@@ -66,6 +66,7 @@ namespace VaultSync.UI.ViewModels
     public class BackupSnapshotItem : ViewModelBase
     {
         public string Id { get; set; } = string.Empty;
+        public int SnapshotId { get; set; }
         public DateTime Timestamp
         {
             get; set;

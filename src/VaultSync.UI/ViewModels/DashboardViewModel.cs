@@ -357,6 +357,8 @@ namespace VaultSync.UI.ViewModels
         public RelayCommand NewSnapshotCommand { get; }
         public RelayCommand ToggleRestoreReadinessIssuesCommand { get; }
         public RelayCommand OpenBackupsCommand { get; }
+        public RelayCommand OpenHistoryCommand { get; }
+        public RelayCommand OpenRecoveryCommand { get; }
 
         // Chart bindings
         public ISeries[] SnapshotSeries { get; private set; } = [];
@@ -432,6 +434,12 @@ namespace VaultSync.UI.ViewModels
             OpenBackupsCommand = new RelayCommand(
                 _ => App.AppViewModelInstance?.NavigateBackups?.Execute(null),
                 _ => App.AppViewModelInstance?.NavigateBackups?.CanExecute(null) == true);
+            OpenHistoryCommand = new RelayCommand(
+                _ => App.AppViewModelInstance?.NavigateHistory?.Execute(null),
+                _ => App.AppViewModelInstance?.NavigateHistory?.CanExecute(null) == true);
+            OpenRecoveryCommand = new RelayCommand(
+                _ => App.AppViewModelInstance?.NavigateRecovery?.Execute(null),
+                _ => App.AppViewModelInstance?.NavigateRecovery?.CanExecute(null) == true);
 
             BuildStaticAxes();
             RebuildStorageSortOptions();
@@ -594,21 +602,34 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     // Activity list (newest first)
-                    var activities = new List<(int? ProjectId, DateTime WhenUtc, string Subtitle)>();
+                    var activities = new List<DashboardActivity>();
                     List<(int projectId, DateTime createdUtc, string type)> recentBackups = repo.GetRecentBackups(12);
                     foreach ((int projectId, DateTime createdUtc, string type) b in recentBackups)
                     {
                         string subtitle = string.Equals(b.type, "auto", StringComparison.OrdinalIgnoreCase)
                             ? "auto"
                             : "manual";
-                        activities.Add((b.projectId, b.createdUtc, subtitle));
+                        activities.Add(new DashboardActivity(b.projectId, b.createdUtc, subtitle));
                     }
 
                     List<(int projectId, DateTime createdUtc)> recentSnapshots = repo.GetRecentSnapshotsWithoutBackup(12);
                     foreach ((int projectId, DateTime createdUtc) s in recentSnapshots)
                     {
-                        activities.Add((s.projectId, s.createdUtc, "snapshot"));
+                        activities.Add(new DashboardActivity(s.projectId, s.createdUtc, "snapshot"));
                     }
+
+                    IReadOnlyList<RestoreHistoryEvent> recentRestores = repo.GetRecentRestoreHistoryEvents(12);
+                    foreach (RestoreHistoryEvent restore in recentRestores)
+                    {
+                        string subtitle = string.Equals(restore.Status, RestoreHistoryEventStatus.Failed, StringComparison.OrdinalIgnoreCase)
+                            ? "restore-failed"
+                            : "restore";
+                        activities.Add(new DashboardActivity(restore.ProjectId, restore.CreatedUtc, subtitle));
+                    }
+
+                    List<Backup> restoreReadinessBackups = repo.GetAllBackups().ToList();
+                    IReadOnlyDictionary<int, SnapshotHistoryMetadata> restoreReadinessMetadata =
+                        repo.GetSnapshotHistoryMetadataBySnapshotIds(restoreReadinessBackups.Select(backup => backup.SnapshotId));
 
                     var dashboardData = new DashboardData
                     {
@@ -628,9 +649,10 @@ namespace VaultSync.UI.ViewModels
                         ImportedCounts = importedCounts,
                         RestoreReadiness = new RestoreReadinessService().BuildSummary(
                             projects,
-                            repo.GetAllBackups().ToList(),
+                            restoreReadinessBackups,
                             cfg,
-                            cfg.Advanced.BackupIndexLastScan)
+                            cfg.Advanced.BackupIndexLastScan,
+                            snapshotMetadataById: restoreReadinessMetadata)
                     };
                     _lastDashboardData = dashboardData;
                     _lastDashboardDataUtc = DateTime.UtcNow;
@@ -764,7 +786,7 @@ namespace VaultSync.UI.ViewModels
             public AppConfig Config { get; init; } = new();
             public (double UsedPercent, string FreeText, string ThresholdText, bool IsBelowThreshold, string RiskReason, BackupDiskUsageStatus Status) DiskUsage;
             public List<Project> Projects { get; init; } = [];
-            public List<(int? ProjectId, DateTime WhenUtc, string Subtitle)> Activities { get; init; } = [];
+            public List<DashboardActivity> Activities { get; init; } = [];
             public List<(Project project, long bytes)> StorageSlices { get; init; } = [];
             public long TotalLatestBytes { get; init; }
             public long TotalLocalBytes { get; init; }
@@ -797,7 +819,7 @@ namespace VaultSync.UI.ViewModels
 
             IBrush GetBrush(Color color) => new ImmutableSolidColorBrush(color);
 
-            foreach ((int? ProjectId, DateTime WhenUtc, string Subtitle) activity in data.Activities
+            foreach (DashboardActivity activity in data.Activities
                          .OrderByDescending(item => item.WhenUtc)
                          .Take(5))
             {
@@ -813,6 +835,8 @@ namespace VaultSync.UI.ViewModels
                 {
                     "auto" => L("Dashboard.Activity.AutoBackup", "Auto backup created"),
                     "manual" => L("Dashboard.Activity.ManualBackup", "Manual backup created"),
+                    "restore" => L("Dashboard.Activity.RestoreCompleted", "Restore completed"),
+                    "restore-failed" => L("Dashboard.Activity.RestoreFailed", "Restore needs review"),
                     _ => L("Dashboard.Activity.SnapshotCreated", "Snapshot created")
                 };
                 (string tagsDisplay, ProjectTagChip[] tagChips) = BuildActivityProjectTags(project);
@@ -1979,18 +2003,6 @@ namespace VaultSync.UI.ViewModels
             out ulong lpTotalNumberOfBytes,
             out ulong lpTotalNumberOfFreeBytes);
 
-        private void UpdateBackupDiskUsage(AppConfig config)
-        {
-            (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string riskReason, BackupDiskUsageStatus _) =
-                ComputeBackupDiskUsageDetailed(config);
-
-            BackupDiskUsedPercent      = usedPercent;
-            BackupDiskFreeText         = freeText;
-            BackupDiskThresholdText    = thresholdText;
-            BackupDiskIsBelowThreshold = isBelowThreshold;
-            BackupDiskRiskReason       = riskReason;
-        }
-
         private void UpdateBackupSummaryPills()
         {
             using var timing = RuntimeTiming.Measure("Dashboard backup summary rebuild");
@@ -2021,21 +2033,6 @@ namespace VaultSync.UI.ViewModels
                     manualWeek,
                     importedWeek);
             }
-        }
-
-        private static double[] MovingAverage(IReadOnlyList<double> v, int window)
-        {
-            if (window <= 1) return [.. v];
-            double[] r = new double[v.Count];
-            for (int i = 0; i < v.Count; i++)
-            {
-                int start = Math.Max(0, i - (window - 1));
-                int count = i - start + 1;
-                double sum = 0;
-                for (int j = start; j <= i; j++) sum += v[j];
-                r[i] = sum / count;
-            }
-            return r;
         }
 
         private static string TrimForTooltip(string? value, int maxLength)
@@ -2227,6 +2224,7 @@ namespace VaultSync.UI.ViewModels
         public record StorageLegendSortOption(StorageLegendSortMode Mode, string Label);
         public record BackupUsageSegment(string Name, string ValueText, double SizeBytes, IBrush Brush, string Tooltip);
         public record RestoreReadinessIssueItem(string ProjectName, string StateLabel, string Reason, IBrush StateBrush);
+        private sealed record DashboardActivity(int? ProjectId, DateTime WhenUtc, string Subtitle);
 
         public enum Dot { Green, Blue, Purple, Gray }
 

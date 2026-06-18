@@ -32,7 +32,6 @@ namespace VaultSync.UI.ViewModels;
 /// </summary>
 public class ProjectsViewModel : ViewModelBase
 {
-    private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
     private const string GenericPresetId = "generic";
     private const string NoPresetId = "no preset";
     private static readonly string[] DefaultReusableTags = ["Work", "Games", "Media", "Critical", "Archive"];
@@ -107,6 +106,7 @@ public class ProjectsViewModel : ViewModelBase
     private string _lastSelectedProjectName = string.Empty;
     private int _selectedProjectRefreshToken;
     private int _selectedProjectHistoryToken;
+    private int _suppressProjectPersistence;
     private int _refreshInFlight;
     private int _refreshQueued;
     private readonly RelayCommand _openFolderCommand;
@@ -566,7 +566,7 @@ public class ProjectsViewModel : ViewModelBase
         _applyPresetRecommendationCommand = new RelayCommand(_ => ApplyPresetRecommendation(), _ =>
             SelectedProject is { RecommendedPreset.Length: > 0 });
         _togglePresetEditorCommand = new RelayCommand(_ => TogglePresetEditor(), _ => HasPresetEditorTarget);
-        _reloadPresetEditorCommand = new RelayCommand(_ => ReloadPresetEditor(), _ => HasPresetEditorTarget);
+        _reloadPresetEditorCommand = new RelayCommand(_ => _ = ReloadPresetEditorAsync(), _ => HasPresetEditorTarget);
         _savePresetEditorCommand = new RelayCommand(_ => SavePresetEditor(), _ => HasPresetEditorTarget);
         _previewPresetEditorCommand = new RelayCommand(_ => PreviewPresetEditor(), _ => HasPresetEditorTarget);
         _clonePresetEditorCommand = new RelayCommand(_ => ClonePresetEditor(), _ => HasPresetEditorTarget);
@@ -1138,7 +1138,7 @@ public class ProjectsViewModel : ViewModelBase
 
         var hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
             string.IsNullOrWhiteSpace(vm.EncryptionKeyRef) ? null : vm.EncryptionKeyRef,
-            BackupEncryptionSecretUsername,
+            BackupEncryptionCredentialIdentity.AccountName,
             preferKeychain: true,
             fallbackPlaintext: null));
         vm.HasEncryptionSecret = hasSecret;
@@ -2309,7 +2309,7 @@ public class ProjectsViewModel : ViewModelBase
                 });
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             ShowNotification(Lf("Projects.Notification.OpenFolderFailed", "Failed to open folder for '{0}'.", SelectedProject?.Name ?? string.Empty), NotificationSeverity.Error);
         }
@@ -2497,7 +2497,7 @@ public class ProjectsViewModel : ViewModelBase
                 NotifySnapshotOutcome(msg, success: true);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             var msg = L("Projects.Notification.SnapshotFailure", "Snapshot failed. Check logs for details.");
             ShowNotification(msg, NotificationSeverity.Error);
@@ -2704,33 +2704,41 @@ public class ProjectsViewModel : ViewModelBase
             return;
         }
 
-        if (snapshot.Missing)
+        Interlocked.Increment(ref _suppressProjectPersistence);
+        try
         {
-            SnapshotActionLabel = L("Snapshots.Action.AddProject", "Add project");
-            SelectedProject.IsRegistered = false;
-            SelectedProject.ProjectId = 0;
-            SelectedProject.EncryptionKeyRef = string.Empty;
-
-            SelectedProject.Preset = ResolveRequiredPreset(SelectedProject);
-            if (string.IsNullOrWhiteSpace(SelectedProject.TagsCsv))
+            if (snapshot.Missing)
             {
-                SelectedProject.TagsCsv = string.Empty;
+                SnapshotActionLabel = L("Snapshots.Action.AddProject", "Add project");
+                SelectedProject.IsRegistered = false;
+                SelectedProject.ProjectId = 0;
+                SelectedProject.EncryptionKeyRef = string.Empty;
+
+                SelectedProject.Preset = ResolveRequiredPreset(SelectedProject);
+                if (string.IsNullOrWhiteSpace(SelectedProject.TagsCsv))
+                {
+                    SelectedProject.TagsCsv = string.Empty;
+                }
+            }
+            else
+            {
+                SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
+                SelectedProject.IsRegistered = true;
+                SelectedProject.ProjectId = snapshot.ProjectId;
+                SelectedProject.Preset = ResolveRequiredPreset(SelectedProject, snapshot.Preset);
+                SelectedProject.TagsCsv = snapshot.TagsCsv;
+                SelectedProject.PreferredDestinationId = snapshot.PreferredDestinationId;
+                SelectedProject.EncryptionPolicy = snapshot.EncryptionPolicy;
+                SelectedProject.EncryptionKeyRef = snapshot.EncryptionKeyRef;
+                var cfg = _configStore.GetSnapshot();
+                UpdateProjectDestinationDisplay(SelectedProject, cfg);
+                UpdateProjectEncryptionDisplay(SelectedProject, cfg);
+                UpdateProjectPresetDisplay(SelectedProject);
             }
         }
-        else
+        finally
         {
-            SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
-            SelectedProject.IsRegistered = true;
-            SelectedProject.ProjectId = snapshot.ProjectId;
-            SelectedProject.Preset = ResolveRequiredPreset(SelectedProject, snapshot.Preset);
-            SelectedProject.TagsCsv = snapshot.TagsCsv;
-            SelectedProject.PreferredDestinationId = snapshot.PreferredDestinationId;
-            SelectedProject.EncryptionPolicy = snapshot.EncryptionPolicy;
-            SelectedProject.EncryptionKeyRef = snapshot.EncryptionKeyRef;
-            var cfg = _configStore.GetSnapshot();
-            UpdateProjectDestinationDisplay(SelectedProject, cfg);
-            UpdateProjectEncryptionDisplay(SelectedProject, cfg);
-            UpdateProjectPresetDisplay(SelectedProject);
+            Interlocked.Decrement(ref _suppressProjectPersistence);
         }
     }
 
@@ -2756,6 +2764,9 @@ public class ProjectsViewModel : ViewModelBase
             _applyPresetRecommendationCommand.RaiseCanExecuteChanged();
 
         if (!changedPreset && !changedDestination && !changedEncryption && !changedTags)
+            return;
+
+        if (Volatile.Read(ref _suppressProjectPersistence) > 0)
             return;
 
         try
@@ -2827,7 +2838,10 @@ public class ProjectsViewModel : ViewModelBase
                     var config = _configStore.GetSnapshot();
                     var repo = CreateRepository(config);
                     var snapshots = await repo.GetSnapshotsForProjectAsync(projectName);
-                    return snapshots.ConvertAll(CreateProjectSnapshotViewModel);
+                    return snapshots
+                        .Take(40)
+                        .Select(CreateProjectSnapshotViewModel)
+                        .ToList();
                 }
                 catch
                 {
@@ -3019,7 +3033,7 @@ public class ProjectsViewModel : ViewModelBase
                 UpdateProjectPresetDisplay(project);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
 
             // Fallback to a minimal hard-coded set so the UI stays usable.
@@ -3136,26 +3150,41 @@ public class ProjectsViewModel : ViewModelBase
 
         IsPresetEditorVisible = !IsPresetEditorVisible;
         if (IsPresetEditorVisible && string.IsNullOrWhiteSpace(PresetEditorContent))
-            ReloadPresetEditor();
+            _ = ReloadPresetEditorAsync();
     }
 
-    private void ReloadPresetEditor()
+    private async Task ReloadPresetEditorAsync()
     {
         if (!TryResolveSelectedPresetPath(out var presetPath, out _))
             return;
 
         try
         {
-            PresetEditorContent = File.Exists(presetPath)
-                ? File.ReadAllText(presetPath)
-                : string.Empty;
-            PresetEditorStatus = File.Exists(presetPath)
-                ? L("Projects.Preset.Editor.Status.Reloaded", "Preset rules reloaded.")
-                : L("Projects.Preset.Editor.Status.NewFile", "Preset file does not exist yet. Save to create it.");
+            PresetEditorStatus = L("Projects.Preset.Editor.Status.Reloading", "Loading preset rules...");
+            var result = await Task.Run(() =>
+            {
+                bool exists = File.Exists(presetPath);
+                string content = exists ? File.ReadAllText(presetPath) : string.Empty;
+                return (exists, content);
+            }).ConfigureAwait(false);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (!string.Equals(PresetEditorPath, presetPath, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                PresetEditorContent = result.content;
+                PresetEditorStatus = result.exists
+                    ? L("Projects.Preset.Editor.Status.Reloaded", "Preset rules reloaded.")
+                    : L("Projects.Preset.Editor.Status.NewFile", "Preset file does not exist yet. Save to create it.");
+            });
         }
         catch (Exception ex)
         {
-            PresetEditorStatus = Lf("Projects.Preset.Editor.Status.ReloadFailed", "Failed to reload preset rules: {0}", ex.Message);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                PresetEditorStatus = Lf("Projects.Preset.Editor.Status.ReloadFailed", "Failed to reload preset rules: {0}", ex.Message);
+            });
         }
     }
 
@@ -3381,9 +3410,14 @@ public class ProjectsViewModel : ViewModelBase
         HasPresetEditorTarget = true;
         PresetEditorPath = presetPath;
         PresetEditorPathDisplay = $"{presetId}.vaultsyncignore";
+        PresetEditorContent = string.Empty;
+        PresetEditorStatus = IsPresetEditorVisible
+            ? L("Projects.Preset.Editor.Status.ReadyToLoad", "Open or reload the preset editor to load rules.")
+            : string.Empty;
         OnPropertyChanged(nameof(PresetEditorToggleLabel));
         RaisePresetEditorCanExecuteChanged();
-        ReloadPresetEditor();
+        if (IsPresetEditorVisible)
+            _ = ReloadPresetEditorAsync();
     }
 
     private bool TryResolveSelectedPresetPath(out string presetPath, out string presetId)

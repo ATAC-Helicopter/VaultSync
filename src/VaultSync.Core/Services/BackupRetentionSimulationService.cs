@@ -20,6 +20,7 @@ public sealed class BackupRetentionSimulationService(SqliteRepository repo)
             .ThenByDescending(backup => backup.Id)
             .ToList();
         var snapshotsById = _repo.GetAllSnapshots().ToDictionary(snapshot => snapshot.Id);
+        var metadataBySnapshotId = _repo.GetSnapshotHistoryMetadataBySnapshotIds(backups.Select(backup => backup.SnapshotId));
 
         var projectResults = new List<ProjectRetentionSimulationProjectResult>();
 
@@ -30,7 +31,11 @@ public sealed class BackupRetentionSimulationService(SqliteRepository repo)
                 .OrderByDescending(backup => backup.CreatedUtc)
                 .ThenByDescending(backup => backup.Id)
                 .ToList();
-            var unprotected = projectBackups.Where(backup => !backup.IsProtected).ToList();
+            var unprotected = projectBackups
+                .Where(backup =>
+                    !backup.IsProtected &&
+                    (!metadataBySnapshotId.TryGetValue(backup.SnapshotId, out SnapshotHistoryMetadata? metadata) || !metadata.IsProtected))
+                .ToList();
             int deleteQuota = Math.Max(0, unprotected.Count - normalizedMaxSnapshots);
             var candidates = unprotected
                 .OrderBy(backup => backup.CreatedUtc)

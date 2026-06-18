@@ -56,7 +56,10 @@ public sealed class BackupSafetyServiceTests : IDisposable
         Directory.CreateDirectory(projectRoot);
         Directory.CreateDirectory(backupRoot);
 
-        BackupSafetyService.EnsureSafeBackupRoot(projectRoot, backupRoot);
+        var ex = Record.Exception(() =>
+            BackupSafetyService.EnsureSafeBackupRoot(projectRoot, backupRoot));
+
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -73,6 +76,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
         var stagingRoot = BackupSafetyService.GetOfflineStagingRoot(project);
 
         BackupSafetyService.EnsureSafeBackupRoot(project, stagingRoot);
+        Assert.True(Path.IsPathFullyQualified(stagingRoot));
         Assert.DoesNotContain(projectRoot, stagingRoot, StringComparison.OrdinalIgnoreCase);
     }
 

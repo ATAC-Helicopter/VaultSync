@@ -139,7 +139,6 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan EncryptedOpenStaleRetention = TimeSpan.FromMinutes(30);
         private static readonly ConcurrentDictionary<string, CancellationTokenSource> _encryptedOpenCleanup = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<int, EncryptedOpenUnlockSession> _encryptedOpenSessions = new();
-        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
         private DateTime _lastDestinationScanUtc = DateTime.MinValue;
         private int _destinationScanInFlight;
         private int _destinationOverviewRefreshInFlight;
@@ -184,8 +183,6 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan InitialDataLoadDelay = TimeSpan.FromMilliseconds(750);
         private int _dashboardWarmLoadQueued;
         private int _backupsWarmLoadQueued;
-        private readonly GitHubUpdateService _updateService = new();
-        private readonly PatchUpdateService _patchService = new();
         private readonly LocalizationService _localizationService = new();
         private readonly Stopwatch _startupDiagnosticsStopwatch = Stopwatch.StartNew();
         private readonly object _startupDiagnosticsGate = new();
@@ -608,7 +605,21 @@ namespace VaultSync.UI.ViewModels
         public bool IsSettingsActive => CurrentViewName == "Settings";
         public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
         public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(_configStore, _repositoryFactory);
-        public HistoryViewModel HistoryViewModel => _historyViewModel ??= new HistoryViewModel(_configStore, _repositoryFactory);
+        public HistoryViewModel HistoryViewModel
+        {
+            get
+            {
+                if (_historyViewModel is not null)
+                    return _historyViewModel;
+
+                var vm = new HistoryViewModel(_configStore, _repositoryFactory);
+                vm.OpenBackupFolderRequested += OpenBackupFolder;
+                vm.OpenRecoveryRequested += () => SetCurrentView("Recovery");
+                vm.BackupProtectionChanged += OnBackupProtectionChanged;
+                _historyViewModel = vm;
+                return vm;
+            }
+        }
         public RecoveryViewModel RecoveryViewModel => _recoveryViewModel ??= new RecoveryViewModel(_configStore, _repositoryFactory);
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;

@@ -63,14 +63,7 @@ namespace VaultSync.UI.ViewModels
             var vm = new LogConsoleViewModel(_logConsoleService);
             var window = new LogConsoleWindow(vm);
 
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
-            {
-                window.Show();
-            }
-            else
-            {
-                window.Show();
-            }
+            window.Show();
 
             window.Closed += (_, _) =>
             {
@@ -115,7 +108,7 @@ namespace VaultSync.UI.ViewModels
             else if (CurrentView == _backupsViewModel)
             {
                 HeaderTitle  = L("Nav.Backups", "Backups");
-                HeaderKicker = L("Main.HeaderBackups", "Snapshots & history");
+                HeaderKicker = L("Main.HeaderBackups", "Snapshots & restore");
             }
             else if (CurrentView == _historyViewModel)
             {

@@ -124,6 +124,74 @@ public sealed class BackupRetentionPreflightTests : IDisposable
     }
 
     [Fact]
+    public void EnforceRetentionForProject_KeepsSnapshotMetadataProtectedBackup()
+    {
+        SqliteRepository repo = CreateRepository();
+        var service = new BackupService(repo);
+        int projectId = CreateProject(repo, "Protected Metadata Project");
+        int protectedSnapshotId = repo.CreateSnapshot(projectId, 10, 1024);
+        int middleSnapshotId = repo.CreateSnapshot(projectId, 20, 2048);
+        int newestSnapshotId = repo.CreateSnapshot(projectId, 30, 4096);
+
+        string protectedPath = "protected-metadata/2026-03-12_10-00-00";
+        string middlePath = "protected-metadata/2026-03-12_11-00-00";
+        string newestPath = "protected-metadata/2026-03-12_12-00-00";
+
+        repo.CreateBackupFromMetadata(
+            "backup-protected-by-snapshot",
+            projectId,
+            protectedSnapshotId,
+            new DateTime(2026, 3, 12, 10, 0, 0, DateTimeKind.Utc),
+            "manual",
+            1024,
+            protectedPath,
+            _backupRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+        repo.CreateBackupFromMetadata(
+            "backup-middle",
+            projectId,
+            middleSnapshotId,
+            new DateTime(2026, 3, 12, 11, 0, 0, DateTimeKind.Utc),
+            "manual",
+            2048,
+            middlePath,
+            _backupRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+        repo.CreateBackupFromMetadata(
+            "backup-newest",
+            projectId,
+            newestSnapshotId,
+            new DateTime(2026, 3, 12, 12, 0, 0, DateTimeKind.Utc),
+            "manual",
+            4096,
+            newestPath,
+            _backupRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+        repo.UpsertSnapshotHistoryMetadata(new SnapshotHistoryMetadata
+        {
+            SnapshotId = protectedSnapshotId,
+            IsProtected = true
+        });
+
+        Directory.CreateDirectory(Path.Combine(_backupRoot, protectedPath.Replace('/', Path.DirectorySeparatorChar)));
+        Directory.CreateDirectory(Path.Combine(_backupRoot, middlePath.Replace('/', Path.DirectorySeparatorChar)));
+        Directory.CreateDirectory(Path.Combine(_backupRoot, newestPath.Replace('/', Path.DirectorySeparatorChar)));
+
+        service.EnforceRetentionForProject(projectId, _backupRoot, maxSnapshotsToKeep: 1);
+
+        var remainingBackups = repo.GetBackupsForProject(projectId).Select(backup => backup.ExternalId).ToList();
+        Assert.Contains("backup-protected-by-snapshot", remainingBackups);
+        Assert.Contains("backup-newest", remainingBackups);
+        Assert.DoesNotContain("backup-middle", remainingBackups);
+    }
+
+    [Fact]
     public void BuildRetentionDeletionPlan_SkipsLastValidRestorePoint_AndSelectsNextEligibleCandidate()
     {
         int projectId = 42;

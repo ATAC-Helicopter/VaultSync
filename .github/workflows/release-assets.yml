@@ -45,13 +45,18 @@ jobs:
       - name: Validate release inputs
         id: validate_inputs
         shell: bash
+        env:
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
+          PREVIOUS_VERSION: ${{ inputs.previous_version }}
+          PREVIOUS_VERSIONS: ${{ inputs.previous_versions }}
+          TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           set -euo pipefail
 
-          channel="${{ inputs.release_channel }}"
-          previous="${{ inputs.previous_version }}"
-          previous_versions_raw="${{ inputs.previous_versions }}"
-          target="${{ inputs.target_version }}"
+          channel="$RELEASE_CHANNEL"
+          previous="$PREVIOUS_VERSION"
+          previous_versions_raw="$PREVIOUS_VERSIONS"
+          target="$TARGET_VERSION"
           branch="${{ github.ref_name }}"
 
           trim() {
@@ -262,8 +267,10 @@ jobs:
         shell: pwsh
         env:
           PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
+          TARGET_VERSION: ${{ inputs.target_version }}
         run: |
-          $patchDir = "patches/v${{ inputs.target_version }}"
+          $targetVersion = $env:TARGET_VERSION
+          $patchDir = "patches/v$targetVersion"
           New-Item -ItemType Directory -Force $patchDir | Out-Null
           $baseVersions = @()
           foreach ($line in $env:PATCH_BASE_VERSIONS -split "`r?`n")
@@ -278,13 +285,15 @@ jobs:
             --out-manifest "$patchDir/vaultsync-patch-windows.json" `
             --platform windows `
             @previousArgs `
-            --target "${{ inputs.target_version }}"
+            --target "$targetVersion"
 
       - name: Prepare Microsoft Store manifest version
         if: ${{ inputs.include_store_upload }}
         shell: pwsh
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
         run: |
-          $target = "${{ inputs.target_version }}"
+          $target = $env:TARGET_VERSION
           $baseVersion = ($target -split "-", 2)[0]
           $parts = $baseVersion.Split(".")
           if ($parts.Count -lt 3) {
@@ -312,6 +321,8 @@ jobs:
       - name: Build Microsoft Store upload package
         if: ${{ inputs.include_store_upload }}
         shell: pwsh
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           $storeDir = Join-Path $PWD "dist/store"
           New-Item -ItemType Directory -Force $storeDir | Out-Null
@@ -336,7 +347,7 @@ jobs:
           }
 
           $extension = $upload.Extension
-          $targetPath = Join-Path $storeDir "VaultSync-Store-${{ inputs.target_version }}-x64$extension"
+          $targetPath = Join-Path $storeDir "VaultSync-Store-$($env:TARGET_VERSION)-x64$extension"
           Copy-Item $upload.FullName $targetPath -Force
           Add-Content $env:GITHUB_STEP_SUMMARY "- Upload artifact: ``$targetPath``"
 
@@ -387,36 +398,37 @@ jobs:
           --self-contained true
 
       - name: Build DMGs
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
         run: |
-          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish
-          bash scripts/build_macos_dmg.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish
+          bash scripts/build_macos_dmg.sh "$TARGET_VERSION" arm64 src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish
+          bash scripts/build_macos_dmg.sh "$TARGET_VERSION" x64 src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish
 
       - name: Build patch assets
         env:
           PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
+          TARGET_VERSION: ${{ inputs.target_version }}
         run: |
-          mkdir -p "patches/v${{ inputs.target_version }}"
+          mkdir -p "patches/v$TARGET_VERSION"
           previous_args=()
           while IFS= read -r base; do
             [[ -n "$base" ]] || continue
             previous_args+=( --previous "$base" )
-          done <<'EOF'
-          ${{ needs.validate.outputs.patch_base_versions }}
-          EOF
+          done <<< "$PATCH_BASE_VERSIONS"
           python3 scripts/build_patch.py \
             --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish" \
-            --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.zip" \
-            --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-apple-silicon.json" \
+            --out-zip "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.zip" \
+            --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json" \
             --platform macos \
             "${previous_args[@]}" \
-            --target "${{ inputs.target_version }}"
+            --target "$TARGET_VERSION"
           python3 scripts/build_patch.py \
             --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish" \
-            --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.zip" \
-            --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.json" \
+            --out-zip "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.zip" \
+            --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json" \
             --platform macos \
             "${previous_args[@]}" \
-            --target "${{ inputs.target_version }}"
+            --target "$TARGET_VERSION"
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -459,37 +471,38 @@ jobs:
           --self-contained true
 
       - name: Build Linux archives
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
         run: |
-          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
-          bash scripts/build_linux_release.sh "${{ inputs.target_version }}" arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
+          bash scripts/build_linux_release.sh "$TARGET_VERSION" x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+          bash scripts/build_linux_release.sh "$TARGET_VERSION" arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
 
       - name: Build patch assets
         if: ${{ inputs.include_linux_patches }}
         env:
           PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
+          TARGET_VERSION: ${{ inputs.target_version }}
         run: |
-          mkdir -p "patches/v${{ inputs.target_version }}"
+          mkdir -p "patches/v$TARGET_VERSION"
           previous_args=()
           while IFS= read -r base; do
             [[ -n "$base" ]] || continue
             previous_args+=( --previous "$base" )
-          done <<'EOF'
-          ${{ needs.validate.outputs.patch_base_versions }}
-          EOF
+          done <<< "$PATCH_BASE_VERSIONS"
           python3 scripts/build_patch.py \
             --base-dir "src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish" \
-            --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.zip" \
-            --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.json" \
+            --out-zip "patches/v$TARGET_VERSION/vaultsync-patch-linux-x64.zip" \
+            --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-linux-x64.json" \
             --platform linux \
             "${previous_args[@]}" \
-            --target "${{ inputs.target_version }}"
+            --target "$TARGET_VERSION"
           python3 scripts/build_patch.py \
             --base-dir "src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish" \
-            --out-zip "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.zip" \
-            --out-manifest "patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.json" \
+            --out-zip "patches/v$TARGET_VERSION/vaultsync-patch-linux-arm64.zip" \
+            --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-linux-arm64.json" \
             --platform linux \
             "${previous_args[@]}" \
-            --target "${{ inputs.target_version }}"
+            --target "$TARGET_VERSION"
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4

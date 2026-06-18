@@ -130,7 +130,6 @@ namespace VaultSync.UI
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
-        private readonly SupportBundleService _supportBundleService = new();
         private readonly RelayCommand? _addTagColorRuleCommand;
         private readonly RelayCommand? _removeTagColorRuleCommand;
         private readonly RelayCommand? _resetTagColorRuleCommand;
@@ -153,8 +152,6 @@ namespace VaultSync.UI
         private string _customThemeName = "VaultSync Midnight";
         private string _customThemeBase = "Dark";
         private ThemeColorSlotViewModel? _selectedThemeColorSlot;
-        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
-
         private readonly bool _isInitialized;
         private bool _isSaving;
         private bool _savePending;
@@ -691,7 +688,7 @@ namespace VaultSync.UI
             _backupEncryptionOpenUnlockTimeoutMinutes = ClampInt(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes, 1, 240, 10);
             _backupEncryptionKeyRef = cfg.Backups.Encryption.KeyRef ?? string.Empty;
             _backupEncryptionHasSecret = !string.IsNullOrWhiteSpace(
-                _backupEncryptionSecretService.GetSecret(_backupEncryptionKeyRef, BackupEncryptionSecretUsername));
+                _backupEncryptionSecretService.GetSecret(_backupEncryptionKeyRef, BackupEncryptionCredentialIdentity.AccountName));
             _backupEncryptionPasswordInput = string.Empty;
             _backupEncryptionSecretStatus = _backupEncryptionHasSecret
                 ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
@@ -1019,7 +1016,7 @@ namespace VaultSync.UI
                         Domain      = c.Domain,
                         KeyRef      = keyRef,
                         UseKeychain = c.UseKeychain,
-                        Password    = persistPlaintext ? secret ?? string.Empty : string.Empty // keep out of config unless we must
+                        Password    = persistPlaintext ? secret : string.Empty // keep out of config unless we must
                     });
                 }
 
@@ -1418,28 +1415,6 @@ namespace VaultSync.UI
                     Border = ProjectTagAppearance.NormalizeHex(entry.Value?.Border, defaults.Border)
                 });
             }
-        }
-
-        private Dictionary<string, TagColorConfig> BuildTagColorConfig()
-        {
-            var rules = new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (TagColorRuleViewModel rule in TagColorRules)
-            {
-                string tag = (rule.Tag ?? string.Empty).Trim();
-                if (string.IsNullOrWhiteSpace(tag))
-                    continue;
-
-                (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(tag);
-                rules[tag] = new TagColorConfig
-                {
-                    Background = ProjectTagAppearance.NormalizeHex(rule.Background, defaults.Background),
-                    Foreground = ProjectTagAppearance.NormalizeHex(rule.Foreground, defaults.Foreground),
-                    Border = ProjectTagAppearance.NormalizeHex(rule.Border, defaults.Border)
-                };
-            }
-
-            return rules;
         }
 
         public void RebindDestinationCredentials()
@@ -2749,7 +2724,7 @@ namespace VaultSync.UI
 
                 EncryptionSecretStorageMode storageMode = _backupEncryptionSecretService.SaveSecret(
                     _backupEncryptionKeyRef,
-                    BackupEncryptionSecretUsername,
+                    BackupEncryptionCredentialIdentity.AccountName,
                     BackupEncryptionPasswordInput,
                     allowSessionFallback: BackupEncryptionAllowSessionFallback,
                     fallbackConfirmed: BackupEncryptionAllowSessionFallback);
@@ -2784,7 +2759,7 @@ namespace VaultSync.UI
 
         private void ClearBackupEncryptionPassword()
         {
-            _backupEncryptionSecretService.DeleteSecret(_backupEncryptionKeyRef, BackupEncryptionSecretUsername);
+            _backupEncryptionSecretService.DeleteSecret(_backupEncryptionKeyRef, BackupEncryptionCredentialIdentity.AccountName);
             BackupEncryptionHasSecret = false;
             BackupEncryptionPasswordInput = string.Empty;
             BackupEncryptionSecretStatus = L(
@@ -2895,35 +2870,48 @@ namespace VaultSync.UI
             int removed = 0;
             int failed = 0;
 
-            void TryDeleteDir(string path)
+            CacheDeleteResult TryDeleteDir(string path)
             {
                 if (!Directory.Exists(path))
-                    return;
+                    return CacheDeleteResult.NotFound;
 
                 try
                 {
                     Directory.Delete(path, recursive: true);
-                    removed++;
+                    return CacheDeleteResult.Removed;
                 }
                 catch
                 {
-                    failed++;
+                    return CacheDeleteResult.Failed;
                 }
             }
 
-            void TryDeleteFile(string path)
+            CacheDeleteResult TryDeleteFile(string path)
             {
                 if (!File.Exists(path))
-                    return;
+                    return CacheDeleteResult.NotFound;
 
                 try
                 {
                     File.Delete(path);
-                    removed++;
+                    return CacheDeleteResult.Removed;
                 }
                 catch
                 {
-                    failed++;
+                    return CacheDeleteResult.Failed;
+                }
+            }
+
+            void Count(CacheDeleteResult result)
+            {
+                switch (result)
+                {
+                    case CacheDeleteResult.Removed:
+                        removed++;
+                        break;
+                    case CacheDeleteResult.Failed:
+                        failed++;
+                        break;
                 }
             }
 
@@ -2931,15 +2919,15 @@ namespace VaultSync.UI
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync");
 
-            TryDeleteDir(Path.Combine(localRoot, "logs"));
-            TryDeleteDir(Path.Combine(localRoot, "crash"));
-            TryDeleteFile(Path.Combine(localRoot, "avatars.json"));
-            TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json"));
+            Count(TryDeleteDir(Path.Combine(localRoot, "logs")));
+            Count(TryDeleteDir(Path.Combine(localRoot, "crash")));
+            Count(TryDeleteFile(Path.Combine(localRoot, "avatars.json")));
+            Count(TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json")));
 
             string tempRoot = Path.GetTempPath();
-            TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import"));
-            TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export"));
-            TryDeleteDir(Path.Combine(tempRoot, "VaultSync"));
+            Count(TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import")));
+            Count(TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export")));
+            Count(TryDeleteDir(Path.Combine(tempRoot, "VaultSync")));
 
             if (removed == 0 && failed == 0)
             {
@@ -2953,6 +2941,13 @@ namespace VaultSync.UI
                     ? L("Settings.Status.CacheCleared", "Local cache cleared ({0} item(s)).")
                     : L("Settings.Status.CacheClearedWithErrors", "Cache cleared with {0} error(s)."),
                 failed == 0 ? removed : failed);
+        }
+
+        private enum CacheDeleteResult
+        {
+            NotFound,
+            Removed,
+            Failed
         }
 
         private void TestBackupLocation()

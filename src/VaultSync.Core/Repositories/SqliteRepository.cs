@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -290,6 +291,8 @@ namespace VaultSync.Core.Repositories
     """);
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class BackupPathRow
         {
             public long Id { get; init; }
@@ -922,6 +925,15 @@ DELETE FROM sqlite_sequence;";
                         .ToUniversalTime()
                         .ToString("u", CultureInfo.InvariantCulture),
                     UpdatedUtc = now
+                },
+                tx);
+
+            c.Execute(
+                "UPDATE backups SET is_protected = @isProtected WHERE snapshot_id = @snapshotId;",
+                new
+                {
+                    snapshotId = metadata.SnapshotId,
+                    isProtected = metadata.IsProtected ? 1 : 0
                 },
                 tx);
 
@@ -1816,6 +1828,8 @@ DELETE FROM sqlite_sequence;";
                 """);
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class BackupActivityRow
         {
             public long ProjectId { get; init; }
@@ -1854,6 +1868,8 @@ DELETE FROM sqlite_sequence;";
             return result;
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class SnapshotActivityRow
         {
             public long ProjectId { get; init; }
@@ -1964,12 +1980,16 @@ DELETE FROM sqlite_sequence;";
                 new { limit = Math.Max(0, limit) })];
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class BackupCountRow
         {
             public string Day { get; init; } = string.Empty;
             public long Count { get; init; }
         }
 
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members", Justification = "Dapper populates this private row type by reflection.")]
+        [SuppressMessage("Major Code Smell", "S3459:Unassigned members should be removed", Justification = "Dapper populates this private row type by reflection.")]
         private sealed class BackupCountByTypeRow
         {
             public string Day { get; init; } = string.Empty;
@@ -2154,7 +2174,50 @@ DELETE FROM sqlite_sequence;";
         public void SetBackupProtection(int backupId, bool isProtected)
         {
             using SqliteConnection c = Open();
-            c.Execute("UPDATE backups SET is_protected=@p WHERE id=@id;", new { id = backupId, p = isProtected ? 1 : 0 });
+            using SqliteTransaction tx = c.BeginTransaction();
+
+            int? snapshotId = c.QueryFirstOrDefault<int?>(
+                "SELECT snapshot_id FROM backups WHERE id = @backupId;",
+                new { backupId },
+                tx);
+            if (!snapshotId.HasValue)
+                return;
+
+            int protectedValue = isProtected ? 1 : 0;
+            c.Execute(
+                "UPDATE backups SET is_protected = @protectedValue WHERE snapshot_id = @snapshotId;",
+                new { snapshotId = snapshotId.Value, protectedValue },
+                tx);
+
+            string now = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
+            c.Execute(
+                """
+                INSERT INTO snapshot_history_metadata(
+                  snapshot_id,
+                  label,
+                  note,
+                  tags,
+                  is_protected,
+                  is_known_good,
+                  created_utc,
+                  updated_utc)
+                VALUES(
+                  @snapshotId,
+                  '',
+                  '',
+                  '',
+                  @protectedValue,
+                  0,
+                  @now,
+                  @now)
+                ON CONFLICT(snapshot_id) DO UPDATE SET
+                  is_protected = excluded.is_protected,
+                  updated_utc = excluded.updated_utc;
+                """,
+                new { snapshotId = snapshotId.Value, protectedValue, now },
+                tx);
+
+            tx.Commit();
         }
     }
 

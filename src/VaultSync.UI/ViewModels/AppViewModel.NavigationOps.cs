@@ -102,21 +102,29 @@ namespace VaultSync.UI.ViewModels
             {
                 case "Projects":
                     BackupsViewModel.IsActiveView = false;
-                    _projectsViewModel.EnsureLoaded();
                     CurrentViewName = "Projects";
                     CurrentView = _projectsViewModel;
                     HeaderTitle = AppViewModel.L("Nav.Projects", "Projects");
                     HeaderKicker = AppViewModel.L("Main.HeaderProjects", "All repositories");
+                    Dispatcher.UIThread.Post(_projectsViewModel.EnsureLoaded, DispatcherPriority.Background);
                     break;
                 case "Backups":
                     BackupsViewModel.IsActiveView = true;
+                    CurrentViewName = "Backups";
+                    CurrentView = BackupsViewModel;
+                    HeaderTitle = AppViewModel.L("Nav.Backups", "Backups");
+                    HeaderKicker = AppViewModel.L("Main.HeaderBackups", "Snapshots & restore");
+
                     if (_backupsCacheProjects is not null && _backupsCacheBackups is not null)
                     {
-                        BackupsViewModel.LoadFromBackups(
-                            _backupsCacheProjects,
-                            _backupsCacheBackups,
-                            _backupsCacheDisabledAuto ?? []);
+                        Dispatcher.UIThread.Post(
+                            () => BackupsViewModel.LoadFromBackups(
+                                _backupsCacheProjects,
+                                _backupsCacheBackups,
+                                _backupsCacheDisabledAuto ?? []),
+                            DispatcherPriority.Background);
                     }
+
                     bool cacheFresh = (DateTime.UtcNow - _backupsCacheUpdatedUtc) < BackupsCacheTtl;
                     if (!cacheFresh || _backupsCachePartial)
                     {
@@ -124,14 +132,11 @@ namespace VaultSync.UI.ViewModels
                     }
                     else
                     {
-                        QueueBackupsWarmLoadIfReady();
+                        Dispatcher.UIThread.Post(QueueBackupsWarmLoadIfReady, DispatcherPriority.Background);
                     }
-                    RefreshDestinationStatusOverview();
-                    BackupsViewModel.RefreshActiveViewState();
-                    CurrentViewName = "Backups";
-                    CurrentView = BackupsViewModel;
-                    HeaderTitle = AppViewModel.L("Nav.Backups", "Backups");
-                    HeaderKicker = AppViewModel.L("Main.HeaderBackups", "Snapshots & history");
+
+                    Dispatcher.UIThread.Post(RefreshDestinationStatusOverview, DispatcherPriority.Background);
+                    Dispatcher.UIThread.Post(BackupsViewModel.RefreshActiveViewState, DispatcherPriority.Background);
                     break;
                 case "Settings":
                     BackupsViewModel.IsActiveView = false;

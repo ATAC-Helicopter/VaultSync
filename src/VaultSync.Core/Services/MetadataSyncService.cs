@@ -2757,7 +2757,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
                 ? string.Empty
                 : project.Tags.Trim();
 
-            return settings.Count == 0 ? "{}" : JsonSerializer.Serialize(settings);
+            return JsonSerializer.Serialize(settings);
         }
         catch
         {

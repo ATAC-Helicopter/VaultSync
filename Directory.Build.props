@@ -1,7 +1,9 @@
 <Project>
   <PropertyGroup>
     <!-- Silence common warning noise until code is cleaned up -->
-    <NoWarn>$(NoWarn);CS0168;CS8601;CS8602;CS8604;CS8625</NoWarn>
+    <NoWarn>$(NoWarn);CS8601;CS8602;CS8604;CS8625</NoWarn>
+    <!-- Pin ASP.NET Core runtime packs to a patched servicing release for self-contained RID restores. -->
+    <MicrosoftAspNetCoreAppRuntimePackageVersion>10.0.9</MicrosoftAspNetCoreAppRuntimePackageVersion>
   </PropertyGroup>
 
   <ItemGroup>

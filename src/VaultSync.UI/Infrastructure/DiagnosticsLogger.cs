@@ -86,6 +86,35 @@ internal static class DiagnosticsLogger
         WriterSignal.Set();
     }
 
+    public static void Shutdown()
+    {
+        Timer? heartbeatTimer = Interlocked.Exchange(ref _heartbeatTimer, null);
+        heartbeatTimer?.Dispose();
+
+        CancellationTokenSource? writerCts = Interlocked.Exchange(ref _writerCts, null);
+        if (writerCts is not null)
+        {
+            try
+            {
+                writerCts.Cancel();
+                WriterSignal.Set();
+                _writerTask?.Wait(TimeSpan.FromSeconds(1));
+            }
+            catch
+            {
+                // Diagnostics shutdown must never fail process cleanup.
+            }
+            finally
+            {
+                writerCts.Dispose();
+                _writerTask = null;
+                Interlocked.Exchange(ref _writerStarted, 0);
+            }
+        }
+
+        FlushPendingWrites();
+    }
+
     private static void RaiseRecorded(string line)
     {
         Action<string>? handlers = Recorded;

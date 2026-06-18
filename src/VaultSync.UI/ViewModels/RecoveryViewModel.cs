@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -194,7 +195,13 @@ public sealed class RecoveryViewModel : ViewModelBase
         repo.EnsureSchema();
         var projects = repo.GetAllProjects().ToList();
         var backups = repo.GetAllBackups();
-        RestoreReadinessSummary summary = _readinessService.BuildSummary(projects, backups, config);
+        IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId =
+            repo.GetSnapshotHistoryMetadataBySnapshotIds(backups.Select(backup => backup.SnapshotId));
+        RestoreReadinessSummary summary = _readinessService.BuildSummary(
+            projects,
+            backups,
+            config,
+            snapshotMetadataById: metadataBySnapshotId);
 
         var latestBackups = backups
             .GroupBy(backup => backup.ProjectId)

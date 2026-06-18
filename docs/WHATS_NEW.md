@@ -2,21 +2,22 @@
 
 ## [1.8.0]
 
-Current `1.8.0` development builds introduce the first Project History and Recovery Intelligence surfaces.
+VaultSync `1.8.0` introduces Project History and Recovery Intelligence, with editable recovery-point context and readiness guidance.
 
 ### Project History
 - History now has a dedicated navigation entry and reads real backup, snapshot, restore, and metadata activity.
-- The History page is moving toward a graph-style lane view for metadata, backup, and restore events instead of a dashboard layout.
-- Snapshot history metadata now has a durable foundation for labels, notes, tags, protected markers, and known-good markers.
-- Successful restores are recorded as history events so future views can show restore activity alongside backup activity.
+- The History workspace provides timeline and compact views with project, activity, lane, date, and text filtering.
+- Important snapshots can be labeled, documented, tagged, protected from cleanup, and marked as known-good recovery points.
+- Protection state is shared with the Backups page, so History markers, Backups “Keep,” and retention decisions remain consistent.
+- Successful restores are recorded alongside backup and metadata activity.
 
 ### Recovery
 - Recovery now has a dedicated navigation entry and shows readiness, coverage, and project priority data from the local repository.
 - Recovery rows are ordered by attention needed so the weakest restore baseline is visible first.
+- Dashboard readiness and attention widgets link directly into History, Recovery, and Backups workflows.
 
 ### Foundation
-- The 1.8 roadmap is now tracked in the repository and mirrored into GitHub Project 7.
-- The 1.8 branch and development metadata now target `1.8.0`.
+- Snapshot Explorer, advanced compare intelligence, disaster-recovery drills, and project groups remain planned for later `1.8.x` releases.
 
 ## [1.7.5]
 
@@ -35,6 +36,9 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - Settings reload notifications and backup archive test setup now use named helpers instead of repeated inline plumbing.
 - Release templates, Store validation docs, and metadata/snapshot test temp directories now have clearer stable-release cleanup.
 - Core tests use shared temporary directory, config, repository, and builder fixtures.
+- Small, primary, and banner action buttons now share the same alignment rules across shell, widget, Backups, Projects, and Settings surfaces.
+- The build now reports unused exception-variable warnings again after the 1.7.5 cleanup pass removed the low-risk unused catch variables.
+- Credential profile cards in Settings now keep password visibility controls inside the card instead of clipping them at the edge.
 
 ### Performance and diagnostics
 - Dashboard refresh work now has verbose timing around data load, dispatcher wait, and individual rebuild phases.
@@ -47,6 +51,7 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 - SQLite schema startup code is split into clearer setup phases and avoids reopening the database for each column migration.
 - Windows notification failures and manual storage-health rechecks now stay quieter and keep UI updates on the UI thread.
 - Config fallback now records when VaultSync recovers from a broken primary config through the backup or last-known-good snapshot.
+- macOS tray Quit now closes VaultSync cleanly without the native menu teardown crash seen when quitting from the status-bar menu.
 
 ### Linux updates and shutdown
 - Protected Linux installs still fall back to installer updates when patching cannot safely write to the app folder, but Debian-family systems now hand the downloaded `.deb` directly to the OS elevation prompt instead of leaving users in the graphical app manager.

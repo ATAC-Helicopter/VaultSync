@@ -194,7 +194,10 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
+                Backup? backup = _repo.GetBackupById(backupId);
                 _repo.SetBackupProtection(backupId, isProtected);
+                if (backup is not null)
+                    BackupsViewModel.MarkSnapshotProtection(backup.SnapshotId, isProtected);
                 UpdateBackupProtectionMarker(backupId, isProtected);
             }
             catch
