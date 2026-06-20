@@ -176,7 +176,7 @@ jobs:
 
       - name: Setup MSBuild
         if: ${{ inputs.include_store_upload }}
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
 
       - name: Install Microsoft Store packaging workload
         if: ${{ inputs.include_store_upload }}
