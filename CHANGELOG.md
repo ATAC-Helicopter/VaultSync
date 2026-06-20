@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.8.0] - Unreleased
+## [1.8.0] - 20.06.2026
 ### Added
 - [VS-1814] Added guarded SonarQube Cloud analysis workflow and setup notes for the public OSS repository.
 - [VS-1815] Added SonarQube analysis exclusions for vendored rsync tooling and binary/build artifacts.

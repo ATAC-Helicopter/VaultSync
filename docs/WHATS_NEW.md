@@ -2,6 +2,8 @@
 
 ## [1.8.0]
 
+Released June 20, 2026.
+
 VaultSync `1.8.0` introduces Project History and Recovery Intelligence, with editable recovery-point context and readiness guidance.
 
 ### Project History

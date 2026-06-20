@@ -3,7 +3,7 @@ description: Report something that is not working as expected.
 title: "[Bug]: "
 labels:
   - bug
-  - release:1.7.5
+  - release:1.8.0
 assignees:
   - ATAC-Helicopter
 body:
@@ -16,7 +16,7 @@ body:
     attributes:
       label: VaultSync version
       description: Use the version shown in Settings, the installer name, or the About dialog.
-      placeholder: "1.7.5-Beta.1"
+      placeholder: "1.8.0"
     validations:
       required: true
   - type: dropdown

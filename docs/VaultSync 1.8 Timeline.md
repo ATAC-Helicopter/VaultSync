@@ -1,9 +1,10 @@
 # VaultSync 1.8 Roadmap
 ## Project History & Recovery
 
-Status: Approved Planning Draft  
-Version: 1.8.x Series  
-Last Updated: June 2026
+Status: 1.8.0 Released
+Version: 1.8.x Series
+Release Date: June 20, 2026
+Last Updated: June 20, 2026
 
 ---
 
@@ -21,7 +22,7 @@ The goal is to evolve VaultSync from a backup utility into a platform that helps
 - Measure recoverability
 - Improve disaster recovery readiness
 
-Version 1.8 introduces two major concepts that do not currently exist in VaultSync:
+Version 1.8 introduces two major concepts to VaultSync:
 
 ## History
 
@@ -76,7 +77,7 @@ Create, verify, and maintain backups.
 
 Primary area:
 
-text Backups 
+text Backups
 
 ---
 
@@ -86,7 +87,7 @@ Explore historical project states and changes.
 
 Primary area:
 
-text History 
+text History
 
 ---
 
@@ -96,7 +97,7 @@ Validate recoverability and disaster readiness.
 
 Primary area:
 
-text Recovery 
+text Recovery
 
 ---
 
@@ -104,11 +105,11 @@ text Recovery
 
 Current:
 
-text Dashboard Projects Backups Settings 
+text Dashboard Projects Backups Settings
 
 VaultSync 1.8:
 
-text Dashboard Projects Backups History Recovery Settings 
+text Dashboard Projects Backups History Recovery Settings
 
 ---
 
@@ -344,7 +345,7 @@ Foundation completed.
 
 ## New Navigation
 
-text Dashboard Projects Backups History Recovery Settings 
+text Dashboard Projects Backups History Recovery Settings
 
 ---
 
@@ -458,7 +459,7 @@ Visibility into recovery gaps.
 
 Example:
 
-text 24 Hours   ✓ 7 Days     ✓ 30 Days    ✓ 90 Days    ⚠ 
+text 24 Hours   ✓ 7 Days     ✓ 30 Days    ✓ 90 Days    ⚠
 
 ---
 
@@ -661,9 +662,9 @@ Users can measure disaster recovery readiness.
 
 Examples:
 
-text VaultSync ├─ UI ├─ CLI ├─ Documentation └─ Website 
+text VaultSync ├─ UI ├─ CLI ├─ Documentation └─ Website
 
-text Game Project ├─ Client ├─ Assets ├─ Audio └─ Documentation 
+text Game Project ├─ Client ├─ Assets ├─ Audio └─ Documentation
 
 ---
 
@@ -693,43 +694,43 @@ Users can manage project ecosystems efficiently.
 
 ## Snapshot Extensions
 
-text IsProtected IsKnownGood IsFavorite VersionTag 
+text IsProtected IsKnownGood IsFavorite VersionTag
 
 ---
 
 ## Snapshot Tag
 
-text Id SnapshotExternalId Name CreatedUtc 
+text Id SnapshotExternalId Name CreatedUtc
 
 ---
 
 ## Snapshot Note
 
-text Id SnapshotExternalId Content CreatedUtc 
+text Id SnapshotExternalId Content CreatedUtc
 
 ---
 
 ## Milestone
 
-text Id ProjectId Name Description SnapshotExternalId CreatedUtc 
+text Id ProjectId Name Description SnapshotExternalId CreatedUtc
 
 ---
 
 ## Recovery Drill
 
-text Id ProjectId Result CreatedUtc 
+text Id ProjectId Result CreatedUtc
 
 ---
 
 ## Recovery Report
 
-text Id ProjectId GeneratedUtc 
+text Id ProjectId GeneratedUtc
 
 ---
 
 ## Project Group
 
-text Id Name Description 
+text Id Name Description
 
 ---
 

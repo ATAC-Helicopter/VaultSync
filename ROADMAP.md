@@ -1780,10 +1780,11 @@
 - Project board: GitHub Project 7 (`@VaultSync Roadmap`), release field `1.8.x`.
 - `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
 
-### 1.8.0 status (2026-06-18)
+### 1.8.0 status (2026-06-20)
 - Feature scope is complete for Project History, snapshot metadata/markers, Dashboard recovery awareness, and Recovery v1.
 - Release build, tests, locale-key parity, dependency vulnerability audit, and the live pre-publish gate pass.
-- GitHub Project 7 reports all `1.8.0` milestone issues Done; publishing assets remains the post-merge release step.
+- The stable release date is June 20, 2026.
+- GitHub Project 7 reports all `1.8.0` implementation issues Done; PR #365 remains the merge item, and publishing assets remains the post-merge release step.
 
 ### 1.8 execution tickets
 - [ ] `VS-1801` `P2` Explore full repository backup mode including `.git`. _(Deferred beyond 1.8.0; tracked by #296)_

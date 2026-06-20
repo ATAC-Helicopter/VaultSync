@@ -3,7 +3,7 @@ description: Share feedback from a beta build before the stable release.
 title: "[Beta]: "
 labels:
   - beta
-  - release:1.7.5
+  - release:1.8.0
 assignees:
   - ATAC-Helicopter
 body:
@@ -15,7 +15,7 @@ body:
     id: version
     attributes:
       label: Beta version
-      placeholder: "1.7.5-Beta.1"
+      placeholder: "1.8.0-Beta.1"
     validations:
       required: true
   - type: dropdown
@@ -49,8 +49,8 @@ body:
       label: What did you test?
       options:
         - label: Fresh install
-        - label: Update from 1.7.4 stable
-        - label: Update from 1.7.4 beta
+        - label: Update from 1.7.5 stable
+        - label: Update from 1.7.5 beta
         - label: Existing projects loaded correctly
         - label: Backup completed
         - label: Restore completed
