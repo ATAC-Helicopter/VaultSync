@@ -352,7 +352,7 @@ jobs:
           Add-Content $env:GITHUB_STEP_SUMMARY "- Upload artifact: ``$targetPath``"
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-release-assets
           path: |
@@ -362,7 +362,7 @@ jobs:
 
       - name: Upload Microsoft Store artifact
         if: ${{ inputs.include_store_upload }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-store-upload
           path: |
@@ -431,7 +431,7 @@ jobs:
             --target "$TARGET_VERSION"
 
       - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-release-assets
           path: |
@@ -505,7 +505,7 @@ jobs:
             --target "$TARGET_VERSION"
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-release-assets
           path: |
