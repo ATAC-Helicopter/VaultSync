@@ -1246,7 +1246,10 @@ namespace VaultSync.UI.ViewModels
                     Console.WriteLine($"[MetadataSync] Export ({name}) result: {result.Status}.");
                     if (forceBackfillOverride is null &&
                         dest.ForceMetadataBackfill &&
-                        result.Status == MetadataSyncStatus.Success)
+                        result.Status == MetadataSyncStatus.Success &&
+                        (result.ImportedProjects > 0 ||
+                         result.ImportedSnapshots > 0 ||
+                         result.ImportedBackups > 0))
                     {
                         ClearDestinationForceBackfill(dest);
                     }

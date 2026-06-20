@@ -28,6 +28,7 @@
 - [VS-1818] Extended CI, PR quality gates, and CodeQL triggers to the active `release/v1.8` branch.
 - [VS-1820] Scoped release checks to the exact 1.8.0 milestone, aligned release docs, and enforced locale key parity.
 ### Fixed
+- [BUG-18056] Metadata exports now skip backups removed before asynchronous export and commit each shared SQLite metadata update atomically, reducing false invalid-store reports and lock contention.
 - [BUG-18055] Replaced the vulnerable SQLite native bundle with the maintained SQLitePCLRaw 3.x package graph.
 - [BUG-18054] Patched .NET 10 runtime-pack servicing alerts by pinning ASP.NET Core runtime downloads and Microsoft platform packages to `10.0.9`.
 - [BUG-18053] Restore target folders and sandbox apply paths now stay under their intended roots when project names or relative paths contain unsafe segments.

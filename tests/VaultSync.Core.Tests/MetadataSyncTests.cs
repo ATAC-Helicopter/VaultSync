@@ -914,6 +914,48 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ExportBackupToStore_MissingBackup_SkipsWithoutCreatingStore()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = CreateRepository(dbPath);
+        var service = new MetadataSyncService(repo);
+
+        MetadataSyncResult result = service.ExportBackupToStore(metaRoot, 180, "1.8.0", "machine-d");
+
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+        Assert.Equal(0, result.ImportedProjects);
+        Assert.Equal(0, result.ImportedSnapshots);
+        Assert.Equal(0, result.ImportedBackups);
+        Assert.False(File.Exists(new MetadataStore(metaRoot).DatabasePath));
+    }
+
+    [Fact]
+    public void MetadataStore_WriteBatch_RollsBackAllWritesOnFailure()
+    {
+        string metaRoot = CreateTempDir();
+        MetadataStore store = CreateStore(metaRoot);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            store.ExecuteWriteBatch(() =>
+            {
+                store.UpsertProject(new MetaProject
+                {
+                    ExternalId = "project-batch",
+                    Name = "Batch Project",
+                    Preset = "generic",
+                    RootPathHint = CreateTempDir(),
+                    CreatedUtc = DateTime.UtcNow,
+                    SettingsJson = "{}",
+                    UpdatedUtc = DateTime.UtcNow
+                });
+                throw new InvalidOperationException("Simulated export failure.");
+            }));
+
+        Assert.Empty(store.ListProjects());
+    }
+
+    [Fact]
     public void ImportFromStore_ProjectSettings_AppliesEncryptionPolicyAndKeyRef()
     {
         string metaRoot = CreateTempDir();
