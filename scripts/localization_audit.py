@@ -44,7 +44,8 @@ def is_intentional_exact_match(value: str) -> bool:
         return True
 
     without_placeholders = PLACEHOLDER_PATTERN.sub("", value)
-    if re.fullmatch(r"\s*:?\s*ms\s*", without_placeholders, re.IGNORECASE):
+    normalized_format = without_placeholders.strip().casefold().removeprefix(":").strip()
+    if normalized_format == "ms":
         return True
 
     return not without_placeholders.strip() or bool(
