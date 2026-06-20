@@ -14,9 +14,9 @@ name: "CodeQL Advanced"
 on:
   workflow_dispatch:
   push:
-    branches: [ "Dev", "Stable" ]
+    branches: [ "Dev", "Stable", "release/v1.8" ]
   pull_request:
-    branches: [ "Dev", "Stable" ]
+    branches: [ "Dev", "Stable", "release/v1.8" ]
   schedule:
     - cron: '31 14 * * 4'
 
@@ -102,4 +102,3 @@ jobs:
       uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{matrix.language}}"
-

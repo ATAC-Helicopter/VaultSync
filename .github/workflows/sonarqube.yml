@@ -1,0 +1,113 @@
+name: SonarQube
+
+on:
+  pull_request:
+    branches: [ "Dev", "Stable", "release/v1.8" ]
+  push:
+    branches: [ "Dev", "Stable", "release/v1.8" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: sonarqube-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    name: SonarQube Cloud analysis
+    runs-on: ubuntu-latest
+    env:
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    steps:
+      - name: Check SonarQube configuration
+        id: config
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          configured=true
+          if [[ -z "${SONAR_TOKEN}" ]]; then
+            echo "::notice::SONAR_TOKEN is not configured; skipping SonarQube analysis."
+            configured=false
+          fi
+          if [[ -z "${SONAR_ORGANIZATION}" ]]; then
+            echo "::notice::SONAR_ORGANIZATION repository variable is not configured; skipping SonarQube analysis."
+            configured=false
+          fi
+          if [[ -z "${SONAR_PROJECT_KEY}" ]]; then
+            echo "::notice::SONAR_PROJECT_KEY repository variable is not configured; skipping SonarQube analysis."
+            configured=false
+          fi
+
+          echo "configured=${configured}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Java
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install analysis tools
+        if: steps.config.outputs.configured == 'true'
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+          dotnet tool install --global dotnet-coverage
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Restore
+        if: steps.config.outputs.configured == 'true'
+        run: dotnet restore VaultSync.sln
+
+      - name: Begin SonarQube analysis
+        if: steps.config.outputs.configured == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          host_url="${SONAR_HOST_URL:-https://sonarcloud.io}"
+
+          dotnet sonarscanner begin \
+            /k:"${SONAR_PROJECT_KEY}" \
+            /o:"${SONAR_ORGANIZATION}" \
+            /d:sonar.host.url="${host_url}" \
+            /d:sonar.token="${SONAR_TOKEN}" \
+            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml \
+            /d:sonar.exclusions="coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
+            /d:sonar.coverage.exclusions="scripts/localization_audit.py,src/VaultSync.UI/**,src/VaultSync.Core/Services/BackupService.cs,src/VaultSync.Core/Services/NetworkMountService.cs,src/VaultSync.Core/Services/SnapshotService.cs" \
+            /d:sonar.test.inclusions="tests/**/*" \
+            /d:sonar.python.version="3"
+
+      - name: Build
+        if: steps.config.outputs.configured == 'true'
+        run: dotnet build VaultSync.sln --configuration Release --no-restore -p:UseSharedCompilation=false -m:1
+
+      - name: Test with coverage
+        if: steps.config.outputs.configured == 'true'
+        run: >
+          dotnet-coverage collect
+          "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build"
+          -f xml
+          -o coverage.xml
+
+      - name: End SonarQube analysis
+        if: steps.config.outputs.configured == 'true'
+        run: dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN}"

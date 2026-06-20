@@ -497,10 +497,10 @@ public sealed class BackupService(
         {
             requiredBytes = (long)Math.Ceiling(requiredBytes * 1.05d);
         }
-        bool hasEnoughSpace = !volumeFree.HasValue || volumeFree.Value >= requiredBytes;
-        string? warning = hasEnoughSpace
-            ? null
-            : $"Backup may not fit on the target. Required={requiredBytes} bytes, Free={volumeFree ?? 0} bytes.";
+        bool hasEnoughSpace = volumeFree is not long freeBytes || freeBytes >= requiredBytes;
+        string? warning = volumeFree is long knownFreeBytes && knownFreeBytes < requiredBytes
+            ? $"Backup may not fit on the target. Required={requiredBytes} bytes, Free={knownFreeBytes} bytes."
+            : null;
 
         double fallbackThroughput = GetFallbackThroughputMbSec(backupRoot, useArchiveMode);
         double usedThroughput = throughputMbSec > 0
@@ -793,7 +793,7 @@ public sealed class BackupService(
         var projectCts = new CancellationTokenSource();
         _cancelMap[project.Id] = projectCts;
 
-        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
         CancellationToken linkedToken = linkedCts.Token;
         await using CancellationTokenRegistration cancelLog = linkedToken.Register(() =>
             RuntimeLog.WriteVerbose($"[BackupService] Cancellation observed for project '{project.Name}' (Id={project.Id})."));
@@ -1085,7 +1085,7 @@ public sealed class BackupService(
 
                 string? password = _backupEncryptionSecretService.GetSecret(
                     resolvedEncryption.EffectiveKeyRef,
-                    username: "vaultsync-backup-encryption");
+                    username: BackupEncryptionCredentialIdentity.AccountName);
                 if (string.IsNullOrWhiteSpace(password))
                 {
                     throw new InvalidOperationException(
@@ -2585,13 +2585,6 @@ public sealed class BackupService(
         await task;
     }
 
-    /// <summary>
-    /// Computes the total bytes that will be included in the backup, using the same
-    /// filtering rules as SnapshotService.
-    /// </summary>
-    private static long ComputeBackupSize(string sourceDir, string preset, CancellationToken ct)
-        => ComputeBackupStats(sourceDir, preset, ct).totalBytes;
-
     private static (int totalFiles, long totalBytes) ComputeBackupStats(string sourceDir, string preset, CancellationToken ct)
     {
         var dirInfo = new DirectoryInfo(sourceDir);
@@ -2880,8 +2873,16 @@ public sealed class BackupService(
             return;
         }
 
-        // Keep all protected backups; apply the cap only to unprotected ones.
-        var unprotected = backups.Where(b => !b.IsProtected).ToList();
+        var metadataBySnapshotId = _repo.GetSnapshotHistoryMetadataBySnapshotIds(backups.Select(backup => backup.SnapshotId));
+        var protectedSnapshotIds = metadataBySnapshotId
+            .Where(static entry => entry.Value.IsProtected)
+            .Select(static entry => entry.Key)
+            .ToHashSet();
+
+        // Keep protected backups and protected snapshots; apply the cap only to eligible restore points.
+        var unprotected = backups
+            .Where(backup => !backup.IsProtected && !protectedSnapshotIds.Contains(backup.SnapshotId))
+            .ToList();
         int deleteQuota = Math.Max(0, unprotected.Count - maxToKeep);
         // Retention candidates are oldest first.
         var candidates = unprotected

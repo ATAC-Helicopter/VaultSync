@@ -1,0 +1,303 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+    x:Class="VaultSync.UI.Views.RecoveryView"
+    x:DataType="vm:RecoveryViewModel"
+    Background="{DynamicResource VS.WindowBackground}">
+
+  <UserControl.Styles>
+    <Style Selector="Border.recovery-card">
+      <Setter Property="Background" Value="{DynamicResource Surface1}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Border.recovery-soft">
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Border.recovery-pill">
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="8,4" />
+    </Style>
+    <Style Selector="TextBlock.recovery-label">
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="ProgressBar.recovery-bar">
+      <Setter Property="Height" Value="8" />
+      <Setter Property="Minimum" Value="0" />
+      <Setter Property="Maximum" Value="100" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="{DynamicResource PagePadding}">
+    <Grid RowDefinitions="Auto,Auto,*"
+          RowSpacing="16">
+      <Grid Grid.Row="0"
+            ColumnDefinitions="*,Auto"
+            ColumnSpacing="16">
+        <StackPanel Spacing="7">
+          <TextBlock Text="{infra:LocalizedString Key=Recovery.Title}"
+                     FontSize="26"
+                     FontWeight="SemiBold" />
+          <TextBlock Text="{CompiledBinding Headline}"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="{CompiledBinding Detail}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+        <Button Grid.Column="1"
+                Classes="action-ghost"
+                Content="{infra:LocalizedString Key=Common.Refresh}"
+                Command="{CompiledBinding RefreshCommand}"
+                VerticalAlignment="Top" />
+      </Grid>
+
+      <Grid Grid.Row="1"
+            ColumnDefinitions="1.3*,*,*,*"
+            ColumnSpacing="12">
+        <Border Classes="recovery-card"
+                Padding="18">
+          <Grid RowDefinitions="Auto,Auto,Auto"
+                RowSpacing="10">
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Score.Title}"
+                       Classes="recovery-label" />
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="Auto,*"
+                  ColumnSpacing="14">
+              <StackPanel Spacing="0">
+                <TextBlock Text="{CompiledBinding ReadinessScoreLabel}"
+                           FontSize="34"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="{CompiledBinding ReadinessBand}"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+              </StackPanel>
+              <TextBlock Grid.Column="1"
+                         Text="{CompiledBinding Insight}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap"
+                         MaxLines="3"
+                         VerticalAlignment="Center" />
+            </Grid>
+            <ProgressBar Grid.Row="2"
+                         Classes="recovery-bar"
+                         Value="{CompiledBinding ReadinessPercent}" />
+          </Grid>
+        </Border>
+
+        <Border Grid.Column="1"
+                Classes="recovery-card"
+                Padding="16">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Kpi.Ready}"
+                       Classes="recovery-label" />
+            <TextBlock Text="{CompiledBinding ReadyCount}"
+                       FontSize="30"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{CompiledBinding ProjectSummaryLabel}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       MaxLines="2" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="2"
+                Classes="recovery-card"
+                Padding="16">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Kpi.Attention}"
+                       Classes="recovery-label" />
+            <TextBlock Text="{CompiledBinding AttentionCount}"
+                       FontSize="30"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Kpi.Attention.Detail}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       MaxLines="2" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="3"
+                Classes="recovery-card"
+                Padding="16">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.Kpi.Risk}"
+                       Classes="recovery-label" />
+            <TextBlock FontSize="30"
+                       FontWeight="SemiBold">
+              <Run Text="{CompiledBinding RiskCount}" />
+              <Run Text="/" />
+              <Run Text="{CompiledBinding UnavailableCount}" />
+            </TextBlock>
+            <TextBlock Text="{infra:LocalizedString Key=Recovery.RiskPair.Detail}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       MaxLines="2" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <Grid Grid.Row="2"
+            ColumnDefinitions="360,*"
+            ColumnSpacing="16">
+        <StackPanel Spacing="12">
+          <Border Classes="recovery-card"
+                  Padding="18">
+            <StackPanel Spacing="14">
+              <TextBlock Text="{infra:LocalizedString Key=Recovery.Coverage.Title}"
+                         FontSize="16"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="{CompiledBinding CoverageSummary}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap" />
+
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                    RowSpacing="12">
+                <Grid ColumnDefinitions="44,*,Auto"
+                      ColumnSpacing="10">
+                  <TextBlock Text="24h" Classes="recovery-label" VerticalAlignment="Center" />
+                  <ProgressBar Grid.Column="1" Classes="recovery-bar" Value="{CompiledBinding Coverage24Percent}" />
+                  <TextBlock Grid.Column="2" Text="{CompiledBinding Coverage24Hours}" FontWeight="SemiBold" />
+                </Grid>
+                <Grid Grid.Row="1" ColumnDefinitions="44,*,Auto" ColumnSpacing="10">
+                  <TextBlock Text="7d" Classes="recovery-label" VerticalAlignment="Center" />
+                  <ProgressBar Grid.Column="1" Classes="recovery-bar" Value="{CompiledBinding Coverage7Percent}" />
+                  <TextBlock Grid.Column="2" Text="{CompiledBinding Coverage7Days}" FontWeight="SemiBold" />
+                </Grid>
+                <Grid Grid.Row="2" ColumnDefinitions="44,*,Auto" ColumnSpacing="10">
+                  <TextBlock Text="30d" Classes="recovery-label" VerticalAlignment="Center" />
+                  <ProgressBar Grid.Column="1" Classes="recovery-bar" Value="{CompiledBinding Coverage30Percent}" />
+                  <TextBlock Grid.Column="2" Text="{CompiledBinding Coverage30Days}" FontWeight="SemiBold" />
+                </Grid>
+                <Grid Grid.Row="3" ColumnDefinitions="44,*,Auto" ColumnSpacing="10">
+                  <TextBlock Text="90d" Classes="recovery-label" VerticalAlignment="Center" />
+                  <ProgressBar Grid.Column="1" Classes="recovery-bar" Value="{CompiledBinding Coverage90Percent}" />
+                  <TextBlock Grid.Column="2" Text="{CompiledBinding Coverage90Days}" FontWeight="SemiBold" />
+                </Grid>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="recovery-card"
+                  Padding="18">
+            <StackPanel Spacing="10">
+              <TextBlock Text="{infra:LocalizedString Key=Recovery.Recommendation.Title}"
+                         FontSize="16"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="{CompiledBinding TopRecommendation}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <Border Grid.Column="1"
+                Classes="recovery-card"
+                Padding="0">
+          <Grid RowDefinitions="Auto,*">
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12"
+                  Margin="18,16,18,12">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{infra:LocalizedString Key=Recovery.ProjectMatrix.Title}"
+                           FontSize="16"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="{infra:LocalizedString Key=Recovery.ProjectMatrix.FriendlyDetail}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <Border Grid.Column="1"
+                      Classes="recovery-pill"
+                      VerticalAlignment="Top">
+                <TextBlock Text="{CompiledBinding ProjectCount}"
+                           FontSize="11"
+                           FontWeight="SemiBold" />
+              </Border>
+            </Grid>
+
+            <Border Grid.Row="1"
+                    Classes="recovery-soft"
+                    Margin="18,0,18,18"
+                    Padding="18"
+                    IsVisible="{CompiledBinding !HasProjects}">
+              <TextBlock Text="{infra:LocalizedString Key=Recovery.Empty}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap" />
+            </Border>
+
+            <ItemsControl Grid.Row="1"
+                          ItemsSource="{CompiledBinding Projects}"
+                          IsVisible="{CompiledBinding HasProjects}"
+                          Margin="18,0,18,18">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Classes="recovery-soft"
+                          Padding="14"
+                          Margin="0,0,0,10">
+                    <Grid RowDefinitions="Auto,Auto,Auto"
+                          RowSpacing="8">
+                      <Grid ColumnDefinitions="*,Auto,Auto"
+                            ColumnSpacing="10">
+                        <TextBlock Text="{Binding ProjectName}"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding ScoreLabel}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <Border Grid.Column="2"
+                                Classes="recovery-pill"
+                                Background="{Binding Accent}"
+                                BorderBrush="{Binding Accent}">
+                          <TextBlock Text="{Binding Label}"
+                                     FontSize="10"
+                                     Foreground="White"
+                                     FontWeight="SemiBold" />
+                        </Border>
+                      </Grid>
+
+                      <TextBlock Grid.Row="1"
+                                 Text="{Binding Reason}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 TextWrapping="Wrap"
+                                 MaxLines="2" />
+
+                      <Grid Grid.Row="2"
+                            ColumnDefinitions="*,Auto"
+                            ColumnSpacing="12">
+                        <ProgressBar Classes="recovery-bar"
+                                     Value="{Binding ScoreValue}"
+                                     Foreground="{Binding Accent}" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding TrackLabel}"
+                                   Classes="recovery-label"
+                                   VerticalAlignment="Center" />
+                      </Grid>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

@@ -63,14 +63,7 @@ namespace VaultSync.UI.ViewModels
             var vm = new LogConsoleViewModel(_logConsoleService);
             var window = new LogConsoleWindow(vm);
 
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
-            {
-                window.Show();
-            }
-            else
-            {
-                window.Show();
-            }
+            window.Show();
 
             window.Closed += (_, _) =>
             {
@@ -115,7 +108,17 @@ namespace VaultSync.UI.ViewModels
             else if (CurrentView == _backupsViewModel)
             {
                 HeaderTitle  = L("Nav.Backups", "Backups");
-                HeaderKicker = L("Main.HeaderBackups", "Snapshots & history");
+                HeaderKicker = L("Main.HeaderBackups", "Snapshots & restore");
+            }
+            else if (CurrentView == _historyViewModel)
+            {
+                HeaderTitle  = L("Nav.History", "History");
+                HeaderKicker = L("Main.HeaderHistory", "Project timeline");
+            }
+            else if (CurrentView == _recoveryViewModel)
+            {
+                HeaderTitle  = L("Nav.Recovery", "Recovery");
+                HeaderKicker = L("Main.HeaderRecovery", "Readiness & coverage");
             }
             else if (CurrentView == _settingsViewModel)
             {
@@ -462,7 +465,10 @@ namespace VaultSync.UI.ViewModels
             if (IsEnvFlagEnabled("VAULTSYNC_FORCE_INSTALLER_FALLBACK"))
                 return true;
 
-            return !OperatingSystem.IsWindows() && !CanWriteInstallDir(installDir);
+            if (OperatingSystem.IsWindows() || CanWriteInstallDir(installDir))
+                return false;
+
+            return !PatchInstallService.CanLaunchProtectedPatchInstall(installDir);
         }
 
         private void NotifyPatchAvailabilityChanged()

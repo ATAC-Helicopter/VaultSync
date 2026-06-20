@@ -18,8 +18,6 @@ namespace VaultSync.UI.Services;
 
 public sealed class ProjectEncryptionEnrollmentService
 {
-    private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
-
     private readonly SqliteRepository _repo;
     private readonly CredentialVault _credentialVault;
     private readonly Func<Window?> _getOwner;
@@ -97,7 +95,7 @@ public sealed class ProjectEncryptionEnrollmentService
             : project.EncryptionKeyRef.Trim();
         bool hasExistingSecret = !string.IsNullOrWhiteSpace(_credentialVault.GetSecret(
             existingKeyRef,
-            BackupEncryptionSecretUsername,
+            BackupEncryptionCredentialIdentity.AccountName,
             preferKeychain: true,
             fallbackPlaintext: null));
 
@@ -109,7 +107,7 @@ public sealed class ProjectEncryptionEnrollmentService
         {
             if (dialogResult.ClearRequested)
             {
-                _credentialVault.DeleteSecret(existingKeyRef, BackupEncryptionSecretUsername);
+                _credentialVault.DeleteSecret(existingKeyRef, BackupEncryptionCredentialIdentity.AccountName);
                 _repo.UpdateProjectEncryptionSettings(project.Id, project.EncryptionPolicy, null);
             }
             else
@@ -119,7 +117,7 @@ public sealed class ProjectEncryptionEnrollmentService
                     return;
 
                 string keyRef = _credentialVault.EnsureKeyRef(existingKeyRef, $"project-{project.Name}");
-                _credentialVault.SaveSecret(keyRef, BackupEncryptionSecretUsername, normalizedPassword, preferKeychain: true);
+                _credentialVault.SaveSecret(keyRef, BackupEncryptionCredentialIdentity.AccountName, normalizedPassword, preferKeychain: true);
                 _repo.UpdateProjectEncryptionSettings(project.Id, project.EncryptionPolicy, keyRef);
             }
 

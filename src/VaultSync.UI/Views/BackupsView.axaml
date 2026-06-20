@@ -1539,7 +1539,7 @@
               </StackPanel>
             </Border>
 
-            <!-- HISTORY -->
+            <!-- Snapshot inventory -->
             <Border x:Name="BackupsHistorySection"
                     Classes="card"
                     CornerRadius="18"
@@ -1548,14 +1548,18 @@
 
               <StackPanel Spacing="12">
 
-                <!-- History header + filters -->
+                <!-- Snapshot inventory header + filters -->
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,0,0,2">
 
                   <StackPanel Grid.Column="0" Spacing="6">
-                    <TextBlock Text="{infra:LocalizedString Key=Backups.Section.HistoryTitle}"
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Section.SnapshotInventoryTitle}"
                                FontSize="14"
                                FontWeight="SemiBold" />
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Section.SnapshotInventoryDescription}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal"
                                 Spacing="8"
                                 VerticalAlignment="Center">

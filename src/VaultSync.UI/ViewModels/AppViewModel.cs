@@ -97,6 +97,8 @@ namespace VaultSync.UI.ViewModels
         private DashboardViewModel? _dashboardViewModel;
         private readonly ProjectsViewModel _projectsViewModel;
         private BackupsViewModel? _backupsViewModel;
+        private HistoryViewModel? _historyViewModel;
+        private RecoveryViewModel? _recoveryViewModel;
         private readonly SettingsViewModel _settingsViewModel;
         private readonly IAppConfigStore _configStore;
         private readonly IRepositoryFactory _repositoryFactory;
@@ -137,7 +139,6 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan EncryptedOpenStaleRetention = TimeSpan.FromMinutes(30);
         private static readonly ConcurrentDictionary<string, CancellationTokenSource> _encryptedOpenCleanup = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<int, EncryptedOpenUnlockSession> _encryptedOpenSessions = new();
-        private const string BackupEncryptionSecretUsername = "vaultsync-backup-encryption";
         private DateTime _lastDestinationScanUtc = DateTime.MinValue;
         private int _destinationScanInFlight;
         private int _destinationOverviewRefreshInFlight;
@@ -182,8 +183,6 @@ namespace VaultSync.UI.ViewModels
         private static readonly TimeSpan InitialDataLoadDelay = TimeSpan.FromMilliseconds(750);
         private int _dashboardWarmLoadQueued;
         private int _backupsWarmLoadQueued;
-        private readonly GitHubUpdateService _updateService = new();
-        private readonly PatchUpdateService _patchService = new();
         private readonly LocalizationService _localizationService = new();
         private readonly Stopwatch _startupDiagnosticsStopwatch = Stopwatch.StartNew();
         private readonly object _startupDiagnosticsGate = new();
@@ -588,6 +587,8 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(IsDashboardActive));
                 OnPropertyChanged(nameof(IsProjectsViewActive));
                 OnPropertyChanged(nameof(IsBackupsViewActive));
+                OnPropertyChanged(nameof(IsHistoryActive));
+                OnPropertyChanged(nameof(IsRecoveryActive));
                 OnPropertyChanged(nameof(IsSettingsActive));
             }
         }
@@ -599,9 +600,27 @@ namespace VaultSync.UI.ViewModels
         public bool IsDashboardActive => CurrentViewName == "Dashboard";
         public bool IsProjectsViewActive => CurrentViewName == "Projects";
         public bool IsBackupsViewActive => CurrentViewName == "Backups";
+        public bool IsHistoryActive => CurrentViewName == "History";
+        public bool IsRecoveryActive => CurrentViewName == "Recovery";
         public bool IsSettingsActive => CurrentViewName == "Settings";
         public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
         public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(_configStore, _repositoryFactory);
+        public HistoryViewModel HistoryViewModel
+        {
+            get
+            {
+                if (_historyViewModel is not null)
+                    return _historyViewModel;
+
+                var vm = new HistoryViewModel(_configStore, _repositoryFactory);
+                vm.OpenBackupFolderRequested += OpenBackupFolder;
+                vm.OpenRecoveryRequested += () => SetCurrentView("Recovery");
+                vm.BackupProtectionChanged += OnBackupProtectionChanged;
+                _historyViewModel = vm;
+                return vm;
+            }
+        }
+        public RecoveryViewModel RecoveryViewModel => _recoveryViewModel ??= new RecoveryViewModel(_configStore, _repositoryFactory);
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;
         public ICommand SkipUpdateCommand => _skipUpdateCommand;

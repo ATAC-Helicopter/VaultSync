@@ -51,6 +51,74 @@ public sealed class BackupCryptoDescriptorTests
         Assert.Equal("unknown", descriptor.KdfProfile);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("{}")]
+    public void Descriptor_EncryptedMetadataWithoutCryptoFields_UsesUnknownDescriptor(string descriptorJson)
+    {
+        var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted: true, descriptorJson: descriptorJson);
+
+        Assert.Equal(BackupCryptoDescriptor.CurrentFormatVersion, descriptor.FormatVersion);
+        Assert.Equal("unknown", descriptor.Algorithm);
+        Assert.Equal("unknown", descriptor.KdfProfile);
+        Assert.Equal(string.Empty, descriptor.KdfParamRef);
+    }
+
+    [Fact]
+    public void Descriptor_ParsesLegacyAndCaseInsensitiveMetadata()
+    {
+        const string json = """
+                            {
+                              "FORMATVERSION": 4,
+                              "cipher": " aes-256-cbc ",
+                              "KDF": " pbkdf2-sha256-v1 ",
+                              "paramsId": " strong-profile "
+                            }
+                            """;
+
+        var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted: true, descriptorJson: json);
+
+        Assert.Equal(4, descriptor.FormatVersion);
+        Assert.Equal("aes-256-cbc", descriptor.Algorithm);
+        Assert.Equal("pbkdf2-sha256-v1", descriptor.KdfProfile);
+        Assert.Equal("strong-profile", descriptor.KdfParamRef);
+    }
+
+    [Fact]
+    public void Descriptor_ToMetadataJson_NormalizesInvalidEncryptedValues()
+    {
+        var descriptor = new BackupCryptoDescriptor
+        {
+            FormatVersion = -7,
+            Algorithm = "  ",
+            KdfProfile = " pbkdf2-sha256-v1 ",
+            KdfParamRef = " profile-2026 "
+        };
+
+        string json = descriptor.ToMetadataJson(isEncrypted: true);
+        var parsed = BackupCryptoDescriptor.FromMetadata(isEncrypted: true, descriptorJson: json);
+
+        Assert.Equal(BackupCryptoDescriptor.CurrentFormatVersion, parsed.FormatVersion);
+        Assert.Equal("unknown", parsed.Algorithm);
+        Assert.Equal("pbkdf2-sha256-v1", parsed.KdfProfile);
+        Assert.Equal("profile-2026", parsed.KdfParamRef);
+    }
+
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("""{"formatVersion":"bad","algorithm":42,"kdfProfile":false,"kdfParamRef":{}}""")]
+    public void Descriptor_InvalidEncryptedMetadataShape_FallsBackToSafeValues(string descriptorJson)
+    {
+        var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted: true, descriptorJson: descriptorJson);
+
+        Assert.Equal(BackupCryptoDescriptor.CurrentFormatVersion, descriptor.FormatVersion);
+        Assert.Equal("unknown", descriptor.Algorithm);
+        Assert.Equal("unknown", descriptor.KdfProfile);
+        Assert.Equal(string.Empty, descriptor.KdfParamRef);
+    }
+
     [Fact]
     public void MetadataStore_UpsertBackup_StripsSecretCryptoFields()
     {

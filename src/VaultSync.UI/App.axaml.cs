@@ -1323,6 +1323,7 @@ public partial class App : Application
                 _instance?.DestroyTrayIcon();
                 CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
+                DiagnosticsLogger.Shutdown();
             };
 
             desktop.ShutdownRequested += (_, e) =>
@@ -1337,6 +1338,7 @@ public partial class App : Application
                 DiagnosticsLogger.Record($"ProcessExit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
                 CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "process_exit"));
+                DiagnosticsLogger.Shutdown();
             };
         }
         catch

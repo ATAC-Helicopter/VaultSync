@@ -28,7 +28,7 @@
   - `- [ ] \`VS-xxxx\` Title`
   - Optional details/acceptance criteria stay as indented bullets below the ticket.
 - Use release sections as routing signals:
-  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## Future backlog`, `## 1.9.x`
+  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## 1.8.x`, `## Future backlog`, `## 1.9.x`
 - For new work, always include:
   - ID (`VS-xxxx`)
   - Priority marker (`P0/P1/P2`) at the start of the ticket line when relevant.
@@ -1772,6 +1772,74 @@
     - accepting Refresh History changes does not freeze the app shell
     - imported root hints under VaultSync temp folders fall back to the configured Projects Root
     - temp root mapping behavior has regression coverage
+
+## 1.8.x
+### Release intent
+- `1.8` should introduce Project History and Recovery Intelligence without turning VaultSync into a Git replacement.
+- Full planning source: `docs/VaultSync 1.8 Timeline.md`.
+- Project board: GitHub Project 7 (`@VaultSync Roadmap`), release field `1.8.x`.
+- `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
+
+### 1.8.0 status (2026-06-20)
+- Feature scope is complete for Project History, snapshot metadata/markers, Dashboard recovery awareness, and Recovery v1.
+- Release build, tests, locale-key parity, dependency vulnerability audit, and the live pre-publish gate pass.
+- The stable release date is June 20, 2026.
+- GitHub Project 7 reports all `1.8.0` implementation issues Done; PR #365 remains the merge item, and publishing assets remains the post-merge release step.
+
+### 1.8 execution tickets
+- [ ] `VS-1801` `P2` Explore full repository backup mode including `.git`. _(Deferred beyond 1.8.0; tracked by #296)_
+- [x] `VS-1802` `P0` Build 1.8 metadata foundation for history and recovery. _(Done in commit `1dcec31`, tracked by #354)_
+  - Done: snapshot history metadata and restore event tables are in place with idempotent schema coverage and repository tests.
+- [x] `VS-1803` `P1` Add 1.8 shell navigation for History and Recovery. _(Done in commit `72b77b2`, tracked by #355)_
+- [x] `VS-1804` `P1` Implement History v1 project timeline. _(Done in commit `d608986`, tracked by #356)_
+  - Done: History renders a full-window, selectable Git-client-style activity graph with persistent lanes for backups, snapshot metadata, imports, and restores.
+- [x] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(Done 2026-06-18, tracked by #357)_
+  - Done: History edits labels, notes, and normalized comma-separated tags for selected snapshots.
+  - Done: History, Backups, and Recovery expose shared protected and known-good recovery-point state.
+  - Done: backup retention and retention simulation honor protected snapshot metadata.
+- [x] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(Done 2026-06-18, tracked by #358)_
+  - Done: Dashboard shows restore-readiness counts, attention review, and 24-hour/7-day/30-day/90-day recovery coverage.
+  - Done: recovery coverage uses the same tested core calculation as the Recovery page.
+  - Done: recent activity includes restore milestones, and workflow links route to History, Recovery, and Backups.
+- [x] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Done in PR #365, tracked by #359)_
+  - Done: Recovery page shows readiness score/band, coverage windows, project priority ordering, and actionable recommendations.
+- [ ] `VS-1808` `P2` Build Snapshot Explorer v1. _(Deferred to a later 1.8.x release; tracked by #360)_
+- [ ] `VS-1809` `P2` Add snapshot compare and change intelligence. _(Deferred to a later 1.8.x release; tracked by #361)_
+- [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
+- [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
+- [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
+- [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_
+  - Done: guarded SonarQube Cloud analysis, setup docs, and 1.8 changelog coverage are in place for active release branches.
+- [x] `VS-1815` `P1` Tune SonarQube scope for vendored tooling. _(Done, tracked by #373; completed 2026-06-08)_
+  - Done: rsync vendored documentation, binary assets, build outputs, and backup artifacts are excluded from maintained-code analysis scope.
+- [x] `VS-1816` `P0` Harden release asset workflow inputs. _(Done, tracked by #374; completed 2026-06-08)_
+  - Done: manual release inputs are passed through environment variables before shell use and PR YAML lint blocks npm lifecycle scripts.
+- [x] `VS-1817` `P1` Review backup archive IV Sonar finding. _(Done, tracked by #375; completed 2026-06-08)_
+  - Done: per-archive random salt/IV generation remains intact and is now analyzer-visible before encryption.
+- [x] `BUG-18052` `P1` Dispose cancellation resources flagged by Sonar. _(Done, tracked by #376; completed 2026-06-08)_
+  - Done: linked backup CTS, diagnostics writer CTS, and onboarding scroll CTS resources are disposed on replacement or shutdown.
+- [x] `VS-1818` `P2` Triage Stable Sonar maintainability backlog. _(Done 2026-06-18, tracked by #377)_
+  - Done: first-pass reliability/unreachable-code cleanups, release/v1.8 CI triggers, and restore path hardening landed.
+  - Done: remaining owned complexity work was split into `VS-1821`, `VS-1822`, and `VS-1823`.
+- [x] `BUG-18053` `P1` Keep restore target paths under intended roots. _(Done in `release/v1.8`)_
+  - Done: generated restore project folders sanitize project names, and restore preview/copy paths use the existing root-bound combine guard.
+- [x] `BUG-18047` `P1` Let Linux patch updates elevate through `pkexec` before falling back to `.deb` installer flows. _(Done 2026-06-03, tracked by #368)_
+- [x] `BUG-18048` `P1` Harden Projects page loading so visible project content appears reliably. _(Done 2026-06-03, tracked by #366)_
+  - Done: Projects refresh runs on the UI thread, page attach triggers loading, and stale visible lists rebuild from the backing project cache.
+- [x] `BUG-18049` `P1` Preserve macOS `/Volumes` destination semantics when mounted paths deny access. _(Done 2026-06-03, tracked by #367)_
+- [x] `BUG-18050` `P1` Keep Projects and Backups navigation responsive while data loads. _(Done in `release/v1.8`)_
+  - Done: Projects and Backups switch views before hydration work starts, and Backups history filtering/grouping is coalesced and shaped off the UI thread.
+- [x] `VS-1813` `P1` Clarify Backups versus History responsibilities and add History view customization. _(Done in `release/v1.8`)_
+  - Done: Backups now presents its lower section as snapshot inventory for restore-point operations, while History owns project/activity/lane/time filtering for timeline exploration.
+- [x] `BUG-18051` `P1` Keep project selection and History paging responsive. _(Done in `release/v1.8`)_
+  - Done: Projects no longer reload preset files or persist refreshed DB state during selection, selected-project snapshot detail is capped to recent entries, and History filters/pages are shaped off the UI thread.
+- [x] `BUG-18055` `P0` Replace vulnerable SQLite native bundle before 1.8.0. _(Done 2026-06-18, tracked by #378)_
+  - Done: SQLitePCLRaw 3.0.3 resolves a maintained native SQLite graph and the full vulnerability audit is clean.
+- [x] `VS-1820` `P1` Complete 1.8.0 release-readiness hardening. _(Done 2026-06-18, tracked by #379)_
+  - Done: Dashboard recovery coverage, locale key parity, release docs, release-gate milestone scoping, and regression tests are complete.
+- [ ] `VS-1821` `P2` Split backup and metadata service complexity hotspots. _(Tracked by #380)_
+- [ ] `VS-1822` `P2` Split oversized desktop view-model hotspots. _(Tracked by #381)_
+- [ ] `VS-1823` `P1` Add large-history performance budgets and release benchmarks. _(Tracked by #382)_
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.

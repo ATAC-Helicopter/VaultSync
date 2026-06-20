@@ -1,5 +1,47 @@
 ﻿# Changelog
-## [1.7.5] - Unreleased
+## [1.8.0] - 20.06.2026
+### Added
+- [VS-1814] Added guarded SonarQube Cloud analysis workflow and setup notes for the public OSS repository.
+- [VS-1815] Added SonarQube analysis exclusions for vendored rsync tooling and binary/build artifacts.
+- [VS-1802] Added 1.8 history metadata tables for snapshot labels, notes, tags, protected, known-good, and restore events.
+- [VS-1803] Added first-class History and Recovery navigation with data-backed pages for the 1.8 project-history release.
+- [VS-1804] Added a full-window selectable project History workspace backed by live repository activity, with reversible time filters, denser paging, event details, and an origin-aware Git-client-style graph where snapshot notes, imports, and restores branch from their backup/snapshot source.
+- [VS-1805] Added editable snapshot labels, notes, tags, protected markers, and known-good recovery points.
+- [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
+- [VS-1806] Added Dashboard readiness, recovery-coverage windows, attention review, restore activity, and workflow links.
+- [VS-1804] Redesigned History as a connected Git/subway-style timeline workspace with modular expandable event stations and a persistent event inspector.
+### Changed
+- [VS-1804] Reworked History into a readable recovery timeline with search, product-style event cards, compact mode, stronger selected-state details, recovery status, metrics, and snapshot notes/actions replacing the graph-heavy default view.
+- [VS-1804] Wired History detail actions for opening backup contents, jumping into Recovery, and reviewing snapshot change summaries, with cleaner accessible action buttons and marker controls.
+- [VS-1805] Completed History editing for snapshot labels, notes, tags, protected markers, and known-good markers.
+- [VS-1805] Unified History snapshot protection with Backups “Keep” state so both pages and retention use the same protection marker.
+- [VS-1812] Localized the completed History workspace and replaced stale “coming next” metadata copy with current 1.8 behavior.
+- [VS-1818] Closed the 1.8 Sonar triage pass; remaining complexity hotspots are tracked as follow-up maintenance rather than release feature work.
+- [VS-1819] Refactored History timeline data shaping and removed unreachable/dead helper code flagged by SonarQube in the 1.8 PR.
+- [VS-1813] History now supports activity, project, lane, and time-range filtering, while the Backups page frames its lower section as a snapshot inventory for restore-point operations instead of a competing history timeline.
+- [VS-1806] Recovery readiness now accounts for protected and known-good snapshot markers when metadata is available.
+- [VS-1816] Hardened release asset workflow input handling so manually supplied versions are passed through quoted environment variables instead of direct shell interpolation.
+- [VS-1812] Moved active development version metadata and What's New notes to `1.8.0`, linked the repo roadmap to the 1.8 planning timeline, and moved History/Recovery teaser copy behind localization keys.
+- [VS-1815] Tuned SonarQube quality scope and dispositions for vendored rsync documentation and credential-vault identifiers.
+- [VS-1816] Hardened release asset workflow inputs and PR YAML lint installs against SonarQube security findings.
+- [VS-1817] Kept backup archive IV generation analyzer-visible while preserving the encrypted archive envelope format.
+- [VS-1818] Extended CI, PR quality gates, and CodeQL triggers to the active `release/v1.8` branch.
+- [VS-1820] Scoped release checks to the exact 1.8.0 milestone, aligned release docs, and enforced locale key parity.
+### Fixed
+- [BUG-18055] Replaced the vulnerable SQLite native bundle with the maintained SQLitePCLRaw 3.x package graph.
+- [BUG-18054] Patched .NET 10 runtime-pack servicing alerts by pinning ASP.NET Core runtime downloads and Microsoft platform packages to `10.0.9`.
+- [BUG-18053] Restore target folders and sandbox apply paths now stay under their intended roots when project names or relative paths contain unsafe segments.
+- [BUG-18052] Disposed Sonar-flagged cancellation resources in backup runs, diagnostics logging, and onboarding tour scrolling.
+- [BUG-18045] macOS tray shutdown no longer crashes when quitting from the native tray menu during menu teardown.
+- [BUG-18047] Linux patch updates can now elevate through `pkexec` for protected installs instead of hiding behind the `.deb` installer fallback.
+- [BUG-18048] Projects now reload visible content on page attach and recover stale visible lists safely.
+- [BUG-18049] macOS mounted `/Volumes` destinations are no longer treated as creatable local folders when access is denied.
+- [BUG-18050] Projects and Backups navigation no longer blocks the UI while cached data and history groups load.
+- [BUG-18051] Project selection and History paging no longer run preset-file reads, redundant project persistence, or timeline page shaping directly in the UI interaction path.
+- [BUG-18052] Backup, diagnostics, and onboarding scroll cancellation resources are now disposed on completion or teardown.
+- [BUG-18055] History and Backups no longer show conflicting protection state for the same snapshot.
+
+## [1.7.5] - 31.05.2026
 ### Changed
 - [VS-1745] Centralized NuGet package versions in `Directory.Packages.props` and removed unused package references.
 - [VS-1746] Routed app configuration access through a shared `IAppConfigStore` adapter so core, CLI, and UI code no longer depend directly on static config calls.

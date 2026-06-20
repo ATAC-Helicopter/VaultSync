@@ -1,5 +1,32 @@
 # What's New
 
+## [1.8.0]
+
+Released June 20, 2026.
+
+VaultSync `1.8.0` introduces Project History and Recovery Intelligence, with editable recovery-point context and readiness guidance.
+
+### Project History
+- History now has a dedicated navigation entry and reads real backup, snapshot, restore, and metadata activity.
+- The History workspace provides timeline and compact views with project, activity, lane, date, and text filtering.
+- Important snapshots can be labeled, documented, tagged, protected from cleanup, and marked as known-good recovery points.
+- Protection state is shared with the Backups page, so History markers, Backups “Keep,” and retention decisions remain consistent.
+- Successful restores are recorded alongside backup and metadata activity.
+
+### Recovery
+- Recovery now has a dedicated navigation entry and shows readiness, coverage, and project priority data from the local repository.
+- Recovery rows are ordered by attention needed so the weakest restore baseline is visible first.
+- Dashboard readiness and attention widgets link directly into History, Recovery, and Backups workflows.
+- Dashboard now summarizes 24-hour, 7-day, 30-day, and 90-day recovery coverage using the same calculation as Recovery.
+
+### Release readiness
+- The 1.8 roadmap is now tracked in the repository and mirrored into GitHub Project 7.
+- The 1.8 branch and development metadata now target `1.8.0`.
+- All shipped locale files have exact key parity, with English fallback text retained where native translations still need review.
+- The SQLite native runtime graph was updated to remove the pre-release High-severity dependency advisory.
+- Release checks now use the exact `1.8.0` milestone so later 1.8.x features do not block this release.
+- Snapshot Explorer, advanced compare intelligence, disaster-recovery drills, and project groups remain planned for later `1.8.x` releases.
+
 ## [1.7.5]
 
 Current `1.7.5` highlights focus on making the codebase more reusable and maintainable while tightening metadata-import performance diagnostics.

@@ -31,3 +31,12 @@ public sealed class RestoreReadinessSummary
     public string Detail { get; init; } = string.Empty;
     public IReadOnlyList<ProjectRestoreReadiness> Projects { get; init; } = [];
 }
+
+public sealed class RecoveryCoverageSummary
+{
+    public int ProjectCount { get; init; }
+    public int Within24Hours { get; init; }
+    public int Within7Days { get; init; }
+    public int Within30Days { get; init; }
+    public int Within90Days { get; init; }
+}

@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using Avalonia;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels;
 
@@ -11,11 +12,18 @@ namespace VaultSync.UI.Views
         public ProjectsView()
         {
             InitializeComponent();
+            AttachedToVisualTree += OnAttachedToVisualTree;
         }
 
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
+        }
+
+        private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+        {
+            if (DataContext is ProjectsViewModel vm)
+                vm.EnsureLoaded();
         }
 
         private void OnProjectTagPillDoubleTapped(object? sender, TappedEventArgs e)

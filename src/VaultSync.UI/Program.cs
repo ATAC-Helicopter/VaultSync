@@ -68,7 +68,7 @@ internal static class Program
                 Console.WriteLine($"[Startup] Native render timer failed: {ex.Message}. Falling back to software rendering.");
                 DiagnosticsLogger.Record($"Native render timer failed. Falling back to software. Error={ex.Message}");
                 DiagnosticsLogger.RecordStartupSnapshot(args, useSoftwareFallback: true);
-                BuildAvaloniaApp(useSoftwareFallback: true).StartWithClassicDesktopLifetime(args);
+                BuildAvaloniaAppWithSoftwareFallback().StartWithClassicDesktopLifetime(args);
             }
         }
         finally
@@ -83,6 +83,7 @@ internal static class Program
             _instanceMutex.Dispose();
             _instanceMutex = null;
             DiagnosticsLogger.Record("Process exit cleanup complete.");
+            DiagnosticsLogger.Shutdown();
         }
     }
 
@@ -350,7 +351,13 @@ internal static class Program
     }
 
 
-    public static AppBuilder BuildAvaloniaApp(bool useSoftwareFallback = false)
+    public static AppBuilder BuildAvaloniaApp()
+        => BuildAvaloniaAppCore(useSoftwareFallback: false);
+
+    private static AppBuilder BuildAvaloniaAppWithSoftwareFallback()
+        => BuildAvaloniaAppCore(useSoftwareFallback: true);
+
+    private static AppBuilder BuildAvaloniaAppCore(bool useSoftwareFallback)
     {
         var builder = AppBuilder.Configure<App>();
         if (useSoftwareFallback && OperatingSystem.IsMacOS())
@@ -402,6 +409,4 @@ internal static class Program
             .UsePlatformDetect()
             .LogToTrace(LogEventLevel.Warning);
 
-    public static AppBuilder BuildAvaloniaApp()
-        => BuildAvaloniaApp(useSoftwareFallback: false);
 }

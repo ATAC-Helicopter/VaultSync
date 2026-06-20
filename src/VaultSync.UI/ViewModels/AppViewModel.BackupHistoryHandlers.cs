@@ -1310,6 +1310,8 @@ namespace VaultSync.UI.ViewModels
                 true,
                 backupFullPath,
                 projectRoot,
+                backup.Id,
+                backup.SnapshotId,
                 project.Id,
                 project.Name,
                 restoreMode,
@@ -1322,6 +1324,8 @@ namespace VaultSync.UI.ViewModels
             bool IsReady,
             string BackupFullPath,
             string ProjectRoot,
+            int BackupId,
+            int SnapshotId,
             int ProjectId,
             string ProjectName,
             string RestoreMode,
@@ -1333,6 +1337,8 @@ namespace VaultSync.UI.ViewModels
                 false,
                 string.Empty,
                 string.Empty,
+                0,
+                0,
                 0,
                 string.Empty,
                 ProjectRestoreMode.Direct,
@@ -1357,7 +1363,7 @@ namespace VaultSync.UI.ViewModels
             {
                 string? secret = _credentialVault.GetSecret(
                     keyRef,
-                    BackupEncryptionSecretUsername,
+                    BackupEncryptionCredentialIdentity.AccountName,
                     preferKeychain: true,
                     fallbackPlaintext: null);
 
@@ -1371,12 +1377,9 @@ namespace VaultSync.UI.ViewModels
         private string ResolveRestoreTarget(Project project, string restoreMode)
         {
             string mode = ProjectRestoreMode.Normalize(restoreMode);
+            string safeProjectName = SanitizeProjectDirectoryName(project.Name);
             if (string.Equals(mode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase))
             {
-                string safeProjectName = string.Concat(project.Name.Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch));
-                if (string.IsNullOrWhiteSpace(safeProjectName))
-                    safeProjectName = "Project";
-
                 string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
                 string sandboxRoot = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -1396,7 +1399,7 @@ namespace VaultSync.UI.ViewModels
             AppConfig cfg = _configStore.GetSnapshot();
             if (!string.IsNullOrWhiteSpace(cfg.ProjectsRoot))
             {
-                string projectsRoot = Path.Combine(cfg.ProjectsRoot, project.Name);
+                string projectsRoot = Path.Combine(cfg.ProjectsRoot, safeProjectName);
                 Directory.CreateDirectory(projectsRoot);
                 TryUpdateProjectRootPath(project, projectsRoot);
                 RuntimeLog.WriteVerbose($"[Restore] Project root missing. Using ProjectsRoot '{projectsRoot}'.");
@@ -1406,13 +1409,31 @@ namespace VaultSync.UI.ViewModels
             string fallbackRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 "VaultSync Restores",
-                project.Name);
+                safeProjectName);
 
             Directory.CreateDirectory(fallbackRoot);
             TryUpdateProjectRootPath(project, fallbackRoot);
 
             RuntimeLog.WriteVerbose($"[Restore] Project root missing. Using fallback restore path '{fallbackRoot}'.");
             return fallbackRoot;
+        }
+
+        private static string SanitizeProjectDirectoryName(string? projectName)
+        {
+            char[] invalidFileNameChars = Path.GetInvalidFileNameChars();
+            string safeProjectName = string.Concat((projectName ?? string.Empty)
+                .Select(ch => invalidFileNameChars.Contains(ch) ||
+                              ch == Path.DirectorySeparatorChar ||
+                              ch == Path.AltDirectorySeparatorChar
+                    ? '_'
+                    : ch));
+
+            safeProjectName = safeProjectName.Trim();
+            return string.IsNullOrWhiteSpace(safeProjectName) ||
+                   string.Equals(safeProjectName, ".", StringComparison.Ordinal) ||
+                   string.Equals(safeProjectName, "..", StringComparison.Ordinal)
+                ? "Project"
+                : safeProjectName;
         }
 
         private AutoBackupPreparation PrepareAutoBackupRun()
@@ -2139,7 +2160,9 @@ namespace VaultSync.UI.ViewModels
                     totalFiles++;
                     totalBytes += Math.Max(0, entry.Length);
 
-                    string targetPath = Path.Combine(preparation.ProjectRoot, relative);
+                    if (!TryCombinePathUnderRoot(preparation.ProjectRoot, relative, out string targetPath, out _))
+                        continue;
+
                     if (!File.Exists(targetPath))
                     {
                         newFiles++;
@@ -2173,7 +2196,9 @@ namespace VaultSync.UI.ViewModels
                     var sourceInfo = new FileInfo(sourcePath);
                     totalBytes += sourceInfo.Length;
 
-                    string targetPath = Path.Combine(preparation.ProjectRoot, relative);
+                    if (!TryCombinePathUnderRoot(preparation.ProjectRoot, relative, out string targetPath, out _))
+                        continue;
+
                     if (!File.Exists(targetPath))
                     {
                         newFiles++;
@@ -2232,7 +2257,9 @@ namespace VaultSync.UI.ViewModels
                 totalBytes += fileInfo.Length;
 
                 string relativePath = Path.GetRelativePath(sandboxPath, sourceFile);
-                string destinationFile = Path.Combine(targetPath, relativePath);
+                if (!TryCombinePathUnderRoot(targetPath, relativePath, out string destinationFile, out _))
+                    continue;
+
                 if (File.Exists(destinationFile))
                 {
                     overwriteFiles++;
@@ -2591,6 +2618,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     Project? restoredProject = _repo.GetProjectByName(preparation.ProjectName);
                     bool isDirectRestore = !string.Equals(selectedRestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase);
+                    RecordRestoreHistoryEvent(preparation, selectedRestoreMode, projectRoot);
                     if (isDirectRestore && restoredProject != null && restoredProject.NeedsRestore)
                     {
                         _repo.UpdateProjectNeedsRestore(restoredProject.Id, false);
@@ -2632,6 +2660,27 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.RemoveActiveBackup(restoreCardId);
                 BackupsViewModel.IsBusy      = false;
                 BackupsViewModel.BusyMessage = string.Empty;
+            }
+        }
+
+        private void RecordRestoreHistoryEvent(RestoreBackupPreparation preparation, string restoreMode, string targetPath)
+        {
+            try
+            {
+                _repo.AddRestoreHistoryEvent(new RestoreHistoryEvent
+                {
+                    ProjectId = preparation.ProjectId,
+                    BackupId = preparation.BackupId,
+                    SnapshotId = preparation.SnapshotId,
+                    RestoreMode = restoreMode,
+                    TargetPath = targetPath,
+                    Status = RestoreHistoryEventStatus.Completed,
+                    Note = AppViewModel.L("History.Event.RestoreDetail", "Restore operation recorded as a project-history event.")
+                });
+            }
+            catch (Exception ex)
+            {
+                RuntimeLog.WriteVerbose($"[Restore] Failed to record restore history event for backupId={preparation.BackupId}: {ex.Message}");
             }
         }
 
@@ -2818,7 +2867,6 @@ namespace VaultSync.UI.ViewModels
                 Directory.CreateDirectory(stagingExtracted);
                 progress?.Invoke(new RestoreProgressUpdate(5, "Decrypting backup...", 0, 0));
 
-                var cryptoService = new BackupArchiveCryptoService();
                 BackupArchiveCryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
                 progress?.Invoke(new RestoreProgressUpdate(30, "Decrypting backup...", 0, 0));
 
@@ -2871,7 +2919,8 @@ namespace VaultSync.UI.ViewModels
             {
                 long fileLength = Math.Max(0, new FileInfo(filePath).Length);
                 string relative = Path.GetRelativePath(sourceDir, filePath);
-                string target = Path.Combine(targetDir, relative);
+                if (!TryCombinePathUnderRoot(targetDir, relative, out string target, out _))
+                    continue;
 
                 string? parentDir = Path.GetDirectoryName(target);
                 if (!string.IsNullOrEmpty(parentDir))
