@@ -16,6 +16,8 @@ public sealed class MetadataStore
 
     private readonly string _dbPath;
     private readonly bool _allowReadRecovery;
+    private SqliteConnection? _activeWriteConnection;
+    private SqliteTransaction? _activeWriteTransaction;
 
     public MetadataStore(string rootPath, bool allowReadRecovery = false)
     {
@@ -25,6 +27,28 @@ public sealed class MetadataStore
     }
 
     public string DatabasePath => _dbPath;
+
+    public void ExecuteWriteBatch(Action writeAction)
+    {
+        ArgumentNullException.ThrowIfNull(writeAction);
+        if (_activeWriteConnection is not null)
+            throw new InvalidOperationException("A metadata write batch is already active.");
+
+        using SqliteConnection connection = Open(write: true);
+        using SqliteTransaction transaction = connection.BeginTransaction(deferred: false);
+        _activeWriteConnection = connection;
+        _activeWriteTransaction = transaction;
+        try
+        {
+            writeAction();
+            transaction.Commit();
+        }
+        finally
+        {
+            _activeWriteTransaction = null;
+            _activeWriteConnection = null;
+        }
+    }
 
     public void EnsureSchema()
     {
@@ -147,9 +171,9 @@ public sealed class MetadataStore
 
     public void UpsertMetaInfo(MetaInfo info)
     {
-        using SqliteConnection c = Open(write: true);
-        c.Execute("DELETE FROM meta_info;");
-        c.Execute(
+        ExecuteWrite(
+            "DELETE FROM meta_info;");
+        ExecuteWrite(
             """
             INSERT INTO meta_info(schema_version, created_utc, last_write_utc, writer_app_version, writer_machine_id)
             VALUES(@SchemaVersion, @CreatedUtc, @LastWriteUtc, @WriterAppVersion, @WriterMachineId);
@@ -166,8 +190,7 @@ public sealed class MetadataStore
 
     public void UpsertProject(MetaProject project)
     {
-        using SqliteConnection c = Open(write: true);
-        c.Execute(
+        ExecuteWrite(
             """
             INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc)
             VALUES(@ExternalId, @Name, @Preset, @RootPathHint, @CreatedUtc, @SettingsJson, @UpdatedUtc)
@@ -192,8 +215,7 @@ public sealed class MetadataStore
 
     public void UpsertSnapshot(MetaSnapshot snapshot)
     {
-        using SqliteConnection c = Open(write: true);
-        c.Execute(
+        ExecuteWrite(
             """
             INSERT INTO snapshots(
               external_id,
@@ -248,8 +270,7 @@ public sealed class MetadataStore
         var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.KdfParamsJson);
         string descriptorJson = descriptor.ToMetadataJson(backup.IsEncrypted);
 
-        using SqliteConnection c = Open(write: true);
-        c.Execute(
+        ExecuteWrite(
             """
             INSERT INTO backups(external_id, project_external_id, snapshot_external_id, created_utc, type, backup_mode, total_bytes, path_rel, destination_alias, origin_machine_name, is_protected, enc_flag, kdf_params_json)
             VALUES(@ExternalId, @ProjectExternalId, @SnapshotExternalId, @CreatedUtc, @Type, @BackupMode, @TotalBytes, @PathRel, @DestinationAlias, @OriginMachineName, @IsProtected, @EncFlag, @KdfParamsJson)
@@ -287,8 +308,7 @@ public sealed class MetadataStore
 
     public void AddTombstone(MetaTombstone tombstone)
     {
-        using SqliteConnection c = Open(write: true);
-        c.Execute(
+        ExecuteWrite(
             """
             INSERT INTO tombstones(entity_type, entity_id, deleted_utc, origin_machine_id)
             VALUES(@EntityType, @EntityId, @DeletedUtc, @OriginMachineId)
@@ -301,6 +321,18 @@ public sealed class MetadataStore
                 DeletedUtc = ToUtcString(tombstone.DeletedUtc),
                 tombstone.OriginMachineId
             });
+    }
+
+    private void ExecuteWrite(string sql, object? param = null)
+    {
+        if (_activeWriteConnection is not null)
+        {
+            _activeWriteConnection.Execute(sql, param, _activeWriteTransaction);
+            return;
+        }
+
+        using SqliteConnection connection = Open(write: true);
+        connection.Execute(sql, param);
     }
 
     public IEnumerable<MetaProject> ListProjects()

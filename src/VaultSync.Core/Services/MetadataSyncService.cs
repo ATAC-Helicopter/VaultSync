@@ -1898,8 +1898,11 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
 
         try
         {
-            store.UpsertMetaInfo(metaInfo);
-            AddTombstones(store, externalIds, entityType, now, machineId);
+            store.ExecuteWriteBatch(() =>
+            {
+                store.UpsertMetaInfo(metaInfo);
+                AddTombstones(store, externalIds, entityType, now, machineId);
+            });
         }
         catch (Exception ex)
         {
@@ -2078,16 +2081,19 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
 
         try
         {
-            store.UpsertMetaInfo(metaInfo);
-            store.UpsertProject(new MetaProject
+            store.ExecuteWriteBatch(() =>
             {
-                ExternalId = projectExternalId,
-                Name = project.Name,
-                Preset = project.Preset,
-                RootPathHint = project.RootPath,
-                CreatedUtc = project.CreatedUtc,
-                SettingsJson = BuildProjectSettingsJson(project),
-                UpdatedUtc = now
+                store.UpsertMetaInfo(metaInfo);
+                store.UpsertProject(new MetaProject
+                {
+                    ExternalId = projectExternalId,
+                    Name = project.Name,
+                    Preset = project.Preset,
+                    RootPathHint = project.RootPath,
+                    CreatedUtc = project.CreatedUtc,
+                    SettingsJson = BuildProjectSettingsJson(project),
+                    UpdatedUtc = now
+                });
             });
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
@@ -2176,6 +2182,39 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
         }
 
+        Backup? backup = _repo.GetBackupById(backupId);
+        if (backup == null)
+        {
+            Console.WriteLine($"[MetadataSync] Export skipped: backup {backupId} no longer exists.");
+            return new MetadataSyncResult(
+                MetadataSyncStatus.Success,
+                0,
+                0,
+                0,
+                0,
+                "Backup no longer exists; metadata export skipped.");
+        }
+
+        Project? project = _repo.GetProjectById(backup.ProjectId);
+        if (project == null)
+        {
+            Console.WriteLine($"[MetadataSync] Export failed: project {backup.ProjectId} not found.");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
+        }
+
+        Snapshot? snapshot = _repo.GetSnapshotById(backup.SnapshotId);
+        if (snapshot == null)
+        {
+            Console.WriteLine($"[MetadataSync] Export skipped: snapshot {backup.SnapshotId} no longer exists.");
+            return new MetadataSyncResult(
+                MetadataSyncStatus.Success,
+                0,
+                0,
+                0,
+                0,
+                "Snapshot no longer exists; metadata export skipped.");
+        }
+
         TryFlushDeferredExport(rootPath);
 
         string storeRoot = rootPath;
@@ -2197,27 +2236,6 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         {
             Console.WriteLine($"[MetadataSync] Export failed: store init error at '{rootPath}': {ex.Message}");
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
-        }
-
-        Backup? backup = _repo.GetBackupById(backupId);
-        if (backup == null)
-        {
-            Console.WriteLine($"[MetadataSync] Export failed: backup {backupId} not found.");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Backup not found.");
-        }
-
-        Project? project = _repo.GetProjectById(backup.ProjectId);
-        if (project == null)
-        {
-            Console.WriteLine($"[MetadataSync] Export failed: project {backup.ProjectId} not found.");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
-        }
-
-        Snapshot? snapshot = _repo.GetSnapshotById(backup.SnapshotId);
-        if (snapshot == null)
-        {
-            Console.WriteLine($"[MetadataSync] Export failed: snapshot {backup.SnapshotId} not found.");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Snapshot not found.");
         }
 
         string projectExternalId = EnsureProjectExternalId(project);
@@ -2247,63 +2265,65 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         int exportedProjects = 0;
         int exportedSnapshots = 0;
         int exportedBackups = 0;
-        bool backfilled = false;
+        bool backfilled = forceBackfill || !store.HasProject(projectExternalId);
 
         try
         {
-            store.UpsertMetaInfo(metaInfo);
-        if (forceBackfill || !store.HasProject(projectExternalId))
-        {
-            backfilled = true;
-                (int snapshots, int backups) = ExportProjectHistory(store, project, projectExternalId, now, machineId);
-            exportedProjects = 1;
-            exportedSnapshots = snapshots;
-            exportedBackups = backups;
-            }
-            else
+            store.ExecuteWriteBatch(() =>
             {
-                store.UpsertProject(new MetaProject
+                store.UpsertMetaInfo(metaInfo);
+                if (backfilled)
                 {
-                    ExternalId = projectExternalId,
-                    Name = project.Name,
-                    Preset = project.Preset,
-                    RootPathHint = project.RootPath,
-                    CreatedUtc = project.CreatedUtc,
-                    SettingsJson = BuildProjectSettingsJson(project),
-                    UpdatedUtc = now
-                });
-                store.UpsertSnapshot(new MetaSnapshot
+                    (int snapshots, int backups) = ExportProjectHistory(store, project, projectExternalId, now, machineId);
+                    exportedProjects = 1;
+                    exportedSnapshots = snapshots;
+                    exportedBackups = backups;
+                }
+                else
                 {
-                    ExternalId = snapshotExternalId,
-                    ProjectExternalId = projectExternalId,
-                    CreatedUtc = snapshot.CreatedUtc,
-                    FileCount = snapshot.FileCount,
-                    TotalBytes = snapshot.TotalBytes,
-                    DiffAdded = snapshot.DiffAdded,
-                    DiffModified = snapshot.DiffModified,
-                    DiffDeleted = snapshot.DiffDeleted,
-                    DiffNetBytes = snapshot.DiffNetBytes,
-                    DiffTopPathsJson = string.IsNullOrWhiteSpace(snapshot.DiffTopPathsJson) ? "[]" : snapshot.DiffTopPathsJson
-                });
-                var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
-                store.UpsertBackup(new MetaBackup
-                {
-                    ExternalId = backupExternalId,
-                    ProjectExternalId = projectExternalId,
-                    SnapshotExternalId = snapshotExternalId,
-                    CreatedUtc = backup.CreatedUtc,
-                    Type = backup.Type,
-                    BackupMode = BackupModes.Normalize(backup.BackupMode),
-                    TotalBytes = backup.TotalBytes,
-                    PathRel = backup.Path,
-                    DestinationAlias = backup.DestinationAlias ?? string.Empty,
-                    OriginMachineName = machineId,
-                    IsProtected = backup.IsProtected,
-                    IsEncrypted = backup.IsEncrypted,
-                    KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
-                });
-                exportedBackups = 1;
-            }
+                    store.UpsertProject(new MetaProject
+                    {
+                        ExternalId = projectExternalId,
+                        Name = project.Name,
+                        Preset = project.Preset,
+                        RootPathHint = project.RootPath,
+                        CreatedUtc = project.CreatedUtc,
+                        SettingsJson = BuildProjectSettingsJson(project),
+                        UpdatedUtc = now
+                    });
+                    store.UpsertSnapshot(new MetaSnapshot
+                    {
+                        ExternalId = snapshotExternalId,
+                        ProjectExternalId = projectExternalId,
+                        CreatedUtc = snapshot.CreatedUtc,
+                        FileCount = snapshot.FileCount,
+                        TotalBytes = snapshot.TotalBytes,
+                        DiffAdded = snapshot.DiffAdded,
+                        DiffModified = snapshot.DiffModified,
+                        DiffDeleted = snapshot.DiffDeleted,
+                        DiffNetBytes = snapshot.DiffNetBytes,
+                        DiffTopPathsJson = string.IsNullOrWhiteSpace(snapshot.DiffTopPathsJson) ? "[]" : snapshot.DiffTopPathsJson
+                    });
+                    var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
+                    store.UpsertBackup(new MetaBackup
+                    {
+                        ExternalId = backupExternalId,
+                        ProjectExternalId = projectExternalId,
+                        SnapshotExternalId = snapshotExternalId,
+                        CreatedUtc = backup.CreatedUtc,
+                        Type = backup.Type,
+                        BackupMode = BackupModes.Normalize(backup.BackupMode),
+                        TotalBytes = backup.TotalBytes,
+                        PathRel = backup.Path,
+                        DestinationAlias = backup.DestinationAlias ?? string.Empty,
+                        OriginMachineName = machineId,
+                        IsProtected = backup.IsProtected,
+                        IsEncrypted = backup.IsEncrypted,
+                        KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
+                    });
+                    exportedBackups = 1;
+                }
+            });
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
@@ -2412,8 +2432,11 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
                 machineId,
                 updateExistingAppVersion: true);
 
-            store.UpsertMetaInfo(metaInfo);
-            AddTombstones(store, [backupExternalId], "backup", now, machineId);
+            store.ExecuteWriteBatch(() =>
+            {
+                store.UpsertMetaInfo(metaInfo);
+                AddTombstones(store, [backupExternalId], "backup", now, machineId);
+            });
 
             Console.WriteLine($"[MetadataSync] Tombstone export deferred locally for '{rootPath}'.");
         }
@@ -2456,8 +2479,11 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
 
         try
         {
-            store.UpsertMetaInfo(metaInfo);
-            AddTombstones(store, [backupExternalId], "backup", now, machineId);
+            store.ExecuteWriteBatch(() =>
+            {
+                store.UpsertMetaInfo(metaInfo);
+                AddTombstones(store, [backupExternalId], "backup", now, machineId);
+            });
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
