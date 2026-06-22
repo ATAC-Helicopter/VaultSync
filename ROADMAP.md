@@ -1778,6 +1778,19 @@
 - `1.8` should introduce Project History and Recovery Intelligence without turning VaultSync into a Git replacement.
 - Full planning source: `docs/VaultSync 1.8 Timeline.md`.
 - Project board: GitHub Project 7 (`@VaultSync Roadmap`), release field `1.8.x`.
+- `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
+- `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
+
+### 1.8.1 status (2026-06-22)
+- Release theme: complete the Recovery Intelligence slice planned in `docs/VaultSync 1.8 Timeline.md`.
+- Readiness, coverage, recommendations, and the Recovery project matrix shipped early in 1.8.0.
+- Remaining product scope: basic Recovery report export, focused Recovery UX refinement, and release validation.
+- Maintenance scope includes the Linux `.deb` updater repair and other confirmed 1.8.0 regressions.
+
+### 1.8.0 status (released 2026-06-20)
+- Feature scope is complete for Project History, snapshot metadata/markers, Dashboard recovery awareness, and Recovery v1.
+- Release build, tests, locale-key parity, dependency vulnerability audit, and the live pre-publish gate pass.
+- GitHub Project 7 reports all `1.8.0` milestone issues Done, and release assets were published on 2026-06-20.
 
 ### 1.8 execution tickets
 - [ ] `VS-1801` `P2` Explore full repository backup mode including `.git`. _(Deferred beyond 1.8.0; tracked by #296)_
@@ -1824,6 +1837,20 @@
   - Done: Backups now presents its lower section as snapshot inventory for restore-point operations, while History owns project/activity/lane/time filtering for timeline exploration.
 - [x] `BUG-18051` `P1` Keep project selection and History paging responsive. _(Done in `release/v1.8`)_
   - Done: Projects no longer reload preset files or persist refreshed DB state during selection, selected-project snapshot detail is capped to recent entries, and History filters/pages are shaped off the UI thread.
+- [x] `BUG-18055` `P0` Replace vulnerable SQLite native bundle before 1.8.0. _(Done 2026-06-18, tracked by #378)_
+  - Done: SQLitePCLRaw 3.0.3 resolves a maintained native SQLite graph and the full vulnerability audit is clean.
+- [x] `VS-1820` `P1` Complete 1.8.0 release-readiness hardening. _(Done 2026-06-18, tracked by #379)_
+  - Done: Dashboard recovery coverage, locale key parity, release docs, release-gate milestone scoping, and regression tests are complete.
+- [ ] `BUG-18056` `P1` Fix Linux `.deb` patch and reinstall updater flows. _(In progress; tracked by #394; target 1.8.1)_
+  - Done locally: elevated Linux patch application runs headlessly after `pkexec` authentication.
+  - Done locally: `.deb` fallback uses `apt-get install --reinstall` and helper failures return a non-zero exit code.
+  - Remaining: validate patch and full-package update behavior on a protected `/opt/vaultsync` install before publishing 1.8.1.
+- [ ] `VS-1824` `P1` Add basic Recovery report export. _(Tracked by #395; target 1.8.1)_
+  - Scope: export the current readiness score, coverage windows, recommendations, and per-project recovery matrix.
+  - Acceptance: reports are readable outside VaultSync, localized where practical, and do not expose secrets or credentials.
+- [ ] `VS-1821` `P2` Split backup and metadata service complexity hotspots. _(Tracked by #380)_
+- [ ] `VS-1822` `P2` Split oversized desktop view-model hotspots. _(Tracked by #381)_
+- [ ] `VS-1823` `P1` Add large-history performance budgets and release benchmarks. _(Tracked by #382)_
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.

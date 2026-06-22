@@ -54,6 +54,7 @@ namespace VaultSync.UI.Services
     {
         private const string ApplyArg = "--apply-patch";
         private const string ApplyRequestArg = "--apply-patch-request";
+        private const string HeadlessArg = "--headless-patch";
         private const string RequestHashArg = "--request-sha256=";
         private const string RestartArg = "--restart";
         private const string WaitPidArg = "--waitpid=";
@@ -70,9 +71,13 @@ namespace VaultSync.UI.Services
             if (!TryParsePatchArgs(args, out PatchApplyRequest? request, out _))
                 return false;
 
-            _ = ApplyPatch(request, null, CancellationToken.None);
+            PatchApplyResult result = ApplyPatch(request, null, CancellationToken.None);
+            Environment.ExitCode = result.Success ? 0 : 1;
             return true;
         }
+
+        public static bool IsHeadlessPatchInvocation(string[] args)
+            => args.Any(a => string.Equals(a, HeadlessArg, StringComparison.OrdinalIgnoreCase));
 
         public static bool TryParsePatchArgs(string[] args, out PatchApplyRequest? request)
             => TryParsePatchArgs(args, out request, out _);
@@ -213,6 +218,7 @@ namespace VaultSync.UI.Services
                     psi.ArgumentList.Add(ApplyRequestArg);
                     psi.ArgumentList.Add(requestPath);
                     psi.ArgumentList.Add(RequestHashArg + requestHash);
+                    psi.ArgumentList.Add(HeadlessArg);
                 }
                 else
                 {

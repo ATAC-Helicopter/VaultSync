@@ -6,6 +6,22 @@ namespace VaultSync.Core.Tests;
 
 public sealed class PatchManifestCompatibilityTests
 {
+    [Theory]
+    [InlineData("--headless-patch")]
+    [InlineData("--HEADLESS-PATCH")]
+    public void IsHeadlessPatchInvocation_DetectsLinuxElevationMarker(string marker)
+    {
+        Assert.True(PatchInstallService.IsHeadlessPatchInvocation(
+            new[] { "--apply-patch-request", "/tmp/request.json", marker }));
+    }
+
+    [Fact]
+    public void IsHeadlessPatchInvocation_IgnoresNormalUpdaterInvocation()
+    {
+        Assert.False(PatchInstallService.IsHeadlessPatchInvocation(
+            new[] { "--apply-patch-request", "/tmp/request.json" }));
+    }
+
     [Fact]
     public void TryGetAllowedBaseVersions_UsesLegacyPreviousVersion_WhenAllowlistMissing()
     {

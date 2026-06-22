@@ -14,6 +14,33 @@ from typing import Any
 
 SCHEMA_VERSION = 1
 KEEP_RECENT_HISTORY = 90
+UNNAMED_RELEASE = "Unnamed release"
+
+
+def is_within(path: Path, root: Path) -> bool:
+    return path != root and root in path.parents
+
+
+def resolve_workspace_path(raw_path: str) -> Path:
+    workspace = Path.cwd().resolve()
+    raw_candidate = Path(raw_path)
+    lexical = Path(os.path.abspath(workspace / raw_candidate if not raw_candidate.is_absolute() else raw_candidate))
+    if not is_within(lexical, workspace):
+        raise ValueError(f"Output directory must stay inside the workspace: {raw_path}")
+    candidate = lexical.resolve()
+    if not is_within(candidate, workspace):
+        raise ValueError(f"Resolved output directory must stay inside the workspace: {raw_path}")
+    return candidate
+
+
+def child_path(root: Path, relative_name: str) -> Path:
+    lexical = Path(os.path.abspath(root / relative_name))
+    if not is_within(lexical, root):
+        raise ValueError(f"Generated path escapes output directory: {relative_name}")
+    candidate = lexical.resolve()
+    if not is_within(candidate, root):
+        raise ValueError(f"Resolved generated path escapes output directory: {relative_name}")
+    return candidate
 
 
 def github_get_json(url: str, token: str) -> Any:
@@ -57,20 +84,27 @@ def read_previous_snapshot(latest_path: Path) -> dict[str, Any] | None:
         return None
 
 
-def normalize_releases(raw_releases: list[dict[str, Any]], previous: dict[str, Any] | None) -> dict[str, Any]:
+def previous_download_totals(
+    previous: dict[str, Any] | None,
+) -> tuple[int, dict[str, int], dict[tuple[str, str], int]]:
     previous_release_totals: dict[str, int] = {}
     previous_asset_totals: dict[tuple[str, str], int] = {}
     previous_total_downloads = 0
 
-    if previous:
-        previous_total_downloads = int(previous.get("totals", {}).get("all_assets_downloads", 0))
-        for prev_release in previous.get("releases", []):
-            tag = prev_release.get("tag_name") or ""
-            previous_release_totals[tag] = int(prev_release.get("total_downloads", 0))
-            for asset in prev_release.get("assets", []):
-                previous_asset_totals[(tag, asset.get("name") or "")] = int(asset.get("download_count", 0))
+    if not previous:
+        return previous_total_downloads, previous_release_totals, previous_asset_totals
 
-    snapshot = {
+    previous_total_downloads = int(previous.get("totals", {}).get("all_assets_downloads", 0))
+    for prev_release in previous.get("releases", []):
+        tag = prev_release.get("tag_name") or ""
+        previous_release_totals[tag] = int(prev_release.get("total_downloads", 0))
+        for asset in prev_release.get("assets", []):
+            previous_asset_totals[(tag, asset.get("name") or "")] = int(asset.get("download_count", 0))
+    return previous_total_downloads, previous_release_totals, previous_asset_totals
+
+
+def empty_snapshot() -> dict[str, Any]:
+    return {
         "schema_version": SCHEMA_VERSION,
         "captured_at": iso_now(),
         "repository": None,
@@ -88,81 +122,91 @@ def normalize_releases(raw_releases: list[dict[str, Any]], previous: dict[str, A
         },
     }
 
-    normalized_releases: list[dict[str, Any]] = []
+
+def normalize_release(
+    release: dict[str, Any],
+    previous_release_totals: dict[str, int],
+    previous_asset_totals: dict[tuple[str, str], int],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    release_item = {
+        "id": release.get("id"),
+        "tag_name": release.get("tag_name"),
+        "name": release.get("name"),
+        "draft": bool(release.get("draft")),
+        "prerelease": bool(release.get("prerelease")),
+        "created_at": release.get("created_at"),
+        "published_at": release.get("published_at"),
+        "html_url": release.get("html_url"),
+        "assets": [],
+        "total_downloads": 0,
+        "downloads_delta": 0,
+    }
+    asset_rollup: list[dict[str, Any]] = []
+    tag_name = release_item["tag_name"] or ""
+    for asset in release.get("assets", []):
+        asset_name = asset.get("name") or ""
+        downloads = int(asset.get("download_count", 0))
+        asset_item = {
+            "id": asset.get("id"),
+            "name": asset_name,
+            "size": asset.get("size"),
+            "content_type": asset.get("content_type"),
+            "download_count": downloads,
+            "downloads_delta": downloads - previous_asset_totals.get((tag_name, asset_name), 0),
+            "created_at": asset.get("created_at"),
+            "updated_at": asset.get("updated_at"),
+            "browser_download_url": asset.get("browser_download_url"),
+        }
+        release_item["assets"].append(asset_item)
+        release_item["total_downloads"] += downloads
+        asset_rollup.append(
+            {
+                "release_tag": tag_name,
+                "release_name": release_item["name"] or tag_name or UNNAMED_RELEASE,
+                **asset_item,
+            }
+        )
+    release_item["downloads_delta"] = release_item["total_downloads"] - previous_release_totals.get(tag_name, 0)
+    return release_item, asset_rollup
+
+
+def release_highlight(release: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "tag_name": release["tag_name"],
+        "name": release["name"],
+        "total_downloads": release["total_downloads"],
+        "downloads_delta": release["downloads_delta"],
+        "html_url": release["html_url"],
+    }
+
+
+def set_latest_release_highlights(snapshot: dict[str, Any]) -> None:
+    for release in snapshot["releases"]:
+        if release["draft"]:
+            continue
+        key = "latest_prerelease" if release["prerelease"] else "latest_stable"
+        if snapshot["highlights"][key] is None:
+            snapshot["highlights"][key] = release_highlight(release)
+        if snapshot["highlights"]["latest_prerelease"] and snapshot["highlights"]["latest_stable"]:
+            return
+
+
+def normalize_releases(raw_releases: list[dict[str, Any]], previous: dict[str, Any] | None) -> dict[str, Any]:
+    previous_total, previous_releases, previous_assets = previous_download_totals(previous)
+    snapshot = empty_snapshot()
     asset_rollup: list[dict[str, Any]] = []
 
     for release in raw_releases:
-        release_item = {
-            "id": release.get("id"),
-            "tag_name": release.get("tag_name"),
-            "name": release.get("name"),
-            "draft": bool(release.get("draft")),
-            "prerelease": bool(release.get("prerelease")),
-            "created_at": release.get("created_at"),
-            "published_at": release.get("published_at"),
-            "html_url": release.get("html_url"),
-            "assets": [],
-            "total_downloads": 0,
-            "downloads_delta": 0,
-        }
+        release_item, release_assets = normalize_release(release, previous_releases, previous_assets)
+        snapshot["releases"].append(release_item)
+        asset_rollup.extend(release_assets)
+        snapshot["totals"]["all_assets_downloads"] += release_item["total_downloads"]
+        snapshot["totals"]["asset_count"] += len(release_item["assets"])
 
-        tag_name = release_item["tag_name"] or ""
-        for asset in release.get("assets", []):
-            asset_name = asset.get("name") or ""
-            downloads = int(asset.get("download_count", 0))
-            previous_downloads = previous_asset_totals.get((tag_name, asset_name), 0)
-            asset_item = {
-                "id": asset.get("id"),
-                "name": asset_name,
-                "size": asset.get("size"),
-                "content_type": asset.get("content_type"),
-                "download_count": downloads,
-                "downloads_delta": downloads - previous_downloads,
-                "created_at": asset.get("created_at"),
-                "updated_at": asset.get("updated_at"),
-                "browser_download_url": asset.get("browser_download_url"),
-            }
-            release_item["assets"].append(asset_item)
-            release_item["total_downloads"] += downloads
-            snapshot["totals"]["all_assets_downloads"] += downloads
-            snapshot["totals"]["asset_count"] += 1
-            asset_rollup.append(
-                {
-                    "release_tag": tag_name,
-                    "release_name": release_item["name"] or tag_name or "Unnamed release",
-                    **asset_item,
-                }
-            )
-
-        release_item["downloads_delta"] = release_item["total_downloads"] - previous_release_totals.get(tag_name, 0)
-        normalized_releases.append(release_item)
-        snapshot["totals"]["release_count"] += 1
-
-    normalized_releases.sort(key=lambda rel: rel.get("published_at") or rel.get("created_at") or "", reverse=True)
-    snapshot["releases"] = normalized_releases
-    snapshot["totals"]["all_assets_delta"] = snapshot["totals"]["all_assets_downloads"] - previous_total_downloads
-
-    for release in normalized_releases:
-        if release["draft"]:
-            continue
-        if snapshot["highlights"]["latest_prerelease"] is None and release["prerelease"]:
-            snapshot["highlights"]["latest_prerelease"] = {
-                "tag_name": release["tag_name"],
-                "name": release["name"],
-                "total_downloads": release["total_downloads"],
-                "downloads_delta": release["downloads_delta"],
-                "html_url": release["html_url"],
-            }
-        if snapshot["highlights"]["latest_stable"] is None and not release["prerelease"]:
-            snapshot["highlights"]["latest_stable"] = {
-                "tag_name": release["tag_name"],
-                "name": release["name"],
-                "total_downloads": release["total_downloads"],
-                "downloads_delta": release["downloads_delta"],
-                "html_url": release["html_url"],
-            }
-        if snapshot["highlights"]["latest_prerelease"] and snapshot["highlights"]["latest_stable"]:
-            break
+    snapshot["releases"].sort(key=lambda rel: rel.get("published_at") or rel.get("created_at") or "", reverse=True)
+    snapshot["totals"]["release_count"] = len(snapshot["releases"])
+    snapshot["totals"]["all_assets_delta"] = snapshot["totals"]["all_assets_downloads"] - previous_total
+    set_latest_release_highlights(snapshot)
 
     asset_rollup.sort(key=lambda asset: (asset["download_count"], asset["downloads_delta"]), reverse=True)
     snapshot["highlights"]["top_assets"] = asset_rollup[:10]
@@ -172,6 +216,54 @@ def normalize_releases(raw_releases: list[dict[str, Any]], previous: dict[str, A
 def write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def append_markdown_highlights(lines: list[str], snapshot: dict[str, Any]) -> None:
+    latest_stable = snapshot["highlights"].get("latest_stable")
+    latest_prerelease = snapshot["highlights"].get("latest_prerelease")
+    if not latest_stable and not latest_prerelease:
+        return
+    lines.extend(["## Highlights", ""])
+    for label, item in (("Latest stable", latest_stable), ("Latest prerelease", latest_prerelease)):
+        if item:
+            lines.append(
+                f"- {label}: **{item['name'] or item['tag_name']}** with "
+                f"**{item['total_downloads']}** downloads ({format_signed(item['downloads_delta'])})"
+            )
+    lines.append("")
+
+
+def append_markdown_releases(lines: list[str], releases: list[dict[str, Any]]) -> None:
+    lines.extend(["## By release", ""])
+    for release in releases:
+        title = release["name"] or release["tag_name"] or UNNAMED_RELEASE
+        if release["draft"]:
+            label = " (draft)"
+        elif release["prerelease"]:
+            label = " (prerelease)"
+        else:
+            label = ""
+        lines.extend(
+            [
+                f"### {title}{label}",
+                "",
+                f"- Tag: `{release['tag_name']}`",
+                f"- Published: `{release['published_at']}`",
+                f"- Total downloads: **{release['total_downloads']}**",
+                f"- Delta: **{format_signed(release['downloads_delta'])}**",
+                "",
+            ]
+        )
+        if not release["assets"]:
+            lines.extend(["_No assets attached to this release._", ""])
+            continue
+        lines.extend(["| Asset | Downloads | Delta | Size (bytes) |", "|---|---:|---:|---:|"])
+        for asset in sorted(release["assets"], key=lambda item: item["download_count"], reverse=True):
+            lines.append(
+                f"| {asset['name']} | {asset['download_count']} | "
+                f"{format_signed(asset['downloads_delta'])} | {asset['size']} |"
+            )
+        lines.append("")
 
 
 def build_markdown(snapshot: dict[str, Any]) -> str:
@@ -190,24 +282,7 @@ def build_markdown(snapshot: dict[str, Any]) -> str:
     lines.append(f"- Change since previous snapshot: **{format_signed(totals['all_assets_delta'])}**")
     lines.append("")
 
-    latest_stable = snapshot["highlights"].get("latest_stable")
-    latest_prerelease = snapshot["highlights"].get("latest_prerelease")
-    if latest_stable or latest_prerelease:
-        lines.append("## Highlights")
-        lines.append("")
-        if latest_stable:
-            lines.append(
-                f"- Latest stable: **{latest_stable['name'] or latest_stable['tag_name']}** "
-                f"with **{latest_stable['total_downloads']}** downloads "
-                f"({format_signed(latest_stable['downloads_delta'])})"
-            )
-        if latest_prerelease:
-            lines.append(
-                f"- Latest prerelease: **{latest_prerelease['name'] or latest_prerelease['tag_name']}** "
-                f"with **{latest_prerelease['total_downloads']}** downloads "
-                f"({format_signed(latest_prerelease['downloads_delta'])})"
-            )
-        lines.append("")
+    append_markdown_highlights(lines, snapshot)
 
     top_assets = snapshot["highlights"].get("top_assets") or []
     if top_assets:
@@ -221,29 +296,7 @@ def build_markdown(snapshot: dict[str, Any]) -> str:
             )
         lines.append("")
 
-    lines.append("## By release")
-    lines.append("")
-    for rel in snapshot["releases"]:
-        title = rel["name"] or rel["tag_name"] or "Unnamed release"
-        label = " (draft)" if rel["draft"] else " (prerelease)" if rel["prerelease"] else ""
-        lines.append(f"### {title}{label}")
-        lines.append("")
-        lines.append(f"- Tag: `{rel['tag_name']}`")
-        lines.append(f"- Published: `{rel['published_at']}`")
-        lines.append(f"- Total downloads: **{rel['total_downloads']}**")
-        lines.append(f"- Delta: **{format_signed(rel['downloads_delta'])}**")
-        lines.append("")
-        if rel["assets"]:
-            lines.append("| Asset | Downloads | Delta | Size (bytes) |")
-            lines.append("|---|---:|---:|---:|")
-            for asset in sorted(rel["assets"], key=lambda item: item["download_count"], reverse=True):
-                lines.append(
-                    f"| {asset['name']} | {asset['download_count']} | {format_signed(asset['downloads_delta'])} | {asset['size']} |"
-                )
-            lines.append("")
-        else:
-            lines.append("_No assets attached to this release._")
-            lines.append("")
+    append_markdown_releases(lines, snapshot["releases"])
     return "\n".join(lines) + "\n"
 
 
@@ -255,53 +308,73 @@ def render_badge(value: str, tone: str) -> str:
     return f'<span class="badge badge-{tone}">{escape(value)}</span>'
 
 
+def release_badge(release: dict[str, Any]) -> str:
+    if release["draft"]:
+        return render_badge("Draft", "muted")
+    if release["prerelease"]:
+        return render_badge("Prerelease", "warning")
+    return render_badge("Stable", "success")
+
+
+def render_asset_table(assets: list[dict[str, Any]]) -> str:
+    if not assets:
+        return '<p class="muted">No assets attached to this release.</p>'
+    rows = []
+    for asset in sorted(assets, key=lambda item: item["download_count"], reverse=True):
+        rows.append(
+            "<tr>"
+            f"<td><a href=\"{escape(asset['browser_download_url'])}\">{escape(asset['name'])}</a></td>"
+            f"<td>{asset['download_count']}</td>"
+            f"<td>{escape(format_signed(asset['downloads_delta']))}</td>"
+            f"<td>{asset['size']}</td>"
+            "</tr>"
+        )
+    return (
+        "<table><thead><tr><th>Asset</th><th>Downloads</th><th>Delta</th><th>Size (bytes)</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table>"
+    )
+
+
+def render_release_card(release: dict[str, Any]) -> str:
+    title = escape(release["name"] or release["tag_name"] or UNNAMED_RELEASE)
+    return (
+        '<section class="release-card">'
+        f"<div class=\"release-head\"><div><h3>{title}</h3><p class=\"muted\">{escape(release['tag_name'] or '')}</p></div>"
+        f"<div class=\"release-badges\">{release_badge(release)}</div></div>"
+        '<div class="stats-row">'
+        f"<div><span class=\"label\">Published</span><strong>{escape(release['published_at'] or 'n/a')}</strong></div>"
+        f"<div><span class=\"label\">Downloads</span><strong>{release['total_downloads']}</strong></div>"
+        f"<div><span class=\"label\">Delta</span><strong>{escape(format_signed(release['downloads_delta']))}</strong></div>"
+        f"<div><span class=\"label\">Release</span><strong><a href=\"{escape(release['html_url'] or '#')}\">Open</a></strong></div>"
+        "</div>"
+        f"{render_asset_table(release['assets'])}"
+        "</section>"
+    )
+
+
+def render_highlight_card(title: str, item: dict[str, Any] | None, tone: str) -> str:
+    if item is None:
+        return (
+            f"<article class=\"metric-card {tone}\"><h3>{escape(title)}</h3>"
+            '<p class="muted">No release available yet.</p></article>'
+        )
+    release_name = escape(item["name"] or item["tag_name"] or title)
+    return (
+        f"<article class=\"metric-card {tone}\"><h3>{escape(title)}</h3>"
+        f"<strong>{release_name}</strong>"
+        f"<p>{item['total_downloads']} downloads</p>"
+        f"<p class=\"muted\">{escape(format_signed(item['downloads_delta']))} since previous snapshot</p>"
+        f"<a href=\"{escape(item['html_url'] or '#')}\">Open release</a></article>"
+    )
+
+
 def build_html(snapshot: dict[str, Any]) -> str:
     totals = snapshot["totals"]
     latest_stable = snapshot["highlights"].get("latest_stable")
     latest_prerelease = snapshot["highlights"].get("latest_prerelease")
     top_assets = snapshot["highlights"].get("top_assets") or []
 
-    releases_html: list[str] = []
-    for rel in snapshot["releases"]:
-        title = escape(rel["name"] or rel["tag_name"] or "Unnamed release")
-        tags = []
-        if rel["draft"]:
-            tags.append(render_badge("Draft", "muted"))
-        elif rel["prerelease"]:
-            tags.append(render_badge("Prerelease", "warning"))
-        else:
-            tags.append(render_badge("Stable", "success"))
-
-        rows = []
-        for asset in sorted(rel["assets"], key=lambda item: item["download_count"], reverse=True):
-            rows.append(
-                "<tr>"
-                f"<td><a href=\"{escape(asset['browser_download_url'])}\">{escape(asset['name'])}</a></td>"
-                f"<td>{asset['download_count']}</td>"
-                f"<td>{escape(format_signed(asset['downloads_delta']))}</td>"
-                f"<td>{asset['size']}</td>"
-                "</tr>"
-            )
-        asset_table = (
-            "<table><thead><tr><th>Asset</th><th>Downloads</th><th>Delta</th><th>Size (bytes)</th></tr></thead>"
-            f"<tbody>{''.join(rows)}</tbody></table>"
-            if rows
-            else "<p class=\"muted\">No assets attached to this release.</p>"
-        )
-
-        releases_html.append(
-            "<section class=\"release-card\">"
-            f"<div class=\"release-head\"><div><h3>{title}</h3><p class=\"muted\">{escape(rel['tag_name'] or '')}</p></div>"
-            f"<div class=\"release-badges\">{''.join(tags)}</div></div>"
-            "<div class=\"stats-row\">"
-            f"<div><span class=\"label\">Published</span><strong>{escape(rel['published_at'] or 'n/a')}</strong></div>"
-            f"<div><span class=\"label\">Downloads</span><strong>{rel['total_downloads']}</strong></div>"
-            f"<div><span class=\"label\">Delta</span><strong>{escape(format_signed(rel['downloads_delta']))}</strong></div>"
-            f"<div><span class=\"label\">Release</span><strong><a href=\"{escape(rel['html_url'] or '#')}\">Open</a></strong></div>"
-            "</div>"
-            f"{asset_table}"
-            "</section>"
-        )
+    releases_html = [render_release_card(release) for release in snapshot["releases"]]
 
     top_asset_items = "".join(
         "<tr>"
@@ -312,21 +385,6 @@ def build_html(snapshot: dict[str, Any]) -> str:
         "</tr>"
         for asset in top_assets
     )
-
-    def render_highlight_card(title: str, item: dict[str, Any] | None, tone: str) -> str:
-        if item is None:
-            return (
-                f"<article class=\"metric-card {tone}\"><h3>{escape(title)}</h3>"
-                "<p class=\"muted\">No release available yet.</p></article>"
-            )
-        release_name = escape(item["name"] or item["tag_name"] or title)
-        return (
-            f"<article class=\"metric-card {tone}\"><h3>{escape(title)}</h3>"
-            f"<strong>{release_name}</strong>"
-            f"<p>{item['total_downloads']} downloads</p>"
-            f"<p class=\"muted\">{escape(format_signed(item['downloads_delta']))} since previous snapshot</p>"
-            f"<a href=\"{escape(item['html_url'] or '#')}\">Open release</a></article>"
-        )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -508,7 +566,7 @@ def ensure_history_index(history_dir: Path) -> None:
     for item in items:
         index_html.append(f"<li><a href=\"./{escape(item)}\">{escape(item)}</a></li>")
     index_html.extend(["</ul>", "</body></html>"])
-    (history_dir / "index.html").write_text("\n".join(index_html) + "\n", encoding="utf-8")
+    child_path(history_dir, "index.html").write_text("\n".join(index_html) + "\n", encoding="utf-8")
 
 
 def prune_history(history_dir: Path, keep_recent: int = KEEP_RECENT_HISTORY) -> list[str]:
@@ -546,10 +604,10 @@ def main() -> int:
     if not args.owner or not args.repo or not args.token:
         parser.error("--owner, --repo, and --token are required (or set REPO_OWNER/REPO_NAME/GITHUB_TOKEN).")
 
-    output_dir = Path(args.output_dir)
+    output_dir = resolve_workspace_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    latest_path = output_dir / "latest.json"
-    history_dir = output_dir / "history"
+    latest_path = child_path(output_dir, "latest.json")
+    history_dir = child_path(output_dir, "history")
     history_dir.mkdir(parents=True, exist_ok=True)
 
     previous = read_previous_snapshot(latest_path)
@@ -559,11 +617,11 @@ def main() -> int:
 
     timestamp_slug = snapshot["captured_at"].replace(":", "-")
     write_json(latest_path, snapshot)
-    write_json(history_dir / f"{timestamp_slug}.json", snapshot)
+    write_json(child_path(history_dir, f"{timestamp_slug}.json"), snapshot)
     prune_history(history_dir)
-    (output_dir / "README.md").write_text(build_markdown(snapshot), encoding="utf-8")
-    (output_dir / "index.html").write_text(build_html(snapshot), encoding="utf-8")
-    (output_dir / ".nojekyll").write_text("", encoding="utf-8")
+    child_path(output_dir, "README.md").write_text(build_markdown(snapshot), encoding="utf-8")
+    child_path(output_dir, "index.html").write_text(build_html(snapshot), encoding="utf-8")
+    child_path(output_dir, ".nojekyll").write_text("", encoding="utf-8")
     ensure_history_index(history_dir)
     return 0
 

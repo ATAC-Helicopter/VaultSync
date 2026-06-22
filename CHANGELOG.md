@@ -1,5 +1,11 @@
 ﻿# Changelog
-## [1.8.0] - Unreleased
+## [1.8.1] - Unreleased
+### Changed
+- [BUG-18056] Linux `.deb` fallback installs now request an explicit APT reinstall of the downloaded package.
+### Fixed
+- [BUG-18056] Protected Linux patch installs now run the elevated helper headlessly instead of losing the desktop session after `pkexec`.
+
+## [1.8.0] - 20.06.2026
 ### Added
 - [VS-1814] Added guarded SonarQube Cloud analysis workflow and setup notes for the public OSS repository.
 - [VS-1815] Added SonarQube analysis exclusions for vendored rsync tooling and binary/build artifacts.

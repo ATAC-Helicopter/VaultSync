@@ -33,6 +33,14 @@ internal static class Program
         RegisterDiagnosticHooks(args);
         DiagnosticsLogger.RecordStartupSnapshot(args, useSoftwareFallback: false);
         CrashHandler.RegisterEarly();
+        if (PatchInstallService.IsHeadlessPatchInvocation(args))
+        {
+            DiagnosticsLogger.Record("Headless patch installer mode detected.");
+            PatchInstallService.TryHandlePatchArgs(args);
+            DiagnosticsLogger.Shutdown();
+            return;
+        }
+
         if (PatchInstallService.TryParsePatchArgs(args, out PatchApplyRequest? request))
         {
             DiagnosticsLogger.Record("Patch installer mode detected.");
