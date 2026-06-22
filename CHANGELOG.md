@@ -2,8 +2,12 @@
 ## [1.8.1] - Unreleased
 ### Changed
 - [BUG-18056] Linux `.deb` fallback installs now request an explicit APT reinstall of the downloaded package.
+- [VS-1825] Encrypted backups are now encrypted locally before their final artifact is uploaded to the destination.
+- [VS-1825] Published a backup encryption guide covering setup, format, credential storage, password changes, opening, and restore.
 ### Fixed
 - [BUG-18056] Protected Linux patch installs now run the elevated helper headlessly instead of losing the desktop session after `pkexec`.
+- [VS-1825] Linux credential references now store, find, and delete the correct Secret Service entry.
+- [VS-1825] Encrypted archive readers now reject unsupported formats and excessive embedded KDF parameters before derivation.
 
 ## [1.8.0] - 20.06.2026
 ### Added

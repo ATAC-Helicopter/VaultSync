@@ -29,6 +29,8 @@ The UI shows stages like Preparing, Hashing, Copying, Compressing, and Uploading
 
 Archive-mode retries can resume from validated checkpoints when the destination allows it. If a preserved partial archive no longer matches the rebuilt local archive prefix, VaultSync discards the checkpoint and restarts safely instead of guessing.
 
+For encrypted archive backups, VaultSync creates and encrypts the archive locally before uploading `data.vse`. The destination does not receive a completed plaintext `data.zip`. See [Backup encryption](Encryption) for setup and usage.
+
 ## Restore guidance
 - Before restore starts, VaultSync shows a confirmation dialog with a `What happens next` block.
 - The guidance is type-aware (`Full`, `Incremental`, `Imported`) and highlights password requirements for encrypted backups.

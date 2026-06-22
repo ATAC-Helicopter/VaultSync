@@ -14,6 +14,15 @@ This page explains the internal phases so you can interpret progress and logs.
   - Network share: prefers rsync delta when available and tuned copy flags.
 - Progress reports include file counts, speed, and ETA.
 
+For encrypted archive mode:
+
+1. VaultSync compresses the project into a local temporary archive.
+2. It encrypts that archive locally into `data.vse`.
+3. It uploads only `data.vse` to the destination.
+4. It copies the non-secret crypto descriptor and cleans the local temporary workspace.
+
+See [Backup encryption](Encryption) for setup, password storage, opening, restore, and format details.
+
 ## 3) Verification and hashing
 - Hashing ensures data integrity and supports snapshot comparisons.
 - These steps may run after the copy phase to keep backups fast.

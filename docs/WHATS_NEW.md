@@ -2,7 +2,7 @@
 
 ## [1.8.1]
 
-VaultSync `1.8.1` continues the Recovery Intelligence release line and improves Linux update reliability.
+VaultSync `1.8.1` continues Recovery Intelligence while hardening encrypted backups, credentials, and Linux updates.
 
 ### Recovery Intelligence
 - Recovery report export is planned for this release, covering readiness, recovery windows, recommendations, and project status.
@@ -10,6 +10,13 @@ VaultSync `1.8.1` continues the Recovery Intelligence release line and improves 
 ### Linux updates
 - Protected `.deb` installations run elevated patch application without depending on a root-owned graphical desktop session.
 - Full `.deb` fallback installs explicitly reinstall the downloaded package when repair is required.
+
+### Encryption and credentials
+- Encrypted archives are completed locally before upload, so destinations no longer receive a plaintext archive first.
+- Linux credential entries are isolated by key reference for reliable save, lookup, cleanup, and deletion.
+- Encrypted archive metadata is bounded and validated before expensive key derivation or plaintext output begins.
+- Interrupted encryption and failed authentication clean up partial plaintext and encrypted artifacts more consistently.
+- A new backup encryption guide explains setup, password storage, backup creation, opening, restore, and password rotation.
 
 ## [1.8.0]
 

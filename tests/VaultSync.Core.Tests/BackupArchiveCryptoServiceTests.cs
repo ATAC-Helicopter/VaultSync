@@ -2,6 +2,11 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Buffers.Binary;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Services;
 using VaultSync.Core.Tests.TestSupport;
@@ -104,5 +109,135 @@ public sealed class BackupArchiveCryptoServiceTests
         Assert.Equal(BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage, ex.Message);
         Assert.False(File.Exists(restoredArchive));
         Assert.False(File.Exists(restoredArchive + ".tmp"));
+    }
+
+    [Fact]
+    public void DecryptArchiveToPlainZip_WhenCiphertextIsTampered_FailsWithoutPlaintextOutput()
+    {
+        using var root = new TempDirectory();
+        string backupFolder = BackupArchiveTestFactory.CreateEncryptedBackupFolder(root.Path, "test-password");
+        string encryptedArchive = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
+        byte[] bytes = File.ReadAllBytes(encryptedArchive);
+        bytes[^40] ^= 0x5A;
+        File.WriteAllBytes(encryptedArchive, bytes);
+
+        string restoredArchive = Path.Combine(backupFolder, "tampered.zip");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, "test-password", restoredArchive));
+
+        Assert.Equal(BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage, ex.Message);
+        Assert.False(File.Exists(restoredArchive));
+        Assert.False(File.Exists(restoredArchive + ".tmp"));
+    }
+
+    [Theory]
+    [InlineData("kdfIterations", 1000001)]
+    [InlineData("formatVersion", 2)]
+    [InlineData("envelopeVersion", 2)]
+    public void DecryptArchiveToPlainZip_RejectsUnsupportedEmbeddedParameters(string propertyName, int value)
+    {
+        using var root = new TempDirectory();
+        string backupFolder = BackupArchiveTestFactory.CreateEncryptedBackupFolder(root.Path, "test-password");
+        RewriteEnvelopeMetadata(
+            Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName),
+            propertyName,
+            JsonValueKind.Number,
+            value.ToString());
+
+        string restoredArchive = Path.Combine(backupFolder, "unsupported.zip");
+        Assert.Throws<InvalidDataException>(() =>
+            BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, "test-password", restoredArchive));
+        Assert.False(File.Exists(restoredArchive));
+    }
+
+    [Theory]
+    [InlineData("algorithm", "aes-unknown")]
+    [InlineData("kdfProfile", "argon2id-v99")]
+    [InlineData("hmacAlgorithm", "none")]
+    public void DecryptArchiveToPlainZip_RejectsUnsupportedFormatIdentifiers(string propertyName, string value)
+    {
+        using var root = new TempDirectory();
+        string backupFolder = BackupArchiveTestFactory.CreateEncryptedBackupFolder(root.Path, "test-password");
+        RewriteEnvelopeMetadata(
+            Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName),
+            propertyName,
+            JsonValueKind.String,
+            value);
+
+        string restoredArchive = Path.Combine(backupFolder, "unsupported.zip");
+        Assert.Throws<InvalidDataException>(() =>
+            BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, "test-password", restoredArchive));
+        Assert.False(File.Exists(restoredArchive));
+    }
+
+    [Fact]
+    public void EncryptArchiveInPlace_WhenCancelled_LeavesPlainArchiveAndRemovesPartialEncryptedArtifacts()
+    {
+        using var root = new TempDirectory();
+        string backupFolder = BackupArchiveTestFactory.CreatePlainBackupFolder(root.Path);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            BackupArchiveCryptoService.EncryptArchiveInPlace(
+                backupFolder,
+                "test-password",
+                new BackupEncryptionConfig { Enabled = true },
+                cts.Token));
+
+        Assert.True(File.Exists(Path.Combine(backupFolder, BackupArchiveCryptoService.PlainArchiveFileName)));
+        Assert.False(File.Exists(Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName)));
+        Assert.False(File.Exists(Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName + ".tmp")));
+        Assert.False(File.Exists(Path.Combine(backupFolder, BackupArchiveCryptoService.MetadataFileName + ".tmp")));
+    }
+
+    private static void RewriteEnvelopeMetadata(
+        string encryptedArchivePath,
+        string propertyName,
+        JsonValueKind valueKind,
+        string value)
+    {
+        byte[] original = File.ReadAllBytes(encryptedArchivePath);
+        int metadataLength = BinaryPrimitives.ReadInt32LittleEndian(
+            original.AsSpan(BackupArchiveCryptoService.EnvelopeMagic.Length, sizeof(int)));
+        int metadataOffset = BackupArchiveCryptoService.EnvelopeMagic.Length + sizeof(int);
+        using JsonDocument document = JsonDocument.Parse(
+            original.AsMemory(metadataOffset, metadataLength));
+        var values = document.RootElement.EnumerateObject().ToDictionary(
+            property => property.Name,
+            property => property.Value.Clone(),
+            StringComparer.Ordinal);
+
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject();
+            foreach ((string name, JsonElement element) in values)
+            {
+                writer.WritePropertyName(name);
+                if (string.Equals(name, propertyName, StringComparison.Ordinal))
+                {
+                    if (valueKind == JsonValueKind.Number)
+                        writer.WriteNumberValue(int.Parse(value));
+                    else
+                        writer.WriteStringValue(value);
+                }
+                else
+                {
+                    element.WriteTo(writer);
+                }
+            }
+            writer.WriteEndObject();
+        }
+
+        byte[] metadata = stream.ToArray();
+        using var output = new MemoryStream();
+        output.Write(Encoding.ASCII.GetBytes(BackupArchiveCryptoService.EnvelopeMagic));
+        Span<byte> length = stackalloc byte[sizeof(int)];
+        BinaryPrimitives.WriteInt32LittleEndian(length, metadata.Length);
+        output.Write(length);
+        output.Write(metadata);
+        output.Write(original, metadataOffset + metadataLength, original.Length - metadataOffset - metadataLength);
+        File.WriteAllBytes(encryptedArchivePath, output.ToArray());
     }
 }

@@ -54,7 +54,13 @@ public sealed class BackupService(
         bool UsesParallelUpload = false,
         long ChunkSizeBytes = 0,
         int Parallelism = 0,
-        List<int>? CompletedChunkIndexes = null);
+        List<int>? CompletedChunkIndexes = null,
+        string ArtifactFileName = BackupArchiveCryptoService.PlainArchiveFileName);
+
+    private sealed record ArchiveBackupResult(
+        string BackupFolder,
+        bool IsEncrypted,
+        BackupCryptoDescriptor Descriptor);
 
     internal static void UpdateCheckpointResumeTelemetry(
         AppConfig config,
@@ -355,12 +361,16 @@ public sealed class BackupService(
             return false;
         }
 
-        if (TryReadArchiveResumeCheckpoint(backupDir) is null)
+        ArchiveResumeCheckpoint? checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
+        if (checkpoint is null)
         {
             return false;
         }
 
-        return File.Exists(Path.Combine(backupDir, BackupArchiveCryptoService.PlainArchiveFileName));
+        string artifactFileName = string.IsNullOrWhiteSpace(checkpoint.ArtifactFileName)
+            ? BackupArchiveCryptoService.PlainArchiveFileName
+            : Path.GetFileName(checkpoint.ArtifactFileName);
+        return File.Exists(Path.Combine(backupDir, artifactFileName));
     }
 
     private static string? TryFindResumableArchiveBackupFolder(string candidateDestDir, string sourceFingerprint)
@@ -661,13 +671,17 @@ public sealed class BackupService(
                     {
                         RuntimeLog.WriteVerbose($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
                         ArchiveResumeCheckpoint? checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
+                        string artifactFileName = string.IsNullOrWhiteSpace(checkpoint?.ArtifactFileName)
+                            ? BackupArchiveCryptoService.PlainArchiveFileName
+                            : Path.GetFileName(checkpoint.ArtifactFileName);
+                        string artifactPath = Path.Combine(backupDir, artifactFileName);
                         PersistCheckpointResumeTelemetry(
                             status: "cleanup-preserved",
                             projectName: Path.GetFileName(projectDir),
                             backupFolder: backupDir,
-                            archivePath: Path.Combine(backupDir, BackupArchiveCryptoService.PlainArchiveFileName),
-                            resumeOffsetBytes: File.Exists(Path.Combine(backupDir, BackupArchiveCryptoService.PlainArchiveFileName))
-                                ? new FileInfo(Path.Combine(backupDir, BackupArchiveCryptoService.PlainArchiveFileName)).Length
+                            archivePath: artifactPath,
+                            resumeOffsetBytes: File.Exists(artifactPath)
+                                ? new FileInfo(artifactPath).Length
                                 : 0,
                             archiveSizeBytes: checkpoint?.ArchiveSizeBytes ?? 0,
                             sourceFingerprint: checkpoint?.SourceFingerprint ?? string.Empty,
@@ -783,6 +797,24 @@ public sealed class BackupService(
 
         bool backupIsEncrypted = false;
         string backupCryptoDescriptorJson = BackupCryptoDescriptor.PlainMetadataJson;
+        string? encryptionPassword = null;
+        if (encryptionRequested)
+        {
+            if (string.IsNullOrWhiteSpace(resolvedEncryption.EffectiveKeyRef))
+            {
+                throw new InvalidOperationException(
+                    "Backup encryption is enabled for this project but no encryption key reference is configured.");
+            }
+
+            encryptionPassword = _backupEncryptionSecretService.GetSecret(
+                resolvedEncryption.EffectiveKeyRef,
+                username: BackupEncryptionCredentialIdentity.AccountName);
+            if (string.IsNullOrWhiteSpace(encryptionPassword))
+            {
+                throw new InvalidOperationException(
+                    $"Backup encryption is enabled but no encryption secret is available for the resolved {resolvedEncryption.KeySource} key.");
+            }
+        }
 
         // Create (or replace) a CTS for this project and link with caller token.
         if (_cancelMap.TryGetValue(project.Id, out CancellationTokenSource? existingCts))
@@ -953,7 +985,7 @@ public sealed class BackupService(
                 progressCallback?.Invoke(0, "Preparing archive backup...", string.Empty);
 
                 int uploadBufferBytes = NormalizeArchiveUploadBufferBytes(archiveUploadBufferBytes);
-                backupFolderUsed = await RunArchiveBackupAsync(
+                ArchiveBackupResult archiveResult = await RunArchiveBackupAsync(
                     project,
                     backupFolder,
                     totalBytes,
@@ -964,7 +996,12 @@ public sealed class BackupService(
                     preferParallelArchiveUpload,
                     enableCheckpointedRetry,
                     _configStore,
+                    encryptionPassword,
+                    encryptionConfig,
                     linkedToken);
+                backupFolderUsed = archiveResult.BackupFolder;
+                backupIsEncrypted = archiveResult.IsEncrypted;
+                backupCryptoDescriptorJson = archiveResult.Descriptor.ToMetadataJson(backupIsEncrypted);
             }
             else
             {
@@ -1069,47 +1106,6 @@ public sealed class BackupService(
             catch (Exception ex)
             {
                 Console.WriteLine($"[BackupService] Failed to move backup from temp to preferred root: {ex.Message}");
-            }
-        }
-
-        if (encryptionRequested)
-        {
-            try
-            {
-                progressCallback?.Invoke(95, string.Empty, "Encrypting archive...");
-                if (string.IsNullOrWhiteSpace(resolvedEncryption.EffectiveKeyRef))
-                {
-                    throw new InvalidOperationException(
-                        "Backup encryption is enabled for this project but no encryption key reference is configured.");
-                }
-
-                string? password = _backupEncryptionSecretService.GetSecret(
-                    resolvedEncryption.EffectiveKeyRef,
-                    username: BackupEncryptionCredentialIdentity.AccountName);
-                if (string.IsNullOrWhiteSpace(password))
-                {
-                    throw new InvalidOperationException(
-                        $"Backup encryption is enabled but no encryption secret is available for the resolved {resolvedEncryption.KeySource} key.");
-                }
-
-                BackupArchiveCryptoService.EncryptionResult encryptionResult = BackupArchiveCryptoService.EncryptArchiveInPlace(
-                    backupFolderUsed,
-                    password,
-                    encryptionConfig,
-                    linkedToken);
-
-                backupIsEncrypted = encryptionResult.IsEncrypted;
-                backupCryptoDescriptorJson = encryptionResult.Descriptor.ToMetadataJson(backupIsEncrypted);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                Console.WriteLine($"[BackupService] Backup encryption failed for '{project.Name}': {ex.Message}");
-                DeletePartialBackup(backupFolderUsed);
-                if (!string.Equals(backupFolderUsed, backupFolder, StringComparison.OrdinalIgnoreCase))
-                    DeletePartialBackup(backupFolder);
-                throw new InvalidOperationException(
-                    "Backup encryption failed; partial backup data was removed.",
-                    ex);
             }
         }
 
@@ -1621,7 +1617,7 @@ public sealed class BackupService(
     private const int ArchiveCopyBufferBytes = 1024 * 1024;
     private const int ArchiveFileStreamBufferBytes = 1024 * 1024;
 
-    private static async Task<string> RunArchiveBackupAsync(
+    private static async Task<ArchiveBackupResult> RunArchiveBackupAsync(
         Project project,
         string destDir,
         long totalBytes,
@@ -1632,6 +1628,8 @@ public sealed class BackupService(
         bool preferParallelUpload,
         bool enableCheckpointedRetry,
         IAppConfigStore configStore,
+        string? encryptionPassword,
+        BackupEncryptionConfig encryptionConfig,
         CancellationToken ct)
     {
         string sourceDir = project.RootPath;
@@ -1647,6 +1645,10 @@ public sealed class BackupService(
         // 2. Gather all files that will be archived.
         string[] allFiles = filesForBackup?.ToArray() ?? BuildFilteredFileList(sourceDir, filter, ct);
         int archiveTotalFiles = totalFiles > 0 ? totalFiles : allFiles.Length;
+        bool encryptBeforeUpload = !string.IsNullOrWhiteSpace(encryptionPassword);
+        string artifactFileName = encryptBeforeUpload
+            ? BackupArchiveCryptoService.EncryptedArchiveFileName
+            : BackupArchiveCryptoService.PlainArchiveFileName;
 
         string workingDestDir = destDir;
         ArchiveResumeCheckpoint? resumeCheckpoint = null;
@@ -1658,7 +1660,8 @@ public sealed class BackupService(
                 Mode: "archive",
                 SourceFingerprint: fingerprint,
                 ArchiveSizeBytes: 0,
-                LastUpdatedUtc: DateTime.UtcNow);
+                LastUpdatedUtc: DateTime.UtcNow,
+                ArtifactFileName: artifactFileName);
 
             string? resumableDir = TryFindResumableArchiveBackupFolder(destDir, fingerprint);
             if (!string.IsNullOrWhiteSpace(resumableDir) &&
@@ -1671,9 +1674,9 @@ public sealed class BackupService(
                     status: "resume-discovered",
                     projectName: project.Name,
                     backupFolder: workingDestDir,
-                    archivePath: Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName),
-                    resumeOffsetBytes: File.Exists(Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName))
-                        ? new FileInfo(Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName)).Length
+                    archivePath: Path.Combine(workingDestDir, artifactFileName),
+                    resumeOffsetBytes: File.Exists(Path.Combine(workingDestDir, artifactFileName))
+                        ? new FileInfo(Path.Combine(workingDestDir, artifactFileName)).Length
                         : 0,
                     archiveSizeBytes: 0,
                     sourceFingerprint: fingerprint,
@@ -1684,7 +1687,7 @@ public sealed class BackupService(
 
         // 3. Prepare destination and local temp folder.
         Directory.CreateDirectory(workingDestDir);
-        string finalArchivePath = Path.Combine(workingDestDir, BackupArchiveCryptoService.PlainArchiveFileName);
+        string finalArchivePath = Path.Combine(workingDestDir, artifactFileName);
 
         string localTempRoot = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(localTempRoot);
@@ -1707,13 +1710,7 @@ public sealed class BackupService(
                     // no entries
                 }
 
-                File.Copy(localArchive, finalArchivePath, overwrite: true);
-                progressCallback?.Invoke(100, string.Empty, "Archive empty (0 files).");
-                RemoveArchiveResumeCheckpoint(workingDestDir);
-
-                long emptySize = new FileInfo(finalArchivePath).Length;
-                RuntimeLog.WriteVerbose($"[BackupService] Created empty archive for '{project.Name}', size={emptySize} bytes.");
-                return workingDestDir;
+                RuntimeLog.WriteVerbose($"[BackupService] Created empty local archive for '{project.Name}'.");
             }
 
             // --------------------
@@ -1868,8 +1865,23 @@ public sealed class BackupService(
                 }
             }
 
+            BackupCryptoDescriptor descriptor = BackupCryptoDescriptor.Plain();
+            if (encryptBeforeUpload)
+            {
+                progressCallback?.Invoke(88, string.Empty, "Encrypting archive before upload...");
+                BackupArchiveCryptoService.EncryptionResult encryptionResult =
+                    BackupArchiveCryptoService.EncryptArchiveInPlace(
+                        localTempRoot,
+                        encryptionPassword!,
+                        encryptionConfig,
+                        ct);
+                localArchive = encryptionResult.EncryptedArchivePath;
+                descriptor = encryptionResult.Descriptor;
+            }
+
             // --------------------
-            // PHASE 2: Upload local ZIP to destination with progress (90-100%)
+            // PHASE 2: Upload the final local artifact to the destination (90-100%).
+            // Encrypted backups never place data.zip on the destination.
             // --------------------
             ct.ThrowIfCancellationRequested();
 
@@ -2112,6 +2124,12 @@ public sealed class BackupService(
                 await UploadSingleWithResumeAsync(2);
             }
 
+            if (encryptBeforeUpload)
+            {
+                string localMetadataPath = Path.Combine(localTempRoot, BackupArchiveCryptoService.MetadataFileName);
+                string destinationMetadataPath = Path.Combine(workingDestDir, BackupArchiveCryptoService.MetadataFileName);
+                File.Copy(localMetadataPath, destinationMetadataPath, overwrite: true);
+            }
             RemoveArchiveResumeCheckpoint(workingDestDir);
             PersistCheckpointResumeTelemetry(
                 status: "resume-complete",
@@ -2123,8 +2141,8 @@ public sealed class BackupService(
                 sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
                 message: "Archive upload completed and checkpoint metadata was cleared.",
                 configStore: configStore);
-            RuntimeLog.WriteVerbose($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalZipSize={zipSize} bytes");
-            return workingDestDir;
+            RuntimeLog.WriteVerbose($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalArtifactSize={zipSize} bytes, encrypted={encryptBeforeUpload}.");
+            return new ArchiveBackupResult(workingDestDir, encryptBeforeUpload, descriptor);
         }
         catch
         {

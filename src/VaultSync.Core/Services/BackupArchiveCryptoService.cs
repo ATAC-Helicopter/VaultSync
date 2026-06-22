@@ -17,10 +17,16 @@ public sealed class BackupArchiveCryptoService
     public const string MetadataFileName = ".vaultsync_crypto.json";
     public const string EnvelopeMagic = "VSENC1";
     public const int CurrentEnvelopeVersion = 1;
+    public const string CurrentAlgorithm = "aes-256-cbc-hmac-sha256-v1";
+    public const string CurrentKdfProfile = "pbkdf2-sha256-v1";
+    public const string CurrentHmacAlgorithm = "hmac-sha256";
     public const string InvalidPasswordOrCorruptedMessage =
         "Invalid backup password or corrupted encrypted backup archive.";
 
     private const int DefaultKdfIterations = 210_000;
+    internal const int MinimumKdfIterations = 10_000;
+    internal const int MaximumKdfIterations = 1_000_000;
+    internal const int MaximumMetadataBytes = 256 * 1024;
     private const int SaltLengthBytes = 16;
     private const int IvLengthBytes = 16;
     private const int DerivedKeyLengthBytes = 64;
@@ -70,20 +76,31 @@ public sealed class BackupArchiveCryptoService
             formatVersion: metadata.FormatVersion);
 
         string encryptedArchivePath = Path.Combine(backupFolder, EncryptedArchiveFileName);
+        string tempEncryptedArchivePath = encryptedArchivePath + ".tmp";
+        string metadataPath = Path.Combine(backupFolder, MetadataFileName);
+        string tempMetadataPath = metadataPath + ".tmp";
         try
         {
-            WriteEncryptedArchive(plainArchivePath, encryptedArchivePath, password, metadata, salt, iv, ct);
+            TryDeleteFile(tempEncryptedArchivePath);
+            TryDeleteFile(tempMetadataPath);
+            WriteEncryptedArchive(plainArchivePath, tempEncryptedArchivePath, password, metadata, salt, iv, ct);
+            File.WriteAllText(tempMetadataPath, JsonSerializer.Serialize(metadata, JsonOptions), Encoding.UTF8);
+
+            File.Move(tempEncryptedArchivePath, encryptedArchivePath, overwrite: true);
+            File.Move(tempMetadataPath, metadataPath, overwrite: true);
+            File.Delete(plainArchivePath);
+        }
+        catch
+        {
+            TryDeleteFile(tempEncryptedArchivePath);
+            TryDeleteFile(tempMetadataPath);
+            throw;
         }
         finally
         {
             CryptographicOperations.ZeroMemory(salt);
             CryptographicOperations.ZeroMemory(iv);
         }
-
-        string metadataPath = Path.Combine(backupFolder, MetadataFileName);
-        File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, JsonOptions), Encoding.UTF8);
-
-        File.Delete(plainArchivePath);
 
         long encryptedBytes = new FileInfo(encryptedArchivePath).Length;
         return new EncryptionResult(true, encryptedArchivePath, descriptor, encryptedBytes);
@@ -172,7 +189,7 @@ public sealed class BackupArchiveCryptoService
         EncryptedArchiveHeader header = ReadEncryptedArchiveHeader(encryptedArchivePath);
         byte[] saltBytes = Convert.FromBase64String(header.Metadata.SaltBase64);
         byte[] ivBytes = Convert.FromBase64String(header.Metadata.IvBase64);
-        int iterations = Math.Max(10_000, header.Metadata.KdfIterations);
+        int iterations = header.Metadata.KdfIterations;
 
         byte[] keyMaterial = new byte[DerivedKeyLengthBytes];
         byte[] encryptionKey = new byte[EncryptionKeyLengthBytes];
@@ -287,7 +304,7 @@ public sealed class BackupArchiveCryptoService
             KdfIterations = iterations,
             SaltBase64 = Convert.ToBase64String(salt),
             IvBase64 = Convert.ToBase64String(iv),
-            HmacAlgorithm = "hmac-sha256"
+            HmacAlgorithm = CurrentHmacAlgorithm
         };
     }
 
@@ -306,7 +323,8 @@ public sealed class BackupArchiveCryptoService
         byte[] metadataLengthBytes = new byte[4];
         BinaryPrimitives.WriteInt32LittleEndian(metadataLengthBytes, metadataBytes.Length);
 
-        int iterations = Math.Max(10_000, metadata.KdfIterations);
+        ValidateMetadata(metadata);
+        int iterations = metadata.KdfIterations;
 
         byte[] keyMaterial = new byte[DerivedKeyLengthBytes];
         byte[] encryptionKey = new byte[EncryptionKeyLengthBytes];
@@ -405,7 +423,7 @@ public sealed class BackupArchiveCryptoService
 
         byte[] metadataLengthBytes = ReadExact(stream, sizeof(int));
         int metadataLength = BinaryPrimitives.ReadInt32LittleEndian(metadataLengthBytes);
-        if (metadataLength <= 0 || metadataLength > 256 * 1024)
+        if (metadataLength <= 0 || metadataLength > MaximumMetadataBytes)
             throw new InvalidDataException("Encrypted backup metadata length is invalid.");
 
         byte[] metadataBytes = ReadExact(stream, metadataLength);
@@ -413,11 +431,7 @@ public sealed class BackupArchiveCryptoService
         BackupArchiveEnvelopeMetadata metadata = JsonSerializer.Deserialize<BackupArchiveEnvelopeMetadata>(metadataJson, JsonOptions)
             ?? throw new InvalidDataException("Encrypted backup metadata is invalid.");
 
-        if (!string.Equals(metadata.Magic, EnvelopeMagic, StringComparison.Ordinal))
-            throw new InvalidDataException("Encrypted backup metadata signature mismatch.");
-
-        if (string.IsNullOrWhiteSpace(metadata.SaltBase64) || string.IsNullOrWhiteSpace(metadata.IvBase64))
-            throw new InvalidDataException("Encrypted backup metadata is incomplete.");
+        ValidateMetadata(metadata);
 
         int headerBytes = EnvelopeMagic.Length + sizeof(int) + metadataLength;
         long cipherTextBytes = stream.Length - headerBytes - HmacLengthBytes;
@@ -455,11 +469,11 @@ public sealed class BackupArchiveCryptoService
         if (!string.IsNullOrWhiteSpace(configured))
         {
             string normalized = configured.Trim();
-            if (string.Equals(normalized, "aes-256-cbc-hmac-sha256-v1", StringComparison.OrdinalIgnoreCase))
-                return "aes-256-cbc-hmac-sha256-v1";
+            if (string.Equals(normalized, CurrentAlgorithm, StringComparison.OrdinalIgnoreCase))
+                return CurrentAlgorithm;
         }
 
-        return "aes-256-cbc-hmac-sha256-v1";
+        return CurrentAlgorithm;
     }
 
     private static string ResolveKdfProfile(string? configured)
@@ -467,11 +481,11 @@ public sealed class BackupArchiveCryptoService
         if (!string.IsNullOrWhiteSpace(configured))
         {
             string normalized = configured.Trim();
-            if (normalized.StartsWith("pbkdf2", StringComparison.OrdinalIgnoreCase))
-                return normalized;
+            if (string.Equals(normalized, CurrentKdfProfile, StringComparison.OrdinalIgnoreCase))
+                return CurrentKdfProfile;
         }
 
-        return "pbkdf2-sha256-v1";
+        return CurrentKdfProfile;
     }
 
     private static int ResolveKdfIterations(string? kdfParamRef)
@@ -486,7 +500,7 @@ public sealed class BackupArchiveCryptoService
 
         string valuePart = kdfParamRef[(idx + marker.Length)..].Trim();
         if (int.TryParse(valuePart, out int parsed))
-            return Math.Clamp(parsed, 10_000, 1_000_000);
+            return Math.Clamp(parsed, MinimumKdfIterations, MaximumKdfIterations);
 
         return DefaultKdfIterations;
     }
@@ -498,6 +512,69 @@ public sealed class BackupArchiveCryptoService
 
         return $"pbkdf2-iter-{iterations}";
     }
+
+    private static void ValidateMetadata(BackupArchiveEnvelopeMetadata metadata)
+    {
+        if (metadata.EnvelopeVersion != CurrentEnvelopeVersion ||
+            metadata.FormatVersion != BackupCryptoDescriptor.CurrentFormatVersion)
+        {
+            throw new InvalidDataException("Encrypted backup format version is not supported.");
+        }
+
+        if (!string.Equals(metadata.Magic, EnvelopeMagic, StringComparison.Ordinal) ||
+            !string.Equals(metadata.Algorithm, CurrentAlgorithm, StringComparison.Ordinal) ||
+            !string.Equals(metadata.KdfProfile, CurrentKdfProfile, StringComparison.Ordinal) ||
+            !string.Equals(metadata.HmacAlgorithm, CurrentHmacAlgorithm, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException("Encrypted backup format identifiers are not supported.");
+        }
+
+        if (metadata.KdfIterations < MinimumKdfIterations ||
+            metadata.KdfIterations > MaximumKdfIterations)
+        {
+            throw new InvalidDataException("Encrypted backup KDF parameters are outside supported bounds.");
+        }
+
+        byte[] salt = DecodeFixedLength(metadata.SaltBase64, SaltLengthBytes, "salt");
+        byte[] iv = DecodeFixedLength(metadata.IvBase64, IvLengthBytes, "IV");
+        CryptographicOperations.ZeroMemory(salt);
+        CryptographicOperations.ZeroMemory(iv);
+    }
+
+    private static byte[] DecodeFixedLength(string value, int expectedLength, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new InvalidDataException($"Encrypted backup {fieldName} is missing.");
+
+        try
+        {
+            byte[] decoded = Convert.FromBase64String(value);
+            if (decoded.Length != expectedLength)
+            {
+                CryptographicOperations.ZeroMemory(decoded);
+                throw new InvalidDataException($"Encrypted backup {fieldName} length is invalid.");
+            }
+
+            return decoded;
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidDataException($"Encrypted backup {fieldName} encoding is invalid.", ex);
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+            // Best-effort cleanup of interrupted encryption artifacts.
+        }
+    }
 }
 
 public sealed class BackupArchiveEnvelopeMetadata
@@ -505,11 +582,11 @@ public sealed class BackupArchiveEnvelopeMetadata
     public int EnvelopeVersion { get; set; } = BackupArchiveCryptoService.CurrentEnvelopeVersion;
     public int FormatVersion { get; set; } = BackupCryptoDescriptor.CurrentFormatVersion;
     public string Magic { get; set; } = BackupArchiveCryptoService.EnvelopeMagic;
-    public string Algorithm { get; set; } = "aes-256-cbc-hmac-sha256-v1";
-    public string KdfProfile { get; set; } = "pbkdf2-sha256-v1";
+    public string Algorithm { get; set; } = BackupArchiveCryptoService.CurrentAlgorithm;
+    public string KdfProfile { get; set; } = BackupArchiveCryptoService.CurrentKdfProfile;
     public string KdfParamRef { get; set; } = "pbkdf2-iter-210000";
     public int KdfIterations { get; set; } = 210_000;
     public string SaltBase64 { get; set; } = string.Empty;
     public string IvBase64 { get; set; } = string.Empty;
-    public string HmacAlgorithm { get; set; } = "hmac-sha256";
+    public string HmacAlgorithm { get; set; } = BackupArchiveCryptoService.CurrentHmacAlgorithm;
 }

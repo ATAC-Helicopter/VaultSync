@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Linq;
 using VaultSync.Core.Config;
 using VaultSync.Core.Services;
 using VaultSync.Core.Tests.TestSupport;
@@ -91,5 +92,79 @@ public sealed class CredentialVaultTests
         object result = method!.Invoke(null, new object[] { encoded, false });
 
         Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData("store", true)]
+    [InlineData("lookup", false)]
+    [InlineData("clear", false)]
+    public void LinuxSecretServiceCommands_UseKeyRefAndAccountIdentity(string operation, bool redirectInput)
+    {
+        const string keyRef = "cred-project-a-0123456789abcdef0123456789abcdef";
+        const string username = "vaultsync-backup-encryption";
+
+        System.Diagnostics.ProcessStartInfo command =
+            CredentialVault.BuildSecretToolStartInfo(operation, keyRef, username, redirectInput);
+        string[] args = command.ArgumentList.ToArray();
+
+        Assert.Equal("secret-tool", command.FileName);
+        Assert.Equal(redirectInput, command.RedirectStandardInput);
+        Assert.Contains("service", args);
+        Assert.Contains("vaultsync", args);
+        Assert.Equal(keyRef, args[Array.IndexOf(args, "key-ref") + 1]);
+        Assert.Equal(username, args[Array.IndexOf(args, "account") + 1]);
+    }
+
+    [Fact]
+    public void LinuxSecretServiceCommands_KeepDifferentKeyRefsDistinct()
+    {
+        string[] first = CredentialVault.BuildSecretToolStartInfo("lookup", "key-ref-a", "same-account")
+            .ArgumentList.ToArray();
+        string[] second = CredentialVault.BuildSecretToolStartInfo("lookup", "key-ref-b", "same-account")
+            .ArgumentList.ToArray();
+
+        Assert.NotEqual(
+            first[Array.IndexOf(first, "key-ref") + 1],
+            second[Array.IndexOf(second, "key-ref") + 1]);
+    }
+
+    [Theory]
+    [InlineData("add-generic-password")]
+    [InlineData("find-generic-password")]
+    [InlineData("delete-generic-password")]
+    public void MacKeychainCommands_UseStableServiceAndAccountIdentity(string operation)
+    {
+        const string keyRef = "cred-project-a";
+        const string username = "vaultsync-backup-encryption";
+        System.Diagnostics.ProcessStartInfo command =
+            CredentialVault.BuildMacKeychainStartInfo(operation, keyRef, username);
+        string[] args = command.ArgumentList.ToArray();
+
+        Assert.Equal("/usr/bin/security", command.FileName);
+        Assert.Equal(operation, args[0]);
+        Assert.Equal(username, args[Array.IndexOf(args, "-a") + 1]);
+        Assert.Equal(keyRef, args[Array.IndexOf(args, "-s") + 1]);
+    }
+
+    [Fact]
+    public void WindowsDpapi_RoundTripsForCurrentUser_WhenRunningOnWindows()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        MethodInfo protect = typeof(CredentialVault).GetMethod(
+            "TryProtect",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        MethodInfo unprotect = typeof(CredentialVault).GetMethod(
+            "TryUnprotect",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        object[] protectArgs = { "windows-secret", string.Empty };
+
+        bool protectedSuccessfully = (bool)protect.Invoke(null, protectArgs)!;
+        string protectedSecret = (string)protectArgs[1];
+        string restored = (string)unprotect.Invoke(null, new object[] { protectedSecret, true })!;
+
+        Assert.True(protectedSuccessfully);
+        Assert.Equal("windows-secret", restored);
     }
 }

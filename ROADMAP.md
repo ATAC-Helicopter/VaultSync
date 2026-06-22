@@ -1785,7 +1785,7 @@
 - Release theme: complete the Recovery Intelligence slice planned in `docs/VaultSync 1.8 Timeline.md`.
 - Readiness, coverage, recommendations, and the Recovery project matrix shipped early in 1.8.0.
 - Remaining product scope: basic Recovery report export, focused Recovery UX refinement, and release validation.
-- Maintenance scope includes the Linux `.deb` updater repair and other confirmed 1.8.0 regressions.
+- Maintenance scope includes Linux updater repair and encryption/credential hardening carried forward from the 1.8.0 audit.
 
 ### 1.8.0 status (released 2026-06-20)
 - Feature scope is complete for Project History, snapshot metadata/markers, Dashboard recovery awareness, and Recovery v1.
@@ -1848,6 +1848,14 @@
 - [ ] `VS-1824` `P1` Add basic Recovery report export. _(Tracked by #395; target 1.8.1)_
   - Scope: export the current readiness score, coverage windows, recommendations, and per-project recovery matrix.
   - Acceptance: reports are readable outside VaultSync, localized where practical, and do not expose secrets or credentials.
+- [ ] `VS-1825` `P0` Harden encrypted backup staging and platform credential integration. _(Implemented locally; tracked by #396; target 1.8.1)_
+  - Scope: encrypt archive artifacts before destination upload, isolate Linux Secret Service entries by `keyRef`, validate embedded crypto parameters, and reduce plaintext staging exposure.
+  - Done locally: encrypted backups upload `data.vse` directly and never place `data.zip` on the destination.
+  - Done locally: Linux store, lookup, cleanup, and deletion use both account and `key-ref` attributes.
+  - Done locally: envelope versions, algorithms, KDF identifiers, iteration bounds, salt/IV lengths, and HMAC identifiers are validated before key derivation.
+  - Done locally: encryption output uses temporary atomic artifacts with cancellation cleanup, plus tamper, crash-cleanup, and platform credential contract tests.
+  - Done locally: public encryption documentation explains the format, credential storage, threat model, temporary plaintext boundary, and password-loss implications.
+  - Remaining: validate Linux Secret Service behavior in a desktop session and run the full Windows/Linux release matrix.
 - [ ] `VS-1821` `P2` Split backup and metadata service complexity hotspots. _(Tracked by #380)_
 - [ ] `VS-1822` `P2` Split oversized desktop view-model hotspots. _(Tracked by #381)_
 - [ ] `VS-1823` `P1` Add large-history performance budgets and release benchmarks. _(Tracked by #382)_

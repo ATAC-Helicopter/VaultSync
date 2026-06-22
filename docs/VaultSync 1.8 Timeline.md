@@ -478,9 +478,19 @@ Basic export functionality.
 
 ---
 
+## Security and Reliability Hardening
+
+- Encrypt archive artifacts before destination upload.
+- Bound and validate encrypted format and KDF metadata before key derivation.
+- Keep Linux Secret Service entries isolated by credential `keyRef`.
+- Reduce plaintext temporary artifacts and clean interrupted encryption outputs.
+- Cover tampering, crash cleanup, and Windows/macOS/Linux credential contracts in integration tests.
+
+---
+
 ## Success Criteria
 
-Users can measure recoverability.
+Users can measure recoverability, and encrypted backups reach destinations only as validated encrypted artifacts.
 
 ---
 

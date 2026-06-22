@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
@@ -126,6 +127,45 @@ public sealed class BackupSkipNoChangesTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task RunBackupAsync_EncryptedArchive_UploadsOnlyEncryptedArtifact()
+    {
+        SqliteRepository repo = TestRepository.Create(_dbPath);
+        Project project = CreateProject(repo) with
+        {
+            EncryptionPolicy = ProjectEncryptionPolicy.Encrypted,
+            EncryptionKeyRef = "project-key-ref"
+        };
+
+        string backupRoot = Path.Combine(_tempDir.Path, "encrypted-backups");
+        Directory.CreateDirectory(backupRoot);
+        var config = new AppConfig();
+        config.Backups.Encryption.Enabled = true;
+        config.Backups.Encryption.KeyRef = "global-key-ref";
+        var configStore = new FixedConfigStore(config, _dbPath);
+        var secrets = new BackupEncryptionSecretService(
+            (existing, _) => existing ?? "generated-key-ref",
+            (keyRef, _, _, _) => keyRef == "project-key-ref" ? "test-password" : null,
+            (_, _, _, _) => { },
+            (_, _) => { });
+        var service = new BackupService(repo, secrets, configStore);
+
+        BackupService.BackupRunResult result = await service.RunBackupAsync(
+            project,
+            backupRoot,
+            isAuto: false,
+            useArchiveMode: true,
+            enableCheckpointedRetry: true);
+
+        Backup backup = repo.GetBackupById(result.BackupId)!;
+        string backupPath = Path.Combine(backupRoot, backup.Path);
+        Assert.True(backup.IsEncrypted);
+        Assert.True(File.Exists(Path.Combine(backupPath, BackupArchiveCryptoService.EncryptedArchiveFileName)));
+        Assert.True(File.Exists(Path.Combine(backupPath, BackupArchiveCryptoService.MetadataFileName)));
+        Assert.False(File.Exists(Path.Combine(backupPath, BackupArchiveCryptoService.PlainArchiveFileName)));
+        Assert.False(File.Exists(Path.Combine(backupPath, ".vaultsync_resume.json")));
+    }
+
     private Project CreateProject(SqliteRepository repo)
         => CreateProject(repo, "Project One", "data.txt", "backup me");
 
@@ -154,5 +194,16 @@ public sealed class BackupSkipNoChangesTests : IDisposable
     public void Dispose()
     {
         _tempDir.Dispose();
+    }
+
+    private sealed class FixedConfigStore(AppConfig config, string dbPath) : IAppConfigStore
+    {
+        public bool WasConfigMissingOnFirstLoad => false;
+        public AppConfig GetSnapshot() => config;
+        public AppConfig Load() => config;
+        public void Save(AppConfig value) { }
+        public Task SaveAsync(AppConfig value, CancellationToken ct = default) => Task.CompletedTask;
+        public string GetDefaultDbPath() => dbPath;
+        public string ResolveDbPath(AppConfig value = null) => dbPath;
     }
 }

@@ -75,6 +75,14 @@ Metadata sync does not carry:
 - The Dashboard review card links directly to Backups for drill-down.
 - Retention cleanup protects the last metadata-valid restore point for a project.
 
+## Backup Encryption
+- Encrypted archive backups are encrypted locally before upload; destinations receive `data.vse`, not a completed plaintext `data.zip`.
+- Passwords are stored through Windows DPAPI, macOS Keychain, or Linux Secret Service. Configuration and metadata sync carry only non-secret references.
+- A plaintext archive temporarily exists on the source machine during creation, and decrypted content temporarily exists during open/restore.
+- VaultSync cannot recover a forgotten encryption password.
+
+Full security explanation: `docs/wiki/Encryption.md`.
+
 ## Updates Summary
 - Patch updates use a strict manifest allowlist for compatible base versions.
 - Multi-base patch manifests are still exact allowlists, not version ranges.
@@ -99,6 +107,7 @@ See full troubleshooting page: `docs/wiki/Troubleshooting.md`.
 - Docs index: `docs/README.md`
 - Documentation hub: `DOCUMENTATION.md`
 - Wiki home: `docs/wiki/Home.md`
+- Backup encryption: `docs/wiki/Encryption.md`
 - Microsoft Store notes: `docs/MICROSOFT_STORE.md`
 - Microsoft Store submission checklist: `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md`
 - Roadmap: `ROADMAP.md`
