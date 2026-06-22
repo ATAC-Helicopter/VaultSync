@@ -1845,6 +1845,9 @@
   - Done locally: elevated Linux patch application runs headlessly after `pkexec` authentication.
   - Done locally: `.deb` fallback uses `apt-get install --reinstall` and helper failures return a non-zero exit code.
   - Remaining: validate patch and full-package update behavior on a protected `/opt/vaultsync` install before publishing 1.8.1.
+- [x] `BUG-18057` `P1` Prevent multiple VaultSync UI instances on Linux. _(Done 2026-06-22, tracked by #397; target 1.8.1)_
+  - Done: Linux startup holds a per-user OS file lock for the UI process lifetime and repeated launches signal the existing instance.
+  - Done: regression coverage verifies that concurrent acquisition is rejected and the lock becomes available after shutdown.
 - [ ] `VS-1824` `P1` Add basic Recovery report export. _(Tracked by #395; target 1.8.1)_
   - Scope: export the current readiness score, coverage windows, recommendations, and per-project recovery matrix.
   - Acceptance: reports are readable outside VaultSync, localized where practical, and do not expose secrets or credentials.

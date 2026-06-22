@@ -8,6 +8,7 @@ VaultSync `1.8.1` continues Recovery Intelligence while hardening encrypted back
 - Recovery report export is planned for this release, covering readiness, recovery windows, recommendations, and project status.
 
 ### Linux updates
+- VaultSync now prevents multiple Linux UI instances with a process-lifetime file lock and activates the existing window on repeated launches.
 - Protected `.deb` installations run elevated patch application without depending on a root-owned graphical desktop session.
 - Full `.deb` fallback installs explicitly reinstall the downloaded package when repair is required.
 

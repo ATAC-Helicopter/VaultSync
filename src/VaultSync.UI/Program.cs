@@ -18,7 +18,7 @@ namespace VaultSync.UI;
 internal static class Program
 {
     private const int MaxActivationPayloadBytes = 8192;
-    private static Mutex? _instanceMutex;
+    private static SingleInstanceLock? _instanceLock;
     private static CancellationTokenSource? _activationListenerCts;
     private const string InstancePipeName = "VaultSync.UI.SingleInstancePipe";
     private static readonly string? PsPath = ResolvePsPath();
@@ -49,13 +49,15 @@ internal static class Program
             return;
         }
 
-        _instanceMutex = new Mutex(true, "VaultSync.UI.SingleInstance", out bool isFirstInstance);
-        DiagnosticsLogger.Record($"Instance mutex acquired. IsFirst={isFirstInstance}.");
-        if (!isFirstInstance)
+        _instanceLock = SingleInstanceLock.TryAcquire(
+            "VaultSync.UI.SingleInstance",
+            "VaultSync.UI.SingleInstance.lock");
+        DiagnosticsLogger.Record($"Instance lock acquired. IsFirst={_instanceLock.IsAcquired}.");
+        if (!_instanceLock.IsAcquired)
         {
             DiagnosticsLogger.Record("Second instance detected. Signaling existing instance.");
-            _instanceMutex.Dispose();
-            _instanceMutex = null;
+            _instanceLock.Dispose();
+            _instanceLock = null;
             TrySignalExistingInstance(args);
             return;
         }
@@ -87,9 +89,8 @@ internal static class Program
                 _activationListenerCts.Dispose();
                 _activationListenerCts = null;
             }
-            _instanceMutex.ReleaseMutex();
-            _instanceMutex.Dispose();
-            _instanceMutex = null;
+            _instanceLock.Dispose();
+            _instanceLock = null;
             DiagnosticsLogger.Record("Process exit cleanup complete.");
             DiagnosticsLogger.Shutdown();
         }

@@ -483,6 +483,7 @@ Basic export functionality.
 - Encrypt archive artifacts before destination upload.
 - Bound and validate encrypted format and KDF metadata before key derivation.
 - Keep Linux Secret Service entries isolated by credential `keyRef`.
+- Prevent duplicate Linux UI processes with a per-user process-lifetime lock.
 - Reduce plaintext temporary artifacts and clean interrupted encryption outputs.
 - Cover tampering, crash cleanup, and Windows/macOS/Linux credential contracts in integration tests.
 
