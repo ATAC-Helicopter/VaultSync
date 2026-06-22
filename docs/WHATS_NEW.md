@@ -1,5 +1,16 @@
 # What's New
 
+## [1.8.1]
+
+VaultSync `1.8.1` continues the Recovery Intelligence release line and improves Linux update reliability.
+
+### Recovery Intelligence
+- Recovery report export is planned for this release, covering readiness, recovery windows, recommendations, and project status.
+
+### Linux updates
+- Protected `.deb` installations run elevated patch application without depending on a root-owned graphical desktop session.
+- Full `.deb` fallback installs explicitly reinstall the downloaded package when repair is required.
+
 ## [1.8.0]
 
 VaultSync `1.8.0` introduces Project History and Recovery Intelligence, with editable recovery-point context and readiness guidance.
