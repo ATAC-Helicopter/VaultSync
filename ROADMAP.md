@@ -1784,8 +1784,10 @@
 ### 1.8.1 status (2026-06-23)
 - Release theme: complete the Recovery Intelligence slice planned in `docs/VaultSync 1.8 Timeline.md`.
 - Readiness, coverage, recommendations, and the Recovery project matrix shipped early in 1.8.0.
-- Recovery report export is implemented; remaining product scope is focused Recovery UX refinement and release validation.
+- Recovery report export and focused project-triage refinement are implemented; product scope is complete.
 - Maintenance scope includes Linux updater repair and encryption/credential hardening carried forward from the 1.8.0 audit.
+- Automated validation is green: 254 core tests, warning-free Release build, clean dependency vulnerability audit, Windows/Linux CI, CodeQL, SonarQube, and PR quality gates.
+- The milestone-scoped pre-publish gate now identifies only two manual Linux desktop validations before release.
 
 ### 1.8.0 status (released 2026-06-20)
 - Feature scope is complete for Project History, snapshot metadata/markers, Dashboard recovery awareness, and Recovery v1.
@@ -1844,6 +1846,7 @@
 - [ ] `BUG-18056` `P1` Fix Linux `.deb` patch and reinstall updater flows. _(In progress; tracked by #394; target 1.8.1)_
   - Done locally: elevated Linux patch application runs headlessly after `pkexec` authentication.
   - Done locally: `.deb` fallback uses `apt-get install --reinstall` and helper failures return a non-zero exit code.
+  - Done: Windows/Linux CI, updater-focused coverage, CodeQL, SonarQube, and dependency checks pass on `Dev`.
   - Remaining: validate patch and full-package update behavior on a protected `/opt/vaultsync` install before publishing 1.8.1.
 - [x] `BUG-18057` `P1` Prevent multiple VaultSync UI instances on Linux. _(Done 2026-06-22, tracked by #397; target 1.8.1)_
   - Done: Linux startup holds a per-user OS file lock for the UI process lifetime and repeated launches signal the existing instance.
@@ -1869,7 +1872,8 @@
   - Done locally: envelope versions, algorithms, KDF identifiers, iteration bounds, salt/IV lengths, and HMAC identifiers are validated before key derivation.
   - Done locally: encryption output uses temporary atomic artifacts with cancellation cleanup, plus tamper, crash-cleanup, and platform credential contract tests.
   - Done locally: public encryption documentation explains the format, credential storage, threat model, temporary plaintext boundary, and password-loss implications.
-  - Remaining: validate Linux Secret Service behavior in a desktop session and run the full Windows/Linux release matrix.
+  - Done: full Windows/Linux CI, CodeQL, SonarQube, quality gates, and dependency vulnerability audit pass on `Dev`.
+  - Remaining: validate Linux Secret Service save/read/delete behavior in a real desktop session.
 - [ ] `VS-1821` `P2` Split backup and metadata service complexity hotspots. _(Tracked by #380)_
 - [ ] `VS-1822` `P2` Split oversized desktop view-model hotspots. _(Tracked by #381)_
 - [ ] `VS-1823` `P1` Add large-history performance budgets and release benchmarks. _(Tracked by #382)_
