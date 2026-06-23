@@ -12,6 +12,7 @@
 - [BUG-18056] Protected Linux patch installs now run the elevated helper headlessly instead of losing the desktop session after `pkexec`.
 - [VS-1825] Linux credential references now store, find, and delete the correct Secret Service entry.
 - [VS-1825] Encrypted archive readers now reject unsupported formats and excessive embedded KDF parameters before derivation.
+- [VS-1827] Release readiness checks now scope Project completion to the target milestone instead of later train work.
 
 ## [1.8.0] - 20.06.2026
 ### Added

@@ -1858,6 +1858,10 @@
   - Scope: add project search, ready/needs-attention filters, visible-result counts, and distinct no-match guidance.
   - Done locally: matrix filtering preserves weakest-first ordering and report export continues to include the complete assessment.
   - Acceptance: search covers names, statuses, and reasons; empty repositories remain distinct from filtered no-match results.
+- [x] `VS-1827` `P1` Scope release readiness checks by milestone. _(Done locally; tracked by #399; target 1.8.1)_
+  - Scope: make the documented `TargetMilestone` gate input filter Project completion independently from the broader `1.8.x` release train.
+  - Acceptance: deferred later-train work does not block 1.8.1, while incomplete 1.8.1 milestone items remain visible.
+  - Done: the live 1.8.1 pre-publish gate finds only milestone items and reports Linux updater and credential validation as the remaining blockers.
 - [ ] `VS-1825` `P0` Harden encrypted backup staging and platform credential integration. _(Implemented locally; tracked by #396; target 1.8.1)_
   - Scope: encrypt archive artifacts before destination upload, isolate Linux Secret Service entries by `keyRef`, validate embedded crypto parameters, and reduce plaintext staging exposure.
   - Done locally: encrypted backups upload `data.vse` directly and never place `data.zip` on the destination.

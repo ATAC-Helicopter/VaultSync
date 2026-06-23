@@ -1,6 +1,7 @@
 param(
     [string]$TargetVersion,
     [string]$ReleaseTrack,
+    [string]$TargetMilestone,
     [string]$Repository = "ATAC-Helicopter/VaultSync",
     [int]$ProjectNumber = 7,
     [ValidateSet("PrePublish", "PostPublish")]
@@ -120,6 +121,10 @@ if ([string]::IsNullOrWhiteSpace($TargetVersion)) {
 
 if ([string]::IsNullOrWhiteSpace($ReleaseTrack)) {
     $ReleaseTrack = Get-ReleaseTrackFromVersion -Version $TargetVersion
+}
+
+if ([string]::IsNullOrWhiteSpace($TargetMilestone)) {
+    $TargetMilestone = $TargetVersion
 }
 
 $results = New-Object System.Collections.Generic.List[object]
@@ -250,7 +255,28 @@ $projectItems = Get-GhJson -Command "gh project item-list $ProjectNumber --owner
 $releaseItems = @($projectItems.items | Where-Object {
     $releaseProperty = $_.PSObject.Properties["release"]
     $itemRelease = if ($null -ne $releaseProperty) { $releaseProperty.Value } else { $null }
-    $itemRelease -eq $ReleaseTrack
+    if ($itemRelease -ne $ReleaseTrack) {
+        return $false
+    }
+
+    if ([string]::IsNullOrWhiteSpace($TargetMilestone)) {
+        return $true
+    }
+
+    $milestoneProperty = $_.PSObject.Properties["milestone"]
+    if ($null -eq $milestoneProperty -or $null -eq $milestoneProperty.Value) {
+        return $false
+    }
+
+    $milestoneValue = $milestoneProperty.Value
+    $milestoneTitleProperty = $milestoneValue.PSObject.Properties["title"]
+    $milestoneTitle = if ($null -ne $milestoneTitleProperty) {
+        $milestoneTitleProperty.Value
+    } else {
+        [string]$milestoneValue
+    }
+
+    $milestoneTitle -eq $TargetMilestone
 })
 $incompleteItems = @($releaseItems | Where-Object {
     $statusProperty = $_.PSObject.Properties["status"]
@@ -259,15 +285,16 @@ $incompleteItems = @($releaseItems | Where-Object {
 })
 
 Add-CheckResult -Results $results -Code "project-release-items" -Condition ($releaseItems.Count -gt 0) `
-    -PassMessage "Project release slice '$ReleaseTrack' contains $($releaseItems.Count) item(s)." `
-    -FailMessage "Project release slice '$ReleaseTrack' has no items." `
-    -Data @{ release = $ReleaseTrack; count = $releaseItems.Count }
+    -PassMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' contains $($releaseItems.Count) item(s)." `
+    -FailMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' has no items." `
+    -Data @{ release = $ReleaseTrack; milestone = $TargetMilestone; count = $releaseItems.Count }
 
 Add-CheckResult -Results $results -Code "project-release-complete" -Condition ($incompleteItems.Count -eq 0) `
-    -PassMessage "Project release slice '$ReleaseTrack' is complete." `
-    -FailMessage "Project release slice '$ReleaseTrack' still has incomplete work." `
+    -PassMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' is complete." `
+    -FailMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' still has incomplete work." `
     -Data @{
         release = $ReleaseTrack
+        milestone = $TargetMilestone
         incomplete = @($incompleteItems | ForEach-Object {
             [pscustomobject]@{
                 title  = $_.title
@@ -283,6 +310,7 @@ $warnings = @($results | Where-Object { $_.status -eq "warn" })
 $summary = [pscustomobject]@{
     targetVersion = $TargetVersion
     releaseTrack  = $ReleaseTrack
+    targetMilestone = $TargetMilestone
     repository    = $Repository
     phase         = $Phase
     checkedUtc    = [DateTimeOffset]::UtcNow.ToString("O")
@@ -308,6 +336,7 @@ if ($Json) {
 
     Write-Host "Target version : $TargetVersion"
     Write-Host "Release track  : $ReleaseTrack"
+    Write-Host "Milestone      : $TargetMilestone"
     Write-Host "Phase          : $Phase"
     Write-Host "Repository     : $Repository"
     Write-Host ""
