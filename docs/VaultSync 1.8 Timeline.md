@@ -474,7 +474,7 @@ Examples:
 
 ### Recovery Reports
 
-Basic export functionality.
+Recovery exports the current readiness score, coverage windows, recommendation, and per-project matrix as a portable Markdown report.
 
 ---
 

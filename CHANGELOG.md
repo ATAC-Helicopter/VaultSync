@@ -1,5 +1,7 @@
 ﻿# Changelog
 ## [1.8.1] - Unreleased
+### Added
+- [VS-1824] Recovery assessments can now be exported as portable Markdown reports with coverage and project readiness details.
 ### Changed
 - [BUG-18056] Linux `.deb` fallback installs now request an explicit APT reinstall of the downloaded package.
 - [VS-1825] Encrypted backups are now encrypted locally before their final artifact is uploaded to the destination.

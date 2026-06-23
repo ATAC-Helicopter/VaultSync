@@ -1781,10 +1781,10 @@
 - `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
 - `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
 
-### 1.8.1 status (2026-06-22)
+### 1.8.1 status (2026-06-23)
 - Release theme: complete the Recovery Intelligence slice planned in `docs/VaultSync 1.8 Timeline.md`.
 - Readiness, coverage, recommendations, and the Recovery project matrix shipped early in 1.8.0.
-- Remaining product scope: basic Recovery report export, focused Recovery UX refinement, and release validation.
+- Recovery report export is implemented; remaining product scope is focused Recovery UX refinement and release validation.
 - Maintenance scope includes Linux updater repair and encryption/credential hardening carried forward from the 1.8.0 audit.
 
 ### 1.8.0 status (released 2026-06-20)
@@ -1848,9 +1848,12 @@
 - [x] `BUG-18057` `P1` Prevent multiple VaultSync UI instances on Linux. _(Done 2026-06-22, tracked by #397; target 1.8.1)_
   - Done: Linux startup holds a per-user OS file lock for the UI process lifetime and repeated launches signal the existing instance.
   - Done: regression coverage verifies that concurrent acquisition is rejected and the lock becomes available after shutdown.
-- [ ] `VS-1824` `P1` Add basic Recovery report export. _(Tracked by #395; target 1.8.1)_
+- [x] `VS-1824` `P1` Add basic Recovery report export. _(Done locally; tracked by #395; target 1.8.1)_
   - Scope: export the current readiness score, coverage windows, recommendations, and per-project recovery matrix.
   - Acceptance: reports are readable outside VaultSync, localized where practical, and do not expose secrets or credentials.
+  - Done: Recovery exports the same readiness snapshot shown in the UI as a portable Markdown report.
+  - Done: reports include generation time, overview, coverage windows, recommendation, and the ordered project matrix.
+  - Done: exports use localized headings, unique filenames, empty-state output, Markdown escaping, and focused regression tests.
 - [ ] `VS-1825` `P0` Harden encrypted backup staging and platform credential integration. _(Implemented locally; tracked by #396; target 1.8.1)_
   - Scope: encrypt archive artifacts before destination upload, isolate Linux Secret Service entries by `keyRef`, validate embedded crypto parameters, and reduce plaintext staging exposure.
   - Done locally: encrypted backups upload `data.vse` directly and never place `data.zip` on the destination.

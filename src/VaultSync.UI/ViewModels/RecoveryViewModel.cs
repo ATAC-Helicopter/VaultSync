@@ -11,7 +11,9 @@ using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
+using VaultSync.UI.Notifications;
 using VaultSync.UI.Services;
+using VaultSync.UI.ViewModels.Notifications;
 
 namespace VaultSync.UI.ViewModels;
 
@@ -39,6 +41,8 @@ public sealed class RecoveryViewModel : ViewModelBase
     private int _readinessPercent;
     private string _readinessBand = L("Recovery.Band.NotMeasured", "Not measured");
     private string _insight = L("Recovery.Insight.Empty", "Add a project and create a backup to measure recovery readiness.");
+    private string _exportStatus = string.Empty;
+    private bool _isExporting;
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -56,11 +60,13 @@ public sealed class RecoveryViewModel : ViewModelBase
         _configStore = configStore;
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
         RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
+        ExportReportCommand = new RelayCommand(async _ => await ExportReportAsync(), _ => !IsExporting);
     }
 
     public ObservableCollection<RecoveryProjectViewModel> Projects { get; } = [];
 
     public ICommand RefreshCommand { get; }
+    public ICommand ExportReportCommand { get; }
 
     public string Headline
     {
@@ -168,6 +174,31 @@ public sealed class RecoveryViewModel : ViewModelBase
 
     public bool HasProjects => Projects.Count > 0;
 
+    public string ExportStatus
+    {
+        get => _exportStatus;
+        private set
+        {
+            if (SetField(ref _exportStatus, value))
+                OnPropertyChanged(nameof(HasExportStatus));
+        }
+    }
+
+    public bool HasExportStatus => !string.IsNullOrWhiteSpace(ExportStatus);
+
+    public bool IsExporting
+    {
+        get => _isExporting;
+        private set
+        {
+            if (!SetField(ref _isExporting, value))
+                return;
+
+            if (ExportReportCommand is RelayCommand command)
+                command.RaiseCanExecuteChanged();
+        }
+    }
+
     public async Task RefreshAsync(bool force = false)
     {
         if (!force && (DateTime.UtcNow - _lastRefreshUtc) < RefreshTtl)
@@ -187,6 +218,87 @@ public sealed class RecoveryViewModel : ViewModelBase
             Interlocked.Exchange(ref _refreshInFlight, 0);
         }
     }
+
+    internal async Task<string?> ExportReportAsync(string? exportRoot = null)
+    {
+        if (IsExporting)
+            return null;
+
+        IsExporting = true;
+        ExportStatus = L("Recovery.Export.Working", "Preparing recovery report...");
+        try
+        {
+            await RefreshAsync().ConfigureAwait(false);
+            RecoveryReportSnapshot snapshot = await Dispatcher.UIThread.InvokeAsync(BuildReportSnapshot);
+            RecoveryReportLabels labels = BuildReportLabels();
+            string path = await Task.Run(() =>
+                RecoveryReportExporter.ExportMarkdown(snapshot, labels, exportRoot));
+            string message = LF("Recovery.Export.Success", "Recovery report exported to {0}", path);
+            await Dispatcher.UIThread.InvokeAsync(() => ExportStatus = message);
+            GlobalNotificationCenter.Instance.Show(
+                message,
+                NotificationSeverity.Info,
+                L("Recovery.Export.Title", "Recovery report"),
+                groupKey: "recovery-report-export");
+            return path;
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.RecordException("Recovery report export failed", ex);
+            string message = LF("Recovery.Export.FailedWithReason", "Recovery report export failed: {0}", ex.Message);
+            await Dispatcher.UIThread.InvokeAsync(() => ExportStatus = message);
+            GlobalNotificationCenter.Instance.Show(
+                message,
+                NotificationSeverity.Error,
+                L("Recovery.Export.Title", "Recovery report"),
+                groupKey: "recovery-report-export");
+            return null;
+        }
+        finally
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => IsExporting = false);
+        }
+    }
+
+    private RecoveryReportSnapshot BuildReportSnapshot() =>
+        new(
+            DateTimeOffset.Now,
+            ReadinessPercent,
+            ReadinessBand,
+            Headline,
+            Detail,
+            Insight,
+            ProjectCount,
+            ReadyCount,
+            AttentionCount,
+            RiskCount,
+            UnavailableCount,
+            Coverage24Hours,
+            Coverage7Days,
+            Coverage30Days,
+            Coverage90Days,
+            TopRecommendation,
+            Projects.Select(project => new RecoveryReportProject(
+                project.ProjectName,
+                project.TrackLabel,
+                project.Score,
+                project.Reason)).ToList());
+
+    private static RecoveryReportLabels BuildReportLabels() =>
+        new(
+            L("Recovery.Export.ReportTitle", "VaultSync Recovery Report"),
+            L("Recovery.Export.Generated", "Generated"),
+            L("Recovery.Export.Overview", "Recovery overview"),
+            L("Recovery.Export.Readiness", "Readiness"),
+            L("Recovery.Export.Projects", "Projects measured"),
+            L("Recovery.Export.Coverage", "Recovery coverage"),
+            L("Recovery.Export.Recommendation", "Top recommendation"),
+            L("Recovery.Export.ProjectMatrix", "Project recovery matrix"),
+            L("Recovery.Export.Project", "Project"),
+            L("Recovery.Export.Status", "Status"),
+            L("Recovery.Export.Score", "Score"),
+            L("Recovery.Export.Reason", "Reason"),
+            L("Recovery.Export.NoProjects", "No projects are currently available in the recovery assessment."));
 
     private RecoveryData LoadData()
     {
