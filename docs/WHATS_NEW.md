@@ -6,6 +6,7 @@ VaultSync `1.8.1` continues Recovery Intelligence while hardening encrypted back
 
 ### Recovery Intelligence
 - Recovery can export a portable Markdown report with readiness, coverage windows, recommendations, and project status.
+- The Recovery project matrix can be searched and filtered to ready projects or projects needing attention.
 
 ### Linux updates
 - VaultSync now prevents multiple Linux UI instances with a process-lifetime file lock and activates the existing window on repeated launches.

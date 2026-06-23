@@ -23,6 +23,7 @@ public sealed class RecoveryViewModel : ViewModelBase
     private readonly IAppConfigStore _configStore;
     private readonly IRepositoryFactory _repositoryFactory;
     private readonly RestoreReadinessService _readinessService = new();
+    private readonly List<RecoveryProjectViewModel> _allProjects = [];
     private int _refreshInFlight;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
     private string _headline = "Loading recovery readiness...";
@@ -43,6 +44,8 @@ public sealed class RecoveryViewModel : ViewModelBase
     private string _insight = L("Recovery.Insight.Empty", "Add a project and create a backup to measure recovery readiness.");
     private string _exportStatus = string.Empty;
     private bool _isExporting;
+    private string _projectSearchText = string.Empty;
+    private RecoveryFilterOption? _selectedProjectFilter;
 
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
@@ -61,9 +64,17 @@ public sealed class RecoveryViewModel : ViewModelBase
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
         RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
         ExportReportCommand = new RelayCommand(async _ => await ExportReportAsync(), _ => !IsExporting);
+        ProjectFilters =
+        [
+            new RecoveryFilterOption(RecoveryProjectFilter.All, L("Recovery.Filter.All", "All projects")),
+            new RecoveryFilterOption(RecoveryProjectFilter.NeedsAttention, L("Recovery.Filter.NeedsAttention", "Needs attention")),
+            new RecoveryFilterOption(RecoveryProjectFilter.Ready, L("Recovery.Filter.Ready", "Ready"))
+        ];
+        _selectedProjectFilter = ProjectFilters[0];
     }
 
     public ObservableCollection<RecoveryProjectViewModel> Projects { get; } = [];
+    public ObservableCollection<RecoveryFilterOption> ProjectFilters { get; }
 
     public ICommand RefreshCommand { get; }
     public ICommand ExportReportCommand { get; }
@@ -173,6 +184,34 @@ public sealed class RecoveryViewModel : ViewModelBase
     public string ProjectSummaryLabel => LF("Recovery.ProjectSummary", "{0} project(s) measured", ProjectCount);
 
     public bool HasProjects => Projects.Count > 0;
+    public bool HasTrackedProjects => ProjectCount > 0;
+
+    public string ProjectSearchText
+    {
+        get => _projectSearchText;
+        set
+        {
+            if (SetField(ref _projectSearchText, value ?? string.Empty))
+                RefreshProjectsView();
+        }
+    }
+
+    public RecoveryFilterOption? SelectedProjectFilter
+    {
+        get => _selectedProjectFilter;
+        set
+        {
+            if (SetField(ref _selectedProjectFilter, value))
+                RefreshProjectsView();
+        }
+    }
+
+    public string VisibleProjectSummaryLabel =>
+        LF("Recovery.Filter.VisibleCount", "{0} of {1}", Projects.Count, ProjectCount);
+
+    public string ProjectEmptyMessage => HasTrackedProjects
+        ? L("Recovery.Filter.NoMatches", "No projects match the current Recovery filters.")
+        : L("Recovery.Empty", "No tracked projects yet. Add a project and create a backup to measure recovery readiness.");
 
     public string ExportStatus
     {
@@ -278,7 +317,7 @@ public sealed class RecoveryViewModel : ViewModelBase
             Coverage30Days,
             Coverage90Days,
             TopRecommendation,
-            Projects.Select(project => new RecoveryReportProject(
+            _allProjects.Select(project => new RecoveryReportProject(
                 project.ProjectName,
                 project.TrackLabel,
                 project.Score,
@@ -382,19 +421,35 @@ public sealed class RecoveryViewModel : ViewModelBase
         TopRecommendation = data.TopRecommendation;
         Insight = BuildInsight(summary);
 
-        Projects.Clear();
+        _allProjects.Clear();
         foreach (ProjectRestoreReadiness project in summary.Projects
                      .OrderBy(project => project.Score)
                      .ThenBy(project => project.ProjectName, StringComparer.OrdinalIgnoreCase))
-            Projects.Add(new RecoveryProjectViewModel(project));
+            _allProjects.Add(new RecoveryProjectViewModel(project));
 
-        OnPropertyChanged(nameof(HasProjects));
+        RefreshProjectsView();
+        OnPropertyChanged(nameof(HasTrackedProjects));
         OnPropertyChanged(nameof(ReadinessScoreLabel));
         OnPropertyChanged(nameof(Coverage24Percent));
         OnPropertyChanged(nameof(Coverage7Percent));
         OnPropertyChanged(nameof(Coverage30Percent));
         OnPropertyChanged(nameof(Coverage90Percent));
         OnPropertyChanged(nameof(ProjectSummaryLabel));
+    }
+
+    private void RefreshProjectsView()
+    {
+        RecoveryProjectFilter filter = SelectedProjectFilter?.Filter ?? RecoveryProjectFilter.All;
+        IReadOnlyList<RecoveryProjectViewModel> visible =
+            RecoveryProjectListFilter.Apply(_allProjects, ProjectSearchText, filter);
+
+        Projects.Clear();
+        foreach (RecoveryProjectViewModel project in visible)
+            Projects.Add(project);
+
+        OnPropertyChanged(nameof(HasProjects));
+        OnPropertyChanged(nameof(VisibleProjectSummaryLabel));
+        OnPropertyChanged(nameof(ProjectEmptyMessage));
     }
 
     private static int Percent(int value, int total) =>
@@ -453,6 +508,7 @@ public sealed class RecoveryProjectViewModel
         Label = project.Label;
         Score = project.Score;
         Reason = project.Reason;
+        State = project.State;
         Accent = project.State switch
         {
             RestoreReadinessState.Ready => "#22CC88",
@@ -466,6 +522,7 @@ public sealed class RecoveryProjectViewModel
     public string Label { get; }
     public int Score { get; }
     public string Reason { get; }
+    public RestoreReadinessState State { get; }
     public string Accent { get; }
     public string ScoreLabel => $"{Score}%";
     public int ScoreValue => Score;
@@ -477,3 +534,5 @@ public sealed class RecoveryProjectViewModel
         _ => L("Recovery.Track.Blocked", "Blocked")
     };
 }
+
+public sealed record RecoveryFilterOption(RecoveryProjectFilter Filter, string Label);

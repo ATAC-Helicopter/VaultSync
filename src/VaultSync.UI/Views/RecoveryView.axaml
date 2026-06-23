@@ -236,11 +236,26 @@
                 <TextBlock Text="{infra:LocalizedString Key=Recovery.ProjectMatrix.FriendlyDetail}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="*,170"
+                      ColumnSpacing="10"
+                      Margin="0,8,0,0">
+                  <TextBox Watermark="{infra:LocalizedString Key=Recovery.Filter.SearchWatermark}"
+                           Text="{CompiledBinding ProjectSearchText, Mode=TwoWay}" />
+                  <ComboBox Grid.Column="1"
+                            ItemsSource="{CompiledBinding ProjectFilters}"
+                            SelectedItem="{CompiledBinding SelectedProjectFilter, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:RecoveryFilterOption">
+                        <TextBlock Text="{CompiledBinding Label}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </Grid>
               </StackPanel>
               <Border Grid.Column="1"
                       Classes="recovery-pill"
                       VerticalAlignment="Top">
-                <TextBlock Text="{CompiledBinding ProjectCount}"
+                <TextBlock Text="{CompiledBinding VisibleProjectSummaryLabel}"
                            FontSize="11"
                            FontWeight="SemiBold" />
               </Border>
@@ -251,7 +266,7 @@
                     Margin="18,0,18,18"
                     Padding="18"
                     IsVisible="{CompiledBinding !HasProjects}">
-              <TextBlock Text="{infra:LocalizedString Key=Recovery.Empty}"
+              <TextBlock Text="{CompiledBinding ProjectEmptyMessage}"
                          Foreground="{DynamicResource TextSecondaryBrush}"
                          TextWrapping="Wrap" />
             </Border>

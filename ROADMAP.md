@@ -1854,6 +1854,10 @@
   - Done: Recovery exports the same readiness snapshot shown in the UI as a portable Markdown report.
   - Done: reports include generation time, overview, coverage windows, recommendation, and the ordered project matrix.
   - Done: exports use localized headings, unique filenames, empty-state output, Markdown escaping, and focused regression tests.
+- [x] `VS-1826` `P1` Refine Recovery project triage. _(Done locally; tracked by #398; target 1.8.1)_
+  - Scope: add project search, ready/needs-attention filters, visible-result counts, and distinct no-match guidance.
+  - Done locally: matrix filtering preserves weakest-first ordering and report export continues to include the complete assessment.
+  - Acceptance: search covers names, statuses, and reasons; empty repositories remain distinct from filtered no-match results.
 - [ ] `VS-1825` `P0` Harden encrypted backup staging and platform credential integration. _(Implemented locally; tracked by #396; target 1.8.1)_
   - Scope: encrypt archive artifacts before destination upload, isolate Linux Secret Service entries by `keyRef`, validate embedded crypto parameters, and reduce plaintext staging exposure.
   - Done locally: encrypted backups upload `data.vse` directly and never place `data.zip` on the destination.

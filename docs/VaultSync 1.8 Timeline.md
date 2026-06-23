@@ -472,6 +472,12 @@ Examples:
 
 ---
 
+### Recovery Project Triage
+
+Search the project matrix or filter it to ready projects and projects needing attention while preserving weakest-first ordering.
+
+---
+
 ### Recovery Reports
 
 Recovery exports the current readiness score, coverage windows, recommendation, and per-project matrix as a portable Markdown report.

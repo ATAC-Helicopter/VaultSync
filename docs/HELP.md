@@ -75,6 +75,7 @@ Metadata sync does not carry:
 - The Dashboard review card links directly to Backups for drill-down.
 - Retention cleanup protects the last metadata-valid restore point for a project.
 - Recovery can export the current readiness score, coverage windows, recommendation, and project matrix as a Markdown report under `Documents/VaultSync/Exports/Recovery`.
+- Recovery project rows can be searched or filtered to show all projects, ready projects, or anything needing attention.
 
 ## Backup Encryption
 - Encrypted archive backups are encrypted locally before upload; destinations receive `data.vse`, not a completed plaintext `data.zip`.
