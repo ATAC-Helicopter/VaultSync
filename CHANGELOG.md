@@ -7,6 +7,7 @@
 - [VS-1825] Encrypted backups are now encrypted locally before their final artifact is uploaded to the destination.
 - [VS-1825] Published a backup encryption guide covering setup, format, credential storage, password changes, opening, and restore.
 - [VS-1826] Recovery project triage now supports search and focused ready or needs-attention filters.
+- [VS-1827] Release-facing issue and PR templates now default to the 1.8.1 release train and show the milestone-scoped release gate command.
 ### Fixed
 - [BUG-18057] Linux now holds a per-user OS file lock for the UI process lifetime, preventing duplicate app instances while preserving activation of the existing window.
 - [BUG-18056] Protected Linux patch installs now run the elevated helper headlessly instead of losing the desktop session after `pkexec`.
