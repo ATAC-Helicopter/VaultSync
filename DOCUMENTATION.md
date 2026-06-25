@@ -31,6 +31,7 @@ Core pillars:
 ### 2.3 Wiki docs
 - `docs/wiki/Home.md`: wiki entry page.
 - `docs/wiki/*`: task and feature guides (installation, backups, destinations, troubleshooting, etc.).
+- `docs/wiki/Encryption.md`: backup encryption setup, format, credential storage, password changes, opening, and restore.
 
 ## 3. Work-Item and ID Conventions
 Primary planning IDs use `VS-xxxx`.
@@ -78,8 +79,9 @@ When changing behavior, update all relevant artifacts in the same PR:
 ### End user help flow
 1. `docs/HELP.md`
 2. `docs/wiki/Quick-Start.md`
-3. `docs/wiki/Troubleshooting.md`
-4. `docs/wiki/FAQ.md`
+3. `docs/wiki/Encryption.md` for encrypted-backup security and password handling
+4. `docs/wiki/Troubleshooting.md`
+5. `docs/wiki/FAQ.md`
 
 ## 6. Quality Checklist (Docs)
 Before merging documentation updates:

@@ -1,10 +1,9 @@
 # VaultSync 1.8 Roadmap
 ## Project History & Recovery
 
-Status: 1.8.0 Released
+Status: Approved Planning Draft
 Version: 1.8.x Series
-Release Date: June 20, 2026
-Last Updated: June 20, 2026
+Last Updated: June 2026
 
 ---
 
@@ -22,7 +21,7 @@ The goal is to evolve VaultSync from a backup utility into a platform that helps
 - Measure recoverability
 - Improve disaster recovery readiness
 
-Version 1.8 introduces two major concepts to VaultSync:
+Version 1.8 introduces two major concepts that do not currently exist in VaultSync:
 
 ## History
 
@@ -473,15 +472,32 @@ Examples:
 
 ---
 
+### Recovery Project Triage
+
+Search the project matrix or filter it to ready projects and projects needing attention while preserving weakest-first ordering.
+
+---
+
 ### Recovery Reports
 
-Basic export functionality.
+Recovery exports the current readiness score, coverage windows, recommendation, and per-project matrix as a portable Markdown report.
+
+---
+
+## Security and Reliability Hardening
+
+- Encrypt archive artifacts before destination upload.
+- Bound and validate encrypted format and KDF metadata before key derivation.
+- Keep Linux Secret Service entries isolated by credential `keyRef`.
+- Prevent duplicate Linux UI processes with a per-user process-lifetime lock.
+- Reduce plaintext temporary artifacts and clean interrupted encryption outputs.
+- Cover tampering, crash cleanup, and Windows/macOS/Linux credential contracts in integration tests.
 
 ---
 
 ## Success Criteria
 
-Users can measure recoverability.
+Users can measure recoverability, and encrypted backups reach destinations only as validated encrypted artifacts.
 
 ---
 

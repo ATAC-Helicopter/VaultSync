@@ -11,8 +11,8 @@ namespace VaultSync.Core.Services;
 
 /// <summary>
 /// Very small helper to move secrets out of the main app config.
-/// On macOS it writes to the user keychain; elsewhere it stores
-/// DPAPI-protected blobs under ApplicationData/VaultSync.
+/// Uses the current user's native credential store on Windows, macOS, and Linux.
+/// The JSON index contains references and timestamps only, never plaintext secrets.
 /// </summary>
 public sealed class CredentialVault
 {
@@ -179,6 +179,10 @@ public sealed class CredentialVault
         {
             TryDeleteFromKeychain(keyRef, username);
         }
+        else if (OperatingSystem.IsLinux())
+        {
+            TryDeleteFromSecretService(keyRef, username);
+        }
     }
 
     public int CleanupUnusedSecrets(IEnumerable<string> activeKeyRefs, TimeSpan staleAge)
@@ -229,6 +233,10 @@ public sealed class CredentialVault
                 if (OperatingSystem.IsMacOS())
                 {
                     TryDeleteFromKeychain(key, record.Username ?? string.Empty);
+                }
+                else if (OperatingSystem.IsLinux())
+                {
+                    TryDeleteFromSecretService(key, record.Username ?? string.Empty);
                 }
             }
 
@@ -369,19 +377,7 @@ public sealed class CredentialVault
     {
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName               = "/usr/bin/security",
-                RedirectStandardError  = true,
-                RedirectStandardOutput = true,
-                UseShellExecute        = false
-            };
-
-            psi.ArgumentList.Add("add-generic-password");
-            psi.ArgumentList.Add("-a");
-            psi.ArgumentList.Add(username);
-            psi.ArgumentList.Add("-s");
-            psi.ArgumentList.Add(keyRef);
+            ProcessStartInfo psi = BuildMacKeychainStartInfo("add-generic-password", keyRef, username);
             psi.ArgumentList.Add("-w");
             psi.ArgumentList.Add(secret);
             psi.ArgumentList.Add("-U");
@@ -400,19 +396,7 @@ public sealed class CredentialVault
     {
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName               = "/usr/bin/security",
-                RedirectStandardError  = true,
-                RedirectStandardOutput = true,
-                UseShellExecute        = false
-            };
-
-            psi.ArgumentList.Add("find-generic-password");
-            psi.ArgumentList.Add("-a");
-            psi.ArgumentList.Add(username);
-            psi.ArgumentList.Add("-s");
-            psi.ArgumentList.Add(keyRef);
+            ProcessStartInfo psi = BuildMacKeychainStartInfo("find-generic-password", keyRef, username);
             psi.ArgumentList.Add("-w");
 
             using var proc = Process.Start(psi);
@@ -433,19 +417,7 @@ public sealed class CredentialVault
     {
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName               = "/usr/bin/security",
-                RedirectStandardError  = true,
-                RedirectStandardOutput = true,
-                UseShellExecute        = false
-            };
-
-            psi.ArgumentList.Add("delete-generic-password");
-            psi.ArgumentList.Add("-a");
-            psi.ArgumentList.Add(username);
-            psi.ArgumentList.Add("-s");
-            psi.ArgumentList.Add(keyRef);
+            ProcessStartInfo psi = BuildMacKeychainStartInfo("delete-generic-password", keyRef, username);
 
             using var proc = Process.Start(psi);
             proc?.WaitForExit(3_000);
@@ -460,22 +432,7 @@ public sealed class CredentialVault
     {
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName               = "secret-tool",
-                RedirectStandardError  = true,
-                RedirectStandardOutput = true,
-                RedirectStandardInput = true,
-                UseShellExecute        = false
-            };
-
-            psi.ArgumentList.Add("store");
-            psi.ArgumentList.Add("--label");
-            psi.ArgumentList.Add(keyRef);
-            psi.ArgumentList.Add("service");
-            psi.ArgumentList.Add("vaultsync");
-            psi.ArgumentList.Add("account");
-            psi.ArgumentList.Add(username);
+            ProcessStartInfo psi = BuildSecretToolStartInfo("store", keyRef, username, redirectInput: true);
 
             using var proc = Process.Start(psi);
             if (proc is null)
@@ -495,19 +452,7 @@ public sealed class CredentialVault
     {
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName               = "secret-tool",
-                RedirectStandardError  = true,
-                RedirectStandardOutput = true,
-                UseShellExecute        = false
-            };
-
-            psi.ArgumentList.Add("lookup");
-            psi.ArgumentList.Add("service");
-            psi.ArgumentList.Add("vaultsync");
-            psi.ArgumentList.Add("account");
-            psi.ArgumentList.Add(username);
+            ProcessStartInfo psi = BuildSecretToolStartInfo("lookup", keyRef, username);
 
             using var proc = Process.Start(psi);
             if (proc is null)
@@ -520,6 +465,73 @@ public sealed class CredentialVault
         {
             return null;
         }
+    }
+
+    internal static ProcessStartInfo BuildMacKeychainStartInfo(
+        string operation,
+        string keyRef,
+        string username)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName               = "/usr/bin/security",
+            RedirectStandardError  = true,
+            RedirectStandardOutput = true,
+            UseShellExecute        = false
+        };
+
+        psi.ArgumentList.Add(operation);
+        psi.ArgumentList.Add("-a");
+        psi.ArgumentList.Add(username);
+        psi.ArgumentList.Add("-s");
+        psi.ArgumentList.Add(keyRef);
+        return psi;
+    }
+
+    private static void TryDeleteFromSecretService(string keyRef, string username)
+    {
+        try
+        {
+            ProcessStartInfo psi = BuildSecretToolStartInfo("clear", keyRef, username);
+
+            using var proc = Process.Start(psi);
+            proc?.WaitForExit(30_000);
+        }
+        catch
+        {
+            // Ignore cleanup failures. The non-secret index entry has already been removed.
+        }
+    }
+
+    internal static ProcessStartInfo BuildSecretToolStartInfo(
+        string operation,
+        string keyRef,
+        string username,
+        bool redirectInput = false)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName               = "secret-tool",
+            RedirectStandardError  = true,
+            RedirectStandardOutput = true,
+            RedirectStandardInput  = redirectInput,
+            UseShellExecute        = false
+        };
+
+        psi.ArgumentList.Add(operation);
+        if (string.Equals(operation, "store", StringComparison.Ordinal))
+        {
+            psi.ArgumentList.Add("--label");
+            psi.ArgumentList.Add(keyRef);
+        }
+
+        psi.ArgumentList.Add("service");
+        psi.ArgumentList.Add("vaultsync");
+        psi.ArgumentList.Add("key-ref");
+        psi.ArgumentList.Add(keyRef);
+        psi.ArgumentList.Add("account");
+        psi.ArgumentList.Add(username);
+        return psi;
     }
 
     private sealed class StoredSecret

@@ -978,6 +978,7 @@ namespace VaultSync.UI.ViewModels
 
                 psi.ArgumentList.Add(aptGet);
                 psi.ArgumentList.Add("install");
+                psi.ArgumentList.Add("--reinstall");
                 psi.ArgumentList.Add("-y");
                 psi.ArgumentList.Add(packagePath);
 

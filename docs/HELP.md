@@ -74,6 +74,16 @@ Metadata sync does not carry:
 - Dashboard and Backups show restore-readiness summaries so you can see whether projects are ready, need attention, or are unavailable.
 - The Dashboard review card links directly to Backups for drill-down.
 - Retention cleanup protects the last metadata-valid restore point for a project.
+- Recovery can export the current readiness score, coverage windows, recommendation, and project matrix as a Markdown report under `Documents/VaultSync/Exports/Recovery`.
+- Recovery project rows can be searched or filtered to show all projects, ready projects, or anything needing attention.
+
+## Backup Encryption
+- Encrypted archive backups are encrypted locally before upload; destinations receive `data.vse`, not a completed plaintext `data.zip`.
+- Passwords are stored through Windows DPAPI, macOS Keychain, or Linux Secret Service. Configuration and metadata sync carry only non-secret references.
+- A plaintext archive temporarily exists on the source machine during creation, and decrypted content temporarily exists during open/restore.
+- VaultSync cannot recover a forgotten encryption password.
+
+Full security explanation: `docs/wiki/Encryption.md`.
 
 ## Updates Summary
 - Patch updates use a strict manifest allowlist for compatible base versions.
@@ -99,6 +109,7 @@ See full troubleshooting page: `docs/wiki/Troubleshooting.md`.
 - Docs index: `docs/README.md`
 - Documentation hub: `DOCUMENTATION.md`
 - Wiki home: `docs/wiki/Home.md`
+- Backup encryption: `docs/wiki/Encryption.md`
 - Microsoft Store notes: `docs/MICROSOFT_STORE.md`
 - Microsoft Store submission checklist: `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md`
 - Roadmap: `ROADMAP.md`

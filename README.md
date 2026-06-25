@@ -173,7 +173,7 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 
 - One-click snapshots and backups (manual + scheduled)
 - Per-project destination routing (`Auto`, specific destination, multi-destination support)
-- Global and per-project encryption policies with secure credential-store integration
+- Global and per-project encryption policies with secure credential-store integration ([how encryption works](docs/wiki/Encryption.md))
 - Password-gated encrypted backup open/restore flow with auto-lock timeout and manual `Lock now`
 - Backup history with type and encryption context (`Full`, `Incremental`, `Imported`, `Encrypted/Plain`)
 - Snapshot diff summaries (`added`, `modified`, `deleted`, net size, top changed paths) with export (`text` / `JSON`)
@@ -221,6 +221,7 @@ or choose **No preset** if no presets apply or you want no file exclusion.
   - `Incremental`: backup created using incremental copy mode
   - `Imported`: history discovered/imported from metadata sync or destination scan
 - Restore flow now shows a "What happens next" confirmation block before running restore.
+- Encrypted archive backups are encrypted locally before upload; see [Backup encryption](docs/wiki/Encryption.md) for setup and usage.
 
 ### Network shares (SMB/NFS)
 

@@ -29,6 +29,7 @@ Use this page as the primary index for all project documentation.
 - Installation: `docs/wiki/Installation.md`
 - Backups overview: `docs/wiki/Backups.md`
 - Backup pipeline: `docs/wiki/Backup-Pipeline.md`
+- Backup encryption: `docs/wiki/Encryption.md`
 - Destinations: `docs/wiki/Destinations.md`
 - Metadata sync: `docs/wiki/Metadata-Sync.md`
 - Network shares: `docs/wiki/Network-Shares.md`

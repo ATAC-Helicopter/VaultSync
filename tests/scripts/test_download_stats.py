@@ -15,6 +15,15 @@ spec.loader.exec_module(download_stats)
 
 
 class DownloadStatsTests(unittest.TestCase):
+    def test_resolve_workspace_path_rejects_escape(self) -> None:
+        with self.assertRaises(ValueError):
+            download_stats.resolve_workspace_path("../outside")
+
+    def test_child_path_rejects_escape(self) -> None:
+        root = Path.cwd().resolve()
+        with self.assertRaises(ValueError):
+            download_stats.child_path(root, "../outside.json")
+
     def test_normalize_releases_computes_deltas_and_highlights(self) -> None:
         previous = {
             "totals": {

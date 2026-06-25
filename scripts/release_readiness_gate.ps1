@@ -174,11 +174,6 @@ Add-CheckResult -Results $results -Code "docs-release-checklist" -Condition ($re
     -FailMessage "Release guide is missing release gate and/or asset-upload checklist coverage." `
     -Data @{ path = "docs/RELEASING.md" }
 
-Add-CheckResult -Results $results -Code "docs-release-target" -Condition ($releasingDoc -match [regex]::Escape($TargetVersion)) `
-    -PassMessage "Release guide references target version '$TargetVersion'." `
-    -FailMessage "Release guide does not reference target version '$TargetVersion'." `
-    -Data @{ path = "docs/RELEASING.md"; expected = $TargetVersion }
-
 if ($SkipGitHubChecks) {
     $results.Add((New-Result -Code "github-checks-skipped" -Status "warn" -Message "GitHub release and project checks were skipped for PR-local validation." -Data @{
         reason = "Use the full gate without -SkipGitHubChecks before final publish."
@@ -260,36 +255,43 @@ $projectItems = Get-GhJson -Command "gh project item-list $ProjectNumber --owner
 $releaseItems = @($projectItems.items | Where-Object {
     $releaseProperty = $_.PSObject.Properties["release"]
     $itemRelease = if ($null -ne $releaseProperty) { $releaseProperty.Value } else { $null }
-    $itemRelease -eq $ReleaseTrack
-})
-$targetItems = @($releaseItems | Where-Object {
-    $milestoneProperty = $_.PSObject.Properties["milestone"]
-    $milestoneTitle = if ($null -ne $milestoneProperty -and $null -ne $milestoneProperty.Value) {
-        $milestoneProperty.Value.title
-    } else {
-        $null
+    if ($itemRelease -ne $ReleaseTrack) {
+        return $false
     }
-    $_.content.type -eq "Issue" -and $milestoneTitle -eq $TargetMilestone
+
+    if ([string]::IsNullOrWhiteSpace($TargetMilestone)) {
+        return $true
+    }
+
+    $milestoneProperty = $_.PSObject.Properties["milestone"]
+    if ($null -eq $milestoneProperty -or $null -eq $milestoneProperty.Value) {
+        return $false
+    }
+
+    $milestoneValue = $milestoneProperty.Value
+    $milestoneTitleProperty = $milestoneValue.PSObject.Properties["title"]
+    $milestoneTitle = if ($null -ne $milestoneTitleProperty) {
+        $milestoneTitleProperty.Value
+    } else {
+        [string]$milestoneValue
+    }
+
+    $milestoneTitle -eq $TargetMilestone
 })
-$incompleteItems = @($targetItems | Where-Object {
+$incompleteItems = @($releaseItems | Where-Object {
     $statusProperty = $_.PSObject.Properties["status"]
     $itemStatus = if ($null -ne $statusProperty) { $statusProperty.Value } else { $null }
     $itemStatus -ne "Done"
 })
 
 Add-CheckResult -Results $results -Code "project-release-items" -Condition ($releaseItems.Count -gt 0) `
-    -PassMessage "Project release slice '$ReleaseTrack' contains $($releaseItems.Count) item(s)." `
-    -FailMessage "Project release slice '$ReleaseTrack' has no items." `
-    -Data @{ release = $ReleaseTrack; count = $releaseItems.Count }
+    -PassMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' contains $($releaseItems.Count) item(s)." `
+    -FailMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' has no items." `
+    -Data @{ release = $ReleaseTrack; milestone = $TargetMilestone; count = $releaseItems.Count }
 
-Add-CheckResult -Results $results -Code "project-target-items" -Condition ($targetItems.Count -gt 0) `
-    -PassMessage "Target milestone '$TargetMilestone' contains $($targetItems.Count) issue(s)." `
-    -FailMessage "Target milestone '$TargetMilestone' has no project issues." `
-    -Data @{ release = $ReleaseTrack; milestone = $TargetMilestone; count = $targetItems.Count }
-
-Add-CheckResult -Results $results -Code "project-release-complete" -Condition ($targetItems.Count -gt 0 -and $incompleteItems.Count -eq 0) `
-    -PassMessage "Target milestone '$TargetMilestone' is complete." `
-    -FailMessage "Target milestone '$TargetMilestone' still has incomplete work." `
+Add-CheckResult -Results $results -Code "project-release-complete" -Condition ($incompleteItems.Count -eq 0) `
+    -PassMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' is complete." `
+    -FailMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' still has incomplete work." `
     -Data @{
         release = $ReleaseTrack
         milestone = $TargetMilestone

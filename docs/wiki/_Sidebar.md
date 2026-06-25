@@ -10,6 +10,7 @@
 - Backups and Storage
   - [Backups overview](Backups)
   - [Backup pipeline](Backup-Pipeline)
+  - [Backup encryption](Encryption)
   - [Destinations](Destinations)
   - [Metadata sync](Metadata-Sync)
   - [Network shares](Network-Shares)

@@ -61,11 +61,26 @@
                      Foreground="{DynamicResource TextSecondaryBrush}"
                      TextWrapping="Wrap" />
         </StackPanel>
-        <Button Grid.Column="1"
-                Classes="action-ghost"
-                Content="{infra:LocalizedString Key=Common.Refresh}"
-                Command="{CompiledBinding RefreshCommand}"
-                VerticalAlignment="Top" />
+        <StackPanel Grid.Column="1"
+                    Spacing="8"
+                    VerticalAlignment="Top">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8"
+                      HorizontalAlignment="Right">
+            <Button Classes="action-ghost"
+                    Content="{infra:LocalizedString Key=Recovery.Export.Action}"
+                    Command="{CompiledBinding ExportReportCommand}" />
+            <Button Classes="action-ghost"
+                    Content="{infra:LocalizedString Key=Common.Refresh}"
+                    Command="{CompiledBinding RefreshCommand}" />
+          </StackPanel>
+          <TextBlock Text="{CompiledBinding ExportStatus}"
+                     IsVisible="{CompiledBinding HasExportStatus}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextAlignment="Right"
+                     TextWrapping="Wrap"
+                     MaxWidth="420" />
+        </StackPanel>
       </Grid>
 
       <Grid Grid.Row="1"
@@ -221,11 +236,26 @@
                 <TextBlock Text="{infra:LocalizedString Key=Recovery.ProjectMatrix.FriendlyDetail}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="*,170"
+                      ColumnSpacing="10"
+                      Margin="0,8,0,0">
+                  <TextBox Watermark="{infra:LocalizedString Key=Recovery.Filter.SearchWatermark}"
+                           Text="{CompiledBinding ProjectSearchText, Mode=TwoWay}" />
+                  <ComboBox Grid.Column="1"
+                            ItemsSource="{CompiledBinding ProjectFilters}"
+                            SelectedItem="{CompiledBinding SelectedProjectFilter, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:RecoveryFilterOption">
+                        <TextBlock Text="{CompiledBinding Label}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </Grid>
               </StackPanel>
               <Border Grid.Column="1"
                       Classes="recovery-pill"
                       VerticalAlignment="Top">
-                <TextBlock Text="{CompiledBinding ProjectCount}"
+                <TextBlock Text="{CompiledBinding VisibleProjectSummaryLabel}"
                            FontSize="11"
                            FontWeight="SemiBold" />
               </Border>
@@ -236,7 +266,7 @@
                     Margin="18,0,18,18"
                     Padding="18"
                     IsVisible="{CompiledBinding !HasProjects}">
-              <TextBlock Text="{infra:LocalizedString Key=Recovery.Empty}"
+              <TextBlock Text="{CompiledBinding ProjectEmptyMessage}"
                          Foreground="{DynamicResource TextSecondaryBrush}"
                          TextWrapping="Wrap" />
             </Border>

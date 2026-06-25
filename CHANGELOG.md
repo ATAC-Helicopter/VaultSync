@@ -1,4 +1,21 @@
 ﻿# Changelog
+## [1.8.1] - 25.06.2026
+### Added
+- [VS-1824] Recovery assessments can now be exported as portable Markdown reports with coverage and project readiness details.
+### Changed
+- [BUG-18056] Linux `.deb` fallback installs now request an explicit APT reinstall of the downloaded package.
+- [VS-1825] Encrypted backups are now encrypted locally before their final artifact is uploaded to the destination.
+- [VS-1825] Published a backup encryption guide covering setup, format, credential storage, password changes, opening, and restore.
+- [VS-1826] Recovery project triage now supports search and focused ready or needs-attention filters.
+- [VS-1827] Release-facing issue and PR templates now default to the 1.8.1 release train and show the milestone-scoped release gate command.
+### Fixed
+- [BUG-18057] Linux now holds a per-user OS file lock for the UI process lifetime, preventing duplicate app instances while preserving activation of the existing window.
+- [BUG-18056] Metadata exports now skip backups removed before asynchronous export and commit each shared SQLite metadata update atomically, reducing false invalid-store reports and lock contention.
+- [BUG-18056] Protected Linux patch installs now run the elevated helper headlessly instead of losing the desktop session after `pkexec`.
+- [VS-1825] Linux credential references now store, find, and delete the correct Secret Service entry.
+- [VS-1825] Encrypted archive readers now reject unsupported formats and excessive embedded KDF parameters before derivation.
+- [VS-1827] Release readiness checks now scope Project completion to the target milestone instead of later train work.
+
 ## [1.8.0] - 20.06.2026
 ### Added
 - [VS-1814] Added guarded SonarQube Cloud analysis workflow and setup notes for the public OSS repository.
@@ -6,9 +23,9 @@
 - [VS-1802] Added 1.8 history metadata tables for snapshot labels, notes, tags, protected, known-good, and restore events.
 - [VS-1803] Added first-class History and Recovery navigation with data-backed pages for the 1.8 project-history release.
 - [VS-1804] Added a full-window selectable project History workspace backed by live repository activity, with reversible time filters, denser paging, event details, and an origin-aware Git-client-style graph where snapshot notes, imports, and restores branch from their backup/snapshot source.
-- [VS-1805] Added editable snapshot labels, notes, tags, protected markers, and known-good recovery points.
+- [VS-1805] Added protected and known-good snapshot markers, with retention honoring protected snapshot metadata.
 - [VS-1807] Added Recovery readiness and coverage previews using current project, backup, and destination health data.
-- [VS-1806] Added Dashboard readiness, recovery-coverage windows, attention review, restore activity, and workflow links.
+- [VS-1806] Added Dashboard workflow links into History, Recovery, and Backups, with restore milestones included in recent activity.
 - [VS-1804] Redesigned History as a connected Git/subway-style timeline workspace with modular expandable event stations and a persistent event inspector.
 ### Changed
 - [VS-1804] Reworked History into a readable recovery timeline with search, product-style event cards, compact mode, stronger selected-state details, recovery status, metrics, and snapshot notes/actions replacing the graph-heavy default view.
@@ -26,10 +43,7 @@
 - [VS-1816] Hardened release asset workflow inputs and PR YAML lint installs against SonarQube security findings.
 - [VS-1817] Kept backup archive IV generation analyzer-visible while preserving the encrypted archive envelope format.
 - [VS-1818] Extended CI, PR quality gates, and CodeQL triggers to the active `release/v1.8` branch.
-- [VS-1820] Scoped release checks to the exact 1.8.0 milestone, aligned release docs, and enforced locale key parity.
 ### Fixed
-- [BUG-18056] Metadata exports now skip backups removed before asynchronous export and commit each shared SQLite metadata update atomically, reducing false invalid-store reports and lock contention.
-- [BUG-18055] Replaced the vulnerable SQLite native bundle with the maintained SQLitePCLRaw 3.x package graph.
 - [BUG-18054] Patched .NET 10 runtime-pack servicing alerts by pinning ASP.NET Core runtime downloads and Microsoft platform packages to `10.0.9`.
 - [BUG-18053] Restore target folders and sandbox apply paths now stay under their intended roots when project names or relative paths contain unsafe segments.
 - [BUG-18052] Disposed Sonar-flagged cancellation resources in backup runs, diagnostics logging, and onboarding tour scrolling.
