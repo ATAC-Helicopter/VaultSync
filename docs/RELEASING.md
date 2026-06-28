@@ -6,7 +6,7 @@ This document defines the current release packaging flow.
 - .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The prepared stable release target is `1.8.1`; prerelease builds for the active patch train use `1.8.1-Beta.N` until the stable release is cut.
+- The prepared stable release target is `1.8.2`; prerelease builds for the active patch train use `1.8.2-Beta.N` until the stable release is cut.
 
 ## 1) Windows Installer
 1. Publish:
@@ -33,8 +33,8 @@ This document defines the current release packaging flow.
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.8.1 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.8.1 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.8.2 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.8.2 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz`, `.deb`, and `linux-x64` `.AppImage` artifacts.
    The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a
@@ -57,13 +57,13 @@ Stable example:
 - branch: `Stable`
 - release channel: `stable`
 - `previous_version = 1.8.0`
-- `target_version = 1.8.1`
+- `target_version = 1.8.2`
 
 Current beta example:
 - branch: `Dev`
 - release channel: `beta`
-- `previous_version = 1.8.1-Beta.1`
-- `target_version = 1.8.1-Beta.2`
+- `previous_version = 1.8.2-Beta.1`
+- `target_version = 1.8.2-Beta.2`
 - `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
 
 Example multi-base input:
@@ -82,11 +82,11 @@ Older or unlisted installs must fall back to the full installer.
 ## 5) Release Checklist
 - Run the release gate before publishing:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.1 -ReleaseTrack 1.8.x -TargetMilestone 1.8.1
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.2 -ReleaseTrack 1.8.x -TargetMilestone 1.8.2
   ```
 - Run the release gate again after GitHub Actions uploads assets:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.1 -ReleaseTrack 1.8.x -TargetMilestone 1.8.1 -Phase PostPublish
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.2 -ReleaseTrack 1.8.x -TargetMilestone 1.8.2 -Phase PostPublish
   ```
 - `CHANGELOG.md` updated
 - `docs/WHATS_NEW.md` updated

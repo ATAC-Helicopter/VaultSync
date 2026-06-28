@@ -1,0 +1,126 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+        xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+        x:Class="VaultSync.UI.Views.SnapshotExplorerView"
+        x:DataType="vm:SnapshotExplorerViewModel"
+        Width="980"
+        Height="680"
+        MinWidth="780"
+        MinHeight="520"
+        Title="{Binding Title}">
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20" RowSpacing="12">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding Title}"
+                   FontSize="22"
+                   FontWeight="SemiBold" />
+        <TextBlock Text="{Binding CurrentPathDisplay}"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+        <Button Content="Up"
+                Classes="small-button"
+                Command="{Binding GoUpCommand}" />
+        <Button Content="Refresh"
+                Classes="small-button"
+                Command="{Binding RefreshCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+      <TextBox Watermark="Search files"
+               Text="{Binding SearchText, Mode=TwoWay}" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+        <Button Content="Search"
+                Classes="small-button"
+                Command="{Binding RefreshCommand}" />
+        <Button Content="Clear"
+                Classes="small-button"
+                Command="{Binding ClearSearchCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <Grid Grid.Row="2" ColumnDefinitions="2*,3*" ColumnSpacing="14">
+      <Border Background="{DynamicResource Surface2}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1"
+              CornerRadius="8">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Grid.Row="0"
+                     Margin="12,10,12,6"
+                     Text="Snapshot contents"
+                     FontWeight="SemiBold" />
+          <ListBox Grid.Row="1"
+                   ItemsSource="{Binding Entries}"
+                   SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:SnapshotExplorerEntryViewModel">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="8,6">
+                  <TextBlock Grid.Row="0"
+                             Grid.Column="0"
+                             Text="{Binding Name}"
+                             FontWeight="SemiBold"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Row="0"
+                             Grid.Column="1"
+                             Text="{Binding KindLabel}"
+                             Foreground="{DynamicResource TextSecondaryBrush}"
+                             Margin="10,0,0,0" />
+                  <StackPanel Grid.Row="1"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="2"
+                              Orientation="Horizontal"
+                              Spacing="10">
+                    <TextBlock Text="{Binding SizeLabel}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextMutedBrush}" />
+                    <TextBlock Text="{Binding ModifiedLabel}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextMutedBrush}" />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1"
+              Background="{DynamicResource Surface2}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1"
+              CornerRadius="8">
+        <Grid RowDefinitions="Auto,*">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="12,10,12,6">
+            <TextBlock Text="Preview"
+                       FontWeight="SemiBold" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+              <Button Content="Open"
+                      Classes="small-button"
+                      Command="{Binding OpenSelectedCommand}" />
+              <Button Content="Preview"
+                      Classes="small-button"
+                      Command="{Binding PreviewSelectedCommand}" />
+              <Button Content="Restore"
+                      Classes="small-button"
+                      Command="{Binding RestoreSelectedCommand}" />
+            </StackPanel>
+          </Grid>
+          <ScrollViewer Grid.Row="1" Margin="12">
+            <TextBlock Text="{Binding PreviewText}"
+                       FontFamily="Consolas, Menlo, monospace"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <TextBlock Grid.Row="3"
+               Text="{Binding StatusText}"
+               Foreground="{DynamicResource TextSecondaryBrush}"
+               TextWrapping="Wrap" />
+  </Grid>
+</Window>

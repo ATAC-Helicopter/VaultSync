@@ -924,6 +924,7 @@ namespace VaultSync.UI.ViewModels
         public event Action<BackupSnapshotItem?>? RestoreBackupRequested;
         public event Action<BackupSnapshotItem?>? DeleteBackupRequested;
         public event Action<BackupSnapshotItem?>? OpenBackupFolderRequested;
+        public event Action<BackupSnapshotItem?>? ExploreBackupRequested;
         public event Action<BackupProgressItem?>? CancelActiveBackupRequested;
         public event Action<int, bool>? BackupProtectionChanged;
         public event Action? OpenSettingsRequested;
@@ -933,6 +934,7 @@ namespace VaultSync.UI.ViewModels
         public ICommand RestoreBackupCommand { get; }
         public ICommand DeleteBackupCommand { get; }
         public ICommand OpenBackupFolderCommand { get; }
+        public ICommand ExploreBackupCommand { get; }
         public ICommand ToggleBackupProtectionCommand { get; }
         public ICommand ExportSnapshotSummaryTextCommand { get; }
         public ICommand ExportSnapshotSummaryJsonCommand { get; }
@@ -974,6 +976,7 @@ namespace VaultSync.UI.ViewModels
             RestoreBackupCommand = new RelayCommand(p => RestoreBackup(p as BackupSnapshotItem));
             DeleteBackupCommand  = new RelayCommand(p => DeleteBackup(p as BackupSnapshotItem));
             OpenBackupFolderCommand = new RelayCommand(p => OpenBackupFolder(p as BackupSnapshotItem));
+            ExploreBackupCommand = new RelayCommand(p => ExploreBackup(p as BackupSnapshotItem));
             ToggleBackupProtectionCommand = new RelayCommand(p => ToggleBackupProtection(p as BackupSnapshotItem));
             ExportSnapshotSummaryTextCommand = new RelayCommand(p => ExportSnapshotSummary(p as BackupSnapshotItem, SnapshotSummaryExportFormat.Text));
             ExportSnapshotSummaryJsonCommand = new RelayCommand(p => ExportSnapshotSummary(p as BackupSnapshotItem, SnapshotSummaryExportFormat.Json));
@@ -1080,6 +1083,14 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             OpenBackupFolderRequested?.Invoke(snapshot);
+        }
+
+        private void ExploreBackup(BackupSnapshotItem? snapshot)
+        {
+            if (snapshot is null)
+                return;
+
+            ExploreBackupRequested?.Invoke(snapshot);
         }
 
         private void ExportSnapshotSummary(BackupSnapshotItem? snapshot, SnapshotSummaryExportFormat format)

@@ -1,4 +1,8 @@
 ﻿# Changelog
+## [1.8.2] - Unreleased
+### Added
+- [VS-1808] Added Snapshot Explorer v1 for backup folder/archive browsing, text preview, search, and selected-item restore.
+
 ## [1.8.1] - 25.06.2026
 ### Added
 - [VS-1824] Recovery assessments can now be exported as portable Markdown reports with coverage and project readiness details.

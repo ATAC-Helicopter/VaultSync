@@ -4,7 +4,7 @@ title: "[Update/Install]: "
 labels:
   - bug
   - area:release
-  - release:1.8.1
+  - release:1.8.2
 assignees:
   - ATAC-Helicopter
 body:
@@ -19,7 +19,7 @@ body:
     id: target_version
     attributes:
       label: Target version
-      placeholder: "1.8.1"
+      placeholder: "1.8.2"
     validations:
       required: true
   - type: dropdown

@@ -342,6 +342,48 @@ namespace VaultSync.UI.ViewModels
             OpenBackupFolder(backupId);
         }
 
+        private void OnExploreBackupRequested(BackupSnapshotItem? snapshot)
+        {
+            AppViewModel.RunDetached(() => OnExploreBackupRequestedAsync(snapshot), nameof(OnExploreBackupRequestedAsync));
+        }
+
+        private async Task OnExploreBackupRequestedAsync(BackupSnapshotItem? snapshot)
+        {
+            if (snapshot is null)
+                return;
+
+            if (!int.TryParse(snapshot.Id, out int backupId))
+                return;
+
+            RestoreBackupPreparation preparation = await Task.Run(() => PrepareRestoreBackup(backupId));
+            if (!preparation.IsReady)
+            {
+                BackupsViewModel.ShowNotification(
+                    AppViewModel.L("Backups.SnapshotExplorer.Unavailable", "Snapshot Explorer could not open this backup."),
+                    "Error");
+                return;
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var vm = new SnapshotExplorerViewModel(
+                    new SnapshotExplorerService(),
+                    preparation.BackupFullPath,
+                    preparation.ProjectRoot,
+                    Lf("Backups.SnapshotExplorer.Title", "Snapshot Explorer - {0}", preparation.ProjectName));
+                var window = new SnapshotExplorerView
+                {
+                    DataContext = vm
+                };
+
+                Window? owner = GetMainWindow();
+                if (owner is not null)
+                    await window.ShowDialog(owner);
+                else
+                    window.Show();
+            });
+        }
+
         private void OnOpenSettingsRequested()
         {
             NavigateSettings?.Execute(null);

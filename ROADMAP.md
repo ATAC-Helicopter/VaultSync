@@ -1780,6 +1780,7 @@
 - Project board: GitHub Project 7 (`@VaultSync Roadmap`), release field `1.8.x`.
 - `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
 - `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
+- `1.8.2` Snapshot Explorer scope is tracked by the dedicated GitHub milestone `1.8.2`.
 
 ### 1.8.1 status (2026-06-23)
 - Release theme: complete the Recovery Intelligence slice planned in `docs/VaultSync 1.8 Timeline.md`.
@@ -1810,7 +1811,10 @@
   - Done: Dashboard recent activity includes restore milestones, and workflow links route directly to History, Recovery, and Backups.
 - [x] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Done in PR #365, tracked by #359)_
   - Done: Recovery page shows readiness score/band, coverage windows, project priority ordering, and actionable recommendations.
-- [ ] `VS-1808` `P2` Build Snapshot Explorer v1. _(Deferred to a later 1.8.x release; tracked by #360)_
+- [ ] `VS-1808` `P2` Build Snapshot Explorer v1. _(In progress for 1.8.2; tracked by #360)_
+  - Done locally: added core folder/archive browsing, search, safe text preview, and selected file/folder restore helpers.
+  - Done locally: added a Backups-page Explore action and Snapshot Explorer window for backup cards.
+  - Remaining: polish encrypted-backup handling, localization coverage, and large-snapshot UI responsiveness before marking complete.
 - [ ] `VS-1809` `P2` Add snapshot compare and change intelligence. _(Deferred to a later 1.8.x release; tracked by #361)_
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_

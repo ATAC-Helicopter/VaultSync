@@ -243,6 +243,7 @@ namespace VaultSync.UI.ViewModels
             vm.DeleteBackupRequested += OnDeleteBackupRequested;
             vm.RestoreBackupRequested += OnRestoreBackupRequested; // stub for later
             vm.OpenBackupFolderRequested += OnOpenBackupFolderRequested;
+            vm.ExploreBackupRequested += OnExploreBackupRequested;
             vm.CancelActiveBackupRequested += OnCancelActiveBackupRequested;
             vm.AutoBackupPreferenceChanged += OnAutoBackupPreferenceChanged;
             vm.BackupProtectionChanged += OnBackupProtectionChanged;

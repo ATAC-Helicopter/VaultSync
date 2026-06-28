@@ -1,5 +1,14 @@
 # What's New
 
+## [1.8.2]
+
+VaultSync `1.8.2` starts the Snapshot Explorer release slice for finding files before a full restore.
+
+### Snapshot Explorer
+- Backup cards now include an Explore action for browsing folder and archive backups.
+- Snapshot Explorer supports folder navigation, file search, metadata, and text preview for common readable formats.
+- Individual files or folders can be restored from the explorer while keeping restore paths root-bound.
+
 ## [1.8.1]
 
 VaultSync `1.8.1` continues Recovery Intelligence while hardening encrypted backups, credentials, and Linux updates.
