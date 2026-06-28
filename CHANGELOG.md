@@ -2,6 +2,8 @@
 ## [1.8.2] - Unreleased
 ### Added
 - [VS-1808] Added Snapshot Explorer v1 for backup folder/archive browsing, text preview, search, and selected-item restore.
+### Changed
+- [VS-1828] Refreshed setup-python, Microsoft.NET.Test.Sdk, SkiaSharp, and HarfBuzzSharp dependencies for the 1.8.2 release train.
 
 ## [1.8.1] - 25.06.2026
 ### Added
