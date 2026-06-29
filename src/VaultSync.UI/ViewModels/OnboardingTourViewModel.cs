@@ -49,6 +49,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 {
     private const string BackupsViewName = "Backups";
     private const string ProjectsViewName = "Projects";
+    private const string SettingsViewName = "Settings";
 
     private readonly AppViewModel _app;
     private readonly List<OnboardingTourStep> _steps = [];
@@ -57,8 +58,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private bool _isActive;
     private bool _isStepComplete;
     private int _advanceQueued;
-    private DateTime _lastNavigateAt;
-    private string? _lastRequiredView;
     private AppConfig? _cachedConfig;
     private DateTime _lastConfigAt;
     private int _configRefreshInFlight;
@@ -127,7 +126,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             {
                 return CurrentStep?.RequiredView switch
                 {
-                    "Settings" => L("Onboarding.GoSettings", "Open Settings"),
+                    SettingsViewName => L("Onboarding.GoSettings", "Open Settings"),
                     ProjectsViewName => L("Onboarding.GoProjects", "Open Projects"),
                     BackupsViewName => L("Onboarding.GoBackups", "Open Backups"),
                     _ => L("Onboarding.Go", "Go")
@@ -178,7 +177,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         IsActive = true;
         EnsureApplicableStep();
         UpdateState();
-        NavigateToRequiredView();
         _pollTimer.Start();
     }
 
@@ -207,7 +205,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     {
         switch (CurrentStep?.RequiredView)
         {
-            case "Settings":
+            case SettingsViewName:
                 _app.NavigateSettings.Execute(null);
                 break;
             case ProjectsViewName:
@@ -222,7 +220,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private void BuildSteps()
     {
         _steps.Clear();
-        bool UseAdvanced()
+
+        bool UseAdvancedDestinations()
         {
             SettingsViewModel? live = _app.SettingsViewModel;
             if (live is not null)
@@ -230,232 +229,86 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
             return GetConfig().Backups.UseAdvancedDestinations;
         }
-        bool HasAdvancedDestination()
-        {
-            SettingsViewModel? live = _app.SettingsViewModel;
-            if (live is not null)
-            {
-                // Step 4 is "Add a destination": it should complete when an entry exists.
-                // Path configuration is guided by the following onboarding steps.
-                return live.Destinations.Count > 0;
-            }
 
-            AppConfig cfg = GetConfig();
-            return cfg.Backups.Destinations.Any();
-        }
-        bool HasLanguageSelected()
-        {
-            AppConfig cfg = GetConfig();
-            return !string.IsNullOrWhiteSpace(cfg.Advanced.Language);
-        }
         bool HasProjectsRoot()
         {
             SettingsViewModel? live = _app.SettingsViewModel;
             if (live is not null)
                 return !string.IsNullOrWhiteSpace(live.ProjectsRootPath);
 
-            AppConfig cfg = GetConfig();
-            return !string.IsNullOrWhiteSpace(cfg.ProjectsRoot);
+            return !string.IsNullOrWhiteSpace(GetConfig().ProjectsRoot);
         }
-        void AddStep(string title, string body, string targetName, string requiredView, Func<bool> isComplete, bool autoAdvance = true, Func<bool>? isApplicable = null)
+
+        bool HasBackupDestination()
+        {
+            SettingsViewModel? live = _app.SettingsViewModel;
+            if (live is not null)
+            {
+                if (live.UseAdvancedDestinations)
+                {
+                    return live.Destinations.Any(d =>
+                        d.Active && !string.IsNullOrWhiteSpace(d.Path));
+                }
+
+                return !string.IsNullOrWhiteSpace(live.BackupLocationPath);
+            }
+
+            return HasDestinationConfigured(GetConfig());
+        }
+
+        bool HasRegisteredProject() =>
+            _app.ProjectsViewModel.Projects.Any(p => p.IsRegistered);
+
+        string DestinationTarget() =>
+            UseAdvancedDestinations() ? "AddDestinationButton" : "BackupLocationRow";
+
+        void AddStep(string title, string body, string targetName, string requiredView, Func<bool> isComplete, bool autoAdvance = false, Func<bool>? isApplicable = null)
             => _steps.Add(new OnboardingTourStep(title, body, targetName, requiredView, isComplete, autoAdvance, isApplicable));
-        void AddStepDynamic(string title, string body, Func<string> targetNameProvider, string requiredView, Func<bool> isComplete, bool autoAdvance = true, Func<bool>? isApplicable = null)
+
+        void AddStepDynamic(string title, string body, Func<string> targetNameProvider, string requiredView, Func<bool> isComplete, bool autoAdvance = false, Func<bool>? isApplicable = null)
             => _steps.Add(new OnboardingTourStep(title, body, targetNameProvider, requiredView, isComplete, autoAdvance, isApplicable));
-        void AddSettingsStep(string title, string body, string targetName, Func<bool>? isComplete = null, bool autoAdvance = true, Func<bool>? isApplicable = null)
-            => AddStep(title, body, targetName, "Settings", isComplete ?? (() => true), autoAdvance, isApplicable);
 
-        AddSettingsStep(
-            L("Onboarding.Tour.Step1.Title", "Choose your language"),
-            L("Onboarding.Tour.Step1.Body", "Pick the language for VaultSync. We default to your system language when available."),
-            "LanguageSelectCombo",
-            HasLanguageSelected);
+        AddStep(
+            L("Onboarding.Setup.Intro.Title", "Set up your first backup"),
+            L("Onboarding.Setup.Intro.Body", "VaultSync only needs three things to become useful: where your projects live, where backups should go, and one project to protect. Advanced options can wait."),
+            string.Empty,
+            string.Empty,
+            () => true);
 
-        AddSettingsStep(
-            L("Onboarding.Tour.Step2.Title", "Set your projects root"),
-            L("Onboarding.Tour.Step2.Body", "Choose the folder where your projects live so VaultSync can discover them."),
+        AddStep(
+            L("Onboarding.Setup.ProjectsRoot.Title", "Tell VaultSync where your projects live"),
+            L("Onboarding.Setup.ProjectsRoot.Body", "Choose the folder that contains your project folders. VaultSync uses this to find candidates and keep future setup fast."),
             "ProjectsRootRow",
+            SettingsViewName,
             HasProjectsRoot);
 
-        AddSettingsStep(
-            L("Onboarding.Tour.Step3.Title", "Choose your destination mode"),
-            L("Onboarding.Tour.Step3.Body", "Use simple mode for a single backup location, or enable advanced destinations to manage multiple paths and credentials."),
-            "DestinationsModeToggle",
-            autoAdvance: false);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step4.Title", "Add a destination"),
-            L("Onboarding.Tour.Step4.Body", "Add at least one destination where backups should be stored."),
-            "AddDestinationButton",
-            () =>
-            {
-                if (!UseAdvanced())
-                    return true;
-                return HasAdvancedDestination();
-            },
-            isApplicable: UseAdvanced);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step5.Title", "Destination basics"),
-            L("Onboarding.Tour.Step5.Body", "Set a label and enable/disable the destination so VaultSync knows where to write."),
-            "DestinationBasicsRow",
-            autoAdvance: false,
-            isApplicable: UseAdvanced);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step6.Title", "Destination path"),
-            L("Onboarding.Tour.Step6.Body", "Choose the path where backups are stored for this destination."),
-            "DestinationPathRow",
-            autoAdvance: false,
-            isApplicable: UseAdvanced);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step7.Title", "Destination credentials"),
-            L("Onboarding.Tour.Step7.Body", "Attach a credential profile for NAS/SMB destinations and test connectivity."),
-            "DestinationCredentialRow",
-            autoAdvance: false,
-            isApplicable: UseAdvanced);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step8.Title", "Mount behavior"),
-            L("Onboarding.Tour.Step8.Body", "Control whether VaultSync mounts the destination automatically and how it handles pre-mounted paths."),
-            "DestinationMountOptionsRow",
-            autoAdvance: false,
-            isApplicable: UseAdvanced);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step9.Title", "History sync"),
-            L("Onboarding.Tour.Step9.Body", "Enable history sync and import options to keep backups consistent across devices."),
-            "DestinationHistoryOptionsRow",
-            autoAdvance: false,
-            isApplicable: UseAdvanced);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step10.Title", "Credential profiles"),
-            L("Onboarding.Tour.Step10.Body", "Create credential profiles for network destinations so VaultSync can connect securely."),
-            "CredentialProfilesSection",
-            autoAdvance: false,
-            isApplicable: UseAdvanced);
-
         AddStepDynamic(
-            L("Onboarding.Tour.Step11.Title", "Select a backup destination"),
-            L("Onboarding.Tour.Step11.Body", "Choose the folder where your backups will be stored in simple mode."),
-            () => UseAdvanced() ? string.Empty : "BackupLocationRow",
-            "Settings",
-            () =>
-            {
-                if (UseAdvanced())
-                    return true;
-
-                SettingsViewModel? live = _app.SettingsViewModel;
-                if (live is not null)
-                    return !string.IsNullOrWhiteSpace(live.BackupLocationPath);
-
-                AppConfig cfg = GetConfig();
-                return HasDestinationConfigured(cfg);
-            },
-            isApplicable: () => !UseAdvanced());
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step12.Title", "Backup settings"),
-            L("Onboarding.Tour.Step12.Body", "Review auto backup settings, retention, and history sync for your projects."),
-            "SettingsBackupsCard",
-            autoAdvance: false);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step26.Title", "Bandwidth and quiet hours"),
-            L("Onboarding.Tour.Step26.Body", "Set transfer limits and quiet hours so automatic backups pause/defer at the right time without stopping active runs."),
-            "SettingsQuietHoursWindowCard",
-            autoAdvance: false);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step20.Title", "Global encryption"),
-            L("Onboarding.Tour.Step20.Body", "Encryption is off by default. Enable it here when you want new backups encrypted by default, then review secure password status."),
-            "SettingsEncryptionCard",
-            autoAdvance: false);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step21.Title", "Set backup encryption password"),
-            L("Onboarding.Tour.Step21.Body", "Set or clear the global encryption password used by projects that inherit global protection."),
-            "SettingsEncryptionPasswordInput",
-            autoAdvance: false);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step13.Title", "Appearance settings"),
-            L("Onboarding.Tour.Step13.Body", "Control theme, build custom palettes, and adjust compact layout or project avatars."),
-            "SettingsAppearanceCard",
-            autoAdvance: false);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step14.Title", "Notification settings"),
-            L("Onboarding.Tour.Step14.Body", "Choose when VaultSync notifies you about backups and warnings."),
-            "SettingsNotificationsCard",
-            autoAdvance: false);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step15.Title", "Advanced settings"),
-            L("Onboarding.Tour.Step15.Body", "Configure logging, update checks, and beta channel options."),
-            "SettingsAdvancedCard",
-            autoAdvance: false);
-
-        AddSettingsStep(
-            L("Onboarding.Tour.Step16.Title", "Danger zone"),
-            L("Onboarding.Tour.Step16.Body", "Use these actions to clear cache or forget projects when troubleshooting."),
-            "SettingsDangerCard",
-            autoAdvance: false);
+            L("Onboarding.Setup.Destination.Title", "Choose where backups should be stored"),
+            L("Onboarding.Setup.Destination.Body", "Pick a local, external, or network location that is not inside the project you are backing up. Simple mode is enough for a first run."),
+            DestinationTarget,
+            SettingsViewName,
+            HasBackupDestination);
 
         AddStep(
-            L("Onboarding.Tour.Step17.Title", "Add a project"),
-            L("Onboarding.Tour.Step17.Body", "Select a project and add it to VaultSync to start tracking snapshots."),
+            L("Onboarding.Setup.Project.Title", "Add your first project"),
+            L("Onboarding.Setup.Project.Body", "Register one project first. You can add more later after you have confirmed the backup flow works."),
             "ProjectSnapshotButton",
             ProjectsViewName,
-            () => _app.ProjectsViewModel.Projects.Any(p => p.IsRegistered));
+            HasRegisteredProject);
 
         AddStep(
-            L("Onboarding.Tour.Step28.Title", "Project tag colors"),
-            L("Onboarding.Tour.Step28.Body", "Type or pick a tag in Projects, then open the color editor here to style that tag app-wide with a live preview."),
-            "ProjectTagsEditorSection",
-            ProjectsViewName,
-            () => true,
-            autoAdvance: false);
-
-        AddStep(
-            L("Onboarding.Tour.Step22.Title", "Project encryption policy"),
-            L("Onboarding.Tour.Step22.Body", "Set the per-project encryption policy from the Backups page so each project can inherit global protection, force encryption, or stay plain."),
-            "BackupsProjectEncryptionPolicyCombo",
-            BackupsViewName,
-            () => true,
-            autoAdvance: false);
-
-        AddStep(
-            L("Onboarding.Tour.Step23.Title", "Project encryption password"),
-            L("Onboarding.Tour.Step23.Body", "Set or clear the project-specific encryption password from the Backups page."),
-            "BackupsProjectEncryptionPasswordButton",
-            BackupsViewName,
-            () => true,
-            autoAdvance: false);
-
-        AddStep(
-            L("Onboarding.Tour.Step27.Title", "Snapshot diff summaries"),
-            L("Onboarding.Tour.Step27.Body", "Each backup now shows diff stats (added, changed, deleted, net size) with preview and export actions."),
-            "BackupsHistorySection",
-            BackupsViewName,
-            () => true,
-            autoAdvance: false);
-
-        AddStep(
-            L("Onboarding.Tour.Step18.Title", "Enable auto backups"),
-            L("Onboarding.Tour.Step18.Body", "Turn on auto backups for a project to keep snapshots up to date."),
-            "AutoBackupToggle",
-            BackupsViewName,
-            () => true,
-            autoAdvance: false);
-
-        AddStep(
-            L("Onboarding.Tour.Step19.Title", "Run your first backup"),
-            L("Onboarding.Tour.Step19.Body", "Start a backup for a project to create the first snapshot."),
+            L("Onboarding.Setup.Backup.Title", "Run the first backup"),
+            L("Onboarding.Setup.Backup.Body", "Start a backup for the project. Once it completes, VaultSync can show history, diff summaries, and restore points."),
             "PerProjectBackupButton",
             BackupsViewName,
             () => _app.BackupsViewModel.HasAnyBackups);
+
+        AddStep(
+            L("Onboarding.Setup.Done.Title", "You have a restore point"),
+            L("Onboarding.Setup.Done.Body", "This Backups section is where you verify snapshots, browse backup contents, restore files, and review future backup history."),
+            "BackupsHistorySection",
+            BackupsViewName,
+            () => true);
     }
 
     private static bool HasDestinationConfigured(AppConfig cfg)
@@ -473,8 +326,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             return;
 
         UpdateState();
-
-        MaybeNavigate();
 
         if (IsStepComplete && IsOnRequiredView)
         {
@@ -506,20 +357,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         OnPropertyChanged(nameof(PrimaryLabel));
         OnPropertyChanged(nameof(IsPrimaryEnabled));
 
-        string? required = CurrentStep?.RequiredView;
-        if (!string.Equals(_lastRequiredView, required, StringComparison.OrdinalIgnoreCase))
-        {
-            _lastRequiredView = required;
-            _lastNavigateAt = DateTime.MinValue;
-        }
-    }
-
-    private void MaybeNavigate()
-    {
-        if (!IsOnRequiredView && ShouldNavigate())
-        {
-            NavigateToRequiredView();
-        }
     }
 
     private AppConfig GetConfig()
@@ -573,7 +410,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         Interlocked.Exchange(ref _advanceQueued, 0);
         EnsureApplicableStep();
         UpdateState();
-        NavigateToRequiredView();
     }
 
     private void EnsureApplicableStep()
@@ -586,16 +422,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
             _index = Math.Min(_index + 1, _steps.Count - 1);
         }
-    }
-
-    private bool ShouldNavigate()
-    {
-        DateTime now = DateTime.UtcNow;
-        if ((now - _lastNavigateAt).TotalMilliseconds < 900)
-            return false;
-
-        _lastNavigateAt = now;
-        return true;
     }
 
     private static string L(string key, string fallback)

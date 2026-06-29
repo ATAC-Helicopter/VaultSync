@@ -1885,6 +1885,8 @@
   - Done: backup, Settings, shell, and onboarding UI/view-model duplicate literals were reduced for telemetry fields, filter labels, restore/delete dialogs, action styles, status labels, theme/default values, navigation targets, and repeated presentation constants.
   - Remaining: split oversized desktop view-model flows that still drive cognitive-complexity findings.
 - [ ] `VS-1823` `P1` Add large-history performance budgets and release benchmarks. _(Tracked by #382)_
+- [x] `VS-1829` `P1` Rebuild first-run onboarding around the first successful backup. _(Done locally; target 1.8.2)_
+  - Done: onboarding now uses a six-step setup path instead of a broad feature tour, stops auto-jumping between pages, and focuses first-time users on project root, backup destination, first project, first backup, and where restore points live.
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
