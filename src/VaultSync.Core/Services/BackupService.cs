@@ -30,6 +30,10 @@ public sealed class BackupService(
     private const string InProgressMarkerFileName = ".vaultsync_inprogress";
     private const string CompletedMarkerFileName = ".vaultsync_complete";
     private const string ArchiveResumeCheckpointFileName = ".vaultsync_resume.json";
+    private const string RsyncExecutableName = "rsync";
+    private const string RsyncWindowsExecutableName = "rsync.exe";
+    private const string ToolsDirectoryName = "tools";
+
     private static readonly JsonSerializerOptions ResumeCheckpointJsonOptions = new() { WriteIndented = true };
     public event Action<Backup>? BackupRetentionDeleted;
     public sealed record BackupRetentionPreflightResult(
@@ -1303,7 +1307,7 @@ public sealed class BackupService(
         bool effectiveUseRsyncDelta = useRsyncDelta;
         if (OperatingSystem.IsWindows() && isNetworkDestination && !useRsyncDelta && !useIncrementalBackups)
         {
-            if (TryGetBundledRsyncPath() is not null || IsOnPath("rsync"))
+            if (TryGetBundledRsyncPath() is not null || IsOnPath(RsyncExecutableName))
             {
                 effectiveUseRsyncDelta = true;
             }
@@ -1316,11 +1320,11 @@ public sealed class BackupService(
             if (OperatingSystem.IsWindows())
             {
                 string? bundledRsync = TryGetBundledRsyncPath();
-                if ((effectiveUseRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath("rsync")))
+                if ((effectiveUseRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath(RsyncExecutableName)))
                 {
                     // rsync-based backup on Windows (when installed)
                     string source = bundledRsync is null ? "PATH" : "bundled";
-                    string rsyncPath = bundledRsync ?? "rsync";
+                    string rsyncPath = bundledRsync ?? RsyncExecutableName;
                     int? rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
                     RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
                     RuntimeLog.WriteVerbose($"[BackupService] Using rsync on Windows ({source}).");
@@ -1340,7 +1344,7 @@ public sealed class BackupService(
                 else
                 {
                     // robocopy-based backup (multi-threaded, robust on Windows)
-                    if ((effectiveUseRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath("rsync"))
+                    if ((effectiveUseRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath(RsyncExecutableName))
                         RuntimeLog.WriteVerbose("[BackupService] rsync not found on PATH; falling back to robocopy.");
 
                     RuntimeLog.WriteVerbose($"[BackupService] Starting robocopy backup (threads={(isNetworkDestination ? Math.Min(32, Math.Max(4, Environment.ProcessorCount)) : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2)))}, bw={(maxBandwidthMbps is > 0 ? $"{maxBandwidthMbps}Mbps" : "unlimited")}).");
@@ -3569,11 +3573,11 @@ public sealed class BackupService(
             string baseDir = AppContext.BaseDirectory;
             if (OperatingSystem.IsWindows())
             {
-                string direct = Path.Combine(baseDir, "tools", "rsync", "rsync.exe");
+                string direct = Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, RsyncWindowsExecutableName);
                 if (File.Exists(direct))
                     return direct;
 
-                string bin = Path.Combine(baseDir, "tools", "rsync", "bin", "rsync.exe");
+                string bin = Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "bin", RsyncWindowsExecutableName);
                 return File.Exists(bin) ? bin : null;
             }
 
@@ -3583,22 +3587,22 @@ public sealed class BackupService(
                 Architecture arch = RuntimeInformation.OSArchitecture;
                 if (arch == Architecture.Arm64)
                 {
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "arm64", RsyncExecutableName));
                 }
                 else if (arch == Architecture.X64)
                 {
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "x64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "x64", RsyncExecutableName));
                 }
                 else
                 {
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "x64", "bin", RsyncExecutableName));
                 }
 
-                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "rsync"));
-                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "bin", "rsync"));
+                candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, RsyncExecutableName));
+                candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "bin", RsyncExecutableName));
 
                 foreach (string candidate in candidates)
                 {

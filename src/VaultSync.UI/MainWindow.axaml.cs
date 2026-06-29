@@ -19,6 +19,8 @@ namespace VaultSync.UI;
 
 public partial class MainWindow : Window
 {
+    private const string CompactClass = "compact";
+
     private readonly AppViewModel _appVm;
     private readonly IAppConfigStore _configStore;
     private bool _fullscreenSuppressed;
@@ -165,7 +167,7 @@ public partial class MainWindow : Window
             ? new Thickness(0, 24, 0, 10)
             : new Thickness(0, 0, 0, 10);
 
-        SidebarRoot.Classes.Set("compact", collapsed);
+        SidebarRoot.Classes.Set(CompactClass, collapsed);
         ShellCompactBadge.IsVisible = collapsed;
         ShellBanner.IsVisible = !collapsed;
         NavigationHeader.IsVisible = !collapsed;
@@ -221,18 +223,18 @@ public partial class MainWindow : Window
         NavRecoveryButton.Padding = navButtonPadding;
         NavSettingsButton.Padding = navButtonPadding;
 
-        NavDashboardButton.Classes.Set("compact", collapsed);
-        NavProjectsButton.Classes.Set("compact", collapsed);
-        NavBackupsButton.Classes.Set("compact", collapsed);
-        NavHistoryButton.Classes.Set("compact", collapsed);
-        NavRecoveryButton.Classes.Set("compact", collapsed);
-        NavSettingsButton.Classes.Set("compact", collapsed);
-        NavDashboardIconBadge.Classes.Set("compact", collapsed);
-        NavProjectsIconBadge.Classes.Set("compact", collapsed);
-        NavBackupsIconBadge.Classes.Set("compact", collapsed);
-        NavHistoryIconBadge.Classes.Set("compact", collapsed);
-        NavRecoveryIconBadge.Classes.Set("compact", collapsed);
-        NavSettingsIconBadge.Classes.Set("compact", collapsed);
+        NavDashboardButton.Classes.Set(CompactClass, collapsed);
+        NavProjectsButton.Classes.Set(CompactClass, collapsed);
+        NavBackupsButton.Classes.Set(CompactClass, collapsed);
+        NavHistoryButton.Classes.Set(CompactClass, collapsed);
+        NavRecoveryButton.Classes.Set(CompactClass, collapsed);
+        NavSettingsButton.Classes.Set(CompactClass, collapsed);
+        NavDashboardIconBadge.Classes.Set(CompactClass, collapsed);
+        NavProjectsIconBadge.Classes.Set(CompactClass, collapsed);
+        NavBackupsIconBadge.Classes.Set(CompactClass, collapsed);
+        NavHistoryIconBadge.Classes.Set(CompactClass, collapsed);
+        NavRecoveryIconBadge.Classes.Set(CompactClass, collapsed);
+        NavSettingsIconBadge.Classes.Set(CompactClass, collapsed);
     }
 
     private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)

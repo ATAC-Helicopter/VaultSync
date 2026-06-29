@@ -47,6 +47,9 @@ public sealed class OnboardingTourStep
 
 public sealed class OnboardingTourViewModel : ViewModelBase
 {
+    private const string BackupsViewName = "Backups";
+    private const string ProjectsViewName = "Projects";
+
     private readonly AppViewModel _app;
     private readonly List<OnboardingTourStep> _steps = [];
     private readonly DispatcherTimer _pollTimer;
@@ -125,8 +128,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                 return CurrentStep?.RequiredView switch
                 {
                     "Settings" => L("Onboarding.GoSettings", "Open Settings"),
-                    "Projects" => L("Onboarding.GoProjects", "Open Projects"),
-                    "Backups" => L("Onboarding.GoBackups", "Open Backups"),
+                    ProjectsViewName => L("Onboarding.GoProjects", "Open Projects"),
+                    BackupsViewName => L("Onboarding.GoBackups", "Open Backups"),
                     _ => L("Onboarding.Go", "Go")
                 };
             }
@@ -207,10 +210,10 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             case "Settings":
                 _app.NavigateSettings.Execute(null);
                 break;
-            case "Projects":
+            case ProjectsViewName:
                 _app.NavigateProjects.Execute(null);
                 break;
-            case "Backups":
+            case BackupsViewName:
                 _app.NavigateBackups.Execute(null);
                 break;
         }
@@ -404,14 +407,14 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Tour.Step17.Title", "Add a project"),
             L("Onboarding.Tour.Step17.Body", "Select a project and add it to VaultSync to start tracking snapshots."),
             "ProjectSnapshotButton",
-            "Projects",
+            ProjectsViewName,
             () => _app.ProjectsViewModel.Projects.Any(p => p.IsRegistered));
 
         AddStep(
             L("Onboarding.Tour.Step28.Title", "Project tag colors"),
             L("Onboarding.Tour.Step28.Body", "Type or pick a tag in Projects, then open the color editor here to style that tag app-wide with a live preview."),
             "ProjectTagsEditorSection",
-            "Projects",
+            ProjectsViewName,
             () => true,
             autoAdvance: false);
 
@@ -419,7 +422,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Tour.Step22.Title", "Project encryption policy"),
             L("Onboarding.Tour.Step22.Body", "Set the per-project encryption policy from the Backups page so each project can inherit global protection, force encryption, or stay plain."),
             "BackupsProjectEncryptionPolicyCombo",
-            "Backups",
+            BackupsViewName,
             () => true,
             autoAdvance: false);
 
@@ -427,7 +430,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Tour.Step23.Title", "Project encryption password"),
             L("Onboarding.Tour.Step23.Body", "Set or clear the project-specific encryption password from the Backups page."),
             "BackupsProjectEncryptionPasswordButton",
-            "Backups",
+            BackupsViewName,
             () => true,
             autoAdvance: false);
 
@@ -435,7 +438,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Tour.Step27.Title", "Snapshot diff summaries"),
             L("Onboarding.Tour.Step27.Body", "Each backup now shows diff stats (added, changed, deleted, net size) with preview and export actions."),
             "BackupsHistorySection",
-            "Backups",
+            BackupsViewName,
             () => true,
             autoAdvance: false);
 
@@ -443,7 +446,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Tour.Step18.Title", "Enable auto backups"),
             L("Onboarding.Tour.Step18.Body", "Turn on auto backups for a project to keep snapshots up to date."),
             "AutoBackupToggle",
-            "Backups",
+            BackupsViewName,
             () => true,
             autoAdvance: false);
 
@@ -451,7 +454,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Tour.Step19.Title", "Run your first backup"),
             L("Onboarding.Tour.Step19.Body", "Start a backup for a project to create the first snapshot."),
             "PerProjectBackupButton",
-            "Backups",
+            BackupsViewName,
             () => _app.BackupsViewModel.HasAnyBackups);
     }
 

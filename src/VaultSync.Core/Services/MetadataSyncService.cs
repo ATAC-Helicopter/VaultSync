@@ -18,6 +18,10 @@ namespace VaultSync.Core.Services;
 
 public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? configStore = null)
 {
+    private const string BackupEntityType = "backup";
+    private const string InvalidRootPathMessage = "Root path is empty.";
+    private const string VaultSyncDirectoryName = ".vaultsync";
+
     private readonly SqliteRepository _repo = repo;
     private readonly IAppConfigStore _configStore = configStore ?? StaticAppConfigStore.Instance;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
@@ -47,7 +51,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             if (string.IsNullOrWhiteSpace(rootPath))
             {
                 Console.WriteLine("[MetadataSync] Import failed: root path is empty.");
-                return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
+                return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
             }
 
             var store = new MetadataStore(rootPath);
@@ -134,7 +138,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             if (string.IsNullOrWhiteSpace(rootPath))
             {
                 Console.WriteLine("[MetadataSync] Preview failed: root path is empty.");
-                return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidPath, rootPath, string.Empty, "Root path is empty.");
+                return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidPath, rootPath, string.Empty, InvalidRootPathMessage);
             }
 
             var store = new MetadataStore(rootPath);
@@ -400,7 +404,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
 
         var tombstonedBackupIds = metaTombstones
-            .Where(t => string.Equals(t.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            .Where(t => string.Equals(t.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
             .Select(t => t.EntityId)
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -513,7 +517,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             if (string.IsNullOrWhiteSpace(tombstone.EntityId))
                 continue;
 
-            if (string.Equals(tombstone.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
             {
                 if (backupExternalMap.TryGetValue(tombstone.EntityId, out int existingId))
                 {
@@ -906,7 +910,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
                 foreach (string dir in dirs)
                 {
                     string name = Path.GetFileName(dir);
-                    if (string.Equals(name, ".vaultsync", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(name, VaultSyncDirectoryName, StringComparison.OrdinalIgnoreCase))
                         continue;
 
                     try
@@ -1063,7 +1067,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             if (string.IsNullOrWhiteSpace(tombstone.EntityId))
                 continue;
 
-            if (string.Equals(tombstone.EntityType, "backup", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
             {
                 tombstonedBackupIds.Add(tombstone.EntityId);
                 if (backupExternalMap.ContainsKey(tombstone.EntityId))
@@ -1401,7 +1405,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         {
             string projectName = Path.GetFileName(projectDir);
             if (string.IsNullOrWhiteSpace(projectName) ||
-                string.Equals(projectName, ".vaultsync", StringComparison.OrdinalIgnoreCase))
+                string.Equals(projectName, VaultSyncDirectoryName, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -1532,7 +1536,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         try
         {
             string root = Path.Combine(Path.GetTempPath(), "vaultsync-meta-import", Guid.NewGuid().ToString("N"));
-            string tempDir = Path.Combine(root, ".vaultsync", "meta");
+            string tempDir = Path.Combine(root, VaultSyncDirectoryName, "meta");
             Directory.CreateDirectory(tempDir);
             string destPath = Path.Combine(tempDir, Path.GetFileName(databasePath));
             File.Copy(databasePath, destPath, overwrite: true);
@@ -1836,7 +1840,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     {
         TryExportTombstones(
             rootPath,
-            "backup",
+            BackupEntityType,
             missingExternalIds,
             Environment.MachineName,
             "Missing backup tombstone export");
@@ -2025,7 +2029,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             Console.WriteLine("[MetadataSync] Project export failed: root path is empty.");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
         }
 
         TryFlushDeferredExport(rootPath);
@@ -2179,7 +2183,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             Console.WriteLine("[MetadataSync] Export failed: root path is empty.");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, "Root path is empty.");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
         }
 
         Backup? backup = _repo.GetBackupById(backupId);
@@ -2435,7 +2439,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                AddTombstones(store, [backupExternalId], "backup", now, machineId);
+                AddTombstones(store, [backupExternalId], BackupEntityType, now, machineId);
             });
 
             Console.WriteLine($"[MetadataSync] Tombstone export deferred locally for '{rootPath}'.");
@@ -2482,7 +2486,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                AddTombstones(store, [backupExternalId], "backup", now, machineId);
+                AddTombstones(store, [backupExternalId], BackupEntityType, now, machineId);
             });
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
@@ -2498,7 +2502,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     }
 
     private static string GetMetaDir(string rootPath) =>
-        Path.Combine(rootPath, ".vaultsync", "meta");
+        Path.Combine(rootPath, VaultSyncDirectoryName, "meta");
 
     private static string GetDeferredExportRoot(string rootPath)
     {

@@ -1879,10 +1879,10 @@
   - Done: full Windows/Linux CI, CodeQL, SonarQube, quality gates, and dependency vulnerability audit pass on `Dev`.
   - Remaining: validate Linux Secret Service save/read/delete behavior in a real desktop session.
 - [ ] `VS-1821` `P2` Split backup and metadata service complexity hotspots. _(Tracked by #380)_
-  - Done: Sonar-flagged script path writes now route through workspace/child-path guards, encrypted archive IV handling has an analyzer-visible justification, and duplicated service literals were reduced across telemetry, drive health, support bundles, patch staging, SQLite schema checks, and backup progress stages.
+  - Done: Sonar-flagged script path writes now route through workspace/child-path guards, encrypted archive IV handling has an analyzer-visible justification, and duplicated service literals were reduced across telemetry, drive health, support bundles, patch staging, SQLite schema checks, metadata sync, rsync lookup, and backup progress stages.
   - Remaining: split the large backup/metadata service methods that still drive cognitive-complexity findings.
 - [ ] `VS-1822` `P2` Split oversized desktop view-model hotspots. _(Tracked by #381)_
-  - Done: backup UI/view-model duplicate literals were reduced for telemetry fields, filter labels, restore/delete dialogs, action styles, status labels, and repeated presentation constants.
+  - Done: backup, Settings, shell, and onboarding UI/view-model duplicate literals were reduced for telemetry fields, filter labels, restore/delete dialogs, action styles, status labels, theme/default values, navigation targets, and repeated presentation constants.
   - Remaining: split oversized desktop view-model flows that still drive cognitive-complexity findings.
 - [ ] `VS-1823` `P1` Add large-history performance budgets and release benchmarks. _(Tracked by #382)_
 
