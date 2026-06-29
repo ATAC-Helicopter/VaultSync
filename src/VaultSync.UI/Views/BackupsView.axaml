@@ -1941,7 +1941,7 @@
                                                   Command="{Binding DataContext.OpenBackupFolderCommand,
                                                                     RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                   CommandParameter="{Binding}" />
-                                          <Button Content="Explore"
+                                          <Button Content="{infra:LocalizedString Key=Backups.Section.Explore}"
                                                   Classes="small-button"
                                                   Command="{Binding DataContext.ExploreBackupCommand,
                                                                     RelativeSource={RelativeSource AncestorType=UserControl}}"

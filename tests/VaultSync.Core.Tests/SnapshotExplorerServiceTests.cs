@@ -72,6 +72,19 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public void List_EncryptedArchive_ReturnsExplicitEncryptedSource()
+    {
+        string backup = Path.Combine(_root, "encrypted-backup");
+        Directory.CreateDirectory(backup);
+        File.WriteAllText(Path.Combine(backup, BackupArchiveCryptoService.EncryptedArchiveFileName), "encrypted");
+
+        SnapshotExplorerResult result = _service.List(backup);
+
+        Assert.Equal(SnapshotExplorerSourceKind.EncryptedArchive, result.SourceKind);
+        Assert.Empty(result.Entries);
+    }
+
+    [Fact]
     public void PreviewText_RejectsUnsafePath()
     {
         string backup = CreateFolderBackup();

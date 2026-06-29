@@ -1811,10 +1811,10 @@
   - Done: Dashboard recent activity includes restore milestones, and workflow links route directly to History, Recovery, and Backups.
 - [x] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Done in PR #365, tracked by #359)_
   - Done: Recovery page shows readiness score/band, coverage windows, project priority ordering, and actionable recommendations.
-- [ ] `VS-1808` `P2` Build Snapshot Explorer v1. _(In progress for 1.8.2; tracked by #360)_
-  - Done locally: added core folder/archive browsing, search, safe text preview, and selected file/folder restore helpers.
-  - Done locally: added a Backups-page Explore action and Snapshot Explorer window for backup cards.
-  - Remaining: polish encrypted-backup handling, localization coverage, and large-snapshot UI responsiveness before marking complete.
+- [x] `VS-1808` `P2` Build Snapshot Explorer v1. _(Done for 1.8.2; tracked by #360)_
+  - Done: added core folder/archive browsing, search, safe text preview, and selected file/folder restore helpers.
+  - Done: added a Backups-page Explore action and Snapshot Explorer window for backup cards.
+  - Done: Snapshot Explorer browsing, preview, and selected restore work runs asynchronously, all user-facing strings are localized, and encrypted backups show an explicit v1 out-of-scope message that routes users to normal restore.
 - [ ] `VS-1809` `P2` Add snapshot compare and change intelligence. _(Deferred to a later 1.8.x release; tracked by #361)_
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
