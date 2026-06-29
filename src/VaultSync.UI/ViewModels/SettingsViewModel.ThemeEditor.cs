@@ -14,6 +14,26 @@ namespace VaultSync.UI
 {
     public sealed partial class SettingsViewModel
     {
+        private const string ThemeSlotAccent = "Accent";
+        private const string ThemeSlotBackground = "Background";
+        private const string ThemeSlotDanger = "Danger";
+        private const string ThemeSlotSuccess = "Success";
+        private const string ThemeSlotSurface = "Surface";
+        private const string ThemeSlotSurfaceAlt = "SurfaceAlt";
+        private const string ThemeSlotTextPrimary = "TextPrimary";
+        private const string ThemeSlotTextSecondary = "TextSecondary";
+        private const string ThemeSlotWarning = "Warning";
+
+        private const string ThemeDefaultAccent = "#4F8DFF";
+        private const string ThemeDefaultBackground = "#101218";
+        private const string ThemeDefaultDanger = "#FF7676";
+        private const string ThemeDefaultSuccess = "#4FF2B6";
+        private const string ThemeDefaultSurface = "#181B24";
+        private const string ThemeDefaultSurfaceAlt = "#222635";
+        private const string ThemeDefaultTextPrimary = "#FFFFFF";
+        private const string ThemeDefaultTextSecondary = "#B3B8C7";
+        private const string ThemeDefaultWarning = "#FFC766";
+
         public sealed class ThemeColorSlotViewModel : ViewModelBase
         {
             private string _hex;
@@ -177,15 +197,15 @@ namespace VaultSync.UI
         private void InitializeThemeEditor()
         {
             ThemeColorSlots.Clear();
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Background", L("Settings.Appearance.ThemeSlots.Background", "Background"), "#101218"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Surface", L("Settings.Appearance.ThemeSlots.Surface", "Cards"), "#181B24"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("SurfaceAlt", L("Settings.Appearance.ThemeSlots.SurfaceAlt", "Raised surfaces"), "#222635"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Accent", L("Settings.Appearance.ThemeSlots.Accent", "Accent"), "#4F8DFF"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("TextPrimary", L("Settings.Appearance.ThemeSlots.TextPrimary", "Primary text"), "#FFFFFF"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("TextSecondary", L("Settings.Appearance.ThemeSlots.TextSecondary", "Secondary text"), "#B3B8C7"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Success", L("Settings.Appearance.ThemeSlots.Success", "Success"), "#4FF2B6"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Warning", L("Settings.Appearance.ThemeSlots.Warning", "Warning"), "#FFC766"));
-            ThemeColorSlots.Add(new ThemeColorSlotViewModel("Danger", L("Settings.Appearance.ThemeSlots.Danger", "Danger"), "#FF7676"));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel(ThemeSlotBackground, L("Settings.Appearance.ThemeSlots.Background", ThemeSlotBackground), ThemeDefaultBackground));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel(ThemeSlotSurface, L("Settings.Appearance.ThemeSlots.Surface", "Cards"), ThemeDefaultSurface));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel(ThemeSlotSurfaceAlt, L("Settings.Appearance.ThemeSlots.SurfaceAlt", "Raised surfaces"), ThemeDefaultSurfaceAlt));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel(ThemeSlotAccent, L("Settings.Appearance.ThemeSlots.Accent", ThemeSlotAccent), ThemeDefaultAccent));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel(ThemeSlotTextPrimary, L("Settings.Appearance.ThemeSlots.TextPrimary", "Primary text"), ThemeDefaultTextPrimary));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel(ThemeSlotTextSecondary, L("Settings.Appearance.ThemeSlots.TextSecondary", "Secondary text"), ThemeDefaultTextSecondary));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel(ThemeSlotSuccess, L("Settings.Appearance.ThemeSlots.Success", ThemeSlotSuccess), ThemeDefaultSuccess));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel(ThemeSlotWarning, L("Settings.Appearance.ThemeSlots.Warning", ThemeSlotWarning), ThemeDefaultWarning));
+            ThemeColorSlots.Add(new ThemeColorSlotViewModel(ThemeSlotDanger, L("Settings.Appearance.ThemeSlots.Danger", ThemeSlotDanger), ThemeDefaultDanger));
 
             ThemePresets.Clear();
             foreach ((string Id, string Description, ThemePaletteConfig Palette) preset in ThemeManager.GetThemePresets())
@@ -214,7 +234,7 @@ namespace VaultSync.UI
                 "#111827", "#334155", "#64748B", "#E2E8F0",
                 "#DC2626", "#F97316", "#F59E0B", "#EAB308",
                 "#84CC16", "#22C55E", "#14B8A6", "#06B6D4",
-                "#0EA5E9", "#2563EB", "#4F8DFF", "#6366F1",
+                "#0EA5E9", "#2563EB", ThemeDefaultAccent, "#6366F1",
                 "#7C3AED", "#A855F7", "#EC4899", "#F43F5E"
             };
         }
@@ -273,15 +293,15 @@ namespace VaultSync.UI
                 ? ThemeBaseLightLabel
                 : ThemeBaseDarkLabel;
 
-            SetThemeSlotHex("Background", theme.Background);
-            SetThemeSlotHex("Surface", theme.Surface);
-            SetThemeSlotHex("SurfaceAlt", theme.SurfaceAlt);
-            SetThemeSlotHex("Accent", theme.Accent);
-            SetThemeSlotHex("TextPrimary", theme.TextPrimary);
-            SetThemeSlotHex("TextSecondary", theme.TextSecondary);
-            SetThemeSlotHex("Success", theme.Success);
-            SetThemeSlotHex("Warning", theme.Warning);
-            SetThemeSlotHex("Danger", theme.Danger);
+            SetThemeSlotHex(ThemeSlotBackground, theme.Background);
+            SetThemeSlotHex(ThemeSlotSurface, theme.Surface);
+            SetThemeSlotHex(ThemeSlotSurfaceAlt, theme.SurfaceAlt);
+            SetThemeSlotHex(ThemeSlotAccent, theme.Accent);
+            SetThemeSlotHex(ThemeSlotTextPrimary, theme.TextPrimary);
+            SetThemeSlotHex(ThemeSlotTextSecondary, theme.TextSecondary);
+            SetThemeSlotHex(ThemeSlotSuccess, theme.Success);
+            SetThemeSlotHex(ThemeSlotWarning, theme.Warning);
+            SetThemeSlotHex(ThemeSlotDanger, theme.Danger);
 
             OnPropertyChanged(nameof(CustomThemeName));
             OnPropertyChanged(nameof(CustomThemeBase));
@@ -309,15 +329,15 @@ namespace VaultSync.UI
             {
                 Name = string.IsNullOrWhiteSpace(CustomThemeName) ? L("Settings.Appearance.ThemeNameDefault", "Custom theme") : CustomThemeName.Trim(),
                 BaseTheme = IsLightThemeBaseOption(CustomThemeBase) ? "Light" : "Dark",
-                Background = Get("Background", "#101218"),
-                Surface = Get("Surface", "#181B24"),
-                SurfaceAlt = Get("SurfaceAlt", "#222635"),
-                Accent = Get("Accent", "#4F8DFF"),
-                TextPrimary = Get("TextPrimary", "#FFFFFF"),
-                TextSecondary = Get("TextSecondary", "#B3B8C7"),
-                Success = Get("Success", "#4FF2B6"),
-                Warning = Get("Warning", "#FFC766"),
-                Danger = Get("Danger", "#FF7676")
+                Background = Get(ThemeSlotBackground, ThemeDefaultBackground),
+                Surface = Get(ThemeSlotSurface, ThemeDefaultSurface),
+                SurfaceAlt = Get(ThemeSlotSurfaceAlt, ThemeDefaultSurfaceAlt),
+                Accent = Get(ThemeSlotAccent, ThemeDefaultAccent),
+                TextPrimary = Get(ThemeSlotTextPrimary, ThemeDefaultTextPrimary),
+                TextSecondary = Get(ThemeSlotTextSecondary, ThemeDefaultTextSecondary),
+                Success = Get(ThemeSlotSuccess, ThemeDefaultSuccess),
+                Warning = Get(ThemeSlotWarning, ThemeDefaultWarning),
+                Danger = Get(ThemeSlotDanger, ThemeDefaultDanger)
             };
         }
 
@@ -375,7 +395,7 @@ namespace VaultSync.UI
 
         public Color SelectedThemeColor
         {
-            get => SelectedThemeColorSlot?.SwatchColor ?? Color.Parse("#4F8DFF");
+            get => SelectedThemeColorSlot?.SwatchColor ?? Color.Parse(ThemeDefaultAccent);
             set
             {
                 if (SelectedThemeColorSlot is null)
@@ -385,13 +405,13 @@ namespace VaultSync.UI
             }
         }
 
-        public string SelectedThemeColorHex => SelectedThemeColorSlot?.Hex ?? "#4F8DFF";
-        public string ThemePreviewBackground => ThemeColorSlots.FirstOrDefault(x => x.Id == "Background")?.Hex ?? "#101218";
-        public string ThemePreviewSurface => ThemeColorSlots.FirstOrDefault(x => x.Id == "Surface")?.Hex ?? "#181B24";
-        public string ThemePreviewSurfaceAlt => ThemeColorSlots.FirstOrDefault(x => x.Id == "SurfaceAlt")?.Hex ?? "#222635";
-        public string ThemePreviewAccent => ThemeColorSlots.FirstOrDefault(x => x.Id == "Accent")?.Hex ?? "#4F8DFF";
-        public string ThemePreviewTextPrimary => ThemeColorSlots.FirstOrDefault(x => x.Id == "TextPrimary")?.Hex ?? "#FFFFFF";
-        public string ThemePreviewTextSecondary => ThemeColorSlots.FirstOrDefault(x => x.Id == "TextSecondary")?.Hex ?? "#B3B8C7";
+        public string SelectedThemeColorHex => SelectedThemeColorSlot?.Hex ?? ThemeDefaultAccent;
+        public string ThemePreviewBackground => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotBackground)?.Hex ?? ThemeDefaultBackground;
+        public string ThemePreviewSurface => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotSurface)?.Hex ?? ThemeDefaultSurface;
+        public string ThemePreviewSurfaceAlt => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotSurfaceAlt)?.Hex ?? ThemeDefaultSurfaceAlt;
+        public string ThemePreviewAccent => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotAccent)?.Hex ?? ThemeDefaultAccent;
+        public string ThemePreviewTextPrimary => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotTextPrimary)?.Hex ?? ThemeDefaultTextPrimary;
+        public string ThemePreviewTextSecondary => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotTextSecondary)?.Hex ?? ThemeDefaultTextSecondary;
 
         public ICommand ApplyThemePresetCommand => _applyThemePresetCommand!;
         public ICommand ApplyThemePaletteSwatchCommand => _applyThemePaletteSwatchCommand!;
@@ -409,8 +429,8 @@ namespace VaultSync.UI
         public string ThemePreviewLabel => L("Settings.Appearance.ThemeEditor.Preview", "Preview");
         public string ThemeAdvancedLabel => L("Settings.Appearance.ThemeEditor.AdvancedPanel", "Advanced tuning");
         public string ThemeAdvancedDescription => L("Settings.Appearance.ThemeEditor.AdvancedDescription", "Fine-tune the selected color with direct component sliders.");
-        public string ThemePreviewAccentLabel => L("Settings.Appearance.ThemeEditor.PreviewAccent", "Accent");
-        public string ThemePreviewSurfaceLabel => L("Settings.Appearance.ThemeEditor.PreviewSurface", "Surface");
+        public string ThemePreviewAccentLabel => L("Settings.Appearance.ThemeEditor.PreviewAccent", ThemeSlotAccent);
+        public string ThemePreviewSurfaceLabel => L("Settings.Appearance.ThemeEditor.PreviewSurface", ThemeSlotSurface);
         public string ThemePreviewPrimaryLabel => L("Settings.Appearance.ThemeEditor.PreviewPrimary", "Primary text");
         public string ThemePreviewSecondaryLabel => L("Settings.Appearance.ThemeEditor.PreviewSecondary", "Secondary text stays readable while you tune the palette.");
     }

@@ -34,6 +34,25 @@ namespace VaultSync.UI
 {
     public sealed partial class SettingsViewModel : ViewModelBase
     {
+        private const string BackupRepairTitleKey = "Settings.Advanced.BackupRepairTitle";
+        private const string BackupRepairTitleFallback = "Backup index repair";
+        private const string DefaultMaintenanceEnd = "05:00";
+        private const string DefaultMaintenanceStart = "01:00";
+        private const string DefaultQuietHoursEnd = "07:00";
+        private const string DefaultQuietHoursStart = "23:00";
+        private const string MetadataConflictsTitleKey = "Settings.Advanced.MetadataConflictsTitle";
+        private const string MetadataConflictsTitleFallback = "Metadata conflicts";
+        private const string MissingSecretStatusKey = "Settings.Encryption.SecretStatusMissing";
+        private const string MissingSecretStatusFallback = "No encryption password enrolled yet.";
+        private const string RsyncExecutableName = "rsync";
+        private const string SupportBundleTitleKey = "Settings.Advanced.SupportBundle";
+        private const string SupportBundleTitleFallback = "Support bundle";
+        private const string ThemeCustom = "Custom";
+        private const string ThemeDark = "Dark";
+        private const string ThemeFollowSystem = "Follow system";
+        private const string ThemeLight = "Light";
+        private const string ThemeSystem = "System";
+
         // ---------------- Core backing fields ----------------
 
         private string _projectsRootPath = string.Empty;
@@ -65,8 +84,8 @@ namespace VaultSync.UI
         private bool _enableBandwidthLimit = false;
         private int _maxBandwidthMbps = 100;
         private bool _enableQuietHours = false;
-        private string _quietHoursStart = "23:00";
-        private string _quietHoursEnd = "07:00";
+        private string _quietHoursStart = DefaultQuietHoursStart;
+        private string _quietHoursEnd = DefaultQuietHoursEnd;
         private string _backupLocationStatus = string.Empty;
         private bool _backupEncryptionEnabled = false;
         private bool _backupEncryptionAllowSessionFallback = false;
@@ -105,8 +124,8 @@ namespace VaultSync.UI
         private int _updateCheckIntervalMinutes = 120;
         private bool _betaChannelEnabled = false;
         private bool _enableMaintenanceWindow = false;
-        private string _maintenanceWindowStart = "01:00";
-        private string _maintenanceWindowEnd = "05:00";
+        private string _maintenanceWindowStart = DefaultMaintenanceStart;
+        private string _maintenanceWindowEnd = DefaultMaintenanceEnd;
         private bool _maintenanceRunConsistencyScan = true;
         private bool _maintenanceRunRepairDryRun = true;
         private bool _maintenanceRunMetadataRefresh = true;
@@ -150,7 +169,7 @@ namespace VaultSync.UI
         private bool _isBackupIndexRepairBusy;
         private bool _showLegacyBackupLocation = true;
         private string _customThemeName = "VaultSync Midnight";
-        private string _customThemeBase = "Dark";
+        private string _customThemeBase = ThemeDark;
         private ThemeColorSlotViewModel? _selectedThemeColorSlot;
         private readonly bool _isInitialized;
         private bool _isSaving;
@@ -560,7 +579,7 @@ namespace VaultSync.UI
                         ProjectMetadataConflicts.Count);
                 _backupEncryptionSecretStatus = _backupEncryptionHasSecret
                     ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
-                    : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
+                    : L(MissingSecretStatusKey, MissingSecretStatusFallback);
                 OnPropertyChanged(nameof(BackupEncryptionSecretStatus));
                 OnPropertyChanged(nameof(ProjectMetadataConflictStatus));
             };
@@ -681,8 +700,8 @@ namespace VaultSync.UI
             _enableBandwidthLimit      = cfg.Backups.EnableBandwidthLimit;
             _maxBandwidthMbps          = ClampInt(cfg.Backups.MaxBandwidthMbps, 1, 5000, 100);
             _enableQuietHours          = cfg.Backups.EnableQuietHours;
-            _quietHoursStart           = NormalizeTimeOfDay(cfg.Backups.QuietHoursStart, "23:00");
-            _quietHoursEnd             = NormalizeTimeOfDay(cfg.Backups.QuietHoursEnd, "07:00");
+            _quietHoursStart           = NormalizeTimeOfDay(cfg.Backups.QuietHoursStart, DefaultQuietHoursStart);
+            _quietHoursEnd             = NormalizeTimeOfDay(cfg.Backups.QuietHoursEnd, DefaultQuietHoursEnd);
             _backupEncryptionEnabled   = cfg.Backups.Encryption.Enabled;
             _backupEncryptionAllowSessionFallback = cfg.Backups.Encryption.AllowSessionFallback;
             _backupEncryptionOpenUnlockTimeoutMinutes = ClampInt(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes, 1, 240, 10);
@@ -692,7 +711,7 @@ namespace VaultSync.UI
             _backupEncryptionPasswordInput = string.Empty;
             _backupEncryptionSecretStatus = _backupEncryptionHasSecret
                 ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
-                : L("Settings.Encryption.SecretStatusMissing", "No encryption password enrolled yet.");
+                : L(MissingSecretStatusKey, MissingSecretStatusFallback);
 
             _preferExternalDrives    = cfg.Storage.PreferExternalDrives;
             _showDriveHealthWarnings = cfg.Storage.ShowDriveWarnings;
@@ -783,7 +802,7 @@ namespace VaultSync.UI
             RefreshLegacyVisibility();
 
             // FIX: use Theme instead of ThemeName
-            _selectedTheme      = DisplayThemeOption(cfg.Appearance.Theme ?? "System");
+            _selectedTheme      = DisplayThemeOption(cfg.Appearance.Theme ?? ThemeSystem);
             _useCompactLayout   = cfg.Appearance.CompactLayout;
             _showProjectAvatars = cfg.Appearance.ShowProjectAvatars;
             LoadTagColorRules(cfg);
@@ -812,8 +831,8 @@ namespace VaultSync.UI
             _updateCheckIntervalMinutes = ClampInt(cfg.Advanced.UpdateCheckIntervalMinutes, 15, 10080, 120);
             _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
             _enableMaintenanceWindow    = cfg.Advanced.Maintenance.Enabled;
-            _maintenanceWindowStart     = NormalizeTimeOfDay(cfg.Advanced.Maintenance.WindowStart, "01:00");
-            _maintenanceWindowEnd       = NormalizeTimeOfDay(cfg.Advanced.Maintenance.WindowEnd, "05:00");
+            _maintenanceWindowStart     = NormalizeTimeOfDay(cfg.Advanced.Maintenance.WindowStart, DefaultMaintenanceStart);
+            _maintenanceWindowEnd       = NormalizeTimeOfDay(cfg.Advanced.Maintenance.WindowEnd, DefaultMaintenanceEnd);
             _maintenanceRunConsistencyScan = cfg.Advanced.Maintenance.RunConsistencyScan;
             _maintenanceRunRepairDryRun = cfg.Advanced.Maintenance.RunRepairDryRun;
             _maintenanceRunMetadataRefresh = cfg.Advanced.Maintenance.RunMetadataRefresh;
@@ -966,8 +985,8 @@ namespace VaultSync.UI
             cfg.Backups.EnableBandwidthLimit        = EnableBandwidthLimit;
             cfg.Backups.MaxBandwidthMbps            = ClampInt(MaxBandwidthMbps, 1, 5000, 100);
             cfg.Backups.EnableQuietHours            = EnableQuietHours;
-            cfg.Backups.QuietHoursStart             = NormalizeTimeOfDay(QuietHoursStart, "23:00");
-            cfg.Backups.QuietHoursEnd               = NormalizeTimeOfDay(QuietHoursEnd, "07:00");
+            cfg.Backups.QuietHoursStart             = NormalizeTimeOfDay(QuietHoursStart, DefaultQuietHoursStart);
+            cfg.Backups.QuietHoursEnd               = NormalizeTimeOfDay(QuietHoursEnd, DefaultQuietHoursEnd);
             cfg.Backups.Encryption.Enabled          = BackupEncryptionEnabled;
             cfg.Backups.Encryption.AllowSessionFallback = BackupEncryptionAllowSessionFallback;
             cfg.Backups.Encryption.OpenUnlockTimeoutMinutes = ClampInt(BackupEncryptionOpenUnlockTimeoutMinutes, 1, 240, 10);
@@ -1045,8 +1064,8 @@ namespace VaultSync.UI
             cfg.Advanced.BetaChannelEnabled  = BetaChannelEnabled;
             cfg.Advanced.Language            = SelectedLanguageCode;
             cfg.Advanced.Maintenance.Enabled = EnableMaintenanceWindow;
-            cfg.Advanced.Maintenance.WindowStart = NormalizeTimeOfDay(MaintenanceWindowStart, "01:00");
-            cfg.Advanced.Maintenance.WindowEnd = NormalizeTimeOfDay(MaintenanceWindowEnd, "05:00");
+            cfg.Advanced.Maintenance.WindowStart = NormalizeTimeOfDay(MaintenanceWindowStart, DefaultMaintenanceStart);
+            cfg.Advanced.Maintenance.WindowEnd = NormalizeTimeOfDay(MaintenanceWindowEnd, DefaultMaintenanceEnd);
             cfg.Advanced.Maintenance.RunConsistencyScan = MaintenanceRunConsistencyScan;
             cfg.Advanced.Maintenance.RunRepairDryRun = MaintenanceRunRepairDryRun;
             cfg.Advanced.Maintenance.RunMetadataRefresh = MaintenanceRunMetadataRefresh;
@@ -1448,25 +1467,25 @@ namespace VaultSync.UI
             {
                 return existingIndex switch
                 {
-                    1 => "Dark",
-                    2 => "Light",
-                    3 => "Custom",
-                    _ => "System"
+                    1 => ThemeDark,
+                    2 => ThemeLight,
+                    3 => ThemeCustom,
+                    _ => ThemeSystem
                 };
             }
 
             return theme switch
             {
-                var value when string.Equals(value, ThemeOptionDarkLabel, StringComparison.OrdinalIgnoreCase) => "Dark",
-                var value when string.Equals(value, ThemeOptionLightLabel, StringComparison.OrdinalIgnoreCase) => "Light",
-                var value when string.Equals(value, ThemeOptionCustomLabel, StringComparison.OrdinalIgnoreCase) => "Custom",
-                var value when string.Equals(value, ThemeOptionSystemLabel, StringComparison.OrdinalIgnoreCase) => "System",
-                "Dark"          => "Dark",
-                "Light"         => "Light",
-                "Custom"        => "Custom",
-                "Follow system" => "System",
-                "System"        => "System",
-                _               => "System"
+                var value when string.Equals(value, ThemeOptionDarkLabel, StringComparison.OrdinalIgnoreCase) => ThemeDark,
+                var value when string.Equals(value, ThemeOptionLightLabel, StringComparison.OrdinalIgnoreCase) => ThemeLight,
+                var value when string.Equals(value, ThemeOptionCustomLabel, StringComparison.OrdinalIgnoreCase) => ThemeCustom,
+                var value when string.Equals(value, ThemeOptionSystemLabel, StringComparison.OrdinalIgnoreCase) => ThemeSystem,
+                ThemeDark          => ThemeDark,
+                ThemeLight         => ThemeLight,
+                ThemeCustom        => ThemeCustom,
+                ThemeFollowSystem => ThemeSystem,
+                ThemeSystem        => ThemeSystem,
+                _               => ThemeSystem
             };
         }
 
@@ -1474,9 +1493,9 @@ namespace VaultSync.UI
         {
             return storedTheme switch
             {
-                "Dark" => ThemeOptionDarkLabel,
-                "Light" => ThemeOptionLightLabel,
-                "Custom" => ThemeOptionCustomLabel,
+                ThemeDark => ThemeOptionDarkLabel,
+                ThemeLight => ThemeOptionLightLabel,
+                ThemeCustom => ThemeOptionCustomLabel,
                 _ => ThemeOptionSystemLabel
             };
         }
@@ -1486,24 +1505,24 @@ namespace VaultSync.UI
             int existingIndex = CustomThemeBaseOptions.IndexOf(value);
             if (existingIndex >= 0)
             {
-                return existingIndex == 1 ? "Light" : "Dark";
+                return existingIndex == 1 ? ThemeLight : ThemeDark;
             }
 
             return value switch
             {
-                var candidate when string.Equals(candidate, ThemeBaseLightLabel, StringComparison.OrdinalIgnoreCase) => "Light",
-                "Light" => "Light",
-                _ => "Dark"
+                var candidate when string.Equals(candidate, ThemeBaseLightLabel, StringComparison.OrdinalIgnoreCase) => ThemeLight,
+                ThemeLight => ThemeLight,
+                _ => ThemeDark
             };
         }
 
         private string DisplayThemeBaseOption(string value)
-            => string.Equals(value, "Light", StringComparison.OrdinalIgnoreCase)
+            => string.Equals(value, ThemeLight, StringComparison.OrdinalIgnoreCase)
                 ? ThemeBaseLightLabel
                 : ThemeBaseDarkLabel;
 
         private bool IsLightThemeBaseOption(string value)
-            => string.Equals(NormalizeThemeBaseOption(value), "Light", StringComparison.OrdinalIgnoreCase);
+            => string.Equals(NormalizeThemeBaseOption(value), ThemeLight, StringComparison.OrdinalIgnoreCase);
 
         private void RefreshThemeOptions()
         {
@@ -1521,12 +1540,12 @@ namespace VaultSync.UI
             CustomThemeBaseOptions.Add(ThemeBaseLightLabel);
         }
 
-        private string ThemeOptionSystemLabel => L("Settings.Appearance.ThemeOption.System", "Follow system");
-        private string ThemeOptionDarkLabel => L("Settings.Appearance.ThemeOption.Dark", "Dark");
-        private string ThemeOptionLightLabel => L("Settings.Appearance.ThemeOption.Light", "Light");
-        private string ThemeOptionCustomLabel => L("Settings.Appearance.ThemeOption.Custom", "Custom");
-        private string ThemeBaseDarkLabel => L("Settings.Appearance.ThemeBase.Dark", "Dark");
-        private string ThemeBaseLightLabel => L("Settings.Appearance.ThemeBase.Light", "Light");
+        private string ThemeOptionSystemLabel => L("Settings.Appearance.ThemeOption.System", ThemeFollowSystem);
+        private string ThemeOptionDarkLabel => L("Settings.Appearance.ThemeOption.Dark", ThemeDark);
+        private string ThemeOptionLightLabel => L("Settings.Appearance.ThemeOption.Light", ThemeLight);
+        private string ThemeOptionCustomLabel => L("Settings.Appearance.ThemeOption.Custom", ThemeCustom);
+        private string ThemeBaseDarkLabel => L("Settings.Appearance.ThemeBase.Dark", ThemeDark);
+        private string ThemeBaseLightLabel => L("Settings.Appearance.ThemeBase.Light", ThemeLight);
 
         private static int ClampInt(int value, int min, int max, int fallback)
         {
@@ -1837,7 +1856,7 @@ namespace VaultSync.UI
             }
         }
 
-        public bool IsCustomThemeSelected => string.Equals(NormalizeThemeOption(SelectedTheme), "Custom", StringComparison.Ordinal);
+        public bool IsCustomThemeSelected => string.Equals(NormalizeThemeOption(SelectedTheme), ThemeCustom, StringComparison.Ordinal);
 
         public string CustomThemeName
         {
@@ -2498,7 +2517,7 @@ namespace VaultSync.UI
             {
                 try
                 {
-                    string candidate = Path.Combine(dir, "rsync");
+                    string candidate = Path.Combine(dir, RsyncExecutableName);
                     if (File.Exists(candidate))
                         return candidate;
                 }
@@ -2520,22 +2539,22 @@ namespace VaultSync.UI
                 var candidates = new List<string>();
                 if (arch == Architecture.Arm64)
                 {
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "arm64", RsyncExecutableName));
                 }
                 else if (arch == Architecture.X64)
                 {
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "x64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "x64", RsyncExecutableName));
                 }
                 else
                 {
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "arm64", "bin", "rsync"));
-                    candidates.Add(Path.Combine(baseDir, "tools", "rsync", "x64", "bin", "rsync"));
+                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "x64", "bin", RsyncExecutableName));
                 }
 
-                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "rsync"));
-                candidates.Add(Path.Combine(baseDir, "tools", "rsync", "bin", "rsync"));
+                candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, RsyncExecutableName));
+                candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "bin", RsyncExecutableName));
 
                 foreach (string candidate in candidates)
                 {
@@ -2685,14 +2704,14 @@ namespace VaultSync.UI
         public string QuietHoursEndLabel => L("Settings.Backups.QuietHoursEnd", "End (HH:mm)");
         public string QuietHoursWindowLabel => L("Settings.Backups.QuietHoursWindow", "Active window");
         public string QuietHoursWindowPreview =>
-            $"{NormalizeTimeOfDay(QuietHoursStart, "23:00")} -> {NormalizeTimeOfDay(QuietHoursEnd, "07:00")}";
+            $"{NormalizeTimeOfDay(QuietHoursStart, DefaultQuietHoursStart)} -> {NormalizeTimeOfDay(QuietHoursEnd, DefaultQuietHoursEnd)}";
         public string MaintenanceWindowLabel => L("Settings.Advanced.MaintenanceWindow", "Maintenance window");
         public string MaintenanceWindowDescription => L("Settings.Advanced.MaintenanceWindowDescription", "Run optional health and repair checks during this time window.");
         public string MaintenanceWindowStartLabel => L("Settings.Advanced.MaintenanceWindowStart", "Start (HH:mm)");
         public string MaintenanceWindowEndLabel => L("Settings.Advanced.MaintenanceWindowEnd", "End (HH:mm)");
         public string MaintenanceWindowPreviewLabel => L("Settings.Advanced.MaintenanceWindowPreview", "Active window");
         public string MaintenanceWindowPreview =>
-            $"{NormalizeTimeOfDay(MaintenanceWindowStart, "01:00")} -> {NormalizeTimeOfDay(MaintenanceWindowEnd, "05:00")}";
+            $"{NormalizeTimeOfDay(MaintenanceWindowStart, DefaultMaintenanceStart)} -> {NormalizeTimeOfDay(MaintenanceWindowEnd, DefaultMaintenanceEnd)}";
         public string MaintenanceWindowConsistencyLabel => L("Settings.Advanced.MaintenanceConsistency", "Run consistency scan");
         public string MaintenanceWindowConsistencyDescription => L("Settings.Advanced.MaintenanceConsistencyDescription", "Scan backup, snapshot, and project links and record a health summary.");
         public string MaintenanceWindowRepairLabel => L("Settings.Advanced.MaintenanceRepairDryRun", "Run repair dry-run");
@@ -2711,8 +2730,8 @@ namespace VaultSync.UI
             if (string.IsNullOrWhiteSpace(BackupEncryptionPasswordInput))
             {
                 BackupEncryptionSecretStatus = L(
-                    "Settings.Encryption.SecretStatusMissing",
-                    "No encryption password enrolled yet.");
+                    MissingSecretStatusKey,
+                    MissingSecretStatusFallback);
                 return;
             }
 
@@ -2763,8 +2782,8 @@ namespace VaultSync.UI
             BackupEncryptionHasSecret = false;
             BackupEncryptionPasswordInput = string.Empty;
             BackupEncryptionSecretStatus = L(
-                "Settings.Encryption.SecretStatusMissing",
-                "No encryption password enrolled yet.");
+                MissingSecretStatusKey,
+                MissingSecretStatusFallback);
             TriggerAutoSave();
         }
 
@@ -3455,7 +3474,7 @@ namespace VaultSync.UI
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Warning,
-                    L("Settings.Advanced.SupportBundle", "Support bundle"));
+                    L(SupportBundleTitleKey, SupportBundleTitleFallback));
                 return;
             }
 
@@ -3466,7 +3485,7 @@ namespace VaultSync.UI
             GlobalNotificationCenter.Instance.Show(
                 L("Settings.Advanced.SupportBundleReady", "Support bundle ready. You can share the zip file."),
                 NotificationSeverity.Info,
-                L("Settings.Advanced.SupportBundle", "Support bundle"));
+                L(SupportBundleTitleKey, SupportBundleTitleFallback));
 
             TryOpenContainingFolder(result.ZipPath);
         }
@@ -3663,7 +3682,7 @@ namespace VaultSync.UI
                     GlobalNotificationCenter.Instance.Show(
                         status,
                         NotificationSeverity.Info,
-                        L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                        L(BackupRepairTitleKey, BackupRepairTitleFallback));
                 });
                 DiagnosticsLogger.Record(
                     $"Doctor action complete: backup-index-repair scan. Actions={plan.Actions.Count}; BlockedBuckets={plan.BlockedIssues.Count}.");
@@ -3683,7 +3702,7 @@ namespace VaultSync.UI
                     GlobalNotificationCenter.Instance.Show(
                         status,
                         NotificationSeverity.Error,
-                        L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                        L(BackupRepairTitleKey, BackupRepairTitleFallback));
                 });
                 DiagnosticsLogger.Record($"Doctor action failed: backup-index-repair scan. {ex.GetType().Name} - {ex.Message}");
                 PersistBackupRepairTelemetry(null, appliedCount: null, status: status);
@@ -3731,7 +3750,7 @@ namespace VaultSync.UI
                     GlobalNotificationCenter.Instance.Show(
                         status,
                         NotificationSeverity.Info,
-                        L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                        L(BackupRepairTitleKey, BackupRepairTitleFallback));
                 });
                 DiagnosticsLogger.Record($"Doctor action complete: backup-index-repair apply. Applied={applied}.");
                 PersistBackupRepairTelemetry(plan, applied, status);
@@ -3752,7 +3771,7 @@ namespace VaultSync.UI
                     GlobalNotificationCenter.Instance.Show(
                         status,
                         NotificationSeverity.Error,
-                        L("Settings.Advanced.BackupRepairTitle", "Backup index repair"));
+                        L(BackupRepairTitleKey, BackupRepairTitleFallback));
                 });
                 DiagnosticsLogger.Record($"Doctor action failed: backup-index-repair apply. {ex.GetType().Name} - {ex.Message}");
                 PersistBackupRepairTelemetry(plan, appliedCount: null, status: status);
@@ -3899,7 +3918,7 @@ namespace VaultSync.UI
                     GlobalNotificationCenter.Instance.Show(
                         status,
                         NotificationSeverity.Info,
-                        L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                        L(MetadataConflictsTitleKey, MetadataConflictsTitleFallback));
                 });
                 DiagnosticsLogger.Record($"Doctor action complete: metadata-conflict accept. ProjectId={item.ProjectId}.");
             }
@@ -3917,7 +3936,7 @@ namespace VaultSync.UI
                     GlobalNotificationCenter.Instance.Show(
                         status,
                         NotificationSeverity.Error,
-                        L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                        L(MetadataConflictsTitleKey, MetadataConflictsTitleFallback));
                 });
                 DiagnosticsLogger.Record($"Doctor action failed: metadata-conflict accept. {ex.GetType().Name} - {ex.Message}");
             }
@@ -3963,7 +3982,7 @@ namespace VaultSync.UI
                     GlobalNotificationCenter.Instance.Show(
                         status,
                         NotificationSeverity.Info,
-                        L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                        L(MetadataConflictsTitleKey, MetadataConflictsTitleFallback));
                 });
                 DiagnosticsLogger.Record($"Doctor action complete: metadata-conflict keep-local. ProjectId={item.ProjectId}.");
             }
@@ -3981,7 +4000,7 @@ namespace VaultSync.UI
                     GlobalNotificationCenter.Instance.Show(
                         status,
                         NotificationSeverity.Error,
-                        L("Settings.Advanced.MetadataConflictsTitle", "Metadata conflicts"));
+                        L(MetadataConflictsTitleKey, MetadataConflictsTitleFallback));
                 });
                 DiagnosticsLogger.Record($"Doctor action failed: metadata-conflict keep-local. {ex.GetType().Name} - {ex.Message}");
             }
@@ -4098,7 +4117,7 @@ namespace VaultSync.UI
                 GlobalNotificationCenter.Instance.Show(
                     message,
                     NotificationSeverity.Warning,
-                    L("Settings.Advanced.SupportBundle", "Support bundle"));
+                    L(SupportBundleTitleKey, SupportBundleTitleFallback));
                 return;
             }
 
@@ -4107,7 +4126,7 @@ namespace VaultSync.UI
             GlobalNotificationCenter.Instance.Show(
                 message,
                 NotificationSeverity.Info,
-                L("Settings.Advanced.SupportBundle", "Support bundle"));
+                L(SupportBundleTitleKey, SupportBundleTitleFallback));
         }
 
         private (bool success, string message) TryApplySupportBundleSettings(string zipPath)
@@ -4289,10 +4308,10 @@ namespace VaultSync.UI
                         cfg.Advanced.Maintenance.Enabled);
                     cfg.Advanced.Maintenance.WindowStart = NormalizeTimeOfDay(
                         ReadString(maintenance, nameof(cfg.Advanced.Maintenance.WindowStart), cfg.Advanced.Maintenance.WindowStart),
-                        "01:00");
+                        DefaultMaintenanceStart);
                     cfg.Advanced.Maintenance.WindowEnd = NormalizeTimeOfDay(
                         ReadString(maintenance, nameof(cfg.Advanced.Maintenance.WindowEnd), cfg.Advanced.Maintenance.WindowEnd),
-                        "05:00");
+                        DefaultMaintenanceEnd);
                     cfg.Advanced.Maintenance.RunConsistencyScan = ReadBool(
                         maintenance,
                         nameof(cfg.Advanced.Maintenance.RunConsistencyScan),
@@ -4346,11 +4365,11 @@ namespace VaultSync.UI
         {
             return value switch
             {
-                "Dark" => "Dark",
-                "Light" => "Light",
-                "Custom" => "Custom",
-                "Follow system" => "Follow system",
-                "System" => "Follow system",
+                ThemeDark => ThemeDark,
+                ThemeLight => ThemeLight,
+                ThemeCustom => ThemeCustom,
+                ThemeFollowSystem => ThemeFollowSystem,
+                ThemeSystem => ThemeFollowSystem,
                 _ => fallback
             };
         }

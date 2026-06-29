@@ -4,6 +4,9 @@
 - [VS-1808] Added Snapshot Explorer v1 for backup folder/archive browsing, text preview, search, and selected-item restore.
 ### Changed
 - [VS-1808] Snapshot Explorer now loads browsing, preview, and selected restore work asynchronously, uses localized UI/status strings, and shows a clear encrypted-backup message when encrypted archive browsing is unavailable in v1.
+- [VS-1821] Hardened Sonar-flagged script path writes and kept encrypted archive IV handling analyzer-visible while preserving random IV generation.
+- [VS-1821] Reduced duplicated service literals for telemetry storage, drive-health probing, patch helper staging, support bundle redaction, and SQLite schema checks.
+- [VS-1822] Reduced duplicated backup UI literals for progress stages, backup filters, restore/delete dialogs, telemetry fields, and repeated action styling.
 - [VS-1828] Refreshed setup-python, Microsoft.NET.Test.Sdk, SkiaSharp, and HarfBuzzSharp dependencies for the 1.8.2 release train.
 
 ## [1.8.1] - 25.06.2026
