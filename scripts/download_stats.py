@@ -213,9 +213,14 @@ def normalize_releases(raw_releases: list[dict[str, Any]], previous: dict[str, A
     return snapshot
 
 
-def write_json(path: Path, data: Any) -> None:
+def write_text_file(root: Path, relative_name: str, content: str) -> None:
+    path = child_path(root, relative_name)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(content, encoding="utf-8")
+
+
+def write_json(root: Path, relative_name: str, data: Any) -> None:
+    write_text_file(root, relative_name, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 
 
 def append_markdown_highlights(lines: list[str], snapshot: dict[str, Any]) -> None:
@@ -616,12 +621,12 @@ def main() -> int:
     snapshot["repository"] = f"{args.owner}/{args.repo}"
 
     timestamp_slug = snapshot["captured_at"].replace(":", "-")
-    write_json(latest_path, snapshot)
-    write_json(child_path(history_dir, f"{timestamp_slug}.json"), snapshot)
+    write_json(output_dir, "latest.json", snapshot)
+    write_json(history_dir, f"{timestamp_slug}.json", snapshot)
     prune_history(history_dir)
-    child_path(output_dir, "README.md").write_text(build_markdown(snapshot), encoding="utf-8")
-    child_path(output_dir, "index.html").write_text(build_html(snapshot), encoding="utf-8")
-    child_path(output_dir, ".nojekyll").write_text("", encoding="utf-8")
+    write_text_file(output_dir, "README.md", build_markdown(snapshot))
+    write_text_file(output_dir, "index.html", build_html(snapshot))
+    write_text_file(output_dir, ".nojekyll", "")
     ensure_history_index(history_dir)
     return 0
 

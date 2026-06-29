@@ -17,6 +17,13 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
+        private const string TelemetryBackupSingleSkipped = "backup_single_skipped";
+        private const string TelemetryReason = "reason";
+        private const string TelemetryProject = "project";
+        private const string TelemetryProjectRoot = "projectRoot";
+        private const string TelemetryUseArchiveMode = "useArchiveMode";
+        private const string TelemetryDurationSeconds = "durationSeconds";
+
         private void OnBackupProjectRequested(ProjectBackupItem? item)
         {
             AppViewModel.RunDetached(() => OnBackupProjectRequestedAsync(item), nameof(OnBackupProjectRequestedAsync));
@@ -77,8 +84,8 @@ namespace VaultSync.UI.ViewModels
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.BatteryPaused"],
                     NotificationSeverity.Warning);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "battery"));
+                Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                    .WithCode(TelemetryReason, "battery"));
                 return;
             }
 
@@ -87,8 +94,8 @@ namespace VaultSync.UI.ViewModels
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.NoProject"],
                     NotificationSeverity.Warning);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "no_project"));
+                Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                    .WithCode(TelemetryReason, "no_project"));
                 return;
             }
 
@@ -97,8 +104,8 @@ namespace VaultSync.UI.ViewModels
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.InvalidProjectId"],
                     NotificationSeverity.Error);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "invalid_project_id"));
+                Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                    .WithCode(TelemetryReason, "invalid_project_id"));
                 return;
             }
 
@@ -107,9 +114,9 @@ namespace VaultSync.UI.ViewModels
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.AlreadyRunning"],
                     NotificationSeverity.Info);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "backup_all_running")
-                    .WithHashedString("project", item.Name));
+                Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                    .WithCode(TelemetryReason, "backup_all_running")
+                    .WithHashedString(TelemetryProject, item.Name));
                 return;
             }
 
@@ -118,8 +125,8 @@ namespace VaultSync.UI.ViewModels
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.AlreadyRunning"],
                     NotificationSeverity.Info);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "busy"));
+                Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                    .WithCode(TelemetryReason, "busy"));
                 return;
             }
 
@@ -130,8 +137,8 @@ namespace VaultSync.UI.ViewModels
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.NoDestination"],
                     NotificationSeverity.Warning);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "no_destination"));
+                Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                    .WithCode(TelemetryReason, "no_destination"));
                 return; // later: show error in UI
             }
 
@@ -140,8 +147,8 @@ namespace VaultSync.UI.ViewModels
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.ProjectNotFound"],
                     NotificationSeverity.Error);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "project_not_found"));
+                Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                    .WithCode(TelemetryReason, "project_not_found"));
                 return;
             }
 
@@ -154,16 +161,16 @@ namespace VaultSync.UI.ViewModels
             {
                 BackupsViewModel.ShowNotification(preparation.DestinationWarning, "Warning");
                 Telemetry.Log("backup_single_destination_fallback", b => b
-                    .WithCode("reason", preparation.DestinationWarningCode ?? "preferred_destination_fallback")
-                    .WithHashedString("project", project.Name));
+                    .WithCode(TelemetryReason, preparation.DestinationWarningCode ?? "preferred_destination_fallback")
+                    .WithHashedString(TelemetryProject, project.Name));
             }
             if (!TryResolveProjectRoot(project, cfg, out Project? resolvedProject, out string? rootError))
             {
                 MaybeNotifyProjectRootMissing(project, rootError);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "project_root_missing")
-                    .WithHashedString("project", project.Name)
-                    .WithHashedString("projectRoot", project.RootPath));
+                Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                    .WithCode(TelemetryReason, "project_root_missing")
+                    .WithHashedString(TelemetryProject, project.Name)
+                    .WithHashedString(TelemetryProjectRoot, project.RootPath));
                 return;
             }
             project = resolvedProject;
@@ -171,8 +178,8 @@ namespace VaultSync.UI.ViewModels
             {
                 MaybeNotifyRestoreRecommended(project);
                 Telemetry.Log("backup_single_advisory", b => b
-                    .WithCode("reason", "restore_recommended")
-                    .WithHashedString("project", project.Name));
+                    .WithCode(TelemetryReason, "restore_recommended")
+                    .WithHashedString(TelemetryProject, project.Name));
             }
 
             if (!_manualBackupInFlight.TryAdd(projectId, 0))
@@ -180,9 +187,9 @@ namespace VaultSync.UI.ViewModels
                 ShowBackupSkipNotification(
                     _localizationService["Backups.Notification.AlreadyRunning"],
                     NotificationSeverity.Info);
-                Telemetry.Log("backup_single_skipped", b => b
-                    .WithCode("reason", "duplicate")
-                    .WithHashedString("project", item.Name));
+                Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                    .WithCode(TelemetryReason, "duplicate")
+                    .WithHashedString(TelemetryProject, item.Name));
                 return;
             }
             inFlightAdded = true;
@@ -191,10 +198,10 @@ namespace VaultSync.UI.ViewModels
             int maxSnapshotsToKeep = cfg.Backups.MaxSnapshotsPerProject;
             bool useArchiveMode = _settingsViewModel.UseBackupCompression;
             Telemetry.Log("backup_single_start", b => b
-                .WithHashedString("project", project.Name)
-                .WithHashedString("projectRoot", project.RootPath)
+                .WithHashedString(TelemetryProject, project.Name)
+                .WithHashedString(TelemetryProjectRoot, project.RootPath)
                 .WithCount("destinations", destinations.Count)
-                .WithFlag("useArchiveMode", useArchiveMode));
+                .WithFlag(TelemetryUseArchiveMode, useArchiveMode));
 
             if (isFirstManual)
             {
@@ -256,7 +263,7 @@ namespace VaultSync.UI.ViewModels
                     {
                         unreachable++;
                         Telemetry.Log("backup_single_destination_unreachable", b => b
-                            .WithHashedString("project", project.Name)
+                            .WithHashedString(TelemetryProject, project.Name)
                             .WithHashedString("destinationPath", dest.Path)
                             .WithHashedString("destinationAlias", dest.Alias ?? string.Empty));
                         continue;
@@ -380,9 +387,9 @@ namespace VaultSync.UI.ViewModels
 
                                 if (Result.SkippedForNoChanges)
                                 {
-                                    Telemetry.Log("backup_single_skipped", b => b
-                                        .WithCode("reason", "no_changes")
-                                        .WithHashedString("project", project.Name)
+                                    Telemetry.Log(TelemetryBackupSingleSkipped, b => b
+                                        .WithCode(TelemetryReason, "no_changes")
+                                        .WithHashedString(TelemetryProject, project.Name)
                                         .WithHashedString("destinationPath", dest.Path ?? string.Empty));
                                     noChangesDetected = true;
                                     destinationSucceeded = true;
@@ -401,9 +408,9 @@ namespace VaultSync.UI.ViewModels
                                         allowCancel: false,
                                         policyText: activePolicyText);
                                     Telemetry.Log("backup_single_cancelled", b => b
-                                        .WithHashedString("project", project.Name)
+                                        .WithHashedString(TelemetryProject, project.Name)
                                         .WithHashedString("destinationPath", dest.Path ?? string.Empty)
-                                        .WithFlag("useArchiveMode", useArchiveMode));
+                                        .WithFlag(TelemetryUseArchiveMode, useArchiveMode));
                                     destinationSucceeded = true;
                                     break;
                                 }
@@ -440,7 +447,7 @@ namespace VaultSync.UI.ViewModels
                                         retryMaxAttempts),
                                     BackupsViewModel.SeverityStatus.Warning);
                                 Telemetry.Log("backup_single_destination_retry", b => b
-                                    .WithHashedString("project", project.Name)
+                                    .WithHashedString(TelemetryProject, project.Name)
                                     .WithHashedString("destinationPath", dest.Path)
                                     .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
                                     .WithCount("attempt", attemptIndex + 1)
@@ -465,20 +472,20 @@ namespace VaultSync.UI.ViewModels
                     catch (OperationCanceledException)
                     {
                         Telemetry.Log("backup_single_cancelled", b => b
-                            .WithHashedString("project", project.Name)
+                            .WithHashedString(TelemetryProject, project.Name)
                             .WithHashedString("destinationPath", dest.Path)
-                            .WithFlag("useArchiveMode", useArchiveMode));
+                            .WithFlag(TelemetryUseArchiveMode, useArchiveMode));
                         throw;
                     }
                     catch (Exception ex)
                     {
                         failed++;
                         Telemetry.Log("backup_single_failure", b => b
-                            .WithHashedString("project", project.Name)
-                            .WithHashedString("projectRoot", project.RootPath)
+                            .WithHashedString(TelemetryProject, project.Name)
+                            .WithHashedString(TelemetryProjectRoot, project.RootPath)
                             .WithHashedString("destinationPath", dest.Path)
                             .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
-                            .WithFlag("useArchiveMode", useArchiveMode)
+                            .WithFlag(TelemetryUseArchiveMode, useArchiveMode)
                             .WithException(ex));
                     }
                     finally
@@ -525,16 +532,16 @@ namespace VaultSync.UI.ViewModels
                 await _projectsViewModel.RefreshAsync();
 
                 Telemetry.Log("backup_single_success", b => b
-                    .WithHashedString("project", project.Name)
-                    .WithHashedString("projectRoot", project.RootPath)
+                    .WithHashedString(TelemetryProject, project.Name)
+                    .WithHashedString(TelemetryProjectRoot, project.RootPath)
                     .WithCount("destinations", destinations.Count)
                     .WithCount("attempts", attempts)
                     .WithCount("succeeded", succeeded)
                     .WithCount("failed", failed)
                     .WithCount("destinationsUnreachable", unreachable)
                     .WithCount("driveBlocked", driveBlocked)
-                    .WithFlag("useArchiveMode", useArchiveMode)
-                    .WithNumber("durationSeconds", (DateTime.UtcNow - start).TotalSeconds));
+                    .WithFlag(TelemetryUseArchiveMode, useArchiveMode)
+                    .WithNumber(TelemetryDurationSeconds, (DateTime.UtcNow - start).TotalSeconds));
 
                 // Notify success if enabled in settings and globally
                 if (NotificationsEnabled && _settingsViewModel.NotifyOnBackupSuccess)
@@ -575,8 +582,8 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.BackupCurrentFile = AppViewModel.L("Backups.Notification.Cancelled", "Backup cancelled.");
                 BackupsViewModel.BackupEtaText = string.Empty;
                 Telemetry.Log("backup_single_cancelled", b => b
-                    .WithHashedString("project", project?.Name ?? string.Empty)
-                    .WithNumber("durationSeconds", (DateTime.UtcNow - start).TotalSeconds));
+                    .WithHashedString(TelemetryProject, project?.Name ?? string.Empty)
+                    .WithNumber(TelemetryDurationSeconds, (DateTime.UtcNow - start).TotalSeconds));
             }
             catch (Exception ex)
             {
@@ -591,9 +598,9 @@ namespace VaultSync.UI.ViewModels
                     // Low disk space: treat as a skipped backup with a clear warning,
                     // honoring the notifications settings.
                     Telemetry.Log("backup_single_low_disk", b => b
-                        .WithHashedString("project", project.Name)
-                        .WithHashedString("projectRoot", project.RootPath)
-                        .WithNumber("durationSeconds", (DateTime.UtcNow - start).TotalSeconds));
+                        .WithHashedString(TelemetryProject, project.Name)
+                        .WithHashedString(TelemetryProjectRoot, project.RootPath)
+                        .WithNumber(TelemetryDurationSeconds, (DateTime.UtcNow - start).TotalSeconds));
 
                     if (NotificationsEnabled && _settingsViewModel.NotifyOnLowDiskSpace)
                     {
@@ -633,11 +640,11 @@ namespace VaultSync.UI.ViewModels
                 {
                     // Generic backup failure path
                     Telemetry.Log("backup_single_failure", b => b
-                        .WithHashedString("project", project.Name)
-                        .WithHashedString("projectRoot", project.RootPath)
-                        .WithFlag("useArchiveMode", useArchiveMode)
+                        .WithHashedString(TelemetryProject, project.Name)
+                        .WithHashedString(TelemetryProjectRoot, project.RootPath)
+                        .WithFlag(TelemetryUseArchiveMode, useArchiveMode)
                         .WithException(ex)
-                        .WithNumber("durationSeconds", (DateTime.UtcNow - start).TotalSeconds));
+                        .WithNumber(TelemetryDurationSeconds, (DateTime.UtcNow - start).TotalSeconds));
 
                     if (NotificationsEnabled)
                     {
@@ -718,7 +725,7 @@ namespace VaultSync.UI.ViewModels
             // Do not start "backup all" if a backup is already running.
             if (BackupsViewModel.IsBusy)
             {
-                Telemetry.Log("backup_all_skipped", b => b.WithCode("reason", "busy"));
+                Telemetry.Log("backup_all_skipped", b => b.WithCode(TelemetryReason, "busy"));
                 return;
             }
 
@@ -726,7 +733,7 @@ namespace VaultSync.UI.ViewModels
             {
                 BackupsViewModel.BackupCurrentFile = pauseReason;
                 BackupsViewModel.BusyMessage = pauseReason;
-                Telemetry.Log("backup_all_skipped", b => b.WithCode("reason", "battery"));
+                Telemetry.Log("backup_all_skipped", b => b.WithCode(TelemetryReason, "battery"));
                 return;
             }
 
@@ -735,7 +742,7 @@ namespace VaultSync.UI.ViewModels
 
             if (!preparation.IsReady)
             {
-                Telemetry.Log("backup_all_skipped", b => b.WithCode("reason", preparation.FailureCode ?? "preflight_failed"));
+                Telemetry.Log("backup_all_skipped", b => b.WithCode(TelemetryReason, preparation.FailureCode ?? "preflight_failed"));
                 return;
             }
 
@@ -749,7 +756,7 @@ namespace VaultSync.UI.ViewModels
             bool useArchiveMode = _settingsViewModel.UseBackupCompression;
             Telemetry.Log("backup_all_start", b => b
                 .WithCount("destinationsConfigured", AppViewModel.GetAllDestinations(cfg).Count)
-                .WithFlag("useArchiveMode", useArchiveMode));
+                .WithFlag(TelemetryUseArchiveMode, useArchiveMode));
 
             BackupsViewModel.BackupProgress = 0;
             BackupsViewModel.BackupCurrentFile = AppViewModel.L("Backups.Status.Preparing", "Preparing backup...");
@@ -770,7 +777,7 @@ namespace VaultSync.UI.ViewModels
 
                     if (projects.Count == 0)
                     {
-                        Telemetry.Log("backup_all_skipped", b => b.WithCode("reason", "no_projects"));
+                        Telemetry.Log("backup_all_skipped", b => b.WithCode(TelemetryReason, "no_projects"));
                         return;
                     }
 
@@ -801,8 +808,8 @@ namespace VaultSync.UI.ViewModels
                         {
                             BackupsViewModel.ShowNotification(selection.WarningMessage, "Warning");
                             Telemetry.Log("backup_all_destination_fallback", b => b
-                                .WithCode("reason", selection.WarningCode ?? "preferred_destination_fallback")
-                                .WithHashedString("project", project.Name));
+                                .WithCode(TelemetryReason, selection.WarningCode ?? "preferred_destination_fallback")
+                                .WithHashedString(TelemetryProject, project.Name));
                         }
 
                         if (selection.Destinations.Count == 0)
@@ -810,9 +817,9 @@ namespace VaultSync.UI.ViewModels
                             string message = AppViewModel.L("Backups.Notification.NoDestination", "Backup could not start: no active destination configured.");
                             results.Add((project.Name, project.RootPath, false));
                             Telemetry.Log("backup_all_project_skipped", b => b
-                                .WithHashedString("project", project.Name)
-                                .WithHashedString("projectRoot", project.RootPath)
-                                .WithCode("reason", "no_destination"));
+                                .WithHashedString(TelemetryProject, project.Name)
+                                .WithHashedString(TelemetryProjectRoot, project.RootPath)
+                                .WithCode(TelemetryReason, "no_destination"));
                             progressPerProject[project.Id] = 100;
                             Dispatcher.UIThread.Post(() =>
                             {
@@ -835,9 +842,9 @@ namespace VaultSync.UI.ViewModels
                             string message = preparedPrimary.Message;
                             results.Add((project.Name, project.RootPath, false));
                             Telemetry.Log("backup_all_project_skipped", b => b
-                                .WithHashedString("project", project.Name)
-                                .WithHashedString("projectRoot", project.RootPath)
-                                .WithCode("reason", "destination_unreachable"));
+                                .WithHashedString(TelemetryProject, project.Name)
+                                .WithHashedString(TelemetryProjectRoot, project.RootPath)
+                                .WithCode(TelemetryReason, "destination_unreachable"));
                             progressPerProject[project.Id] = 100;
                             Dispatcher.UIThread.Post(() =>
                             {
@@ -862,9 +869,9 @@ namespace VaultSync.UI.ViewModels
                         {
                             results.Add((project.Name, project.RootPath, false));
                             Telemetry.Log("backup_all_project_skipped", b => b
-                                .WithHashedString("project", project.Name)
-                                .WithHashedString("projectRoot", project.RootPath)
-                                .WithCode("reason", "project_root_missing"));
+                                .WithHashedString(TelemetryProject, project.Name)
+                                .WithHashedString(TelemetryProjectRoot, project.RootPath)
+                                .WithCode(TelemetryReason, "project_root_missing"));
                             progressPerProject[project.Id] = 100;
                             Dispatcher.UIThread.Post(() =>
                             {
@@ -891,9 +898,9 @@ namespace VaultSync.UI.ViewModels
                         {
                             results.Add((project.Name, project.RootPath, false));
                             Telemetry.Log("backup_all_project_skipped", b => b
-                                .WithHashedString("project", project.Name)
-                                .WithHashedString("projectRoot", project.RootPath)
-                                .WithCode("reason", "drive_health"));
+                                .WithHashedString(TelemetryProject, project.Name)
+                                .WithHashedString(TelemetryProjectRoot, project.RootPath)
+                                .WithCode(TelemetryReason, "drive_health"));
                             progressPerProject[project.Id] = 100;
                             Dispatcher.UIThread.Post(() =>
                             {
@@ -1023,9 +1030,9 @@ namespace VaultSync.UI.ViewModels
                                 UpdateAggregateProgress(string.Empty, string.Empty);
                                 results.Add((project.Name, project.RootPath, true));
                                 Telemetry.Log("backup_all_project_skipped", b => b
-                                    .WithHashedString("project", project.Name)
-                                    .WithHashedString("projectRoot", project.RootPath)
-                                    .WithCode("reason", "no_changes"));
+                                    .WithHashedString(TelemetryProject, project.Name)
+                                    .WithHashedString(TelemetryProjectRoot, project.RootPath)
+                                    .WithCode(TelemetryReason, "no_changes"));
                                 return;
                             }
 
@@ -1033,8 +1040,8 @@ namespace VaultSync.UI.ViewModels
                             {
                                 results.Add((project.Name, project.RootPath, false));
                                 Telemetry.Log("backup_all_project_cancelled", b => b
-                                    .WithHashedString("project", project.Name)
-                                    .WithHashedString("projectRoot", project.RootPath));
+                                    .WithHashedString(TelemetryProject, project.Name)
+                                    .WithHashedString(TelemetryProjectRoot, project.RootPath));
                                 progressPerProject[project.Id] = 0;
                                 UpdateAggregateProgress(string.Empty, string.Empty);
                                 BackupsViewModel.UpdateActiveBackup(
@@ -1064,16 +1071,16 @@ namespace VaultSync.UI.ViewModels
                                 TryExportMetadataForBackup(cfg, primaryDest, effectiveBackupRoot, backupResult.BackupId);
                             }
                             Telemetry.Log("backup_all_project_success", b => b
-                                .WithHashedString("project", project.Name)
-                                .WithHashedString("projectRoot", project.RootPath)
-                                .WithFlag("useArchiveMode", useArchiveMode));
+                                .WithHashedString(TelemetryProject, project.Name)
+                                .WithHashedString(TelemetryProjectRoot, project.RootPath)
+                                .WithFlag(TelemetryUseArchiveMode, useArchiveMode));
                         }
                         catch (OperationCanceledException)
                         {
                             results.Add((project.Name, project.RootPath, false));
                             Telemetry.Log("backup_all_project_cancelled", b => b
-                                .WithHashedString("project", project.Name)
-                                .WithHashedString("projectRoot", project.RootPath));
+                                .WithHashedString(TelemetryProject, project.Name)
+                                .WithHashedString(TelemetryProjectRoot, project.RootPath));
                             progressPerProject[project.Id] = 0;
                             UpdateAggregateProgress(string.Empty, string.Empty);
                             BackupsViewModel.UpdateActiveBackup(
@@ -1090,9 +1097,9 @@ namespace VaultSync.UI.ViewModels
                         {
                             results.Add((project.Name, project.RootPath, false));
                             Telemetry.Log("backup_all_project_failure", b => b
-                                .WithHashedString("project", project.Name)
-                                .WithHashedString("projectRoot", project.RootPath)
-                                .WithFlag("useArchiveMode", useArchiveMode)
+                                .WithHashedString(TelemetryProject, project.Name)
+                                .WithHashedString(TelemetryProjectRoot, project.RootPath)
+                                .WithFlag(TelemetryUseArchiveMode, useArchiveMode)
                                 .WithException(ex));
                             throw;
                         }
@@ -1108,8 +1115,8 @@ namespace VaultSync.UI.ViewModels
                         .WithCount("projects", projects.Count)
                         .WithCount("succeeded", results.Count(r => r.success))
                         .WithCount("failed", results.Count(r => !r.success))
-                        .WithFlag("useArchiveMode", useArchiveMode)
-                        .WithNumber("durationSeconds", (DateTime.UtcNow - start).TotalSeconds));
+                        .WithFlag(TelemetryUseArchiveMode, useArchiveMode)
+                        .WithNumber(TelemetryDurationSeconds, (DateTime.UtcNow - start).TotalSeconds));
                 });
 
                 // First reload history so the new backups appear.
@@ -1188,8 +1195,8 @@ namespace VaultSync.UI.ViewModels
 
                 Telemetry.Log("backup_all_failure", b => b
                     .WithException(ex)
-                    .WithFlag("useArchiveMode", useArchiveMode)
-                    .WithNumber("durationSeconds", (DateTime.UtcNow - start).TotalSeconds));
+                    .WithFlag(TelemetryUseArchiveMode, useArchiveMode)
+                    .WithNumber(TelemetryDurationSeconds, (DateTime.UtcNow - start).TotalSeconds));
 
                 if (NotificationsEnabled)
                 {

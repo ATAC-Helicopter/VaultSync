@@ -13,6 +13,10 @@ namespace VaultSync.Core.Repositories
 {
     public class SqliteRepository(string dbPath)
     {
+        private const string BackupsTable = "backups";
+        private const string ProjectsTable = "projects";
+        private const string SnapshotsTable = "snapshots";
+
         private static readonly ConcurrentDictionary<string, byte> JournalModeConfigured = new(StringComparer.OrdinalIgnoreCase);
         private readonly string _dbPath = dbPath;
 
@@ -231,29 +235,29 @@ namespace VaultSync.Core.Repositories
 
         private static void ApplyMigrations(SqliteConnection connection)
         {
-            EnsureColumnExists(connection, "backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
-            EnsureColumnExists(connection, "backups", "is_imported", "ALTER TABLE backups ADD COLUMN is_imported INTEGER NOT NULL DEFAULT 0;");
-            EnsureColumnExists(connection, "backups", "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
-            EnsureColumnExists(connection, "backups", "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
-            EnsureColumnExists(connection, "backups", "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
-            EnsureColumnExists(connection, "backups", "is_encrypted", "ALTER TABLE backups ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0;");
-            EnsureColumnExists(connection, "backups", "crypto_descriptor_json", "ALTER TABLE backups ADD COLUMN crypto_descriptor_json TEXT NOT NULL DEFAULT '{}';");
-            EnsureColumnExists(connection, "backups", "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
-            EnsureColumnExists(connection, "projects", "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
-            EnsureColumnExists(connection, "projects", "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
-            EnsureColumnExists(connection, "projects", "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
-            EnsureColumnExists(connection, "projects", "encryption_policy", "ALTER TABLE projects ADD COLUMN encryption_policy TEXT NOT NULL DEFAULT 'inherit';");
-            EnsureColumnExists(connection, "projects", "encryption_key_ref", "ALTER TABLE projects ADD COLUMN encryption_key_ref TEXT;");
-            EnsureColumnExists(connection, "projects", "restore_mode", "ALTER TABLE projects ADD COLUMN restore_mode TEXT NOT NULL DEFAULT 'direct';");
-            EnsureColumnExists(connection, "projects", "verification_policy", "ALTER TABLE projects ADD COLUMN verification_policy TEXT NOT NULL DEFAULT 'always';");
-            EnsureColumnExists(connection, "projects", "tags", "ALTER TABLE projects ADD COLUMN tags TEXT NOT NULL DEFAULT '';");
-            EnsureColumnExists(connection, "snapshots", "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
-            EnsureColumnExists(connection, "snapshots", "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
-            EnsureColumnExists(connection, "snapshots", "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
-            EnsureColumnExists(connection, "snapshots", "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
-            EnsureColumnExists(connection, "snapshots", "diff_net_bytes", "ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
-            EnsureColumnExists(connection, "snapshots", "diff_top_paths_json", "ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
-            EnsureColumnExists(connection, "backups", "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, BackupsTable, "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, BackupsTable, "is_imported", "ALTER TABLE backups ADD COLUMN is_imported INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, BackupsTable, "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, BackupsTable, "destination_alias", "ALTER TABLE backups ADD COLUMN destination_alias TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, BackupsTable, "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, BackupsTable, "is_encrypted", "ALTER TABLE backups ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, BackupsTable, "crypto_descriptor_json", "ALTER TABLE backups ADD COLUMN crypto_descriptor_json TEXT NOT NULL DEFAULT '{}';");
+            EnsureColumnExists(connection, BackupsTable, "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
+            EnsureColumnExists(connection, ProjectsTable, "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, ProjectsTable, "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, ProjectsTable, "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
+            EnsureColumnExists(connection, ProjectsTable, "encryption_policy", "ALTER TABLE projects ADD COLUMN encryption_policy TEXT NOT NULL DEFAULT 'inherit';");
+            EnsureColumnExists(connection, ProjectsTable, "encryption_key_ref", "ALTER TABLE projects ADD COLUMN encryption_key_ref TEXT;");
+            EnsureColumnExists(connection, ProjectsTable, "restore_mode", "ALTER TABLE projects ADD COLUMN restore_mode TEXT NOT NULL DEFAULT 'direct';");
+            EnsureColumnExists(connection, ProjectsTable, "verification_policy", "ALTER TABLE projects ADD COLUMN verification_policy TEXT NOT NULL DEFAULT 'always';");
+            EnsureColumnExists(connection, ProjectsTable, "tags", "ALTER TABLE projects ADD COLUMN tags TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, SnapshotsTable, "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, SnapshotsTable, "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, SnapshotsTable, "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, SnapshotsTable, "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, SnapshotsTable, "diff_net_bytes", "ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
+            EnsureColumnExists(connection, SnapshotsTable, "diff_top_paths_json", "ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
+            EnsureColumnExists(connection, BackupsTable, "external_id", "ALTER TABLE backups ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
         }
 
         private static void CreateIndexes(SqliteConnection connection)

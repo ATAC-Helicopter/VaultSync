@@ -3875,10 +3875,7 @@ public class ProjectItemViewModel : ViewModelBase
     public string AverageSnapshotSizeDisplay =>
         SnapshotHistory.Count == 0
             ? "-"
-            : ProjectSnapshotViewModel.FormatSize(
-                SnapshotHistory.Count == 0
-                    ? 0
-                    : (long)SnapshotHistory.Average(s => (double)s.SizeBytes));
+            : ProjectSnapshotViewModel.FormatSize((long)SnapshotHistory.Average(s => (double)s.SizeBytes));
 
     /// <summary>
     /// Sets the snapshot history used by the Projects view and stats panel.

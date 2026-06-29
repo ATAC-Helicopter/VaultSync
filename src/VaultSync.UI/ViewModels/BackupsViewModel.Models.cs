@@ -754,6 +754,18 @@ namespace VaultSync.UI.ViewModels
 
     public class BackupProgressItem : ViewModelBase
     {
+        private const string StageBackingUp = "BackingUp";
+        private const string StageCancelling = "Cancelling";
+        private const string StageCompleted = "Completed";
+        private const string StageCompressing = "Compressing";
+        private const string StageCopying = "Copying";
+        private const string StageDeleting = "Deleting";
+        private const string StageHashing = "Hashing";
+        private const string StagePreparing = "Preparing";
+        private const string StageRestoring = "Restoring";
+        private const string StageUploading = "Uploading";
+        private const string StageWorking = "Working";
+
         private static string L(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
 
@@ -949,7 +961,7 @@ namespace VaultSync.UI.ViewModels
 
         public bool HasCurrentFileDisplay => !string.IsNullOrWhiteSpace(CurrentFileDisplay);
 
-        public bool IsCompleted => string.Equals(GetStageKey(), "Completed", StringComparison.OrdinalIgnoreCase);
+        public bool IsCompleted => string.Equals(GetStageKey(), StageCompleted, StringComparison.OrdinalIgnoreCase);
 
         public bool ShowEta => Progress < 100d && HasEtaDisplay;
 
@@ -971,16 +983,16 @@ namespace VaultSync.UI.ViewModels
                 string stageKey = GetStageKey();
                 return stageKey switch
                 {
-                    "Completed" => L("Backups.Status.Completed", "Completed"),
-                    "Cancelling" => L("Backups.Status.Cancelling", "Cancelling..."),
-                    "Deleting" => L("Backups.Stage.Deleting", "Deleting"),
-                    "Restoring" => L("Backups.Status.Restoring", "Restoring backup..."),
-                    "Compressing" => L("Backups.Stage.Compressing", "Compressing archive"),
-                    "Uploading" => L("Backups.Stage.Uploading", "Uploading archive"),
-                    "Hashing" => L("Backups.Stage.Hashing", "Hashing files"),
-                    "Copying" => L("Backups.Stage.Copying", "Copying files"),
-                    "Preparing" => L("Backups.Stage.Preparing", "Preparing"),
-                    "BackingUp" => L("Backups.Stage.BackingUp", "Backing up files"),
+                    StageCompleted => L("Backups.Status.Completed", StageCompleted),
+                    StageCancelling => L("Backups.Status.Cancelling", "Cancelling..."),
+                    StageDeleting => L("Backups.Stage.Deleting", StageDeleting),
+                    StageRestoring => L("Backups.Status.Restoring", "Restoring backup..."),
+                    StageCompressing => L("Backups.Stage.Compressing", "Compressing archive"),
+                    StageUploading => L("Backups.Stage.Uploading", "Uploading archive"),
+                    StageHashing => L("Backups.Stage.Hashing", "Hashing files"),
+                    StageCopying => L("Backups.Stage.Copying", "Copying files"),
+                    StagePreparing => L("Backups.Stage.Preparing", StagePreparing),
+                    StageBackingUp => L("Backups.Stage.BackingUp", "Backing up files"),
                     _ => L("Backups.Stage.Working", "Working...")
                 };
             }
@@ -1003,16 +1015,16 @@ namespace VaultSync.UI.ViewModels
         }
 
         private bool IsStageIndeterminate
-            => string.Equals(StageLabel, L("Backups.Stage.Preparing", "Preparing"), StringComparison.OrdinalIgnoreCase);
+            => string.Equals(StageLabel, L("Backups.Stage.Preparing", StagePreparing), StringComparison.OrdinalIgnoreCase);
 
-        private bool IsHashingStage => string.Equals(GetStageKey(), "Hashing", StringComparison.OrdinalIgnoreCase);
+        private bool IsHashingStage => string.Equals(GetStageKey(), StageHashing, StringComparison.OrdinalIgnoreCase);
 
         private bool HasCompletionSignal()
         {
-            if (ContainsToken(_etaText, "Completed"))
+            if (ContainsToken(_etaText, StageCompleted))
                 return true;
 
-            return ContainsToken(_currentFile, L("Backups.Status.Completed", "Completed"))
+            return ContainsToken(_currentFile, L("Backups.Status.Completed", StageCompleted))
                 || ContainsToken(_currentFile, L("Backups.Status.NoChanges", "No changes detected"))
                 || ContainsToken(_currentFile, L("Backups.Status.Cancelled", "Cancelled"))
                 || ContainsToken(_currentFile, L("Backups.Status.Deleted", "Deleted"));
@@ -1190,67 +1202,67 @@ namespace VaultSync.UI.ViewModels
 
         private string GetStageKey()
         {
-            if (ContainsToken(_currentFile, L("Backups.Status.Completed", "Completed")) ||
+            if (ContainsToken(_currentFile, L("Backups.Status.Completed", StageCompleted)) ||
                 ContainsToken(_currentFile, L("Backups.Status.NoChanges", "No changes detected")) ||
                 ContainsToken(_currentFile, L("Backups.Status.Cancelled", "Cancelled")) ||
                 ContainsToken(_currentFile, L("Backups.Status.Deleted", "Deleted")) ||
-                (ContainsToken(_etaText, "Completed") && !ContainsToken(_etaText, "Hashing")))
+                (ContainsToken(_etaText, StageCompleted) && !ContainsToken(_etaText, StageHashing)))
             {
-                return "Completed";
+                return StageCompleted;
             }
 
             if (ContainsToken(_currentFile, L("Backups.Status.Cancelling", "Cancelling...")))
-                return "Cancelling";
+                return StageCancelling;
 
-            if (ContainsToken(_etaText, "Compressing"))
-                return "Compressing";
+            if (ContainsToken(_etaText, StageCompressing))
+                return StageCompressing;
 
-            if (ContainsToken(_etaText, "Uploading"))
-                return "Uploading";
+            if (ContainsToken(_etaText, StageUploading))
+                return StageUploading;
 
-            if (ContainsToken(_etaText, "Hashing"))
-                return "Hashing";
+            if (ContainsToken(_etaText, StageHashing))
+                return StageHashing;
 
-            if (ContainsToken(_etaText, "Copying"))
-                return "Copying";
+            if (ContainsToken(_etaText, StageCopying))
+                return StageCopying;
 
-            if (ContainsToken(_etaText, "Restoring") ||
-                ContainsToken(_currentFile, "Restoring") ||
+            if (ContainsToken(_etaText, StageRestoring) ||
+                ContainsToken(_currentFile, StageRestoring) ||
                 ContainsToken(_currentFile, "Decrypting") ||
                 ContainsToken(_currentFile, L("Backups.Status.Restoring", "Restoring backup...")))
             {
-                return "Restoring";
+                return StageRestoring;
             }
 
             if (ContainsToken(_currentFile, L("Backups.Status.Deleting", "Deleting backup files...")) ||
-                ContainsToken(_currentFile, L("Backups.Stage.Deleting", "Deleting")))
+                ContainsToken(_currentFile, L("Backups.Stage.Deleting", StageDeleting)))
             {
-                return "Deleting";
+                return StageDeleting;
             }
 
             if (ContainsToken(_currentFile, L("Backups.Status.Preparing", "Preparing backup...")))
-                return "Preparing";
+                return StagePreparing;
 
             if (ContainsToken(_currentFile, "Reusing existing snapshot") ||
                 ContainsToken(_currentFile, "Creating snapshot") ||
-                ContainsToken(_currentFile, "Hashing"))
+                ContainsToken(_currentFile, StageHashing))
             {
-                return "Hashing";
+                return StageHashing;
             }
 
             if (ContainsToken(_currentFile, L("Backups.Status.Running", "Running backup...")) ||
                 ContainsToken(_currentFile, L("Backups.Status.RunningMultiple", "Running backups...")))
             {
-                return "BackingUp";
+                return StageBackingUp;
             }
 
             if (HasCurrentFile)
-                return "BackingUp";
+                return StageBackingUp;
 
-            return "Working";
+            return StageWorking;
         }
 
-        private bool IsCopyingStage => string.Equals(GetStageKey(), "Copying", StringComparison.OrdinalIgnoreCase);
+        private bool IsCopyingStage => string.Equals(GetStageKey(), StageCopying, StringComparison.OrdinalIgnoreCase);
 
         private static readonly IBrush StageCompletedBrush = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
         private static readonly IBrush StageCancelBrush = new ImmutableSolidColorBrush(Color.Parse("#FF6B6B"));
@@ -1266,16 +1278,16 @@ namespace VaultSync.UI.ViewModels
             string stageKey = GetStageKey();
             return stageKey switch
             {
-                "Completed" => StageCompletedBrush,
-                "Cancelling" => StageCancelBrush,
-                "Deleting" => StageCancelBrush,
-                "Compressing" => StageCompressBrush,
-                "Uploading" => StageUploadBrush,
-                "Hashing" => StageHashBrush,
-                "Copying" => StageCopyBrush,
-                "Restoring" => StageCopyBrush,
-                "BackingUp" => StageBackupBrush,
-                "Preparing" => StagePrepareBrush,
+                StageCompleted => StageCompletedBrush,
+                StageCancelling => StageCancelBrush,
+                StageDeleting => StageCancelBrush,
+                StageCompressing => StageCompressBrush,
+                StageUploading => StageUploadBrush,
+                StageHashing => StageHashBrush,
+                StageCopying => StageCopyBrush,
+                StageRestoring => StageCopyBrush,
+                StageBackingUp => StageBackupBrush,
+                StagePreparing => StagePrepareBrush,
                 _ => StagePrepareBrush
             };
         }

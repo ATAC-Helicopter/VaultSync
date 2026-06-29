@@ -13,6 +13,8 @@ namespace VaultSync.Core.Services;
 public sealed class MetadataStore
 {
     public const int CurrentSchemaVersion = 1;
+    private const string BackupsTable = "backups";
+    private const string SnapshotsTable = "snapshots";
 
     private readonly string _dbPath;
     private readonly bool _allowReadRecovery;
@@ -114,16 +116,16 @@ public sealed class MetadataStore
             CREATE INDEX IF NOT EXISTS idx_backups_project ON backups(project_external_id);
         """);
 
-        EnsureColumn(c, "backups", "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
-        EnsureColumn(c, "backups", "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
-        EnsureColumn(c, "backups", "enc_flag", "ALTER TABLE backups ADD COLUMN enc_flag INTEGER NOT NULL DEFAULT 0;");
-        EnsureColumn(c, "backups", "kdf_params_json", "ALTER TABLE backups ADD COLUMN kdf_params_json TEXT NOT NULL DEFAULT '{}';");
-        EnsureColumn(c, "backups", "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
-        EnsureColumn(c, "snapshots", "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
-        EnsureColumn(c, "snapshots", "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
-        EnsureColumn(c, "snapshots", "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
-        EnsureColumn(c, "snapshots", "diff_net_bytes", "ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
-        EnsureColumn(c, "snapshots", "diff_top_paths_json", "ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
+        EnsureColumn(c, BackupsTable, "origin_machine_name", "ALTER TABLE backups ADD COLUMN origin_machine_name TEXT NOT NULL DEFAULT '';");
+        EnsureColumn(c, BackupsTable, "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, BackupsTable, "enc_flag", "ALTER TABLE backups ADD COLUMN enc_flag INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, BackupsTable, "kdf_params_json", "ALTER TABLE backups ADD COLUMN kdf_params_json TEXT NOT NULL DEFAULT '{}';");
+        EnsureColumn(c, BackupsTable, "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
+        EnsureColumn(c, SnapshotsTable, "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, SnapshotsTable, "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, SnapshotsTable, "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, SnapshotsTable, "diff_net_bytes", "ALTER TABLE snapshots ADD COLUMN diff_net_bytes INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, SnapshotsTable, "diff_top_paths_json", "ALTER TABLE snapshots ADD COLUMN diff_top_paths_json TEXT NOT NULL DEFAULT '[]';");
     }
 
     private static void EnsureColumn(SqliteConnection connection, string tableName, string columnName, string alterSql)
@@ -384,7 +386,7 @@ public sealed class MetadataStore
         if (c is null)
             return Array.Empty<MetaSnapshot>();
 
-        HashSet<string> snapshotColumns = GetTableColumns(c, "snapshots");
+        HashSet<string> snapshotColumns = GetTableColumns(c, SnapshotsTable);
         string diffAddedProjection = snapshotColumns.Contains("diff_added")
             ? "diff_added as DiffAdded"
             : "0 as DiffAdded";
@@ -438,7 +440,7 @@ public sealed class MetadataStore
         if (c is null)
             return Array.Empty<MetaBackup>();
 
-        HashSet<string> backupColumns = GetTableColumns(c, "backups");
+        HashSet<string> backupColumns = GetTableColumns(c, BackupsTable);
         string originMachineProjection = backupColumns.Contains("origin_machine_name")
             ? "origin_machine_name as OriginMachineName"
             : "'' as OriginMachineName";
@@ -548,7 +550,7 @@ public sealed class MetadataStore
             }
         }
 
-        throw lastError ?? new InvalidOperationException("Failed to open SQLite connection.");
+        throw lastError!;
     }
 
     private SqliteConnection OpenCore(bool write)

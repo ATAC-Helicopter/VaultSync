@@ -56,6 +56,11 @@ def sha256_file(path: Path, root: Path) -> str:
     return h.hexdigest().upper()
 
 
+def write_json_file(path: Path, root: Path, data: object) -> None:
+    path = ensure_child_path(path, root)
+    path.write_text(json.dumps(data, indent=4), encoding="utf-8")
+
+
 def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str, previous_versions: list[str], target: str) -> None:
     files = []
     base_dir = base_dir.resolve()
@@ -117,7 +122,7 @@ def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str
         "files": files,
     }
 
-    out_manifest.write_text(json.dumps(manifest, indent=4), encoding="utf-8")
+    write_json_file(out_manifest, workspace, manifest)
 
 
 def main() -> None:

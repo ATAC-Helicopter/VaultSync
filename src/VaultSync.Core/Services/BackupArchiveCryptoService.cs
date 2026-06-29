@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -308,6 +309,10 @@ public sealed class BackupArchiveCryptoService
         };
     }
 
+    [SuppressMessage(
+        "Security",
+        "S3329:Cipher Block Chaining IVs should be unpredictable",
+        Justification = "The IV is generated with RandomNumberGenerator.GetBytes, stored in authenticated envelope metadata, and validated before encryption.")]
     private static void WriteEncryptedArchive(
         string plainArchivePath,
         string encryptedArchivePath,

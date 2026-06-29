@@ -9,6 +9,10 @@ namespace VaultSync.UI.Services
 {
     public static class ThemeManager
     {
+        private const string ThemeDark = "Dark";
+        private const string ThemeLight = "Light";
+        private const string ThemeCustom = "Custom";
+
         private sealed record ThemePresetDefinition(string Id, string Description, ThemePaletteConfig Palette);
 
         private static readonly ThemePresetDefinition[] ThemePresets =
@@ -21,43 +25,43 @@ namespace VaultSync.UI.Services
                 "studio-light",
                 "Clean light workspace with crisp surfaces and a bright accent.",
                 "Studio Light",
-                "Light",
+                ThemeLight,
                 ["#F4F5F9", "#FFFFFF", "#E6E9F2", "#2663FF", "#11131A", "#5C6275", "#32DFA0", "#FFBF5F", "#FF6A6A"]),
             Preset(
                 "ember",
                 "Warm dark tones with orange accents for a softer night theme.",
                 "Ember",
-                "Dark",
+                ThemeDark,
                 ["#14110F", "#201A16", "#2C241E", "#FF8B4D", "#FFF4EB", "#D4BBA8", "#54D7A2", "#F7C66B", "#FF7B74"]),
             Preset(
                 "fjord",
                 "Cool blue dark theme inspired by colder, calmer palettes.",
                 "Fjord",
-                "Dark",
+                ThemeDark,
                 ["#0D1620", "#142131", "#1B2B3E", "#4CC9F0", "#F4FAFF", "#AFC4D9", "#51D5AA", "#FFCB65", "#FF7A88"]),
             Preset(
                 "deep-blue",
                 "Deeper blue night theme with stronger contrast and cooler surfaces.",
                 "Deep Blue",
-                "Dark",
+                ThemeDark,
                 ["#09111B", "#0F1A29", "#16253A", "#5D8DFF", "#F4F8FF", "#A9BBD6", "#57D8AF", "#FFCA66", "#FF7B86"]),
             Preset(
                 "forest",
                 "Muted green palette built for long sessions and lower visual noise.",
                 "Forest",
-                "Dark",
+                ThemeDark,
                 ["#101611", "#18211A", "#223026", "#5AC88F", "#F5FFF7", "#B4CDB8", "#5CE2A1", "#EFC56A", "#FF7B79"]),
             Preset(
                 "orchid",
                 "High-contrast violet palette with a brighter accent pop.",
                 "Orchid",
-                "Dark",
+                ThemeDark,
                 ["#15111C", "#21182B", "#2B2238", "#B983FF", "#FFF7FF", "#CAB7DA", "#5ED7B4", "#F8C86C", "#FF82A8"]),
             Preset(
                 "oled-black",
                 "Pure black dark theme for OLED displays with bright blue highlights.",
                 "OLED Black",
-                "Dark",
+                ThemeDark,
                 ["#000000", "#090B10", "#111621", "#4F8DFF", "#F5F8FF", "#AAB5CB", "#4DDAA6", "#FFC766", "#FF7676"])
         };
 
@@ -127,7 +131,7 @@ namespace VaultSync.UI.Services
                 return;
 
             ApplyThemeVariant(app, themeName, null);
-            if (!string.Equals(themeName, "Custom", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(themeName, ThemeCustom, StringComparison.OrdinalIgnoreCase))
                 ClearPaletteOverrides(app);
         }
 
@@ -179,10 +183,10 @@ namespace VaultSync.UI.Services
         {
             app.RequestedThemeVariant = themeName switch
             {
-                "Dark" => ThemeVariant.Dark,
-                "Light" => ThemeVariant.Light,
-                "Custom" when string.Equals(customTheme?.BaseTheme, "Light", StringComparison.OrdinalIgnoreCase) => ThemeVariant.Light,
-                "Custom" => ThemeVariant.Dark,
+                ThemeDark => ThemeVariant.Dark,
+                ThemeLight => ThemeVariant.Light,
+                ThemeCustom when string.Equals(customTheme?.BaseTheme, ThemeLight, StringComparison.OrdinalIgnoreCase) => ThemeVariant.Light,
+                ThemeCustom => ThemeVariant.Dark,
                 _ => ThemeVariant.Default
             };
         }
@@ -197,20 +201,21 @@ namespace VaultSync.UI.Services
 
         private static void ApplyPaletteOverrides(Application app, string themeName, ThemePaletteConfig? customTheme)
         {
-            if (!string.Equals(themeName, "Custom", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(themeName, ThemeCustom, StringComparison.OrdinalIgnoreCase))
             {
                 ClearPaletteOverrides(app);
                 return;
             }
 
             ThemePaletteConfig palette = NormalizePalette(customTheme ?? GetDefaultCustomTheme());
-            Color accentSoft = WithAlpha(palette.Accent, palette.BaseTheme == "Light" ? 0.14 : 0.24);
-            Color textMuted = Blend(palette.TextSecondary, palette.Background, palette.BaseTheme == "Light" ? 0.45 : 0.60);
-            Color inputBackground = Blend(palette.SurfaceAlt, palette.Background, palette.BaseTheme == "Light" ? 0.45 : 0.25);
-            Color inputBorder = Blend(palette.SurfaceAlt, palette.TextSecondary, palette.BaseTheme == "Light" ? 0.35 : 0.28);
-            Color divider = Blend(palette.SurfaceAlt, palette.TextSecondary, palette.BaseTheme == "Light" ? 0.25 : 0.18);
-            Color shellStart = Blend(palette.Accent, palette.Background, palette.BaseTheme == "Light" ? 0.12 : 0.35);
-            Color shellEnd = Blend(palette.Accent, palette.SurfaceAlt, palette.BaseTheme == "Light" ? 0.20 : 0.45);
+            bool isLightBase = string.Equals(palette.BaseTheme, ThemeLight, StringComparison.OrdinalIgnoreCase);
+            Color accentSoft = WithAlpha(palette.Accent, isLightBase ? 0.14 : 0.24);
+            Color textMuted = Blend(palette.TextSecondary, palette.Background, isLightBase ? 0.45 : 0.60);
+            Color inputBackground = Blend(palette.SurfaceAlt, palette.Background, isLightBase ? 0.45 : 0.25);
+            Color inputBorder = Blend(palette.SurfaceAlt, palette.TextSecondary, isLightBase ? 0.35 : 0.28);
+            Color divider = Blend(palette.SurfaceAlt, palette.TextSecondary, isLightBase ? 0.25 : 0.18);
+            Color shellStart = Blend(palette.Accent, palette.Background, isLightBase ? 0.12 : 0.35);
+            Color shellEnd = Blend(palette.Accent, palette.SurfaceAlt, isLightBase ? 0.20 : 0.45);
             Color shellText = IsDark(palette.Surface) ? Colors.White : Color.Parse("#11131A");
 
             SetColorOverride(app, "VsBackgroundColor", palette.Background);
@@ -245,7 +250,7 @@ namespace VaultSync.UI.Services
             return new ThemePaletteConfig
             {
                 Name = string.IsNullOrWhiteSpace(palette.Name) ? defaults.Name : palette.Name.Trim(),
-                BaseTheme = string.Equals(palette.BaseTheme, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark",
+                BaseTheme = string.Equals(palette.BaseTheme, ThemeLight, StringComparison.OrdinalIgnoreCase) ? ThemeLight : ThemeDark,
                 Background = NormalizeHex(palette.Background, defaults.Background),
                 Surface = NormalizeHex(palette.Surface, defaults.Surface),
                 SurfaceAlt = NormalizeHex(palette.SurfaceAlt, defaults.SurfaceAlt),
