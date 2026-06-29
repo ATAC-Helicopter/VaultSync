@@ -24,6 +24,17 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
+        private const string ActionGhostClass = "action-ghost";
+        private const string ActionPrimaryClass = "action-primary";
+        private const string CommonCancelKey = "Common.Cancel";
+        private const string CommonCancelFallback = "Cancel";
+        private const string CredentialsRequiredTitleKey = "Backups.Delete.ForceCredentialsTitle";
+        private const string CredentialsRequiredTitleFallback = "Credentials required";
+        private const string ErrorNotificationType = "Error";
+        private const string RestoreFailedKey = "Backups.Status.RestoreFailed";
+        private const string RestoreFailedFallback = "Restore failed.";
+        private const string TextSecondaryBrushKey = "TextSecondary";
+
         private void OnDeleteBackupRequested(BackupSnapshotItem? snapshot)
         {
             AppViewModel.RunDetached(() => OnDeleteBackupRequestedAsync(snapshot), nameof(OnDeleteBackupRequestedAsync));
@@ -277,10 +288,10 @@ namespace VaultSync.UI.ViewModels
                     }
                     else
                     {
-                        string title = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required");
+                        string title = AppViewModel.L(CredentialsRequiredTitleKey, CredentialsRequiredTitleFallback);
                         string msg = AppViewModel.L("Backups.Delete.ForceCredentialsMissing",
                             "Assign a credential profile to this destination in Settings. If your usual user cannot delete backups, the NAS root/admin user may be required.");
-                        BackupsViewModel.ShowNotification(msg, "Error");
+                        BackupsViewModel.ShowNotification(msg, ErrorNotificationType);
                         if (!IsOnBackupsPage)
                         {
                             GlobalNotificationCenter.Instance.Show(msg, NotificationSeverity.Error, title);
@@ -308,7 +319,7 @@ namespace VaultSync.UI.ViewModels
                         msg = $"{msg} {deleteError}";
                     }
 
-                    BackupsViewModel.ShowNotification(msg, "Error");
+                    BackupsViewModel.ShowNotification(msg, ErrorNotificationType);
                     if (!IsOnBackupsPage)
                     {
                         GlobalNotificationCenter.Instance.Show(msg, NotificationSeverity.Error, title);
@@ -360,7 +371,7 @@ namespace VaultSync.UI.ViewModels
             {
                 BackupsViewModel.ShowNotification(
                     AppViewModel.L("Backups.SnapshotExplorer.Unavailable", "Snapshot Explorer could not open this backup."),
-                    "Error");
+                    ErrorNotificationType);
                 return;
             }
 
@@ -416,7 +427,7 @@ namespace VaultSync.UI.ViewModels
                     Text = AppViewModel.L("Backups.Delete.Warning", "This removes data on the destination."),
                     TextWrapping = TextWrapping.Wrap
                 };
-                if (GetBrush("TextSecondary") is { } warningBrush)
+                if (GetBrush(TextSecondaryBrushKey) is { } warningBrush)
                 {
                     warning.Foreground = warningBrush;
                 }
@@ -436,17 +447,17 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L(CommonCancelKey, CommonCancelFallback),
                     MinWidth = 120
                 };
-                cancelButton.Classes.Add("action-ghost");
+                cancelButton.Classes.Add(ActionGhostClass);
 
                 var deleteButton = new Button
                 {
                     Content = AppViewModel.L("Backups.Delete.Confirm", "Delete backup"),
                     MinWidth = 140
                 };
-                deleteButton.Classes.Add("action-primary");
+                deleteButton.Classes.Add(ActionPrimaryClass);
 
                 Window? window = null;
                 bool confirmed = false;
@@ -534,7 +545,7 @@ namespace VaultSync.UI.ViewModels
             {
                 var title = new TextBlock
                 {
-                    Text = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Text = AppViewModel.L(CredentialsRequiredTitleKey, CredentialsRequiredTitleFallback),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 };
@@ -552,7 +563,7 @@ namespace VaultSync.UI.ViewModels
                         "Recommended for NAS shares when delete is denied."),
                     TextWrapping = TextWrapping.Wrap
                 };
-                if (GetBrush("TextSecondary") is { } hintBrush)
+                if (GetBrush(TextSecondaryBrushKey) is { } hintBrush)
                 {
                     hint.Foreground = hintBrush;
                 }
@@ -566,17 +577,17 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L(CommonCancelKey, CommonCancelFallback),
                     MinWidth = 120
                 };
-                cancelButton.Classes.Add("action-ghost");
+                cancelButton.Classes.Add(ActionGhostClass);
 
                 var forceButton = new Button
                 {
                     Content = AppViewModel.L("Backups.Delete.ForceCredentialsConfirm", "Use credentials"),
                     MinWidth = 160
                 };
-                forceButton.Classes.Add("action-primary");
+                forceButton.Classes.Add(ActionPrimaryClass);
 
                 Window? window = null;
                 bool confirmed = false;
@@ -606,7 +617,7 @@ namespace VaultSync.UI.ViewModels
 
                 window = new Window
                 {
-                    Title = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Title = AppViewModel.L(CredentialsRequiredTitleKey, CredentialsRequiredTitleFallback),
                     Content = card,
                     CanResize = false,
                     Width = 540,
@@ -640,7 +651,7 @@ namespace VaultSync.UI.ViewModels
             {
                 var title = new TextBlock
                 {
-                    Text = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Text = AppViewModel.L(CredentialsRequiredTitleKey, CredentialsRequiredTitleFallback),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 };
@@ -681,7 +692,7 @@ namespace VaultSync.UI.ViewModels
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(0, 8, 0, 0)
                 };
-                if (GetBrush("TextSecondary") is { } hintBrush)
+                if (GetBrush(TextSecondaryBrushKey) is { } hintBrush)
                 {
                     hint.Foreground = hintBrush;
                 }
@@ -695,17 +706,17 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L(CommonCancelKey, CommonCancelFallback),
                     MinWidth = 120
                 };
-                cancelButton.Classes.Add("action-ghost");
+                cancelButton.Classes.Add(ActionGhostClass);
 
                 var forceButton = new Button
                 {
                     Content = AppViewModel.L("Backups.Delete.ForceCredentialsConfirm", "Use credentials"),
                     MinWidth = 160
                 };
-                forceButton.Classes.Add("action-primary");
+                forceButton.Classes.Add(ActionPrimaryClass);
 
                 Window? window = null;
                 bool confirmed = false;
@@ -739,7 +750,7 @@ namespace VaultSync.UI.ViewModels
 
                 window = new Window
                 {
-                    Title = AppViewModel.L("Backups.Delete.ForceCredentialsTitle", "Credentials required"),
+                    Title = AppViewModel.L(CredentialsRequiredTitleKey, CredentialsRequiredTitleFallback),
                     Content = card,
                     CanResize = false,
                     Width = 540,
@@ -1553,17 +1564,17 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L(CommonCancelKey, CommonCancelFallback),
                     MinWidth = 120
                 };
-                cancelButton.Classes.Add("action-ghost");
+                cancelButton.Classes.Add(ActionGhostClass);
 
                 var restoreButton = new Button
                 {
                     Content = AppViewModel.L("Backups.Section.Restore", "Restore"),
                     MinWidth = 140
                 };
-                restoreButton.Classes.Add("action-primary");
+                restoreButton.Classes.Add(ActionPrimaryClass);
 
                 Window? window = null;
                 bool confirmed = false;
@@ -1685,7 +1696,7 @@ namespace VaultSync.UI.ViewModels
                         Text = "• " + line,
                         TextWrapping = TextWrapping.Wrap
                     };
-                    if (GetBrush("TextSecondary") is { } secondary)
+                    if (GetBrush(TextSecondaryBrushKey) is { } secondary)
                         row.Foreground = secondary;
                     guidancePanel.Children.Add(row);
                 }
@@ -1705,7 +1716,7 @@ namespace VaultSync.UI.ViewModels
                             : preview.UnavailableReason),
                         TextWrapping = TextWrapping.Wrap
                     };
-                    if (GetBrush("TextSecondary") is { } unavailableSecondary)
+                    if (GetBrush(TextSecondaryBrushKey) is { } unavailableSecondary)
                         unavailable.Foreground = unavailableSecondary;
                     previewPanel.Children.Add(unavailable);
                 }
@@ -1727,7 +1738,7 @@ namespace VaultSync.UI.ViewModels
                             Text = "• " + line,
                             TextWrapping = TextWrapping.Wrap
                         };
-                        if (GetBrush("TextSecondary") is { } previewSecondary)
+                        if (GetBrush(TextSecondaryBrushKey) is { } previewSecondary)
                             row.Foreground = previewSecondary;
                         previewPanel.Children.Add(row);
                     }
@@ -1776,7 +1787,7 @@ namespace VaultSync.UI.ViewModels
                     {
                         Text = AppViewModel.L("Backups.Restore.Selection.Description", "Choose which top-level folders/files to restore."),
                         TextWrapping = TextWrapping.Wrap,
-                        Foreground = GetBrush("TextSecondary")
+                        Foreground = GetBrush(TextSecondaryBrushKey)
                     });
 
                     foreach (string option in targetOptions)
@@ -1800,11 +1811,11 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L(CommonCancelKey, CommonCancelFallback),
                     MinWidth = 120,
                     IsCancel = true
                 };
-                cancelButton.Classes.Add("action-ghost");
+                cancelButton.Classes.Add(ActionGhostClass);
 
                 var restoreButton = new Button
                 {
@@ -1812,7 +1823,7 @@ namespace VaultSync.UI.ViewModels
                     MinWidth = 140,
                     IsDefault = true
                 };
-                restoreButton.Classes.Add("action-primary");
+                restoreButton.Classes.Add(ActionPrimaryClass);
 
                 Window? window = null;
                 bool confirmed = false;
@@ -1924,7 +1935,7 @@ namespace VaultSync.UI.ViewModels
                     Text = sandboxPath,
                     TextWrapping = TextWrapping.Wrap
                 };
-                if (GetBrush("TextSecondary") is { } secondary)
+                if (GetBrush(TextSecondaryBrushKey) is { } secondary)
                     pathLine.Foreground = secondary;
 
                 var deleteAfterApply = new CheckBox
@@ -1945,21 +1956,21 @@ namespace VaultSync.UI.ViewModels
                     Content = AppViewModel.L("Backups.Restore.Sandbox.Post.Keep", "Keep for later"),
                     MinWidth = 130
                 };
-                keepButton.Classes.Add("action-ghost");
+                keepButton.Classes.Add(ActionGhostClass);
 
                 var openButton = new Button
                 {
                     Content = AppViewModel.L("Backups.Restore.Sandbox.Post.Open", "Open sandbox"),
                     MinWidth = 130
                 };
-                openButton.Classes.Add("action-ghost");
+                openButton.Classes.Add(ActionGhostClass);
 
                 var applyButton = new Button
                 {
                     Content = AppViewModel.L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
                     MinWidth = 150
                 };
-                applyButton.Classes.Add("action-primary");
+                applyButton.Classes.Add(ActionPrimaryClass);
 
                 Window? window = null;
                 SandboxPostRestoreAction action = SandboxPostRestoreAction.Keep;
@@ -2040,7 +2051,7 @@ namespace VaultSync.UI.ViewModels
             {
                 BackupsViewModel.ShowNotification(
                     AppViewModel.L("Backups.Restore.Sandbox.ApplyMissing", "Sandbox folder no longer exists."),
-                    "Error");
+                    ErrorNotificationType);
                 return;
             }
 
@@ -2048,8 +2059,8 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(targetPath))
             {
                 BackupsViewModel.ShowNotification(
-                    AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed."),
-                    "Error");
+                    AppViewModel.L(RestoreFailedKey, RestoreFailedFallback),
+                    ErrorNotificationType);
                 return;
             }
 
@@ -2106,7 +2117,7 @@ namespace VaultSync.UI.ViewModels
                 Console.WriteLine($"[Restore] Failed to apply sandbox restore for '{projectName}': {ex.Message}");
                 BackupsViewModel.ShowNotification(
                     Lf("Backups.Restore.Sandbox.ApplyFailed", "Failed to apply sandbox restore: {0}", ex.Message),
-                    "Error");
+                    ErrorNotificationType);
             }
             finally
             {
@@ -2360,7 +2371,7 @@ namespace VaultSync.UI.ViewModels
                         Text = "• " + line,
                         TextWrapping = TextWrapping.Wrap
                     };
-                    if (GetBrush("TextSecondary") is { } secondary)
+                    if (GetBrush(TextSecondaryBrushKey) is { } secondary)
                         row.Foreground = secondary;
                     summaryPanel.Children.Add(row);
                 }
@@ -2370,7 +2381,7 @@ namespace VaultSync.UI.ViewModels
                     Text = AppViewModel.L("Backups.Restore.Sandbox.ApplyConfirmWarning", "Existing files with matching paths will be overwritten."),
                     TextWrapping = TextWrapping.Wrap
                 };
-                if (GetBrush("TextSecondary") is { } warningBrush)
+                if (GetBrush(TextSecondaryBrushKey) is { } warningBrush)
                     warning.Foreground = warningBrush;
 
                 var buttonRow = new StackPanel
@@ -2382,17 +2393,17 @@ namespace VaultSync.UI.ViewModels
 
                 var cancelButton = new Button
                 {
-                    Content = AppViewModel.L("Common.Cancel", "Cancel"),
+                    Content = AppViewModel.L(CommonCancelKey, CommonCancelFallback),
                     MinWidth = 120
                 };
-                cancelButton.Classes.Add("action-ghost");
+                cancelButton.Classes.Add(ActionGhostClass);
 
                 var applyButton = new Button
                 {
                     Content = AppViewModel.L("Backups.Restore.Sandbox.Post.Apply", "Apply to project"),
                     MinWidth = 150
                 };
-                applyButton.Classes.Add("action-primary");
+                applyButton.Classes.Add(ActionPrimaryClass);
 
                 Window? window = null;
                 bool confirmed = false;
@@ -2470,8 +2481,8 @@ namespace VaultSync.UI.ViewModels
             if (!preparation.IsReady)
             {
                 BackupsViewModel.ShowNotification(
-                    AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed."),
-                    "Error");
+                    AppViewModel.L(RestoreFailedKey, RestoreFailedFallback),
+                    ErrorNotificationType);
                 RuntimeLog.WriteVerbose($"[Restore] Restore preparation failed for backupId={backupId}.");
                 return;
             }
@@ -2487,8 +2498,8 @@ namespace VaultSync.UI.ViewModels
             if (restoreProject is null)
             {
                 BackupsViewModel.ShowNotification(
-                    AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed."),
-                    "Error");
+                    AppViewModel.L(RestoreFailedKey, RestoreFailedFallback),
+                    ErrorNotificationType);
                 RuntimeLog.WriteVerbose($"[Restore] Project not found during restore execution for backupId={backupId}.");
                 return;
             }
@@ -2497,8 +2508,8 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(projectRoot))
             {
                 BackupsViewModel.ShowNotification(
-                    AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed."),
-                    "Error");
+                    AppViewModel.L(RestoreFailedKey, RestoreFailedFallback),
+                    ErrorNotificationType);
                 RuntimeLog.WriteVerbose($"[Restore] Restore target resolution failed for backupId={backupId}.");
                 return;
             }
@@ -2602,7 +2613,7 @@ namespace VaultSync.UI.ViewModels
                             {
                                 BackupsViewModel.ShowNotification(
                                     AppViewModel.L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."),
-                                    "Error");
+                                    ErrorNotificationType);
                                 continue;
                             }
 
@@ -2647,7 +2658,7 @@ namespace VaultSync.UI.ViewModels
 
                 Dispatcher.UIThread.Post(() =>
                 {
-                    BackupsViewModel.BackupCurrentFile = AppViewModel.L("Backups.Status.RestoreFailed", "Restore failed.");
+                    BackupsViewModel.BackupCurrentFile = AppViewModel.L(RestoreFailedKey, RestoreFailedFallback);
                     BackupsViewModel.BackupEtaText =
                         string.IsNullOrWhiteSpace(BackupsViewModel.BackupEtaText)
                             ? failureMessage

@@ -37,6 +37,20 @@ namespace VaultSync.UI.ViewModels
         private static string L(string key, string fallback) =>
             LocalizationProvider.Service?.GetString(key) ?? fallback;
 
+        private const string AllProjectsKey = "Backups.Section.HistoryFilterAllProjects";
+        private const string AllProjectsFallback = "All projects";
+        private const string EncryptedPolicyKey = "Projects.EncryptionPolicy.Encrypted";
+        private const string EncryptedFallback = "Encrypted";
+        private const string ManualBackupType = "Manual";
+        private const string NoBackupsKey = "Backups.Summary.NoBackups";
+        private const string NoBackupsFallback = "No backups yet";
+        private const string PlainPolicyKey = "Projects.EncryptionPolicy.Plain";
+        private const string PlainFallback = "Plain";
+        private const string TimestampMinuteFormat = "yyyy-MM-dd HH:mm";
+        private const string UnknownProjectFallback = "Unknown project";
+        private const string UnknownProjectGroupKey = "Backups.Section.Group.Unknown";
+        private const string DefaultAccentColor = "#33405A";
+
         private static string Lf(string key, string fallback, params object[] args)
         {
             string fmt = L(key, fallback);
@@ -162,7 +176,7 @@ namespace VaultSync.UI.ViewModels
         // Type + project filter state
         private string _currentTypeFilter = "All";
         private string? _currentProjectIdFilter = null;
-        public string HistoryFilterProjectLabel { get; private set; } = L("Backups.Section.HistoryFilterAllProjects", "All projects");
+        public string HistoryFilterProjectLabel { get; private set; } = L(AllProjectsKey, AllProjectsFallback);
         private bool _onlyErrorsFilter;
         private bool _onlyManualFilter;
 
@@ -475,7 +489,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         public string LastBackupDisplay { get; private set; } =
-            L("Backups.Summary.NoBackups", "No backups yet");
+            L(NoBackupsKey, NoBackupsFallback);
         public string LastBackupRelative { get; private set; } = "-";
         public string LastBackupSecondaryLine { get; private set; } =
             L("Backups.Summary.LastBackupSize", "Size -");
@@ -952,7 +966,7 @@ namespace VaultSync.UI.ViewModels
 
         public bool IsTypeFilterAll => string.Equals(_currentTypeFilter, "All", StringComparison.OrdinalIgnoreCase);
         public bool IsTypeFilterAuto => string.Equals(_currentTypeFilter, "Auto", StringComparison.OrdinalIgnoreCase);
-        public bool IsTypeFilterManual => string.Equals(_currentTypeFilter, "Manual", StringComparison.OrdinalIgnoreCase);
+        public bool IsTypeFilterManual => string.Equals(_currentTypeFilter, ManualBackupType, StringComparison.OrdinalIgnoreCase);
         public bool CanCompareSelectedSnapshots =>
             SelectedSnapshotA is not null &&
             SelectedSnapshotB is not null &&
@@ -1211,8 +1225,8 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewMetaLine = Lf(
                 "Backups.Compare.Range",
                 "{0} -> {1}",
-                older.Timestamp.ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture),
-                newer.Timestamp.ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture));
+                older.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture),
+                newer.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture));
             DiffPreviewTrigger = Lf(
                 "Backups.Compare.TypeLine",
                 "Type: {0} -> {1}",
@@ -1226,8 +1240,8 @@ namespace VaultSync.UI.ViewModels
                 ? L("Backups.Snapshot.Type.Imported", "Imported")
                 : L("Backups.Summary.LocalLabel", "Local");
             DiffPreviewEncryptionDisplay = older.IsEncrypted || newer.IsEncrypted
-                ? L("Projects.EncryptionPolicy.Encrypted", "Encrypted")
-                : L("Projects.EncryptionPolicy.Plain", "Plain");
+                ? L(EncryptedPolicyKey, EncryptedFallback)
+                : L(PlainPolicyKey, PlainFallback);
             DiffPreviewAdded = newer.DiffAdded;
             DiffPreviewModified = newer.DiffModified;
             DiffPreviewDeleted = newer.DiffDeleted;
@@ -1267,7 +1281,7 @@ namespace VaultSync.UI.ViewModels
             if (string.Equals(projectA, projectB, StringComparison.OrdinalIgnoreCase))
                 return projectA;
 
-            return L("Backups.Section.HistoryFilterAllProjects", "All projects");
+            return L(AllProjectsKey, AllProjectsFallback);
         }
 
         private string ResolveProjectNameFromSnapshot(BackupSnapshotItem snapshot)
@@ -1280,7 +1294,7 @@ namespace VaultSync.UI.ViewModels
                     return match.Name;
             }
 
-            return L("Backups.Section.Group.Unknown", "Unknown project");
+            return L(UnknownProjectGroupKey, UnknownProjectFallback);
         }
 
         private static string FormatElapsed(TimeSpan elapsed)
@@ -1317,7 +1331,7 @@ namespace VaultSync.UI.ViewModels
             int projectId = int.TryParse(snapshot.ProjectId, out int pid) ? pid : 0;
             string projectName = ProjectBackups
                 .FirstOrDefault(project => string.Equals(project.Id, snapshot.ProjectId, StringComparison.OrdinalIgnoreCase))
-                ?.Name ?? L("Backups.Section.Group.Unknown", "Unknown project");
+                ?.Name ?? L(UnknownProjectGroupKey, UnknownProjectFallback);
 
             var topPaths = SnapshotDiffSummary.ParseTopChangedPaths(snapshot.DiffTopPathsJson)
                 .Select(path => new SnapshotDiffPathExport(path.Path, path.Changes, path.ChangedBytes))
@@ -1453,14 +1467,14 @@ namespace VaultSync.UI.ViewModels
             SnapshotsSummaryLine = Lf("Backups.Summary.TodayWeek", "{0} backups today - {1} this week", 0, 0);
             TotalSnapshotsSecondaryLine = Lf("Backups.Summary.YesterdayAverage", "{0} yesterday - avg {1}", 0, "0 B");
             SnapshotActivitySummary = L("Backups.Summary.NoActivity", "No backups in the last 7 days");
-            LastBackupDisplay = L("Backups.Summary.NoBackups", "No backups yet");
+            LastBackupDisplay = L(NoBackupsKey, NoBackupsFallback);
             LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
             LastBackupSizeValueFormatted = "0 B";
             TotalStoredLocalLine = Lf("Backups.Summary.LocalTotal", "Local total: {0}", "0 B");
             TotalStoredLocalValueFormatted = "0 B";
             TotalStoredImportedLine = Lf("Backups.Summary.ImportedTotal", "Imported total: {0}", "0 B");
             TotalStoredImportedValueFormatted = "0 B";
-            HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
+            HistoryFilterProjectLabel = L(AllProjectsKey, AllProjectsFallback);
             BackupHealthSummaryLine = L("Backups.Health.Center.Empty", "No project health data yet.");
 
             string driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", L("DriveHealth.UnknownDrive", "drive"));
@@ -1574,10 +1588,10 @@ namespace VaultSync.UI.ViewModels
                 L("Projects.EncryptionPolicy.Inherit", "Inherit global")));
             EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
                 ProjectEncryptionPolicy.Encrypted,
-                L("Projects.EncryptionPolicy.Encrypted", "Encrypted")));
+                L(EncryptedPolicyKey, EncryptedFallback)));
             EncryptionPolicyOptions.Add(new EncryptionPolicyOption(
                 ProjectEncryptionPolicy.Plain,
-                L("Projects.EncryptionPolicy.Plain", "Plain")));
+                L(PlainPolicyKey, PlainFallback)));
         }
 
         private void RefreshRestoreModeOptions()
@@ -1614,7 +1628,7 @@ namespace VaultSync.UI.ViewModels
             if (project is null)
             {
                 _currentProjectIdFilter   = null;
-                HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
+                HistoryFilterProjectLabel = L(AllProjectsKey, AllProjectsFallback);
                 OnPropertyChanged(nameof(HistoryFilterProjectLabel));
                 _preferredExpandedProjectId = null;
                 RefreshSnapshotsView(true);
@@ -1745,7 +1759,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     ProjectId        = update.ProjectId,
                     ProjectName      = string.IsNullOrWhiteSpace(update.ProjectName)
-                        ? L("Dashboard.Activity.UnknownProject", "Unknown project")
+                        ? L("Dashboard.Activity.UnknownProject", UnknownProjectFallback)
                         : update.ProjectName,
                     CancelRequested  = OnCancelActiveBackup
                 };
@@ -2014,13 +2028,13 @@ namespace VaultSync.UI.ViewModels
                 // Only reset the label to "All projects" if we are not scoped to a project.
                 if (string.IsNullOrWhiteSpace(_currentProjectIdFilter))
                 {
-                    HistoryFilterProjectLabel = L("Backups.Section.HistoryFilterAllProjects", "All projects");
+                    HistoryFilterProjectLabel = L(AllProjectsKey, AllProjectsFallback);
                     OnPropertyChanged(nameof(HistoryFilterProjectLabel));
                 }
             }
             else
             {
-                // "Auto" or "Manual" while keeping the current project filter (if any).
+                // "Auto" or ManualBackupType while keeping the current project filter (if any).
                 _currentTypeFilter = type;
             }
 
@@ -2120,7 +2134,7 @@ namespace VaultSync.UI.ViewModels
                 int revision = _snapshotRevision;
                 var groupText = new SnapshotGroupText(
                     L("Backups.Section.Group.Global", "Global snapshots"),
-                    L("Backups.Section.Group.Unknown", "Unknown project"),
+                    L(UnknownProjectGroupKey, UnknownProjectFallback),
                     L("Backups.Section.SnapshotCount.Singular", "{0} backup"),
                     L("Backups.Section.SnapshotCount.Plural", "{0} backups"));
 
@@ -2171,10 +2185,10 @@ namespace VaultSync.UI.ViewModels
             {
                 if (filterState.TypeFilter == "Auto" && !string.Equals(snapshot.Type, "Auto", StringComparison.OrdinalIgnoreCase))
                     continue;
-                if (filterState.TypeFilter == "Manual" && !string.Equals(snapshot.Type, "Manual", StringComparison.OrdinalIgnoreCase))
+                if (filterState.TypeFilter == ManualBackupType && !string.Equals(snapshot.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                if (filterState.OnlyManual && !string.Equals(snapshot.Type, "Manual", StringComparison.OrdinalIgnoreCase))
+                if (filterState.OnlyManual && !string.Equals(snapshot.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 if (filterState.OnlyErrors && !string.Equals(snapshot.Status, "Failed", StringComparison.OrdinalIgnoreCase))
@@ -2262,7 +2276,7 @@ namespace VaultSync.UI.ViewModels
                     ? groupText.SingleSnapshotFormat
                     : groupText.MultipleSnapshotsFormat;
 
-                ImmutableSolidColorBrush accentBrush = GetAccentBrush("#33405A");
+                ImmutableSolidColorBrush accentBrush = GetAccentBrush(DefaultAccentColor);
                 if (!string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out ProjectBackupItem? colorSource))
                 {
                     accentBrush = GetAccentBrush(colorSource.AvatarColor);
@@ -2283,7 +2297,7 @@ namespace VaultSync.UI.ViewModels
                         : string.Empty,
                     Summary = string.Format(CultureInfo.CurrentCulture, summaryFormat, ordered.Count),
                     TotalSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes),
-                    LatestBackupDisplay = latest == DateTime.MinValue ? "-" : latest.ToString("yyyy-MM-dd HH:mm"),
+                    LatestBackupDisplay = latest == DateTime.MinValue ? "-" : latest.ToString(TimestampMinuteFormat),
                     AccentBrush = accentBrush,
                     IsExpanded = isExpanded
                 };
@@ -2305,7 +2319,7 @@ namespace VaultSync.UI.ViewModels
 
         private static ImmutableSolidColorBrush GetAccentBrush(string? hexColor)
         {
-            string normalized = string.IsNullOrWhiteSpace(hexColor) ? "#33405A" : hexColor;
+            string normalized = string.IsNullOrWhiteSpace(hexColor) ? DefaultAccentColor : hexColor;
             if (AccentBrushCache.TryGetValue(normalized, out ImmutableSolidColorBrush? cached))
                 return cached;
 
@@ -2317,7 +2331,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch
             {
-                return AccentBrushCache.GetOrAdd("#33405A", _ => new ImmutableSolidColorBrush(Color.Parse("#33405A")));
+                return AccentBrushCache.GetOrAdd(DefaultAccentColor, _ => new ImmutableSolidColorBrush(Color.Parse(DefaultAccentColor)));
             }
         }
 
@@ -2648,7 +2662,7 @@ namespace VaultSync.UI.ViewModels
 
             ManualSnapshotsThisWeek = _allSnapshots.Count(s =>
                 s.Timestamp.Date >= weekStart &&
-                string.Equals(s.Type, "Manual", StringComparison.OrdinalIgnoreCase));
+                string.Equals(s.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase));
             ImportedSnapshotsThisWeek = _allSnapshots.Count(s =>
                 s.Timestamp.Date >= weekStart &&
                 s.IsImported);
@@ -2682,7 +2696,7 @@ namespace VaultSync.UI.ViewModels
                     .OrderByDescending(s => s.Timestamp)
                     .First();
 
-                LastBackupDisplay  = last.Timestamp.ToString("yyyy-MM-dd HH:mm");
+                LastBackupDisplay  = last.Timestamp.ToString(TimestampMinuteFormat);
                 LastBackupRelative = FormatRelative(now - last.Timestamp);
                 LastBackupSecondaryLine = Lf(
                     "Backups.Summary.LastBackupSize",
@@ -2691,7 +2705,7 @@ namespace VaultSync.UI.ViewModels
                 LastBackupSizeValueFormatted = BackupSnapshotItem.FormatSize(last.SizeBytes);
                 string lastProjectName = ResolveProjectNameFromSnapshot(last);
                 LastBackupProjectName = string.IsNullOrWhiteSpace(lastProjectName)
-                    ? L("Backups.Summary.UnknownProject", "Unknown project")
+                    ? L("Backups.Summary.UnknownProject", UnknownProjectFallback)
                     : lastProjectName;
                 LastBackupTypeDisplay = !string.IsNullOrWhiteSpace(last.TypeLabel)
                     ? last.TypeLabel
@@ -2731,7 +2745,7 @@ namespace VaultSync.UI.ViewModels
             }
             else
             {
-                LastBackupDisplay  = L("Backups.Summary.NoBackups", "No backups yet");
+                LastBackupDisplay  = L(NoBackupsKey, NoBackupsFallback);
                 LastBackupRelative = "-";
                 LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
                 LastBackupSizeValueFormatted = "0 B";
@@ -2740,8 +2754,8 @@ namespace VaultSync.UI.ViewModels
                 LastBackupDestinationDisplay = "-";
                 LastBackupSecurityDisplay = "-";
                 LastBackupFreshnessPercent = 0;
-                LastBackupFreshnessLabel = L("Backups.Summary.NoBackups", "No backups yet");
-                LastBackupFreshnessTooltip = L("Backups.Summary.NoBackups", "No backups yet");
+                LastBackupFreshnessLabel = L(NoBackupsKey, NoBackupsFallback);
+                LastBackupFreshnessTooltip = L(NoBackupsKey, NoBackupsFallback);
                 LastBackupFreshnessBrush = FreshnessUnknownBrush;
             }
 
@@ -2932,7 +2946,7 @@ namespace VaultSync.UI.ViewModels
             {
                 string projectName = projectNameById.TryGetValue(entry.ProjectId, out string? foundName)
                     ? foundName
-                    : L("Backups.Section.Group.Unknown", "Unknown project");
+                    : L(UnknownProjectGroupKey, UnknownProjectFallback);
 
                 double sharePercent = totalBytes <= 0
                     ? 0
@@ -3158,7 +3172,7 @@ namespace VaultSync.UI.ViewModels
                 .GroupBy(s => s.Timestamp.Date)
                 .ToDictionary(g => g.Key, g => g.Count());
             var manualByDate = _allSnapshots
-                .Where(s => string.Equals(s.Type, "Manual", StringComparison.OrdinalIgnoreCase))
+                .Where(s => string.Equals(s.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase))
                 .GroupBy(s => s.Timestamp.Date)
                 .ToDictionary(g => g.Key, g => g.Count());
             var importedByDate = _allSnapshots
@@ -3353,7 +3367,7 @@ namespace VaultSync.UI.ViewModels
                 projectStats.TryGetValue(project.Id, out (int Count, long TotalBytes, DateTime? LastBackupTime) stats);
 
                 string projectName = string.IsNullOrWhiteSpace(project.Name)
-                    ? L("Backups.Section.Group.Unknown", "Unknown project")
+                    ? L(UnknownProjectGroupKey, UnknownProjectFallback)
                     : project.Name.Trim();
 
                 var projectItem = new ProjectBackupItem
@@ -3418,14 +3432,14 @@ namespace VaultSync.UI.ViewModels
                 SnapshotId = backup.SnapshotId,
                 Timestamp = backup.CreatedUtc.ToLocalTime(),
                 SizeBytes = backup.TotalBytes,
-                Type      = isAutoSnapshot ? "Auto" : "Manual",
+                Type      = isAutoSnapshot ? "Auto" : ManualBackupType,
                 IsImported = backup.IsImported,
                 IsEncrypted = backup.IsEncrypted,
                 OriginMachineName = backup.OriginMachineName,
                 ImportedLabel = importedLabel,
                 EncryptionLabel = backup.IsEncrypted
-                    ? L("Projects.EncryptionPolicy.Encrypted", "Encrypted")
-                    : L("Projects.EncryptionPolicy.Plain", "Plain"),
+                    ? L(EncryptedPolicyKey, EncryptedFallback)
+                    : L(PlainPolicyKey, PlainFallback),
                 TypeLabel = isIncremental
                         ? L("Backups.Snapshot.Type.Incremental", "Incremental")
                         : L("Backups.Snapshot.Type.Full", "Full"),
@@ -3435,8 +3449,8 @@ namespace VaultSync.UI.ViewModels
                         : L("Backups.Snapshot.Type.Full", "Full")),
                 EncryptionChipLabel = Lf("Backups.Snapshot.EncryptionChip", "Encryption: {0}",
                     backup.IsEncrypted
-                        ? L("Projects.EncryptionPolicy.Encrypted", "Encrypted")
-                        : L("Projects.EncryptionPolicy.Plain", "Plain")),
+                        ? L(EncryptedPolicyKey, EncryptedFallback)
+                        : L(PlainPolicyKey, PlainFallback)),
                 RetentionDefaultLabel = backup.IsImported
                     ? L("Backups.Retention.Outcome.Imported", "Retention: imported history entry")
                     : L("Backups.Retention.Outcome.Eligible", "Retention: eligible for pruning"),

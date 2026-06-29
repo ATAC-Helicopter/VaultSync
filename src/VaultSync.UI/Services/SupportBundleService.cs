@@ -15,6 +15,8 @@ public sealed record SupportBundleExportResult(bool Success, string? ZipPath, st
 
 public sealed class SupportBundleService
 {
+    private const string RedactedValue = "[redacted]";
+
     public static SupportBundleExportResult Export(IAppConfigStore? configStore = null)
     {
         configStore ??= StaticAppConfigStore.Instance;
@@ -167,7 +169,7 @@ public sealed class SupportBundleService
                     domain = RedactToken(c.Domain),
                     keyRef = RedactToken(c.KeyRef),
                     c.UseKeychain,
-                    password = string.IsNullOrWhiteSpace(c.Password) ? string.Empty : "[redacted]"
+                    password = string.IsNullOrWhiteSpace(c.Password) ? string.Empty : RedactedValue
                 }).ToList()
             },
             storage = new
@@ -537,13 +539,13 @@ public sealed class SupportBundleService
 
             string leaf = Path.GetFileName(trimmed);
             if (string.IsNullOrWhiteSpace(leaf))
-                return "[redacted]";
+                return RedactedValue;
 
             return $"...{Path.DirectorySeparatorChar}{leaf}";
         }
         catch
         {
-            return "[redacted]";
+            return RedactedValue;
         }
     }
 
@@ -552,7 +554,7 @@ public sealed class SupportBundleService
         if (string.IsNullOrWhiteSpace(value))
             return string.Empty;
 
-        return "[redacted]";
+        return RedactedValue;
     }
 
     private static string GetFolderSafe(Environment.SpecialFolder folder)

@@ -23,6 +23,8 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
+        private const string TelemetryAutoBackupSkipped = "auto_backup_skipped";
+
         private static readonly TimeSpan AutoBackupDestinationWakeDelay = TimeSpan.FromSeconds(10);
 
         private void InitializeDestinationStatusOverview(BackupsViewModel vm)
@@ -706,8 +708,8 @@ namespace VaultSync.UI.ViewModels
                 if (BackupsViewModel.IsBusy)
                 {
                     DiagnosticsLogger.Record("[AutoBackup] Tick skipped: backups view is busy.");
-                    Telemetry.Log("auto_backup_skipped", b => b
-                        .WithCode("reason", "busy"));
+                    Telemetry.Log(TelemetryAutoBackupSkipped, b => b
+                        .WithCode(TelemetryReason, "busy"));
                     return;
                 }
 
@@ -719,8 +721,8 @@ namespace VaultSync.UI.ViewModels
                         BackupsViewModel.BackupCurrentFile = pauseReason;
                         BackupsViewModel.BusyMessage = pauseReason;
                     });
-                    Telemetry.Log("auto_backup_skipped", b => b
-                        .WithCode("reason", "battery"));
+                    Telemetry.Log(TelemetryAutoBackupSkipped, b => b
+                        .WithCode(TelemetryReason, "battery"));
                     return;
                 }
 
@@ -733,9 +735,9 @@ namespace VaultSync.UI.ViewModels
                         BackupsViewModel.BusyMessage = quietReason;
                     });
 
-                    Telemetry.Log("auto_backup_skipped", b =>
+                    Telemetry.Log(TelemetryAutoBackupSkipped, b =>
                     {
-                        _ = b.WithCode("reason", "quiet_hours");
+                        _ = b.WithCode(TelemetryReason, "quiet_hours");
                         if (quietResumeAtLocal.HasValue)
                             _ = b.WithHashedString("resumeAtLocal", quietResumeAtLocal.Value.ToString("O", CultureInfo.InvariantCulture));
                     });
@@ -746,8 +748,8 @@ namespace VaultSync.UI.ViewModels
                 if (!preparation.IsReady)
                 {
                     DiagnosticsLogger.Record($"[AutoBackup] Tick skipped: {preparation.FailureCode ?? "preflight_failed"}.");
-                    Telemetry.Log("auto_backup_skipped", b => b
-                        .WithCode("reason", preparation.FailureCode ?? "preflight_failed"));
+                    Telemetry.Log(TelemetryAutoBackupSkipped, b => b
+                        .WithCode(TelemetryReason, preparation.FailureCode ?? "preflight_failed"));
                     return;
                 }
 
@@ -779,15 +781,15 @@ namespace VaultSync.UI.ViewModels
                                 if (!string.IsNullOrWhiteSpace(selection.WarningMessage))
                                 {
                                     Telemetry.Log("auto_backup_destination_fallback", b => b
-                                        .WithCode("reason", selection.WarningCode ?? "preferred_destination_fallback")
-                                        .WithHashedString("project", project.Name));
+                                        .WithCode(TelemetryReason, selection.WarningCode ?? "preferred_destination_fallback")
+                                        .WithHashedString(TelemetryProject, project.Name));
                                 }
 
                                 if (selection.Destinations.Count == 0)
                                 {
-                                    Telemetry.Log("auto_backup_skipped", b => b
-                                        .WithCode("reason", "no_destination")
-                                        .WithHashedString("project", project.Name));
+                                    Telemetry.Log(TelemetryAutoBackupSkipped, b => b
+                                        .WithCode(TelemetryReason, "no_destination")
+                                        .WithHashedString(TelemetryProject, project.Name));
                                     return;
                                 }
 
@@ -795,16 +797,16 @@ namespace VaultSync.UI.ViewModels
                                 {
                                     MaybeNotifyRestoreRecommended(project);
                                     Telemetry.Log("auto_backup_advisory", b => b
-                                        .WithCode("reason", "restore_recommended")
-                                        .WithHashedString("project", project.Name));
+                                        .WithCode(TelemetryReason, "restore_recommended")
+                                        .WithHashedString(TelemetryProject, project.Name));
                                 }
 
                                 if (!TryResolveProjectRoot(project, cfg, out Project? resolvedProject, out string? rootError))
                                 {
                                     MaybeNotifyProjectRootMissing(project, rootError);
-                                    Telemetry.Log("auto_backup_skipped", b => b
-                                        .WithCode("reason", "project_root_missing")
-                                        .WithHashedString("project", project.Name)
+                                    Telemetry.Log(TelemetryAutoBackupSkipped, b => b
+                                        .WithCode(TelemetryReason, "project_root_missing")
+                                        .WithHashedString(TelemetryProject, project.Name)
                                         .WithHashedString("projectRoot", project.RootPath));
                                     return;
                                 }
@@ -828,9 +830,9 @@ namespace VaultSync.UI.ViewModels
 
                                 if (destinationResolutions.Count == 0)
                                 {
-                                    Telemetry.Log("auto_backup_skipped", b => b
-                                        .WithCode("reason", "no_destination")
-                                        .WithHashedString("project", project.Name));
+                                    Telemetry.Log(TelemetryAutoBackupSkipped, b => b
+                                        .WithCode(TelemetryReason, "no_destination")
+                                        .WithHashedString(TelemetryProject, project.Name));
                                     return;
                                 }
 
@@ -904,10 +906,10 @@ namespace VaultSync.UI.ViewModels
 
                                                     if (backupResult.SkippedForNoChanges)
                                                     {
-                                                        Telemetry.Log("auto_backup_skipped", b => b
-                                                            .WithCode("reason", "no_changes")
-                                                            .WithHashedString("project", project.Name)
-                                                            .WithHashedString("destinationPath", dest.Path ?? string.Empty));
+                                                        Telemetry.Log(TelemetryAutoBackupSkipped, b => b
+                                                            .WithCode(TelemetryReason, "no_changes")
+                                                            .WithHashedString(TelemetryProject, project.Name)
+                                                            .WithHashedString(TelemetryDestinationPath, dest.Path ?? string.Empty));
                                                         noChangesDetected = true;
                                                         destinationSucceeded = true;
                                                         break;
@@ -937,9 +939,9 @@ namespace VaultSync.UI.ViewModels
                                                     _ = Interlocked.Increment(ref backupFailed);
                                                     int delaySeconds = Math.Min(300, retryBaseDelaySeconds * (1 << Math.Max(0, attemptIndex - 1)));
                                                     Telemetry.Log("auto_backup_destination_retry", b => b
-                                                        .WithHashedString("project", project.Name)
+                                                        .WithHashedString(TelemetryProject, project.Name)
                                                         .WithHashedString("projectRoot", project.RootPath)
-                                                        .WithHashedString("destinationPath", dest.Path)
+                                                        .WithHashedString(TelemetryDestinationPath, dest.Path)
                                                         .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
                                                         .WithCount("attempt", attemptIndex + 1)
                                                         .WithCount("maxAttempts", retryMaxAttempts)
@@ -962,9 +964,9 @@ namespace VaultSync.UI.ViewModels
                                         {
                                             _ = Interlocked.Increment(ref backupFailed);
                                             Telemetry.Log("auto_backup_failure", b => b
-                                                .WithHashedString("project", project.Name)
+                                                .WithHashedString(TelemetryProject, project.Name)
                                                 .WithHashedString("projectRoot", project.RootPath)
-                                                .WithHashedString("destinationPath", dest.Path)
+                                                .WithHashedString(TelemetryDestinationPath, dest.Path)
                                                 .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
                                                 .WithFlag("useArchiveMode", useArchiveMode)
                                                 .WithException(ex));

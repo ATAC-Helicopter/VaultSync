@@ -57,6 +57,7 @@ namespace VaultSync.UI.Services
         private const string HeadlessArg = "--headless-patch";
         private const string RequestHashArg = "--request-sha256=";
         private const string RestartArg = "--restart";
+        private const string TempRootName = "VaultSync";
         private const string WaitPidArg = "--waitpid=";
 
         private enum PatchElevationKind
@@ -257,7 +258,7 @@ namespace VaultSync.UI.Services
 
         private static string PrepareHelperDirectory(string installDir)
         {
-            string root = Path.Combine(Path.GetTempPath(), "VaultSync");
+            string root = Path.Combine(Path.GetTempPath(), TempRootName);
             Directory.CreateDirectory(root);
 
             string helperDir = Path.Combine(root, "patch-helper");
@@ -306,7 +307,7 @@ namespace VaultSync.UI.Services
             Action<string>? onLog,
             CancellationToken cancellationToken)
         {
-            string logDir = Path.Combine(Path.GetTempPath(), "VaultSync");
+            string logDir = Path.Combine(Path.GetTempPath(), TempRootName);
             Directory.CreateDirectory(logDir);
             string logPath = Path.Combine(logDir, "patch-helper.log");
 
@@ -359,7 +360,7 @@ namespace VaultSync.UI.Services
                 VerifyBaseVersionCompatibility(manifest);
                 VerifyArchivePreflight(request.ArchivePath, manifest);
 
-                string stagingDir = Path.Combine(Path.GetTempPath(), "VaultSync", $"patch-{Guid.NewGuid():N}");
+                string stagingDir = Path.Combine(Path.GetTempPath(), TempRootName, $"patch-{Guid.NewGuid():N}");
                 Directory.CreateDirectory(stagingDir);
 
                 try
@@ -534,7 +535,7 @@ namespace VaultSync.UI.Services
             try
             {
                 string normalizedPath = Path.GetFullPath(path);
-                string root = Path.Combine(Path.GetTempPath(), "VaultSync");
+                string root = Path.Combine(Path.GetTempPath(), TempRootName);
                 string normalizedRoot = Path.GetFullPath(root)
                     .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                     + Path.DirectorySeparatorChar;

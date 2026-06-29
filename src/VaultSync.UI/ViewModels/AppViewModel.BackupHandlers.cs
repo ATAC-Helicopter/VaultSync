@@ -21,8 +21,11 @@ namespace VaultSync.UI.ViewModels
         private const string TelemetryReason = "reason";
         private const string TelemetryProject = "project";
         private const string TelemetryProjectRoot = "projectRoot";
+        private const string TelemetryDestinationPath = "destinationPath";
         private const string TelemetryUseArchiveMode = "useArchiveMode";
         private const string TelemetryDurationSeconds = "durationSeconds";
+        private const string BackupsStatusPreparingKey = "Backups.Status.Preparing";
+        private const string BackupsStatusPreparingFallback = "Preparing backup...";
 
         private void OnBackupProjectRequested(ProjectBackupItem? item)
         {
@@ -217,7 +220,7 @@ namespace VaultSync.UI.ViewModels
                 project.Id.ToString(),
                 project.Name,
                 0,
-                AppViewModel.L("Backups.Status.Preparing", "Preparing backup..."),
+                AppViewModel.L(BackupsStatusPreparingKey, BackupsStatusPreparingFallback),
                 string.Empty,
                 policyText: activePolicyText);
             if (isFirstManual)
@@ -264,7 +267,7 @@ namespace VaultSync.UI.ViewModels
                         unreachable++;
                         Telemetry.Log("backup_single_destination_unreachable", b => b
                             .WithHashedString(TelemetryProject, project.Name)
-                            .WithHashedString("destinationPath", dest.Path)
+                            .WithHashedString(TelemetryDestinationPath, dest.Path)
                             .WithHashedString("destinationAlias", dest.Alias ?? string.Empty));
                         continue;
                     }
@@ -390,7 +393,7 @@ namespace VaultSync.UI.ViewModels
                                     Telemetry.Log(TelemetryBackupSingleSkipped, b => b
                                         .WithCode(TelemetryReason, "no_changes")
                                         .WithHashedString(TelemetryProject, project.Name)
-                                        .WithHashedString("destinationPath", dest.Path ?? string.Empty));
+                                        .WithHashedString(TelemetryDestinationPath, dest.Path ?? string.Empty));
                                     noChangesDetected = true;
                                     destinationSucceeded = true;
                                     break;
@@ -409,7 +412,7 @@ namespace VaultSync.UI.ViewModels
                                         policyText: activePolicyText);
                                     Telemetry.Log("backup_single_cancelled", b => b
                                         .WithHashedString(TelemetryProject, project.Name)
-                                        .WithHashedString("destinationPath", dest.Path ?? string.Empty)
+                                        .WithHashedString(TelemetryDestinationPath, dest.Path ?? string.Empty)
                                         .WithFlag(TelemetryUseArchiveMode, useArchiveMode));
                                     destinationSucceeded = true;
                                     break;
@@ -448,7 +451,7 @@ namespace VaultSync.UI.ViewModels
                                     BackupsViewModel.SeverityStatus.Warning);
                                 Telemetry.Log("backup_single_destination_retry", b => b
                                     .WithHashedString(TelemetryProject, project.Name)
-                                    .WithHashedString("destinationPath", dest.Path)
+                                    .WithHashedString(TelemetryDestinationPath, dest.Path)
                                     .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
                                     .WithCount("attempt", attemptIndex + 1)
                                     .WithCount("maxAttempts", retryMaxAttempts)
@@ -473,7 +476,7 @@ namespace VaultSync.UI.ViewModels
                     {
                         Telemetry.Log("backup_single_cancelled", b => b
                             .WithHashedString(TelemetryProject, project.Name)
-                            .WithHashedString("destinationPath", dest.Path)
+                            .WithHashedString(TelemetryDestinationPath, dest.Path)
                             .WithFlag(TelemetryUseArchiveMode, useArchiveMode));
                         throw;
                     }
@@ -483,7 +486,7 @@ namespace VaultSync.UI.ViewModels
                         Telemetry.Log("backup_single_failure", b => b
                             .WithHashedString(TelemetryProject, project.Name)
                             .WithHashedString(TelemetryProjectRoot, project.RootPath)
-                            .WithHashedString("destinationPath", dest.Path)
+                            .WithHashedString(TelemetryDestinationPath, dest.Path)
                             .WithHashedString("destinationAlias", dest.Alias ?? string.Empty)
                             .WithFlag(TelemetryUseArchiveMode, useArchiveMode)
                             .WithException(ex));
@@ -759,7 +762,7 @@ namespace VaultSync.UI.ViewModels
                 .WithFlag(TelemetryUseArchiveMode, useArchiveMode));
 
             BackupsViewModel.BackupProgress = 0;
-            BackupsViewModel.BackupCurrentFile = AppViewModel.L("Backups.Status.Preparing", "Preparing backup...");
+            BackupsViewModel.BackupCurrentFile = AppViewModel.L(BackupsStatusPreparingKey, BackupsStatusPreparingFallback);
             BackupsViewModel.BackupEtaText = string.Empty;
             BackupsViewModel.IsBusy = true;
             BackupsViewModel.BusyMessage = AppViewModel.L("Backups.Busy.All", "Backing up all projects...");
@@ -792,7 +795,7 @@ namespace VaultSync.UI.ViewModels
                             p.Id.ToString(),
                             p.Name,
                             0,
-                            AppViewModel.L("Backups.Status.Preparing", "Preparing backup..."),
+                            AppViewModel.L(BackupsStatusPreparingKey, BackupsStatusPreparingFallback),
                             string.Empty,
                             policyText: activePolicyText);
                     }
@@ -970,7 +973,7 @@ namespace VaultSync.UI.ViewModels
                                     }
                                     else if (percent <= 0.1)
                                     {
-                                        label = AppViewModel.L("Backups.Status.Preparing", "Preparing backup...");
+                                        label = AppViewModel.L(BackupsStatusPreparingKey, BackupsStatusPreparingFallback);
                                     }
                                     else if (!string.IsNullOrWhiteSpace(etaText) && etaText.Contains("Copying", StringComparison.OrdinalIgnoreCase))
                                     {

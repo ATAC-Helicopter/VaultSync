@@ -32,6 +32,8 @@ namespace VaultSync.UI.Services
     /// </summary>
     public sealed class DriveHealthService : IDriveHealthService
     {
+        private const string SmartCtlCommand = "smartctl";
+
         public DriveHealthResult CheckPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -247,7 +249,7 @@ namespace VaultSync.UI.Services
                 return false;
 
             // smartctl supports drive letters on Windows (e.g., "C:")
-            string smartOutput = RunProcess("smartctl", $"-H {device}", 5000);
+            string smartOutput = RunProcess(SmartCtlCommand, $"-H {device}", 5000);
             if (string.IsNullOrWhiteSpace(smartOutput))
                 return false;
 
@@ -358,7 +360,7 @@ namespace VaultSync.UI.Services
         {
             try
             {
-                if (string.Equals(fileName, "smartctl", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(fileName, SmartCtlCommand, StringComparison.OrdinalIgnoreCase))
                 {
                     string resolved = ResolveSmartctlPath();
                     if (string.IsNullOrWhiteSpace(resolved))
@@ -409,7 +411,7 @@ namespace VaultSync.UI.Services
         private static string ResolveSmartctlPath()
         {
             if (OperatingSystem.IsWindows())
-                return ResolveExecutablePath("smartctl");
+                return ResolveExecutablePath(SmartCtlCommand);
 
             string[] candidates = OperatingSystem.IsMacOS()
                 ?
@@ -438,7 +440,7 @@ namespace VaultSync.UI.Services
             {
                 try
                 {
-                    string candidate = Path.Combine(dir, "smartctl");
+                    string candidate = Path.Combine(dir, SmartCtlCommand);
                     if (File.Exists(candidate))
                         return candidate;
                 }

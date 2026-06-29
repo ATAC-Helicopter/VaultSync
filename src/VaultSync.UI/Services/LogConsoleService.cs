@@ -17,6 +17,11 @@ namespace VaultSync.UI.Services
 {
     public sealed record LogLine(DateTimeOffset Timestamp, string Source, string Message)
     {
+        private const string DiagnosticsSource = "diagnostics";
+        private const string StdErrSource = "stderr";
+        private const string StdOutSource = "stdout";
+        private const string TraceSource = "trace";
+
         private static readonly IBrush DiagnosticsBackground = new ImmutableSolidColorBrush(Color.Parse("#23304A"));
         private static readonly IBrush DiagnosticsForeground = new ImmutableSolidColorBrush(Color.Parse("#BFD1FF"));
         private static readonly IBrush OutputBackground = new ImmutableSolidColorBrush(Color.Parse("#173B34"));
@@ -30,26 +35,26 @@ namespace VaultSync.UI.Services
 
         public string SourceText => SourceKind switch
         {
-            "diagnostics" => "DIAG",
-            "stderr" => "ERR",
-            "stdout" => "OUT",
-            "trace" => "TRACE",
+            DiagnosticsSource => "DIAG",
+            StdErrSource => "ERR",
+            StdOutSource => "OUT",
+            TraceSource => "TRACE",
             _ => Source.ToUpperInvariant()
         };
 
         public IBrush SourceBackground => SourceKind switch
         {
-            "stderr" => ErrorBackground,
-            "stdout" => OutputBackground,
-            "trace" => TraceBackground,
+            StdErrSource => ErrorBackground,
+            StdOutSource => OutputBackground,
+            TraceSource => TraceBackground,
             _ => DiagnosticsBackground
         };
 
         public IBrush SourceForeground => SourceKind switch
         {
-            "stderr" => ErrorForeground,
-            "stdout" => OutputForeground,
-            "trace" => TraceForeground,
+            StdErrSource => ErrorForeground,
+            StdOutSource => OutputForeground,
+            TraceSource => TraceForeground,
             _ => DiagnosticsForeground
         };
 
@@ -63,18 +68,18 @@ namespace VaultSync.UI.Services
         {
             get
             {
-                if (!string.Equals(Source, "diagnostics", StringComparison.Ordinal))
+                if (!string.Equals(Source, DiagnosticsSource, StringComparison.Ordinal))
                     return Source;
 
                 string text = Message.TrimStart();
                 if (text.Contains("CONSOLE[stderr]", StringComparison.Ordinal))
-                    return "stderr";
+                    return StdErrSource;
                 if (text.Contains("CONSOLE[stdout]", StringComparison.Ordinal))
-                    return "stdout";
+                    return StdOutSource;
                 if (text.Contains("TRACE ", StringComparison.Ordinal) ||
                     text.Contains("TRACE[", StringComparison.Ordinal))
                 {
-                    return "trace";
+                    return TraceSource;
                 }
 
                 return Source;

@@ -15,6 +15,8 @@ namespace VaultSync.Core.Services;
 /// </summary>
 public static class Telemetry
 {
+    private const string TelemetryDirectoryName = "telemetry";
+
     private static volatile bool _enabled;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -92,7 +94,7 @@ public static class Telemetry
     private static string GetTodayLogPath(DateTime utcNow)
     {
         string baseDir = GetVaultBaseDir();
-        string logsDir = Path.Combine(baseDir, "telemetry");
+        string logsDir = Path.Combine(baseDir, TelemetryDirectoryName);
         string file = $"{utcNow:yyyy-MM-dd}.ndjson";
         return Path.Combine(logsDir, file);
     }
@@ -144,7 +146,7 @@ public static class Telemetry
     public static string GetTelemetryDirectory()
     {
         string baseDir = GetVaultBaseDir();
-        return Path.Combine(baseDir, "telemetry");
+        return Path.Combine(baseDir, TelemetryDirectoryName);
     }
 
     /// <summary>
@@ -156,7 +158,7 @@ public static class Telemetry
         try
         {
             string baseDir = GetVaultBaseDir();
-            string logsDir = Path.Combine(baseDir, "telemetry");
+            string logsDir = Path.Combine(baseDir, TelemetryDirectoryName);
             if (!Directory.Exists(logsDir))
                 return;
 
@@ -206,7 +208,7 @@ public static class Telemetry
             try
             {
                 string baseDir = GetVaultBaseDir();
-                string path = Path.Combine(baseDir, "telemetry", "installation.id");
+                string path = Path.Combine(baseDir, TelemetryDirectoryName, "installation.id");
                 string? dir = Path.GetDirectoryName(path);
                 if (!string.IsNullOrWhiteSpace(dir))
                     Directory.CreateDirectory(dir);
@@ -236,7 +238,7 @@ public static class Telemetry
             try
             {
                 string baseDir = GetVaultBaseDir();
-                string path = Path.Combine(baseDir, "telemetry", "telemetry.salt");
+                string path = Path.Combine(baseDir, TelemetryDirectoryName, "telemetry.salt");
                 string? dir = Path.GetDirectoryName(path);
                 if (!string.IsNullOrWhiteSpace(dir))
                     Directory.CreateDirectory(dir);
