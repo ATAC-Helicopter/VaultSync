@@ -8,12 +8,12 @@ namespace VaultSync.UI.Infrastructure;
 
 internal sealed class SingleInstanceLock : IDisposable
 {
-    private static readonly object LinuxPathGate = new();
-    private static readonly HashSet<string> OwnedLinuxPaths = new(StringComparer.Ordinal);
+    private static readonly object FileLockPathGate = new();
+    private static readonly HashSet<string> OwnedFileLockPaths = new(StringComparer.Ordinal);
 
     private readonly Mutex? _mutex;
-    private readonly FileStream? _linuxLockStream;
-    private readonly string? _linuxLockPath;
+    private readonly FileStream? _fileLockStream;
+    private readonly string? _fileLockPath;
     private bool _ownsLock;
 
     private SingleInstanceLock(Mutex mutex, bool ownsLock)
@@ -22,10 +22,10 @@ internal sealed class SingleInstanceLock : IDisposable
         _ownsLock = ownsLock;
     }
 
-    private SingleInstanceLock(FileStream linuxLockStream, string linuxLockPath)
+    private SingleInstanceLock(FileStream fileLockStream, string fileLockPath)
     {
-        _linuxLockStream = linuxLockStream;
-        _linuxLockPath = linuxLockPath;
+        _fileLockStream = fileLockStream;
+        _fileLockPath = fileLockPath;
         _ownsLock = true;
     }
 
@@ -40,20 +40,27 @@ internal sealed class SingleInstanceLock : IDisposable
         if (OperatingSystem.IsLinux())
             return TryAcquireLinux(linuxLockFileName);
 
+        if (OperatingSystem.IsMacOS())
+            return TryAcquireMacOs(linuxLockFileName);
+
         var mutex = new Mutex(true, mutexName, out bool createdNew);
         return new SingleInstanceLock(mutex, createdNew);
     }
 
     [SupportedOSPlatform("linux")]
     internal static SingleInstanceLock TryAcquireLinux(string lockFileName, string? lockDirectory = null)
+        => TryAcquireFileLock(lockFileName, lockDirectory);
+
+    [SupportedOSPlatform("linux")]
+    internal static SingleInstanceLock TryAcquireFileLock(string lockFileName, string? lockDirectory = null)
     {
-        string directory = lockDirectory ?? ResolveLinuxLockDirectory();
+        string directory = lockDirectory ?? ResolveFileLockDirectory();
         Directory.CreateDirectory(directory);
 
         string lockPath = Path.GetFullPath(Path.Combine(directory, lockFileName));
-        lock (LinuxPathGate)
+        lock (FileLockPathGate)
         {
-            if (!OwnedLinuxPaths.Add(lockPath))
+            if (!OwnedFileLockPaths.Add(lockPath))
                 return new SingleInstanceLock();
         }
 
@@ -71,22 +78,66 @@ internal sealed class SingleInstanceLock : IDisposable
         catch (IOException)
         {
             stream?.Dispose();
-            ReleaseLinuxPathReservation(lockPath);
+            ReleaseFileLockPathReservation(lockPath);
             return new SingleInstanceLock();
         }
         catch
         {
             stream?.Dispose();
-            ReleaseLinuxPathReservation(lockPath);
+            ReleaseFileLockPathReservation(lockPath);
             throw;
         }
     }
 
-    private static string ResolveLinuxLockDirectory()
+    internal static SingleInstanceLock TryAcquireMacOs(string lockFileName, string? lockDirectory = null)
     {
-        string? runtimeDirectory = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
-        if (!string.IsNullOrWhiteSpace(runtimeDirectory) && Path.IsPathFullyQualified(runtimeDirectory))
-            return Path.Combine(runtimeDirectory, "vaultsync");
+        string directory = lockDirectory ?? ResolveFileLockDirectory();
+        Directory.CreateDirectory(directory);
+
+        string lockPath = Path.GetFullPath(Path.Combine(directory, lockFileName));
+        lock (FileLockPathGate)
+        {
+            if (!OwnedFileLockPaths.Add(lockPath))
+                return new SingleInstanceLock();
+        }
+
+        try
+        {
+            var stream = new FileStream(
+                lockPath,
+                FileMode.OpenOrCreate,
+                FileAccess.ReadWrite,
+                FileShare.None);
+            return new SingleInstanceLock(stream, lockPath);
+        }
+        catch (IOException)
+        {
+            ReleaseFileLockPathReservation(lockPath);
+            return new SingleInstanceLock();
+        }
+        catch
+        {
+            ReleaseFileLockPathReservation(lockPath);
+            throw;
+        }
+    }
+
+    private static string ResolveFileLockDirectory()
+    {
+        if (OperatingSystem.IsLinux())
+        {
+            string? runtimeDirectory = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
+            if (!string.IsNullOrWhiteSpace(runtimeDirectory) && Path.IsPathFullyQualified(runtimeDirectory))
+                return Path.Combine(runtimeDirectory, "vaultsync");
+        }
+
+        string? tempDirectory = Environment.GetEnvironmentVariable("TMPDIR");
+        if (OperatingSystem.IsMacOS() &&
+            !string.IsNullOrWhiteSpace(tempDirectory) &&
+            Path.IsPathFullyQualified(tempDirectory))
+        {
+            return Path.Combine(tempDirectory, "vaultsync");
+        }
 
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -104,11 +155,11 @@ internal sealed class SingleInstanceLock : IDisposable
 
         _ownsLock = false;
 
-        if (_linuxLockStream is not null)
+        if (_fileLockStream is not null)
         {
-            _linuxLockStream.Dispose();
-            if (_linuxLockPath is not null)
-                ReleaseLinuxPathReservation(_linuxLockPath);
+            _fileLockStream.Dispose();
+            if (_fileLockPath is not null)
+                ReleaseFileLockPathReservation(_fileLockPath);
             return;
         }
 
@@ -116,11 +167,11 @@ internal sealed class SingleInstanceLock : IDisposable
         _mutex?.Dispose();
     }
 
-    private static void ReleaseLinuxPathReservation(string lockPath)
+    private static void ReleaseFileLockPathReservation(string lockPath)
     {
-        lock (LinuxPathGate)
+        lock (FileLockPathGate)
         {
-            OwnedLinuxPaths.Remove(lockPath);
+            OwnedFileLockPaths.Remove(lockPath);
         }
     }
 }

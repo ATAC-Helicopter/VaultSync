@@ -12,25 +12,25 @@ public sealed class SingleInstanceLockTests : IDisposable
         Path.Combine(Path.GetTempPath(), $"vaultsync-single-instance-{Guid.NewGuid():N}");
 
     [Fact]
-    public void LinuxLock_BlocksSecondOwner_AndCanBeReacquiredAfterDispose()
+    public void FileLock_BlocksSecondOwner_AndCanBeReacquiredAfterDispose()
     {
-        if (!OperatingSystem.IsLinux())
+        if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
             return;
 
-        using var first = SingleInstanceLock.TryAcquireLinux("app.lock", _tempDirectory);
-        using var second = SingleInstanceLock.TryAcquireLinux("app.lock", _tempDirectory);
+        using var first = TryAcquireCurrentUnixLock("app.lock");
+        using var second = TryAcquireCurrentUnixLock("app.lock");
 
         Assert.True(first.IsAcquired);
         Assert.False(second.IsAcquired);
 
         first.Dispose();
 
-        using var third = SingleInstanceLock.TryAcquireLinux("app.lock", _tempDirectory);
+        using var third = TryAcquireCurrentUnixLock("app.lock");
         Assert.True(third.IsAcquired);
     }
 
     [Fact]
-    public void LinuxLock_BlocksAnotherProcess()
+    public void FileLock_BlocksAnotherProcess()
     {
         if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/python3"))
             return;
@@ -63,6 +63,17 @@ public sealed class SingleInstanceLockTests : IDisposable
         using Process process = Process.Start(startInfo)!;
         process.WaitForExit();
         return process.ExitCode;
+    }
+
+    private SingleInstanceLock TryAcquireCurrentUnixLock(string lockFileName)
+    {
+        if (OperatingSystem.IsMacOS())
+            return SingleInstanceLock.TryAcquireMacOs(lockFileName, _tempDirectory);
+
+        if (OperatingSystem.IsLinux())
+            return SingleInstanceLock.TryAcquireLinux(lockFileName, _tempDirectory);
+
+        throw new PlatformNotSupportedException("The file-lock test helper only supports Linux and macOS.");
     }
 
     public void Dispose()

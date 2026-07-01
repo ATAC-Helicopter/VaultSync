@@ -5,8 +5,6 @@
 ### Changed
 - [VS-1808] Snapshot Explorer now loads browsing, preview, and selected restore work asynchronously, uses localized UI/status strings, and shows a clear encrypted-backup message when encrypted archive browsing is unavailable in v1.
 - [VS-1808] Snapshot Explorer preview now handles text-like source/config files instead of only a small extension allow-list, while rejecting binary content safely.
-- [VS-1808] Snapshot Explorer now previews selected text-like files automatically, highlights the selected row more clearly, and prevents repeated Explore actions from opening duplicate Explorer windows.
-- [VS-1808] Fixed Snapshot Explorer action buttons staying disabled after switching from an in-flight file preview to a folder selection.
 - [VS-1808] Improved Snapshot Explorer navigation and readability with click-to-open folders, line-numbered code previews, horizontal scrolling, and lightweight syntax coloring for code/config files.
 - [VS-1808] Changed Snapshot Explorer folder browsing to expand/collapse folders inline so users can browse nested files without losing the surrounding folder context.
 - [VS-1829] Reworked first-run onboarding from a long feature tour into an interactive setup guide for project root, backup destination, first project, first backup, and restore-point review.
@@ -16,6 +14,10 @@
 - [VS-1822] Reduced duplicated backup UI literals for progress stages, backup filters, restore/delete dialogs, telemetry fields, and repeated action styling.
 - [VS-1822] Reduced duplicated Settings, shell, onboarding, metadata-sync, and rsync lookup literals flagged by Sonar.
 - [VS-1828] Refreshed setup-python, Microsoft.NET.Test.Sdk, SkiaSharp, and HarfBuzzSharp dependencies for the 1.8.2 release train.
+### Fixed
+- [VS-1808] Snapshot Explorer now previews selected text-like files automatically, highlights the selected row more clearly, and prevents repeated Explore actions from opening duplicate Explorer windows.
+- [VS-1808] Snapshot Explorer action buttons no longer stay disabled after switching from an in-flight file preview to a folder selection.
+- [BUG-18058] macOS now uses an exclusive per-user lock file for single-instance startup, reducing intermittent duplicate app launches.
 
 ## [1.8.1] - 25.06.2026
 ### Added

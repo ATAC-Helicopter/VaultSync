@@ -1861,6 +1861,9 @@
 - [x] `BUG-18057` `P1` Prevent multiple VaultSync UI instances on Linux. _(Done 2026-06-22, tracked by #397; target 1.8.1)_
   - Done: Linux startup holds a per-user OS file lock for the UI process lifetime and repeated launches signal the existing instance.
   - Done: regression coverage verifies that concurrent acquisition is rejected and the lock becomes available after shutdown.
+- [x] `BUG-18058` `P1` Prevent intermittent duplicate VaultSync UI sessions on macOS. _(Done locally; target 1.8.2)_
+  - Done: macOS startup now uses an exclusive per-user lock file instead of the named mutex path.
+  - Done: single-instance regression coverage now exercises the macOS file-lock path on macOS.
 - [x] `VS-1824` `P1` Add basic Recovery report export. _(Done locally; tracked by #395; target 1.8.1)_
   - Scope: export the current readiness score, coverage windows, recommendations, and per-project recovery matrix.
   - Acceptance: reports are readable outside VaultSync, localized where practical, and do not expose secrets or credentials.
