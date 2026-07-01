@@ -34,11 +34,12 @@ def resolve_workspace_path(raw_path: str) -> Path:
 
 
 def child_path(root: Path, relative_name: str) -> Path:
-    lexical = Path(os.path.abspath(root / relative_name))
-    if not is_within(lexical, root):
+    normalized_root = root.resolve()
+    lexical = Path(os.path.abspath(normalized_root / relative_name))
+    if not is_within(lexical, normalized_root):
         raise ValueError(f"Generated path escapes output directory: {relative_name}")
     candidate = lexical.resolve()
-    if not is_within(candidate, root):
+    if not is_within(candidate, normalized_root):
         raise ValueError(f"Resolved generated path escapes output directory: {relative_name}")
     return candidate
 

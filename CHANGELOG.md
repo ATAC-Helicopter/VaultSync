@@ -17,6 +17,7 @@
 ### Fixed
 - [VS-1808] Snapshot Explorer now previews selected text-like files automatically, highlights the selected row more clearly, and prevents repeated Explore actions from opening duplicate Explorer windows.
 - [VS-1808] Snapshot Explorer action buttons no longer stay disabled after switching from an in-flight file preview to a folder selection.
+- [VS-1821] Download stats path guards now normalize macOS-resolved roots before child-path validation, avoiding false escape failures while preserving workspace confinement.
 - [BUG-18058] macOS now uses an exclusive per-user lock file for single-instance startup, reducing intermittent duplicate app launches.
 
 ## [1.8.1] - 25.06.2026
