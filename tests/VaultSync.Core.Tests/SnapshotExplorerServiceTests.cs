@@ -46,6 +46,28 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public void PreviewText_FolderBackup_ReturnsSourceCodeText()
+    {
+        string backup = CreateFolderBackup();
+
+        SnapshotPreviewResult preview = _service.PreviewText(backup, "src/Program.cs");
+
+        Assert.True(preview.Success);
+        Assert.Contains("Console.WriteLine", preview.Text);
+    }
+
+    [Fact]
+    public void PreviewText_FolderBackup_RejectsBinaryContent()
+    {
+        string backup = CreateFolderBackup();
+
+        SnapshotPreviewResult preview = _service.PreviewText(backup, "asset.bin");
+
+        Assert.False(preview.Success);
+        Assert.Contains("text-like files", preview.Error);
+    }
+
+    [Fact]
     public void List_ArchiveBackup_SupportsSearchAndPreview()
     {
         string backup = CreateArchiveBackup();
@@ -98,6 +120,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         Directory.CreateDirectory(Path.Combine(backup, "src"));
         Directory.CreateDirectory(Path.Combine(backup, "docs"));
         File.WriteAllText(Path.Combine(backup, "src", "app.json"), "{\"name\":\"VaultSync\"}");
+        File.WriteAllText(Path.Combine(backup, "src", "Program.cs"), "Console.WriteLine(\"VaultSync\");");
         File.WriteAllText(Path.Combine(backup, "docs", "notes.md"), "# Notes");
         File.WriteAllBytes(Path.Combine(backup, "asset.bin"), [0, 1, 2]);
         return backup;

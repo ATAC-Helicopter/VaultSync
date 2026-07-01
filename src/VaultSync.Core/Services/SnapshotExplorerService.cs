@@ -7,17 +7,8 @@ namespace VaultSync.Core.Services;
 public sealed class SnapshotExplorerService
 {
     private const int DefaultPreviewBytes = 256 * 1024;
-    private static readonly HashSet<string> PreviewExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".txt",
-        ".md",
-        ".markdown",
-        ".json",
-        ".xml",
-        ".yaml",
-        ".yml",
-        ".log"
-    };
+    private const double MaxBinaryControlCharacterRatio = 0.02;
+    private const string UnsupportedPreviewMessage = "Preview is available for text-like files only.";
 
     public SnapshotExplorerResult List(string backupRoot, string? folderPath = null, string? search = null)
     {
@@ -42,9 +33,6 @@ public sealed class SnapshotExplorerService
             maxBytes = DefaultPreviewBytes;
 
         string safePath = NormalizeExplorerPath(relativePath, allowEmpty: false);
-        if (!IsPreviewable(safePath))
-            return SnapshotPreviewResult.Failure("Preview is available for text, Markdown, JSON, XML, YAML, and LOG files.");
-
         BackupSource source = ResolveSource(backupRoot);
         if (source.Kind == SnapshotExplorerSourceKind.EncryptedArchive)
             return SnapshotPreviewResult.Failure("Encrypted backup preview is not available in Snapshot Explorer yet.");
@@ -86,7 +74,8 @@ public sealed class SnapshotExplorerService
     }
 
     public static bool IsPreviewable(string relativePath) =>
-        PreviewExtensions.Contains(Path.GetExtension(relativePath));
+        !string.IsNullOrWhiteSpace(relativePath) &&
+        !relativePath.EndsWith("/", StringComparison.Ordinal);
 
     private static IReadOnlyList<SnapshotExplorerEntry> ListFolder(string backupRoot, string folderPath, string search)
     {
@@ -202,6 +191,9 @@ public sealed class SnapshotExplorerService
             return SnapshotPreviewResult.Failure("File is missing from the backup.");
 
         byte[] buffer = ReadPrefix(path, maxBytes, out bool truncated);
+        if (!LooksLikeText(buffer))
+            return SnapshotPreviewResult.Failure(UnsupportedPreviewMessage);
+
         return SnapshotPreviewResult.Ok(DecodeText(buffer), truncated);
     }
 
@@ -216,6 +208,9 @@ public sealed class SnapshotExplorerService
 
         using Stream stream = entry.Open();
         byte[] buffer = ReadPrefix(stream, maxBytes, out bool truncated, entry.Length);
+        if (!LooksLikeText(buffer))
+            return SnapshotPreviewResult.Failure(UnsupportedPreviewMessage);
+
         return SnapshotPreviewResult.Ok(DecodeText(buffer), truncated);
     }
 
@@ -388,6 +383,24 @@ public sealed class SnapshotExplorerService
             return Encoding.UTF8.GetString(buffer, 3, buffer.Length - 3);
 
         return Encoding.UTF8.GetString(buffer);
+    }
+
+    private static bool LooksLikeText(byte[] buffer)
+    {
+        if (buffer.Length == 0)
+            return true;
+
+        if (buffer.Contains((byte)0))
+            return false;
+
+        int controlCharacters = 0;
+        foreach (byte value in buffer)
+        {
+            if (value < 0x20 && value != (byte)'\t' && value != (byte)'\r' && value != (byte)'\n')
+                controlCharacters++;
+        }
+
+        return controlCharacters / (double)buffer.Length <= MaxBinaryControlCharacterRatio;
     }
 
     private readonly record struct BackupSource(SnapshotExplorerSourceKind Kind, string Path);
