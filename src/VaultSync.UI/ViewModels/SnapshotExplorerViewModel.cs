@@ -233,6 +233,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         int version = ++_previewRequestVersion;
         if (entry is null)
         {
+            IsBusy = false;
             PreviewText = IsEncryptedBackup
                 ? EncryptedBackupMessage
                 : L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
@@ -241,6 +242,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
 
         if (entry.IsFolder)
         {
+            IsBusy = false;
             PreviewText = L("SnapshotExplorer.Preview.OpenFolder", "Open this folder to browse its contents.");
             StatusText = entry.Name;
             return;
