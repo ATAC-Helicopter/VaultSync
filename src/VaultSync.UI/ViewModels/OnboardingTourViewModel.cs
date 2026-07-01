@@ -15,6 +15,8 @@ public sealed class OnboardingTourStep
 {
     public string Title { get; }
     public string Body { get; }
+    public string ActionText { get; }
+    public string CompleteText { get; }
     public string TargetName => _targetNameProvider();
     public string RequiredView { get; }
     public Func<bool> IsComplete { get; }
@@ -22,10 +24,21 @@ public sealed class OnboardingTourStep
     public Func<bool> IsApplicable { get; }
     private readonly Func<string> _targetNameProvider;
 
-    public OnboardingTourStep(string title, string body, string targetName, string requiredView, Func<bool> isComplete, bool autoAdvance = true, Func<bool>? isApplicable = null)
+    public OnboardingTourStep(
+        string title,
+        string body,
+        string actionText,
+        string completeText,
+        string targetName,
+        string requiredView,
+        Func<bool> isComplete,
+        bool autoAdvance = true,
+        Func<bool>? isApplicable = null)
     {
         Title = title;
         Body = body;
+        ActionText = actionText;
+        CompleteText = completeText;
         _targetNameProvider = () => targetName;
         RequiredView = requiredView;
         IsComplete = isComplete;
@@ -33,10 +46,21 @@ public sealed class OnboardingTourStep
         IsApplicable = isApplicable ?? (() => true);
     }
 
-    public OnboardingTourStep(string title, string body, Func<string> targetNameProvider, string requiredView, Func<bool> isComplete, bool autoAdvance = true, Func<bool>? isApplicable = null)
+    public OnboardingTourStep(
+        string title,
+        string body,
+        string actionText,
+        string completeText,
+        Func<string> targetNameProvider,
+        string requiredView,
+        Func<bool> isComplete,
+        bool autoAdvance = true,
+        Func<bool>? isApplicable = null)
     {
         Title = title;
         Body = body;
+        ActionText = actionText;
+        CompleteText = completeText;
         _targetNameProvider = targetNameProvider;
         RequiredView = requiredView;
         IsComplete = isComplete;
@@ -98,7 +122,39 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     }
     public string Title => CurrentStep?.Title ?? string.Empty;
     public string Body => CurrentStep?.Body ?? string.Empty;
+    public string ActionText => CurrentStep?.ActionText ?? string.Empty;
+    public string CompleteText => CurrentStep?.CompleteText ?? string.Empty;
+    public static string ActionHeadingText => L("Onboarding.ActionHeading", "Next");
+    public static string CompleteHeadingText => L("Onboarding.CompleteHeading", "Done");
     public string TargetName => CurrentStep?.TargetName ?? string.Empty;
+    public bool HasActionText => !string.IsNullOrWhiteSpace(ActionText) && !IsStepComplete;
+    public bool HasCompleteText => !string.IsNullOrWhiteSpace(CompleteText) && IsStepComplete;
+    public bool CanGoBack => PreviousApplicableIndex() >= 0;
+    public double ProgressValue
+    {
+        get
+        {
+            int total = ApplicableStepCount();
+            if (total <= 0)
+                return 0d;
+
+            int index = CurrentApplicableIndex();
+            return Math.Clamp((index + 1d) / total, 0d, 1d);
+        }
+    }
+
+    public string StatusText
+    {
+        get
+        {
+            if (!IsOnRequiredView)
+                return L("Onboarding.Status.OpenPage", "Open the right page to continue");
+
+            return IsStepComplete
+                ? L("Onboarding.Status.Done", "Done")
+                : L("Onboarding.Status.Waiting", "Waiting for you");
+        }
+    }
 
     public bool IsStepComplete
     {
@@ -110,6 +166,9 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                 OnPropertyChanged(nameof(CanAdvance));
                 OnPropertyChanged(nameof(PrimaryLabel));
                 OnPropertyChanged(nameof(IsPrimaryEnabled));
+                OnPropertyChanged(nameof(HasActionText));
+                OnPropertyChanged(nameof(HasCompleteText));
+                OnPropertyChanged(nameof(StatusText));
             }
         }
     }
@@ -140,7 +199,9 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     }
 
     public static string SkipLabel => L("Onboarding.Skip", "Skip");
+    public static string BackLabel => L("Onboarding.Back", "Back");
 
+    public RelayCommand PreviousCommand { get; }
     public RelayCommand PrimaryCommand { get; }
     public RelayCommand SkipCommand { get; }
 
@@ -154,10 +215,43 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         string.IsNullOrWhiteSpace(CurrentStep.RequiredView) ||
         string.Equals(_app.CurrentViewKey, CurrentStep.RequiredView, StringComparison.OrdinalIgnoreCase);
 
+    private int ApplicableStepCount() =>
+        _steps.Count(step => step.IsApplicable());
+
+    private int CurrentApplicableIndex()
+    {
+        int index = 0;
+        OnboardingTourStep? current = CurrentStep;
+        foreach (OnboardingTourStep step in _steps)
+        {
+            if (!step.IsApplicable())
+                continue;
+
+            if (ReferenceEquals(step, current))
+                return index;
+
+            index++;
+        }
+
+        return Math.Clamp(_index, 0, Math.Max(index - 1, 0));
+    }
+
+    private int PreviousApplicableIndex()
+    {
+        for (int i = _index - 1; i >= 0; i--)
+        {
+            if (_steps[i].IsApplicable())
+                return i;
+        }
+
+        return -1;
+    }
+
     public OnboardingTourViewModel(AppViewModel app)
     {
         _app = app;
 
+        PreviousCommand = new RelayCommand(_ => GoBack());
         PrimaryCommand = new RelayCommand(_ => HandlePrimary());
         SkipCommand = new RelayCommand(_ => Stop());
 
@@ -217,6 +311,17 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         }
     }
 
+    private void GoBack()
+    {
+        int previous = PreviousApplicableIndex();
+        if (previous < 0)
+            return;
+
+        _index = previous;
+        Interlocked.Exchange(ref _advanceQueued, 0);
+        UpdateState();
+    }
+
     private void BuildSteps()
     {
         _steps.Clear();
@@ -262,15 +367,57 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         string DestinationTarget() =>
             UseAdvancedDestinations() ? "AddDestinationButton" : "BackupLocationRow";
 
-        void AddStep(string title, string body, string targetName, string requiredView, Func<bool> isComplete, bool autoAdvance = false, Func<bool>? isApplicable = null)
-            => _steps.Add(new OnboardingTourStep(title, body, targetName, requiredView, isComplete, autoAdvance, isApplicable));
+        void AddStep(
+            string title,
+            string body,
+            string actionText,
+            string completeText,
+            string targetName,
+            string requiredView,
+            Func<bool> isComplete,
+            bool autoAdvance = false,
+            Func<bool>? isApplicable = null)
+        {
+            _steps.Add(new OnboardingTourStep(
+                title,
+                body,
+                actionText,
+                completeText,
+                targetName,
+                requiredView,
+                isComplete,
+                autoAdvance,
+                isApplicable));
+        }
 
-        void AddStepDynamic(string title, string body, Func<string> targetNameProvider, string requiredView, Func<bool> isComplete, bool autoAdvance = false, Func<bool>? isApplicable = null)
-            => _steps.Add(new OnboardingTourStep(title, body, targetNameProvider, requiredView, isComplete, autoAdvance, isApplicable));
+        void AddStepDynamic(
+            string title,
+            string body,
+            string actionText,
+            string completeText,
+            Func<string> targetNameProvider,
+            string requiredView,
+            Func<bool> isComplete,
+            bool autoAdvance = false,
+            Func<bool>? isApplicable = null)
+        {
+            _steps.Add(new OnboardingTourStep(
+                title,
+                body,
+                actionText,
+                completeText,
+                targetNameProvider,
+                requiredView,
+                isComplete,
+                autoAdvance,
+                isApplicable));
+        }
 
         AddStep(
             L("Onboarding.Setup.Intro.Title", "Set up your first backup"),
             L("Onboarding.Setup.Intro.Body", "VaultSync only needs three things to become useful: where your projects live, where backups should go, and one project to protect. Advanced options can wait."),
+            L("Onboarding.Setup.Intro.Action", "Start with the basics. This guide will stay out of your way and only point at the next control you need."),
+            L("Onboarding.Setup.Intro.Done", "Ready."),
             string.Empty,
             string.Empty,
             () => true);
@@ -278,6 +425,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         AddStep(
             L("Onboarding.Setup.ProjectsRoot.Title", "Tell VaultSync where your projects live"),
             L("Onboarding.Setup.ProjectsRoot.Body", "Choose the folder that contains your project folders. VaultSync uses this to find candidates and keep future setup fast."),
+            L("Onboarding.Setup.ProjectsRoot.Action", "Open Settings and choose your projects root folder."),
+            L("Onboarding.Setup.ProjectsRoot.Done", "Projects root selected."),
             "ProjectsRootRow",
             SettingsViewName,
             HasProjectsRoot);
@@ -285,6 +434,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         AddStepDynamic(
             L("Onboarding.Setup.Destination.Title", "Choose where backups should be stored"),
             L("Onboarding.Setup.Destination.Body", "Pick a local, external, or network location that is not inside the project you are backing up. Simple mode is enough for a first run."),
+            L("Onboarding.Setup.Destination.Action", "Choose a backup folder. If you use advanced destinations, add one active destination with a path."),
+            L("Onboarding.Setup.Destination.Done", "Backup destination ready."),
             DestinationTarget,
             SettingsViewName,
             HasBackupDestination);
@@ -292,6 +443,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         AddStep(
             L("Onboarding.Setup.Project.Title", "Add your first project"),
             L("Onboarding.Setup.Project.Body", "Register one project first. You can add more later after you have confirmed the backup flow works."),
+            L("Onboarding.Setup.Project.Action", "Open Projects, select one project candidate, and add it to VaultSync."),
+            L("Onboarding.Setup.Project.Done", "First project registered."),
             "ProjectSnapshotButton",
             ProjectsViewName,
             HasRegisteredProject);
@@ -299,6 +452,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         AddStep(
             L("Onboarding.Setup.Backup.Title", "Run the first backup"),
             L("Onboarding.Setup.Backup.Body", "Start a backup for the project. Once it completes, VaultSync can show history, diff summaries, and restore points."),
+            L("Onboarding.Setup.Backup.Action", "Open Backups and run a backup for the registered project."),
+            L("Onboarding.Setup.Backup.Done", "First backup completed."),
             "PerProjectBackupButton",
             BackupsViewName,
             () => _app.BackupsViewModel.HasAnyBackups);
@@ -306,6 +461,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         AddStep(
             L("Onboarding.Setup.Done.Title", "You have a restore point"),
             L("Onboarding.Setup.Done.Body", "This Backups section is where you verify snapshots, browse backup contents, restore files, and review future backup history."),
+            L("Onboarding.Setup.Done.Action", "Review this page when you want to restore files or inspect backup history."),
+            L("Onboarding.Setup.Done.Done", "Onboarding complete."),
             "BackupsHistorySection",
             BackupsViewName,
             () => true);
@@ -353,10 +510,16 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         OnPropertyChanged(nameof(StepCounter));
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(Body));
+        OnPropertyChanged(nameof(ActionText));
+        OnPropertyChanged(nameof(CompleteText));
         OnPropertyChanged(nameof(TargetName));
+        OnPropertyChanged(nameof(HasActionText));
+        OnPropertyChanged(nameof(HasCompleteText));
+        OnPropertyChanged(nameof(CanGoBack));
+        OnPropertyChanged(nameof(ProgressValue));
+        OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(PrimaryLabel));
         OnPropertyChanged(nameof(IsPrimaryEnabled));
-
     }
 
     private AppConfig GetConfig()

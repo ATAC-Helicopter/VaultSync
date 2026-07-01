@@ -1887,6 +1887,7 @@
 - [ ] `VS-1823` `P1` Add large-history performance budgets and release benchmarks. _(Tracked by #382)_
 - [x] `VS-1829` `P1` Rebuild first-run onboarding around the first successful backup. _(Done locally; target 1.8.2)_
   - Done: onboarding now uses a six-step setup path instead of a broad feature tour, stops auto-jumping between pages, and focuses first-time users on project root, backup destination, first project, first backup, and where restore points live.
+  - Done: the overlay was rebuilt as an interactive progress card with actionable next-step copy, completed-state feedback, Back/Skip/Continue controls, and a non-blocking highlight mask for the target control.
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
