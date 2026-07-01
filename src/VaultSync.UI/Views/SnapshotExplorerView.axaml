@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+        xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
         xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
         x:Class="VaultSync.UI.Views.SnapshotExplorerView"
         x:DataType="vm:SnapshotExplorerViewModel"
@@ -151,11 +152,11 @@
                          Foreground="{DynamicResource TextSecondaryBrush}" />
             </Border>
             <ScrollViewer Margin="12"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto"
                           IsVisible="{Binding !IsEncryptedBackup}">
-              <TextBlock Text="{Binding PreviewText}"
-                         FontFamily="Consolas, Menlo, monospace"
-                         FontSize="12"
-                         TextWrapping="Wrap" />
+              <controls:CodePreviewBlock CodeText="{Binding PreviewText}"
+                                         FileName="{Binding PreviewFileName}" />
             </ScrollViewer>
           </Grid>
         </Grid>

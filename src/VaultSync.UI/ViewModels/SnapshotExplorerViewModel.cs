@@ -48,6 +48,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
     private string _currentPath = string.Empty;
     private string _searchText = string.Empty;
     private string _previewText = string.Empty;
+    private string _previewFileName = string.Empty;
     private string _statusText = string.Empty;
     private bool _isBusy;
     private bool _isEncryptedBackup;
@@ -123,6 +124,12 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         private set => SetField(ref _previewText, value);
     }
 
+    public string PreviewFileName
+    {
+        get => _previewFileName;
+        private set => SetField(ref _previewFileName, value);
+    }
+
     public string StatusText
     {
         get => _statusText;
@@ -192,6 +199,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
             PreviewText = IsEncryptedBackup
                 ? EncryptedBackupMessage
                 : L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
+            PreviewFileName = string.Empty;
             SelectedEntry = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
@@ -210,9 +218,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         if (SelectedEntry?.IsFolder != true)
             return;
 
-        CurrentPath = SelectedEntry.Path;
-        SearchText = string.Empty;
-        await LoadEntriesAsync();
+        await OpenFolderAsync(SelectedEntry.Path);
     }
 
     private async Task GoUpAsync()
@@ -237,18 +243,31 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
             PreviewText = IsEncryptedBackup
                 ? EncryptedBackupMessage
                 : L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
+            PreviewFileName = string.Empty;
             return;
         }
 
         if (entry.IsFolder)
         {
-            IsBusy = false;
-            PreviewText = L("SnapshotExplorer.Preview.OpenFolder", "Open this folder to browse its contents.");
-            StatusText = entry.Name;
+            _ = OpenFolderAsync(entry.Path);
             return;
         }
 
         _ = PreviewSelectedAsync(entry.Path, version);
+    }
+
+    private async Task OpenFolderAsync(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        IsBusy = false;
+        CurrentPath = path;
+        SearchText = string.Empty;
+        PreviewFileName = string.Empty;
+        PreviewText = L("SnapshotExplorer.Preview.OpeningFolder", "Opening folder...");
+        StatusText = LF("SnapshotExplorer.Status.OpeningFolder", "Opening {0}...", path);
+        await LoadEntriesAsync();
     }
 
     private Task PreviewSelectedAsync() =>
@@ -260,6 +279,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
             return;
 
         IsBusy = true;
+        PreviewFileName = Path.GetFileName(selectedPath);
         StatusText = L("SnapshotExplorer.Status.PreviewLoading", "Loading preview...");
         try
         {
