@@ -11,18 +11,34 @@ using VaultSync.UI.Services;
 
 namespace VaultSync.UI.ViewModels;
 
-public sealed class SnapshotExplorerEntryViewModel
+public sealed class SnapshotExplorerEntryViewModel : ViewModelBase
 {
-    public SnapshotExplorerEntryViewModel(SnapshotExplorerEntry entry)
+    private bool _isExpanded;
+
+    public SnapshotExplorerEntryViewModel(SnapshotExplorerEntry entry, int depth = 0)
     {
         Entry = entry;
+        Depth = depth;
     }
 
     public SnapshotExplorerEntry Entry { get; }
+    public int Depth { get; }
     public string Name => Entry.Name;
     public string Path => Entry.Path;
     public bool IsFolder => Entry.Kind == SnapshotExplorerEntryKind.Folder;
     public bool CanPreview => Entry.CanPreview;
+    public double Indent => Depth * 18d;
+    public string ToggleGlyph => IsFolder ? (IsExpanded ? "▾" : "▸") : " ";
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (SetField(ref _isExpanded, value))
+                OnPropertyChanged(nameof(ToggleGlyph));
+        }
+    }
+
     public string KindLabel => IsFolder
         ? L("SnapshotExplorer.Kind.Folder", "Folder")
         : L("SnapshotExplorer.Kind.File", "File");
@@ -71,7 +87,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         _backupRoot = backupRoot;
         _restoreTargetRoot = restoreTargetRoot;
         Title = title;
-        _openSelectedCommand = new RelayCommand(async _ => await OpenSelectedAsync(), _ => !IsBusy && SelectedEntry?.IsFolder == true);
+        _openSelectedCommand = new RelayCommand(async _ => await ToggleSelectedFolderAsync(), _ => !IsBusy && SelectedEntry?.IsFolder == true);
         _previewSelectedCommand = new RelayCommand(async _ => await PreviewSelectedAsync(), _ => !IsBusy && SelectedEntry?.CanPreview == true);
         _restoreSelectedCommand = new RelayCommand(async _ => await RestoreSelectedAsync(), _ => !IsBusy && SelectedEntry is not null);
         _goUpCommand = new RelayCommand(async _ => await GoUpAsync(), _ => !IsBusy && !string.IsNullOrWhiteSpace(CurrentPath));
@@ -213,12 +229,12 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         }
     }
 
-    private async Task OpenSelectedAsync()
+    private async Task ToggleSelectedFolderAsync()
     {
         if (SelectedEntry?.IsFolder != true)
             return;
 
-        await OpenFolderAsync(SelectedEntry.Path);
+        await ToggleFolderAsync(SelectedEntry);
     }
 
     private async Task GoUpAsync()
@@ -249,25 +265,75 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
 
         if (entry.IsFolder)
         {
-            _ = OpenFolderAsync(entry.Path);
+            _ = ToggleFolderAsync(entry);
             return;
         }
 
         _ = PreviewSelectedAsync(entry.Path, version);
     }
 
-    private async Task OpenFolderAsync(string path)
+    private async Task ToggleFolderAsync(SnapshotExplorerEntryViewModel folder)
     {
-        if (string.IsNullOrWhiteSpace(path))
+        if (!folder.IsFolder)
             return;
 
-        IsBusy = false;
-        CurrentPath = path;
-        SearchText = string.Empty;
+        if (folder.IsExpanded)
+        {
+            CollapseFolder(folder);
+            PreviewFileName = string.Empty;
+            PreviewText = L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
+            StatusText = LF("SnapshotExplorer.Status.ItemCount", "{0} item(s)", Entries.Count);
+            return;
+        }
+
+        await ExpandFolderAsync(folder);
+    }
+
+    private async Task ExpandFolderAsync(SnapshotExplorerEntryViewModel folder)
+    {
+        if (IsBusy)
+            return;
+
+        IsBusy = true;
         PreviewFileName = string.Empty;
         PreviewText = L("SnapshotExplorer.Preview.OpeningFolder", "Opening folder...");
-        StatusText = LF("SnapshotExplorer.Status.OpeningFolder", "Opening {0}...", path);
-        await LoadEntriesAsync();
+        StatusText = LF("SnapshotExplorer.Status.OpeningFolder", "Opening {0}...", folder.Path);
+
+        try
+        {
+            SnapshotExplorerResult result = await Task.Run(() => _service.List(_backupRoot, folder.Path));
+            int index = Entries.IndexOf(folder);
+            if (index < 0)
+                return;
+
+            folder.IsExpanded = true;
+            foreach (SnapshotExplorerEntry child in result.Entries.Reverse())
+                Entries.Insert(index + 1, new SnapshotExplorerEntryViewModel(child, folder.Depth + 1));
+
+            StatusText = LF("SnapshotExplorer.Status.ItemCount", "{0} item(s)", Entries.Count);
+            PreviewText = L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            StatusText = ex.Message;
+            PreviewText = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private void CollapseFolder(SnapshotExplorerEntryViewModel folder)
+    {
+        int index = Entries.IndexOf(folder);
+        if (index < 0)
+            return;
+
+        folder.IsExpanded = false;
+        int removeAt = index + 1;
+        while (removeAt < Entries.Count && Entries[removeAt].Depth > folder.Depth)
+            Entries.RemoveAt(removeAt);
     }
 
     private Task PreviewSelectedAsync() =>

@@ -90,19 +90,30 @@
                    SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:SnapshotExplorerEntryViewModel">
-                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="8,6">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" Margin="8,6">
+                  <Border Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="0"
+                          Width="{Binding Indent}" />
                   <TextBlock Grid.Row="0"
-                             Grid.Column="0"
+                             Grid.RowSpan="2"
+                             Grid.Column="1"
+                             Text="{Binding ToggleGlyph}"
+                             Width="18"
+                             VerticalAlignment="Center"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <TextBlock Grid.Row="0"
+                             Grid.Column="2"
                              Text="{Binding Name}"
                              FontWeight="SemiBold"
                              TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Row="0"
-                             Grid.Column="1"
+                             Grid.Column="3"
                              Text="{Binding KindLabel}"
                              Foreground="{DynamicResource TextSecondaryBrush}"
                              Margin="10,0,0,0" />
                   <StackPanel Grid.Row="1"
-                              Grid.Column="0"
+                              Grid.Column="2"
                               Grid.ColumnSpan="2"
                               Orientation="Horizontal"
                               Spacing="10">

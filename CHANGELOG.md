@@ -8,6 +8,7 @@
 - [VS-1808] Snapshot Explorer now previews selected text-like files automatically, highlights the selected row more clearly, and prevents repeated Explore actions from opening duplicate Explorer windows.
 - [VS-1808] Fixed Snapshot Explorer action buttons staying disabled after switching from an in-flight file preview to a folder selection.
 - [VS-1808] Improved Snapshot Explorer navigation and readability with click-to-open folders, line-numbered code previews, horizontal scrolling, and lightweight syntax coloring for code/config files.
+- [VS-1808] Changed Snapshot Explorer folder browsing to expand/collapse folders inline so users can browse nested files without losing the surrounding folder context.
 - [VS-1829] Reworked first-run onboarding from a long feature tour into an interactive setup guide for project root, backup destination, first project, first backup, and restore-point review.
 - [VS-1829] Simplified the onboarding card by removing the progress bar, status pill, and completed-state block while keeping focused step instructions and Back/Skip/Continue controls.
 - [VS-1821] Hardened Sonar-flagged script path writes and kept encrypted archive IV handling analyzer-visible while preserving random IV generation.
