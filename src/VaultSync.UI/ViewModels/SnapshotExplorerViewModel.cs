@@ -51,6 +51,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
     private string _statusText = string.Empty;
     private bool _isBusy;
     private bool _isEncryptedBackup;
+    private int _previewRequestVersion;
     private SnapshotExplorerEntryViewModel? _selectedEntry;
     private readonly RelayCommand _openSelectedCommand;
     private readonly RelayCommand _previewSelectedCommand;
@@ -156,6 +157,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
             if (SetField(ref _selectedEntry, value))
             {
                 RaiseCommandStatesChanged();
+                HandleSelectedEntryChanged(value);
             }
         }
     }
@@ -187,7 +189,9 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
             StatusText = IsEncryptedBackup
                 ? L("SnapshotExplorer.Status.Encrypted", "Encrypted backup detected. Use the normal restore flow for encrypted archives.")
                 : LF("SnapshotExplorer.Status.ItemCount", "{0} item(s)", Entries.Count);
-            PreviewText = string.Empty;
+            PreviewText = IsEncryptedBackup
+                ? EncryptedBackupMessage
+                : L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
             SelectedEntry = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
@@ -224,17 +228,43 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         await LoadEntriesAsync();
     }
 
-    private async Task PreviewSelectedAsync()
+    private void HandleSelectedEntryChanged(SnapshotExplorerEntryViewModel? entry)
     {
-        string? path = SelectedEntry?.Path;
-        if (string.IsNullOrWhiteSpace(path))
+        int version = ++_previewRequestVersion;
+        if (entry is null)
+        {
+            PreviewText = IsEncryptedBackup
+                ? EncryptedBackupMessage
+                : L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
+            return;
+        }
+
+        if (entry.IsFolder)
+        {
+            PreviewText = L("SnapshotExplorer.Preview.OpenFolder", "Open this folder to browse its contents.");
+            StatusText = entry.Name;
+            return;
+        }
+
+        _ = PreviewSelectedAsync(entry.Path, version);
+    }
+
+    private Task PreviewSelectedAsync() =>
+        PreviewSelectedAsync(SelectedEntry?.Path, ++_previewRequestVersion);
+
+    private async Task PreviewSelectedAsync(string? selectedPath, int requestVersion)
+    {
+        if (string.IsNullOrWhiteSpace(selectedPath))
             return;
 
         IsBusy = true;
         StatusText = L("SnapshotExplorer.Status.PreviewLoading", "Loading preview...");
         try
         {
-            SnapshotPreviewResult preview = await Task.Run(() => _service.PreviewText(_backupRoot, path));
+            SnapshotPreviewResult preview = await Task.Run(() => _service.PreviewText(_backupRoot, selectedPath));
+            if (requestVersion != _previewRequestVersion || SelectedEntry?.Path != selectedPath)
+                return;
+
             PreviewText = preview.Success
                 ? preview.Text + (preview.Truncated ? Environment.NewLine + Environment.NewLine + L("SnapshotExplorer.Preview.Truncated", "[Preview truncated]") : string.Empty)
                 : preview.Error;
@@ -244,7 +274,8 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         }
         finally
         {
-            IsBusy = false;
+            if (requestVersion == _previewRequestVersion)
+                IsBusy = false;
         }
     }
 

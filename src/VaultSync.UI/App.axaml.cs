@@ -34,8 +34,8 @@ public partial class App : Application
 {
     private static readonly IAppConfigStore ConfigStore = StaticAppConfigStore.Instance;
 
-    // Test hook: enabled while onboarding UX is being validated every startup.
-    private static readonly bool ForceOnboardingAtStartupForTesting = true;
+    // Optional test hook is environment-driven; do not force onboarding in normal builds.
+    private static readonly bool ForceOnboardingAtStartupForTesting = false;
     private static readonly string OnboardingSentinelPath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync", "onboarding.seen");
 

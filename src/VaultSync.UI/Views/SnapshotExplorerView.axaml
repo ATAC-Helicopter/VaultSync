@@ -9,6 +9,36 @@
         MinWidth="780"
         MinHeight="520"
         Title="{Binding Title}">
+  <Window.Styles>
+    <Style Selector="#SnapshotEntryList ListBoxItem">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Template">
+        <ControlTemplate TargetType="ListBoxItem">
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Padding="0">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="#SnapshotEntryList ListBoxItem:pointerover">
+      <Setter Property="Background" Value="#5C15273A" />
+      <Setter Property="BorderBrush" Value="#365A7A" />
+    </Style>
+    <Style Selector="#SnapshotEntryList ListBoxItem:selected">
+      <Setter Property="Background" Value="#8A1E3A56" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </Window.Styles>
+
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20" RowSpacing="12">
     <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
       <StackPanel Spacing="4">
@@ -52,7 +82,9 @@
                      Margin="12,10,12,6"
                      Text="{infra:LocalizedString Key=SnapshotExplorer.Section.Contents}"
                      FontWeight="SemiBold" />
-          <ListBox Grid.Row="1"
+          <ListBox x:Name="SnapshotEntryList"
+                   Grid.Row="1"
+                   SelectionMode="Single"
                    ItemsSource="{Binding Entries}"
                    SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
             <ListBox.ItemTemplate>

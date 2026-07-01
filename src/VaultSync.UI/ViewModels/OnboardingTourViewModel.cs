@@ -124,7 +124,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     public string Body => CurrentStep?.Body ?? string.Empty;
     public string ActionText => CurrentStep?.ActionText ?? string.Empty;
     public string CompleteText => CurrentStep?.CompleteText ?? string.Empty;
-    public static string ActionHeadingText => L("Onboarding.ActionHeading", "Next");
+    public static string ActionHeadingText => L("Onboarding.ActionHeading", "What to do");
     public static string CompleteHeadingText => L("Onboarding.CompleteHeading", "Done");
     public string TargetName => CurrentStep?.TargetName ?? string.Empty;
     public bool HasActionText => !string.IsNullOrWhiteSpace(ActionText) && !IsStepComplete;

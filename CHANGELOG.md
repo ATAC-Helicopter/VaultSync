@@ -5,7 +5,9 @@
 ### Changed
 - [VS-1808] Snapshot Explorer now loads browsing, preview, and selected restore work asynchronously, uses localized UI/status strings, and shows a clear encrypted-backup message when encrypted archive browsing is unavailable in v1.
 - [VS-1808] Snapshot Explorer preview now handles text-like source/config files instead of only a small extension allow-list, while rejecting binary content safely.
+- [VS-1808] Snapshot Explorer now previews selected text-like files automatically, highlights the selected row more clearly, and prevents repeated Explore actions from opening duplicate Explorer windows.
 - [VS-1829] Reworked first-run onboarding from a long feature tour into an interactive setup guide for project root, backup destination, first project, first backup, and restore-point review.
+- [VS-1829] Simplified the onboarding card by removing the progress bar, status pill, and completed-state block while keeping focused step instructions and Back/Skip/Continue controls.
 - [VS-1821] Hardened Sonar-flagged script path writes and kept encrypted archive IV handling analyzer-visible while preserving random IV generation.
 - [VS-1821] Reduced duplicated service literals for telemetry storage, drive-health probing, patch helper staging, support bundle redaction, and SQLite schema checks.
 - [VS-1822] Reduced duplicated backup UI literals for progress stages, backup filters, restore/delete dialogs, telemetry fields, and repeated action styling.

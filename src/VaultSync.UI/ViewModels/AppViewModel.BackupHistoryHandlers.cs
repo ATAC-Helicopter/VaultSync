@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -34,6 +35,7 @@ namespace VaultSync.UI.ViewModels
         private const string RestoreFailedKey = "Backups.Status.RestoreFailed";
         private const string RestoreFailedFallback = "Restore failed.";
         private const string TextSecondaryBrushKey = "TextSecondary";
+        private int _snapshotExplorerOpenRequest;
 
         private void OnDeleteBackupRequested(BackupSnapshotItem? snapshot)
         {
@@ -366,33 +368,43 @@ namespace VaultSync.UI.ViewModels
             if (!int.TryParse(snapshot.Id, out int backupId))
                 return;
 
-            RestoreBackupPreparation preparation = await Task.Run(() => PrepareRestoreBackup(backupId));
-            if (!preparation.IsReady)
-            {
-                BackupsViewModel.ShowNotification(
-                    AppViewModel.L("Backups.SnapshotExplorer.Unavailable", "Snapshot Explorer could not open this backup."),
-                    ErrorNotificationType);
+            if (Interlocked.Exchange(ref _snapshotExplorerOpenRequest, 1) == 1)
                 return;
-            }
 
-            await Dispatcher.UIThread.InvokeAsync(async () =>
+            try
             {
-                var vm = new SnapshotExplorerViewModel(
-                    new SnapshotExplorerService(),
-                    preparation.BackupFullPath,
-                    preparation.ProjectRoot,
-                    Lf("Backups.SnapshotExplorer.Title", "Snapshot Explorer - {0}", preparation.ProjectName));
-                var window = new SnapshotExplorerView
+                RestoreBackupPreparation preparation = await Task.Run(() => PrepareRestoreBackup(backupId));
+                if (!preparation.IsReady)
                 {
-                    DataContext = vm
-                };
+                    BackupsViewModel.ShowNotification(
+                        AppViewModel.L("Backups.SnapshotExplorer.Unavailable", "Snapshot Explorer could not open this backup."),
+                        ErrorNotificationType);
+                    return;
+                }
 
-                Window? owner = GetMainWindow();
-                if (owner is not null)
-                    await window.ShowDialog(owner);
-                else
-                    window.Show();
-            });
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    var vm = new SnapshotExplorerViewModel(
+                        new SnapshotExplorerService(),
+                        preparation.BackupFullPath,
+                        preparation.ProjectRoot,
+                        Lf("Backups.SnapshotExplorer.Title", "Snapshot Explorer - {0}", preparation.ProjectName));
+                    var window = new SnapshotExplorerView
+                    {
+                        DataContext = vm
+                    };
+
+                    Window? owner = GetMainWindow();
+                    if (owner is not null)
+                        await window.ShowDialog(owner);
+                    else
+                        window.Show();
+                });
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _snapshotExplorerOpenRequest, 0);
+            }
         }
 
         private void OnOpenSettingsRequested()

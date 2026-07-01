@@ -37,39 +37,18 @@
               Background="{DynamicResource Surface1}"
               BorderBrush="{DynamicResource BorderSoft}"
               BorderThickness="1"
-              CornerRadius="20"
+              CornerRadius="18"
               Padding="18"
-              Width="390">
-        <StackPanel Spacing="12">
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-            <StackPanel Spacing="5">
-              <TextBlock Text="{CompiledBinding StepCounter}"
-                         FontSize="11"
-                         Foreground="{DynamicResource TextSecondary}"
-                         FontWeight="SemiBold" />
-              <ProgressBar Value="{CompiledBinding ProgressValue}"
-                           Minimum="0"
-                           Maximum="1"
-                           Height="5"
-                           CornerRadius="3" />
-            </StackPanel>
-            <Border Grid.Column="1"
-                    Background="{DynamicResource Surface2}"
-                    BorderBrush="{DynamicResource BorderSoft}"
-                    BorderThickness="1"
-                    CornerRadius="999"
-                    Padding="8,4"
-                    VerticalAlignment="Top">
-              <TextBlock Text="{CompiledBinding StatusText}"
-                         FontSize="11"
-                         FontWeight="SemiBold"
-                         Foreground="{DynamicResource TextSecondary}" />
-            </Border>
-          </Grid>
+              Width="370">
+        <StackPanel Spacing="14">
+          <TextBlock Text="{CompiledBinding StepCounter}"
+                     FontSize="12"
+                     Foreground="{DynamicResource AccentBrush}"
+                     FontWeight="SemiBold" />
 
           <StackPanel Spacing="7">
             <TextBlock Text="{CompiledBinding Title}"
-                       FontSize="18"
+                       FontSize="19"
                        FontWeight="SemiBold"
                        TextWrapping="Wrap" />
             <TextBlock Text="{CompiledBinding Body}"
@@ -83,7 +62,7 @@
                   Background="{DynamicResource Surface2}"
                   BorderBrush="{DynamicResource BorderSoft}"
                   BorderThickness="1"
-                  CornerRadius="14"
+                  CornerRadius="12"
                   Padding="12">
             <StackPanel Spacing="4">
               <TextBlock Text="{CompiledBinding ActionHeadingText}"
@@ -93,25 +72,6 @@
               <TextBlock Text="{CompiledBinding ActionText}"
                          FontSize="12"
                          Foreground="{DynamicResource TextSecondary}"
-                         TextWrapping="Wrap"
-                         LineHeight="19" />
-            </StackPanel>
-          </Border>
-
-          <Border IsVisible="{CompiledBinding HasCompleteText}"
-                  Background="#1F22CC88"
-                  BorderBrush="#5522CC88"
-                  BorderThickness="1"
-                  CornerRadius="14"
-                  Padding="12">
-            <StackPanel Spacing="4">
-              <TextBlock Text="{CompiledBinding CompleteHeadingText}"
-                         FontSize="11"
-                         FontWeight="SemiBold"
-                         Foreground="#22CC88" />
-              <TextBlock Text="{CompiledBinding CompleteText}"
-                         FontSize="12"
-                         Foreground="{DynamicResource TextPrimary}"
                          TextWrapping="Wrap"
                          LineHeight="19" />
             </StackPanel>
