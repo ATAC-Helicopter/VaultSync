@@ -1815,7 +1815,13 @@
   - Done: added core folder/archive browsing, search, safe text preview, and selected file/folder restore helpers.
   - Done: added a Backups-page Explore action and Snapshot Explorer window for backup cards.
   - Done: Snapshot Explorer browsing, preview, and selected restore work runs asynchronously, all user-facing strings are localized, and encrypted backups show an explicit v1 out-of-scope message that routes users to normal restore.
-- [ ] `VS-1809` `P2` Add snapshot compare and change intelligence. _(Deferred to a later 1.8.x release; tracked by #361)_
+- [ ] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(Deferred to a later 1.8.x release before 1.9; tracked by #361)_
+  - Scope: compare two backups/snapshots and show a changed-file tree with added, modified, deleted, and unchanged states.
+  - Scope: integrate with Snapshot Explorer so users can browse changed files and inspect readable text/code changes without leaving the explorer context.
+  - Scope: add line-by-line text/code diffs for previewable files; binary/encrypted/unavailable files should show clear metadata-only or unsupported states.
+  - Acceptance: users can select older/newer restore points and understand what changed before restoring.
+  - Acceptance: large snapshots stay responsive through async loading, search/filtering, and capped preview work.
+  - Acceptance: existing summary diff cards and A/B restore-point compare remain intact, but the new view provides file-level detail.
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
