@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Globalization;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
+using VaultSync.Core.Repositories;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
 
@@ -17,56 +20,118 @@ public sealed class OnboardingTourStep
     public string Body { get; }
     public string ActionText { get; }
     public string CompleteText { get; }
-    public string TargetName => _targetNameProvider();
     public string RequiredView { get; }
-    public Func<bool> IsComplete { get; }
-    public bool AutoAdvance { get; }
-    public Func<bool> IsApplicable { get; }
-    private readonly Func<string> _targetNameProvider;
+    public Func<OnboardingSetupState, bool> IsComplete { get; }
 
     public OnboardingTourStep(
         string title,
         string body,
         string actionText,
         string completeText,
-        string targetName,
         string requiredView,
-        Func<bool> isComplete,
-        bool autoAdvance = true,
-        Func<bool>? isApplicable = null)
+        Func<OnboardingSetupState, bool> isComplete)
     {
         Title = title;
         Body = body;
         ActionText = actionText;
         CompleteText = completeText;
-        _targetNameProvider = () => targetName;
         RequiredView = requiredView;
         IsComplete = isComplete;
-        AutoAdvance = autoAdvance;
-        IsApplicable = isApplicable ?? (() => true);
+    }
+}
+
+public sealed class OnboardingChecklistItem : ViewModelBase
+{
+    private bool _isCurrent;
+    private bool _isComplete;
+
+    public OnboardingChecklistItem(int number, string title)
+    {
+        Number = number;
+        Title = title;
     }
 
-    public OnboardingTourStep(
-        string title,
-        string body,
-        string actionText,
-        string completeText,
-        Func<string> targetNameProvider,
-        string requiredView,
-        Func<bool> isComplete,
-        bool autoAdvance = true,
-        Func<bool>? isApplicable = null)
+    public int Number { get; }
+    public string Title { get; }
+
+    public bool IsCurrent
     {
-        Title = title;
-        Body = body;
-        ActionText = actionText;
-        CompleteText = completeText;
-        _targetNameProvider = targetNameProvider;
-        RequiredView = requiredView;
-        IsComplete = isComplete;
-        AutoAdvance = autoAdvance;
-        IsApplicable = isApplicable ?? (() => true);
+        get => _isCurrent;
+        set
+        {
+            if (SetField(ref _isCurrent, value))
+                OnPropertiesChanged(nameof(StatusText), nameof(StatusBrush), nameof(NumberBrush), nameof(NumberText));
+        }
     }
+
+    public bool IsComplete
+    {
+        get => _isComplete;
+        set
+        {
+            if (SetField(ref _isComplete, value))
+                OnPropertiesChanged(nameof(StatusText), nameof(StatusBrush), nameof(NumberBrush), nameof(NumberText));
+        }
+    }
+
+    public string NumberText => IsComplete ? "✓" : Number.ToString(CultureInfo.CurrentCulture);
+
+    public string StatusText
+    {
+        get
+        {
+            if (IsComplete)
+                return L("Onboarding.Status.Done", "Done");
+            return IsCurrent
+                ? L("Onboarding.Status.Current", "Now")
+                : L("Onboarding.Status.Upcoming", "Next");
+        }
+    }
+
+    public IBrush StatusBrush
+    {
+        get
+        {
+            if (IsComplete)
+                return CompleteBrush;
+            return IsCurrent
+                ? CurrentBrush
+                : MutedBrush;
+        }
+    }
+
+    public IBrush NumberBrush
+    {
+        get
+        {
+            if (IsComplete)
+                return CompleteBrush;
+            return IsCurrent
+                ? CurrentBrush
+                : MutedBrush;
+        }
+    }
+
+    private static readonly IBrush CompleteBrush = new ImmutableSolidColorBrush(Color.Parse("#22CC88"));
+    private static readonly IBrush CurrentBrush = new ImmutableSolidColorBrush(Color.Parse("#4C8DFF"));
+    private static readonly IBrush MutedBrush = new ImmutableSolidColorBrush(Color.Parse("#8A94A7"));
+
+    private static string L(string key, string fallback)
+    {
+        string? value = LocalizationProvider.Service?.GetString(key);
+        return string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal)
+            ? fallback
+            : value;
+    }
+}
+
+public sealed record OnboardingSetupState(
+    bool HasProjectsRoot,
+    bool HasBackupDestination,
+    int RegisteredProjectCount,
+    int BackupCount)
+{
+    public static OnboardingSetupState Empty { get; } = new(false, false, 0, 0);
 }
 
 public sealed class OnboardingTourViewModel : ViewModelBase
@@ -78,15 +143,17 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private readonly AppViewModel _app;
     private readonly List<OnboardingTourStep> _steps = [];
     private readonly DispatcherTimer _pollTimer;
+    private readonly IRepositoryFactory _repositoryFactory = new SqliteRepositoryFactory(StaticAppConfigStore.Instance);
     private int _index;
     private bool _isActive;
     private bool _isStepComplete;
-    private int _advanceQueued;
-    private AppConfig? _cachedConfig;
-    private DateTime _lastConfigAt;
-    private int _configRefreshInFlight;
+    private OnboardingSetupState _setupState = OnboardingSetupState.Empty;
+    private DateTime _lastStateRefreshUtc = DateTime.MinValue;
+    private int _stateRefreshInFlight;
 
     public event Action? TourCompleted;
+
+    public ObservableCollection<OnboardingChecklistItem> ChecklistItems { get; } = [];
 
     public bool IsActive
     {
@@ -94,54 +161,31 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         private set => SetField(ref _isActive, value);
     }
 
-    public string StepCounter
-    {
-        get
-        {
-            int total = 0;
-            int index = -1;
-            OnboardingTourStep? current = CurrentStep;
-            for (int i = 0; i < _steps.Count; i++)
-            {
-                OnboardingTourStep step = _steps[i];
-                if (!step.IsApplicable())
-                    continue;
+    public string StepCounter => Lf(
+        "Onboarding.StepCounter",
+        "Step {0} of {1}",
+        Math.Clamp(_index + 1, 1, Math.Max(_steps.Count, 1)),
+        _steps.Count);
 
-                if (ReferenceEquals(step, current) && index < 0)
-                {
-                    index = total;
-                }
-                total++;
-            }
+    public string ProgressText => Lf(
+        "Onboarding.Progress",
+        "{0} of {1} complete",
+        CompletedStepCount(),
+        _steps.Count);
 
-            if (index < 0)
-                index = Math.Clamp(_index, 0, Math.Max(total - 1, 0));
-
-            return Lf("Onboarding.StepCounter", "Step {0} of {1}", index + 1, total);
-        }
-    }
     public string Title => CurrentStep?.Title ?? string.Empty;
     public string Body => CurrentStep?.Body ?? string.Empty;
-    public string ActionText => CurrentStep?.ActionText ?? string.Empty;
-    public string CompleteText => CurrentStep?.CompleteText ?? string.Empty;
-    public static string ActionHeadingText => L("Onboarding.ActionHeading", "What to do");
-    public static string CompleteHeadingText => L("Onboarding.CompleteHeading", "Done");
-    public string TargetName => CurrentStep?.TargetName ?? string.Empty;
-    public bool HasActionText => !string.IsNullOrWhiteSpace(ActionText) && !IsStepComplete;
-    public bool HasCompleteText => !string.IsNullOrWhiteSpace(CompleteText) && IsStepComplete;
-    public bool CanGoBack => PreviousApplicableIndex() >= 0;
-    public double ProgressValue
-    {
-        get
-        {
-            int total = ApplicableStepCount();
-            if (total <= 0)
-                return 0d;
+    public string ActionText => IsStepComplete
+        ? CurrentStep?.CompleteText ?? string.Empty
+        : CurrentStep?.ActionText ?? string.Empty;
 
-            int index = CurrentApplicableIndex();
-            return Math.Clamp((index + 1d) / total, 0d, 1d);
-        }
-    }
+    public string ActionHeadingText => IsStepComplete
+        ? L("Onboarding.CompleteHeading", "Done")
+        : L("Onboarding.ActionHeading", "What to do");
+
+    public bool HasActionText => !string.IsNullOrWhiteSpace(ActionText);
+    public bool CanGoBack => _index > 0;
+    public double ProgressValue => _steps.Count == 0 ? 0d : Math.Clamp(CompletedStepCount() / (double)_steps.Count, 0d, 1d);
 
     public string StatusText
     {
@@ -163,17 +207,16 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         {
             if (SetField(ref _isStepComplete, value))
             {
-                OnPropertyChanged(nameof(CanAdvance));
-                OnPropertyChanged(nameof(PrimaryLabel));
-                OnPropertyChanged(nameof(IsPrimaryEnabled));
-                OnPropertyChanged(nameof(HasActionText));
-                OnPropertyChanged(nameof(HasCompleteText));
-                OnPropertyChanged(nameof(StatusText));
+                OnPropertiesChanged(
+                    nameof(PrimaryLabel),
+                    nameof(IsPrimaryEnabled),
+                    nameof(ActionText),
+                    nameof(ActionHeadingText),
+                    nameof(HasActionText),
+                    nameof(StatusText));
             }
         }
     }
-
-    public bool CanAdvance => IsStepComplete && IsOnRequiredView;
 
     public bool IsPrimaryEnabled => !IsOnRequiredView || IsStepComplete;
 
@@ -215,38 +258,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         string.IsNullOrWhiteSpace(CurrentStep.RequiredView) ||
         string.Equals(_app.CurrentViewKey, CurrentStep.RequiredView, StringComparison.OrdinalIgnoreCase);
 
-    private int ApplicableStepCount() =>
-        _steps.Count(step => step.IsApplicable());
-
-    private int CurrentApplicableIndex()
-    {
-        int index = 0;
-        OnboardingTourStep? current = CurrentStep;
-        foreach (OnboardingTourStep step in _steps)
-        {
-            if (!step.IsApplicable())
-                continue;
-
-            if (ReferenceEquals(step, current))
-                return index;
-
-            index++;
-        }
-
-        return Math.Clamp(_index, 0, Math.Max(index - 1, 0));
-    }
-
-    private int PreviousApplicableIndex()
-    {
-        for (int i = _index - 1; i >= 0; i--)
-        {
-            if (_steps[i].IsApplicable())
-                return i;
-        }
-
-        return -1;
-    }
-
     public OnboardingTourViewModel(AppViewModel app)
     {
         _app = app;
@@ -257,19 +268,19 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
         _pollTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(400)
+            Interval = TimeSpan.FromMilliseconds(500)
         };
         _pollTimer.Tick += (_, _) => Poll();
 
         BuildSteps();
+        RebuildChecklist();
     }
 
     public void Start()
     {
         _index = 0;
-        Interlocked.Exchange(ref _advanceQueued, 0);
         IsActive = true;
-        EnsureApplicableStep();
+        RefreshSetupState(force: true);
         UpdateState();
         _pollTimer.Start();
     }
@@ -290,7 +301,10 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         }
 
         if (!IsStepComplete)
+        {
+            RefreshSetupState(force: true);
             return;
+        }
 
         Advance();
     }
@@ -313,12 +327,10 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
     private void GoBack()
     {
-        int previous = PreviousApplicableIndex();
-        if (previous < 0)
+        if (_index <= 0)
             return;
 
-        _index = previous;
-        Interlocked.Exchange(ref _advanceQueued, 0);
+        _index--;
         UpdateState();
     }
 
@@ -326,152 +338,71 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     {
         _steps.Clear();
 
-        bool UseAdvancedDestinations()
-        {
-            SettingsViewModel? live = _app.SettingsViewModel;
-            if (live is not null)
-                return live.UseAdvancedDestinations;
-
-            return GetConfig().Backups.UseAdvancedDestinations;
-        }
-
-        bool HasProjectsRoot()
-        {
-            SettingsViewModel? live = _app.SettingsViewModel;
-            if (live is not null)
-                return !string.IsNullOrWhiteSpace(live.ProjectsRootPath);
-
-            return !string.IsNullOrWhiteSpace(GetConfig().ProjectsRoot);
-        }
-
-        bool HasBackupDestination()
-        {
-            SettingsViewModel? live = _app.SettingsViewModel;
-            if (live is not null)
-            {
-                if (live.UseAdvancedDestinations)
-                {
-                    return live.Destinations.Any(d =>
-                        d.Active && !string.IsNullOrWhiteSpace(d.Path));
-                }
-
-                return !string.IsNullOrWhiteSpace(live.BackupLocationPath);
-            }
-
-            return HasDestinationConfigured(GetConfig());
-        }
-
-        bool HasRegisteredProject() =>
-            _app.ProjectsViewModel.Projects.Any(p => p.IsRegistered);
-
-        string DestinationTarget() =>
-            UseAdvancedDestinations() ? "AddDestinationButton" : "BackupLocationRow";
-
-        void AddStep(
-            string title,
-            string body,
-            string actionText,
-            string completeText,
-            string targetName,
-            string requiredView,
-            Func<bool> isComplete,
-            bool autoAdvance = false,
-            Func<bool>? isApplicable = null)
-        {
-            _steps.Add(new OnboardingTourStep(
-                title,
-                body,
-                actionText,
-                completeText,
-                targetName,
-                requiredView,
-                isComplete,
-                autoAdvance,
-                isApplicable));
-        }
-
-        void AddStepDynamic(
-            string title,
-            string body,
-            string actionText,
-            string completeText,
-            Func<string> targetNameProvider,
-            string requiredView,
-            Func<bool> isComplete,
-            bool autoAdvance = false,
-            Func<bool>? isApplicable = null)
-        {
-            _steps.Add(new OnboardingTourStep(
-                title,
-                body,
-                actionText,
-                completeText,
-                targetNameProvider,
-                requiredView,
-                isComplete,
-                autoAdvance,
-                isApplicable));
-        }
-
-        AddStep(
+        _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Intro.Title", "Set up your first backup"),
             L("Onboarding.Setup.Intro.Body", "VaultSync only needs three things to become useful: where your projects live, where backups should go, and one project to protect. Advanced options can wait."),
-            L("Onboarding.Setup.Intro.Action", "Start with the basics. This guide will stay out of your way and only point at the next control you need."),
+            L("Onboarding.Setup.Intro.Action", "Start with the basics. This guide will track real setup progress and keep the next step visible."),
             L("Onboarding.Setup.Intro.Done", "Ready."),
             string.Empty,
-            string.Empty,
-            () => true);
+            _ => true));
 
-        AddStep(
+        _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.ProjectsRoot.Title", "Tell VaultSync where your projects live"),
             L("Onboarding.Setup.ProjectsRoot.Body", "Choose the folder that contains your project folders. VaultSync uses this to find candidates and keep future setup fast."),
             L("Onboarding.Setup.ProjectsRoot.Action", "Open Settings and choose your projects root folder."),
             L("Onboarding.Setup.ProjectsRoot.Done", "Projects root selected."),
-            "ProjectsRootRow",
             SettingsViewName,
-            HasProjectsRoot);
+            state => state.HasProjectsRoot));
 
-        AddStepDynamic(
+        _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Destination.Title", "Choose where backups should be stored"),
             L("Onboarding.Setup.Destination.Body", "Pick a local, external, or network location that is not inside the project you are backing up. Simple mode is enough for a first run."),
             L("Onboarding.Setup.Destination.Action", "Choose a backup folder. If you use advanced destinations, add one active destination with a path."),
             L("Onboarding.Setup.Destination.Done", "Backup destination ready."),
-            DestinationTarget,
             SettingsViewName,
-            HasBackupDestination);
+            state => state.HasBackupDestination));
 
-        AddStep(
+        _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Project.Title", "Add your first project"),
             L("Onboarding.Setup.Project.Body", "Register one project first. You can add more later after you have confirmed the backup flow works."),
             L("Onboarding.Setup.Project.Action", "Open Projects, select one project candidate, and add it to VaultSync."),
             L("Onboarding.Setup.Project.Done", "First project registered."),
-            "ProjectSnapshotButton",
             ProjectsViewName,
-            HasRegisteredProject);
+            state => state.RegisteredProjectCount > 0));
 
-        AddStep(
+        _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Backup.Title", "Run the first backup"),
             L("Onboarding.Setup.Backup.Body", "Start a backup for the project. Once it completes, VaultSync can show history, diff summaries, and restore points."),
             L("Onboarding.Setup.Backup.Action", "Open Backups and run a backup for the registered project."),
             L("Onboarding.Setup.Backup.Done", "First backup completed."),
-            "PerProjectBackupButton",
             BackupsViewName,
-            () => _app.BackupsViewModel.HasAnyBackups);
+            state => state.BackupCount > 0));
 
-        AddStep(
+        _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Done.Title", "You have a restore point"),
             L("Onboarding.Setup.Done.Body", "This Backups section is where you verify snapshots, browse backup contents, restore files, and review future backup history."),
             L("Onboarding.Setup.Done.Action", "Review this page when you want to restore files or inspect backup history."),
             L("Onboarding.Setup.Done.Done", "Onboarding complete."),
-            "BackupsHistorySection",
             BackupsViewName,
-            () => true);
+            state => state.BackupCount > 0));
+    }
+
+    private void RebuildChecklist()
+    {
+        ChecklistItems.Clear();
+        for (int i = 0; i < _steps.Count; i++)
+        {
+            ChecklistItems.Add(new OnboardingChecklistItem(i + 1, _steps[i].Title));
+        }
     }
 
     private static bool HasDestinationConfigured(AppConfig cfg)
     {
         if (cfg.Backups.UseAdvancedDestinations)
-            return cfg.Backups.Destinations.Any();
+        {
+            return cfg.Backups.Destinations.Any(destination =>
+                destination.Active && !string.IsNullOrWhiteSpace(destination.Path));
+        }
 
         string root = cfg.Backups.BackupRoot ?? cfg.Backups.BackupLocation ?? string.Empty;
         return !string.IsNullOrWhiteSpace(root);
@@ -482,84 +413,96 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         if (!IsActive)
             return;
 
+        RefreshSetupState();
         UpdateState();
+    }
 
-        if (IsStepComplete && IsOnRequiredView)
+    private void RefreshSetupState(bool force = false)
+    {
+        DateTime now = DateTime.UtcNow;
+        if (!force && (now - _lastStateRefreshUtc).TotalMilliseconds < 900)
+            return;
+
+        if (Interlocked.Exchange(ref _stateRefreshInFlight, 1) == 1)
+            return;
+
+        _lastStateRefreshUtc = now;
+        DetachedTask.Run(() =>
         {
-            OnboardingTourStep? step = CurrentStep;
-            bool autoAdvance = step?.AutoAdvance ?? true;
-            if (step is not null && autoAdvance && Interlocked.Exchange(ref _advanceQueued, 1) == 0)
+            try
             {
-                Dispatcher.UIThread.Post(async () =>
+                OnboardingSetupState state = BuildSetupState();
+                Dispatcher.UIThread.Post(() =>
                 {
-                    await Task.Delay(650);
-                    if (ReferenceEquals(CurrentStep, step) && IsStepComplete && IsOnRequiredView && step.AutoAdvance)
-                    {
-                        Advance();
-                    }
-                    Interlocked.Exchange(ref _advanceQueued, 0);
-                }, DispatcherPriority.Background);
+                    _setupState = state;
+                    UpdateState();
+                });
             }
+            finally
+            {
+                Interlocked.Exchange(ref _stateRefreshInFlight, 0);
+            }
+        }, nameof(RefreshSetupState));
+    }
+
+    private OnboardingSetupState BuildSetupState()
+    {
+        AppConfig cfg = _app.GetConfigSnapshot();
+        int projectCount = 0;
+        int backupCount = 0;
+
+        try
+        {
+            SqliteRepository repo = _repositoryFactory.Create(cfg);
+            projectCount = repo.GetAllProjects().Count();
+            backupCount = repo.GetBackupCount();
         }
+        catch
+        {
+            projectCount = _app.ProjectsViewModel.Projects.Count(project => project.IsRegistered);
+            backupCount = _app.BackupsViewModel.HasAnyBackups ? 1 : 0;
+        }
+
+        bool hasProjectsRoot =
+            !string.IsNullOrWhiteSpace(_app.SettingsViewModel.ProjectsRootPath) ||
+            !string.IsNullOrWhiteSpace(cfg.ProjectsRoot);
+
+        bool hasDestination =
+            HasDestinationConfigured(cfg) ||
+            (_app.SettingsViewModel.UseAdvancedDestinations
+                ? _app.SettingsViewModel.Destinations.Any(destination =>
+                    destination.Active && !string.IsNullOrWhiteSpace(destination.Path))
+                : !string.IsNullOrWhiteSpace(_app.SettingsViewModel.BackupLocationPath));
+
+        return new OnboardingSetupState(hasProjectsRoot, hasDestination, projectCount, backupCount);
     }
 
     private void UpdateState()
     {
-        EnsureApplicableStep();
-        IsStepComplete = CurrentStep?.IsComplete() ?? false;
-        OnPropertyChanged(nameof(StepCounter));
-        OnPropertyChanged(nameof(Title));
-        OnPropertyChanged(nameof(Body));
-        OnPropertyChanged(nameof(ActionText));
-        OnPropertyChanged(nameof(CompleteText));
-        OnPropertyChanged(nameof(TargetName));
-        OnPropertyChanged(nameof(HasActionText));
-        OnPropertyChanged(nameof(HasCompleteText));
-        OnPropertyChanged(nameof(CanGoBack));
-        OnPropertyChanged(nameof(ProgressValue));
-        OnPropertyChanged(nameof(StatusText));
-        OnPropertyChanged(nameof(PrimaryLabel));
-        OnPropertyChanged(nameof(IsPrimaryEnabled));
-    }
-
-    private AppConfig GetConfig()
-    {
-        DateTime now = DateTime.UtcNow;
-        if (_cachedConfig is not null && (now - _lastConfigAt).TotalMilliseconds < 250)
+        IsStepComplete = CurrentStep?.IsComplete(_setupState) ?? false;
+        for (int i = 0; i < ChecklistItems.Count && i < _steps.Count; i++)
         {
-            return _cachedConfig;
+            ChecklistItems[i].IsCurrent = i == _index;
+            ChecklistItems[i].IsComplete = _steps[i].IsComplete(_setupState);
         }
 
-        if (_cachedConfig is not null)
-        {
-            if (Interlocked.Exchange(ref _configRefreshInFlight, 1) == 0)
-            {
-                DetachedTask.Run(() =>
-                {
-                    try
-                    {
-                        AppConfig cfg = _app.GetConfigSnapshot();
-                        Dispatcher.UIThread.Post(() =>
-                        {
-                            _cachedConfig = cfg;
-                            _lastConfigAt = DateTime.UtcNow;
-                        });
-                    }
-                    finally
-                    {
-                        Interlocked.Exchange(ref _configRefreshInFlight, 0);
-                    }
-                }, nameof(GetConfig));
-            }
-
-            return _cachedConfig;
-        }
-
-        AppConfig fresh = _app.GetConfigSnapshot();
-        _cachedConfig = fresh;
-        _lastConfigAt = now;
-        return fresh;
+        OnPropertiesChanged(
+            nameof(StepCounter),
+            nameof(ProgressText),
+            nameof(Title),
+            nameof(Body),
+            nameof(ActionText),
+            nameof(ActionHeadingText),
+            nameof(HasActionText),
+            nameof(CanGoBack),
+            nameof(ProgressValue),
+            nameof(StatusText),
+            nameof(PrimaryLabel),
+            nameof(IsPrimaryEnabled));
     }
+
+    private int CompletedStepCount() =>
+        _steps.Count(step => step.IsComplete(_setupState));
 
     private void Advance()
     {
@@ -570,21 +513,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         }
 
         _index = Math.Min(_index + 1, _steps.Count - 1);
-        Interlocked.Exchange(ref _advanceQueued, 0);
-        EnsureApplicableStep();
         UpdateState();
-    }
-
-    private void EnsureApplicableStep()
-    {
-        int safety = _steps.Count + 1;
-        while (safety-- > 0 && CurrentStep is not null && !CurrentStep.IsApplicable())
-        {
-            if (IsLastStep)
-                break;
-
-            _index = Math.Min(_index + 1, _steps.Count - 1);
-        }
     }
 
     private static string L(string key, string fallback)

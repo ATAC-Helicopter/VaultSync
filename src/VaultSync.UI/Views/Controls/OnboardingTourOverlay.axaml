@@ -2,110 +2,144 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
-    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     x:Class="VaultSync.UI.Views.Controls.OnboardingTourOverlay"
     x:DataType="vm:OnboardingTourViewModel"
     IsVisible="{CompiledBinding IsActive}">
 
-  <Grid>
-    <Canvas x:Name="OverlayCanvas"
-            IsHitTestVisible="False">
-      <Border x:Name="OverlayTop"
-              Background="#A0000000" />
-      <Border x:Name="OverlayLeft"
-              Background="#A0000000" />
-      <Border x:Name="OverlayRight"
-              Background="#A0000000" />
-      <Border x:Name="OverlayBottom"
-              Background="#A0000000" />
-      <Border x:Name="HighlightBorder"
-              BorderBrush="{DynamicResource AccentBrush}"
-              BorderThickness="3"
-              CornerRadius="14"
-              Background="#22FFFFFF"
-              Width="10"
-              Height="10"
-              IsHitTestVisible="False" />
+  <Grid Background="#78000000">
+    <Border HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="24"
+            Width="430"
+            MaxWidth="430"
+            Background="{DynamicResource Surface1}"
+            BorderBrush="{DynamicResource BorderSoft}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="18">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+            RowSpacing="14">
 
-    </Canvas>
-
-    <Popup x:Name="CalloutPopup"
-           IsOpen="{CompiledBinding IsActive}"
-           Placement="Top"
-           IsLightDismissEnabled="False">
-      <Border x:Name="CalloutCard"
-              Background="{DynamicResource Surface1}"
-              BorderBrush="{DynamicResource BorderSoft}"
-              BorderThickness="1"
-              CornerRadius="18"
-              Padding="18"
-              Width="370">
-        <StackPanel Spacing="14">
-          <TextBlock Text="{CompiledBinding StepCounter}"
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="12">
+          <StackPanel Spacing="4">
+            <TextBlock Text="{CompiledBinding StepCounter}"
+                       FontSize="12"
+                       Foreground="{DynamicResource AccentBrush}"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{CompiledBinding ProgressText}"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextSecondary}" />
+          </StackPanel>
+          <TextBlock Grid.Column="1"
+                     Text="{CompiledBinding StatusText}"
                      FontSize="12"
-                     Foreground="{DynamicResource AccentBrush}"
-                     FontWeight="SemiBold" />
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextSecondary}"
+                     VerticalAlignment="Top" />
+        </Grid>
 
-          <StackPanel Spacing="7">
-            <TextBlock Text="{CompiledBinding Title}"
-                       FontSize="19"
+        <ProgressBar Grid.Row="1"
+                     Minimum="0"
+                     Maximum="1"
+                     Height="6"
+                     Value="{CompiledBinding ProgressValue}" />
+
+        <StackPanel Grid.Row="2"
+                    Spacing="7">
+          <TextBlock Text="{CompiledBinding Title}"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="{CompiledBinding Body}"
+                     FontSize="13"
+                     Foreground="{DynamicResource TextSecondary}"
+                     TextWrapping="Wrap"
+                     LineHeight="21" />
+        </StackPanel>
+
+        <Border Grid.Row="3"
+                Background="{DynamicResource Surface2}"
+                BorderBrush="{DynamicResource BorderSoft}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="12"
+                IsVisible="{CompiledBinding HasActionText}">
+          <StackPanel Spacing="5">
+            <TextBlock Text="{CompiledBinding ActionHeadingText}"
+                       FontSize="11"
                        FontWeight="SemiBold"
-                       TextWrapping="Wrap" />
-            <TextBlock Text="{CompiledBinding Body}"
-                       FontSize="13"
+                       Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{CompiledBinding ActionText}"
+                       FontSize="12"
                        Foreground="{DynamicResource TextSecondary}"
                        TextWrapping="Wrap"
-                       LineHeight="21" />
+                       LineHeight="19" />
           </StackPanel>
+        </Border>
 
-          <Border IsVisible="{CompiledBinding HasActionText}"
-                  Background="{DynamicResource Surface2}"
-                  BorderBrush="{DynamicResource BorderSoft}"
-                  BorderThickness="1"
-                  CornerRadius="12"
-                  Padding="12">
-            <StackPanel Spacing="4">
-              <TextBlock Text="{CompiledBinding ActionHeadingText}"
-                         FontSize="11"
-                         FontWeight="SemiBold"
-                         Foreground="{DynamicResource AccentBrush}" />
-              <TextBlock Text="{CompiledBinding ActionText}"
-                         FontSize="12"
-                         Foreground="{DynamicResource TextSecondary}"
-                         TextWrapping="Wrap"
-                         LineHeight="19" />
-            </StackPanel>
-          </Border>
+        <Grid Grid.Row="4"
+              RowDefinitions="Auto,Auto"
+              RowSpacing="14">
+          <ItemsControl ItemsSource="{CompiledBinding ChecklistItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:OnboardingChecklistItem">
+                <Grid ColumnDefinitions="28,*,Auto"
+                      ColumnSpacing="10"
+                      Margin="0,0,0,8">
+                  <Border Width="22"
+                          Height="22"
+                          CornerRadius="6"
+                          BorderBrush="{Binding NumberBrush}"
+                          BorderThickness="1"
+                          Background="{DynamicResource Surface1}"
+                          VerticalAlignment="Top">
+                    <TextBlock Text="{Binding NumberText}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{Binding NumberBrush}" />
+                  </Border>
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Title}"
+                             FontSize="12"
+                             FontWeight="SemiBold"
+                             TextWrapping="Wrap"
+                             Foreground="{DynamicResource TextPrimary}" />
+                  <TextBlock Grid.Column="2"
+                             Text="{Binding StatusText}"
+                             FontSize="11"
+                             FontWeight="SemiBold"
+                             Foreground="{Binding StatusBrush}"
+                             VerticalAlignment="Top" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
 
-          <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+          <Grid Grid.Row="1"
+                ColumnDefinitions="Auto,*,Auto,Auto"
+                ColumnSpacing="8">
             <Button Content="{CompiledBinding BackLabel}"
                     Command="{CompiledBinding PreviousCommand}"
                     IsVisible="{CompiledBinding CanGoBack}"
-                    Background="{DynamicResource Surface2}"
-                    BorderBrush="{DynamicResource BorderSoft}"
-                    Foreground="{DynamicResource TextPrimary}"
-                    CornerRadius="10"
-                    Padding="10,6" />
+                    Classes="action-ghost"
+                    Padding="12,7" />
             <Button Content="{CompiledBinding SkipLabel}"
                     Grid.Column="2"
                     Command="{CompiledBinding SkipCommand}"
-                    Background="{DynamicResource Surface2}"
-                    BorderBrush="{DynamicResource BorderSoft}"
-                    Foreground="{DynamicResource TextPrimary}"
-                    CornerRadius="10"
-                    Padding="10,6" />
+                    Classes="action-ghost"
+                    Padding="12,7" />
             <Button Content="{CompiledBinding PrimaryLabel}"
                     Grid.Column="3"
                     Command="{CompiledBinding PrimaryCommand}"
                     IsEnabled="{CompiledBinding IsPrimaryEnabled}"
-                    Background="{DynamicResource AccentBrush}"
-                    Foreground="{DynamicResource TextOnPillBrush}"
-                    BorderBrush="{DynamicResource AccentBrush}"
-                    CornerRadius="10"
-                    Padding="10,6" />
+                    Classes="action-primary"
+                    Padding="14,7" />
           </Grid>
-        </StackPanel>
-      </Border>
-    </Popup>
+        </Grid>
+      </Grid>
+    </Border>
   </Grid>
 </UserControl>
