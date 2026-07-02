@@ -58,6 +58,11 @@ namespace VaultSync.UI.ViewModels
         private string _restoreReadinessRiskLabel = string.Empty;
         private string _restoreReadinessUnavailableLabel = string.Empty;
         private bool _showRestoreReadinessIssues;
+        private string _recoveryCoverageDetail = string.Empty;
+        private string _recoveryCoverage24Label = string.Empty;
+        private string _recoveryCoverage7Label = string.Empty;
+        private string _recoveryCoverage30Label = string.Empty;
+        private string _recoveryCoverage90Label = string.Empty;
 
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
@@ -347,6 +352,61 @@ namespace VaultSync.UI.ViewModels
             {
                 if (_showRestoreReadinessIssues == value) return;
                 _showRestoreReadinessIssues = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RecoveryCoverageDetail
+        {
+            get => _recoveryCoverageDetail;
+            private set
+            {
+                if (_recoveryCoverageDetail == value) return;
+                _recoveryCoverageDetail = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RecoveryCoverage24Label
+        {
+            get => _recoveryCoverage24Label;
+            private set
+            {
+                if (_recoveryCoverage24Label == value) return;
+                _recoveryCoverage24Label = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RecoveryCoverage7Label
+        {
+            get => _recoveryCoverage7Label;
+            private set
+            {
+                if (_recoveryCoverage7Label == value) return;
+                _recoveryCoverage7Label = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RecoveryCoverage30Label
+        {
+            get => _recoveryCoverage30Label;
+            private set
+            {
+                if (_recoveryCoverage30Label == value) return;
+                _recoveryCoverage30Label = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RecoveryCoverage90Label
+        {
+            get => _recoveryCoverage90Label;
+            private set
+            {
+                if (_recoveryCoverage90Label == value) return;
+                _recoveryCoverage90Label = value;
                 OnPropertyChanged();
             }
         }
@@ -652,7 +712,10 @@ namespace VaultSync.UI.ViewModels
                             restoreReadinessBackups,
                             cfg,
                             cfg.Advanced.BackupIndexLastScan,
-                            snapshotMetadataById: restoreReadinessMetadata)
+                            snapshotMetadataById: restoreReadinessMetadata),
+                        RecoveryCoverage = new RecoveryCoverageService().BuildSummary(
+                            projects,
+                            restoreReadinessBackups)
                     };
                     _lastDashboardData = dashboardData;
                     _lastDashboardDataUtc = DateTime.UtcNow;
@@ -702,6 +765,7 @@ namespace VaultSync.UI.ViewModels
                             ? L("Dashboard.Hint.StorageEmpty", "No storage used")
                             : L("Dashboard.Hint.StorageTotal", "Total across all backups");
                         ApplyRestoreReadinessSummary(data.RestoreReadiness);
+                        ApplyRecoveryCoverageSummary(data.RecoveryCoverage);
 
                         List<ActivityItem> activityItems = BuildRecentActivityItems(data);
 
@@ -798,6 +862,7 @@ namespace VaultSync.UI.ViewModels
             public int[] ManualCounts { get; init; } = [];
             public int[] ImportedCounts { get; init; } = [];
             public RestoreReadinessSummary RestoreReadiness { get; init; } = new();
+            public RecoveryCoverageSummary RecoveryCoverage { get; init; } = new();
         }
 
         private static List<ActivityItem> BuildRecentActivityItems(DashboardData data)
@@ -1093,6 +1158,7 @@ namespace VaultSync.UI.ViewModels
             StorageUsedLocal = Lf("Dashboard.Kpi.StorageLocal", "Local: {0}", "0 B");
             StorageHint    = L("Dashboard.Hint.StorageEmpty", "No storage used");
             ApplyRestoreReadinessSummary(new RestoreReadinessSummary());
+            ApplyRecoveryCoverageSummary(new RecoveryCoverageSummary());
 
             BuildStorageDonut([]);
             AppConfig cfg = _configStore.GetSnapshot();
@@ -2167,6 +2233,25 @@ namespace VaultSync.UI.ViewModels
 
             OnPropertyChanged(nameof(HasRestoreReadinessIssues));
             ToggleRestoreReadinessIssuesCommand.RaiseCanExecuteChanged();
+        }
+
+        private void ApplyRecoveryCoverageSummary(RecoveryCoverageSummary summary)
+        {
+            using var timing = RuntimeTiming.Measure("Dashboard recovery coverage rebuild");
+            int total = Math.Max(0, summary.ProjectCount);
+            RecoveryCoverageDetail = total == 0
+                ? L("RecoveryCoverage.Detail.Empty", "No tracked projects to measure recovery coverage.")
+                : Lf(
+                    "RecoveryCoverage.Detail",
+                    "{0} of {1} project(s) have a backup within 24 hours; {2} are covered within 7 days.",
+                    summary.Within24Hours,
+                    total,
+                    summary.Within7Days);
+
+            RecoveryCoverage24Label = Lf("RecoveryCoverage.Window.24h", "24h: {0}/{1}", summary.Within24Hours, total);
+            RecoveryCoverage7Label = Lf("RecoveryCoverage.Window.7d", "7d: {0}/{1}", summary.Within7Days, total);
+            RecoveryCoverage30Label = Lf("RecoveryCoverage.Window.30d", "30d: {0}/{1}", summary.Within30Days, total);
+            RecoveryCoverage90Label = Lf("RecoveryCoverage.Window.90d", "90d: {0}/{1}", summary.Within90Days, total);
         }
 
         private static string LocalizeRestoreReadinessState(RestoreReadinessState state)
