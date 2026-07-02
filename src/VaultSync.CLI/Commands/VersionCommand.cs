@@ -10,7 +10,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class VersionCommand : AsyncCommand<VersionSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, VersionSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, VersionSettings s, CancellationToken cancellationToken)
         {
             var asm = Assembly.GetExecutingAssembly();
             string? informational = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;

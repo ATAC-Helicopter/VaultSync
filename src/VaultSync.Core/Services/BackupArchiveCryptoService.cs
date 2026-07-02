@@ -361,8 +361,10 @@ public sealed class BackupArchiveCryptoService
                 aes.BlockSize = 128;
                 aes.Mode = CipherMode.CBC;
                 aes.Padding = PaddingMode.PKCS7;
+                aes.Key = encryptionKey;
+                aes.IV = ivBytes;
 
-                using ICryptoTransform encryptor = aes.CreateEncryptor(encryptionKey, ivBytes);
+                using ICryptoTransform encryptor = aes.CreateEncryptor();
                 using var cryptoStream = new CryptoStream(output, encryptor, CryptoStreamMode.Write, leaveOpen: true);
                 source.CopyTo(cryptoStream);
                 cryptoStream.FlushFinalBlock();

@@ -40,7 +40,7 @@ namespace VaultSync.CLI.Commands
     {
         private static readonly System.Threading.SemaphoreSlim _cycleGate = new(1, 1);
 
-        protected override async Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(null);
             var repo = new SqliteRepository(db);
@@ -142,7 +142,7 @@ namespace VaultSync.CLI.Commands
                 }
             }
 
-            await RunCycle(ct, "startup");
+            await RunCycle(cancellationToken, "startup");
 
             using var watcher = new FileSystemWatcher(root)
             {
@@ -154,13 +154,13 @@ namespace VaultSync.CLI.Commands
             var debouncer = new AsyncDebouncer(Math.Max(100, s.DebounceMs));
             void OnChange(object? _, FileSystemEventArgs e)
             {
-                if (ct.IsCancellationRequested) return;
+                if (cancellationToken.IsCancellationRequested) return;
                 debouncer.Trigger(t => RunCycle(t, $"{e.ChangeType}: {e.FullPath}"));
             }
 
             void OnRename(object? _, RenamedEventArgs e)
             {
-                if (ct.IsCancellationRequested) return;
+                if (cancellationToken.IsCancellationRequested) return;
                 debouncer.Trigger(t => RunCycle(t, $"Renamed: {e.OldFullPath} -> {e.FullPath}"));
             }
 

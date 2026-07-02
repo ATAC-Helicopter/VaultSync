@@ -14,7 +14,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class PresetsListCommand : AsyncCommand<PresetsListSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, PresetsListSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, PresetsListSettings s, CancellationToken cancellationToken)
         {
             IEnumerable<string> names = PresetStore.ListNames();
             Table table = new Table().Border(TableBorder.Rounded);
@@ -27,7 +27,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class PresetsShowCommand : AsyncCommand<PresetsShowSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, PresetsShowSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, PresetsShowSettings s, CancellationToken cancellationToken)
         {
             string content = PresetStore.Load(s.Name);
             AnsiConsole.MarkupLine($"[blue]{Markup.Escape(s.Name)}[/] preset:");

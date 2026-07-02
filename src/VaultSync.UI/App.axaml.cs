@@ -87,6 +87,16 @@ public partial class App : Application
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
 
+    private static void SetCurrentInstance(App? instance) => _instance = instance;
+
+    private static void SetAppViewModelInstance(AppViewModel? viewModel) => AppViewModelInstance = viewModel;
+
+    private static void RefreshCachedDriveHealthLabel() =>
+        _cachedDriveHealthLabel = L("Tray.Health.DefaultLabel", DefaultDriveHealthLabel);
+
+    private static void ToggleRecentBackupsLatestOnly() =>
+        _trayRecentLatestOnly = !_trayRecentLatestOnly;
+
     internal static void MarkCrashing()
     {
         if (IsCrashing)
@@ -117,14 +127,14 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        _instance = this;
+        SetCurrentInstance(this);
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             CrashHandler.RegisterAvalonia();
             WireGlobalExceptionHandlers();
             WireLifecycleBreadcrumbs(desktop);
             InitializeLocalizationProviderEarly();
-            AppViewModelInstance = new AppViewModel();
+            SetAppViewModelInstance(new AppViewModel());
             DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={AppViewModelInstance.CurrentVersionDisplay}");
 
             if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out object? fontResource))
@@ -136,7 +146,7 @@ public partial class App : Application
             {
                 locService.LanguageChanged += () =>
                 {
-                    _cachedDriveHealthLabel = L("Tray.Health.DefaultLabel", DefaultDriveHealthLabel);
+                    RefreshCachedDriveHealthLabel();
                     if (_trayIcon is not null)
                     {
                         _trayIcon.ToolTipText = L("Tray.Tooltip", "VaultSync - snapshots & backups");
@@ -312,6 +322,14 @@ public partial class App : Application
                 $"WorkingSetMB={proc.WorkingSet64 / (1024 * 1024)}, GC0={GC.CollectionCount(0)}, GC1={GC.CollectionCount(1)}, GC2={GC.CollectionCount(2)}");
             DiagnosticsLogger.TryCollectDump($"ui_hang_{ageMs:0}ms");
         }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private static void StopUiWatchdog()
+    {
+        _uiHeartbeatTimer?.Stop();
+        _uiHeartbeatTimer = null;
+        _uiWatchdogTimer?.Dispose();
+        _uiWatchdogTimer = null;
     }
 
     private void ApplyLanguageFontOverrides()
@@ -1151,7 +1169,7 @@ public partial class App : Application
         };
         latestOnlyToggle.Click += (_, _) =>
         {
-            _trayRecentLatestOnly = !_trayRecentLatestOnly;
+            ToggleRecentBackupsLatestOnly();
             RefreshTrayMenu();
         };
         manageBackupsMenu.Items.Add(latestOnlyToggle);
@@ -1320,6 +1338,7 @@ public partial class App : Application
             desktop.Exit += (_, _) =>
             {
                 DiagnosticsLogger.Record($"Desktop exit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                StopUiWatchdog();
                 _instance?.DestroyTrayIcon();
                 CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
@@ -1336,6 +1355,7 @@ public partial class App : Application
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
             {
                 DiagnosticsLogger.Record($"ProcessExit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
+                StopUiWatchdog();
                 CleanupAllEncryptedOpenTempFolders();
                 Telemetry.Log("app_exit", b => b.WithCode("source", "process_exit"));
                 DiagnosticsLogger.Shutdown();
@@ -1661,11 +1681,7 @@ public partial class App : Application
             try
             {
                     string extractedDir = await Task.Run(() => ExtractEncryptedArchive(archivePath, prompt.Password)).ConfigureAwait(false);
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = extractedDir,
-                    UseShellExecute = true
-                });
+                SystemFileLauncher.OpenPath(extractedDir);
                 ScheduleEncryptedOpenTempCleanup(extractedDir);
                 return;
             }
@@ -1881,9 +1897,8 @@ public partial class App : Application
             if (!File.Exists(sourceArchivePath))
                 throw new FileNotFoundException("Encrypted backup archive not found.", sourceArchivePath);
 
-            var cryptoService = new BackupArchiveCryptoService();
             BackupArchiveCryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
-            ZipFile.ExtractToDirectory(stagingArchive, extractDir, overwriteFiles: true);
+            SafeZipExtractor.ExtractToDirectory(stagingArchive, extractDir, overwriteFiles: true);
             return extractDir;
         }
         catch

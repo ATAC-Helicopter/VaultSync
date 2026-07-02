@@ -140,8 +140,9 @@ public sealed class MetadataStore
 
     private static bool HasColumn(SqliteConnection connection, string tableName, string columnName)
     {
-        string escapedTable = tableName.Replace("'", "''", StringComparison.Ordinal);
-        IEnumerable<dynamic> columns = connection.Query($"PRAGMA table_info('{escapedTable}');");
+        IEnumerable<dynamic> columns = connection.Query(
+            "SELECT name FROM pragma_table_info(@TableName);",
+            new { TableName = tableName });
         foreach (dynamic column in columns)
         {
             string? name = (string?)column.name;
@@ -550,7 +551,7 @@ public sealed class MetadataStore
             }
         }
 
-        throw lastError!;
+        throw lastError ?? new InvalidOperationException("Metadata store could not be opened.");
     }
 
     private SqliteConnection OpenCore(bool write)
@@ -679,7 +680,9 @@ public sealed class MetadataStore
         try
         {
             return connection
-                .Query<TableColumnInfo>($"PRAGMA table_info({tableName});")
+                .Query<TableColumnInfo>(
+                    "SELECT name AS Name FROM pragma_table_info(@TableName);",
+                    new { TableName = tableName })
                 .Select(c => c.Name)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);

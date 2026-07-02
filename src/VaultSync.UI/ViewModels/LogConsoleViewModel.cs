@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -114,34 +113,7 @@ namespace VaultSync.UI.ViewModels
                 string folder = LogConsoleService.GetLogDirectory();
                 Directory.CreateDirectory(folder);
 
-                if (OperatingSystem.IsWindows())
-                {
-                    Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
-                }
-                else if (OperatingSystem.IsMacOS())
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = "open",
-                        UseShellExecute = false
-                    };
-                    psi.ArgumentList.Add(folder);
-                    Process.Start(psi);
-                }
-                else if (OperatingSystem.IsLinux())
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = "xdg-open",
-                        UseShellExecute = false
-                    };
-                    psi.ArgumentList.Add(folder);
-                    Process.Start(psi);
-                }
-                else
-                {
-                    Process.Start(new ProcessStartInfo { FileName = folder, UseShellExecute = true });
-                }
+                SystemFileLauncher.OpenPath(folder);
             }
             catch
             {

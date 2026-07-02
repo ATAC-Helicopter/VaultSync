@@ -8,16 +8,20 @@ import zipfile
 
 
 def is_within(path: Path, root: Path) -> bool:
-    return path != root and root in path.parents
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return path != root
 
 
 def resolve_workspace_path(raw_path: str, *, must_exist: bool = False, directory: bool = False) -> Path:
     workspace = Path.cwd().resolve()
     raw_candidate = Path(raw_path)
-    lexical = Path(os.path.abspath(workspace / raw_candidate if not raw_candidate.is_absolute() else raw_candidate))
+    lexical = Path(os.path.abspath(workspace / raw_candidate if not raw_candidate.is_absolute() else raw_candidate)).resolve(strict=False)
     if not is_within(lexical, workspace):
         raise ValueError(f"Path must stay inside the workspace: {raw_path}")
-    candidate = lexical.resolve()
+    candidate = lexical.resolve(strict=False)
     if not is_within(candidate, workspace):
         raise ValueError(f"Resolved path must stay inside the workspace: {raw_path}")
     if must_exist and not candidate.exists():
@@ -28,20 +32,20 @@ def resolve_workspace_path(raw_path: str, *, must_exist: bool = False, directory
 
 
 def ensure_output_path(path: Path, workspace: Path) -> Path:
-    lexical = Path(os.path.abspath(path))
+    lexical = Path(os.path.abspath(path)).resolve(strict=False)
     if not is_within(lexical, workspace):
         raise ValueError(f"Output path must stay inside the workspace: {path}")
-    resolved = lexical.resolve()
+    resolved = lexical.resolve(strict=False)
     if not is_within(resolved, workspace):
         raise ValueError(f"Resolved output path must stay inside the workspace: {path}")
     return resolved
 
 
 def ensure_child_path(path: Path, root: Path) -> Path:
-    lexical = Path(os.path.abspath(path))
+    lexical = Path(os.path.abspath(path)).resolve(strict=False)
     if not is_within(lexical, root):
         raise ValueError(f"Patch input escapes base directory: {path}")
-    resolved = lexical.resolve()
+    resolved = lexical.resolve(strict=False)
     if not is_within(resolved, root):
         raise ValueError(f"Resolved patch input escapes base directory: {path}")
     return resolved

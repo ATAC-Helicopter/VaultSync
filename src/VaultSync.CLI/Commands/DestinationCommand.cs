@@ -20,7 +20,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class DestinationCommand : AsyncCommand<DestinationSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, DestinationSettings settings, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, DestinationSettings settings, CancellationToken cancellationToken)
         {
             AppConfig config = ConfigHelper.Load();
             List<BackupDestination> destinations = BuildActiveDestinations(config);

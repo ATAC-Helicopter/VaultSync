@@ -2931,6 +2931,10 @@ namespace VaultSync.UI
                     case CacheDeleteResult.Failed:
                         failed++;
                         break;
+                    case CacheDeleteResult.NotFound:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(result), result, null);
                 }
             }
 
@@ -3307,18 +3311,10 @@ namespace VaultSync.UI
             {
                 try
                 {
-                    if (OperatingSystem.IsWindows())
-                    {
-                        Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
-                    }
-                    else if (OperatingSystem.IsMacOS())
-                    {
-                        Process.Start("open", target);
-                    }
+                    if (File.Exists(target) || Directory.Exists(target))
+                        SystemFileLauncher.OpenPath(target);
                     else
-                    {
-                        Process.Start("xdg-open", target);
-                    }
+                        SystemFileLauncher.OpenUri(target);
 
                     return true;
                 }
@@ -3423,13 +3419,13 @@ namespace VaultSync.UI
 
             try
             {
-                Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+                SystemFileLauncher.OpenUri(target);
             }
             catch
             {
                 try
                 {
-                    Process.Start(new ProcessStartInfo("https://apps.microsoft.com/detail/9N9HRX4JCLCP") { UseShellExecute = true });
+                    SystemFileLauncher.OpenUri("https://apps.microsoft.com/detail/9N9HRX4JCLCP");
                 }
                 catch
                 {
@@ -3497,11 +3493,7 @@ namespace VaultSync.UI
                 string? folder = Path.GetDirectoryName(artifactPath);
                 if (!string.IsNullOrWhiteSpace(folder))
                 {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = folder,
-                        UseShellExecute = true
-                    });
+                    SystemFileLauncher.OpenPath(folder);
                 }
             }
             catch

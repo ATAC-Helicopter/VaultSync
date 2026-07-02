@@ -25,7 +25,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SyncCommand : AsyncCommand<SyncSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken cancellationToken)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -45,7 +45,7 @@ namespace VaultSync.CLI.Commands
             }
 
             var started = DateTime.UtcNow;
-            var code = await svc.SyncAsync(proj, dest, s.DryRun, ct);
+            var code = await svc.SyncAsync(proj, dest, s.DryRun, cancellationToken);
             var took = DateTime.UtcNow - started;
 
             if (!s.Quiet)
@@ -71,7 +71,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class VerifyCommand : AsyncCommand<VerifySettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken cancellationToken)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -86,7 +86,7 @@ namespace VaultSync.CLI.Commands
                 AnsiConsole.MarkupLine($"Verifying [blue]{Markup.Escape(proj.Name)}[/] against [blue]{Markup.Escape(src)}[/] - {(s.Full ? "full scan" : $"{s.Percent}% sample")}...");
 
             var started = DateTime.UtcNow;
-            var result = await svc.VerifyAsync(proj, src, s.Percent, s.Full, ct);
+            var result = await svc.VerifyAsync(proj, src, s.Percent, s.Full, cancellationToken);
             var took = DateTime.UtcNow - started;
 
             if (s.Json)
@@ -144,7 +144,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class RestoreCommand : AsyncCommand<RestoreSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -293,7 +293,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SelfTestCommand : AsyncCommand<SelfTestSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, SelfTestSettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, SelfTestSettings s, CancellationToken cancellationToken)
         {
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var tmpRoot = Path.Combine(home, ".vaultsync", "selftest");
@@ -303,9 +303,9 @@ namespace VaultSync.CLI.Commands
             Directory.CreateDirectory(src);
             Directory.CreateDirectory(dst);
 
-            await File.WriteAllTextAsync(Path.Combine(src, "a.txt"), "hello", ct);
+            await File.WriteAllTextAsync(Path.Combine(src, "a.txt"), "hello", cancellationToken);
             Directory.CreateDirectory(Path.Combine(src, "Sub"));
-            await File.WriteAllTextAsync(Path.Combine(src, "Sub", "b.txt"), "world", ct);
+            await File.WriteAllTextAsync(Path.Combine(src, "Sub", "b.txt"), "world", cancellationToken);
 
             var name = $"SelfTest-{DateTime.UtcNow:yyyyMMddHHmmss}";
             var db = ConfigHelper.ResolveDb(s.Db);
@@ -322,16 +322,16 @@ namespace VaultSync.CLI.Commands
                 repo.GetProjectByName(name)!,
                 fullHash: true,
                 maxSnapshotsToKeep: null,
-                ct: ct);
+                ct: cancellationToken);
             if (!s.Quiet) AnsiConsole.MarkupLine($"Snapshot {snapId} created");
 
             var syncSvc = new SyncService();
-            var syncCode = await syncSvc.SyncAsync(repo.GetProjectByName(name)!, dst, dryRun: false, ct);
+            var syncCode = await syncSvc.SyncAsync(repo.GetProjectByName(name)!, dst, dryRun: false, cancellationToken);
             if (syncCode != 0) { if (!s.Quiet) AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {syncCode})"); return 2; }
             if (!s.Quiet) AnsiConsole.MarkupLine($"[green]Sync OK[/] -> {Markup.Escape(dst)}");
 
             var verifySvc = new VerifyService(repo, new HashService());
-            var result = await verifySvc.VerifyAsync(repo.GetProjectByName(name)!, dst, percent: 100, full: true, ct);
+            var result = await verifySvc.VerifyAsync(repo.GetProjectByName(name)!, dst, percent: 100, full: true, cancellationToken);
             if (result.Failures.Count > 0)
             {
                 if (!s.Quiet) AnsiConsole.MarkupLine($"[red]Verify failed[/]: {result.Failures.Count} issues");

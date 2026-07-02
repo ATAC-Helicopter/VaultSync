@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -338,11 +339,11 @@ namespace VaultSync.UI.ViewModels
 
                     // Schedule cleanup before shell-open so temp decrypted data is never left unscheduled.
                     ScheduleEncryptedOpenCleanup(extractedDir);
-                    OpenPathInSystemFileManager(extractedDir);
+                    SystemFileLauncher.OpenPath(extractedDir);
                     return;
                 }
 
-                OpenPathInSystemFileManager(preparation.BackupFolder);
+                SystemFileLauncher.OpenPath(preparation.BackupFolder);
             }
             catch (Exception ex)
             {
@@ -531,7 +532,6 @@ namespace VaultSync.UI.ViewModels
                 Directory.CreateDirectory(extractDir);
                 progress?.Invoke(10, "Decrypting archive...", string.Empty);
 
-                var cryptoService = new BackupArchiveCryptoService();
                 BackupArchiveCryptoService.DecryptArchiveToPlainZip(backupFolder, password, stagingArchive);
                 progress?.Invoke(40, "Decrypting archive...", string.Empty);
 
@@ -540,7 +540,7 @@ namespace VaultSync.UI.ViewModels
                 int processed = 0;
                 foreach (ZipArchiveEntry entry in archive.Entries)
                 {
-                    string destinationPath = GetSafeArchiveEntryPath(extractDir, entry.FullName);
+                    string destinationPath = SafeZipExtractor.GetSafeEntryPath(extractDir, entry.FullName);
                     if (string.IsNullOrEmpty(entry.Name))
                     {
                         Directory.CreateDirectory(destinationPath);
@@ -788,29 +788,6 @@ namespace VaultSync.UI.ViewModels
         }
 
         private sealed record EncryptedOpenUnlockSession(string Password, DateTime ExpiresUtc);
-
-        private static void OpenPathInSystemFileManager(string path)
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
-                return;
-            }
-
-            if (OperatingSystem.IsMacOS())
-            {
-                Process.Start("open", path);
-                return;
-            }
-
-            if (OperatingSystem.IsLinux())
-            {
-                Process.Start("xdg-open", path);
-                return;
-            }
-
-            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
-        }
 
         private void UpdateBackupProtectionMarker(int backupId, bool isProtected)
         {

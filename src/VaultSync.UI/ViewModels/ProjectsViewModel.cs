@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Avalonia.Media;
@@ -2279,35 +2278,7 @@ public class ProjectsViewModel : ViewModelBase
 
         try
         {
-            if (OperatingSystem.IsMacOS())
-            {
-                // macOS: use the 'open' command
-                Process.Start("open", path);
-            }
-            else if (OperatingSystem.IsWindows())
-            {
-                // Windows: use explorer
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"\"{path}\"",
-                    UseShellExecute = true
-                });
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                // Linux: try xdg-open
-                Process.Start("xdg-open", path);
-            }
-            else
-            {
-                // Fallback: try default shell execute
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = path,
-                    UseShellExecute = true
-                });
-            }
+            SystemFileLauncher.OpenPath(path);
         }
         catch (Exception)
         {
@@ -3946,14 +3917,11 @@ public class ProjectItemViewModel : ViewModelBase
             }
         }
 
-        if (SnapshotHistory.Count > 0)
+        var last = SnapshotHistory[^1];
+        if (!last.ShowDayLabel)
         {
-            var last = SnapshotHistory[^1];
-            if (!last.ShowDayLabel)
-            {
-                last.ShowDayLabel = true;
-                last.DayLabel = last.Timestamp.ToString("dd/MM", CultureInfo.CurrentCulture);
-            }
+            last.ShowDayLabel = true;
+            last.DayLabel = last.Timestamp.ToString("dd/MM", CultureInfo.CurrentCulture);
         }
 
         // Notify that aggregate snapshot stats have changed.

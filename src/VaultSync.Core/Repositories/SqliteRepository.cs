@@ -2134,8 +2134,11 @@ DELETE FROM sqlite_sequence;";
         {
             try
             {
-                var cols = connection.Query($"PRAGMA table_info({table});")
-                    .Select(row => (string)row.name)
+                var cols = connection.Query(
+                        "SELECT name AS Name FROM pragma_table_info(@TableName);",
+                        new { TableName = table })
+                    .Select(row => (string)row.Name)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 if (!cols.Contains(column))

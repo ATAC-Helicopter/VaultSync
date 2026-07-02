@@ -444,34 +444,7 @@ internal static class CrashHandler
             if (string.IsNullOrWhiteSpace(folder))
                 return;
 
-            if (OperatingSystem.IsWindows())
-            {
-                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
-            }
-            else if (OperatingSystem.IsMacOS())
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "open",
-                    UseShellExecute = false
-                };
-                psi.ArgumentList.Add(folder);
-                Process.Start(psi);
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "xdg-open",
-                    UseShellExecute = false
-                };
-                psi.ArgumentList.Add(folder);
-                Process.Start(psi);
-            }
-            else
-            {
-                Process.Start(new ProcessStartInfo { FileName = folder, UseShellExecute = true });
-            }
+            SystemFileLauncher.OpenPath(folder);
         }
         catch
         {

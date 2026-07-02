@@ -13,7 +13,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class ConfigShowCommand : AsyncCommand<ConfigShowSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, ConfigShowSettings settings, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, ConfigShowSettings settings, CancellationToken cancellationToken)
         {
             Core.Config.AppConfig cfg = ConfigHelper.Load();
             string json = JsonSerializer.Serialize(cfg, CommandJsonOptions.Indented);
@@ -24,7 +24,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class ConfigPathCommand : AsyncCommand<ConfigPathSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, ConfigPathSettings settings, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, ConfigPathSettings settings, CancellationToken cancellationToken)
         {
             Core.Config.AppConfig cfg = ConfigHelper.Load();
             Console.WriteLine(string.IsNullOrWhiteSpace(cfg.DbPath)
@@ -41,7 +41,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class ConfigSetDbCommand : AsyncCommand<ConfigSetDbSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, ConfigSetDbSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, ConfigSetDbSettings s, CancellationToken cancellationToken)
         {
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string expanded = s.DbPath.Replace("~", home);

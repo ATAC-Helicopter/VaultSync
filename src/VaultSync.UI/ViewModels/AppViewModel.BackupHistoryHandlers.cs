@@ -17,6 +17,7 @@ using Avalonia.Media;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
+using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.ViewModels.Notifications;
 using VaultSync.UI.Views;
@@ -974,7 +975,7 @@ namespace VaultSync.UI.ViewModels
             string CurrentPath,
             string Detail)
         {
-            private static string L(string key, string fallback) => LStatic(key, fallback);
+            private static string LProgress(string key, string fallback) => LStatic(key, fallback);
 
             private static string Lf(string key, string fallback, params object[] args)
             {
@@ -988,7 +989,7 @@ namespace VaultSync.UI.ViewModels
                 new(
                     0,
                     path,
-                    L("Backups.Delete.DetailScanning", "Scanning backup contents..."));
+                    LProgress("Backups.Delete.DetailScanning", "Scanning backup contents..."));
 
             public static DeleteDirectoryProgress Preparing(string path, int totalFiles, long totalBytes) =>
                 new(
@@ -2217,7 +2218,7 @@ namespace VaultSync.UI.ViewModels
                 using ZipArchive archive = ZipFile.OpenRead(archivePath);
                 foreach (ZipArchiveEntry? entry in archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)))
                 {
-                    string relative = GetSafeArchiveEntryRelativePath(entry.FullName);
+                    string relative = SafeZipExtractor.GetSafeEntryRelativePath(entry.FullName);
                     sourceRelative.Add(relative);
                     string topLevel = GetTopLevelSegment(relative);
                     if (!string.IsNullOrWhiteSpace(topLevel))
@@ -2695,7 +2696,7 @@ namespace VaultSync.UI.ViewModels
                         SandboxPostRestoreDecision decision = await ConfirmSandboxPostRestoreActionAsync(preparation.ProjectName, sandboxPath);
                         if (decision.Action == SandboxPostRestoreAction.Open)
                         {
-                            OpenPathInSystemFileManager(sandboxPath);
+                            SystemFileLauncher.OpenPath(sandboxPath);
                             BackupsViewModel.ShowNotification(
                                 Lf(
                                     "Backups.Restore.Sandbox.Completed",
@@ -2854,7 +2855,7 @@ namespace VaultSync.UI.ViewModels
 
             foreach (ZipArchiveEntry? entry in entries)
             {
-                string destinationPath = GetSafeArchiveEntryPath(targetDir, entry.FullName);
+                string destinationPath = SafeZipExtractor.GetSafeEntryPath(targetDir, entry.FullName);
                 if (string.IsNullOrEmpty(entry.Name))
                 {
                     Directory.CreateDirectory(destinationPath);
@@ -2878,42 +2879,6 @@ namespace VaultSync.UI.ViewModels
                     processedBytes,
                     totalBytes));
             }
-        }
-
-
-        private static string GetSafeArchiveEntryRelativePath(string entryFullName)
-        {
-            string normalized = (entryFullName ?? string.Empty)
-                .Replace('/', Path.DirectorySeparatorChar)
-                .Trim();
-
-            if (string.IsNullOrWhiteSpace(normalized))
-                return string.Empty;
-
-            if (Path.IsPathFullyQualified(normalized))
-                throw new InvalidDataException($"Archive entry '{entryFullName}' is absolute.");
-
-            string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "vaultsync-archive-root"))
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                + Path.DirectorySeparatorChar;
-            string candidate = Path.GetFullPath(Path.Combine(root, normalized));
-            if (!candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException($"Archive entry '{entryFullName}' escapes the extraction root.");
-
-            return Path.GetRelativePath(root, candidate);
-        }
-
-        private static string GetSafeArchiveEntryPath(string root, string entryFullName)
-        {
-            string relative = GetSafeArchiveEntryRelativePath(entryFullName);
-            string normalizedRoot = Path.GetFullPath(root)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                + Path.DirectorySeparatorChar;
-            string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relative));
-            if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException($"Archive entry '{entryFullName}' escapes the extraction destination.");
-
-            return candidate;
         }
 
         private static void RestoreEncryptedArchiveWithProgress(

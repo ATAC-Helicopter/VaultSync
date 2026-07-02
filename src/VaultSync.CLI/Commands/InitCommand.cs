@@ -17,7 +17,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class InitCommand : AsyncCommand<InitSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, InitSettings s, CancellationToken ct)
+        protected override Task<int> ExecuteAsync(CommandContext context, InitSettings s, CancellationToken cancellationToken)
         {
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string targetDb = string.IsNullOrWhiteSpace(s.Db)

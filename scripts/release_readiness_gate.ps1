@@ -67,11 +67,11 @@ function Get-WhatsNewVersion {
 }
 
 function Get-GhJson {
-    param([string]$Command)
+    param([string[]]$Arguments)
 
-    $raw = Invoke-Expression $Command
+    $raw = & gh @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "GitHub CLI command failed: $Command"
+        throw "GitHub CLI command failed: gh $($Arguments -join ' ')"
     }
 
     if ([string]::IsNullOrWhiteSpace($raw)) {
@@ -183,7 +183,7 @@ if ($SkipGitHubChecks) {
 $releaseTag = "v$TargetVersion"
 $release = $null
 try {
-    $release = Get-GhJson -Command "gh release view $releaseTag --repo $Repository --json tagName,isPrerelease,isDraft,assets,url"
+    $release = Get-GhJson -Arguments @("release", "view", $releaseTag, "--repo", $Repository, "--json", "tagName,isPrerelease,isDraft,assets,url")
 } catch {
     $release = $null
 }
@@ -251,7 +251,7 @@ if ($null -eq $release) {
 }
 
 $owner = ($Repository -split "/")[0]
-$projectItems = Get-GhJson -Command "gh project item-list $ProjectNumber --owner $owner --limit 500 --format json"
+$projectItems = Get-GhJson -Arguments @("project", "item-list", $ProjectNumber, "--owner", $owner, "--limit", "500", "--format", "json")
 $releaseItems = @($projectItems.items | Where-Object {
     $releaseProperty = $_.PSObject.Properties["release"]
     $itemRelease = if ($null -ne $releaseProperty) { $releaseProperty.Value } else { $null }

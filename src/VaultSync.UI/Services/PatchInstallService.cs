@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Reflection;
 using VaultSync.Core.Services;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.Services
 {
@@ -366,7 +367,7 @@ namespace VaultSync.UI.Services
                 try
                 {
                     LogLine("Extracting patch archive.");
-                    ZipFile.ExtractToDirectory(request.ArchivePath, stagingDir);
+                    SafeZipExtractor.ExtractToDirectory(request.ArchivePath, stagingDir);
                     LogLine("Verifying extracted files.");
                     VerifyExtractedFiles(manifest, stagingDir);
                     LogLine("Copying updated files.");

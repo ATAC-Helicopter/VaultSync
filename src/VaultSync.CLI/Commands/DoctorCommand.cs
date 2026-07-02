@@ -20,7 +20,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, DoctorSettings s, CancellationToken ct)
+        protected override async Task<int> ExecuteAsync(CommandContext context, DoctorSettings s, CancellationToken cancellationToken)
         {
             bool ok = true;
             void Pass(string msg) { if (!s.Quiet) AnsiConsole.MarkupLine($"[green]+[/] {Markup.Escape(msg)}"); }
@@ -45,7 +45,7 @@ namespace VaultSync.CLI.Commands
                         UseShellExecute = false
                     };
                     using System.Diagnostics.Process proc = System.Diagnostics.Process.Start(p)!;
-                    await proc.WaitForExitAsync(ct);
+                    await proc.WaitForExitAsync(cancellationToken);
                     if (proc.ExitCode <= 16) Pass("robocopy found (Windows sync runner)");
                     else ok = Fail("robocopy returned unexpected exit");
                 }
@@ -60,8 +60,8 @@ namespace VaultSync.CLI.Commands
                         UseShellExecute = false
                     };
                     using System.Diagnostics.Process proc = System.Diagnostics.Process.Start(p)!;
-                    string txt = await proc.StandardOutput.ReadToEndAsync(ct);
-                    await proc.WaitForExitAsync(ct);
+                    string txt = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
+                    await proc.WaitForExitAsync(cancellationToken);
                     if (proc.ExitCode == 0 && txt.Contains("rsync", StringComparison.OrdinalIgnoreCase))
                         Pass("rsync found (Unix sync runner)");
                     else
@@ -76,7 +76,7 @@ namespace VaultSync.CLI.Commands
                 string dir = Path.GetDirectoryName(db)!;
                 Directory.CreateDirectory(dir);
                 string testFile = Path.Combine(dir, ".vaultsync_write_test");
-                await File.WriteAllTextAsync(testFile, "ok", ct);
+                await File.WriteAllTextAsync(testFile, "ok", cancellationToken);
                 File.Delete(testFile);
                 Pass($"Database path writable: {db}");
             }
@@ -104,7 +104,7 @@ namespace VaultSync.CLI.Commands
                     string dest = s.CheckDest.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
                     Directory.CreateDirectory(dest);
                     string test = Path.Combine(dest, ".vaultsync_write_test");
-                    await File.WriteAllTextAsync(test, "ok", ct);
+                    await File.WriteAllTextAsync(test, "ok", cancellationToken);
                     File.Delete(test);
                     Pass($"Destination writable: {dest}");
                 }

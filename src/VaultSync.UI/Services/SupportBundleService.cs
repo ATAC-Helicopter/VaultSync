@@ -461,7 +461,13 @@ public sealed class SupportBundleService
     private static int QueryCount(SqliteConnection c, string tableName)
     {
         using SqliteCommand cmd = c.CreateCommand();
-        cmd.CommandText = $"SELECT COUNT(1) FROM {tableName};";
+        cmd.CommandText = tableName switch
+        {
+            "projects" => "SELECT COUNT(1) FROM projects;",
+            "snapshots" => "SELECT COUNT(1) FROM snapshots;",
+            "backups" => "SELECT COUNT(1) FROM backups;",
+            _ => throw new ArgumentException("Unsupported metadata table.", nameof(tableName))
+        };
         return Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
     }
 

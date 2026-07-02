@@ -30,9 +30,6 @@ namespace VaultSync.UI.Services
             new LanguageOption { Code = "bn", DisplayName = "বাংলা" },
             new LanguageOption { Code = "ru", DisplayName = "Русский" }
         ];
-
-        private string _pendingLanguage = "en";
-
         public LocalizationService()
         {
             CurrentLanguage = "en";
@@ -56,7 +53,6 @@ namespace VaultSync.UI.Services
             string normalized = code.Trim();
             if (string.Equals(normalized, CurrentLanguage, StringComparison.OrdinalIgnoreCase))
             {
-                _pendingLanguage = normalized;
                 return true;
             }
 
@@ -65,7 +61,6 @@ namespace VaultSync.UI.Services
 
             LanguageChanging?.Invoke();
             CurrentLanguage = normalized;
-            _pendingLanguage = normalized;
             LanguageChanged?.Invoke();
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item"));

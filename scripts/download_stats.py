@@ -18,16 +18,20 @@ UNNAMED_RELEASE = "Unnamed release"
 
 
 def is_within(path: Path, root: Path) -> bool:
-    return path != root and root in path.parents
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return path != root
 
 
 def resolve_workspace_path(raw_path: str) -> Path:
     workspace = Path.cwd().resolve()
     raw_candidate = Path(raw_path)
-    lexical = Path(os.path.abspath(workspace / raw_candidate if not raw_candidate.is_absolute() else raw_candidate))
+    lexical = Path(os.path.abspath(workspace / raw_candidate if not raw_candidate.is_absolute() else raw_candidate)).resolve(strict=False)
     if not is_within(lexical, workspace):
         raise ValueError(f"Output directory must stay inside the workspace: {raw_path}")
-    candidate = lexical.resolve()
+    candidate = lexical.resolve(strict=False)
     if not is_within(candidate, workspace):
         raise ValueError(f"Resolved output directory must stay inside the workspace: {raw_path}")
     return candidate
@@ -35,10 +39,10 @@ def resolve_workspace_path(raw_path: str) -> Path:
 
 def child_path(root: Path, relative_name: str) -> Path:
     normalized_root = root.resolve()
-    lexical = Path(os.path.abspath(normalized_root / relative_name))
+    lexical = Path(os.path.abspath(normalized_root / relative_name)).resolve(strict=False)
     if not is_within(lexical, normalized_root):
         raise ValueError(f"Generated path escapes output directory: {relative_name}")
-    candidate = lexical.resolve()
+    candidate = lexical.resolve(strict=False)
     if not is_within(candidate, normalized_root):
         raise ValueError(f"Resolved generated path escapes output directory: {relative_name}")
     return candidate
