@@ -13,7 +13,7 @@
 - [VS-1821] Reduced duplicated service literals for telemetry storage, drive-health probing, patch helper staging, support bundle redaction, and SQLite schema checks.
 - [VS-1822] Reduced duplicated backup UI literals for progress stages, backup filters, restore/delete dialogs, telemetry fields, and repeated action styling.
 - [VS-1822] Reduced duplicated Settings, shell, onboarding, metadata-sync, and rsync lookup literals flagged by Sonar.
-- [VS-1828] Refreshed setup-python, Microsoft.NET.Test.Sdk, SkiaSharp, and HarfBuzzSharp dependencies for the 1.8.2 release train.
+- [VS-1828] Refreshed setup-python, Spectre.Console, Microsoft.NET.Test.Sdk, SkiaSharp, and HarfBuzzSharp dependencies for the 1.8.2 release train.
 ### Fixed
 - [VS-1808] Snapshot Explorer now previews selected text-like files automatically, highlights the selected row more clearly, and prevents repeated Explore actions from opening duplicate Explorer windows.
 - [VS-1808] Snapshot Explorer action buttons no longer stay disabled after switching from an in-flight file preview to a folder selection.
