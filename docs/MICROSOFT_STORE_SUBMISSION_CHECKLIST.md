@@ -15,7 +15,7 @@ Reference:
 - Added Microsoft Store upload package generation to `.github/workflows/release-assets.yml` behind the `include_store_upload` option.
 
 ## Needs code / packaging validation
-- Build the 1.7.5 Store upload package in GitHub Actions with `include_store_upload` enabled and verify the artifact shape (`.msixupload` or equivalent upload package).
+- Build the 1.8.2 Store upload package in GitHub Actions with `include_store_upload` enabled and verify the artifact shape (`.msixupload` or equivalent upload package).
 - Install the packaged build and validate:
   - local folder backup
   - local restore
