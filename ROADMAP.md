@@ -1897,6 +1897,8 @@
 - [x] `VS-1829` `P1` Rebuild first-run onboarding around the first successful backup. _(Done locally; target 1.8.2)_
   - Done: onboarding now uses a six-step setup path instead of a broad feature tour, stops auto-jumping between pages, and focuses first-time users on project root, backup destination, first project, first backup, and where restore points live.
   - Done: the overlay was rebuilt as an interactive progress card with actionable next-step copy, completed-state feedback, Back/Skip/Continue controls, and a non-blocking highlight mask for the target control.
+- [x] `VS-1830` `P2` Warn on reused changelog IDs during release readiness. _(Done locally; tracked by #408; target 1.8.2)_
+  - Done: the release gate now reports repeated changelog work-item IDs as a warning with line-level details so maintainers can confirm each reused ID stays within one coherent scope.
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.

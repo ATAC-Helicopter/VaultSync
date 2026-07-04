@@ -66,6 +66,37 @@ function Get-WhatsNewVersion {
     return $match.Groups[1].Value.Trim()
 }
 
+function Get-ChangelogEntries {
+    param([string]$Version)
+
+    $entries = New-Object System.Collections.Generic.List[object]
+    $inTargetSection = $false
+    $lineNumber = 0
+
+    foreach ($line in Get-Content CHANGELOG.md) {
+        $lineNumber++
+
+        if ($line -match '^## \[(.+?)\]') {
+            $inTargetSection = ($matches[1] -eq $Version)
+            continue
+        }
+
+        if (-not $inTargetSection) {
+            continue
+        }
+
+        if ($line -match '^- \[((?:VS|BUG|ISS|REL)-\d+)\]\s*(.+)$') {
+            $entries.Add([pscustomobject]@{
+                id   = $matches[1]
+                text = $matches[2].Trim()
+                line = $lineNumber
+            })
+        }
+    }
+
+    return @($entries.ToArray())
+}
+
 function Get-GhJson {
     param([string[]]$Arguments)
 
@@ -153,6 +184,31 @@ Add-CheckResult -Results $results -Code "docs-whats-new" -Condition ($whatsNewVe
     -PassMessage "Top What's New version is '$whatsNewVersion'." `
     -FailMessage "Top What's New version '$whatsNewVersion' does not match target '$TargetVersion'." `
     -Data @{ expected = $TargetVersion; actual = $whatsNewVersion }
+
+$changelogEntries = Get-ChangelogEntries -Version $TargetVersion
+$changelogDuplicateIds = @(
+    $changelogEntries |
+        Group-Object id |
+        Where-Object { $_.Count -gt 1 } |
+        ForEach-Object {
+            [pscustomobject]@{
+                id      = $_.Name
+                count   = $_.Count
+                entries = @($_.Group | ForEach-Object {
+                    [pscustomobject]@{
+                        line = $_.line
+                        text = $_.text
+                    }
+                })
+            }
+        }
+)
+
+Add-CheckResult -Results $results -Code "docs-changelog-id-reuse" -Condition ($changelogDuplicateIds.Count -eq 0) `
+    -PassMessage "Target changelog section does not reuse any work-item IDs." `
+    -FailMessage "Target changelog section reuses one or more work-item IDs; verify each reused ID describes one coherent scope." `
+    -Data @{ version = $TargetVersion; duplicateIds = $changelogDuplicateIds } `
+    -WarningOnFail
 
 Add-CheckResult -Results $results -Code "workflow-release-assets" -Condition (Test-Path ".github/workflows/release-assets.yml") `
     -PassMessage "Release assets workflow present." `

@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.8.2] - Unreleased
+## [1.8.2] - 04.07.2026
 ### Added
 - [VS-1808] Added Snapshot Explorer v1 for backup folder/archive browsing, text preview, search, and selected-item restore.
 ### Changed
@@ -14,6 +14,7 @@
 - [VS-1822] Reduced duplicated backup UI literals for progress stages, backup filters, restore/delete dialogs, telemetry fields, and repeated action styling.
 - [VS-1822] Reduced duplicated Settings, shell, onboarding, metadata-sync, and rsync lookup literals flagged by Sonar.
 - [VS-1828] Refreshed setup-python, Spectre.Console, Microsoft.NET.Test.Sdk, SkiaSharp, and HarfBuzzSharp dependencies for the 1.8.2 release train.
+- [VS-1830] Release readiness now warns when a changelog section reuses IDs so scopes can be checked before publishing.
 ### Fixed
 - [VS-1808] Snapshot Explorer now previews selected text-like files automatically, highlights the selected row more clearly, and prevents repeated Explore actions from opening duplicate Explorer windows.
 - [VS-1808] Snapshot Explorer action buttons no longer stay disabled after switching from an in-flight file preview to a folder selection.
