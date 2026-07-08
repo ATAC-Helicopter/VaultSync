@@ -83,45 +83,65 @@ public sealed class SnapshotExplorerService
         if (!Directory.Exists(folderFullPath))
             return [];
 
-        var entries = new List<SnapshotExplorerEntry>();
-
-        if (string.IsNullOrWhiteSpace(search))
-        {
-            foreach (string dir in Directory.EnumerateDirectories(folderFullPath))
-            {
-                string relative = ToExplorerPath(Path.GetRelativePath(backupRoot, dir));
-                entries.Add(SnapshotExplorerEntry.Folder(relative, Path.GetFileName(dir)));
-            }
-
-            foreach (string file in Directory.EnumerateFiles(folderFullPath))
-            {
-                string name = Path.GetFileName(file);
-                if (IsInternalBackupArtifact(name))
-                    continue;
-
-                var info = new FileInfo(file);
-                string relative = ToExplorerPath(Path.GetRelativePath(backupRoot, file));
-                entries.Add(SnapshotExplorerEntry.File(relative, name, info.Length, info.LastWriteTimeUtc, IsPreviewable(relative)));
-            }
-        }
-        else
-        {
-            foreach (string file in Directory.EnumerateFiles(folderFullPath, "*", SearchOption.AllDirectories))
-            {
-                string name = Path.GetFileName(file);
-                if (IsInternalBackupArtifact(name))
-                    continue;
-
-                string relative = ToExplorerPath(Path.GetRelativePath(backupRoot, file));
-                if (!relative.Contains(search, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var info = new FileInfo(file);
-                entries.Add(SnapshotExplorerEntry.File(relative, relative, info.Length, info.LastWriteTimeUtc, IsPreviewable(relative)));
-            }
-        }
+        List<SnapshotExplorerEntry> entries = string.IsNullOrWhiteSpace(search)
+            ? ListFolderChildren(backupRoot, folderFullPath)
+            : SearchFolderFiles(backupRoot, folderFullPath, search);
 
         return [.. entries.OrderBy(e => e.Kind).ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    private static List<SnapshotExplorerEntry> ListFolderChildren(string backupRoot, string folderFullPath)
+    {
+        var entries = new List<SnapshotExplorerEntry>();
+        AddFolderEntries(entries, backupRoot, folderFullPath);
+        AddFolderFileEntries(entries, backupRoot, folderFullPath);
+        return entries;
+    }
+
+    private static void AddFolderEntries(List<SnapshotExplorerEntry> entries, string backupRoot, string folderFullPath)
+    {
+        foreach (string dir in Directory.EnumerateDirectories(folderFullPath))
+        {
+            string relative = ToExplorerPath(Path.GetRelativePath(backupRoot, dir));
+            entries.Add(SnapshotExplorerEntry.Folder(relative, Path.GetFileName(dir)));
+        }
+    }
+
+    private static void AddFolderFileEntries(List<SnapshotExplorerEntry> entries, string backupRoot, string folderFullPath)
+    {
+        foreach (string file in Directory.EnumerateFiles(folderFullPath))
+        {
+            if (IsInternalBackupArtifact(Path.GetFileName(file)))
+                continue;
+
+            entries.Add(CreateFolderFileEntry(backupRoot, file, displayRelativePath: false));
+        }
+    }
+
+    private static List<SnapshotExplorerEntry> SearchFolderFiles(string backupRoot, string folderFullPath, string search)
+    {
+        var entries = new List<SnapshotExplorerEntry>();
+        foreach (string file in Directory.EnumerateFiles(folderFullPath, "*", SearchOption.AllDirectories))
+        {
+            string relative = ToExplorerPath(Path.GetRelativePath(backupRoot, file));
+            if (IsInternalBackupArtifact(Path.GetFileName(file)) ||
+                !relative.Contains(search, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            entries.Add(CreateFolderFileEntry(backupRoot, file, displayRelativePath: true));
+        }
+
+        return entries;
+    }
+
+    private static SnapshotExplorerEntry CreateFolderFileEntry(string backupRoot, string file, bool displayRelativePath)
+    {
+        string relative = ToExplorerPath(Path.GetRelativePath(backupRoot, file));
+        string name = displayRelativePath ? relative : Path.GetFileName(file);
+        var info = new FileInfo(file);
+        return SnapshotExplorerEntry.File(relative, name, info.Length, info.LastWriteTimeUtc, IsPreviewable(relative));
     }
 
     private static IReadOnlyList<SnapshotExplorerEntry> ListArchive(string archivePath, string folderPath, string search)
@@ -137,51 +157,95 @@ public sealed class SnapshotExplorerService
             if (string.IsNullOrWhiteSpace(relative))
                 continue;
 
+            if (!string.IsNullOrWhiteSpace(search) && TryAddArchiveSearchResult(files, entry, relative, search))
+            {
+                continue;
+            }
+
             if (!string.IsNullOrWhiteSpace(search))
-            {
-                if (string.IsNullOrEmpty(entry.Name) || !relative.Contains(search, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                files[relative] = SnapshotExplorerEntry.File(
-                    relative,
-                    relative,
-                    Math.Max(0, entry.Length),
-                    entry.LastWriteTime.UtcDateTime,
-                    IsPreviewable(relative));
-                continue;
-            }
-
-            if (!relative.StartsWith(folderPrefix, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            string remaining = relative[folderPrefix.Length..];
-            if (remaining.Length == 0)
-                continue;
-
-            int slashIndex = remaining.IndexOf('/');
-            if (slashIndex >= 0)
-            {
-                string childName = remaining[..slashIndex];
-                string childPath = string.IsNullOrWhiteSpace(folderPath)
-                    ? childName
-                    : folderPath.TrimEnd('/') + "/" + childName;
-                folders[childPath] = SnapshotExplorerEntry.Folder(childPath, childName);
-            }
-            else if (!string.IsNullOrEmpty(entry.Name))
-            {
-                files[relative] = SnapshotExplorerEntry.File(
-                    relative,
-                    remaining,
-                    Math.Max(0, entry.Length),
-                    entry.LastWriteTime.UtcDateTime,
-                    IsPreviewable(relative));
-            }
+            AddArchiveFolderResult(folders, files, entry, relative, folderPath, folderPrefix);
         }
 
         return [.. folders.Values
             .Concat(files.Values)
             .OrderBy(e => e.Kind)
             .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    private static bool TryAddArchiveSearchResult(
+        Dictionary<string, SnapshotExplorerEntry> files,
+        ZipArchiveEntry entry,
+        string relative,
+        string search)
+    {
+        if (string.IsNullOrEmpty(entry.Name) ||
+            !relative.Contains(search, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        files[relative] = SnapshotExplorerEntry.File(
+            relative,
+            relative,
+            Math.Max(0, entry.Length),
+            entry.LastWriteTime.UtcDateTime,
+            IsPreviewable(relative));
+        return true;
+    }
+
+    private static void AddArchiveFolderResult(
+        Dictionary<string, SnapshotExplorerEntry> folders,
+        Dictionary<string, SnapshotExplorerEntry> files,
+        ZipArchiveEntry entry,
+        string relative,
+        string folderPath,
+        string folderPrefix)
+    {
+        if (!relative.StartsWith(folderPrefix, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        string remaining = relative[folderPrefix.Length..];
+        if (remaining.Length == 0)
+            return;
+
+        int slashIndex = remaining.IndexOf('/');
+        if (slashIndex >= 0)
+        {
+            AddArchiveFolderEntry(folders, folderPath, remaining, slashIndex);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(entry.Name))
+            AddArchiveFileEntry(files, entry, relative, remaining);
+    }
+
+    private static void AddArchiveFolderEntry(
+        Dictionary<string, SnapshotExplorerEntry> folders,
+        string folderPath,
+        string remaining,
+        int slashIndex)
+    {
+        string childName = remaining[..slashIndex];
+        string childPath = string.IsNullOrWhiteSpace(folderPath)
+            ? childName
+            : folderPath.TrimEnd('/') + "/" + childName;
+        folders[childPath] = SnapshotExplorerEntry.Folder(childPath, childName);
+    }
+
+    private static void AddArchiveFileEntry(
+        Dictionary<string, SnapshotExplorerEntry> files,
+        ZipArchiveEntry entry,
+        string relative,
+        string name)
+    {
+        files[relative] = SnapshotExplorerEntry.File(
+            relative,
+            name,
+            Math.Max(0, entry.Length),
+            entry.LastWriteTime.UtcDateTime,
+            IsPreviewable(relative));
     }
 
     private static SnapshotPreviewResult PreviewFolderFile(string backupRoot, string relativePath, int maxBytes)

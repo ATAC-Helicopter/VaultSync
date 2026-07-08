@@ -81,6 +81,18 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public void List_ArchiveBackup_ReturnsFoldersAndFiles()
+    {
+        string backup = CreateArchiveBackup();
+
+        SnapshotExplorerResult root = _service.List(backup);
+        SnapshotExplorerResult docs = _service.List(backup, "docs");
+
+        Assert.Contains(root.Entries, e => e.Kind == SnapshotExplorerEntryKind.Folder && e.Path == "docs");
+        Assert.Contains(docs.Entries, e => e.Kind == SnapshotExplorerEntryKind.File && e.Path == "docs/notes.md");
+    }
+
+    [Fact]
     public void RestoreSelection_ArchiveFolder_RestoresOnlySelectedFolder()
     {
         string backup = CreateArchiveBackup();

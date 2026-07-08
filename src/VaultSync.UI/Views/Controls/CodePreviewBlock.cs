@@ -107,11 +107,7 @@ public sealed class CodePreviewBlock : TextBlock
         if (line.Length == 0)
             return;
 
-        string trimmed = line.TrimStart();
-        if (trimmed.StartsWith("//", StringComparison.Ordinal) ||
-            trimmed.StartsWith("#", StringComparison.Ordinal) ||
-            trimmed.StartsWith("<!--", StringComparison.Ordinal) ||
-            trimmed.StartsWith("*", StringComparison.Ordinal))
+        if (IsWholeLineComment(line))
         {
             AddRun(line, CommentBrush);
             return;
@@ -120,53 +116,89 @@ public sealed class CodePreviewBlock : TextBlock
         int i = 0;
         while (i < line.Length)
         {
-            char c = line[i];
-            if (c is '"' or '\'')
+            if (TryAddStringToken(line, ref i) ||
+                TryAddLineComment(line, ref i) ||
+                TryAddNumberToken(line, ref i) ||
+                TryAddIdentifierToken(line, ref i) ||
+                TryAddPunctuationToken(line, ref i))
             {
-                int end = FindStringEnd(line, i, c);
-                AddRun(line[i..end], StringBrush);
-                i = end;
                 continue;
             }
 
-            if (c == '/' && i + 1 < line.Length && line[i + 1] == '/')
-            {
-                AddRun(line[i..], CommentBrush);
-                break;
-            }
-
-            if (char.IsDigit(c))
-            {
-                int end = i + 1;
-                while (end < line.Length && (char.IsDigit(line[end]) || line[end] is '.' or '_' or 'x' or 'X' || IsHexLetter(line[end])))
-                    end++;
-                AddRun(line[i..end], NumberBrush);
-                i = end;
-                continue;
-            }
-
-            if (IsIdentifierStart(c))
-            {
-                int end = i + 1;
-                while (end < line.Length && IsIdentifierPart(line[end]))
-                    end++;
-
-                string token = line[i..end];
-                AddRun(token, Keywords.Contains(token) ? KeywordBrush : Foreground);
-                i = end;
-                continue;
-            }
-
-            if ("{}[]()<>/=:;,.+-*!?|&%@".Contains(c, StringComparison.Ordinal))
-            {
-                AddRun(c.ToString(), c is '<' or '>' or '/' ? MarkupBrush : PunctuationBrush);
-                i++;
-                continue;
-            }
-
-            AddRun(c.ToString(), Foreground);
+            AddRun(line[i].ToString(), Foreground);
             i++;
         }
+    }
+
+    private static bool IsWholeLineComment(string line)
+    {
+        string trimmed = line.TrimStart();
+        return trimmed.StartsWith("//", StringComparison.Ordinal) ||
+            trimmed.StartsWith("#", StringComparison.Ordinal) ||
+            trimmed.StartsWith("<!--", StringComparison.Ordinal) ||
+            trimmed.StartsWith("*", StringComparison.Ordinal);
+    }
+
+    private bool TryAddStringToken(string line, ref int index)
+    {
+        char c = line[index];
+        if (c is not ('"' or '\''))
+            return false;
+
+        int end = FindStringEnd(line, index, c);
+        AddRun(line[index..end], StringBrush);
+        index = end;
+        return true;
+    }
+
+    private bool TryAddLineComment(string line, ref int index)
+    {
+        if (line[index] != '/' || index + 1 >= line.Length || line[index + 1] != '/')
+            return false;
+
+        AddRun(line[index..], CommentBrush);
+        index = line.Length;
+        return true;
+    }
+
+    private bool TryAddNumberToken(string line, ref int index)
+    {
+        if (!char.IsDigit(line[index]))
+            return false;
+
+        int end = index + 1;
+        while (end < line.Length && IsNumberPart(line[end]))
+            end++;
+
+        AddRun(line[index..end], NumberBrush);
+        index = end;
+        return true;
+    }
+
+    private bool TryAddIdentifierToken(string line, ref int index)
+    {
+        if (!IsIdentifierStart(line[index]))
+            return false;
+
+        int end = index + 1;
+        while (end < line.Length && IsIdentifierPart(line[end]))
+            end++;
+
+        string token = line[index..end];
+        AddRun(token, Keywords.Contains(token) ? KeywordBrush : Foreground);
+        index = end;
+        return true;
+    }
+
+    private bool TryAddPunctuationToken(string line, ref int index)
+    {
+        char c = line[index];
+        if (!"{}[]()<>/=:;,.+-*!?|&%@".Contains(c, StringComparison.Ordinal))
+            return false;
+
+        AddRun(c.ToString(), c is '<' or '>' or '/' ? MarkupBrush : PunctuationBrush);
+        index++;
+        return true;
     }
 
     private void AddRun(string text, IBrush? brush)
@@ -211,6 +243,9 @@ public sealed class CodePreviewBlock : TextBlock
 
     private static bool IsIdentifierPart(char value) =>
         char.IsLetterOrDigit(value) || value == '_' || value == '-';
+
+    private static bool IsNumberPart(char value) =>
+        char.IsDigit(value) || value is '.' or '_' or 'x' or 'X' || IsHexLetter(value);
 
     private static bool IsHexLetter(char value) =>
         value is >= 'a' and <= 'f' or >= 'A' and <= 'F';
