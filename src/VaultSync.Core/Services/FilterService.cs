@@ -104,26 +104,7 @@ public class FilterService
             if (!File.Exists(indexPath))
                 return null;
 
-            DateTime lastWrite = File.GetLastWriteTimeUtc(indexPath);
-            if (!s_presetIndexCache.TryGetValue(indexPath, out CachedPresetIndex? cached) || cached.LastWriteUtc != lastWrite)
-            {
-                string json = File.ReadAllText(indexPath);
-                PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json);
-                var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                if (index?.Presets != null)
-                {
-                    foreach (PresetInfo preset in index.Presets)
-                    {
-                        if (string.IsNullOrWhiteSpace(preset.Id) || string.IsNullOrWhiteSpace(preset.File))
-                            continue;
-
-                        map[preset.Id] = preset.File;
-                    }
-                }
-
-                cached = new CachedPresetIndex(lastWrite, map);
-                s_presetIndexCache[indexPath] = cached;
-            }
+            CachedPresetIndex cached = GetPresetIndex(indexPath);
 
             if (!cached.ById.TryGetValue(presetName, out string? fileName) || string.IsNullOrWhiteSpace(fileName))
                 return null;
@@ -135,6 +116,31 @@ public class FilterService
         {
             return null;
         }
+    }
+
+    private static CachedPresetIndex GetPresetIndex(string indexPath)
+    {
+        DateTime lastWrite = File.GetLastWriteTimeUtc(indexPath);
+        if (s_presetIndexCache.TryGetValue(indexPath, out CachedPresetIndex? cached) && cached.LastWriteUtc == lastWrite)
+            return cached;
+
+        cached = new CachedPresetIndex(lastWrite, ReadPresetIndex(indexPath));
+        s_presetIndexCache[indexPath] = cached;
+        return cached;
+    }
+
+    private static Dictionary<string, string> ReadPresetIndex(string indexPath)
+    {
+        string json = File.ReadAllText(indexPath);
+        PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json);
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (PresetInfo preset in index?.Presets ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(preset.Id) && !string.IsNullOrWhiteSpace(preset.File))
+                map[preset.Id] = preset.File;
+        }
+
+        return map;
     }
 
     private static string ResolvePresetsDir(string? presetsDir)
