@@ -12,6 +12,70 @@ public class SnapshotService
     private readonly IVaultLogger _logger;
 
     private readonly record struct SnapshotFileMetadata(string Full, string Rel, FileEntry Entry);
+    private sealed record SnapshotBaseline(Dictionary<string, FileEntry> PreviousFiles, long PreviousTotalBytes);
+    private sealed record SnapshotChangeSet(
+        List<string> Added,
+        List<string> Modified,
+        List<string> Unchanged,
+        List<string> Deleted,
+        List<SnapshotFileMetadata> CurrentMetadata,
+        Dictionary<string, SnapshotFileMetadata> CurrentMetadataByRel,
+        Dictionary<string, FileEntry> CurrentFilesByRel);
+
+    private sealed class HashProgressReporter(
+        int totalToHash,
+        long totalHashBytes,
+        Action<double, string, string>? progressCallback,
+        TimeSpan reportInterval)
+    {
+        private readonly DateTime _hashStart = DateTime.UtcNow;
+        private DateTime _lastReport = DateTime.UtcNow;
+        private readonly object _lock = new();
+
+        public void Report(string relPath, int hashedCount, long hashedBytes, bool force)
+        {
+            if (progressCallback is null)
+                return;
+
+            DateTime now = DateTime.UtcNow;
+            lock (_lock)
+            {
+                if (!force && (now - _lastReport) < reportInterval)
+                    return;
+
+                _lastReport = now;
+                progressCallback(
+                    GetPercent(hashedCount),
+                    relPath,
+                    GetEtaText(hashedCount, hashedBytes, now));
+            }
+        }
+
+        private double GetPercent(int hashedCount) =>
+            totalToHash > 0 ? hashedCount * 100d / totalToHash : 100d;
+
+        private string GetEtaText(int hashedCount, long hashedBytes, DateTime now)
+        {
+            if (hashedCount >= totalToHash)
+                return $"Hashing {hashedCount}/{totalToHash}";
+
+            double speedBytesSec = GetSpeedBytesPerSecond(hashedBytes, now);
+            if (hashedCount <= 0 || totalHashBytes <= 0 || speedBytesSec <= 0)
+                return $"Hashing {hashedCount}/{totalToHash}";
+
+            double speedMbSec = speedBytesSec / (1024d * 1024d);
+            long remainingBytes = Math.Max(0L, totalHashBytes - hashedBytes);
+            var eta = TimeSpan.FromSeconds(remainingBytes / speedBytesSec);
+            return $"Hashing {hashedCount}/{totalToHash} - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
+        }
+
+        private double GetSpeedBytesPerSecond(long hashedBytes, DateTime now)
+        {
+            double elapsedSeconds = Math.Max(0.1, (now - _hashStart).TotalSeconds);
+            return hashedBytes / elapsedSeconds;
+        }
+    }
+
     public SnapshotOutcome? LastCreatedOutcome { get; private set; }
 
     public SnapshotService(SqliteRepository repo, HashService hash, IVaultLogger? logger = null)
@@ -58,13 +122,7 @@ public class SnapshotService
         {
             ct.ThrowIfCancellationRequested();
 
-            // Load the latest local snapshot as the baseline. Imported snapshots can come
-            // from another machine/OS and should not drive local diff math.
-            Snapshot? prev = _repo.GetLatestLocalSnapshotForProject(project.Id);
-            long previousTotalBytes = prev?.TotalBytes ?? 0L;
-            Dictionary<string, FileEntry> prevFiles = prev != null
-                ? _repo.GetFilesForSnapshot(prev.Id).ToDictionary(f => f.RelPath, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, FileEntry>(StringComparer.OrdinalIgnoreCase);
+            SnapshotBaseline baseline = await LoadSnapshotBaselineAsync(project, ct).ConfigureAwait(false);
 
             ct.ThrowIfCancellationRequested();
 
@@ -80,7 +138,7 @@ public class SnapshotService
             List<FileEntry> currentEntries = BuildCurrentEntries(
                 project,
                 filter,
-                prevFiles.Values,
+                baseline.PreviousFiles.Values,
                 cache,
                 forceFullScan,
                 dirMtimeCache,
@@ -91,281 +149,306 @@ public class SnapshotService
 
             ct.ThrowIfCancellationRequested();
 
-            // Map rel path -> file system info
-            List<SnapshotFileMetadata> currMeta = [.. currentEntries
-                .Select(entry => new SnapshotFileMetadata(
-                    Path.Combine(project.RootPath, entry.RelPath.Replace('/', Path.DirectorySeparatorChar)),
-                    entry.RelPath,
-                    entry))];
-
-            // Index by relative path for faster lookups
-            Dictionary<string, SnapshotFileMetadata> currMetaByRel = currMeta.ToDictionary(m => m.Rel, StringComparer.OrdinalIgnoreCase);
-            Dictionary<string, FileEntry> currentFilesByRel = currMetaByRel.ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Value.Entry,
-                StringComparer.OrdinalIgnoreCase);
-
-            // Determine changes
-            List<string> added     = new List<string>();
-            List<string> modified  = new List<string>();
-            List<string> unchanged = new List<string>();
-
-            foreach (KeyValuePair<string, SnapshotFileMetadata> kvp in currMetaByRel)
-            {
-                ct.ThrowIfCancellationRequested();
-
-                string rel = kvp.Key;
-                SnapshotFileMetadata f = kvp.Value;
-
-                if (!prevFiles.TryGetValue(rel, out FileEntry? old))
-                {
-                    added.Add(rel);
-                    continue;
-                }
-
-                // consider unchanged if size and mtime are identical (UTC)
-                bool sameSize = old.Size == f.Entry.Size;
-                bool sameTime = Math.Abs((old.MTimeUtc - f.Entry.MTimeUtc).TotalSeconds) < 1.0; // tolerate FS granularity
-
-                if (!sameSize || !sameTime)
-                    modified.Add(rel);
-                else
-                    unchanged.Add(rel);
-            }
-
-            var deleted = prevFiles.Keys
-                .Except(currMetaByRel.Keys, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            SnapshotChangeSet changes = BuildSnapshotChangeSet(project, currentEntries, baseline.PreviousFiles, ct);
 
             UpdateScanCache(project, filterHash, cache, forceFullScan, dirMtimeCache);
 
             if (!hashNow)
-            {
-                long snapshotTotalBytes = 0;
-                List<FileEntry> snapshotEntries = new List<FileEntry>(currMetaByRel.Count);
+                return PersistSnapshotWithoutHashing(project, changes, baseline, fullHash, maxSnapshotsToKeep, ct);
 
-                foreach (SnapshotFileMetadata meta in currMetaByRel.Values)
-                {
-                    ct.ThrowIfCancellationRequested();
+            return await HashAndPersistSnapshotAsync(
+                project,
+                changes,
+                baseline,
+                fullHash,
+                maxSnapshotsToKeep,
+                progressCallback,
+                ct).ConfigureAwait(false);
+        }, ct);
+    }
 
-                    string hash = string.Empty;
-                    if (!fullHash &&
-                        prevFiles.TryGetValue(meta.Rel, out FileEntry? prevEntry) &&
-                        !string.IsNullOrWhiteSpace(prevEntry.HashSha256))
-                    {
-                        hash = prevEntry.HashSha256;
-                    }
+    private async Task<SnapshotBaseline> LoadSnapshotBaselineAsync(Project project, CancellationToken ct)
+    {
+        Snapshot? previousSnapshot = _repo.GetLatestLocalSnapshotForProject(project.Id);
+        if (previousSnapshot is null)
+        {
+            return new SnapshotBaseline(
+                new Dictionary<string, FileEntry>(StringComparer.OrdinalIgnoreCase),
+                0L);
+        }
 
-                    snapshotEntries.Add(new FileEntry(meta.Rel, meta.Entry.Size, meta.Entry.MTimeUtc, hash));
-                    snapshotTotalBytes += meta.Entry.Size;
-                }
+        List<FileEntry> previousFiles = await _repo.GetFilesForSnapshotAsync(previousSnapshot.Id, ct).ConfigureAwait(false);
+        return new SnapshotBaseline(
+            previousFiles.ToDictionary(f => f.RelPath, StringComparer.OrdinalIgnoreCase),
+            previousSnapshot.TotalBytes);
+    }
 
-                SnapshotDiffSummary diffSummary = BuildSnapshotDiffSummary(
-                    added,
-                    modified,
-                    deleted,
-                    currentFilesByRel,
-                    prevFiles,
-                    snapshotTotalBytes,
-                    previousTotalBytes);
+    private static SnapshotChangeSet BuildSnapshotChangeSet(
+        Project project,
+        List<FileEntry> currentEntries,
+        Dictionary<string, FileEntry> previousFiles,
+        CancellationToken ct)
+    {
+        List<SnapshotFileMetadata> currentMetadata = [.. currentEntries
+            .Select(entry => new SnapshotFileMetadata(
+                Path.Combine(project.RootPath, entry.RelPath.Replace('/', Path.DirectorySeparatorChar)),
+                entry.RelPath,
+                entry))];
 
-                int snapshotId = _repo.CreateSnapshot(
-                    project.Id,
-                    snapshotEntries.Count,
-                    snapshotTotalBytes,
-                    diffSummary);
-                _repo.InsertFiles(snapshotId, snapshotEntries.OrderBy(e => e.RelPath, StringComparer.OrdinalIgnoreCase));
+        Dictionary<string, SnapshotFileMetadata> currentMetadataByRel =
+            currentMetadata.ToDictionary(m => m.Rel, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, FileEntry> currentFilesByRel = currentMetadataByRel.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value.Entry,
+            StringComparer.OrdinalIgnoreCase);
 
-                if (maxSnapshotsToKeep.HasValue && maxSnapshotsToKeep.Value > 0)
-                {
-                    try
-                    {
-                        ApplySnapshotRetention(project, Math.Max(1, maxSnapshotsToKeep.Value));
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error($"[SnapshotService] Retention step failed for project '{project.Name}': {ex}");
-                    }
-                }
+        var added = new List<string>();
+        var modified = new List<string>();
+        var unchanged = new List<string>();
+        ClassifySnapshotChanges(currentMetadataByRel, previousFiles, added, modified, unchanged, ct);
 
-                LastCreatedOutcome = new SnapshotOutcome
-                (
-                    Added:      added.Count,
-                    Modified:   modified.Count,
-                    Deleted:    deleted.Count,
-                    Unchanged:  unchanged.Count,
-                    TotalFiles: snapshotEntries.Count,
-                    TotalBytes: snapshotTotalBytes
-                );
-                LastOutcome = LastCreatedOutcome;
+        var deleted = previousFiles.Keys
+            .Except(currentMetadataByRel.Keys, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-                _logger.Info($"[SnapshotService] Finished snapshot for '{project.Name}': " +
-                             $"added={added.Count}, modified={modified.Count}, deleted={deleted.Count}, unchanged={unchanged.Count}, totalFiles={snapshotEntries.Count}, totalBytes={snapshotTotalBytes}");
+        return new SnapshotChangeSet(
+            added,
+            modified,
+            unchanged,
+            deleted,
+            currentMetadata,
+            currentMetadataByRel,
+            currentFilesByRel);
+    }
 
-                return snapshotId;
-            }
-
-            // Hash strategy
-            var entries    = new ConcurrentBag<FileEntry>();
-            long totalBytes = 0;
-
-            // helper to add entry
-            void AddEntry(string rel, long size, DateTime mtime, string hash)
-            {
-                entries.Add(new FileEntry(rel, size, mtime, hash));
-                Interlocked.Add(ref totalBytes, size);
-            }
-
-            // Unchanged: reuse previous hash unless fullHash forces recompute
-            if (!fullHash && unchanged.Count > 0)
-            {
-                foreach (string rel in unchanged)
-                {
-                    ct.ThrowIfCancellationRequested();
-
-                    if (!currMetaByRel.TryGetValue(rel, out SnapshotFileMetadata meta))
-                        continue;
-
-                    if (!prevFiles.TryGetValue(rel, out FileEntry? prevEntry))
-                        continue;
-
-                    AddEntry(rel, meta.Entry.Size, meta.Entry.MTimeUtc, prevEntry.HashSha256);
-                }
-            }
-
-            // Added + Modified (and everything if fullHash)
-            HashSet<string> changedRel = new HashSet<string>(added, StringComparer.OrdinalIgnoreCase);
-            changedRel.UnionWith(modified);
-            List<SnapshotFileMetadata> toHash = fullHash
-                ? currMeta
-                : [.. currMeta.Where(m => changedRel.Contains(m.Rel))];
-
-            _logger.Info($"[SnapshotService] toHash = {toHash.Count}, fullHash={fullHash}, added={added.Count}, modified={modified.Count}, unchanged={unchanged.Count}, deleted={deleted.Count}");
-
-            int totalToHash = toHash.Count;
-            long totalHashBytes = toHash.Sum(m => m.Entry.Size);
-            int hashedCount = 0;
-            long hashedBytes = 0;
-            DateTime hashStart = DateTime.UtcNow;
-            DateTime lastReport = hashStart;
-            var reportInterval = TimeSpan.FromMilliseconds(200);
-            object progressLock = new object();
-
-            void ReportHashProgress(string relPath, bool force)
-            {
-                if (progressCallback is null)
-                    return;
-
-                DateTime now = DateTime.UtcNow;
-                lock (progressLock)
-                {
-                    if (!force && (now - lastReport) < reportInterval)
-                        return;
-
-                    lastReport = now;
-                    int count = hashedCount;
-                    long bytes = hashedBytes;
-                    double percent = totalToHash > 0 ? count * 100d / totalToHash : 100d;
-
-                    double elapsedSeconds = Math.Max(0.1, (now - hashStart).TotalSeconds);
-                    double speedBytesSec = bytes / elapsedSeconds;
-                    double speedMbSec = speedBytesSec / (1024d * 1024d);
-
-                    string etaText;
-                    if (count >= totalToHash)
-                    {
-                        etaText = $"Hashing {count}/{totalToHash}";
-                    }
-                    else if (count > 0 && totalHashBytes > 0 && speedBytesSec > 0)
-                    {
-                        long remainingBytes = Math.Max(0L, totalHashBytes - bytes);
-                        double remainingSeconds = remainingBytes / speedBytesSec;
-                        var eta = TimeSpan.FromSeconds(remainingSeconds);
-                        etaText = $"Hashing {count}/{totalToHash} - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
-                    }
-                    else
-                    {
-                        etaText = $"Hashing {count}/{totalToHash}";
-                    }
-
-                    progressCallback(percent, relPath, etaText);
-                }
-            }
-
-            if (progressCallback is not null && totalToHash == 0)
-            {
-                progressCallback(0, string.Empty, "Hashing 0/0");
-            }
-
-            // Hash in parallel (CPU-heavy, but off the UI thread and cancellable)
-            await Parallel.ForEachAsync(
-                toHash,
-                new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = Environment.ProcessorCount,
-                    CancellationToken      = ct
-                },
-                async (m, token) =>
-                {
-                    string h = await _hash.Sha256Async(m.Full, token);
-                    AddEntry(m.Rel, m.Entry.Size, m.Entry.MTimeUtc, h);
-
-                    Interlocked.Add(ref hashedBytes, m.Entry.Size);
-                    int currentCount = Interlocked.Increment(ref hashedCount);
-                    ReportHashProgress(m.Rel, currentCount >= totalToHash);
-                });
-
+    private static void ClassifySnapshotChanges(
+        Dictionary<string, SnapshotFileMetadata> currentMetadataByRel,
+        Dictionary<string, FileEntry> previousFiles,
+        List<string> added,
+        List<string> modified,
+        List<string> unchanged,
+        CancellationToken ct)
+    {
+        foreach (KeyValuePair<string, SnapshotFileMetadata> kvp in currentMetadataByRel)
+        {
             ct.ThrowIfCancellationRequested();
 
-            SnapshotDiffSummary diffSummaryWithHashes = BuildSnapshotDiffSummary(
-                added,
-                modified,
-                deleted,
-                currentFilesByRel,
-                prevFiles,
-                totalBytes,
-                previousTotalBytes);
-
-            // Create snapshot record
-            int snapId = _repo.CreateSnapshot(
-                project.Id,
-                entries.Count,
-                totalBytes,
-                diffSummaryWithHashes);
-
-            // Persist files in a stable order
-            _repo.InsertFiles(snapId, entries.OrderBy(e => e.RelPath, StringComparer.OrdinalIgnoreCase));
-
-            // Apply snapshot retention (keep only the most recent N snapshots that have no backups referencing them)
-            if (maxSnapshotsToKeep.HasValue && maxSnapshotsToKeep.Value > 0)
+            if (!previousFiles.TryGetValue(kvp.Key, out FileEntry? old))
             {
-                try
-                {
-                    ApplySnapshotRetention(project, Math.Max(1, maxSnapshotsToKeep.Value));
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"[SnapshotService] Retention step failed for project '{project.Name}': {ex}");
-                }
+                added.Add(kvp.Key);
+                continue;
             }
 
-            // Attach summary for CLI
-            LastCreatedOutcome = new SnapshotOutcome
-            (
-                Added:      added.Count,
-                Modified:   modified.Count,
-                Deleted:    deleted.Count,
-                Unchanged:  unchanged.Count,
-                TotalFiles: entries.Count,
-                TotalBytes: totalBytes
-            );
-            LastOutcome = LastCreatedOutcome;
+            if (HasFileChanged(old, kvp.Value.Entry))
+                modified.Add(kvp.Key);
+            else
+                unchanged.Add(kvp.Key);
+        }
+    }
 
-            _logger.Info($"[SnapshotService] Finished snapshot for '{project.Name}': " +
-                         $"added={added.Count}, modified={modified.Count}, deleted={deleted.Count}, unchanged={unchanged.Count}, totalFiles={entries.Count}, totalBytes={totalBytes}");
+    private static bool HasFileChanged(FileEntry old, FileEntry current)
+    {
+        bool sameSize = old.Size == current.Size;
+        bool sameTime = Math.Abs((old.MTimeUtc - current.MTimeUtc).TotalSeconds) < 1.0;
+        return !sameSize || !sameTime;
+    }
 
-            return snapId;
-        }, ct);
+    private int PersistSnapshotWithoutHashing(
+        Project project,
+        SnapshotChangeSet changes,
+        SnapshotBaseline baseline,
+        bool fullHash,
+        int? maxSnapshotsToKeep,
+        CancellationToken ct)
+    {
+        long snapshotTotalBytes = 0;
+        List<FileEntry> snapshotEntries = new List<FileEntry>(changes.CurrentMetadataByRel.Count);
+
+        foreach (SnapshotFileMetadata meta in changes.CurrentMetadataByRel.Values)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            string hash = ResolveDeferredSnapshotHash(meta.Rel, baseline.PreviousFiles, fullHash);
+            snapshotEntries.Add(new FileEntry(meta.Rel, meta.Entry.Size, meta.Entry.MTimeUtc, hash));
+            snapshotTotalBytes += meta.Entry.Size;
+        }
+
+        int snapshotId = CreateSnapshotRecord(project, changes, baseline, snapshotEntries, snapshotTotalBytes);
+        FinishSnapshot(project, changes, snapshotEntries.Count, snapshotTotalBytes, maxSnapshotsToKeep);
+        return snapshotId;
+    }
+
+    private static string ResolveDeferredSnapshotHash(
+        string relativePath,
+        Dictionary<string, FileEntry> previousFiles,
+        bool fullHash)
+    {
+        return !fullHash &&
+               previousFiles.TryGetValue(relativePath, out FileEntry? previousEntry) &&
+               !string.IsNullOrWhiteSpace(previousEntry.HashSha256)
+            ? previousEntry.HashSha256
+            : string.Empty;
+    }
+
+    private async Task<int> HashAndPersistSnapshotAsync(
+        Project project,
+        SnapshotChangeSet changes,
+        SnapshotBaseline baseline,
+        bool fullHash,
+        int? maxSnapshotsToKeep,
+        Action<double, string, string>? progressCallback,
+        CancellationToken ct)
+    {
+        var entries = new ConcurrentBag<FileEntry>();
+        long totalBytes = AddReusableHashEntries(changes, baseline.PreviousFiles, fullHash, entries, ct);
+        List<SnapshotFileMetadata> toHash = GetSnapshotFilesToHash(changes, fullHash);
+
+        _logger.Info($"[SnapshotService] toHash = {toHash.Count}, fullHash={fullHash}, added={changes.Added.Count}, modified={changes.Modified.Count}, unchanged={changes.Unchanged.Count}, deleted={changes.Deleted.Count}");
+
+        totalBytes += await HashChangedSnapshotFilesAsync(toHash, entries, progressCallback, ct).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+
+        int snapshotId = CreateSnapshotRecord(project, changes, baseline, entries, totalBytes);
+        FinishSnapshot(project, changes, entries.Count, totalBytes, maxSnapshotsToKeep);
+        return snapshotId;
+    }
+
+    private static long AddReusableHashEntries(
+        SnapshotChangeSet changes,
+        Dictionary<string, FileEntry> previousFiles,
+        bool fullHash,
+        ConcurrentBag<FileEntry> entries,
+        CancellationToken ct)
+    {
+        if (fullHash)
+            return 0L;
+
+        long totalBytes = 0;
+        foreach (string rel in changes.Unchanged)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (!changes.CurrentMetadataByRel.TryGetValue(rel, out SnapshotFileMetadata meta) ||
+                !previousFiles.TryGetValue(rel, out FileEntry? previousEntry))
+            {
+                continue;
+            }
+
+            entries.Add(new FileEntry(rel, meta.Entry.Size, meta.Entry.MTimeUtc, previousEntry.HashSha256));
+            totalBytes += meta.Entry.Size;
+        }
+
+        return totalBytes;
+    }
+
+    private static List<SnapshotFileMetadata> GetSnapshotFilesToHash(SnapshotChangeSet changes, bool fullHash)
+    {
+        if (fullHash)
+            return changes.CurrentMetadata;
+
+        HashSet<string> changedRel = new HashSet<string>(changes.Added, StringComparer.OrdinalIgnoreCase);
+        changedRel.UnionWith(changes.Modified);
+        return [.. changes.CurrentMetadata.Where(m => changedRel.Contains(m.Rel))];
+    }
+
+    private async Task<long> HashChangedSnapshotFilesAsync(
+        List<SnapshotFileMetadata> toHash,
+        ConcurrentBag<FileEntry> entries,
+        Action<double, string, string>? progressCallback,
+        CancellationToken ct)
+    {
+        long hashedBytes = 0;
+        int hashedCount = 0;
+        long totalHashBytes = toHash.Sum(m => m.Entry.Size);
+        var progress = CreateHashProgressReporter(toHash.Count, totalHashBytes, progressCallback);
+
+        if (progressCallback is not null && toHash.Count == 0)
+            progressCallback(0, string.Empty, "Hashing 0/0");
+
+        await Parallel.ForEachAsync(
+            toHash,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = ct
+            },
+            async (m, token) =>
+            {
+                string hash = await _hash.Sha256Async(m.Full, token).ConfigureAwait(false);
+                entries.Add(new FileEntry(m.Rel, m.Entry.Size, m.Entry.MTimeUtc, hash));
+
+                Interlocked.Add(ref hashedBytes, m.Entry.Size);
+                int currentCount = Interlocked.Increment(ref hashedCount);
+                progress.Report(m.Rel, currentCount, hashedBytes, currentCount >= toHash.Count);
+            }).ConfigureAwait(false);
+
+        return hashedBytes;
+    }
+
+    private static HashProgressReporter CreateHashProgressReporter(
+        int totalToHash,
+        long totalHashBytes,
+        Action<double, string, string>? progressCallback)
+    {
+        return new HashProgressReporter(totalToHash, totalHashBytes, progressCallback, TimeSpan.FromMilliseconds(200));
+    }
+
+    private int CreateSnapshotRecord(
+        Project project,
+        SnapshotChangeSet changes,
+        SnapshotBaseline baseline,
+        IEnumerable<FileEntry> entries,
+        long totalBytes)
+    {
+        var entryList = entries as IReadOnlyCollection<FileEntry> ?? entries.ToList();
+        SnapshotDiffSummary diffSummary = BuildSnapshotDiffSummary(
+            changes.Added,
+            changes.Modified,
+            changes.Deleted,
+            changes.CurrentFilesByRel,
+            baseline.PreviousFiles,
+            totalBytes,
+            baseline.PreviousTotalBytes);
+
+        int snapshotId = _repo.CreateSnapshot(project.Id, entryList.Count, totalBytes, diffSummary);
+        _repo.InsertFiles(snapshotId, entryList.OrderBy(e => e.RelPath, StringComparer.OrdinalIgnoreCase));
+        return snapshotId;
+    }
+
+    private void FinishSnapshot(
+        Project project,
+        SnapshotChangeSet changes,
+        int totalFiles,
+        long totalBytes,
+        int? maxSnapshotsToKeep)
+    {
+        ApplySnapshotRetentionIfNeeded(project, maxSnapshotsToKeep);
+        LastCreatedOutcome = new SnapshotOutcome(
+            Added: changes.Added.Count,
+            Modified: changes.Modified.Count,
+            Deleted: changes.Deleted.Count,
+            Unchanged: changes.Unchanged.Count,
+            TotalFiles: totalFiles,
+            TotalBytes: totalBytes);
+        LastOutcome = LastCreatedOutcome;
+
+        _logger.Info($"[SnapshotService] Finished snapshot for '{project.Name}': " +
+                     $"added={changes.Added.Count}, modified={changes.Modified.Count}, deleted={changes.Deleted.Count}, unchanged={changes.Unchanged.Count}, totalFiles={totalFiles}, totalBytes={totalBytes}");
+    }
+
+    private void ApplySnapshotRetentionIfNeeded(Project project, int? maxSnapshotsToKeep)
+    {
+        if (!maxSnapshotsToKeep.HasValue || maxSnapshotsToKeep.Value <= 0)
+            return;
+
+        try
+        {
+            ApplySnapshotRetention(project, Math.Max(1, maxSnapshotsToKeep.Value));
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"[SnapshotService] Retention step failed for project '{project.Name}': {ex}");
+        }
     }
 
     private static string ComputeFilterHash(FilterService filter)
