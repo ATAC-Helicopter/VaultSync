@@ -460,13 +460,13 @@ namespace VaultSync.Core.Config
                 ResetRuntimeStateForTests();
                 _disposed = true;
             }
-        }
 
-        private static void RestoreTestConfigDirOverride(string? previousOverride)
-        {
-            lock (ConfigPathGate)
+            private static void RestoreTestConfigDirOverride(string? previousOverride)
             {
-                TestConfigDirOverride = previousOverride;
+                lock (ConfigPathGate)
+                {
+                    TestConfigDirOverride = previousOverride;
+                }
             }
         }
 

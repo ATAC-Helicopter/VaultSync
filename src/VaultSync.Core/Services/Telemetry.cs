@@ -170,7 +170,14 @@ public static class Telemetry
             DateTime cutoff = DateTime.UtcNow.AddDays(-retentionDays);
             foreach (FileInfo? file in files.Where(f => f.LastWriteTimeUtc < cutoff))
             {
-                try { file.Delete(); } catch { }
+                try
+                {
+                    file.Delete();
+                }
+                catch (Exception)
+                {
+                    // Pruning is best-effort; stale telemetry can remain if the file is locked.
+                }
             }
 
             // Recompute after date-based prune
@@ -188,16 +195,16 @@ public static class Telemetry
                         total -= file.Length;
                         file.Delete();
                     }
-                    catch
+                    catch (Exception)
                     {
-                        // continue best-effort
+                        // Pruning is best-effort; stale telemetry can remain if the file is locked.
                     }
                 }
             }
         }
-        catch
+        catch (Exception)
         {
-            // best-effort; never throw
+            // Telemetry cleanup must not affect app startup or command execution.
         }
     }
 

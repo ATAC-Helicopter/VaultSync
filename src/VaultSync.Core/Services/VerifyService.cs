@@ -11,8 +11,8 @@ public class VerifyService(SqliteRepository repo, HashService hash)
 
     public async Task<VerifyResult> VerifyAsync(Project project, string destination, int percent, bool full, CancellationToken ct = default)
     {
-        Snapshot snap = _repo.GetLatestSnapshot(project.Id) ?? throw new Exception("No snapshot found for project.");
-        var files = _repo.GetFilesForSnapshot(snap.Id).ToList();
+        Snapshot snap = _repo.GetLatestSnapshot(project.Id) ?? throw new InvalidOperationException("No snapshot found for project.");
+        List<FileEntry> files = await _repo.GetFilesForSnapshotAsync(snap.Id, ct).ConfigureAwait(false);
         if (files.Count == 0) return new VerifyResult(0, 0, []);
 
         List<FileEntry> sample = ChooseSample(files, ClampPercent(percent), full);
