@@ -464,8 +464,9 @@ public class SnapshotService
                     string rel = Path.GetRelativePath(root, file).Replace('\\', '/');
                     results.Add(new FileEntry(rel, fi.Length, fi.LastWriteTimeUtc, string.Empty));
                 }
-                catch
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
+                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping inaccessible file '{file}': {ex.Message}");
                 }
             }
         }

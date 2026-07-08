@@ -205,7 +205,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         {
             string currentPath = CurrentPath;
             string searchText = SearchText;
-            SnapshotExplorerResult result = await Task.Run(() => _service.List(_backupRoot, currentPath, searchText));
+            SnapshotExplorerResult result = await Task.Run(() => SnapshotExplorerService.List(_backupRoot, currentPath, searchText));
             Entries.Clear();
             foreach (SnapshotExplorerEntry entry in result.Entries)
                 Entries.Add(new SnapshotExplorerEntryViewModel(entry));
@@ -299,7 +299,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
 
         try
         {
-            SnapshotExplorerResult result = await Task.Run(() => _service.List(_backupRoot, folder.Path));
+            SnapshotExplorerResult result = await Task.Run(() => SnapshotExplorerService.List(_backupRoot, folder.Path));
             int index = Entries.IndexOf(folder);
             if (index < 0)
                 return;
