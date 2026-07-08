@@ -30,57 +30,82 @@ namespace VaultSync.CLI.Commands
                 return Task.FromResult(0);
             }
 
-            NetworkMountService? mountService = null;
-            if (settings.Test)
-            {
-                mountService = new NetworkMountService();
-            }
-
-            var results = new List<DestinationInfo>();
-            foreach (BackupDestination dest in destinations)
-            {
-                string alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias;
-                string path = dest.Path ?? string.Empty;
-                string status = dest.Active ? "Active" : "Inactive";
-                string message = "Configured";
-                bool reachable = false;
-
-                if (settings.Test && dest.Active)
-                {
-                    NetworkCredentialProfile? profile = ResolveCredential(config, dest);
-                    try
-                    {
-                        DestinationResolution resolution = mountService!.PrepareDestination(dest, profile);
-                        reachable = resolution.IsSuccess;
-                        message = string.IsNullOrWhiteSpace(resolution.Message)
-                            ? (reachable ? "Reachable" : "Unreachable")
-                            : resolution.Message;
-                        mountService.Cleanup(resolution);
-                    }
-                    catch (Exception ex)
-                    {
-                        reachable = false;
-                        message = ex.Message;
-                    }
-                }
-
-                results.Add(new DestinationInfo(alias, path, status, reachable, message));
-            }
+            List<DestinationInfo> results = BuildDestinationInfo(config, destinations, settings.Test);
 
             if (settings.Json)
             {
-                var payload = results.Select(r => new
-                {
-                    r.Alias,
-                    r.Path,
-                    r.Status,
-                    r.Reachable,
-                    r.Message
-                });
-                Console.WriteLine(JsonSerializer.Serialize(payload, CommandJsonOptions.Indented));
+                WriteJson(results);
                 return Task.FromResult(0);
             }
 
+            WriteTable(results, settings.Test);
+            return Task.FromResult(0);
+        }
+
+        private static List<DestinationInfo> BuildDestinationInfo(
+            AppConfig config,
+            IEnumerable<BackupDestination> destinations,
+            bool test)
+        {
+            NetworkMountService? mountService = test ? new NetworkMountService() : null;
+            return [.. destinations.Select(dest => BuildDestinationInfo(config, mountService, dest, test))];
+        }
+
+        private static DestinationInfo BuildDestinationInfo(
+            AppConfig config,
+            NetworkMountService? mountService,
+            BackupDestination dest,
+            bool test)
+        {
+            string alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias;
+            string path = dest.Path ?? string.Empty;
+            string status = dest.Active ? "Active" : "Inactive";
+            if (!test || !dest.Active)
+                return new DestinationInfo(alias, path, status, false, "Configured");
+
+            return TestDestination(config, mountService!, dest, alias, path, status);
+        }
+
+        private static DestinationInfo TestDestination(
+            AppConfig config,
+            NetworkMountService mountService,
+            BackupDestination dest,
+            string alias,
+            string path,
+            string status)
+        {
+            try
+            {
+                NetworkCredentialProfile? profile = ResolveCredential(config, dest);
+                DestinationResolution resolution = mountService.PrepareDestination(dest, profile);
+                bool reachable = resolution.IsSuccess;
+                string message = string.IsNullOrWhiteSpace(resolution.Message)
+                    ? (reachable ? "Reachable" : "Unreachable")
+                    : resolution.Message;
+                mountService.Cleanup(resolution);
+                return new DestinationInfo(alias, path, status, reachable, message);
+            }
+            catch (Exception ex)
+            {
+                return new DestinationInfo(alias, path, status, false, ex.Message);
+            }
+        }
+
+        private static void WriteJson(IEnumerable<DestinationInfo> results)
+        {
+            var payload = results.Select(r => new
+            {
+                r.Alias,
+                r.Path,
+                r.Status,
+                r.Reachable,
+                r.Message
+            });
+            Console.WriteLine(JsonSerializer.Serialize(payload, CommandJsonOptions.Indented));
+        }
+
+        private static void WriteTable(IEnumerable<DestinationInfo> results, bool test)
+        {
             Table table = new Table().Border(TableBorder.Rounded);
             table.AddColumn("Alias");
             table.AddColumn(new TableColumn("Path").Width(35));
@@ -89,7 +114,7 @@ namespace VaultSync.CLI.Commands
 
             foreach (DestinationInfo row in results)
             {
-                string detail = settings.Test
+                string detail = test
                     ? (row.Reachable ? "Reachable" : row.Message)
                     : row.Message;
 
@@ -98,7 +123,6 @@ namespace VaultSync.CLI.Commands
 
             AnsiConsole.MarkupLine("[bold]Configured backup destinations[/]");
             AnsiConsole.Write(table);
-            return Task.FromResult(0);
         }
 
         private static List<BackupDestination> BuildActiveDestinations(AppConfig config)

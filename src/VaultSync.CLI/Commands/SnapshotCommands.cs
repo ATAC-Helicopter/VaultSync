@@ -136,94 +136,120 @@ namespace VaultSync.CLI.Commands
             var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
             if (snaps.Count < 1) throw new Exception("No snapshots exist for this project");
 
-            int aId, bId;
-            if (s.A.HasValue && s.B.HasValue)
+            DiffSelection selection = ResolveDiffSelection(snaps, s);
+
+            var aFiles = repo.GetFilesForSnapshot(selection.A).ToDictionary(f => f.RelPath, f => f);
+            var bFiles = repo.GetFilesForSnapshot(selection.B).ToDictionary(f => f.RelPath, f => f);
+            DiffResult diff = BuildDiff(aFiles, bFiles);
+
+            Log.Info($"diff name={proj.Name} A={selection.A} B={selection.B} added={diff.Added.Count} deleted={diff.Deleted.Count} modified={diff.Modified.Count} unchanged={diff.Unchanged.Count} json={s.Json}");
+
+            if (s.Json)
             {
-                aId = s.A.Value; bId = s.B.Value;
-            }
-            else if (s.A.HasValue)
-            {
-                aId = s.A.Value;
-                int idx = snaps.FindIndex(x => x.Id == aId);
-                if (idx < 0 || idx + 1 >= snaps.Count) throw new Exception("Cannot infer the other snapshot; provide both A and B.");
-                bId = snaps[idx + 1].Id;
-            }
-            else
-            {
-                if (snaps.Count < 2) throw new Exception("Need at least two snapshots to diff");
-                aId = snaps[0].Id; bId = snaps[1].Id;
+                WriteDiffJson(selection, diff, aFiles.Count, bFiles.Count);
+                return Task.FromResult(0);
             }
 
-            var aFiles = repo.GetFilesForSnapshot(aId).ToDictionary(f => f.RelPath, f => f);
-            var bFiles = repo.GetFilesForSnapshot(bId).ToDictionary(f => f.RelPath, f => f);
+            WriteDiffTable(proj.Name, selection, diff, s.Limit);
+            return Task.FromResult(0);
+        }
 
+        private static DiffSelection ResolveDiffSelection(IReadOnlyList<Core.Models.Snapshot> snaps, DiffSettings settings)
+        {
+            if (settings.A.HasValue && settings.B.HasValue)
+                return new DiffSelection(settings.A.Value, settings.B.Value);
+
+            if (settings.A.HasValue)
+            {
+                int idx = snaps.ToList().FindIndex(x => x.Id == settings.A.Value);
+                if (idx < 0 || idx + 1 >= snaps.Count)
+                    throw new Exception("Cannot infer the other snapshot; provide both A and B.");
+
+                return new DiffSelection(settings.A.Value, snaps[idx + 1].Id);
+            }
+
+            if (snaps.Count < 2)
+                throw new Exception("Need at least two snapshots to diff");
+
+            return new DiffSelection(snaps[0].Id, snaps[1].Id);
+        }
+
+        private static DiffResult BuildDiff(
+            IReadOnlyDictionary<string, Core.Models.FileEntry> aFiles,
+            IReadOnlyDictionary<string, Core.Models.FileEntry> bFiles)
+        {
             var added = new List<string>();
             var deleted = new List<string>();
             var modified = new List<string>();
             var unchanged = new List<string>();
 
-            foreach (KeyValuePair<string, Core.Models.FileEntry> kv in aFiles)
+            foreach ((string rel, Core.Models.FileEntry af) in aFiles)
             {
-                string rel = kv.Key;
-                Core.Models.FileEntry af = kv.Value;
                 if (!bFiles.TryGetValue(rel, out Core.Models.FileEntry? bf))
-                {
-                    added.Add(rel); continue;
-                }
-                if (!string.Equals(af.HashSha256, bf.HashSha256, StringComparison.OrdinalIgnoreCase) || af.Size != bf.Size)
+                    added.Add(rel);
+                else if (FileChanged(af, bf))
                     modified.Add(rel);
                 else
                     unchanged.Add(rel);
             }
-            foreach (KeyValuePair<string, Core.Models.FileEntry> kv in bFiles)
-            {
-                string rel = kv.Key;
-                if (!aFiles.ContainsKey(rel)) deleted.Add(rel);
-            }
 
-            Log.Info($"diff name={proj.Name} A={aId} B={bId} added={added.Count} deleted={deleted.Count} modified={modified.Count} unchanged={unchanged.Count} json={s.Json}");
+            deleted.AddRange(bFiles.Keys.Where(rel => !aFiles.ContainsKey(rel)));
+            return new DiffResult(added, deleted, modified, unchanged);
+        }
 
-            if (s.Json)
-            {
-                string json = JsonSerializer.Serialize(new {
-                    A = aId, B = bId, added, deleted, modified, unchanged,
-                    summary = new {
-                        added = added.Count, deleted = deleted.Count,
-                        modified = modified.Count, unchanged = unchanged.Count,
-                        totalA = aFiles.Count, totalB = bFiles.Count
-                    }
-                }, CommandJsonOptions.Indented);
-                Console.WriteLine(json);
-                return Task.FromResult(0);
-            }
+        private static bool FileChanged(Core.Models.FileEntry a, Core.Models.FileEntry b) =>
+            !string.Equals(a.HashSha256, b.HashSha256, StringComparison.OrdinalIgnoreCase) ||
+            a.Size != b.Size;
 
-            AnsiConsole.MarkupLine($"Diff [bold]{Markup.Escape(proj.Name)}[/] - A: {aId} vs B: {bId}");
+        private static void WriteDiffJson(DiffSelection selection, DiffResult diff, int totalA, int totalB)
+        {
+            string json = JsonSerializer.Serialize(new {
+                A = selection.A, B = selection.B,
+                added = diff.Added,
+                deleted = diff.Deleted,
+                modified = diff.Modified,
+                unchanged = diff.Unchanged,
+                summary = new {
+                    added = diff.Added.Count,
+                    deleted = diff.Deleted.Count,
+                    modified = diff.Modified.Count,
+                    unchanged = diff.Unchanged.Count,
+                    totalA,
+                    totalB
+                }
+            }, CommandJsonOptions.Indented);
+            Console.WriteLine(json);
+        }
+
+        private static void WriteDiffTable(string projectName, DiffSelection selection, DiffResult diff, int limit)
+        {
+            AnsiConsole.MarkupLine($"Diff [bold]{Markup.Escape(projectName)}[/] - A: {selection.A} vs B: {selection.B}");
             Grid grid = new Grid().AddColumn().AddColumn().AddColumn().AddColumn();
             grid.AddRow(
-                $"[green]Added[/]: {added.Count}",
-                $"[red]Deleted[/]: {deleted.Count}",
-                $"[yellow]Modified[/]: {modified.Count}",
-                $"[grey]Unchanged[/]: {unchanged.Count}");
+                $"[green]Added[/]: {diff.Added.Count}",
+                $"[red]Deleted[/]: {diff.Deleted.Count}",
+                $"[yellow]Modified[/]: {diff.Modified.Count}",
+                $"[grey]Unchanged[/]: {diff.Unchanged.Count}");
             AnsiConsole.Write(grid);
 
-            void PrintList(string title, string color, IEnumerable<string> rows)
-            {
-                int total = rows is ICollection<string> c ? c.Count : rows.Count();
-                var list  = rows.Take(s.Limit).ToList();
-                if (list.Count == 0) return;
+            PrintList("ADDED", "green", diff.Added, limit);
+            PrintList("DELETED", "red", diff.Deleted, limit);
+            PrintList("MODIFIED", "yellow", diff.Modified, limit);
+        }
 
-                Table table = new Table().Border(TableBorder.Rounded);
-                table.Title = new TableTitle($"[{color}]{title}[/] (showing {list.Count}{(total > list.Count ? $"/{total}" : "")})");
-                table.AddColumn("Path");
-                foreach (string? r in list) table.AddRow(r);
-                AnsiConsole.Write(table);
-            }
+        private static void PrintList(string title, string color, IEnumerable<string> rows, int limit)
+        {
+            int total = rows is ICollection<string> c ? c.Count : rows.Count();
+            var list = rows.Take(limit).ToList();
+            if (list.Count == 0)
+                return;
 
-            PrintList("ADDED", "green", added);
-            PrintList("DELETED", "red", deleted);
-            PrintList("MODIFIED", "yellow", modified);
-
-            return Task.FromResult(0);
+            Table table = new Table().Border(TableBorder.Rounded);
+            table.Title = new TableTitle($"[{color}]{title}[/] (showing {list.Count}{(total > list.Count ? $"/{total}" : "")})");
+            table.AddColumn("Path");
+            foreach (string? r in list)
+                table.AddRow(r);
+            AnsiConsole.Write(table);
         }
     }
 
@@ -268,48 +294,15 @@ namespace VaultSync.CLI.Commands
                 return Task.FromResult(0);
             }
 
-            var toDelete = new List<int>();
-            if (s.KeepLast is int keep)
-            {
-                if (snaps.Count > keep) toDelete.AddRange(snaps.Skip(keep).Select(x => x.Id));
-            }
-            else if (!string.IsNullOrWhiteSpace(s.Before))
-            {
-                var cutoff = DateTime.Parse(s.Before!).ToUniversalTime().Date;
-                toDelete.AddRange(snaps.Where(x => x.CreatedUtc < cutoff).Select(x => x.Id));
-            }
-
-            List<int> planned = [.. toDelete.Distinct().Order()];
+            List<int> planned = PlanPrune(snaps, s);
 
             if (s.Json)
             {
-                var payload = new { project = proj.Name, totalSnapshots = snaps.Count, plannedDeletions = planned, dryRun = s.DryRun };
-                Console.WriteLine(JsonSerializer.Serialize(payload, CommandJsonOptions.Indented));
+                WritePruneJson(proj.Name, snaps.Count, planned, s.DryRun);
             }
             else
             {
-                AnsiConsole.MarkupLine($"Prune [bold]{Markup.Escape(proj.Name)}[/]: total snapshots {snaps.Count}");
-                if (planned.Count == 0)
-                {
-                    AnsiConsole.MarkupLine("[grey]Nothing to delete[/].");
-                }
-                else
-                {
-                    Table tbl = new Table().Border(TableBorder.Rounded);
-                    tbl.AddColumn("Snapshot");
-                    tbl.AddColumn("Created (UTC)");
-                    tbl.AddColumn(new TableColumn("Files").RightAligned());
-                    tbl.AddColumn(new TableColumn("Bytes").RightAligned());
-
-                    var byId = snaps.ToDictionary(x => x.Id);
-                    foreach (int id in planned)
-                    {
-                        Core.Models.Snapshot srow = byId[id];
-                        tbl.AddRow(id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), ByteSizeFormat.FormatBytes(srow.TotalBytes, "0.#"));
-                    }
-                    AnsiConsole.Write(tbl);
-                    if (s.DryRun) AnsiConsole.MarkupLine("[yellow]Dry run[/]: no changes written.");
-                }
+                WritePruneTable(proj.Name, snaps, planned, s.DryRun);
             }
 
             if (planned.Count == 0 || s.DryRun) return Task.FromResult(0);
@@ -318,5 +311,63 @@ namespace VaultSync.CLI.Commands
             AnsiConsole.MarkupLine($"[green]Pruned[/] snapshots: {snapshots}, files: {files}");
             return Task.FromResult(0);
         }
+
+        private static List<int> PlanPrune(IReadOnlyList<Core.Models.Snapshot> snapshots, PruneSettings settings)
+        {
+            IEnumerable<int> toDelete = settings.KeepLast is int keep
+                ? snapshots.Skip(keep).Select(x => x.Id)
+                : snapshots.Where(x => x.CreatedUtc < DateTime.Parse(settings.Before!).ToUniversalTime().Date).Select(x => x.Id);
+            return [.. toDelete.Distinct().Order()];
+        }
+
+        private static void WritePruneJson(string projectName, int totalSnapshots, IReadOnlyList<int> planned, bool dryRun)
+        {
+            var payload = new { project = projectName, totalSnapshots, plannedDeletions = planned, dryRun };
+            Console.WriteLine(JsonSerializer.Serialize(payload, CommandJsonOptions.Indented));
+        }
+
+        private static void WritePruneTable(
+            string projectName,
+            IReadOnlyList<Core.Models.Snapshot> snapshots,
+            IReadOnlyList<int> planned,
+            bool dryRun)
+        {
+            AnsiConsole.MarkupLine($"Prune [bold]{Markup.Escape(projectName)}[/]: total snapshots {snapshots.Count}");
+            if (planned.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[grey]Nothing to delete[/].");
+                return;
+            }
+
+            WritePlannedPruneTable(snapshots, planned);
+            if (dryRun)
+                AnsiConsole.MarkupLine("[yellow]Dry run[/]: no changes written.");
+        }
+
+        private static void WritePlannedPruneTable(
+            IReadOnlyList<Core.Models.Snapshot> snapshots,
+            IEnumerable<int> planned)
+        {
+            Table tbl = new Table().Border(TableBorder.Rounded);
+            tbl.AddColumn("Snapshot");
+            tbl.AddColumn("Created (UTC)");
+            tbl.AddColumn(new TableColumn("Files").RightAligned());
+            tbl.AddColumn(new TableColumn("Bytes").RightAligned());
+
+            var byId = snapshots.ToDictionary(x => x.Id);
+            foreach (int id in planned)
+            {
+                Core.Models.Snapshot srow = byId[id];
+                tbl.AddRow(id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), ByteSizeFormat.FormatBytes(srow.TotalBytes, "0.#"));
+            }
+            AnsiConsole.Write(tbl);
+        }
     }
+
+    sealed record DiffSelection(int A, int B);
+    sealed record DiffResult(
+        List<string> Added,
+        List<string> Deleted,
+        List<string> Modified,
+        List<string> Unchanged);
 }
