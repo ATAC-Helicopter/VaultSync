@@ -213,6 +213,10 @@ namespace VaultSync.UI
             bool UseKeychain,
             string Password);
 
+        private sealed record CredentialSaveResult(
+            NetworkCredentialProfile Profile,
+            bool HadPlaintextFallback);
+
         public sealed class ProjectMetadataConflictItemViewModel
         {
             public required int ProjectId { get; init; }
@@ -719,87 +723,8 @@ namespace VaultSync.UI
             _minimumFreeSpacePercent = ClampInt(cfg.Storage.MinFreeSpacePercent, 0, 95, 10);
             RefreshRsyncStatusHint();
 
-            foreach (NetworkCredentialViewModel? cred in CredentialProfiles.ToList())
-            {
-                cred.PropertyChanged -= OnNestedPropertyChanged;
-            }
-            CredentialProfiles.Clear();
-            foreach (NetworkCredentialProfile cred in cfg.Network.Credentials ?? [])
-            {
-                    string keyRef  = _credentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
-                    string? secret  = _credentialVault.GetSecret(keyRef, cred.Username, cred.UseKeychain, cred.Password);
-
-                CredentialProfiles.Add(new NetworkCredentialViewModel
-                {
-                    Name        = cred.Name,
-                    Username    = cred.Username,
-                    Domain      = cred.Domain ?? string.Empty,
-                    KeyRef      = keyRef,
-                    UseKeychain = cred.UseKeychain,
-                    Password    = secret ?? string.Empty
-                });
-            }
-
-            foreach (BackupDestinationViewModel? dest in Destinations.ToList())
-            {
-                dest.PropertyChanged -= OnNestedPropertyChanged;
-            }
-            Destinations.Clear();
-            if (cfg.Backups.Destinations?.Count > 0)
-            {
-                foreach (BackupDestination dest in cfg.Backups.Destinations)
-                {
-                    var vm = new BackupDestinationViewModel
-                    {
-                        Alias        = dest.Alias ?? string.Empty,
-                        Path         = dest.Path,
-                        Active       = dest.Active,
-                        AutoMount    = dest.AutoMount,
-                        AutoUnmount  = dest.AutoUnmount,
-                        PreMounted   = dest.PreMounted,
-                        EnableMetadataSync = dest.EnableMetadataSync,
-                        AutoImportMetadata = dest.AutoImportMetadata,
-                        ForceMetadataBackfill = dest.ForceMetadataBackfill,
-                        RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
-                        RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10),
-                        EnableCheckpointResume = dest.EnableCheckpointResume,
-                        SoftQuotaGb = dest.SoftQuotaBytes.HasValue && dest.SoftQuotaBytes.Value > 0
-                            ? Math.Round(dest.SoftQuotaBytes.Value / 1024d / 1024d / 1024d, 2)
-                            : 0d,
-                        QuotaWarningPercent = ClampInt(dest.QuotaWarningPercent, 50, 99, 85)
-                    };
-
-                    vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
-                        c.Name.Equals(dest.CredentialName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
-                    vm.CredentialName = vm.SelectedCredential?.Name ?? dest.CredentialName ?? string.Empty;
-
-                    Destinations.Add(vm);
-                }
-            }
-            else
-            {
-                // fallback: use BackupRoot as a single destination
-                if (!string.IsNullOrWhiteSpace(_backupLocationPath))
-                {
-                Destinations.Add(new BackupDestinationViewModel
-                {
-                    Alias       = "Primary",
-                    Path        = _backupLocationPath,
-                    Active      = true,
-                    PreMounted  = true,
-                    AutoMount   = false,
-                    AutoUnmount = false,
-                    EnableMetadataSync = true,
-                    AutoImportMetadata = true,
-                    ForceMetadataBackfill = false,
-                    RetryMaxAttempts = 1,
-                    RetryBackoffSeconds = 10,
-                    EnableCheckpointResume = true,
-                    SoftQuotaGb = 0d,
-                    QuotaWarningPercent = 85
-                });
-            }
-            }
+            LoadCredentialProfiles(cfg);
+            LoadDestinations(cfg);
             RefreshLegacyVisibility();
 
             // FIX: use Theme instead of ThemeName
@@ -858,6 +783,107 @@ namespace VaultSync.UI
             }
         }
 
+        private void LoadCredentialProfiles(AppConfig cfg)
+        {
+            foreach (NetworkCredentialViewModel? cred in CredentialProfiles.ToList())
+            {
+                cred.PropertyChanged -= OnNestedPropertyChanged;
+            }
+
+            CredentialProfiles.Clear();
+            foreach (NetworkCredentialProfile cred in cfg.Network.Credentials ?? [])
+            {
+                CredentialProfiles.Add(CreateCredentialViewModel(cred));
+            }
+        }
+
+        private NetworkCredentialViewModel CreateCredentialViewModel(NetworkCredentialProfile cred)
+        {
+            string keyRef = _credentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
+            string? secret = _credentialVault.GetSecret(keyRef, cred.Username, cred.UseKeychain, cred.Password);
+            return new NetworkCredentialViewModel
+            {
+                Name = cred.Name,
+                Username = cred.Username,
+                Domain = cred.Domain ?? string.Empty,
+                KeyRef = keyRef,
+                UseKeychain = cred.UseKeychain,
+                Password = secret ?? string.Empty
+            };
+        }
+
+        private void LoadDestinations(AppConfig cfg)
+        {
+            foreach (BackupDestinationViewModel? dest in Destinations.ToList())
+            {
+                dest.PropertyChanged -= OnNestedPropertyChanged;
+            }
+
+            Destinations.Clear();
+            if (cfg.Backups.Destinations?.Count > 0)
+            {
+                foreach (BackupDestination dest in cfg.Backups.Destinations)
+                {
+                    Destinations.Add(CreateDestinationViewModel(dest));
+                }
+                return;
+            }
+
+            AddLegacyPrimaryDestination();
+        }
+
+        private BackupDestinationViewModel CreateDestinationViewModel(BackupDestination dest)
+        {
+            var vm = new BackupDestinationViewModel
+            {
+                Alias = dest.Alias ?? string.Empty,
+                Path = dest.Path,
+                Active = dest.Active,
+                AutoMount = dest.AutoMount,
+                AutoUnmount = dest.AutoUnmount,
+                PreMounted = dest.PreMounted,
+                EnableMetadataSync = dest.EnableMetadataSync,
+                AutoImportMetadata = dest.AutoImportMetadata,
+                ForceMetadataBackfill = dest.ForceMetadataBackfill,
+                RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
+                RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10),
+                EnableCheckpointResume = dest.EnableCheckpointResume,
+                SoftQuotaGb = dest.SoftQuotaBytes.HasValue && dest.SoftQuotaBytes.Value > 0
+                    ? Math.Round(dest.SoftQuotaBytes.Value / 1024d / 1024d / 1024d, 2)
+                    : 0d,
+                QuotaWarningPercent = ClampInt(dest.QuotaWarningPercent, 50, 99, 85)
+            };
+
+            vm.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
+                c.Name.Equals(dest.CredentialName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+            vm.CredentialName = vm.SelectedCredential?.Name ?? dest.CredentialName ?? string.Empty;
+            return vm;
+        }
+
+        private void AddLegacyPrimaryDestination()
+        {
+            if (string.IsNullOrWhiteSpace(_backupLocationPath))
+                return;
+
+            Destinations.Add(new BackupDestinationViewModel
+            {
+                Alias = "Primary",
+                Path = _backupLocationPath,
+                Active = true,
+                PreMounted = true,
+                AutoMount = false,
+                AutoUnmount = false,
+                EnableMetadataSync = true,
+                AutoImportMetadata = true,
+                ForceMetadataBackfill = false,
+                RetryMaxAttempts = 1,
+                RetryBackoffSeconds = 10,
+                EnableCheckpointResume = true,
+                SoftQuotaGb = 0d,
+                QuotaWarningPercent = 85
+            });
+        }
+
         private async Task SaveToConfigAsync(bool notifyOnValidationError = true)
         {
             // Start from the latest persisted config so we don't clobber fields the Settings view doesn't edit
@@ -871,49 +897,11 @@ namespace VaultSync.UI
                 return;
             }
 
-            // Keep name + object selection aligned before taking snapshots.
-            foreach (BackupDestinationViewModel dest in Destinations)
-            {
-                if (dest.SelectedCredential is not null)
-                {
-                    dest.CredentialName = dest.SelectedCredential.Name;
-                }
-                else if (!string.IsNullOrWhiteSpace(dest.CredentialName))
-                {
-                    dest.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
-                        c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
-                }
-            }
+            SyncDestinationCredentialSelections();
 
             // Snapshot UI state to avoid cross-thread collection access during background work.
-            var destinationSnapshot = Destinations
-                .Select(d => new DestinationSnapshot(
-                    Alias: d.Alias,
-                    Path: d.Path,
-                    Active: d.Active,
-                    AutoMount: d.AutoMount,
-                    AutoUnmount: d.AutoUnmount,
-                    PreMounted: d.PreMounted,
-                    CredentialName: d.SelectedCredential?.Name ?? d.CredentialName,
-                    EnableMetadataSync: d.EnableMetadataSync,
-                    AutoImportMetadata: d.AutoImportMetadata,
-                    ForceMetadataBackfill: d.ForceMetadataBackfill,
-                    RetryMaxAttempts: ClampInt(d.RetryMaxAttempts, 1, 10, 1),
-                    RetryBackoffSeconds: ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
-                    EnableCheckpointResume: d.EnableCheckpointResume,
-                    SoftQuotaBytes: ToQuotaBytes(d.SoftQuotaGb),
-                    QuotaWarningPercent: ClampInt(d.QuotaWarningPercent, 50, 99, 85)))
-                .ToList();
-
-            var credentialSnapshot = CredentialProfiles
-                .Select(c => new CredentialSnapshot(
-                    Name: c.Name,
-                    Username: c.Username,
-                    Domain: c.Domain,
-                    KeyRef: c.KeyRef,
-                    UseKeychain: c.UseKeychain,
-                    Password: c.Password))
-                .ToList();
+            var destinationSnapshot = CreateDestinationSnapshots();
+            var credentialSnapshot = CreateCredentialSnapshots();
 
             AppConfig cfg = _configStore.Load();
 
@@ -1000,48 +988,7 @@ namespace VaultSync.UI
             cfg.Storage.ShowDriveWarnings    = ShowDriveHealthWarnings;
             cfg.Storage.MinFreeSpacePercent  = MinimumFreeSpacePercent;
 
-            var credentialSave = await Task.Run(() =>
-            {
-                var savedCreds = new List<NetworkCredentialProfile>();
-                bool hadPlaintextFallback = false;
-
-                foreach (CredentialSnapshot? c in credentialSnapshot)
-                {
-                    string keyRef = _credentialVault.EnsureKeyRef(c.KeyRef, c.Name);
-
-                    string? secret = !string.IsNullOrWhiteSpace(c.Password)
-                        ? c.Password
-                        : _credentialVault.GetSecret(keyRef, c.Username, c.UseKeychain);
-
-                    bool persistPlaintext = false;
-
-                    if (!string.IsNullOrWhiteSpace(secret))
-                    {
-                        try
-                        {
-                            _credentialVault.SaveSecret(keyRef, c.Username, secret, c.UseKeychain);
-                        }
-                        catch
-                        {
-                            persistPlaintext = true;
-                        }
-                    }
-
-                    hadPlaintextFallback |= persistPlaintext;
-
-                    savedCreds.Add(new NetworkCredentialProfile
-                    {
-                        Name        = c.Name,
-                        Username    = c.Username,
-                        Domain      = c.Domain,
-                        KeyRef      = keyRef,
-                        UseKeychain = c.UseKeychain,
-                        Password    = persistPlaintext ? secret : string.Empty // keep out of config unless we must
-                    });
-                }
-
-                return (savedCreds, hadPlaintextFallback);
-            });
+            var credentialSave = await SaveCredentialSnapshotsAsync(credentialSnapshot);
 
             cfg.Network.Credentials = credentialSave.savedCreds;
 
@@ -1092,57 +1039,160 @@ namespace VaultSync.UI
                 DateTime.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture));
         }
 
+        private void SyncDestinationCredentialSelections()
+        {
+            foreach (BackupDestinationViewModel dest in Destinations)
+            {
+                SyncDestinationCredentialSelection(dest);
+            }
+        }
+
+        private void SyncDestinationCredentialSelection(BackupDestinationViewModel dest)
+        {
+            if (dest.SelectedCredential is not null)
+            {
+                dest.CredentialName = dest.SelectedCredential.Name;
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dest.CredentialName))
+            {
+                dest.SelectedCredential = CredentialProfiles.FirstOrDefault(c =>
+                    c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        private List<DestinationSnapshot> CreateDestinationSnapshots()
+        {
+            return [.. Destinations.Select(d => new DestinationSnapshot(
+                Alias: d.Alias,
+                Path: d.Path,
+                Active: d.Active,
+                AutoMount: d.AutoMount,
+                AutoUnmount: d.AutoUnmount,
+                PreMounted: d.PreMounted,
+                CredentialName: d.SelectedCredential?.Name ?? d.CredentialName,
+                EnableMetadataSync: d.EnableMetadataSync,
+                AutoImportMetadata: d.AutoImportMetadata,
+                ForceMetadataBackfill: d.ForceMetadataBackfill,
+                RetryMaxAttempts: ClampInt(d.RetryMaxAttempts, 1, 10, 1),
+                RetryBackoffSeconds: ClampInt(d.RetryBackoffSeconds, 1, 300, 10),
+                EnableCheckpointResume: d.EnableCheckpointResume,
+                SoftQuotaBytes: ToQuotaBytes(d.SoftQuotaGb),
+                QuotaWarningPercent: ClampInt(d.QuotaWarningPercent, 50, 99, 85)))];
+        }
+
+        private List<CredentialSnapshot> CreateCredentialSnapshots()
+        {
+            return [.. CredentialProfiles.Select(c => new CredentialSnapshot(
+                Name: c.Name,
+                Username: c.Username,
+                Domain: c.Domain,
+                KeyRef: c.KeyRef,
+                UseKeychain: c.UseKeychain,
+                Password: c.Password))];
+        }
+
+        private Task<(List<NetworkCredentialProfile> savedCreds, bool hadPlaintextFallback)> SaveCredentialSnapshotsAsync(IReadOnlyList<CredentialSnapshot> credentialSnapshot)
+        {
+            return Task.Run(() =>
+            {
+                var savedCreds = new List<NetworkCredentialProfile>();
+                bool hadPlaintextFallback = false;
+                foreach (CredentialSnapshot credential in credentialSnapshot)
+                {
+                    CredentialSaveResult saved = SaveCredentialSnapshot(credential);
+                    savedCreds.Add(saved.Profile);
+                    hadPlaintextFallback |= saved.HadPlaintextFallback;
+                }
+
+                return (savedCreds, hadPlaintextFallback);
+            });
+        }
+
+        private CredentialSaveResult SaveCredentialSnapshot(CredentialSnapshot credential)
+        {
+            string keyRef = _credentialVault.EnsureKeyRef(credential.KeyRef, credential.Name);
+            string? secret = ResolveCredentialSecret(credential, keyRef);
+            bool persistPlaintext = TrySaveCredentialSecret(credential, keyRef, secret);
+
+            var profile = new NetworkCredentialProfile
+            {
+                Name = credential.Name,
+                Username = credential.Username,
+                Domain = credential.Domain,
+                KeyRef = keyRef,
+                UseKeychain = credential.UseKeychain,
+                Password = persistPlaintext ? secret : string.Empty
+            };
+
+            return new CredentialSaveResult(profile, persistPlaintext);
+        }
+
+        private string? ResolveCredentialSecret(CredentialSnapshot credential, string keyRef)
+        {
+            return !string.IsNullOrWhiteSpace(credential.Password)
+                ? credential.Password
+                : _credentialVault.GetSecret(keyRef, credential.Username, credential.UseKeychain);
+        }
+
+        private bool TrySaveCredentialSecret(CredentialSnapshot credential, string keyRef, string? secret)
+        {
+            if (string.IsNullOrWhiteSpace(secret))
+                return false;
+
+            try
+            {
+                _credentialVault.SaveSecret(keyRef, credential.Username, secret, credential.UseKeychain);
+                return false;
+            }
+            catch (Exception)
+            {
+                return true;
+            }
+        }
+
         private bool ValidateDestinations(bool notifyOnError)
         {
             var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (BackupDestinationViewModel dest in Destinations)
             {
-                if (string.IsNullOrWhiteSpace(dest.Path))
+                string? error = GetDestinationValidationError(dest, aliases);
+                if (error is not null)
                 {
                     if (notifyOnError)
-                    {
-                        SaveStatus = L("Settings.Destinations.ValidationPathRequired", "Destination path is required.");
-                        GlobalNotificationCenter.Instance.Show(
-                            SaveStatus,
-                            NotificationSeverity.Error,
-                            L("Settings.Destinations.ValidationTitle", "Destination validation"));
-                    }
+                        ShowDestinationValidationError(error);
                     return false;
                 }
-
-                if (!string.IsNullOrWhiteSpace(dest.Alias) && !aliases.Add(dest.Alias))
-                {
-                    if (notifyOnError)
-                    {
-                        SaveStatus = string.Format(
-                            CultureInfo.CurrentCulture,
-                            L("Settings.Destinations.ValidationDuplicateAlias", "Duplicate destination alias '{0}'."),
-                            dest.Alias);
-                        GlobalNotificationCenter.Instance.Show(
-                            SaveStatus,
-                            NotificationSeverity.Error,
-                            L("Settings.Destinations.ValidationTitle", "Destination validation"));
-                    }
-                    return false;
-                }
-
-                if (dest.SoftQuotaGb < 0)
-                {
-                    if (notifyOnError)
-                    {
-                        SaveStatus = L("Settings.Destinations.ValidationQuotaNonNegative", "Destination quota must be 0 GB or higher.");
-                        GlobalNotificationCenter.Instance.Show(
-                            SaveStatus,
-                            NotificationSeverity.Error,
-                            L("Settings.Destinations.ValidationTitle", "Destination validation"));
-                    }
-                    return false;
-                }
-
             }
 
             return true;
+        }
+
+        private string? GetDestinationValidationError(BackupDestinationViewModel dest, HashSet<string> aliases)
+        {
+            if (string.IsNullOrWhiteSpace(dest.Path))
+                return L("Settings.Destinations.ValidationPathRequired", "Destination path is required.");
+
+            if (!string.IsNullOrWhiteSpace(dest.Alias) && !aliases.Add(dest.Alias))
+                return string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Destinations.ValidationDuplicateAlias", "Duplicate destination alias '{0}'."),
+                    dest.Alias);
+
+            return dest.SoftQuotaGb < 0
+                ? L("Settings.Destinations.ValidationQuotaNonNegative", "Destination quota must be 0 GB or higher.")
+                : null;
+        }
+
+        private void ShowDestinationValidationError(string message)
+        {
+            SaveStatus = message;
+            GlobalNotificationCenter.Instance.Show(
+                SaveStatus,
+                NotificationSeverity.Error,
+                L("Settings.Destinations.ValidationTitle", "Destination validation"));
         }
 
         private static bool BackupDestinationsEqual(IReadOnlyList<BackupDestination>? current, IReadOnlyList<BackupDestination> next)
@@ -3152,71 +3202,78 @@ namespace VaultSync.UI
                 return (false, false);
             }
 
+            if (!TryEnsureBackupDirectory(path, notifyOnSuccess))
+                return (false, false);
+
+            if (!ValidateBackupLocationWritable(path, notifyOnSuccess))
+                return (true, false);
+
+            CheckBackupLocationFreeSpace(path, notifyOnSuccess);
+            return (true, true);
+        }
+
+        private bool TryEnsureBackupDirectory(string path, bool notifyOnError)
+        {
             try
             {
                 Directory.CreateDirectory(path);
+                return true;
             }
             catch (Exception ex)
             {
                 BackupLocationStatus = "Not accessible";
-                if (notifyOnSuccess)
-                {
-                    GlobalNotificationCenter.Instance.Show(
-                        $"Backup location not accessible: {ex.Message}",
-                        NotificationSeverity.Error,
-                        "Backup location");
-                }
-                return (false, false);
+                if (notifyOnError)
+                    ShowBackupLocationNotification($"Backup location not accessible: {ex.Message}", NotificationSeverity.Error);
+                return false;
             }
+        }
 
-            bool canWrite = TryWriteProbeFile(path);
-            if (!canWrite)
-            {
-                BackupLocationStatus = "Not writable";
-                if (notifyOnSuccess)
-                {
-                    GlobalNotificationCenter.Instance.Show(
-                        "Backup location is not writable.",
-                        NotificationSeverity.Error,
-                        "Backup location");
-                }
-                return (true, false);
-            }
+        private bool ValidateBackupLocationWritable(string path, bool notifyOnError)
+        {
+            if (TryWriteProbeFile(path))
+                return true;
 
-            // Check free space against the configured minimum threshold.
+            BackupLocationStatus = "Not writable";
+            if (notifyOnError)
+                ShowBackupLocationNotification("Backup location is not writable.", NotificationSeverity.Error);
+            return false;
+        }
+
+        private void CheckBackupLocationFreeSpace(string path, bool notifyOnSuccess)
+        {
             try
             {
                 var drive = new DriveInfo(path);
                 if (drive.IsReady && drive.TotalSize > 0)
-                {
-                    double freePercent = (double)drive.AvailableFreeSpace / drive.TotalSize * 100d;
-                    if (freePercent < MinimumFreeSpacePercent)
-                    {
-                        BackupLocationStatus = $"Low space ({freePercent:0.#}% free)";
-                        GlobalNotificationCenter.Instance.Show(
-                            $"Free space below threshold ({freePercent:0.#}% available, threshold {MinimumFreeSpacePercent}%).",
-                            NotificationSeverity.Warning,
-                            "Backup location");
-                    }
-                    else
-                    {
-                        BackupLocationStatus = "OK";
-                        if (notifyOnSuccess)
-                        {
-                            GlobalNotificationCenter.Instance.Show(
-                                $"Backup location set: {path}",
-                                NotificationSeverity.Info,
-                                "Backup location");
-                        }
-                    }
-                }
+                    ApplyBackupLocationFreeSpaceStatus(path, drive, notifyOnSuccess);
             }
-            catch
+            catch (Exception)
             {
                 BackupLocationStatus = "OK";
                 // Ignore disk space failures; path/write checks already passed.
             }
-            return (true, true);
+        }
+
+        private void ApplyBackupLocationFreeSpaceStatus(string path, DriveInfo drive, bool notifyOnSuccess)
+        {
+            double freePercent = (double)drive.AvailableFreeSpace / drive.TotalSize * 100d;
+            if (freePercent < MinimumFreeSpacePercent)
+            {
+                BackupLocationStatus = $"Low space ({freePercent:0.#}% free)";
+                ShowBackupLocationNotification(
+                    $"Free space below threshold ({freePercent:0.#}% available, threshold {MinimumFreeSpacePercent}%).",
+                    NotificationSeverity.Warning);
+                return;
+            }
+
+            BackupLocationStatus = "OK";
+            if (notifyOnSuccess)
+                ShowBackupLocationNotification($"Backup location set: {path}", NotificationSeverity.Info);
+        }
+
+        private static void ShowBackupLocationNotification(string message, NotificationSeverity severity)
+        {
+            GlobalNotificationCenter.Instance.Show(message, severity, "Backup location");
         }
 
         private void ForgetAllProjects()
@@ -4161,176 +4218,169 @@ namespace VaultSync.UI
         private static void ApplyImportableSettings(JsonElement redactedConfig, AppConfig cfg)
         {
             if (redactedConfig.TryGetProperty("backups", out JsonElement backups))
-            {
-                cfg.Backups.EnableAutoBackups = ReadBool(backups, nameof(cfg.Backups.EnableAutoBackups), cfg.Backups.EnableAutoBackups);
-                cfg.Backups.IntervalMinutes = ClampInt(ReadInt(backups, nameof(cfg.Backups.IntervalMinutes), cfg.Backups.IntervalMinutes), 1, 10080, 30);
-                cfg.Backups.MaxSnapshotsPerProject = ClampInt(ReadInt(backups, nameof(cfg.Backups.MaxSnapshotsPerProject), cfg.Backups.MaxSnapshotsPerProject), 1, 10000, 20);
-                cfg.Backups.EnableMetadataSync = ReadBool(backups, nameof(cfg.Backups.EnableMetadataSync), cfg.Backups.EnableMetadataSync);
-                cfg.Backups.AutoImportMetadata = ReadBool(backups, nameof(cfg.Backups.AutoImportMetadata), cfg.Backups.AutoImportMetadata);
-                cfg.Backups.PromptRestoreAfterImport = ReadBool(backups, nameof(cfg.Backups.PromptRestoreAfterImport), cfg.Backups.PromptRestoreAfterImport);
-                cfg.Backups.EnableBandwidthLimit = ReadBool(backups, nameof(cfg.Backups.EnableBandwidthLimit), cfg.Backups.EnableBandwidthLimit);
-                cfg.Backups.MaxBandwidthMbps = ClampInt(ReadInt(backups, nameof(cfg.Backups.MaxBandwidthMbps), cfg.Backups.MaxBandwidthMbps), 1, 100000, 100);
-                cfg.Backups.EnableQuietHours = ReadBool(backups, nameof(cfg.Backups.EnableQuietHours), cfg.Backups.EnableQuietHours);
-                cfg.Backups.QuietHoursStart = NormalizeTimeOfDay(
-                    ReadString(backups, nameof(cfg.Backups.QuietHoursStart), cfg.Backups.QuietHoursStart),
-                    cfg.Backups.QuietHoursStart);
-                cfg.Backups.QuietHoursEnd = NormalizeTimeOfDay(
-                    ReadString(backups, nameof(cfg.Backups.QuietHoursEnd), cfg.Backups.QuietHoursEnd),
-                    cfg.Backups.QuietHoursEnd);
-                cfg.Backups.UseAdvancedDestinations = ReadBool(backups, nameof(cfg.Backups.UseAdvancedDestinations), cfg.Backups.UseAdvancedDestinations);
-                cfg.Backups.UseCompression = ReadBool(backups, nameof(cfg.Backups.UseCompression), cfg.Backups.UseCompression);
-                cfg.Backups.UseRsyncDelta = ReadBool(backups, nameof(cfg.Backups.UseRsyncDelta), cfg.Backups.UseRsyncDelta);
-                cfg.Backups.UseIncrementalBackups = ReadBool(backups, nameof(cfg.Backups.UseIncrementalBackups), cfg.Backups.UseIncrementalBackups);
-                cfg.Backups.UseFullSnapshotHash = ReadBool(backups, nameof(cfg.Backups.UseFullSnapshotHash), cfg.Backups.UseFullSnapshotHash);
-                cfg.Backups.EnableScanCache = ReadBool(backups, nameof(cfg.Backups.EnableScanCache), cfg.Backups.EnableScanCache);
-                cfg.Backups.AggressiveScanCache = ReadBool(backups, nameof(cfg.Backups.AggressiveScanCache), cfg.Backups.AggressiveScanCache);
-                cfg.Backups.EnableArchiveUploadAutoTune = ReadBool(backups, nameof(cfg.Backups.EnableArchiveUploadAutoTune), cfg.Backups.EnableArchiveUploadAutoTune);
-                cfg.Backups.EnableParallelArchiveUpload = ReadBool(backups, nameof(cfg.Backups.EnableParallelArchiveUpload), cfg.Backups.EnableParallelArchiveUpload);
-                cfg.Backups.VerifyAfterCreate = ReadBool(backups, nameof(cfg.Backups.VerifyAfterCreate), cfg.Backups.VerifyAfterCreate);
-                cfg.Backups.PauseOnBattery = ReadBool(backups, nameof(cfg.Backups.PauseOnBattery), cfg.Backups.PauseOnBattery);
-
-                if (backups.TryGetProperty("encryption", out JsonElement enc))
-                {
-                    cfg.Backups.Encryption.Enabled = ReadBool(enc, nameof(cfg.Backups.Encryption.Enabled), cfg.Backups.Encryption.Enabled);
-                    cfg.Backups.Encryption.Algorithm = NormalizeImportedEncryptionAlgorithm(
-                        ReadString(enc, nameof(cfg.Backups.Encryption.Algorithm), cfg.Backups.Encryption.Algorithm),
-                        cfg.Backups.Encryption.Algorithm);
-                    cfg.Backups.Encryption.KdfProfile = NormalizeImportedKdfProfile(
-                        ReadString(enc, nameof(cfg.Backups.Encryption.KdfProfile), cfg.Backups.Encryption.KdfProfile),
-                        cfg.Backups.Encryption.KdfProfile);
-                    cfg.Backups.Encryption.KdfParamRef = NormalizeImportedKdfParamRef(
-                        ReadString(enc, nameof(cfg.Backups.Encryption.KdfParamRef), cfg.Backups.Encryption.KdfParamRef),
-                        cfg.Backups.Encryption.KdfParamRef);
-                    cfg.Backups.Encryption.AllowSessionFallback = ReadBool(enc, nameof(cfg.Backups.Encryption.AllowSessionFallback), cfg.Backups.Encryption.AllowSessionFallback);
-                    cfg.Backups.Encryption.OpenUnlockTimeoutMinutes = ClampInt(ReadInt(enc, nameof(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes), cfg.Backups.Encryption.OpenUnlockTimeoutMinutes), 1, 1440, 10);
-                }
-            }
+                ApplyImportableBackupSettings(backups, cfg);
 
             if (redactedConfig.TryGetProperty("storage", out JsonElement storage))
-            {
-                cfg.Storage.PreferExternalDrives = ReadBool(storage, nameof(cfg.Storage.PreferExternalDrives), cfg.Storage.PreferExternalDrives);
-                cfg.Storage.ShowDriveWarnings = ReadBool(storage, nameof(cfg.Storage.ShowDriveWarnings), cfg.Storage.ShowDriveWarnings);
-                cfg.Storage.MinFreeSpacePercent = ClampInt(ReadInt(storage, nameof(cfg.Storage.MinFreeSpacePercent), cfg.Storage.MinFreeSpacePercent), 1, 99, 10);
-            }
+                ApplyImportableStorageSettings(storage, cfg);
 
             if (redactedConfig.TryGetProperty("appearance", out JsonElement appearance))
-            {
-                cfg.Appearance.Theme = NormalizeImportedTheme(
-                    ReadString(appearance, nameof(cfg.Appearance.Theme), cfg.Appearance.Theme),
-                    cfg.Appearance.Theme);
-                cfg.Appearance.CompactLayout = ReadBool(appearance, nameof(cfg.Appearance.CompactLayout), cfg.Appearance.CompactLayout);
-                cfg.Appearance.ShowProjectAvatars = ReadBool(appearance, nameof(cfg.Appearance.ShowProjectAvatars), cfg.Appearance.ShowProjectAvatars);
-
-                if (appearance.TryGetProperty(nameof(cfg.Appearance.TagColors), out JsonElement tagColors) &&
-                    tagColors.ValueKind == JsonValueKind.Object)
-                {
-                    var importedTagColors = new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
-
-                    foreach (JsonProperty property in tagColors.EnumerateObject())
-                    {
-                        string tag = property.Name?.Trim() ?? string.Empty;
-                        if (string.IsNullOrWhiteSpace(tag) || property.Value.ValueKind != JsonValueKind.Object)
-                            continue;
-
-                        (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(tag);
-                        importedTagColors[tag] = new TagColorConfig
-                        {
-                            Background = ProjectTagAppearance.NormalizeHex(
-                                ReadString(property.Value, nameof(TagColorConfig.Background), defaults.Background),
-                                defaults.Background),
-                            Foreground = ProjectTagAppearance.NormalizeHex(
-                                ReadString(property.Value, nameof(TagColorConfig.Foreground), defaults.Foreground),
-                                defaults.Foreground),
-                            Border = ProjectTagAppearance.NormalizeHex(
-                                ReadString(property.Value, nameof(TagColorConfig.Border), defaults.Border),
-                                defaults.Border)
-                        };
-                    }
-
-                    cfg.Appearance.TagColors = importedTagColors;
-                }
-
-                if (appearance.TryGetProperty(nameof(cfg.Appearance.CustomTheme), out JsonElement customTheme) &&
-                    customTheme.ValueKind == JsonValueKind.Object)
-                {
-                    cfg.Appearance.CustomTheme = new ThemePaletteConfig
-                    {
-                        Name = ReadString(customTheme, nameof(ThemePaletteConfig.Name), cfg.Appearance.CustomTheme.Name),
-                        BaseTheme = ReadString(customTheme, nameof(ThemePaletteConfig.BaseTheme), cfg.Appearance.CustomTheme.BaseTheme),
-                        Background = ReadString(customTheme, nameof(ThemePaletteConfig.Background), cfg.Appearance.CustomTheme.Background),
-                        Surface = ReadString(customTheme, nameof(ThemePaletteConfig.Surface), cfg.Appearance.CustomTheme.Surface),
-                        SurfaceAlt = ReadString(customTheme, nameof(ThemePaletteConfig.SurfaceAlt), cfg.Appearance.CustomTheme.SurfaceAlt),
-                        Accent = ReadString(customTheme, nameof(ThemePaletteConfig.Accent), cfg.Appearance.CustomTheme.Accent),
-                        TextPrimary = ReadString(customTheme, nameof(ThemePaletteConfig.TextPrimary), cfg.Appearance.CustomTheme.TextPrimary),
-                        TextSecondary = ReadString(customTheme, nameof(ThemePaletteConfig.TextSecondary), cfg.Appearance.CustomTheme.TextSecondary),
-                        Success = ReadString(customTheme, nameof(ThemePaletteConfig.Success), cfg.Appearance.CustomTheme.Success),
-                        Warning = ReadString(customTheme, nameof(ThemePaletteConfig.Warning), cfg.Appearance.CustomTheme.Warning),
-                        Danger = ReadString(customTheme, nameof(ThemePaletteConfig.Danger), cfg.Appearance.CustomTheme.Danger)
-                    };
-                }
-            }
+                ApplyImportableAppearanceSettings(appearance, cfg);
 
             if (redactedConfig.TryGetProperty("notifications", out JsonElement notifications))
-            {
-                cfg.Notifications.OnBackupSuccess = ReadBool(notifications, nameof(cfg.Notifications.OnBackupSuccess), cfg.Notifications.OnBackupSuccess);
-                cfg.Notifications.OnBackupFailure = ReadBool(notifications, nameof(cfg.Notifications.OnBackupFailure), cfg.Notifications.OnBackupFailure);
-                cfg.Notifications.OnSnapshotSuccess = ReadBool(notifications, nameof(cfg.Notifications.OnSnapshotSuccess), cfg.Notifications.OnSnapshotSuccess);
-                cfg.Notifications.OnSnapshotFailure = ReadBool(notifications, nameof(cfg.Notifications.OnSnapshotFailure), cfg.Notifications.OnSnapshotFailure);
-                cfg.Notifications.OnLowDisk = ReadBool(notifications, nameof(cfg.Notifications.OnLowDisk), cfg.Notifications.OnLowDisk);
-                cfg.Notifications.UseOsNotifications = ReadBool(notifications, nameof(cfg.Notifications.UseOsNotifications), cfg.Notifications.UseOsNotifications);
-                cfg.Notifications.OnlyWhenInactive = ReadBool(notifications, nameof(cfg.Notifications.OnlyWhenInactive), cfg.Notifications.OnlyWhenInactive);
-            }
+                ApplyImportableNotificationSettings(notifications, cfg);
 
             if (redactedConfig.TryGetProperty("advanced", out JsonElement advanced))
-            {
-                cfg.Advanced.VerboseLogging = ReadBool(advanced, nameof(cfg.Advanced.VerboseLogging), cfg.Advanced.VerboseLogging);
-                cfg.Advanced.SaveVerboseLogs = ReadBool(advanced, nameof(cfg.Advanced.SaveVerboseLogs), cfg.Advanced.SaveVerboseLogs);
-                cfg.Advanced.CheckUpdates = ReadBool(advanced, nameof(cfg.Advanced.CheckUpdates), cfg.Advanced.CheckUpdates);
-                cfg.Advanced.UpdateCheckIntervalMinutes = ClampInt(ReadInt(advanced, nameof(cfg.Advanced.UpdateCheckIntervalMinutes), cfg.Advanced.UpdateCheckIntervalMinutes), 15, 1440, 120);
-                cfg.Advanced.BetaChannelEnabled = ReadBool(advanced, nameof(cfg.Advanced.BetaChannelEnabled), cfg.Advanced.BetaChannelEnabled);
-                cfg.Advanced.Language = NormalizeImportedLanguage(
-                    ReadString(advanced, nameof(cfg.Advanced.Language), cfg.Advanced.Language),
-                    cfg.Advanced.Language);
-                cfg.Advanced.HasSeenOnboarding = ReadBool(advanced, nameof(cfg.Advanced.HasSeenOnboarding), cfg.Advanced.HasSeenOnboarding);
-
-                if (advanced.TryGetProperty(nameof(cfg.Advanced.Maintenance), out JsonElement maintenance))
-                {
-                    cfg.Advanced.Maintenance.Enabled = ReadBool(
-                        maintenance,
-                        nameof(cfg.Advanced.Maintenance.Enabled),
-                        cfg.Advanced.Maintenance.Enabled);
-                    cfg.Advanced.Maintenance.WindowStart = NormalizeTimeOfDay(
-                        ReadString(maintenance, nameof(cfg.Advanced.Maintenance.WindowStart), cfg.Advanced.Maintenance.WindowStart),
-                        DefaultMaintenanceStart);
-                    cfg.Advanced.Maintenance.WindowEnd = NormalizeTimeOfDay(
-                        ReadString(maintenance, nameof(cfg.Advanced.Maintenance.WindowEnd), cfg.Advanced.Maintenance.WindowEnd),
-                        DefaultMaintenanceEnd);
-                    cfg.Advanced.Maintenance.RunConsistencyScan = ReadBool(
-                        maintenance,
-                        nameof(cfg.Advanced.Maintenance.RunConsistencyScan),
-                        cfg.Advanced.Maintenance.RunConsistencyScan);
-                    cfg.Advanced.Maintenance.RunRepairDryRun = ReadBool(
-                        maintenance,
-                        nameof(cfg.Advanced.Maintenance.RunRepairDryRun),
-                        cfg.Advanced.Maintenance.RunRepairDryRun);
-                    cfg.Advanced.Maintenance.RunMetadataRefresh = ReadBool(
-                        maintenance,
-                        nameof(cfg.Advanced.Maintenance.RunMetadataRefresh),
-                        cfg.Advanced.Maintenance.RunMetadataRefresh);
-                }
-            }
+                ApplyImportableAdvancedSettings(advanced, cfg);
 
             if (redactedConfig.TryGetProperty("behavior", out JsonElement behavior))
+                ApplyImportableBehaviorSettings(behavior, cfg);
+        }
+
+        private static void ApplyImportableBackupSettings(JsonElement backups, AppConfig cfg)
+        {
+            cfg.Backups.EnableAutoBackups = ReadBool(backups, nameof(cfg.Backups.EnableAutoBackups), cfg.Backups.EnableAutoBackups);
+            cfg.Backups.IntervalMinutes = ClampInt(ReadInt(backups, nameof(cfg.Backups.IntervalMinutes), cfg.Backups.IntervalMinutes), 1, 10080, 30);
+            cfg.Backups.MaxSnapshotsPerProject = ClampInt(ReadInt(backups, nameof(cfg.Backups.MaxSnapshotsPerProject), cfg.Backups.MaxSnapshotsPerProject), 1, 10000, 20);
+            cfg.Backups.EnableMetadataSync = ReadBool(backups, nameof(cfg.Backups.EnableMetadataSync), cfg.Backups.EnableMetadataSync);
+            cfg.Backups.AutoImportMetadata = ReadBool(backups, nameof(cfg.Backups.AutoImportMetadata), cfg.Backups.AutoImportMetadata);
+            cfg.Backups.PromptRestoreAfterImport = ReadBool(backups, nameof(cfg.Backups.PromptRestoreAfterImport), cfg.Backups.PromptRestoreAfterImport);
+            cfg.Backups.EnableBandwidthLimit = ReadBool(backups, nameof(cfg.Backups.EnableBandwidthLimit), cfg.Backups.EnableBandwidthLimit);
+            cfg.Backups.MaxBandwidthMbps = ClampInt(ReadInt(backups, nameof(cfg.Backups.MaxBandwidthMbps), cfg.Backups.MaxBandwidthMbps), 1, 100000, 100);
+            cfg.Backups.EnableQuietHours = ReadBool(backups, nameof(cfg.Backups.EnableQuietHours), cfg.Backups.EnableQuietHours);
+            cfg.Backups.QuietHoursStart = NormalizeTimeOfDay(ReadString(backups, nameof(cfg.Backups.QuietHoursStart), cfg.Backups.QuietHoursStart), cfg.Backups.QuietHoursStart);
+            cfg.Backups.QuietHoursEnd = NormalizeTimeOfDay(ReadString(backups, nameof(cfg.Backups.QuietHoursEnd), cfg.Backups.QuietHoursEnd), cfg.Backups.QuietHoursEnd);
+            cfg.Backups.UseAdvancedDestinations = ReadBool(backups, nameof(cfg.Backups.UseAdvancedDestinations), cfg.Backups.UseAdvancedDestinations);
+            cfg.Backups.UseCompression = ReadBool(backups, nameof(cfg.Backups.UseCompression), cfg.Backups.UseCompression);
+            cfg.Backups.UseRsyncDelta = ReadBool(backups, nameof(cfg.Backups.UseRsyncDelta), cfg.Backups.UseRsyncDelta);
+            cfg.Backups.UseIncrementalBackups = ReadBool(backups, nameof(cfg.Backups.UseIncrementalBackups), cfg.Backups.UseIncrementalBackups);
+            cfg.Backups.UseFullSnapshotHash = ReadBool(backups, nameof(cfg.Backups.UseFullSnapshotHash), cfg.Backups.UseFullSnapshotHash);
+            cfg.Backups.EnableScanCache = ReadBool(backups, nameof(cfg.Backups.EnableScanCache), cfg.Backups.EnableScanCache);
+            cfg.Backups.AggressiveScanCache = ReadBool(backups, nameof(cfg.Backups.AggressiveScanCache), cfg.Backups.AggressiveScanCache);
+            cfg.Backups.EnableArchiveUploadAutoTune = ReadBool(backups, nameof(cfg.Backups.EnableArchiveUploadAutoTune), cfg.Backups.EnableArchiveUploadAutoTune);
+            cfg.Backups.EnableParallelArchiveUpload = ReadBool(backups, nameof(cfg.Backups.EnableParallelArchiveUpload), cfg.Backups.EnableParallelArchiveUpload);
+            cfg.Backups.VerifyAfterCreate = ReadBool(backups, nameof(cfg.Backups.VerifyAfterCreate), cfg.Backups.VerifyAfterCreate);
+            cfg.Backups.PauseOnBattery = ReadBool(backups, nameof(cfg.Backups.PauseOnBattery), cfg.Backups.PauseOnBattery);
+
+            if (backups.TryGetProperty("encryption", out JsonElement enc))
+                ApplyImportableEncryptionSettings(enc, cfg);
+        }
+
+        private static void ApplyImportableEncryptionSettings(JsonElement enc, AppConfig cfg)
+        {
+            cfg.Backups.Encryption.Enabled = ReadBool(enc, nameof(cfg.Backups.Encryption.Enabled), cfg.Backups.Encryption.Enabled);
+            cfg.Backups.Encryption.Algorithm = NormalizeImportedEncryptionAlgorithm(ReadString(enc, nameof(cfg.Backups.Encryption.Algorithm), cfg.Backups.Encryption.Algorithm), cfg.Backups.Encryption.Algorithm);
+            cfg.Backups.Encryption.KdfProfile = NormalizeImportedKdfProfile(ReadString(enc, nameof(cfg.Backups.Encryption.KdfProfile), cfg.Backups.Encryption.KdfProfile), cfg.Backups.Encryption.KdfProfile);
+            cfg.Backups.Encryption.KdfParamRef = NormalizeImportedKdfParamRef(ReadString(enc, nameof(cfg.Backups.Encryption.KdfParamRef), cfg.Backups.Encryption.KdfParamRef), cfg.Backups.Encryption.KdfParamRef);
+            cfg.Backups.Encryption.AllowSessionFallback = ReadBool(enc, nameof(cfg.Backups.Encryption.AllowSessionFallback), cfg.Backups.Encryption.AllowSessionFallback);
+            cfg.Backups.Encryption.OpenUnlockTimeoutMinutes = ClampInt(ReadInt(enc, nameof(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes), cfg.Backups.Encryption.OpenUnlockTimeoutMinutes), 1, 1440, 10);
+        }
+
+        private static void ApplyImportableStorageSettings(JsonElement storage, AppConfig cfg)
+        {
+            cfg.Storage.PreferExternalDrives = ReadBool(storage, nameof(cfg.Storage.PreferExternalDrives), cfg.Storage.PreferExternalDrives);
+            cfg.Storage.ShowDriveWarnings = ReadBool(storage, nameof(cfg.Storage.ShowDriveWarnings), cfg.Storage.ShowDriveWarnings);
+            cfg.Storage.MinFreeSpacePercent = ClampInt(ReadInt(storage, nameof(cfg.Storage.MinFreeSpacePercent), cfg.Storage.MinFreeSpacePercent), 1, 99, 10);
+        }
+
+        private static void ApplyImportableAppearanceSettings(JsonElement appearance, AppConfig cfg)
+        {
+            cfg.Appearance.Theme = NormalizeImportedTheme(ReadString(appearance, nameof(cfg.Appearance.Theme), cfg.Appearance.Theme), cfg.Appearance.Theme);
+            cfg.Appearance.CompactLayout = ReadBool(appearance, nameof(cfg.Appearance.CompactLayout), cfg.Appearance.CompactLayout);
+            cfg.Appearance.ShowProjectAvatars = ReadBool(appearance, nameof(cfg.Appearance.ShowProjectAvatars), cfg.Appearance.ShowProjectAvatars);
+
+            if (appearance.TryGetProperty(nameof(cfg.Appearance.TagColors), out JsonElement tagColors) && tagColors.ValueKind == JsonValueKind.Object)
+                cfg.Appearance.TagColors = ReadImportableTagColors(tagColors);
+
+            if (appearance.TryGetProperty(nameof(cfg.Appearance.CustomTheme), out JsonElement customTheme) && customTheme.ValueKind == JsonValueKind.Object)
+                cfg.Appearance.CustomTheme = ReadImportableCustomTheme(customTheme, cfg.Appearance.CustomTheme);
+        }
+
+        private static Dictionary<string, TagColorConfig> ReadImportableTagColors(JsonElement tagColors)
+        {
+            var importedTagColors = new Dictionary<string, TagColorConfig>(StringComparer.OrdinalIgnoreCase);
+            foreach (JsonProperty property in tagColors.EnumerateObject())
+                AddImportableTagColor(importedTagColors, property);
+            return importedTagColors;
+        }
+
+        private static void AddImportableTagColor(Dictionary<string, TagColorConfig> importedTagColors, JsonProperty property)
+        {
+            string tag = property.Name?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(tag) || property.Value.ValueKind != JsonValueKind.Object)
+                return;
+
+            (string Background, string Foreground, string Border) defaults = ProjectTagChip.GetDefaultPalette(tag);
+            importedTagColors[tag] = new TagColorConfig
             {
-                cfg.Behavior.RunInBackground = ReadBool(behavior, nameof(cfg.Behavior.RunInBackground), cfg.Behavior.RunInBackground);
-                cfg.Behavior.ShowWindowOnTrayActions = ReadBool(behavior, nameof(cfg.Behavior.ShowWindowOnTrayActions), cfg.Behavior.ShowWindowOnTrayActions);
-                cfg.Behavior.ShowTrayIcon = ReadBool(behavior, nameof(cfg.Behavior.ShowTrayIcon), cfg.Behavior.ShowTrayIcon);
-                cfg.Behavior.ShowBackupWidget = ReadBool(behavior, nameof(cfg.Behavior.ShowBackupWidget), cfg.Behavior.ShowBackupWidget);
-                cfg.Behavior.EnableSystemNotifications = ReadBool(behavior, nameof(cfg.Behavior.EnableSystemNotifications), cfg.Behavior.EnableSystemNotifications);
-                cfg.Behavior.MinimizeToTray = ReadBool(behavior, nameof(cfg.Behavior.MinimizeToTray), cfg.Behavior.MinimizeToTray);
-                cfg.Behavior.LaunchOnLogin = ReadBool(behavior, nameof(cfg.Behavior.LaunchOnLogin), cfg.Behavior.LaunchOnLogin);
-                cfg.Behavior.ConfirmDeleteBackup = ReadBool(behavior, nameof(cfg.Behavior.ConfirmDeleteBackup), cfg.Behavior.ConfirmDeleteBackup);
-            }
+                Background = ProjectTagAppearance.NormalizeHex(ReadString(property.Value, nameof(TagColorConfig.Background), defaults.Background), defaults.Background),
+                Foreground = ProjectTagAppearance.NormalizeHex(ReadString(property.Value, nameof(TagColorConfig.Foreground), defaults.Foreground), defaults.Foreground),
+                Border = ProjectTagAppearance.NormalizeHex(ReadString(property.Value, nameof(TagColorConfig.Border), defaults.Border), defaults.Border)
+            };
+        }
+
+        private static ThemePaletteConfig ReadImportableCustomTheme(JsonElement customTheme, ThemePaletteConfig fallback)
+        {
+            return new ThemePaletteConfig
+            {
+                Name = ReadString(customTheme, nameof(ThemePaletteConfig.Name), fallback.Name),
+                BaseTheme = ReadString(customTheme, nameof(ThemePaletteConfig.BaseTheme), fallback.BaseTheme),
+                Background = ReadString(customTheme, nameof(ThemePaletteConfig.Background), fallback.Background),
+                Surface = ReadString(customTheme, nameof(ThemePaletteConfig.Surface), fallback.Surface),
+                SurfaceAlt = ReadString(customTheme, nameof(ThemePaletteConfig.SurfaceAlt), fallback.SurfaceAlt),
+                Accent = ReadString(customTheme, nameof(ThemePaletteConfig.Accent), fallback.Accent),
+                TextPrimary = ReadString(customTheme, nameof(ThemePaletteConfig.TextPrimary), fallback.TextPrimary),
+                TextSecondary = ReadString(customTheme, nameof(ThemePaletteConfig.TextSecondary), fallback.TextSecondary),
+                Success = ReadString(customTheme, nameof(ThemePaletteConfig.Success), fallback.Success),
+                Warning = ReadString(customTheme, nameof(ThemePaletteConfig.Warning), fallback.Warning),
+                Danger = ReadString(customTheme, nameof(ThemePaletteConfig.Danger), fallback.Danger)
+            };
+        }
+
+        private static void ApplyImportableNotificationSettings(JsonElement notifications, AppConfig cfg)
+        {
+            cfg.Notifications.OnBackupSuccess = ReadBool(notifications, nameof(cfg.Notifications.OnBackupSuccess), cfg.Notifications.OnBackupSuccess);
+            cfg.Notifications.OnBackupFailure = ReadBool(notifications, nameof(cfg.Notifications.OnBackupFailure), cfg.Notifications.OnBackupFailure);
+            cfg.Notifications.OnSnapshotSuccess = ReadBool(notifications, nameof(cfg.Notifications.OnSnapshotSuccess), cfg.Notifications.OnSnapshotSuccess);
+            cfg.Notifications.OnSnapshotFailure = ReadBool(notifications, nameof(cfg.Notifications.OnSnapshotFailure), cfg.Notifications.OnSnapshotFailure);
+            cfg.Notifications.OnLowDisk = ReadBool(notifications, nameof(cfg.Notifications.OnLowDisk), cfg.Notifications.OnLowDisk);
+            cfg.Notifications.UseOsNotifications = ReadBool(notifications, nameof(cfg.Notifications.UseOsNotifications), cfg.Notifications.UseOsNotifications);
+            cfg.Notifications.OnlyWhenInactive = ReadBool(notifications, nameof(cfg.Notifications.OnlyWhenInactive), cfg.Notifications.OnlyWhenInactive);
+        }
+
+        private static void ApplyImportableAdvancedSettings(JsonElement advanced, AppConfig cfg)
+        {
+            cfg.Advanced.VerboseLogging = ReadBool(advanced, nameof(cfg.Advanced.VerboseLogging), cfg.Advanced.VerboseLogging);
+            cfg.Advanced.SaveVerboseLogs = ReadBool(advanced, nameof(cfg.Advanced.SaveVerboseLogs), cfg.Advanced.SaveVerboseLogs);
+            cfg.Advanced.CheckUpdates = ReadBool(advanced, nameof(cfg.Advanced.CheckUpdates), cfg.Advanced.CheckUpdates);
+            cfg.Advanced.UpdateCheckIntervalMinutes = ClampInt(ReadInt(advanced, nameof(cfg.Advanced.UpdateCheckIntervalMinutes), cfg.Advanced.UpdateCheckIntervalMinutes), 15, 1440, 120);
+            cfg.Advanced.BetaChannelEnabled = ReadBool(advanced, nameof(cfg.Advanced.BetaChannelEnabled), cfg.Advanced.BetaChannelEnabled);
+            cfg.Advanced.Language = NormalizeImportedLanguage(ReadString(advanced, nameof(cfg.Advanced.Language), cfg.Advanced.Language), cfg.Advanced.Language);
+            cfg.Advanced.HasSeenOnboarding = ReadBool(advanced, nameof(cfg.Advanced.HasSeenOnboarding), cfg.Advanced.HasSeenOnboarding);
+
+            if (advanced.TryGetProperty(nameof(cfg.Advanced.Maintenance), out JsonElement maintenance))
+                ApplyImportableMaintenanceSettings(maintenance, cfg);
+        }
+
+        private static void ApplyImportableMaintenanceSettings(JsonElement maintenance, AppConfig cfg)
+        {
+            cfg.Advanced.Maintenance.Enabled = ReadBool(maintenance, nameof(cfg.Advanced.Maintenance.Enabled), cfg.Advanced.Maintenance.Enabled);
+            cfg.Advanced.Maintenance.WindowStart = NormalizeTimeOfDay(ReadString(maintenance, nameof(cfg.Advanced.Maintenance.WindowStart), cfg.Advanced.Maintenance.WindowStart), DefaultMaintenanceStart);
+            cfg.Advanced.Maintenance.WindowEnd = NormalizeTimeOfDay(ReadString(maintenance, nameof(cfg.Advanced.Maintenance.WindowEnd), cfg.Advanced.Maintenance.WindowEnd), DefaultMaintenanceEnd);
+            cfg.Advanced.Maintenance.RunConsistencyScan = ReadBool(maintenance, nameof(cfg.Advanced.Maintenance.RunConsistencyScan), cfg.Advanced.Maintenance.RunConsistencyScan);
+            cfg.Advanced.Maintenance.RunRepairDryRun = ReadBool(maintenance, nameof(cfg.Advanced.Maintenance.RunRepairDryRun), cfg.Advanced.Maintenance.RunRepairDryRun);
+            cfg.Advanced.Maintenance.RunMetadataRefresh = ReadBool(maintenance, nameof(cfg.Advanced.Maintenance.RunMetadataRefresh), cfg.Advanced.Maintenance.RunMetadataRefresh);
+        }
+
+        private static void ApplyImportableBehaviorSettings(JsonElement behavior, AppConfig cfg)
+        {
+            cfg.Behavior.RunInBackground = ReadBool(behavior, nameof(cfg.Behavior.RunInBackground), cfg.Behavior.RunInBackground);
+            cfg.Behavior.ShowWindowOnTrayActions = ReadBool(behavior, nameof(cfg.Behavior.ShowWindowOnTrayActions), cfg.Behavior.ShowWindowOnTrayActions);
+            cfg.Behavior.ShowTrayIcon = ReadBool(behavior, nameof(cfg.Behavior.ShowTrayIcon), cfg.Behavior.ShowTrayIcon);
+            cfg.Behavior.ShowBackupWidget = ReadBool(behavior, nameof(cfg.Behavior.ShowBackupWidget), cfg.Behavior.ShowBackupWidget);
+            cfg.Behavior.EnableSystemNotifications = ReadBool(behavior, nameof(cfg.Behavior.EnableSystemNotifications), cfg.Behavior.EnableSystemNotifications);
+            cfg.Behavior.MinimizeToTray = ReadBool(behavior, nameof(cfg.Behavior.MinimizeToTray), cfg.Behavior.MinimizeToTray);
+            cfg.Behavior.LaunchOnLogin = ReadBool(behavior, nameof(cfg.Behavior.LaunchOnLogin), cfg.Behavior.LaunchOnLogin);
+            cfg.Behavior.ConfirmDeleteBackup = ReadBool(behavior, nameof(cfg.Behavior.ConfirmDeleteBackup), cfg.Behavior.ConfirmDeleteBackup);
         }
 
         private static bool ReadBool(JsonElement parent, string propertyName, bool fallback)
