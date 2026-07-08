@@ -15,34 +15,49 @@ public static class ProjectRootResolver
     {
         resolvedRoot = string.Empty;
 
-        if (!string.IsNullOrWhiteSpace(currentRoot) &&
-            Directory.Exists(currentRoot) &&
-            !IsVaultSyncTransientTempPath(currentRoot))
-        {
-            resolvedRoot = Path.GetFullPath(currentRoot);
+        if (TryUseCurrentRoot(currentRoot, out resolvedRoot))
             return true;
-        }
 
         if (string.IsNullOrWhiteSpace(projectsRoot) || !Directory.Exists(projectsRoot))
             return false;
 
         string fullProjectsRoot = Path.GetFullPath(projectsRoot);
         var names = GetCandidateFolderNames(projectName, currentRoot);
+        return TryFindExistingChild(fullProjectsRoot, names, out resolvedRoot) ||
+            TryFindDirectCandidate(fullProjectsRoot, names, out resolvedRoot);
+    }
 
+    private static bool TryUseCurrentRoot(string? currentRoot, out string resolvedRoot)
+    {
+        resolvedRoot = string.Empty;
+        if (string.IsNullOrWhiteSpace(currentRoot) ||
+            !Directory.Exists(currentRoot) ||
+            IsVaultSyncTransientTempPath(currentRoot))
+        {
+            return false;
+        }
+
+        resolvedRoot = Path.GetFullPath(currentRoot);
+        return true;
+    }
+
+    private static bool TryFindExistingChild(string fullProjectsRoot, IReadOnlyList<string> names, out string resolvedRoot)
+    {
+        resolvedRoot = string.Empty;
         try
         {
             foreach (string child in Directory.EnumerateDirectories(fullProjectsRoot))
             {
                 string childName = Path.GetFileName(child);
-                if (names.Any(name => string.Equals(name, childName, StringComparison.OrdinalIgnoreCase)))
-                {
-                    string fullChild = Path.GetFullPath(child);
-                    if (IsVaultSyncTransientTempPath(fullChild))
-                        continue;
+                if (!CandidateNameMatches(names, childName))
+                    continue;
 
-                    resolvedRoot = fullChild;
-                    return true;
-                }
+                string fullChild = Path.GetFullPath(child);
+                if (IsVaultSyncTransientTempPath(fullChild))
+                    continue;
+
+                resolvedRoot = fullChild;
+                return true;
             }
         }
         catch
@@ -50,22 +65,31 @@ public static class ProjectRootResolver
             return false;
         }
 
+        return false;
+    }
+
+    private static bool TryFindDirectCandidate(string fullProjectsRoot, IEnumerable<string> names, out string resolvedRoot)
+    {
+        resolvedRoot = string.Empty;
         foreach (string name in names)
         {
             string candidate = Path.Combine(fullProjectsRoot, name);
-            if (Directory.Exists(candidate))
-            {
-                string fullCandidate = Path.GetFullPath(candidate);
-                if (IsVaultSyncTransientTempPath(fullCandidate))
-                    continue;
+            if (!Directory.Exists(candidate))
+                continue;
 
-                resolvedRoot = fullCandidate;
-                return true;
-            }
+            string fullCandidate = Path.GetFullPath(candidate);
+            if (IsVaultSyncTransientTempPath(fullCandidate))
+                continue;
+
+            resolvedRoot = fullCandidate;
+            return true;
         }
 
         return false;
     }
+
+    private static bool CandidateNameMatches(IEnumerable<string> names, string childName) =>
+        names.Any(name => string.Equals(name, childName, StringComparison.OrdinalIgnoreCase));
 
     public static string GetCrossPlatformLeafName(string? path)
     {

@@ -21,14 +21,7 @@ public sealed class BackupKeyRotationService(BackupArchiveCryptoService? cryptoS
         BackupEncryptionConfig targetConfig,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(backupFolder))
-            throw new ArgumentException("Backup folder is required.", nameof(backupFolder));
-        if (string.IsNullOrWhiteSpace(oldPassword))
-            throw new ArgumentException("Old password is required.", nameof(oldPassword));
-        if (string.IsNullOrWhiteSpace(newPassword))
-            throw new ArgumentException("New password is required.", nameof(newPassword));
-        if (!Directory.Exists(backupFolder))
-            throw new DirectoryNotFoundException($"Backup folder '{backupFolder}' was not found.");
+        ValidateRotationInputs(backupFolder, oldPassword, newPassword);
 
         string sourceEncryptedPath = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
         if (!File.Exists(sourceEncryptedPath))
@@ -90,20 +83,8 @@ public sealed class BackupKeyRotationService(BackupArchiveCryptoService? cryptoS
         catch
         {
             // Atomic rollback: if we moved originals out, always restore them on any failure.
-            if (movedEncryptedToRollback && File.Exists(rollbackEncryptedPath))
-            {
-                if (wroteNewEncrypted && File.Exists(sourceEncryptedPath))
-                    TryDeleteFile(sourceEncryptedPath);
-                TryMoveForRollback(rollbackEncryptedPath, sourceEncryptedPath);
-            }
-
-            if (movedMetadataToRollback && File.Exists(rollbackMetadataPath))
-            {
-                if (wroteNewMetadata && File.Exists(sourceMetadataPath))
-                    TryDeleteFile(sourceMetadataPath);
-                TryMoveForRollback(rollbackMetadataPath, sourceMetadataPath);
-            }
-
+            RestoreRollbackFile(movedEncryptedToRollback, wroteNewEncrypted, rollbackEncryptedPath, sourceEncryptedPath);
+            RestoreRollbackFile(movedMetadataToRollback, wroteNewMetadata, rollbackMetadataPath, sourceMetadataPath);
             throw;
         }
         finally
@@ -112,6 +93,29 @@ public sealed class BackupKeyRotationService(BackupArchiveCryptoService? cryptoS
             TryDeleteFile(rollbackMetadataPath);
             TryDeleteDirectory(stagingRoot);
         }
+    }
+
+    private static void ValidateRotationInputs(string backupFolder, string oldPassword, string newPassword)
+    {
+        if (string.IsNullOrWhiteSpace(backupFolder))
+            throw new ArgumentException("Backup folder is required.", nameof(backupFolder));
+        if (string.IsNullOrWhiteSpace(oldPassword))
+            throw new ArgumentException("Old password is required.", nameof(oldPassword));
+        if (string.IsNullOrWhiteSpace(newPassword))
+            throw new ArgumentException("New password is required.", nameof(newPassword));
+        if (!Directory.Exists(backupFolder))
+            throw new DirectoryNotFoundException($"Backup folder '{backupFolder}' was not found.");
+    }
+
+    private static void RestoreRollbackFile(bool movedToRollback, bool wroteReplacement, string rollbackPath, string sourcePath)
+    {
+        if (!movedToRollback || !File.Exists(rollbackPath))
+            return;
+
+        if (wroteReplacement && File.Exists(sourcePath))
+            TryDeleteFile(sourcePath);
+
+        TryMoveForRollback(rollbackPath, sourcePath);
     }
 
     private static void TryMoveForRollback(string from, string to)
