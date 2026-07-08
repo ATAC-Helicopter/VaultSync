@@ -6,6 +6,7 @@ namespace VaultSync.Core.Services;
 
 public sealed class SnapshotExplorerService
 {
+    private const char ArchivePathSeparator = '/';
     private const int DefaultPreviewBytes = 256 * 1024;
     private const double MaxBinaryControlCharacterRatio = 0.02;
     private const string UnsupportedPreviewMessage = "Preview is available for text-like files only.";
@@ -27,7 +28,7 @@ public sealed class SnapshotExplorerService
         return new SnapshotExplorerResult(source.Kind, safeFolder, entries);
     }
 
-    public SnapshotPreviewResult PreviewText(string backupRoot, string relativePath, int maxBytes = DefaultPreviewBytes)
+    public static SnapshotPreviewResult PreviewText(string backupRoot, string relativePath, int maxBytes = DefaultPreviewBytes)
     {
         if (maxBytes <= 0)
             maxBytes = DefaultPreviewBytes;
@@ -49,7 +50,7 @@ public sealed class SnapshotExplorerService
         }
     }
 
-    public SnapshotRestoreSelectionResult RestoreSelection(
+    public static SnapshotRestoreSelectionResult RestoreSelection(
         string backupRoot,
         string targetRoot,
         IEnumerable<string> relativePaths)
@@ -230,7 +231,7 @@ public sealed class SnapshotExplorerService
         string childName = remaining[..slashIndex];
         string childPath = string.IsNullOrWhiteSpace(folderPath)
             ? childName
-            : folderPath.TrimEnd('/') + "/" + childName;
+            : $"{folderPath.TrimEnd(ArchivePathSeparator)}{ArchivePathSeparator}{childName}";
         folders[childPath] = SnapshotExplorerEntry.Folder(childPath, childName);
     }
 

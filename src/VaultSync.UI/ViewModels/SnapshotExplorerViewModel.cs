@@ -60,7 +60,6 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
 {
     private const string PreviewSelectFileKey = "SnapshotExplorer.Preview.SelectFile";
     private const string PreviewSelectFileFallback = "Select a file to preview its contents.";
-    private readonly SnapshotExplorerService _service;
     private readonly string _backupRoot;
     private readonly string _restoreTargetRoot;
     private string _currentPath = string.Empty;
@@ -85,7 +84,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         string restoreTargetRoot,
         string title)
     {
-        _service = service;
+        ArgumentNullException.ThrowIfNull(service);
         _backupRoot = backupRoot;
         _restoreTargetRoot = restoreTargetRoot;
         Title = title;
@@ -347,7 +346,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         StatusText = L("SnapshotExplorer.Status.PreviewLoading", "Loading preview...");
         try
         {
-            SnapshotPreviewResult preview = await Task.Run(() => _service.PreviewText(_backupRoot, selectedPath));
+            SnapshotPreviewResult preview = await Task.Run(() => SnapshotExplorerService.PreviewText(_backupRoot, selectedPath));
             if (requestVersion != _previewRequestVersion || SelectedEntry?.Path != selectedPath)
                 return;
 
@@ -375,7 +374,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         StatusText = L("SnapshotExplorer.Status.Restoring", "Restoring selected item...");
         try
         {
-            SnapshotRestoreSelectionResult result = await Task.Run(() => _service.RestoreSelection(_backupRoot, _restoreTargetRoot, [path]));
+            SnapshotRestoreSelectionResult result = await Task.Run(() => SnapshotExplorerService.RestoreSelection(_backupRoot, _restoreTargetRoot, [path]));
             StatusText = LF("SnapshotExplorer.Status.Restored", "Restored {0} file(s) to {1}", result.FileCount, _restoreTargetRoot);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException)

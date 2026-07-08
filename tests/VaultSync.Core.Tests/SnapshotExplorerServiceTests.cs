@@ -9,7 +9,7 @@ namespace VaultSync.Core.Tests;
 public sealed class SnapshotExplorerServiceTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "vaultsync-explorer-tests-" + Guid.NewGuid().ToString("N"));
-    private readonly SnapshotExplorerService _service = new();
+
     public SnapshotExplorerServiceTests()
     {
         Directory.CreateDirectory(_root);
@@ -38,7 +38,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     {
         string backup = CreateFolderBackup();
 
-        SnapshotPreviewResult preview = _service.PreviewText(backup, "src/app.json");
+        SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(backup, "src/app.json");
 
         Assert.True(preview.Success);
         Assert.Contains("\"name\"", preview.Text);
@@ -49,7 +49,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     {
         string backup = CreateFolderBackup();
 
-        SnapshotPreviewResult preview = _service.PreviewText(backup, "src/Program.cs");
+        SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(backup, "src/Program.cs");
 
         Assert.True(preview.Success);
         Assert.Contains("Console.WriteLine", preview.Text);
@@ -60,7 +60,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     {
         string backup = CreateFolderBackup();
 
-        SnapshotPreviewResult preview = _service.PreviewText(backup, "asset.bin");
+        SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(backup, "asset.bin");
 
         Assert.False(preview.Success);
         Assert.Contains("text-like files", preview.Error);
@@ -72,7 +72,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         string backup = CreateArchiveBackup();
 
         SnapshotExplorerResult search = SnapshotExplorerService.List(backup, search: "notes");
-        SnapshotPreviewResult preview = _service.PreviewText(backup, "docs/notes.md");
+        SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(backup, "docs/notes.md");
 
         Assert.Contains(search.Entries, e => e.Kind == SnapshotExplorerEntryKind.File && e.Path == "docs/notes.md");
         Assert.True(preview.Success);
@@ -97,7 +97,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         string backup = CreateArchiveBackup();
         string target = Path.Combine(_root, "restore");
 
-        SnapshotRestoreSelectionResult result = _service.RestoreSelection(backup, target, ["docs"]);
+        SnapshotRestoreSelectionResult result = SnapshotExplorerService.RestoreSelection(backup, target, ["docs"]);
 
         Assert.Equal(1, result.FileCount);
         Assert.True(File.Exists(Path.Combine(target, "docs", "notes.md")));
@@ -122,7 +122,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     {
         string backup = CreateFolderBackup();
 
-        Assert.Throws<InvalidDataException>(() => _service.PreviewText(backup, "../outside.txt"));
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.PreviewText(backup, "../outside.txt"));
     }
 
     private string CreateFolderBackup()
