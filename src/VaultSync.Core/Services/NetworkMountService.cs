@@ -10,6 +10,8 @@ namespace VaultSync.Core.Services;
 
 public sealed class NetworkMountService
 {
+    private const string SmbScheme = "smb://";
+
     private readonly CredentialVault _vault = CredentialVault.Instance;
 
     public DestinationResolution PrepareDestination(BackupDestination dest, NetworkCredentialProfile? profile)
@@ -656,7 +658,7 @@ public sealed class NetworkMountService
 
         return path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
                path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase) ||
-               path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWith(SmbScheme, StringComparison.OrdinalIgnoreCase) ||
                path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -703,9 +705,9 @@ public sealed class NetworkMountService
 
         try
         {
-            if (raw.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
+            if (raw.StartsWith(SmbScheme, StringComparison.OrdinalIgnoreCase))
             {
-                raw = raw["smb://".Length..];
+                raw = raw[SmbScheme.Length..];
             }
             else if (raw.StartsWith(@"\\"))
             {
@@ -751,9 +753,9 @@ public sealed class NetworkMountService
 
         try
         {
-            if (raw.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
+            if (raw.StartsWith(SmbScheme, StringComparison.OrdinalIgnoreCase))
             {
-                raw = raw["smb://".Length..];
+                raw = raw[SmbScheme.Length..];
             }
             else if (raw.StartsWith(@"\\"))
             {
@@ -819,7 +821,7 @@ public sealed class NetworkMountService
 
         string trimmed = raw.Trim();
 
-        if (OperatingSystem.IsWindows() && trimmed.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
+        if (OperatingSystem.IsWindows() && trimmed.StartsWith(SmbScheme, StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseShareWithSubpath(trimmed, out string? host, out string? share, out string? subPath))
             {

@@ -540,7 +540,6 @@ public sealed class CredentialVault
         public string? ProtectedSecret { get; set; }
         public bool ProtectedWithDpapi { get; set; }
         public bool StoredInKeychain { get; set; }
-        public string? LegacyPlaintext { get; set; }
         public DateTime? CreatedUtc { get; set; }
         public DateTime? LastAccessUtc { get; set; }
     }

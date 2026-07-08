@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 
@@ -45,7 +46,6 @@ public class VerifyService(SqliteRepository repo, HashService hash)
 
     private static List<FileEntry> ReservoirSample(IReadOnlyList<FileEntry> files, int take)
     {
-        var rnd = new Random(42); // deterministic sample
         var sample = new List<FileEntry>(take);
         for (int i = 0; i < files.Count; i++)
         {
@@ -55,7 +55,7 @@ public class VerifyService(SqliteRepository repo, HashService hash)
                 continue;
             }
 
-            int j = rnd.Next(i + 1);
+            int j = RandomNumberGenerator.GetInt32(i + 1);
             if (j < take)
                 sample[j] = files[i];
         }
