@@ -3497,8 +3497,7 @@ namespace VaultSync.UI.ViewModels
         {
             _destinationQuotaPlansById.Clear();
 
-            var planner = new DestinationQuotaPlanner();
-            foreach (DestinationQuotaPlan plan in planner.BuildPlans(config.Backups.Destinations ?? [], backups))
+            foreach (DestinationQuotaPlan plan in DestinationQuotaPlanner.BuildPlans(config.Backups.Destinations ?? [], backups))
             {
                 _destinationQuotaPlansById[plan.DestinationId] = plan;
             }

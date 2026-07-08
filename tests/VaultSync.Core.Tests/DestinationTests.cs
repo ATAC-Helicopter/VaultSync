@@ -58,7 +58,7 @@ public sealed class CredentialVaultTests
         CredentialVault vault = CredentialVault.Instance;
         string existingRef = "existing-ref";
 
-        string actual = vault.EnsureKeyRef(existingRef, "test");
+        string actual = CredentialVault.EnsureKeyRef(existingRef, "test");
 
         Assert.Equal(existingRef, actual);
     }

@@ -31,7 +31,7 @@ public sealed class CredentialVault
         _storePath = Path.Combine(dir, "credentials.json");
     }
 
-    public string EnsureKeyRef(string? existing, string nameHint)
+    public static string EnsureKeyRef(string? existing, string nameHint)
     {
         if (!string.IsNullOrWhiteSpace(existing))
             return existing;
@@ -49,59 +49,56 @@ public sealed class CredentialVault
         {
             Dictionary<string, StoredSecret> map = Load();
 
-            if (OperatingSystem.IsMacOS() && preferKeychain)
-            {
-                string? kc = TryReadFromKeychain(keyRef, username);
-                if (!string.IsNullOrEmpty(kc))
-                {
-                    TouchSecretIfNeeded(map, keyRef);
-                    return kc;
-                }
-            }
-            else if (OperatingSystem.IsLinux() && preferKeychain)
-            {
-                string? sec = TryReadFromSecretService(keyRef, username);
-                if (!string.IsNullOrEmpty(sec))
-                {
-                    TouchSecretIfNeeded(map, keyRef);
-                    return sec;
-                }
-            }
+            string? preferredSecret = TryReadPreferredSecret(keyRef, username, preferKeychain);
+            if (!string.IsNullOrEmpty(preferredSecret))
+                return TouchAndReturn(map, keyRef, preferredSecret);
 
             if (!map.TryGetValue(keyRef, out StoredSecret? record))
                 return fallbackPlaintext;
 
-            if (record.StoredInKeychain && OperatingSystem.IsMacOS())
-            {
-                string? kc = TryReadFromKeychain(keyRef, record.Username ?? username);
-                if (!string.IsNullOrEmpty(kc))
-                {
-                    TouchSecretIfNeeded(map, keyRef);
-                    return kc;
-                }
-            }
-            if (record.StoredInKeychain && OperatingSystem.IsLinux())
-            {
-                string? sec = TryReadFromSecretService(keyRef, record.Username ?? username);
-                if (!string.IsNullOrEmpty(sec))
-                {
-                    TouchSecretIfNeeded(map, keyRef);
-                    return sec;
-                }
-            }
+            string? storedSecret = TryReadStoredSecret(keyRef, username, record);
+            if (!string.IsNullOrEmpty(storedSecret))
+                return TouchAndReturn(map, keyRef, storedSecret);
 
             if (!string.IsNullOrWhiteSpace(record.ProtectedSecret))
             {
                 string? secret = TryUnprotect(record.ProtectedSecret, record.ProtectedWithDpapi);
                 if (!string.IsNullOrEmpty(secret))
-                {
-                    TouchSecretIfNeeded(map, keyRef);
-                    return secret;
-                }
+                    return TouchAndReturn(map, keyRef, secret);
             }
         }
 
         return fallbackPlaintext;
+    }
+
+    private static string? TryReadPreferredSecret(string keyRef, string username, bool preferKeychain)
+    {
+        if (!preferKeychain)
+            return null;
+        if (OperatingSystem.IsMacOS())
+            return TryReadFromKeychain(keyRef, username);
+        return OperatingSystem.IsLinux()
+            ? TryReadFromSecretService(keyRef, username)
+            : null;
+    }
+
+    private static string? TryReadStoredSecret(string keyRef, string username, StoredSecret record)
+    {
+        if (!record.StoredInKeychain)
+            return null;
+
+        string accountName = record.Username ?? username;
+        if (OperatingSystem.IsMacOS())
+            return TryReadFromKeychain(keyRef, accountName);
+        return OperatingSystem.IsLinux()
+            ? TryReadFromSecretService(keyRef, accountName)
+            : null;
+    }
+
+    private string TouchAndReturn(Dictionary<string, StoredSecret> map, string keyRef, string secret)
+    {
+        TouchSecretIfNeeded(map, keyRef);
+        return secret;
     }
 
     public void SaveSecret(string keyRef, string username, string secret, bool preferKeychain)

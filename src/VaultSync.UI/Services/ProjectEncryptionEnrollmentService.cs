@@ -116,7 +116,7 @@ public sealed class ProjectEncryptionEnrollmentService
                 if (string.IsNullOrWhiteSpace(normalizedPassword))
                     return;
 
-                string keyRef = _credentialVault.EnsureKeyRef(existingKeyRef, $"project-{project.Name}");
+                string keyRef = CredentialVault.EnsureKeyRef(existingKeyRef, $"project-{project.Name}");
                 _credentialVault.SaveSecret(keyRef, BackupEncryptionCredentialIdentity.AccountName, normalizedPassword, preferKeychain: true);
                 _repo.UpdateProjectEncryptionSettings(project.Id, project.EncryptionPolicy, keyRef);
             }
