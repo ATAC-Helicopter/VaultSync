@@ -77,16 +77,7 @@ def sha256_file(path: Path, root: Path) -> str:
 
 
 def write_json_file(path: Path, root: Path, data: object) -> None:
-    normalized_root = root.resolve(strict=False)
-    safe_path = path.resolve(strict=False)
-    if safe_path.suffix.lower() != ".json":
-        raise ValueError(f"Output file must use a .json extension: {path}")
-    if safe_path == normalized_root or not safe_path.is_relative_to(normalized_root):
-        raise ValueError(f"Output path must stay inside the workspace: {path}")
-    safe_parent = safe_path.parent.resolve(strict=False)
-    if safe_parent != normalized_root and not safe_parent.is_relative_to(normalized_root):
-        raise ValueError(f"Output parent path must stay inside the workspace: {path}")
-    safe_parent.mkdir(parents=True, exist_ok=True)
+    safe_path = ensure_output_file(path, root, suffix=".json")
     safe_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
 
 
@@ -108,7 +99,7 @@ def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str
     paths.sort(key=lambda p: str(p.relative_to(base_dir)).lower())
 
     safe_out_zip = ensure_output_file(out_zip, workspace, suffix=".zip")
-    _ = ensure_output_file(out_manifest, workspace, suffix=".json")
+    safe_out_manifest = ensure_output_file(out_manifest, workspace, suffix=".json")
     with zipfile.ZipFile(safe_out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path in paths:
             rel = path.relative_to(base_dir)
@@ -151,7 +142,7 @@ def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str
         "files": files,
     }
 
-    write_json_file(out_manifest, workspace, manifest)
+    write_json_file(safe_out_manifest, workspace, manifest)
 
 
 def main() -> None:
