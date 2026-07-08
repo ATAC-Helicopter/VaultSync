@@ -2273,118 +2273,25 @@ public class ProjectsViewModel : ViewModelBase
 
     private async Task TakeSnapshotCoreAsync()
     {
-        if (SelectedProject is null)
+        var selectedProject = SelectedProject;
+        if (selectedProject is null)
             return;
 
         try
         {
             var config = await Task.Run(_configStore.GetSnapshot);
-            var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
-            var fullHash = config.Backups.UseFullSnapshotHash;
-            var enableScanCache = config.Backups.EnableScanCache;
-            var aggressiveScanCache = config.Backups.AggressiveScanCache;
-
             var repo = CreateRepository(config);
 
-            // 3. Check if project is already registered.
-            var existing = repo.GetProjectByName(SelectedProject.Name);
+            var existing = repo.GetProjectByName(selectedProject.Name);
             if (existing is null)
             {
-                // Require a preset (or explicit "no preset") before registering the project.
-                if (string.IsNullOrWhiteSpace(SelectedProject.Preset))
-                {
-                    ShowNotification(L("Projects.Preset.Required", "Please select a preset (or 'no preset') before adding this project."), NotificationSeverity.Error);
-                    return;
-                }
-                // Register project instead of snapshot.
-                var project = new Project
-                {
-                    Name = SelectedProject.Name,
-                    RootPath = SelectedProject.Path,
-                    Preset = SelectedProject.Preset,
-                    Tags = SelectedProject.TagsCsv,
-                    CreatedUtc = DateTime.UtcNow,
-                    PreferredDestinationId = SelectedProject.PreferredDestinationId,
-                    EncryptionPolicy = SelectedProject.EncryptionPolicy
-                };
-
-                var id = repo.AddProject(project);
-                UnhideProjectPathInConfig(project.RootPath);
-                ShowNotification(Lf("Projects.Notification.Registered", "Project '{0}' registered. Next click will create a snapshot.", project.Name), NotificationSeverity.Info);
-
-                // Update UI label so next click becomes a real snapshot.
-                SnapshotActionLabel = L(DefaultSnapshotActionKey, DefaultSnapshotActionFallback);
-                if (SelectedProject != null)
-                {
-                    SelectedProject.IsRegistered = true;
-                }
+                RegisterProjectForSnapshots(repo, selectedProject);
                 return;
             }
 
-            if (config.Backups.PromptRestoreAfterImport && existing.NeedsRestore)
-            {
-                ShowNotification(L("Projects.Notification.RestoreRequired", "Imported history is newer. Consider restoring before creating new snapshots."), NotificationSeverity.Warning);
-            }
-
-            // 4. Run snapshot via Core engine.
-            var hashService = new HashService();
-            var snapshotService = new SnapshotService(repo, hashService);
-
-            var snapshotId = await snapshotService.CreateSnapshotAsync(
-                existing,
-                fullHash: fullHash,
-                hashNow: true,
-                maxSnapshotsToKeep: maxSnapshotsToKeep,
-                ct: CancellationToken.None,
-                progressCallback: null,
-                useScanCache: enableScanCache,
-                aggressiveScanCache: aggressiveScanCache);
-            var outcome = SnapshotService.LastOutcome;
-
-            // Update the selected project's stats in the UI immediately, based on the DB state
-            // after snapshot creation and retention have run.
-            if (SelectedProject != null && outcome != null)
-            {
-                try
-                {
-                    var snapshotsFromDb = repo.GetSnapshotsForProject(existing.Name)?.ToList()
-                                          ?? [];
-
-                    if (snapshotsFromDb.Count > 0)
-                    {
-                        // Assume snapshots are returned newest-first, consistent with RefreshAsync.
-                        var latest = snapshotsFromDb[0];
-                        SelectedProject.LastSnapshot = latest.CreatedUtc;
-                        SelectedProject.SizeBytes = latest.TotalBytes;
-
-                        var history = snapshotsFromDb
-                            .Take(10)
-                            .Select(CreateProjectSnapshotViewModel);
-
-                        SelectedProject.SetSnapshots(history);
-                    }
-                    else
-                    {
-                        // No snapshots remaining (should be rare, but handle it).
-                        SelectedProject.LastSnapshot = default;
-                        SelectedProject.SizeBytes = 0;
-                        SelectedProject.SetSnapshots([]);
-                    }
-
-                    SelectedProject.Health = ProjectHealthStatus.Healthy;
-                    SelectedProject.HealthTag = L("Projects.Health.Healthy", "Healthy");
-                }
-                catch (Exception ex)
-                {
-                    DiagnosticsLogger.Record($"Project snapshot UI refresh failed: {ex.GetType().Name} - {ex.Message}");
-                }
-            }
-            if (SelectedProject != null)
-            {
-                var msg = Lf("Projects.Notification.SnapshotSuccess", "Snapshot created for '{0}'.", SelectedProject.Name);
-                ShowNotification(msg, NotificationSeverity.Info);
-                NotifySnapshotOutcome(msg, success: true);
-            }
+            ShowRestoreWarningIfNeeded(config, existing);
+            await CreateSnapshotForProjectAsync(config, repo, existing);
+            ShowSnapshotSuccessIfSelected();
         }
         catch (Exception)
         {
@@ -2395,6 +2302,112 @@ public class ProjectsViewModel : ViewModelBase
 
         // Refresh label/state after the operation.
         RefreshSelectedProjectRegistration();
+    }
+
+    private void RegisterProjectForSnapshots(SqliteRepository repo, ProjectItemViewModel selectedProject)
+    {
+        if (string.IsNullOrWhiteSpace(selectedProject.Preset))
+        {
+            ShowNotification(L("Projects.Preset.Required", "Please select a preset (or 'no preset') before adding this project."), NotificationSeverity.Error);
+            return;
+        }
+
+        var project = new Project
+        {
+            Name = selectedProject.Name,
+            RootPath = selectedProject.Path,
+            Preset = selectedProject.Preset,
+            Tags = selectedProject.TagsCsv,
+            CreatedUtc = DateTime.UtcNow,
+            PreferredDestinationId = selectedProject.PreferredDestinationId,
+            EncryptionPolicy = selectedProject.EncryptionPolicy
+        };
+
+        repo.AddProject(project);
+        UnhideProjectPathInConfig(project.RootPath);
+        ShowNotification(Lf("Projects.Notification.Registered", "Project '{0}' registered. Next click will create a snapshot.", project.Name), NotificationSeverity.Info);
+
+        SnapshotActionLabel = L(DefaultSnapshotActionKey, DefaultSnapshotActionFallback);
+        selectedProject.IsRegistered = true;
+    }
+
+    private void ShowRestoreWarningIfNeeded(AppConfig config, Project existing)
+    {
+        if (config.Backups.PromptRestoreAfterImport && existing.NeedsRestore)
+        {
+            ShowNotification(L("Projects.Notification.RestoreRequired", "Imported history is newer. Consider restoring before creating new snapshots."), NotificationSeverity.Warning);
+        }
+    }
+
+    private async Task CreateSnapshotForProjectAsync(AppConfig config, SqliteRepository repo, Project existing)
+    {
+        var hashService = new HashService();
+        var snapshotService = new SnapshotService(repo, hashService);
+
+        await snapshotService.CreateSnapshotAsync(
+            existing,
+            fullHash: config.Backups.UseFullSnapshotHash,
+            hashNow: true,
+            maxSnapshotsToKeep: config.Backups.MaxSnapshotsPerProject,
+            ct: CancellationToken.None,
+            progressCallback: null,
+            useScanCache: config.Backups.EnableScanCache,
+            aggressiveScanCache: config.Backups.AggressiveScanCache);
+
+        if (SnapshotService.LastOutcome != null)
+            RefreshSelectedProjectSnapshotStats(repo, existing);
+    }
+
+    private void RefreshSelectedProjectSnapshotStats(SqliteRepository repo, Project existing)
+    {
+        if (SelectedProject is null)
+            return;
+
+        try
+        {
+            var snapshotsFromDb = repo.GetSnapshotsForProject(existing.Name)?.ToList() ?? [];
+            ApplySelectedProjectSnapshotStats(snapshotsFromDb);
+            SelectedProject.Health = ProjectHealthStatus.Healthy;
+            SelectedProject.HealthTag = L("Projects.Health.Healthy", "Healthy");
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Project snapshot UI refresh failed: {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    private void ApplySelectedProjectSnapshotStats(IReadOnlyList<Snapshot> snapshotsFromDb)
+    {
+        if (SelectedProject is null)
+            return;
+
+        if (snapshotsFromDb.Count == 0)
+        {
+            SelectedProject.LastSnapshot = default;
+            SelectedProject.SizeBytes = 0;
+            SelectedProject.SetSnapshots([]);
+            return;
+        }
+
+        var latest = snapshotsFromDb[0];
+        SelectedProject.LastSnapshot = latest.CreatedUtc;
+        SelectedProject.SizeBytes = latest.TotalBytes;
+
+        var history = snapshotsFromDb
+            .Take(10)
+            .Select(CreateProjectSnapshotViewModel);
+
+        SelectedProject.SetSnapshots(history);
+    }
+
+    private void ShowSnapshotSuccessIfSelected()
+    {
+        if (SelectedProject is null)
+            return;
+
+        var msg = Lf("Projects.Notification.SnapshotSuccess", "Snapshot created for '{0}'.", SelectedProject.Name);
+        ShowNotification(msg, NotificationSeverity.Info);
+        NotifySnapshotOutcome(msg, success: true);
     }
 
     private static string NormalizeProjectPath(string? path)
