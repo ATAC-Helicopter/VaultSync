@@ -24,6 +24,21 @@ class DownloadStatsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             download_stats.child_path(root, "../outside.json")
 
+    def test_write_text_file_allows_output_root_file(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            root = Path(tmp)
+
+            download_stats.write_text_file(root, "README.md", "ok")
+
+            self.assertEqual((root / "README.md").read_text(encoding="utf-8"), "ok")
+
+    def test_write_text_file_rejects_generated_path_escape(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            root = Path(tmp)
+
+            with self.assertRaises(ValueError):
+                download_stats.write_text_file(root, "../escape.md", "nope")
+
     def test_normalize_releases_computes_deltas_and_highlights(self) -> None:
         previous = {
             "totals": {

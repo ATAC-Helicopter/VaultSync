@@ -25,10 +25,14 @@ def is_within(path: Path, root: Path) -> bool:
     return path != root
 
 
+def ensure_existing_workspace() -> Path:
+    return Path.cwd().resolve(strict=True)
+
+
 def resolve_workspace_path(raw_path: str) -> Path:
-    workspace = Path.cwd().resolve()
+    workspace = ensure_existing_workspace()
     raw_candidate = Path(raw_path)
-    lexical = Path(os.path.abspath(workspace / raw_candidate if not raw_candidate.is_absolute() else raw_candidate)).resolve(strict=False)
+    lexical = (workspace / raw_candidate if not raw_candidate.is_absolute() else raw_candidate).resolve(strict=False)
     if not is_within(lexical, workspace):
         raise ValueError(f"Output directory must stay inside the workspace: {raw_path}")
     candidate = lexical.resolve(strict=False)
@@ -38,14 +42,24 @@ def resolve_workspace_path(raw_path: str) -> Path:
 
 
 def child_path(root: Path, relative_name: str) -> Path:
-    normalized_root = root.resolve()
-    lexical = Path(os.path.abspath(normalized_root / relative_name)).resolve(strict=False)
+    normalized_root = root.resolve(strict=False)
+    lexical = (normalized_root / relative_name).resolve(strict=False)
     if not is_within(lexical, normalized_root):
         raise ValueError(f"Generated path escapes output directory: {relative_name}")
     candidate = lexical.resolve(strict=False)
     if not is_within(candidate, normalized_root):
         raise ValueError(f"Resolved generated path escapes output directory: {relative_name}")
     return candidate
+
+
+def output_file_path(root: Path, relative_name: str) -> Path:
+    normalized_root = root.resolve(strict=False)
+    safe_path = child_path(root, relative_name)
+    safe_parent = safe_path.parent.resolve(strict=False)
+    if safe_parent != normalized_root and not is_within(safe_parent, normalized_root):
+        raise ValueError(f"Generated parent path escapes output directory: {relative_name}")
+    safe_parent.mkdir(parents=True, exist_ok=True)
+    return safe_path
 
 
 def github_get_json(url: str, token: str) -> Any:
@@ -219,9 +233,8 @@ def normalize_releases(raw_releases: list[dict[str, Any]], previous: dict[str, A
 
 
 def write_text_file(root: Path, relative_name: str, content: str) -> None:
-    path = child_path(root, relative_name)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    safe_path = output_file_path(root, relative_name)
+    safe_path.write_text(content, encoding="utf-8")
 
 
 def write_json(root: Path, relative_name: str, data: Any) -> None:
