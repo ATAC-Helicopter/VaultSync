@@ -10,7 +10,7 @@ public sealed class SnapshotExplorerService
     private const double MaxBinaryControlCharacterRatio = 0.02;
     private const string UnsupportedPreviewMessage = "Preview is available for text-like files only.";
 
-    public SnapshotExplorerResult List(string backupRoot, string? folderPath = null, string? search = null)
+    public static SnapshotExplorerResult List(string backupRoot, string? folderPath = null, string? search = null)
     {
         BackupSource source = ResolveSource(backupRoot);
         string safeFolder = NormalizeExplorerPath(folderPath, allowEmpty: true);

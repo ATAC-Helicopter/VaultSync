@@ -10,7 +10,6 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "vaultsync-explorer-tests-" + Guid.NewGuid().ToString("N"));
     private readonly SnapshotExplorerService _service = new();
-
     public SnapshotExplorerServiceTests()
     {
         Directory.CreateDirectory(_root);
@@ -27,8 +26,8 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     {
         string backup = CreateFolderBackup();
 
-        SnapshotExplorerResult root = _service.List(backup);
-        SnapshotExplorerResult src = _service.List(backup, "src");
+        SnapshotExplorerResult root = SnapshotExplorerService.List(backup);
+        SnapshotExplorerResult src = SnapshotExplorerService.List(backup, "src");
 
         Assert.Contains(root.Entries, e => e.Kind == SnapshotExplorerEntryKind.Folder && e.Path == "src");
         Assert.Contains(src.Entries, e => e.Kind == SnapshotExplorerEntryKind.File && e.Path == "src/app.json");
@@ -72,7 +71,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     {
         string backup = CreateArchiveBackup();
 
-        SnapshotExplorerResult search = _service.List(backup, search: "notes");
+        SnapshotExplorerResult search = SnapshotExplorerService.List(backup, search: "notes");
         SnapshotPreviewResult preview = _service.PreviewText(backup, "docs/notes.md");
 
         Assert.Contains(search.Entries, e => e.Kind == SnapshotExplorerEntryKind.File && e.Path == "docs/notes.md");
@@ -85,8 +84,8 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     {
         string backup = CreateArchiveBackup();
 
-        SnapshotExplorerResult root = _service.List(backup);
-        SnapshotExplorerResult docs = _service.List(backup, "docs");
+        SnapshotExplorerResult root = SnapshotExplorerService.List(backup);
+        SnapshotExplorerResult docs = SnapshotExplorerService.List(backup, "docs");
 
         Assert.Contains(root.Entries, e => e.Kind == SnapshotExplorerEntryKind.Folder && e.Path == "docs");
         Assert.Contains(docs.Entries, e => e.Kind == SnapshotExplorerEntryKind.File && e.Path == "docs/notes.md");
@@ -112,7 +111,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         Directory.CreateDirectory(backup);
         File.WriteAllText(Path.Combine(backup, BackupArchiveCryptoService.EncryptedArchiveFileName), "encrypted");
 
-        SnapshotExplorerResult result = _service.List(backup);
+        SnapshotExplorerResult result = SnapshotExplorerService.List(backup);
 
         Assert.Equal(SnapshotExplorerSourceKind.EncryptedArchive, result.SourceKind);
         Assert.Empty(result.Entries);

@@ -6,7 +6,7 @@ using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Services;
 
-public sealed class DestinationQuotaPlanner
+public static class DestinationQuotaPlanner
 {
     public static IReadOnlyList<DestinationQuotaPlan> BuildPlans(
         IEnumerable<BackupDestination> destinations,
