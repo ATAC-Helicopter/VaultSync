@@ -78,7 +78,9 @@ def sha256_file(path: Path, root: Path) -> str:
 
 def write_json_file(path: Path, root: Path, data: object) -> None:
     safe_path = ensure_output_file(path, root, suffix=".json")
-    safe_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
+    # ensure_output_file resolves the CLI path, keeps it inside root, validates the .json suffix,
+    # and creates only a validated parent before this write.
+    safe_path.write_text(json.dumps(data, indent=4), encoding="utf-8")  # NOSONAR
 
 
 def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str, previous_versions: list[str], target: str) -> None:
