@@ -233,7 +233,14 @@ def normalize_releases(raw_releases: list[dict[str, Any]], previous: dict[str, A
 
 
 def write_text_file(root: Path, relative_name: str, content: str) -> None:
-    safe_path = output_file_path(root, relative_name)
+    normalized_root = root.resolve(strict=False)
+    safe_path = (normalized_root / relative_name).resolve(strict=False)
+    if safe_path == normalized_root or not safe_path.is_relative_to(normalized_root):
+        raise ValueError(f"Generated path escapes output directory: {relative_name}")
+    safe_parent = safe_path.parent.resolve(strict=False)
+    if safe_parent != normalized_root and not safe_parent.is_relative_to(normalized_root):
+        raise ValueError(f"Generated parent path escapes output directory: {relative_name}")
+    safe_parent.mkdir(parents=True, exist_ok=True)
     safe_path.write_text(content, encoding="utf-8")
 
 

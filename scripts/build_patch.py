@@ -77,7 +77,16 @@ def sha256_file(path: Path, root: Path) -> str:
 
 
 def write_json_file(path: Path, root: Path, data: object) -> None:
-    safe_path = ensure_output_file(path, root, suffix=".json")
+    normalized_root = root.resolve(strict=False)
+    safe_path = path.resolve(strict=False)
+    if safe_path.suffix.lower() != ".json":
+        raise ValueError(f"Output file must use a .json extension: {path}")
+    if safe_path == normalized_root or not safe_path.is_relative_to(normalized_root):
+        raise ValueError(f"Output path must stay inside the workspace: {path}")
+    safe_parent = safe_path.parent.resolve(strict=False)
+    if safe_parent != normalized_root and not safe_parent.is_relative_to(normalized_root):
+        raise ValueError(f"Output parent path must stay inside the workspace: {path}")
+    safe_parent.mkdir(parents=True, exist_ok=True)
     safe_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
 
 
