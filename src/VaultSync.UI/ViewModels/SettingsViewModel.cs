@@ -45,6 +45,7 @@ namespace VaultSync.UI
         private const string MissingSecretStatusKey = "Settings.Encryption.SecretStatusMissing";
         private const string MissingSecretStatusFallback = "No encryption password enrolled yet.";
         private const string RsyncExecutableName = "rsync";
+        private const string ToolsDirectoryName = "tools";
         private const string SupportBundleTitleKey = "Settings.Advanced.SupportBundle";
         private const string SupportBundleTitleFallback = "Support bundle";
         private const string ThemeCustom = "Custom";
@@ -2539,22 +2540,22 @@ namespace VaultSync.UI
                 var candidates = new List<string>();
                 if (arch == Architecture.Arm64)
                 {
-                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
-                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "arm64", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "arm64", RsyncExecutableName));
                 }
                 else if (arch == Architecture.X64)
                 {
-                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "x64", "bin", RsyncExecutableName));
-                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "x64", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "x64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "x64", RsyncExecutableName));
                 }
                 else
                 {
-                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
-                    candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "x64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
+                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "x64", "bin", RsyncExecutableName));
                 }
 
-                candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, RsyncExecutableName));
-                candidates.Add(Path.Combine(baseDir, "tools", RsyncExecutableName, "bin", RsyncExecutableName));
+                candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, RsyncExecutableName));
+                candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "bin", RsyncExecutableName));
 
                 foreach (string candidate in candidates)
                 {

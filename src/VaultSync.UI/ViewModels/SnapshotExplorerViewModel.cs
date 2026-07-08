@@ -58,6 +58,8 @@ public sealed class SnapshotExplorerEntryViewModel : ViewModelBase
 
 public sealed class SnapshotExplorerViewModel : ViewModelBase
 {
+    private const string PreviewSelectFileKey = "SnapshotExplorer.Preview.SelectFile";
+    private const string PreviewSelectFileFallback = "Select a file to preview its contents.";
     private readonly SnapshotExplorerService _service;
     private readonly string _backupRoot;
     private readonly string _restoreTargetRoot;
@@ -212,9 +214,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
             StatusText = IsEncryptedBackup
                 ? L("SnapshotExplorer.Status.Encrypted", "Encrypted backup detected. Use the normal restore flow for encrypted archives.")
                 : LF("SnapshotExplorer.Status.ItemCount", "{0} item(s)", Entries.Count);
-            PreviewText = IsEncryptedBackup
-                ? EncryptedBackupMessage
-                : L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
+            PreviewText = SelectFilePreviewText();
             PreviewFileName = string.Empty;
             SelectedEntry = null;
         }
@@ -256,9 +256,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         if (entry is null)
         {
             IsBusy = false;
-            PreviewText = IsEncryptedBackup
-                ? EncryptedBackupMessage
-                : L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
+            PreviewText = SelectFilePreviewText();
             PreviewFileName = string.Empty;
             return;
         }
@@ -281,7 +279,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         {
             CollapseFolder(folder);
             PreviewFileName = string.Empty;
-            PreviewText = L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
+            PreviewText = SelectFilePreviewText();
             StatusText = LF("SnapshotExplorer.Status.ItemCount", "{0} item(s)", Entries.Count);
             return;
         }
@@ -311,7 +309,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
                 Entries.Insert(index + 1, new SnapshotExplorerEntryViewModel(child, folder.Depth + 1));
 
             StatusText = LF("SnapshotExplorer.Status.ItemCount", "{0} item(s)", Entries.Count);
-            PreviewText = L("SnapshotExplorer.Preview.SelectFile", "Select a file to preview its contents.");
+            PreviewText = SelectFilePreviewText();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
@@ -410,4 +408,9 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
 
     private static string LF(string key, string fallback, params object[] args) =>
         string.Format(CultureInfo.CurrentCulture, L(key, fallback), args);
+
+    private string SelectFilePreviewText() =>
+        IsEncryptedBackup
+            ? EncryptedBackupMessage
+            : L(PreviewSelectFileKey, PreviewSelectFileFallback);
 }

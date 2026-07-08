@@ -18,6 +18,7 @@ namespace VaultSync.UI.ViewModels
     public partial class AppViewModel
     {
         private const string TelemetryBackupSingleSkipped = "backup_single_skipped";
+        private const string TelemetryBackupAllSkipped = "backup_all_skipped";
         private const string TelemetryReason = "reason";
         private const string TelemetryProject = "project";
         private const string TelemetryProjectRoot = "projectRoot";
@@ -728,7 +729,7 @@ namespace VaultSync.UI.ViewModels
             // Do not start "backup all" if a backup is already running.
             if (BackupsViewModel.IsBusy)
             {
-                Telemetry.Log("backup_all_skipped", b => b.WithCode(TelemetryReason, "busy"));
+                Telemetry.Log(TelemetryBackupAllSkipped, b => b.WithCode(TelemetryReason, "busy"));
                 return;
             }
 
@@ -736,7 +737,7 @@ namespace VaultSync.UI.ViewModels
             {
                 BackupsViewModel.BackupCurrentFile = pauseReason;
                 BackupsViewModel.BusyMessage = pauseReason;
-                Telemetry.Log("backup_all_skipped", b => b.WithCode(TelemetryReason, "battery"));
+                Telemetry.Log(TelemetryBackupAllSkipped, b => b.WithCode(TelemetryReason, "battery"));
                 return;
             }
 
@@ -745,7 +746,7 @@ namespace VaultSync.UI.ViewModels
 
             if (!preparation.IsReady)
             {
-                Telemetry.Log("backup_all_skipped", b => b.WithCode(TelemetryReason, preparation.FailureCode ?? "preflight_failed"));
+                Telemetry.Log(TelemetryBackupAllSkipped, b => b.WithCode(TelemetryReason, preparation.FailureCode ?? "preflight_failed"));
                 return;
             }
 
@@ -780,7 +781,7 @@ namespace VaultSync.UI.ViewModels
 
                     if (projects.Count == 0)
                     {
-                        Telemetry.Log("backup_all_skipped", b => b.WithCode(TelemetryReason, "no_projects"));
+                        Telemetry.Log(TelemetryBackupAllSkipped, b => b.WithCode(TelemetryReason, "no_projects"));
                         return;
                     }
 
