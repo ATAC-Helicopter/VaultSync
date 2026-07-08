@@ -19,6 +19,7 @@ namespace VaultSync.UI.ViewModels
     {
         private const string TelemetryBackupSingleSkipped = "backup_single_skipped";
         private const string TelemetryBackupAllSkipped = "backup_all_skipped";
+        private const string TelemetryBackupAllProjectSkipped = "backup_all_project_skipped";
         private const string TelemetryReason = "reason";
         private const string TelemetryProject = "project";
         private const string TelemetryProjectRoot = "projectRoot";
@@ -820,7 +821,7 @@ namespace VaultSync.UI.ViewModels
                         {
                             string message = AppViewModel.L("Backups.Notification.NoDestination", "Backup could not start: no active destination configured.");
                             results.Add((project.Name, project.RootPath, false));
-                            Telemetry.Log("backup_all_project_skipped", b => b
+                            Telemetry.Log(TelemetryBackupAllProjectSkipped, b => b
                                 .WithHashedString(TelemetryProject, project.Name)
                                 .WithHashedString(TelemetryProjectRoot, project.RootPath)
                                 .WithCode(TelemetryReason, "no_destination"));
@@ -845,7 +846,7 @@ namespace VaultSync.UI.ViewModels
                         {
                             string message = preparedPrimary.Message;
                             results.Add((project.Name, project.RootPath, false));
-                            Telemetry.Log("backup_all_project_skipped", b => b
+                            Telemetry.Log(TelemetryBackupAllProjectSkipped, b => b
                                 .WithHashedString(TelemetryProject, project.Name)
                                 .WithHashedString(TelemetryProjectRoot, project.RootPath)
                                 .WithCode(TelemetryReason, "destination_unreachable"));
@@ -872,7 +873,7 @@ namespace VaultSync.UI.ViewModels
                         if (!TryResolveProjectRoot(project, cfg, out Project? resolvedProject, out string? rootError))
                         {
                             results.Add((project.Name, project.RootPath, false));
-                            Telemetry.Log("backup_all_project_skipped", b => b
+                            Telemetry.Log(TelemetryBackupAllProjectSkipped, b => b
                                 .WithHashedString(TelemetryProject, project.Name)
                                 .WithHashedString(TelemetryProjectRoot, project.RootPath)
                                 .WithCode(TelemetryReason, "project_root_missing"));
@@ -901,7 +902,7 @@ namespace VaultSync.UI.ViewModels
                         if (driveDecision.Block)
                         {
                             results.Add((project.Name, project.RootPath, false));
-                            Telemetry.Log("backup_all_project_skipped", b => b
+                            Telemetry.Log(TelemetryBackupAllProjectSkipped, b => b
                                 .WithHashedString(TelemetryProject, project.Name)
                                 .WithHashedString(TelemetryProjectRoot, project.RootPath)
                                 .WithCode(TelemetryReason, "drive_health"));
@@ -1033,7 +1034,7 @@ namespace VaultSync.UI.ViewModels
                                     policyText: activePolicyText);
                                 UpdateAggregateProgress(string.Empty, string.Empty);
                                 results.Add((project.Name, project.RootPath, true));
-                                Telemetry.Log("backup_all_project_skipped", b => b
+                                Telemetry.Log(TelemetryBackupAllProjectSkipped, b => b
                                     .WithHashedString(TelemetryProject, project.Name)
                                     .WithHashedString(TelemetryProjectRoot, project.RootPath)
                                     .WithCode(TelemetryReason, "no_changes"));

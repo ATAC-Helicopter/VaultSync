@@ -33,6 +33,10 @@ public class ProjectsViewModel : ViewModelBase
 {
     private const string GenericPresetId = "generic";
     private const string NoPresetId = "no preset";
+    private const string DefaultSnapshotActionKey = "Snapshots.Action.Default";
+    private const string DefaultSnapshotActionFallback = "Snapshot now";
+    internal const string NeutralBadgeBackground = "#2F3650";
+    private const string VideoPresetId = "video";
     private static readonly string[] DefaultReusableTags = ["Work", "Games", "Media", "Critical", "Archive"];
     private sealed record ProjectRegistrationSnapshot(
         bool Missing,
@@ -182,7 +186,7 @@ public class ProjectsViewModel : ViewModelBase
 
     public bool ShowProjectAvatars { get; private set; } = true;
 
-    private string _snapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
+    private string _snapshotActionLabel = L(DefaultSnapshotActionKey, DefaultSnapshotActionFallback);
     public string SnapshotActionLabel
     {
         get => _snapshotActionLabel;
@@ -1160,7 +1164,7 @@ public class ProjectsViewModel : ViewModelBase
         else
         {
             vm.EncryptionBadgeText = L("Projects.EncryptionBadge.NotProtected", "Not protected");
-            vm.EncryptionBadgeBackground = "#2F3650";
+            vm.EncryptionBadgeBackground = NeutralBadgeBackground;
             vm.EncryptionBadgeForeground = "#C7D2FE";
         }
     }
@@ -1740,8 +1744,8 @@ public class ProjectsViewModel : ViewModelBase
             "work" => Tagged("work", "client", "business", "job", "office"),
             "games" => Tagged("games", "game", "mod", "steam") ||
                        preset is "unity" or "unreal" or "godot" or "gamemaker" or "steam_mods",
-            "media" => Tagged("media", "photo", "photos", "video", "music", "creative") ||
-                       preset is "blender" or "video" or "premiere" or "after_effects" or "davinci" or "creative_suite" or "photos",
+            "media" => Tagged("media", "photo", "photos", VideoPresetId, "music", "creative") ||
+                       preset is "blender" or VideoPresetId or "premiere" or "after_effects" or "davinci" or "creative_suite" or "photos",
             "critical" => Tagged("critical", "important", "prod", "production") ||
                           project.Health == ProjectHealthStatus.OutOfDate,
             "archive" => Tagged("archive", "legacy", "cold", "old"),
@@ -2258,7 +2262,7 @@ public class ProjectsViewModel : ViewModelBase
         if (HasAny("*.prproj"))
         {
             return Build(
-                "video",
+                VideoPresetId,
                 "Projects.Preset.Recommendation.Reason.Video",
                 "Detected video editing project files (*.prproj).");
         }
@@ -2395,7 +2399,7 @@ public class ProjectsViewModel : ViewModelBase
                 ShowNotification(Lf("Projects.Notification.Registered", "Project '{0}' registered. Next click will create a snapshot.", project.Name), NotificationSeverity.Info);
 
                 // Update UI label so next click becomes a real snapshot.
-                SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
+                SnapshotActionLabel = L(DefaultSnapshotActionKey, DefaultSnapshotActionFallback);
                 if (SelectedProject != null)
                 {
                     SelectedProject.IsRegistered = true;
@@ -2619,7 +2623,7 @@ public class ProjectsViewModel : ViewModelBase
     {
         if (SelectedProject is null)
         {
-            SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
+            SnapshotActionLabel = L(DefaultSnapshotActionKey, DefaultSnapshotActionFallback);
             return;
         }
 
@@ -2693,7 +2697,7 @@ public class ProjectsViewModel : ViewModelBase
             }
             else
             {
-                SnapshotActionLabel = L("Snapshots.Action.Default", "Snapshot now");
+                SnapshotActionLabel = L(DefaultSnapshotActionKey, DefaultSnapshotActionFallback);
                 SelectedProject.IsRegistered = true;
                 SelectedProject.ProjectId = snapshot.ProjectId;
                 SelectedProject.Preset = ResolveRequiredPreset(SelectedProject, snapshot.Preset);
@@ -2905,7 +2909,7 @@ public class ProjectsViewModel : ViewModelBase
     public void RefreshLocalization()
     {
         SnapshotActionLabel = SelectedProject is null || SelectedProject.IsRegistered
-            ? L("Snapshots.Action.Default", "Snapshot now")
+            ? L(DefaultSnapshotActionKey, DefaultSnapshotActionFallback)
             : L("Snapshots.Action.AddProject", "Add project");
         OnPropertyChanged(nameof(SortModeLabel));
         var config = _configStore.GetSnapshot();
@@ -3013,7 +3017,7 @@ public class ProjectsViewModel : ViewModelBase
             AvailablePresets.Add("unity");
             AvailablePresets.Add("dotnet");
             AvailablePresets.Add("blender");
-            AvailablePresets.Add("video");
+                AvailablePresets.Add(VideoPresetId);
             AvailablePresets.Add(NoPresetId);
             _presetCatalogById.Clear();
             _presetRecommendationCache.Clear();
@@ -3794,11 +3798,11 @@ public class ProjectItemViewModel : ViewModelBase
         set => SetField(ref _encryptionBadgeText, value ?? string.Empty);
     }
 
-    private string _encryptionBadgeBackground = "#2F3650";
+    private string _encryptionBadgeBackground = ProjectsViewModel.NeutralBadgeBackground;
     public string EncryptionBadgeBackground
     {
         get => _encryptionBadgeBackground;
-        set => SetField(ref _encryptionBadgeBackground, value ?? "#2F3650");
+        set => SetField(ref _encryptionBadgeBackground, value ?? ProjectsViewModel.NeutralBadgeBackground);
     }
 
     private string _encryptionBadgeForeground = "#C7D2FE";
@@ -3880,7 +3884,7 @@ public class ProjectItemViewModel : ViewModelBase
             if (i == 0)
             {
                 // first bar: neutral
-                s.TrendColor = "#2F3650";
+                s.TrendColor = ProjectsViewModel.NeutralBadgeBackground;
             }
             else
             {
@@ -3897,7 +3901,7 @@ public class ProjectItemViewModel : ViewModelBase
                 }
                 else
                 {
-                    s.TrendColor = "#2F3650";
+                    s.TrendColor = ProjectsViewModel.NeutralBadgeBackground;
                 }
             }
 
