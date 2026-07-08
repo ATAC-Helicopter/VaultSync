@@ -98,6 +98,7 @@ namespace VaultSync.UI.Services
 
     public sealed class PatchUpdateService
     {
+        private const string InvalidBaseAllowlistStatus = "manifest-invalid-base-allowlist";
         private static readonly HttpClient s_httpClient = CreateHttpClient();
         private static readonly TimeSpan s_manifestCacheWindow = TimeSpan.FromMinutes(30);
         private static readonly ConcurrentDictionary<string, (PatchManifest Manifest, DateTimeOffset FetchedAt)> s_manifestCache =
@@ -366,7 +367,7 @@ namespace VaultSync.UI.Services
 
             if (manifest is null)
             {
-                statusCode = "manifest-invalid-base-allowlist";
+                statusCode = InvalidBaseAllowlistStatus;
                 message = "Patch manifest is missing.";
                 return false;
             }
@@ -379,7 +380,7 @@ namespace VaultSync.UI.Services
                 string normalizedVersion = VersionHelper.NormalizeIdentity(raw);
                 if (string.IsNullOrWhiteSpace(normalizedVersion))
                 {
-                    statusCode = "manifest-invalid-base-allowlist";
+                    statusCode = InvalidBaseAllowlistStatus;
                     message = "Patch manifest contains an empty allowed base version entry.";
                     return false;
                 }
@@ -399,7 +400,7 @@ namespace VaultSync.UI.Services
                 }
                 else if (!normalized.Contains(legacyBase, StringComparer.OrdinalIgnoreCase))
                 {
-                    statusCode = "manifest-invalid-base-allowlist";
+                    statusCode = InvalidBaseAllowlistStatus;
                     message = "Patch manifest previousVersion is not included in the allowed base version list.";
                     return false;
                 }
@@ -407,7 +408,7 @@ namespace VaultSync.UI.Services
 
             if (normalized.Count == 0)
             {
-                statusCode = "manifest-invalid-base-allowlist";
+                statusCode = InvalidBaseAllowlistStatus;
                 message = "Patch manifest does not declare any allowed base versions.";
                 return false;
             }

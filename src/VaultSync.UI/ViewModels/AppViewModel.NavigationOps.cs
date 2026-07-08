@@ -11,6 +11,9 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
+        private const string DashboardViewKey = "Dashboard";
+        private const string BackupsViewKey = "Backups";
+
         public object? CurrentView
         {
             get => _currentView;
@@ -48,7 +51,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            SetCurrentView("Dashboard", remember: false);
+            SetCurrentView(DashboardViewKey, remember: false);
         }
 
         public string HeaderTitle
@@ -108,11 +111,11 @@ namespace VaultSync.UI.ViewModels
                     HeaderKicker = AppViewModel.L("Main.HeaderProjects", "All repositories");
                     Dispatcher.UIThread.Post(_projectsViewModel.EnsureLoaded, DispatcherPriority.Background);
                     break;
-                case "Backups":
+                case BackupsViewKey:
                     BackupsViewModel.IsActiveView = true;
-                    CurrentViewName = "Backups";
+                    CurrentViewName = BackupsViewKey;
                     CurrentView = BackupsViewModel;
-                    HeaderTitle = AppViewModel.L("Nav.Backups", "Backups");
+                    HeaderTitle = AppViewModel.L("Nav.Backups", BackupsViewKey);
                     HeaderKicker = AppViewModel.L("Main.HeaderBackups", "Snapshots & restore");
 
                     if (_backupsCacheProjects is not null && _backupsCacheBackups is not null)
@@ -172,11 +175,11 @@ namespace VaultSync.UI.ViewModels
                     {
                         QueueDashboardWarmLoadIfReady();
                     }
-                    CurrentViewName = "Dashboard";
+                    CurrentViewName = DashboardViewKey;
                     CurrentView = DashboardViewModel;
-                    HeaderTitle = AppViewModel.L("Nav.Dashboard", "Dashboard");
+                    HeaderTitle = AppViewModel.L("Nav.Dashboard", DashboardViewKey);
                     HeaderKicker = AppViewModel.L("Main.HeaderOverview", "Overview");
-                    viewKey = "Dashboard";
+                    viewKey = DashboardViewKey;
                     break;
             }
 
@@ -238,7 +241,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     if (delay > TimeSpan.Zero)
                         await Task.Delay(delay).ConfigureAwait(false);
-                    if (CurrentViewKey == "Dashboard")
+                    if (CurrentViewKey == DashboardViewKey)
                     {
                         _lastDashboardRefreshUtc = DateTime.UtcNow;
                         EnsureDashboardWarmLoad();
@@ -280,7 +283,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     if (delay > TimeSpan.Zero)
                         await Task.Delay(delay).ConfigureAwait(false);
-                    if (CurrentViewKey == "Backups")
+                    if (CurrentViewKey == BackupsViewKey)
                     {
                         EnsureBackupsWarmLoad();
                     }
@@ -298,7 +301,7 @@ namespace VaultSync.UI.ViewModels
             {
                 AppConfig cfg = _configStore.GetSnapshot();
                 string last = string.IsNullOrWhiteSpace(cfg.LastView)
-                    ? "Dashboard"
+                    ? DashboardViewKey
                     : cfg.LastView;
                 Dispatcher.UIThread.Post(() => SetCurrentView(last, remember: false));
             }, nameof(ApplyLastSessionView));
