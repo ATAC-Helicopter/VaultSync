@@ -842,32 +842,47 @@ public class ProjectsViewModel : ViewModelBase
     private List<ProjectItemViewModel> BuildProjectItems(AppConfig config, IReadOnlyList<DiscoveredProject> discovered)
     {
         var hiddenPaths = GetHiddenProjectPathSet(config);
+        var context = CreateProjectBuildContext(config);
+        var projectSources = CreateProjectSources(discovered, context.RegisteredProjects);
 
-        // Try to open the shared DB so we can enrich projects with real snapshot data.
-        SqliteRepository? repo = null;
-        List<Project>? registeredProjects = null;
-        Dictionary<string, Project>? projectsByName = null;
-        IReadOnlyDictionary<int, (DateTime CreatedUtc, long TotalBytes)>? latestSnapshotsByProject = null;
-        Dictionary<int, Backup>? latestBackupsByProject = null;
+        return projectSources.Count == 0
+            ? []
+            : [.. projectSources
+                .Where(p => IsProjectVisible(p, hiddenPaths))
+                .Select(p => CreateProjectItem(p, config, context))];
+    }
+
+    private ProjectBuildContext CreateProjectBuildContext(AppConfig config)
+    {
         try
         {
-            repo = CreateRepository(config);
-            registeredProjects = [.. repo.GetAllProjects()];
-            projectsByName = registeredProjects
+            var repo = CreateRepository(config);
+            var registeredProjects = repo.GetAllProjects().ToList();
+            var projectsByName = registeredProjects
                 .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-            latestSnapshotsByProject = repo.GetLatestSnapshotInfoByProject();
-            latestBackupsByProject = repo.GetLatestBackupsPerProject()
+
+            var latestBackupsByProject = repo.GetLatestBackupsPerProject()
                 .GroupBy(b => b.ProjectId)
                 .ToDictionary(g => g.Key, g => g.First());
-        }
-        catch
-        {
-        }
 
+            return new ProjectBuildContext(
+                repo,
+                registeredProjects,
+                projectsByName,
+                repo.GetLatestSnapshotInfoByProject(),
+                latestBackupsByProject);
+        }
+        catch (Exception)
+        {
+            return ProjectBuildContext.Empty;
+        }
+    }
+
+    private static List<DiscoveredProject> CreateProjectSources(IReadOnlyList<DiscoveredProject> discovered, IReadOnlyList<Project> registeredProjects)
+    {
         var projectSources = new List<DiscoveredProject>(discovered);
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         foreach (var item in discovered)
         {
             var normalized = NormalizeProjectPath(item.Path);
@@ -875,147 +890,132 @@ public class ProjectsViewModel : ViewModelBase
                 seenPaths.Add(normalized);
         }
 
-        if (registeredProjects is { Count: > 0 })
+        foreach (var project in registeredProjects)
         {
-            foreach (var project in registeredProjects)
-            {
-                var rootPath = project.RootPath?.Trim();
-                if (string.IsNullOrWhiteSpace(rootPath))
-                    continue;
-
-                var normalizedRoot = NormalizeProjectPath(rootPath);
-                if (!string.IsNullOrWhiteSpace(normalizedRoot) && seenPaths.Contains(normalizedRoot))
-                    continue;
-
-                projectSources.Add(new DiscoveredProject(
-                    string.IsNullOrWhiteSpace(project.Name)
-                        ? Path.GetFileName(rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                        : project.Name,
-                    rootPath,
-                    null,
-                    null));
-
-                if (!string.IsNullOrWhiteSpace(normalizedRoot))
-                    seenPaths.Add(normalizedRoot);
-            }
+            AddRegisteredProjectSource(projectSources, seenPaths, project);
         }
 
-        if (projectSources.Count == 0)
-            return [];
+        return projectSources;
+    }
 
-        var items = new List<ProjectItemViewModel>();
-        foreach (var p in projectSources)
+    private static void AddRegisteredProjectSource(List<DiscoveredProject> projectSources, HashSet<string> seenPaths, Project project)
+    {
+        var rootPath = project.RootPath?.Trim();
+        if (string.IsNullOrWhiteSpace(rootPath))
+            return;
+
+        var normalizedRoot = NormalizeProjectPath(rootPath);
+        if (!string.IsNullOrWhiteSpace(normalizedRoot) && seenPaths.Contains(normalizedRoot))
+            return;
+
+        projectSources.Add(new DiscoveredProject(
+            string.IsNullOrWhiteSpace(project.Name)
+                ? Path.GetFileName(rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                : project.Name,
+            rootPath,
+            null,
+            null));
+
+        if (!string.IsNullOrWhiteSpace(normalizedRoot))
+            seenPaths.Add(normalizedRoot);
+    }
+
+    private static bool IsProjectVisible(DiscoveredProject project, HashSet<string> hiddenPaths)
+    {
+        var normalizedPath = NormalizeProjectPath(project.Path);
+        return string.IsNullOrWhiteSpace(normalizedPath) || !hiddenPaths.Contains(normalizedPath);
+    }
+
+    private ProjectItemViewModel CreateProjectItem(DiscoveredProject source, AppConfig config, ProjectBuildContext context)
+    {
+        var stats = ResolveProjectStats(source, context, out Project? existingProject);
+        var vm = CreateProjectItemViewModel(source, existingProject, stats);
+
+        vm.SetAvatarFromNameAndStore(source.Path, AvatarStore.GetAvatarForProject(source.Path), vm.ExternalId);
+        UpdateProjectDestinationDisplay(vm, config);
+        UpdateProjectEncryptionDisplay(vm, config);
+        UpdateProjectPresetDisplay(vm);
+        vm.PropertyChanged += OnProjectItemPropertyChanged;
+
+        PopulateProjectSnapshots(vm, source);
+        vm.IsRegistered = existingProject is not null;
+        if (!vm.IsRegistered)
+            vm.SnapshotHistoryLoaded = true;
+
+        ApplyProjectHealth(vm, stats.LastSnapshotTime, vm.IsRegistered);
+        ApplyRequiredPreset(vm, existingProject, context.Repository);
+        UpdateProjectPresetRecommendation(vm);
+        return vm;
+    }
+
+    private ProjectStats ResolveProjectStats(DiscoveredProject source, ProjectBuildContext context, out Project? existingProject)
+    {
+        existingProject = null;
+        var stats = new ProjectStats(source.LastSnapshotTime, source.LastSnapshotSizeBytes);
+        if (context.Repository is null)
+            return stats;
+
+        try
         {
-            var normalizedPath = NormalizeProjectPath(p.Path);
-            if (!string.IsNullOrWhiteSpace(normalizedPath) && hiddenPaths.Contains(normalizedPath))
-                continue;
+            context.ProjectsByName.TryGetValue(source.Name, out existingProject);
+            return existingProject is null
+                ? stats
+                : stats.WithRepositoryData(existingProject.Id, context.LatestSnapshotsByProject, context.LatestBackupsByProject);
+        }
+        catch (Exception)
+        {
+            return stats;
+        }
+    }
 
-            DateTime? lastSnapshotTime = p.LastSnapshotTime;
-            long? lastSnapshotBytes = p.LastSnapshotSizeBytes;
-            List<ProjectSnapshotViewModel>? snapshotVms = null;
-            Project? existingProject = null;
+    private static ProjectItemViewModel CreateProjectItemViewModel(DiscoveredProject source, Project? existingProject, ProjectStats stats)
+    {
+        return new ProjectItemViewModel
+        {
+            Name = source.Name,
+            Path = source.Path,
+            ProjectId = existingProject?.Id ?? 0,
+            ExternalId = existingProject?.ExternalId ?? string.Empty,
+            LastSnapshot = stats.LastSnapshotTime ?? default,
+            SizeBytes = stats.LastSnapshotBytes ?? 0,
+            Preset = existingProject?.Preset ?? string.Empty,
+            TagsCsv = existingProject?.Tags ?? string.Empty,
+            PreferredDestinationId = existingProject?.PreferredDestinationId ?? string.Empty,
+            EncryptionPolicy = ProjectEncryptionPolicy.Normalize(existingProject?.EncryptionPolicy),
+            EncryptionKeyRef = existingProject?.EncryptionKeyRef ?? string.Empty
+        };
+    }
 
-            if (repo != null)
-            {
-                try
-                {
-                    // Use DB snapshot history if the project is registered.
-                    projectsByName?.TryGetValue(p.Name, out existingProject);
-
-                    if (existingProject != null)
-                    {
-                        if (latestSnapshotsByProject?.TryGetValue(existingProject.Id, out var latestSnapshot) == true)
-                        {
-                            lastSnapshotTime = latestSnapshot.CreatedUtc;
-                            lastSnapshotBytes = latestSnapshot.TotalBytes;
-                        }
-
-                        if (latestBackupsByProject?.TryGetValue(existingProject.Id, out var latestBackup) == true)
-                        {
-                            if (!lastSnapshotTime.HasValue || latestBackup.CreatedUtc > lastSnapshotTime.Value)
-                            {
-                                lastSnapshotTime = latestBackup.CreatedUtc;
-                                lastSnapshotBytes = latestBackup.TotalBytes;
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                }
-            }
-
-            var vm = new ProjectItemViewModel
-            {
-                Name = p.Name,
-                Path = p.Path,
-                ProjectId = existingProject?.Id ?? 0,
-                ExternalId = existingProject?.ExternalId ?? string.Empty,
-                LastSnapshot = lastSnapshotTime ?? default,
-                SizeBytes = lastSnapshotBytes ?? 0,
-                Preset = existingProject?.Preset ?? string.Empty,
-                TagsCsv = existingProject?.Tags ?? string.Empty,
-                PreferredDestinationId = existingProject?.PreferredDestinationId ?? string.Empty,
-                EncryptionPolicy = ProjectEncryptionPolicy.Normalize(existingProject?.EncryptionPolicy),
-                EncryptionKeyRef = existingProject?.EncryptionKeyRef ?? string.Empty
-            };
-            vm.SetAvatarFromNameAndStore(p.Path, AvatarStore.GetAvatarForProject(p.Path), vm.ExternalId);
-            UpdateProjectDestinationDisplay(vm, config);
-            UpdateProjectEncryptionDisplay(vm, config);
-            UpdateProjectPresetDisplay(vm);
-            vm.PropertyChanged += OnProjectItemPropertyChanged;
-
-            // Populate snapshot history from DB if available; otherwise fall back to discovery values.
-            if (snapshotVms?.Count > 0)
-            {
-                vm.SetSnapshots(snapshotVms);
-            }
-            else if (p.LastSnapshotTime.HasValue && p.LastSnapshotSizeBytes.HasValue)
-            {
-                var snapshotVm = new ProjectSnapshotViewModel(
-                    p.LastSnapshotTime.Value,
-                    p.LastSnapshotSizeBytes.Value);
-
-                vm.SetSnapshots([snapshotVm]);
-                vm.SnapshotHistoryLoaded = true;
-            }
-            else
-            {
-                vm.SetSnapshots([]);
-            }
-
-            // Mark whether this project is registered in the backup DB.
-            var isRegistered = existingProject is not null;
-            vm.IsRegistered = isRegistered;
-            if (!isRegistered)
-            {
-                vm.SnapshotHistoryLoaded = true;
-            }
-
-            ApplyProjectHealth(vm, lastSnapshotTime, isRegistered);
-
-            var resolvedPreset = ResolveRequiredPreset(vm);
-            if (!string.Equals(vm.Preset, resolvedPreset, StringComparison.Ordinal))
-            {
-                vm.Preset = resolvedPreset;
-                if (isRegistered && existingProject is not null && repo is not null)
-                {
-                    try
-                    {
-                        repo.UpdateProjectPreset(existingProject.Id, resolvedPreset);
-                    }
-                    catch (Exception ex)
-                    {
-                        DiagnosticsLogger.Record($"Project preset fallback persist failed for '{vm.Name}': {ex.GetType().Name} - {ex.Message}");
-                    }
-                }
-            }
-            UpdateProjectPresetRecommendation(vm);
-
-            items.Add(vm);
+    private static void PopulateProjectSnapshots(ProjectItemViewModel vm, DiscoveredProject source)
+    {
+        if (source.LastSnapshotTime.HasValue && source.LastSnapshotSizeBytes.HasValue)
+        {
+            vm.SetSnapshots([new ProjectSnapshotViewModel(source.LastSnapshotTime.Value, source.LastSnapshotSizeBytes.Value)]);
+            vm.SnapshotHistoryLoaded = true;
+            return;
         }
 
-        return items;
+        vm.SetSnapshots([]);
+    }
+
+    private void ApplyRequiredPreset(ProjectItemViewModel vm, Project? existingProject, SqliteRepository? repo)
+    {
+        var resolvedPreset = ResolveRequiredPreset(vm);
+        if (string.Equals(vm.Preset, resolvedPreset, StringComparison.Ordinal))
+            return;
+
+        vm.Preset = resolvedPreset;
+        if (existingProject is null || repo is null)
+            return;
+
+        try
+        {
+            repo.UpdateProjectPreset(existingProject.Id, resolvedPreset);
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Project preset fallback persist failed for '{vm.Name}': {ex.GetType().Name} - {ex.Message}");
+        }
     }
 
     private void RefreshDestinationOptionsInternal(AppConfig config)
@@ -1197,8 +1197,20 @@ public class ProjectsViewModel : ViewModelBase
 
     private void ApplyFilterAndSort(bool autoSelectIfNone = true)
     {
-        IEnumerable<ProjectItemViewModel> filtered = _allProjects;
+        var newList = SortProjectItems(GetFilteredProjects()).ToList();
+        SyncProjectsCollection(newList);
+        RestoreProjectSelection(autoSelectIfNone);
 
+        OnPropertiesChanged(
+            nameof(HasProjects),
+            nameof(ShowProjectsEmptyState),
+            nameof(HasSelectedProject),
+            nameof(ShowSelectedProjectEmptyState));
+    }
+
+    private IEnumerable<ProjectItemViewModel> GetFilteredProjects()
+    {
+        IEnumerable<ProjectItemViewModel> filtered = _allProjects;
         var selectedGroupId = SelectedGroup?.Id ?? ProjectGroupOption.AllId;
         if (!string.Equals(selectedGroupId, ProjectGroupOption.AllId, StringComparison.OrdinalIgnoreCase))
         {
@@ -1213,17 +1225,22 @@ public class ProjectsViewModel : ViewModelBase
             filtered = filtered.Where(p => MatchesSearchTerms(p, terms));
         }
 
-        IOrderedEnumerable<ProjectItemViewModel> ordered = SortMode switch
+        return filtered;
+    }
+
+    private IOrderedEnumerable<ProjectItemViewModel> SortProjectItems(IEnumerable<ProjectItemViewModel> projects)
+    {
+        return SortMode switch
         {
-            ProjectSortMode.LastSnapshot => filtered
+            ProjectSortMode.LastSnapshot => projects
                 .OrderByDescending(p => p.LastSnapshot == default ? DateTime.MinValue : p.LastSnapshot)
                 .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase),
-            _ => filtered.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            _ => projects.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
         };
+    }
 
-        var newList = ordered.ToList();
-
-        // Sync Projects collection to newList
+    private void SyncProjectsCollection(IReadOnlyList<ProjectItemViewModel> newList)
+    {
         for (int i = 0; i < newList.Count; i++)
         {
             var item = newList[i];
@@ -1246,33 +1263,31 @@ public class ProjectsViewModel : ViewModelBase
         {
             Projects.RemoveAt(i);
         }
+    }
 
-        // Keep selection valid
+    private void RestoreProjectSelection(bool autoSelectIfNone)
+    {
         if (SelectedProject != null && !Projects.Contains(SelectedProject))
         {
             SelectedProject = autoSelectIfNone && Projects.Count > 0 ? Projects[0] : null;
+            return;
         }
-        else if (SelectedProject == null)
+
+        if (SelectedProject != null)
+            return;
+
+        var restore = !string.IsNullOrWhiteSpace(_lastSelectedProjectName)
+            ? Projects.FirstOrDefault(p => string.Equals(p.Name, _lastSelectedProjectName, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        if (restore is not null)
         {
-            var restore = !string.IsNullOrWhiteSpace(_lastSelectedProjectName)
-                ? Projects.FirstOrDefault(p => string.Equals(p.Name, _lastSelectedProjectName, StringComparison.OrdinalIgnoreCase))
-                : null;
-
-            if (restore is not null)
-            {
-                SelectedProject = restore;
-            }
-            else if (autoSelectIfNone && Projects.Count > 0)
-            {
-                SelectedProject = Projects[0];
-            }
+            SelectedProject = restore;
+            return;
         }
 
-        OnPropertiesChanged(
-            nameof(HasProjects),
-            nameof(ShowProjectsEmptyState),
-            nameof(HasSelectedProject),
-            nameof(ShowSelectedProjectEmptyState));
+        if (autoSelectIfNone && Projects.Count > 0)
+            SelectedProject = Projects[0];
     }
 
     private void LoadGroupOptions()
@@ -1839,36 +1854,7 @@ public class ProjectsViewModel : ViewModelBase
             var projectsById = repo.GetAllProjects().ToDictionary(p => p.Id);
             foreach (var projectId in ids)
             {
-                if (!projectsById.TryGetValue(projectId, out var project))
-                    continue;
-
-                var tags = ParseTags(project.Tags);
-                var changed = false;
-                foreach (var tag in tagsToProcess)
-                {
-                    if (add)
-                    {
-                        if (tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
-                            continue;
-                        tags.Add(tag);
-                        changed = true;
-                    }
-                    else
-                    {
-                        var removed = tags.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
-                        if (removed > 0)
-                            changed = true;
-                    }
-                }
-
-                if (!changed)
-                    continue;
-
-                var csv = string.Join(", ", tags);
-                repo.UpdateProjectTags(projectId, csv);
-                var vm = _allProjects.FirstOrDefault(p => p.ProjectId == projectId);
-                if (vm is not null)
-                    vm.TagsCsv = csv;
+                UpdateProjectTagsForGroup(repo, projectsById, projectId, tagsToProcess, add);
             }
         }).ConfigureAwait(false);
 
@@ -1887,6 +1873,52 @@ public class ProjectsViewModel : ViewModelBase
                 NotificationSeverity.Info);
         });
     }
+
+    private void UpdateProjectTagsForGroup(
+        SqliteRepository repo,
+        IReadOnlyDictionary<int, Project> projectsById,
+        int projectId,
+        IReadOnlyList<string> tagsToProcess,
+        bool add)
+    {
+        if (!projectsById.TryGetValue(projectId, out var project))
+            return;
+
+        var tags = ParseTags(project.Tags);
+        if (!ApplyTags(tags, tagsToProcess, add))
+            return;
+
+        var csv = string.Join(", ", tags);
+        repo.UpdateProjectTags(projectId, csv);
+        var vm = _allProjects.FirstOrDefault(p => p.ProjectId == projectId);
+        if (vm is not null)
+            vm.TagsCsv = csv;
+    }
+
+    private static bool ApplyTags(List<string> tags, IReadOnlyList<string> tagsToProcess, bool add)
+    {
+        var changed = false;
+        foreach (var tag in tagsToProcess)
+        {
+            changed |= add
+                ? AddTagIfMissing(tags, tag)
+                : RemoveTagIfPresent(tags, tag);
+        }
+
+        return changed;
+    }
+
+    private static bool AddTagIfMissing(List<string> tags, string tag)
+    {
+        if (tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+            return false;
+
+        tags.Add(tag);
+        return true;
+    }
+
+    private static bool RemoveTagIfPresent(List<string> tags, string tag) =>
+        tags.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)) > 0;
 
     private async Task SnapshotSelectedGroupAsync()
     {
@@ -2110,164 +2142,46 @@ public class ProjectsViewModel : ViewModelBase
 
     private PresetRecommendation? DetectPresetRecommendation(string projectPath)
     {
-        bool Has(string relativePath)
+        var probe = new ProjectPathProbe(projectPath);
+        foreach (var rule in GetPresetRecommendationRules())
         {
-            try
-            {
-                return File.Exists(Path.Combine(projectPath, relativePath));
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        bool HasDir(string relativePath)
-        {
-            try
-            {
-                return Directory.Exists(Path.Combine(projectPath, relativePath));
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        bool HasAny(string pattern)
-        {
-            try
-            {
-                if (!Directory.Exists(projectPath))
-                {
-                    return false;
-                }
-
-                return Directory.EnumerateFiles(
-                        projectPath,
-                        pattern,
-                        new EnumerationOptions
-                        {
-                            RecurseSubdirectories = true,
-                            IgnoreInaccessible = true,
-                            ReturnSpecialDirectories = false
-                        })
-                    .Take(1)
-                    .Any();
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        bool HasAnyPath(params string[] relativePaths)
-        {
-            foreach (var path in relativePaths)
-            {
-                if (Has(path))
-                    return true;
-            }
-
-            return false;
-        }
-
-        PresetRecommendation? Build(string presetName, string reasonKey, string reasonFallback)
-        {
-            var availablePreset = PresetAvailable(presetName);
-            if (string.IsNullOrWhiteSpace(availablePreset))
-                return null;
-
-            return new PresetRecommendation(availablePreset, L(reasonKey, reasonFallback));
-        }
-
-        if (HasDir("Assets") && HasDir("ProjectSettings"))
-        {
-            return Build(
-                "unity",
-                "Projects.Preset.Recommendation.Reason.Unity",
-                "Detected Unity project layout (Assets + ProjectSettings).");
-        }
-
-        if (Has("project.godot"))
-        {
-            return Build(
-                "godot",
-                "Projects.Preset.Recommendation.Reason.Godot",
-                "Detected Godot project marker (project.godot).");
-        }
-
-        if (HasAny("*.uproject"))
-        {
-            return Build(
-                "unreal",
-                "Projects.Preset.Recommendation.Reason.Unreal",
-                "Detected Unreal project file (*.uproject).");
-        }
-
-        if (Has("Cargo.toml"))
-        {
-            return Build(
-                "rust",
-                "Projects.Preset.Recommendation.Reason.Rust",
-                "Detected Rust project marker (Cargo.toml).");
-        }
-
-        var hasNodeMarker = Has("package.json");
-        var hasNodeConfidence = HasAnyPath("package-lock.json", "yarn.lock", "pnpm-lock.yaml", "tsconfig.json", "vite.config.ts", "vite.config.js");
-        if (hasNodeMarker && hasNodeConfidence)
-        {
-            return Build(
-                "node",
-                "Projects.Preset.Recommendation.Reason.Node",
-                "Detected JavaScript/Node project markers (package.json + lock/build config).");
-        }
-
-        var hasPythonMarker = Has("pyproject.toml") || Has("requirements.txt");
-        var hasPythonConfidence = HasAnyPath("setup.py", "poetry.lock", "Pipfile", "tox.ini");
-        if (hasPythonMarker && hasPythonConfidence)
-        {
-            return Build(
-                "python",
-                "Projects.Preset.Recommendation.Reason.Python",
-                "Detected Python project markers (dependency file + project config).");
-        }
-
-        if (HasAny("*.axaml"))
-        {
-            return Build(
-                "avalonia",
-                "Projects.Preset.Recommendation.Reason.Avalonia",
-                "Detected Avalonia UI files (*.axaml).");
-        }
-
-        var hasDotNetMarker = HasAny("*.csproj") || HasAny("*.sln");
-        var hasDotNetConfidence = HasAnyPath("global.json", "Directory.Build.props", "Directory.Packages.props") || HasAny("*.cs");
-        if (hasDotNetMarker && hasDotNetConfidence)
-        {
-            return Build(
-                "dotnet",
-                "Projects.Preset.Recommendation.Reason.DotNet",
-                "Detected .NET solution/project files (*.sln/*.csproj).");
-        }
-
-        if (HasAny("*.blend"))
-        {
-            return Build(
-                "blender",
-                "Projects.Preset.Recommendation.Reason.Blender",
-                "Detected Blender files (*.blend).");
-        }
-
-        if (HasAny("*.prproj"))
-        {
-            return Build(
-                VideoPresetId,
-                "Projects.Preset.Recommendation.Reason.Video",
-                "Detected video editing project files (*.prproj).");
+            if (rule.Matches(probe))
+                return BuildPresetRecommendation(rule);
         }
 
         return null;
+    }
+
+    private PresetRecommendation? BuildPresetRecommendation(PresetRecommendationRule rule)
+    {
+        var availablePreset = PresetAvailable(rule.PresetName);
+        return string.IsNullOrWhiteSpace(availablePreset)
+            ? null
+            : new PresetRecommendation(availablePreset, L(rule.ReasonKey, rule.ReasonFallback));
+    }
+
+    private static IEnumerable<PresetRecommendationRule> GetPresetRecommendationRules()
+    {
+        yield return new("unity", "Projects.Preset.Recommendation.Reason.Unity", "Detected Unity project layout (Assets + ProjectSettings).",
+            probe => probe.HasDir("Assets") && probe.HasDir("ProjectSettings"));
+        yield return new("godot", "Projects.Preset.Recommendation.Reason.Godot", "Detected Godot project marker (project.godot).",
+            probe => probe.Has("project.godot"));
+        yield return new("unreal", "Projects.Preset.Recommendation.Reason.Unreal", "Detected Unreal project file (*.uproject).",
+            probe => probe.HasAny("*.uproject"));
+        yield return new("rust", "Projects.Preset.Recommendation.Reason.Rust", "Detected Rust project marker (Cargo.toml).",
+            probe => probe.Has("Cargo.toml"));
+        yield return new("node", "Projects.Preset.Recommendation.Reason.Node", "Detected JavaScript/Node project markers (package.json + lock/build config).",
+            probe => probe.Has("package.json") && probe.HasAnyPath("package-lock.json", "yarn.lock", "pnpm-lock.yaml", "tsconfig.json", "vite.config.ts", "vite.config.js"));
+        yield return new("python", "Projects.Preset.Recommendation.Reason.Python", "Detected Python project markers (dependency file + project config).",
+            probe => (probe.Has("pyproject.toml") || probe.Has("requirements.txt")) && probe.HasAnyPath("setup.py", "poetry.lock", "Pipfile", "tox.ini"));
+        yield return new("avalonia", "Projects.Preset.Recommendation.Reason.Avalonia", "Detected Avalonia UI files (*.axaml).",
+            probe => probe.HasAny("*.axaml"));
+        yield return new("dotnet", "Projects.Preset.Recommendation.Reason.DotNet", "Detected .NET solution/project files (*.sln/*.csproj).",
+            probe => (probe.HasAny("*.csproj") || probe.HasAny("*.sln")) && (probe.HasAnyPath("global.json", "Directory.Build.props", "Directory.Packages.props") || probe.HasAny("*.cs")));
+        yield return new("blender", "Projects.Preset.Recommendation.Reason.Blender", "Detected Blender files (*.blend).",
+            probe => probe.HasAny("*.blend"));
+        yield return new(VideoPresetId, "Projects.Preset.Recommendation.Reason.Video", "Detected video editing project files (*.prproj).",
+            probe => probe.HasAny("*.prproj"));
     }
 
 
@@ -2722,12 +2636,8 @@ public class ProjectsViewModel : ViewModelBase
         if (sender is not ProjectItemViewModel vm)
             return;
 
-        var changedPreset = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.Preset), StringComparison.Ordinal);
-        var changedTags = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.TagsCsv), StringComparison.Ordinal);
-        var changedRecommendedPreset = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.RecommendedPreset), StringComparison.Ordinal);
-        var changedDestination = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.PreferredDestinationId), StringComparison.Ordinal);
-        var changedEncryption = string.Equals(e.PropertyName, nameof(ProjectItemViewModel.EncryptionPolicy), StringComparison.Ordinal);
-        if (changedPreset)
+        var change = ProjectItemChange.FromProperty(e.PropertyName);
+        if (change.ChangedPreset)
         {
             UpdateProjectPresetDisplay(vm);
             UpdateProjectPresetRecommendation(vm);
@@ -2735,10 +2645,10 @@ public class ProjectsViewModel : ViewModelBase
                 LoadPresetEditorForSelectedProject();
         }
 
-        if (changedRecommendedPreset && ReferenceEquals(vm, SelectedProject))
+        if (change.ChangedRecommendedPreset && ReferenceEquals(vm, SelectedProject))
             _applyPresetRecommendationCommand.RaiseCanExecuteChanged();
 
-        if (!changedPreset && !changedDestination && !changedEncryption && !changedTags)
+        if (!change.ShouldPersist)
             return;
 
         if (Volatile.Read(ref _suppressProjectPersistence) > 0)
@@ -2752,43 +2662,55 @@ public class ProjectsViewModel : ViewModelBase
             if (project is null)
                 return;
 
-            if (changedPreset)
-            {
-                repo.UpdateProjectPreset(project.Id, vm.Preset);
-            }
+            PersistProjectItemChange(change, vm, project, repo, config);
 
-            if (changedDestination)
-            {
-                repo.UpdateProjectPreferredDestination(project.Id, vm.PreferredDestinationId);
-                UpdateProjectDestinationDisplay(vm, config);
-            }
-
-            if (changedEncryption)
-            {
-                repo.UpdateProjectEncryptionSettings(
-                    project.Id,
-                    vm.EncryptionPolicy,
-                    string.IsNullOrWhiteSpace(vm.EncryptionKeyRef) ? null : vm.EncryptionKeyRef);
-                UpdateProjectEncryptionDisplay(vm, config);
-                ProjectEncryptionPolicyChanged?.Invoke(project.Id, vm.EncryptionPolicy);
-            }
-
-            if (changedTags)
-            {
-                repo.UpdateProjectTags(project.Id, vm.TagsCsv);
-                RefreshReusableProjectTags();
-                ApplyFilterAndSort(autoSelectIfNone: false);
-                if (ReferenceEquals(vm, SelectedProject))
-                    RefreshSelectedProjectTags();
-            }
-
-            if (changedPreset || changedDestination || changedTags)
+            if (change.ChangedPreset || change.ChangedDestination || change.ChangedTags)
                 ProjectSettingsMetadataChanged?.Invoke(project.Id);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[Projects] Failed to persist project settings for '{vm.Name}': {ex.Message}");
         }
+    }
+
+    private void PersistProjectItemChange(ProjectItemChange change, ProjectItemViewModel vm, Project project, SqliteRepository repo, AppConfig config)
+    {
+        if (change.ChangedPreset)
+            repo.UpdateProjectPreset(project.Id, vm.Preset);
+
+        if (change.ChangedDestination)
+            PersistProjectDestination(vm, project.Id, repo, config);
+
+        if (change.ChangedEncryption)
+            PersistProjectEncryption(vm, project.Id, repo, config);
+
+        if (change.ChangedTags)
+            PersistProjectTags(vm, project.Id, repo);
+    }
+
+    private void PersistProjectDestination(ProjectItemViewModel vm, int projectId, SqliteRepository repo, AppConfig config)
+    {
+        repo.UpdateProjectPreferredDestination(projectId, vm.PreferredDestinationId);
+        UpdateProjectDestinationDisplay(vm, config);
+    }
+
+    private void PersistProjectEncryption(ProjectItemViewModel vm, int projectId, SqliteRepository repo, AppConfig config)
+    {
+        repo.UpdateProjectEncryptionSettings(
+            projectId,
+            vm.EncryptionPolicy,
+            string.IsNullOrWhiteSpace(vm.EncryptionKeyRef) ? null : vm.EncryptionKeyRef);
+        UpdateProjectEncryptionDisplay(vm, config);
+        ProjectEncryptionPolicyChanged?.Invoke(projectId, vm.EncryptionPolicy);
+    }
+
+    private void PersistProjectTags(ProjectItemViewModel vm, int projectId, SqliteRepository repo)
+    {
+        repo.UpdateProjectTags(projectId, vm.TagsCsv);
+        RefreshReusableProjectTags();
+        ApplyFilterAndSort(autoSelectIfNone: false);
+        if (ReferenceEquals(vm, SelectedProject))
+            RefreshSelectedProjectTags();
     }
 
     private void LoadSnapshotHistoryForSelectedProject()
@@ -3030,66 +2952,80 @@ public class ProjectsViewModel : ViewModelBase
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var dir = ResolvePresetsDirForUi();
 
-        if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
-        {
-            try
-            {
-                var indexPath = Path.Combine(dir, "presets.index.json");
-                if (File.Exists(indexPath))
-                {
-                    var json = File.ReadAllText(indexPath);
-                    var index = JsonSerializer.Deserialize<PresetIndex>(json);
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+            return presets;
 
-                    if (index?.Presets != null)
-                    {
-                        foreach (var p in index.Presets)
-                        {
-                            if (!string.IsNullOrWhiteSpace(p.Id))
-                            {
-                                if (ids.Add(p.Id))
-                                {
-                                    presets.Add(p);
-                                }
-                            }
-                            else if (!string.IsNullOrWhiteSpace(p.File))
-                            {
-                                var id = Path.GetFileNameWithoutExtension(p.File);
-                                if (ids.Add(id))
-                                {
-                                    presets.Add(new PresetInfo
-                                    {
-                                        Id = id,
-                                        File = p.File
-                                    });
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    // No index file: just enumerate preset files.
-                    foreach (var file in Directory.EnumerateFiles(dir, "*.vaultsyncignore"))
-                    {
-                        var name = Path.GetFileNameWithoutExtension(file);
-                        if (!string.IsNullOrWhiteSpace(name) && ids.Add(name))
-                        {
-                            presets.Add(new PresetInfo
-                            {
-                                Id = name,
-                                File = Path.GetFileName(file)
-                            });
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                DiagnosticsLogger.Record($"Project preset catalog load failed: {ex.GetType().Name} - {ex.Message}");
-            }
+        try
+        {
+            LoadPresetInfos(dir, presets, ids);
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.Record($"Project preset catalog load failed: {ex.GetType().Name} - {ex.Message}");
         }
 
         return presets.OrderBy(n => n.Id, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static void LoadPresetInfos(string dir, List<PresetInfo> presets, HashSet<string> ids)
+    {
+        var indexPath = Path.Combine(dir, "presets.index.json");
+        if (File.Exists(indexPath))
+        {
+            AddIndexedPresetInfos(indexPath, presets, ids);
+            return;
+        }
+
+        AddDirectoryPresetInfos(dir, presets, ids);
+    }
+
+    private static void AddIndexedPresetInfos(string indexPath, List<PresetInfo> presets, HashSet<string> ids)
+    {
+        var json = File.ReadAllText(indexPath);
+        var index = JsonSerializer.Deserialize<PresetIndex>(json);
+        foreach (var preset in index?.Presets ?? [])
+        {
+            AddPresetInfo(preset, presets, ids);
+        }
+    }
+
+    private static void AddPresetInfo(PresetInfo preset, List<PresetInfo> presets, HashSet<string> ids)
+    {
+        if (!string.IsNullOrWhiteSpace(preset.Id))
+        {
+            if (ids.Add(preset.Id))
+                presets.Add(preset);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(preset.File))
+            return;
+
+        var id = Path.GetFileNameWithoutExtension(preset.File);
+        if (ids.Add(id))
+        {
+            presets.Add(new PresetInfo
+            {
+                Id = id,
+                File = preset.File
+            });
+        }
+    }
+
+    private static void AddDirectoryPresetInfos(string dir, List<PresetInfo> presets, HashSet<string> ids)
+    {
+        foreach (var file in Directory.EnumerateFiles(dir, "*.vaultsyncignore"))
+        {
+            var name = Path.GetFileNameWithoutExtension(file);
+            if (!string.IsNullOrWhiteSpace(name) && ids.Add(name))
+            {
+                presets.Add(new PresetInfo
+                {
+                    Id = name,
+                    File = Path.GetFileName(file)
+                });
+            }
+        }
     }
 
     private void UpdateProjectPresetDisplay(ProjectItemViewModel vm)
@@ -3503,6 +3439,118 @@ public class ProjectsViewModel : ViewModelBase
 
     private sealed record PresetRecommendation(string PresetId, string Reason);
 
+    private sealed record PresetRecommendationRule(
+        string PresetName,
+        string ReasonKey,
+        string ReasonFallback,
+        Func<ProjectPathProbe, bool> Matches);
+
+    private sealed class ProjectPathProbe(string projectPath)
+    {
+        private static readonly EnumerationOptions RecursiveFileOptions = new()
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            ReturnSpecialDirectories = false
+        };
+
+        public bool Has(string relativePath)
+        {
+            try
+            {
+                return File.Exists(Path.Combine(projectPath, relativePath));
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public bool HasDir(string relativePath)
+        {
+            try
+            {
+                return Directory.Exists(Path.Combine(projectPath, relativePath));
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public bool HasAny(string pattern)
+        {
+            try
+            {
+                return Directory.Exists(projectPath) &&
+                    Directory.EnumerateFiles(projectPath, pattern, RecursiveFileOptions).Any();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public bool HasAnyPath(params string[] relativePaths) =>
+            relativePaths.Any(Has);
+    }
+
+    private sealed record ProjectItemChange(
+        bool ChangedPreset,
+        bool ChangedTags,
+        bool ChangedRecommendedPreset,
+        bool ChangedDestination,
+        bool ChangedEncryption)
+    {
+        public bool ShouldPersist => ChangedPreset || ChangedDestination || ChangedEncryption || ChangedTags;
+
+        public static ProjectItemChange FromProperty(string? propertyName) =>
+            new(
+                string.Equals(propertyName, nameof(ProjectItemViewModel.Preset), StringComparison.Ordinal),
+                string.Equals(propertyName, nameof(ProjectItemViewModel.TagsCsv), StringComparison.Ordinal),
+                string.Equals(propertyName, nameof(ProjectItemViewModel.RecommendedPreset), StringComparison.Ordinal),
+                string.Equals(propertyName, nameof(ProjectItemViewModel.PreferredDestinationId), StringComparison.Ordinal),
+                string.Equals(propertyName, nameof(ProjectItemViewModel.EncryptionPolicy), StringComparison.Ordinal));
+    }
+
+    private sealed record ProjectBuildContext(
+        SqliteRepository? Repository,
+        IReadOnlyList<Project> RegisteredProjects,
+        IReadOnlyDictionary<string, Project> ProjectsByName,
+        IReadOnlyDictionary<int, (DateTime CreatedUtc, long TotalBytes)> LatestSnapshotsByProject,
+        IReadOnlyDictionary<int, Backup> LatestBackupsByProject)
+    {
+        public static ProjectBuildContext Empty { get; } =
+            new(null, [], new Dictionary<string, Project>(StringComparer.OrdinalIgnoreCase), new Dictionary<int, (DateTime, long)>(), new Dictionary<int, Backup>());
+    }
+
+    private sealed record ProjectStats(DateTime? LastSnapshotTime, long? LastSnapshotBytes)
+    {
+        public ProjectStats WithRepositoryData(
+            int projectId,
+            IReadOnlyDictionary<int, (DateTime CreatedUtc, long TotalBytes)> latestSnapshotsByProject,
+            IReadOnlyDictionary<int, Backup> latestBackupsByProject)
+        {
+            DateTime? lastSnapshotTime = LastSnapshotTime;
+            long? lastSnapshotBytes = LastSnapshotBytes;
+
+            if (latestSnapshotsByProject.TryGetValue(projectId, out var latestSnapshot))
+            {
+                lastSnapshotTime = latestSnapshot.CreatedUtc;
+                lastSnapshotBytes = latestSnapshot.TotalBytes;
+            }
+
+            if (latestBackupsByProject.TryGetValue(projectId, out var latestBackup) &&
+                (!lastSnapshotTime.HasValue || latestBackup.CreatedUtc > lastSnapshotTime.Value))
+            {
+                lastSnapshotTime = latestBackup.CreatedUtc;
+                lastSnapshotBytes = latestBackup.TotalBytes;
+            }
+
+            return new ProjectStats(lastSnapshotTime, lastSnapshotBytes);
+        }
+    }
+
     private SqliteRepository CreateRepository(AppConfig? config = null)
     {
         return _repositoryFactory.Create(config);
@@ -3880,40 +3928,8 @@ public class ProjectItemViewModel : ViewModelBase
         {
             var s = SnapshotHistory[i];
             s.RelativeSize = (double)s.SizeBytes / max;
-
-            if (i == 0)
-            {
-                // first bar: neutral
-                s.TrendColor = ProjectsViewModel.NeutralBadgeBackground;
-            }
-            else
-            {
-                var prev = SnapshotHistory[i - 1];
-                if (s.SizeBytes > prev.SizeBytes)
-                {
-                    // snapshot grew -> red warning
-                    s.TrendColor = "#6A2E2E";
-                }
-                else if (s.SizeBytes < prev.SizeBytes)
-                {
-                    // snapshot shrank -> nice green
-                    s.TrendColor = "#2E6A3E";
-                }
-                else
-                {
-                    s.TrendColor = ProjectsViewModel.NeutralBadgeBackground;
-                }
-            }
-
-            if (i == 0)
-            {
-                s.ShowDayLabel = true;
-            }
-            else
-            {
-                var prevDate = SnapshotHistory[i - 1].Timestamp.Date;
-                s.ShowDayLabel = s.Timestamp.Date != prevDate;
-            }
+            s.TrendColor = GetSnapshotTrendColor(i);
+            s.ShowDayLabel = ShouldShowSnapshotDayLabel(i);
 
             if (s.ShowDayLabel)
             {
@@ -3934,6 +3950,30 @@ public class ProjectItemViewModel : ViewModelBase
             nameof(TotalSnapshotSizeDisplay),
             nameof(AverageSnapshotSizeDisplay),
             nameof(DaysSinceLastSnapshotDisplay));
+    }
+
+    private string GetSnapshotTrendColor(int index)
+    {
+        if (index == 0)
+            return ProjectsViewModel.NeutralBadgeBackground;
+
+        var current = SnapshotHistory[index];
+        var previous = SnapshotHistory[index - 1];
+        if (current.SizeBytes > previous.SizeBytes)
+            return "#6A2E2E";
+        if (current.SizeBytes < previous.SizeBytes)
+            return "#2E6A3E";
+
+        return ProjectsViewModel.NeutralBadgeBackground;
+    }
+
+    private bool ShouldShowSnapshotDayLabel(int index)
+    {
+        if (index == 0)
+            return true;
+
+        var previousDate = SnapshotHistory[index - 1].Timestamp.Date;
+        return SnapshotHistory[index].Timestamp.Date != previousDate;
     }
 
     // ---- Convenience / formatted properties ----

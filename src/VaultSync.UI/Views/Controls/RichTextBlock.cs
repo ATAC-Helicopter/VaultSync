@@ -47,98 +47,134 @@ public class RichTextBlock : TextBlock
         int i = 0;
         while (i < text.Length)
         {
-            if (text[i] == '\n')
+            if (TryAddFormattedInline(text, ref i))
             {
-                Inlines?.Add(new LineBreak());
-                i++;
                 continue;
             }
 
-            if (IsAt(text, i, "~~") && TryReadToken(text, i + 2, "~~", out string? strikeText, out int nextStrike))
-            {
-                var run = new Run(strikeText)
-                {
-                    TextDecorations = CreateStrikethrough()
-                };
-                Inlines?.Add(run);
-                i = nextStrike;
-                continue;
-            }
-
-            if (IsAt(text, i, "[") && TryReadLink(text, i, out string? linkText, out string? linkUrl, out int nextLink))
-            {
-                if (TryCreateUri(linkUrl, out Uri? uri))
-                {
-                    _primaryLinkUri ??= uri;
-                    Cursor = new Cursor(StandardCursorType.Hand);
-                    var run = new Run(linkText)
-                    {
-                        Foreground = GetAccentBrush() ?? Foreground,
-                        TextDecorations = CreateUnderline()
-                    };
-                    Inlines?.Add(run);
-                }
-                else
-                {
-                    var run = new Run(linkText)
-                    {
-                        Foreground = GetAccentBrush() ?? Foreground,
-                        TextDecorations = CreateUnderline()
-                    };
-                    Inlines?.Add(run);
-                }
-                i = nextLink;
-                continue;
-            }
-
-            if (IsAt(text, i, "{") && TryReadToken(text, i + 1, "}", out string? badgeText, out int nextBadge))
-            {
-                var run = new Run($"[{badgeText.Trim()}]")
-                {
-                    Foreground = GetAccentBrush() ?? Foreground
-                };
-                Inlines?.Add(run);
-                i = nextBadge;
-                continue;
-            }
-
-            if (IsAt(text, i, "**") && TryReadToken(text, i + 2, "**", out string? boldText, out int nextBold))
-            {
-                var bold = new Bold();
-                bold.Inlines.Add(new Run(boldText));
-                Inlines?.Add(bold);
-                i = nextBold;
-                continue;
-            }
-
-            if (IsAt(text, i, "`") && TryReadToken(text, i + 1, "`", out string? codeText, out int nextCode))
-            {
-                var run = new Run(codeText)
-                {
-                    FontFamily = new FontFamily("Menlo,Consolas,monospace")
-                };
-                Inlines?.Add(run);
-                i = nextCode;
-                continue;
-            }
-
-            if (IsAt(text, i, "*") && TryReadToken(text, i + 1, "*", out string? italicText, out int nextItalic))
-            {
-                var italic = new Italic();
-                italic.Inlines.Add(new Run(italicText));
-                Inlines?.Add(italic);
-                i = nextItalic;
-                continue;
-            }
-
-            int next = FindNextSpecial(text, i);
-            string chunk = text[i..next];
-            if (chunk.Length > 0)
-            {
-                Inlines?.Add(new Run(chunk));
-            }
-            i = next;
+            AddPlainTextUntilNextSpecial(text, ref i);
         }
+    }
+
+    private bool TryAddFormattedInline(string text, ref int index)
+    {
+        return TryAddLineBreak(text, ref index) ||
+            TryAddStrikethrough(text, ref index) ||
+            TryAddLink(text, ref index) ||
+            TryAddBadge(text, ref index) ||
+            TryAddBold(text, ref index) ||
+            TryAddCode(text, ref index) ||
+            TryAddItalic(text, ref index);
+    }
+
+    private bool TryAddLineBreak(string text, ref int index)
+    {
+        if (text[index] != '\n')
+            return false;
+
+        Inlines?.Add(new LineBreak());
+        index++;
+        return true;
+    }
+
+    private bool TryAddStrikethrough(string text, ref int index)
+    {
+        if (!IsAt(text, index, "~~") || !TryReadToken(text, index + 2, "~~", out string? strikeText, out int next))
+            return false;
+
+        var run = new Run(strikeText)
+        {
+            TextDecorations = CreateStrikethrough()
+        };
+        Inlines?.Add(run);
+        index = next;
+        return true;
+    }
+
+    private bool TryAddLink(string text, ref int index)
+    {
+        if (!IsAt(text, index, "[") || !TryReadLink(text, index, out string? linkText, out string? linkUrl, out int next))
+            return false;
+
+        AddLinkRun(linkText, linkUrl);
+        index = next;
+        return true;
+    }
+
+    private void AddLinkRun(string linkText, string linkUrl)
+    {
+        if (TryCreateUri(linkUrl, out Uri? uri))
+        {
+            _primaryLinkUri ??= uri;
+            Cursor = new Cursor(StandardCursorType.Hand);
+        }
+
+        Inlines?.Add(new Run(linkText)
+        {
+            Foreground = GetAccentBrush() ?? Foreground,
+            TextDecorations = CreateUnderline()
+        });
+    }
+
+    private bool TryAddBadge(string text, ref int index)
+    {
+        if (!IsAt(text, index, "{") || !TryReadToken(text, index + 1, "}", out string? badgeText, out int next))
+            return false;
+
+        Inlines?.Add(new Run($"[{badgeText.Trim()}]")
+        {
+            Foreground = GetAccentBrush() ?? Foreground
+        });
+        index = next;
+        return true;
+    }
+
+    private bool TryAddBold(string text, ref int index)
+    {
+        if (!IsAt(text, index, "**") || !TryReadToken(text, index + 2, "**", out string? boldText, out int next))
+            return false;
+
+        var bold = new Bold();
+        bold.Inlines.Add(new Run(boldText));
+        Inlines?.Add(bold);
+        index = next;
+        return true;
+    }
+
+    private bool TryAddCode(string text, ref int index)
+    {
+        if (!IsAt(text, index, "`") || !TryReadToken(text, index + 1, "`", out string? codeText, out int next))
+            return false;
+
+        Inlines?.Add(new Run(codeText)
+        {
+            FontFamily = new FontFamily("Menlo,Consolas,monospace")
+        });
+        index = next;
+        return true;
+    }
+
+    private bool TryAddItalic(string text, ref int index)
+    {
+        if (!IsAt(text, index, "*") || !TryReadToken(text, index + 1, "*", out string? italicText, out int next))
+            return false;
+
+        var italic = new Italic();
+        italic.Inlines.Add(new Run(italicText));
+        Inlines?.Add(italic);
+        index = next;
+        return true;
+    }
+
+    private void AddPlainTextUntilNextSpecial(string text, ref int index)
+    {
+        int next = FindNextSpecial(text, index);
+        string chunk = text[index..next];
+        if (chunk.Length > 0)
+        {
+            Inlines?.Add(new Run(chunk));
+        }
+        index = next;
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
