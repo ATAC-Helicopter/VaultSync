@@ -45,6 +45,25 @@ class BuildPatchTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_patch.resolve_workspace_path("../outside")
 
+    def test_build_patch_allows_workspace_root_outputs(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            root = Path(tmp)
+            base_dir = root / "publish"
+            base_dir.mkdir()
+            (base_dir / "VaultSync.UI").write_bytes(b"binary")
+
+            build_patch.build_patch(
+                base_dir,
+                root / "patch.zip",
+                root / "patch.json",
+                "linux",
+                ["1.8.0"],
+                "1.8.1",
+            )
+
+            self.assertTrue((root / "patch.zip").is_file())
+            self.assertTrue((root / "patch.json").is_file())
+
     def test_build_patch_rejects_symlink_outside_base(self) -> None:
         if os.name == "nt":
             self.skipTest("Creating symlinks is not reliably permitted on Windows.")
