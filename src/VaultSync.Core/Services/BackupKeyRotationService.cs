@@ -5,10 +5,8 @@ using VaultSync.Core.Config;
 
 namespace VaultSync.Core.Services;
 
-public sealed class BackupKeyRotationService(BackupArchiveCryptoService? cryptoService = null)
+public sealed class BackupKeyRotationService
 {
-    private readonly BackupArchiveCryptoService _cryptoService = cryptoService ?? new BackupArchiveCryptoService();
-
     public sealed record RotationResult(
         bool Success,
         string CryptoDescriptorJson,
