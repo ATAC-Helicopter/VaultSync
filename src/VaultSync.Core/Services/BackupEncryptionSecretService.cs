@@ -20,7 +20,7 @@ public sealed class BackupEncryptionSecretService(
 
     public BackupEncryptionSecretService()
         : this(
-            (existing, hint) => CredentialVault.Instance.EnsureKeyRef(existing, hint),
+            CredentialVault.EnsureKeyRef,
             (keyRef, username, preferKeychain, fallback) => CredentialVault.Instance.GetSecret(keyRef, username, preferKeychain, fallback),
             (keyRef, username, secret, preferKeychain) => CredentialVault.Instance.SaveSecret(keyRef, username, secret, preferKeychain),
             (keyRef, username) => CredentialVault.Instance.DeleteSecret(keyRef, username))

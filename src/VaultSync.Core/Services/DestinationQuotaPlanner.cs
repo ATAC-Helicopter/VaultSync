@@ -8,7 +8,7 @@ namespace VaultSync.Core.Services;
 
 public sealed class DestinationQuotaPlanner
 {
-    public IReadOnlyList<DestinationQuotaPlan> BuildPlans(
+    public static IReadOnlyList<DestinationQuotaPlan> BuildPlans(
         IEnumerable<BackupDestination> destinations,
         IEnumerable<Backup> backups)
     {

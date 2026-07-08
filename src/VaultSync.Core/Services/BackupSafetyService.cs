@@ -43,11 +43,8 @@ public static class BackupSafetyService
 
     public static IEnumerable<string> AddReservedIgnorePatterns(IEnumerable<string> patterns)
     {
-        foreach (var pattern in patterns)
-        {
-            if (!string.IsNullOrWhiteSpace(pattern))
-                yield return pattern;
-        }
+        foreach (var pattern in patterns.Where(pattern => !string.IsNullOrWhiteSpace(pattern)))
+            yield return pattern;
 
         foreach (var pattern in ReservedIgnorePatterns)
             yield return pattern;
@@ -175,7 +172,9 @@ public static class BackupSafetyService
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (string.IsNullOrWhiteSpace(home))
-            home = Path.GetTempPath();
+            home = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrWhiteSpace(home))
+            throw new InvalidOperationException("VaultSync user storage directory could not be resolved.");
 
         return Path.Combine(home, ".vaultsync");
     }

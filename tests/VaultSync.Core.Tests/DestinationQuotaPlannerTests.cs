@@ -20,7 +20,6 @@ public sealed class DestinationQuotaPlannerTests
             QuotaWarningPercent = 80
         };
 
-        var planner = new DestinationQuotaPlanner();
         Backup[] backups = new[]
         {
             CreateBackup(1, destination.Path, 250, DateTime.UtcNow.AddDays(-3)),
@@ -28,7 +27,7 @@ public sealed class DestinationQuotaPlannerTests
             CreateBackup(3, destination.Path, 300, DateTime.UtcNow.AddDays(-1))
         };
 
-        DestinationQuotaPlan plan = planner.BuildPlans(new[] { destination }, backups).Single();
+        DestinationQuotaPlan plan = DestinationQuotaPlanner.BuildPlans(new[] { destination }, backups).Single();
 
         Assert.Equal(950, plan.StoredBytes);
         Assert.Equal(1_000, plan.SoftQuotaBytes);
@@ -50,14 +49,13 @@ public sealed class DestinationQuotaPlannerTests
             QuotaWarningPercent = 85
         };
 
-        var planner = new DestinationQuotaPlanner();
         Backup[] backups = new[]
         {
             CreateBackup(1, destination.Path, 600, DateTime.UtcNow.AddDays(-2), isProtected: true),
             CreateBackup(2, destination.Path, 500, DateTime.UtcNow.AddDays(-1), isProtected: true)
         };
 
-        DestinationQuotaPlan plan = planner.BuildPlans(new[] { destination }, backups).Single();
+        DestinationQuotaPlan plan = DestinationQuotaPlanner.BuildPlans(new[] { destination }, backups).Single();
 
         Assert.True(plan.ExceedsWarningThreshold);
         Assert.True(plan.ExceedsQuota);
@@ -74,8 +72,7 @@ public sealed class DestinationQuotaPlannerTests
             Path = @"E:\Backups"
         };
 
-        var planner = new DestinationQuotaPlanner();
-        DestinationQuotaPlan plan = planner.BuildPlans(new[] { destination }, new[] { CreateBackup(1, destination.Path, 123, DateTime.UtcNow) }).Single();
+        DestinationQuotaPlan plan = DestinationQuotaPlanner.BuildPlans(new[] { destination }, new[] { CreateBackup(1, destination.Path, 123, DateTime.UtcNow) }).Single();
 
         Assert.Equal(123, plan.StoredBytes);
         Assert.Null(plan.SoftQuotaBytes);

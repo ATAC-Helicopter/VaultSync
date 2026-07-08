@@ -799,7 +799,7 @@ namespace VaultSync.UI
 
         private NetworkCredentialViewModel CreateCredentialViewModel(NetworkCredentialProfile cred)
         {
-            string keyRef = _credentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
+            string keyRef = CredentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
             string? secret = _credentialVault.GetSecret(keyRef, cred.Username, cred.UseKeychain, cred.Password);
             return new NetworkCredentialViewModel
             {
@@ -1112,7 +1112,7 @@ namespace VaultSync.UI
 
         private CredentialSaveResult SaveCredentialSnapshot(CredentialSnapshot credential)
         {
-            string keyRef = _credentialVault.EnsureKeyRef(credential.KeyRef, credential.Name);
+            string keyRef = CredentialVault.EnsureKeyRef(credential.KeyRef, credential.Name);
             string? secret = ResolveCredentialSecret(credential, keyRef);
             bool persistPlaintext = TrySaveCredentialSecret(credential, keyRef, secret);
 

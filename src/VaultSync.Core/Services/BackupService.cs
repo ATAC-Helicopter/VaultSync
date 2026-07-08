@@ -162,7 +162,14 @@ public sealed class BackupService(
         if (_cancelMap.TryGetValue(projectId, out CancellationTokenSource? cts))
         {
             RuntimeLog.WriteVerbose($"[BackupService] Cancel requested for projectId={projectId}.");
-            try { cts.Cancel(); } catch { }
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                RuntimeLog.WriteVerbose($"[BackupService] Cancel ignored; token source already disposed for projectId={projectId}.");
+            }
         }
     }
 
