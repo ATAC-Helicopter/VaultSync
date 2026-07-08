@@ -1036,7 +1036,7 @@ DELETE FROM sqlite_sequence;";
             foreach ((int projectId, string createdUtc, long totalBytes) in rows)
             {
                 if (!DateTime.TryParse(createdUtc, CultureInfo.InvariantCulture, styles, out DateTime created))
-                    created = DateTime.SpecifyKind(DateTime.Parse(createdUtc), DateTimeKind.Utc);
+                    created = DateTime.SpecifyKind(DateTime.Parse(createdUtc, CultureInfo.InvariantCulture), DateTimeKind.Utc);
 
                 map[projectId] = (created, totalBytes);
             }
@@ -1193,7 +1193,7 @@ DELETE FROM sqlite_sequence;";
             foreach ((string relPath, long size, string mTimeUtc, string hashSha256) in rows)
             {
                 if (!DateTime.TryParse(mTimeUtc, CultureInfo.InvariantCulture, styles, out DateTime mtime))
-                    mtime = DateTime.SpecifyKind(DateTime.Parse(mTimeUtc), DateTimeKind.Utc);
+                    mtime = DateTime.SpecifyKind(DateTime.Parse(mTimeUtc, CultureInfo.InvariantCulture), DateTimeKind.Utc);
 
                 yield return new FileEntry(relPath, size, mtime, hashSha256);
             }
@@ -1216,7 +1216,7 @@ DELETE FROM sqlite_sequence;";
             {
                 ct.ThrowIfCancellationRequested();
                 if (!DateTime.TryParse(mTimeUtc, CultureInfo.InvariantCulture, styles, out DateTime mtime))
-                    mtime = DateTime.SpecifyKind(DateTime.Parse(mTimeUtc), DateTimeKind.Utc);
+                    mtime = DateTime.SpecifyKind(DateTime.Parse(mTimeUtc, CultureInfo.InvariantCulture), DateTimeKind.Utc);
                 list.Add(new FileEntry(relPath, size, mtime, hashSha256));
             }
 
