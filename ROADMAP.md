@@ -1784,6 +1784,7 @@
 - `1.8.3` maintenance and diagnostics hardening is tracked by the dedicated GitHub milestone `1.8.3` and release PR #410.
 
 ### 1.8.3 status (2026-07-10)
+- Compare & Change Intelligence is active under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
 - The maintenance scope covers release-script output confinement, Snapshot Explorer and snapshot-pipeline decomposition, CLI/UI complexity reduction, and analyzer cleanup.
 - Diagnostics retention now runs at startup and every six hours on every platform, with at most two hang dumps and a 1 GiB total diagnostics budget.
 - The original 18 `Dev` commits are preserved in release-branch ancestry through merge commit `76d2b3e`; no shared history was rewritten.
@@ -1822,7 +1823,7 @@
   - Done: added core folder/archive browsing, search, safe text preview, and selected file/folder restore helpers.
   - Done: added a Backups-page Explore action and Snapshot Explorer window for backup cards.
   - Done: Snapshot Explorer browsing, preview, and selected restore work runs asynchronously, all user-facing strings are localized, and encrypted backups show an explicit v1 out-of-scope message that routes users to normal restore.
-- [ ] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(Deferred to a later 1.8.x release before 1.9; tracked by #361)_
+- [ ] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(In progress; tracked by #361; target 1.8.3)_
   - Scope: compare two backups/snapshots and show a changed-file tree with added, modified, deleted, and unchanged states.
   - Scope: integrate with Snapshot Explorer so users can browse changed files and inspect readable text/code changes without leaving the explorer context.
   - Scope: add line-by-line text/code diffs for previewable files; binary/encrypted/unavailable files should show clear metadata-only or unsupported states.
@@ -1915,6 +1916,7 @@
 - [x] `BUG-18059` `P1` Bound periodic diagnostics retention. _(Done; tracked by #417; target 1.8.3)_
   - Done: cleanup runs at startup and every six hours on Windows, macOS, and Linux.
   - Done: VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget and removes timed-out partial dumps.
+- [ ] `VS-1837` `P1` Align 1.8.3 release metadata. _(In progress; tracked by #418; target 1.8.3)_
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.

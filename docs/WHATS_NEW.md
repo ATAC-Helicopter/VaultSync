@@ -1,5 +1,19 @@
 # What's New
 
+## [1.8.3]
+
+VaultSync `1.8.3` begins the Compare & Change Intelligence release slice while strengthening release safety and diagnostics retention.
+
+### Diagnostics and reliability
+- Diagnostics cleanup now runs at startup and every six hours on Windows, macOS, and Linux.
+- VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget.
+- Hang capture uses smaller mini dumps, stops after 20 seconds, and removes timed-out partial output.
+
+### Release and maintainability
+- Release scripts validate output paths before writing patch and download-stat artifacts.
+- Snapshot, Snapshot Explorer, CLI, Projects, and Settings workflows are split into smaller focused helpers.
+- Additional Sonar analyzer findings and repeated service/UI literals have been cleaned up without changing public behavior.
+
 ## [1.8.2]
 
 VaultSync `1.8.2` starts the Snapshot Explorer release slice for finding files before a full restore.
