@@ -5,6 +5,7 @@
 - [VS-1809] Added a searchable changed-file workspace with bounded Git-style unified text diffs for reachable folder and ZIP snapshots; encrypted, binary, offline, and unsupported content remains safely metadata-only.
 ### Changed
 - [VS-1809] Expanded snapshot comparison into dedicated hotspot, changed-file, and text-diff panes so file changes can be inspected without crowding the summary.
+- [VS-1809] Improved comparison QoL with automatic same-project restore-point suggestions, contextual selection guidance, cancellable comparison work, filtered-result counts, and clearer empty, capped, and no-match states.
 - [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.
 - [VS-1832] Split Snapshot Explorer browsing, archive traversal, text preview, and code-preview helpers into focused operations while preserving existing browsing and restore behavior.
 - [VS-1833] Split snapshot creation, manifest construction, hashing, and persistence into focused stages to reduce complexity while preserving snapshot compatibility.

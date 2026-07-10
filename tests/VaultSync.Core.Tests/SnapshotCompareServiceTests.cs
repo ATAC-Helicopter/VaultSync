@@ -118,4 +118,26 @@ public sealed class SnapshotCompareServiceTests
 
         Assert.Equal(1, result.Modified);
     }
+
+    [Fact]
+    public void Compare_HandlesLargeInventoriesWithoutDroppingChanges()
+    {
+        DateTime time = DateTime.UtcNow;
+        FileEntry[] older = Enumerable.Range(0, 10_000)
+            .Select(index => new FileEntry($"src/{index:D5}.txt", 10, time, $"old-{index}"))
+            .ToArray();
+        FileEntry[] newer = Enumerable.Range(0, 10_000)
+            .Select(index => new FileEntry(
+                $"src/{index:D5}.txt",
+                index % 10 == 0 ? 11 : 10,
+                time,
+                index % 10 == 0 ? $"new-{index}" : $"old-{index}"))
+            .ToArray();
+
+        SnapshotCompareResult result = SnapshotCompareService.Compare(older, newer);
+
+        Assert.Equal(1_000, result.Modified);
+        Assert.Equal(9_000, result.Unchanged);
+        Assert.Equal(1_000, result.Changes.Count);
+    }
 }

@@ -1654,15 +1654,22 @@
                     </ComboBox.ItemTemplate>
                   </ComboBox>
 
-                  <Button Grid.Row="1"
-                          Grid.Column="2"
-                          Content="{infra:LocalizedString Key=Backups.Compare.Button}"
-                          Classes="small-button"
-                          Command="{Binding CompareSelectedSnapshotsCommand}" />
+                  <StackPanel Grid.Row="1"
+                              Grid.Column="2"
+                              Orientation="Horizontal"
+                              Spacing="6">
+                    <Button Content="{infra:LocalizedString Key=Backups.Compare.Button}"
+                            Classes="small-button"
+                            Command="{Binding CompareSelectedSnapshotsCommand}" />
+                    <Button Content="{infra:LocalizedString Key=Common.Cancel}"
+                            Classes="small-button"
+                            IsVisible="{Binding IsSnapshotCompareBusy}"
+                            Command="{Binding CancelSnapshotCompareCommand}" />
+                  </StackPanel>
 
                   <TextBlock Grid.Row="2"
                              Grid.ColumnSpan="3"
-                             Text="{infra:LocalizedString Key=Backups.Compare.Help}"
+                             Text="{Binding CompareSelectionHint}"
                              FontSize="10"
                              Foreground="{DynamicResource TextMutedBrush}"
                              TextWrapping="Wrap" />
@@ -2175,10 +2182,19 @@
                       CornerRadius="10">
                 <Grid RowDefinitions="Auto,Auto,*"
                       RowSpacing="8">
-                  <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.ChangedFilesHeader}"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <Grid ColumnDefinitions="Auto,*"
+                        ColumnSpacing="8">
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.ChangedFilesHeader}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Grid.Column="1"
+                               HorizontalAlignment="Right"
+                               Text="{Binding DiffFileResultsLabel}"
+                               TextTrimming="CharacterEllipsis"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextMutedBrush}" />
+                  </Grid>
                   <Grid Grid.Row="1"
                         ColumnDefinitions="*,Auto"
                         ColumnSpacing="6">

@@ -1835,7 +1835,9 @@
   - Done: Backups renders a searchable changed-file workspace with real size deltas instead of showing only the newer snapshot's aggregate summary.
   - Done: selecting a readable file produces a bounded Git-style unified diff from reachable folder or ZIP snapshots; encrypted, binary, offline, and unsupported content falls back to an explicit metadata-only state.
   - Done: changed-file search and added/modified/deleted filters keep large comparisons navigable.
-  - Remaining: add focused UI automation and large-history performance coverage before closing #361.
+  - Done: comparison QoL suggests a nearby same-project restore point, explains invalid selections, supports cancellation, reports filtered/capped counts, and distinguishes no-change from no-match states.
+  - Done: focused view-model coverage verifies selection guidance and a 10,000-file inventory regression test verifies large comparisons retain all changes.
+  - Remaining: perform a manual desktop interaction pass before closing #361.
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_

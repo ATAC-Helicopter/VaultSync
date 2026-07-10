@@ -10,6 +10,7 @@ VaultSync `1.8.3` introduces Compare & Change Intelligence with searchable file-
 - Large deletion, significant growth, and high-churn signals call attention to unusual project changes.
 - Changed files can be searched and filtered by added, modified, or deleted state; selecting readable content opens a bounded Git-style unified diff.
 - File inventory loading and comparison run away from the UI thread, and both file-list and text previews are capped safely for large histories.
+- Comparison QoL suggests the nearest valid restore point, explains invalid selections, supports cancellation, and clearly reports empty, filtered, and capped result states.
 
 ### Diagnostics and reliability
 - Diagnostics cleanup now runs at startup and every six hours on Windows, macOS, and Linux.

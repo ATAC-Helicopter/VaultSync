@@ -154,6 +154,8 @@ namespace VaultSync.UI.ViewModels
                     OnPropertyChanged(nameof(SelectedSnapshotA));
                     OnPropertyChanged(nameof(CanCompareSelectedSnapshots));
                     _compareSelectedSnapshotsRelayCommand?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CompareSelectionHint));
+                    SelectDefaultCompareCounterpart(value, selectPointB: true);
                 }
             }
         }
@@ -169,6 +171,8 @@ namespace VaultSync.UI.ViewModels
                     OnPropertyChanged(nameof(SelectedSnapshotB));
                     OnPropertyChanged(nameof(CanCompareSelectedSnapshots));
                     _compareSelectedSnapshotsRelayCommand?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CompareSelectionHint));
+                    SelectDefaultCompareCounterpart(value, selectPointB: false);
                 }
             }
         }
@@ -688,6 +692,8 @@ namespace VaultSync.UI.ViewModels
         private BackupSnapshotItem? _diffNewerSnapshot;
         private int _diffContentRequestVersion;
         private bool _isSnapshotCompareBusy;
+        private CancellationTokenSource? _snapshotCompareCts;
+        private string _diffFileResultsLabel = string.Empty;
 
         // Backup progress details (for long-running operations)
         private double _backupProgress;
@@ -1012,7 +1018,18 @@ namespace VaultSync.UI.ViewModels
                     OnPropertyChanged(nameof(IsSnapshotCompareBusy));
                     OnPropertyChanged(nameof(CanCompareSelectedSnapshots));
                     _compareSelectedSnapshotsRelayCommand?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CompareSelectionHint));
                 }
+            }
+        }
+
+        public string DiffFileResultsLabel
+        {
+            get => _diffFileResultsLabel;
+            private set
+            {
+                if (SetProperty(ref _diffFileResultsLabel, value))
+                    OnPropertyChanged(nameof(DiffFileResultsLabel));
             }
         }
 
@@ -1039,6 +1056,7 @@ namespace VaultSync.UI.ViewModels
         public ICommand ExportSnapshotSummaryJsonCommand { get; }
         public ICommand ShowSnapshotDiffPreviewCommand { get; }
         public ICommand CompareSelectedSnapshotsCommand { get; }
+        public ICommand CancelSnapshotCompareCommand { get; }
         public ICommand CloseSnapshotDiffPreviewCommand { get; }
 
         public ICommand BackupProjectCommand { get; }
@@ -1060,7 +1078,38 @@ namespace VaultSync.UI.ViewModels
             SelectedSnapshotB.SnapshotId > 0 &&
             !string.IsNullOrWhiteSpace(SelectedSnapshotA.ProjectId) &&
             string.Equals(SelectedSnapshotA.ProjectId, SelectedSnapshotB.ProjectId, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(SelectedSnapshotA.Id, SelectedSnapshotB.Id, StringComparison.Ordinal);
+            SelectedSnapshotA.SnapshotId != SelectedSnapshotB.SnapshotId;
+
+        public string CompareSelectionHint
+        {
+            get
+            {
+                if (IsSnapshotCompareBusy)
+                    return L("Backups.Compare.Busy", "Comparing restore points...");
+                if (SelectedSnapshotA is null && SelectedSnapshotB is null)
+                    return L("Backups.Compare.SelectFirst", "Select a restore point; VaultSync will suggest a nearby point from the same project.");
+                if (SelectedSnapshotA is null || SelectedSnapshotB is null)
+                    return L("Backups.Compare.SelectSecond", "Select a second restore point from the same project.");
+                if (SelectedSnapshotA.SnapshotId == SelectedSnapshotB.SnapshotId)
+                    return L("Backups.Compare.DifferentPoints", "Choose two different restore points.");
+                if (string.IsNullOrWhiteSpace(SelectedSnapshotA.ProjectId) || string.IsNullOrWhiteSpace(SelectedSnapshotB.ProjectId))
+                    return L("Backups.Compare.ProjectUnavailable", "Project information is unavailable for one of these restore points.");
+                if (!string.Equals(SelectedSnapshotA.ProjectId, SelectedSnapshotB.ProjectId, StringComparison.OrdinalIgnoreCase))
+                    return L("Backups.Compare.SameProject", "Restore points must belong to the same project.");
+
+                BackupSnapshotItem older = SelectedSnapshotA.Timestamp <= SelectedSnapshotB.Timestamp
+                    ? SelectedSnapshotA
+                    : SelectedSnapshotB;
+                BackupSnapshotItem newer = ReferenceEquals(older, SelectedSnapshotA)
+                    ? SelectedSnapshotB
+                    : SelectedSnapshotA;
+                return Lf(
+                    "Backups.Compare.ReadyRange",
+                    "Ready: {0} -> {1}",
+                    older.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture),
+                    newer.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture));
+            }
+        }
 
         public BackupsViewModel()
             : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
@@ -1092,6 +1141,7 @@ namespace VaultSync.UI.ViewModels
             ShowSnapshotDiffPreviewCommand = new RelayCommand(p => ShowSnapshotDiffPreview(p as BackupSnapshotItem));
             _compareSelectedSnapshotsRelayCommand = new RelayCommand(_ => CompareSelectedSnapshots(), _ => CanCompareSelectedSnapshots);
             CompareSelectedSnapshotsCommand = _compareSelectedSnapshotsRelayCommand;
+            CancelSnapshotCompareCommand = new RelayCommand(_ => _snapshotCompareCts?.Cancel());
             CloseSnapshotDiffPreviewCommand = new RelayCommand(_ => CloseSnapshotDiffPreview());
             _toggleRestoreReadinessIssuesCommand = new RelayCommand(
                 _ => ShowRestoreReadinessIssues = !ShowRestoreReadinessIssues,
@@ -1312,12 +1362,19 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             IsSnapshotCompareBusy = true;
+            _snapshotCompareCts?.Cancel();
+            _snapshotCompareCts?.Dispose();
+            var compareCts = new CancellationTokenSource();
+            _snapshotCompareCts = compareCts;
             DetachedTask.Run(
-                () => CompareSelectedSnapshotsAsync(pointA, pointB),
+                () => CompareSelectedSnapshotsAsync(pointA, pointB, compareCts),
                 "snapshot-file-compare");
         }
 
-        private async Task CompareSelectedSnapshotsAsync(BackupSnapshotItem pointA, BackupSnapshotItem pointB)
+        private async Task CompareSelectedSnapshotsAsync(
+            BackupSnapshotItem pointA,
+            BackupSnapshotItem pointB,
+            CancellationTokenSource compareCts)
         {
             BackupSnapshotItem newer = pointA.Timestamp >= pointB.Timestamp ? pointA : pointB;
             BackupSnapshotItem older = ReferenceEquals(newer, pointA) ? pointB : pointA;
@@ -1326,10 +1383,14 @@ namespace VaultSync.UI.ViewModels
                 SqliteRepository repository = _repositoryFactory.Create();
                 var compareService = new SnapshotCompareService(repository);
                 SnapshotCompareResult result = await compareService
-                    .CompareAsync(older.SnapshotId, newer.SnapshotId)
+                    .CompareAsync(older.SnapshotId, newer.SnapshotId, compareCts.Token)
                     .ConfigureAwait(false);
 
                 await Dispatcher.UIThread.InvokeAsync(() => ShowSnapshotComparison(older, newer, result));
+            }
+            catch (OperationCanceledException) when (compareCts.IsCancellationRequested)
+            {
+                // User cancellation is expected and should not open an error dialog.
             }
             catch (Exception ex)
             {
@@ -1352,7 +1413,14 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
-                await Dispatcher.UIThread.InvokeAsync(() => IsSnapshotCompareBusy = false);
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (!ReferenceEquals(_snapshotCompareCts, compareCts))
+                        return;
+                    _snapshotCompareCts = null;
+                    IsSnapshotCompareBusy = false;
+                    compareCts.Dispose();
+                });
             }
         }
 
@@ -1461,6 +1529,11 @@ namespace VaultSync.UI.ViewModels
                 "Select a changed text file to see its Git-style diff.");
             SelectedDiffPreviewFile = DiffPreviewFiles.FirstOrDefault(file => file.Kind == SnapshotFileChangeKind.Modified)
                 ?? DiffPreviewFiles.FirstOrDefault();
+            if (result.ChangedCount == 0)
+            {
+                DiffFileContentStatus = L("Backups.Compare.NoChanges", "No file-level changes between these restore points.");
+                DiffFileContentText = DiffPreviewText;
+            }
             IsDiffPreviewOpen = true;
         }
 
@@ -1476,6 +1549,12 @@ namespace VaultSync.UI.ViewModels
                 DiffPreviewFiles.Add(file);
             }
 
+            int totalShown = _allDiffPreviewFiles.Count;
+            int totalChanges = DiffPreviewAdded + DiffPreviewModified + DiffPreviewDeleted;
+            DiffFileResultsLabel = totalChanges > totalShown
+                ? Lf("Backups.Compare.ResultsCapped", "{0} matching - first {1} of {2} indexed", DiffPreviewFiles.Count, totalShown, totalChanges)
+                : Lf("Backups.Compare.Results", "{0} of {1} changed files", DiffPreviewFiles.Count, totalChanges);
+
             if (selected is not null && DiffPreviewFiles.Contains(selected))
                 return;
             SelectedDiffPreviewFile = null;
@@ -1485,7 +1564,16 @@ namespace VaultSync.UI.ViewModels
         {
             int requestVersion = Interlocked.Increment(ref _diffContentRequestVersion);
             if (file is null || _diffOlderSnapshot is null || _diffNewerSnapshot is null)
+            {
+                if (_diffOlderSnapshot is not null && _diffNewerSnapshot is not null)
+                {
+                    DiffFileContentStatus = DiffPreviewFiles.Count == 0 && _allDiffPreviewFiles.Count > 0
+                        ? L("Backups.Compare.NoMatches", "No changed files match the current filters.")
+                        : L("Backups.Compare.SelectFile", "Select a changed text file to see its Git-style diff.");
+                    DiffFileContentText = DiffPreviewText;
+                }
                 return;
+            }
 
             DiffFileContentStatus = L("Backups.Compare.LoadingFile", "Loading file diff...");
             DetachedTask.Run(
@@ -1651,6 +1739,7 @@ namespace VaultSync.UI.ViewModels
 
         private void CloseSnapshotDiffPreview()
         {
+            _snapshotCompareCts?.Cancel();
             IsDiffPreviewOpen = false;
             DiffPreviewTitle = string.Empty;
             DiffPreviewText = string.Empty;
@@ -1671,9 +1760,30 @@ namespace VaultSync.UI.ViewModels
             SelectedDiffFileKindFilter = DiffFileKindFilters[0];
             DiffFileContentText = string.Empty;
             DiffFileContentStatus = string.Empty;
+            DiffFileResultsLabel = string.Empty;
             _diffOlderSnapshot = null;
             _diffNewerSnapshot = null;
             OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
+        }
+
+        private void SelectDefaultCompareCounterpart(BackupSnapshotItem? selected, bool selectPointB)
+        {
+            if (selected is null || string.IsNullOrWhiteSpace(selected.ProjectId))
+                return;
+            if (selectPointB && SelectedSnapshotB is not null)
+                return;
+            if (!selectPointB && SelectedSnapshotA is not null)
+                return;
+
+            BackupSnapshotItem? candidate = Snapshots
+                .Where(snapshot => snapshot.SnapshotId != selected.SnapshotId &&
+                                   string.Equals(snapshot.ProjectId, selected.ProjectId, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(snapshot => Math.Abs((snapshot.Timestamp - selected.Timestamp).Ticks))
+                .FirstOrDefault();
+            if (selectPointB)
+                SelectedSnapshotB = candidate;
+            else
+                SelectedSnapshotA = candidate;
         }
 
         private SnapshotSummaryExportPayload BuildSnapshotSummaryExportPayload(BackupSnapshotItem snapshot)
