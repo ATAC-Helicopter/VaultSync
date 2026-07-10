@@ -1781,6 +1781,13 @@
 - `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
 - `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
 - `1.8.2` Snapshot Explorer scope is tracked by the dedicated GitHub milestone `1.8.2`.
+- `1.8.3` maintenance and diagnostics hardening is tracked by the dedicated GitHub milestone `1.8.3` and release PR #410.
+
+### 1.8.3 status (2026-07-10)
+- The maintenance scope covers release-script output confinement, Snapshot Explorer and snapshot-pipeline decomposition, CLI/UI complexity reduction, and analyzer cleanup.
+- Diagnostics retention now runs at startup and every six hours on every platform, with at most two hang dumps and a 1 GiB total diagnostics budget.
+- The original 18 `Dev` commits are preserved in release-branch ancestry through merge commit `76d2b3e`; no shared history was rewritten.
+- Release preparation and validation continue in draft PR #410.
 
 ### 1.8.1 status (2026-06-23)
 - Release theme: complete the Recovery Intelligence slice planned in `docs/VaultSync 1.8 Timeline.md`.
@@ -1899,6 +1906,15 @@
   - Done: the overlay was rebuilt as an interactive progress card with actionable next-step copy, completed-state feedback, Back/Skip/Continue controls, and a non-blocking highlight mask for the target control.
 - [x] `VS-1830` `P2` Warn on reused changelog IDs during release readiness. _(Done locally; tracked by #408; target 1.8.2)_
   - Done: the release gate now reports repeated changelog work-item IDs as a warning with line-level details so maintainers can confirm each reused ID stays within one coherent scope.
+- [x] `VS-1831` `P2` Harden release-script output paths. _(Done; tracked by #411; target 1.8.3)_
+- [x] `VS-1832` `P2` Split Snapshot Explorer complexity hotspots. _(Done; tracked by #412; target 1.8.3)_
+- [x] `VS-1833` `P2` Split snapshot creation flow. _(Done; tracked by #413; target 1.8.3)_
+- [x] `VS-1834` `P2` Split CLI command complexity hotspots. _(Done; tracked by #414; target 1.8.3)_
+- [x] `VS-1835` `P2` Split Projects and Settings UI complexity hotspots. _(Done; tracked by #415; target 1.8.3)_
+- [x] `VS-1836` `P2` Complete Sonar analyzer cleanup. _(Done; tracked by #416; target 1.8.3)_
+- [x] `BUG-18059` `P1` Bound periodic diagnostics retention. _(Done; tracked by #417; target 1.8.3)_
+  - Done: cleanup runs at startup and every six hours on Windows, macOS, and Linux.
+  - Done: VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget and removes timed-out partial dumps.
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
