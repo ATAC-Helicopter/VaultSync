@@ -1,4 +1,13 @@
 ﻿# Changelog
+## [1.8.3] - 10.07.2026
+### Changed
+- [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.
+- [VS-1832] Split Snapshot Explorer browsing, archive traversal, text preview, and code-preview helpers into focused operations while preserving existing browsing and restore behavior.
+- [VS-1833] Split snapshot creation, manifest construction, hashing, and persistence into focused stages to reduce complexity while preserving snapshot compatibility.
+- [VS-1834] Refactored CLI destination, doctor, snapshot, and watch command flows into smaller validation and execution helpers without changing their command-line contracts.
+- [VS-1835] Refactored Projects and Settings workflows, project snapshot commands, and rich-text rendering into focused helpers to reduce UI complexity and improve maintainability.
+- [VS-1836] Addressed Sonar analyzer findings and consolidated repeated literals across backup, navigation, update, credential, telemetry, verification, network-mount, and encryption services.
+
 ## [1.8.2] - 04.07.2026
 ### Added
 - [VS-1808] Added Snapshot Explorer v1 for backup folder/archive browsing, text preview, search, and selected-item restore.
