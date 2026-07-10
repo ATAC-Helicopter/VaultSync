@@ -63,6 +63,32 @@ namespace VaultSync.UI.ViewModels
         }
     }
 
+    public sealed class DiffPreviewFileItem
+    {
+        public DiffPreviewFileItem(SnapshotFileChange change)
+        {
+            Change = change;
+            Path = change.Path;
+            Kind = change.Kind;
+            Marker = change.Kind switch
+            {
+                SnapshotFileChangeKind.Added => "+",
+                SnapshotFileChangeKind.Modified => "~",
+                SnapshotFileChangeKind.Deleted => "-",
+                _ => "?"
+            };
+            SizeDelta = UiFormat.FormatSignedBytes(change.SizeDeltaBytes);
+        }
+
+        public SnapshotFileChange Change { get; }
+        public string Path { get; }
+        public SnapshotFileChangeKind Kind { get; }
+        public string Marker { get; }
+        public string SizeDelta { get; }
+    }
+
+    public sealed record DiffPreviewKindFilterItem(string Label, SnapshotFileChangeKind? Kind);
+
     public class BackupSnapshotItem : ViewModelBase
     {
         public string Id { get; set; } = string.Empty;
@@ -105,6 +131,9 @@ namespace VaultSync.UI.ViewModels
 
         /// <summary>Destination endpoint that stored this backup.</summary>
         public string DestinationDisplay { get; set; } = string.Empty;
+        public string BackupRelativePath { get; set; } = string.Empty;
+        public string DestinationRootPath { get; set; } = string.Empty;
+        public string DestinationAlias { get; set; } = string.Empty;
         public string DiffSummaryDisplay { get; set; } = string.Empty;
         public string DiffTopPathsDisplay { get; set; } = string.Empty;
         public bool HasDiffTopPaths

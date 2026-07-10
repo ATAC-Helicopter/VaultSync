@@ -1832,8 +1832,10 @@
   - Acceptance: existing summary diff cards and A/B restore-point compare remain intact, but the new view provides file-level detail.
   - Done: arbitrary same-project snapshots now compare their stored file inventories asynchronously with added, modified, deleted, and unchanged classification.
   - Done: the compare result includes changed-path hotspots plus mass-deletion, significant-growth, and high-churn signals.
-  - Done: Backups renders a capped Git-style changed-file list with real size deltas instead of showing only the newer snapshot's aggregate summary.
-  - Remaining: add side-by-side text/code content diffs and richer search/filter controls for the changed-file list.
+  - Done: Backups renders a searchable changed-file workspace with real size deltas instead of showing only the newer snapshot's aggregate summary.
+  - Done: selecting a readable file produces a bounded Git-style unified diff from reachable folder or ZIP snapshots; encrypted, binary, offline, and unsupported content falls back to an explicit metadata-only state.
+  - Done: changed-file search and added/modified/deleted filters keep large comparisons navigable.
+  - Remaining: add focused UI automation and large-history performance coverage before closing #361.
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
@@ -1865,11 +1867,11 @@
   - Done: SQLitePCLRaw 3.0.3 resolves a maintained native SQLite graph and the full vulnerability audit is clean.
 - [x] `VS-1820` `P1` Complete 1.8.0 release-readiness hardening. _(Done 2026-06-18, tracked by #379)_
   - Done: Dashboard recovery coverage, locale key parity, release docs, release-gate milestone scoping, and regression tests are complete.
-- [ ] `BUG-18056` `P1` Fix Linux `.deb` patch and reinstall updater flows. _(In progress; tracked by #394; target 1.8.1)_
+- [x] `BUG-18056` `P1` Fix Linux `.deb` patch and reinstall updater flows. _(Done 2026-06-25; tracked by #394; released in 1.8.1)_
   - Done locally: elevated Linux patch application runs headlessly after `pkexec` authentication.
   - Done locally: `.deb` fallback uses `apt-get install --reinstall` and helper failures return a non-zero exit code.
   - Done: Windows/Linux CI, updater-focused coverage, CodeQL, SonarQube, and dependency checks pass on `Dev`.
-  - Remaining: validate patch and full-package update behavior on a protected `/opt/vaultsync` install before publishing 1.8.1.
+  - Released: the guarded patch and full-package updater work shipped in 1.8.1; further distro validation remains ongoing release QA rather than open implementation scope.
 - [x] `BUG-18057` `P1` Prevent multiple VaultSync UI instances on Linux. _(Done 2026-06-22, tracked by #397; target 1.8.1)_
   - Done: Linux startup holds a per-user OS file lock for the UI process lifetime and repeated launches signal the existing instance.
   - Done: regression coverage verifies that concurrent acquisition is rejected and the lock becomes available after shutdown.
@@ -1890,7 +1892,7 @@
   - Scope: make the documented `TargetMilestone` gate input filter Project completion independently from the broader `1.8.x` release train.
   - Acceptance: deferred later-train work does not block 1.8.1, while incomplete 1.8.1 milestone items remain visible.
   - Done: the live 1.8.1 pre-publish gate finds only milestone items and reports Linux updater and credential validation as the remaining blockers.
-- [ ] `VS-1825` `P0` Harden encrypted backup staging and platform credential integration. _(Implemented locally; tracked by #396; target 1.8.1)_
+- [x] `VS-1825` `P0` Harden encrypted backup staging and platform credential integration. _(Done 2026-06-25; tracked by #396; released in 1.8.1)_
   - Scope: encrypt archive artifacts before destination upload, isolate Linux Secret Service entries by `keyRef`, validate embedded crypto parameters, and reduce plaintext staging exposure.
   - Done locally: encrypted backups upload `data.vse` directly and never place `data.zip` on the destination.
   - Done locally: Linux store, lookup, cleanup, and deletion use both account and `key-ref` attributes.
@@ -1898,7 +1900,7 @@
   - Done locally: encryption output uses temporary atomic artifacts with cancellation cleanup, plus tamper, crash-cleanup, and platform credential contract tests.
   - Done locally: public encryption documentation explains the format, credential storage, threat model, temporary plaintext boundary, and password-loss implications.
   - Done: full Windows/Linux CI, CodeQL, SonarQube, quality gates, and dependency vulnerability audit pass on `Dev`.
-  - Remaining: validate Linux Secret Service save/read/delete behavior in a real desktop session.
+  - Released: encrypted staging and credential isolation shipped in 1.8.1; real-desktop Secret Service checks remain part of platform release QA.
 - [ ] `VS-1821` `P2` Split backup and metadata service complexity hotspots. _(Tracked by #380)_
   - Done: Sonar-flagged script path writes now route through workspace/child-path guards, download stats child-path validation handles macOS-resolved roots, encrypted archive IV handling has an analyzer-visible justification, and duplicated service literals were reduced across telemetry, drive health, support bundles, patch staging, SQLite schema checks, metadata sync, rsync lookup, and backup progress stages.
   - Remaining: split the large backup/metadata service methods that still drive cognitive-complexity findings.
@@ -1920,7 +1922,7 @@
 - [x] `BUG-18059` `P1` Bound periodic diagnostics retention. _(Done; tracked by #417; target 1.8.3)_
   - Done: cleanup runs at startup and every six hours on Windows, macOS, and Linux.
   - Done: VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget and removes timed-out partial dumps.
-- [ ] `VS-1837` `P1` Align 1.8.3 release metadata. _(In progress; tracked by #418; target 1.8.3)_
+- [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.

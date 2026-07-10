@@ -2,13 +2,14 @@
 
 ## [1.8.3]
 
-VaultSync `1.8.3` begins the Compare & Change Intelligence release slice while strengthening release safety and diagnostics retention.
+VaultSync `1.8.3` introduces Compare & Change Intelligence with searchable file-level changes and safe Git-style text diffs, while strengthening release safety and diagnostics retention.
 
 ### Compare & Change Intelligence
 - Backups can compare any two restore points from the same project using their stored snapshot file inventories.
 - The comparison shows added, modified, deleted, and unchanged files with per-file size deltas and changed-path hotspots.
 - Large deletion, significant growth, and high-churn signals call attention to unusual project changes.
-- File inventory loading and comparison run away from the UI thread, with the displayed file list capped for large histories.
+- Changed files can be searched and filtered by added, modified, or deleted state; selecting readable content opens a bounded Git-style unified diff.
+- File inventory loading and comparison run away from the UI thread, and both file-list and text previews are capped safely for large histories.
 
 ### Diagnostics and reliability
 - Diagnostics cleanup now runs at startup and every six hours on Windows, macOS, and Linux.

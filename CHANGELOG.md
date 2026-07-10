@@ -1,8 +1,10 @@
 ﻿# Changelog
-## [1.8.3] - 10.07.2026
+## [1.8.3] - Unreleased
 ### Added
 - [VS-1809] Added asynchronous file-level comparison between any two snapshots from the same project, including added, modified, deleted, and unchanged counts, changed-path hotspots, and mass-deletion, growth, or high-churn signals.
+- [VS-1809] Added a searchable changed-file workspace with bounded Git-style unified text diffs for reachable folder and ZIP snapshots; encrypted, binary, offline, and unsupported content remains safely metadata-only.
 ### Changed
+- [VS-1809] Expanded snapshot comparison into dedicated hotspot, changed-file, and text-diff panes so file changes can be inspected without crowding the summary.
 - [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.
 - [VS-1832] Split Snapshot Explorer browsing, archive traversal, text preview, and code-preview helpers into focused operations while preserving existing browsing and restore behavior.
 - [VS-1833] Split snapshot creation, manifest construction, hashing, and persistence into focused stages to reduce complexity while preserving snapshot compatibility.

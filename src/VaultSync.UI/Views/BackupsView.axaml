@@ -2043,10 +2043,10 @@
                 Padding="16"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Width="760"
-                MaxWidth="1100"
-                Height="520"
-                MaxHeight="680">
+                Width="1120"
+                MaxWidth="1280"
+                Height="700"
+                MaxHeight="820">
           <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
                 RowSpacing="10">
             <StackPanel Grid.Row="0"
@@ -2125,7 +2125,7 @@
             </Grid>
 
             <Grid Grid.Row="3"
-                  ColumnDefinitions="2*,3*"
+                  ColumnDefinitions="2*,3*,5*"
                   ColumnSpacing="10">
               <Border Grid.Column="0"
                       Classes="card"
@@ -2173,14 +2173,70 @@
                       Classes="card"
                       Padding="10"
                       CornerRadius="10">
+                <Grid RowDefinitions="Auto,Auto,*"
+                      RowSpacing="8">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.ChangedFilesHeader}"
+                             FontSize="11"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <Grid Grid.Row="1"
+                        ColumnDefinitions="*,Auto"
+                        ColumnSpacing="6">
+                    <TextBox Text="{Binding DiffFileSearchText}"
+                             Watermark="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
+                             FontSize="12" />
+                    <ComboBox Grid.Column="1"
+                              MinWidth="105"
+                              ItemsSource="{Binding DiffFileKindFilters}"
+                              SelectedItem="{Binding SelectedDiffFileKindFilter}">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </Grid>
+                  <ListBox Grid.Row="2"
+                           ItemsSource="{Binding DiffPreviewFiles}"
+                           SelectedItem="{Binding SelectedDiffPreviewFile}"
+                           Background="Transparent"
+                           BorderThickness="0"
+                           ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                              ColumnSpacing="7"
+                              Margin="2,4">
+                          <TextBlock Text="{Binding Marker}"
+                                     FontFamily="Consolas"
+                                     FontWeight="Bold" />
+                          <TextBlock Grid.Column="1"
+                                     Text="{Binding Path}"
+                                     TextTrimming="CharacterEllipsis"
+                                     ToolTip.Tip="{Binding Path}" />
+                          <TextBlock Grid.Column="2"
+                                     Text="{Binding SizeDelta}"
+                                     FontSize="10"
+                                     Foreground="{DynamicResource TextMutedBrush}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </Grid>
+              </Border>
+
+              <Border Grid.Column="2"
+                      Classes="card"
+                      Padding="10"
+                      CornerRadius="10">
                 <Grid RowDefinitions="Auto,*"
                       RowSpacing="8">
-                  <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Raw}"
+                  <TextBlock Text="{Binding DiffFileContentStatus}"
                              FontSize="11"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                   <TextBox Grid.Row="1"
-                           Text="{Binding DiffPreviewText}"
+                           Text="{Binding DiffFileContentText}"
                            IsReadOnly="True"
                            AcceptsReturn="True"
                            TextWrapping="NoWrap"

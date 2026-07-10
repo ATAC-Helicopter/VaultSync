@@ -123,13 +123,15 @@ public sealed class SnapshotCompareService(SqliteRepository repository)
 
     private static bool HasChanged(FileEntry previous, FileEntry current)
     {
+        if (previous.Size != current.Size)
+            return true;
+
         if (!string.IsNullOrWhiteSpace(previous.HashSha256) && !string.IsNullOrWhiteSpace(current.HashSha256))
         {
             return !string.Equals(previous.HashSha256, current.HashSha256, StringComparison.OrdinalIgnoreCase);
         }
 
-        return previous.Size != current.Size ||
-               Math.Abs((previous.MTimeUtc - current.MTimeUtc).TotalSeconds) >= 1.0;
+        return Math.Abs((previous.MTimeUtc - current.MTimeUtc).TotalSeconds) >= 1.0;
     }
 
     private static IReadOnlyList<SnapshotDiffPathStat> BuildTopChangedPaths(

@@ -106,4 +106,16 @@ public sealed class SnapshotCompareServiceTests
         Assert.Equal(0, result.ChangedCount);
         Assert.Equal(1, result.Unchanged);
     }
+
+    [Fact]
+    public void Compare_TreatsDifferentSizesAsModifiedEvenWhenHashesMatch()
+    {
+        DateTime time = DateTime.UtcNow;
+        FileEntry[] older = [new("file.txt", 10, time, "same-hash")];
+        FileEntry[] newer = [new("file.txt", 11, time, "same-hash")];
+
+        SnapshotCompareResult result = SnapshotCompareService.Compare(older, newer);
+
+        Assert.Equal(1, result.Modified);
+    }
 }
