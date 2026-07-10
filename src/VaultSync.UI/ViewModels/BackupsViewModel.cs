@@ -970,6 +970,10 @@ namespace VaultSync.UI.ViewModels
         public bool CanCompareSelectedSnapshots =>
             SelectedSnapshotA is not null &&
             SelectedSnapshotB is not null &&
+            SelectedSnapshotA.SnapshotId > 0 &&
+            SelectedSnapshotB.SnapshotId > 0 &&
+            !string.IsNullOrWhiteSpace(SelectedSnapshotA.ProjectId) &&
+            string.Equals(SelectedSnapshotA.ProjectId, SelectedSnapshotB.ProjectId, StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(SelectedSnapshotA.Id, SelectedSnapshotB.Id, StringComparison.Ordinal);
 
         public BackupsViewModel()
@@ -1206,16 +1210,50 @@ namespace VaultSync.UI.ViewModels
         {
             BackupSnapshotItem? pointA = SelectedSnapshotA;
             BackupSnapshotItem? pointB = SelectedSnapshotB;
-            if (pointA is null || pointB is null)
-                return;
-            if (string.Equals(pointA.Id, pointB.Id, StringComparison.Ordinal))
+            if (pointA is null || pointB is null || !CanCompareSelectedSnapshots)
                 return;
 
+            DetachedTask.Run(
+                () => CompareSelectedSnapshotsAsync(pointA, pointB),
+                "snapshot-file-compare");
+        }
+
+        private async Task CompareSelectedSnapshotsAsync(BackupSnapshotItem pointA, BackupSnapshotItem pointB)
+        {
             BackupSnapshotItem newer = pointA.Timestamp >= pointB.Timestamp ? pointA : pointB;
             BackupSnapshotItem older = ReferenceEquals(newer, pointA) ? pointB : pointA;
+            try
+            {
+                SqliteRepository repository = _repositoryFactory.Create();
+                var compareService = new SnapshotCompareService(repository);
+                SnapshotCompareResult result = await compareService
+                    .CompareAsync(older.SnapshotId, newer.SnapshotId)
+                    .ConfigureAwait(false);
+
+                await Dispatcher.UIThread.InvokeAsync(() => ShowSnapshotComparison(older, newer, result));
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record(
+                    $"Snapshot file compare failed: older={older.SnapshotId}, newer={newer.SnapshotId}, error={ex.GetType().Name} - {ex.Message}");
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    DiffPreviewTitle = L("Backups.Compare.FailedTitle", "Snapshot comparison unavailable");
+                    DiffPreviewText = Lf(
+                        "Backups.Compare.FailedMessage",
+                        "VaultSync could not compare these snapshots: {0}",
+                        ex.Message);
+                    IsDiffPreviewOpen = true;
+                });
+            }
+        }
+
+        private void ShowSnapshotComparison(
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            SnapshotCompareResult result)
+        {
             TimeSpan elapsed = newer.Timestamp - older.Timestamp;
-            long sizeDelta = newer.SizeBytes - older.SizeBytes;
-            long netDelta = newer.DiffNetBytes - older.DiffNetBytes;
             string projectName = ResolveCompareProjectName(newer, older);
 
             DiffPreviewTitle = Lf(
@@ -1228,13 +1266,13 @@ namespace VaultSync.UI.ViewModels
                 older.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture),
                 newer.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture));
             DiffPreviewTrigger = Lf(
-                "Backups.Compare.TypeLine",
-                "Type: {0} -> {1}",
-                older.TypeLabel,
-                newer.TypeLabel);
+                "Backups.Compare.ChangeIntelligenceLine",
+                "Change intelligence: {0} files examined",
+                (result.Unchanged + result.ChangedCount).ToString(CultureInfo.CurrentCulture));
             DiffPreviewMode = Lf(
-                "Backups.Compare.ElapsedLine",
-                "Elapsed: {0}",
+                "Backups.Compare.ChangeCountLine",
+                "{0} changed over {1}",
+                result.ChangedCount.ToString(CultureInfo.CurrentCulture),
                 FormatElapsed(elapsed));
             DiffPreviewImportedDisplay = older.IsImported || newer.IsImported
                 ? L("Backups.Snapshot.Type.Imported", "Imported")
@@ -1242,15 +1280,22 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewEncryptionDisplay = older.IsEncrypted || newer.IsEncrypted
                 ? L(EncryptedPolicyKey, EncryptedFallback)
                 : L(PlainPolicyKey, PlainFallback);
-            DiffPreviewAdded = newer.DiffAdded;
-            DiffPreviewModified = newer.DiffModified;
-            DiffPreviewDeleted = newer.DiffDeleted;
-            DiffPreviewNet = FormatSignedSize(newer.DiffNetBytes);
+            DiffPreviewAdded = result.Added;
+            DiffPreviewModified = result.Modified;
+            DiffPreviewDeleted = result.Deleted;
+            DiffPreviewNet = FormatSignedSize(result.NetSizeBytes);
             DiffPreviewTopPaths.Clear();
+            foreach (SnapshotDiffPathStat path in result.TopChangedPaths)
+            {
+                DiffPreviewTopPaths.Add(new DiffPreviewPathItem(
+                    path.Path,
+                    path.Changes,
+                    BackupSnapshotItem.FormatSize(path.ChangedBytes)));
+            }
             OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
 
             var compareText = new StringBuilder();
-            compareText.AppendLine("# VaultSync Restore Point Compare");
+            compareText.AppendLine(L("Backups.Compare.DocumentTitle", "# VaultSync Snapshot Compare"));
             compareText.AppendLine();
             compareText.AppendLine(Lf("Backups.Compare.PointA", "A: {0} · {1} · {2}",
                 older.Timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture),
@@ -1261,17 +1306,66 @@ namespace VaultSync.UI.ViewModels
                 newer.TypeLabel,
                 newer.SizeFormatted));
             compareText.AppendLine(Lf("Backups.Compare.ElapsedLine", "Elapsed: {0}", FormatElapsed(elapsed)));
-            compareText.AppendLine(Lf("Backups.Compare.SizeDeltaLine", "Backup size delta: {0}", FormatSignedSize(sizeDelta)));
-            compareText.AppendLine(Lf("Backups.Compare.NetDeltaLine", "Net diff delta: {0}", FormatSignedSize(netDelta)));
+            compareText.AppendLine(Lf("Backups.Compare.SnapshotSizeDeltaLine", "Snapshot size delta: {0}", FormatSignedSize(result.NetSizeBytes)));
+            compareText.AppendLine(Lf("Backups.Compare.ChangedBytesLine", "Changed bytes examined: {0}", BackupSnapshotItem.FormatSize(result.ChangedBytes)));
             compareText.AppendLine();
-            compareText.AppendLine(L("Backups.Compare.NewerSnapshotSummary", "Newest restore point diff summary:"));
-            compareText.AppendLine(Lf("Backups.Compare.NewerAdded", "+ added {0}", newer.DiffAdded.ToString(CultureInfo.CurrentCulture)));
-            compareText.AppendLine(Lf("Backups.Compare.NewerModified", "~ modified {0}", newer.DiffModified.ToString(CultureInfo.CurrentCulture)));
-            compareText.AppendLine(Lf("Backups.Compare.NewerDeleted", "- deleted {0}", newer.DiffDeleted.ToString(CultureInfo.CurrentCulture)));
-            compareText.AppendLine(Lf("Backups.Compare.NewerNet", "Δ net {0}", FormatSignedSize(newer.DiffNetBytes)));
+            compareText.AppendLine(L("Backups.Compare.FileSummary", "File-level change summary:"));
+            compareText.AppendLine(Lf("Backups.Compare.NewerAdded", "+ added {0}", result.Added.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.NewerModified", "~ modified {0}", result.Modified.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.NewerDeleted", "- deleted {0}", result.Deleted.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.Unchanged", "= unchanged {0}", result.Unchanged.ToString(CultureInfo.CurrentCulture)));
+
+            AppendChangeSignals(compareText, result.Signals);
+            compareText.AppendLine();
+            compareText.AppendLine(L("Backups.Compare.ChangedFilesHeader", "## Changed files"));
+            foreach (SnapshotFileChange change in result.Changes.Take(200))
+            {
+                string marker = change.Kind switch
+                {
+                    SnapshotFileChangeKind.Added => "+",
+                    SnapshotFileChangeKind.Modified => "~",
+                    SnapshotFileChangeKind.Deleted => "-",
+                    _ => "?"
+                };
+                compareText.AppendLine($"{marker} {change.Path} ({FormatSignedSize(change.SizeDeltaBytes)})");
+            }
+
+            if (result.Changes.Count > 200)
+            {
+                compareText.AppendLine(Lf(
+                    "Backups.Compare.AdditionalFiles",
+                    "... {0} additional changed files not shown",
+                    result.Changes.Count - 200));
+            }
 
             DiffPreviewText = compareText.ToString().TrimEnd();
             IsDiffPreviewOpen = true;
+        }
+
+        private static void AppendChangeSignals(
+            StringBuilder compareText,
+            IReadOnlyList<SnapshotChangeSignal> signals)
+        {
+            if (signals.Count == 0)
+                return;
+
+            compareText.AppendLine();
+            compareText.AppendLine(L("Backups.Compare.AttentionSignalsHeader", "## Attention signals"));
+            foreach (SnapshotChangeSignal signal in signals)
+            {
+                string line = signal.Kind switch
+                {
+                    SnapshotChangeSignalKind.MassDeletion =>
+                        Lf("Backups.Compare.SignalMassDeletion", "! Mass deletion: {0} files removed ({1:P0})", signal.AffectedFiles, signal.Ratio),
+                    SnapshotChangeSignalKind.SignificantGrowth =>
+                        Lf("Backups.Compare.SignalGrowth", "! Significant growth: {0} ({1:P0})", FormatSignedSize(signal.SizeDeltaBytes), signal.Ratio),
+                    SnapshotChangeSignalKind.HighChurn =>
+                        Lf("Backups.Compare.SignalHighChurn", "! High churn: {0} files changed ({1:P0})", signal.AffectedFiles, signal.Ratio),
+                    _ => string.Empty
+                };
+                if (line.Length > 0)
+                    compareText.AppendLine(line);
+            }
         }
 
         private string ResolveCompareProjectName(BackupSnapshotItem a, BackupSnapshotItem b)

@@ -1539,5 +1539,20 @@
   "SnapshotExplorer.Status.PreviewReady": "Preview loaded.",
   "SnapshotExplorer.Status.Restored": "Restored {0} file(s) to {1}",
   "SnapshotExplorer.Status.RestoreFailed": "Restore failed: {0}",
-  "SnapshotExplorer.Status.Restoring": "Restoring selected item..."
+  "SnapshotExplorer.Status.Restoring": "Restoring selected item...",
+  "Backups.Compare.ChangeIntelligenceLine": "Change intelligence: {0} files examined",
+  "Backups.Compare.ChangeCountLine": "{0} changed over {1}",
+  "Backups.Compare.SnapshotSizeDeltaLine": "Snapshot size delta: {0}",
+  "Backups.Compare.ChangedBytesLine": "Changed bytes examined: {0}",
+  "Backups.Compare.FileSummary": "File-level change summary:",
+  "Backups.Compare.Unchanged": "= unchanged {0}",
+  "Backups.Compare.FailedTitle": "Snapshot comparison unavailable",
+  "Backups.Compare.FailedMessage": "VaultSync could not compare these snapshots: {0}",
+  "Backups.Compare.DocumentTitle": "# VaultSync Snapshot Compare",
+  "Backups.Compare.ChangedFilesHeader": "## Changed files",
+  "Backups.Compare.AdditionalFiles": "... {0} additional changed files not shown",
+  "Backups.Compare.AttentionSignalsHeader": "## Attention signals",
+  "Backups.Compare.SignalMassDeletion": "! Mass deletion: {0} files removed ({1:P0})",
+  "Backups.Compare.SignalGrowth": "! Significant growth: {0} ({1:P0})",
+  "Backups.Compare.SignalHighChurn": "! High churn: {0} files changed ({1:P0})"
 }

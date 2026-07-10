@@ -1830,6 +1830,10 @@
   - Acceptance: users can select older/newer restore points and understand what changed before restoring.
   - Acceptance: large snapshots stay responsive through async loading, search/filtering, and capped preview work.
   - Acceptance: existing summary diff cards and A/B restore-point compare remain intact, but the new view provides file-level detail.
+  - Done: arbitrary same-project snapshots now compare their stored file inventories asynchronously with added, modified, deleted, and unchanged classification.
+  - Done: the compare result includes changed-path hotspots plus mass-deletion, significant-growth, and high-churn signals.
+  - Done: Backups renders a capped Git-style changed-file list with real size deltas instead of showing only the newer snapshot's aggregate summary.
+  - Remaining: add side-by-side text/code content diffs and richer search/filter controls for the changed-file list.
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_

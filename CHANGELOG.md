@@ -1,5 +1,7 @@
 ﻿# Changelog
 ## [1.8.3] - 10.07.2026
+### Added
+- [VS-1809] Added asynchronous file-level comparison between any two snapshots from the same project, including added, modified, deleted, and unchanged counts, changed-path hotspots, and mass-deletion, growth, or high-churn signals.
 ### Changed
 - [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.
 - [VS-1832] Split Snapshot Explorer browsing, archive traversal, text preview, and code-preview helpers into focused operations while preserving existing browsing and restore behavior.
