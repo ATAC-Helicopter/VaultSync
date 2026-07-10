@@ -7,6 +7,8 @@
 - [VS-1834] Refactored CLI destination, doctor, snapshot, and watch command flows into smaller validation and execution helpers without changing their command-line contracts.
 - [VS-1835] Refactored Projects and Settings workflows, project snapshot commands, and rich-text rendering into focused helpers to reduce UI complexity and improve maintainability.
 - [VS-1836] Addressed Sonar analyzer findings and consolidated repeated literals across backup, navigation, update, credential, telemetry, verification, network-mount, and encryption services.
+### Fixed
+- [BUG-18059] Diagnostics retention now runs periodically on every platform, keeps at most two hang dumps within a 1 GiB diagnostics budget, and stops timed-out dump collection before partial files consume disk space.
 
 ## [1.8.2] - 04.07.2026
 ### Added

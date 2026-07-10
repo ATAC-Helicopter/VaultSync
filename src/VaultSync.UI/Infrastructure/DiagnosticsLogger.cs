@@ -15,6 +15,16 @@ internal static class DiagnosticsLogger
     private const int MaxRecent = 1000;
     private const int MaxFirstChanceTotal = 250;
     private const int MaxFirstChancePerSignature = 5;
+    private const int MaxHangDumpFiles = 2;
+    private const long MaxDiagnosticsBytes = 1024L * 1024L * 1024L;
+    private static readonly TimeSpan DiagnosticsPruneInterval = TimeSpan.FromHours(6);
+    private static readonly string[] RetainedDiagnosticPatterns =
+    [
+        "session-*.log",
+        "sample-*.txt",
+        "hangdump-*.dmp",
+        "trace-*.log"
+    ];
     private static readonly ConcurrentQueue<string> Recent = new();
     private static readonly ConcurrentQueue<string> PendingWrites = new();
     private static readonly ConcurrentDictionary<string, int> FirstChanceCounts = new(StringComparer.Ordinal);
@@ -23,6 +33,7 @@ internal static class DiagnosticsLogger
     private static string? _sessionPath;
     private static string? _heartbeatPath;
     private static Timer? _heartbeatTimer;
+    private static Timer? _retentionTimer;
     private static Task? _writerTask;
     private static CancellationTokenSource? _writerCts;
     private static readonly AutoResetEvent WriterSignal = new(false);
@@ -56,6 +67,7 @@ internal static class DiagnosticsLogger
             InstallTraceListener();
             InstallConsoleMirroring();
             StartHeartbeat();
+            StartPeriodicRetention(dir);
             Record("Diagnostics session started.");
         }
         catch
@@ -90,6 +102,9 @@ internal static class DiagnosticsLogger
     {
         Timer? heartbeatTimer = Interlocked.Exchange(ref _heartbeatTimer, null);
         heartbeatTimer?.Dispose();
+
+        Timer? retentionTimer = Interlocked.Exchange(ref _retentionTimer, null);
+        retentionTimer?.Dispose();
 
         CancellationTokenSource? writerCts = Interlocked.Exchange(ref _writerCts, null);
         if (writerCts is not null)
@@ -338,6 +353,15 @@ internal static class DiagnosticsLogger
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
     }
 
+    private static void StartPeriodicRetention(string diagnosticsDirectory)
+    {
+        _retentionTimer = new Timer(
+            _ => PruneDiagnostics(diagnosticsDirectory),
+            null,
+            DiagnosticsPruneInterval,
+            DiagnosticsPruneInterval);
+    }
+
     private static void StartWriter()
     {
         if (Interlocked.Exchange(ref _writerStarted, 1) == 1)
@@ -397,14 +421,18 @@ internal static class DiagnosticsLogger
         }
     }
 
-    private static void PruneDiagnostics(string dir)
+    internal static void PruneDiagnostics(
+        string dir,
+        int maxHangDumpFiles = MaxHangDumpFiles,
+        long maxDiagnosticsBytes = MaxDiagnosticsBytes)
     {
         try
         {
             PruneByPattern(dir, "session-*.log", keep: 5);
             PruneByPattern(dir, "sample-*.txt", keep: 5);
-            PruneByPattern(dir, "hangdump-*.dmp", keep: 5);
+            PruneByPattern(dir, "hangdump-*.dmp", keep: maxHangDumpFiles);
             PruneByPattern(dir, "trace-*.log", keep: 5);
+            PruneToTotalSize(dir, maxDiagnosticsBytes);
         }
         catch
         {
@@ -414,9 +442,6 @@ internal static class DiagnosticsLogger
 
     private static void PruneByPattern(string dir, string pattern, int keep)
     {
-        if (keep <= 0)
-            return;
-
         var files = Directory.GetFiles(dir, pattern)
             .Select(path => new FileInfo(path))
             .OrderByDescending(fi => fi.LastWriteTimeUtc)
@@ -435,6 +460,43 @@ internal static class DiagnosticsLogger
             {
                 // ignore
             }
+        }
+    }
+
+    private static void PruneToTotalSize(string dir, long maxBytes)
+    {
+        if (maxBytes < 0)
+            return;
+
+        var files = RetainedDiagnosticPatterns
+            .SelectMany(pattern => Directory.GetFiles(dir, pattern))
+            .Distinct(StringComparer.Ordinal)
+            .Select(path => new FileInfo(path))
+            .OrderByDescending(fi => fi.LastWriteTimeUtc)
+            .ToList();
+
+        long retainedBytes = 0;
+        foreach (FileInfo file in files)
+        {
+            if (file.Length <= maxBytes - retainedBytes)
+            {
+                retainedBytes += file.Length;
+                continue;
+            }
+
+            TryDeleteDiagnostic(file);
+        }
+    }
+
+    private static void TryDeleteDiagnostic(FileInfo file)
+    {
+        try
+        {
+            file.Delete();
+        }
+        catch
+        {
+            // Diagnostics retention is best effort.
         }
     }
 
@@ -477,7 +539,7 @@ internal static class DiagnosticsLogger
                 psi.ArgumentList.Add("--process-id");
                 psi.ArgumentList.Add(Environment.ProcessId.ToString());
                 psi.ArgumentList.Add("--type");
-                psi.ArgumentList.Add("full");
+                psi.ArgumentList.Add("Mini");
                 psi.ArgumentList.Add("--output");
                 psi.ArgumentList.Add(output);
 
@@ -488,7 +550,16 @@ internal static class DiagnosticsLogger
                     Record("dotnet-dump failed to start.");
                     return;
                 }
-                proc.WaitForExit(20_000);
+                if (!proc.WaitForExit(20_000))
+                {
+                    Record("dotnet-dump timed out after 20 seconds; terminating collection.");
+                    proc.Kill(entireProcessTree: true);
+                    proc.WaitForExit(5_000);
+                    TryDeleteDiagnostic(new FileInfo(output));
+                    shouldSample = true;
+                    return;
+                }
+
                 string stderr = proc.StandardError.ReadToEnd().Trim();
                 string stdout = proc.StandardOutput.ReadToEnd().Trim();
                 if (!string.IsNullOrWhiteSpace(stdout))
@@ -506,6 +577,10 @@ internal static class DiagnosticsLogger
             finally
             {
                 Interlocked.Exchange(ref _dumpInFlight, 0);
+                PruneDiagnostics(Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "VaultSync",
+                    "diagnostics"));
             }
 
             if (shouldSample && OperatingSystem.IsMacOS())
