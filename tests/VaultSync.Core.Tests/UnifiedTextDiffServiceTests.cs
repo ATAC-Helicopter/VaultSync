@@ -1,3 +1,6 @@
+using System;
+using System.Linq;
+using System.Threading;
 using VaultSync.Core.Services;
 using Xunit;
 
@@ -35,5 +38,19 @@ public sealed class UnifiedTextDiffServiceTests
 
         Assert.True(result.IsTruncated);
         Assert.Contains("truncated", result.Text);
+    }
+
+    [Fact]
+    public void Create_HonorsCancellationBeforeQuadraticWork()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() => UnifiedTextDiffService.Create(
+            string.Join('\n', Enumerable.Repeat("old", 800)),
+            string.Join('\n', Enumerable.Repeat("new", 800)),
+            "a",
+            "b",
+            cancellationToken: cts.Token));
     }
 }

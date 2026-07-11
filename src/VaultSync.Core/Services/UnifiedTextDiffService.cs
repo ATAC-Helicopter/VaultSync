@@ -24,7 +24,8 @@ public static class UnifiedTextDiffService
         string? newerText,
         string olderLabel,
         string newerLabel,
-        UnifiedTextDiffOptions? options = null)
+        UnifiedTextDiffOptions? options = null,
+        CancellationToken cancellationToken = default)
     {
         options ??= UnifiedTextDiffOptions.Default;
         if (options.MaxLinesPerFile <= 0)
@@ -38,7 +39,7 @@ public static class UnifiedTextDiffService
         string[] older = [.. allOlder.Take(options.MaxLinesPerFile)];
         string[] newer = [.. allNewer.Take(options.MaxLinesPerFile)];
 
-        int[,] lcs = BuildLongestCommonSubsequence(older, newer);
+        int[,] lcs = BuildLongestCommonSubsequence(older, newer, cancellationToken);
         var output = new List<string>(Math.Min(options.MaxOutputLines, older.Length + newer.Length + 3))
         {
             $"--- {olderLabel}",
@@ -52,6 +53,7 @@ public static class UnifiedTextDiffService
         int deleted = 0;
         while (oldIndex < older.Length || newIndex < newer.Length)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (output.Count >= options.MaxOutputLines)
             {
                 truncated = true;
@@ -88,11 +90,15 @@ public static class UnifiedTextDiffService
         ? []
         : text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
 
-    private static int[,] BuildLongestCommonSubsequence(string[] older, string[] newer)
+    private static int[,] BuildLongestCommonSubsequence(
+        string[] older,
+        string[] newer,
+        CancellationToken cancellationToken)
     {
         var lengths = new int[older.Length + 1, newer.Length + 1];
         for (int oldIndex = older.Length - 1; oldIndex >= 0; oldIndex--)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             for (int newIndex = newer.Length - 1; newIndex >= 0; newIndex--)
             {
                 lengths[oldIndex, newIndex] = string.Equals(older[oldIndex], newer[newIndex], StringComparison.Ordinal)

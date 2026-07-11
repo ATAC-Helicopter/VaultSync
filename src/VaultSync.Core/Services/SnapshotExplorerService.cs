@@ -321,10 +321,13 @@ public sealed class SnapshotExplorerService
             if (!selectedPaths.Any(path => IsSelected(relative, path)))
                 continue;
 
-            string destinationPath = ResolvePathUnderRoot(targetRoot, relative);
+            string destinationPath = ResolveArchiveEntryPathUnderRoot(targetRoot, entry.FullName);
             string? parent = Path.GetDirectoryName(destinationPath);
             if (!string.IsNullOrEmpty(parent))
+            {
                 Directory.CreateDirectory(parent);
+                EnsureNoLinkedPathComponents(targetRoot, destinationPath);
+            }
             entry.ExtractToFile(destinationPath, overwrite: true);
             files++;
             bytes += Math.Max(0, entry.Length);
@@ -385,6 +388,48 @@ public sealed class SnapshotExplorerService
 
         return candidate;
     }
+
+    private static string ResolveArchiveEntryPathUnderRoot(string root, string entryFullName)
+    {
+        string normalizedRoot = NormalizeRoot(root);
+        string rootWithSeparator = normalizedRoot + Path.DirectorySeparatorChar;
+        string archivePath = (entryFullName ?? string.Empty)
+            .Replace('/', Path.DirectorySeparatorChar)
+            .Replace('\\', Path.DirectorySeparatorChar);
+        string candidate = Path.GetFullPath(Path.Combine(rootWithSeparator, archivePath));
+        if (!candidate.StartsWith(rootWithSeparator, GetPathComparison()))
+            throw new InvalidDataException($"Archive entry '{entryFullName}' escapes the selected restore root.");
+
+        EnsureNoLinkedPathComponents(normalizedRoot, candidate);
+        return candidate;
+    }
+
+    private static void EnsureNoLinkedPathComponents(string root, string destinationPath)
+    {
+        string normalizedRoot = NormalizeRoot(root);
+        string relative = Path.GetRelativePath(normalizedRoot, destinationPath);
+        string current = normalizedRoot;
+        string[] components = relative.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+        for (int index = 0; index < components.Length; index++)
+        {
+            current = Path.Combine(current, components[index]);
+            if (index == components.Length - 1 && !File.Exists(current) && !Directory.Exists(current))
+                continue;
+            if (!File.Exists(current) && !Directory.Exists(current))
+                continue;
+
+            FileAttributes attributes = File.GetAttributes(current);
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException($"Restore path '{relative}' contains a linked path component.");
+        }
+    }
+
+    private static StringComparison GetPathComparison() =>
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
 
     private static string NormalizeExplorerPath(string? path, bool allowEmpty)
     {

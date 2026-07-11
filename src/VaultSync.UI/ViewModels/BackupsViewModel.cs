@@ -691,6 +691,7 @@ namespace VaultSync.UI.ViewModels
         private BackupSnapshotItem? _diffOlderSnapshot;
         private BackupSnapshotItem? _diffNewerSnapshot;
         private int _diffContentRequestVersion;
+        private CancellationTokenSource? _diffContentCts;
         private bool _isSnapshotCompareBusy;
         private CancellationTokenSource? _snapshotCompareCts;
         private string _diffFileResultsLabel = string.Empty;
@@ -1563,6 +1564,8 @@ namespace VaultSync.UI.ViewModels
         private void LoadSelectedDiffFile(DiffPreviewFileItem? file)
         {
             int requestVersion = Interlocked.Increment(ref _diffContentRequestVersion);
+            _diffContentCts?.Cancel();
+            _diffContentCts = null;
             if (file is null || _diffOlderSnapshot is null || _diffNewerSnapshot is null)
             {
                 if (_diffOlderSnapshot is not null && _diffNewerSnapshot is not null)
@@ -1575,9 +1578,11 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
+            var contentCts = new CancellationTokenSource();
+            _diffContentCts = contentCts;
             DiffFileContentStatus = L("Backups.Compare.LoadingFile", "Loading file diff...");
             DetachedTask.Run(
-                () => LoadSelectedDiffFileAsync(file, _diffOlderSnapshot, _diffNewerSnapshot, requestVersion),
+                () => LoadSelectedDiffFileAsync(file, _diffOlderSnapshot, _diffNewerSnapshot, requestVersion, contentCts),
                 "snapshot-text-diff");
         }
 
@@ -1585,8 +1590,41 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewFileItem file,
             BackupSnapshotItem older,
             BackupSnapshotItem newer,
-            int requestVersion)
+            int requestVersion,
+            CancellationTokenSource contentCts)
         {
+            try
+            {
+                await LoadSelectedDiffFileCoreAsync(
+                    file,
+                    older,
+                    newer,
+                    requestVersion,
+                    contentCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (contentCts.IsCancellationRequested)
+            {
+                // A newer file selection superseded this preview.
+            }
+            finally
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (ReferenceEquals(_diffContentCts, contentCts))
+                        _diffContentCts = null;
+                });
+                contentCts.Dispose();
+            }
+        }
+
+        private async Task LoadSelectedDiffFileCoreAsync(
+            DiffPreviewFileItem file,
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            int requestVersion,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             (string? olderRoot, string? newerRoot) = (ResolveBackupContentRoot(older), ResolveBackupContentRoot(newer));
             string? error = null;
             string olderText = string.Empty;
@@ -1600,6 +1638,7 @@ namespace VaultSync.UI.ViewModels
                 else
                 {
                     SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(olderRoot, file.Path);
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (!preview.Success)
                         error = preview.Error;
                     else
@@ -1617,6 +1656,7 @@ namespace VaultSync.UI.ViewModels
                 else
                 {
                     SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(newerRoot, file.Path);
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (!preview.Success)
                         error = preview.Error;
                     else
@@ -1628,8 +1668,14 @@ namespace VaultSync.UI.ViewModels
             }
 
             UnifiedTextDiffResult? diff = error is null
-                ? UnifiedTextDiffService.Create(olderText, newerText, $"a/{file.Path}", $"b/{file.Path}")
+                ? UnifiedTextDiffService.Create(
+                    olderText,
+                    newerText,
+                    $"a/{file.Path}",
+                    $"b/{file.Path}",
+                    cancellationToken: cancellationToken)
                 : null;
+            cancellationToken.ThrowIfCancellationRequested();
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (requestVersion != _diffContentRequestVersion || !ReferenceEquals(file, SelectedDiffPreviewFile))
@@ -1740,6 +1786,7 @@ namespace VaultSync.UI.ViewModels
         private void CloseSnapshotDiffPreview()
         {
             _snapshotCompareCts?.Cancel();
+            _diffContentCts?.Cancel();
             IsDiffPreviewOpen = false;
             DiffPreviewTitle = string.Empty;
             DiffPreviewText = string.Empty;

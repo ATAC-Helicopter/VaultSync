@@ -6,6 +6,8 @@
 ### Changed
 - [VS-1809] Expanded snapshot comparison into dedicated hotspot, changed-file, and text-diff panes so file changes can be inspected without crowding the summary.
 - [VS-1809] Improved comparison QoL with automatic same-project restore-point suggestions, contextual selection guidance, cancellable comparison work, filtered-result counts, and clearer empty, capped, and no-match states.
+- [VS-1809] Cancelled superseded text-diff computations when users move quickly between changed files, avoiding unnecessary quadratic diff work for stale selections.
+- [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines without taking major UI-framework migrations into the 1.8.3 release.
 - [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.
 - [VS-1832] Split Snapshot Explorer browsing, archive traversal, text preview, and code-preview helpers into focused operations while preserving existing browsing and restore behavior.
 - [VS-1833] Split snapshot creation, manifest construction, hashing, and persistence into focused stages to reduce complexity while preserving snapshot compatibility.
@@ -13,6 +15,7 @@
 - [VS-1835] Refactored Projects and Settings workflows, project snapshot commands, and rich-text rendering into focused helpers to reduce UI complexity and improve maintainability.
 - [VS-1836] Addressed Sonar analyzer findings and consolidated repeated literals across backup, navigation, update, credential, telemetry, verification, network-mount, and encryption services.
 ### Fixed
+- [BUG-18060] Hardened Snapshot Explorer ZIP restore with explicit destination containment and linked-path rejection so malicious archive entries cannot write outside the selected restore root.
 - [BUG-18059] Diagnostics retention now runs periodically on every platform, keeps at most two hang dumps within a 1 GiB diagnostics budget, and stops timed-out dump collection before partial files consume disk space.
 
 ## [1.8.2] - 04.07.2026

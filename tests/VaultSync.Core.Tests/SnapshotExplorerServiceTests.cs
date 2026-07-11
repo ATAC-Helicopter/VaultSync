@@ -125,6 +125,42 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.PreviewText(backup, "../outside.txt"));
     }
 
+    [Theory]
+    [InlineData("../escape.txt")]
+    [InlineData("..\\escape.txt")]
+    [InlineData("/absolute.txt")]
+    public void RestoreSelection_ArchiveRejectsTraversalEntries(string maliciousPath)
+    {
+        string backup = Path.Combine(_root, "malicious-archive-" + Guid.NewGuid().ToString("N"));
+        string target = Path.Combine(_root, "restore-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(backup);
+        using (ZipArchive archive = ZipFile.Open(Path.Combine(backup, BackupArchiveCryptoService.PlainArchiveFileName), ZipArchiveMode.Create))
+        {
+            AddArchiveText(archive, maliciousPath, "escape");
+            AddArchiveText(archive, "safe/file.txt", "safe");
+        }
+
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.RestoreSelection(backup, target, ["safe", "absolute.txt"]));
+        Assert.False(File.Exists(Path.Combine(_root, "escape.txt")));
+    }
+
+    [Fact]
+    public void RestoreSelection_ArchiveRejectsLinkedDirectoryEscape()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string backup = CreateArchiveBackup();
+        string target = Path.Combine(_root, "linked-restore");
+        string outside = Path.Combine(_root, "outside");
+        Directory.CreateDirectory(target);
+        Directory.CreateDirectory(outside);
+        Directory.CreateSymbolicLink(Path.Combine(target, "docs"), outside);
+
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.RestoreSelection(backup, target, ["docs"]));
+        Assert.False(File.Exists(Path.Combine(outside, "notes.md")));
+    }
+
     private string CreateFolderBackup()
     {
         string backup = Path.Combine(_root, "folder-backup");

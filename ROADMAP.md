@@ -1781,9 +1781,9 @@
 - `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
 - `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
 - `1.8.2` Snapshot Explorer scope is tracked by the dedicated GitHub milestone `1.8.2`.
-- `1.8.3` maintenance and diagnostics hardening is tracked by the dedicated GitHub milestone `1.8.3` and release PR #410.
+- `1.8.3` Compare & Change Intelligence, security, maintenance, and diagnostics hardening is tracked by the dedicated GitHub milestone `1.8.3` and release PR #410.
 
-### 1.8.3 status (2026-07-10)
+### 1.8.3 status (2026-07-12)
 - Compare & Change Intelligence is active under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
 - The maintenance scope covers release-script output confinement, Snapshot Explorer and snapshot-pipeline decomposition, CLI/UI complexity reduction, and analyzer cleanup.
 - Diagnostics retention now runs at startup and every six hours on every platform, with at most two hang dumps and a 1 GiB total diagnostics budget.
@@ -1837,6 +1837,7 @@
   - Done: changed-file search and added/modified/deleted filters keep large comparisons navigable.
   - Done: comparison QoL suggests a nearby same-project restore point, explains invalid selections, supports cancellation, reports filtered/capped counts, and distinguishes no-change from no-match states.
   - Done: focused view-model coverage verifies selection guidance and a 10,000-file inventory regression test verifies large comparisons retain all changes.
+  - Done: changed-file selection now cancels superseded unified-diff computation instead of only suppressing stale presentation.
   - Remaining: perform a manual desktop interaction pass before closing #361.
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
@@ -1924,6 +1925,11 @@
 - [x] `BUG-18059` `P1` Bound periodic diagnostics retention. _(Done; tracked by #417; target 1.8.3)_
   - Done: cleanup runs at startup and every six hours on Windows, macOS, and Linux.
   - Done: VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget and removes timed-out partial dumps.
+- [ ] `BUG-18060` `P0` Harden Snapshot Explorer archive extraction containment. _(In progress; tracked by #423; target 1.8.3)_
+  - Done locally: archive entry destinations are resolved and checked directly against the selected restore root immediately before extraction.
+  - Done locally: restore rejects linked/reparse-point path components and regression coverage includes traversal, rooted, backslash, and symlink escape attempts.
+- [ ] `VS-1838` `P2` Refresh safe 1.8.3 patch dependencies. _(In progress; tracked by #424; target 1.8.3)_
+  - Done locally: Avalonia 11, HarfBuzzSharp, and LiveCharts patch families are updated together while Avalonia 12, Skia minor updates, and deprecated-package migrations remain deferred.
 - [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
 
 ## Future backlog
