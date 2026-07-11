@@ -1928,8 +1928,10 @@
 - [ ] `BUG-18060` `P0` Harden Snapshot Explorer archive extraction containment. _(In progress; tracked by #423; target 1.8.3)_
   - Done locally: archive entry destinations are resolved and checked directly against the selected restore root immediately before extraction.
   - Done locally: restore rejects linked/reparse-point path components and regression coverage includes traversal, rooted, backslash, and symlink escape attempts.
-- [ ] `VS-1838` `P2` Refresh safe 1.8.3 patch dependencies. _(In progress; tracked by #424; target 1.8.3)_
-  - Done locally: Avalonia 11, HarfBuzzSharp, and LiveCharts patch families are updated together while Avalonia 12, Skia minor updates, and deprecated-package migrations remain deferred.
+  - Done: PR CodeQL analysis passes; the repository alert remains attached to the current Stable commit until the fix is merged.
+- [x] `VS-1838` `P2` Refresh safe 1.8.3 patch dependencies. _(Done 2026-07-12; tracked by #424; target 1.8.3)_
+  - Done: Avalonia 11, HarfBuzzSharp, and LiveCharts patch families are updated together, cross-platform CI passes, and the transitive vulnerability audit remains clean.
+  - Deferred: Avalonia 12, Skia minor updates, and deprecated-package migrations remain outside the 1.8.3 patch scope.
 - [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
 
 ## Future backlog
