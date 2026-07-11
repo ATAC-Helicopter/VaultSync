@@ -30,11 +30,11 @@
     <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="4.148.0" />
     <PackageVersion Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.148.0" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.148.0" />
-    <PackageVersion Include="HarfBuzzSharp" Version="14.2.0" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.0" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.0" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="14.2.0" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.0" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1" />
 
     <!-- Windows-only UI integrations -->
     <PackageVersion Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />
