@@ -321,7 +321,7 @@ internal static class CrashHandler
             CanResize = false,
             Width = 720,
             SizeToContent = SizeToContent.Height,
-            SystemDecorations = SystemDecorations.None,
+            WindowDecorations = WindowDecorations.None,
             ExtendClientAreaToDecorationsHint = true,
             WindowStartupLocation = desktop.MainWindow != null
                 ? WindowStartupLocation.CenterOwner

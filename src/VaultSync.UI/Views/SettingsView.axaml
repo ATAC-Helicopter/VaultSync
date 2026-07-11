@@ -158,7 +158,7 @@
                            Grid.Column="0"
                            Margin="0,2,0,0"
                            Text="{Binding ProjectsRootPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           Watermark="{infra:LocalizedString Key=Settings.General.ProjectsRootWatermark}" />
+                           PlaceholderText="{infra:LocalizedString Key=Settings.General.ProjectsRootWatermark}" />
 
                   <Button Grid.Row="1"
                           Grid.Column="1"
@@ -488,7 +488,7 @@
                         <TextBox Width="110"
                                  HorizontalAlignment="Center"
                                  HorizontalContentAlignment="Center"
-                                 Watermark="HH:mm"
+                                 PlaceholderText="HH:mm"
                                  Text="{Binding QuietHoursStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding EnableQuietHours}" />
                       </StackPanel>
@@ -508,7 +508,7 @@
                         <TextBox Width="110"
                                  HorizontalAlignment="Center"
                                  HorizontalContentAlignment="Center"
-                                 Watermark="HH:mm"
+                                 PlaceholderText="HH:mm"
                                  Text="{Binding QuietHoursEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding EnableQuietHours}" />
                       </StackPanel>
@@ -568,7 +568,7 @@
                            VerticalAlignment="Center"
                            Text="{Binding BackupLocationPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            ToolTip.Tip="{infra:LocalizedString Key=Settings.Backups.FallbackLocationTooltip}"
-                           Watermark="{infra:LocalizedString Key=Settings.Backups.FallbackLocationWatermark}" />
+                           PlaceholderText="{infra:LocalizedString Key=Settings.Backups.FallbackLocationWatermark}" />
 
                   <StackPanel Grid.Row="1"
                               Grid.Column="1"
@@ -683,7 +683,7 @@
                                Grid.Column="0"
                                Text="{Binding BackupEncryptionPasswordInput, Mode=TwoWay}"
                                PasswordChar="{Binding BackupEncryptionShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=*}"
-                               Watermark="{infra:LocalizedString Key=Settings.Encryption.PasswordWatermark}" />
+                               PlaceholderText="{infra:LocalizedString Key=Settings.Encryption.PasswordWatermark}" />
                       <Button Grid.Column="1"
                               Classes="settings-ghost"
                               Command="{Binding SetBackupEncryptionPasswordCommand}">
@@ -974,7 +974,7 @@
                                 <TextBox Width="170"
                                          MaxWidth="220"
                                          HorizontalAlignment="Left"
-                                         Watermark="{infra:LocalizedString Key=Settings.Destinations.AliasWatermark}"
+                                         PlaceholderText="{infra:LocalizedString Key=Settings.Destinations.AliasWatermark}"
                                          Text="{Binding Alias, Mode=TwoWay}" />
                                 <TextBlock Grid.Column="1"
                                            Text="{infra:LocalizedString Key=Settings.Destinations.ActiveToggle}"
@@ -1001,7 +1001,7 @@
                                     ColumnDefinitions="*,Auto"
                                     ColumnSpacing="10">
                                 <TextBox Grid.Column="0"
-                                         Watermark="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
+                                         PlaceholderText="{infra:LocalizedString Key=Settings.Destinations.PathWatermark}"
                                          Text="{Binding Path, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <StackPanel Grid.Column="1"
                                             Orientation="Horizontal"
@@ -1181,7 +1181,7 @@
                                 <TextBox Grid.Column="1"
                                          HorizontalAlignment="Stretch"
                                          Text="{Binding Name, Mode=TwoWay}"
-                                         Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Name}" />
+                                         PlaceholderText="{infra:LocalizedString Key=Settings.Credentials.Watermark.Name}" />
                               </Grid>
 
                               <CheckBox Grid.Row="1"
@@ -1194,7 +1194,7 @@
                                 <TextBox Grid.Column="1"
                                          HorizontalAlignment="Stretch"
                                          Text="{Binding Username, Mode=TwoWay}"
-                                         Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Username}" />
+                                         PlaceholderText="{infra:LocalizedString Key=Settings.Credentials.Watermark.Username}" />
                                 <Button Grid.Column="2"
                                         Classes="settings-ghost"
                                         HorizontalAlignment="Right"
@@ -1212,7 +1212,7 @@
                                   <TextBox Grid.Column="0"
                                            HorizontalAlignment="Stretch"
                                            Text="{Binding Password, Mode=TwoWay}"
-                                           Watermark="{infra:LocalizedString Key=Settings.Credentials.Watermark.Password}"
+                                           PlaceholderText="{infra:LocalizedString Key=Settings.Credentials.Watermark.Password}"
                                              PasswordChar="{Binding ShowPassword, Converter={StaticResource BoolToCharConverter}, ConverterParameter=*}" />
                                 </Grid>
                                 <CheckBox Grid.Column="2"
@@ -1293,7 +1293,7 @@
                                    Foreground="{StaticResource TextSecondary}"
                                    FontSize="11" />
                         <TextBox Text="{Binding CustomThemeName, Mode=TwoWay}"
-                                 Watermark="{Binding ThemeNameLabel}" />
+                                 PlaceholderText="{Binding ThemeNameLabel}" />
                       </StackPanel>
                       <StackPanel Grid.Column="1" Spacing="4">
                         <TextBlock Text="{Binding ThemeBaseLabel}"
@@ -1804,14 +1804,14 @@
                                         Spacing="2">
                               <TextBlock Text="{Binding MaintenanceWindowStartLabel}" />
                               <TextBox Text="{Binding MaintenanceWindowStart}"
-                                       Watermark="01:00" />
+                                       PlaceholderText="01:00" />
                             </StackPanel>
                             <StackPanel Grid.Row="0"
                                         Grid.Column="1"
                                         Spacing="2">
                               <TextBlock Text="{Binding MaintenanceWindowEndLabel}" />
                               <TextBox Text="{Binding MaintenanceWindowEnd}"
-                                       Watermark="05:00" />
+                                       PlaceholderText="05:00" />
                             </StackPanel>
                             <StackPanel Grid.Row="1"
                                         Grid.ColumnSpan="2"

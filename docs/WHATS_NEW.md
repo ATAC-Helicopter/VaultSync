@@ -18,6 +18,7 @@ VaultSync `1.8.3` introduces Compare & Change Intelligence with searchable file-
 - Hang capture uses smaller mini dumps, stops after 20 seconds, and removes timed-out partial output.
 
 ### Release and maintainability
+- The desktop UI now runs on Avalonia 12.1 with compiled bindings, updated focus/selection behavior, modern placeholder and window-decoration APIs, and an aligned cross-platform rendering stack.
 - Release scripts validate output paths before writing patch and download-stat artifacts.
 - Snapshot, Snapshot Explorer, CLI, Projects, and Settings workflows are split into smaller focused helpers.
 - Additional Sonar analyzer findings and repeated service/UI literals have been cleaned up without changing public behavior.

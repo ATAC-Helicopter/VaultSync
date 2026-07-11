@@ -216,7 +216,7 @@
           <Grid ColumnDefinitions="*,Auto" Row="1" ColumnSpacing="8">
             <TextBox
               x:Name="ProjectSearch"
-              Watermark="{infra:LocalizedString Key=Projects.Page.SearchWatermark}"
+              PlaceholderText="{infra:LocalizedString Key=Projects.Page.SearchWatermark}"
               Text="{Binding SearchText, Mode=TwoWay}" />
 
             <Button Grid.Column="1"
@@ -297,7 +297,7 @@
               <TextBox Grid.Row="2"
                        Grid.Column="1"
                        Text="{Binding GroupTagInput, Mode=TwoWay}"
-                       Watermark="{infra:LocalizedString Key=Projects.Group.TagWatermark}"
+                       PlaceholderText="{infra:LocalizedString Key=Projects.Group.TagWatermark}"
                        Background="{DynamicResource InputBackgroundBrush}"
                        BorderBrush="{DynamicResource DividerBrush}"
                        BorderThickness="1"
@@ -784,7 +784,7 @@
                   </ItemsControl>
 
                   <TextBox Text="{Binding DataContext.ProjectTagInput, ElementName=Root, Mode=TwoWay}"
-                           Watermark="{infra:LocalizedString Key=Projects.Tags.Watermark}"
+                           PlaceholderText="{infra:LocalizedString Key=Projects.Tags.Watermark}"
                            Background="{DynamicResource InputBackgroundBrush}"
                            BorderBrush="{DynamicResource DividerBrush}"
                            BorderThickness="1"
@@ -1119,7 +1119,7 @@
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        TextWrapping="Wrap" />
                             <TextBox Text="{Binding DataContext.PresetEditorImportPath, ElementName=Root, Mode=TwoWay}"
-                                     Watermark="{infra:LocalizedString Key=Projects.Preset.Editor.ImportPathWatermark}"
+                                     PlaceholderText="{infra:LocalizedString Key=Projects.Preset.Editor.ImportPathWatermark}"
                                      Background="{DynamicResource InputBackgroundBrush}"
                                      BorderBrush="{DynamicResource DividerBrush}"
                                      BorderThickness="1"
@@ -1143,7 +1143,7 @@
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        TextWrapping="Wrap" />
                             <TextBox Text="{Binding DataContext.PresetEditorCloneId, ElementName=Root, Mode=TwoWay}"
-                                     Watermark="{infra:LocalizedString Key=Projects.Preset.Editor.CloneIdWatermark}"
+                                     PlaceholderText="{infra:LocalizedString Key=Projects.Preset.Editor.CloneIdWatermark}"
                                      Background="{DynamicResource InputBackgroundBrush}"
                                      BorderBrush="{DynamicResource DividerBrush}"
                                      BorderThickness="1"

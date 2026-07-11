@@ -6,7 +6,7 @@
         x:DataType="viewmodels:BackupWidgetViewModel"
         Width="360"
         Height="220"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         Background="{DynamicResource CardBackgroundBrush}"
         ShowInTaskbar="False"

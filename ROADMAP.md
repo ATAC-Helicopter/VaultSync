@@ -1931,7 +1931,12 @@
   - Done: PR CodeQL analysis passes; the repository alert remains attached to the current Stable commit until the fix is merged.
 - [x] `VS-1838` `P2` Refresh safe 1.8.3 patch dependencies. _(Done 2026-07-12; tracked by #424; target 1.8.3)_
   - Done: Avalonia 11, HarfBuzzSharp, and LiveCharts patch families are updated together, cross-platform CI passes, and the transitive vulnerability audit remains clean.
-  - Deferred: Avalonia 12, Skia minor updates, and deprecated-package migrations remain outside the 1.8.3 patch scope.
+  - Follow-up: the later Avalonia 12 decision is tracked separately under `VS-1839`; unrelated deprecated-package migrations remain deferred.
+- [ ] `VS-1839` `P1` Migrate the desktop UI to Avalonia 12. _(In progress; tracked by #425; target 1.8.3)_
+  - Done locally: the coordinated UI stack now uses Avalonia 12.1, its compatible SkiaSharp/HarfBuzzSharp ABI line, and the Avalonia 12 LiveCharts adapter.
+  - Done locally: the retired Avalonia diagnostics package is removed and placeholder/window-decoration APIs use their Avalonia 12 replacements.
+  - Done locally: compiled bindings remain enabled by default, Debug and Release builds are warning-free, 287 tests pass, and a real macOS startup smoke reaches the Dashboard successfully.
+  - Remaining: confirm Windows/Linux CI and perform focused interaction checks for frameless windows, selection controls, clipboard, storage pickers, and Dashboard charts.
 - [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
 
 ## Future backlog

@@ -3,11 +3,13 @@
 ### Added
 - [VS-1809] Added asynchronous file-level comparison between any two snapshots from the same project, including added, modified, deleted, and unchanged counts, changed-path hotspots, and mass-deletion, growth, or high-churn signals.
 - [VS-1809] Added a searchable changed-file workspace with bounded Git-style unified text diffs for reachable folder and ZIP snapshots; encrypted, binary, offline, and unsupported content remains safely metadata-only.
+- [VS-1839] Migrated the desktop UI to Avalonia 12.1 with its .NET 10 rendering, accessibility, focus, selection, and compiled-binding improvements.
 ### Changed
 - [VS-1809] Expanded snapshot comparison into dedicated hotspot, changed-file, and text-diff panes so file changes can be inspected without crowding the summary.
 - [VS-1809] Improved comparison QoL with automatic same-project restore-point suggestions, contextual selection guidance, cancellable comparison work, filtered-result counts, and clearer empty, capped, and no-match states.
 - [VS-1809] Cancelled superseded text-diff computations when users move quickly between changed files, avoiding unnecessary quadratic diff work for stale selections.
-- [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines without taking major UI-framework migrations into the 1.8.3 release.
+- [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines as the validated baseline for the separately tracked Avalonia 12 migration.
+- [VS-1839] Aligned LiveCharts, SkiaSharp, and HarfBuzzSharp with the Avalonia 12 rendering ABI, removed the retired diagnostics package, and adopted the new placeholder and window-decoration APIs.
 - [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.
 - [VS-1832] Split Snapshot Explorer browsing, archive traversal, text preview, and code-preview helpers into focused operations while preserving existing browsing and restore behavior.
 - [VS-1833] Split snapshot creation, manifest construction, hashing, and persistence into focused stages to reduce complexity while preserving snapshot compatibility.
