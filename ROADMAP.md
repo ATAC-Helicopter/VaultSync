@@ -1935,8 +1935,8 @@
 - [ ] `VS-1839` `P1` Migrate the desktop UI to Avalonia 12. _(In progress; tracked by #425; target 1.8.3)_
   - Done locally: the coordinated UI stack now uses Avalonia 12.1, its compatible SkiaSharp/HarfBuzzSharp ABI line, and the Avalonia 12 LiveCharts adapter.
   - Done locally: the retired Avalonia diagnostics package is removed and placeholder/window-decoration APIs use their Avalonia 12 replacements.
-  - Done locally: compiled bindings remain enabled by default, Debug and Release builds are warning-free, 287 tests pass, and a real macOS startup smoke reaches the Dashboard successfully.
-  - Remaining: confirm Windows/Linux CI and perform focused interaction checks for frameless windows, selection controls, clipboard, storage pickers, and Dashboard charts.
+  - Done: compiled bindings remain enabled by default, Debug and Release builds are warning-free, 287 tests pass, a real macOS startup smoke reaches the Dashboard, and Windows/Linux CI plus CodeQL, Sonar, Store preflight, and dependency submission pass.
+  - Remaining: perform focused interaction checks for frameless windows, selection controls, clipboard, storage pickers, and Dashboard charts.
 - [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
 
 ## Future backlog
