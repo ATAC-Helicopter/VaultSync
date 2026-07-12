@@ -1939,14 +1939,18 @@
   - Done locally: the retired Avalonia diagnostics package is removed and placeholder/window-decoration APIs use their Avalonia 12 replacements.
   - Done: compiled bindings remain enabled by default, Debug and Release builds are warning-free, 287 tests pass, a real macOS startup smoke reaches the Dashboard, and Windows/Linux CI plus CodeQL, Sonar, Store preflight, and dependency submission pass.
   - Remaining: perform focused interaction checks for frameless windows, selection controls, clipboard, storage pickers, and Dashboard charts.
-- [ ] `VS-1840` `P1` Audit and harden fragile 1.8.3 code paths. _(In progress; tracked by #426; target 1.8.3)_
+- [x] `VS-1840` `P1` Audit and harden fragile 1.8.3 code paths. _(Done 2026-07-12; tracked by #426; target 1.8.3)_
   - Done: folder restores reject linked target components immediately before copying, matching archive extraction containment.
   - Done: project scanning skips linked files and directories so cycles and out-of-root source traversal cannot enter snapshots.
   - Done: snapshot comparison and archive browsing preserve case-distinct stored paths instead of collapsing Linux files such as `Foo` and `foo`.
   - Done: archive encryption and decryption clear the temporary PBKDF2 result buffer in addition to the split key buffers.
-  - Measured: removing the global nullable-warning suppression exposes 22 distinct source locations (repeated across UI target frameworks/build passes); burn down and narrow the suppression incrementally rather than masking new defects indefinitely.
-  - Remaining 1.8.x hardening: replace unsafe async command lambdas, harden credential index/subprocess handling, pin and verify release-tool downloads, and add reproducible macOS CI.
-  - Later structural work: split the largest backup/metadata/UI coordinators, introduce per-store database concurrency, expand UI/headless coverage, and migrate large views to compiled bindings incrementally.
+  - Done: all 22 exposed nullable-warning locations are corrected and the global suppression is removed; Debug/Release warning-as-error builds now enforce the complete baseline.
+  - Done: high-risk async UI commands are observed and single-flight, Recovery refresh is lifecycle-cancellable, and command failure/re-entry/cancellation behavior has focused coverage.
+  - Done: macOS credential storage uses native Security.framework calls, Linux helper timeouts terminate process trees, and credential index persistence is atomic, permission-restricted, and corruption-safe.
+  - Done: release packaging requires build, test, and vulnerability gates; AppImageKit is pinned and checksum-verified; required artifact uploads fail hard; macOS build/test runs in CI.
+  - Done: backup history renders incrementally, core Avalonia views use compiled bindings with explicit reflective exceptions only for typed ancestor handoffs, and compare controls expose accessible names/help.
+  - Done: metadata synchronization coordinates per destination instead of globally, presentation hooks are instance-injected, and required schema migration failures no longer leave a silently partial database.
+  - Validated: 302 tests pass locally, Debug and Release builds have zero warnings/errors with warnings treated as errors, analyzer verification passes, localization keys remain in parity, and the dependency vulnerability audit is clean.
 - [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
 
 ## Future backlog

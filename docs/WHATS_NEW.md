@@ -19,6 +19,12 @@ VaultSync `1.8.3` introduces Compare & Change Intelligence with searchable file-
 
 ### Release and maintainability
 - The desktop UI now runs on Avalonia 12.1 with compiled bindings, updated focus/selection behavior, modern placeholder and window-decoration APIs, and an aligned cross-platform rendering stack.
+- Dashboard, Projects, Settings, Backups, and the snapshot compare workspace now use compile-time checked bindings; large backup histories render incrementally instead of constructing every card at once.
+- Async UI actions reject accidental re-entry, observe failures, and cancel Recovery refresh work when its page detaches.
+- Nullable warnings are no longer globally hidden, so warning-as-error builds enforce the complete null-safety baseline.
+- macOS credentials use the native Security framework, Linux credential helpers have real timeouts, and the credential index is written atomically with restricted permissions.
+- Metadata synchronization coordinates independently per destination and no longer depends on mutable global presentation callbacks.
+- Release packaging now requires build, test, and vulnerability gates; macOS has CI coverage; pinned AppImageKit tooling is checksum-verified; missing required artifacts fail the workflow.
 - Release scripts validate output paths before writing patch and download-stat artifacts.
 - Snapshot, Snapshot Explorer, CLI, Projects, and Settings workflows are split into smaller focused helpers.
 - Additional Sonar analyzer findings and repeated service/UI literals have been cleaned up without changing public behavior.

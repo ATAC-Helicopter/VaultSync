@@ -13,6 +13,12 @@
 - [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines as the validated baseline for the separately tracked Avalonia 12 migration.
 - [VS-1839] Aligned LiveCharts, SkiaSharp, and HarfBuzzSharp with the Avalonia 12 rendering ABI, removed the retired diagnostics package, and adopted the new placeholder and window-decoration APIs.
 - [VS-1840] Hardened snapshot scanning and comparison by skipping linked source entries, preserving case-distinct paths, and clearing temporary PBKDF2 key material after archive encryption and decryption.
+- [VS-1840] Replaced re-entrant `async void` UI commands with observed, single-flight async commands and added cancellable Recovery page lifecycle refreshes.
+- [VS-1840] Removed the global nullable-warning suppression and corrected every exposed nullability contract so warning-as-error builds enforce the full baseline again.
+- [VS-1840] Moved macOS credentials to native Security.framework calls, made credential indexes atomic and corruption-safe, and enforced real Linux secret-tool timeouts with process-tree termination.
+- [VS-1840] Added macOS CI and mandatory release build/test/vulnerability gates, checksum verification for pinned AppImageKit tooling, and fail-hard required artifact uploads.
+- [VS-1840] Bounded backup history rendering with localized incremental paging, enabled compiled bindings across the core Dashboard, Projects, Settings, and Backups views, and added accessible compare controls.
+- [VS-1840] Scoped metadata I/O coordination per store, removed mutable static presentation callbacks from the core sync service, and made required schema migration failures explicit.
 - [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.
 - [VS-1832] Split Snapshot Explorer browsing, archive traversal, text preview, and code-preview helpers into focused operations while preserving existing browsing and restore behavior.
 - [VS-1833] Split snapshot creation, manifest construction, hashing, and persistence into focused stages to reduce complexity while preserving snapshot compatibility.
