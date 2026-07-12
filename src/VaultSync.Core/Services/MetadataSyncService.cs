@@ -16,21 +16,32 @@ using Microsoft.Data.Sqlite;
 
 namespace VaultSync.Core.Services;
 
-public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? configStore = null)
+public sealed class MetadataSyncService
 {
     private const string BackupEntityType = "backup";
     private const string InvalidRootPathMessage = "Root path is empty.";
     private const string VaultSyncDirectoryName = ".vaultsync";
 
-    private readonly SqliteRepository _repo = repo;
-    private readonly IAppConfigStore _configStore = configStore ?? StaticAppConfigStore.Instance;
+    private readonly SqliteRepository _repo;
+    private readonly IAppConfigStore _configStore;
+    private readonly Func<Project, string?>? _projectColorResolver;
+    private readonly Action<string, string>? _projectColorApplier;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> MetadataIoGates =
         new(GetPathComparer());
 
-    public static Func<Project, string?>? ProjectColorResolver { get; set; }
-    public static Action<string, string>? ProjectColorApplier { get; set; }
+    public MetadataSyncService(
+        SqliteRepository repo,
+        IAppConfigStore? configStore = null,
+        Func<Project, string?>? projectColorResolver = null,
+        Action<string, string>? projectColorApplier = null)
+    {
+        _repo = repo ?? throw new ArgumentNullException(nameof(repo));
+        _configStore = configStore ?? StaticAppConfigStore.Instance;
+        _projectColorResolver = projectColorResolver;
+        _projectColorApplier = projectColorApplier;
+    }
 
     public MetadataSyncResult ImportFromStore(string rootPath, MetadataSyncOptions? options = null)
     {
@@ -2793,7 +2804,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     {
         try
         {
-            string? color = ProjectColorResolver?.Invoke(project);
+            string? color = _projectColorResolver?.Invoke(project);
             var settings = new Dictionary<string, object?>();
             if (!string.IsNullOrWhiteSpace(color))
             {
@@ -3188,9 +3199,9 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     private static string NormalizePreferredDestinationId(string? preferredDestinationId, IReadOnlyCollection<BackupDestination> destinations)
         => DestinationIdentityService.NormalizePreferredDestinationId(preferredDestinationId, destinations);
 
-    private static void TryApplyProjectColor(MetaProject metaProject)
+    private void TryApplyProjectColor(MetaProject metaProject)
     {
-        if (ProjectColorApplier is null || string.IsNullOrWhiteSpace(metaProject.ExternalId))
+        if (_projectColorApplier is null || string.IsNullOrWhiteSpace(metaProject.ExternalId))
             return;
 
         try
@@ -3206,7 +3217,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             if (string.IsNullOrWhiteSpace(color))
                 return;
 
-            ProjectColorApplier(metaProject.ExternalId, color);
+            _projectColorApplier(metaProject.ExternalId, color);
         }
         catch
         {
