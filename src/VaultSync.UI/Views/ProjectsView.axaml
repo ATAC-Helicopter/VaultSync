@@ -6,7 +6,8 @@
     xmlns:colorpicker="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.ColorPicker"
     xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
     xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
-    x:CompileBindings="False">
+    xmlns:vm="using:VaultSync.UI.ViewModels"
+    x:DataType="vm:ProjectsViewModel">
 
   <UserControl.Styles>
     <!-- Hover effect for snapshot bars -->
@@ -426,7 +427,7 @@
                             Height="36"
                             Margin="0,0,4,0"
                             VerticalAlignment="Center"
-                            IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                            IsVisible="{ReflectionBinding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
                         <Border CornerRadius="18" Background="{Binding AvatarColor}"/>
                         <Image Source="{Binding AvatarImagePath}"
                                Stretch="UniformToFill"
@@ -595,7 +596,7 @@
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <Grid Width="48"
                   Height="48"
-                  IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                  IsVisible="{ReflectionBinding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
               <Border CornerRadius="24"
                       Background="{Binding AvatarColor}" />
               <Image Source="{Binding AvatarImagePath}"

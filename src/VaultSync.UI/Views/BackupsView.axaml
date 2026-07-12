@@ -6,8 +6,7 @@
              xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
              xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
              x:Class="VaultSync.UI.Views.BackupsView"
-             x:DataType="vm:BackupsViewModel"
-             x:CompileBindings="False">
+             x:DataType="vm:BackupsViewModel">
 
   <UserControl.Resources>
     <controls:StatusToBrushConverter x:Key="StatusToBrushConverter" />
@@ -1227,7 +1226,7 @@
                                 VerticalAlignment="Center" />
                         <Grid Width="40"
                               Height="40"
-                              IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                              IsVisible="{ReflectionBinding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
                           <Border Width="40"
                                   Height="40"
                                   CornerRadius="999"
@@ -1366,12 +1365,12 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox
                                 Classes="preset-combo"
-                                ItemsSource="{Binding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ItemsSource="{ReflectionBinding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding Label}" />
+                                  <TextBlock Text="{ReflectionBinding Label}" />
                                 </DataTemplate>
                               </ComboBox.ItemTemplate>
                             </ComboBox>
@@ -1386,12 +1385,12 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox x:Name="BackupsProjectEncryptionPolicyCombo"
                                       Classes="preset-combo"
-                                      ItemsSource="{Binding DataContext.EncryptionPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      ItemsSource="{ReflectionBinding DataContext.EncryptionPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                       SelectedItem="{Binding EncryptionPolicyOption, Mode=TwoWay}"
                                       HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding Label}" />
+                                  <TextBlock Text="{ReflectionBinding Label}" />
                                 </DataTemplate>
                               </ComboBox.ItemTemplate>
                             </ComboBox>
@@ -1406,12 +1405,12 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox
                                 Classes="preset-combo"
-                                ItemsSource="{Binding DataContext.RestoreModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ItemsSource="{ReflectionBinding DataContext.RestoreModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 SelectedItem="{Binding RestoreModeOption, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding Label}" />
+                                  <TextBlock Text="{ReflectionBinding Label}" />
                                 </DataTemplate>
                               </ComboBox.ItemTemplate>
                             </ComboBox>
@@ -1426,12 +1425,12 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox
                                 Classes="preset-combo"
-                                ItemsSource="{Binding DataContext.VerificationPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ItemsSource="{ReflectionBinding DataContext.VerificationPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 SelectedItem="{Binding VerificationPolicyOption, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding Label}" />
+                                  <TextBlock Text="{ReflectionBinding Label}" />
                                 </DataTemplate>
                               </ComboBox.ItemTemplate>
                             </ComboBox>
@@ -1451,7 +1450,7 @@
                                   Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
                                   Classes="small-button"
                                   Margin="0,0,0,4"
-                                  Command="{Binding DataContext.ManageProjectEncryptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  Command="{ReflectionBinding DataContext.ManageProjectEncryptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                   CommandParameter="{Binding}" />
                         </WrapPanel>
 
@@ -1475,7 +1474,7 @@
                                   HorizontalAlignment="Right"
                                   VerticalAlignment="Center"
                                   Margin="0,0,0,2"
-                                  Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  Command="{ReflectionBinding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                   CommandParameter="{Binding}" />
                         </Grid>
                       </Grid>
@@ -1942,45 +1941,45 @@
                                           <CheckBox Content="{infra:LocalizedString Key=Backups.Section.Keep}"
                                                     VerticalAlignment="Center"
                                                     IsChecked="{Binding IsProtected, Mode=TwoWay}"
-                                                    Command="{Binding Tag.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    Command="{ReflectionBinding Tag.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}"
                                                     FontSize="11"/>
                                           <Button Content="{infra:LocalizedString Key=Backups.Section.OpenFolder}"
                                                   Classes="small-button"
-                                                  Command="{Binding Tag.OpenBackupFolderCommand,
+                                                  Command="{ReflectionBinding Tag.OpenBackupFolderCommand,
                                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.Section.Explore}"
                                                   Classes="small-button"
-                                                  Command="{Binding Tag.ExploreBackupCommand,
+                                                  Command="{ReflectionBinding Tag.ExploreBackupCommand,
                                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.Section.Restore}"
                                                   Classes="small-button"
-                                                  Command="{Binding Tag.RestoreBackupCommand,
+                                                  Command="{ReflectionBinding Tag.RestoreBackupCommand,
                                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.DiffSummary.ViewDiff}"
                                                   Classes="small-button"
                                                   IsEnabled="{Binding CanOpenDiffDetails}"
-                                                  Command="{Binding Tag.ShowSnapshotDiffPreviewCommand,
+                                                  Command="{ReflectionBinding Tag.ShowSnapshotDiffPreviewCommand,
                                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.DiffSummary.ExportText}"
                                                   Classes="small-button"
                                                   IsEnabled="{Binding CanOpenDiffDetails}"
-                                                  Command="{Binding Tag.ExportSnapshotSummaryTextCommand,
+                                                  Command="{ReflectionBinding Tag.ExportSnapshotSummaryTextCommand,
                                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.DiffSummary.ExportJson}"
                                                   Classes="small-button"
                                                   IsEnabled="{Binding CanOpenDiffDetails}"
-                                                  Command="{Binding Tag.ExportSnapshotSummaryJsonCommand,
+                                                  Command="{ReflectionBinding Tag.ExportSnapshotSummaryJsonCommand,
                                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.Section.Delete}"
                                                   Classes="small-button"
-                                                  Command="{Binding Tag.DeleteBackupCommand,
+                                                  Command="{ReflectionBinding Tag.DeleteBackupCommand,
                                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                         </WrapPanel>

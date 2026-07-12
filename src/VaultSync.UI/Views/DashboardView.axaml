@@ -3,9 +3,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
     xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+    xmlns:vm="using:VaultSync.UI.ViewModels"
     xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
     x:Class="VaultSync.UI.Views.DashboardView"
-    x:CompileBindings="False"
+    x:DataType="vm:DashboardViewModel"
     Background="{DynamicResource VS.WindowBackground}">
 
   <ScrollViewer VerticalScrollBarVisibility="Auto"
