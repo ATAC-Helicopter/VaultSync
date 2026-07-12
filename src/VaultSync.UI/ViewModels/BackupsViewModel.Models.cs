@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -238,8 +239,21 @@ namespace VaultSync.UI.ViewModels
             UiFormat.FormatBytes(bytes);
     }
 
-    public class SnapshotProjectGroup
+    public class SnapshotProjectGroup : ViewModelBase
     {
+        internal const int DefaultPageSize = 20;
+
+        private readonly List<BackupSnapshotItem> _allSnapshots = [];
+        private readonly RelayCommand _loadMoreSnapshotsCommand;
+
+        public SnapshotProjectGroup()
+        {
+            _loadMoreSnapshotsCommand = new RelayCommand(
+                _ => LoadMoreSnapshots(),
+                _ => HasMoreSnapshots);
+            LoadMoreSnapshotsCommand = _loadMoreSnapshotsCommand;
+        }
+
         public string? ProjectId
         {
             get; set;
@@ -262,6 +276,46 @@ namespace VaultSync.UI.ViewModels
             get;
         } =
             [];
+
+        public ICommand LoadMoreSnapshotsCommand { get; }
+        public int TotalSnapshotCount => _allSnapshots.Count;
+        public int VisibleSnapshotCount => Snapshots.Count;
+        public int RemainingSnapshotCount => Math.Max(0, TotalSnapshotCount - VisibleSnapshotCount);
+        public bool HasMoreSnapshots => RemainingSnapshotCount > 0;
+
+        internal void SetSnapshots(IEnumerable<BackupSnapshotItem> snapshots, int initialCount = DefaultPageSize)
+        {
+            ArgumentNullException.ThrowIfNull(snapshots);
+            if (initialCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(initialCount));
+
+            _allSnapshots.Clear();
+            _allSnapshots.AddRange(snapshots);
+            Snapshots.Clear();
+            AppendSnapshots(initialCount);
+        }
+
+        public void LoadMoreSnapshots(int pageSize = DefaultPageSize)
+        {
+            if (pageSize <= 0)
+                throw new ArgumentOutOfRangeException(nameof(pageSize));
+
+            AppendSnapshots(pageSize);
+        }
+
+        private void AppendSnapshots(int count)
+        {
+            int targetCount = Math.Min(TotalSnapshotCount, VisibleSnapshotCount + count);
+            for (int index = VisibleSnapshotCount; index < targetCount; index++)
+                Snapshots.Add(_allSnapshots[index]);
+
+            OnPropertiesChanged(
+                nameof(TotalSnapshotCount),
+                nameof(VisibleSnapshotCount),
+                nameof(RemainingSnapshotCount),
+                nameof(HasMoreSnapshots));
+            _loadMoreSnapshotsCommand.RaiseCanExecuteChanged();
+        }
     }
 
     public sealed class BackupsProjectSortOption

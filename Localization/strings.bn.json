@@ -198,6 +198,7 @@
   "Backups.Section.TypeImported": "আমদানি করা",
   "Backups.Section.SnapshotCount.Plural": "{0} ব্যাকআপ",
   "Backups.Section.SnapshotCount.Singular": "{0} ব্যাকআপ",
+  "Backups.Section.ShowMore": "আরও দেখুন",
   "Backups.Section.SnapshotsActivity": "প্রতিদিনের ব্যাকআপ (শেষ ৭ দিন)",
   "Backups.Section.StorageLabel": "ব্যাকআপ স্টোরেজ",
   "Backups.Section.StorageSuffix": "ব্যবহৃত",

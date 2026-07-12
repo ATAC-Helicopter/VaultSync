@@ -1988,6 +1988,18 @@
                                   </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                               </ItemsControl>
+                              <Button Classes="secondary"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,4,0,2"
+                                      Padding="16,8"
+                                      IsVisible="{Binding HasMoreSnapshots}"
+                                      Command="{Binding LoadMoreSnapshotsCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.ShowMore}" />
+                                  <TextBlock Text="{Binding RemainingSnapshotCount, StringFormat='({0})'}"
+                                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </StackPanel>
+                              </Button>
                           </Border>
                         </Expander>
                         </Border>

@@ -198,6 +198,7 @@
   "Backups.Section.TypeImported": "مستورد",
   "Backups.Section.SnapshotCount.Plural": "{0} النسخ الاحتياطية",
   "Backups.Section.SnapshotCount.Singular": "{0} النسخ الاحتياطي",
+  "Backups.Section.ShowMore": "عرض المزيد",
   "Backups.Section.SnapshotsActivity": "النسخ الاحتياطية يوميًا (آخر 7 أيام)",
   "Backups.Section.StorageLabel": "تخزين النسخ الاحتياطية",
   "Backups.Section.StorageSuffix": "مستخدم",

@@ -2909,8 +2909,7 @@ namespace VaultSync.UI.ViewModels
                         groupVm.ProjectTagChips.Add(chip);
                 }
 
-                foreach (BackupSnapshotItem? snap in ordered)
-                    groupVm.Snapshots.Add(snap);
+                groupVm.SetSnapshots(ordered);
 
                 groups.Add(groupVm);
             }

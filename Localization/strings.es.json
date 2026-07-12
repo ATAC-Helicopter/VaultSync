@@ -198,6 +198,7 @@
   "Backups.Section.TypeImported": "Importado",
   "Backups.Section.SnapshotCount.Plural": "{0} copias",
   "Backups.Section.SnapshotCount.Singular": "{0} copia",
+  "Backups.Section.ShowMore": "Mostrar más",
   "Backups.Section.SnapshotsActivity": "Respaldos por día (últimos 7 días)",
   "Backups.Section.StorageLabel": "Almacenamiento de respaldos",
   "Backups.Section.StorageSuffix": "usado",

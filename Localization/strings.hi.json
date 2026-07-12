@@ -198,6 +198,7 @@
   "Backups.Section.TypeImported": "आयातित",
   "Backups.Section.SnapshotCount.Plural": "{0} बैकअप",
   "Backups.Section.SnapshotCount.Singular": "{0} बैकअप",
+  "Backups.Section.ShowMore": "और दिखाएं",
   "Backups.Section.SnapshotsActivity": "दैनिक बैकअप (पिछले 7 दिन)",
   "Backups.Section.StorageLabel": "बैकअप स्टोरेज",
   "Backups.Section.StorageSuffix": "उपयोग",

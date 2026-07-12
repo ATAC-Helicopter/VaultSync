@@ -198,6 +198,7 @@
   "Backups.Section.TypeImported": "Импортировано",
   "Backups.Section.SnapshotCount.Plural": "{0} резервных копий",
   "Backups.Section.SnapshotCount.Singular": "{0} резервная копия",
+  "Backups.Section.ShowMore": "Показать ещё",
   "Backups.Section.SnapshotsActivity": "Резервные копии по дням (последние 7 дней)",
   "Backups.Section.StorageLabel": "Хранилище резервных копий",
   "Backups.Section.StorageSuffix": "использовано",

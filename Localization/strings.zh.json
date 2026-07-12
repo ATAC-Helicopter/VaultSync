@@ -198,6 +198,7 @@
   "Backups.Section.TypeImported": "已导入",
   "Backups.Section.SnapshotCount.Plural": "{0} 个备份",
   "Backups.Section.SnapshotCount.Singular": "{0} 个备份",
+  "Backups.Section.ShowMore": "显示更多",
   "Backups.Section.SnapshotsActivity": "按天统计备份（最近 7 天）",
   "Backups.Section.StorageLabel": "备份存储",
   "Backups.Section.StorageSuffix": "已使用",
