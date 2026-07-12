@@ -52,9 +52,9 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             DeleteBackupPreparation preparation = await Task.Run(() => PrepareDeleteBackup(backupId));
-            if (!preparation.IsReady)
+            if (!preparation.IsReady || preparation.Backup is null)
                 return;
-            Backup? backup      = preparation.Backup;
+            Backup backup      = preparation.Backup;
             int snapshotId  = preparation.SnapshotId;
             int projectId   = preparation.ProjectId;
             string backupRoot  = preparation.BackupRoot;
@@ -128,7 +128,7 @@ namespace VaultSync.UI.ViewModels
 
                             destToUse = new BackupDestination
                             {
-                                Path = pathToUse,
+                                Path = pathToUse ?? string.Empty,
                                 CredentialName = matchedDestination.CredentialName,
                                 Active = true,
                                 AutoMount = true,

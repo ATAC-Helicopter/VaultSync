@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 
@@ -70,7 +71,7 @@ namespace VaultSync.UI.Services
 
         public static bool TryHandlePatchArgs(string[] args)
         {
-            if (!TryParsePatchArgs(args, out PatchApplyRequest? request, out _))
+            if (!TryParsePatchArgs(args, out PatchApplyRequest? request, out _) || request is null)
                 return false;
 
             PatchApplyResult result = ApplyPatch(request, null, CancellationToken.None);
@@ -81,10 +82,13 @@ namespace VaultSync.UI.Services
         public static bool IsHeadlessPatchInvocation(string[] args)
             => args.Any(a => string.Equals(a, HeadlessArg, StringComparison.OrdinalIgnoreCase));
 
-        public static bool TryParsePatchArgs(string[] args, out PatchApplyRequest? request)
+        public static bool TryParsePatchArgs(string[] args, [NotNullWhen(true)] out PatchApplyRequest? request)
             => TryParsePatchArgs(args, out request, out _);
 
-        private static bool TryParsePatchArgs(string[] args, out PatchApplyRequest? request, out string? expectedRequestHash)
+        private static bool TryParsePatchArgs(
+            string[] args,
+            [NotNullWhen(true)] out PatchApplyRequest? request,
+            out string? expectedRequestHash)
         {
             request = null;
             expectedRequestHash = null;
@@ -114,7 +118,7 @@ namespace VaultSync.UI.Services
                         return false;
 
                     PatchApplyRequest? parsed = JsonSerializer.Deserialize<PatchApplyRequest>(requestBytes);
-                    if (!TryNormalizeRequest(parsed, out request, out _))
+                    if (!TryNormalizeRequest(parsed, out request, out _) || request is null)
                         return false;
 
                     if (!IsUnderTrustedPatchTempRoot(request.ManifestPath))

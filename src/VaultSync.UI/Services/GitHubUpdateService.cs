@@ -91,7 +91,7 @@ namespace VaultSync.UI.Services
         private static readonly TimeSpan s_releaseCacheTtl = TimeSpan.FromMinutes(5);
 
         public static async Task<UpdateCheckEvaluation> CheckForUpdateAsync(
-            string currentVersion,
+            string? currentVersion,
             GitHubReleaseChannel channel,
             CancellationToken cancellationToken)
         {
@@ -146,7 +146,7 @@ namespace VaultSync.UI.Services
 
             Console.WriteLine($"[Update] Candidate release: tag={releaseTag}, prerelease={candidate.Prerelease}, published={candidate.PublishedAt:O}, target={candidate.TargetCommitish}.");
 
-            if (!IsReleaseNewer(releaseTag, currentVersion))
+            if (!IsReleaseNewer(releaseTag, currentVersion ?? string.Empty))
             {
                 Console.WriteLine("[Update] Candidate is not newer than current version.");
                 diagnostics.Decision = "candidate-not-newer";

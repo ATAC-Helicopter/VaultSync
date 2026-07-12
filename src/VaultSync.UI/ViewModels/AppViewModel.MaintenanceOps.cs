@@ -50,7 +50,7 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 AppConfig cfg = _configStore.Load();
-                MaintenanceConfig maintenance = cfg.Advanced.Maintenance ?? new MaintenanceConfig();
+                MaintenanceConfig maintenance = cfg.Advanced.Maintenance ??= new MaintenanceConfig();
                 if (!maintenance.Enabled)
                     return;
 

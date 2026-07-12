@@ -101,7 +101,7 @@ namespace VaultSync.UI
         private bool _showDriveHealthWarnings = true;
         private int _minimumFreeSpacePercent = 10;
 
-    private string _selectedTheme;
+    private string _selectedTheme = ThemeSystem;
     private bool _useCompactLayout = false;
     private bool _showProjectAvatars = true;
     private string _saveStatus = string.Empty;
@@ -931,11 +931,11 @@ namespace VaultSync.UI
                 : BackupLocationPath;
             string? nextBackupRoot = ResolveBackupRootForSave(fallbackRoot, cfg.Backups.BackupRoot ?? cfg.Backups.Location);
             List<BackupDestination> nextDestinations = preserveExistingDestinations
-                ? [.. cfg.Backups.Destinations]
+                ? [.. cfg.Backups.Destinations!]
                 : [.. destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
-                Path           = d.Path,
+                Path           = d.Path ?? string.Empty,
                 CredentialName = d.CredentialName,
                 Active         = d.Active,
                 AutoMount      = d.AutoMount,
@@ -2809,7 +2809,7 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                if (ex.InnerException.Message == "LINUX_SECRET_TOOL_MISSING")
+                if (ex.InnerException?.Message == "LINUX_SECRET_TOOL_MISSING")
                 {
                     BackupEncryptionSecretStatus = L("Projects.Encryption.LinuxSecretToolMissing",
                         "Linux secret storage is unavailable. Ensure 'libsecret' is installed and your keyring service is running.");
