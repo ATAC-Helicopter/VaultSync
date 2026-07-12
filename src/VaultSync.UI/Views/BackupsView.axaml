@@ -2225,11 +2225,15 @@
                       <Button Content="‹"
                               Classes="small-button"
                               Padding="8,2"
+                              AutomationProperties.Name="Previous changed file"
+                              AutomationProperties.HelpText="Select the previous file in the filtered snapshot comparison."
                               ToolTip.Tip="{infra:LocalizedString Key=Common.Previous}"
                               Command="{Binding SelectPreviousDiffFileCommand}" />
                       <Button Content="›"
                               Classes="small-button"
                               Padding="8,2"
+                              AutomationProperties.Name="Next changed file"
+                              AutomationProperties.HelpText="Select the next file in the filtered snapshot comparison."
                               ToolTip.Tip="{infra:LocalizedString Key=Common.Next}"
                               Command="{Binding SelectNextDiffFileCommand}" />
                     </StackPanel>
@@ -2239,9 +2243,13 @@
                         ColumnSpacing="6">
                     <TextBox Text="{Binding DiffFileSearchText}"
                              PlaceholderText="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
+                             AutomationProperties.Name="Search changed files"
+                             AutomationProperties.HelpText="Filter snapshot changes by file name or path."
                              FontSize="12" />
                     <ComboBox Grid.Column="1"
                               MinWidth="105"
+                              AutomationProperties.Name="Changed file type filter"
+                              AutomationProperties.HelpText="Show all, added, modified, or deleted files."
                               ItemsSource="{Binding DiffFileKindFilters}"
                               SelectedItem="{Binding SelectedDiffFileKindFilter}">
                       <ComboBox.ItemTemplate>
@@ -2253,6 +2261,8 @@
                     <Button Grid.Column="2"
                             Content="{infra:LocalizedString Key=Common.Clear}"
                             Classes="small-button"
+                            AutomationProperties.Name="Clear changed file filters"
+                            AutomationProperties.HelpText="Clear the comparison search and file type filter."
                             Command="{Binding ClearDiffFileFiltersCommand}" />
                   </Grid>
                   <ListBox Grid.Row="2"

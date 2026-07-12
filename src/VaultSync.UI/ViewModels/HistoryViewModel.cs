@@ -59,13 +59,14 @@ public sealed class HistoryViewModel : ViewModelBase
     private readonly RelayCommand _previousPageCommand;
     private readonly RelayCommand _nextPageCommand;
     private readonly RelayCommand _resetFiltersCommand;
-    private readonly RelayCommand _toggleSelectedProtectedCommand;
-    private readonly RelayCommand _toggleSelectedKnownGoodCommand;
-    private readonly RelayCommand _saveSelectedSnapshotMetadataCommand;
-    private readonly RelayCommand _clearSelectedSnapshotMetadataCommand;
+    private readonly AsyncRelayCommand _toggleSelectedProtectedCommand;
+    private readonly AsyncRelayCommand _toggleSelectedKnownGoodCommand;
+    private readonly AsyncRelayCommand _saveSelectedSnapshotMetadataCommand;
+    private readonly AsyncRelayCommand _clearSelectedSnapshotMetadataCommand;
     private readonly RelayCommand _browseSelectedSnapshotCommand;
     private readonly RelayCommand _openRecoveryCommand;
     private readonly RelayCommand _compareSelectedSnapshotCommand;
+    private readonly AsyncRelayCommand _refreshCommand;
     private readonly List<HistoryTimelineItemViewModel> _allTimelineItems = [];
     private int _filterRevision;
     private int _refreshInFlight;
@@ -113,22 +114,23 @@ public sealed class HistoryViewModel : ViewModelBase
     {
         _configStore = configStore;
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
-        RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
+        _refreshCommand = new AsyncRelayCommand(_ => RefreshAsync(force: true), operationName: "refresh-history");
+        RefreshCommand = _refreshCommand;
         _previousPageCommand = new RelayCommand(_ => MovePage(-1), _ => CanGoToPreviousPage);
         _nextPageCommand = new RelayCommand(_ => MovePage(1), _ => CanGoToNextPage);
         _resetFiltersCommand = new RelayCommand(_ => ResetFilters(), _ => HasActiveFilters);
-        _toggleSelectedProtectedCommand = new RelayCommand(
-            async _ => await ToggleSelectedSnapshotMarkerAsync(toggleProtected: true),
-            _ => CanEditSelectedSnapshotMetadata);
-        _toggleSelectedKnownGoodCommand = new RelayCommand(
-            async _ => await ToggleSelectedSnapshotMarkerAsync(toggleProtected: false),
-            _ => CanEditSelectedSnapshotMetadata);
-        _saveSelectedSnapshotMetadataCommand = new RelayCommand(
-            async _ => await SaveSelectedSnapshotMetadataAsync(clearTextMetadata: false),
-            _ => CanEditSelectedSnapshotMetadata);
-        _clearSelectedSnapshotMetadataCommand = new RelayCommand(
-            async _ => await SaveSelectedSnapshotMetadataAsync(clearTextMetadata: true),
-            _ => CanEditSelectedSnapshotMetadata && HasSelectedSnapshotTextMetadata);
+        _toggleSelectedProtectedCommand = new AsyncRelayCommand(
+            _ => ToggleSelectedSnapshotMarkerAsync(toggleProtected: true),
+            _ => CanEditSelectedSnapshotMetadata, "toggle-snapshot-protection");
+        _toggleSelectedKnownGoodCommand = new AsyncRelayCommand(
+            _ => ToggleSelectedSnapshotMarkerAsync(toggleProtected: false),
+            _ => CanEditSelectedSnapshotMetadata, "toggle-snapshot-known-good");
+        _saveSelectedSnapshotMetadataCommand = new AsyncRelayCommand(
+            _ => SaveSelectedSnapshotMetadataAsync(clearTextMetadata: false),
+            _ => CanEditSelectedSnapshotMetadata, "save-snapshot-metadata");
+        _clearSelectedSnapshotMetadataCommand = new AsyncRelayCommand(
+            _ => SaveSelectedSnapshotMetadataAsync(clearTextMetadata: true),
+            _ => CanEditSelectedSnapshotMetadata && HasSelectedSnapshotTextMetadata, "clear-snapshot-metadata");
         _browseSelectedSnapshotCommand = new RelayCommand(
             _ => BrowseSelectedSnapshot(),
             _ => CanBrowseSelectedSnapshot);

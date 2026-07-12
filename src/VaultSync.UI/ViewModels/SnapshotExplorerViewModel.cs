@@ -71,12 +71,12 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
     private bool _isEncryptedBackup;
     private int _previewRequestVersion;
     private SnapshotExplorerEntryViewModel? _selectedEntry;
-    private readonly RelayCommand _openSelectedCommand;
-    private readonly RelayCommand _previewSelectedCommand;
-    private readonly RelayCommand _restoreSelectedCommand;
-    private readonly RelayCommand _goUpCommand;
-    private readonly RelayCommand _refreshCommand;
-    private readonly RelayCommand _clearSearchCommand;
+    private readonly AsyncRelayCommand _openSelectedCommand;
+    private readonly AsyncRelayCommand _previewSelectedCommand;
+    private readonly AsyncRelayCommand _restoreSelectedCommand;
+    private readonly AsyncRelayCommand _goUpCommand;
+    private readonly AsyncRelayCommand _refreshCommand;
+    private readonly AsyncRelayCommand _clearSearchCommand;
 
     public SnapshotExplorerViewModel(
         SnapshotExplorerService service,
@@ -88,23 +88,23 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         _backupRoot = backupRoot;
         _restoreTargetRoot = restoreTargetRoot;
         Title = title;
-        _openSelectedCommand = new RelayCommand(async _ => await ToggleSelectedFolderAsync(), _ => !IsBusy && SelectedEntry?.IsFolder == true);
-        _previewSelectedCommand = new RelayCommand(async _ => await PreviewSelectedAsync(), _ => !IsBusy && SelectedEntry?.CanPreview == true);
-        _restoreSelectedCommand = new RelayCommand(async _ => await RestoreSelectedAsync(), _ => !IsBusy && SelectedEntry is not null);
-        _goUpCommand = new RelayCommand(async _ => await GoUpAsync(), _ => !IsBusy && !string.IsNullOrWhiteSpace(CurrentPath));
-        _refreshCommand = new RelayCommand(async _ => await LoadEntriesAsync(), _ => !IsBusy);
-        _clearSearchCommand = new RelayCommand(async _ =>
+        _openSelectedCommand = new AsyncRelayCommand(_ => ToggleSelectedFolderAsync(), _ => !IsBusy && SelectedEntry?.IsFolder == true, "open-snapshot-folder");
+        _previewSelectedCommand = new AsyncRelayCommand(_ => PreviewSelectedAsync(), _ => !IsBusy && SelectedEntry?.CanPreview == true, "preview-snapshot-file");
+        _restoreSelectedCommand = new AsyncRelayCommand(_ => RestoreSelectedAsync(), _ => !IsBusy && SelectedEntry is not null, "restore-snapshot-entry");
+        _goUpCommand = new AsyncRelayCommand(_ => GoUpAsync(), _ => !IsBusy && !string.IsNullOrWhiteSpace(CurrentPath), "navigate-snapshot-parent");
+        _refreshCommand = new AsyncRelayCommand(_ => LoadEntriesAsync(), _ => !IsBusy, "refresh-snapshot-explorer");
+        _clearSearchCommand = new AsyncRelayCommand(async _ =>
         {
             SearchText = string.Empty;
             await LoadEntriesAsync();
-        }, _ => !IsBusy && !string.IsNullOrWhiteSpace(SearchText));
+        }, _ => !IsBusy && !string.IsNullOrWhiteSpace(SearchText), "clear-snapshot-search");
         OpenSelectedCommand = _openSelectedCommand;
         PreviewSelectedCommand = _previewSelectedCommand;
         RestoreSelectedCommand = _restoreSelectedCommand;
         GoUpCommand = _goUpCommand;
         RefreshCommand = _refreshCommand;
         ClearSearchCommand = _clearSearchCommand;
-        _ = LoadEntriesAsync();
+        _ = DetachedTask.RunAsync(LoadEntriesAsync, "load-snapshot-explorer");
     }
 
     public string Title { get; }

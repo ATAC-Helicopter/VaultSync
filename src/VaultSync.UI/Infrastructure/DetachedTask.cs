@@ -31,6 +31,10 @@ public static class DetachedTask
         {
             await operation().ConfigureAwait(false);
         }
+        catch (OperationCanceledException)
+        {
+            // Cancellation is an expected outcome for view and application lifecycles.
+        }
         catch (Exception ex)
         {
             LogFailure(operationName, ex);
