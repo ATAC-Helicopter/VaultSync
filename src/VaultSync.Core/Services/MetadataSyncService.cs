@@ -26,7 +26,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     private readonly IAppConfigStore _configStore = configStore ?? StaticAppConfigStore.Instance;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
         new(StringComparer.OrdinalIgnoreCase);
-    private static readonly SemaphoreSlim MetadataIoGate = new(1, 1);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> MetadataIoGates =
+        new(GetPathComparer());
 
     public static Func<Project, string?>? ProjectColorResolver { get; set; }
     public static Action<string, string>? ProjectColorApplier { get; set; }
@@ -39,7 +40,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     public async Task<MetadataSyncResult> ImportFromStoreAsync(string rootPath, MetadataSyncOptions? options = null, CancellationToken ct = default)
     {
         using var totalTiming = RuntimeTiming.Measure("Metadata import total");
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             using (RuntimeTiming.Measure("Metadata import network wait"))
@@ -118,7 +120,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
 
@@ -129,7 +131,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
 
     public async Task<MetadataSyncPreview> PreviewImportFromStoreAsync(string rootPath, MetadataSyncOptions? options = null, CancellationToken ct = default)
     {
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
@@ -193,7 +196,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
 
@@ -1983,7 +1986,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         string machineId,
         CancellationToken ct = default)
     {
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
@@ -2020,7 +2024,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
 
@@ -2137,7 +2141,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         bool forceBackfill = false,
         CancellationToken ct = default)
     {
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
@@ -2174,7 +2179,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
 
@@ -2375,7 +2380,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
             return;
 
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
@@ -2412,9 +2418,31 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
+
+    private static SemaphoreSlim GetMetadataIoGate(string rootPath)
+    {
+        string key;
+        try
+        {
+            key = string.IsNullOrWhiteSpace(rootPath)
+                ? "<invalid-root>"
+                : Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            key = rootPath?.Trim() ?? "<invalid-root>";
+        }
+
+        return MetadataIoGates.GetOrAdd(key, static _ => new SemaphoreSlim(1, 1));
+    }
+
+    private static StringComparer GetPathComparer() =>
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
 
     private static void TryExportBackupTombstoneToDeferred(
         string rootPath,

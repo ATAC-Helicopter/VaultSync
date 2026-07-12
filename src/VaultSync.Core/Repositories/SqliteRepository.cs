@@ -2132,23 +2132,16 @@ DELETE FROM sqlite_sequence;";
 
         private static void EnsureColumnExists(SqliteConnection connection, string table, string column, string alterSql)
         {
-            try
-            {
-                var cols = connection.Query(
-                        "SELECT name AS Name FROM pragma_table_info(@TableName);",
-                        new { TableName = table })
-                    .Select(row => (string)row.Name)
-                    .Where(name => !string.IsNullOrWhiteSpace(name))
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var columns = connection.Query(
+                    "SELECT name AS Name FROM pragma_table_info(@TableName);",
+                    new { TableName = table })
+                .Select(row => (string)row.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                if (!cols.Contains(column))
-                {
-                    connection.Execute(alterSql);
-                }
-            }
-            catch (Exception ex)
+            if (!columns.Contains(column))
             {
-                Console.WriteLine($"[SqliteRepository] Failed to ensure column {column} on {table}: {ex.Message}");
+                connection.Execute(alterSql);
             }
         }
 
