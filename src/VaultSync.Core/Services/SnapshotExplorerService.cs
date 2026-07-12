@@ -61,7 +61,7 @@ public sealed class SnapshotExplorerService
 
         string[] selectedPaths = [.. relativePaths
             .Select(path => NormalizeExplorerPath(path, allowEmpty: false))
-            .Distinct(StringComparer.OrdinalIgnoreCase)];
+            .Distinct(StringComparer.Ordinal)];
         if (selectedPaths.Length == 0)
             return new SnapshotRestoreSelectionResult(0, 0);
 
@@ -149,8 +149,8 @@ public sealed class SnapshotExplorerService
     {
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
         string folderPrefix = string.IsNullOrWhiteSpace(folderPath) ? string.Empty : folderPath.TrimEnd('/') + "/";
-        var folders = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.OrdinalIgnoreCase);
-        var files = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.OrdinalIgnoreCase);
+        var folders = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.Ordinal);
+        var files = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.Ordinal);
 
         foreach (ZipArchiveEntry entry in archive.Entries)
         {
@@ -204,7 +204,7 @@ public sealed class SnapshotExplorerService
         string folderPath,
         string folderPrefix)
     {
-        if (!relative.StartsWith(folderPrefix, StringComparison.OrdinalIgnoreCase))
+        if (!relative.StartsWith(folderPrefix, StringComparison.Ordinal))
             return;
 
         string remaining = relative[folderPrefix.Length..];
@@ -266,7 +266,7 @@ public sealed class SnapshotExplorerService
     {
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
         ZipArchiveEntry? entry = archive.Entries.FirstOrDefault(e =>
-            string.Equals(NormalizeArchiveEntryPath(e.FullName), relativePath, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(NormalizeArchiveEntryPath(e.FullName), relativePath, StringComparison.Ordinal) &&
             !string.IsNullOrEmpty(e.Name));
         if (entry is null)
             return SnapshotPreviewResult.Failure("File is missing from the backup archive.");
@@ -337,15 +337,18 @@ public sealed class SnapshotExplorerService
     }
 
     private static bool IsSelected(string entryPath, string selectedPath) =>
-        string.Equals(entryPath, selectedPath, StringComparison.OrdinalIgnoreCase) ||
-        entryPath.StartsWith(selectedPath.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase);
+        string.Equals(entryPath, selectedPath, StringComparison.Ordinal) ||
+        entryPath.StartsWith(selectedPath.TrimEnd('/') + "/", StringComparison.Ordinal);
 
     private static void CopyFileUnderRoot(string sourcePath, string targetRoot, string relativePath)
     {
         string targetPath = ResolvePathUnderRoot(targetRoot, relativePath);
         string? parent = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrEmpty(parent))
+        {
             Directory.CreateDirectory(parent);
+            EnsureNoLinkedPathComponents(targetRoot, targetPath);
+        }
         File.Copy(sourcePath, targetPath, overwrite: true);
     }
 

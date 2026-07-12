@@ -107,7 +107,7 @@ public sealed class SnapshotCompareService(SqliteRepository repository)
 
     private static Dictionary<string, FileEntry> IndexFiles(IEnumerable<FileEntry> files)
     {
-        var result = new Dictionary<string, FileEntry>(StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<string, FileEntry>(StringComparer.Ordinal);
         foreach (FileEntry file in files)
         {
             string path = NormalizePath(file.RelPath);
@@ -138,7 +138,7 @@ public sealed class SnapshotCompareService(SqliteRepository repository)
         IEnumerable<SnapshotFileChange> changes)
     {
         return [.. changes
-            .GroupBy(change => ToPathBucket(change.Path), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(change => ToPathBucket(change.Path), StringComparer.Ordinal)
             .Select(group => new SnapshotDiffPathStat(
                 group.Key,
                 group.Count(),

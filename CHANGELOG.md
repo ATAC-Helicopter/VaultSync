@@ -12,6 +12,7 @@
 - [VS-1809] Redesigned restore-point comparison with compact change cards, an app-native empty state, and a detailed workspace shown only when changed files are available; zero examined files are no longer reported as confirmed no-change results.
 - [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines as the validated baseline for the separately tracked Avalonia 12 migration.
 - [VS-1839] Aligned LiveCharts, SkiaSharp, and HarfBuzzSharp with the Avalonia 12 rendering ABI, removed the retired diagnostics package, and adopted the new placeholder and window-decoration APIs.
+- [VS-1840] Hardened snapshot scanning and comparison by skipping linked source entries, preserving case-distinct paths, and clearing temporary PBKDF2 key material after archive encryption and decryption.
 - [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.
 - [VS-1832] Split Snapshot Explorer browsing, archive traversal, text preview, and code-preview helpers into focused operations while preserving existing browsing and restore behavior.
 - [VS-1833] Split snapshot creation, manifest construction, hashing, and persistence into focused stages to reduce complexity while preserving snapshot compatibility.
@@ -20,6 +21,7 @@
 - [VS-1836] Addressed Sonar analyzer findings and consolidated repeated literals across backup, navigation, update, credential, telemetry, verification, network-mount, and encryption services.
 ### Fixed
 - [BUG-18060] Hardened Snapshot Explorer ZIP restore with explicit destination containment and linked-path rejection so malicious archive entries cannot write outside the selected restore root.
+- [BUG-18060] Applied the same linked-path rejection to ordinary folder restores so an existing symlink or junction inside the restore target cannot redirect copied files outside it.
 - [BUG-18059] Diagnostics retention now runs periodically on every platform, keeps at most two hang dumps within a 1 GiB diagnostics budget, and stops timed-out dump collection before partial files consume disk space.
 
 ## [1.8.2] - 04.07.2026

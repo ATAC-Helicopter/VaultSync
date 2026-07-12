@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using VaultSync.Core.Services;
 using Xunit;
 
@@ -92,6 +93,26 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public void ArchiveBackup_PreservesCaseDistinctFiles()
+    {
+        string backup = Path.Combine(_root, "case-distinct-archive");
+        Directory.CreateDirectory(backup);
+        using (ZipArchive archive = ZipFile.Open(Path.Combine(backup, BackupArchiveCryptoService.PlainArchiveFileName), ZipArchiveMode.Create))
+        {
+            AddArchiveText(archive, "docs/Foo.txt", "upper");
+            AddArchiveText(archive, "docs/foo.txt", "lower");
+        }
+
+        SnapshotExplorerResult docs = SnapshotExplorerService.List(backup, "docs");
+        SnapshotPreviewResult upper = SnapshotExplorerService.PreviewText(backup, "docs/Foo.txt");
+        SnapshotPreviewResult lower = SnapshotExplorerService.PreviewText(backup, "docs/foo.txt");
+
+        Assert.Equal(2, docs.Entries.Count(entry => entry.Kind == SnapshotExplorerEntryKind.File));
+        Assert.Equal("upper", upper.Text);
+        Assert.Equal("lower", lower.Text);
+    }
+
+    [Fact]
     public void RestoreSelection_ArchiveFolder_RestoresOnlySelectedFolder()
     {
         string backup = CreateArchiveBackup();
@@ -153,6 +174,23 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         string backup = CreateArchiveBackup();
         string target = Path.Combine(_root, "linked-restore");
         string outside = Path.Combine(_root, "outside");
+        Directory.CreateDirectory(target);
+        Directory.CreateDirectory(outside);
+        Directory.CreateSymbolicLink(Path.Combine(target, "docs"), outside);
+
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.RestoreSelection(backup, target, ["docs"]));
+        Assert.False(File.Exists(Path.Combine(outside, "notes.md")));
+    }
+
+    [Fact]
+    public void RestoreSelection_FolderRejectsLinkedDirectoryEscape()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string backup = CreateFolderBackup();
+        string target = Path.Combine(_root, "linked-folder-restore");
+        string outside = Path.Combine(_root, "folder-restore-outside");
         Directory.CreateDirectory(target);
         Directory.CreateDirectory(outside);
         Directory.CreateSymbolicLink(Path.Combine(target, "docs"), outside);

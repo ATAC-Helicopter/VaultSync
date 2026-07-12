@@ -120,6 +120,21 @@ public sealed class SnapshotCompareServiceTests
     }
 
     [Fact]
+    public void Compare_PreservesCaseDistinctPaths()
+    {
+        DateTime time = DateTime.UtcNow;
+        FileEntry[] older = [new("src/Foo.txt", 10, time, "upper")];
+        FileEntry[] newer = [new("src/foo.txt", 10, time, "lower")];
+
+        SnapshotCompareResult result = SnapshotCompareService.Compare(older, newer);
+
+        Assert.Equal(1, result.Added);
+        Assert.Equal(1, result.Deleted);
+        Assert.Contains(result.Changes, change => change.Path == "src/Foo.txt" && change.Kind == SnapshotFileChangeKind.Deleted);
+        Assert.Contains(result.Changes, change => change.Path == "src/foo.txt" && change.Kind == SnapshotFileChangeKind.Added);
+    }
+
+    [Fact]
     public void Compare_HandlesLargeInventoriesWithoutDroppingChanges()
     {
         DateTime time = DateTime.UtcNow;
