@@ -1786,6 +1786,7 @@
                                   Padding="{DynamicResource CardPaddingSmall}"
                                   BorderBrush="{DynamicResource CardBorderBrush}"
                                   BorderThickness="0,1,0,0">
+                            <StackPanel>
                               <ItemsControl ItemsSource="{Binding Snapshots}"
                                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                 <ItemsControl.ItemTemplate>
@@ -2000,6 +2001,7 @@
                                              Foreground="{DynamicResource TextSecondaryBrush}" />
                                 </StackPanel>
                               </Button>
+                            </StackPanel>
                           </Border>
                         </Expander>
                         </Border>
@@ -2053,7 +2055,7 @@
       </Grid>
     </Border>
 
-    <Border IsVisible="{Binding IsDiffPreviewOpen}"
+    <Border IsVisible="{CompiledBinding IsDiffPreviewOpen}"
             Background="{DynamicResource OverlayScrimBrush}"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch">
@@ -2087,10 +2089,10 @@
               <StackPanel Grid.Column="1"
                           Spacing="3"
                           VerticalAlignment="Center">
-                <TextBlock Text="{Binding DiffPreviewTitle}"
+                <TextBlock Text="{CompiledBinding DiffPreviewTitle}"
                            FontSize="18"
                            FontWeight="SemiBold" />
-                <TextBlock Text="{Binding DiffPreviewMetaLine}"
+                <TextBlock Text="{CompiledBinding DiffPreviewMetaLine}"
                            FontSize="12"
                            Foreground="{DynamicResource TextSecondaryBrush}" />
               </StackPanel>
@@ -2100,16 +2102,16 @@
                        ItemSpacing="8"
                        LineSpacing="8">
               <Border Classes="stat-pill sm">
-                <TextBlock Text="{Binding DiffPreviewTrigger}" />
+                <TextBlock Text="{CompiledBinding DiffPreviewTrigger}" />
               </Border>
               <Border Classes="stat-pill sm">
-                <TextBlock Text="{Binding DiffPreviewMode}" />
+                <TextBlock Text="{CompiledBinding DiffPreviewMode}" />
               </Border>
               <Border Classes="stat-pill sm warning">
-                <TextBlock Text="{Binding DiffPreviewImportedDisplay}" />
+                <TextBlock Text="{CompiledBinding DiffPreviewImportedDisplay}" />
               </Border>
               <Border Classes="stat-pill sm info">
-                <TextBlock Text="{Binding DiffPreviewEncryptionDisplay}" />
+                <TextBlock Text="{CompiledBinding DiffPreviewEncryptionDisplay}" />
               </Border>
             </WrapPanel>
 
@@ -2123,7 +2125,7 @@
                   <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Added}"
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <TextBlock Text="{Binding DiffPreviewAdded}"
+                  <TextBlock Text="{CompiledBinding DiffPreviewAdded}"
                              FontSize="20"
                              FontWeight="SemiBold" />
                 </StackPanel>
@@ -2135,7 +2137,7 @@
                   <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Modified}"
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <TextBlock Text="{Binding DiffPreviewModified}"
+                  <TextBlock Text="{CompiledBinding DiffPreviewModified}"
                              FontSize="20"
                              FontWeight="SemiBold" />
                 </StackPanel>
@@ -2147,7 +2149,7 @@
                   <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Deleted}"
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <TextBlock Text="{Binding DiffPreviewDeleted}"
+                  <TextBlock Text="{CompiledBinding DiffPreviewDeleted}"
                              FontSize="20"
                              FontWeight="SemiBold" />
                 </StackPanel>
@@ -2159,7 +2161,7 @@
                   <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.NetChange}"
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <TextBlock Text="{Binding DiffPreviewNet}"
+                  <TextBlock Text="{CompiledBinding DiffPreviewNet}"
                              FontSize="20"
                              FontWeight="SemiBold" />
                 </StackPanel>
@@ -2170,7 +2172,7 @@
                   ColumnDefinitions="2.2*,3.2*,4.6*"
                   ColumnSpacing="10"
                   Height="430"
-                  IsVisible="{Binding HasDiffPreviewFiles}">
+                  IsVisible="{CompiledBinding HasDiffPreviewFiles}">
               <Border Grid.Column="0"
                       Classes="card"
                       Padding="10"
@@ -2183,7 +2185,7 @@
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                   <ScrollViewer Grid.Row="1"
                                 VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding DiffPreviewTopPaths}">
+                    <ItemsControl ItemsSource="{CompiledBinding DiffPreviewTopPaths}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
                           <Border Margin="0,0,0,6"
@@ -2227,7 +2229,7 @@
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Grid.Column="1"
                                HorizontalAlignment="Right"
-                               Text="{Binding DiffFileResultsLabel}"
+                               Text="{CompiledBinding DiffFileResultsLabel}"
                                TextTrimming="CharacterEllipsis"
                                FontSize="10"
                                Foreground="{DynamicResource TextMutedBrush}" />
@@ -2240,20 +2242,20 @@
                               AutomationProperties.Name="Previous changed file"
                               AutomationProperties.HelpText="Select the previous file in the filtered snapshot comparison."
                               ToolTip.Tip="{infra:LocalizedString Key=Common.Previous}"
-                              Command="{Binding SelectPreviousDiffFileCommand}" />
+                              Command="{CompiledBinding SelectPreviousDiffFileCommand}" />
                       <Button Content="›"
                               Classes="small-button"
                               Padding="8,2"
                               AutomationProperties.Name="Next changed file"
                               AutomationProperties.HelpText="Select the next file in the filtered snapshot comparison."
                               ToolTip.Tip="{infra:LocalizedString Key=Common.Next}"
-                              Command="{Binding SelectNextDiffFileCommand}" />
+                              Command="{CompiledBinding SelectNextDiffFileCommand}" />
                     </StackPanel>
                   </Grid>
                   <Grid Grid.Row="1"
                         ColumnDefinitions="*,Auto,Auto"
                         ColumnSpacing="6">
-                    <TextBox Text="{Binding DiffFileSearchText}"
+                    <TextBox Text="{CompiledBinding DiffFileSearchText}"
                              PlaceholderText="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
                              AutomationProperties.Name="Search changed files"
                              AutomationProperties.HelpText="Filter snapshot changes by file name or path."
@@ -2262,8 +2264,8 @@
                               MinWidth="105"
                               AutomationProperties.Name="Changed file type filter"
                               AutomationProperties.HelpText="Show all, added, modified, or deleted files."
-                              ItemsSource="{Binding DiffFileKindFilters}"
-                              SelectedItem="{Binding SelectedDiffFileKindFilter}">
+                              ItemsSource="{CompiledBinding DiffFileKindFilters}"
+                              SelectedItem="{CompiledBinding SelectedDiffFileKindFilter}">
                       <ComboBox.ItemTemplate>
                         <DataTemplate>
                           <TextBlock Text="{Binding Label}" />
@@ -2275,11 +2277,11 @@
                             Classes="small-button"
                             AutomationProperties.Name="Clear changed file filters"
                             AutomationProperties.HelpText="Clear the comparison search and file type filter."
-                            Command="{Binding ClearDiffFileFiltersCommand}" />
+                            Command="{CompiledBinding ClearDiffFileFiltersCommand}" />
                   </Grid>
                   <ListBox Grid.Row="2"
-                           ItemsSource="{Binding DiffPreviewFiles}"
-                           SelectedItem="{Binding SelectedDiffPreviewFile}"
+                           ItemsSource="{CompiledBinding DiffPreviewFiles}"
+                           SelectedItem="{CompiledBinding SelectedDiffPreviewFile}"
                            Background="Transparent"
                            BorderThickness="0"
                            ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -2312,12 +2314,12 @@
                       CornerRadius="10">
                 <Grid RowDefinitions="Auto,*"
                       RowSpacing="8">
-                  <TextBlock Text="{Binding DiffFileContentStatus}"
+                  <TextBlock Text="{CompiledBinding DiffFileContentStatus}"
                              FontSize="11"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                   <TextBox Grid.Row="1"
-                           Text="{Binding DiffFileContentText}"
+                           Text="{CompiledBinding DiffFileContentText}"
                            IsReadOnly="True"
                            AcceptsReturn="True"
                            TextWrapping="NoWrap"
@@ -2332,7 +2334,7 @@
             </Grid>
 
             <Border Grid.Row="3"
-                    IsVisible="{Binding HasNoDiffPreviewFiles}"
+                    IsVisible="{CompiledBinding HasNoDiffPreviewFiles}"
                     MinHeight="220"
                     Padding="28"
                     CornerRadius="14"
@@ -2353,12 +2355,12 @@
                              HorizontalAlignment="Center"
                              VerticalAlignment="Center" />
                 </Border>
-                <TextBlock Text="{Binding DiffPreviewEmptyTitle}"
+                <TextBlock Text="{CompiledBinding DiffPreviewEmptyTitle}"
                            FontSize="16"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"
                            TextAlignment="Center" />
-                <TextBlock Text="{Binding DiffPreviewEmptyMessage}"
+                <TextBlock Text="{CompiledBinding DiffPreviewEmptyMessage}"
                            FontSize="12"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap"
@@ -2376,7 +2378,7 @@
                       Padding="18,9"
                       CornerRadius="12"
                       MinWidth="110"
-                      Command="{Binding CloseSnapshotDiffPreviewCommand}" />
+                      Command="{CompiledBinding CloseSnapshotDiffPreviewCommand}" />
             </StackPanel>
           </Grid>
         </Border>
