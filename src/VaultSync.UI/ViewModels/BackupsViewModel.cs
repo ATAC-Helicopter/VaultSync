@@ -144,6 +144,8 @@ namespace VaultSync.UI.ViewModels
 
         private BackupSnapshotItem? _selectedSnapshotA;
         private readonly RelayCommand? _compareSelectedSnapshotsRelayCommand;
+        private readonly RelayCommand? _selectPreviousDiffFileRelayCommand;
+        private readonly RelayCommand? _selectNextDiffFileRelayCommand;
         public BackupSnapshotItem? SelectedSnapshotA
         {
             get => _selectedSnapshotA;
@@ -958,6 +960,7 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _selectedDiffPreviewFile, value))
                 {
                     OnPropertyChanged(nameof(SelectedDiffPreviewFile));
+                    RaiseDiffFileNavigationCanExecuteChanged();
                     LoadSelectedDiffFile(value);
                 }
             }
@@ -1059,6 +1062,9 @@ namespace VaultSync.UI.ViewModels
         public ICommand CompareSelectedSnapshotsCommand { get; }
         public ICommand CancelSnapshotCompareCommand { get; }
         public ICommand CloseSnapshotDiffPreviewCommand { get; }
+        public ICommand ClearDiffFileFiltersCommand { get; }
+        public ICommand SelectPreviousDiffFileCommand { get; }
+        public ICommand SelectNextDiffFileCommand { get; }
 
         public ICommand BackupProjectCommand { get; }
         public ICommand ManageProjectEncryptionCommand { get; }
@@ -1144,6 +1150,11 @@ namespace VaultSync.UI.ViewModels
             CompareSelectedSnapshotsCommand = _compareSelectedSnapshotsRelayCommand;
             CancelSnapshotCompareCommand = new RelayCommand(_ => _snapshotCompareCts?.Cancel());
             CloseSnapshotDiffPreviewCommand = new RelayCommand(_ => CloseSnapshotDiffPreview());
+            ClearDiffFileFiltersCommand = new RelayCommand(_ => ClearDiffFileFilters());
+            _selectPreviousDiffFileRelayCommand = new RelayCommand(_ => SelectAdjacentDiffFile(-1), _ => CanSelectAdjacentDiffFile(-1));
+            SelectPreviousDiffFileCommand = _selectPreviousDiffFileRelayCommand;
+            _selectNextDiffFileRelayCommand = new RelayCommand(_ => SelectAdjacentDiffFile(1), _ => CanSelectAdjacentDiffFile(1));
+            SelectNextDiffFileCommand = _selectNextDiffFileRelayCommand;
             _toggleRestoreReadinessIssuesCommand = new RelayCommand(
                 _ => ShowRestoreReadinessIssues = !ShowRestoreReadinessIssues,
                 _ => HasRestoreReadinessIssues);
@@ -1557,8 +1568,42 @@ namespace VaultSync.UI.ViewModels
                 : Lf("Backups.Compare.Results", "{0} of {1} changed files", DiffPreviewFiles.Count, totalChanges);
 
             if (selected is not null && DiffPreviewFiles.Contains(selected))
+            {
+                RaiseDiffFileNavigationCanExecuteChanged();
                 return;
+            }
             SelectedDiffPreviewFile = null;
+            RaiseDiffFileNavigationCanExecuteChanged();
+        }
+
+        private void ClearDiffFileFilters()
+        {
+            DiffFileSearchText = string.Empty;
+            SelectedDiffFileKindFilter = DiffFileKindFilters[0];
+        }
+
+        private bool CanSelectAdjacentDiffFile(int offset)
+        {
+            int currentIndex = SelectedDiffPreviewFile is null
+                ? -1
+                : DiffPreviewFiles.IndexOf(SelectedDiffPreviewFile);
+            int targetIndex = currentIndex + offset;
+            return targetIndex >= 0 && targetIndex < DiffPreviewFiles.Count;
+        }
+
+        private void SelectAdjacentDiffFile(int offset)
+        {
+            if (!CanSelectAdjacentDiffFile(offset))
+                return;
+
+            int currentIndex = DiffPreviewFiles.IndexOf(SelectedDiffPreviewFile!);
+            SelectedDiffPreviewFile = DiffPreviewFiles[currentIndex + offset];
+        }
+
+        private void RaiseDiffFileNavigationCanExecuteChanged()
+        {
+            _selectPreviousDiffFileRelayCommand?.RaiseCanExecuteChanged();
+            _selectNextDiffFileRelayCommand?.RaiseCanExecuteChanged();
         }
 
         private void LoadSelectedDiffFile(DiffPreviewFileItem? file)

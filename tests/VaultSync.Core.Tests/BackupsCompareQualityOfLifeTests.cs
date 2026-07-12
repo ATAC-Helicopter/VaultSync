@@ -1,4 +1,5 @@
 using System;
+using VaultSync.Core.Models;
 using VaultSync.UI.ViewModels;
 using Xunit;
 
@@ -48,6 +49,41 @@ public sealed class BackupsCompareQualityOfLifeTests
 
         Assert.False(viewModel.CanCompareSelectedSnapshots);
         Assert.Contains("different restore points", viewModel.CompareSelectionHint, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ChangedFileNavigationMovesBetweenVisibleResults()
+    {
+        var viewModel = new BackupsViewModel();
+        var first = new DiffPreviewFileItem(new SnapshotFileChange("first.txt", SnapshotFileChangeKind.Modified, 1, 2));
+        var second = new DiffPreviewFileItem(new SnapshotFileChange("second.txt", SnapshotFileChangeKind.Modified, 2, 3));
+        viewModel.DiffPreviewFiles.Add(first);
+        viewModel.DiffPreviewFiles.Add(second);
+        viewModel.SelectedDiffPreviewFile = first;
+
+        Assert.False(viewModel.SelectPreviousDiffFileCommand.CanExecute(null));
+        Assert.True(viewModel.SelectNextDiffFileCommand.CanExecute(null));
+
+        viewModel.SelectNextDiffFileCommand.Execute(null);
+
+        Assert.Same(second, viewModel.SelectedDiffPreviewFile);
+        Assert.True(viewModel.SelectPreviousDiffFileCommand.CanExecute(null));
+        Assert.False(viewModel.SelectNextDiffFileCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ClearChangedFileFiltersRestoresDefaultFilter()
+    {
+        var viewModel = new BackupsViewModel
+        {
+            DiffFileSearchText = "config"
+        };
+        viewModel.SelectedDiffFileKindFilter = viewModel.DiffFileKindFilters[1];
+
+        viewModel.ClearDiffFileFiltersCommand.Execute(null);
+
+        Assert.Equal(string.Empty, viewModel.DiffFileSearchText);
+        Assert.Same(viewModel.DiffFileKindFilters[0], viewModel.SelectedDiffFileKindFilter);
     }
 
     private static BackupSnapshotItem Point(string id, int snapshotId, string projectId, DateTime timestamp) =>

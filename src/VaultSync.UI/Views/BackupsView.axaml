@@ -2194,9 +2194,23 @@
                                TextTrimming="CharacterEllipsis"
                                FontSize="10"
                                Foreground="{DynamicResource TextMutedBrush}" />
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="4">
+                      <Button Content="‹"
+                              Classes="small-button"
+                              Padding="8,2"
+                              ToolTip.Tip="{infra:LocalizedString Key=Common.Previous}"
+                              Command="{Binding SelectPreviousDiffFileCommand}" />
+                      <Button Content="›"
+                              Classes="small-button"
+                              Padding="8,2"
+                              ToolTip.Tip="{infra:LocalizedString Key=Common.Next}"
+                              Command="{Binding SelectNextDiffFileCommand}" />
+                    </StackPanel>
                   </Grid>
                   <Grid Grid.Row="1"
-                        ColumnDefinitions="*,Auto"
+                        ColumnDefinitions="*,Auto,Auto"
                         ColumnSpacing="6">
                     <TextBox Text="{Binding DiffFileSearchText}"
                              PlaceholderText="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
@@ -2211,6 +2225,10 @@
                         </DataTemplate>
                       </ComboBox.ItemTemplate>
                     </ComboBox>
+                    <Button Grid.Column="2"
+                            Content="{infra:LocalizedString Key=Common.Clear}"
+                            Classes="small-button"
+                            Command="{Binding ClearDiffFileFiltersCommand}" />
                   </Grid>
                   <ListBox Grid.Row="2"
                            ItemsSource="{Binding DiffPreviewFiles}"
