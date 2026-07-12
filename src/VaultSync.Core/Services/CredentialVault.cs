@@ -4,8 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace VaultSync.Core.Services;
 
@@ -16,6 +19,11 @@ namespace VaultSync.Core.Services;
 /// </summary>
 public sealed class CredentialVault
 {
+    private const int ErrSecSuccess = 0;
+    private const int ErrSecItemNotFound = -25300;
+    private const string SecurityFramework = "/System/Library/Frameworks/Security.framework/Security";
+    private const string CoreFoundationFramework = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
+
     private static readonly Lazy<CredentialVault> _lazy = new(() => new CredentialVault());
     public static CredentialVault Instance => _lazy.Value;
 
@@ -23,12 +31,19 @@ public sealed class CredentialVault
     private readonly object _sync = new();
 
     private CredentialVault()
-    {
-        string dir = Path.Combine(
+        : this(Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "VaultSync");
+            "VaultSync",
+            "credentials.json"))
+    {
+    }
+
+    internal CredentialVault(string storePath)
+    {
+        string dir = Path.GetDirectoryName(storePath)
+            ?? throw new ArgumentException("Credential store path must have a parent directory.", nameof(storePath));
         Directory.CreateDirectory(dir);
-        _storePath = Path.Combine(dir, "credentials.json");
+        _storePath = storePath;
     }
 
     public static string EnsureKeyRef(string? existing, string nameHint)
@@ -109,8 +124,9 @@ public sealed class CredentialVault
         lock (_sync)
         {
             Dictionary<string, StoredSecret> map = Load();
-            StoredSecret record = map.TryGetValue(keyRef, out StoredSecret? existing)
-                ? existing
+            bool isNewRecord = !map.TryGetValue(keyRef, out StoredSecret? existing);
+            StoredSecret record = !isNewRecord
+                ? existing!
                 : new StoredSecret();
 
             record.Username = username;
@@ -154,7 +170,23 @@ public sealed class CredentialVault
             }
 
             map[keyRef] = record;
-            Save(map);
+            try
+            {
+                Save(map);
+            }
+            catch
+            {
+                // A newly-created native item without an index entry could never be
+                // discovered for later cleanup. Roll it back if index persistence fails.
+                if (isNewRecord && record.StoredInKeychain)
+                {
+                    if (OperatingSystem.IsMacOS())
+                        TryDeleteFromKeychain(keyRef, username);
+                    else if (OperatingSystem.IsLinux())
+                        TryDeleteFromSecretService(keyRef, username);
+                }
+                throw;
+            }
         }
     }
 
@@ -166,19 +198,25 @@ public sealed class CredentialVault
         lock (_sync)
         {
             Dictionary<string, StoredSecret> map = Load();
-            if (map.Remove(keyRef))
+            if (!map.TryGetValue(keyRef, out StoredSecret? record))
             {
-                Save(map);
+                // Best-effort cleanup for a legacy item whose index entry was lost.
+                if (OperatingSystem.IsMacOS())
+                    TryDeleteFromKeychain(keyRef, username);
+                else if (OperatingSystem.IsLinux())
+                    TryDeleteFromSecretService(keyRef, username);
+                return;
             }
-        }
 
-        if (OperatingSystem.IsMacOS())
-        {
-            TryDeleteFromKeychain(keyRef, username);
-        }
-        else if (OperatingSystem.IsLinux())
-        {
-            TryDeleteFromSecretService(keyRef, username);
+            string accountName = record.Username ?? username;
+            bool nativeDeleted = !record.StoredInKeychain
+                || (OperatingSystem.IsMacOS() && TryDeleteFromKeychain(keyRef, accountName))
+                || (OperatingSystem.IsLinux() && TryDeleteFromSecretService(keyRef, accountName));
+            if (!nativeDeleted)
+                return;
+
+            map.Remove(keyRef);
+            Save(map);
         }
     }
 
@@ -224,17 +262,14 @@ public sealed class CredentialVault
                         continue;
                 }
 
+                bool nativeDeleted = !record.StoredInKeychain
+                    || (OperatingSystem.IsMacOS() && TryDeleteFromKeychain(key, record.Username ?? string.Empty))
+                    || (OperatingSystem.IsLinux() && TryDeleteFromSecretService(key, record.Username ?? string.Empty));
+                if (!nativeDeleted)
+                    continue;
+
                 map.Remove(key);
                 removed++;
-
-                if (OperatingSystem.IsMacOS())
-                {
-                    TryDeleteFromKeychain(key, record.Username ?? string.Empty);
-                }
-                else if (OperatingSystem.IsLinux())
-                {
-                    TryDeleteFromSecretService(key, record.Username ?? string.Empty);
-                }
             }
 
             if (removed > 0)
@@ -270,16 +305,29 @@ public sealed class CredentialVault
             Dictionary<string, StoredSecret>? data = JsonSerializer.Deserialize<Dictionary<string, StoredSecret>>(json);
             return data ?? new(StringComparer.OrdinalIgnoreCase);
         }
-        catch
+        catch (JsonException ex)
         {
-            return new(StringComparer.OrdinalIgnoreCase);
+            throw new InvalidDataException(
+                $"Credential index '{_storePath}' is corrupt. It was preserved and no credential changes were made.", ex);
         }
     }
 
     private void Save(Dictionary<string, StoredSecret> map)
     {
         string json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(_storePath, json);
+        string directory = Path.GetDirectoryName(_storePath)!;
+        string tempPath = Path.Combine(directory, $".{Path.GetFileName(_storePath)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            File.WriteAllText(tempPath, json);
+            if (!OperatingSystem.IsWindows())
+                File.SetUnixFileMode(tempPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            File.Move(tempPath, _storePath, overwrite: true);
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch { /* best-effort temporary-file cleanup */ }
+        }
     }
 
     private void TouchSecretIfNeeded(Dictionary<string, StoredSecret> map, string keyRef)
@@ -372,56 +420,100 @@ public sealed class CredentialVault
 
     private static bool TryWriteToKeychain(string keyRef, string username, string secret)
     {
+        byte[] service = Encoding.UTF8.GetBytes(keyRef);
+        byte[] account = Encoding.UTF8.GetBytes(username);
+        byte[] password = Encoding.UTF8.GetBytes(secret);
+        IntPtr item = IntPtr.Zero;
         try
         {
-            ProcessStartInfo psi = BuildMacKeychainStartInfo("add-generic-password", keyRef, username);
-            psi.ArgumentList.Add("-w");
-            psi.ArgumentList.Add(secret);
-            psi.ArgumentList.Add("-U");
+            int findStatus = SecKeychainFindGenericPassword(
+                IntPtr.Zero, (uint)service.Length, service, (uint)account.Length, account,
+                out _, out IntPtr existingPassword, out item);
+            if (existingPassword != IntPtr.Zero)
+                SecKeychainItemFreeContent(IntPtr.Zero, existingPassword);
 
-            using var proc = Process.Start(psi);
-            proc?.WaitForExit(5_000);
-            return proc is { ExitCode: 0 };
+            if (findStatus == ErrSecSuccess)
+                return SecKeychainItemModifyAttributesAndData(item, IntPtr.Zero, (uint)password.Length, password) == ErrSecSuccess;
+            if (findStatus != ErrSecItemNotFound)
+                return false;
+
+            return SecKeychainAddGenericPassword(
+                IntPtr.Zero, (uint)service.Length, service, (uint)account.Length, account,
+                (uint)password.Length, password, out item) == ErrSecSuccess;
         }
         catch
         {
             return false;
         }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(password);
+            if (item != IntPtr.Zero)
+                CFRelease(item);
+        }
     }
 
     private static string? TryReadFromKeychain(string keyRef, string username)
     {
+        byte[] service = Encoding.UTF8.GetBytes(keyRef);
+        byte[] account = Encoding.UTF8.GetBytes(username);
+        IntPtr passwordData = IntPtr.Zero;
+        IntPtr item = IntPtr.Zero;
         try
         {
-            ProcessStartInfo psi = BuildMacKeychainStartInfo("find-generic-password", keyRef, username);
-            psi.ArgumentList.Add("-w");
-
-            using var proc = Process.Start(psi);
-            if (proc is null)
+            int status = SecKeychainFindGenericPassword(
+                IntPtr.Zero, (uint)service.Length, service, (uint)account.Length, account,
+                out uint passwordLength, out passwordData, out item);
+            if (status != ErrSecSuccess || passwordData == IntPtr.Zero)
                 return null;
 
-            string output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(30_000);
-            return proc.ExitCode == 0 ? output.Trim() : null;
+            byte[] password = new byte[passwordLength];
+            try
+            {
+                Marshal.Copy(passwordData, password, 0, password.Length);
+                return Encoding.UTF8.GetString(password);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(password);
+            }
         }
         catch
         {
             return null;
         }
+        finally
+        {
+            if (passwordData != IntPtr.Zero)
+                SecKeychainItemFreeContent(IntPtr.Zero, passwordData);
+            if (item != IntPtr.Zero)
+                CFRelease(item);
+        }
     }
 
-    private static void TryDeleteFromKeychain(string keyRef, string username)
+    private static bool TryDeleteFromKeychain(string keyRef, string username)
     {
+        byte[] service = Encoding.UTF8.GetBytes(keyRef);
+        byte[] account = Encoding.UTF8.GetBytes(username);
+        IntPtr item = IntPtr.Zero;
         try
         {
-            ProcessStartInfo psi = BuildMacKeychainStartInfo("delete-generic-password", keyRef, username);
-
-            using var proc = Process.Start(psi);
-            proc?.WaitForExit(3_000);
+            int status = SecKeychainFindGenericPassword(
+                IntPtr.Zero, (uint)service.Length, service, (uint)account.Length, account,
+                out _, out IntPtr passwordData, out item);
+            if (passwordData != IntPtr.Zero)
+                SecKeychainItemFreeContent(IntPtr.Zero, passwordData);
+            return status == ErrSecItemNotFound
+                || (status == ErrSecSuccess && SecKeychainItemDelete(item) == ErrSecSuccess);
         }
         catch
         {
-            // ignore cleanup failures
+            return false;
+        }
+        finally
+        {
+            if (item != IntPtr.Zero)
+                CFRelease(item);
         }
     }
 
@@ -431,13 +523,7 @@ public sealed class CredentialVault
         {
             ProcessStartInfo psi = BuildSecretToolStartInfo("store", keyRef, username, redirectInput: true);
 
-            using var proc = Process.Start(psi);
-            if (proc is null)
-                return false;
-            proc.StandardInput.Write(secret);
-            proc.StandardInput.Close();
-            proc.WaitForExit(30_000);
-            return proc.ExitCode == 0;
+            return RunProcess(psi, secret, TimeSpan.FromSeconds(30)).ExitCode == 0;
         }
         catch
         {
@@ -451,12 +537,8 @@ public sealed class CredentialVault
         {
             ProcessStartInfo psi = BuildSecretToolStartInfo("lookup", keyRef, username);
 
-            using var proc = Process.Start(psi);
-            if (proc is null)
-                return null;
-            string output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(30_000);
-            return proc.ExitCode == 0 ? output.Trim() : null;
+            ProcessResult result = RunProcess(psi, null, TimeSpan.FromSeconds(30));
+            return result.ExitCode == 0 ? result.StandardOutput.Trim() : null;
         }
         catch
         {
@@ -485,20 +567,51 @@ public sealed class CredentialVault
         return psi;
     }
 
-    private static void TryDeleteFromSecretService(string keyRef, string username)
+    private static bool TryDeleteFromSecretService(string keyRef, string username)
     {
         try
         {
             ProcessStartInfo psi = BuildSecretToolStartInfo("clear", keyRef, username);
 
-            using var proc = Process.Start(psi);
-            proc?.WaitForExit(30_000);
+            return RunProcess(psi, null, TimeSpan.FromSeconds(30)).ExitCode == 0;
         }
         catch
         {
-            // Ignore cleanup failures. The non-secret index entry has already been removed.
+            return false;
         }
     }
+
+    private static ProcessResult RunProcess(ProcessStartInfo startInfo, string? standardInput, TimeSpan timeout)
+    {
+        using var process = Process.Start(startInfo);
+        if (process is null)
+            return new ProcessResult(-1, string.Empty);
+
+        Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
+        Task<string> errorTask = process.StandardError.ReadToEndAsync();
+        if (startInfo.RedirectStandardInput)
+        {
+            process.StandardInput.Write(standardInput ?? string.Empty);
+            process.StandardInput.Close();
+        }
+
+        using var cancellation = new CancellationTokenSource(timeout);
+        try
+        {
+            process.WaitForExitAsync(cancellation.Token).GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(entireProcessTree: true); } catch { /* process may already be gone */ }
+            process.WaitForExit();
+            return new ProcessResult(-1, string.Empty);
+        }
+
+        Task.WhenAll(outputTask, errorTask).GetAwaiter().GetResult();
+        return new ProcessResult(process.ExitCode, outputTask.Result);
+    }
+
+    private readonly record struct ProcessResult(int ExitCode, string StandardOutput);
 
     internal static ProcessStartInfo BuildSecretToolStartInfo(
         string operation,
@@ -540,4 +653,29 @@ public sealed class CredentialVault
         public DateTime? CreatedUtc { get; set; }
         public DateTime? LastAccessUtc { get; set; }
     }
+
+    [DllImport(SecurityFramework)]
+    private static extern int SecKeychainFindGenericPassword(
+        IntPtr keychainOrArray, uint serviceNameLength, byte[] serviceName,
+        uint accountNameLength, byte[] accountName, out uint passwordLength,
+        out IntPtr passwordData, out IntPtr itemRef);
+
+    [DllImport(SecurityFramework)]
+    private static extern int SecKeychainAddGenericPassword(
+        IntPtr keychain, uint serviceNameLength, byte[] serviceName,
+        uint accountNameLength, byte[] accountName, uint passwordLength,
+        byte[] passwordData, out IntPtr itemRef);
+
+    [DllImport(SecurityFramework)]
+    private static extern int SecKeychainItemModifyAttributesAndData(
+        IntPtr itemRef, IntPtr attrList, uint length, byte[] data);
+
+    [DllImport(SecurityFramework)]
+    private static extern int SecKeychainItemDelete(IntPtr itemRef);
+
+    [DllImport(SecurityFramework)]
+    private static extern int SecKeychainItemFreeContent(IntPtr attrList, IntPtr data);
+
+    [DllImport(CoreFoundationFramework)]
+    private static extern void CFRelease(IntPtr cf);
 }

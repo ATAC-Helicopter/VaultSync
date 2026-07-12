@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using System.Linq;
 using VaultSync.Core.Config;
@@ -52,6 +53,58 @@ public sealed class NetworkMountServiceTests
 
 public sealed class CredentialVaultTests
 {
+    [Fact]
+    public void CorruptCredentialIndex_IsPreservedAndFailsClosed()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"vaultsync-credentials-{Guid.NewGuid():N}");
+        string storePath = Path.Combine(directory, "credentials.json");
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(storePath, "{ definitely-not-json");
+        var vault = new CredentialVault(storePath);
+
+        try
+        {
+            InvalidDataException error = Assert.Throws<InvalidDataException>(() =>
+                vault.GetSecret("cred-test", "user", preferKeychain: false));
+
+            Assert.Contains("corrupt", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("{ definitely-not-json", File.ReadAllText(storePath));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DeleteCredential_ReplacesIndexAtomicallyWithoutLeavingTemporaryFiles()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"vaultsync-credentials-{Guid.NewGuid():N}");
+        string storePath = Path.Combine(directory, "credentials.json");
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(storePath, """
+            {
+              "cred-test": {
+                "Username": "user",
+                "StoredInKeychain": false
+              }
+            }
+            """);
+        var vault = new CredentialVault(storePath);
+
+        try
+        {
+            vault.DeleteSecret("cred-test", "user");
+
+            Assert.Equal("{}", File.ReadAllText(storePath).Trim());
+            Assert.Empty(Directory.EnumerateFiles(directory, ".credentials.json.*.tmp"));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Fact]
     public void EnsureKeyRef_WithExistingReference_ReturnsSameReference()
     {
@@ -144,6 +197,33 @@ public sealed class CredentialVaultTests
         Assert.Equal(operation, args[0]);
         Assert.Equal(username, args[Array.IndexOf(args, "-a") + 1]);
         Assert.Equal(keyRef, args[Array.IndexOf(args, "-s") + 1]);
+    }
+
+    [Fact]
+    public void MacKeychainNativeApi_RoundTripsWithoutStartingSecurityCli()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        string keyRef = $"vaultsync-test-{Guid.NewGuid():N}";
+        const string username = "vaultsync-test";
+        const string secret = "secret with spaces";
+        MethodInfo write = typeof(CredentialVault).GetMethod(
+            "TryWriteToKeychain", BindingFlags.NonPublic | BindingFlags.Static)!;
+        MethodInfo read = typeof(CredentialVault).GetMethod(
+            "TryReadFromKeychain", BindingFlags.NonPublic | BindingFlags.Static)!;
+        MethodInfo delete = typeof(CredentialVault).GetMethod(
+            "TryDeleteFromKeychain", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+        try
+        {
+            Assert.True((bool)write.Invoke(null, new object[] { keyRef, username, secret })!);
+            Assert.Equal(secret, (string)read.Invoke(null, new object[] { keyRef, username })!);
+        }
+        finally
+        {
+            Assert.True((bool)delete.Invoke(null, new object[] { keyRef, username })!);
+        }
     }
 
     [Fact]
