@@ -697,6 +697,8 @@ namespace VaultSync.UI.ViewModels
         private bool _isSnapshotCompareBusy;
         private CancellationTokenSource? _snapshotCompareCts;
         private string _diffFileResultsLabel = string.Empty;
+        private string _diffPreviewEmptyTitle = string.Empty;
+        private string _diffPreviewEmptyMessage = string.Empty;
 
         // Backup progress details (for long-running operations)
         private double _backupProgress;
@@ -951,6 +953,28 @@ namespace VaultSync.UI.ViewModels
         public bool HasDiffPreviewTopPaths => DiffPreviewTopPaths.Count > 0;
         public ObservableCollection<DiffPreviewFileItem> DiffPreviewFiles { get; } = [];
         public ObservableCollection<DiffPreviewKindFilterItem> DiffFileKindFilters { get; } = [];
+        public bool HasDiffPreviewFiles => _allDiffPreviewFiles.Count > 0;
+        public bool HasNoDiffPreviewFiles => !HasDiffPreviewFiles;
+
+        public string DiffPreviewEmptyTitle
+        {
+            get => _diffPreviewEmptyTitle;
+            private set
+            {
+                if (SetProperty(ref _diffPreviewEmptyTitle, value))
+                    OnPropertyChanged(nameof(DiffPreviewEmptyTitle));
+            }
+        }
+
+        public string DiffPreviewEmptyMessage
+        {
+            get => _diffPreviewEmptyMessage;
+            private set
+            {
+                if (SetProperty(ref _diffPreviewEmptyMessage, value))
+                    OnPropertyChanged(nameof(DiffPreviewEmptyMessage));
+            }
+        }
 
         public DiffPreviewFileItem? SelectedDiffPreviewFile
         {
@@ -1363,6 +1387,11 @@ namespace VaultSync.UI.ViewModels
             SelectedDiffPreviewFile = null;
             DiffFileContentStatus = L("Backups.Compare.SummaryOnly", "Snapshot change summary");
             DiffFileContentText = DiffPreviewText;
+            DiffPreviewEmptyTitle = DiffFileContentStatus;
+            DiffPreviewEmptyMessage = L(
+                "Backups.DiffSummary.NoChanges",
+                "No file changes detected or diff data is unavailable for this backup");
+            NotifyDiffPreviewFileAvailabilityChanged();
             IsDiffPreviewOpen = true;
         }
 
@@ -1420,6 +1449,9 @@ namespace VaultSync.UI.ViewModels
                     SelectedDiffPreviewFile = null;
                     DiffFileContentStatus = DiffPreviewTitle;
                     DiffFileContentText = DiffPreviewText;
+                    DiffPreviewEmptyTitle = DiffPreviewTitle;
+                    DiffPreviewEmptyMessage = DiffPreviewText;
+                    NotifyDiffPreviewFileAvailabilityChanged();
                     IsDiffPreviewOpen = true;
                 });
             }
@@ -1486,6 +1518,7 @@ namespace VaultSync.UI.ViewModels
             _diffNewerSnapshot = newer;
             _allDiffPreviewFiles.Clear();
             _allDiffPreviewFiles.AddRange(result.Changes.Take(5_000).Select(change => new DiffPreviewFileItem(change)));
+            NotifyDiffPreviewFileAvailabilityChanged();
             DiffFileSearchText = string.Empty;
             SelectedDiffFileKindFilter = DiffFileKindFilters[0];
             RefreshDiffPreviewFiles();
@@ -1543,10 +1576,26 @@ namespace VaultSync.UI.ViewModels
                 ?? DiffPreviewFiles.FirstOrDefault();
             if (result.ChangedCount == 0)
             {
-                DiffFileContentStatus = L("Backups.Compare.NoChanges", "No file-level changes between these restore points.");
+                int filesExamined = result.Unchanged + result.ChangedCount;
+                bool hasInventory = filesExamined > 0;
+                DiffFileContentStatus = hasInventory
+                    ? L("Backups.Compare.NoChanges", "No file-level changes between these restore points.")
+                    : L("Backups.DiffSummary.Unavailable", "Diff summary unavailable");
                 DiffFileContentText = DiffPreviewText;
+                DiffPreviewEmptyTitle = DiffFileContentStatus;
+                DiffPreviewEmptyMessage = hasInventory
+                    ? DiffPreviewTrigger
+                    : L(
+                        "Backups.DiffSummary.NoChanges",
+                        "No file changes detected or diff data is unavailable for this backup");
             }
             IsDiffPreviewOpen = true;
+        }
+
+        private void NotifyDiffPreviewFileAvailabilityChanged()
+        {
+            OnPropertyChanged(nameof(HasDiffPreviewFiles));
+            OnPropertyChanged(nameof(HasNoDiffPreviewFiles));
         }
 
         private void RefreshDiffPreviewFiles()

@@ -9,6 +9,7 @@
 - [VS-1809] Improved comparison QoL with automatic same-project restore-point suggestions, contextual selection guidance, cancellable comparison work, filtered-result counts, and clearer empty, capped, and no-match states.
 - [VS-1809] Cancelled superseded text-diff computations when users move quickly between changed files, avoiding unnecessary quadratic diff work for stale selections.
 - [VS-1809] Added previous/next changed-file navigation and one-click filter clearing to make large snapshot comparisons faster to review.
+- [VS-1809] Redesigned restore-point comparison with compact change cards, an app-native empty state, and a detailed workspace shown only when changed files are available; zero examined files are no longer reported as confirmed no-change results.
 - [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines as the validated baseline for the separately tracked Avalonia 12 migration.
 - [VS-1839] Aligned LiveCharts, SkiaSharp, and HarfBuzzSharp with the Avalonia 12 rendering ABI, removed the retired diagnostics package, and adopted the new placeholder and window-decoration APIs.
 - [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.

@@ -1839,6 +1839,7 @@
   - Done: focused view-model coverage verifies selection guidance and a 10,000-file inventory regression test verifies large comparisons retain all changes.
   - Done: changed-file selection now cancels superseded unified-diff computation instead of only suppressing stale presentation.
   - Done: the changed-file workspace supports previous/next navigation and one-click search/filter clearing for faster keyboard-friendly review.
+  - Done: compare presentation now uses compact app-native summary cards, distinguishes unavailable inventory from verified no-change results, and hides the large file workspace when there are no changed files to inspect.
   - Remaining: perform a manual desktop interaction pass before closing #361.
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
