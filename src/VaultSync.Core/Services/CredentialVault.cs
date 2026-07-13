@@ -25,6 +25,7 @@ public sealed class CredentialVault
     private const string CoreFoundationFramework = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
 
     private static readonly Lazy<CredentialVault> _lazy = new(() => new CredentialVault());
+    private static readonly JsonSerializerOptions IndentedJsonOptions = new() { WriteIndented = true };
     public static CredentialVault Instance => _lazy.Value;
 
     private readonly string _storePath;
@@ -133,41 +134,7 @@ public sealed class CredentialVault
             record.CreatedUtc ??= DateTime.UtcNow;
             record.LastAccessUtc = DateTime.UtcNow;
 
-            if (preferKeychain && OperatingSystem.IsMacOS())
-            {
-                if (TryWriteToKeychain(keyRef, username, secret))
-                {
-                    record.StoredInKeychain = true;
-                    record.ProtectedSecret  = null;
-                }
-                else
-                {
-                    throw new InvalidOperationException("Failed to store secret in macOS Keychain.");
-                }
-            }
-            else if (preferKeychain && OperatingSystem.IsLinux())
-            {
-                if (TryWriteToSecretService(keyRef, username, secret))
-                {
-                    record.StoredInKeychain = true;
-                    record.ProtectedSecret  = null;
-                }
-                else
-                {
-                    //Linux secret-tool failed. 99% not installed secret-tool packages.
-                    throw new InvalidOperationException("LINUX_SECRET_TOOL_MISSING");
-                }
-            }
-            else if (OperatingSystem.IsWindows())
-            {
-                record.StoredInKeychain = false;
-                StoreProtected(record, secret, requireProtection: true);
-            }
-            else
-            {
-                // Strict mode: do not store secrets on unsupported platforms without a secure store.
-                throw new InvalidOperationException("Secure credential storage is not available on this platform.");
-            }
+            StoreSecret(record, keyRef, username, secret, preferKeychain);
 
             map[keyRef] = record;
             try
@@ -188,6 +155,46 @@ public sealed class CredentialVault
                 throw;
             }
         }
+    }
+
+    private static void StoreSecret(
+        StoredSecret record,
+        string keyRef,
+        string username,
+        string secret,
+        bool preferKeychain)
+    {
+        if (preferKeychain && OperatingSystem.IsMacOS())
+        {
+            StoreNativeSecret(record, TryWriteToKeychain(keyRef, username, secret),
+                "Failed to store secret in macOS Keychain.");
+            return;
+        }
+
+        if (preferKeychain && OperatingSystem.IsLinux())
+        {
+            StoreNativeSecret(record, TryWriteToSecretService(keyRef, username, secret),
+                "LINUX_SECRET_TOOL_MISSING");
+            return;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            record.StoredInKeychain = false;
+            StoreProtected(record, secret, requireProtection: true);
+            return;
+        }
+
+        throw new InvalidOperationException("Secure credential storage is not available on this platform.");
+    }
+
+    private static void StoreNativeSecret(StoredSecret record, bool stored, string errorMessage)
+    {
+        if (!stored)
+            throw new InvalidOperationException(errorMessage);
+
+        record.StoredInKeychain = true;
+        record.ProtectedSecret = null;
     }
 
     public void DeleteSecret(string? keyRef, string username)
@@ -314,7 +321,7 @@ public sealed class CredentialVault
 
     private void Save(Dictionary<string, StoredSecret> map)
     {
-        string json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
+        string json = JsonSerializer.Serialize(map, IndentedJsonOptions);
         string directory = Path.GetDirectoryName(_storePath)!;
         string tempPath = Path.Combine(directory, $".{Path.GetFileName(_storePath)}.{Guid.NewGuid():N}.tmp");
         try
@@ -430,7 +437,7 @@ public sealed class CredentialVault
                 IntPtr.Zero, (uint)service.Length, service, (uint)account.Length, account,
                 out _, out IntPtr existingPassword, out item);
             if (existingPassword != IntPtr.Zero)
-                SecKeychainItemFreeContent(IntPtr.Zero, existingPassword);
+                _ = SecKeychainItemFreeContent(IntPtr.Zero, existingPassword);
 
             if (findStatus == ErrSecSuccess)
                 return SecKeychainItemModifyAttributesAndData(item, IntPtr.Zero, (uint)password.Length, password) == ErrSecSuccess;
@@ -485,7 +492,7 @@ public sealed class CredentialVault
         finally
         {
             if (passwordData != IntPtr.Zero)
-                SecKeychainItemFreeContent(IntPtr.Zero, passwordData);
+                _ = SecKeychainItemFreeContent(IntPtr.Zero, passwordData);
             if (item != IntPtr.Zero)
                 CFRelease(item);
         }
@@ -502,7 +509,7 @@ public sealed class CredentialVault
                 IntPtr.Zero, (uint)service.Length, service, (uint)account.Length, account,
                 out _, out IntPtr passwordData, out item);
             if (passwordData != IntPtr.Zero)
-                SecKeychainItemFreeContent(IntPtr.Zero, passwordData);
+                _ = SecKeychainItemFreeContent(IntPtr.Zero, passwordData);
             return status == ErrSecItemNotFound
                 || (status == ErrSecSuccess && SecKeychainItemDelete(item) == ErrSecSuccess);
         }
@@ -581,7 +588,7 @@ public sealed class CredentialVault
         }
     }
 
-    private static ProcessResult RunProcess(ProcessStartInfo startInfo, string? standardInput, TimeSpan timeout)
+    internal static ProcessResult RunProcess(ProcessStartInfo startInfo, string? standardInput, TimeSpan timeout)
     {
         using var process = Process.Start(startInfo);
         if (process is null)
@@ -611,7 +618,7 @@ public sealed class CredentialVault
         return new ProcessResult(process.ExitCode, outputTask.Result);
     }
 
-    private readonly record struct ProcessResult(int ExitCode, string StandardOutput);
+    internal readonly record struct ProcessResult(int ExitCode, string StandardOutput);
 
     internal static ProcessStartInfo BuildSecretToolStartInfo(
         string operation,

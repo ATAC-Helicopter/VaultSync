@@ -20,6 +20,47 @@ public sealed class MetadataSyncTests : IDisposable
     private readonly List<TempDirectory> _tempDirs = [];
 
     [Fact]
+    public async System.Threading.Tasks.Task PreviewImportFromStoreAsync_WithEmptyPath_ReleasesItsPerRootGate()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var service = new MetadataSyncService(CreateRepository(dbPath));
+
+        MetadataSyncPreview first = await service.PreviewImportFromStoreAsync(string.Empty);
+        MetadataSyncPreview second = await service.PreviewImportFromStoreAsync(string.Empty);
+
+        Assert.Equal(MetadataSyncStatus.InvalidPath, first.Status);
+        Assert.Equal(MetadataSyncStatus.InvalidPath, second.Status);
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task PreviewImportFromStoreAsync_WithInvalidFullPath_UsesAStableFallbackGate()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var service = new MetadataSyncService(CreateRepository(dbPath));
+
+        MetadataSyncPreview preview = await service.PreviewImportFromStoreAsync("invalid\0root");
+
+        Assert.Equal(MetadataSyncStatus.NoStore, preview.Status);
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task ExportBackupTombstoneToStoreAsync_PersistsTombstoneAndReleasesItsPerRootGate()
+    {
+        string rootPath = CreateTempDir();
+
+        await MetadataSyncService.ExportBackupTombstoneToStoreAsync(
+            rootPath,
+            "backup-deleted",
+            "1.8.3",
+            "machine-a");
+
+        MetaTombstone tombstone = Assert.Single(new MetadataStore(rootPath).ListTombstones());
+        Assert.Equal("backup", tombstone.EntityType);
+        Assert.Equal("backup-deleted", tombstone.EntityId);
+        Assert.Equal("machine-a", tombstone.OriginMachineId);
+    }
+
+    [Fact]
     public void ImportFromStore_ImportsBackupWhenPathExists_AndMarksRestore()
     {
         string metaRoot = CreateTempDir();

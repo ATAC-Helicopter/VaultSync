@@ -66,7 +66,6 @@ public sealed class HistoryViewModel : ViewModelBase
     private readonly RelayCommand _browseSelectedSnapshotCommand;
     private readonly RelayCommand _openRecoveryCommand;
     private readonly RelayCommand _compareSelectedSnapshotCommand;
-    private readonly AsyncRelayCommand _refreshCommand;
     private readonly List<HistoryTimelineItemViewModel> _allTimelineItems = [];
     private int _filterRevision;
     private int _refreshInFlight;
@@ -114,8 +113,7 @@ public sealed class HistoryViewModel : ViewModelBase
     {
         _configStore = configStore;
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
-        _refreshCommand = new AsyncRelayCommand(_ => RefreshAsync(force: true), operationName: "refresh-history");
-        RefreshCommand = _refreshCommand;
+        RefreshCommand = new AsyncRelayCommand(_ => RefreshAsync(force: true), operationName: "refresh-history");
         _previousPageCommand = new RelayCommand(_ => MovePage(-1), _ => CanGoToPreviousPage);
         _nextPageCommand = new RelayCommand(_ => MovePage(1), _ => CanGoToNextPage);
         _resetFiltersCommand = new RelayCommand(_ => ResetFilters(), _ => HasActiveFilters);

@@ -15,10 +15,8 @@ public sealed class SnapshotCompareService(SqliteRepository repository)
         int newerSnapshotId,
         CancellationToken cancellationToken = default)
     {
-        if (olderSnapshotId <= 0)
-            throw new ArgumentOutOfRangeException(nameof(olderSnapshotId));
-        if (newerSnapshotId <= 0)
-            throw new ArgumentOutOfRangeException(nameof(newerSnapshotId));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(olderSnapshotId);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(newerSnapshotId);
         if (olderSnapshotId == newerSnapshotId)
             throw new ArgumentException("Snapshot comparison requires two different snapshots.");
 
@@ -159,7 +157,7 @@ public sealed class SnapshotCompareService(SqliteRepository repository)
         return secondSlash < 0 ? path[..firstSlash] : path[..secondSlash];
     }
 
-    private static IReadOnlyList<SnapshotChangeSignal> BuildSignals(
+    private static List<SnapshotChangeSignal> BuildSignals(
         int added,
         int modified,
         int deleted,
@@ -176,7 +174,9 @@ public sealed class SnapshotCompareService(SqliteRepository repository)
         double deletionRatio = previousFileCount == 0 ? 0 : (double)deleted / previousFileCount;
         double churnRatio = comparisonBase == 0 ? 0 : (double)changedCount / comparisonBase;
         long growth = currentTotal - previousTotal;
-        double growthRatio = previousTotal == 0 ? (growth > 0 ? 1 : 0) : (double)growth / previousTotal;
+        double growthRatio = previousTotal == 0
+            ? GetGrowthRatioWithoutBaseline(growth)
+            : (double)growth / previousTotal;
 
         if (deleted >= options.MassDeletionMinimumFiles && deletionRatio >= options.MassDeletionRatio)
         {
@@ -207,4 +207,6 @@ public sealed class SnapshotCompareService(SqliteRepository repository)
 
         return signals;
     }
+
+    private static double GetGrowthRatioWithoutBaseline(long growth) => growth > 0 ? 1 : 0;
 }

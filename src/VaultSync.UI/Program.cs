@@ -41,7 +41,7 @@ internal static class Program
             return;
         }
 
-        if (PatchInstallService.TryParsePatchArgs(args, out PatchApplyRequest? request) && request is not null)
+        if (PatchInstallService.TryParsePatchArgs(args, out PatchApplyRequest? request))
         {
             DiagnosticsLogger.Record("Patch installer mode detected.");
             UpdaterApp.SetPendingRequest(request);

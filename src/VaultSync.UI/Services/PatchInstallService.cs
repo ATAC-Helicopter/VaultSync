@@ -71,7 +71,7 @@ namespace VaultSync.UI.Services
 
         public static bool TryHandlePatchArgs(string[] args)
         {
-            if (!TryParsePatchArgs(args, out PatchApplyRequest? request, out _) || request is null)
+            if (!TryParsePatchArgs(args, out PatchApplyRequest? request, out _))
                 return false;
 
             PatchApplyResult result = ApplyPatch(request, null, CancellationToken.None);
@@ -94,43 +94,7 @@ namespace VaultSync.UI.Services
             expectedRequestHash = null;
 
             if (args.Length >= 2 && string.Equals(args[0], ApplyRequestArg, StringComparison.OrdinalIgnoreCase))
-            {
-                string requestPath = args[1];
-                if (!File.Exists(requestPath))
-                    return false;
-
-                string? requestHashArg = args.FirstOrDefault(a => a.StartsWith(RequestHashArg, StringComparison.OrdinalIgnoreCase));
-                if (string.IsNullOrWhiteSpace(requestHashArg))
-                    return false;
-
-                expectedRequestHash = requestHashArg.Substring(RequestHashArg.Length).Trim();
-                if (expectedRequestHash.Length != 64)
-                    return false;
-
-                if (!IsUnderTrustedPatchTempRoot(requestPath))
-                    return false;
-
-                try
-                {
-                    byte[] requestBytes = File.ReadAllBytes(requestPath);
-                    string actualHash = ComputeSha256(requestBytes);
-                    if (!actualHash.Equals(expectedRequestHash, StringComparison.OrdinalIgnoreCase))
-                        return false;
-
-                    PatchApplyRequest? parsed = JsonSerializer.Deserialize<PatchApplyRequest>(requestBytes);
-                    if (!TryNormalizeRequest(parsed, out request, out _) || request is null)
-                        return false;
-
-                    if (!IsUnderTrustedPatchTempRoot(request.ManifestPath))
-                        return false;
-
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
+                return TryParseHashedPatchRequest(args, out request, out expectedRequestHash);
 
             if (args.Length < 4 || !string.Equals(args[0], ApplyArg, StringComparison.OrdinalIgnoreCase))
                 return false;
@@ -155,6 +119,44 @@ namespace VaultSync.UI.Services
                 new PatchApplyRequest(archivePath, manifestPath, installDir, restart, waitPid),
                 out request,
                 out _);
+        }
+
+        private static bool TryParseHashedPatchRequest(
+            string[] args,
+            [NotNullWhen(true)] out PatchApplyRequest? request,
+            out string? expectedRequestHash)
+        {
+            request = null;
+            expectedRequestHash = null;
+            string requestPath = args[1];
+            if (!File.Exists(requestPath) || !IsUnderTrustedPatchTempRoot(requestPath))
+                return false;
+
+            string? requestHashArg = args.FirstOrDefault(a => a.StartsWith(RequestHashArg, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(requestHashArg))
+                return false;
+
+            expectedRequestHash = requestHashArg[RequestHashArg.Length..].Trim();
+            if (expectedRequestHash.Length != 64)
+                return false;
+
+            try
+            {
+                byte[] requestBytes = File.ReadAllBytes(requestPath);
+                if (!ComputeSha256(requestBytes).Equals(expectedRequestHash, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                PatchApplyRequest? parsed = JsonSerializer.Deserialize<PatchApplyRequest>(requestBytes);
+                if (!TryNormalizeRequest(parsed, out PatchApplyRequest? normalized, out _))
+                    return false;
+
+                request = normalized;
+                return IsUnderTrustedPatchTempRoot(normalized.ManifestPath);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public static Task<PatchApplyResult> ApplyPatchAsync(
@@ -194,7 +196,7 @@ namespace VaultSync.UI.Services
                     manifestPath,
                     installDir,
                     restart: elevationKind != PatchElevationKind.LinuxPkexec,
-                    waitPid: Process.GetCurrentProcess().Id);
+                    waitPid: Environment.ProcessId);
                 byte[] requestBytes = JsonSerializer.SerializeToUtf8Bytes(request);
                 File.WriteAllBytes(requestPath, requestBytes);
                 string requestHash = ComputeSha256(requestBytes);
@@ -482,9 +484,7 @@ namespace VaultSync.UI.Services
 
         private static string ComputeSha256(byte[] payload)
         {
-            using var sha = SHA256.Create();
-            byte[] bytes = sha.ComputeHash(payload);
-            return HashService.FormatSha256Lower(bytes);
+            return HashService.FormatSha256Lower(SHA256.HashData(payload));
         }
 
         private static void VerifyArchivePreflight(string archivePath, PatchManifest manifest)
@@ -664,7 +664,7 @@ namespace VaultSync.UI.Services
 
         private static bool TryNormalizeRequest(
             PatchApplyRequest? request,
-            out PatchApplyRequest? normalized,
+            [NotNullWhen(true)] out PatchApplyRequest? normalized,
             out string? error)
         {
             normalized = null;

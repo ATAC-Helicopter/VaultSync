@@ -26,7 +26,6 @@ public sealed class RecoveryViewModel : ViewModelBase
     private readonly List<RecoveryProjectViewModel> _allProjects = [];
     private readonly object _lifecycleGate = new();
     private CancellationTokenSource? _viewLifetimeCts;
-    private readonly AsyncRelayCommand _refreshCommand;
     private readonly AsyncRelayCommand _exportReportCommand;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private DateTime _lastRefreshUtc = DateTime.MinValue;
@@ -66,9 +65,8 @@ public sealed class RecoveryViewModel : ViewModelBase
     {
         _configStore = configStore;
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
-        _refreshCommand = new AsyncRelayCommand(_ => RefreshAsync(force: true), operationName: "refresh-recovery");
+        RefreshCommand = new AsyncRelayCommand(_ => RefreshAsync(force: true), operationName: "refresh-recovery");
         _exportReportCommand = new AsyncRelayCommand(async _ => await ExportReportAsync(), _ => !IsExporting, "export-recovery-report");
-        RefreshCommand = _refreshCommand;
         ExportReportCommand = _exportReportCommand;
         ProjectFilters =
         [

@@ -286,8 +286,7 @@ namespace VaultSync.UI.ViewModels
         internal void SetSnapshots(IEnumerable<BackupSnapshotItem> snapshots, int initialCount = DefaultPageSize)
         {
             ArgumentNullException.ThrowIfNull(snapshots);
-            if (initialCount <= 0)
-                throw new ArgumentOutOfRangeException(nameof(initialCount));
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(initialCount);
 
             _allSnapshots.Clear();
             _allSnapshots.AddRange(snapshots);
@@ -297,8 +296,7 @@ namespace VaultSync.UI.ViewModels
 
         public void LoadMoreSnapshots(int pageSize = DefaultPageSize)
         {
-            if (pageSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(pageSize));
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
 
             AppendSnapshots(pageSize);
         }
