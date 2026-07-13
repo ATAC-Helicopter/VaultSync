@@ -692,6 +692,8 @@ namespace VaultSync.UI.ViewModels
         private DiffPreviewKindFilterItem? _selectedDiffFileKindFilter;
         private string _diffFileContentText = string.Empty;
         private string _diffFileContentStatus = string.Empty;
+        private int _diffFileAddedLines;
+        private int _diffFileDeletedLines;
         private BackupSnapshotItem? _diffOlderSnapshot;
         private BackupSnapshotItem? _diffNewerSnapshot;
         private int _diffContentRequestVersion;
@@ -954,9 +956,12 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<DiffPreviewPathItem> DiffPreviewTopPaths { get; } = [];
         public bool HasDiffPreviewTopPaths => DiffPreviewTopPaths.Count > 0;
         public ObservableCollection<DiffPreviewFileItem> DiffPreviewFiles { get; } = [];
+        public IReadOnlyList<DiffPreviewLineItem> DiffFileContentLines { get; private set; } = [];
         public ObservableCollection<DiffPreviewKindFilterItem> DiffFileKindFilters { get; } = [];
         public bool HasDiffPreviewFiles => _allDiffPreviewFiles.Count > 0;
         public bool HasNoDiffPreviewFiles => !HasDiffPreviewFiles;
+        public bool HasDiffFileContentLines => DiffFileContentLines.Count > 0;
+        public bool HasNoDiffFileContentLines => !HasDiffFileContentLines;
 
         public string DiffPreviewEmptyTitle
         {
@@ -1035,6 +1040,26 @@ namespace VaultSync.UI.ViewModels
             {
                 if (SetProperty(ref _diffFileContentStatus, value))
                     OnPropertyChanged(nameof(DiffFileContentStatus));
+            }
+        }
+
+        public int DiffFileAddedLines
+        {
+            get => _diffFileAddedLines;
+            private set
+            {
+                if (SetProperty(ref _diffFileAddedLines, value))
+                    OnPropertyChanged(nameof(DiffFileAddedLines));
+            }
+        }
+
+        public int DiffFileDeletedLines
+        {
+            get => _diffFileDeletedLines;
+            private set
+            {
+                if (SetProperty(ref _diffFileDeletedLines, value))
+                    OnPropertyChanged(nameof(DiffFileDeletedLines));
             }
         }
 
@@ -1895,6 +1920,7 @@ namespace VaultSync.UI.ViewModels
             int requestVersion = Interlocked.Increment(ref _diffContentRequestVersion);
             _diffContentCts?.Cancel();
             _diffContentCts = null;
+            ClearDiffFileContentLines();
             if (file is null || _diffOlderSnapshot is null || _diffNewerSnapshot is null)
             {
                 if (_diffOlderSnapshot is not null && _diffNewerSnapshot is not null)
@@ -1998,6 +2024,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     DiffFileContentStatus = L("Backups.Compare.MetadataOnly", "Metadata comparison only");
                     DiffFileContentText = error ?? string.Empty;
+                    ClearDiffFileContentLines();
                     return;
                 }
 
@@ -2005,7 +2032,32 @@ namespace VaultSync.UI.ViewModels
                     ? L("Backups.Compare.DiffTruncated", "Git-style diff (preview truncated safely)")
                     : L("Backups.Compare.GitDiff", "Git-style text diff");
                 DiffFileContentText = diff.Text;
+                SetDiffFileContentLines(diff);
             });
+        }
+
+        private void SetDiffFileContentLines(UnifiedTextDiffResult diff)
+        {
+            DiffFileContentLines = DiffPreviewLineItem.ParseUnified(diff.Text);
+            DiffFileAddedLines = diff.AddedLines;
+            DiffFileDeletedLines = diff.DeletedLines;
+            OnPropertyChanged(nameof(DiffFileContentLines));
+            NotifyDiffFileContentLineAvailabilityChanged();
+        }
+
+        private void ClearDiffFileContentLines()
+        {
+            DiffFileContentLines = [];
+            DiffFileAddedLines = 0;
+            DiffFileDeletedLines = 0;
+            OnPropertyChanged(nameof(DiffFileContentLines));
+            NotifyDiffFileContentLineAvailabilityChanged();
+        }
+
+        private void NotifyDiffFileContentLineAvailabilityChanged()
+        {
+            OnPropertyChanged(nameof(HasDiffFileContentLines));
+            OnPropertyChanged(nameof(HasNoDiffFileContentLines));
         }
 
         private static (string Text, bool Truncated, string? Error) LoadSnapshotTextPreview(

@@ -86,6 +86,130 @@ namespace VaultSync.UI.ViewModels
         public SnapshotFileChangeKind Kind { get; }
         public string Marker { get; }
         public string SizeDelta { get; }
+        public bool IsAdded => Kind == SnapshotFileChangeKind.Added;
+        public bool IsModified => Kind == SnapshotFileChangeKind.Modified;
+        public bool IsDeleted => Kind == SnapshotFileChangeKind.Deleted;
+    }
+
+    public sealed class DiffPreviewLineItem
+    {
+        private DiffPreviewLineItem(
+            string oldLineNumber,
+            string newLineNumber,
+            string marker,
+            string content,
+            char kind)
+        {
+            OldLineNumber = oldLineNumber;
+            NewLineNumber = newLineNumber;
+            Marker = marker;
+            Content = content;
+            IsAdded = kind == '+';
+            IsDeleted = kind == '-';
+            IsHunk = kind == '@';
+            IsNotice = kind == '!';
+        }
+
+        public string OldLineNumber { get; }
+        public string NewLineNumber { get; }
+        public string Marker { get; }
+        public string Content { get; }
+        public bool IsAdded { get; }
+        public bool IsDeleted { get; }
+        public bool IsHunk { get; }
+        public bool IsNotice { get; }
+
+        public static IReadOnlyList<DiffPreviewLineItem> ParseUnified(string? diffText)
+        {
+            if (string.IsNullOrWhiteSpace(diffText))
+                return [];
+
+            string normalized = diffText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+            string[] lines = normalized.Split('\n');
+            var result = new List<DiffPreviewLineItem>(lines.Length);
+            int oldLine = 1;
+            int newLine = 1;
+
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("--- ", StringComparison.Ordinal) ||
+                    line.StartsWith("+++ ", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (line.StartsWith("@@", StringComparison.Ordinal))
+                {
+                    TryReadHunkStarts(line, out oldLine, out newLine);
+                    result.Add(new DiffPreviewLineItem(string.Empty, string.Empty, string.Empty, line, '@'));
+                    continue;
+                }
+
+                if (line.StartsWith("... diff preview truncated", StringComparison.Ordinal))
+                {
+                    result.Add(new DiffPreviewLineItem(string.Empty, string.Empty, "…", line, '!'));
+                    continue;
+                }
+
+                char marker = line.Length == 0 ? ' ' : line[0];
+                string content = line.Length == 0 ? string.Empty : line[1..];
+                if (marker == '+')
+                {
+                    result.Add(new DiffPreviewLineItem(
+                        string.Empty,
+                        newLine.ToString(CultureInfo.InvariantCulture),
+                        "+",
+                        content,
+                        marker));
+                    newLine++;
+                    continue;
+                }
+
+                if (marker == '-')
+                {
+                    result.Add(new DiffPreviewLineItem(
+                        oldLine.ToString(CultureInfo.InvariantCulture),
+                        string.Empty,
+                        "-",
+                        content,
+                        marker));
+                    oldLine++;
+                    continue;
+                }
+
+                result.Add(new DiffPreviewLineItem(
+                    oldLine.ToString(CultureInfo.InvariantCulture),
+                    newLine.ToString(CultureInfo.InvariantCulture),
+                    string.Empty,
+                    marker == ' ' ? content : line,
+                    ' '));
+                oldLine++;
+                newLine++;
+            }
+
+            return result;
+        }
+
+        private static void TryReadHunkStarts(string header, out int oldLine, out int newLine)
+        {
+            oldLine = ReadStartAfter(header, '-');
+            newLine = ReadStartAfter(header, '+');
+        }
+
+        private static int ReadStartAfter(string header, char prefix)
+        {
+            int start = header.IndexOf(prefix);
+            if (start < 0)
+                return 1;
+
+            start++;
+            int end = start;
+            while (end < header.Length && char.IsDigit(header[end]))
+                end++;
+            return int.TryParse(header.AsSpan(start, end - start), CultureInfo.InvariantCulture, out int value)
+                ? Math.Max(1, value)
+                : 1;
+        }
     }
 
     public sealed record DiffPreviewKindFilterItem(string Label, SnapshotFileChangeKind? Kind);

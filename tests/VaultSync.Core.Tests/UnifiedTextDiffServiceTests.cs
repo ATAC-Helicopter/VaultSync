@@ -42,6 +42,27 @@ public sealed class UnifiedTextDiffServiceTests
     }
 
     [Fact]
+    public void Create_UsesCompactGitStyleHunksInsteadOfRenderingTheWholeFile()
+    {
+        string[] older = Enumerable.Range(1, 30).Select(index => $"line {index}").ToArray();
+        string[] newer = [.. older];
+        newer[2] = "changed near start";
+        newer[25] = "changed near end";
+
+        UnifiedTextDiffResult result = UnifiedTextDiffService.Create(
+            string.Join('\n', older),
+            string.Join('\n', newer),
+            "a/file.txt",
+            "b/file.txt",
+            new UnifiedTextDiffOptions(ContextLines: 2));
+
+        Assert.Equal(2, result.Text.Split('\n').Count(line => line.StartsWith("@@", StringComparison.Ordinal)));
+        Assert.Contains(" line 1", result.Text);
+        Assert.Contains(" line 28", result.Text);
+        Assert.DoesNotContain(" line 15", result.Text);
+    }
+
+    [Fact]
     public void Create_TruncatesLargeInputsAndOutput()
     {
         UnifiedTextDiffResult result = UnifiedTextDiffService.Create(

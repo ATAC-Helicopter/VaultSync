@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -90,6 +91,22 @@ public sealed class BackupsCompareQualityOfLifeTests
 
         Assert.Equal(string.Empty, viewModel.DiffFileSearchText);
         Assert.Same(viewModel.DiffFileKindFilters[0], viewModel.SelectedDiffFileKindFilter);
+    }
+
+    [Fact]
+    public void UnifiedDiffRowsExposeGitStyleKindsAndLineNumberGutters()
+    {
+        IReadOnlyList<DiffPreviewLineItem> lines = DiffPreviewLineItem.ParseUnified(
+            "--- a/file.txt\n+++ b/file.txt\n@@ -4,2 +4,2 @@\n-old\n+new\n same");
+
+        Assert.True(lines[0].IsHunk);
+        Assert.Equal("4", lines[1].OldLineNumber);
+        Assert.Equal(string.Empty, lines[1].NewLineNumber);
+        Assert.True(lines[1].IsDeleted);
+        Assert.Equal("4", lines[2].NewLineNumber);
+        Assert.True(lines[2].IsAdded);
+        Assert.Equal("5", lines[3].OldLineNumber);
+        Assert.Equal("5", lines[3].NewLineNumber);
     }
 
     [Fact]

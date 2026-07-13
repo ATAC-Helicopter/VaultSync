@@ -2,7 +2,8 @@ namespace VaultSync.Core.Services;
 
 public sealed record UnifiedTextDiffOptions(
     int MaxLinesPerFile = 800,
-    int MaxOutputLines = 2_000)
+    int MaxOutputLines = 2_000,
+    int ContextLines = 3)
 {
     public static UnifiedTextDiffOptions Default { get; } = new();
 }
@@ -19,6 +20,12 @@ public sealed record UnifiedTextDiffResult(
 /// </summary>
 public static class UnifiedTextDiffService
 {
+    private sealed record DiffOperation(
+        char Marker,
+        string Text,
+        int OldPosition,
+        int NewPosition);
+
     public static UnifiedTextDiffResult Create(
         string? olderText,
         string? newerText,
@@ -32,6 +39,8 @@ public static class UnifiedTextDiffService
             throw new ArgumentOutOfRangeException(nameof(options), "The line limit must be positive.");
         if (options.MaxOutputLines < 2)
             throw new ArgumentOutOfRangeException(nameof(options), "The output limit must allow the diff header.");
+        if (options.ContextLines < 0)
+            throw new ArgumentOutOfRangeException(nameof(options), "The context line count cannot be negative.");
 
         string[] allOlder = SplitLines(olderText);
         string[] allNewer = SplitLines(newerText);
@@ -43,15 +52,15 @@ public static class UnifiedTextDiffService
         var output = new List<string>(Math.Min(options.MaxOutputLines, older.Length + newer.Length + 3))
         {
             $"--- {olderLabel}",
-            $"+++ {newerLabel}",
-            $"@@ -1,{older.Length} +1,{newer.Length} @@"
+            $"+++ {newerLabel}"
         };
 
-        int oldIndex = 0;
-        int newIndex = 0;
-        int added = 0;
-        int deleted = 0;
-        while (oldIndex < older.Length || newIndex < newer.Length)
+        List<DiffOperation> operations = BuildOperations(older, newer, lcs, cancellationToken);
+        int added = operations.Count(operation => operation.Marker == '+');
+        int deleted = operations.Count(operation => operation.Marker == '-');
+        IReadOnlyList<(int Start, int End)> hunks = BuildHunkRanges(operations, options.ContextLines);
+
+        foreach ((int start, int end) in hunks)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (output.Count >= options.MaxOutputLines)
@@ -60,31 +69,107 @@ public static class UnifiedTextDiffService
                 break;
             }
 
+            DiffOperation first = operations[start];
+            int oldCount = 0;
+            int newCount = 0;
+            for (int index = start; index <= end; index++)
+            {
+                oldCount += operations[index].Marker == '+' ? 0 : 1;
+                newCount += operations[index].Marker == '-' ? 0 : 1;
+            }
+
+            output.Add($"@@ -{first.OldPosition},{oldCount} +{first.NewPosition},{newCount} @@");
+            for (int index = start; index <= end; index++)
+            {
+                if (output.Count >= options.MaxOutputLines)
+                {
+                    truncated = true;
+                    break;
+                }
+
+                DiffOperation operation = operations[index];
+                output.Add($"{operation.Marker}{operation.Text}");
+            }
+
+            if (truncated)
+                break;
+        }
+
+        if (truncated)
+            AppendTruncationNotice(output, options.MaxOutputLines);
+
+        return new UnifiedTextDiffResult(string.Join(Environment.NewLine, output), added, deleted, truncated);
+    }
+
+    private static List<DiffOperation> BuildOperations(
+        string[] older,
+        string[] newer,
+        int[,] lcs,
+        CancellationToken cancellationToken)
+    {
+        var operations = new List<DiffOperation>(older.Length + newer.Length);
+        int oldIndex = 0;
+        int newIndex = 0;
+        while (oldIndex < older.Length || newIndex < newer.Length)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             if (oldIndex < older.Length && newIndex < newer.Length &&
                 string.Equals(older[oldIndex], newer[newIndex], StringComparison.Ordinal))
             {
-                output.Add($" {older[oldIndex]}");
+                operations.Add(new DiffOperation(' ', older[oldIndex], oldIndex + 1, newIndex + 1));
                 oldIndex++;
                 newIndex++;
             }
             else if (newIndex < newer.Length &&
-                     (oldIndex >= older.Length || lcs[oldIndex, newIndex + 1] >= lcs[oldIndex + 1, newIndex]))
+                     (oldIndex >= older.Length || lcs[oldIndex, newIndex + 1] > lcs[oldIndex + 1, newIndex]))
             {
-                output.Add($"+{newer[newIndex++]}");
-                added++;
+                operations.Add(new DiffOperation('+', newer[newIndex], oldIndex + 1, newIndex + 1));
+                newIndex++;
             }
             else
             {
-                output.Add($"-{older[oldIndex++]}");
-                deleted++;
+                operations.Add(new DiffOperation('-', older[oldIndex], oldIndex + 1, newIndex + 1));
+                oldIndex++;
             }
         }
 
-        if (truncated)
-            output.Add("... diff preview truncated by VaultSync safety limits ...");
-
-        return new UnifiedTextDiffResult(string.Join(Environment.NewLine, output), added, deleted, truncated);
+        return operations;
     }
+
+    private static IReadOnlyList<(int Start, int End)> BuildHunkRanges(
+        IReadOnlyList<DiffOperation> operations,
+        int contextLines)
+    {
+        var ranges = new List<(int Start, int End)>();
+        for (int index = 0; index < operations.Count; index++)
+        {
+            if (operations[index].Marker == ' ')
+                continue;
+
+            int start = Math.Max(0, index - contextLines);
+            int end = Math.Min(operations.Count - 1, index + contextLines);
+            if (ranges.Count == 0 || start > ranges[^1].End + 1)
+            {
+                ranges.Add((start, end));
+                continue;
+            }
+
+            (int previousStart, int previousEnd) = ranges[^1];
+            ranges[^1] = (previousStart, Math.Max(previousEnd, end));
+        }
+
+        return ranges;
+    }
+
+    private static void AppendTruncationNotice(List<string> output, int maxOutputLines)
+    {
+        const string notice = "... diff preview truncated by VaultSync safety limits ...";
+        if (output.Count < maxOutputLines)
+            output.Add(notice);
+        else if (output.Count > 0)
+            output[^1] = notice;
+    }
+
 
     private static string[] SplitLines(string? text) => string.IsNullOrEmpty(text)
         ? []
