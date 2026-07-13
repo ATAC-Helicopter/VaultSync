@@ -4637,11 +4637,8 @@ namespace VaultSync.UI.ViewModels
                 ? L("Projects.EncryptionPolicy.EffectiveEncrypted", "Effective: Encrypted")
                 : L("Projects.EncryptionPolicy.EffectivePlain", "Effective: Plain");
 
-            bool hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
-                string.IsNullOrWhiteSpace(item.EncryptionKeyRef) ? null : item.EncryptionKeyRef,
-                BackupEncryptionCredentialIdentity.AccountName,
-                preferKeychain: true,
-                fallbackPlaintext: null));
+            bool hasSecret = CredentialVault.Instance.HasStoredSecret(
+                string.IsNullOrWhiteSpace(item.EncryptionKeyRef) ? null : item.EncryptionKeyRef);
             item.HasEncryptionSecret = hasSecret;
             item.EncryptionSecretStatus = hasSecret
                 ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")

@@ -30,6 +30,9 @@ public sealed class CredentialVault
 
     private readonly string _storePath;
     private readonly object _sync = new();
+    private readonly Func<string, string, string?> _nativeSecretReader;
+    private readonly Dictionary<string, byte[]> _sessionSecretCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _nativeReadAttempts = new(StringComparer.OrdinalIgnoreCase);
 
     private CredentialVault()
         : this(Path.Combine(
@@ -40,11 +43,17 @@ public sealed class CredentialVault
     }
 
     internal CredentialVault(string storePath)
+        : this(storePath, ReadNativeSecret)
+    {
+    }
+
+    internal CredentialVault(string storePath, Func<string, string, string?> nativeSecretReader)
     {
         string dir = Path.GetDirectoryName(storePath)
             ?? throw new ArgumentException("Credential store path must have a parent directory.", nameof(storePath));
         Directory.CreateDirectory(dir);
         _storePath = storePath;
+        _nativeSecretReader = nativeSecretReader ?? throw new ArgumentNullException(nameof(nativeSecretReader));
     }
 
     public static string EnsureKeyRef(string? existing, string nameHint)
@@ -56,6 +65,19 @@ public sealed class CredentialVault
         return $"cred-{slug}-{Guid.NewGuid():N}";
     }
 
+    public bool HasStoredSecret(string? keyRef)
+    {
+        if (string.IsNullOrWhiteSpace(keyRef))
+            return false;
+
+        lock (_sync)
+        {
+            Dictionary<string, StoredSecret> map = Load();
+            return map.TryGetValue(keyRef, out StoredSecret? record)
+                && (record.StoredInKeychain || !string.IsNullOrWhiteSpace(record.ProtectedSecret));
+        }
+    }
+
     public string? GetSecret(string? keyRef, string username, bool preferKeychain, string? fallbackPlaintext = null)
     {
         if (string.IsNullOrWhiteSpace(keyRef))
@@ -64,33 +86,36 @@ public sealed class CredentialVault
         lock (_sync)
         {
             Dictionary<string, StoredSecret> map = Load();
+            map.TryGetValue(keyRef, out StoredSecret? record);
 
-            string? preferredSecret = TryReadPreferredSecret(keyRef, username, preferKeychain);
-            if (!string.IsNullOrEmpty(preferredSecret))
-                return TouchAndReturn(map, keyRef, preferredSecret);
+            string? cachedSecret = TryReadCachedSecret(keyRef);
+            if (!string.IsNullOrEmpty(cachedSecret))
+                return TouchAndReturn(map, keyRef, cachedSecret);
 
-            if (!map.TryGetValue(keyRef, out StoredSecret? record))
-                return fallbackPlaintext;
+            if (preferKeychain || record?.StoredInKeychain == true)
+            {
+                string accountName = record?.Username ?? username;
+                string? nativeSecret = TryReadNativeSecretOnce(keyRef, accountName);
+                if (!string.IsNullOrEmpty(nativeSecret))
+                    return TouchAndReturn(map, keyRef, nativeSecret);
+            }
 
-            string? storedSecret = TryReadStoredSecret(keyRef, username, record);
-            if (!string.IsNullOrEmpty(storedSecret))
-                return TouchAndReturn(map, keyRef, storedSecret);
-
-            if (!string.IsNullOrWhiteSpace(record.ProtectedSecret))
+            if (!string.IsNullOrWhiteSpace(record?.ProtectedSecret))
             {
                 string? secret = TryUnprotect(record.ProtectedSecret, record.ProtectedWithDpapi);
                 if (!string.IsNullOrEmpty(secret))
+                {
+                    CacheSecret(keyRef, secret);
                     return TouchAndReturn(map, keyRef, secret);
+                }
             }
         }
 
         return fallbackPlaintext;
     }
 
-    private static string? TryReadPreferredSecret(string keyRef, string username, bool preferKeychain)
+    private static string? ReadNativeSecret(string keyRef, string username)
     {
-        if (!preferKeychain)
-            return null;
         if (OperatingSystem.IsMacOS())
             return TryReadFromKeychain(keyRef, username);
         return OperatingSystem.IsLinux()
@@ -98,17 +123,37 @@ public sealed class CredentialVault
             : null;
     }
 
-    private static string? TryReadStoredSecret(string keyRef, string username, StoredSecret record)
+    private string? TryReadNativeSecretOnce(string keyRef, string username)
     {
-        if (!record.StoredInKeychain)
+        if (!_nativeReadAttempts.Add(keyRef))
             return null;
 
-        string accountName = record.Username ?? username;
-        if (OperatingSystem.IsMacOS())
-            return TryReadFromKeychain(keyRef, accountName);
-        return OperatingSystem.IsLinux()
-            ? TryReadFromSecretService(keyRef, accountName)
+        string? secret = _nativeSecretReader(keyRef, username);
+        if (!string.IsNullOrEmpty(secret))
+            CacheSecret(keyRef, secret);
+        return secret;
+    }
+
+    private string? TryReadCachedSecret(string keyRef)
+    {
+        return _sessionSecretCache.TryGetValue(keyRef, out byte[]? secretBytes)
+            ? Encoding.UTF8.GetString(secretBytes)
             : null;
+    }
+
+    private void CacheSecret(string keyRef, string secret)
+    {
+        byte[] secretBytes = Encoding.UTF8.GetBytes(secret);
+        if (_sessionSecretCache.TryGetValue(keyRef, out byte[]? previous))
+            CryptographicOperations.ZeroMemory(previous);
+        _sessionSecretCache[keyRef] = secretBytes;
+    }
+
+    private void RemoveCachedSecret(string keyRef)
+    {
+        _nativeReadAttempts.Remove(keyRef);
+        if (_sessionSecretCache.Remove(keyRef, out byte[]? secretBytes))
+            CryptographicOperations.ZeroMemory(secretBytes);
     }
 
     private string TouchAndReturn(Dictionary<string, StoredSecret> map, string keyRef, string secret)
@@ -140,6 +185,8 @@ public sealed class CredentialVault
             try
             {
                 Save(map);
+                CacheSecret(keyRef, secret);
+                _nativeReadAttempts.Add(keyRef);
             }
             catch
             {
@@ -212,6 +259,7 @@ public sealed class CredentialVault
                     TryDeleteFromKeychain(keyRef, username);
                 else if (OperatingSystem.IsLinux())
                     TryDeleteFromSecretService(keyRef, username);
+                RemoveCachedSecret(keyRef);
                 return;
             }
 
@@ -224,6 +272,7 @@ public sealed class CredentialVault
 
             map.Remove(keyRef);
             Save(map);
+            RemoveCachedSecret(keyRef);
         }
     }
 
@@ -276,6 +325,7 @@ public sealed class CredentialVault
                     continue;
 
                 map.Remove(key);
+                RemoveCachedSecret(key);
                 removed++;
             }
 

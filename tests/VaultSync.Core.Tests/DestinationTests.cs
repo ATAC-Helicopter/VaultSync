@@ -49,6 +49,60 @@ public sealed class NetworkMountServiceTests
         Assert.False(result.IsSuccess);
         Assert.Contains("unreachable", result.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void PrepareDestination_DoesNotReadCredentialForUnsupportedAutoMountPlatform()
+    {
+        if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS())
+            return;
+
+        int readCount = 0;
+        var service = new NetworkMountService(_ =>
+        {
+            readCount++;
+            return "secret";
+        });
+        var destination = new BackupDestination
+        {
+            Path = "smb://example.invalid/share",
+            Active = true,
+            AutoMount = true
+        };
+
+        DestinationResolution result = service.PrepareDestination(
+            destination,
+            new NetworkCredentialProfile { Name = "test", Username = "user", KeyRef = "cred-test" });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(0, readCount);
+    }
+
+    [Fact]
+    public void PrepareDestination_DoesNotReadCredentialForUnsupportedMacNfsAutoMount()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        int readCount = 0;
+        var service = new NetworkMountService(_ =>
+        {
+            readCount++;
+            return "secret";
+        });
+        var destination = new BackupDestination
+        {
+            Path = "nfs://example.invalid/share",
+            Active = true,
+            AutoMount = true
+        };
+
+        DestinationResolution result = service.PrepareDestination(
+            destination,
+            new NetworkCredentialProfile { Name = "test", Username = "user", KeyRef = "cred-test" });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(0, readCount);
+    }
 }
 
 [Collection("Credential environment")]
@@ -181,6 +235,77 @@ public sealed class CredentialVaultTests
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    [Fact]
+    public void GetSecret_CoalescesRepeatedNativeReadsForTheSession()
+    {
+        using var tempDir = new TempDirectory();
+        string storePath = Path.Combine(tempDir.Path, "credentials.json");
+        File.WriteAllText(storePath, """
+            {
+              "cred-test": {
+                "Username": "stored-account",
+                "StoredInKeychain": true
+              }
+            }
+            """);
+        int readCount = 0;
+        string observedAccount = null;
+        var vault = new CredentialVault(storePath, (_, account) =>
+        {
+            readCount++;
+            observedAccount = account;
+            return "session-secret";
+        });
+
+        Assert.Equal("session-secret", vault.GetSecret("cred-test", "caller-account", preferKeychain: true));
+        Assert.Equal("session-secret", vault.GetSecret("cred-test", "caller-account", preferKeychain: true));
+        Assert.Equal("session-secret", vault.GetSecret("cred-test", "other-account", preferKeychain: true));
+        Assert.Equal(1, readCount);
+        Assert.Equal("stored-account", observedAccount);
+    }
+
+    [Fact]
+    public void GetSecret_DoesNotRetryDeniedOrUnavailableNativeReadDuringTheSession()
+    {
+        using var tempDir = new TempDirectory();
+        string storePath = Path.Combine(tempDir.Path, "credentials.json");
+        int readCount = 0;
+        var vault = new CredentialVault(storePath, (_, _) =>
+        {
+            readCount++;
+            return null;
+        });
+
+        Assert.Equal("fallback", vault.GetSecret("cred-test", "user", preferKeychain: true, fallbackPlaintext: "fallback"));
+        Assert.Equal("fallback", vault.GetSecret("cred-test", "user", preferKeychain: true, fallbackPlaintext: "fallback"));
+        Assert.Equal(1, readCount);
+    }
+
+    [Fact]
+    public void HasStoredSecret_UsesIndexMetadataWithoutReadingNativeStore()
+    {
+        using var tempDir = new TempDirectory();
+        string storePath = Path.Combine(tempDir.Path, "credentials.json");
+        File.WriteAllText(storePath, """
+            {
+              "cred-test": {
+                "Username": "stored-account",
+                "StoredInKeychain": true
+              }
+            }
+            """);
+        int readCount = 0;
+        var vault = new CredentialVault(storePath, (_, _) =>
+        {
+            readCount++;
+            return "secret";
+        });
+
+        Assert.True(vault.HasStoredSecret("cred-test"));
+        Assert.False(vault.HasStoredSecret("cred-missing"));
+        Assert.Equal(0, readCount);
     }
 
     [Fact]

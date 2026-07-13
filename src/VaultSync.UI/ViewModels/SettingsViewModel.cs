@@ -711,8 +711,9 @@ namespace VaultSync.UI
             _backupEncryptionAllowSessionFallback = cfg.Backups.Encryption.AllowSessionFallback;
             _backupEncryptionOpenUnlockTimeoutMinutes = ClampInt(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes, 1, 240, 10);
             _backupEncryptionKeyRef = cfg.Backups.Encryption.KeyRef ?? string.Empty;
-            _backupEncryptionHasSecret = !string.IsNullOrWhiteSpace(
-                _backupEncryptionSecretService.GetSecret(_backupEncryptionKeyRef, BackupEncryptionCredentialIdentity.AccountName));
+            // Startup status is based on the credential index. Reading the secret
+            // here would unlock Keychain before the user requests encrypted work.
+            _backupEncryptionHasSecret = _credentialVault.HasStoredSecret(_backupEncryptionKeyRef);
             _backupEncryptionPasswordInput = string.Empty;
             _backupEncryptionSecretStatus = _backupEncryptionHasSecret
                 ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
@@ -800,7 +801,6 @@ namespace VaultSync.UI
         private NetworkCredentialViewModel CreateCredentialViewModel(NetworkCredentialProfile cred)
         {
             string keyRef = CredentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
-            string? secret = _credentialVault.GetSecret(keyRef, cred.Username, cred.UseKeychain, cred.Password);
             return new NetworkCredentialViewModel
             {
                 Name = cred.Name,
@@ -808,7 +808,10 @@ namespace VaultSync.UI
                 Domain = cred.Domain ?? string.Empty,
                 KeyRef = keyRef,
                 UseKeychain = cred.UseKeychain,
-                Password = secret ?? string.Empty
+                // Loading Settings must not unlock every native credential. A blank
+                // field means "keep the enrolled secret"; plaintext is present only
+                // for legacy/fallback profiles and still needs to remain editable.
+                Password = cred.Password ?? string.Empty
             };
         }
 
@@ -1113,7 +1116,9 @@ namespace VaultSync.UI
         private CredentialSaveResult SaveCredentialSnapshot(CredentialSnapshot credential)
         {
             string keyRef = CredentialVault.EnsureKeyRef(credential.KeyRef, credential.Name);
-            string? secret = ResolveCredentialSecret(credential, keyRef);
+            string? secret = string.IsNullOrWhiteSpace(credential.Password)
+                ? null
+                : credential.Password;
             bool persistPlaintext = TrySaveCredentialSecret(credential, keyRef, secret);
 
             var profile = new NetworkCredentialProfile
@@ -1127,13 +1132,6 @@ namespace VaultSync.UI
             };
 
             return new CredentialSaveResult(profile, persistPlaintext);
-        }
-
-        private string? ResolveCredentialSecret(CredentialSnapshot credential, string keyRef)
-        {
-            return !string.IsNullOrWhiteSpace(credential.Password)
-                ? credential.Password
-                : _credentialVault.GetSecret(keyRef, credential.Username, credential.UseKeychain);
         }
 
         private bool TrySaveCredentialSecret(CredentialSnapshot credential, string keyRef, string? secret)
