@@ -1569,6 +1569,8 @@
   "Backups.Compare.OlderUnavailable": "The older backup content is not currently reachable.",
   "Backups.Compare.NewerUnavailable": "The newer backup content is not currently reachable.",
   "Backups.Compare.Busy": "Comparing restore points...",
+  "Backups.Compare.LineEndingsChanged": "Line endings changed",
+  "Backups.Compare.MetadataChangedOnly": "Text content is identical; only file metadata changed.",
   "Backups.Compare.InventoryUnavailable": "File inventory is unavailable for this restore point.",
   "Backups.Compare.NoEarlierPoint": "This is the first available restore point for the project. Create another backup to inspect file-by-file changes.",
   "Backups.Compare.LoadingInventory": "Loading changed files from the previous restore point.",

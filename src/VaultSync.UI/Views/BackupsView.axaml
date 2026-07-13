@@ -2441,7 +2441,7 @@
                     </StackPanel>
                     <Border Grid.Column="1"
                             Classes="pill"
-                            IsVisible="{CompiledBinding HasDiffFileContentLines}"
+                            IsVisible="{CompiledBinding HasDiffFileLineChanges}"
                             Padding="8,3"
                             Background="#2432DFA0"
                             BorderBrush="{DynamicResource SuccessBrush}"
@@ -2455,7 +2455,7 @@
                     </Border>
                     <Border Grid.Column="2"
                             Classes="pill"
-                            IsVisible="{CompiledBinding HasDiffFileContentLines}"
+                            IsVisible="{CompiledBinding HasDiffFileLineChanges}"
                             Padding="8,3"
                             Background="#24FF6A6A"
                             BorderBrush="{DynamicResource DangerBrush}"

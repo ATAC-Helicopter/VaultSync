@@ -5,7 +5,7 @@
 - [VS-1809] Added a searchable changed-file workspace with bounded Git-style unified text diffs for reachable folder and ZIP snapshots; encrypted, binary, offline, and unsupported content remains safely metadata-only.
 - [VS-1839] Migrated the desktop UI to Avalonia 12.1 with its .NET 10 rendering, accessibility, focus, selection, and compiled-binding improvements.
 ### Changed
-- [BUG-18063] Reworked snapshot text diffs into compact Git-style hunks with old/new line-number gutters, high-contrast addition and deletion rows, semantic file markers and summary cards, and per-file line totals so changes can be understood at a glance.
+- [BUG-18063] Reworked snapshot text diffs into compact Git-style hunks with old/new line-number gutters, high-contrast addition and deletion rows, semantic file markers and summary cards, per-file line totals, and explicit line-ending or metadata-only states so every changed file is understandable at a glance.
 - [VS-1809] Expanded snapshot comparison into dedicated hotspot, changed-file, and text-diff panes so file changes can be inspected without crowding the summary.
 - [VS-1809] Improved comparison QoL with automatic same-project restore-point suggestions, contextual selection guidance, cancellable comparison work, filtered-result counts, and clearer empty, capped, and no-match states.
 - [VS-1809] Cancelled superseded text-diff computations when users move quickly between changed files, avoiding unnecessary quadratic diff work for stale selections.

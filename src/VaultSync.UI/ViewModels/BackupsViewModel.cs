@@ -962,6 +962,7 @@ namespace VaultSync.UI.ViewModels
         public bool HasNoDiffPreviewFiles => !HasDiffPreviewFiles;
         public bool HasDiffFileContentLines => DiffFileContentLines.Count > 0;
         public bool HasNoDiffFileContentLines => !HasDiffFileContentLines;
+        public bool HasDiffFileLineChanges => DiffFileAddedLines > 0 || DiffFileDeletedLines > 0;
 
         public string DiffPreviewEmptyTitle
         {
@@ -2030,7 +2031,9 @@ namespace VaultSync.UI.ViewModels
 
                 DiffFileContentStatus = previewTruncated || diff.IsTruncated
                     ? L("Backups.Compare.DiffTruncated", "Git-style diff (preview truncated safely)")
-                    : L("Backups.Compare.GitDiff", "Git-style text diff");
+                    : diff.HasLineEndingChange
+                        ? L("Backups.Compare.LineEndingsChanged", "Line endings changed")
+                        : L("Backups.Compare.GitDiff", "Git-style text diff");
                 DiffFileContentText = diff.Text;
                 SetDiffFileContentLines(diff);
             });
@@ -2038,7 +2041,12 @@ namespace VaultSync.UI.ViewModels
 
         private void SetDiffFileContentLines(UnifiedTextDiffResult diff)
         {
-            DiffFileContentLines = DiffPreviewLineItem.ParseUnified(diff.Text);
+            IReadOnlyList<DiffPreviewLineItem> lines = DiffPreviewLineItem.ParseUnified(diff.Text);
+            DiffFileContentLines = lines.Count > 0
+                ? lines
+                : [DiffPreviewLineItem.Notice(L(
+                    "Backups.Compare.MetadataChangedOnly",
+                    "Text content is identical; only file metadata changed."))];
             DiffFileAddedLines = diff.AddedLines;
             DiffFileDeletedLines = diff.DeletedLines;
             OnPropertyChanged(nameof(DiffFileContentLines));
@@ -2058,6 +2066,7 @@ namespace VaultSync.UI.ViewModels
         {
             OnPropertyChanged(nameof(HasDiffFileContentLines));
             OnPropertyChanged(nameof(HasNoDiffFileContentLines));
+            OnPropertyChanged(nameof(HasDiffFileLineChanges));
         }
 
         private static (string Text, bool Truncated, string? Error) LoadSnapshotTextPreview(

@@ -63,6 +63,23 @@ public sealed class UnifiedTextDiffServiceTests
     }
 
     [Fact]
+    public void Create_ExplainsLineEndingOnlyChangesWithColoredDiffRows()
+    {
+        UnifiedTextDiffResult result = UnifiedTextDiffService.Create(
+            "first\r\nsecond\r\n",
+            "first\nsecond\n",
+            "a/file.txt",
+            "b/file.txt");
+
+        Assert.True(result.HasLineEndingChange);
+        Assert.Contains("@@ Line endings changed @@", result.Text);
+        Assert.Contains("-CRLF line endings", result.Text);
+        Assert.Contains("+LF line endings", result.Text);
+        Assert.Equal(0, result.AddedLines);
+        Assert.Equal(0, result.DeletedLines);
+    }
+
+    [Fact]
     public void Create_TruncatesLargeInputsAndOutput()
     {
         UnifiedTextDiffResult result = UnifiedTextDiffService.Create(

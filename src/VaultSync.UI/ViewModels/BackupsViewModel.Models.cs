@@ -119,6 +119,9 @@ namespace VaultSync.UI.ViewModels
         public bool IsHunk { get; }
         public bool IsNotice { get; }
 
+        public static DiffPreviewLineItem Notice(string content) =>
+            new(string.Empty, string.Empty, "!", content, '!');
+
         public static IReadOnlyList<DiffPreviewLineItem> ParseUnified(string? diffText)
         {
             if (string.IsNullOrWhiteSpace(diffText))
