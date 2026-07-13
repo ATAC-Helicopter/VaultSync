@@ -8,6 +8,21 @@ namespace VaultSync.Core.Tests;
 
 public sealed class UnifiedTextDiffServiceTests
 {
+    [Theory]
+    [InlineData(0, 10)]
+    [InlineData(10, 1)]
+    public void Create_RejectsNonPositiveWorkBounds(int maxLinesPerFile, int maxOutputLines)
+    {
+        var options = new UnifiedTextDiffOptions(maxLinesPerFile, maxOutputLines);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => UnifiedTextDiffService.Create(
+            "old",
+            "new",
+            "a",
+            "b",
+            options));
+    }
+
     [Fact]
     public void Create_ProducesUnifiedLineChanges()
     {

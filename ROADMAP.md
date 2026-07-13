@@ -1953,7 +1953,7 @@
   - Done: release packaging requires build, test, and vulnerability gates; AppImageKit is pinned and checksum-verified; required artifact uploads fail hard; macOS build/test runs in CI.
   - Done: backup history renders incrementally, core Avalonia views use compiled bindings with explicit reflective exceptions only for typed ancestor handoffs, and compare controls expose accessible names/help.
   - Done: metadata synchronization coordinates per destination instead of globally, presentation hooks are instance-injected, and required schema migration failures no longer leave a silently partial database.
-  - Validated: 315 tests pass locally, Debug and Release builds have zero warnings/errors with warnings treated as errors, analyzer verification passes, localization keys remain in parity, and the dependency vulnerability audit is clean.
+  - Validated: 320 tests pass locally, Debug and Release builds have zero warnings/errors with warnings treated as errors, analyzer verification passes, localization keys remain in parity, and the dependency vulnerability audit is clean.
 - [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
 
 ## Future backlog

@@ -14,6 +14,16 @@ namespace VaultSync.Core.Tests;
 public sealed class SnapshotCompareServiceTests
 {
     [Fact]
+    public async Task CompareAsync_RejectsTheSameSnapshotOnBothSides()
+    {
+        using var temp = new TempDirectory();
+        SqliteRepository repository = TestRepository.Create(Path.Combine(temp.Path, "vaultsync.db"));
+        var service = new SnapshotCompareService(repository);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CompareAsync(1, 1));
+    }
+
+    [Fact]
     public async Task CompareAsync_LoadsArbitrarySnapshotsFromRepository()
     {
         using var temp = new TempDirectory();
@@ -154,5 +164,14 @@ public sealed class SnapshotCompareServiceTests
         Assert.Equal(1_000, result.Modified);
         Assert.Equal(9_000, result.Unchanged);
         Assert.Equal(1_000, result.Changes.Count);
+    }
+
+    [Fact]
+    public void Compare_EmptyInventoriesDoNotReportGrowth()
+    {
+        SnapshotCompareResult result = SnapshotCompareService.Compare([], []);
+
+        Assert.Equal(0, result.NetSizeBytes);
+        Assert.Empty(result.Signals);
     }
 }
