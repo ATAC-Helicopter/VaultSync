@@ -93,6 +93,30 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public void BuildFileInventory_IndexesNestedFolderFiles()
+    {
+        string backup = CreateFolderBackup();
+
+        SnapshotFileInventory inventory = SnapshotExplorerService.BuildFileInventory(backup);
+
+        Assert.False(inventory.IsTruncated);
+        Assert.Equal(SnapshotExplorerSourceKind.Folder, inventory.SourceKind);
+        Assert.Contains(inventory.Files, file => file.RelPath == "src/app.json" && file.Size > 0);
+        Assert.Contains(inventory.Files, file => file.RelPath == "docs/notes.md" && file.Size > 0);
+    }
+
+    [Fact]
+    public void BuildFileInventory_StopsAtConfiguredFileLimit()
+    {
+        string backup = CreateArchiveBackup();
+
+        SnapshotFileInventory inventory = SnapshotExplorerService.BuildFileInventory(backup, maxFiles: 1);
+
+        Assert.True(inventory.IsTruncated);
+        Assert.Single(inventory.Files);
+    }
+
+    [Fact]
     public void ArchiveBackup_PreservesCaseDistinctFiles()
     {
         string backup = Path.Combine(_root, "case-distinct-archive");

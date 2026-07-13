@@ -11,6 +11,93 @@ public sealed class SnapshotExplorerService
     private const double MaxBinaryControlCharacterRatio = 0.02;
     private const string UnsupportedPreviewMessage = "Preview is available for text-like files only.";
 
+    public static SnapshotFileInventory BuildFileInventory(
+        string backupRoot,
+        int maxFiles = 5_000,
+        CancellationToken cancellationToken = default)
+    {
+        if (maxFiles <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxFiles));
+
+        BackupSource source = ResolveSource(backupRoot);
+        if (source.Kind == SnapshotExplorerSourceKind.EncryptedArchive)
+            return new SnapshotFileInventory(source.Kind, [], IsTruncated: false);
+
+        var files = new List<FileEntry>(Math.Min(maxFiles, 1_024));
+        bool truncated = source.Kind == SnapshotExplorerSourceKind.Archive
+            ? AddArchiveInventory(source.Path, files, maxFiles, cancellationToken)
+            : AddFolderInventory(source.Path, files, maxFiles, cancellationToken);
+        return new SnapshotFileInventory(source.Kind, files, truncated);
+    }
+
+    private static bool AddFolderInventory(
+        string backupRoot,
+        List<FileEntry> files,
+        int maxFiles,
+        CancellationToken cancellationToken)
+    {
+        var pending = new Stack<string>();
+        pending.Push(backupRoot);
+        while (pending.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string directory = pending.Pop();
+            foreach (string childDirectory in Directory.EnumerateDirectories(directory))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if ((File.GetAttributes(childDirectory) & FileAttributes.ReparsePoint) == 0)
+                    pending.Push(childDirectory);
+            }
+
+            foreach (string file in Directory.EnumerateFiles(directory))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (IsInternalBackupArtifact(Path.GetFileName(file)) ||
+                    (File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
+                {
+                    continue;
+                }
+
+                if (files.Count >= maxFiles)
+                    return true;
+
+                var info = new FileInfo(file);
+                files.Add(new FileEntry(
+                    ToExplorerPath(Path.GetRelativePath(backupRoot, file)),
+                    Math.Max(0, info.Length),
+                    info.LastWriteTimeUtc,
+                    string.Empty));
+            }
+        }
+
+        return false;
+    }
+
+    private static bool AddArchiveInventory(
+        string archivePath,
+        List<FileEntry> files,
+        int maxFiles,
+        CancellationToken cancellationToken)
+    {
+        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        foreach (ZipArchiveEntry entry in archive.Entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrEmpty(entry.Name) || IsInternalBackupArtifact(entry.Name))
+                continue;
+            if (files.Count >= maxFiles)
+                return true;
+
+            files.Add(new FileEntry(
+                NormalizeArchiveEntryPath(entry.FullName),
+                Math.Max(0, entry.Length),
+                entry.LastWriteTime.UtcDateTime,
+                string.Empty));
+        }
+
+        return false;
+    }
+
     public static SnapshotExplorerResult List(string backupRoot, string? folderPath = null, string? search = null)
     {
         BackupSource source = ResolveSource(backupRoot);
@@ -551,6 +638,11 @@ public sealed record SnapshotExplorerResult(
     SnapshotExplorerSourceKind SourceKind,
     string FolderPath,
     IReadOnlyList<SnapshotExplorerEntry> Entries);
+
+public sealed record SnapshotFileInventory(
+    SnapshotExplorerSourceKind SourceKind,
+    IReadOnlyList<FileEntry> Files,
+    bool IsTruncated);
 
 public sealed record SnapshotPreviewResult(
     bool Success,

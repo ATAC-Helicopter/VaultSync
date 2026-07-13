@@ -28,6 +28,7 @@
 - [VS-1835] Refactored Projects and Settings workflows, project snapshot commands, and rich-text rendering into focused helpers to reduce UI complexity and improve maintainability.
 - [VS-1836] Addressed Sonar analyzer findings and consolidated repeated literals across backup, navigation, update, credential, telemetry, verification, network-mount, and encryption services.
 ### Fixed
+- [BUG-18061] Restored per-backup changed-file details by comparing with the nearest earlier project restore point, including safe bounded folder and ZIP inventory recovery when imported metadata lacks file rows; offline, encrypted, and capped cases now retain their recorded totals with accurate guidance instead of showing a false empty diff.
 - [BUG-18060] Hardened Snapshot Explorer ZIP restore with explicit destination containment and linked-path rejection so malicious archive entries cannot write outside the selected restore root.
 - [BUG-18060] Applied the same linked-path rejection to ordinary folder restores so an existing symlink or junction inside the restore target cannot redirect copied files outside it.
 - [BUG-18059] Diagnostics retention now runs periodically on every platform, keeps at most two hang dumps within a 1 GiB diagnostics budget, and stops timed-out dump collection before partial files consume disk space.
