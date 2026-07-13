@@ -4,6 +4,8 @@
 
 VaultSync `1.8.3` introduces Compare & Change Intelligence with searchable file-level changes and safe Git-style text diffs, while strengthening release safety and diagnostics retention.
 
+The comparison workflow now uses clear earlier/later restore-point choices, compact affected-path and changed-file review, plain-language result states, and keyboard-accessible vector controls. Dashboard activity and storage cards also adapt to narrow windows instead of crowding fixed multi-column layouts.
+
 ### Compare & Change Intelligence
 - Backups can compare any two restore points from the same project using their stored snapshot file inventories.
 - The comparison shows added, modified, deleted, and unchanged files with per-file size deltas and changed-path hotspots.

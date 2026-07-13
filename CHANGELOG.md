@@ -10,8 +10,10 @@
 - [VS-1809] Cancelled superseded text-diff computations when users move quickly between changed files, avoiding unnecessary quadratic diff work for stale selections.
 - [VS-1809] Added previous/next changed-file navigation and one-click filter clearing to make large snapshot comparisons faster to review.
 - [VS-1809] Redesigned restore-point comparison with compact change cards, an app-native empty state, and a detailed workspace shown only when changed files are available; zero examined files are no longer reported as confirmed no-change results.
+- [VS-1809] Refined restore-point comparison around clearly labeled earlier/later selections, plain-language status copy, affected-path chips, a compact two-pane files-to-diff workspace, vector navigation controls, and keyboard-friendly compare and close actions.
 - [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines as the validated baseline for the separately tracked Avalonia 12 migration.
 - [VS-1839] Aligned LiveCharts, SkiaSharp, and HarfBuzzSharp with the Avalonia 12 rendering ABI, removed the retired diagnostics package, and adopted the new placeholder and window-decoration APIs.
+- [VS-1839] Made Dashboard activity and storage sections adapt progressively at narrow widths, including stacked cards, a compact storage header, and a donut chart that scales to the available space.
 - [VS-1840] Hardened snapshot scanning and comparison by skipping linked source entries, preserving case-distinct paths, and clearing temporary PBKDF2 key material after archive encryption and decryption.
 - [VS-1840] Replaced re-entrant `async void` UI commands with observed, single-flight async commands and added cancellable Recovery page lifecycle refreshes.
 - [VS-1840] Removed the global nullable-warning suppression and corrected every exposed nullability contract so warning-as-error builds enforce the full baseline again.
@@ -29,6 +31,7 @@
 - [BUG-18060] Hardened Snapshot Explorer ZIP restore with explicit destination containment and linked-path rejection so malicious archive entries cannot write outside the selected restore root.
 - [BUG-18060] Applied the same linked-path rejection to ordinary folder restores so an existing symlink or junction inside the restore target cannot redirect copied files outside it.
 - [BUG-18059] Diagnostics retention now runs periodically on every platform, keeps at most two hang dumps within a 1 GiB diagnostics budget, and stops timed-out dump collection before partial files consume disk space.
+- [VS-1839] Limited frameless tray and backup-widget dragging to their title areas, restored visible Log Console multi-selection, and updated folder pickers to resolve Avalonia 12 storage items without assuming `file://` URIs.
 
 ## [1.8.2] - 04.07.2026
 ### Added

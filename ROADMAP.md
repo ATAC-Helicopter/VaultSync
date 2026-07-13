@@ -1783,12 +1783,13 @@
 - `1.8.2` Snapshot Explorer scope is tracked by the dedicated GitHub milestone `1.8.2`.
 - `1.8.3` Compare & Change Intelligence, security, maintenance, and diagnostics hardening is tracked by the dedicated GitHub milestone `1.8.3` and release PR #410.
 
-### 1.8.3 status (2026-07-12)
+### 1.8.3 status (2026-07-13)
 - Compare & Change Intelligence is active under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
 - The maintenance scope covers release-script output confinement, Snapshot Explorer and snapshot-pipeline decomposition, CLI/UI complexity reduction, and analyzer cleanup.
 - Diagnostics retention now runs at startup and every six hours on every platform, with at most two hang dumps and a 1 GiB total diagnostics budget.
 - The original 18 `Dev` commits are preserved in release-branch ancestry through merge commit `76d2b3e`; no shared history was rewritten.
 - Release preparation and validation continue in draft PR #410.
+- The final UI pass clarifies earlier/later comparison, compresses the changed-file review workspace, makes Dashboard cards responsive at narrow widths, and hardens frameless-window, selection, and storage-picker interactions under Avalonia 12.
 
 ### 1.8.1 status (2026-06-23)
 - Release theme: complete the Recovery Intelligence slice planned in `docs/VaultSync 1.8 Timeline.md`.
@@ -1840,6 +1841,7 @@
   - Done: changed-file selection now cancels superseded unified-diff computation instead of only suppressing stale presentation.
   - Done: the changed-file workspace supports previous/next navigation and one-click search/filter clearing for faster keyboard-friendly review.
   - Done: compare presentation now uses compact app-native summary cards, distinguishes unavailable inventory from verified no-change results, and hides the large file workspace when there are no changed files to inspect.
+  - Done: the final UX pass adds labeled earlier/later selectors, plain-language result copy, compact affected-path chips, a two-pane files-to-diff workspace, vector controls, and keyboard-friendly default/cancel behavior.
   - Remaining: perform a manual desktop interaction pass before closing #361.
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
@@ -1938,7 +1940,8 @@
   - Done locally: the coordinated UI stack now uses Avalonia 12.1, its compatible SkiaSharp/HarfBuzzSharp ABI line, and the Avalonia 12 LiveCharts adapter.
   - Done locally: the retired Avalonia diagnostics package is removed and placeholder/window-decoration APIs use their Avalonia 12 replacements.
   - Done: compiled bindings remain enabled by default, Debug and Release builds are warning-free, 287 tests pass, a real macOS startup smoke reaches the Dashboard, and Windows/Linux CI plus CodeQL, Sonar, Store preflight, and dependency submission pass.
-  - Remaining: perform focused interaction checks for frameless windows, selection controls, clipboard, storage pickers, and Dashboard charts.
+  - Done: frameless utility windows reserve dragging for their title areas, Log Console selection is visible, folder pickers use Avalonia 12 local-path resolution, and Dashboard activity/storage layouts respond across six tested width breakpoints.
+  - Remaining: perform real Windows/Linux interaction checks for scaled-DPI utility windows, portal pickers, clipboard gestures, and Dashboard chart rendering.
 - [x] `VS-1840` `P1` Audit and harden fragile 1.8.3 code paths. _(Done 2026-07-12; tracked by #426; target 1.8.3)_
   - Done: folder restores reject linked target components immediately before copying, matching archive extraction containment.
   - Done: project scanning skips linked files and directories so cycles and out-of-root source traversal cannot enter snapshots.
@@ -1950,7 +1953,7 @@
   - Done: release packaging requires build, test, and vulnerability gates; AppImageKit is pinned and checksum-verified; required artifact uploads fail hard; macOS build/test runs in CI.
   - Done: backup history renders incrementally, core Avalonia views use compiled bindings with explicit reflective exceptions only for typed ancestor handoffs, and compare controls expose accessible names/help.
   - Done: metadata synchronization coordinates per destination instead of globally, presentation hooks are instance-injected, and required schema migration failures no longer leave a silently partial database.
-  - Validated: 302 tests pass locally, Debug and Release builds have zero warnings/errors with warnings treated as errors, analyzer verification passes, localization keys remain in parity, and the dependency vulnerability audit is clean.
+  - Validated: 315 tests pass locally, Debug and Release builds have zero warnings/errors with warnings treated as errors, analyzer verification passes, localization keys remain in parity, and the dependency vulnerability audit is clean.
 - [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
 
 ## Future backlog
