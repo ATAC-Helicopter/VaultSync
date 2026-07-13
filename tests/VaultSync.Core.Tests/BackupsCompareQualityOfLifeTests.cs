@@ -20,9 +20,10 @@ public sealed class BackupsCompareQualityOfLifeTests
 
         viewModel.SelectedSnapshotA = selected;
 
-        Assert.Same(nearest, viewModel.SelectedSnapshotB);
+        Assert.Same(nearest, viewModel.SelectedSnapshotA);
+        Assert.Same(selected, viewModel.SelectedSnapshotB);
         Assert.True(viewModel.CanCompareSelectedSnapshots);
-        Assert.Contains("Ready:", viewModel.CompareSelectionHint);
+        Assert.Contains("Ready to compare:", viewModel.CompareSelectionHint);
     }
 
     [Fact]

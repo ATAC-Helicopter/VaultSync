@@ -1136,7 +1136,7 @@ namespace VaultSync.UI.ViewModels
                     : SelectedSnapshotA;
                 return Lf(
                     "Backups.Compare.ReadyRange",
-                    "Ready: {0} -> {1}",
+                    "Ready to compare: {0} → {1}",
                     older.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture),
                     newer.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture));
             }
@@ -1478,20 +1478,20 @@ namespace VaultSync.UI.ViewModels
 
             DiffPreviewTitle = Lf(
                 "Backups.Compare.Title",
-                "Restore point compare - {0}",
+                "Changes in {0}",
                 projectName);
             DiffPreviewMetaLine = Lf(
                 "Backups.Compare.Range",
-                "{0} -> {1}",
+                "{0} → {1}",
                 older.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture),
                 newer.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture));
             DiffPreviewTrigger = Lf(
                 "Backups.Compare.ChangeIntelligenceLine",
-                "Change intelligence: {0} files examined",
+                "{0} files checked",
                 (result.Unchanged + result.ChangedCount).ToString(CultureInfo.CurrentCulture));
             DiffPreviewMode = Lf(
                 "Backups.Compare.ChangeCountLine",
-                "{0} changed over {1}",
+                "{0} changes across {1}",
                 result.ChangedCount.ToString(CultureInfo.CurrentCulture),
                 FormatElapsed(elapsed));
             DiffPreviewImportedDisplay = older.IsImported || newer.IsImported
@@ -1720,45 +1720,29 @@ namespace VaultSync.UI.ViewModels
         {
             cancellationToken.ThrowIfCancellationRequested();
             (string? olderRoot, string? newerRoot) = (ResolveBackupContentRoot(older), ResolveBackupContentRoot(newer));
-            string? error = null;
             string olderText = string.Empty;
             string newerText = string.Empty;
             bool previewTruncated = false;
+            string? error = null;
 
             if (file.Kind != SnapshotFileChangeKind.Added)
             {
-                if (olderRoot is null)
-                    error = L("Backups.Compare.OlderUnavailable", "The older backup content is not currently reachable.");
-                else
-                {
-                    SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(olderRoot, file.Path);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (!preview.Success)
-                        error = preview.Error;
-                    else
-                    {
-                        olderText = preview.Text;
-                        previewTruncated |= preview.Truncated;
-                    }
-                }
+                (olderText, bool olderTruncated, error) = LoadSnapshotTextPreview(
+                    olderRoot,
+                    file.Path,
+                    L("Backups.Compare.OlderUnavailable", "The older backup content is not currently reachable."),
+                    cancellationToken);
+                previewTruncated |= olderTruncated;
             }
 
             if (error is null && file.Kind != SnapshotFileChangeKind.Deleted)
             {
-                if (newerRoot is null)
-                    error = L("Backups.Compare.NewerUnavailable", "The newer backup content is not currently reachable.");
-                else
-                {
-                    SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(newerRoot, file.Path);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (!preview.Success)
-                        error = preview.Error;
-                    else
-                    {
-                        newerText = preview.Text;
-                        previewTruncated |= preview.Truncated;
-                    }
-                }
+                (newerText, bool newerTruncated, error) = LoadSnapshotTextPreview(
+                    newerRoot,
+                    file.Path,
+                    L("Backups.Compare.NewerUnavailable", "The newer backup content is not currently reachable."),
+                    cancellationToken);
+                previewTruncated |= newerTruncated;
             }
 
             UnifiedTextDiffResult? diff = error is null
@@ -1787,6 +1771,22 @@ namespace VaultSync.UI.ViewModels
                     : L("Backups.Compare.GitDiff", "Git-style text diff");
                 DiffFileContentText = diff.Text;
             });
+        }
+
+        private static (string Text, bool Truncated, string? Error) LoadSnapshotTextPreview(
+            string? contentRoot,
+            string relativePath,
+            string unavailableMessage,
+            CancellationToken cancellationToken)
+        {
+            if (contentRoot is null)
+                return (string.Empty, false, unavailableMessage);
+
+            SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(contentRoot, relativePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            return preview.Success
+                ? (preview.Text, preview.Truncated, null)
+                : (string.Empty, false, preview.Error);
         }
 
         private string? ResolveBackupContentRoot(BackupSnapshotItem snapshot)
@@ -1922,9 +1922,29 @@ namespace VaultSync.UI.ViewModels
                 .OrderBy(snapshot => Math.Abs((snapshot.Timestamp - selected.Timestamp).Ticks))
                 .FirstOrDefault();
             if (selectPointB)
-                SelectedSnapshotB = candidate;
+            {
+                if (candidate is not null && candidate.Timestamp < selected.Timestamp)
+                {
+                    SelectedSnapshotB = selected;
+                    SelectedSnapshotA = candidate;
+                }
+                else
+                {
+                    SelectedSnapshotB = candidate;
+                }
+            }
             else
-                SelectedSnapshotA = candidate;
+            {
+                if (candidate is not null && candidate.Timestamp > selected.Timestamp)
+                {
+                    SelectedSnapshotA = selected;
+                    SelectedSnapshotB = candidate;
+                }
+                else
+                {
+                    SelectedSnapshotA = candidate;
+                }
+            }
         }
 
         private SnapshotSummaryExportPayload BuildSnapshotSummaryExportPayload(BackupSnapshotItem snapshot)
