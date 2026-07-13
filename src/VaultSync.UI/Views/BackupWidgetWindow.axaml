@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:viewmodels="using:VaultSync.UI.ViewModels"
         xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+        xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
         x:Class="VaultSync.UI.Views.BackupWidgetWindow"
         x:DataType="viewmodels:BackupWidgetViewModel"
         Width="360"
@@ -17,19 +18,18 @@
           CornerRadius="16"
           Padding="12"
           Background="{DynamicResource CardBackgroundBrush}"
-          BoxShadow="0 12 30 0 #20000000"
-          PointerPressed="OnDragAreaPointerPressed">
+          BoxShadow="0 12 30 0 #20000000">
 
     <Grid RowDefinitions="Auto,Auto,*,Auto"
           RowSpacing="8">
       <!-- Header: title + status + close -->
       <Grid Grid.Row="0"
             ColumnDefinitions="*,Auto"
-            ColumnSpacing="8"
-            PointerPressed="OnDragAreaPointerPressed">
+            ColumnSpacing="8">
         <StackPanel Orientation="Horizontal"
                     Spacing="6"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center"
+                    PointerPressed="OnDragAreaPointerPressed">
           <TextBlock Text="{infra:LocalizedString Key=BackupWidget.Title}"
                      FontWeight="SemiBold"
                      FontSize="13" />
@@ -46,11 +46,19 @@
         </StackPanel>
 
         <Button Grid.Column="1"
-                Content="×"
                 Command="{Binding CloseCommand}"
+                AutomationProperties.Name="{infra:LocalizedString Key=BackupWidget.Hide}"
+                ToolTip.Tip="{infra:LocalizedString Key=BackupWidget.Hide}"
                 Classes="small-button"
                 Padding="6,2"
-                MinWidth="0" />
+                MinWidth="0">
+          <shapes:Path Data="M 2,2 L 10,10 M 10,2 L 2,10"
+                       Width="12"
+                       Height="12"
+                       Stretch="Uniform"
+                       Stroke="{DynamicResource TextPrimaryBrush}"
+                       StrokeThickness="1.5" />
+        </Button>
       </Grid>
 
       <!-- Subtitle + buttons -->

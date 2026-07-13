@@ -18,16 +18,15 @@
           CornerRadius="20"
           Padding="14"
           Background="{DynamicResource CardBackgroundBrush}"
-          BoxShadow="0 14 36 0 #22000000"
-          PointerPressed="OnDragAreaPointerPressed">
+          BoxShadow="0 14 36 0 #22000000">
     <Grid RowDefinitions="Auto,Auto,*,Auto"
           RowSpacing="12">
       <!-- Header -->
       <Grid Grid.Row="0"
             ColumnDefinitions="*,Auto"
-            ColumnSpacing="12"
-            PointerPressed="OnDragAreaPointerPressed">
-        <StackPanel Spacing="2">
+            ColumnSpacing="12">
+        <StackPanel Spacing="2"
+                    PointerPressed="OnDragAreaPointerPressed">
           <TextBlock Text="{Binding HeaderTitle}"
                      FontSize="16"
                      FontWeight="SemiBold" />

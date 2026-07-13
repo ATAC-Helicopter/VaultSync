@@ -2855,8 +2855,8 @@ namespace VaultSync.UI
                 AllowMultiple = false
             });
 
-            IStorageFolder? folder = folders?.FirstOrDefault();
-            string? path = folder?.Path?.LocalPath;
+            IStorageFolder? folder = folders is { Count: > 0 } ? folders[0] : null;
+            string? path = folder?.TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
@@ -2891,8 +2891,8 @@ namespace VaultSync.UI
                 AllowMultiple = false
             });
 
-            IStorageFolder? folder = folders?.FirstOrDefault();
-            string? path = folder?.Path?.LocalPath;
+            IStorageFolder? folder = folders is { Count: > 0 } ? folders[0] : null;
+            string? path = folder?.TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
@@ -2920,8 +2920,8 @@ namespace VaultSync.UI
                 AllowMultiple = false
             });
 
-            IStorageFolder? folder = folders?.FirstOrDefault();
-            string? path = folder?.Path?.LocalPath;
+            IStorageFolder? folder = folders is { Count: > 0 } ? folders[0] : null;
+            string? path = folder?.TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
