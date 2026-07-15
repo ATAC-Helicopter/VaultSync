@@ -1571,8 +1571,6 @@
   "Backups.Compare.OlderUnavailable": "The earlier backup is unavailable. Reconnect its storage to view this file.",
   "Backups.Compare.NewerUnavailable": "The later backup is unavailable. Reconnect its storage to view this file.",
   "Backups.Compare.Busy": "Comparing restore points...",
-  "Backups.Compare.LineEndingsChanged": "Line endings changed",
-  "Backups.Compare.LineEndingValue": "{0} line endings",
   "Backups.Compare.PreviewShortened": "Preview shortened to keep comparison responsive.",
   "Backups.Compare.MetadataChangedOnly": "The text is identical; only file details such as its timestamp or size changed.",
   "Backups.Compare.InventoryUnavailable": "File details are unavailable for this restore point.",

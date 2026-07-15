@@ -63,7 +63,7 @@ public sealed class UnifiedTextDiffServiceTests
     }
 
     [Fact]
-    public void Create_ReportsLineEndingOnlyChangesWithoutEmbeddingUiCopy()
+    public void Create_IgnoresLineEndingOnlyChanges()
     {
         UnifiedTextDiffResult result = UnifiedTextDiffService.Create(
             "first\r\nsecond\r\n",
@@ -71,10 +71,7 @@ public sealed class UnifiedTextDiffServiceTests
             "a/file.txt",
             "b/file.txt");
 
-        Assert.True(result.HasLineEndingChange);
-        Assert.Equal("CRLF", result.OlderLineEnding);
-        Assert.Equal("LF", result.NewerLineEnding);
-        Assert.DoesNotContain("line endings", result.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("--- a/file.txt" + Environment.NewLine + "+++ b/file.txt", result.Text);
         Assert.Equal(0, result.AddedLines);
         Assert.Equal(0, result.DeletedLines);
     }

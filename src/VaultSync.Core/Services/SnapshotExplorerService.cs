@@ -10,6 +10,7 @@ public sealed class SnapshotExplorerService
     private const int DefaultPreviewBytes = 256 * 1024;
     private const double MaxBinaryControlCharacterRatio = 0.02;
     private const string UnsupportedPreviewMessage = "Preview is available for text-like files only.";
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     public static SnapshotFileInventory BuildFileInventory(
         string backupRoot,
@@ -28,6 +29,46 @@ public sealed class SnapshotExplorerService
             ? AddArchiveInventory(source.Path, files, maxFiles, cancellationToken)
             : AddFolderInventory(source.Path, files, maxFiles, cancellationToken);
         return new SnapshotFileInventory(source.Kind, files, truncated);
+    }
+
+    public static IReadOnlySet<string> FindTextEquivalentFiles(
+        string olderBackupRoot,
+        string newerBackupRoot,
+        IEnumerable<string> relativePaths,
+        int maxBytesPerFile = DefaultPreviewBytes,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(relativePaths);
+        if (maxBytesPerFile <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxBytesPerFile));
+
+        using var olderReader = new TextContentReader(ResolveSource(olderBackupRoot));
+        using var newerReader = new TextContentReader(ResolveSource(newerBackupRoot));
+        if (!olderReader.CanRead || !newerReader.CanRead)
+            return new HashSet<string>(StringComparer.Ordinal);
+
+        var equivalent = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string path in relativePaths
+                     .Select(item => NormalizeExplorerPath(item, allowEmpty: false))
+                     .Distinct(StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!olderReader.TryReadCompleteText(path, maxBytesPerFile, out string olderText) ||
+                !newerReader.TryReadCompleteText(path, maxBytesPerFile, out string newerText))
+            {
+                continue;
+            }
+
+            if (string.Equals(
+                    NormalizeLineEndings(olderText),
+                    NormalizeLineEndings(newerText),
+                    StringComparison.Ordinal))
+            {
+                equivalent.Add(path);
+            }
+        }
+
+        return equivalent;
     }
 
     private static bool AddFolderInventory(
@@ -601,6 +642,70 @@ public sealed class SnapshotExplorerService
         }
 
         return controlCharacters / (double)buffer.Length <= MaxBinaryControlCharacterRatio;
+    }
+
+    private static string NormalizeLineEndings(string text) =>
+        text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
+    private sealed class TextContentReader : IDisposable
+    {
+        private readonly BackupSource _source;
+        private readonly ZipArchive? _archive;
+        private readonly IReadOnlyDictionary<string, ZipArchiveEntry>? _archiveEntries;
+
+        public TextContentReader(BackupSource source)
+        {
+            _source = source;
+            if (source.Kind != SnapshotExplorerSourceKind.Archive)
+                return;
+
+            _archive = ZipFile.OpenRead(source.Path);
+            _archiveEntries = _archive.Entries
+                .Where(entry => !string.IsNullOrEmpty(entry.Name))
+                .GroupBy(entry => NormalizeArchiveEntryPath(entry.FullName), StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        }
+
+        public bool CanRead => _source.Kind != SnapshotExplorerSourceKind.EncryptedArchive;
+
+        public bool TryReadCompleteText(string relativePath, int maxBytes, out string text)
+        {
+            text = string.Empty;
+            byte[] buffer;
+            bool truncated;
+            if (_source.Kind == SnapshotExplorerSourceKind.Archive)
+            {
+                if (_archiveEntries is null || !_archiveEntries.TryGetValue(relativePath, out ZipArchiveEntry? entry))
+                    return false;
+
+                using Stream stream = entry.Open();
+                buffer = ReadPrefix(stream, maxBytes, out truncated, entry.Length);
+            }
+            else
+            {
+                string path = ResolvePathUnderRoot(_source.Path, relativePath);
+                if (!File.Exists(path))
+                    return false;
+
+                buffer = ReadPrefix(path, maxBytes, out truncated);
+            }
+
+            if (truncated || !LooksLikeText(buffer))
+                return false;
+
+            try
+            {
+                int start = buffer.Length >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF ? 3 : 0;
+                text = StrictUtf8.GetString(buffer, start, buffer.Length - start);
+                return true;
+            }
+            catch (DecoderFallbackException)
+            {
+                return false;
+            }
+        }
+
+        public void Dispose() => _archive?.Dispose();
     }
 
     private readonly record struct BackupSource(SnapshotExplorerSourceKind Kind, string Path);

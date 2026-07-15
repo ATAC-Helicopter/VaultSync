@@ -12,12 +12,7 @@ public sealed record UnifiedTextDiffResult(
     string Text,
     int AddedLines,
     int DeletedLines,
-    bool IsTruncated,
-    string? OlderLineEnding = null,
-    string? NewerLineEnding = null)
-{
-    public bool HasLineEndingChange => OlderLineEnding is not null && NewerLineEnding is not null;
-}
+    bool IsTruncated);
 
 /// <summary>
 /// Creates a bounded, line-oriented unified diff suitable for snapshot previews.
@@ -66,12 +61,6 @@ public static class UnifiedTextDiffService
         int added = operations.Count(operation => operation.Marker == '+');
         int deleted = operations.Count(operation => operation.Marker == '-');
         IReadOnlyList<(int Start, int End)> hunks = BuildHunkRanges(operations, options.ContextLines);
-        string? olderEnding = null;
-        string? newerEnding = null;
-        bool hasLineEndingChange = added == 0 && deleted == 0 &&
-                                   !string.Equals(olderRaw, newerRaw, StringComparison.Ordinal) &&
-                                   TryDescribeLineEndingChange(olderRaw, newerRaw, out olderEnding, out newerEnding);
-
         foreach ((int start, int end) in hunks)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -111,9 +100,7 @@ public static class UnifiedTextDiffService
             string.Join(Environment.NewLine, output),
             added,
             deleted,
-            truncated,
-            hasLineEndingChange ? olderEnding : null,
-            hasLineEndingChange ? newerEnding : null);
+            truncated);
     }
 
     private static List<DiffOperation> BuildOperations(
@@ -175,55 +162,6 @@ public static class UnifiedTextDiffService
 
         return ranges;
     }
-
-    private static bool TryDescribeLineEndingChange(
-        string olderText,
-        string newerText,
-        out string? olderEnding,
-        out string? newerEnding)
-    {
-        olderEnding = DescribeLineEndings(olderText);
-        newerEnding = DescribeLineEndings(newerText);
-        return !string.Equals(olderEnding, newerEnding, StringComparison.Ordinal);
-    }
-
-    private static string DescribeLineEndings(string text)
-    {
-        int crlf = 0;
-        int lf = 0;
-        int cr = 0;
-        for (int index = 0; index < text.Length; index++)
-        {
-            if (text[index] == '\r')
-            {
-                if (index + 1 < text.Length && text[index + 1] == '\n')
-                {
-                    crlf++;
-                    index++;
-                }
-                else
-                {
-                    cr++;
-                }
-            }
-            else if (text[index] == '\n')
-            {
-                lf++;
-            }
-        }
-
-        int kinds = (crlf > 0 ? 1 : 0) + (lf > 0 ? 1 : 0) + (cr > 0 ? 1 : 0);
-        if (kinds > 1)
-            return "Mixed";
-        if (crlf > 0)
-            return "CRLF";
-        if (lf > 0)
-            return "LF";
-        if (cr > 0)
-            return "CR";
-        return "None";
-    }
-
 
     private static string[] SplitLines(string? text) => string.IsNullOrEmpty(text)
         ? []

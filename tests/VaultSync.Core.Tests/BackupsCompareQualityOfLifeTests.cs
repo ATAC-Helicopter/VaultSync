@@ -296,6 +296,36 @@ public sealed class BackupsCompareQualityOfLifeTests
         }
     }
 
+    [Fact]
+    public void ReachableBackupContentsTreatLineEndingOnlyChangesAsUnchanged()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "vaultsync-line-ending-compare-" + Guid.NewGuid().ToString("N"));
+        string olderRoot = Path.Combine(root, "older");
+        string newerRoot = Path.Combine(root, "newer");
+        Directory.CreateDirectory(olderRoot);
+        Directory.CreateDirectory(newerRoot);
+        try
+        {
+            File.WriteAllText(Path.Combine(olderRoot, "same.txt"), "first\r\nsecond\r\n");
+            File.WriteAllText(Path.Combine(newerRoot, "same.txt"), "first\nsecond\n");
+            var emptyDatabaseResult = new SnapshotCompareResult(
+                0, 0, 0, 0, 0, 0, 0, [], [], []);
+
+            SnapshotCompareResult result = BackupsViewModel.CompareBackupContentInventories(
+                olderRoot,
+                newerRoot,
+                emptyDatabaseResult);
+
+            Assert.Equal(0, result.ChangedCount);
+            Assert.Equal(1, result.Unchanged);
+            Assert.Empty(result.Changes);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     private static BackupSnapshotItem Point(string id, int snapshotId, string projectId, DateTime timestamp) =>
         new()
         {

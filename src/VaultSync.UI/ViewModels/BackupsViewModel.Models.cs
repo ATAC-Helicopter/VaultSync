@@ -122,15 +122,6 @@ namespace VaultSync.UI.ViewModels
         public static DiffPreviewLineItem Notice(string content) =>
             new(string.Empty, string.Empty, "!", content, '!');
 
-        public static DiffPreviewLineItem Hunk(string content) =>
-            new(string.Empty, string.Empty, string.Empty, content, '@');
-
-        public static DiffPreviewLineItem Added(string content) =>
-            new(string.Empty, string.Empty, "+", content, '+');
-
-        public static DiffPreviewLineItem Deleted(string content) =>
-            new(string.Empty, string.Empty, "-", content, '-');
-
         public static IReadOnlyList<DiffPreviewLineItem> ParseUnified(string? diffText)
         {
             if (string.IsNullOrWhiteSpace(diffText))

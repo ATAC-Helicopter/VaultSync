@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -173,5 +174,31 @@ public sealed class SnapshotCompareServiceTests
 
         Assert.Equal(0, result.NetSizeBytes);
         Assert.Empty(result.Signals);
+    }
+
+    [Fact]
+    public void IgnoreTextEquivalentModifications_ReclassifiesFilesAndSummaries()
+    {
+        DateTime time = DateTime.UtcNow;
+        SnapshotCompareResult result = SnapshotCompareService.Compare(
+            [
+                new FileEntry("src/line-endings.cs", 14, time, "older-line-endings"),
+                new FileEntry("src/real-change.cs", 6, time, "older-content")
+            ],
+            [
+                new FileEntry("src/line-endings.cs", 12, time, "newer-line-endings"),
+                new FileEntry("src/real-change.cs", 5, time, "newer-content")
+            ]);
+
+        SnapshotCompareResult refined = SnapshotCompareService.IgnoreTextEquivalentModifications(
+            result,
+            new HashSet<string>(StringComparer.Ordinal) { "src/line-endings.cs" });
+
+        Assert.Equal(1, refined.Modified);
+        Assert.Equal(1, refined.Unchanged);
+        SnapshotFileChange remaining = Assert.Single(refined.Changes);
+        Assert.Equal("src/real-change.cs", remaining.Path);
+        Assert.Equal(6, refined.ChangedBytes);
+        Assert.Equal(1, Assert.Single(refined.TopChangedPaths).Changes);
     }
 }

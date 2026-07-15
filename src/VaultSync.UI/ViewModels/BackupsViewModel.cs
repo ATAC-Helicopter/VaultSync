@@ -1557,9 +1557,21 @@ namespace VaultSync.UI.ViewModels
                                           (preserveStoredSummaryWhenInventoryMissing && storedSummaryMatches);
                 bool shouldRecoverInventory = result.Unchanged + result.ChangedCount == 0 ||
                                               (preserveStoredSummaryWhenInventoryMissing && !storedSummaryMatches);
+                bool comparedReachableContents = false;
                 if (shouldRecoverInventory)
                 {
                     (result, inventoryAvailable) = await CompareReachableBackupContentsAsync(
+                            older,
+                            newer,
+                            result,
+                            compareCts.Token)
+                        .ConfigureAwait(false);
+                    comparedReachableContents = inventoryAvailable;
+                }
+
+                if (!comparedReachableContents && result.Modified > 0)
+                {
+                    result = await IgnoreReachableTextEquivalentModificationsAsync(
                             older,
                             newer,
                             result,
@@ -1654,6 +1666,38 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        private async Task<SnapshotCompareResult> IgnoreReachableTextEquivalentModificationsAsync(
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            SnapshotCompareResult result,
+            CancellationToken cancellationToken)
+        {
+            if (older.IsEncrypted || newer.IsEncrypted)
+                return result;
+
+            string? olderRoot = ResolveBackupContentRoot(older);
+            string? newerRoot = ResolveBackupContentRoot(newer);
+            if (olderRoot is null || newerRoot is null)
+                return result;
+
+            try
+            {
+                return await Task.Run(
+                    () => SnapshotCompareService.IgnoreTextEquivalentModifications(
+                        olderRoot,
+                        newerRoot,
+                        result,
+                        cancellationToken),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                DiagnosticsLogger.Record(
+                    $"Snapshot text-equivalence refinement unavailable: older={older.SnapshotId}, newer={newer.SnapshotId}, error={ex.GetType().Name} - {ex.Message}");
+                return result;
+            }
+        }
+
         internal static SnapshotCompareResult CompareBackupContentInventories(
             string olderRoot,
             string newerRoot,
@@ -1673,10 +1717,15 @@ namespace VaultSync.UI.ViewModels
                 return databaseResult;
             }
 
-            return SnapshotCompareService.Compare(
+            SnapshotCompareResult result = SnapshotCompareService.Compare(
                 olderInventory.Files,
                 newerInventory.Files,
                 cancellationToken: cancellationToken);
+            return SnapshotCompareService.IgnoreTextEquivalentModifications(
+                olderRoot,
+                newerRoot,
+                result,
+                cancellationToken);
         }
 
         internal void ApplySnapshotComparisonResult(
@@ -2032,9 +2081,7 @@ namespace VaultSync.UI.ViewModels
 
                 DiffFileContentStatus = previewTruncated || diff.IsTruncated
                     ? L("Backups.Compare.TextChangesShortened", "Text changes (preview shortened)")
-                    : diff.HasLineEndingChange
-                        ? L("Backups.Compare.LineEndingsChanged", "Line endings changed")
-                        : L("Backups.Compare.TextChanges", "Text changes");
+                    : L("Backups.Compare.TextChanges", "Text changes");
                 DiffFileContentText = diff.Text;
                 SetDiffFileContentLines(diff);
             });
@@ -2043,21 +2090,6 @@ namespace VaultSync.UI.ViewModels
         private void SetDiffFileContentLines(UnifiedTextDiffResult diff)
         {
             var lines = DiffPreviewLineItem.ParseUnified(diff.Text).ToList();
-            if (diff.HasLineEndingChange)
-            {
-                lines.Add(DiffPreviewLineItem.Hunk(L(
-                    "Backups.Compare.LineEndingsChanged",
-                    "Line endings changed")));
-                lines.Add(DiffPreviewLineItem.Deleted(Lf(
-                    "Backups.Compare.LineEndingValue",
-                    "{0} line endings",
-                    diff.OlderLineEnding ?? string.Empty)));
-                lines.Add(DiffPreviewLineItem.Added(Lf(
-                    "Backups.Compare.LineEndingValue",
-                    "{0} line endings",
-                    diff.NewerLineEnding ?? string.Empty)));
-            }
-
             if (diff.IsTruncated)
             {
                 lines.Add(DiffPreviewLineItem.Notice(L(

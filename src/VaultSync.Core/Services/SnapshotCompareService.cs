@@ -103,6 +103,69 @@ public sealed class SnapshotCompareService(SqliteRepository repository)
             signals);
     }
 
+    public static SnapshotCompareResult IgnoreTextEquivalentModifications(
+        string olderRoot,
+        string newerRoot,
+        SnapshotCompareResult result,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        string[] modifiedPaths = [.. result.Changes
+            .Where(change => change.Kind == SnapshotFileChangeKind.Modified)
+            .Select(change => change.Path)];
+        if (modifiedPaths.Length == 0)
+            return result;
+
+        IReadOnlySet<string> equivalentPaths = SnapshotExplorerService.FindTextEquivalentFiles(
+            olderRoot,
+            newerRoot,
+            modifiedPaths,
+            cancellationToken: cancellationToken);
+        return IgnoreTextEquivalentModifications(result, equivalentPaths);
+    }
+
+    public static SnapshotCompareResult IgnoreTextEquivalentModifications(
+        SnapshotCompareResult result,
+        IReadOnlySet<string> equivalentPaths,
+        SnapshotCompareOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(equivalentPaths);
+        if (equivalentPaths.Count == 0 || result.Modified == 0)
+            return result;
+
+        List<SnapshotFileChange> changes = [.. result.Changes.Where(change =>
+            change.Kind != SnapshotFileChangeKind.Modified || !equivalentPaths.Contains(change.Path))];
+        int ignored = result.Changes.Count - changes.Count;
+        if (ignored == 0)
+            return result;
+
+        int modified = Math.Max(0, result.Modified - ignored);
+        int unchanged = result.Unchanged + ignored;
+        int deleted = changes.Count(change => change.Kind == SnapshotFileChangeKind.Deleted);
+        long changedBytes = changes.Sum(change => Math.Max(change.PreviousSizeBytes, change.CurrentSizeBytes));
+        options ??= SnapshotCompareOptions.Default;
+
+        return new SnapshotCompareResult(
+            result.Added,
+            modified,
+            deleted,
+            unchanged,
+            result.PreviousTotalBytes,
+            result.CurrentTotalBytes,
+            changedBytes,
+            changes,
+            BuildTopChangedPaths(changes),
+            BuildSignals(
+                result.Added,
+                modified,
+                deleted,
+                unchanged,
+                result.PreviousTotalBytes,
+                result.CurrentTotalBytes,
+                options));
+    }
+
     private static Dictionary<string, FileEntry> IndexFiles(IEnumerable<FileEntry> files)
     {
         var result = new Dictionary<string, FileEntry>(StringComparer.Ordinal);

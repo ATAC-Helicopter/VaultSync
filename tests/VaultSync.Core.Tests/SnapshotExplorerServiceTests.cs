@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -137,6 +138,36 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public void FindTextEquivalentFiles_ArchiveIgnoresLineEndingStyleOnly()
+    {
+        string older = Path.Combine(_root, "equivalent-older");
+        string newer = Path.Combine(_root, "equivalent-newer");
+        Directory.CreateDirectory(older);
+        Directory.CreateDirectory(newer);
+        using (ZipArchive archive = ZipFile.Open(Path.Combine(older, BackupArchiveCryptoService.PlainArchiveFileName), ZipArchiveMode.Create))
+        {
+            AddArchiveText(archive, "src/same.cs", "first\r\nsecond\r\n");
+            AddArchiveText(archive, "src/changed.cs", "before\r\n");
+            AddArchiveBytes(archive, "asset.bin", [0xFF, 0xFE, 0xFD]);
+        }
+        using (ZipArchive archive = ZipFile.Open(Path.Combine(newer, BackupArchiveCryptoService.PlainArchiveFileName), ZipArchiveMode.Create))
+        {
+            AddArchiveText(archive, "src/same.cs", "first\nsecond\n");
+            AddArchiveText(archive, "src/changed.cs", "after\n");
+            AddArchiveBytes(archive, "asset.bin", [0xFF, 0xFE, 0xFD]);
+        }
+
+        IReadOnlySet<string> equivalent = SnapshotExplorerService.FindTextEquivalentFiles(
+            older,
+            newer,
+            ["src/same.cs", "src/changed.cs", "asset.bin"]);
+
+        Assert.Contains("src/same.cs", equivalent);
+        Assert.DoesNotContain("src/changed.cs", equivalent);
+        Assert.DoesNotContain("asset.bin", equivalent);
+    }
+
+    [Fact]
     public void RestoreSelection_ArchiveFolder_RestoresOnlySelectedFolder()
     {
         string backup = CreateArchiveBackup();
@@ -250,5 +281,12 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         ZipArchiveEntry entry = archive.CreateEntry(path);
         using StreamWriter writer = new(entry.Open());
         writer.Write(text);
+    }
+
+    private static void AddArchiveBytes(ZipArchive archive, string path, byte[] bytes)
+    {
+        ZipArchiveEntry entry = archive.CreateEntry(path);
+        using Stream stream = entry.Open();
+        stream.Write(bytes);
     }
 }
