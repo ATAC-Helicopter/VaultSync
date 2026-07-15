@@ -2197,7 +2197,7 @@
                 CornerRadius="16"
                 Padding="20"
                 HorizontalAlignment="Stretch"
-                VerticalAlignment="Center"
+                VerticalAlignment="Stretch"
                 Margin="24"
                 MaxWidth="1280"
                 MaxHeight="860">
@@ -2596,7 +2596,8 @@
                           CornerRadius="8"
                           ClipToBounds="True">
                     <Grid>
-                      <ScrollViewer IsVisible="{CompiledBinding HasDiffFileContentLines}"
+                      <ScrollViewer x:Name="DiffContentScrollViewer"
+                                    IsVisible="{CompiledBinding HasDiffFileContentLines}"
                                     HorizontalScrollBarVisibility="Auto"
                                     VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{CompiledBinding DiffFileContentLines}">

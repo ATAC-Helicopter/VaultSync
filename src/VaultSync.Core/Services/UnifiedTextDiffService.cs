@@ -46,18 +46,18 @@ public static class UnifiedTextDiffService
         string newerRaw = newerText ?? string.Empty;
         string[] allOlder = SplitLines(olderRaw);
         string[] allNewer = SplitLines(newerRaw);
-        bool truncated = allOlder.Length > options.MaxLinesPerFile || allNewer.Length > options.MaxLinesPerFile;
-        string[] older = [.. allOlder.Take(options.MaxLinesPerFile)];
-        string[] newer = [.. allNewer.Take(options.MaxLinesPerFile)];
-
-        int[,] lcs = BuildLongestCommonSubsequence(older, newer, cancellationToken);
-        var output = new List<string>(Math.Min(options.MaxOutputLines, older.Length + newer.Length + 3))
+        bool truncated = false;
+        var output = new List<string>(Math.Min(options.MaxOutputLines, allOlder.Length + allNewer.Length + 3))
         {
             $"--- {olderLabel}",
             $"+++ {newerLabel}"
         };
 
-        List<DiffOperation> operations = BuildOperations(older, newer, lcs, cancellationToken);
+        List<DiffOperation> operations = BuildOperations(
+            allOlder,
+            allNewer,
+            options.MaxLinesPerFile,
+            cancellationToken);
         int added = operations.Count(operation => operation.Marker == '+');
         int deleted = operations.Count(operation => operation.Marker == '-');
         IReadOnlyList<(int Start, int End)> hunks = BuildHunkRanges(operations, options.ContextLines);
@@ -106,6 +106,21 @@ public static class UnifiedTextDiffService
     private static List<DiffOperation> BuildOperations(
         string[] older,
         string[] newer,
+        int exactDiffLineLimit,
+        CancellationToken cancellationToken)
+    {
+        if (older.Length <= exactDiffLineLimit && newer.Length <= exactDiffLineLimit)
+        {
+            int[,] lcs = BuildLongestCommonSubsequence(older, newer, cancellationToken);
+            return BuildExactOperations(older, newer, lcs, cancellationToken);
+        }
+
+        return BuildBoundedOperations(older, newer, cancellationToken);
+    }
+
+    private static List<DiffOperation> BuildExactOperations(
+        string[] older,
+        string[] newer,
         int[,] lcs,
         CancellationToken cancellationToken)
     {
@@ -136,6 +151,93 @@ public static class UnifiedTextDiffService
         }
 
         return operations;
+    }
+
+    private static List<DiffOperation> BuildBoundedOperations(
+        string[] older,
+        string[] newer,
+        CancellationToken cancellationToken)
+    {
+        const int synchronizationLookahead = 96;
+        var operations = new List<DiffOperation>(older.Length + newer.Length);
+        int oldIndex = 0;
+        int newIndex = 0;
+        while (oldIndex < older.Length || newIndex < newer.Length)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (oldIndex < older.Length && newIndex < newer.Length &&
+                string.Equals(older[oldIndex], newer[newIndex], StringComparison.Ordinal))
+            {
+                operations.Add(new DiffOperation(' ', older[oldIndex], oldIndex + 1, newIndex + 1));
+                oldIndex++;
+                newIndex++;
+                continue;
+            }
+
+            (int oldSkip, int newSkip) = FindNextSynchronizationPoint(
+                older,
+                newer,
+                oldIndex,
+                newIndex,
+                synchronizationLookahead);
+            if (oldSkip == 0 && newSkip == 0)
+            {
+                if (oldIndex < older.Length)
+                {
+                    operations.Add(new DiffOperation('-', older[oldIndex], oldIndex + 1, newIndex + 1));
+                    oldIndex++;
+                }
+
+                if (newIndex < newer.Length)
+                {
+                    operations.Add(new DiffOperation('+', newer[newIndex], oldIndex + 1, newIndex + 1));
+                    newIndex++;
+                }
+
+                continue;
+            }
+
+            for (int index = 0; index < oldSkip; index++)
+            {
+                operations.Add(new DiffOperation('-', older[oldIndex], oldIndex + 1, newIndex + 1));
+                oldIndex++;
+            }
+
+            for (int index = 0; index < newSkip; index++)
+            {
+                operations.Add(new DiffOperation('+', newer[newIndex], oldIndex + 1, newIndex + 1));
+                newIndex++;
+            }
+        }
+
+        return operations;
+    }
+
+    private static (int OldSkip, int NewSkip) FindNextSynchronizationPoint(
+        string[] older,
+        string[] newer,
+        int oldIndex,
+        int newIndex,
+        int maxLookahead)
+    {
+        int maxOldSkip = Math.Min(maxLookahead, older.Length - oldIndex);
+        int maxNewSkip = Math.Min(maxLookahead, newer.Length - newIndex);
+        int maxDistance = Math.Min(maxLookahead, maxOldSkip + maxNewSkip);
+        for (int distance = 1; distance <= maxDistance; distance++)
+        {
+            int firstOldSkip = Math.Max(0, distance - maxNewSkip);
+            int lastOldSkip = Math.Min(distance, maxOldSkip);
+            for (int oldSkip = firstOldSkip; oldSkip <= lastOldSkip; oldSkip++)
+            {
+                int newSkip = distance - oldSkip;
+                if (oldIndex + oldSkip >= older.Length || newIndex + newSkip >= newer.Length)
+                    continue;
+                if (string.Equals(older[oldIndex + oldSkip], newer[newIndex + newSkip], StringComparison.Ordinal))
+                    return (oldSkip, newSkip);
+            }
+        }
+
+        return (0, 0);
     }
 
     private static IReadOnlyList<(int Start, int End)> BuildHunkRanges(

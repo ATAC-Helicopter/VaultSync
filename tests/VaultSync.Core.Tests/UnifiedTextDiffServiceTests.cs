@@ -77,11 +77,31 @@ public sealed class UnifiedTextDiffServiceTests
     }
 
     [Fact]
-    public void Create_TruncatesLargeInputsAndOutput()
+    public void Create_FindsChangesBeyondTheExactDiffLimit()
+    {
+        string[] older = Enumerable.Range(1, 1_200).Select(index => $"line {index}").ToArray();
+        string[] newer = [.. older];
+        newer[1_099] = "changed near the end";
+
+        UnifiedTextDiffResult result = UnifiedTextDiffService.Create(
+            string.Join('\n', older),
+            string.Join('\n', newer),
+            "a",
+            "b",
+            new UnifiedTextDiffOptions(MaxLinesPerFile: 100, ContextLines: 2));
+
+        Assert.Contains("-line 1100", result.Text);
+        Assert.Contains("+changed near the end", result.Text);
+        Assert.DoesNotContain(" line 500", result.Text);
+        Assert.False(result.IsTruncated);
+    }
+
+    [Fact]
+    public void Create_TruncatesOnlyWhenTheRenderedHunksExceedTheOutputLimit()
     {
         UnifiedTextDiffResult result = UnifiedTextDiffService.Create(
             "one\ntwo\nthree\nfour",
-            "one\nchanged\nthree\nfour",
+            "changed one\nchanged two\nchanged three\nchanged four",
             "a",
             "b",
             new UnifiedTextDiffOptions(MaxLinesPerFile: 2, MaxOutputLines: 5));
