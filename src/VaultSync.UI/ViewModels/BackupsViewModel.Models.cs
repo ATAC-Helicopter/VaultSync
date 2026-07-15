@@ -139,6 +139,7 @@ namespace VaultSync.UI.ViewModels
         };
         public string Marker => File?.Marker ?? string.Empty;
         public string SizeDelta => File?.SizeDelta ?? string.Empty;
+        public bool HasSizeDelta => File?.Change.SizeDeltaBytes != 0;
         public bool IsAdded => File?.IsAdded == true;
         public bool IsModified => File?.IsModified == true;
         public bool IsDeleted => File?.IsDeleted == true;

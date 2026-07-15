@@ -131,6 +131,12 @@ public sealed class BackupsCompareQualityOfLifeTests
         Assert.Equal("C#", service.FileTypeLabel);
         Assert.Equal(DiffPreviewFileType.Code, service.FileTypeKind);
         Assert.NotEmpty(service.FileTypeIconData);
+        Assert.True(service.HasSizeDelta);
+
+        DiffPreviewTreeNode zeroDelta = Assert.Single(DiffPreviewTreeNode.Build(
+            [new DiffPreviewFileItem(new SnapshotFileChange("same-size.cs", SnapshotFileChangeKind.Modified, 2, 2))],
+            expandAll: false));
+        Assert.False(zeroDelta.HasSizeDelta);
 
         DiffPreviewTreeNode ui = Assert.Single(src.Children, node => node.Name == "VaultSync.UI");
         Assert.Equal("XML", FindFile(ui, "BackupsView.axaml").FileTypeLabel);
@@ -162,6 +168,7 @@ public sealed class BackupsCompareQualityOfLifeTests
 
         viewModel.ApplySnapshotComparisonResult(older, newer, result, preserveStoredSummaryWhenInventoryMissing: false);
 
+        Assert.Equal("2/2", viewModel.DiffFileCompactResultsLabel);
         Assert.NotNull(viewModel.SelectedDiffPreviewTreeNode?.File);
         Assert.Same(viewModel.SelectedDiffPreviewFile, viewModel.SelectedDiffPreviewTreeNode!.File);
         viewModel.DiffFileSearchText = "Second";

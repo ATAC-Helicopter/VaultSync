@@ -703,6 +703,7 @@ namespace VaultSync.UI.ViewModels
         private bool _isSnapshotCompareBusy;
         private CancellationTokenSource? _snapshotCompareCts;
         private string _diffFileResultsLabel = string.Empty;
+        private string _diffFileCompactResultsLabel = string.Empty;
         private string _diffPreviewEmptyTitle = string.Empty;
         private string _diffPreviewEmptyMessage = string.Empty;
 
@@ -1104,6 +1105,16 @@ namespace VaultSync.UI.ViewModels
             {
                 if (SetProperty(ref _diffFileResultsLabel, value))
                     OnPropertyChanged(nameof(DiffFileResultsLabel));
+            }
+        }
+
+        public string DiffFileCompactResultsLabel
+        {
+            get => _diffFileCompactResultsLabel;
+            private set
+            {
+                if (SetProperty(ref _diffFileCompactResultsLabel, value))
+                    OnPropertyChanged(nameof(DiffFileCompactResultsLabel));
             }
         }
 
@@ -1947,6 +1958,7 @@ namespace VaultSync.UI.ViewModels
             DiffFileResultsLabel = totalChanges > totalShown
                 ? Lf("Backups.Compare.ResultsCapped", "{0} matches · showing the first {1} of {2}", DiffPreviewFiles.Count, totalShown, totalChanges)
                 : Lf("Backups.Compare.Results", "{0} of {1} changed files", DiffPreviewFiles.Count, totalChanges);
+            DiffFileCompactResultsLabel = $"{DiffPreviewFiles.Count}/{totalShown}";
 
             if (selected is not null && DiffPreviewFiles.Contains(selected))
             {
@@ -2322,6 +2334,7 @@ namespace VaultSync.UI.ViewModels
             DiffFileContentText = string.Empty;
             DiffFileContentStatus = string.Empty;
             DiffFileResultsLabel = string.Empty;
+            DiffFileCompactResultsLabel = string.Empty;
             _diffOlderSnapshot = null;
             _diffNewerSnapshot = null;
             OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
