@@ -129,17 +129,20 @@ public sealed class BackupsCompareQualityOfLifeTests
         Assert.False(core.IsExpanded);
         DiffPreviewTreeNode service = FindFile(core, "CompareService.cs");
         Assert.Equal("C#", service.FileTypeLabel);
-        Assert.True(service.IsCode);
+        Assert.Equal(DiffPreviewFileType.Code, service.FileTypeKind);
+        Assert.NotEmpty(service.FileTypeIconData);
 
         DiffPreviewTreeNode ui = Assert.Single(src.Children, node => node.Name == "VaultSync.UI");
         Assert.Equal("XML", FindFile(ui, "BackupsView.axaml").FileTypeLabel);
         DiffPreviewTreeNode image = FindFile(ui, "logo.png");
         Assert.Equal("IMG", image.FileTypeLabel);
-        Assert.True(image.IsImage);
+        Assert.Equal(DiffPreviewFileType.Image, image.FileTypeKind);
+        Assert.NotEqual(service.FileTypeIconData, image.FileTypeIconData);
 
         DiffPreviewTreeNode readme = Assert.Single(roots, node => node.Name == "README.md");
         Assert.Equal("MD", readme.FileTypeLabel);
-        Assert.True(readme.IsDocument);
+        Assert.Equal(DiffPreviewFileType.Document, readme.FileTypeKind);
+        Assert.NotEqual(image.FileTypeIconData, readme.FileTypeIconData);
     }
 
     [Fact]

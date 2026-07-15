@@ -93,6 +93,14 @@ namespace VaultSync.UI.ViewModels
 
     public sealed class DiffPreviewTreeNode : ViewModelBase
     {
+        private const string ArchiveIcon = "M2 4 H14 V14 H2 Z M1 2 H15 V5 H1 Z M7 7 H9 V11 H7 Z";
+        private const string CodeIcon = "M5 3 L1 8 L5 13 M11 3 L15 8 L11 13 M9 2 L7 14";
+        private const string DataIcon = "M3 4 C3 1 13 1 13 4 C13 7 3 7 3 4 M3 4 V12 C3 15 13 15 13 12 V4 M3 8 C3 11 13 11 13 8";
+        private const string DocumentIcon = "M3 1 H10 L14 5 V15 H3 Z M10 1 V5 H14 M5 8 H12 M5 11 H12";
+        private const string ImageIcon = "M2 2 H14 V14 H2 Z M4 11 L7 8 L9 10 L11 7 L14 11 M5 5 H5.1";
+        private const string MarkupIcon = "M5 3 L1 8 L5 13 M11 3 L15 8 L11 13";
+        private const string OtherFileIcon = "M3 1 H10 L14 5 V15 H3 Z M10 1 V5 H14";
+
         private bool _isExpanded;
 
         private DiffPreviewTreeNode(
@@ -119,12 +127,16 @@ namespace VaultSync.UI.ViewModels
         public bool IsFile => File is not null;
         public string FileTypeLabel { get; }
         public DiffPreviewFileType FileTypeKind { get; }
-        public bool IsCode => FileTypeKind == DiffPreviewFileType.Code;
-        public bool IsMarkup => FileTypeKind == DiffPreviewFileType.Markup;
-        public bool IsData => FileTypeKind == DiffPreviewFileType.Data;
-        public bool IsImage => FileTypeKind == DiffPreviewFileType.Image;
-        public bool IsDocument => FileTypeKind == DiffPreviewFileType.Document;
-        public bool IsArchive => FileTypeKind == DiffPreviewFileType.Archive;
+        public string FileTypeIconData => FileTypeKind switch
+        {
+            DiffPreviewFileType.Code => CodeIcon,
+            DiffPreviewFileType.Markup => MarkupIcon,
+            DiffPreviewFileType.Data => DataIcon,
+            DiffPreviewFileType.Image => ImageIcon,
+            DiffPreviewFileType.Document => DocumentIcon,
+            DiffPreviewFileType.Archive => ArchiveIcon,
+            _ => OtherFileIcon
+        };
         public string Marker => File?.Marker ?? string.Empty;
         public string SizeDelta => File?.SizeDelta ?? string.Empty;
         public bool IsAdded => File?.IsAdded == true;

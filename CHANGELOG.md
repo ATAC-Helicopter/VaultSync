@@ -12,7 +12,8 @@
 - [VS-1809] Added previous/next changed-file navigation and one-click filter clearing to make large snapshot comparisons faster to review.
 - [VS-1809] Redesigned restore-point comparison with compact change cards, an app-native empty state, and a detailed workspace shown only when changed files are available; zero examined files are no longer reported as confirmed no-change results.
 - [VS-1809] Refined restore-point comparison around clearly labeled earlier/later selections, plain-language status copy, affected-path chips, a compact two-pane files-to-diff workspace, vector navigation controls, and keyboard-friendly compare and close actions.
-- [VS-1809] Reworked the comparison workspace with a compact summary header and an expandable changed-file folder tree, including recognizable badges for source code, markup, data, images, documents, archives, and project files.
+- [VS-1809] Reworked the comparison workspace with a compact summary header and an expandable changed-file folder tree, including recognizable icons for source code, markup, data, images, documents, archives, and project files.
+- [VS-1843] Simplified the comparison header into a clear title, range, scope, and status hierarchy; reduced hotspot noise; and replaced colored extension boxes with compact monochrome vector file icons.
 - [VS-1842] Completed the 1.8.3 localization pass across all maintained languages for Snapshot Compare, Snapshot Explorer, onboarding, destination guidance, and shared controls while preserving every format-placeholder contract.
 - [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines as the validated baseline for the separately tracked Avalonia 12 migration.
 - [VS-1839] Aligned LiveCharts, SkiaSharp, and HarfBuzzSharp with the Avalonia 12 rendering ABI, removed the retired diagnostics package, and adopted the new placeholder and window-decoration APIs.

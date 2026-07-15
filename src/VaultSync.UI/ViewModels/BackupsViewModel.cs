@@ -1464,7 +1464,7 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewDeleted = payload.DiffDeleted;
             DiffPreviewNet = FormatSignedSize(payload.DiffNetBytes);
             DiffPreviewTopPaths.Clear();
-            foreach (SnapshotDiffPathExport? path in payload.TopPaths.Take(8))
+            foreach (SnapshotDiffPathExport? path in payload.TopPaths.Take(6))
             {
                 DiffPreviewTopPaths.Add(new DiffPreviewPathItem(
                     path.Path,
@@ -1835,7 +1835,7 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewDeleted = result.Deleted;
             DiffPreviewNet = FormatSignedSize(result.NetSizeBytes);
             DiffPreviewTopPaths.Clear();
-            foreach (SnapshotDiffPathStat path in result.TopChangedPaths)
+            foreach (SnapshotDiffPathStat path in result.TopChangedPaths.Take(6))
             {
                 DiffPreviewTopPaths.Add(new DiffPreviewPathItem(
                     path.Path,
