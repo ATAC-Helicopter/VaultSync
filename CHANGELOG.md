@@ -31,6 +31,7 @@
 - [VS-1835] Refactored Projects and Settings workflows, project snapshot commands, and rich-text rendering into focused helpers to reduce UI complexity and improve maintainability.
 - [VS-1836] Addressed Sonar analyzer findings and consolidated repeated literals across backup, navigation, update, credential, telemetry, verification, network-mount, and encryption services.
 ### Fixed
+- [BUG-18064] Folder selection now opens from the existing destination or a valid home/Documents fallback, avoiding an empty Avalonia macOS start URL that could trap the native picker and break New Folder navigation.
 - [BUG-18061] Restored per-backup changed-file details by comparing with the nearest earlier project restore point, including safe bounded folder and ZIP inventory recovery when imported metadata lacks file rows; offline, encrypted, and capped cases now retain their recorded totals with accurate guidance instead of showing a false empty diff.
 - [BUG-18062] Prevented repeated macOS Keychain prompts by coalescing native credential reads per session, removing eager secret reads from Settings and status badges, preserving blank secure-password fields, and resolving network credentials only when a new mount actually needs them.
 - [BUG-18060] Hardened Snapshot Explorer ZIP restore with explicit destination containment and linked-path rejection so malicious archive entries cannot write outside the selected restore root.

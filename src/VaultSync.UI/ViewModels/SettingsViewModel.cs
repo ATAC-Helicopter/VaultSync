@@ -2844,13 +2844,18 @@ namespace VaultSync.UI
         private async Task BrowseProjectsRootAsync()
         {
             IStorageProvider? storageProvider = GetStorageProvider();
-            if (storageProvider is null)
+            if (storageProvider is null || !storageProvider.CanPickFolder)
                 return;
+
+            IStorageFolder? startLocation = await ResolveFolderPickerStartLocationAsync(
+                storageProvider,
+                ProjectsRootPath);
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Choose projects root",
-                AllowMultiple = false
+                AllowMultiple = false,
+                SuggestedStartLocation = startLocation
             });
 
             IStorageFolder? folder = folders is { Count: > 0 } ? folders[0] : null;
@@ -2880,13 +2885,18 @@ namespace VaultSync.UI
         private async Task BrowseBackupLocationAsync()
         {
             IStorageProvider? storageProvider = GetStorageProvider();
-            if (storageProvider is null)
+            if (storageProvider is null || !storageProvider.CanPickFolder)
                 return;
+
+            IStorageFolder? startLocation = await ResolveFolderPickerStartLocationAsync(
+                storageProvider,
+                BackupLocationPath);
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Choose backup location",
-                AllowMultiple = false
+                AllowMultiple = false,
+                SuggestedStartLocation = startLocation
             });
 
             IStorageFolder? folder = folders is { Count: > 0 } ? folders[0] : null;
@@ -2909,13 +2919,18 @@ namespace VaultSync.UI
                 return;
 
             IStorageProvider? storageProvider = GetStorageProvider();
-            if (storageProvider is null)
+            if (storageProvider is null || !storageProvider.CanPickFolder)
                 return;
+
+            IStorageFolder? startLocation = await ResolveFolderPickerStartLocationAsync(
+                storageProvider,
+                dest.Path);
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Choose destination folder",
-                AllowMultiple = false
+                AllowMultiple = false,
+                SuggestedStartLocation = startLocation
             });
 
             IStorageFolder? folder = folders is { Count: > 0 } ? folders[0] : null;
@@ -3304,6 +3319,74 @@ namespace VaultSync.UI
             }
 
             return null;
+        }
+
+        private static async Task<IStorageFolder?> ResolveFolderPickerStartLocationAsync(
+            IStorageProvider storageProvider,
+            string? preferredPath)
+        {
+            foreach (Uri candidate in BuildFolderPickerStartCandidates(preferredPath))
+            {
+                try
+                {
+                    IStorageFolder? folder = await storageProvider.TryGetFolderFromPathAsync(candidate);
+                    if (folder is not null)
+                        return folder;
+                }
+                catch
+                {
+                    // A stale, disconnected, or permission-restricted path should not block the picker.
+                }
+            }
+
+            foreach (WellKnownFolder fallback in new[] { WellKnownFolder.Documents, WellKnownFolder.Desktop })
+            {
+                try
+                {
+                    IStorageFolder? folder = await storageProvider.TryGetWellKnownFolderAsync(fallback);
+                    if (folder is not null)
+                        return folder;
+                }
+                catch
+                {
+                    // Continue to the next cross-platform fallback.
+                }
+            }
+
+            return null;
+        }
+
+        internal static IReadOnlyList<Uri> BuildFolderPickerStartCandidates(
+            string? preferredPath,
+            string? homePath = null)
+        {
+            var candidates = new List<Uri>(capacity: 2);
+            var seen = new HashSet<string>(OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal);
+
+            AddCandidate(preferredPath);
+            AddCandidate(homePath ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            return candidates;
+
+            void AddCandidate(string? path)
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                    return;
+
+                try
+                {
+                    string fullPath = Path.GetFullPath(path.Trim());
+                    if (!Directory.Exists(fullPath) || !seen.Add(fullPath))
+                        return;
+
+                    candidates.Add(new Uri(fullPath));
+                }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+                {
+                    // Ignore invalid persisted paths and fall back to the user's home folder.
+                }
+            }
         }
 
         private void AddDestination()
