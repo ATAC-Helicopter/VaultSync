@@ -63,7 +63,7 @@ public sealed class UnifiedTextDiffServiceTests
     }
 
     [Fact]
-    public void Create_ExplainsLineEndingOnlyChangesWithColoredDiffRows()
+    public void Create_ReportsLineEndingOnlyChangesWithoutEmbeddingUiCopy()
     {
         UnifiedTextDiffResult result = UnifiedTextDiffService.Create(
             "first\r\nsecond\r\n",
@@ -72,9 +72,9 @@ public sealed class UnifiedTextDiffServiceTests
             "b/file.txt");
 
         Assert.True(result.HasLineEndingChange);
-        Assert.Contains("@@ Line endings changed @@", result.Text);
-        Assert.Contains("-CRLF line endings", result.Text);
-        Assert.Contains("+LF line endings", result.Text);
+        Assert.Equal("CRLF", result.OlderLineEnding);
+        Assert.Equal("LF", result.NewerLineEnding);
+        Assert.DoesNotContain("line endings", result.Text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, result.AddedLines);
         Assert.Equal(0, result.DeletedLines);
     }
@@ -90,7 +90,7 @@ public sealed class UnifiedTextDiffServiceTests
             new UnifiedTextDiffOptions(MaxLinesPerFile: 2, MaxOutputLines: 5));
 
         Assert.True(result.IsTruncated);
-        Assert.Contains("truncated", result.Text);
+        Assert.DoesNotContain("truncated", result.Text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -94,7 +94,7 @@ public sealed class BackupsCompareQualityOfLifeTests
     }
 
     [Fact]
-    public void UnifiedDiffRowsExposeGitStyleKindsAndLineNumberGutters()
+    public void UnifiedDiffRowsExposeChangeKindsAndLineNumberGutters()
     {
         IReadOnlyList<DiffPreviewLineItem> lines = DiffPreviewLineItem.ParseUnified(
             "--- a/file.txt\n+++ b/file.txt\n@@ -4,2 +4,2 @@\n-old\n+new\n same");
@@ -225,7 +225,7 @@ public sealed class BackupsCompareQualityOfLifeTests
         Assert.Equal(65, viewModel.DiffPreviewModified);
         Assert.Equal(3, viewModel.DiffPreviewDeleted);
         Assert.Empty(viewModel.DiffPreviewFiles);
-        Assert.Contains("not imported", viewModel.DiffPreviewEmptyMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("imported without file details", viewModel.DiffPreviewEmptyMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

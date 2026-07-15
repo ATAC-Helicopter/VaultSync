@@ -6,6 +6,7 @@
     xmlns:colorpicker="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.ColorPicker"
     xmlns:controls="clr-namespace:VaultSync.UI.Views.Controls"
     xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+    xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
     xmlns:vm="using:VaultSync.UI.ViewModels"
     x:DataType="vm:ProjectsViewModel">
 
@@ -324,8 +325,7 @@
                                    FontWeight="Bold"
                                    Foreground="{Binding Foreground}"
                                    VerticalAlignment="Center" />
-                        <Button Content="x"
-                                Classes="small-button"
+                        <Button Classes="small-button"
                                 Padding="4,0"
                                 MinWidth="18"
                                 MinHeight="18"
@@ -334,7 +334,16 @@
                                 Foreground="{Binding Foreground}"
                                 BorderThickness="0"
                                 Command="{Binding DataContext.RemoveGroupTagCommand, ElementName=Root}"
-                                CommandParameter="{Binding Value}" />
+                                CommandParameter="{Binding Value}"
+                                AutomationProperties.Name="{infra:LocalizedString Key=Projects.Group.TagRemove}"
+                                ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.TagRemove}">
+                          <shapes:Path Data="M 2,2 L 10,10 M 10,2 L 2,10"
+                                       Width="10"
+                                       Height="10"
+                                       Stretch="Uniform"
+                                       Stroke="{Binding Foreground}"
+                                       StrokeThickness="1.5" />
+                        </Button>
                       </StackPanel>
                     </Border>
                   </DataTemplate>
@@ -767,8 +776,7 @@
                                        VerticalAlignment="Center"
                                        TextAlignment="Center"
                                        Foreground="{Binding Foreground}" />
-                            <Button Content="x"
-                                    Classes="small-button"
+                            <Button Classes="small-button"
                                     Padding="4,0"
                                     MinWidth="18"
                                     MinHeight="18"
@@ -777,7 +785,16 @@
                                     Foreground="{Binding Foreground}"
                                     BorderThickness="0"
                                     Command="{Binding DataContext.RemoveProjectTagCommand, ElementName=Root}"
-                                    CommandParameter="{Binding Value}" />
+                                    CommandParameter="{Binding Value}"
+                                    AutomationProperties.Name="{infra:LocalizedString Key=Projects.Group.TagRemove}"
+                                    ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.TagRemove}">
+                              <shapes:Path Data="M 2,2 L 10,10 M 10,2 L 2,10"
+                                           Width="10"
+                                           Height="10"
+                                           Stretch="Uniform"
+                                           Stroke="{Binding Foreground}"
+                                           StrokeThickness="1.5" />
+                            </Button>
                           </StackPanel>
                         </Border>
                       </DataTemplate>

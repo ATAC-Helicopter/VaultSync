@@ -2519,15 +2519,24 @@
                         </ItemsControl>
                       </ScrollViewer>
 
-                      <TextBox IsVisible="{CompiledBinding HasNoDiffFileContentLines}"
-                               Text="{CompiledBinding DiffFileContentText}"
-                               IsReadOnly="True"
-                               AcceptsReturn="True"
-                               TextWrapping="Wrap"
-                               ScrollViewer.VerticalScrollBarVisibility="Auto"
-                               FontSize="12"
-                               Background="Transparent"
-                               BorderThickness="0" />
+                      <StackPanel IsVisible="{CompiledBinding HasNoDiffFileContentLines}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  MaxWidth="520"
+                                  Margin="24"
+                                  Spacing="8">
+                        <TextBlock Text="{CompiledBinding DiffFileContentStatus}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center" />
+                        <TextBlock Text="{CompiledBinding DiffFileContentText}"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center" />
+                      </StackPanel>
                     </Grid>
                   </Border>
                 </Grid>

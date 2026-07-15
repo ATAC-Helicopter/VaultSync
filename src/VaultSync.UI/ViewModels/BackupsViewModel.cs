@@ -1374,7 +1374,7 @@ namespace VaultSync.UI.ViewModels
                 return path;
             }
 
-            string text = BuildGitStyleDiffText(payload);
+            string text = BuildSnapshotDiffExportText(payload);
             File.WriteAllText(path, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             return path;
         }
@@ -1454,7 +1454,7 @@ namespace VaultSync.UI.ViewModels
                     BackupSnapshotItem.FormatSize(path.ChangedBytes)));
             }
             OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
-            DiffPreviewText = BuildGitStyleDiffText(payload);
+            DiffPreviewText = BuildSnapshotDiffExportText(payload);
             _diffOlderSnapshot = null;
             _diffNewerSnapshot = null;
             _allDiffPreviewFiles.Clear();
@@ -1591,10 +1591,10 @@ namespace VaultSync.UI.ViewModels
                 {
                     if (compareCts.IsCancellationRequested || !ReferenceEquals(_snapshotCompareCts, compareCts))
                         return;
-                    DiffPreviewTitle = L("Backups.Compare.FailedTitle", "Snapshot comparison unavailable");
+                    DiffPreviewTitle = L("Backups.Compare.FailedTitle", "Comparison unavailable");
                     DiffPreviewText = Lf(
                         "Backups.Compare.FailedMessage",
-                        "VaultSync could not compare these snapshots: {0}",
+                        "VaultSync could not compare these restore points: {0}",
                         ex.Message);
                     _allDiffPreviewFiles.Clear();
                     DiffPreviewFiles.Clear();
@@ -1695,10 +1695,10 @@ namespace VaultSync.UI.ViewModels
                 ShowSnapshotDiffUnavailable(newer.IsImported
                     ? L(
                         "Backups.Compare.ImportedInventoryUnavailable",
-                        "The file inventory was not imported with this restore point. Compare two reachable, indexed restore points to inspect individual files.")
+                        "This restore point was imported without file details. Choose two backups whose storage is connected to inspect individual files.")
                     : L(
                         "Backups.Compare.InventoryUnavailableWithSummary",
-                        "VaultSync retained the change totals, but the file inventory is unavailable. Compare two reachable, indexed restore points to inspect individual files."));
+                        "The change totals are available, but individual file details are not. Choose two backups whose storage is connected."));
                 return;
             }
 
@@ -1785,7 +1785,7 @@ namespace VaultSync.UI.ViewModels
             RefreshDiffPreviewFiles();
 
             var compareText = new StringBuilder();
-            compareText.AppendLine(L("Backups.Compare.DocumentTitle", "# VaultSync Snapshot Compare"));
+            compareText.AppendLine(L("Backups.Compare.DocumentTitle", "# VaultSync backup comparison"));
             compareText.AppendLine();
             compareText.AppendLine(Lf("Backups.Compare.PointA", "A: {0} · {1} · {2}",
                 older.Timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture),
@@ -1796,14 +1796,14 @@ namespace VaultSync.UI.ViewModels
                 newer.TypeLabel,
                 newer.SizeFormatted));
             compareText.AppendLine(Lf("Backups.Compare.ElapsedLine", "Elapsed: {0}", FormatElapsed(elapsed)));
-            compareText.AppendLine(Lf("Backups.Compare.SnapshotSizeDeltaLine", "Snapshot size delta: {0}", FormatSignedSize(result.NetSizeBytes)));
-            compareText.AppendLine(Lf("Backups.Compare.ChangedBytesLine", "Changed bytes examined: {0}", BackupSnapshotItem.FormatSize(result.ChangedBytes)));
+            compareText.AppendLine(Lf("Backups.Compare.SnapshotSizeDeltaLine", "Backup size change: {0}", FormatSignedSize(result.NetSizeBytes)));
+            compareText.AppendLine(Lf("Backups.Compare.ChangedBytesLine", "Changed file data: {0}", BackupSnapshotItem.FormatSize(result.ChangedBytes)));
             compareText.AppendLine();
-            compareText.AppendLine(L("Backups.Compare.FileSummary", "File-level change summary:"));
+            compareText.AppendLine(L("Backups.Compare.FileSummary", "File changes:"));
             compareText.AppendLine(Lf("Backups.Compare.NewerAdded", "+ added {0}", result.Added.ToString(CultureInfo.CurrentCulture)));
             compareText.AppendLine(Lf("Backups.Compare.NewerModified", "~ modified {0}", result.Modified.ToString(CultureInfo.CurrentCulture)));
             compareText.AppendLine(Lf("Backups.Compare.NewerDeleted", "- deleted {0}", result.Deleted.ToString(CultureInfo.CurrentCulture)));
-            compareText.AppendLine(Lf("Backups.Compare.Unchanged", "= unchanged {0}", result.Unchanged.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.Unchanged", "= unchanged: {0}", result.Unchanged.ToString(CultureInfo.CurrentCulture)));
 
             AppendChangeSignals(compareText, result.Signals);
             compareText.AppendLine();
@@ -1824,7 +1824,7 @@ namespace VaultSync.UI.ViewModels
             {
                 compareText.AppendLine(Lf(
                     "Backups.Compare.AdditionalFiles",
-                    "... {0} additional changed files not shown",
+                    "... {0} more changed files not shown",
                     result.Changes.Count - 200));
             }
 
@@ -1832,7 +1832,7 @@ namespace VaultSync.UI.ViewModels
             DiffFileContentText = DiffPreviewText;
             DiffFileContentStatus = L(
                 "Backups.Compare.SelectFile",
-                "Select a changed text file to see its Git-style diff.");
+                "Select a changed text file to review its changes.");
             SelectedDiffPreviewFile = DiffPreviewFiles.FirstOrDefault(file => file.Kind == SnapshotFileChangeKind.Modified)
                 ?? DiffPreviewFiles.FirstOrDefault();
             if (result.ChangedCount == 0)
@@ -1874,7 +1874,7 @@ namespace VaultSync.UI.ViewModels
             int totalShown = _allDiffPreviewFiles.Count;
             int totalChanges = DiffPreviewAdded + DiffPreviewModified + DiffPreviewDeleted;
             DiffFileResultsLabel = totalChanges > totalShown
-                ? Lf("Backups.Compare.ResultsCapped", "{0} matching - first {1} of {2} indexed", DiffPreviewFiles.Count, totalShown, totalChanges)
+                ? Lf("Backups.Compare.ResultsCapped", "{0} matches · showing the first {1} of {2}", DiffPreviewFiles.Count, totalShown, totalChanges)
                 : Lf("Backups.Compare.Results", "{0} of {1} changed files", DiffPreviewFiles.Count, totalChanges);
 
             if (selected is not null && DiffPreviewFiles.Contains(selected))
@@ -1928,15 +1928,16 @@ namespace VaultSync.UI.ViewModels
                 {
                     DiffFileContentStatus = DiffPreviewFiles.Count == 0 && _allDiffPreviewFiles.Count > 0
                         ? L("Backups.Compare.NoMatches", "No changed files match the current filters.")
-                        : L("Backups.Compare.SelectFile", "Select a changed text file to see its Git-style diff.");
-                    DiffFileContentText = DiffPreviewText;
+                        : L("Backups.Compare.SelectFile", "Select a changed text file to review its changes.");
+                    DiffFileContentText = string.Empty;
                 }
                 return;
             }
 
             var contentCts = new CancellationTokenSource();
             _diffContentCts = contentCts;
-            DiffFileContentStatus = L("Backups.Compare.LoadingFile", "Loading file diff...");
+            DiffFileContentStatus = L("Backups.Compare.LoadingFile", "Loading file changes...");
+            DiffFileContentText = string.Empty;
             DetachedTask.Run(
                 () => LoadSelectedDiffFileAsync(file, _diffOlderSnapshot, _diffNewerSnapshot, requestVersion, contentCts),
                 "snapshot-text-diff");
@@ -1992,7 +1993,7 @@ namespace VaultSync.UI.ViewModels
                 (olderText, bool olderTruncated, error) = LoadSnapshotTextPreview(
                     olderRoot,
                     file.Path,
-                    L("Backups.Compare.OlderUnavailable", "The older backup content is not currently reachable."),
+                    L("Backups.Compare.OlderUnavailable", "The earlier backup is unavailable. Reconnect its storage to view this file."),
                     cancellationToken);
                 previewTruncated |= olderTruncated;
             }
@@ -2002,7 +2003,7 @@ namespace VaultSync.UI.ViewModels
                 (newerText, bool newerTruncated, error) = LoadSnapshotTextPreview(
                     newerRoot,
                     file.Path,
-                    L("Backups.Compare.NewerUnavailable", "The newer backup content is not currently reachable."),
+                    L("Backups.Compare.NewerUnavailable", "The later backup is unavailable. Reconnect its storage to view this file."),
                     cancellationToken);
                 previewTruncated |= newerTruncated;
             }
@@ -2023,17 +2024,17 @@ namespace VaultSync.UI.ViewModels
 
                 if (diff is null)
                 {
-                    DiffFileContentStatus = L("Backups.Compare.MetadataOnly", "Metadata comparison only");
+                    DiffFileContentStatus = L("Backups.Compare.PreviewUnavailable", "File preview unavailable");
                     DiffFileContentText = error ?? string.Empty;
                     ClearDiffFileContentLines();
                     return;
                 }
 
                 DiffFileContentStatus = previewTruncated || diff.IsTruncated
-                    ? L("Backups.Compare.DiffTruncated", "Git-style diff (preview truncated safely)")
+                    ? L("Backups.Compare.TextChangesShortened", "Text changes (preview shortened)")
                     : diff.HasLineEndingChange
                         ? L("Backups.Compare.LineEndingsChanged", "Line endings changed")
-                        : L("Backups.Compare.GitDiff", "Git-style text diff");
+                        : L("Backups.Compare.TextChanges", "Text changes");
                 DiffFileContentText = diff.Text;
                 SetDiffFileContentLines(diff);
             });
@@ -2041,12 +2042,34 @@ namespace VaultSync.UI.ViewModels
 
         private void SetDiffFileContentLines(UnifiedTextDiffResult diff)
         {
-            IReadOnlyList<DiffPreviewLineItem> lines = DiffPreviewLineItem.ParseUnified(diff.Text);
+            var lines = DiffPreviewLineItem.ParseUnified(diff.Text).ToList();
+            if (diff.HasLineEndingChange)
+            {
+                lines.Add(DiffPreviewLineItem.Hunk(L(
+                    "Backups.Compare.LineEndingsChanged",
+                    "Line endings changed")));
+                lines.Add(DiffPreviewLineItem.Deleted(Lf(
+                    "Backups.Compare.LineEndingValue",
+                    "{0} line endings",
+                    diff.OlderLineEnding ?? string.Empty)));
+                lines.Add(DiffPreviewLineItem.Added(Lf(
+                    "Backups.Compare.LineEndingValue",
+                    "{0} line endings",
+                    diff.NewerLineEnding ?? string.Empty)));
+            }
+
+            if (diff.IsTruncated)
+            {
+                lines.Add(DiffPreviewLineItem.Notice(L(
+                    "Backups.Compare.PreviewShortened",
+                    "Preview shortened to keep comparison responsive.")));
+            }
+
             DiffFileContentLines = lines.Count > 0
                 ? lines
                 : [DiffPreviewLineItem.Notice(L(
                     "Backups.Compare.MetadataChangedOnly",
-                    "Text content is identical; only file metadata changed."))];
+                    "The text is identical; only file details such as its timestamp or size changed."))];
             DiffFileAddedLines = diff.AddedLines;
             DiffFileDeletedLines = diff.DeletedLines;
             OnPropertyChanged(nameof(DiffFileContentLines));
@@ -2121,7 +2144,7 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             compareText.AppendLine();
-            compareText.AppendLine(L("Backups.Compare.AttentionSignalsHeader", "## Attention signals"));
+            compareText.AppendLine(L("Backups.Compare.AttentionSignalsHeader", "## Notable changes"));
             foreach (SnapshotChangeSignal signal in signals)
             {
                 string line = signal.Kind switch
@@ -2129,9 +2152,9 @@ namespace VaultSync.UI.ViewModels
                     SnapshotChangeSignalKind.MassDeletion =>
                         Lf("Backups.Compare.SignalMassDeletion", "! Mass deletion: {0} files removed ({1:P0})", signal.AffectedFiles, signal.Ratio),
                     SnapshotChangeSignalKind.SignificantGrowth =>
-                        Lf("Backups.Compare.SignalGrowth", "! Significant growth: {0} ({1:P0})", FormatSignedSize(signal.SizeDeltaBytes), signal.Ratio),
+                        Lf("Backups.Compare.SignalGrowth", "! Large growth: {0} ({1:P0})", FormatSignedSize(signal.SizeDeltaBytes), signal.Ratio),
                     SnapshotChangeSignalKind.HighChurn =>
-                        Lf("Backups.Compare.SignalHighChurn", "! High churn: {0} files changed ({1:P0})", signal.AffectedFiles, signal.Ratio),
+                        Lf("Backups.Compare.SignalHighChurn", "! Widespread changes: {0} files changed ({1:P0})", signal.AffectedFiles, signal.Ratio),
                     _ => string.Empty
                 };
                 if (line.Length > 0)
@@ -2307,7 +2330,7 @@ namespace VaultSync.UI.ViewModels
             return Path.Combine(directory, $"{fileName}-{Guid.NewGuid():N}{extension}");
         }
 
-        private static string BuildGitStyleDiffText(SnapshotSummaryExportPayload payload)
+        private static string BuildSnapshotDiffExportText(SnapshotSummaryExportPayload payload)
         {
             var sb = new StringBuilder();
             sb.AppendLine("# VaultSync Snapshot Diff Summary");

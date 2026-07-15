@@ -611,7 +611,7 @@ Implementation notes:
 Highlight:
 
 - Mass deletions
-- Significant growth
+- Large growth
 - Unusual activity
 
 ---

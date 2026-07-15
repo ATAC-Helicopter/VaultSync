@@ -362,7 +362,7 @@
   - Acceptance tests:
     - Integration: opening `.vse` triggers password dialog and opens extracted temp folder on success.
     - Integration: wrong password shows explicit error and leaves no partial extracted data.
-    - Regression: standard �open backup folder� behavior remains unchanged.
+    - Regression: standard “open backup folder” behavior remains unchanged.
 - [x] `VS-1536` Existing-backup key rotation job.
   - Scope: explicit user-triggered re-encryption of existing encrypted backups from old key to new key (project or global scope) with atomic replacement.
   - Depends on: `VS-1533`, `VS-1534`.
@@ -989,7 +989,7 @@
   - What it takes:
     - persist per-destination quota/threshold settings.
     - rank cleanup candidates from existing retention metadata without suggesting protected backups.
-    - surface �space to recover� estimates and tie into health/readiness panels.
+    - surface “space to recover” estimates and tie into health/readiness panels.
   - Current status:
     - Settings > Advanced now persists per-destination soft quota and warning-threshold values.
     - Backups destination cards now show stored bytes plus cleanup suggestions derived from unprotected backup candidates only.
@@ -1079,7 +1079,7 @@
 - [x] `VS-1711` `P0` Backup chain preflight before retention prune. _(Done)_
   - Scope: validate there is at least one restorable point per project before pruning non-protected backups.
   - What it takes:
-    - define �restorable point� precisely across direct/sandbox/encrypted/imported histories.
+    - define “restorable point” precisely across direct/sandbox/encrypted/imported histories.
     - integrate with retention planner before delete execution, not after.
     - emit clear block reasons when prune would violate restore safety.
   - Current status:
@@ -1157,7 +1157,7 @@
   - Scope: guided repair actions for common states (orphaned links, unreachable destination, stale verification, inconsistent metadata cache).
   - What it takes:
     - reusable doctor card/action model with dry-run/apply + remediation guidance.
-    - action-specific validators for �can run now�, �needs destination online�, �needs user choice�.
+    - action-specific validators for “can run now”, “needs destination online”, “needs user choice”.
     - support/diagnostic logging for every doctor action.
   - Depends on:
     - `VS-1702`

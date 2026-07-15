@@ -981,7 +981,7 @@
                                 <ToggleSwitch Grid.Column="2"
                                               IsChecked="{Binding Active, Mode=TwoWay}"
                                               VerticalAlignment="Center"
-                                              ToolTip.Tip="When off, this destination is ignored for backups." />
+                                              ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.ActiveTooltip}" />
                               </Grid>
                               <Button Grid.Column="2" Grid.Row="0"
                                       Classes="settings-ghost"

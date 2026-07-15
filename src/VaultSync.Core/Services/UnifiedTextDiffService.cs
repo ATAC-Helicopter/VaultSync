@@ -13,7 +13,11 @@ public sealed record UnifiedTextDiffResult(
     int AddedLines,
     int DeletedLines,
     bool IsTruncated,
-    bool HasLineEndingChange = false);
+    string? OlderLineEnding = null,
+    string? NewerLineEnding = null)
+{
+    public bool HasLineEndingChange => OlderLineEnding is not null && NewerLineEnding is not null;
+}
 
 /// <summary>
 /// Creates a bounded, line-oriented unified diff suitable for snapshot previews.
@@ -68,13 +72,6 @@ public static class UnifiedTextDiffService
                                    !string.Equals(olderRaw, newerRaw, StringComparison.Ordinal) &&
                                    TryDescribeLineEndingChange(olderRaw, newerRaw, out olderEnding, out newerEnding);
 
-        if (hasLineEndingChange && output.Count + 3 <= options.MaxOutputLines)
-        {
-            output.Add("@@ Line endings changed @@");
-            output.Add($"-{olderEnding} line endings");
-            output.Add($"+{newerEnding} line endings");
-        }
-
         foreach ((int start, int end) in hunks)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -110,15 +107,13 @@ public static class UnifiedTextDiffService
                 break;
         }
 
-        if (truncated)
-            AppendTruncationNotice(output, options.MaxOutputLines);
-
         return new UnifiedTextDiffResult(
             string.Join(Environment.NewLine, output),
             added,
             deleted,
             truncated,
-            hasLineEndingChange);
+            hasLineEndingChange ? olderEnding : null,
+            hasLineEndingChange ? newerEnding : null);
     }
 
     private static List<DiffOperation> BuildOperations(
@@ -179,15 +174,6 @@ public static class UnifiedTextDiffService
         }
 
         return ranges;
-    }
-
-    private static void AppendTruncationNotice(List<string> output, int maxOutputLines)
-    {
-        const string notice = "... diff preview truncated by VaultSync safety limits ...";
-        if (output.Count < maxOutputLines)
-            output.Add(notice);
-        else if (output.Count > 0)
-            output[^1] = notice;
     }
 
     private static bool TryDescribeLineEndingChange(
