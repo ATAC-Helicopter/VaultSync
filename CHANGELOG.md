@@ -12,6 +12,7 @@
 - [VS-1809] Added previous/next changed-file navigation and one-click filter clearing to make large snapshot comparisons faster to review.
 - [VS-1809] Redesigned restore-point comparison with compact change cards, an app-native empty state, and a detailed workspace shown only when changed files are available; zero examined files are no longer reported as confirmed no-change results.
 - [VS-1809] Refined restore-point comparison around clearly labeled earlier/later selections, plain-language status copy, affected-path chips, a compact two-pane files-to-diff workspace, vector navigation controls, and keyboard-friendly compare and close actions.
+- [VS-1809] Reworked the comparison workspace with a compact summary header and an expandable changed-file folder tree, including recognizable badges for source code, markup, data, images, documents, archives, and project files.
 - [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines as the validated baseline for the separately tracked Avalonia 12 migration.
 - [VS-1839] Aligned LiveCharts, SkiaSharp, and HarfBuzzSharp with the Avalonia 12 rendering ABI, removed the retired diagnostics package, and adopted the new placeholder and window-decoration APIs.
 - [VS-1839] Made Dashboard activity and storage sections adapt progressively at narrow widths, including stacked cards, a compact storage header, and a donut chart that scales to the available space.

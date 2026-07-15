@@ -687,7 +687,9 @@ namespace VaultSync.UI.ViewModels
         private int _diffPreviewDeleted;
         private string _diffPreviewNet = string.Empty;
         private readonly List<DiffPreviewFileItem> _allDiffPreviewFiles = [];
+        private readonly Dictionary<DiffPreviewFileItem, DiffPreviewTreeNode> _diffPreviewTreeNodes = [];
         private DiffPreviewFileItem? _selectedDiffPreviewFile;
+        private DiffPreviewTreeNode? _selectedDiffPreviewTreeNode;
         private string _diffFileSearchText = string.Empty;
         private DiffPreviewKindFilterItem? _selectedDiffFileKindFilter;
         private string _diffFileContentText = string.Empty;
@@ -956,6 +958,7 @@ namespace VaultSync.UI.ViewModels
         public ObservableCollection<DiffPreviewPathItem> DiffPreviewTopPaths { get; } = [];
         public bool HasDiffPreviewTopPaths => DiffPreviewTopPaths.Count > 0;
         public ObservableCollection<DiffPreviewFileItem> DiffPreviewFiles { get; } = [];
+        public ObservableCollection<DiffPreviewTreeNode> DiffPreviewTreeRoots { get; } = [];
         public IReadOnlyList<DiffPreviewLineItem> DiffFileContentLines { get; private set; } = [];
         public ObservableCollection<DiffPreviewKindFilterItem> DiffFileKindFilters { get; } = [];
         public bool HasDiffPreviewFiles => _allDiffPreviewFiles.Count > 0;
@@ -992,9 +995,24 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _selectedDiffPreviewFile, value))
                 {
                     OnPropertyChanged(nameof(SelectedDiffPreviewFile));
+                    SyncSelectedDiffPreviewTreeNode(value);
                     RaiseDiffFileNavigationCanExecuteChanged();
                     LoadSelectedDiffFile(value);
                 }
+            }
+        }
+
+        public DiffPreviewTreeNode? SelectedDiffPreviewTreeNode
+        {
+            get => _selectedDiffPreviewTreeNode;
+            set
+            {
+                if (!SetProperty(ref _selectedDiffPreviewTreeNode, value))
+                    return;
+
+                OnPropertyChanged(nameof(SelectedDiffPreviewTreeNode));
+                if (value?.File is { } file && !ReferenceEquals(file, SelectedDiffPreviewFile))
+                    SelectedDiffPreviewFile = file;
             }
         }
 
@@ -1459,6 +1477,7 @@ namespace VaultSync.UI.ViewModels
             _diffNewerSnapshot = null;
             _allDiffPreviewFiles.Clear();
             DiffPreviewFiles.Clear();
+            ResetDiffPreviewTree();
             SelectedDiffPreviewFile = null;
             DiffFileContentStatus = L("Backups.Compare.SummaryOnly", "Snapshot change summary");
             DiffFileContentText = DiffPreviewText;
@@ -1610,6 +1629,7 @@ namespace VaultSync.UI.ViewModels
                         ex.Message);
                     _allDiffPreviewFiles.Clear();
                     DiffPreviewFiles.Clear();
+                    ResetDiffPreviewTree();
                     SelectedDiffPreviewFile = null;
                     DiffFileContentStatus = DiffPreviewTitle;
                     DiffFileContentText = DiffPreviewText;
@@ -1920,6 +1940,8 @@ namespace VaultSync.UI.ViewModels
                 DiffPreviewFiles.Add(file);
             }
 
+            RebuildDiffPreviewTree(expandAll: search.Length > 0);
+
             int totalShown = _allDiffPreviewFiles.Count;
             int totalChanges = DiffPreviewAdded + DiffPreviewModified + DiffPreviewDeleted;
             DiffFileResultsLabel = totalChanges > totalShown
@@ -1928,11 +1950,57 @@ namespace VaultSync.UI.ViewModels
 
             if (selected is not null && DiffPreviewFiles.Contains(selected))
             {
+                SyncSelectedDiffPreviewTreeNode(selected);
                 RaiseDiffFileNavigationCanExecuteChanged();
                 return;
             }
             SelectedDiffPreviewFile = null;
             RaiseDiffFileNavigationCanExecuteChanged();
+        }
+
+        private void RebuildDiffPreviewTree(bool expandAll)
+        {
+            DiffPreviewTreeRoots.Clear();
+            _diffPreviewTreeNodes.Clear();
+            foreach (DiffPreviewTreeNode root in DiffPreviewTreeNode.Build(DiffPreviewFiles, expandAll))
+            {
+                DiffPreviewTreeRoots.Add(root);
+                IndexDiffPreviewTree(root);
+            }
+
+            OnPropertyChanged(nameof(DiffPreviewTreeRoots));
+        }
+
+        private void IndexDiffPreviewTree(DiffPreviewTreeNode node)
+        {
+            if (node.File is { } file)
+                _diffPreviewTreeNodes[file] = node;
+            foreach (DiffPreviewTreeNode child in node.Children)
+                IndexDiffPreviewTree(child);
+        }
+
+        private void SyncSelectedDiffPreviewTreeNode(DiffPreviewFileItem? file)
+        {
+            DiffPreviewTreeNode? node = file is not null && _diffPreviewTreeNodes.TryGetValue(file, out DiffPreviewTreeNode? match)
+                ? match
+                : null;
+            node?.ExpandAncestors();
+            if (ReferenceEquals(_selectedDiffPreviewTreeNode, node))
+                return;
+
+            _selectedDiffPreviewTreeNode = node;
+            OnPropertyChanged(nameof(SelectedDiffPreviewTreeNode));
+        }
+
+        private void ResetDiffPreviewTree()
+        {
+            DiffPreviewTreeRoots.Clear();
+            _diffPreviewTreeNodes.Clear();
+            if (_selectedDiffPreviewTreeNode is null)
+                return;
+
+            _selectedDiffPreviewTreeNode = null;
+            OnPropertyChanged(nameof(SelectedDiffPreviewTreeNode));
         }
 
         private void ClearDiffFileFilters()
@@ -2247,6 +2315,7 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewTopPaths.Clear();
             _allDiffPreviewFiles.Clear();
             DiffPreviewFiles.Clear();
+            ResetDiffPreviewTree();
             SelectedDiffPreviewFile = null;
             DiffFileSearchText = string.Empty;
             SelectedDiffFileKindFilter = DiffFileKindFilters[0];

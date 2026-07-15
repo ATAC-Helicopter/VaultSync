@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Config;
@@ -107,6 +108,67 @@ public sealed class BackupsCompareQualityOfLifeTests
         Assert.True(lines[2].IsAdded);
         Assert.Equal("5", lines[3].OldLineNumber);
         Assert.Equal("5", lines[3].NewLineNumber);
+    }
+
+    [Fact]
+    public void ChangedFilesBuildExpandableFolderTreeWithSemanticFileTypes()
+    {
+        IReadOnlyList<DiffPreviewTreeNode> roots = DiffPreviewTreeNode.Build(
+            [
+                DiffFile("README.md"),
+                DiffFile("src/VaultSync.Core/Services/CompareService.cs"),
+                DiffFile("src/VaultSync.UI/Views/BackupsView.axaml"),
+                DiffFile("src/VaultSync.UI/Assets/logo.png")
+            ],
+            expandAll: false);
+
+        DiffPreviewTreeNode src = Assert.Single(roots, node => node.Name == "src");
+        Assert.True(src.IsFolder);
+        Assert.True(src.IsExpanded);
+        DiffPreviewTreeNode core = Assert.Single(src.Children, node => node.Name == "VaultSync.Core");
+        Assert.False(core.IsExpanded);
+        DiffPreviewTreeNode service = FindFile(core, "CompareService.cs");
+        Assert.Equal("C#", service.FileTypeLabel);
+        Assert.True(service.IsCode);
+
+        DiffPreviewTreeNode ui = Assert.Single(src.Children, node => node.Name == "VaultSync.UI");
+        Assert.Equal("XML", FindFile(ui, "BackupsView.axaml").FileTypeLabel);
+        DiffPreviewTreeNode image = FindFile(ui, "logo.png");
+        Assert.Equal("IMG", image.FileTypeLabel);
+        Assert.True(image.IsImage);
+
+        DiffPreviewTreeNode readme = Assert.Single(roots, node => node.Name == "README.md");
+        Assert.Equal("MD", readme.FileTypeLabel);
+        Assert.True(readme.IsDocument);
+    }
+
+    [Fact]
+    public void TreeSelectionAndSearchStayAlignedWithFlatFileNavigation()
+    {
+        var viewModel = new BackupsViewModel();
+        var older = Point("1", 11, "7", new DateTime(2026, 7, 10, 10, 0, 0));
+        var newer = Point("2", 12, "7", new DateTime(2026, 7, 10, 11, 0, 0));
+        var result = new SnapshotCompareResult(
+            0, 2, 0, 0, 0, 2, 2,
+            [
+                new SnapshotFileChange("src/Core/First.cs", SnapshotFileChangeKind.Modified, 1, 2),
+                new SnapshotFileChange("src/UI/Second.axaml", SnapshotFileChangeKind.Modified, 1, 2)
+            ],
+            [],
+            []);
+
+        viewModel.ApplySnapshotComparisonResult(older, newer, result, preserveStoredSummaryWhenInventoryMissing: false);
+
+        Assert.NotNull(viewModel.SelectedDiffPreviewTreeNode?.File);
+        Assert.Same(viewModel.SelectedDiffPreviewFile, viewModel.SelectedDiffPreviewTreeNode!.File);
+        viewModel.DiffFileSearchText = "Second";
+
+        DiffPreviewTreeNode root = Assert.Single(viewModel.DiffPreviewTreeRoots);
+        Assert.True(root.IsExpanded);
+        Assert.True(Assert.Single(root.Children).IsExpanded);
+        DiffPreviewTreeNode match = FindFile(root, "Second.axaml");
+        viewModel.SelectedDiffPreviewTreeNode = match;
+        Assert.Equal("src/UI/Second.axaml", viewModel.SelectedDiffPreviewFile?.Path);
     }
 
     [Fact]
@@ -324,6 +386,30 @@ public sealed class BackupsCompareQualityOfLifeTests
         {
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    private static DiffPreviewFileItem DiffFile(string path) =>
+        new(new SnapshotFileChange(path, SnapshotFileChangeKind.Modified, 1, 2));
+
+    private static DiffPreviewTreeNode FindFile(DiffPreviewTreeNode node, string name)
+    {
+        DiffPreviewTreeNode match = FindFileOrNull(node, name);
+        return match ?? throw new InvalidOperationException($"File node '{name}' was not found.");
+    }
+
+    private static DiffPreviewTreeNode FindFileOrNull(DiffPreviewTreeNode node, string name)
+    {
+        DiffPreviewTreeNode match = node.Children.FirstOrDefault(child => child.Name == name);
+        if (match is not null)
+            return match;
+        foreach (DiffPreviewTreeNode child in node.Children.Where(child => child.IsFolder))
+        {
+            match = FindFileOrNull(child, name);
+            if (match is not null)
+                return match;
+        }
+
+        return null;
     }
 
     private static BackupSnapshotItem Point(string id, int snapshotId, string projectId, DateTime timestamp) =>

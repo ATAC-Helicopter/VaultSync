@@ -91,6 +91,187 @@ namespace VaultSync.UI.ViewModels
         public bool IsDeleted => Kind == SnapshotFileChangeKind.Deleted;
     }
 
+    public sealed class DiffPreviewTreeNode : ViewModelBase
+    {
+        private bool _isExpanded;
+
+        private DiffPreviewTreeNode(
+            string name,
+            string path,
+            DiffPreviewTreeNode? parent,
+            DiffPreviewFileItem? file)
+        {
+            Name = name;
+            Path = path;
+            Parent = parent;
+            File = file;
+            (FileTypeLabel, FileTypeKind) = file is null
+                ? (string.Empty, DiffPreviewFileType.Folder)
+                : DescribeFileType(name);
+        }
+
+        public string Name { get; }
+        public string Path { get; }
+        public DiffPreviewTreeNode? Parent { get; }
+        public DiffPreviewFileItem? File { get; }
+        public ObservableCollection<DiffPreviewTreeNode> Children { get; } = [];
+        public bool IsFolder => File is null;
+        public bool IsFile => File is not null;
+        public string FileTypeLabel { get; }
+        public DiffPreviewFileType FileTypeKind { get; }
+        public bool IsCode => FileTypeKind == DiffPreviewFileType.Code;
+        public bool IsMarkup => FileTypeKind == DiffPreviewFileType.Markup;
+        public bool IsData => FileTypeKind == DiffPreviewFileType.Data;
+        public bool IsImage => FileTypeKind == DiffPreviewFileType.Image;
+        public bool IsDocument => FileTypeKind == DiffPreviewFileType.Document;
+        public bool IsArchive => FileTypeKind == DiffPreviewFileType.Archive;
+        public string Marker => File?.Marker ?? string.Empty;
+        public string SizeDelta => File?.SizeDelta ?? string.Empty;
+        public bool IsAdded => File?.IsAdded == true;
+        public bool IsModified => File?.IsModified == true;
+        public bool IsDeleted => File?.IsDeleted == true;
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set => SetField(ref _isExpanded, value);
+        }
+
+        public void ExpandAncestors()
+        {
+            for (DiffPreviewTreeNode? node = Parent; node is not null; node = node.Parent)
+                node.IsExpanded = true;
+        }
+
+        public static IReadOnlyList<DiffPreviewTreeNode> Build(
+            IEnumerable<DiffPreviewFileItem> files,
+            bool expandAll)
+        {
+            var roots = new List<DiffPreviewTreeNode>();
+            var folders = new Dictionary<string, DiffPreviewTreeNode>(StringComparer.Ordinal);
+
+            foreach (DiffPreviewFileItem file in files.OrderBy(static item => item.Path, StringComparer.Ordinal))
+            {
+                string normalizedPath = file.Path.Replace('\\', '/').Trim('/');
+                string[] parts = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0)
+                    continue;
+
+                ObservableCollection<DiffPreviewTreeNode>? children = null;
+                DiffPreviewTreeNode? parent = null;
+                string folderPath = string.Empty;
+                for (int index = 0; index < parts.Length - 1; index++)
+                {
+                    folderPath = folderPath.Length == 0 ? parts[index] : $"{folderPath}/{parts[index]}";
+                    if (!folders.TryGetValue(folderPath, out DiffPreviewTreeNode? folder))
+                    {
+                        folder = new DiffPreviewTreeNode(parts[index], folderPath, parent, null)
+                        {
+                            IsExpanded = expandAll || parent is null
+                        };
+                        if (children is null)
+                            roots.Add(folder);
+                        else
+                            children.Add(folder);
+                        folders.Add(folderPath, folder);
+                    }
+
+                    parent = folder;
+                    children = folder.Children;
+                }
+
+                var fileNode = new DiffPreviewTreeNode(parts[^1], normalizedPath, parent, file);
+                if (children is null)
+                    roots.Add(fileNode);
+                else
+                    children.Add(fileNode);
+            }
+
+            SortNodes(roots);
+            return roots;
+        }
+
+        private static void SortNodes(IList<DiffPreviewTreeNode> nodes)
+        {
+            var sorted = nodes
+                .OrderByDescending(static node => node.IsFolder)
+                .ThenBy(static node => node.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static node => node.Name, StringComparer.Ordinal)
+                .ToList();
+            nodes.Clear();
+            foreach (DiffPreviewTreeNode node in sorted)
+            {
+                SortNodes(node.Children);
+                nodes.Add(node);
+            }
+        }
+
+        private static (string Label, DiffPreviewFileType Kind) DescribeFileType(string fileName)
+        {
+            string lowerName = fileName.ToLowerInvariant();
+            string extension = System.IO.Path.GetExtension(fileName).ToLowerInvariant();
+            if (extension.Length == 0)
+            {
+                return lowerName switch
+                {
+                    "dockerfile" => ("DKR", DiffPreviewFileType.Code),
+                    "makefile" => ("MK", DiffPreviewFileType.Code),
+                    ".gitignore" or ".gitattributes" or ".editorconfig" => ("CFG", DiffPreviewFileType.Data),
+                    "license" or "readme" => ("TXT", DiffPreviewFileType.Document),
+                    _ => ("•", DiffPreviewFileType.Other)
+                };
+            }
+
+            return extension switch
+            {
+                ".cs" => ("C#", DiffPreviewFileType.Code),
+                ".fs" or ".fsx" => ("F#", DiffPreviewFileType.Code),
+                ".vb" => ("VB", DiffPreviewFileType.Code),
+                ".js" or ".mjs" or ".cjs" => ("JS", DiffPreviewFileType.Code),
+                ".ts" or ".tsx" => ("TS", DiffPreviewFileType.Code),
+                ".jsx" => ("JSX", DiffPreviewFileType.Code),
+                ".py" => ("PY", DiffPreviewFileType.Code),
+                ".rs" => ("RS", DiffPreviewFileType.Code),
+                ".go" => ("GO", DiffPreviewFileType.Code),
+                ".java" => ("JV", DiffPreviewFileType.Code),
+                ".kt" or ".kts" => ("KT", DiffPreviewFileType.Code),
+                ".swift" => ("SW", DiffPreviewFileType.Code),
+                ".c" or ".h" => ("C", DiffPreviewFileType.Code),
+                ".cc" or ".cpp" or ".cxx" or ".hpp" => ("C++", DiffPreviewFileType.Code),
+                ".sh" or ".bash" or ".zsh" or ".ps1" => ("$", DiffPreviewFileType.Code),
+                ".html" or ".htm" => ("<>", DiffPreviewFileType.Markup),
+                ".xml" or ".xaml" or ".axaml" or ".svg" or ".csproj" or ".props" or ".targets" =>
+                    ("XML", DiffPreviewFileType.Markup),
+                ".css" or ".scss" or ".sass" or ".less" => ("CSS", DiffPreviewFileType.Markup),
+                ".json" or ".jsonc" => ("{}", DiffPreviewFileType.Data),
+                ".yml" or ".yaml" => ("YML", DiffPreviewFileType.Data),
+                ".toml" => ("TML", DiffPreviewFileType.Data),
+                ".ini" or ".config" or ".conf" or ".env" => ("CFG", DiffPreviewFileType.Data),
+                ".sql" or ".db" or ".sqlite" or ".sqlite3" => ("DB", DiffPreviewFileType.Data),
+                ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" or ".bmp" or ".ico" or ".tif" or ".tiff" =>
+                    ("IMG", DiffPreviewFileType.Image),
+                ".md" or ".mdx" => ("MD", DiffPreviewFileType.Document),
+                ".txt" or ".log" or ".csv" or ".tsv" => ("TXT", DiffPreviewFileType.Document),
+                ".zip" or ".7z" or ".rar" or ".tar" or ".gz" or ".bz2" or ".xz" =>
+                    ("ZIP", DiffPreviewFileType.Archive),
+                ".sln" or ".slnx" => ("VS", DiffPreviewFileType.Code),
+                _ => ("•", DiffPreviewFileType.Other)
+            };
+        }
+    }
+
+    public enum DiffPreviewFileType
+    {
+        Folder,
+        Code,
+        Markup,
+        Data,
+        Image,
+        Document,
+        Archive,
+        Other
+    }
+
     public sealed class DiffPreviewLineItem
     {
         private DiffPreviewLineItem(
