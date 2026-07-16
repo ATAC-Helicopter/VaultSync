@@ -19,6 +19,10 @@ The comparison workflow now uses clear earlier/later restore-point choices, comp
 - VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget.
 - Hang capture uses smaller mini dumps, stops after 20 seconds, and removes timed-out partial output.
 
+### Language support
+- VaultSync is now available in Indonesian, Japanese, Korean, Dutch, Polish, Turkish, Ukrainian, and Vietnamese.
+- Localization validation now prevents missing or duplicate keys, empty values, broken format placeholders, and locale files that are shipped without being registered in the app.
+
 ### Release and maintainability
 - The desktop UI now runs on Avalonia 12.1 with compiled bindings, updated focus/selection behavior, modern placeholder and window-decoration APIs, and an aligned cross-platform rendering stack.
 - Dashboard, Projects, Settings, Backups, and the snapshot compare workspace now use compile-time checked bindings; large backup histories render incrementally instead of constructing every card at once.
