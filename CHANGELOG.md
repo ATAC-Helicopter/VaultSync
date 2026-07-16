@@ -4,6 +4,7 @@
 - [VS-1809] Added asynchronous file-level comparison between any two snapshots from the same project, including added, modified, deleted, and unchanged counts, changed-path hotspots, and mass-deletion, growth, or high-churn signals.
 - [VS-1809] Added a searchable changed-file workspace with bounded line-by-line text comparisons for available folder and ZIP snapshots; encrypted, binary, offline, and unsupported content falls back safely to file details.
 - [VS-1839] Migrated the desktop UI to Avalonia 12.1 with its .NET 10 rendering, accessibility, focus, selection, and compiled-binding improvements.
+- [VS-1845] Added Indonesian, Japanese, Korean, Dutch, Polish, Turkish, Ukrainian, and Vietnamese application localizations with full key, duplicate, value, registration, and format-placeholder validation.
 ### Changed
 - [BUG-18063] Reworked snapshot text comparisons into compact change groups with old/new line-number gutters, high-contrast addition and deletion rows, semantic file markers and summary cards, per-file line totals, and localized app-native loading, unavailable, shortened, and file-details-only states; text files that differ only by line-ending style are treated as unchanged.
 - [VS-1809] Expanded snapshot comparison into dedicated hotspot, changed-file, and text-diff panes so file changes can be inspected without crowding the summary.
