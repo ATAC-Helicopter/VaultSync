@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
@@ -278,9 +279,9 @@ public class RichTextBlock : TextBlock
     private static TextDecorationCollection CreateStrikethrough()
         => [new TextDecoration { Location = TextDecorationLocation.Strikethrough }];
 
-    private static bool TryCreateUri(string raw, out Uri uri)
+    private static bool TryCreateUri(string raw, [NotNullWhen(true)] out Uri? uri)
     {
-        uri = default!;
+        uri = null;
         if (string.IsNullOrWhiteSpace(raw))
             return false;
 

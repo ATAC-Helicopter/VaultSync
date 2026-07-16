@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using System.Linq;
 using VaultSync.Core.Config;
@@ -48,10 +49,294 @@ public sealed class NetworkMountServiceTests
         Assert.False(result.IsSuccess);
         Assert.Contains("unreachable", result.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void PrepareDestination_DoesNotReadCredentialForUnsupportedAutoMountPlatform()
+    {
+        if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS())
+            return;
+
+        int readCount = 0;
+        var service = new NetworkMountService(_ =>
+        {
+            readCount++;
+            return "secret";
+        });
+        var destination = new BackupDestination
+        {
+            Path = "smb://example.invalid/share",
+            Active = true,
+            AutoMount = true
+        };
+
+        DestinationResolution result = service.PrepareDestination(
+            destination,
+            new NetworkCredentialProfile { Name = "test", Username = "user", KeyRef = "cred-test" });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(0, readCount);
+    }
+
+    [Fact]
+    public void PrepareDestination_DoesNotReadCredentialForUnsupportedMacNfsAutoMount()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        int readCount = 0;
+        var service = new NetworkMountService(_ =>
+        {
+            readCount++;
+            return "secret";
+        });
+        var destination = new BackupDestination
+        {
+            Path = "nfs://example.invalid/share",
+            Active = true,
+            AutoMount = true
+        };
+
+        DestinationResolution result = service.PrepareDestination(
+            destination,
+            new NetworkCredentialProfile { Name = "test", Username = "user", KeyRef = "cred-test" });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(0, readCount);
+    }
 }
 
+[Collection("Credential environment")]
 public sealed class CredentialVaultTests
 {
+    [Fact]
+    public void LinuxSecretService_RoundTripsWithoutWritingPlaintextToTheIndex()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        using var tempDir = new TempDirectory();
+        string toolPath = Path.Combine(tempDir.Path, "secret-tool");
+        string secretPath = Path.Combine(tempDir.Path, "native-secret");
+        string indexPath = Path.Combine(tempDir.Path, "credentials.json");
+        File.WriteAllText(toolPath, """
+            #!/bin/sh
+            case "$1" in
+              store) cat > "$VAULTSYNC_FAKE_SECRET_FILE" ;;
+              lookup) cat "$VAULTSYNC_FAKE_SECRET_FILE" ;;
+              clear) rm -f "$VAULTSYNC_FAKE_SECRET_FILE" ;;
+              *) exit 2 ;;
+            esac
+            """);
+        File.SetUnixFileMode(
+            toolPath,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string previousPath = Environment.GetEnvironmentVariable("PATH");
+        string previousSecretFile = Environment.GetEnvironmentVariable("VAULTSYNC_FAKE_SECRET_FILE");
+        Environment.SetEnvironmentVariable("PATH", $"{tempDir.Path}{Path.PathSeparator}{previousPath}");
+        Environment.SetEnvironmentVariable("VAULTSYNC_FAKE_SECRET_FILE", secretPath);
+        try
+        {
+            var vault = new CredentialVault(indexPath);
+            const string keyRef = "cred-project-0123456789abcdef0123456789abcdef";
+            const string username = "backup-user";
+            const string secret = "native secret with spaces";
+
+            vault.SaveSecret(keyRef, username, secret, preferKeychain: true);
+
+            string indexJson = File.ReadAllText(indexPath);
+            Assert.DoesNotContain(secret, indexJson, StringComparison.Ordinal);
+            Assert.Contains("\"StoredInKeychain\": true", indexJson, StringComparison.Ordinal);
+            Assert.Equal(secret, vault.GetSecret(keyRef, username, preferKeychain: true));
+
+            vault.DeleteSecret(keyRef, username);
+
+            Assert.False(File.Exists(secretPath));
+            Assert.Equal("{}", File.ReadAllText(indexPath).Trim());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", previousPath);
+            Environment.SetEnvironmentVariable("VAULTSYNC_FAKE_SECRET_FILE", previousSecretFile);
+        }
+    }
+
+    [Fact]
+    public void RunProcess_ForSecretInput_DrainsOutputAndKeepsInputOutOfArguments()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        const string secret = "secret with spaces and symbols $'\"";
+        var command = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "/bin/sh",
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        command.ArgumentList.Add("-c");
+        command.ArgumentList.Add("cat; printf ignored-error >&2");
+
+        CredentialVault.ProcessResult result = CredentialVault.RunProcess(
+            command,
+            secret,
+            TimeSpan.FromSeconds(5));
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(secret, result.StandardOutput);
+        Assert.DoesNotContain(secret, command.ArgumentList);
+    }
+
+    [Fact]
+    public void RunProcess_WhenCommandExceedsDeadline_TerminatesIt()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        var command = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "/bin/sh",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        command.ArgumentList.Add("-c");
+        command.ArgumentList.Add("sleep 10");
+
+        CredentialVault.ProcessResult result = CredentialVault.RunProcess(
+            command,
+            standardInput: null,
+            timeout: TimeSpan.FromMilliseconds(100));
+
+        Assert.Equal(-1, result.ExitCode);
+        Assert.Equal(string.Empty, result.StandardOutput);
+    }
+
+    [Fact]
+    public void CorruptCredentialIndex_IsPreservedAndFailsClosed()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"vaultsync-credentials-{Guid.NewGuid():N}");
+        string storePath = Path.Combine(directory, "credentials.json");
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(storePath, "{ definitely-not-json");
+        var vault = new CredentialVault(storePath);
+
+        try
+        {
+            InvalidDataException error = Assert.Throws<InvalidDataException>(() =>
+                vault.GetSecret("cred-test", "user", preferKeychain: false));
+
+            Assert.Contains("corrupt", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("{ definitely-not-json", File.ReadAllText(storePath));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GetSecret_CoalescesRepeatedNativeReadsForTheSession()
+    {
+        using var tempDir = new TempDirectory();
+        string storePath = Path.Combine(tempDir.Path, "credentials.json");
+        File.WriteAllText(storePath, """
+            {
+              "cred-test": {
+                "Username": "stored-account",
+                "StoredInKeychain": true
+              }
+            }
+            """);
+        int readCount = 0;
+        string observedAccount = null;
+        var vault = new CredentialVault(storePath, (_, account) =>
+        {
+            readCount++;
+            observedAccount = account;
+            return "session-secret";
+        });
+
+        Assert.Equal("session-secret", vault.GetSecret("cred-test", "caller-account", preferKeychain: true));
+        Assert.Equal("session-secret", vault.GetSecret("cred-test", "caller-account", preferKeychain: true));
+        Assert.Equal("session-secret", vault.GetSecret("cred-test", "other-account", preferKeychain: true));
+        Assert.Equal(1, readCount);
+        Assert.Equal("stored-account", observedAccount);
+    }
+
+    [Fact]
+    public void GetSecret_DoesNotRetryDeniedOrUnavailableNativeReadDuringTheSession()
+    {
+        using var tempDir = new TempDirectory();
+        string storePath = Path.Combine(tempDir.Path, "credentials.json");
+        int readCount = 0;
+        var vault = new CredentialVault(storePath, (_, _) =>
+        {
+            readCount++;
+            return null;
+        });
+
+        Assert.Equal("fallback", vault.GetSecret("cred-test", "user", preferKeychain: true, fallbackPlaintext: "fallback"));
+        Assert.Equal("fallback", vault.GetSecret("cred-test", "user", preferKeychain: true, fallbackPlaintext: "fallback"));
+        Assert.Equal(1, readCount);
+    }
+
+    [Fact]
+    public void HasStoredSecret_UsesIndexMetadataWithoutReadingNativeStore()
+    {
+        using var tempDir = new TempDirectory();
+        string storePath = Path.Combine(tempDir.Path, "credentials.json");
+        File.WriteAllText(storePath, """
+            {
+              "cred-test": {
+                "Username": "stored-account",
+                "StoredInKeychain": true
+              }
+            }
+            """);
+        int readCount = 0;
+        var vault = new CredentialVault(storePath, (_, _) =>
+        {
+            readCount++;
+            return "secret";
+        });
+
+        Assert.True(vault.HasStoredSecret("cred-test"));
+        Assert.False(vault.HasStoredSecret("cred-missing"));
+        Assert.Equal(0, readCount);
+    }
+
+    [Fact]
+    public void DeleteCredential_ReplacesIndexAtomicallyWithoutLeavingTemporaryFiles()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"vaultsync-credentials-{Guid.NewGuid():N}");
+        string storePath = Path.Combine(directory, "credentials.json");
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(storePath, """
+            {
+              "cred-test": {
+                "Username": "user",
+                "StoredInKeychain": false
+              }
+            }
+            """);
+        var vault = new CredentialVault(storePath);
+
+        try
+        {
+            vault.DeleteSecret("cred-test", "user");
+
+            Assert.Equal("{}", File.ReadAllText(storePath).Trim());
+            Assert.Empty(Directory.EnumerateFiles(directory, ".credentials.json.*.tmp"));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Fact]
     public void EnsureKeyRef_WithExistingReference_ReturnsSameReference()
     {
@@ -147,6 +432,33 @@ public sealed class CredentialVaultTests
     }
 
     [Fact]
+    public void MacKeychainNativeApi_RoundTripsWithoutStartingSecurityCli()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        string keyRef = $"vaultsync-test-{Guid.NewGuid():N}";
+        const string username = "vaultsync-test";
+        const string secret = "secret with spaces";
+        MethodInfo write = typeof(CredentialVault).GetMethod(
+            "TryWriteToKeychain", BindingFlags.NonPublic | BindingFlags.Static)!;
+        MethodInfo read = typeof(CredentialVault).GetMethod(
+            "TryReadFromKeychain", BindingFlags.NonPublic | BindingFlags.Static)!;
+        MethodInfo delete = typeof(CredentialVault).GetMethod(
+            "TryDeleteFromKeychain", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+        try
+        {
+            Assert.True((bool)write.Invoke(null, new object[] { keyRef, username, secret })!);
+            Assert.Equal(secret, (string)read.Invoke(null, new object[] { keyRef, username })!);
+        }
+        finally
+        {
+            Assert.True((bool)delete.Invoke(null, new object[] { keyRef, username })!);
+        }
+    }
+
+    [Fact]
     public void WindowsDpapi_RoundTripsForCurrentUser_WhenRunningOnWindows()
     {
         if (!OperatingSystem.IsWindows())
@@ -168,3 +480,6 @@ public sealed class CredentialVaultTests
         Assert.Equal("windows-secret", restored);
     }
 }
+
+[CollectionDefinition("Credential environment", DisableParallelization = true)]
+public sealed class CredentialEnvironmentCollection;

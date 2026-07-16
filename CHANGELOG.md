@@ -1,4 +1,49 @@
 ﻿# Changelog
+## [1.8.3] - Unreleased
+### Added
+- [VS-1809] Added asynchronous file-level comparison between any two snapshots from the same project, including added, modified, deleted, and unchanged counts, changed-path hotspots, and mass-deletion, growth, or high-churn signals.
+- [VS-1809] Added a searchable changed-file workspace with bounded line-by-line text comparisons for available folder and ZIP snapshots; encrypted, binary, offline, and unsupported content falls back safely to file details.
+- [VS-1839] Migrated the desktop UI to Avalonia 12.1 with its .NET 10 rendering, accessibility, focus, selection, and compiled-binding improvements.
+- [VS-1845] Added Indonesian, Japanese, Korean, Dutch, Polish, Turkish, Ukrainian, and Vietnamese application localizations with full key, duplicate, value, registration, and format-placeholder validation.
+### Changed
+- [BUG-18063] Reworked snapshot text comparisons into compact change groups with old/new line-number gutters, high-contrast addition and deletion rows, semantic file markers and summary cards, per-file line totals, and localized app-native loading, unavailable, shortened, and file-details-only states; text files that differ only by line-ending style are treated as unchanged.
+- [VS-1809] Expanded snapshot comparison into dedicated hotspot, changed-file, and text-diff panes so file changes can be inspected without crowding the summary.
+- [VS-1809] Improved comparison QoL with automatic same-project restore-point suggestions, contextual selection guidance, cancellable comparison work, filtered-result counts, and clearer empty, capped, and no-match states.
+- [VS-1809] Cancelled superseded text-diff computations when users move quickly between changed files, avoiding unnecessary quadratic diff work for stale selections.
+- [VS-1809] Added previous/next changed-file navigation and one-click filter clearing to make large snapshot comparisons faster to review.
+- [VS-1809] Redesigned restore-point comparison with compact change cards, an app-native empty state, and a detailed workspace shown only when changed files are available; zero examined files are no longer reported as confirmed no-change results.
+- [VS-1809] Refined restore-point comparison around clearly labeled earlier/later selections, plain-language status copy, affected-path chips, a compact two-pane files-to-diff workspace, vector navigation controls, and keyboard-friendly compare and close actions.
+- [VS-1809] Reworked the comparison workspace with a compact summary header and an expandable changed-file folder tree, including recognizable icons for source code, markup, data, images, documents, archives, and project files.
+- [VS-1843] Simplified the comparison header into a clear title, range, scope, and status hierarchy; reduced hotspot noise; and replaced colored extension boxes with compact monochrome vector file icons.
+- [VS-1844] Refined the changed-file navigator with a compact toolbar, neutral folder icons, tighter tree rows and indentation, quieter selection, abbreviated result counts, and hidden zero-byte size deltas.
+- [VS-1846] Densified the snapshot comparison workspace with a narrower file tree, compact diff rows and gutters, a centered app-native search/filter strip, and unobtrusive Git-style added/deleted line totals.
+- [VS-1842] Completed the 1.8.3 localization pass across all maintained languages for Snapshot Compare, Snapshot Explorer, onboarding, destination guidance, and shared controls while preserving every format-placeholder contract.
+- [VS-1838] Refreshed the maintained Avalonia 11, HarfBuzzSharp, and LiveCharts patch lines as the validated baseline for the separately tracked Avalonia 12 migration.
+- [VS-1839] Aligned LiveCharts, SkiaSharp, and HarfBuzzSharp with the Avalonia 12 rendering ABI, removed the retired diagnostics package, and adopted the new placeholder and window-decoration APIs.
+- [VS-1839] Made Dashboard activity and storage sections adapt progressively at narrow widths, including stacked cards, a compact storage header, and a donut chart that scales to the available space.
+- [VS-1840] Hardened snapshot scanning and comparison by skipping linked source entries, preserving case-distinct paths, and clearing temporary PBKDF2 key material after archive encryption and decryption.
+- [VS-1840] Replaced re-entrant `async void` UI commands with observed, single-flight async commands and added cancellable Recovery page lifecycle refreshes.
+- [VS-1840] Removed the global nullable-warning suppression and corrected every exposed nullability contract so warning-as-error builds enforce the full baseline again.
+- [VS-1840] Moved macOS credentials to native Security.framework calls, made credential indexes atomic and corruption-safe, and enforced real Linux secret-tool timeouts with process-tree termination.
+- [VS-1840] Added macOS CI and mandatory release build/test/vulnerability gates, checksum verification for pinned AppImageKit tooling, and fail-hard required artifact uploads.
+- [VS-1840] Bounded backup history rendering with localized incremental paging, enabled compiled bindings across the core Dashboard, Projects, Settings, and Backups views, and added accessible compare controls.
+- [VS-1840] Scoped metadata I/O coordination per store, removed mutable static presentation callbacks from the core sync service, and made required schema migration failures explicit.
+- [VS-1831] Hardened patch-building and download-stat scripts so output paths are normalized, validated within their allowed roots, and reused after validation before files are written.
+- [VS-1832] Split Snapshot Explorer browsing, archive traversal, text preview, and code-preview helpers into focused operations while preserving existing browsing and restore behavior.
+- [VS-1833] Split snapshot creation, manifest construction, hashing, and persistence into focused stages to reduce complexity while preserving snapshot compatibility.
+- [VS-1834] Refactored CLI destination, doctor, snapshot, and watch command flows into smaller validation and execution helpers without changing their command-line contracts.
+- [VS-1835] Refactored Projects and Settings workflows, project snapshot commands, and rich-text rendering into focused helpers to reduce UI complexity and improve maintainability.
+- [VS-1836] Addressed Sonar analyzer findings and consolidated repeated literals across backup, navigation, update, credential, telemetry, verification, network-mount, and encryption services.
+### Fixed
+- [BUG-18065] Large text comparisons now retain edits beyond the first 800 lines, collapse long unchanged regions into Git-style hunks, keep the comparison dialog stable while switching files, and reset each selected diff to its first hunk.
+- [BUG-18064] Folder selection now opens from the existing destination or a valid home/Documents fallback, avoiding an empty Avalonia macOS start URL that could trap the native picker and break New Folder navigation.
+- [BUG-18061] Restored per-backup changed-file details by comparing with the nearest earlier project restore point, including safe bounded folder and ZIP inventory recovery when imported metadata lacks file rows; offline, encrypted, and capped cases now retain their recorded totals with accurate guidance instead of showing a false empty diff.
+- [BUG-18062] Prevented repeated macOS Keychain prompts by coalescing native credential reads per session, removing eager secret reads from Settings and status badges, preserving blank secure-password fields, and resolving network credentials only when a new mount actually needs them.
+- [BUG-18060] Hardened Snapshot Explorer ZIP restore with explicit destination containment and linked-path rejection so malicious archive entries cannot write outside the selected restore root.
+- [BUG-18060] Applied the same linked-path rejection to ordinary folder restores so an existing symlink or junction inside the restore target cannot redirect copied files outside it.
+- [BUG-18059] Diagnostics retention now runs periodically on every platform, keeps at most two hang dumps within a 1 GiB diagnostics budget, and stops timed-out dump collection before partial files consume disk space.
+- [VS-1839] Limited frameless tray and backup-widget dragging to their title areas, restored visible Log Console multi-selection, and updated folder pickers to resolve Avalonia 12 storage items without assuming `file://` URIs.
+
 ## [1.8.2] - 04.07.2026
 ### Added
 - [VS-1808] Added Snapshot Explorer v1 for backup folder/archive browsing, text preview, search, and selected-item restore.

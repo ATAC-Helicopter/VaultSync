@@ -109,6 +109,11 @@ public class ScannerService
             foreach (var file in files)
             {
                 ct.ThrowIfCancellationRequested();
+                if (IsLinkedPath(file))
+                {
+                    _logger.Warning($"[ScannerService] Skipping linked file '{file}'.");
+                    continue;
+                }
                 yield return file;
             }
 
@@ -128,9 +133,26 @@ public class ScannerService
                 ct.ThrowIfCancellationRequested();
                 if (BackupSafetyService.IsReservedPath(root, directory) || _filter.ShouldExclude(root, directory))
                     continue;
+                if (IsLinkedPath(directory))
+                {
+                    _logger.Warning($"[ScannerService] Skipping linked directory '{directory}'.");
+                    continue;
+                }
 
                 stack.Push(directory);
             }
+        }
+    }
+
+    private static bool IsLinkedPath(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FileNotFoundException)
+        {
+            return true;
         }
     }
 

@@ -258,7 +258,7 @@
           <WrapPanel ItemSpacing="8"
                      LineSpacing="8">
             <TextBox Classes="history-search"
-                     Watermark="{infra:LocalizedString Key=History.Search.Watermark}"
+                     PlaceholderText="{infra:LocalizedString Key=History.Search.Watermark}"
                      Text="{CompiledBinding SearchText, Mode=TwoWay}" />
 
             <ComboBox Classes="history-filter"
@@ -664,15 +664,15 @@
                   <TextBlock Text="{infra:LocalizedString Key=History.Editor.Title}"
                              Classes="history-eyebrow" />
                   <TextBox Text="{CompiledBinding SelectedSnapshotLabelDraft, Mode=TwoWay}"
-                           Watermark="{infra:LocalizedString Key=History.Editor.LabelWatermark}"
+                           PlaceholderText="{infra:LocalizedString Key=History.Editor.LabelWatermark}"
                            Classes="history-editor"
                            IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}" />
                   <TextBox Text="{CompiledBinding SelectedSnapshotTagsDraft, Mode=TwoWay}"
-                           Watermark="{infra:LocalizedString Key=History.Editor.TagsWatermark}"
+                           PlaceholderText="{infra:LocalizedString Key=History.Editor.TagsWatermark}"
                            Classes="history-editor"
                            IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}" />
                   <TextBox Text="{CompiledBinding SelectedSnapshotNoteDraft, Mode=TwoWay}"
-                           Watermark="{infra:LocalizedString Key=History.Editor.NoteWatermark}"
+                           PlaceholderText="{infra:LocalizedString Key=History.Editor.NoteWatermark}"
                            Classes="history-editor"
                            AcceptsReturn="True"
                            TextWrapping="Wrap"

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
 using VaultSync.Core.Tests.TestSupport;
@@ -11,6 +12,14 @@ namespace VaultSync.Core.Tests;
 public sealed class BackupSafetyServiceTests : IDisposable
 {
     private readonly TempDirectory _tempDir = new();
+
+    [Fact]
+    public async Task ScannerService_ScanAsyncRequiresARootPath()
+    {
+        var scanner = new ScannerService(new FilterService([]));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => scanner.ScanAsync(string.Empty));
+    }
 
     [Fact]
     public void EnsureSafeBackupRoot_BlocksBackupRootInsideProjectRoot()
@@ -140,6 +149,28 @@ public sealed class BackupSafetyServiceTests : IDisposable
         Assert.DoesNotContain(entries, path => path.Contains("runaway", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(entries, path => path.Contains("nested", StringComparison.OrdinalIgnoreCase));
         Assert.Single(entries);
+    }
+
+    [Fact]
+    public void ScannerService_SkipsLinkedFilesAndDirectories()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string projectRoot = Path.Combine(_tempDir.Path, "linked-project");
+        string outsideRoot = Path.Combine(_tempDir.Path, "outside-project");
+        Directory.CreateDirectory(projectRoot);
+        Directory.CreateDirectory(outsideRoot);
+        File.WriteAllText(Path.Combine(projectRoot, "inside.txt"), "inside");
+        string outsideFile = Path.Combine(outsideRoot, "outside.txt");
+        File.WriteAllText(outsideFile, "outside");
+        Directory.CreateSymbolicLink(Path.Combine(projectRoot, "linked-directory"), outsideRoot);
+        File.CreateSymbolicLink(Path.Combine(projectRoot, "linked-file.txt"), outsideFile);
+
+        var scanner = new ScannerService(new FilterService(Array.Empty<string>()));
+        string[] entries = scanner.Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
+
+        Assert.Equal(["inside.txt"], entries);
     }
 
     [Fact]

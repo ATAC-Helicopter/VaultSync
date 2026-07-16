@@ -3,38 +3,87 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using VaultSync.UI.Services;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class LocalizationCoverageTests
 {
+    private static readonly Regex FormatPlaceholder = new(
+        @"\{\d+(?:,[^}:]+)?(?::[^}]+)?\}",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     [Fact]
-    public void ShippedLocales_MatchEnglishKeySet()
+    public void ShippedLocales_MatchEnglishContracts()
     {
         string localizationDirectory = FindLocalizationDirectory();
-        HashSet<string> englishKeys = ReadKeys(Path.Combine(localizationDirectory, "strings.en.json"));
+        Dictionary<string, string> english = ReadLocale(Path.Combine(localizationDirectory, "strings.en.json"));
 
         foreach (string localePath in Directory.GetFiles(localizationDirectory, "strings.*.json"))
         {
-            HashSet<string> localeKeys = ReadKeys(localePath);
+            Dictionary<string, string> localeValues = ReadLocale(localePath);
             string locale = Path.GetFileName(localePath);
 
             Assert.True(
-                englishKeys.SetEquals(localeKeys),
-                $"{locale} key mismatch. Missing: {string.Join(", ", englishKeys.Except(localeKeys).Order())}; " +
-                $"Extra: {string.Join(", ", localeKeys.Except(englishKeys).Order())}");
+                english.Keys.ToHashSet().SetEquals(localeValues.Keys),
+                $"{locale} key mismatch. Missing: {string.Join(", ", english.Keys.Except(localeValues.Keys).Order())}; " +
+                $"Extra: {string.Join(", ", localeValues.Keys.Except(english.Keys).Order())}");
+
+            foreach ((string key, string value) in localeValues)
+            {
+                Assert.False(string.IsNullOrWhiteSpace(value), $"{locale} has an empty value for {key}.");
+                Assert.Equal(
+                    GetPlaceholders(english[key]),
+                    GetPlaceholders(value));
+            }
         }
     }
 
-    private static HashSet<string> ReadKeys(string path)
+    [Fact]
+    public void SupportedLanguages_MatchShippedLocaleFiles()
+    {
+        string localizationDirectory = FindLocalizationDirectory();
+        string[] shippedCodes = Directory.GetFiles(localizationDirectory, "strings.*.json")
+            .Select(path => Path.GetFileNameWithoutExtension(path)["strings.".Length..])
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        string[] supportedCodes = new LocalizationService().SupportedLanguages
+            .Select(language => language.Code)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(shippedCodes, supportedCodes);
+    }
+
+    private static Dictionary<string, string> ReadLocale(string path)
     {
         using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
-        return document.RootElement
-            .EnumerateObject()
-            .Select(property => property.Name)
-            .ToHashSet();
+        JsonProperty[] properties = document.RootElement.EnumerateObject().ToArray();
+        string[] duplicateKeys = properties
+            .GroupBy(property => property.Name, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.True(duplicateKeys.Length == 0, $"{Path.GetFileName(path)} has duplicate keys: {string.Join(", ", duplicateKeys)}");
+
+        var locale = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (JsonProperty property in properties)
+        {
+            Assert.Equal(JsonValueKind.String, property.Value.ValueKind);
+            locale.Add(property.Name, property.Value.GetString()!);
+        }
+
+        return locale;
     }
+
+    private static string[] GetPlaceholders(string value) => FormatPlaceholder.Matches(value)
+        .Select(match => match.Value)
+        .Order(StringComparer.Ordinal)
+        .ToArray();
 
     private static string FindLocalizationDirectory()
     {

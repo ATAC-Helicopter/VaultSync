@@ -1,13 +1,14 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:viewmodels="using:VaultSync.UI.ViewModels"
-    xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
-    xmlns:viewsControls="clr-namespace:VaultSync.UI.Views.Controls"
+        xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+        xmlns:viewsControls="clr-namespace:VaultSync.UI.Views.Controls"
+        xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
         x:Class="VaultSync.UI.Views.TrayPanelWindow"
         x:DataType="viewmodels:TrayPanelViewModel"
         Width="380"
         Height="560"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         Background="{DynamicResource CardBackgroundBrush}"
         ShowInTaskbar="False"
@@ -18,16 +19,15 @@
           CornerRadius="20"
           Padding="14"
           Background="{DynamicResource CardBackgroundBrush}"
-          BoxShadow="0 14 36 0 #22000000"
-          PointerPressed="OnDragAreaPointerPressed">
+          BoxShadow="0 14 36 0 #22000000">
     <Grid RowDefinitions="Auto,Auto,*,Auto"
           RowSpacing="12">
       <!-- Header -->
       <Grid Grid.Row="0"
             ColumnDefinitions="*,Auto"
-            ColumnSpacing="12"
-            PointerPressed="OnDragAreaPointerPressed">
-        <StackPanel Spacing="2">
+            ColumnSpacing="12">
+        <StackPanel Spacing="2"
+                    PointerPressed="OnDragAreaPointerPressed">
           <TextBlock Text="{Binding HeaderTitle}"
                      FontSize="16"
                      FontWeight="SemiBold" />
@@ -36,12 +36,22 @@
                      Foreground="{DynamicResource TextSecondaryBrush}" />
         </StackPanel>
         <Button Grid.Column="1"
-                Content="X"
                 Command="{Binding CloseCommand}"
                 Classes="action-ghost"
-                Padding="8,4"
+                Width="32"
+                Height="32"
+                Padding="0"
                 MinWidth="0"
-                HorizontalAlignment="Right" />
+                HorizontalAlignment="Right"
+                AutomationProperties.Name="{infra:LocalizedString Key=Common.Close}"
+                ToolTip.Tip="{infra:LocalizedString Key=Common.Close}">
+          <shapes:Path Data="M 2,2 L 12,12 M 12,2 L 2,12"
+                       Width="13"
+                       Height="13"
+                       Stretch="Uniform"
+                       Stroke="{DynamicResource TextPrimaryBrush}"
+                       StrokeThickness="1.6" />
+        </Button>
       </Grid>
 
       <!-- Status row -->

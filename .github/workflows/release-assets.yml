@@ -162,8 +162,42 @@ jobs:
           - Target version: \`$target\`
           EOF
 
-  windows:
+  quality-gate:
+    name: Test and dependency audit
     needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore VaultSync.sln
+
+      - name: Build
+        run: dotnet build VaultSync.sln --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+
+      - name: Test
+        run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build -warnaserror -p:UseSharedCompilation=false
+
+      - name: Audit NuGet dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$(mktemp)"
+          dotnet list VaultSync.sln package --vulnerable --include-transitive --format json > "$report"
+          jq -e '[.. | objects | select((.vulnerabilities? // []) | length > 0)] | length == 0' "$report" >/dev/null || {
+            jq '[.. | objects | select((.vulnerabilities? // []) | length > 0)]' "$report"
+            echo "NuGet vulnerability audit failed." >&2
+            exit 1
+          }
+
+  windows:
+    needs: [validate, quality-gate]
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -287,6 +321,24 @@ jobs:
             @previousArgs `
             --target "$targetVersion"
 
+      - name: Verify required Windows artifacts
+        shell: pwsh
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          $required = @(
+            "patches/v$($env:TARGET_VERSION)/vaultsync-patch-windows.json",
+            "patches/v$($env:TARGET_VERSION)/vaultsync-patch-windows.zip"
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "Required release artifact was not produced: $path"
+            }
+          }
+          if (-not (Get-ChildItem "dist/windows/VaultSync-Setup-*.exe" -File -ErrorAction SilentlyContinue)) {
+            throw "Required Windows installer was not produced."
+          }
+
       - name: Prepare Microsoft Store manifest version
         if: ${{ inputs.include_store_upload }}
         shell: pwsh
@@ -355,6 +407,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-release-assets
+          if-no-files-found: error
           path: |
             dist/windows/VaultSync-Setup-*.exe
             patches/v${{ inputs.target_version }}/vaultsync-patch-windows.json
@@ -365,12 +418,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-store-upload
+          if-no-files-found: error
           path: |
             dist/store/*.msixupload
             dist/store/*.appxupload
 
   macos:
-    needs: validate
+    needs: [validate, quality-gate]
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -430,10 +484,31 @@ jobs:
             "${previous_args[@]}" \
             --target "$TARGET_VERSION"
 
+      - name: Verify required macOS artifacts
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          required=(
+            dist/macos/VaultSync-*-macos-apple-silicon.dmg
+            dist/macos/VaultSync-*-macos-intel.dmg
+            "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json"
+            "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.zip"
+            "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json"
+            "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.zip"
+          )
+          for pattern in "${required[@]}"; do
+            compgen -G "$pattern" >/dev/null || {
+              echo "Required release artifact was not produced: $pattern" >&2
+              exit 1
+            }
+          done
+
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-release-assets
+          if-no-files-found: error
           path: |
             dist/macos/VaultSync-*-macos-apple-silicon.dmg
             dist/macos/VaultSync-*-macos-intel.dmg
@@ -443,7 +518,7 @@ jobs:
             patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.zip
 
   linux:
-    needs: validate
+    needs: [validate, quality-gate]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -504,10 +579,39 @@ jobs:
             "${previous_args[@]}" \
             --target "$TARGET_VERSION"
 
+      - name: Verify required Linux artifacts
+        env:
+          INCLUDE_LINUX_PATCHES: ${{ inputs.include_linux_patches }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          required=(
+            dist/linux/VaultSync-*-linux-x64.tar.gz
+            dist/linux/VaultSync-*-linux-arm64.tar.gz
+            dist/linux/VaultSync-*-linux-x64.deb
+            dist/linux/VaultSync-*-linux-arm64.deb
+            dist/linux/VaultSync-*-linux-x64.AppImage
+          )
+          if [[ "$INCLUDE_LINUX_PATCHES" == "true" ]]; then
+            required+=(
+              "patches/v$TARGET_VERSION/vaultsync-patch-linux-x64.json"
+              "patches/v$TARGET_VERSION/vaultsync-patch-linux-x64.zip"
+              "patches/v$TARGET_VERSION/vaultsync-patch-linux-arm64.json"
+              "patches/v$TARGET_VERSION/vaultsync-patch-linux-arm64.zip"
+            )
+          fi
+          for pattern in "${required[@]}"; do
+            compgen -G "$pattern" >/dev/null || {
+              echo "Required release artifact was not produced: $pattern" >&2
+              exit 1
+            }
+          done
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-release-assets
+          if-no-files-found: error
           path: |
             dist/linux/VaultSync-*-linux-x64.tar.gz
             dist/linux/VaultSync-*-linux-arm64.tar.gz

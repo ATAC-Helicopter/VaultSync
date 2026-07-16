@@ -97,8 +97,7 @@ public sealed class RestoreReadinessService
         IReadOnlyDictionary<string, bool> destinationReachability,
         IReadOnlyDictionary<int, SnapshotHistoryMetadata>? snapshotMetadataById)
     {
-        Backup? latest = backups?.FirstOrDefault();
-        if (latest is null)
+        if (backups is null || backups.Count == 0)
         {
             return new ProjectRestoreReadiness
             {
@@ -110,6 +109,8 @@ public sealed class RestoreReadinessService
                 Reason = "No backup history is currently available for this project."
             };
         }
+
+        Backup latest = backups[0];
 
         int score = 100;
         var reasons = new List<string>();

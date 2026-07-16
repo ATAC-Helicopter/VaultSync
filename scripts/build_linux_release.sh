@@ -259,12 +259,20 @@ if [[ "$arch" != "x64" ]]; then
   exit 0
 fi
 
-appimage_tool_url="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+# Keep release packaging reproducible: this is an immutable AppImageKit release,
+# and the digest is verified before any downloaded code is executed.
+appimage_tool_version="13"
+appimage_tool_sha256="df3baf5ca5facbecfc2f3fa6713c29ab9cefa8fd8c1eac5d283b79cab33e4acb"
+appimage_tool_url="https://github.com/AppImage/AppImageKit/releases/download/${appimage_tool_version}/obsolete-appimagetool-x86_64.AppImage"
 tool_dir="$(mktemp -d)"
 appdir="$(mktemp -d)"
 
 appimage_tool="${tool_dir}/appimagetool-x86_64.AppImage"
 curl -fsSL "$appimage_tool_url" -o "$appimage_tool"
+printf '%s  %s\n' "$appimage_tool_sha256" "$appimage_tool" | sha256sum --check --status || {
+  echo "appimagetool SHA-256 verification failed." >&2
+  exit 1
+}
 chmod +x "$appimage_tool"
 
 mkdir -p \

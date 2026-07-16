@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -63,6 +64,347 @@ namespace VaultSync.UI.ViewModels
         }
     }
 
+    public sealed class DiffPreviewFileItem
+    {
+        public DiffPreviewFileItem(SnapshotFileChange change)
+        {
+            Change = change;
+            Path = change.Path;
+            Kind = change.Kind;
+            Marker = change.Kind switch
+            {
+                SnapshotFileChangeKind.Added => "+",
+                SnapshotFileChangeKind.Modified => "~",
+                SnapshotFileChangeKind.Deleted => "-",
+                _ => "?"
+            };
+            SizeDelta = UiFormat.FormatSignedBytes(change.SizeDeltaBytes);
+        }
+
+        public SnapshotFileChange Change { get; }
+        public string Path { get; }
+        public SnapshotFileChangeKind Kind { get; }
+        public string Marker { get; }
+        public string SizeDelta { get; }
+        public bool IsAdded => Kind == SnapshotFileChangeKind.Added;
+        public bool IsModified => Kind == SnapshotFileChangeKind.Modified;
+        public bool IsDeleted => Kind == SnapshotFileChangeKind.Deleted;
+    }
+
+    public sealed class DiffPreviewTreeNode : ViewModelBase
+    {
+        private const string ArchiveIcon = "M2 4 H14 V14 H2 Z M1 2 H15 V5 H1 Z M7 7 H9 V11 H7 Z";
+        private const string CodeIcon = "M5 3 L1 8 L5 13 M11 3 L15 8 L11 13 M9 2 L7 14";
+        private const string DataIcon = "M3 4 C3 1 13 1 13 4 C13 7 3 7 3 4 M3 4 V12 C3 15 13 15 13 12 V4 M3 8 C3 11 13 11 13 8";
+        private const string DocumentIcon = "M3 1 H10 L14 5 V15 H3 Z M10 1 V5 H14 M5 8 H12 M5 11 H12";
+        private const string ImageIcon = "M2 2 H14 V14 H2 Z M4 11 L7 8 L9 10 L11 7 L14 11 M5 5 H5.1";
+        private const string MarkupIcon = "M5 3 L1 8 L5 13 M11 3 L15 8 L11 13";
+        private const string OtherFileIcon = "M3 1 H10 L14 5 V15 H3 Z M10 1 V5 H14";
+
+        private bool _isExpanded;
+
+        private DiffPreviewTreeNode(
+            string name,
+            string path,
+            DiffPreviewTreeNode? parent,
+            DiffPreviewFileItem? file)
+        {
+            Name = name;
+            Path = path;
+            Parent = parent;
+            File = file;
+            (FileTypeLabel, FileTypeKind) = file is null
+                ? (string.Empty, DiffPreviewFileType.Folder)
+                : DescribeFileType(name);
+        }
+
+        public string Name { get; }
+        public string Path { get; }
+        public DiffPreviewTreeNode? Parent { get; }
+        public DiffPreviewFileItem? File { get; }
+        public ObservableCollection<DiffPreviewTreeNode> Children { get; } = [];
+        public bool IsFolder => File is null;
+        public bool IsFile => File is not null;
+        public string FileTypeLabel { get; }
+        public DiffPreviewFileType FileTypeKind { get; }
+        public string FileTypeIconData => FileTypeKind switch
+        {
+            DiffPreviewFileType.Code => CodeIcon,
+            DiffPreviewFileType.Markup => MarkupIcon,
+            DiffPreviewFileType.Data => DataIcon,
+            DiffPreviewFileType.Image => ImageIcon,
+            DiffPreviewFileType.Document => DocumentIcon,
+            DiffPreviewFileType.Archive => ArchiveIcon,
+            _ => OtherFileIcon
+        };
+        public string Marker => File?.Marker ?? string.Empty;
+        public string SizeDelta => File?.SizeDelta ?? string.Empty;
+        public bool HasSizeDelta => File?.Change.SizeDeltaBytes != 0;
+        public bool IsAdded => File?.IsAdded == true;
+        public bool IsModified => File?.IsModified == true;
+        public bool IsDeleted => File?.IsDeleted == true;
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set => SetField(ref _isExpanded, value);
+        }
+
+        public void ExpandAncestors()
+        {
+            for (DiffPreviewTreeNode? node = Parent; node is not null; node = node.Parent)
+                node.IsExpanded = true;
+        }
+
+        public static IReadOnlyList<DiffPreviewTreeNode> Build(
+            IEnumerable<DiffPreviewFileItem> files,
+            bool expandAll)
+        {
+            var roots = new List<DiffPreviewTreeNode>();
+            var folders = new Dictionary<string, DiffPreviewTreeNode>(StringComparer.Ordinal);
+
+            foreach (DiffPreviewFileItem file in files.OrderBy(static item => item.Path, StringComparer.Ordinal))
+            {
+                string normalizedPath = file.Path.Replace('\\', '/').Trim('/');
+                string[] parts = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0)
+                    continue;
+
+                ObservableCollection<DiffPreviewTreeNode>? children = null;
+                DiffPreviewTreeNode? parent = null;
+                string folderPath = string.Empty;
+                for (int index = 0; index < parts.Length - 1; index++)
+                {
+                    folderPath = folderPath.Length == 0 ? parts[index] : $"{folderPath}/{parts[index]}";
+                    if (!folders.TryGetValue(folderPath, out DiffPreviewTreeNode? folder))
+                    {
+                        folder = new DiffPreviewTreeNode(parts[index], folderPath, parent, null)
+                        {
+                            IsExpanded = expandAll || parent is null
+                        };
+                        if (children is null)
+                            roots.Add(folder);
+                        else
+                            children.Add(folder);
+                        folders.Add(folderPath, folder);
+                    }
+
+                    parent = folder;
+                    children = folder.Children;
+                }
+
+                var fileNode = new DiffPreviewTreeNode(parts[^1], normalizedPath, parent, file);
+                if (children is null)
+                    roots.Add(fileNode);
+                else
+                    children.Add(fileNode);
+            }
+
+            SortNodes(roots);
+            return roots;
+        }
+
+        private static void SortNodes(IList<DiffPreviewTreeNode> nodes)
+        {
+            var sorted = nodes
+                .OrderByDescending(static node => node.IsFolder)
+                .ThenBy(static node => node.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static node => node.Name, StringComparer.Ordinal)
+                .ToList();
+            nodes.Clear();
+            foreach (DiffPreviewTreeNode node in sorted)
+            {
+                SortNodes(node.Children);
+                nodes.Add(node);
+            }
+        }
+
+        private static (string Label, DiffPreviewFileType Kind) DescribeFileType(string fileName)
+        {
+            string lowerName = fileName.ToLowerInvariant();
+            string extension = System.IO.Path.GetExtension(fileName).ToLowerInvariant();
+            if (extension.Length == 0)
+            {
+                return lowerName switch
+                {
+                    "dockerfile" => ("DKR", DiffPreviewFileType.Code),
+                    "makefile" => ("MK", DiffPreviewFileType.Code),
+                    ".gitignore" or ".gitattributes" or ".editorconfig" => ("CFG", DiffPreviewFileType.Data),
+                    "license" or "readme" => ("TXT", DiffPreviewFileType.Document),
+                    _ => ("•", DiffPreviewFileType.Other)
+                };
+            }
+
+            return extension switch
+            {
+                ".cs" => ("C#", DiffPreviewFileType.Code),
+                ".fs" or ".fsx" => ("F#", DiffPreviewFileType.Code),
+                ".vb" => ("VB", DiffPreviewFileType.Code),
+                ".js" or ".mjs" or ".cjs" => ("JS", DiffPreviewFileType.Code),
+                ".ts" or ".tsx" => ("TS", DiffPreviewFileType.Code),
+                ".jsx" => ("JSX", DiffPreviewFileType.Code),
+                ".py" => ("PY", DiffPreviewFileType.Code),
+                ".rs" => ("RS", DiffPreviewFileType.Code),
+                ".go" => ("GO", DiffPreviewFileType.Code),
+                ".java" => ("JV", DiffPreviewFileType.Code),
+                ".kt" or ".kts" => ("KT", DiffPreviewFileType.Code),
+                ".swift" => ("SW", DiffPreviewFileType.Code),
+                ".c" or ".h" => ("C", DiffPreviewFileType.Code),
+                ".cc" or ".cpp" or ".cxx" or ".hpp" => ("C++", DiffPreviewFileType.Code),
+                ".sh" or ".bash" or ".zsh" or ".ps1" => ("$", DiffPreviewFileType.Code),
+                ".html" or ".htm" => ("<>", DiffPreviewFileType.Markup),
+                ".xml" or ".xaml" or ".axaml" or ".svg" or ".csproj" or ".props" or ".targets" =>
+                    ("XML", DiffPreviewFileType.Markup),
+                ".css" or ".scss" or ".sass" or ".less" => ("CSS", DiffPreviewFileType.Markup),
+                ".json" or ".jsonc" => ("{}", DiffPreviewFileType.Data),
+                ".yml" or ".yaml" => ("YML", DiffPreviewFileType.Data),
+                ".toml" => ("TML", DiffPreviewFileType.Data),
+                ".ini" or ".config" or ".conf" or ".env" => ("CFG", DiffPreviewFileType.Data),
+                ".sql" or ".db" or ".sqlite" or ".sqlite3" => ("DB", DiffPreviewFileType.Data),
+                ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" or ".bmp" or ".ico" or ".tif" or ".tiff" =>
+                    ("IMG", DiffPreviewFileType.Image),
+                ".md" or ".mdx" => ("MD", DiffPreviewFileType.Document),
+                ".txt" or ".log" or ".csv" or ".tsv" => ("TXT", DiffPreviewFileType.Document),
+                ".zip" or ".7z" or ".rar" or ".tar" or ".gz" or ".bz2" or ".xz" =>
+                    ("ZIP", DiffPreviewFileType.Archive),
+                ".sln" or ".slnx" => ("VS", DiffPreviewFileType.Code),
+                _ => ("•", DiffPreviewFileType.Other)
+            };
+        }
+    }
+
+    public enum DiffPreviewFileType
+    {
+        Folder,
+        Code,
+        Markup,
+        Data,
+        Image,
+        Document,
+        Archive,
+        Other
+    }
+
+    public sealed class DiffPreviewLineItem
+    {
+        private DiffPreviewLineItem(
+            string oldLineNumber,
+            string newLineNumber,
+            string marker,
+            string content,
+            char kind)
+        {
+            OldLineNumber = oldLineNumber;
+            NewLineNumber = newLineNumber;
+            Marker = marker;
+            Content = content;
+            IsAdded = kind == '+';
+            IsDeleted = kind == '-';
+            IsHunk = kind == '@';
+            IsNotice = kind == '!';
+        }
+
+        public string OldLineNumber { get; }
+        public string NewLineNumber { get; }
+        public string Marker { get; }
+        public string Content { get; }
+        public bool IsAdded { get; }
+        public bool IsDeleted { get; }
+        public bool IsHunk { get; }
+        public bool IsNotice { get; }
+
+        public static DiffPreviewLineItem Notice(string content) =>
+            new(string.Empty, string.Empty, "!", content, '!');
+
+        public static IReadOnlyList<DiffPreviewLineItem> ParseUnified(string? diffText)
+        {
+            if (string.IsNullOrWhiteSpace(diffText))
+                return [];
+
+            string normalized = diffText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+            string[] lines = normalized.Split('\n');
+            var result = new List<DiffPreviewLineItem>(lines.Length);
+            int oldLine = 1;
+            int newLine = 1;
+
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("--- ", StringComparison.Ordinal) ||
+                    line.StartsWith("+++ ", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (line.StartsWith("@@", StringComparison.Ordinal))
+                {
+                    TryReadHunkStarts(line, out oldLine, out newLine);
+                    result.Add(new DiffPreviewLineItem(string.Empty, string.Empty, string.Empty, line, '@'));
+                    continue;
+                }
+
+                char marker = line.Length == 0 ? ' ' : line[0];
+                string content = line.Length == 0 ? string.Empty : line[1..];
+                if (marker == '+')
+                {
+                    result.Add(new DiffPreviewLineItem(
+                        string.Empty,
+                        newLine.ToString(CultureInfo.InvariantCulture),
+                        "+",
+                        content,
+                        marker));
+                    newLine++;
+                    continue;
+                }
+
+                if (marker == '-')
+                {
+                    result.Add(new DiffPreviewLineItem(
+                        oldLine.ToString(CultureInfo.InvariantCulture),
+                        string.Empty,
+                        "-",
+                        content,
+                        marker));
+                    oldLine++;
+                    continue;
+                }
+
+                result.Add(new DiffPreviewLineItem(
+                    oldLine.ToString(CultureInfo.InvariantCulture),
+                    newLine.ToString(CultureInfo.InvariantCulture),
+                    string.Empty,
+                    marker == ' ' ? content : line,
+                    ' '));
+                oldLine++;
+                newLine++;
+            }
+
+            return result;
+        }
+
+        private static void TryReadHunkStarts(string header, out int oldLine, out int newLine)
+        {
+            oldLine = ReadStartAfter(header, '-');
+            newLine = ReadStartAfter(header, '+');
+        }
+
+        private static int ReadStartAfter(string header, char prefix)
+        {
+            int start = header.IndexOf(prefix);
+            if (start < 0)
+                return 1;
+
+            start++;
+            int end = start;
+            while (end < header.Length && char.IsDigit(header[end]))
+                end++;
+            return int.TryParse(header.AsSpan(start, end - start), CultureInfo.InvariantCulture, out int value)
+                ? Math.Max(1, value)
+                : 1;
+        }
+    }
+
+    public sealed record DiffPreviewKindFilterItem(string Label, SnapshotFileChangeKind? Kind);
+
     public class BackupSnapshotItem : ViewModelBase
     {
         public string Id { get; set; } = string.Empty;
@@ -105,6 +447,9 @@ namespace VaultSync.UI.ViewModels
 
         /// <summary>Destination endpoint that stored this backup.</summary>
         public string DestinationDisplay { get; set; } = string.Empty;
+        public string BackupRelativePath { get; set; } = string.Empty;
+        public string DestinationRootPath { get; set; } = string.Empty;
+        public string DestinationAlias { get; set; } = string.Empty;
         public string DiffSummaryDisplay { get; set; } = string.Empty;
         public string DiffTopPathsDisplay { get; set; } = string.Empty;
         public bool HasDiffTopPaths
@@ -209,8 +554,21 @@ namespace VaultSync.UI.ViewModels
             UiFormat.FormatBytes(bytes);
     }
 
-    public class SnapshotProjectGroup
+    public class SnapshotProjectGroup : ViewModelBase
     {
+        internal const int DefaultPageSize = 20;
+
+        private readonly List<BackupSnapshotItem> _allSnapshots = [];
+        private readonly RelayCommand _loadMoreSnapshotsCommand;
+
+        public SnapshotProjectGroup()
+        {
+            _loadMoreSnapshotsCommand = new RelayCommand(
+                _ => LoadMoreSnapshots(),
+                _ => HasMoreSnapshots);
+            LoadMoreSnapshotsCommand = _loadMoreSnapshotsCommand;
+        }
+
         public string? ProjectId
         {
             get; set;
@@ -233,6 +591,44 @@ namespace VaultSync.UI.ViewModels
             get;
         } =
             [];
+
+        public ICommand LoadMoreSnapshotsCommand { get; }
+        public int TotalSnapshotCount => _allSnapshots.Count;
+        public int VisibleSnapshotCount => Snapshots.Count;
+        public int RemainingSnapshotCount => Math.Max(0, TotalSnapshotCount - VisibleSnapshotCount);
+        public bool HasMoreSnapshots => RemainingSnapshotCount > 0;
+
+        internal void SetSnapshots(IEnumerable<BackupSnapshotItem> snapshots, int initialCount = DefaultPageSize)
+        {
+            ArgumentNullException.ThrowIfNull(snapshots);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(initialCount);
+
+            _allSnapshots.Clear();
+            _allSnapshots.AddRange(snapshots);
+            Snapshots.Clear();
+            AppendSnapshots(initialCount);
+        }
+
+        public void LoadMoreSnapshots(int pageSize = DefaultPageSize)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+
+            AppendSnapshots(pageSize);
+        }
+
+        private void AppendSnapshots(int count)
+        {
+            int targetCount = Math.Min(TotalSnapshotCount, VisibleSnapshotCount + count);
+            for (int index = VisibleSnapshotCount; index < targetCount; index++)
+                Snapshots.Add(_allSnapshots[index]);
+
+            OnPropertiesChanged(
+                nameof(TotalSnapshotCount),
+                nameof(VisibleSnapshotCount),
+                nameof(RemainingSnapshotCount),
+                nameof(HasMoreSnapshots));
+            _loadMoreSnapshotsCommand.RaiseCanExecuteChanged();
+        }
     }
 
     public sealed class BackupsProjectSortOption

@@ -24,7 +24,10 @@ public sealed class RecoveryViewModel : ViewModelBase
     private readonly IRepositoryFactory _repositoryFactory;
     private readonly RestoreReadinessService _readinessService = new();
     private readonly List<RecoveryProjectViewModel> _allProjects = [];
-    private int _refreshInFlight;
+    private readonly object _lifecycleGate = new();
+    private CancellationTokenSource? _viewLifetimeCts;
+    private readonly AsyncRelayCommand _exportReportCommand;
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private DateTime _lastRefreshUtc = DateTime.MinValue;
     private string _headline = "Loading recovery readiness...";
     private string _detail = "Checking projects, backup recency, verification policy, and destination availability.";
@@ -62,8 +65,9 @@ public sealed class RecoveryViewModel : ViewModelBase
     {
         _configStore = configStore;
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
-        RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
-        ExportReportCommand = new RelayCommand(async _ => await ExportReportAsync(), _ => !IsExporting);
+        RefreshCommand = new AsyncRelayCommand(_ => RefreshAsync(force: true), operationName: "refresh-recovery");
+        _exportReportCommand = new AsyncRelayCommand(async _ => await ExportReportAsync(), _ => !IsExporting, "export-recovery-report");
+        ExportReportCommand = _exportReportCommand;
         ProjectFilters =
         [
             new RecoveryFilterOption(RecoveryProjectFilter.All, L("Recovery.Filter.All", "All projects")),
@@ -233,28 +237,57 @@ public sealed class RecoveryViewModel : ViewModelBase
             if (!SetField(ref _isExporting, value))
                 return;
 
-            if (ExportReportCommand is RelayCommand command)
-                command.RaiseCanExecuteChanged();
+            _exportReportCommand.RaiseCanExecuteChanged();
         }
     }
 
-    public async Task RefreshAsync(bool force = false)
+    public Task ActivateAsync()
     {
-        if (!force && (DateTime.UtcNow - _lastRefreshUtc) < RefreshTtl)
-            return;
+        CancellationToken token;
+        lock (_lifecycleGate)
+        {
+            _viewLifetimeCts?.Cancel();
+            _viewLifetimeCts?.Dispose();
+            _viewLifetimeCts = new CancellationTokenSource();
+            token = _viewLifetimeCts.Token;
+        }
 
-        if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1)
-            return;
+        return RefreshAsync(cancellationToken: token);
+    }
+
+    public void Deactivate()
+    {
+        lock (_lifecycleGate)
+        {
+            _viewLifetimeCts?.Cancel();
+            _viewLifetimeCts?.Dispose();
+            _viewLifetimeCts = null;
+        }
+    }
+
+    public async Task RefreshAsync(bool force = false, CancellationToken cancellationToken = default)
+    {
+        await _refreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            RecoveryData data = await Task.Run(LoadData).ConfigureAwait(false);
-            await Dispatcher.UIThread.InvokeAsync(() => ApplyData(data));
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!force && (DateTime.UtcNow - _lastRefreshUtc) < RefreshTtl)
+                return;
+
+            RecoveryData data = await Task.Run(LoadData, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (!cancellationToken.IsCancellationRequested)
+                    ApplyData(data);
+            });
+            cancellationToken.ThrowIfCancellationRequested();
             _lastRefreshUtc = DateTime.UtcNow;
         }
         finally
         {
-            Interlocked.Exchange(ref _refreshInFlight, 0);
+            _refreshGate.Release();
         }
     }
 

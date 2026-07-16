@@ -753,9 +753,13 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                AppConfig? cfg = preparation.Config;
-                ISet<int>? disabled = preparation.DisabledProjects;
-                List<Project>? projects = preparation.Projects;
+                if (preparation.Config is not { } cfg ||
+                    preparation.DisabledProjects is not { } disabled ||
+                    preparation.Projects is not { } projects)
+                {
+                    DiagnosticsLogger.Record("[AutoBackup] Ready preparation was missing required data.");
+                    return;
+                }
 
                 bool useArchiveMode = _settingsViewModel.UseBackupCompression;
                 int backupAttempts = 0;

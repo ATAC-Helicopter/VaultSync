@@ -70,6 +70,8 @@ namespace VaultSync.UI.ViewModels
         private static readonly ConcurrentDictionary<string, ImmutableSolidColorBrush> AccentBrushCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly IAppConfigStore _configStore;
         private readonly IRepositoryFactory _repositoryFactory;
+        private readonly Func<int, int, CancellationToken, Task<SnapshotCompareResult>> _compareSnapshotsAsync;
+        private readonly Func<Action, Task> _invokeOnUiAsync;
         // Simple SetProperty helper - note: no PropertyChanged here, we just need
         // equality checks + storage for our internal properties.
         protected static bool SetProperty<T>(ref T storage, T value)
@@ -144,6 +146,8 @@ namespace VaultSync.UI.ViewModels
 
         private BackupSnapshotItem? _selectedSnapshotA;
         private readonly RelayCommand? _compareSelectedSnapshotsRelayCommand;
+        private readonly RelayCommand? _selectPreviousDiffFileRelayCommand;
+        private readonly RelayCommand? _selectNextDiffFileRelayCommand;
         public BackupSnapshotItem? SelectedSnapshotA
         {
             get => _selectedSnapshotA;
@@ -154,6 +158,8 @@ namespace VaultSync.UI.ViewModels
                     OnPropertyChanged(nameof(SelectedSnapshotA));
                     OnPropertyChanged(nameof(CanCompareSelectedSnapshots));
                     _compareSelectedSnapshotsRelayCommand?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CompareSelectionHint));
+                    SelectDefaultCompareCounterpart(value, selectPointB: true);
                 }
             }
         }
@@ -169,6 +175,8 @@ namespace VaultSync.UI.ViewModels
                     OnPropertyChanged(nameof(SelectedSnapshotB));
                     OnPropertyChanged(nameof(CanCompareSelectedSnapshots));
                     _compareSelectedSnapshotsRelayCommand?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CompareSelectionHint));
+                    SelectDefaultCompareCounterpart(value, selectPointB: false);
                 }
             }
         }
@@ -678,6 +686,26 @@ namespace VaultSync.UI.ViewModels
         private int _diffPreviewModified;
         private int _diffPreviewDeleted;
         private string _diffPreviewNet = string.Empty;
+        private readonly List<DiffPreviewFileItem> _allDiffPreviewFiles = [];
+        private readonly Dictionary<DiffPreviewFileItem, DiffPreviewTreeNode> _diffPreviewTreeNodes = [];
+        private DiffPreviewFileItem? _selectedDiffPreviewFile;
+        private DiffPreviewTreeNode? _selectedDiffPreviewTreeNode;
+        private string _diffFileSearchText = string.Empty;
+        private DiffPreviewKindFilterItem? _selectedDiffFileKindFilter;
+        private string _diffFileContentText = string.Empty;
+        private string _diffFileContentStatus = string.Empty;
+        private int _diffFileAddedLines;
+        private int _diffFileDeletedLines;
+        private BackupSnapshotItem? _diffOlderSnapshot;
+        private BackupSnapshotItem? _diffNewerSnapshot;
+        private int _diffContentRequestVersion;
+        private CancellationTokenSource? _diffContentCts;
+        private bool _isSnapshotCompareBusy;
+        private CancellationTokenSource? _snapshotCompareCts;
+        private string _diffFileResultsLabel = string.Empty;
+        private string _diffFileCompactResultsLabel = string.Empty;
+        private string _diffPreviewEmptyTitle = string.Empty;
+        private string _diffPreviewEmptyMessage = string.Empty;
 
         // Backup progress details (for long-running operations)
         private double _backupProgress;
@@ -930,6 +958,165 @@ namespace VaultSync.UI.ViewModels
 
         public ObservableCollection<DiffPreviewPathItem> DiffPreviewTopPaths { get; } = [];
         public bool HasDiffPreviewTopPaths => DiffPreviewTopPaths.Count > 0;
+        public ObservableCollection<DiffPreviewFileItem> DiffPreviewFiles { get; } = [];
+        public ObservableCollection<DiffPreviewTreeNode> DiffPreviewTreeRoots { get; } = [];
+        public IReadOnlyList<DiffPreviewLineItem> DiffFileContentLines { get; private set; } = [];
+        public ObservableCollection<DiffPreviewKindFilterItem> DiffFileKindFilters { get; } = [];
+        public bool HasDiffPreviewFiles => _allDiffPreviewFiles.Count > 0;
+        public bool HasNoDiffPreviewFiles => !HasDiffPreviewFiles;
+        public bool HasDiffFileContentLines => DiffFileContentLines.Count > 0;
+        public bool HasNoDiffFileContentLines => !HasDiffFileContentLines;
+        public bool HasDiffFileLineChanges => DiffFileAddedLines > 0 || DiffFileDeletedLines > 0;
+
+        public string DiffPreviewEmptyTitle
+        {
+            get => _diffPreviewEmptyTitle;
+            private set
+            {
+                if (SetProperty(ref _diffPreviewEmptyTitle, value))
+                    OnPropertyChanged(nameof(DiffPreviewEmptyTitle));
+            }
+        }
+
+        public string DiffPreviewEmptyMessage
+        {
+            get => _diffPreviewEmptyMessage;
+            private set
+            {
+                if (SetProperty(ref _diffPreviewEmptyMessage, value))
+                    OnPropertyChanged(nameof(DiffPreviewEmptyMessage));
+            }
+        }
+
+        public DiffPreviewFileItem? SelectedDiffPreviewFile
+        {
+            get => _selectedDiffPreviewFile;
+            set
+            {
+                if (SetProperty(ref _selectedDiffPreviewFile, value))
+                {
+                    OnPropertyChanged(nameof(SelectedDiffPreviewFile));
+                    SyncSelectedDiffPreviewTreeNode(value);
+                    RaiseDiffFileNavigationCanExecuteChanged();
+                    LoadSelectedDiffFile(value);
+                }
+            }
+        }
+
+        public DiffPreviewTreeNode? SelectedDiffPreviewTreeNode
+        {
+            get => _selectedDiffPreviewTreeNode;
+            set
+            {
+                if (!SetProperty(ref _selectedDiffPreviewTreeNode, value))
+                    return;
+
+                OnPropertyChanged(nameof(SelectedDiffPreviewTreeNode));
+                if (value?.File is { } file && !ReferenceEquals(file, SelectedDiffPreviewFile))
+                    SelectedDiffPreviewFile = file;
+            }
+        }
+
+        public string DiffFileSearchText
+        {
+            get => _diffFileSearchText;
+            set
+            {
+                if (SetProperty(ref _diffFileSearchText, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(DiffFileSearchText));
+                    RefreshDiffPreviewFiles();
+                }
+            }
+        }
+
+        public DiffPreviewKindFilterItem? SelectedDiffFileKindFilter
+        {
+            get => _selectedDiffFileKindFilter;
+            set
+            {
+                if (SetProperty(ref _selectedDiffFileKindFilter, value))
+                {
+                    OnPropertyChanged(nameof(SelectedDiffFileKindFilter));
+                    RefreshDiffPreviewFiles();
+                }
+            }
+        }
+
+        public string DiffFileContentText
+        {
+            get => _diffFileContentText;
+            private set
+            {
+                if (SetProperty(ref _diffFileContentText, value))
+                    OnPropertyChanged(nameof(DiffFileContentText));
+            }
+        }
+
+        public string DiffFileContentStatus
+        {
+            get => _diffFileContentStatus;
+            private set
+            {
+                if (SetProperty(ref _diffFileContentStatus, value))
+                    OnPropertyChanged(nameof(DiffFileContentStatus));
+            }
+        }
+
+        public int DiffFileAddedLines
+        {
+            get => _diffFileAddedLines;
+            private set
+            {
+                if (SetProperty(ref _diffFileAddedLines, value))
+                    OnPropertyChanged(nameof(DiffFileAddedLines));
+            }
+        }
+
+        public int DiffFileDeletedLines
+        {
+            get => _diffFileDeletedLines;
+            private set
+            {
+                if (SetProperty(ref _diffFileDeletedLines, value))
+                    OnPropertyChanged(nameof(DiffFileDeletedLines));
+            }
+        }
+
+        public bool IsSnapshotCompareBusy
+        {
+            get => _isSnapshotCompareBusy;
+            private set
+            {
+                if (SetProperty(ref _isSnapshotCompareBusy, value))
+                {
+                    OnPropertyChanged(nameof(IsSnapshotCompareBusy));
+                    OnPropertyChanged(nameof(CanCompareSelectedSnapshots));
+                    _compareSelectedSnapshotsRelayCommand?.RaiseCanExecuteChanged();
+                    OnPropertyChanged(nameof(CompareSelectionHint));
+                }
+            }
+        }
+
+        public string DiffFileResultsLabel
+        {
+            get => _diffFileResultsLabel;
+            private set
+            {
+                if (SetProperty(ref _diffFileResultsLabel, value))
+                    OnPropertyChanged(nameof(DiffFileResultsLabel));
+            }
+        }
+
+        public string DiffFileCompactResultsLabel
+        {
+            get => _diffFileCompactResultsLabel;
+            private set
+            {
+                if (SetProperty(ref _diffFileCompactResultsLabel, value))
+                    OnPropertyChanged(nameof(DiffFileCompactResultsLabel));
+            }
+        }
 
         // Events that external code (e.g. view or parent VM) can subscribe to
         // in order to run real backup/restore logic and then refresh this VM.
@@ -954,7 +1141,11 @@ namespace VaultSync.UI.ViewModels
         public ICommand ExportSnapshotSummaryJsonCommand { get; }
         public ICommand ShowSnapshotDiffPreviewCommand { get; }
         public ICommand CompareSelectedSnapshotsCommand { get; }
+        public ICommand CancelSnapshotCompareCommand { get; }
         public ICommand CloseSnapshotDiffPreviewCommand { get; }
+        public ICommand ClearDiffFileFiltersCommand { get; }
+        public ICommand SelectPreviousDiffFileCommand { get; }
+        public ICommand SelectNextDiffFileCommand { get; }
 
         public ICommand BackupProjectCommand { get; }
         public ICommand ManageProjectEncryptionCommand { get; }
@@ -968,20 +1159,67 @@ namespace VaultSync.UI.ViewModels
         public bool IsTypeFilterAuto => string.Equals(_currentTypeFilter, "Auto", StringComparison.OrdinalIgnoreCase);
         public bool IsTypeFilterManual => string.Equals(_currentTypeFilter, ManualBackupType, StringComparison.OrdinalIgnoreCase);
         public bool CanCompareSelectedSnapshots =>
+            !IsSnapshotCompareBusy &&
             SelectedSnapshotA is not null &&
             SelectedSnapshotB is not null &&
-            !string.Equals(SelectedSnapshotA.Id, SelectedSnapshotB.Id, StringComparison.Ordinal);
+            SelectedSnapshotA.SnapshotId > 0 &&
+            SelectedSnapshotB.SnapshotId > 0 &&
+            !string.IsNullOrWhiteSpace(SelectedSnapshotA.ProjectId) &&
+            string.Equals(SelectedSnapshotA.ProjectId, SelectedSnapshotB.ProjectId, StringComparison.OrdinalIgnoreCase) &&
+            SelectedSnapshotA.SnapshotId != SelectedSnapshotB.SnapshotId;
+
+        public string CompareSelectionHint
+        {
+            get
+            {
+                if (IsSnapshotCompareBusy)
+                    return L("Backups.Compare.Busy", "Comparing restore points...");
+                if (SelectedSnapshotA is null && SelectedSnapshotB is null)
+                    return L("Backups.Compare.SelectFirst", "Select a restore point; VaultSync will suggest a nearby point from the same project.");
+                if (SelectedSnapshotA is null || SelectedSnapshotB is null)
+                    return L("Backups.Compare.SelectSecond", "Select a second restore point from the same project.");
+                if (SelectedSnapshotA.SnapshotId == SelectedSnapshotB.SnapshotId)
+                    return L("Backups.Compare.DifferentPoints", "Choose two different restore points.");
+                if (string.IsNullOrWhiteSpace(SelectedSnapshotA.ProjectId) || string.IsNullOrWhiteSpace(SelectedSnapshotB.ProjectId))
+                    return L("Backups.Compare.ProjectUnavailable", "Project information is unavailable for one of these restore points.");
+                if (!string.Equals(SelectedSnapshotA.ProjectId, SelectedSnapshotB.ProjectId, StringComparison.OrdinalIgnoreCase))
+                    return L("Backups.Compare.SameProject", "Restore points must belong to the same project.");
+
+                BackupSnapshotItem older = SelectedSnapshotA.Timestamp <= SelectedSnapshotB.Timestamp
+                    ? SelectedSnapshotA
+                    : SelectedSnapshotB;
+                BackupSnapshotItem newer = ReferenceEquals(older, SelectedSnapshotA)
+                    ? SelectedSnapshotB
+                    : SelectedSnapshotA;
+                return Lf(
+                    "Backups.Compare.ReadyRange",
+                    "Ready to compare: {0} → {1}",
+                    older.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture),
+                    newer.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture));
+            }
+        }
 
         public BackupsViewModel()
             : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
         {
         }
 
-        internal BackupsViewModel(IAppConfigStore configStore, IRepositoryFactory? repositoryFactory = null)
+        internal BackupsViewModel(
+            IAppConfigStore configStore,
+            IRepositoryFactory? repositoryFactory = null,
+            Func<int, int, CancellationToken, Task<SnapshotCompareResult>>? compareSnapshotsAsync = null,
+            Func<Action, Task>? invokeOnUiAsync = null)
         {
             _configStore = configStore;
             _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
+            _compareSnapshotsAsync = compareSnapshotsAsync ?? CompareSnapshotsFromRepositoryAsync;
+            _invokeOnUiAsync = invokeOnUiAsync ?? (async action => await Dispatcher.UIThread.InvokeAsync(action));
             _activeBackupFlushTimer.Tick += (_, _) => FlushPendingActiveBackupUpdates();
+            DiffFileKindFilters.Add(new DiffPreviewKindFilterItem(L("Backups.Compare.FilterAll", "All changes"), null));
+            DiffFileKindFilters.Add(new DiffPreviewKindFilterItem(L("Backups.DiffSummary.Preview.Modified", "Modified"), SnapshotFileChangeKind.Modified));
+            DiffFileKindFilters.Add(new DiffPreviewKindFilterItem(L("Backups.DiffSummary.Preview.Added", "Added"), SnapshotFileChangeKind.Added));
+            DiffFileKindFilters.Add(new DiffPreviewKindFilterItem(L("Backups.DiffSummary.Preview.Deleted", "Deleted"), SnapshotFileChangeKind.Deleted));
+            _selectedDiffFileKindFilter = DiffFileKindFilters[0];
 
             // All-project backup
             CreateBackupCommand = new RelayCommand(_ => CreateBackupForAllProjects());
@@ -994,10 +1232,18 @@ namespace VaultSync.UI.ViewModels
             ToggleBackupProtectionCommand = new RelayCommand(p => ToggleBackupProtection(p as BackupSnapshotItem));
             ExportSnapshotSummaryTextCommand = new RelayCommand(p => ExportSnapshotSummary(p as BackupSnapshotItem, SnapshotSummaryExportFormat.Text));
             ExportSnapshotSummaryJsonCommand = new RelayCommand(p => ExportSnapshotSummary(p as BackupSnapshotItem, SnapshotSummaryExportFormat.Json));
-            ShowSnapshotDiffPreviewCommand = new RelayCommand(p => ShowSnapshotDiffPreview(p as BackupSnapshotItem));
+            ShowSnapshotDiffPreviewCommand = new AsyncRelayCommand(
+                p => ShowSnapshotDiffPreviewAsync(p as BackupSnapshotItem),
+                operationName: "snapshot-diff-preview");
             _compareSelectedSnapshotsRelayCommand = new RelayCommand(_ => CompareSelectedSnapshots(), _ => CanCompareSelectedSnapshots);
             CompareSelectedSnapshotsCommand = _compareSelectedSnapshotsRelayCommand;
+            CancelSnapshotCompareCommand = new RelayCommand(_ => _snapshotCompareCts?.Cancel());
             CloseSnapshotDiffPreviewCommand = new RelayCommand(_ => CloseSnapshotDiffPreview());
+            ClearDiffFileFiltersCommand = new RelayCommand(_ => ClearDiffFileFilters());
+            _selectPreviousDiffFileRelayCommand = new RelayCommand(_ => SelectAdjacentDiffFile(-1), _ => CanSelectAdjacentDiffFile(-1));
+            SelectPreviousDiffFileCommand = _selectPreviousDiffFileRelayCommand;
+            _selectNextDiffFileRelayCommand = new RelayCommand(_ => SelectAdjacentDiffFile(1), _ => CanSelectAdjacentDiffFile(1));
+            SelectNextDiffFileCommand = _selectNextDiffFileRelayCommand;
             _toggleRestoreReadinessIssuesCommand = new RelayCommand(
                 _ => ShowRestoreReadinessIssues = !ShowRestoreReadinessIssues,
                 _ => HasRestoreReadinessIssues);
@@ -1157,16 +1403,55 @@ namespace VaultSync.UI.ViewModels
                 return path;
             }
 
-            string text = BuildGitStyleDiffText(payload);
+            string text = BuildSnapshotDiffExportText(payload);
             File.WriteAllText(path, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             return path;
         }
 
-        private void ShowSnapshotDiffPreview(BackupSnapshotItem? snapshot)
+        private async Task ShowSnapshotDiffPreviewAsync(BackupSnapshotItem? snapshot)
         {
             if (snapshot is null)
                 return;
 
+            ShowSnapshotDiffSummary(snapshot);
+            if (snapshot.SnapshotId <= 0 || string.IsNullOrWhiteSpace(snapshot.ProjectId))
+            {
+                ShowSnapshotDiffUnavailable(
+                    L("Backups.Compare.InventoryUnavailable", "File inventory is unavailable for this restore point."));
+                return;
+            }
+
+            BackupSnapshotItem? older = FindPreviousSnapshotForDiff(
+                snapshot,
+                _allSnapshots.Count > 0 ? _allSnapshots : Snapshots,
+                candidate => ResolveBackupContentRoot(candidate) is not null);
+            if (older is null)
+            {
+                ShowSnapshotDiffUnavailable(L(
+                    "Backups.Compare.NoEarlierPoint",
+                    "This is the first available restore point for the project. Create another backup to inspect file-by-file changes."));
+                return;
+            }
+
+            DiffFileContentStatus = L("Backups.Compare.Busy", "Comparing restore points...");
+            DiffPreviewEmptyTitle = DiffFileContentStatus;
+            DiffPreviewEmptyMessage = L(
+                "Backups.Compare.LoadingInventory",
+                "Loading changed files from the previous restore point.");
+            IsSnapshotCompareBusy = true;
+            _snapshotCompareCts?.Cancel();
+            _snapshotCompareCts?.Dispose();
+            var compareCts = new CancellationTokenSource();
+            _snapshotCompareCts = compareCts;
+            await CompareSelectedSnapshotsAsync(
+                older,
+                snapshot,
+                compareCts,
+                preserveStoredSummaryWhenInventoryMissing: true).ConfigureAwait(false);
+        }
+
+        private void ShowSnapshotDiffSummary(BackupSnapshotItem snapshot)
+        {
             SnapshotSummaryExportPayload payload = BuildSnapshotSummaryExportPayload(snapshot);
             DiffPreviewTitle = Lf(
                 "Backups.DiffSummary.PreviewTitle",
@@ -1190,7 +1475,7 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewDeleted = payload.DiffDeleted;
             DiffPreviewNet = FormatSignedSize(payload.DiffNetBytes);
             DiffPreviewTopPaths.Clear();
-            foreach (SnapshotDiffPathExport? path in payload.TopPaths.Take(8))
+            foreach (SnapshotDiffPathExport? path in payload.TopPaths.Take(6))
             {
                 DiffPreviewTopPaths.Add(new DiffPreviewPathItem(
                     path.Path,
@@ -1198,43 +1483,357 @@ namespace VaultSync.UI.ViewModels
                     BackupSnapshotItem.FormatSize(path.ChangedBytes)));
             }
             OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
-            DiffPreviewText = BuildGitStyleDiffText(payload);
+            DiffPreviewText = BuildSnapshotDiffExportText(payload);
+            _diffOlderSnapshot = null;
+            _diffNewerSnapshot = null;
+            _allDiffPreviewFiles.Clear();
+            DiffPreviewFiles.Clear();
+            ResetDiffPreviewTree();
+            SelectedDiffPreviewFile = null;
+            DiffFileContentStatus = L("Backups.Compare.SummaryOnly", "Snapshot change summary");
+            DiffFileContentText = DiffPreviewText;
+            DiffPreviewEmptyTitle = DiffFileContentStatus;
+            DiffPreviewEmptyMessage = L(
+                "Backups.DiffSummary.NoChanges",
+                "No file changes detected or diff data is unavailable for this backup");
+            NotifyDiffPreviewFileAvailabilityChanged();
             IsDiffPreviewOpen = true;
+        }
+
+        private void ShowSnapshotDiffUnavailable(string message)
+        {
+            DiffFileContentStatus = L("Backups.DiffSummary.Unavailable", "File-by-file changes unavailable");
+            DiffFileContentText = DiffPreviewText;
+            DiffPreviewEmptyTitle = DiffFileContentStatus;
+            DiffPreviewEmptyMessage = message;
+        }
+
+        internal static BackupSnapshotItem? FindPreviousSnapshotForDiff(
+            BackupSnapshotItem selected,
+            IEnumerable<BackupSnapshotItem> candidates,
+            Func<BackupSnapshotItem, bool>? isContentReachable = null)
+        {
+            ArgumentNullException.ThrowIfNull(selected);
+            ArgumentNullException.ThrowIfNull(candidates);
+
+            var nearestGroup = candidates
+                .Where(candidate => candidate.SnapshotId > 0 &&
+                                    candidate.SnapshotId != selected.SnapshotId &&
+                                    string.Equals(candidate.ProjectId, selected.ProjectId, StringComparison.OrdinalIgnoreCase) &&
+                                    CompareRestorePointOrder(candidate, selected) < 0)
+                .GroupBy(candidate => candidate.SnapshotId)
+                .Select(group => new
+                {
+                    Rows = group.ToArray(),
+                    Order = group
+                        .OrderByDescending(candidate => candidate.Timestamp)
+                        .ThenByDescending(candidate => candidate.SnapshotId)
+                        .First()
+                })
+                .OrderByDescending(group => group.Order.Timestamp)
+                .ThenByDescending(group => group.Order.SnapshotId)
+                .FirstOrDefault();
+
+            return nearestGroup?.Rows
+                .OrderByDescending(candidate => isContentReachable?.Invoke(candidate) ?? false)
+                .ThenBy(candidate => candidate.IsEncrypted)
+                .ThenBy(candidate => candidate.Id, StringComparer.Ordinal)
+                .First();
+        }
+
+        private static int CompareRestorePointOrder(BackupSnapshotItem left, BackupSnapshotItem right)
+        {
+            int timestampOrder = left.Timestamp.CompareTo(right.Timestamp);
+            return timestampOrder != 0
+                ? timestampOrder
+                : left.SnapshotId.CompareTo(right.SnapshotId);
         }
 
         private void CompareSelectedSnapshots()
         {
             BackupSnapshotItem? pointA = SelectedSnapshotA;
             BackupSnapshotItem? pointB = SelectedSnapshotB;
-            if (pointA is null || pointB is null)
-                return;
-            if (string.Equals(pointA.Id, pointB.Id, StringComparison.Ordinal))
+            if (pointA is null || pointB is null || !CanCompareSelectedSnapshots)
                 return;
 
-            BackupSnapshotItem newer = pointA.Timestamp >= pointB.Timestamp ? pointA : pointB;
+            IsSnapshotCompareBusy = true;
+            _snapshotCompareCts?.Cancel();
+            _snapshotCompareCts?.Dispose();
+            var compareCts = new CancellationTokenSource();
+            _snapshotCompareCts = compareCts;
+            DetachedTask.Run(
+                () => CompareSelectedSnapshotsAsync(pointA, pointB, compareCts),
+                "snapshot-file-compare");
+        }
+
+        private async Task CompareSelectedSnapshotsAsync(
+            BackupSnapshotItem pointA,
+            BackupSnapshotItem pointB,
+            CancellationTokenSource compareCts,
+            bool preserveStoredSummaryWhenInventoryMissing = false)
+        {
+            bool pointAIsNewer = CompareRestorePointOrder(pointA, pointB) > 0;
+            BackupSnapshotItem newer = pointAIsNewer ? pointA : pointB;
             BackupSnapshotItem older = ReferenceEquals(newer, pointA) ? pointB : pointA;
+            try
+            {
+                SnapshotCompareResult result = await _compareSnapshotsAsync(
+                    older.SnapshotId,
+                    newer.SnapshotId,
+                    compareCts.Token)
+                    .ConfigureAwait(false);
+                bool storedSummaryMatches = StoredDiffSummaryMatches(newer, result);
+                bool inventoryAvailable = result.Unchanged + result.ChangedCount > 0 ||
+                                          (preserveStoredSummaryWhenInventoryMissing && storedSummaryMatches);
+                bool shouldRecoverInventory = result.Unchanged + result.ChangedCount == 0 ||
+                                              (preserveStoredSummaryWhenInventoryMissing && !storedSummaryMatches);
+                bool comparedReachableContents = false;
+                if (shouldRecoverInventory)
+                {
+                    (result, inventoryAvailable) = await CompareReachableBackupContentsAsync(
+                            older,
+                            newer,
+                            result,
+                            compareCts.Token)
+                        .ConfigureAwait(false);
+                    comparedReachableContents = inventoryAvailable;
+                }
+
+                if (!comparedReachableContents && result.Modified > 0)
+                {
+                    result = await IgnoreReachableTextEquivalentModificationsAsync(
+                            older,
+                            newer,
+                            result,
+                            compareCts.Token)
+                        .ConfigureAwait(false);
+                }
+
+                await _invokeOnUiAsync(() =>
+                {
+                    if (compareCts.IsCancellationRequested || !ReferenceEquals(_snapshotCompareCts, compareCts))
+                        return;
+                    ApplySnapshotComparisonResult(
+                        older,
+                        newer,
+                        result,
+                        preserveStoredSummaryWhenInventoryMissing,
+                        inventoryAvailable);
+                });
+            }
+            catch (OperationCanceledException) when (compareCts.IsCancellationRequested)
+            {
+                // User cancellation is expected and should not open an error dialog.
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record(
+                    $"Snapshot file compare failed: older={older.SnapshotId}, newer={newer.SnapshotId}, error={ex.GetType().Name} - {ex.Message}");
+                await _invokeOnUiAsync(() =>
+                {
+                    if (compareCts.IsCancellationRequested || !ReferenceEquals(_snapshotCompareCts, compareCts))
+                        return;
+                    DiffPreviewTitle = L("Backups.Compare.FailedTitle", "Comparison unavailable");
+                    DiffPreviewText = Lf(
+                        "Backups.Compare.FailedMessage",
+                        "VaultSync could not compare these restore points: {0}",
+                        ex.Message);
+                    _allDiffPreviewFiles.Clear();
+                    DiffPreviewFiles.Clear();
+                    ResetDiffPreviewTree();
+                    SelectedDiffPreviewFile = null;
+                    DiffFileContentStatus = DiffPreviewTitle;
+                    DiffFileContentText = DiffPreviewText;
+                    DiffPreviewEmptyTitle = DiffPreviewTitle;
+                    DiffPreviewEmptyMessage = DiffPreviewText;
+                    NotifyDiffPreviewFileAvailabilityChanged();
+                    IsDiffPreviewOpen = true;
+                });
+            }
+            finally
+            {
+                await _invokeOnUiAsync(() =>
+                {
+                    if (!ReferenceEquals(_snapshotCompareCts, compareCts))
+                        return;
+                    _snapshotCompareCts = null;
+                    IsSnapshotCompareBusy = false;
+                    compareCts.Dispose();
+                });
+            }
+        }
+
+        private async Task<(SnapshotCompareResult Result, bool InventoryAvailable)> CompareReachableBackupContentsAsync(
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            SnapshotCompareResult databaseResult,
+            CancellationToken cancellationToken)
+        {
+            if (older.IsEncrypted || newer.IsEncrypted)
+                return (databaseResult, false);
+
+            string? olderRoot = ResolveBackupContentRoot(older);
+            string? newerRoot = ResolveBackupContentRoot(newer);
+            if (olderRoot is null || newerRoot is null)
+                return (databaseResult, false);
+
+            try
+            {
+                SnapshotCompareResult contentResult = await Task.Run(
+                    () => CompareBackupContentInventories(
+                        olderRoot,
+                        newerRoot,
+                        databaseResult,
+                        cancellationToken),
+                    cancellationToken).ConfigureAwait(false);
+                bool inventoryAvailable = !ReferenceEquals(contentResult, databaseResult);
+                return (contentResult, inventoryAvailable);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                DiagnosticsLogger.Record(
+                    $"Snapshot content inventory fallback unavailable: older={older.SnapshotId}, newer={newer.SnapshotId}, error={ex.GetType().Name} - {ex.Message}");
+                return (databaseResult, false);
+            }
+        }
+
+        private async Task<SnapshotCompareResult> IgnoreReachableTextEquivalentModificationsAsync(
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            SnapshotCompareResult result,
+            CancellationToken cancellationToken)
+        {
+            if (older.IsEncrypted || newer.IsEncrypted)
+                return result;
+
+            string? olderRoot = ResolveBackupContentRoot(older);
+            string? newerRoot = ResolveBackupContentRoot(newer);
+            if (olderRoot is null || newerRoot is null)
+                return result;
+
+            try
+            {
+                return await Task.Run(
+                    () => SnapshotCompareService.IgnoreTextEquivalentModifications(
+                        olderRoot,
+                        newerRoot,
+                        result,
+                        cancellationToken),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                DiagnosticsLogger.Record(
+                    $"Snapshot text-equivalence refinement unavailable: older={older.SnapshotId}, newer={newer.SnapshotId}, error={ex.GetType().Name} - {ex.Message}");
+                return result;
+            }
+        }
+
+        internal static SnapshotCompareResult CompareBackupContentInventories(
+            string olderRoot,
+            string newerRoot,
+            SnapshotCompareResult databaseResult,
+            CancellationToken cancellationToken = default)
+        {
+            SnapshotFileInventory olderInventory = SnapshotExplorerService.BuildFileInventory(
+                olderRoot,
+                cancellationToken: cancellationToken);
+            SnapshotFileInventory newerInventory = SnapshotExplorerService.BuildFileInventory(
+                newerRoot,
+                cancellationToken: cancellationToken);
+            if (olderInventory.IsTruncated || newerInventory.IsTruncated ||
+                olderInventory.SourceKind == SnapshotExplorerSourceKind.EncryptedArchive ||
+                newerInventory.SourceKind == SnapshotExplorerSourceKind.EncryptedArchive)
+            {
+                return databaseResult;
+            }
+
+            SnapshotCompareResult result = SnapshotCompareService.Compare(
+                olderInventory.Files,
+                newerInventory.Files,
+                cancellationToken: cancellationToken);
+            return SnapshotCompareService.IgnoreTextEquivalentModifications(
+                olderRoot,
+                newerRoot,
+                result,
+                cancellationToken);
+        }
+
+        internal void ApplySnapshotComparisonResult(
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            SnapshotCompareResult result,
+            bool preserveStoredSummaryWhenInventoryMissing,
+            bool inventoryAvailable = false)
+        {
+            if (preserveStoredSummaryWhenInventoryMissing &&
+                HasStoredDiffSummary(newer) &&
+                !inventoryAvailable &&
+                !StoredDiffSummaryMatches(newer, result))
+            {
+                ShowSnapshotDiffSummary(newer);
+                ShowSnapshotDiffUnavailable(newer.IsImported
+                    ? L(
+                        "Backups.Compare.ImportedInventoryUnavailable",
+                        "This restore point was imported without file details. Choose two backups whose storage is connected to inspect individual files.")
+                    : L(
+                        "Backups.Compare.InventoryUnavailableWithSummary",
+                        "The change totals are available, but individual file details are not. Choose two backups whose storage is connected."));
+                return;
+            }
+
+            ShowSnapshotComparison(older, newer, result);
+        }
+
+        private static bool HasStoredDiffSummary(BackupSnapshotItem snapshot) =>
+            snapshot.DiffAdded > 0 ||
+            snapshot.DiffModified > 0 ||
+            snapshot.DiffDeleted > 0 ||
+            snapshot.DiffNetBytes != 0 ||
+            SnapshotDiffSummary.ParseTopChangedPaths(snapshot.DiffTopPathsJson).Count > 0;
+
+        private static bool StoredDiffSummaryMatches(
+            BackupSnapshotItem snapshot,
+            SnapshotCompareResult result) =>
+            snapshot.DiffAdded == result.Added &&
+            snapshot.DiffModified == result.Modified &&
+            snapshot.DiffDeleted == result.Deleted;
+
+        private Task<SnapshotCompareResult> CompareSnapshotsFromRepositoryAsync(
+            int olderSnapshotId,
+            int newerSnapshotId,
+            CancellationToken cancellationToken)
+        {
+            SqliteRepository repository = _repositoryFactory.Create();
+            var compareService = new SnapshotCompareService(repository);
+            return compareService.CompareAsync(olderSnapshotId, newerSnapshotId, cancellationToken);
+        }
+
+        private void ShowSnapshotComparison(
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            SnapshotCompareResult result)
+        {
             TimeSpan elapsed = newer.Timestamp - older.Timestamp;
-            long sizeDelta = newer.SizeBytes - older.SizeBytes;
-            long netDelta = newer.DiffNetBytes - older.DiffNetBytes;
             string projectName = ResolveCompareProjectName(newer, older);
 
             DiffPreviewTitle = Lf(
                 "Backups.Compare.Title",
-                "Restore point compare - {0}",
+                "Changes in {0}",
                 projectName);
             DiffPreviewMetaLine = Lf(
                 "Backups.Compare.Range",
-                "{0} -> {1}",
+                "{0} → {1}",
                 older.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture),
                 newer.Timestamp.ToString(TimestampMinuteFormat, CultureInfo.CurrentCulture));
             DiffPreviewTrigger = Lf(
-                "Backups.Compare.TypeLine",
-                "Type: {0} -> {1}",
-                older.TypeLabel,
-                newer.TypeLabel);
+                "Backups.Compare.ChangeIntelligenceLine",
+                "{0} files checked",
+                (result.Unchanged + result.ChangedCount).ToString(CultureInfo.CurrentCulture));
             DiffPreviewMode = Lf(
-                "Backups.Compare.ElapsedLine",
-                "Elapsed: {0}",
+                "Backups.Compare.ChangeCountLine",
+                "{0} changes across {1}",
+                result.ChangedCount.ToString(CultureInfo.CurrentCulture),
                 FormatElapsed(elapsed));
             DiffPreviewImportedDisplay = older.IsImported || newer.IsImported
                 ? L("Backups.Snapshot.Type.Imported", "Imported")
@@ -1242,15 +1841,31 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewEncryptionDisplay = older.IsEncrypted || newer.IsEncrypted
                 ? L(EncryptedPolicyKey, EncryptedFallback)
                 : L(PlainPolicyKey, PlainFallback);
-            DiffPreviewAdded = newer.DiffAdded;
-            DiffPreviewModified = newer.DiffModified;
-            DiffPreviewDeleted = newer.DiffDeleted;
-            DiffPreviewNet = FormatSignedSize(newer.DiffNetBytes);
+            DiffPreviewAdded = result.Added;
+            DiffPreviewModified = result.Modified;
+            DiffPreviewDeleted = result.Deleted;
+            DiffPreviewNet = FormatSignedSize(result.NetSizeBytes);
             DiffPreviewTopPaths.Clear();
+            foreach (SnapshotDiffPathStat path in result.TopChangedPaths.Take(6))
+            {
+                DiffPreviewTopPaths.Add(new DiffPreviewPathItem(
+                    path.Path,
+                    path.Changes,
+                    BackupSnapshotItem.FormatSize(path.ChangedBytes)));
+            }
             OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
 
+            _diffOlderSnapshot = older;
+            _diffNewerSnapshot = newer;
+            _allDiffPreviewFiles.Clear();
+            _allDiffPreviewFiles.AddRange(result.Changes.Take(5_000).Select(change => new DiffPreviewFileItem(change)));
+            NotifyDiffPreviewFileAvailabilityChanged();
+            DiffFileSearchText = string.Empty;
+            SelectedDiffFileKindFilter = DiffFileKindFilters[0];
+            RefreshDiffPreviewFiles();
+
             var compareText = new StringBuilder();
-            compareText.AppendLine("# VaultSync Restore Point Compare");
+            compareText.AppendLine(L("Backups.Compare.DocumentTitle", "# VaultSync backup comparison"));
             compareText.AppendLine();
             compareText.AppendLine(Lf("Backups.Compare.PointA", "A: {0} · {1} · {2}",
                 older.Timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture),
@@ -1261,17 +1876,402 @@ namespace VaultSync.UI.ViewModels
                 newer.TypeLabel,
                 newer.SizeFormatted));
             compareText.AppendLine(Lf("Backups.Compare.ElapsedLine", "Elapsed: {0}", FormatElapsed(elapsed)));
-            compareText.AppendLine(Lf("Backups.Compare.SizeDeltaLine", "Backup size delta: {0}", FormatSignedSize(sizeDelta)));
-            compareText.AppendLine(Lf("Backups.Compare.NetDeltaLine", "Net diff delta: {0}", FormatSignedSize(netDelta)));
+            compareText.AppendLine(Lf("Backups.Compare.SnapshotSizeDeltaLine", "Backup size change: {0}", FormatSignedSize(result.NetSizeBytes)));
+            compareText.AppendLine(Lf("Backups.Compare.ChangedBytesLine", "Changed file data: {0}", BackupSnapshotItem.FormatSize(result.ChangedBytes)));
             compareText.AppendLine();
-            compareText.AppendLine(L("Backups.Compare.NewerSnapshotSummary", "Newest restore point diff summary:"));
-            compareText.AppendLine(Lf("Backups.Compare.NewerAdded", "+ added {0}", newer.DiffAdded.ToString(CultureInfo.CurrentCulture)));
-            compareText.AppendLine(Lf("Backups.Compare.NewerModified", "~ modified {0}", newer.DiffModified.ToString(CultureInfo.CurrentCulture)));
-            compareText.AppendLine(Lf("Backups.Compare.NewerDeleted", "- deleted {0}", newer.DiffDeleted.ToString(CultureInfo.CurrentCulture)));
-            compareText.AppendLine(Lf("Backups.Compare.NewerNet", "Δ net {0}", FormatSignedSize(newer.DiffNetBytes)));
+            compareText.AppendLine(L("Backups.Compare.FileSummary", "File changes:"));
+            compareText.AppendLine(Lf("Backups.Compare.NewerAdded", "+ added {0}", result.Added.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.NewerModified", "~ modified {0}", result.Modified.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.NewerDeleted", "- deleted {0}", result.Deleted.ToString(CultureInfo.CurrentCulture)));
+            compareText.AppendLine(Lf("Backups.Compare.Unchanged", "= unchanged: {0}", result.Unchanged.ToString(CultureInfo.CurrentCulture)));
+
+            AppendChangeSignals(compareText, result.Signals);
+            compareText.AppendLine();
+            compareText.AppendLine(L("Backups.Compare.ChangedFilesHeader", "## Changed files"));
+            foreach (SnapshotFileChange change in result.Changes.Take(200))
+            {
+                string marker = change.Kind switch
+                {
+                    SnapshotFileChangeKind.Added => "+",
+                    SnapshotFileChangeKind.Modified => "~",
+                    SnapshotFileChangeKind.Deleted => "-",
+                    _ => "?"
+                };
+                compareText.AppendLine($"{marker} {change.Path} ({FormatSignedSize(change.SizeDeltaBytes)})");
+            }
+
+            if (result.Changes.Count > 200)
+            {
+                compareText.AppendLine(Lf(
+                    "Backups.Compare.AdditionalFiles",
+                    "... {0} more changed files not shown",
+                    result.Changes.Count - 200));
+            }
 
             DiffPreviewText = compareText.ToString().TrimEnd();
+            DiffFileContentText = DiffPreviewText;
+            DiffFileContentStatus = L(
+                "Backups.Compare.SelectFile",
+                "Select a changed text file to review its changes.");
+            SelectedDiffPreviewFile = DiffPreviewFiles.FirstOrDefault(file => file.Kind == SnapshotFileChangeKind.Modified)
+                ?? DiffPreviewFiles.FirstOrDefault();
+            if (result.ChangedCount == 0)
+            {
+                int filesExamined = result.Unchanged + result.ChangedCount;
+                bool hasInventory = filesExamined > 0;
+                DiffFileContentStatus = hasInventory
+                    ? L("Backups.Compare.NoChanges", "No file-level changes between these restore points.")
+                    : L("Backups.DiffSummary.Unavailable", "Diff summary unavailable");
+                DiffFileContentText = DiffPreviewText;
+                DiffPreviewEmptyTitle = DiffFileContentStatus;
+                DiffPreviewEmptyMessage = hasInventory
+                    ? DiffPreviewTrigger
+                    : L(
+                        "Backups.DiffSummary.NoChanges",
+                        "No file changes detected or diff data is unavailable for this backup");
+            }
             IsDiffPreviewOpen = true;
+        }
+
+        private void NotifyDiffPreviewFileAvailabilityChanged()
+        {
+            OnPropertyChanged(nameof(HasDiffPreviewFiles));
+            OnPropertyChanged(nameof(HasNoDiffPreviewFiles));
+        }
+
+        private void RefreshDiffPreviewFiles()
+        {
+            string search = DiffFileSearchText.Trim();
+            DiffPreviewFileItem? selected = SelectedDiffPreviewFile;
+            DiffPreviewFiles.Clear();
+            foreach (DiffPreviewFileItem file in _allDiffPreviewFiles.Where(file =>
+                         (SelectedDiffFileKindFilter?.Kind is null || file.Kind == SelectedDiffFileKindFilter.Kind) &&
+                         (search.Length == 0 || file.Path.Contains(search, StringComparison.OrdinalIgnoreCase))))
+            {
+                DiffPreviewFiles.Add(file);
+            }
+
+            RebuildDiffPreviewTree(expandAll: search.Length > 0);
+
+            int totalShown = _allDiffPreviewFiles.Count;
+            int totalChanges = DiffPreviewAdded + DiffPreviewModified + DiffPreviewDeleted;
+            DiffFileResultsLabel = totalChanges > totalShown
+                ? Lf("Backups.Compare.ResultsCapped", "{0} matches · showing the first {1} of {2}", DiffPreviewFiles.Count, totalShown, totalChanges)
+                : Lf("Backups.Compare.Results", "{0} of {1} changed files", DiffPreviewFiles.Count, totalChanges);
+            DiffFileCompactResultsLabel = $"{DiffPreviewFiles.Count}/{totalShown}";
+
+            if (selected is not null && DiffPreviewFiles.Contains(selected))
+            {
+                SyncSelectedDiffPreviewTreeNode(selected);
+                RaiseDiffFileNavigationCanExecuteChanged();
+                return;
+            }
+            SelectedDiffPreviewFile = null;
+            RaiseDiffFileNavigationCanExecuteChanged();
+        }
+
+        private void RebuildDiffPreviewTree(bool expandAll)
+        {
+            DiffPreviewTreeRoots.Clear();
+            _diffPreviewTreeNodes.Clear();
+            foreach (DiffPreviewTreeNode root in DiffPreviewTreeNode.Build(DiffPreviewFiles, expandAll))
+            {
+                DiffPreviewTreeRoots.Add(root);
+                IndexDiffPreviewTree(root);
+            }
+
+            OnPropertyChanged(nameof(DiffPreviewTreeRoots));
+        }
+
+        private void IndexDiffPreviewTree(DiffPreviewTreeNode node)
+        {
+            if (node.File is { } file)
+                _diffPreviewTreeNodes[file] = node;
+            foreach (DiffPreviewTreeNode child in node.Children)
+                IndexDiffPreviewTree(child);
+        }
+
+        private void SyncSelectedDiffPreviewTreeNode(DiffPreviewFileItem? file)
+        {
+            DiffPreviewTreeNode? node = file is not null && _diffPreviewTreeNodes.TryGetValue(file, out DiffPreviewTreeNode? match)
+                ? match
+                : null;
+            node?.ExpandAncestors();
+            if (ReferenceEquals(_selectedDiffPreviewTreeNode, node))
+                return;
+
+            _selectedDiffPreviewTreeNode = node;
+            OnPropertyChanged(nameof(SelectedDiffPreviewTreeNode));
+        }
+
+        private void ResetDiffPreviewTree()
+        {
+            DiffPreviewTreeRoots.Clear();
+            _diffPreviewTreeNodes.Clear();
+            if (_selectedDiffPreviewTreeNode is null)
+                return;
+
+            _selectedDiffPreviewTreeNode = null;
+            OnPropertyChanged(nameof(SelectedDiffPreviewTreeNode));
+        }
+
+        private void ClearDiffFileFilters()
+        {
+            DiffFileSearchText = string.Empty;
+            SelectedDiffFileKindFilter = DiffFileKindFilters[0];
+        }
+
+        private bool CanSelectAdjacentDiffFile(int offset)
+        {
+            int currentIndex = SelectedDiffPreviewFile is null
+                ? -1
+                : DiffPreviewFiles.IndexOf(SelectedDiffPreviewFile);
+            int targetIndex = currentIndex + offset;
+            return targetIndex >= 0 && targetIndex < DiffPreviewFiles.Count;
+        }
+
+        private void SelectAdjacentDiffFile(int offset)
+        {
+            if (!CanSelectAdjacentDiffFile(offset))
+                return;
+
+            int currentIndex = DiffPreviewFiles.IndexOf(SelectedDiffPreviewFile!);
+            SelectedDiffPreviewFile = DiffPreviewFiles[currentIndex + offset];
+        }
+
+        private void RaiseDiffFileNavigationCanExecuteChanged()
+        {
+            _selectPreviousDiffFileRelayCommand?.RaiseCanExecuteChanged();
+            _selectNextDiffFileRelayCommand?.RaiseCanExecuteChanged();
+        }
+
+        private void LoadSelectedDiffFile(DiffPreviewFileItem? file)
+        {
+            int requestVersion = Interlocked.Increment(ref _diffContentRequestVersion);
+            _diffContentCts?.Cancel();
+            _diffContentCts = null;
+            ClearDiffFileContentLines();
+            if (file is null || _diffOlderSnapshot is null || _diffNewerSnapshot is null)
+            {
+                if (_diffOlderSnapshot is not null && _diffNewerSnapshot is not null)
+                {
+                    DiffFileContentStatus = DiffPreviewFiles.Count == 0 && _allDiffPreviewFiles.Count > 0
+                        ? L("Backups.Compare.NoMatches", "No changed files match the current filters.")
+                        : L("Backups.Compare.SelectFile", "Select a changed text file to review its changes.");
+                    DiffFileContentText = string.Empty;
+                }
+                return;
+            }
+
+            var contentCts = new CancellationTokenSource();
+            _diffContentCts = contentCts;
+            DiffFileContentStatus = L("Backups.Compare.LoadingFile", "Loading file changes...");
+            DiffFileContentText = string.Empty;
+            DetachedTask.Run(
+                () => LoadSelectedDiffFileAsync(file, _diffOlderSnapshot, _diffNewerSnapshot, requestVersion, contentCts),
+                "snapshot-text-diff");
+        }
+
+        private async Task LoadSelectedDiffFileAsync(
+            DiffPreviewFileItem file,
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            int requestVersion,
+            CancellationTokenSource contentCts)
+        {
+            try
+            {
+                await LoadSelectedDiffFileCoreAsync(
+                    file,
+                    older,
+                    newer,
+                    requestVersion,
+                    contentCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (contentCts.IsCancellationRequested)
+            {
+                // A newer file selection superseded this preview.
+            }
+            finally
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (ReferenceEquals(_diffContentCts, contentCts))
+                        _diffContentCts = null;
+                });
+                contentCts.Dispose();
+            }
+        }
+
+        private async Task LoadSelectedDiffFileCoreAsync(
+            DiffPreviewFileItem file,
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            int requestVersion,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            (string? olderRoot, string? newerRoot) = (ResolveBackupContentRoot(older), ResolveBackupContentRoot(newer));
+            string olderText = string.Empty;
+            string newerText = string.Empty;
+            bool previewTruncated = false;
+            string? error = null;
+
+            if (file.Kind != SnapshotFileChangeKind.Added)
+            {
+                (olderText, bool olderTruncated, error) = LoadSnapshotTextPreview(
+                    olderRoot,
+                    file.Path,
+                    L("Backups.Compare.OlderUnavailable", "The earlier backup is unavailable. Reconnect its storage to view this file."),
+                    cancellationToken);
+                previewTruncated |= olderTruncated;
+            }
+
+            if (error is null && file.Kind != SnapshotFileChangeKind.Deleted)
+            {
+                (newerText, bool newerTruncated, error) = LoadSnapshotTextPreview(
+                    newerRoot,
+                    file.Path,
+                    L("Backups.Compare.NewerUnavailable", "The later backup is unavailable. Reconnect its storage to view this file."),
+                    cancellationToken);
+                previewTruncated |= newerTruncated;
+            }
+
+            UnifiedTextDiffResult? diff = error is null
+                ? UnifiedTextDiffService.Create(
+                    olderText,
+                    newerText,
+                    $"a/{file.Path}",
+                    $"b/{file.Path}",
+                    cancellationToken: cancellationToken)
+                : null;
+            cancellationToken.ThrowIfCancellationRequested();
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (requestVersion != _diffContentRequestVersion || !ReferenceEquals(file, SelectedDiffPreviewFile))
+                    return;
+
+                if (diff is null)
+                {
+                    DiffFileContentStatus = L("Backups.Compare.PreviewUnavailable", "File preview unavailable");
+                    DiffFileContentText = error ?? string.Empty;
+                    ClearDiffFileContentLines();
+                    return;
+                }
+
+                DiffFileContentStatus = previewTruncated || diff.IsTruncated
+                    ? L("Backups.Compare.TextChangesShortened", "Text changes (preview shortened)")
+                    : L("Backups.Compare.TextChanges", "Text changes");
+                DiffFileContentText = diff.Text;
+                SetDiffFileContentLines(diff);
+            });
+        }
+
+        private void SetDiffFileContentLines(UnifiedTextDiffResult diff)
+        {
+            var lines = DiffPreviewLineItem.ParseUnified(diff.Text).ToList();
+            if (diff.IsTruncated)
+            {
+                lines.Add(DiffPreviewLineItem.Notice(L(
+                    "Backups.Compare.PreviewShortened",
+                    "Preview shortened to keep comparison responsive.")));
+            }
+
+            DiffFileContentLines = lines.Count > 0
+                ? lines
+                : [DiffPreviewLineItem.Notice(L(
+                    "Backups.Compare.MetadataChangedOnly",
+                    "The text is identical; only file details such as its timestamp or size changed."))];
+            DiffFileAddedLines = diff.AddedLines;
+            DiffFileDeletedLines = diff.DeletedLines;
+            OnPropertyChanged(nameof(DiffFileContentLines));
+            NotifyDiffFileContentLineAvailabilityChanged();
+        }
+
+        private void ClearDiffFileContentLines()
+        {
+            DiffFileContentLines = [];
+            DiffFileAddedLines = 0;
+            DiffFileDeletedLines = 0;
+            OnPropertyChanged(nameof(DiffFileContentLines));
+            NotifyDiffFileContentLineAvailabilityChanged();
+        }
+
+        private void NotifyDiffFileContentLineAvailabilityChanged()
+        {
+            OnPropertyChanged(nameof(HasDiffFileContentLines));
+            OnPropertyChanged(nameof(HasNoDiffFileContentLines));
+            OnPropertyChanged(nameof(HasDiffFileLineChanges));
+        }
+
+        private static (string Text, bool Truncated, string? Error) LoadSnapshotTextPreview(
+            string? contentRoot,
+            string relativePath,
+            string unavailableMessage,
+            CancellationToken cancellationToken)
+        {
+            if (contentRoot is null)
+                return (string.Empty, false, unavailableMessage);
+
+            SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(contentRoot, relativePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            return preview.Success
+                ? (preview.Text, preview.Truncated, null)
+                : (string.Empty, false, preview.Error);
+        }
+
+        private string? ResolveBackupContentRoot(BackupSnapshotItem snapshot)
+        {
+            if (snapshot.IsEncrypted || string.IsNullOrWhiteSpace(snapshot.BackupRelativePath))
+                return null;
+
+            AppConfig config = _configStore.GetSnapshot();
+            IEnumerable<string> roots = new[] { snapshot.DestinationRootPath }
+                .Concat((config.Backups.Destinations ?? [])
+                    .Where(destination => string.Equals(destination.Alias, snapshot.DestinationAlias, StringComparison.OrdinalIgnoreCase) ||
+                                          string.Equals(destination.Path, snapshot.DestinationRootPath, StringComparison.OrdinalIgnoreCase))
+                    .Select(destination => destination.Path))
+                .Append(config.Backups.BackupRoot)
+                .OfType<string>()
+                .Where(root => !string.IsNullOrWhiteSpace(root))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string root in roots)
+            {
+                if (BackupSafetyService.TryCombinePathUnderRoot(root, snapshot.BackupRelativePath, out string fullPath) &&
+                    Directory.Exists(fullPath))
+                {
+                    return fullPath;
+                }
+            }
+
+            return null;
+        }
+
+        private static void AppendChangeSignals(
+            StringBuilder compareText,
+            IReadOnlyList<SnapshotChangeSignal> signals)
+        {
+            if (signals.Count == 0)
+                return;
+
+            compareText.AppendLine();
+            compareText.AppendLine(L("Backups.Compare.AttentionSignalsHeader", "## Notable changes"));
+            foreach (SnapshotChangeSignal signal in signals)
+            {
+                string line = signal.Kind switch
+                {
+                    SnapshotChangeSignalKind.MassDeletion =>
+                        Lf("Backups.Compare.SignalMassDeletion", "! Mass deletion: {0} files removed ({1:P0})", signal.AffectedFiles, signal.Ratio),
+                    SnapshotChangeSignalKind.SignificantGrowth =>
+                        Lf("Backups.Compare.SignalGrowth", "! Large growth: {0} ({1:P0})", FormatSignedSize(signal.SizeDeltaBytes), signal.Ratio),
+                    SnapshotChangeSignalKind.HighChurn =>
+                        Lf("Backups.Compare.SignalHighChurn", "! Widespread changes: {0} files changed ({1:P0})", signal.AffectedFiles, signal.Ratio),
+                    _ => string.Empty
+                };
+                if (line.Length > 0)
+                    compareText.AppendLine(line);
+            }
         }
 
         private string ResolveCompareProjectName(BackupSnapshotItem a, BackupSnapshotItem b)
@@ -1310,6 +2310,8 @@ namespace VaultSync.UI.ViewModels
 
         private void CloseSnapshotDiffPreview()
         {
+            _snapshotCompareCts?.Cancel();
+            _diffContentCts?.Cancel();
             IsDiffPreviewOpen = false;
             DiffPreviewTitle = string.Empty;
             DiffPreviewText = string.Empty;
@@ -1323,7 +2325,59 @@ namespace VaultSync.UI.ViewModels
             DiffPreviewDeleted = 0;
             DiffPreviewNet = string.Empty;
             DiffPreviewTopPaths.Clear();
+            _allDiffPreviewFiles.Clear();
+            DiffPreviewFiles.Clear();
+            ResetDiffPreviewTree();
+            SelectedDiffPreviewFile = null;
+            DiffFileSearchText = string.Empty;
+            SelectedDiffFileKindFilter = DiffFileKindFilters[0];
+            DiffFileContentText = string.Empty;
+            DiffFileContentStatus = string.Empty;
+            DiffFileResultsLabel = string.Empty;
+            DiffFileCompactResultsLabel = string.Empty;
+            _diffOlderSnapshot = null;
+            _diffNewerSnapshot = null;
             OnPropertyChanged(nameof(HasDiffPreviewTopPaths));
+        }
+
+        private void SelectDefaultCompareCounterpart(BackupSnapshotItem? selected, bool selectPointB)
+        {
+            if (selected is null || string.IsNullOrWhiteSpace(selected.ProjectId))
+                return;
+            if (selectPointB && SelectedSnapshotB is not null)
+                return;
+            if (!selectPointB && SelectedSnapshotA is not null)
+                return;
+
+            BackupSnapshotItem? candidate = Snapshots
+                .Where(snapshot => snapshot.SnapshotId != selected.SnapshotId &&
+                                   string.Equals(snapshot.ProjectId, selected.ProjectId, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(snapshot => Math.Abs((snapshot.Timestamp - selected.Timestamp).Ticks))
+                .FirstOrDefault();
+            if (selectPointB)
+            {
+                if (candidate is not null && candidate.Timestamp < selected.Timestamp)
+                {
+                    SelectedSnapshotB = selected;
+                    SelectedSnapshotA = candidate;
+                }
+                else
+                {
+                    SelectedSnapshotB = candidate;
+                }
+            }
+            else
+            {
+                if (candidate is not null && candidate.Timestamp > selected.Timestamp)
+                {
+                    SelectedSnapshotA = selected;
+                    SelectedSnapshotB = candidate;
+                }
+                else
+                {
+                    SelectedSnapshotA = candidate;
+                }
+            }
         }
 
         private SnapshotSummaryExportPayload BuildSnapshotSummaryExportPayload(BackupSnapshotItem snapshot)
@@ -1390,7 +2444,7 @@ namespace VaultSync.UI.ViewModels
             return Path.Combine(directory, $"{fileName}-{Guid.NewGuid():N}{extension}");
         }
 
-        private static string BuildGitStyleDiffText(SnapshotSummaryExportPayload payload)
+        private static string BuildSnapshotDiffExportText(SnapshotSummaryExportPayload payload)
         {
             var sb = new StringBuilder();
             sb.AppendLine("# VaultSync Snapshot Diff Summary");
@@ -2308,8 +3362,7 @@ namespace VaultSync.UI.ViewModels
                         groupVm.ProjectTagChips.Add(chip);
                 }
 
-                foreach (BackupSnapshotItem? snap in ordered)
-                    groupVm.Snapshots.Add(snap);
+                groupVm.SetSnapshots(ordered);
 
                 groups.Add(groupVm);
             }
@@ -3462,6 +4515,9 @@ namespace VaultSync.UI.ViewModels
                     ProjectId = project?.Id.ToString(),
                     IsProtected = backup.IsProtected,
                     DestinationDisplay = destinationDisplay,
+                    BackupRelativePath = backup.Path,
+                    DestinationRootPath = backup.DestinationPath,
+                    DestinationAlias = backup.DestinationAlias,
                     DiffAdded = snapshotInfo?.DiffAdded ?? 0,
                     DiffModified = snapshotInfo?.DiffModified ?? 0,
                     DiffDeleted = snapshotInfo?.DiffDeleted ?? 0,
@@ -3779,11 +4835,8 @@ namespace VaultSync.UI.ViewModels
                 ? L("Projects.EncryptionPolicy.EffectiveEncrypted", "Effective: Encrypted")
                 : L("Projects.EncryptionPolicy.EffectivePlain", "Effective: Plain");
 
-            bool hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
-                string.IsNullOrWhiteSpace(item.EncryptionKeyRef) ? null : item.EncryptionKeyRef,
-                BackupEncryptionCredentialIdentity.AccountName,
-                preferKeychain: true,
-                fallbackPlaintext: null));
+            bool hasSecret = CredentialVault.Instance.HasStoredSecret(
+                string.IsNullOrWhiteSpace(item.EncryptionKeyRef) ? null : item.EncryptionKeyRef);
             item.HasEncryptionSecret = hasSecret;
             item.EncryptionSecretStatus = hasSecret
                 ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")

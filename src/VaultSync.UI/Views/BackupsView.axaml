@@ -6,8 +6,7 @@
              xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
              xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
              x:Class="VaultSync.UI.Views.BackupsView"
-             x:DataType="vm:BackupsViewModel"
-             x:CompileBindings="False">
+             x:DataType="vm:BackupsViewModel">
 
   <UserControl.Resources>
     <controls:StatusToBrushConverter x:Key="StatusToBrushConverter" />
@@ -17,6 +16,143 @@
     <Style Selector="ListBox > ListBoxItem:selected">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Border.diff-line">
+      <Setter Property="MinHeight" Value="21" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.diff-line.added">
+      <Setter Property="Background" Value="#2432DFA0" />
+    </Style>
+    <Style Selector="Border.diff-line.deleted">
+      <Setter Property="Background" Value="#24FF6A6A" />
+    </Style>
+    <Style Selector="Border.diff-line.hunk">
+      <Setter Property="Background" Value="#244F8DFF" />
+    </Style>
+    <Style Selector="Border.diff-line.notice">
+      <Setter Property="Background" Value="#24FFBF5F" />
+    </Style>
+    <Style Selector="Border.diff-line.added Border.diff-accent">
+      <Setter Property="Background" Value="{DynamicResource SuccessBrush}" />
+    </Style>
+    <Style Selector="Border.diff-line.deleted Border.diff-accent">
+      <Setter Property="Background" Value="{DynamicResource DangerBrush}" />
+    </Style>
+    <Style Selector="Border.diff-line.hunk Border.diff-accent">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Border.diff-line.notice Border.diff-accent">
+      <Setter Property="Background" Value="{DynamicResource WarningBrush}" />
+    </Style>
+    <Style Selector="Border.diff-line.added TextBlock.diff-marker">
+      <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+    </Style>
+    <Style Selector="Border.diff-line.deleted TextBlock.diff-marker">
+      <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    </Style>
+    <Style Selector="Border.diff-line.hunk TextBlock.diff-content">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Border.diff-line.notice TextBlock.diff-content">
+      <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    </Style>
+    <Style Selector="TextBlock.diff-gutter">
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+      <Setter Property="HorizontalAlignment" Value="Right" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.diff-file-marker.added">
+      <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+    </Style>
+    <Style Selector="TextBlock.diff-file-marker.deleted">
+      <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    </Style>
+    <Style Selector="TextBlock.diff-file-marker.modified">
+      <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    </Style>
+    <Style Selector="shapes|Path.diff-file-icon">
+      <Setter Property="Width" Value="15" />
+      <Setter Property="Height" Value="15" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="Stroke" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="StrokeThickness" Value="1.35" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+      <Setter Property="Fill" Value="Transparent" />
+    </Style>
+    <Style Selector="TreeView.diff-tree TreeViewItem">
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="Padding" Value="2,0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="2,0,0,0" />
+      <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}" />
+    </Style>
+    <Style Selector="TreeView.diff-tree TreeViewItem /template/ Border#PART_LayoutRoot:pointerover">
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+    </Style>
+    <Style Selector="TreeView.diff-tree TreeViewItem:selected /template/ Border#PART_LayoutRoot">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="2,0,0,0" />
+      <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    <Style Selector="TreeView.diff-tree TreeViewItem:selected /template/ Border#PART_LayoutRoot:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="TreeView.diff-tree TreeViewItem:selected /template/ ContentPresenter#PART_HeaderPresenter">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.diff-tree-name">
+      <Setter Property="FontSize" Value="11" />
+    </Style>
+    <Style Selector="TextBlock.diff-tree-name.folder">
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+    <Style Selector="Button.diff-nav-button">
+      <Setter Property="Width" Value="26" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="MinWidth" Value="26" />
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.diff-nav-button:pointerover">
+      <Setter Property="Background" Value="{DynamicResource Surface3}" />
+    </Style>
+    <Style Selector="TextBox.diff-search">
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="MaxHeight" Value="28" />
+      <Setter Property="Padding" Value="28,3" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBox.diff-search:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="ComboBox.diff-filter">
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="MaxHeight" Value="28" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 
     <Style Selector="#PerProjectList ListBoxItem">
@@ -1227,7 +1363,7 @@
                                 VerticalAlignment="Center" />
                         <Grid Width="40"
                               Height="40"
-                              IsVisible="{Binding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                              IsVisible="{ReflectionBinding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
                           <Border Width="40"
                                   Height="40"
                                   CornerRadius="999"
@@ -1366,12 +1502,12 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox
                                 Classes="preset-combo"
-                                ItemsSource="{Binding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ItemsSource="{ReflectionBinding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding Label}" />
+                                  <TextBlock Text="{ReflectionBinding Label}" />
                                 </DataTemplate>
                               </ComboBox.ItemTemplate>
                             </ComboBox>
@@ -1386,12 +1522,12 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox x:Name="BackupsProjectEncryptionPolicyCombo"
                                       Classes="preset-combo"
-                                      ItemsSource="{Binding DataContext.EncryptionPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      ItemsSource="{ReflectionBinding DataContext.EncryptionPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                       SelectedItem="{Binding EncryptionPolicyOption, Mode=TwoWay}"
                                       HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding Label}" />
+                                  <TextBlock Text="{ReflectionBinding Label}" />
                                 </DataTemplate>
                               </ComboBox.ItemTemplate>
                             </ComboBox>
@@ -1406,12 +1542,12 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox
                                 Classes="preset-combo"
-                                ItemsSource="{Binding DataContext.RestoreModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ItemsSource="{ReflectionBinding DataContext.RestoreModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 SelectedItem="{Binding RestoreModeOption, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding Label}" />
+                                  <TextBlock Text="{ReflectionBinding Label}" />
                                 </DataTemplate>
                               </ComboBox.ItemTemplate>
                             </ComboBox>
@@ -1426,12 +1562,12 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox
                                 Classes="preset-combo"
-                                ItemsSource="{Binding DataContext.VerificationPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ItemsSource="{ReflectionBinding DataContext.VerificationPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 SelectedItem="{Binding VerificationPolicyOption, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                  <TextBlock Text="{Binding Label}" />
+                                  <TextBlock Text="{ReflectionBinding Label}" />
                                 </DataTemplate>
                               </ComboBox.ItemTemplate>
                             </ComboBox>
@@ -1451,7 +1587,7 @@
                                   Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
                                   Classes="small-button"
                                   Margin="0,0,0,4"
-                                  Command="{Binding DataContext.ManageProjectEncryptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  Command="{ReflectionBinding DataContext.ManageProjectEncryptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                   CommandParameter="{Binding}" />
                         </WrapPanel>
 
@@ -1475,7 +1611,7 @@
                                   HorizontalAlignment="Right"
                                   VerticalAlignment="Center"
                                   Margin="0,0,0,2"
-                                  Command="{Binding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  Command="{ReflectionBinding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                   CommandParameter="{Binding}" />
                         </Grid>
                       </Grid>
@@ -1616,57 +1752,86 @@
                                 IsChecked="{Binding OnlyManualFilter, Mode=TwoWay}" />
                 </WrapPanel>
 
-                <Grid ColumnDefinitions="*,*,Auto"
-                      ColumnSpacing="8"
-                      RowDefinitions="Auto,Auto,Auto"
-                      RowSpacing="6"
-                      Margin="0,4,0,0">
-                  <TextBlock Grid.Row="0"
-                             Grid.ColumnSpan="3"
-                             Text="{infra:LocalizedString Key=Backups.Compare.Header}"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                <Border Margin="0,4,0,0"
+                        Padding="12"
+                        CornerRadius="12"
+                        Background="{DynamicResource Surface2}"
+                        BorderBrush="{DynamicResource BorderSoft}"
+                        BorderThickness="1">
+                  <Grid ColumnDefinitions="*,*,Auto"
+                        ColumnSpacing="10"
+                        RowDefinitions="Auto,Auto,Auto"
+                        RowSpacing="8">
+                    <StackPanel Grid.Row="0"
+                                Grid.ColumnSpan="3"
+                                Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.Header}"
+                                 FontSize="12"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.Help}"
+                                 FontSize="10"
+                                 Foreground="{DynamicResource TextMutedBrush}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
 
-                  <ComboBox Grid.Row="1"
-                            Grid.Column="0"
-                            ItemsSource="{Binding Snapshots}"
-                            SelectedItem="{Binding SelectedSnapshotA, Mode=TwoWay}"
-                            MinWidth="180">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate>
-                        <TextBlock Text="{Binding TimelineSelectionLabel}"
-                                   TextTrimming="CharacterEllipsis" />
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
+                    <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.EarlierPoint}"
+                                 FontSize="10"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <ComboBox ItemsSource="{Binding Snapshots}"
+                                SelectedItem="{Binding SelectedSnapshotA, Mode=TwoWay}"
+                                AutomationProperties.Name="{infra:LocalizedString Key=Backups.Compare.EarlierPoint}"
+                                MinWidth="180">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding TimelineSelectionLabel}"
+                                       TextTrimming="CharacterEllipsis" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                    </StackPanel>
 
-                  <ComboBox Grid.Row="1"
-                            Grid.Column="1"
-                            ItemsSource="{Binding Snapshots}"
-                            SelectedItem="{Binding SelectedSnapshotB, Mode=TwoWay}"
-                            MinWidth="180">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate>
-                        <TextBlock Text="{Binding TimelineSelectionLabel}"
-                                   TextTrimming="CharacterEllipsis" />
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                      <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.LaterPoint}"
+                                 FontSize="10"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <ComboBox ItemsSource="{Binding Snapshots}"
+                                SelectedItem="{Binding SelectedSnapshotB, Mode=TwoWay}"
+                                AutomationProperties.Name="{infra:LocalizedString Key=Backups.Compare.LaterPoint}"
+                                MinWidth="180">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding TimelineSelectionLabel}"
+                                       TextTrimming="CharacterEllipsis" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                    </StackPanel>
 
-                  <Button Grid.Row="1"
-                          Grid.Column="2"
-                          Content="{infra:LocalizedString Key=Backups.Compare.Button}"
-                          Classes="small-button"
-                          Command="{Binding CompareSelectedSnapshotsCommand}" />
+                    <StackPanel Grid.Row="1"
+                                Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Bottom">
+                      <Button Content="{infra:LocalizedString Key=Backups.Compare.Button}"
+                              Classes="action-primary"
+                              Padding="14,7"
+                              Command="{Binding CompareSelectedSnapshotsCommand}"
+                              IsDefault="True" />
+                      <Button Content="{infra:LocalizedString Key=Common.Cancel}"
+                              Classes="small-button"
+                              IsVisible="{Binding IsSnapshotCompareBusy}"
+                              Command="{Binding CancelSnapshotCompareCommand}" />
+                    </StackPanel>
 
-                  <TextBlock Grid.Row="2"
-                             Grid.ColumnSpan="3"
-                             Text="{infra:LocalizedString Key=Backups.Compare.Help}"
-                             FontSize="10"
-                             Foreground="{DynamicResource TextMutedBrush}"
-                             TextWrapping="Wrap" />
-                </Grid>
+                    <TextBlock Grid.Row="2"
+                               Grid.ColumnSpan="3"
+                               Text="{Binding CompareSelectionHint}"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap" />
+                  </Grid>
+                </Border>
 
                 <Border Height="1"
                         Background="{DynamicResource DividerBrush}" />
@@ -1779,7 +1944,9 @@
                                   Padding="{DynamicResource CardPaddingSmall}"
                                   BorderBrush="{DynamicResource CardBorderBrush}"
                                   BorderThickness="0,1,0,0">
-                              <ItemsControl ItemsSource="{Binding Snapshots}">
+                            <StackPanel>
+                              <ItemsControl ItemsSource="{Binding Snapshots}"
+                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                 <ItemsControl.ItemTemplate>
                                   <DataTemplate>
                                     <Border Background="{DynamicResource Surface1}"
@@ -1933,46 +2100,46 @@
                                           <CheckBox Content="{infra:LocalizedString Key=Backups.Section.Keep}"
                                                     VerticalAlignment="Center"
                                                     IsChecked="{Binding IsProtected, Mode=TwoWay}"
-                                                    Command="{Binding DataContext.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    Command="{ReflectionBinding Tag.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}"
                                                     FontSize="11"/>
                                           <Button Content="{infra:LocalizedString Key=Backups.Section.OpenFolder}"
                                                   Classes="small-button"
-                                                  Command="{Binding DataContext.OpenBackupFolderCommand,
-                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  Command="{ReflectionBinding Tag.OpenBackupFolderCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.Section.Explore}"
                                                   Classes="small-button"
-                                                  Command="{Binding DataContext.ExploreBackupCommand,
-                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  Command="{ReflectionBinding Tag.ExploreBackupCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.Section.Restore}"
                                                   Classes="small-button"
-                                                  Command="{Binding DataContext.RestoreBackupCommand,
-                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  Command="{ReflectionBinding Tag.RestoreBackupCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.DiffSummary.ViewDiff}"
                                                   Classes="small-button"
                                                   IsEnabled="{Binding CanOpenDiffDetails}"
-                                                  Command="{Binding DataContext.ShowSnapshotDiffPreviewCommand,
-                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  Command="{ReflectionBinding Tag.ShowSnapshotDiffPreviewCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.DiffSummary.ExportText}"
                                                   Classes="small-button"
                                                   IsEnabled="{Binding CanOpenDiffDetails}"
-                                                  Command="{Binding DataContext.ExportSnapshotSummaryTextCommand,
-                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  Command="{ReflectionBinding Tag.ExportSnapshotSummaryTextCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.DiffSummary.ExportJson}"
                                                   Classes="small-button"
                                                   IsEnabled="{Binding CanOpenDiffDetails}"
-                                                  Command="{Binding DataContext.ExportSnapshotSummaryJsonCommand,
-                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  Command="{ReflectionBinding Tag.ExportSnapshotSummaryJsonCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                           <Button Content="{infra:LocalizedString Key=Backups.Section.Delete}"
                                                   Classes="small-button"
-                                                  Command="{Binding DataContext.DeleteBackupCommand,
-                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  Command="{ReflectionBinding Tag.DeleteBackupCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                         </WrapPanel>
                                       </Grid>
@@ -1980,6 +2147,19 @@
                                   </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                               </ItemsControl>
+                              <Button Classes="secondary"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,4,0,2"
+                                      Padding="16,8"
+                                      IsVisible="{Binding HasMoreSnapshots}"
+                                      Command="{Binding LoadMoreSnapshotsCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                  <TextBlock Text="{infra:LocalizedString Key=Backups.Section.ShowMore}" />
+                                  <TextBlock Text="{Binding RemainingSnapshotCount, StringFormat='({0})'}"
+                                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </StackPanel>
+                              </Button>
+                            </StackPanel>
                           </Border>
                         </Expander>
                         </Border>
@@ -2033,177 +2213,531 @@
       </Grid>
     </Border>
 
-    <Border IsVisible="{Binding IsDiffPreviewOpen}"
+    <Border IsVisible="{CompiledBinding IsDiffPreviewOpen}"
             Background="{DynamicResource OverlayScrimBrush}"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch">
       <Grid>
         <Border Background="{DynamicResource CardBackgroundBrush}"
-                CornerRadius="16"
+                BorderBrush="{DynamicResource BorderSoft}"
+                BorderThickness="1"
+                CornerRadius="14"
                 Padding="16"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Width="760"
-                MaxWidth="1100"
-                Height="520"
-                MaxHeight="680">
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Margin="18"
+                MaxWidth="1280"
+                MaxHeight="860">
           <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
-                RowSpacing="10">
-            <StackPanel Grid.Row="0"
-                        Spacing="4">
-              <TextBlock Text="{Binding DiffPreviewTitle}"
-                         FontSize="16"
-                         FontWeight="SemiBold" />
-              <TextBlock Text="{Binding DiffPreviewMetaLine}"
-                         FontSize="11"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
-            </StackPanel>
-
-            <WrapPanel Grid.Row="1"
-                       ItemSpacing="8"
-                       LineSpacing="8">
-              <Border Classes="stat-pill sm info">
-                <TextBlock Text="{Binding DiffPreviewTrigger}" />
+                RowSpacing="8">
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="12">
+              <Border Width="30"
+                      Height="30"
+                      CornerRadius="9"
+                      Background="{DynamicResource AccentSoftBrush}">
+                <shapes:Path Data="M 2,5 H 12 M 9,2 L 12,5 L 9,8 M 12,11 H 2 M 5,8 L 2,11 L 5,14"
+                             Width="14"
+                             Height="16"
+                             Stretch="Uniform"
+                             Stroke="{DynamicResource AccentBrush}"
+                             StrokeThickness="1.6"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center" />
               </Border>
-              <Border Classes="stat-pill sm info">
-                <TextBlock Text="{Binding DiffPreviewMode}" />
-              </Border>
-              <Border Classes="stat-pill sm warning">
-                <TextBlock Text="{Binding DiffPreviewImportedDisplay}" />
-              </Border>
-              <Border Classes="stat-pill sm info">
-                <TextBlock Text="{Binding DiffPreviewEncryptionDisplay}" />
-              </Border>
-            </WrapPanel>
-
-            <Grid Grid.Row="2"
-                  ColumnDefinitions="*,*"
-                  ColumnSpacing="10">
-              <Border Grid.Column="0"
-                      Classes="card"
-                      Padding="10"
-                      CornerRadius="10">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto"
-                      ColumnDefinitions="*,Auto"
-                      RowSpacing="6">
-                  <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Changes}"
+              <Grid Grid.Column="1"
+                    ColumnDefinitions="*,Auto"
+                    RowDefinitions="Auto,Auto,Auto"
+                    ColumnSpacing="16"
+                    RowSpacing="2"
+                    VerticalAlignment="Center">
+                <TextBlock Text="{CompiledBinding DiffPreviewTitle}"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Row="1"
+                           Text="{CompiledBinding DiffPreviewMetaLine}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis" />
+                <StackPanel Grid.Row="2"
+                            Orientation="Horizontal"
+                            Spacing="7">
+                  <TextBlock Text="{CompiledBinding DiffPreviewTrigger}"
                              FontSize="11"
-                             FontWeight="SemiBold"
-                             Grid.ColumnSpan="2"
+                             FontWeight="SemiBold" />
+                  <TextBlock Text="·"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextMutedBrush}" />
+                  <TextBlock Text="{CompiledBinding DiffPreviewMode}"
+                             FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <TextBlock Grid.Row="1"
-                             Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Added}" />
-                  <TextBlock Grid.Row="1"
-                             Grid.Column="1"
-                             Text="{Binding DiffPreviewAdded}" />
-                  <TextBlock Grid.Row="2"
-                             Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Modified}" />
-                  <TextBlock Grid.Row="2"
-                             Grid.Column="1"
-                             Text="{Binding DiffPreviewModified}" />
-                  <TextBlock Grid.Row="3"
-                             Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Deleted}" />
-                  <TextBlock Grid.Row="3"
-                             Grid.Column="1"
-                             Text="{Binding DiffPreviewDeleted}" />
-                </Grid>
-              </Border>
-              <Border Grid.Column="1"
-                      Classes="card"
-                      Padding="10"
-                      CornerRadius="10">
-                <StackPanel Spacing="6">
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Grid.RowSpan="3"
+                            Orientation="Horizontal"
+                            Spacing="14"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Text="⇄"
+                               FontSize="14"
+                               Foreground="{DynamicResource WarningBrush}" />
+                    <TextBlock Text="{CompiledBinding DiffPreviewImportedDisplay}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <shapes:Path Data="M 7,1 L 12,3 V 7 C 12,10 10,12 7,14 C 4,12 2,10 2,7 V 3 Z"
+                                 Width="12"
+                                 Height="13"
+                                 Stretch="Uniform"
+                                 Stroke="{DynamicResource TextSecondaryBrush}"
+                                 StrokeThickness="1.3" />
+                    <TextBlock Text="{CompiledBinding DiffPreviewEncryptionDisplay}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                  </StackPanel>
+                </StackPanel>
+              </Grid>
+              <Button Grid.Column="2"
+                      Classes="small-button"
+                      Width="30"
+                      Height="30"
+                      Padding="0"
+                      FontSize="18"
+                      AutomationProperties.Name="{infra:LocalizedString Key=Backups.DiffSummary.ClosePreview}"
+                      ToolTip.Tip="{infra:LocalizedString Key=Backups.DiffSummary.ClosePreview}"
+                      Command="{CompiledBinding CloseSnapshotDiffPreviewCommand}"
+                      IsCancel="True">
+                <shapes:Path Data="M 2,2 L 12,12 M 12,2 L 2,12"
+                             Width="14"
+                             Height="14"
+                             Stretch="Uniform"
+                             Stroke="{DynamicResource TextPrimaryBrush}"
+                             StrokeThickness="1.6" />
+              </Button>
+            </Grid>
+
+            <Border Grid.Row="1"
+                    Padding="10,7"
+                    CornerRadius="10"
+                    Background="{DynamicResource Surface2}"
+                    BorderBrush="{DynamicResource BorderSoft}"
+                    BorderThickness="1">
+              <Grid ColumnDefinitions="*,1,*,1,*,1,1.2*"
+                    ColumnSpacing="12">
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Added}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <TextBlock Text="{CompiledBinding DiffPreviewAdded}"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource SuccessBrush}" />
+                </StackPanel>
+                <Border Grid.Column="1" Background="{DynamicResource DividerBrush}" />
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Modified}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <TextBlock Text="{CompiledBinding DiffPreviewModified}"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource WarningBrush}" />
+                </StackPanel>
+                <Border Grid.Column="3" Background="{DynamicResource DividerBrush}" />
+                <StackPanel Grid.Column="4"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                  <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Deleted}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <TextBlock Text="{CompiledBinding DiffPreviewDeleted}"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource DangerBrush}" />
+                </StackPanel>
+                <Border Grid.Column="5" Background="{DynamicResource DividerBrush}" />
+                <StackPanel Grid.Column="6"
+                            Orientation="Horizontal"
+                            Spacing="8">
                   <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.NetChange}"
                              FontSize="11"
-                             FontWeight="SemiBold"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <TextBlock Text="{Binding DiffPreviewNet}"
-                             FontSize="16"
+                  <TextBlock Text="{CompiledBinding DiffPreviewNet}"
+                             FontSize="13"
                              FontWeight="SemiBold" />
                 </StackPanel>
-              </Border>
-            </Grid>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="2"
+                    IsVisible="{CompiledBinding HasDiffPreviewTopPaths}"
+                    Padding="2,2,2,4">
+              <StackPanel Spacing="5">
+                <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.TopPaths}"
+                           FontSize="10"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <ItemsControl ItemsSource="{CompiledBinding DiffPreviewTopPaths}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel Orientation="Horizontal" ItemSpacing="14" LineSpacing="4" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Border Width="4"
+                                Height="4"
+                                CornerRadius="2"
+                                Background="{DynamicResource AccentBrush}"
+                                VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Path}"
+                                     MaxWidth="190"
+                                     FontSize="11"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis"
+                                     ToolTip.Tip="{Binding Path}" />
+                          <TextBlock Text="{Binding Changes}"
+                                     FontSize="11"
+                                     Foreground="{DynamicResource TextSecondaryBrush}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
 
             <Grid Grid.Row="3"
-                  ColumnDefinitions="2*,3*"
-                  ColumnSpacing="10">
+                  ColumnDefinitions="340,*"
+                  ColumnSpacing="8"
+                  MinHeight="340"
+                  MaxHeight="540"
+                  IsVisible="{CompiledBinding HasDiffPreviewFiles}">
               <Border Grid.Column="0"
                       Classes="card"
-                      Padding="10"
+                      Padding="7"
                       CornerRadius="10">
-                <Grid RowDefinitions="Auto,*"
-                      RowSpacing="8">
-                  <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.TopPaths}"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <ScrollViewer Grid.Row="1"
-                                VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding DiffPreviewTopPaths}">
-                      <ItemsControl.ItemTemplate>
+                <Grid RowDefinitions="Auto,Auto,*"
+                      RowSpacing="6">
+                  <Grid ColumnDefinitions="*,Auto,Auto"
+                        ColumnSpacing="7">
+                    <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.ChangedFilesLabel}"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Text="{CompiledBinding DiffFileCompactResultsLabel}"
+                               TextTrimming="CharacterEllipsis"
+                               FontSize="10"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               ToolTip.Tip="{CompiledBinding DiffFileResultsLabel}" />
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="2">
+                      <Button Classes="diff-nav-button"
+                              AutomationProperties.Name="{infra:LocalizedString Key=Common.Previous}"
+                              ToolTip.Tip="{infra:LocalizedString Key=Common.Previous}"
+                              Command="{CompiledBinding SelectPreviousDiffFileCommand}">
+                        <shapes:Path Data="M 9,2 L 3,7 L 9,12"
+                                     Width="9"
+                                     Height="11"
+                                     Stretch="Uniform"
+                                     Stroke="{DynamicResource TextSecondaryBrush}"
+                                     StrokeThickness="1.5" />
+                      </Button>
+                      <Button Classes="diff-nav-button"
+                              AutomationProperties.Name="{infra:LocalizedString Key=Common.Next}"
+                              ToolTip.Tip="{infra:LocalizedString Key=Common.Next}"
+                              Command="{CompiledBinding SelectNextDiffFileCommand}">
+                        <shapes:Path Data="M 3,2 L 9,7 L 3,12"
+                                     Width="9"
+                                     Height="11"
+                                     Stretch="Uniform"
+                                     Stroke="{DynamicResource TextSecondaryBrush}"
+                                     StrokeThickness="1.5" />
+                      </Button>
+                    </StackPanel>
+                  </Grid>
+                  <Grid Grid.Row="1"
+                        ColumnDefinitions="*,104,28"
+                        ColumnSpacing="4">
+                    <Grid>
+                      <TextBox Classes="diff-search"
+                               Text="{CompiledBinding DiffFileSearchText}"
+                               PlaceholderText="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
+                               AutomationProperties.Name="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}" />
+                      <shapes:Path Data="M 7,2 A 5,5 0 1 0 7,12 A 5,5 0 1 0 7,2 M 11,11 L 15,15"
+                                   Width="13"
+                                   Height="13"
+                                   Margin="9,0,0,0"
+                                   Stretch="Uniform"
+                                   Stroke="{DynamicResource TextMutedBrush}"
+                                   StrokeThickness="1.3"
+                                   StrokeLineCap="Round"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center"
+                                   IsHitTestVisible="False" />
+                    </Grid>
+                    <ComboBox Grid.Column="1"
+                              Classes="diff-filter"
+                              AutomationProperties.Name="{infra:LocalizedString Key=Backups.Compare.FilterAll}"
+                              ItemsSource="{CompiledBinding DiffFileKindFilters}"
+                              SelectedItem="{CompiledBinding SelectedDiffFileKindFilter}">
+                      <ComboBox.ItemTemplate>
                         <DataTemplate>
-                          <Border Margin="0,0,0,6"
-                                  Padding="8"
-                                  CornerRadius="8"
-                                  Background="{DynamicResource Surface2}">
-                            <Grid ColumnDefinitions="*,Auto"
-                                  ColumnSpacing="8">
-                              <TextBlock Text="{Binding Path}"
-                                         TextWrapping="Wrap"
-                                         TextTrimming="CharacterEllipsis"
-                                         MaxLines="2" />
-                              <StackPanel Grid.Column="1"
-                                          Spacing="2">
-                                <TextBlock Text="{Binding Changes}"
-                                           Foreground="{DynamicResource TextSecondaryBrush}" />
-                                <TextBlock Text="{Binding ChangedBytes}"
-                                           FontSize="10"
-                                           Foreground="{DynamicResource TextMutedBrush}" />
-                              </StackPanel>
-                            </Grid>
-                          </Border>
+                          <TextBlock Text="{Binding Label}" />
                         </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </ScrollViewer>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Grid.Column="2"
+                            Classes="diff-nav-button"
+                            Width="28"
+                            Height="28"
+                            AutomationProperties.Name="{infra:LocalizedString Key=Common.Clear}"
+                            ToolTip.Tip="{infra:LocalizedString Key=Common.Clear}"
+                            Command="{CompiledBinding ClearDiffFileFiltersCommand}" />
+                    <shapes:Path Grid.Column="2"
+                                 Data="M 3,3 L 11,11 M 11,3 L 3,11"
+                                 Width="10"
+                                 Height="10"
+                                 Stretch="Uniform"
+                                 Stroke="{DynamicResource TextSecondaryBrush}"
+                                 StrokeThickness="1.4"
+                                 IsHitTestVisible="False"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                  </Grid>
+                  <TreeView Grid.Row="2"
+                            Classes="diff-tree"
+                            ItemsSource="{CompiledBinding DiffPreviewTreeRoots}"
+                            SelectedItem="{CompiledBinding SelectedDiffPreviewTreeNode, Mode=TwoWay}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <TreeView.ItemTemplate>
+                      <TreeDataTemplate x:DataType="vm:DiffPreviewTreeNode"
+                                        ItemsSource="{CompiledBinding Children}">
+                        <Grid ColumnDefinitions="24,*,Auto,Auto"
+                              ColumnSpacing="5"
+                              MinHeight="23"
+                              ToolTip.Tip="{CompiledBinding Path}">
+                          <shapes:Path IsVisible="{CompiledBinding IsFolder}"
+                                       Data="M 2,4 H 7 L 9,6 H 16 V 14 H 2 Z"
+                                       Width="15"
+                                       Height="13"
+                                       Stretch="Uniform"
+                                       Fill="Transparent"
+                                       Stroke="{DynamicResource TextSecondaryBrush}"
+                                       StrokeThickness="1.25"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                          <shapes:Path IsVisible="{CompiledBinding IsFile}"
+                                       Data="{CompiledBinding FileTypeIconData}"
+                                       Classes="diff-file-icon"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       ToolTip.Tip="{CompiledBinding FileTypeLabel}" />
+                          <TextBlock Grid.Column="1"
+                                     Text="{CompiledBinding Name}"
+                                     Classes="diff-tree-name"
+                                     Classes.folder="{CompiledBinding IsFolder}"
+                                     TextTrimming="CharacterEllipsis"
+                                     VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2"
+                                     Text="{CompiledBinding Marker}"
+                                     Classes="diff-file-marker"
+                                     Classes.added="{CompiledBinding IsAdded}"
+                                     Classes.deleted="{CompiledBinding IsDeleted}"
+                                     Classes.modified="{CompiledBinding IsModified}"
+                                     FontFamily="Menlo, Consolas, Monaco, monospace"
+                                     FontWeight="Bold"
+                                     VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="3"
+                                     Text="{CompiledBinding SizeDelta}"
+                                     IsVisible="{CompiledBinding HasSizeDelta}"
+                                     FontSize="10"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     VerticalAlignment="Center" />
+                        </Grid>
+                      </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                  </TreeView>
                 </Grid>
               </Border>
 
               <Border Grid.Column="1"
                       Classes="card"
-                      Padding="10"
+                      Padding="8"
                       CornerRadius="10">
                 <Grid RowDefinitions="Auto,*"
                       RowSpacing="8">
-                  <TextBlock Text="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Raw}"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <TextBox Grid.Row="1"
-                           Text="{Binding DiffPreviewText}"
-                           IsReadOnly="True"
-                           AcceptsReturn="True"
-                           TextWrapping="NoWrap"
-                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                           ScrollViewer.VerticalScrollBarVisibility="Auto"
-                           FontFamily="Consolas"
-                           FontSize="12"
-                           Background="{DynamicResource Surface1}"
-                           BorderBrush="{DynamicResource BorderSoft}" />
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="10">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{CompiledBinding SelectedDiffPreviewFile.Path}"
+                                 FontSize="11"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{CompiledBinding SelectedDiffPreviewFile.Path}" />
+                      <TextBlock Text="{CompiledBinding DiffFileContentStatus}"
+                                 FontSize="10"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                IsVisible="{CompiledBinding HasDiffFileLineChanges}"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{CompiledBinding DiffFileAddedLines, StringFormat='+{0}'}"
+                                 ToolTip.Tip="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Added}"
+                                 FontFamily="Menlo, Consolas, Monaco, monospace"
+                                 FontSize="11"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource SuccessBrush}" />
+                      <TextBlock Text="{CompiledBinding DiffFileDeletedLines, StringFormat='-{0}'}"
+                                 ToolTip.Tip="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Deleted}"
+                                 FontFamily="Menlo, Consolas, Monaco, monospace"
+                                 FontSize="11"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource DangerBrush}" />
+                    </StackPanel>
+                  </Grid>
+
+                  <Border Grid.Row="1"
+                          Background="{DynamicResource Surface1}"
+                          BorderBrush="{DynamicResource BorderSoft}"
+                          BorderThickness="1"
+                          CornerRadius="8"
+                          ClipToBounds="True">
+                    <Grid>
+                      <ScrollViewer x:Name="DiffContentScrollViewer"
+                                    IsVisible="{CompiledBinding HasDiffFileContentLines}"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{CompiledBinding DiffFileContentLines}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DiffPreviewLineItem">
+                              <Border Classes="diff-line"
+                                      Classes.added="{CompiledBinding IsAdded}"
+                                      Classes.deleted="{CompiledBinding IsDeleted}"
+                                      Classes.hunk="{CompiledBinding IsHunk}"
+                                      Classes.notice="{CompiledBinding IsNotice}">
+                                <Grid ColumnDefinitions="36,36,3,22,Auto">
+                                  <TextBlock Classes="diff-gutter"
+                                             Margin="0,0,8,0"
+                                             Text="{CompiledBinding OldLineNumber}" />
+                                  <TextBlock Grid.Column="1"
+                                             Classes="diff-gutter"
+                                             Margin="0,0,8,0"
+                                             Text="{CompiledBinding NewLineNumber}" />
+                                  <Border Grid.Column="2"
+                                          Classes="diff-accent" />
+                                  <TextBlock Grid.Column="3"
+                                             Classes="diff-marker"
+                                             Text="{CompiledBinding Marker}"
+                                             FontFamily="Menlo, Consolas, Monaco, monospace"
+                                             FontSize="12"
+                                             FontWeight="Bold"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="4"
+                                             Classes="diff-content"
+                                             Text="{CompiledBinding Content}"
+                                             Margin="4,1,16,1"
+                                             FontFamily="Menlo, Consolas, Monaco, monospace"
+                                             FontSize="11"
+                                             TextWrapping="NoWrap" />
+                                </Grid>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </ScrollViewer>
+
+                      <StackPanel IsVisible="{CompiledBinding HasNoDiffFileContentLines}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  MaxWidth="520"
+                                  Margin="24"
+                                  Spacing="8">
+                        <TextBlock Text="{CompiledBinding DiffFileContentStatus}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center" />
+                        <TextBlock Text="{CompiledBinding DiffFileContentText}"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
                 </Grid>
               </Border>
             </Grid>
+
+            <Border Grid.Row="3"
+                    IsVisible="{CompiledBinding HasNoDiffPreviewFiles}"
+                    MinHeight="150"
+                    Padding="20"
+                    CornerRadius="14"
+                    Background="{DynamicResource Surface2}"
+                    BorderBrush="{DynamicResource BorderSoft}"
+                    BorderThickness="1">
+              <StackPanel HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          MaxWidth="600"
+                          Spacing="10">
+                <Border Width="42"
+                        Height="42"
+                        CornerRadius="21"
+                        Background="{DynamicResource AccentSoftBrush}">
+                  <shapes:Path Data="M 2,5 H 12 M 9,2 L 12,5 L 9,8 M 12,11 H 2 M 5,8 L 2,11 L 5,14"
+                               Width="14"
+                               Height="16"
+                               Stretch="Uniform"
+                               Stroke="{DynamicResource AccentBrush}"
+                               StrokeThickness="1.6"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+                <TextBlock Text="{CompiledBinding DiffPreviewEmptyTitle}"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center" />
+                <TextBlock Text="{CompiledBinding DiffPreviewEmptyMessage}"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           HorizontalAlignment="Center" />
+              </StackPanel>
+            </Border>
 
             <StackPanel Grid.Row="4"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Spacing="8">
               <Button Content="{infra:LocalizedString Key=Backups.DiffSummary.ClosePreview}"
-                      Classes="action-ghost"
-                      Padding="14,8"
-                      CornerRadius="10"
+                      Classes="action-primary"
+                      Padding="18,9"
+                      CornerRadius="12"
                       MinWidth="110"
-                      Command="{Binding CloseSnapshotDiffPreviewCommand}" />
+                      Command="{CompiledBinding CloseSnapshotDiffPreviewCommand}" />
             </StackPanel>
           </Grid>
         </Border>

@@ -1139,11 +1139,8 @@ public class ProjectsViewModel : ViewModelBase
             ? L("Projects.EncryptionPolicy.EffectiveEncrypted", "Effective: Encrypted")
             : L("Projects.EncryptionPolicy.EffectivePlain", "Effective: Plain");
 
-        var hasSecret = !string.IsNullOrWhiteSpace(CredentialVault.Instance.GetSecret(
-            string.IsNullOrWhiteSpace(vm.EncryptionKeyRef) ? null : vm.EncryptionKeyRef,
-            BackupEncryptionCredentialIdentity.AccountName,
-            preferKeychain: true,
-            fallbackPlaintext: null));
+        bool hasSecret = CredentialVault.Instance.HasStoredSecret(
+            string.IsNullOrWhiteSpace(vm.EncryptionKeyRef) ? null : vm.EncryptionKeyRef);
         vm.HasEncryptionSecret = hasSecret;
         vm.EncryptionSecretStatus = hasSecret
             ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")

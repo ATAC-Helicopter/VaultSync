@@ -195,6 +195,7 @@ public sealed class BackupArchiveCryptoService
         byte[] keyMaterial = new byte[DerivedKeyLengthBytes];
         byte[] encryptionKey = new byte[EncryptionKeyLengthBytes];
         byte[] hmacKey = new byte[HmacKeyLengthBytes];
+        byte[] derived = [];
 
         string? outputDirectory = Path.GetDirectoryName(outputArchivePath);
         if (!string.IsNullOrWhiteSpace(outputDirectory))
@@ -203,7 +204,7 @@ public sealed class BackupArchiveCryptoService
         string tempOutputPath = outputArchivePath + ".tmp";
         try
         {
-            byte[] derived = Rfc2898DeriveBytes.Pbkdf2(
+            derived = Rfc2898DeriveBytes.Pbkdf2(
                 password,
                 saltBytes,
                 iterations,
@@ -281,6 +282,7 @@ public sealed class BackupArchiveCryptoService
             CryptographicOperations.ZeroMemory(keyMaterial);
             CryptographicOperations.ZeroMemory(encryptionKey);
             CryptographicOperations.ZeroMemory(hmacKey);
+            CryptographicOperations.ZeroMemory(derived);
             CryptographicOperations.ZeroMemory(saltBytes);
             CryptographicOperations.ZeroMemory(ivBytes);
         }
@@ -334,10 +336,11 @@ public sealed class BackupArchiveCryptoService
         byte[] keyMaterial = new byte[DerivedKeyLengthBytes];
         byte[] encryptionKey = new byte[EncryptionKeyLengthBytes];
         byte[] hmacKey = new byte[HmacKeyLengthBytes];
+        byte[] derived = [];
 
         try
         {
-            byte[] derived = Rfc2898DeriveBytes.Pbkdf2(
+            derived = Rfc2898DeriveBytes.Pbkdf2(
                 password,
                 saltBytes,
                 iterations,
@@ -381,6 +384,7 @@ public sealed class BackupArchiveCryptoService
             CryptographicOperations.ZeroMemory(keyMaterial);
             CryptographicOperations.ZeroMemory(encryptionKey);
             CryptographicOperations.ZeroMemory(hmacKey);
+            CryptographicOperations.ZeroMemory(derived);
         }
     }
 
