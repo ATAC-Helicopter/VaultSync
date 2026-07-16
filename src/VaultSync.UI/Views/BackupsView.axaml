@@ -19,7 +19,7 @@
     </Style>
 
     <Style Selector="Border.diff-line">
-      <Setter Property="MinHeight" Value="23" />
+      <Setter Property="MinHeight" Value="21" />
       <Setter Property="Background" Value="Transparent" />
     </Style>
     <Style Selector="Border.diff-line.added">
@@ -84,7 +84,7 @@
       <Setter Property="Fill" Value="Transparent" />
     </Style>
     <Style Selector="TreeView.diff-tree TreeViewItem">
-      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="MinHeight" Value="24" />
       <Setter Property="Padding" Value="2,0" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
@@ -108,7 +108,7 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
     <Style Selector="TextBlock.diff-tree-name">
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontSize" Value="11" />
     </Style>
     <Style Selector="TextBlock.diff-tree-name.folder">
       <Setter Property="FontWeight" Value="SemiBold" />
@@ -126,6 +126,33 @@
     </Style>
     <Style Selector="Button.diff-nav-button:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface3}" />
+    </Style>
+    <Style Selector="TextBox.diff-search">
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="MaxHeight" Value="28" />
+      <Setter Property="Padding" Value="28,3" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBox.diff-search:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="ComboBox.diff-filter">
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="MaxHeight" Value="28" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 
     <Style Selector="#PerProjectList ListBoxItem">
@@ -2194,21 +2221,21 @@
         <Border Background="{DynamicResource CardBackgroundBrush}"
                 BorderBrush="{DynamicResource BorderSoft}"
                 BorderThickness="1"
-                CornerRadius="16"
-                Padding="20"
+                CornerRadius="14"
+                Padding="16"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                Margin="24"
+                Margin="18"
                 MaxWidth="1280"
                 MaxHeight="860">
           <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
-                RowSpacing="10">
+                RowSpacing="8">
             <Grid Grid.Row="0"
                   ColumnDefinitions="Auto,*,Auto"
                   ColumnSpacing="12">
-              <Border Width="34"
-                      Height="34"
-                      CornerRadius="10"
+              <Border Width="30"
+                      Height="30"
+                      CornerRadius="9"
                       Background="{DynamicResource AccentSoftBrush}">
                 <shapes:Path Data="M 2,5 H 12 M 9,2 L 12,5 L 9,8 M 12,11 H 2 M 5,8 L 2,11 L 5,14"
                              Width="14"
@@ -2276,8 +2303,8 @@
               </Grid>
               <Button Grid.Column="2"
                       Classes="small-button"
-                      Width="34"
-                      Height="34"
+                      Width="30"
+                      Height="30"
                       Padding="0"
                       FontSize="18"
                       AutomationProperties.Name="{infra:LocalizedString Key=Backups.DiffSummary.ClosePreview}"
@@ -2294,7 +2321,7 @@
             </Grid>
 
             <Border Grid.Row="1"
-                    Padding="12,9"
+                    Padding="10,7"
                     CornerRadius="10"
                     Background="{DynamicResource Surface2}"
                     BorderBrush="{DynamicResource BorderSoft}"
@@ -2308,7 +2335,7 @@
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                   <TextBlock Text="{CompiledBinding DiffPreviewAdded}"
-                             FontSize="15"
+                             FontSize="13"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource SuccessBrush}" />
                 </StackPanel>
@@ -2320,7 +2347,7 @@
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                   <TextBlock Text="{CompiledBinding DiffPreviewModified}"
-                             FontSize="15"
+                             FontSize="13"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource WarningBrush}" />
                 </StackPanel>
@@ -2332,7 +2359,7 @@
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                   <TextBlock Text="{CompiledBinding DiffPreviewDeleted}"
-                             FontSize="15"
+                             FontSize="13"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource DangerBrush}" />
                 </StackPanel>
@@ -2344,7 +2371,7 @@
                              FontSize="11"
                              Foreground="{DynamicResource TextSecondaryBrush}" />
                   <TextBlock Text="{CompiledBinding DiffPreviewNet}"
-                             FontSize="15"
+                             FontSize="13"
                              FontWeight="SemiBold" />
                 </StackPanel>
               </Grid>
@@ -2361,7 +2388,7 @@
                 <ItemsControl ItemsSource="{CompiledBinding DiffPreviewTopPaths}">
                   <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                      <WrapPanel Orientation="Horizontal" ItemSpacing="18" LineSpacing="5" />
+                      <WrapPanel Orientation="Horizontal" ItemSpacing="14" LineSpacing="4" />
                     </ItemsPanelTemplate>
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
@@ -2389,14 +2416,14 @@
             </Border>
 
             <Grid Grid.Row="3"
-                  ColumnDefinitions="380,*"
-                  ColumnSpacing="10"
-                  MinHeight="350"
-                  MaxHeight="520"
+                  ColumnDefinitions="340,*"
+                  ColumnSpacing="8"
+                  MinHeight="340"
+                  MaxHeight="540"
                   IsVisible="{CompiledBinding HasDiffPreviewFiles}">
               <Border Grid.Column="0"
                       Classes="card"
-                      Padding="8"
+                      Padding="7"
                       CornerRadius="10">
                 <Grid RowDefinitions="Auto,Auto,*"
                       RowSpacing="6">
@@ -2442,19 +2469,27 @@
                     </StackPanel>
                   </Grid>
                   <Grid Grid.Row="1"
-                        ColumnDefinitions="*,112,30"
-                        ColumnSpacing="5">
-                    <TextBox Text="{CompiledBinding DiffFileSearchText}"
-                             PlaceholderText="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
-                             AutomationProperties.Name="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
-                             FontSize="11"
-                             MinHeight="30"
-                             MaxHeight="30"
-                             Padding="9,4" />
+                        ColumnDefinitions="*,104,28"
+                        ColumnSpacing="4">
+                    <Grid>
+                      <TextBox Classes="diff-search"
+                               Text="{CompiledBinding DiffFileSearchText}"
+                               PlaceholderText="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
+                               AutomationProperties.Name="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}" />
+                      <shapes:Path Data="M 7,2 A 5,5 0 1 0 7,12 A 5,5 0 1 0 7,2 M 11,11 L 15,15"
+                                   Width="13"
+                                   Height="13"
+                                   Margin="9,0,0,0"
+                                   Stretch="Uniform"
+                                   Stroke="{DynamicResource TextMutedBrush}"
+                                   StrokeThickness="1.3"
+                                   StrokeLineCap="Round"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center"
+                                   IsHitTestVisible="False" />
+                    </Grid>
                     <ComboBox Grid.Column="1"
-                              MinHeight="30"
-                              MaxHeight="30"
-                              FontSize="11"
+                              Classes="diff-filter"
                               AutomationProperties.Name="{infra:LocalizedString Key=Backups.Compare.FilterAll}"
                               ItemsSource="{CompiledBinding DiffFileKindFilters}"
                               SelectedItem="{CompiledBinding SelectedDiffFileKindFilter}">
@@ -2466,8 +2501,8 @@
                     </ComboBox>
                     <Button Grid.Column="2"
                             Classes="diff-nav-button"
-                            Width="30"
-                            Height="30"
+                            Width="28"
+                            Height="28"
                             AutomationProperties.Name="{infra:LocalizedString Key=Common.Clear}"
                             ToolTip.Tip="{infra:LocalizedString Key=Common.Clear}"
                             Command="{CompiledBinding ClearDiffFileFiltersCommand}" />
@@ -2495,7 +2530,7 @@
                                         ItemsSource="{CompiledBinding Children}">
                         <Grid ColumnDefinitions="24,*,Auto,Auto"
                               ColumnSpacing="5"
-                              MinHeight="25"
+                              MinHeight="23"
                               ToolTip.Tip="{CompiledBinding Path}">
                           <shapes:Path IsVisible="{CompiledBinding IsFolder}"
                                        Data="M 2,4 H 7 L 9,6 H 16 V 14 H 2 Z"
@@ -2543,15 +2578,15 @@
 
               <Border Grid.Column="1"
                       Classes="card"
-                      Padding="10"
+                      Padding="8"
                       CornerRadius="10">
                 <Grid RowDefinitions="Auto,*"
                       RowSpacing="8">
-                  <Grid ColumnDefinitions="*,Auto,Auto"
-                        ColumnSpacing="8">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="10">
                     <StackPanel Spacing="2">
                       <TextBlock Text="{CompiledBinding SelectedDiffPreviewFile.Path}"
-                                 FontSize="12"
+                                 FontSize="11"
                                  FontWeight="SemiBold"
                                  TextTrimming="CharacterEllipsis"
                                  ToolTip.Tip="{CompiledBinding SelectedDiffPreviewFile.Path}" />
@@ -2559,34 +2594,24 @@
                                  FontSize="10"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
                     </StackPanel>
-                    <Border Grid.Column="1"
-                            Classes="pill"
-                            IsVisible="{CompiledBinding HasDiffFileLineChanges}"
-                            Padding="8,3"
-                            Background="#2432DFA0"
-                            BorderBrush="{DynamicResource SuccessBrush}"
-                            BorderThickness="1">
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                IsVisible="{CompiledBinding HasDiffFileLineChanges}"
+                                VerticalAlignment="Center">
                       <TextBlock Text="{CompiledBinding DiffFileAddedLines, StringFormat='+{0}'}"
                                  ToolTip.Tip="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Added}"
-                                 FontFamily="Consolas"
-                                 FontSize="10"
+                                 FontFamily="Menlo, Consolas, Monaco, monospace"
+                                 FontSize="11"
                                  FontWeight="SemiBold"
                                  Foreground="{DynamicResource SuccessBrush}" />
-                    </Border>
-                    <Border Grid.Column="2"
-                            Classes="pill"
-                            IsVisible="{CompiledBinding HasDiffFileLineChanges}"
-                            Padding="8,3"
-                            Background="#24FF6A6A"
-                            BorderBrush="{DynamicResource DangerBrush}"
-                            BorderThickness="1">
                       <TextBlock Text="{CompiledBinding DiffFileDeletedLines, StringFormat='-{0}'}"
                                  ToolTip.Tip="{infra:LocalizedString Key=Backups.DiffSummary.Preview.Deleted}"
-                                 FontFamily="Consolas"
-                                 FontSize="10"
+                                 FontFamily="Menlo, Consolas, Monaco, monospace"
+                                 FontSize="11"
                                  FontWeight="SemiBold"
                                  Foreground="{DynamicResource DangerBrush}" />
-                    </Border>
+                    </StackPanel>
                   </Grid>
 
                   <Border Grid.Row="1"
@@ -2608,7 +2633,7 @@
                                       Classes.deleted="{CompiledBinding IsDeleted}"
                                       Classes.hunk="{CompiledBinding IsHunk}"
                                       Classes.notice="{CompiledBinding IsNotice}">
-                                <Grid ColumnDefinitions="42,42,4,24,Auto">
+                                <Grid ColumnDefinitions="36,36,3,22,Auto">
                                   <TextBlock Classes="diff-gutter"
                                              Margin="0,0,8,0"
                                              Text="{CompiledBinding OldLineNumber}" />
@@ -2629,9 +2654,9 @@
                                   <TextBlock Grid.Column="4"
                                              Classes="diff-content"
                                              Text="{CompiledBinding Content}"
-                                             Margin="4,2,18,2"
+                                             Margin="4,1,16,1"
                                              FontFamily="Menlo, Consolas, Monaco, monospace"
-                                             FontSize="12"
+                                             FontSize="11"
                                              TextWrapping="NoWrap" />
                                 </Grid>
                               </Border>
