@@ -30,21 +30,29 @@ internal static partial class ShareableCrashReport
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        string reportId = Convert.ToHexString(Guid.NewGuid().ToByteArray())[..8];
+        string crashCategory = NormalizeSource(source);
+        string crashReason = NormalizeTypeName(exception.GetType());
+        string operatingSystemFamily = GetOperatingSystemFamily();
+        string reportId = CreateReportId(crashCategory);
         string content = BuildContent(
             reportId,
             exception,
-            NormalizeSource(source),
+            crashCategory,
+            crashReason,
             isTerminating,
             NormalizeVersion(applicationVersion),
-            GetOperatingSystemFamily());
+            operatingSystemFamily);
 
-        return new CrashReportDocument(reportId, content);
+        return new CrashReportDocument(
+            reportId,
+            operatingSystemFamily,
+            crashCategory,
+            crashReason,
+            content);
     }
 
     public static string Save(
         CrashReportDocument report,
-        string? editedContent = null,
         string? managedDirectoryOverride = null)
     {
         ArgumentNullException.ThrowIfNull(report);
@@ -54,8 +62,7 @@ internal static partial class ShareableCrashReport
         PruneSavedReports(directory);
 
         string path = Path.Combine(directory, $"vaultsync-crash-{report.ReportId}.txt");
-        string content = NormalizeEditedContent(editedContent ?? report.Content);
-        WritePrivateTextFile(path, content);
+        WritePrivateTextFile(path, report.Content);
         return path;
     }
 
@@ -99,6 +106,7 @@ internal static partial class ShareableCrashReport
         string reportId,
         Exception exception,
         string source,
+        string crashReason,
         bool isTerminating,
         string applicationVersion,
         string operatingSystemFamily)
@@ -114,6 +122,7 @@ internal static partial class ShareableCrashReport
         builder.AppendLine($"Application version: {applicationVersionToken}");
         builder.AppendLine($"Operating system family: {operatingSystemFamily}");
         builder.AppendLine($"Crash category: {source}");
+        builder.AppendLine($"Crash reason: {crashReason}");
         builder.AppendLine($"Application must close: {(isTerminating ? "yes" : "no")}");
         builder.AppendLine();
         builder.AppendLine("Exception chain and application call sites");
@@ -149,7 +158,7 @@ internal static partial class ShareableCrashReport
         builder.AppendLine("Credentials, identifiers, addresses, environment variables, and configuration");
         builder.AppendLine("OS version, locale, architecture, process details, timestamps, and raw diagnostics");
         builder.AppendLine();
-        builder.AppendLine("You may edit or remove any part of this report before sharing it.");
+        builder.AppendLine("The generated identity and crash fields are locked by VaultSync.");
 
         return SanitizeDefenseInDepth(builder.ToString())
             .Replace(applicationVersionToken, applicationVersion, StringComparison.Ordinal);
@@ -218,6 +227,19 @@ internal static partial class ShareableCrashReport
         _ => "application"
     };
 
+    private static string CreateReportId(string crashCategory)
+    {
+        string categoryCode = crashCategory switch
+        {
+            "user-interface" => "UI",
+            "application-domain" => "APP",
+            "background-task" => "TASK",
+            _ => "GEN"
+        };
+
+        return $"CRASH-{categoryCode}-{Guid.NewGuid():N}".ToUpperInvariant();
+    }
+
     private static string NormalizeVersion(string version)
     {
         Match match = VersionRegex().Match(version ?? string.Empty);
@@ -244,15 +266,6 @@ internal static partial class ShareableCrashReport
         sanitized = IpAddressRegex().Replace(sanitized, "<redacted-address>");
         sanitized = GuidRegex().Replace(sanitized, "<redacted-identifier>");
         return sanitized;
-    }
-
-    private static string NormalizeEditedContent(string value)
-    {
-        string normalized = value.Replace("\0", string.Empty, StringComparison.Ordinal);
-        const int maximumCharacters = 128 * 1024;
-        return normalized.Length <= maximumCharacters
-            ? normalized
-            : normalized[..maximumCharacters] + Environment.NewLine + "[Report shortened locally]";
     }
 
     private static string GetShareableReportDirectory() => Path.Combine(
@@ -362,4 +375,9 @@ internal static partial class ShareableCrashReport
     private static partial Regex GuidRegex();
 }
 
-internal sealed record CrashReportDocument(string ReportId, string Content);
+internal sealed record CrashReportDocument(
+    string ReportId,
+    string OperatingSystemFamily,
+    string CrashCategory,
+    string CrashReason,
+    string Content);

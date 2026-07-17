@@ -319,7 +319,7 @@
   "Crash.EmailPrepared": "Se abrieron la carpeta del informe y un borrador de correo. Adjunta el informe, revisa el correo y pulsa Enviar tú mismo.",
   "Crash.EmailPrepareFailed": "VaultSync no pudo abrir un borrador de correo. Copia o guarda el informe y envíalo tú mismo a crash-reports@fglabs.dev.",
   "Crash.PrepareEmail": "Preparar correo",
-  "Crash.PreviewHint": "Puedes editar o eliminar cualquier texto. El borrador no contendrá campos ocultos ni archivos adjuntos.",
+  "Crash.PreviewHint": "VaultSync bloquea el ID del informe, la familia del sistema, la categoría y el motivo del fallo. Añade detalles opcionales en el borrador.",
   "Crash.PrivacySummary": "Revisa a continuación el informe redactado completo. No se envía nada hasta que pulses Enviar en tu aplicación de correo.",
   "Crash.ReportDeleted": "Se eliminó el informe guardado. No se envió nada.",
   "Crash.CopyLogPath": "Copiar ruta del registro",

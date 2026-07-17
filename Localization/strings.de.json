@@ -319,7 +319,7 @@
   "Crash.EmailPrepared": "Der Berichtsordner und ein E-Mail-Entwurf wurden geöffnet. Hängen Sie den Bericht an, prüfen Sie die E-Mail und klicken Sie selbst auf Senden.",
   "Crash.EmailPrepareFailed": "VaultSync konnte keinen E-Mail-Entwurf öffnen. Kopieren oder speichern Sie den Bericht und senden Sie ihn selbst an crash-reports@fglabs.dev.",
   "Crash.PrepareEmail": "E-Mail vorbereiten",
-  "Crash.PreviewHint": "Sie können jeden Text bearbeiten oder entfernen. Der E-Mail-Entwurf enthält keine versteckten Felder oder Anhänge.",
+  "Crash.PreviewHint": "VaultSync sperrt Berichts-ID, Betriebssystemfamilie, Absturzkategorie und Absturzgrund. Ergänzen Sie optionale Angaben im E-Mail-Entwurf.",
   "Crash.PrivacySummary": "Prüfen Sie unten den vollständigen bereinigten Bericht. Nichts wird gesendet, bevor Sie in Ihrer E-Mail-App auf Senden klicken.",
   "Crash.ReportDeleted": "Der gespeicherte Bericht wurde gelöscht. Nichts wurde gesendet.",
   "Crash.CopyLogPath": "Log-Pfad kopieren",

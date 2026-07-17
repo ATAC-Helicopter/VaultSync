@@ -4,7 +4,7 @@ VaultSync is designed to keep backup data, diagnostics, and operational informat
 
 ## Crash reports
 
-VaultSync does not send crash reports automatically. Optional crash-report assistance creates a minimal, strictly allowlisted report locally and displays its complete contents before offering to prepare an email draft.
+VaultSync does not send crash reports automatically. Optional crash-report assistance creates a minimal, strictly allowlisted report locally and displays its complete contents in a read-only view before offering to prepare an email draft. Its random per-report ID, OS family, crash category, and exception-type reason cannot be changed in VaultSync; users can add optional context in their email application.
 
 The user must attach the report and press **Send** in their own email application. VaultSync has no SMTP credentials, crash-reporting SDK, upload API, or hosted crash database.
 

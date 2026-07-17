@@ -4,7 +4,7 @@ VaultSync crash reporting is a local report-preparation feature. It is not an au
 
 ## In one sentence
 
-When crash-report assistance is enabled, VaultSync creates a minimal report locally, shows the complete editable report to the user, and can prepare an email draft; only the user can attach the report and press **Send**.
+When crash-report assistance is enabled, VaultSync creates a minimal report locally, shows the complete generated report to the user, and can prepare an email draft; only the user can attach the report and press **Send**.
 
 ## Data flow
 
@@ -18,7 +18,7 @@ Strict allowlist report builder
 Local text file with owner-only permissions where supported
         |
         v
-Complete editable preview
+Complete read-only generated report
         |
         +---- Copy report
         +---- Delete report
@@ -39,7 +39,8 @@ The **Settings > Advanced > Crash report assistance** toggle controls the entire
 - Disabled: VaultSync does not create a crash report and does not offer email preparation.
 - Changing the setting does not transmit anything.
 - There is no automatic-send option and no remembered consent to send future reports.
-- A report can be edited, copied, or deleted before the email application is opened.
+- A report can be inspected, copied, or deleted before the email application is opened.
+- The report ID, OS family, crash category, and crash reason are generated fields and cannot be changed in VaultSync. Optional user context belongs in the visible email draft.
 - The user must attach the visible text file and press **Send** in their own email application.
 
 The feature is enabled by default because it performs no transmission by itself. Users who do not want local crash reports can disable it completely.
@@ -50,16 +51,17 @@ The report builder uses an allowlist. It does not begin with a broad diagnostic 
 
 Included:
 
-- A random eight-character report ID generated for this report only.
+- A category-prefixed report ID containing a fresh 128-bit random value generated for this report only.
 - The VaultSync application version.
 - Operating-system family: `Windows`, `macOS`, `Linux`, or `Other`.
 - A coarse crash category: application domain, user interface, background task, or application.
+- A coarse crash reason containing only the outer exception type name, never its message.
 - Whether VaultSync must close.
 - Exception type names.
 - Method names from call sites whose namespace begins with `VaultSync`.
 - A visible explanation of the fields deliberately excluded.
 
-The report ID is not saved as an installation identifier and is not reused between reports.
+The identifier format is `CRASH-<CATEGORY>-<32 HEX CHARACTERS>`. Category is one of `UI`, `APP`, `TASK`, or `GEN`. The random portion is generated locally for each report, requires no server or shared counter, is not an installation or user identifier, and is never reused intentionally. It exists only to correlate the user's email thread with the matching report.
 
 Example:
 
@@ -69,10 +71,11 @@ VaultSync shareable crash report
 This report was created and redacted locally.
 VaultSync did not send it automatically.
 
-Report ID: A1B2C3D4
+Report ID: CRASH-UI-00112233445566778899AABBCCDDEEFF
 Application version: 1.9.0
 Operating system family: macOS
 Crash category: user-interface
+Crash reason: System.InvalidOperationException
 Application must close: yes
 
 Exception chain and application call sites
@@ -140,7 +143,7 @@ VaultSync also cannot claim that only one human or computer processes an emailed
 
 ## Threat model
 
-The implementation protects against accidental background transmission, raw-log overcollection, sensitive exception messages, debug source paths, deletion outside the report directory, unlimited report accumulation, common path/address leakage, and recovery of mail/API credentials from the app because none exist.
+The implementation protects against accidental background transmission, raw-log overcollection, sensitive exception messages, modification of generated identity/classification fields in the app, debug source paths, deletion outside the report directory, unlimited report accumulation, common path/address leakage, and recovery of mail/API credentials from the app because none exist.
 
 It does not protect against a user manually adding sensitive information, malware that can already read local files or email, provider-side email retention, or unusual sensitive information encoded solely in a compiled method/type identifier.
 
@@ -152,7 +155,7 @@ Any report-schema change must:
 2. Avoid exception messages and raw log ingestion.
 3. Update this document's included and excluded lists.
 4. Add a regression test proving representative sensitive values are absent.
-5. Preserve preview-before-draft and explicit user sending.
+5. Preserve the read-only generated report, preview-before-draft, and explicit user sending.
 6. Never add SMTP secrets, third-party SDKs, or automatic uploads.
 7. Keep the mail URI free of report contents and local paths.
 
@@ -168,6 +171,7 @@ Relevant implementation:
 - Run unit and localization coverage tests.
 - Trigger a test exception on every supported platform.
 - Confirm the preview contains only documented fields.
+- Confirm the report ID, OS family, category, and reason cannot be edited in VaultSync.
 - Confirm disabling assistance creates no report and offers no email action.
 - Confirm **Prepare email** opens a draft but sends nothing.
 - Confirm the report is absent from the draft URI and body.

@@ -24,6 +24,7 @@ public sealed class ShareableCrashReportTests
 
         Assert.Contains("Application version: 1.8.4.123", report.Content, StringComparison.Ordinal);
         Assert.Contains("Crash category: user-interface", report.Content, StringComparison.Ordinal);
+        Assert.Contains("Crash reason: System.InvalidOperationException", report.Content, StringComparison.Ordinal);
         Assert.Contains("Exception 1: System.InvalidOperationException", report.Content, StringComparison.Ordinal);
         Assert.Contains("ShareableCrashReportTests.CaptureException()", report.Content, StringComparison.Ordinal);
         Assert.DoesNotContain("Project Falcon", report.Content, StringComparison.Ordinal);
@@ -34,19 +35,39 @@ public sealed class ShareableCrashReportTests
         Assert.DoesNotContain(Environment.OSVersion.VersionString, report.Content, StringComparison.Ordinal);
         Assert.DoesNotContain(Environment.UserName, report.Content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(Environment.MachineName, report.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Matches("^CRASH-UI-[0-9A-F]{32}$", report.ReportId);
+        Assert.Equal("user-interface", report.CrashCategory);
+        Assert.Equal("System.InvalidOperationException", report.CrashReason);
+        Assert.Contains(report.OperatingSystemFamily, new[] { "Windows", "macOS", "Linux", "Other" });
+    }
+
+    [Fact]
+    public void Create_AssignsAUniqueCategoryPrefixedIdentityPerLocalReport()
+    {
+        Exception exception = CaptureException("not included");
+
+        CrashReportDocument first = ShareableCrashReport.Create(exception, "AppDomain", true, "1.8.4");
+        CrashReportDocument second = ShareableCrashReport.Create(exception, "AppDomain", true, "1.8.4");
+
+        Assert.Matches("^CRASH-APP-[0-9A-F]{32}$", first.ReportId);
+        Assert.Matches("^CRASH-APP-[0-9A-F]{32}$", second.ReportId);
+        Assert.NotEqual(first.ReportId, second.ReportId);
     }
 
     [Fact]
     public void BuildEmailUri_ContainsOnlyRecipientReportIdAndGenericInstructions()
     {
         var report = new CrashReportDocument(
-            "A1B2C3D4",
+            "CRASH-UI-00112233445566778899AABBCCDDEEFF",
+            "macOS",
+            "user-interface",
+            "System.InvalidOperationException",
             "sensitive content that must not enter the mailto URI");
 
         string uri = ShareableCrashReport.BuildEmailUri(report);
 
         Assert.StartsWith("mailto:crash-reports@fglabs.dev?", uri, StringComparison.Ordinal);
-        Assert.Contains("A1B2C3D4", Uri.UnescapeDataString(uri), StringComparison.Ordinal);
+        Assert.Contains(report.ReportId, Uri.UnescapeDataString(uri), StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive content", Uri.UnescapeDataString(uri), StringComparison.Ordinal);
     }
 
@@ -67,19 +88,19 @@ public sealed class ShareableCrashReportTests
     }
 
     [Fact]
-    public void Save_UsesPrivateBoundedManagedStorageAndPreservesVisibleEdits()
+    public void Save_UsesPrivateBoundedManagedStorageAndPreservesLockedContent()
     {
         using var temp = new TempDirectory();
 
         string latestPath = string.Empty;
         for (int index = 0; index < 12; index++)
         {
-            var report = new CrashReportDocument($"{index:X8}", "original");
-            latestPath = ShareableCrashReport.Save(report, $"edited {index}", temp.Path);
+            var report = CreateDocument($"CRASH-GEN-{index:X32}", $"locked {index}");
+            latestPath = ShareableCrashReport.Save(report, temp.Path);
         }
 
         Assert.NotEmpty(latestPath);
-        Assert.Equal("edited 11", File.ReadAllText(latestPath));
+        Assert.Equal("locked 11", File.ReadAllText(latestPath));
         Assert.True(Directory.GetFiles(temp.Path, "vaultsync-crash-*.txt").Length <= 10);
 
         if (!OperatingSystem.IsWindows())
@@ -91,6 +112,13 @@ public sealed class ShareableCrashReportTests
         Assert.True(ShareableCrashReport.DeleteSavedReport(latestPath, temp.Path));
         Assert.False(File.Exists(latestPath));
     }
+
+    private static CrashReportDocument CreateDocument(string reportId, string content) => new(
+        reportId,
+        "Other",
+        "application",
+        "System.Exception",
+        content);
 
     private static Exception CaptureException(string message)
     {
