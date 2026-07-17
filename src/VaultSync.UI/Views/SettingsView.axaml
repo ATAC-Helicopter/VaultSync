@@ -1767,6 +1767,20 @@
                     </WrapPanel>
                   </Grid>
 
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,8,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CrashReportAssistance}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CrashReportAssistanceDescription}"
+                                 Foreground="{StaticResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding CrashReportAssistanceEnabled, Mode=TwoWay}" />
+                  </Grid>
+
                   <Border Classes="subtle-card"
                           Margin="0,8,0,0"
                           Padding="12"
