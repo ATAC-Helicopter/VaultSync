@@ -98,10 +98,6 @@
   <a href="https://www.producthunt.com/products/vaultsync?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-vaultsync" target="_blank" rel="noopener noreferrer">
     <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1094807&amp;theme=dark&amp;t=1773182638071" alt="VaultSync on Product Hunt" width="250" height="54">
   </a>
-  &nbsp;&nbsp;
-  <a href="https://lift-off.sh/p/vaultsync" target="_blank" rel="noopener noreferrer">
-    <img src="https://lift-off.sh/images/badges/badgeLaunchedDark.webp" alt="VaultSync on LiftOff" width="200" height="54">
-  </a>
 </p>
 
 <p align="center">

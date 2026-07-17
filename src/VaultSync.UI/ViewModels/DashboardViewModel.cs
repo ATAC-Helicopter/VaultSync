@@ -1191,7 +1191,7 @@ namespace VaultSync.UI.ViewModels
             return;
         }
 
-                long vaultSyncBytes = perProject?.Sum(p => p.bytes) ?? 0L;
+                long vaultSyncBytes = perProject.Sum(p => p.bytes);
 
         if (OperatingSystem.IsMacOS() && IsNetworkPath(backupRoot))
         {
@@ -1256,8 +1256,6 @@ namespace VaultSync.UI.ViewModels
 
                 // 2) One segment per project for its latest snapshot size, as percent of total disk.
                 int addedProjectSegments = 0;
-        if (perProject != null)
-        {
             var orderedProjects = perProject
                 .Where(p => p.bytes > 0)
                 .OrderByDescending(p => p.bytes)
@@ -1304,11 +1302,10 @@ namespace VaultSync.UI.ViewModels
                     Lf("Dashboard.Storage.MoreProjectsTooltip", "{0} additional projects: {1}", remainingProjects.Count, FormatBytes(remainingBytes))));
                 addedProjectSegments += remainingProjects.Count;
             }
-        }
 
         // Guard: if disk-based projection collapses to only "Other" while we do have
         // project bytes, switch to VaultSync-relative fallback so the breakdown is visible.
-        if (addedProjectSegments == 0 && (perProject?.Any(p => p.bytes > 0) ?? false))
+        if (addedProjectSegments == 0 && perProject.Any(p => p.bytes > 0))
         {
             BuildBackupUsageBarFromVaultSync(perProject, vaultSyncBytes);
             return;

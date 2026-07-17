@@ -264,7 +264,7 @@ namespace VaultSync.UI.ViewModels
                 var projectBox = new TextBox
                 {
                     Width = 360,
-                    Watermark = L("Settings.Encryption.RotateProjectFilterWatermark", "Leave empty to rotate all encrypted backups")
+                    PlaceholderText = L("Settings.Encryption.RotateProjectFilterWatermark", "Leave empty to rotate all encrypted backups")
                 };
 
                 var oldPasswordLabel = new TextBlock

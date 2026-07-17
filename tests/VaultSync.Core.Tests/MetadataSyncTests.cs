@@ -20,6 +20,47 @@ public sealed class MetadataSyncTests : IDisposable
     private readonly List<TempDirectory> _tempDirs = [];
 
     [Fact]
+    public async System.Threading.Tasks.Task PreviewImportFromStoreAsync_WithEmptyPath_ReleasesItsPerRootGate()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var service = new MetadataSyncService(CreateRepository(dbPath));
+
+        MetadataSyncPreview first = await service.PreviewImportFromStoreAsync(string.Empty);
+        MetadataSyncPreview second = await service.PreviewImportFromStoreAsync(string.Empty);
+
+        Assert.Equal(MetadataSyncStatus.InvalidPath, first.Status);
+        Assert.Equal(MetadataSyncStatus.InvalidPath, second.Status);
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task PreviewImportFromStoreAsync_WithInvalidFullPath_UsesAStableFallbackGate()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        var service = new MetadataSyncService(CreateRepository(dbPath));
+
+        MetadataSyncPreview preview = await service.PreviewImportFromStoreAsync("invalid\0root");
+
+        Assert.Equal(MetadataSyncStatus.NoStore, preview.Status);
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task ExportBackupTombstoneToStoreAsync_PersistsTombstoneAndReleasesItsPerRootGate()
+    {
+        string rootPath = CreateTempDir();
+
+        await MetadataSyncService.ExportBackupTombstoneToStoreAsync(
+            rootPath,
+            "backup-deleted",
+            "1.8.3",
+            "machine-a");
+
+        MetaTombstone tombstone = Assert.Single(new MetadataStore(rootPath).ListTombstones());
+        Assert.Equal("backup", tombstone.EntityType);
+        Assert.Equal("backup-deleted", tombstone.EntityId);
+        Assert.Equal("machine-a", tombstone.OriginMachineId);
+    }
+
+    [Fact]
     public void ImportFromStore_ImportsBackupWhenPathExists_AndMarksRestore()
     {
         string metaRoot = CreateTempDir();
@@ -1373,8 +1414,6 @@ public sealed class MetadataSyncTests : IDisposable
     {
         string metaRoot = CreateTempDir();
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
-        Func<Project, string> previousResolver = MetadataSyncService.ProjectColorResolver;
-        Action<string, string> previousApplier = MetadataSyncService.ProjectColorApplier;
         const string expectedAvatarColor = "#1A2B3C";
         string expectedTopPathsJson = JsonSerializer.Serialize(new[]
         {
@@ -1386,11 +1425,7 @@ public sealed class MetadataSyncTests : IDisposable
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         });
 
-        try
         {
-            MetadataSyncService.ProjectColorResolver = _ => expectedAvatarColor;
-            MetadataSyncService.ProjectColorApplier = null;
-
             SqliteRepository repo = CreateRepository(dbPath);
             int projectId = TestRepository.AddProject(repo, "Project Export Contract", CreateTempDir(), "unity", DateTime.UtcNow);
 
@@ -1414,7 +1449,7 @@ public sealed class MetadataSyncTests : IDisposable
                 backupMode: BackupModes.Incremental,
                 isProtected: true);
 
-            var service = new MetadataSyncService(repo);
+            var service = new MetadataSyncService(repo, projectColorResolver: _ => expectedAvatarColor);
             MetadataSyncResult result = service.ExportBackupToStore(metaRoot, backupId, "1.7.3", "machine-contract");
             Assert.Equal(MetadataSyncStatus.Success, result.Status);
 
@@ -1439,11 +1474,6 @@ public sealed class MetadataSyncTests : IDisposable
             Assert.True(metaBackup.IsProtected);
             Assert.Equal("machine-contract", metaBackup.OriginMachineName);
             Assert.Equal("Archive NAS", metaBackup.DestinationAlias);
-        }
-        finally
-        {
-            MetadataSyncService.ProjectColorResolver = previousResolver;
-            MetadataSyncService.ProjectColorApplier = previousApplier;
         }
     }
 
@@ -1609,8 +1639,6 @@ public sealed class MetadataSyncTests : IDisposable
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
         string projectRoot = CreateTempDir();
         var capturedColors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        Func<Project, string> previousResolver = MetadataSyncService.ProjectColorResolver;
-        Action<string, string> previousApplier = MetadataSyncService.ProjectColorApplier;
         const string projectExternalId = "proj-contract-import";
         const string snapshotExternalId = "snap-contract-import";
         const string backupExternalId = "backup-contract-import";
@@ -1627,11 +1655,7 @@ public sealed class MetadataSyncTests : IDisposable
 
         Directory.CreateDirectory(Path.Combine(metaRoot, backupPathRel));
 
-        try
         {
-            MetadataSyncService.ProjectColorResolver = null;
-            MetadataSyncService.ProjectColorApplier = (externalId, color) => capturedColors[externalId] = color;
-
             MetadataStore store = CreateStore(metaRoot);
             SeedMetaInfo(store, "machine-import-source");
             store.UpsertProject(new MetaProject
@@ -1675,7 +1699,9 @@ public sealed class MetadataSyncTests : IDisposable
             });
 
             SqliteRepository repo = CreateRepository(dbPath);
-            var service = new MetadataSyncService(repo);
+            var service = new MetadataSyncService(
+                repo,
+                projectColorApplier: (externalId, color) => capturedColors[externalId] = color);
             MetadataSyncResult result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
 
             Assert.Equal(MetadataSyncStatus.Success, result.Status);
@@ -1697,11 +1723,6 @@ public sealed class MetadataSyncTests : IDisposable
             Assert.True(importedBackup.IsProtected);
             Assert.Equal("machine-import-source", importedBackup.OriginMachineName);
             Assert.Equal("Remote Vault", importedBackup.DestinationAlias);
-        }
-        finally
-        {
-            MetadataSyncService.ProjectColorResolver = previousResolver;
-            MetadataSyncService.ProjectColorApplier = previousApplier;
         }
     }
 
@@ -1852,9 +1873,6 @@ public sealed class MetadataSyncTests : IDisposable
 
     public void Dispose()
     {
-        MetadataSyncService.ProjectColorResolver = null;
-        MetadataSyncService.ProjectColorApplier = null;
-
         foreach (TempDirectory directory in _tempDirs.OrderByDescending(directory => directory.Path.Length))
             directory.Dispose();
     }

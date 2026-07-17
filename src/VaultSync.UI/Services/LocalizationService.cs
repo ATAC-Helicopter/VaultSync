@@ -28,7 +28,15 @@ namespace VaultSync.UI.Services
             new LanguageOption { Code = "hi", DisplayName = "हिन्दी" },
             new LanguageOption { Code = "ar", DisplayName = "العربية" },
             new LanguageOption { Code = "bn", DisplayName = "বাংলা" },
-            new LanguageOption { Code = "ru", DisplayName = "Русский" }
+            new LanguageOption { Code = "ru", DisplayName = "Русский" },
+            new LanguageOption { Code = "id", DisplayName = "Bahasa Indonesia" },
+            new LanguageOption { Code = "ja", DisplayName = "日本語" },
+            new LanguageOption { Code = "ko", DisplayName = "한국어" },
+            new LanguageOption { Code = "nl", DisplayName = "Nederlands" },
+            new LanguageOption { Code = "pl", DisplayName = "Polski" },
+            new LanguageOption { Code = "tr", DisplayName = "Türkçe" },
+            new LanguageOption { Code = "uk", DisplayName = "Українська" },
+            new LanguageOption { Code = "vi", DisplayName = "Tiếng Việt" }
         ];
         public LocalizationService()
         {

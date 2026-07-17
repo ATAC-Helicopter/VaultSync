@@ -239,7 +239,7 @@
                 <Grid ColumnDefinitions="*,170"
                       ColumnSpacing="10"
                       Margin="0,8,0,0">
-                  <TextBox Watermark="{infra:LocalizedString Key=Recovery.Filter.SearchWatermark}"
+                  <TextBox PlaceholderText="{infra:LocalizedString Key=Recovery.Filter.SearchWatermark}"
                            Text="{CompiledBinding ProjectSearchText, Mode=TwoWay}" />
                   <ComboBox Grid.Column="1"
                             ItemsSource="{CompiledBinding ProjectFilters}"

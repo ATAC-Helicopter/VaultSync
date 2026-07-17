@@ -12,7 +12,23 @@ public sealed class NetworkMountService
 {
     private const string SmbScheme = "smb://";
 
-    private readonly CredentialVault _vault = CredentialVault.Instance;
+    private readonly Func<NetworkCredentialProfile?, string?> _passwordResolver;
+
+    public NetworkMountService()
+        : this(profile => profile is null
+            ? null
+            : CredentialVault.Instance.GetSecret(
+                profile.KeyRef,
+                profile.Username,
+                profile.UseKeychain,
+                profile.Password))
+    {
+    }
+
+    internal NetworkMountService(Func<NetworkCredentialProfile?, string?> passwordResolver)
+    {
+        _passwordResolver = passwordResolver ?? throw new ArgumentNullException(nameof(passwordResolver));
+    }
 
     public DestinationResolution PrepareDestination(BackupDestination dest, NetworkCredentialProfile? profile)
     {
@@ -82,12 +98,10 @@ public sealed class NetworkMountService
         }
 
         Log($"Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
-        string? password = profile is null
-            ? null
-            : _vault.GetSecret(profile.KeyRef, profile.Username, profile.UseKeychain, profile.Password);
 
         if (OperatingSystem.IsWindows())
         {
+            string? password = ResolvePassword(profile);
             return ConnectWindowsShare(dest, normalizedPath, profile, password);
         }
 
@@ -100,7 +114,7 @@ public sealed class NetworkMountService
                     "NFS auto-mount is not supported on macOS. Pre-mount the share and use the local mount path with Auto-mount disabled.");
             }
 
-            return MountMacShare(dest, normalizedPath, profile, password);
+            return MountMacShare(dest, normalizedPath, profile);
         }
 
         return DestinationResolution.CreateFailure(dest, "Auto-mount is only supported on Windows and macOS.");
@@ -120,6 +134,11 @@ public sealed class NetworkMountService
         {
             UnmountMac(resolution);
         }
+    }
+
+    private string? ResolvePassword(NetworkCredentialProfile? profile)
+    {
+        return _passwordResolver(profile);
     }
 
     private static DestinationResolution ConnectWindowsShare(
@@ -281,11 +300,10 @@ public sealed class NetworkMountService
         return detail.Contains("1219", StringComparison.Ordinal);
     }
 
-    private static DestinationResolution MountMacShare(
+    private DestinationResolution MountMacShare(
         BackupDestination dest,
         string normalizedPath,
-        NetworkCredentialProfile? profile,
-        string? password)
+        NetworkCredentialProfile? profile)
     {
         if (!TryParseShareWithSubpath(normalizedPath, out string? shareHost, out string? shareName, out string? shareSubPath))
         {
@@ -338,6 +356,10 @@ public sealed class NetworkMountService
             string effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
             return CreateSuccessWithKeepAlive(dest, effectivePath, mounted: false, $"Mounted {DisplayName(dest)}");
         }
+
+        // Only unlock the native credential when a new mount is actually needed.
+        // Existing SMB mounts remain usable after login without a Keychain prompt.
+        string? password = ResolvePassword(profile);
 
         if (!string.IsNullOrWhiteSpace(password) && profile is not null && string.IsNullOrWhiteSpace(profile.Username))
         {

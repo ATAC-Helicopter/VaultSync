@@ -9,6 +9,21 @@
         Height="600"
         Title="{infra:LocalizedString Key=LogConsole.WindowTitle}"
         WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <Style Selector="ListBox#LogList ListBoxItem">
+      <Setter Property="Padding" Value="2" />
+      <Setter Property="Margin" Value="0,1" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="ListBox#LogList ListBoxItem:pointerover">
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+    </Style>
+    <Style Selector="ListBox#LogList ListBoxItem:selected">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+  </Window.Styles>
   <Grid RowDefinitions="Auto,*" Margin="{DynamicResource PagePadding}" RowSpacing="{DynamicResource PageRowSpacing}">
     <Border Classes="card"
             Margin="0"

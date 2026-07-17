@@ -15,6 +15,18 @@ internal static class DiagnosticsLogger
     private const int MaxRecent = 1000;
     private const int MaxFirstChanceTotal = 250;
     private const int MaxFirstChancePerSignature = 5;
+    private const int MaxHangDumpFiles = 2;
+    private const long MaxDiagnosticsBytes = 1024L * 1024L * 1024L;
+    private const string ProductDirectoryName = "VaultSync";
+    private const string DiagnosticsDirectoryName = "diagnostics";
+    private static readonly TimeSpan DiagnosticsPruneInterval = TimeSpan.FromHours(6);
+    private static readonly string[] RetainedDiagnosticPatterns =
+    [
+        "session-*.log",
+        "sample-*.txt",
+        "hangdump-*.dmp",
+        "trace-*.log"
+    ];
     private static readonly ConcurrentQueue<string> Recent = new();
     private static readonly ConcurrentQueue<string> PendingWrites = new();
     private static readonly ConcurrentDictionary<string, int> FirstChanceCounts = new(StringComparer.Ordinal);
@@ -23,6 +35,7 @@ internal static class DiagnosticsLogger
     private static string? _sessionPath;
     private static string? _heartbeatPath;
     private static Timer? _heartbeatTimer;
+    private static Timer? _retentionTimer;
     private static Task? _writerTask;
     private static CancellationTokenSource? _writerCts;
     private static readonly AutoResetEvent WriterSignal = new(false);
@@ -45,8 +58,8 @@ internal static class DiagnosticsLogger
         {
             string dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "VaultSync",
-                "diagnostics");
+                ProductDirectoryName,
+                DiagnosticsDirectoryName);
             Directory.CreateDirectory(dir);
             PruneDiagnostics(dir);
             _sessionPath = Path.Combine(dir, $"session-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
@@ -56,6 +69,7 @@ internal static class DiagnosticsLogger
             InstallTraceListener();
             InstallConsoleMirroring();
             StartHeartbeat();
+            StartPeriodicRetention(dir);
             Record("Diagnostics session started.");
         }
         catch
@@ -90,6 +104,9 @@ internal static class DiagnosticsLogger
     {
         Timer? heartbeatTimer = Interlocked.Exchange(ref _heartbeatTimer, null);
         heartbeatTimer?.Dispose();
+
+        Timer? retentionTimer = Interlocked.Exchange(ref _retentionTimer, null);
+        retentionTimer?.Dispose();
 
         CancellationTokenSource? writerCts = Interlocked.Exchange(ref _writerCts, null);
         if (writerCts is not null)
@@ -338,6 +355,15 @@ internal static class DiagnosticsLogger
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
     }
 
+    private static void StartPeriodicRetention(string diagnosticsDirectory)
+    {
+        _retentionTimer = new Timer(
+            _ => PruneDiagnostics(diagnosticsDirectory),
+            null,
+            DiagnosticsPruneInterval,
+            DiagnosticsPruneInterval);
+    }
+
     private static void StartWriter()
     {
         if (Interlocked.Exchange(ref _writerStarted, 1) == 1)
@@ -397,14 +423,18 @@ internal static class DiagnosticsLogger
         }
     }
 
-    private static void PruneDiagnostics(string dir)
+    internal static void PruneDiagnostics(
+        string dir,
+        int maxHangDumpFiles = MaxHangDumpFiles,
+        long maxDiagnosticsBytes = MaxDiagnosticsBytes)
     {
         try
         {
             PruneByPattern(dir, "session-*.log", keep: 5);
             PruneByPattern(dir, "sample-*.txt", keep: 5);
-            PruneByPattern(dir, "hangdump-*.dmp", keep: 5);
+            PruneByPattern(dir, "hangdump-*.dmp", keep: maxHangDumpFiles);
             PruneByPattern(dir, "trace-*.log", keep: 5);
+            PruneToTotalSize(dir, maxDiagnosticsBytes);
         }
         catch
         {
@@ -414,9 +444,6 @@ internal static class DiagnosticsLogger
 
     private static void PruneByPattern(string dir, string pattern, int keep)
     {
-        if (keep <= 0)
-            return;
-
         var files = Directory.GetFiles(dir, pattern)
             .Select(path => new FileInfo(path))
             .OrderByDescending(fi => fi.LastWriteTimeUtc)
@@ -438,6 +465,43 @@ internal static class DiagnosticsLogger
         }
     }
 
+    private static void PruneToTotalSize(string dir, long maxBytes)
+    {
+        if (maxBytes < 0)
+            return;
+
+        var files = RetainedDiagnosticPatterns
+            .SelectMany(pattern => Directory.GetFiles(dir, pattern))
+            .Distinct(StringComparer.Ordinal)
+            .Select(path => new FileInfo(path))
+            .OrderByDescending(fi => fi.LastWriteTimeUtc)
+            .ToList();
+
+        long retainedBytes = 0;
+        foreach (FileInfo file in files)
+        {
+            if (file.Length <= maxBytes - retainedBytes)
+            {
+                retainedBytes += file.Length;
+                continue;
+            }
+
+            TryDeleteDiagnostic(file);
+        }
+    }
+
+    private static void TryDeleteDiagnostic(FileInfo file)
+    {
+        try
+        {
+            file.Delete();
+        }
+        catch
+        {
+            // Diagnostics retention is best effort.
+        }
+    }
+
     public static void TryCollectDump(string reason)
     {
         if (Interlocked.Exchange(ref _dumpAttempted, 1) == 1)
@@ -446,74 +510,97 @@ internal static class DiagnosticsLogger
         if (Interlocked.Exchange(ref _dumpInFlight, 1) == 1)
             return;
 
-        _ = Task.Run(() =>
+        _ = Task.Run(() => CollectDump(reason));
+    }
+
+    private static void CollectDump(string reason)
+    {
+        bool shouldSample = false;
+        string diagnosticsDirectory = GetDiagnosticsDirectory();
+        try
         {
-            bool shouldSample = false;
-            try
+            Directory.CreateDirectory(diagnosticsDirectory);
+            string output = Path.Combine(diagnosticsDirectory, $"hangdump-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.dmp");
+            string dotnetDump = ResolveExecutablePath("dotnet-dump");
+            if (string.IsNullOrWhiteSpace(dotnetDump))
             {
-                string dir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "VaultSync",
-                    "diagnostics");
-                Directory.CreateDirectory(dir);
-                string output = Path.Combine(dir, $"hangdump-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.dmp");
-                string dotnetDump = ResolveExecutablePath("dotnet-dump");
-                if (string.IsNullOrWhiteSpace(dotnetDump))
-                {
-                    Record("dotnet-dump not found in PATH; skipping dump collection.");
-                    shouldSample = true;
-                    return;
-                }
-
-                var psi = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = dotnetDump,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                psi.ArgumentList.Add("collect");
-                psi.ArgumentList.Add("--process-id");
-                psi.ArgumentList.Add(Environment.ProcessId.ToString());
-                psi.ArgumentList.Add("--type");
-                psi.ArgumentList.Add("full");
-                psi.ArgumentList.Add("--output");
-                psi.ArgumentList.Add(output);
-
-                Record($"Attempting dump collection: reason='{reason}', output='{output}'.");
-                using var proc = System.Diagnostics.Process.Start(psi);
-                if (proc is null)
-                {
-                    Record("dotnet-dump failed to start.");
-                    return;
-                }
-                proc.WaitForExit(20_000);
-                string stderr = proc.StandardError.ReadToEnd().Trim();
-                string stdout = proc.StandardOutput.ReadToEnd().Trim();
-                if (!string.IsNullOrWhiteSpace(stdout))
-                    Record($"dotnet-dump stdout: {stdout}");
-                if (!string.IsNullOrWhiteSpace(stderr))
-                    Record($"dotnet-dump stderr: {stderr}");
-                Record($"dotnet-dump exit code: {proc.ExitCode}.");
-                shouldSample = proc.ExitCode != 0;
-            }
-            catch (Exception ex)
-            {
-                Record($"dotnet-dump failed: {ex.GetType().Name} - {ex.Message}");
+                Record("dotnet-dump not found in PATH; skipping dump collection.");
                 shouldSample = true;
             }
-            finally
+            else
             {
-                Interlocked.Exchange(ref _dumpInFlight, 0);
+                shouldSample = RunDumpCollector(dotnetDump, output, reason);
             }
+        }
+        catch (Exception ex)
+        {
+            Record($"dotnet-dump failed: {ex.GetType().Name} - {ex.Message}");
+            shouldSample = true;
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _dumpInFlight, 0);
+            PruneDiagnostics(diagnosticsDirectory);
+        }
 
-            if (shouldSample && OperatingSystem.IsMacOS())
-            {
-                TryCollectSample(reason);
-            }
-        });
+        if (shouldSample && OperatingSystem.IsMacOS())
+            TryCollectSample(reason);
     }
+
+    private static bool RunDumpCollector(string dotnetDump, string output, string reason)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = dotnetDump,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        psi.ArgumentList.Add("collect");
+        psi.ArgumentList.Add("--process-id");
+        psi.ArgumentList.Add(Environment.ProcessId.ToString());
+        psi.ArgumentList.Add("--type");
+        psi.ArgumentList.Add("Mini");
+        psi.ArgumentList.Add("--output");
+        psi.ArgumentList.Add(output);
+
+        Record($"Attempting dump collection: reason='{reason}', output='{output}'.");
+        using Process? process = Process.Start(psi);
+        if (process is null)
+        {
+            Record("dotnet-dump failed to start.");
+            return false;
+        }
+
+        if (!process.WaitForExit(20_000))
+        {
+            Record("dotnet-dump timed out after 20 seconds; terminating collection.");
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit(5_000);
+            TryDeleteDiagnostic(new FileInfo(output));
+            return true;
+        }
+
+        RecordProcessOutput(process);
+        return process.ExitCode != 0;
+    }
+
+    private static void RecordProcessOutput(Process process)
+    {
+        string stderr = process.StandardError.ReadToEnd().Trim();
+        string stdout = process.StandardOutput.ReadToEnd().Trim();
+        if (!string.IsNullOrWhiteSpace(stdout))
+            Record($"dotnet-dump stdout: {stdout}");
+        if (!string.IsNullOrWhiteSpace(stderr))
+            Record($"dotnet-dump stderr: {stderr}");
+        Record($"dotnet-dump exit code: {process.ExitCode}.");
+    }
+
+    private static string GetDiagnosticsDirectory() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        ProductDirectoryName,
+        DiagnosticsDirectoryName);
 
     private static string ResolveExecutablePath(string fileName)
     {
@@ -564,8 +651,8 @@ internal static class DiagnosticsLogger
         {
             string dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "VaultSync",
-                "diagnostics");
+                ProductDirectoryName,
+                DiagnosticsDirectoryName);
             Directory.CreateDirectory(dir);
             string output = Path.Combine(dir, $"sample-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.txt");
             var psi = new System.Diagnostics.ProcessStartInfo

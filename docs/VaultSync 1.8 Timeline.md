@@ -597,6 +597,13 @@ Supported:
 - YAML
 - Code files
 
+Implementation notes:
+
+- Git-style unified diffs are available for readable files in reachable folder and ZIP snapshots.
+- Diff input and output are bounded so large/generated files cannot block the desktop UI.
+- Encrypted, binary, offline, and unsupported content remains available as metadata-only change information.
+- Changed files can be searched and filtered by added, modified, or deleted state.
+
 ---
 
 ## Large Change Detection
@@ -604,7 +611,7 @@ Supported:
 Highlight:
 
 - Mass deletions
-- Significant growth
+- Large growth
 - Unusual activity
 
 ---

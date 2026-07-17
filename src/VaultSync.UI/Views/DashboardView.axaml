@@ -3,9 +3,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
     xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
+    xmlns:vm="using:VaultSync.UI.ViewModels"
     xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
     x:Class="VaultSync.UI.Views.DashboardView"
-    x:CompileBindings="False"
+    x:DataType="vm:DashboardViewModel"
     Background="{DynamicResource VS.WindowBackground}">
 
   <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -245,8 +246,13 @@
         </StackPanel>
       </Border>
 
-      <Grid Grid.Row="2" ColumnDefinitions="1.65*,0.85*" ColumnSpacing="16" Margin="4,12,4,0">
-        <Border Grid.Column="0"
+      <Grid x:Name="ActivitySectionsGrid"
+            Grid.Row="2"
+            ColumnDefinitions="1.65*,0.85*"
+            ColumnSpacing="16"
+            Margin="4,12,4,0">
+        <Border x:Name="WeeklyActivityCard"
+                Grid.Column="0"
                 Classes="card"
                 Background="{DynamicResource Surface2}"
                 Padding="{DynamicResource CardPaddingSmall}">
@@ -258,8 +264,15 @@
               </Border>
             </Grid>
 
-            <Grid Grid.Row="1" ColumnDefinitions="4.4*,7.6*" ColumnSpacing="12">
-              <Border Grid.Column="0" Background="#24304A" CornerRadius="12" Padding="12">
+            <Grid x:Name="WeeklyActivityContentGrid"
+                  Grid.Row="1"
+                  ColumnDefinitions="4.4*,7.6*"
+                  ColumnSpacing="12">
+              <Border x:Name="WeeklyActivitySummary"
+                      Grid.Column="0"
+                      Background="#24304A"
+                      CornerRadius="12"
+                      Padding="12">
                 <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
                   <WrapPanel Grid.Row="0" ItemSpacing="10" LineSpacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -291,7 +304,13 @@
                 </Grid>
               </Border>
 
-              <Border Grid.Column="1" Background="#1E293D" CornerRadius="12" Padding="12" MinHeight="320" VerticalAlignment="Stretch">
+              <Border x:Name="WeeklyActivityChart"
+                      Grid.Column="1"
+                      Background="#1E293D"
+                      CornerRadius="12"
+                      Padding="12"
+                      MinHeight="320"
+                      VerticalAlignment="Stretch">
                 <Grid RowDefinitions="*,Auto,Auto" RowSpacing="8">
                   <Grid Grid.Row="0">
                     <Canvas VerticalAlignment="Bottom">
@@ -357,7 +376,8 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="1"
+        <Border x:Name="RecentActivityCard"
+                Grid.Column="1"
                 Classes="card"
                 Padding="{DynamicResource CardPaddingSmall}">
           <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
@@ -426,18 +446,26 @@
         </Border>
       </Grid>
 
-      <Grid Grid.Row="3" ColumnDefinitions="1.15*,0.85*" ColumnSpacing="16" Margin="4,12,4,0">
-        <Border Grid.Column="0"
+      <Grid x:Name="StorageSectionsGrid"
+            Grid.Row="3"
+            ColumnDefinitions="1.15*,0.85*"
+            ColumnSpacing="16"
+            Margin="4,12,4,0">
+        <Border x:Name="StorageUsageCard"
+                Grid.Column="0"
                 Classes="card"
                 Padding="{DynamicResource CardPaddingSmall}"
                 HorizontalAlignment="Stretch"
                 ClipToBounds="True">
           <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <Grid x:Name="StorageHeaderGrid"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
               <TextBlock Text="{infra:LocalizedString Key=Dashboard.Section.StorageUsage}"
                          Classes="section-title"
                          Margin="0,0,0,2"/>
-              <ComboBox Grid.Column="1"
+              <ComboBox x:Name="StorageSortSelector"
+                        Grid.Column="1"
                         ItemsSource="{Binding StorageSortOptions}"
                         SelectedItem="{Binding SelectedStorageSortOption}"
                         MinWidth="150"
@@ -450,9 +478,27 @@
               </ComboBox>
             </Grid>
 
-            <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="14" VerticalAlignment="Top">
-              <Grid Grid.Column="0" Width="300" Height="300" HorizontalAlignment="Center" VerticalAlignment="Top">
-                <Border Width="290" Height="290" CornerRadius="145" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="14" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Top" Opacity="0.35"/>
+            <Grid x:Name="StorageBreakdownGrid"
+                  Grid.Row="1"
+                  ColumnDefinitions="Auto,*"
+                  ColumnSpacing="14"
+                  VerticalAlignment="Top">
+              <Grid x:Name="StorageDonutHost"
+                    Grid.Column="0"
+                    Width="300"
+                    Height="300"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top">
+                <Border x:Name="StorageDonutTrack"
+                        Width="290"
+                        Height="290"
+                        CornerRadius="145"
+                        BorderBrush="{DynamicResource DividerBrush}"
+                        BorderThickness="14"
+                        Background="Transparent"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Top"
+                        Opacity="0.35"/>
 
                 <lvc:PieChart x:Name="StorageDonutChart"
                               Series="{Binding StorageSeries}"
@@ -471,7 +517,11 @@
                 </StackPanel>
               </Grid>
 
-              <ItemsControl Grid.Column="1" ItemsSource="{Binding StorageLegend}" VerticalAlignment="Center" Margin="0,8,0,0">
+              <ItemsControl x:Name="StorageLegendList"
+                            Grid.Column="1"
+                            ItemsSource="{Binding StorageLegend}"
+                            VerticalAlignment="Center"
+                            Margin="0,8,0,0">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
                     <StackPanel/>
@@ -498,7 +548,8 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="1"
+        <Border x:Name="BackupStorageCard"
+                Grid.Column="1"
                 Classes="card"
                 Padding="{DynamicResource CardPaddingSmall}">
           <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">

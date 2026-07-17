@@ -362,7 +362,7 @@
   - Acceptance tests:
     - Integration: opening `.vse` triggers password dialog and opens extracted temp folder on success.
     - Integration: wrong password shows explicit error and leaves no partial extracted data.
-    - Regression: standard �open backup folder� behavior remains unchanged.
+    - Regression: standard “open backup folder” behavior remains unchanged.
 - [x] `VS-1536` Existing-backup key rotation job.
   - Scope: explicit user-triggered re-encryption of existing encrypted backups from old key to new key (project or global scope) with atomic replacement.
   - Depends on: `VS-1533`, `VS-1534`.
@@ -989,7 +989,7 @@
   - What it takes:
     - persist per-destination quota/threshold settings.
     - rank cleanup candidates from existing retention metadata without suggesting protected backups.
-    - surface �space to recover� estimates and tie into health/readiness panels.
+    - surface “space to recover” estimates and tie into health/readiness panels.
   - Current status:
     - Settings > Advanced now persists per-destination soft quota and warning-threshold values.
     - Backups destination cards now show stored bytes plus cleanup suggestions derived from unprotected backup candidates only.
@@ -1079,7 +1079,7 @@
 - [x] `VS-1711` `P0` Backup chain preflight before retention prune. _(Done)_
   - Scope: validate there is at least one restorable point per project before pruning non-protected backups.
   - What it takes:
-    - define �restorable point� precisely across direct/sandbox/encrypted/imported histories.
+    - define “restorable point” precisely across direct/sandbox/encrypted/imported histories.
     - integrate with retention planner before delete execution, not after.
     - emit clear block reasons when prune would violate restore safety.
   - Current status:
@@ -1157,7 +1157,7 @@
   - Scope: guided repair actions for common states (orphaned links, unreachable destination, stale verification, inconsistent metadata cache).
   - What it takes:
     - reusable doctor card/action model with dry-run/apply + remediation guidance.
-    - action-specific validators for �can run now�, �needs destination online�, �needs user choice�.
+    - action-specific validators for “can run now”, “needs destination online”, “needs user choice”.
     - support/diagnostic logging for every doctor action.
   - Depends on:
     - `VS-1702`
@@ -1781,6 +1781,15 @@
 - `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
 - `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
 - `1.8.2` Snapshot Explorer scope is tracked by the dedicated GitHub milestone `1.8.2`.
+- `1.8.3` Compare & Change Intelligence, security, maintenance, and diagnostics hardening is tracked by the dedicated GitHub milestone `1.8.3` and release PR #410.
+
+### 1.8.3 status (2026-07-13)
+- Compare & Change Intelligence is active under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
+- The maintenance scope covers release-script output confinement, Snapshot Explorer and snapshot-pipeline decomposition, CLI/UI complexity reduction, and analyzer cleanup.
+- Diagnostics retention now runs at startup and every six hours on every platform, with at most two hang dumps and a 1 GiB total diagnostics budget.
+- The original 18 `Dev` commits are preserved in release-branch ancestry through merge commit `76d2b3e`; no shared history was rewritten.
+- Release preparation and validation continue in draft PR #410.
+- The final UI pass clarifies earlier/later comparison, compresses the changed-file review workspace, makes Dashboard cards responsive at narrow widths, and hardens frameless-window, selection, and storage-picker interactions under Avalonia 12.
 
 ### 1.8.1 status (2026-06-23)
 - Release theme: complete the Recovery Intelligence slice planned in `docs/VaultSync 1.8 Timeline.md`.
@@ -1815,13 +1824,25 @@
   - Done: added core folder/archive browsing, search, safe text preview, and selected file/folder restore helpers.
   - Done: added a Backups-page Explore action and Snapshot Explorer window for backup cards.
   - Done: Snapshot Explorer browsing, preview, and selected restore work runs asynchronously, all user-facing strings are localized, and encrypted backups show an explicit v1 out-of-scope message that routes users to normal restore.
-- [ ] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(Deferred to a later 1.8.x release before 1.9; tracked by #361)_
+- [ ] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(In progress; tracked by #361; target 1.8.3)_
   - Scope: compare two backups/snapshots and show a changed-file tree with added, modified, deleted, and unchanged states.
   - Scope: integrate with Snapshot Explorer so users can browse changed files and inspect readable text/code changes without leaving the explorer context.
   - Scope: add line-by-line text/code diffs for previewable files; binary/encrypted/unavailable files should show clear metadata-only or unsupported states.
   - Acceptance: users can select older/newer restore points and understand what changed before restoring.
   - Acceptance: large snapshots stay responsive through async loading, search/filtering, and capped preview work.
   - Acceptance: existing summary diff cards and A/B restore-point compare remain intact, but the new view provides file-level detail.
+  - Done: arbitrary same-project snapshots now compare their stored file inventories asynchronously with added, modified, deleted, and unchanged classification.
+  - Done: the compare result includes changed-path hotspots plus mass-deletion, significant-growth, and high-churn signals.
+  - Done: Backups renders a searchable changed-file workspace with real size deltas instead of showing only the newer snapshot's aggregate summary.
+  - Done: selecting a readable file produces a bounded Git-style unified diff from reachable folder or ZIP snapshots; encrypted, binary, offline, and unsupported content falls back to an explicit metadata-only state.
+  - Done: changed-file search and added/modified/deleted filters keep large comparisons navigable.
+  - Done: comparison QoL suggests a nearby same-project restore point, explains invalid selections, supports cancellation, reports filtered/capped counts, and distinguishes no-change from no-match states.
+  - Done: focused view-model coverage verifies selection guidance and a 10,000-file inventory regression test verifies large comparisons retain all changes.
+  - Done: changed-file selection now cancels superseded unified-diff computation instead of only suppressing stale presentation.
+  - Done: the changed-file workspace supports previous/next navigation and one-click search/filter clearing for faster keyboard-friendly review.
+  - Done: compare presentation now uses compact app-native summary cards, distinguishes unavailable inventory from verified no-change results, and hides the large file workspace when there are no changed files to inspect.
+  - Done: the final UX pass adds labeled earlier/later selectors, plain-language result copy, compact affected-path chips, a two-pane files-to-diff workspace, vector controls, and keyboard-friendly default/cancel behavior.
+  - Remaining: perform a manual desktop interaction pass before closing #361.
 - [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
@@ -1853,11 +1874,11 @@
   - Done: SQLitePCLRaw 3.0.3 resolves a maintained native SQLite graph and the full vulnerability audit is clean.
 - [x] `VS-1820` `P1` Complete 1.8.0 release-readiness hardening. _(Done 2026-06-18, tracked by #379)_
   - Done: Dashboard recovery coverage, locale key parity, release docs, release-gate milestone scoping, and regression tests are complete.
-- [ ] `BUG-18056` `P1` Fix Linux `.deb` patch and reinstall updater flows. _(In progress; tracked by #394; target 1.8.1)_
+- [x] `BUG-18056` `P1` Fix Linux `.deb` patch and reinstall updater flows. _(Done 2026-06-25; tracked by #394; released in 1.8.1)_
   - Done locally: elevated Linux patch application runs headlessly after `pkexec` authentication.
   - Done locally: `.deb` fallback uses `apt-get install --reinstall` and helper failures return a non-zero exit code.
   - Done: Windows/Linux CI, updater-focused coverage, CodeQL, SonarQube, and dependency checks pass on `Dev`.
-  - Remaining: validate patch and full-package update behavior on a protected `/opt/vaultsync` install before publishing 1.8.1.
+  - Released: the guarded patch and full-package updater work shipped in 1.8.1; further distro validation remains ongoing release QA rather than open implementation scope.
 - [x] `BUG-18057` `P1` Prevent multiple VaultSync UI instances on Linux. _(Done 2026-06-22, tracked by #397; target 1.8.1)_
   - Done: Linux startup holds a per-user OS file lock for the UI process lifetime and repeated launches signal the existing instance.
   - Done: regression coverage verifies that concurrent acquisition is rejected and the lock becomes available after shutdown.
@@ -1878,7 +1899,7 @@
   - Scope: make the documented `TargetMilestone` gate input filter Project completion independently from the broader `1.8.x` release train.
   - Acceptance: deferred later-train work does not block 1.8.1, while incomplete 1.8.1 milestone items remain visible.
   - Done: the live 1.8.1 pre-publish gate finds only milestone items and reports Linux updater and credential validation as the remaining blockers.
-- [ ] `VS-1825` `P0` Harden encrypted backup staging and platform credential integration. _(Implemented locally; tracked by #396; target 1.8.1)_
+- [x] `VS-1825` `P0` Harden encrypted backup staging and platform credential integration. _(Done 2026-06-25; tracked by #396; released in 1.8.1)_
   - Scope: encrypt archive artifacts before destination upload, isolate Linux Secret Service entries by `keyRef`, validate embedded crypto parameters, and reduce plaintext staging exposure.
   - Done locally: encrypted backups upload `data.vse` directly and never place `data.zip` on the destination.
   - Done locally: Linux store, lookup, cleanup, and deletion use both account and `key-ref` attributes.
@@ -1886,7 +1907,7 @@
   - Done locally: encryption output uses temporary atomic artifacts with cancellation cleanup, plus tamper, crash-cleanup, and platform credential contract tests.
   - Done locally: public encryption documentation explains the format, credential storage, threat model, temporary plaintext boundary, and password-loss implications.
   - Done: full Windows/Linux CI, CodeQL, SonarQube, quality gates, and dependency vulnerability audit pass on `Dev`.
-  - Remaining: validate Linux Secret Service save/read/delete behavior in a real desktop session.
+  - Released: encrypted staging and credential isolation shipped in 1.8.1; real-desktop Secret Service checks remain part of platform release QA.
 - [ ] `VS-1821` `P2` Split backup and metadata service complexity hotspots. _(Tracked by #380)_
   - Done: Sonar-flagged script path writes now route through workspace/child-path guards, download stats child-path validation handles macOS-resolved roots, encrypted archive IV handling has an analyzer-visible justification, and duplicated service literals were reduced across telemetry, drive health, support bundles, patch staging, SQLite schema checks, metadata sync, rsync lookup, and backup progress stages.
   - Remaining: split the large backup/metadata service methods that still drive cognitive-complexity findings.
@@ -1899,6 +1920,41 @@
   - Done: the overlay was rebuilt as an interactive progress card with actionable next-step copy, completed-state feedback, Back/Skip/Continue controls, and a non-blocking highlight mask for the target control.
 - [x] `VS-1830` `P2` Warn on reused changelog IDs during release readiness. _(Done locally; tracked by #408; target 1.8.2)_
   - Done: the release gate now reports repeated changelog work-item IDs as a warning with line-level details so maintainers can confirm each reused ID stays within one coherent scope.
+- [x] `VS-1831` `P2` Harden release-script output paths. _(Done; tracked by #411; target 1.8.3)_
+- [x] `VS-1832` `P2` Split Snapshot Explorer complexity hotspots. _(Done; tracked by #412; target 1.8.3)_
+- [x] `VS-1833` `P2` Split snapshot creation flow. _(Done; tracked by #413; target 1.8.3)_
+- [x] `VS-1834` `P2` Split CLI command complexity hotspots. _(Done; tracked by #414; target 1.8.3)_
+- [x] `VS-1835` `P2` Split Projects and Settings UI complexity hotspots. _(Done; tracked by #415; target 1.8.3)_
+- [x] `VS-1836` `P2` Complete Sonar analyzer cleanup. _(Done; tracked by #416; target 1.8.3)_
+- [x] `BUG-18059` `P1` Bound periodic diagnostics retention. _(Done; tracked by #417; target 1.8.3)_
+  - Done: cleanup runs at startup and every six hours on Windows, macOS, and Linux.
+  - Done: VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget and removes timed-out partial dumps.
+- [ ] `BUG-18060` `P0` Harden Snapshot Explorer archive extraction containment. _(In progress; tracked by #423; target 1.8.3)_
+  - Done locally: archive entry destinations are resolved and checked directly against the selected restore root immediately before extraction.
+  - Done locally: restore rejects linked/reparse-point path components and regression coverage includes traversal, rooted, backslash, and symlink escape attempts.
+  - Done: PR CodeQL analysis passes; the repository alert remains attached to the current Stable commit until the fix is merged.
+- [x] `VS-1838` `P2` Refresh safe 1.8.3 patch dependencies. _(Done 2026-07-12; tracked by #424; target 1.8.3)_
+  - Done: Avalonia 11, HarfBuzzSharp, and LiveCharts patch families are updated together, cross-platform CI passes, and the transitive vulnerability audit remains clean.
+  - Follow-up: the later Avalonia 12 decision is tracked separately under `VS-1839`; unrelated deprecated-package migrations remain deferred.
+- [ ] `VS-1839` `P1` Migrate the desktop UI to Avalonia 12. _(In progress; tracked by #425; target 1.8.3)_
+  - Done locally: the coordinated UI stack now uses Avalonia 12.1, its compatible SkiaSharp/HarfBuzzSharp ABI line, and the Avalonia 12 LiveCharts adapter.
+  - Done locally: the retired Avalonia diagnostics package is removed and placeholder/window-decoration APIs use their Avalonia 12 replacements.
+  - Done: compiled bindings remain enabled by default, Debug and Release builds are warning-free, 287 tests pass, a real macOS startup smoke reaches the Dashboard, and Windows/Linux CI plus CodeQL, Sonar, Store preflight, and dependency submission pass.
+  - Done: frameless utility windows reserve dragging for their title areas, Log Console selection is visible, folder pickers use Avalonia 12 local-path resolution, and Dashboard activity/storage layouts respond across six tested width breakpoints.
+  - Remaining: perform real Windows/Linux interaction checks for scaled-DPI utility windows, portal pickers, clipboard gestures, and Dashboard chart rendering.
+- [x] `VS-1840` `P1` Audit and harden fragile 1.8.3 code paths. _(Done 2026-07-12; tracked by #426; target 1.8.3)_
+  - Done: folder restores reject linked target components immediately before copying, matching archive extraction containment.
+  - Done: project scanning skips linked files and directories so cycles and out-of-root source traversal cannot enter snapshots.
+  - Done: snapshot comparison and archive browsing preserve case-distinct stored paths instead of collapsing Linux files such as `Foo` and `foo`.
+  - Done: archive encryption and decryption clear the temporary PBKDF2 result buffer in addition to the split key buffers.
+  - Done: all 22 exposed nullable-warning locations are corrected and the global suppression is removed; Debug/Release warning-as-error builds now enforce the complete baseline.
+  - Done: high-risk async UI commands are observed and single-flight, Recovery refresh is lifecycle-cancellable, and command failure/re-entry/cancellation behavior has focused coverage.
+  - Done: macOS credential storage uses native Security.framework calls, Linux helper timeouts terminate process trees, and credential index persistence is atomic, permission-restricted, and corruption-safe.
+  - Done: release packaging requires build, test, and vulnerability gates; AppImageKit is pinned and checksum-verified; required artifact uploads fail hard; macOS build/test runs in CI.
+  - Done: backup history renders incrementally, core Avalonia views use compiled bindings with explicit reflective exceptions only for typed ancestor handoffs, and compare controls expose accessible names/help.
+  - Done: metadata synchronization coordinates per destination instead of globally, presentation hooks are instance-injected, and required schema migration failures no longer leave a silently partial database.
+  - Validated: 320 tests pass locally, Debug and Release builds have zero warnings/errors with warnings treated as errors, analyzer verification passes, localization keys remain in parity, and the dependency vulnerability audit is clean.
+- [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
 
 ## Future backlog
 - [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.

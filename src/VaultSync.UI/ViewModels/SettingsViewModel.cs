@@ -101,7 +101,7 @@ namespace VaultSync.UI
         private bool _showDriveHealthWarnings = true;
         private int _minimumFreeSpacePercent = 10;
 
-    private string _selectedTheme;
+    private string _selectedTheme = ThemeSystem;
     private bool _useCompactLayout = false;
     private bool _showProjectAvatars = true;
     private string _saveStatus = string.Empty;
@@ -711,8 +711,9 @@ namespace VaultSync.UI
             _backupEncryptionAllowSessionFallback = cfg.Backups.Encryption.AllowSessionFallback;
             _backupEncryptionOpenUnlockTimeoutMinutes = ClampInt(cfg.Backups.Encryption.OpenUnlockTimeoutMinutes, 1, 240, 10);
             _backupEncryptionKeyRef = cfg.Backups.Encryption.KeyRef ?? string.Empty;
-            _backupEncryptionHasSecret = !string.IsNullOrWhiteSpace(
-                _backupEncryptionSecretService.GetSecret(_backupEncryptionKeyRef, BackupEncryptionCredentialIdentity.AccountName));
+            // Startup status is based on the credential index. Reading the secret
+            // here would unlock Keychain before the user requests encrypted work.
+            _backupEncryptionHasSecret = _credentialVault.HasStoredSecret(_backupEncryptionKeyRef);
             _backupEncryptionPasswordInput = string.Empty;
             _backupEncryptionSecretStatus = _backupEncryptionHasSecret
                 ? L("Settings.Encryption.SecretStatusAvailable", "Password is enrolled in secure storage.")
@@ -800,7 +801,6 @@ namespace VaultSync.UI
         private NetworkCredentialViewModel CreateCredentialViewModel(NetworkCredentialProfile cred)
         {
             string keyRef = CredentialVault.EnsureKeyRef(cred.KeyRef, cred.Name);
-            string? secret = _credentialVault.GetSecret(keyRef, cred.Username, cred.UseKeychain, cred.Password);
             return new NetworkCredentialViewModel
             {
                 Name = cred.Name,
@@ -808,7 +808,10 @@ namespace VaultSync.UI
                 Domain = cred.Domain ?? string.Empty,
                 KeyRef = keyRef,
                 UseKeychain = cred.UseKeychain,
-                Password = secret ?? string.Empty
+                // Loading Settings must not unlock every native credential. A blank
+                // field means "keep the enrolled secret"; plaintext is present only
+                // for legacy/fallback profiles and still needs to remain editable.
+                Password = cred.Password ?? string.Empty
             };
         }
 
@@ -931,11 +934,11 @@ namespace VaultSync.UI
                 : BackupLocationPath;
             string? nextBackupRoot = ResolveBackupRootForSave(fallbackRoot, cfg.Backups.BackupRoot ?? cfg.Backups.Location);
             List<BackupDestination> nextDestinations = preserveExistingDestinations
-                ? [.. cfg.Backups.Destinations]
+                ? [.. cfg.Backups.Destinations!]
                 : [.. destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
-                Path           = d.Path,
+                Path           = d.Path ?? string.Empty,
                 CredentialName = d.CredentialName,
                 Active         = d.Active,
                 AutoMount      = d.AutoMount,
@@ -1113,7 +1116,9 @@ namespace VaultSync.UI
         private CredentialSaveResult SaveCredentialSnapshot(CredentialSnapshot credential)
         {
             string keyRef = CredentialVault.EnsureKeyRef(credential.KeyRef, credential.Name);
-            string? secret = ResolveCredentialSecret(credential, keyRef);
+            string? secret = string.IsNullOrWhiteSpace(credential.Password)
+                ? null
+                : credential.Password;
             bool persistPlaintext = TrySaveCredentialSecret(credential, keyRef, secret);
 
             var profile = new NetworkCredentialProfile
@@ -1127,13 +1132,6 @@ namespace VaultSync.UI
             };
 
             return new CredentialSaveResult(profile, persistPlaintext);
-        }
-
-        private string? ResolveCredentialSecret(CredentialSnapshot credential, string keyRef)
-        {
-            return !string.IsNullOrWhiteSpace(credential.Password)
-                ? credential.Password
-                : _credentialVault.GetSecret(keyRef, credential.Username, credential.UseKeychain);
         }
 
         private bool TrySaveCredentialSecret(CredentialSnapshot credential, string keyRef, string? secret)
@@ -2809,7 +2807,7 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                if (ex.InnerException.Message == "LINUX_SECRET_TOOL_MISSING")
+                if (ex.InnerException?.Message == "LINUX_SECRET_TOOL_MISSING")
                 {
                     BackupEncryptionSecretStatus = L("Projects.Encryption.LinuxSecretToolMissing",
                         "Linux secret storage is unavailable. Ensure 'libsecret' is installed and your keyring service is running.");
@@ -2846,17 +2844,22 @@ namespace VaultSync.UI
         private async Task BrowseProjectsRootAsync()
         {
             IStorageProvider? storageProvider = GetStorageProvider();
-            if (storageProvider is null)
+            if (storageProvider is null || !storageProvider.CanPickFolder)
                 return;
+
+            IStorageFolder? startLocation = await ResolveFolderPickerStartLocationAsync(
+                storageProvider,
+                ProjectsRootPath);
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Choose projects root",
-                AllowMultiple = false
+                AllowMultiple = false,
+                SuggestedStartLocation = startLocation
             });
 
-            IStorageFolder? folder = folders?.FirstOrDefault();
-            string? path = folder?.Path?.LocalPath;
+            IStorageFolder? folder = folders is { Count: > 0 } ? folders[0] : null;
+            string? path = folder?.TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
@@ -2882,17 +2885,22 @@ namespace VaultSync.UI
         private async Task BrowseBackupLocationAsync()
         {
             IStorageProvider? storageProvider = GetStorageProvider();
-            if (storageProvider is null)
+            if (storageProvider is null || !storageProvider.CanPickFolder)
                 return;
+
+            IStorageFolder? startLocation = await ResolveFolderPickerStartLocationAsync(
+                storageProvider,
+                BackupLocationPath);
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Choose backup location",
-                AllowMultiple = false
+                AllowMultiple = false,
+                SuggestedStartLocation = startLocation
             });
 
-            IStorageFolder? folder = folders?.FirstOrDefault();
-            string? path = folder?.Path?.LocalPath;
+            IStorageFolder? folder = folders is { Count: > 0 } ? folders[0] : null;
+            string? path = folder?.TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
@@ -2911,17 +2919,22 @@ namespace VaultSync.UI
                 return;
 
             IStorageProvider? storageProvider = GetStorageProvider();
-            if (storageProvider is null)
+            if (storageProvider is null || !storageProvider.CanPickFolder)
                 return;
+
+            IStorageFolder? startLocation = await ResolveFolderPickerStartLocationAsync(
+                storageProvider,
+                dest.Path);
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Choose destination folder",
-                AllowMultiple = false
+                AllowMultiple = false,
+                SuggestedStartLocation = startLocation
             });
 
-            IStorageFolder? folder = folders?.FirstOrDefault();
-            string? path = folder?.Path?.LocalPath;
+            IStorageFolder? folder = folders is { Count: > 0 } ? folders[0] : null;
+            string? path = folder?.TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
@@ -3306,6 +3319,74 @@ namespace VaultSync.UI
             }
 
             return null;
+        }
+
+        private static async Task<IStorageFolder?> ResolveFolderPickerStartLocationAsync(
+            IStorageProvider storageProvider,
+            string? preferredPath)
+        {
+            foreach (Uri candidate in BuildFolderPickerStartCandidates(preferredPath))
+            {
+                try
+                {
+                    IStorageFolder? folder = await storageProvider.TryGetFolderFromPathAsync(candidate);
+                    if (folder is not null)
+                        return folder;
+                }
+                catch
+                {
+                    // A stale, disconnected, or permission-restricted path should not block the picker.
+                }
+            }
+
+            foreach (WellKnownFolder fallback in new[] { WellKnownFolder.Documents, WellKnownFolder.Desktop })
+            {
+                try
+                {
+                    IStorageFolder? folder = await storageProvider.TryGetWellKnownFolderAsync(fallback);
+                    if (folder is not null)
+                        return folder;
+                }
+                catch
+                {
+                    // Continue to the next cross-platform fallback.
+                }
+            }
+
+            return null;
+        }
+
+        internal static IReadOnlyList<Uri> BuildFolderPickerStartCandidates(
+            string? preferredPath,
+            string? homePath = null)
+        {
+            var candidates = new List<Uri>(capacity: 2);
+            var seen = new HashSet<string>(OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal);
+
+            AddCandidate(preferredPath);
+            AddCandidate(homePath ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            return candidates;
+
+            void AddCandidate(string? path)
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                    return;
+
+                try
+                {
+                    string fullPath = Path.GetFullPath(path.Trim());
+                    if (!Directory.Exists(fullPath) || !seen.Add(fullPath))
+                        return;
+
+                    candidates.Add(new Uri(fullPath));
+                }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+                {
+                    // Ignore invalid persisted paths and fall back to the user's home folder.
+                }
+            }
         }
 
         private void AddDestination()

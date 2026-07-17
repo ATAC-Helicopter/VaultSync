@@ -58,3 +58,25 @@ jobs:
 
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+
+  macos:
+    name: macOS build and test
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore VaultSync.sln
+
+      - name: Build UI generic target
+        run: dotnet build src/VaultSync.UI/VaultSync.UI.csproj --framework net10.0 --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+
+      - name: Test
+        run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false

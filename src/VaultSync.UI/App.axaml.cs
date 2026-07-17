@@ -134,8 +134,9 @@ public partial class App : Application
             WireGlobalExceptionHandlers();
             WireLifecycleBreadcrumbs(desktop);
             InitializeLocalizationProviderEarly();
-            SetAppViewModelInstance(new AppViewModel());
-            DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={AppViewModelInstance.CurrentVersionDisplay}");
+            var appViewModel = new AppViewModel();
+            SetAppViewModelInstance(appViewModel);
+            DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={appViewModel.CurrentVersionDisplay}");
 
             if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out object? fontResource))
             {
@@ -193,19 +194,19 @@ public partial class App : Application
             // Small always-on-top widget that lights up for tray-started backups.
             var backupWidgetService = new BackupWidgetService(
                 desktop,
-                AppViewModelInstance.BackupsViewModel,
+                appViewModel.BackupsViewModel,
                 () => BringMainWindowToFront(desktop));
-            AppViewModelInstance.AttachBackupWidgetService(backupWidgetService);
-            AppViewModelInstance.TrayMenuRefreshRequested += () =>
+            appViewModel.AttachBackupWidgetService(backupWidgetService);
+            appViewModel.TrayMenuRefreshRequested += () =>
             {
                 RefreshTrayMenu();
                 _trayPanelService?.Refresh();
             };
-            AppViewModelInstance.SettingsViewModel.PropertyChanged += (_, e) =>
+            appViewModel.SettingsViewModel.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(SettingsViewModel.ShowTrayIcon))
                 {
-                    UpdateTrayIconVisibility(desktop, AppViewModelInstance.SettingsViewModel.ShowTrayIcon);
+                    UpdateTrayIconVisibility(desktop, appViewModel.SettingsViewModel.ShowTrayIcon);
                 }
             };
 
@@ -592,14 +593,15 @@ public partial class App : Application
             MarkOnboardingSeen(cfg);
         }
 
+        AppViewModel viewModel = AppViewModelInstance;
         void Finish()
         {
-            AppViewModelInstance.OnboardingTour.TourCompleted -= Finish;
+            viewModel.OnboardingTour.TourCompleted -= Finish;
             TryShowWhatsNew(desktop);
         }
 
-        AppViewModelInstance.OnboardingTour.TourCompleted += Finish;
-        AppViewModelInstance.OnboardingTour.Start();
+        viewModel.OnboardingTour.TourCompleted += Finish;
+        viewModel.OnboardingTour.Start();
         return true;
     }
 

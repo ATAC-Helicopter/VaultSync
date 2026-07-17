@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using VaultSync.Core.Services;
 using Xunit;
 
@@ -92,6 +94,80 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public void BuildFileInventory_IndexesNestedFolderFiles()
+    {
+        string backup = CreateFolderBackup();
+
+        SnapshotFileInventory inventory = SnapshotExplorerService.BuildFileInventory(backup);
+
+        Assert.False(inventory.IsTruncated);
+        Assert.Equal(SnapshotExplorerSourceKind.Folder, inventory.SourceKind);
+        Assert.Contains(inventory.Files, file => file.RelPath == "src/app.json" && file.Size > 0);
+        Assert.Contains(inventory.Files, file => file.RelPath == "docs/notes.md" && file.Size > 0);
+    }
+
+    [Fact]
+    public void BuildFileInventory_StopsAtConfiguredFileLimit()
+    {
+        string backup = CreateArchiveBackup();
+
+        SnapshotFileInventory inventory = SnapshotExplorerService.BuildFileInventory(backup, maxFiles: 1);
+
+        Assert.True(inventory.IsTruncated);
+        Assert.Single(inventory.Files);
+    }
+
+    [Fact]
+    public void ArchiveBackup_PreservesCaseDistinctFiles()
+    {
+        string backup = Path.Combine(_root, "case-distinct-archive");
+        Directory.CreateDirectory(backup);
+        using (ZipArchive archive = ZipFile.Open(Path.Combine(backup, BackupArchiveCryptoService.PlainArchiveFileName), ZipArchiveMode.Create))
+        {
+            AddArchiveText(archive, "docs/Foo.txt", "upper");
+            AddArchiveText(archive, "docs/foo.txt", "lower");
+        }
+
+        SnapshotExplorerResult docs = SnapshotExplorerService.List(backup, "docs");
+        SnapshotPreviewResult upper = SnapshotExplorerService.PreviewText(backup, "docs/Foo.txt");
+        SnapshotPreviewResult lower = SnapshotExplorerService.PreviewText(backup, "docs/foo.txt");
+
+        Assert.Equal(2, docs.Entries.Count(entry => entry.Kind == SnapshotExplorerEntryKind.File));
+        Assert.Equal("upper", upper.Text);
+        Assert.Equal("lower", lower.Text);
+    }
+
+    [Fact]
+    public void FindTextEquivalentFiles_ArchiveIgnoresLineEndingStyleOnly()
+    {
+        string older = Path.Combine(_root, "equivalent-older");
+        string newer = Path.Combine(_root, "equivalent-newer");
+        Directory.CreateDirectory(older);
+        Directory.CreateDirectory(newer);
+        using (ZipArchive archive = ZipFile.Open(Path.Combine(older, BackupArchiveCryptoService.PlainArchiveFileName), ZipArchiveMode.Create))
+        {
+            AddArchiveText(archive, "src/same.cs", "first\r\nsecond\r\n");
+            AddArchiveText(archive, "src/changed.cs", "before\r\n");
+            AddArchiveBytes(archive, "asset.bin", [0xFF, 0xFE, 0xFD]);
+        }
+        using (ZipArchive archive = ZipFile.Open(Path.Combine(newer, BackupArchiveCryptoService.PlainArchiveFileName), ZipArchiveMode.Create))
+        {
+            AddArchiveText(archive, "src/same.cs", "first\nsecond\n");
+            AddArchiveText(archive, "src/changed.cs", "after\n");
+            AddArchiveBytes(archive, "asset.bin", [0xFF, 0xFE, 0xFD]);
+        }
+
+        IReadOnlySet<string> equivalent = SnapshotExplorerService.FindTextEquivalentFiles(
+            older,
+            newer,
+            ["src/same.cs", "src/changed.cs", "asset.bin"]);
+
+        Assert.Contains("src/same.cs", equivalent);
+        Assert.DoesNotContain("src/changed.cs", equivalent);
+        Assert.DoesNotContain("asset.bin", equivalent);
+    }
+
+    [Fact]
     public void RestoreSelection_ArchiveFolder_RestoresOnlySelectedFolder()
     {
         string backup = CreateArchiveBackup();
@@ -125,6 +201,59 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.PreviewText(backup, "../outside.txt"));
     }
 
+    [Theory]
+    [InlineData("../escape.txt")]
+    [InlineData("..\\escape.txt")]
+    [InlineData("/absolute.txt")]
+    public void RestoreSelection_ArchiveRejectsTraversalEntries(string maliciousPath)
+    {
+        string backup = Path.Combine(_root, "malicious-archive-" + Guid.NewGuid().ToString("N"));
+        string target = Path.Combine(_root, "restore-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(backup);
+        using (ZipArchive archive = ZipFile.Open(Path.Combine(backup, BackupArchiveCryptoService.PlainArchiveFileName), ZipArchiveMode.Create))
+        {
+            AddArchiveText(archive, maliciousPath, "escape");
+            AddArchiveText(archive, "safe/file.txt", "safe");
+        }
+
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.RestoreSelection(backup, target, ["safe", "absolute.txt"]));
+        Assert.False(File.Exists(Path.Combine(_root, "escape.txt")));
+    }
+
+    [Fact]
+    public void RestoreSelection_ArchiveRejectsLinkedDirectoryEscape()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string backup = CreateArchiveBackup();
+        string target = Path.Combine(_root, "linked-restore");
+        string outside = Path.Combine(_root, "outside");
+        Directory.CreateDirectory(target);
+        Directory.CreateDirectory(outside);
+        Directory.CreateSymbolicLink(Path.Combine(target, "docs"), outside);
+
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.RestoreSelection(backup, target, ["docs"]));
+        Assert.False(File.Exists(Path.Combine(outside, "notes.md")));
+    }
+
+    [Fact]
+    public void RestoreSelection_FolderRejectsLinkedDirectoryEscape()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string backup = CreateFolderBackup();
+        string target = Path.Combine(_root, "linked-folder-restore");
+        string outside = Path.Combine(_root, "folder-restore-outside");
+        Directory.CreateDirectory(target);
+        Directory.CreateDirectory(outside);
+        Directory.CreateSymbolicLink(Path.Combine(target, "docs"), outside);
+
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.RestoreSelection(backup, target, ["docs"]));
+        Assert.False(File.Exists(Path.Combine(outside, "notes.md")));
+    }
+
     private string CreateFolderBackup()
     {
         string backup = Path.Combine(_root, "folder-backup");
@@ -152,5 +281,12 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         ZipArchiveEntry entry = archive.CreateEntry(path);
         using StreamWriter writer = new(entry.Open());
         writer.Write(text);
+    }
+
+    private static void AddArchiveBytes(ZipArchive archive, string path, byte[] bytes)
+    {
+        ZipArchiveEntry entry = archive.CreateEntry(path);
+        using Stream stream = entry.Open();
+        stream.Write(bytes);
     }
 }

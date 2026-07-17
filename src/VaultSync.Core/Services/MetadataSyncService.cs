@@ -16,20 +16,32 @@ using Microsoft.Data.Sqlite;
 
 namespace VaultSync.Core.Services;
 
-public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? configStore = null)
+public sealed class MetadataSyncService
 {
     private const string BackupEntityType = "backup";
     private const string InvalidRootPathMessage = "Root path is empty.";
     private const string VaultSyncDirectoryName = ".vaultsync";
 
-    private readonly SqliteRepository _repo = repo;
-    private readonly IAppConfigStore _configStore = configStore ?? StaticAppConfigStore.Instance;
+    private readonly SqliteRepository _repo;
+    private readonly IAppConfigStore _configStore;
+    private readonly Func<Project, string?>? _projectColorResolver;
+    private readonly Action<string, string>? _projectColorApplier;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
         new(StringComparer.OrdinalIgnoreCase);
-    private static readonly SemaphoreSlim MetadataIoGate = new(1, 1);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> MetadataIoGates =
+        new(GetPathComparer());
 
-    public static Func<Project, string?>? ProjectColorResolver { get; set; }
-    public static Action<string, string>? ProjectColorApplier { get; set; }
+    public MetadataSyncService(
+        SqliteRepository repo,
+        IAppConfigStore? configStore = null,
+        Func<Project, string?>? projectColorResolver = null,
+        Action<string, string>? projectColorApplier = null)
+    {
+        _repo = repo ?? throw new ArgumentNullException(nameof(repo));
+        _configStore = configStore ?? StaticAppConfigStore.Instance;
+        _projectColorResolver = projectColorResolver;
+        _projectColorApplier = projectColorApplier;
+    }
 
     public MetadataSyncResult ImportFromStore(string rootPath, MetadataSyncOptions? options = null)
     {
@@ -39,7 +51,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     public async Task<MetadataSyncResult> ImportFromStoreAsync(string rootPath, MetadataSyncOptions? options = null, CancellationToken ct = default)
     {
         using var totalTiming = RuntimeTiming.Measure("Metadata import total");
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             using (RuntimeTiming.Measure("Metadata import network wait"))
@@ -118,7 +131,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
 
@@ -129,7 +142,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
 
     public async Task<MetadataSyncPreview> PreviewImportFromStoreAsync(string rootPath, MetadataSyncOptions? options = null, CancellationToken ct = default)
     {
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
@@ -193,7 +207,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
 
@@ -1983,7 +1997,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         string machineId,
         CancellationToken ct = default)
     {
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
@@ -2020,7 +2035,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
 
@@ -2137,7 +2152,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         bool forceBackfill = false,
         CancellationToken ct = default)
     {
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
@@ -2174,7 +2190,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
 
@@ -2375,7 +2391,8 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
             return;
 
-        await MetadataIoGate.WaitAsync(ct).ConfigureAwait(false);
+        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
+        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
@@ -2412,9 +2429,31 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
         }
         finally
         {
-            MetadataIoGate.Release();
+            metadataIoGate.Release();
         }
     }
+
+    private static SemaphoreSlim GetMetadataIoGate(string rootPath)
+    {
+        string key;
+        try
+        {
+            key = string.IsNullOrWhiteSpace(rootPath)
+                ? "<invalid-root>"
+                : Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            key = rootPath?.Trim() ?? "<invalid-root>";
+        }
+
+        return MetadataIoGates.GetOrAdd(key, static _ => new SemaphoreSlim(1, 1));
+    }
+
+    private static StringComparer GetPathComparer() =>
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
 
     private static void TryExportBackupTombstoneToDeferred(
         string rootPath,
@@ -2765,7 +2804,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     {
         try
         {
-            string? color = ProjectColorResolver?.Invoke(project);
+            string? color = _projectColorResolver?.Invoke(project);
             var settings = new Dictionary<string, object?>();
             if (!string.IsNullOrWhiteSpace(color))
             {
@@ -3160,9 +3199,9 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
     private static string NormalizePreferredDestinationId(string? preferredDestinationId, IReadOnlyCollection<BackupDestination> destinations)
         => DestinationIdentityService.NormalizePreferredDestinationId(preferredDestinationId, destinations);
 
-    private static void TryApplyProjectColor(MetaProject metaProject)
+    private void TryApplyProjectColor(MetaProject metaProject)
     {
-        if (ProjectColorApplier is null || string.IsNullOrWhiteSpace(metaProject.ExternalId))
+        if (_projectColorApplier is null || string.IsNullOrWhiteSpace(metaProject.ExternalId))
             return;
 
         try
@@ -3178,7 +3217,7 @@ public sealed class MetadataSyncService(SqliteRepository repo, IAppConfigStore? 
             if (string.IsNullOrWhiteSpace(color))
                 return;
 
-            ProjectColorApplier(metaProject.ExternalId, color);
+            _projectColorApplier(metaProject.ExternalId, color);
         }
         catch
         {

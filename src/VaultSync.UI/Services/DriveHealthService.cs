@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -240,7 +241,10 @@ namespace VaultSync.UI.Services
             return Unknown(L("DriveHealth.Unknown.SmartNotAvailable", "SMART not available"), driveId: device, path: fullPath);
         }
 
-        private static bool TrySmartCtl(string target, string fullPath, out DriveHealthResult result)
+        private static bool TrySmartCtl(
+            string target,
+            string fullPath,
+            [NotNullWhen(true)] out DriveHealthResult? result)
         {
             result = default;
             // Normalize Windows drive letters to C: style

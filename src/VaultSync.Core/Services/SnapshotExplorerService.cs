@@ -10,6 +10,134 @@ public sealed class SnapshotExplorerService
     private const int DefaultPreviewBytes = 256 * 1024;
     private const double MaxBinaryControlCharacterRatio = 0.02;
     private const string UnsupportedPreviewMessage = "Preview is available for text-like files only.";
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+
+    public static SnapshotFileInventory BuildFileInventory(
+        string backupRoot,
+        int maxFiles = 5_000,
+        CancellationToken cancellationToken = default)
+    {
+        if (maxFiles <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxFiles));
+
+        BackupSource source = ResolveSource(backupRoot);
+        if (source.Kind == SnapshotExplorerSourceKind.EncryptedArchive)
+            return new SnapshotFileInventory(source.Kind, [], IsTruncated: false);
+
+        var files = new List<FileEntry>(Math.Min(maxFiles, 1_024));
+        bool truncated = source.Kind == SnapshotExplorerSourceKind.Archive
+            ? AddArchiveInventory(source.Path, files, maxFiles, cancellationToken)
+            : AddFolderInventory(source.Path, files, maxFiles, cancellationToken);
+        return new SnapshotFileInventory(source.Kind, files, truncated);
+    }
+
+    public static IReadOnlySet<string> FindTextEquivalentFiles(
+        string olderBackupRoot,
+        string newerBackupRoot,
+        IEnumerable<string> relativePaths,
+        int maxBytesPerFile = DefaultPreviewBytes,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(relativePaths);
+        if (maxBytesPerFile <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxBytesPerFile));
+
+        using var olderReader = new TextContentReader(ResolveSource(olderBackupRoot));
+        using var newerReader = new TextContentReader(ResolveSource(newerBackupRoot));
+        if (!olderReader.CanRead || !newerReader.CanRead)
+            return new HashSet<string>(StringComparer.Ordinal);
+
+        var equivalent = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string path in relativePaths
+                     .Select(item => NormalizeExplorerPath(item, allowEmpty: false))
+                     .Distinct(StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!olderReader.TryReadCompleteText(path, maxBytesPerFile, out string olderText) ||
+                !newerReader.TryReadCompleteText(path, maxBytesPerFile, out string newerText))
+            {
+                continue;
+            }
+
+            if (string.Equals(
+                    NormalizeLineEndings(olderText),
+                    NormalizeLineEndings(newerText),
+                    StringComparison.Ordinal))
+            {
+                equivalent.Add(path);
+            }
+        }
+
+        return equivalent;
+    }
+
+    private static bool AddFolderInventory(
+        string backupRoot,
+        List<FileEntry> files,
+        int maxFiles,
+        CancellationToken cancellationToken)
+    {
+        var pending = new Stack<string>();
+        pending.Push(backupRoot);
+        while (pending.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string directory = pending.Pop();
+            foreach (string childDirectory in Directory.EnumerateDirectories(directory))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if ((File.GetAttributes(childDirectory) & FileAttributes.ReparsePoint) == 0)
+                    pending.Push(childDirectory);
+            }
+
+            foreach (string file in Directory.EnumerateFiles(directory))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (IsInternalBackupArtifact(Path.GetFileName(file)) ||
+                    (File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
+                {
+                    continue;
+                }
+
+                if (files.Count >= maxFiles)
+                    return true;
+
+                var info = new FileInfo(file);
+                files.Add(new FileEntry(
+                    ToExplorerPath(Path.GetRelativePath(backupRoot, file)),
+                    Math.Max(0, info.Length),
+                    info.LastWriteTimeUtc,
+                    string.Empty));
+            }
+        }
+
+        return false;
+    }
+
+    private static bool AddArchiveInventory(
+        string archivePath,
+        List<FileEntry> files,
+        int maxFiles,
+        CancellationToken cancellationToken)
+    {
+        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        foreach (ZipArchiveEntry entry in archive.Entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrEmpty(entry.Name) || IsInternalBackupArtifact(entry.Name))
+                continue;
+            if (files.Count >= maxFiles)
+                return true;
+
+            files.Add(new FileEntry(
+                NormalizeArchiveEntryPath(entry.FullName),
+                Math.Max(0, entry.Length),
+                entry.LastWriteTime.UtcDateTime,
+                string.Empty));
+        }
+
+        return false;
+    }
 
     public static SnapshotExplorerResult List(string backupRoot, string? folderPath = null, string? search = null)
     {
@@ -61,7 +189,7 @@ public sealed class SnapshotExplorerService
 
         string[] selectedPaths = [.. relativePaths
             .Select(path => NormalizeExplorerPath(path, allowEmpty: false))
-            .Distinct(StringComparer.OrdinalIgnoreCase)];
+            .Distinct(StringComparer.Ordinal)];
         if (selectedPaths.Length == 0)
             return new SnapshotRestoreSelectionResult(0, 0);
 
@@ -149,8 +277,8 @@ public sealed class SnapshotExplorerService
     {
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
         string folderPrefix = string.IsNullOrWhiteSpace(folderPath) ? string.Empty : folderPath.TrimEnd('/') + "/";
-        var folders = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.OrdinalIgnoreCase);
-        var files = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.OrdinalIgnoreCase);
+        var folders = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.Ordinal);
+        var files = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.Ordinal);
 
         foreach (ZipArchiveEntry entry in archive.Entries)
         {
@@ -204,7 +332,7 @@ public sealed class SnapshotExplorerService
         string folderPath,
         string folderPrefix)
     {
-        if (!relative.StartsWith(folderPrefix, StringComparison.OrdinalIgnoreCase))
+        if (!relative.StartsWith(folderPrefix, StringComparison.Ordinal))
             return;
 
         string remaining = relative[folderPrefix.Length..];
@@ -266,7 +394,7 @@ public sealed class SnapshotExplorerService
     {
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
         ZipArchiveEntry? entry = archive.Entries.FirstOrDefault(e =>
-            string.Equals(NormalizeArchiveEntryPath(e.FullName), relativePath, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(NormalizeArchiveEntryPath(e.FullName), relativePath, StringComparison.Ordinal) &&
             !string.IsNullOrEmpty(e.Name));
         if (entry is null)
             return SnapshotPreviewResult.Failure("File is missing from the backup archive.");
@@ -321,10 +449,13 @@ public sealed class SnapshotExplorerService
             if (!selectedPaths.Any(path => IsSelected(relative, path)))
                 continue;
 
-            string destinationPath = ResolvePathUnderRoot(targetRoot, relative);
+            string destinationPath = ResolveArchiveEntryPathUnderRoot(targetRoot, entry.FullName);
             string? parent = Path.GetDirectoryName(destinationPath);
             if (!string.IsNullOrEmpty(parent))
+            {
                 Directory.CreateDirectory(parent);
+                EnsureNoLinkedPathComponents(targetRoot, destinationPath);
+            }
             entry.ExtractToFile(destinationPath, overwrite: true);
             files++;
             bytes += Math.Max(0, entry.Length);
@@ -334,15 +465,18 @@ public sealed class SnapshotExplorerService
     }
 
     private static bool IsSelected(string entryPath, string selectedPath) =>
-        string.Equals(entryPath, selectedPath, StringComparison.OrdinalIgnoreCase) ||
-        entryPath.StartsWith(selectedPath.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase);
+        string.Equals(entryPath, selectedPath, StringComparison.Ordinal) ||
+        entryPath.StartsWith(selectedPath.TrimEnd('/') + "/", StringComparison.Ordinal);
 
     private static void CopyFileUnderRoot(string sourcePath, string targetRoot, string relativePath)
     {
         string targetPath = ResolvePathUnderRoot(targetRoot, relativePath);
         string? parent = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrEmpty(parent))
+        {
             Directory.CreateDirectory(parent);
+            EnsureNoLinkedPathComponents(targetRoot, targetPath);
+        }
         File.Copy(sourcePath, targetPath, overwrite: true);
     }
 
@@ -385,6 +519,48 @@ public sealed class SnapshotExplorerService
 
         return candidate;
     }
+
+    private static string ResolveArchiveEntryPathUnderRoot(string root, string entryFullName)
+    {
+        string normalizedRoot = NormalizeRoot(root);
+        string rootWithSeparator = normalizedRoot + Path.DirectorySeparatorChar;
+        string archivePath = (entryFullName ?? string.Empty)
+            .Replace('/', Path.DirectorySeparatorChar)
+            .Replace('\\', Path.DirectorySeparatorChar);
+        string candidate = Path.GetFullPath(Path.Combine(rootWithSeparator, archivePath));
+        if (!candidate.StartsWith(rootWithSeparator, GetPathComparison()))
+            throw new InvalidDataException($"Archive entry '{entryFullName}' escapes the selected restore root.");
+
+        EnsureNoLinkedPathComponents(normalizedRoot, candidate);
+        return candidate;
+    }
+
+    private static void EnsureNoLinkedPathComponents(string root, string destinationPath)
+    {
+        string normalizedRoot = NormalizeRoot(root);
+        string relative = Path.GetRelativePath(normalizedRoot, destinationPath);
+        string current = normalizedRoot;
+        string[] components = relative.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+        for (int index = 0; index < components.Length; index++)
+        {
+            current = Path.Combine(current, components[index]);
+            if (index == components.Length - 1 && !File.Exists(current) && !Directory.Exists(current))
+                continue;
+            if (!File.Exists(current) && !Directory.Exists(current))
+                continue;
+
+            FileAttributes attributes = File.GetAttributes(current);
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException($"Restore path '{relative}' contains a linked path component.");
+        }
+    }
+
+    private static StringComparison GetPathComparison() =>
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
 
     private static string NormalizeExplorerPath(string? path, bool allowEmpty)
     {
@@ -468,6 +644,70 @@ public sealed class SnapshotExplorerService
         return controlCharacters / (double)buffer.Length <= MaxBinaryControlCharacterRatio;
     }
 
+    private static string NormalizeLineEndings(string text) =>
+        text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
+    private sealed class TextContentReader : IDisposable
+    {
+        private readonly BackupSource _source;
+        private readonly ZipArchive? _archive;
+        private readonly IReadOnlyDictionary<string, ZipArchiveEntry>? _archiveEntries;
+
+        public TextContentReader(BackupSource source)
+        {
+            _source = source;
+            if (source.Kind != SnapshotExplorerSourceKind.Archive)
+                return;
+
+            _archive = ZipFile.OpenRead(source.Path);
+            _archiveEntries = _archive.Entries
+                .Where(entry => !string.IsNullOrEmpty(entry.Name))
+                .GroupBy(entry => NormalizeArchiveEntryPath(entry.FullName), StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        }
+
+        public bool CanRead => _source.Kind != SnapshotExplorerSourceKind.EncryptedArchive;
+
+        public bool TryReadCompleteText(string relativePath, int maxBytes, out string text)
+        {
+            text = string.Empty;
+            byte[] buffer;
+            bool truncated;
+            if (_source.Kind == SnapshotExplorerSourceKind.Archive)
+            {
+                if (_archiveEntries is null || !_archiveEntries.TryGetValue(relativePath, out ZipArchiveEntry? entry))
+                    return false;
+
+                using Stream stream = entry.Open();
+                buffer = ReadPrefix(stream, maxBytes, out truncated, entry.Length);
+            }
+            else
+            {
+                string path = ResolvePathUnderRoot(_source.Path, relativePath);
+                if (!File.Exists(path))
+                    return false;
+
+                buffer = ReadPrefix(path, maxBytes, out truncated);
+            }
+
+            if (truncated || !LooksLikeText(buffer))
+                return false;
+
+            try
+            {
+                int start = buffer.Length >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF ? 3 : 0;
+                text = StrictUtf8.GetString(buffer, start, buffer.Length - start);
+                return true;
+            }
+            catch (DecoderFallbackException)
+            {
+                return false;
+            }
+        }
+
+        public void Dispose() => _archive?.Dispose();
+    }
+
     private readonly record struct BackupSource(SnapshotExplorerSourceKind Kind, string Path);
 }
 
@@ -503,6 +743,11 @@ public sealed record SnapshotExplorerResult(
     SnapshotExplorerSourceKind SourceKind,
     string FolderPath,
     IReadOnlyList<SnapshotExplorerEntry> Entries);
+
+public sealed record SnapshotFileInventory(
+    SnapshotExplorerSourceKind SourceKind,
+    IReadOnlyList<FileEntry> Files,
+    bool IsTruncated);
 
 public sealed record SnapshotPreviewResult(
     bool Success,

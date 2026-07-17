@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels;
 
 namespace VaultSync.UI.Views;
@@ -10,11 +11,18 @@ public partial class RecoveryView : UserControl
     {
         InitializeComponent();
         AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         if (DataContext is RecoveryViewModel viewModel)
-            _ = viewModel.RefreshAsync();
+            _ = DetachedTask.RunAsync(viewModel.ActivateAsync, "activate-recovery-view");
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (DataContext is RecoveryViewModel viewModel)
+            viewModel.Deactivate();
     }
 }
