@@ -51,7 +51,7 @@ The report builder uses an allowlist. It does not begin with a broad diagnostic 
 
 Included:
 
-- A category-prefixed report ID containing a fresh 128-bit random value generated for this report only.
+- A category-prefixed report ID containing a fresh UUID generated for this report only.
 - The VaultSync application version.
 - Operating-system family: `Windows`, `macOS`, `Linux`, or `Other`.
 - A coarse crash category: application domain, user interface, background task, or application.
@@ -61,7 +61,7 @@ Included:
 - Method names from call sites whose namespace begins with `VaultSync`.
 - A visible explanation of the fields deliberately excluded.
 
-The identifier format is `CRASH-<CATEGORY>-<32 HEX CHARACTERS>`. Category is one of `UI`, `APP`, `TASK`, or `GEN`. The random portion is generated locally for each report, requires no server or shared counter, is not an installation or user identifier, and is never reused intentionally. It exists only to correlate the user's email thread with the matching report.
+The identifier format is `CRASH-<CATEGORY>-<32 HEX CHARACTERS>`. Category is one of `UI`, `APP`, `TASK`, or `GEN`. The final component is a locally generated UUID v4 (122 random bits after the UUID version and variant bits), so no server or shared counter is required. It is not an installation or user identifier and is never reused intentionally. It exists only to correlate the user's email thread with the matching report.
 
 Example:
 
