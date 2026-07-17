@@ -67,6 +67,7 @@ public sealed class ShareableCrashReportTests
         string subject = ShareableCrashReport.BuildEmailSubject(report);
         string body = ShareableCrashReport.BuildEmailBody();
 
+        Assert.Equal("crashes@fglabs.dev", ShareableCrashReport.SupportAddress);
         Assert.Contains(report.ReportId, subject, StringComparison.Ordinal);
         Assert.Contains("already attached", body, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive content", subject, StringComparison.Ordinal);

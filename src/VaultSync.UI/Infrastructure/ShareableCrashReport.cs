@@ -16,7 +16,7 @@ namespace VaultSync.UI.Infrastructure;
 /// </summary>
 internal static partial class ShareableCrashReport
 {
-    internal const string SupportAddress = "crash-reports@fglabs.dev";
+    internal const string SupportAddress = "crashes@fglabs.dev";
     private const int MaximumExceptionDepth = 8;
     private const int MaximumFramesPerException = 80;
     private const int MaximumSavedReports = 10;
