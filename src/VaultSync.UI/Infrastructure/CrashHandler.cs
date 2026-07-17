@@ -1,9 +1,6 @@
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Globalization;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -14,6 +11,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using VaultSync.Core.Config;
 using VaultSync.UI.Services;
 
 namespace VaultSync.UI.Infrastructure;
@@ -36,7 +34,7 @@ internal static class CrashHandler
 
     private static void OnUiUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        DiagnosticsLogger.Record($"UI unhandled exception: {e.Exception.GetType().Name} - {e.Exception.Message}");
+        DiagnosticsLogger.Record($"UI unhandled exception: {e.Exception.GetType().Name}");
         HandleUiExceptionSoft(e.Exception);
         e.Handled = true;
     }
@@ -48,7 +46,7 @@ internal static class CrashHandler
     {
         Exception ex = e.ExceptionObject as Exception
             ?? new Exception("Unhandled exception (non-Exception object).");
-        DiagnosticsLogger.Record($"AppDomain unhandled exception: {ex.GetType().Name} - {ex.Message}");
+        DiagnosticsLogger.Record($"AppDomain unhandled exception: {ex.GetType().Name}");
         HandleException(ex, "AppDomain", e.IsTerminating);
     }
 
@@ -60,7 +58,7 @@ internal static class CrashHandler
             return;
         }
 
-        DiagnosticsLogger.Record($"Unobserved task exception: {e.Exception.GetType().Name} - {e.Exception.Message}");
+        DiagnosticsLogger.Record($"Unobserved task exception: {e.Exception.GetType().Name}");
         WriteCrashLog(e.Exception, "UnobservedTaskException", isTerminating: false);
         e.SetObserved();
     }
@@ -72,10 +70,10 @@ internal static class CrashHandler
             return;
         }
 
-        DiagnosticsLogger.Record($"Crash handler invoked: source={source}, terminating={isTerminating}, error={ex.GetType().Name} - {ex.Message}");
+        DiagnosticsLogger.Record($"Crash handler invoked: source={source}, terminating={isTerminating}, error={ex.GetType().Name}");
         App.MarkCrashing();
-        string? logPath = WriteCrashLog(ex, source, isTerminating);
-        TryShowCrashDialog(logPath);
+        CrashArtifact? crash = WriteCrashLog(ex, source, isTerminating);
+        TryShowCrashDialog(crash);
     }
 
     private static void HandleUiExceptionSoft(Exception ex)
@@ -85,9 +83,9 @@ internal static class CrashHandler
             return;
         }
 
-        DiagnosticsLogger.Record($"Soft UI crash handled: {ex.GetType().Name} - {ex.Message}");
-        string? logPath = WriteCrashLog(ex, "UI thread", isTerminating: false);
-        TryShowSoftCrashBanner(logPath);
+        DiagnosticsLogger.Record($"Soft UI crash handled: {ex.GetType().Name}");
+        CrashArtifact? crash = WriteCrashLog(ex, "UI thread", isTerminating: false);
+        TryShowSoftCrashBanner(crash?.Path);
     }
 
     private static void TryShowSoftCrashBanner(string? logPath)
@@ -106,50 +104,20 @@ internal static class CrashHandler
         App.AppViewModelInstance?.NotifySoftCrashBanner(logPath);
     }
 
-    private static string? WriteCrashLog(Exception ex, string source, bool isTerminating)
+    private static CrashArtifact? WriteCrashLog(Exception ex, string source, bool isTerminating)
     {
+        if (!IsCrashReportAssistanceEnabled())
+            return null;
+
         try
         {
-            string baseDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "VaultSync",
-                "crash");
-
-            Directory.CreateDirectory(baseDir);
-
-            string fileName = $"crash-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log";
-            string path = Path.Combine(baseDir, fileName);
-
-            var sb = new StringBuilder();
-            sb.AppendLine("VaultSync crash report");
-            sb.AppendLine($"UTC: {DateTimeOffset.UtcNow:O}");
-            sb.AppendLine($"Source: {source}");
-            sb.AppendLine($"Terminating: {isTerminating}");
-            sb.AppendLine($"App: {GetAppVersion()}");
-            sb.AppendLine($".NET: {Environment.Version}");
-            sb.AppendLine($"OS: {Environment.OSVersion}");
-            sb.AppendLine($"Process: {Environment.ProcessId}");
-            sb.AppendLine($"64-bit OS: {Environment.Is64BitOperatingSystem}");
-            sb.AppendLine($"64-bit Process: {Environment.Is64BitProcess}");
-            sb.AppendLine($"Culture: {CultureInfo.CurrentCulture.Name} / {CultureInfo.CurrentUICulture.Name}");
-            sb.AppendLine($"CommandLine: {Environment.CommandLine}");
-            sb.AppendLine($"CurrentDirectory: {Environment.CurrentDirectory}");
-            if (!string.IsNullOrWhiteSpace(DiagnosticsLogger.SessionLogPath))
-            {
-                sb.AppendLine($"DiagnosticsLog: {DiagnosticsLogger.SessionLogPath}");
-            }
-            string? recent = DiagnosticsLogger.GetRecentLog();
-            if (!string.IsNullOrWhiteSpace(recent))
-            {
-                sb.AppendLine();
-                sb.AppendLine("Recent diagnostics:");
-                sb.AppendLine(recent);
-            }
-            sb.AppendLine();
-            sb.AppendLine(ex.ToString());
-
-            File.WriteAllText(path, sb.ToString());
-            return path;
+            CrashReportDocument report = ShareableCrashReport.Create(
+                ex,
+                source,
+                isTerminating,
+                GetAppVersion());
+            string path = ShareableCrashReport.Save(report);
+            return new CrashArtifact(report, path);
         }
         catch
         {
@@ -157,18 +125,18 @@ internal static class CrashHandler
         }
     }
 
-    private static void TryShowCrashDialog(string? logPath)
+    private static void TryShowCrashDialog(CrashArtifact? crash)
     {
         if (Dispatcher.UIThread.CheckAccess())
         {
-            ShowCrashDialog(logPath);
+            ShowCrashDialog(crash);
             return;
         }
 
-        Dispatcher.UIThread.Post(() => ShowCrashDialog(logPath), DispatcherPriority.Send);
+        Dispatcher.UIThread.Post(() => ShowCrashDialog(crash), DispatcherPriority.Send);
     }
 
-    private static void ShowCrashDialog(string? logPath)
+    private static void ShowCrashDialog(CrashArtifact? crash)
     {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -203,30 +171,58 @@ internal static class CrashHandler
         content.Children.Add(title);
         content.Children.Add(message);
 
-        TextBox? pathBox = null;
-        if (!string.IsNullOrWhiteSpace(logPath))
+        string? logPath = crash?.Path;
+        TextBox? reportPreview = null;
+        TextBlock? reportStatus = null;
+        bool assistanceEnabled = IsCrashReportAssistanceEnabled();
+        if (crash is not null)
         {
             content.Children.Add(new TextBlock
             {
-                Text = L("Crash.LogPath", "Crash log path:"),
+                Text = assistanceEnabled
+                    ? L("Crash.PrivacySummary", "Review the complete redacted report below. Nothing is sent until you press Send in your email app.")
+                    : L("Crash.AssistanceDisabled", "Crash report assistance is disabled. The redacted report remains only on this device."),
+                TextWrapping = TextWrapping.Wrap,
                 FontWeight = FontWeight.Medium
             });
 
-            pathBox = new TextBox
+            if (assistanceEnabled)
             {
-                Text = logPath,
-                IsReadOnly = true,
-                TextWrapping = TextWrapping.Wrap,
-                MinWidth = 420
-            };
-            content.Children.Add(pathBox);
+                reportPreview = new TextBox
+                {
+                    Text = crash.Document.Content,
+                    AcceptsReturn = true,
+                    TextWrapping = TextWrapping.NoWrap,
+                    MinWidth = 560,
+                    MinHeight = 300,
+                    MaxHeight = 360
+                };
+                ScrollViewer.SetHorizontalScrollBarVisibility(
+                    reportPreview,
+                    Avalonia.Controls.Primitives.ScrollBarVisibility.Auto);
+                ScrollViewer.SetVerticalScrollBarVisibility(
+                    reportPreview,
+                    Avalonia.Controls.Primitives.ScrollBarVisibility.Auto);
+                content.Children.Add(reportPreview);
+
+                reportStatus = new TextBlock
+                {
+                    Text = L("Crash.PreviewHint", "You can edit or remove any text. The email draft will not contain hidden fields or attachments."),
+                    TextWrapping = TextWrapping.Wrap,
+                    FontSize = 12
+                };
+                if (GetBrush("TextSecondary") is { } statusBrush)
+                    reportStatus.Foreground = statusBrush;
+                content.Children.Add(reportStatus);
+            }
         }
 
-        var buttonRow = new StackPanel
+        var buttonRow = new WrapPanel
         {
-            Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = 8
+            Orientation = Orientation.Horizontal,
+            ItemSpacing = 8,
+            LineSpacing = 8
         };
 
         var headerTitle = new TextBlock
@@ -318,9 +314,11 @@ internal static class CrashHandler
         {
             Title = L("Crash.Title", "VaultSync crashed"),
             Content = root,
-            CanResize = false,
-            Width = 720,
-            SizeToContent = SizeToContent.Height,
+            CanResize = true,
+            Width = 820,
+            Height = assistanceEnabled && crash is not null ? 720 : 440,
+            MinWidth = 640,
+            MinHeight = 400,
             WindowDecorations = WindowDecorations.None,
             ExtendClientAreaToDecorationsHint = true,
             WindowStartupLocation = desktop.MainWindow != null
@@ -333,33 +331,68 @@ internal static class CrashHandler
         }
         window.Icon = desktop.MainWindow?.Icon;
 
-        if (!string.IsNullOrWhiteSpace(logPath))
+        if (crash is not null && reportPreview is not null)
         {
             var copyButton = new Button
             {
-                Content = L("Crash.CopyLogPath", "Copy log path")
+                Content = L("Crash.CopyReport", "Copy report")
             };
             copyButton.Click += async (_, _) =>
             {
                 await TryCopyToClipboardAsync(
                     TopLevel.GetTopLevel(window),
-                    logPath ?? string.Empty);
+                    reportPreview.Text ?? string.Empty);
             };
 
             var openFolderButton = new Button
             {
-                Content = L("Crash.OpenFolder", "Open folder")
+                Content = L("Crash.OpenFolder", "Open report folder")
             };
             openFolderButton.Click += (_, _) =>
             {
                 if (logPath is not null)
-                {
                     OpenLogFolder(logPath);
+            };
+
+            var deleteButton = new Button
+            {
+                Content = L("Crash.DeleteReport", "Delete report")
+            };
+            deleteButton.Click += (_, _) =>
+            {
+                if (ShareableCrashReport.DeleteSavedReport(logPath))
+                    reportStatus!.Text = L("Crash.ReportDeleted", "The saved report was deleted. Nothing was sent.");
+            };
+
+            var prepareEmailButton = new Button
+            {
+                Content = L("Crash.PrepareEmail", "Prepare email"),
+                MinWidth = 120
+            };
+            prepareEmailButton.Classes.Add("action-primary");
+            prepareEmailButton.Click += (_, _) =>
+            {
+                try
+                {
+                    logPath = ShareableCrashReport.Save(crash.Document, reportPreview.Text);
+                    OpenLogFolder(logPath);
+                    SystemFileLauncher.OpenUri(ShareableCrashReport.BuildEmailUri(crash.Document));
+                    reportStatus!.Text = L(
+                        "Crash.EmailPrepared",
+                        "The report folder and an email draft were opened. Attach the report, review the email, then press Send yourself.");
+                }
+                catch
+                {
+                    reportStatus!.Text = L(
+                        "Crash.EmailPrepareFailed",
+                        "VaultSync could not open an email draft. Copy or save the report and send it to crash-reports@fglabs.dev yourself.");
                 }
             };
 
             buttonRow.Children.Add(openFolderButton);
             buttonRow.Children.Add(copyButton);
+            buttonRow.Children.Add(deleteButton);
+            buttonRow.Children.Add(prepareEmailButton);
         }
 
         var closeButton = new Button
@@ -436,6 +469,19 @@ internal static class CrashHandler
         }
     }
 
+    private static bool IsCrashReportAssistanceEnabled()
+    {
+        try
+        {
+            return StaticAppConfigStore.Instance.Load().Advanced.CrashReportAssistanceEnabled;
+        }
+        catch
+        {
+            // If preferences cannot be read during a crash, do not expose a sharing action.
+            return false;
+        }
+    }
+
     private static void OpenLogFolder(string logPath)
     {
         try
@@ -451,4 +497,6 @@ internal static class CrashHandler
             // Best effort: ignore failures.
         }
     }
+
+    private sealed record CrashArtifact(CrashReportDocument Document, string Path);
 }

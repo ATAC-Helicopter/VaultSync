@@ -121,6 +121,7 @@ namespace VaultSync.UI
 
         private bool _enableVerboseLogging = false;
         private bool _saveVerboseLogs = false;
+        private bool _crashReportAssistanceEnabled = true;
         private bool _checkForUpdatesOnStartup = true;
         private int _updateCheckIntervalMinutes = 120;
         private bool _betaChannelEnabled = false;
@@ -536,6 +537,7 @@ namespace VaultSync.UI
                 nameof(NotifyOnlyWhenInactive),
                 nameof(EnableVerboseLogging),
                 nameof(SaveVerboseLogs),
+                nameof(CrashReportAssistanceEnabled),
                 nameof(CheckForUpdatesOnStartup),
                 nameof(UpdateCheckIntervalMinutes),
                 nameof(BetaChannelEnabled),
@@ -754,6 +756,7 @@ namespace VaultSync.UI
 
             _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
             _saveVerboseLogs           = cfg.Advanced.SaveVerboseLogs;
+            _crashReportAssistanceEnabled = cfg.Advanced.CrashReportAssistanceEnabled;
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
             _updateCheckIntervalMinutes = ClampInt(cfg.Advanced.UpdateCheckIntervalMinutes, 15, 10080, 120);
             _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
@@ -1010,6 +1013,7 @@ namespace VaultSync.UI
 
             cfg.Advanced.VerboseLogging      = EnableVerboseLogging;
             cfg.Advanced.SaveVerboseLogs     = SaveVerboseLogs;
+            cfg.Advanced.CrashReportAssistanceEnabled = CrashReportAssistanceEnabled;
             cfg.Advanced.CheckUpdates        = CheckForUpdatesOnStartup;
             cfg.Advanced.UpdateCheckIntervalMinutes = ClampInt(UpdateCheckIntervalMinutes, 15, 10080, 120);
             cfg.Advanced.BetaChannelEnabled  = BetaChannelEnabled;
@@ -2157,6 +2161,12 @@ namespace VaultSync.UI
         {
             get => _saveVerboseLogs;
             set => SetField(ref _saveVerboseLogs, value);
+        }
+
+        public bool CrashReportAssistanceEnabled
+        {
+            get => _crashReportAssistanceEnabled;
+            set => SetField(ref _crashReportAssistanceEnabled, value);
         }
 
         public bool CheckForUpdatesOnStartup
@@ -4432,6 +4442,10 @@ namespace VaultSync.UI
         {
             cfg.Advanced.VerboseLogging = ReadBool(advanced, nameof(cfg.Advanced.VerboseLogging), cfg.Advanced.VerboseLogging);
             cfg.Advanced.SaveVerboseLogs = ReadBool(advanced, nameof(cfg.Advanced.SaveVerboseLogs), cfg.Advanced.SaveVerboseLogs);
+            cfg.Advanced.CrashReportAssistanceEnabled = ReadBool(
+                advanced,
+                nameof(cfg.Advanced.CrashReportAssistanceEnabled),
+                cfg.Advanced.CrashReportAssistanceEnabled);
             cfg.Advanced.CheckUpdates = ReadBool(advanced, nameof(cfg.Advanced.CheckUpdates), cfg.Advanced.CheckUpdates);
             cfg.Advanced.UpdateCheckIntervalMinutes = ClampInt(ReadInt(advanced, nameof(cfg.Advanced.UpdateCheckIntervalMinutes), cfg.Advanced.UpdateCheckIntervalMinutes), 15, 1440, 120);
             cfg.Advanced.BetaChannelEnabled = ReadBool(advanced, nameof(cfg.Advanced.BetaChannelEnabled), cfg.Advanced.BetaChannelEnabled);

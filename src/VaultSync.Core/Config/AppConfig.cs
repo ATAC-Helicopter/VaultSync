@@ -329,6 +329,7 @@ namespace VaultSync.Core.Config
     {
         public bool VerboseLogging   { get; set; } = false;
         public bool SaveVerboseLogs  { get; set; } = false;
+        public bool CrashReportAssistanceEnabled { get; set; } = true;
         public bool CheckUpdates     { get; set; } = true;
         public int UpdateCheckIntervalMinutes { get; set; } = 120;
         public bool BetaChannelEnabled { get; set; } = false;

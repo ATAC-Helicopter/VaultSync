@@ -1,5 +1,9 @@
 ﻿# Changelog
-## [1.8.3] - Unreleased
+## [1.8.4] - Unreleased
+### Added
+- [VS-1847] Added a fully local crash-report review workflow with strict allowlist redaction, an editable exact-content preview, manual email-draft preparation, bounded owner-only report storage, and a complete disable control; VaultSync never attaches or sends a report automatically.
+
+## [1.8.3] - 16.07.2026
 ### Added
 - [VS-1809] Added asynchronous file-level comparison between any two snapshots from the same project, including added, modified, deleted, and unchanged counts, changed-path hotspots, and mass-deletion, growth, or high-churn signals.
 - [VS-1809] Added a searchable changed-file workspace with bounded line-by-line text comparisons for available folder and ZIP snapshots; encrypted, binary, offline, and unsupported content falls back safely to file details.

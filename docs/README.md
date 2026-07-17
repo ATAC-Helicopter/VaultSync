@@ -21,6 +21,8 @@ Use this page as the primary index for all project documentation.
 ## Contribution and Governance
 - Contributing: `CONTRIBUTING.md`
 - Security policy: `SECURITY.md`
+- Privacy overview: `docs/PRIVACY.md`
+- Crash reporting and user control: `docs/CRASH_REPORTING.md`
 - Code of Conduct: `CODE_OF_CONDUCT.md`
 - SonarQube Cloud setup: `docs/SONARQUBE.md`
 
