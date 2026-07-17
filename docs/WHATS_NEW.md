@@ -9,7 +9,7 @@ VaultSync `1.8.4` is the Disaster Recovery update. Its first completed slice add
 - Every report receives a category-prefixed UUID generated for that report only; it is not a user, device, installation, or tracking ID.
 - The exact generated report is shown in a read-only view. Its report ID, operating-system family, crash category, and exception-type reason cannot be changed in VaultSync.
 - Exception messages, raw logs, paths, file content, project and backup names, credentials, configuration, detailed OS information, and user or machine identifiers are excluded.
-- Preparing a report opens the local report folder and a generic email draft. The user must attach the visible file, review the message, and press Send in their own email application.
+- Preparing a report opens a visible email draft with the reviewed report already attached. The user must inspect the message and attachment and press Send in their own email application; attachment failures fall back visibly to the local report folder.
 - Crash assistance can be disabled completely in Settings. Local reports are limited to ten files and seven days, with owner-only permissions requested on Unix-like systems.
 
 ## [1.8.3]

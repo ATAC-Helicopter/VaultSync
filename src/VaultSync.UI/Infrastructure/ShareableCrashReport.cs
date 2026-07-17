@@ -66,19 +66,17 @@ internal static partial class ShareableCrashReport
         return path;
     }
 
-    public static string BuildEmailUri(CrashReportDocument report)
+    public static string BuildEmailSubject(CrashReportDocument report)
     {
         ArgumentNullException.ThrowIfNull(report);
+        return $"[VaultSync crash {report.ReportId}]";
+    }
 
-        string subject = $"[VaultSync crash {report.ReportId}]";
-        string body =
+    public static string BuildEmailBody() =>
             "I reviewed the attached redacted VaultSync crash report.\r\n\r\n" +
             "Nothing was sent automatically. This draft was prepared locally by VaultSync.\r\n" +
-            "Please attach the report file that VaultSync opened beside this message.\r\n\r\n" +
+            "The redacted report is already attached. Review it before sending.\r\n\r\n" +
             "Optional description of what happened:\r\n";
-
-        return $"mailto:{SupportAddress}?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
-    }
 
     public static bool DeleteSavedReport(string? path, string? managedDirectoryOverride = null)
     {
@@ -112,11 +110,11 @@ internal static partial class ShareableCrashReport
         string operatingSystemFamily)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("VaultSync shareable crash report");
-        builder.AppendLine("================================");
-        builder.AppendLine("This report was created and redacted locally.");
-        builder.AppendLine("VaultSync did not send it automatically.");
+        builder.AppendLine("VAULTSYNC / CRASH REPORT");
+        builder.AppendLine("Generated and redacted locally. Nothing was sent automatically.");
         builder.AppendLine();
+        builder.AppendLine("REPORT IDENTITY");
+        builder.AppendLine("---------------");
         builder.AppendLine($"Report ID: {reportId}");
         const string applicationVersionToken = "<VAULTSYNC-APPLICATION-VERSION>";
         builder.AppendLine($"Application version: {applicationVersionToken}");
@@ -125,8 +123,8 @@ internal static partial class ShareableCrashReport
         builder.AppendLine($"Crash reason: {crashReason}");
         builder.AppendLine($"Application must close: {(isTerminating ? "yes" : "no")}");
         builder.AppendLine();
-        builder.AppendLine("Exception chain and application call sites");
-        builder.AppendLine("------------------------------------------");
+        builder.AppendLine("CRASH DETAILS");
+        builder.AppendLine("-------------");
 
         Exception? current = exception;
         for (int depth = 0; current is not null && depth < MaximumExceptionDepth; depth++)
@@ -150,15 +148,16 @@ internal static partial class ShareableCrashReport
             builder.AppendLine("Additional nested exceptions were omitted.");
 
         builder.AppendLine();
-        builder.AppendLine("Intentionally excluded");
-        builder.AppendLine("----------------------");
-        builder.AppendLine("Exception messages and file contents");
-        builder.AppendLine("User, machine, project, backup, snapshot, and destination names");
-        builder.AppendLine("File, folder, database, log, command-line, and network paths");
-        builder.AppendLine("Credentials, identifiers, addresses, environment variables, and configuration");
-        builder.AppendLine("OS version, locale, architecture, process details, timestamps, and raw diagnostics");
+        builder.AppendLine("PRIVACY BOUNDARY");
+        builder.AppendLine("----------------");
+        builder.AppendLine("Intentionally excluded:");
+        builder.AppendLine("- Exception messages and file contents");
+        builder.AppendLine("- User, machine, project, backup, snapshot, and destination names");
+        builder.AppendLine("- File, folder, database, log, command-line, and network paths");
+        builder.AppendLine("- Credentials, identifiers, addresses, environment variables, and configuration");
+        builder.AppendLine("- OS version, locale, architecture, process details, timestamps, and raw diagnostics");
         builder.AppendLine();
-        builder.AppendLine("The generated identity and crash fields are locked by VaultSync.");
+        builder.AppendLine("The generated report above is read-only in VaultSync.");
 
         return SanitizeDefenseInDepth(builder.ToString())
             .Replace(applicationVersionToken, applicationVersion, StringComparison.Ordinal);
