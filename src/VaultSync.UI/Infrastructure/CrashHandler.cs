@@ -191,6 +191,7 @@ internal static class CrashHandler
                 reportPreview = new TextBox
                 {
                     Text = crash.Document.Content,
+                    IsReadOnly = true,
                     AcceptsReturn = true,
                     TextWrapping = TextWrapping.NoWrap,
                     MinWidth = 560,
@@ -207,7 +208,7 @@ internal static class CrashHandler
 
                 reportStatus = new TextBlock
                 {
-                    Text = L("Crash.PreviewHint", "You can edit or remove any text. The email draft will not contain hidden fields or attachments."),
+                    Text = L("Crash.PreviewHint", "VaultSync locks the report ID, OS family, crash category, and crash reason. Add any optional context in the email draft."),
                     TextWrapping = TextWrapping.Wrap,
                     FontSize = 12
                 };
@@ -350,8 +351,8 @@ internal static class CrashHandler
             };
             openFolderButton.Click += (_, _) =>
             {
-                if (logPath is not null)
-                    OpenLogFolder(logPath);
+                logPath = ShareableCrashReport.Save(crash.Document);
+                OpenLogFolder(logPath);
             };
 
             var deleteButton = new Button
@@ -374,7 +375,7 @@ internal static class CrashHandler
             {
                 try
                 {
-                    logPath = ShareableCrashReport.Save(crash.Document, reportPreview.Text);
+                    logPath = ShareableCrashReport.Save(crash.Document);
                     OpenLogFolder(logPath);
                     SystemFileLauncher.OpenUri(ShareableCrashReport.BuildEmailUri(crash.Document));
                     reportStatus!.Text = L(

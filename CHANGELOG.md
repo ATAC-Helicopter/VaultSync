@@ -1,7 +1,7 @@
 ﻿# Changelog
 ## [1.8.4] - Unreleased
 ### Added
-- [VS-1847] Added a fully local crash-report review workflow with strict allowlist redaction, an editable exact-content preview, manual email-draft preparation, bounded owner-only report storage, and a complete disable control; VaultSync never attaches or sends a report automatically.
+- [VS-1847] Added a fully local crash-report review workflow with strict allowlist redaction, a read-only exact-content preview, category-prefixed random report IDs, locked OS/category/reason fields, manual email-draft preparation, bounded owner-only report storage, and a complete disable control; VaultSync never attaches or sends a report automatically.
 
 ## [1.8.3] - 16.07.2026
 ### Added

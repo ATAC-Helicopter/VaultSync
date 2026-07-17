@@ -325,7 +325,7 @@
   "Crash.Message": "VaultSync hit an unexpected error and must close.",
   "Crash.OpenFolder": "Open folder",
   "Crash.PrepareEmail": "Prepare email",
-  "Crash.PreviewHint": "You can edit or remove any text. The email draft will not contain hidden fields or attachments.",
+  "Crash.PreviewHint": "VaultSync locks the report ID, OS family, crash category, and crash reason. Add any optional context in the email draft.",
   "Crash.PrivacySummary": "Review the complete redacted report below. Nothing is sent until you press Send in your email app.",
   "Crash.ReportDeleted": "The saved report was deleted. Nothing was sent.",
   "Crash.Title": "VaultSync crashed",

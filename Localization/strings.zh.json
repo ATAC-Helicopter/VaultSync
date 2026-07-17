@@ -319,7 +319,7 @@
   "Crash.EmailPrepared": "已打开报告文件夹和电子邮件草稿。请附加报告、检查邮件，然后由您亲自点击发送。",
   "Crash.EmailPrepareFailed": "VaultSync 无法打开电子邮件草稿。请复制或保存报告，并自行发送至 crash-reports@fglabs.dev。",
   "Crash.PrepareEmail": "准备电子邮件",
-  "Crash.PreviewHint": "您可以编辑或删除任何文本。电子邮件草稿不会包含隐藏字段或附件。",
+  "Crash.PreviewHint": "VaultSync 会锁定报告 ID、操作系统系列、崩溃类别和原因。请在电子邮件草稿中添加可选说明。",
   "Crash.PrivacySummary": "请在下方查看完整的编辑处理后报告。只有您在邮件应用中点击发送后，内容才会发出。",
   "Crash.ReportDeleted": "已删除保存的报告。未发送任何内容。",
   "Crash.CopyLogPath": "复制日志路径",

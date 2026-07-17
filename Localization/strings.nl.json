@@ -319,7 +319,7 @@
   "Crash.EmailPrepared": "De rapportmap en een e-mailconcept zijn geopend. Voeg het rapport toe, controleer de e-mail en druk zelf op Verzenden.",
   "Crash.EmailPrepareFailed": "VaultSync kon geen e-mailconcept openen. Kopieer of bewaar het rapport en stuur het zelf naar crash-reports@fglabs.dev.",
   "Crash.PrepareEmail": "E-mail voorbereiden",
-  "Crash.PreviewHint": "U kunt alle tekst bewerken of verwijderen. Het e-mailconcept bevat geen verborgen velden of bijlagen.",
+  "Crash.PreviewHint": "VaultSync vergrendelt rapport-ID, besturingssysteemfamilie, crashcategorie en crashreden. Voeg optionele context toe in het e-mailconcept.",
   "Crash.PrivacySummary": "Controleer hieronder het volledige geredigeerde rapport. Er wordt niets verzonden totdat u in uw e-mailapp op Verzenden drukt.",
   "Crash.ReportDeleted": "Het opgeslagen rapport is verwijderd. Er is niets verzonden.",
   "Crash.CopyLogPath": "Log pad kopiëren",

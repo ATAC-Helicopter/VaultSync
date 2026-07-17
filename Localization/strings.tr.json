@@ -319,7 +319,7 @@
   "Crash.EmailPrepared": "Rapor klasörü ve bir e-posta taslağı açıldı. Raporu ekleyin, e-postayı gözden geçirin ve Gönder düğmesine kendiniz basın.",
   "Crash.EmailPrepareFailed": "VaultSync bir e-posta taslağı açamadı. Raporu kopyalayın veya kaydedin ve crash-reports@fglabs.dev adresine kendiniz gönderin.",
   "Crash.PrepareEmail": "E-posta hazırla",
-  "Crash.PreviewHint": "Herhangi bir metni düzenleyebilir veya kaldırabilirsiniz. E-posta taslağında gizli alanlar veya ekler bulunmaz.",
+  "Crash.PreviewHint": "VaultSync rapor kimliğini, işletim sistemi ailesini, çökme kategorisini ve nedenini kilitler. İsteğe bağlı ayrıntıları e-posta taslağına ekleyin.",
   "Crash.PrivacySummary": "Aşağıdaki düzenlenmiş raporun tamamını inceleyin. E-posta uygulamanızda Gönder düğmesine basana kadar hiçbir şey gönderilmez.",
   "Crash.ReportDeleted": "Kaydedilmiş rapor silindi. Hiçbir şey gönderilmedi.",
   "Crash.CopyLogPath": "Log yolunu kopyala",

@@ -319,7 +319,7 @@
   "Crash.EmailPrepared": "レポートフォルダーとメールの下書きを開きました。レポートを添付し、メールを確認してからご自身で送信してください。",
   "Crash.EmailPrepareFailed": "VaultSync はメールの下書きを開けませんでした。レポートをコピーまたは保存し、crash-reports@fglabs.dev にご自身で送信してください。",
   "Crash.PrepareEmail": "メールを準備",
-  "Crash.PreviewHint": "どのテキストも編集または削除できます。メールの下書きに非表示の項目や添付ファイルは含まれません。",
+  "Crash.PreviewHint": "VaultSync はレポート ID、OS ファミリー、クラッシュ分類、原因をロックします。任意の説明はメールの下書きに追加してください。",
   "Crash.PrivacySummary": "以下の編集済みレポート全文を確認してください。メールアプリで送信するまで何も送信されません。",
   "Crash.ReportDeleted": "保存済みレポートを削除しました。何も送信されていません。",
   "Crash.CopyLogPath": "ログパスをコピーします",

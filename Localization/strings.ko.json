@@ -319,7 +319,7 @@
   "Crash.EmailPrepared": "보고서 폴더와 이메일 초안을 열었습니다. 보고서를 첨부하고 이메일을 확인한 후 직접 보내기를 누르세요.",
   "Crash.EmailPrepareFailed": "VaultSync가 이메일 초안을 열 수 없습니다. 보고서를 복사하거나 저장한 뒤 crash-reports@fglabs.dev로 직접 보내세요.",
   "Crash.PrepareEmail": "이메일 준비",
-  "Crash.PreviewHint": "모든 텍스트를 편집하거나 삭제할 수 있습니다. 이메일 초안에는 숨겨진 필드나 첨부 파일이 포함되지 않습니다.",
+  "Crash.PreviewHint": "VaultSync는 보고서 ID, OS 계열, 충돌 범주 및 원인을 잠급니다. 선택적 설명은 이메일 초안에 추가하세요.",
   "Crash.PrivacySummary": "아래에서 편집된 전체 보고서를 검토하세요. 이메일 앱에서 보내기를 누르기 전에는 아무것도 전송되지 않습니다.",
   "Crash.ReportDeleted": "저장된 보고서를 삭제했습니다. 아무것도 전송되지 않았습니다.",
   "Crash.CopyLogPath": "로그 경로 복사",

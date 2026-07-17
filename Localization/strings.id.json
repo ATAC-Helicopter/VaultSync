@@ -319,7 +319,7 @@
   "Crash.EmailPrepared": "Folder laporan dan draf email telah dibuka. Lampirkan laporan, periksa email, lalu tekan Kirim sendiri.",
   "Crash.EmailPrepareFailed": "VaultSync tidak dapat membuka draf email. Salin atau simpan laporan dan kirim sendiri ke crash-reports@fglabs.dev.",
   "Crash.PrepareEmail": "Siapkan email",
-  "Crash.PreviewHint": "Anda dapat mengubah atau menghapus teks apa pun. Draf email tidak akan berisi bidang tersembunyi atau lampiran.",
+  "Crash.PreviewHint": "VaultSync mengunci ID laporan, keluarga OS, kategori, dan alasan crash. Tambahkan konteks opsional di draf email.",
   "Crash.PrivacySummary": "Tinjau laporan lengkap yang telah disunting di bawah ini. Tidak ada yang dikirim sampai Anda menekan Kirim di aplikasi email.",
   "Crash.ReportDeleted": "Laporan tersimpan telah dihapus. Tidak ada yang dikirim.",
   "Crash.CopyLogPath": "Salin jalur log",
