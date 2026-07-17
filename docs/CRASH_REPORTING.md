@@ -4,7 +4,7 @@ VaultSync crash reporting is a local report-preparation feature. It is not an au
 
 ## In one sentence
 
-When crash-report assistance is enabled, VaultSync creates a minimal report locally, shows the complete generated report to the user, and can prepare an email draft; only the user can attach the report and press **Send**.
+When crash-report assistance is enabled, VaultSync creates a minimal report locally, shows the complete generated report to the user, and can prepare an email draft with that report attached; only the user can press **Send**.
 
 ## Data flow
 
@@ -26,7 +26,7 @@ Complete read-only generated report
         +---- Prepare email draft
                          |
                          v
-               User reviews, attaches, and sends
+               User reviews and sends
 ```
 
 There is no network request between the exception and the email application. Preparing a draft does not send a report.
@@ -41,7 +41,7 @@ The **Settings > Advanced > Crash report assistance** toggle controls the entire
 - There is no automatic-send option and no remembered consent to send future reports.
 - A report can be inspected, copied, or deleted before the email application is opened.
 - The report ID, OS family, crash category, and crash reason are generated fields and cannot be changed in VaultSync. Optional user context belongs in the visible email draft.
-- The user must attach the visible text file and press **Send** in their own email application.
+- VaultSync attempts to attach the visible text file to the draft. The user must review the attachment and press **Send** in their own email application.
 
 The feature is enabled by default because it performs no transmission by itself. Users who do not want local crash reports can disable it completely.
 
@@ -114,23 +114,28 @@ On Unix-like systems VaultSync requests owner read/write permissions only. Files
 
 When a new report is saved, VaultSync removes managed reports older than seven days and keeps at most ten. Cleanup is best effort so failure cannot interfere with crash handling. Users can delete the current report immediately from the preview. The deletion action rejects paths outside the managed report directory.
 
-## Email preparation
+## Email draft preparation
 
-VaultSync opens a standard `mailto:` draft addressed to:
+VaultSync asks the platform mail application to create a visible draft addressed to:
 
 ```text
 crash-reports@fglabs.dev
 ```
 
-The URI contains only the support address, random report ID in the subject, and generic instructions. It does **not** contain report text, a local file path, user data, or a hidden attachment. Standard `mailto:` handling cannot portably attach files, so VaultSync also opens the report folder and the user attaches the visible report manually.
+The generated report is attached before the draft is shown. VaultSync uses Apple Mail automation on macOS, `xdg-email --attach` on Linux, and the local Outlook automation interface on Windows. Arguments are passed separately to the platform process rather than interpolated into shell commands. No report contents are placed in a `mailto:` URI, and no SMTP or API credential is present in VaultSync.
+
+macOS may show its standard consent prompt the first time VaultSync asks Mail to create a draft. Denying that permission leaves the report local and triggers the visible manual-attachment fallback.
+
+If the configured mail application cannot accept an attachment through the supported platform interface, VaultSync does not claim that a usable draft was created. It opens the report folder and clearly asks the user to attach the file manually.
 
 Simplified construction:
 
 ```csharp
-string subject = $"[VaultSync crash {report.ReportId}]";
-string uri = $"mailto:crash-reports@fglabs.dev" +
-             $"?subject={Uri.EscapeDataString(subject)}" +
-             $"&body={Uri.EscapeDataString(genericInstructions)}";
+ProcessStartInfo draft = CreatePlatformDraft(
+    recipient: "crash-reports@fglabs.dev",
+    subject: $"[VaultSync crash {report.ReportId}]",
+    body: genericInstructions,
+    attachmentPath: managedReportPath);
 ```
 
 The user's email provider and FGLabs receiving mailbox process a report only after the user sends it. The sent message normally remains visible in the user's Sent folder, and support can reply in the same thread.
@@ -157,11 +162,12 @@ Any report-schema change must:
 4. Add a regression test proving representative sensitive values are absent.
 5. Preserve the read-only generated report, preview-before-draft, and explicit user sending.
 6. Never add SMTP secrets, third-party SDKs, or automatic uploads.
-7. Keep the mail URI free of report contents and local paths.
+7. Keep report contents out of command-line text and require an existing managed report file for every attachment.
 
 Relevant implementation:
 
 - `src/VaultSync.UI/Infrastructure/ShareableCrashReport.cs`
+- `src/VaultSync.UI/Infrastructure/CrashReportEmailDraft.cs`
 - `src/VaultSync.UI/Infrastructure/CrashHandler.cs`
 - `src/VaultSync.UI/Infrastructure/SystemFileLauncher.cs`
 - `tests/VaultSync.Core.Tests/ShareableCrashReportTests.cs`
@@ -174,7 +180,8 @@ Relevant implementation:
 - Confirm the report ID, OS family, category, and reason cannot be edited in VaultSync.
 - Confirm disabling assistance creates no report and offers no email action.
 - Confirm **Prepare email** opens a draft but sends nothing.
-- Confirm the report is absent from the draft URI and body.
+- Confirm the generated report is already attached to the visible draft.
+- Confirm attachment failure is reported honestly and opens the report folder for manual recovery.
 - Confirm **Delete report** cannot delete an unrelated file.
 - Confirm permissions and retention on Windows, macOS, and Linux.
 - Send a deliberate test report and confirm the user retains a Sent copy and support can reply in the same thread.

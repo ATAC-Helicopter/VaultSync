@@ -55,7 +55,7 @@ public sealed class ShareableCrashReportTests
     }
 
     [Fact]
-    public void BuildEmailUri_ContainsOnlyRecipientReportIdAndGenericInstructions()
+    public void EmailDraftFields_ContainOnlyReportIdAndGenericInstructions()
     {
         var report = new CrashReportDocument(
             "CRASH-UI-00112233445566778899AABBCCDDEEFF",
@@ -64,11 +64,53 @@ public sealed class ShareableCrashReportTests
             "System.InvalidOperationException",
             "sensitive content that must not enter the mailto URI");
 
-        string uri = ShareableCrashReport.BuildEmailUri(report);
+        string subject = ShareableCrashReport.BuildEmailSubject(report);
+        string body = ShareableCrashReport.BuildEmailBody();
 
-        Assert.StartsWith("mailto:crash-reports@fglabs.dev?", uri, StringComparison.Ordinal);
-        Assert.Contains(report.ReportId, Uri.UnescapeDataString(uri), StringComparison.Ordinal);
-        Assert.DoesNotContain("sensitive content", Uri.UnescapeDataString(uri), StringComparison.Ordinal);
+        Assert.Contains(report.ReportId, subject, StringComparison.Ordinal);
+        Assert.Contains("already attached", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive content", subject, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive content", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MacMailDraft_PassesAttachmentAsAnOpaqueArgument()
+    {
+        const string attachment = "/tmp/VaultSync report 'review'.txt";
+
+        var startInfo = CrashReportEmailDraft.CreateMacMailStartInfo("subject", "body", attachment);
+
+        Assert.Equal("/usr/bin/osascript", startInfo.FileName);
+        Assert.Equal(attachment, startInfo.ArgumentList[^1]);
+        Assert.DoesNotContain(attachment, startInfo.ArgumentList[1], StringComparison.Ordinal);
+        Assert.Contains("make new attachment", startInfo.ArgumentList[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LinuxMailDraft_UsesAttachmentOptionWithoutShellInterpolation()
+    {
+        const string attachment = "/tmp/VaultSync report.txt";
+
+        var startInfo = CrashReportEmailDraft.CreateLinuxMailStartInfo("subject", "body", attachment);
+
+        int attachmentOption = startInfo.ArgumentList.IndexOf("--attach");
+        Assert.Equal("xdg-email", startInfo.FileName);
+        Assert.True(attachmentOption >= 0);
+        Assert.Equal(attachment, startInfo.ArgumentList[attachmentOption + 1]);
+        Assert.False(startInfo.UseShellExecute);
+    }
+
+    [Fact]
+    public void WindowsMailDraft_AddsTheReviewedReportThroughOutlook()
+    {
+        const string attachment = @"C:\Reports\VaultSync report.txt";
+
+        var startInfo = CrashReportEmailDraft.CreateWindowsOutlookStartInfo("subject", "body", attachment);
+
+        Assert.Equal("powershell.exe", startInfo.FileName);
+        Assert.Equal(attachment, startInfo.ArgumentList[^1]);
+        Assert.Contains("Attachments.Add", startInfo.ArgumentList[^5], StringComparison.Ordinal);
+        Assert.False(startInfo.UseShellExecute);
     }
 
     [Fact]
