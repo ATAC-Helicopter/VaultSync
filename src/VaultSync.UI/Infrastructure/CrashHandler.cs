@@ -32,6 +32,13 @@ internal static class CrashHandler
         Dispatcher.UIThread.UnhandledException += OnUiUnhandledException;
     }
 
+    public static void ShowCrashReportTest()
+    {
+        Exception exception = CaptureTestException();
+        CrashArtifact? crash = CreateCrashArtifact(exception, "UI thread", isTerminating: false);
+        ShowCrashDialog(crash, testMode: true);
+    }
+
     private static void OnUiUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
     {
         DiagnosticsLogger.Record($"UI unhandled exception: {e.Exception.GetType().Name}");
@@ -109,6 +116,11 @@ internal static class CrashHandler
         if (!IsCrashReportAssistanceEnabled())
             return null;
 
+        return CreateCrashArtifact(ex, source, isTerminating);
+    }
+
+    private static CrashArtifact? CreateCrashArtifact(Exception ex, string source, bool isTerminating)
+    {
         try
         {
             CrashReportDocument report = ShareableCrashReport.Create(
@@ -129,14 +141,14 @@ internal static class CrashHandler
     {
         if (Dispatcher.UIThread.CheckAccess())
         {
-            ShowCrashDialog(crash);
+            ShowCrashDialog(crash, testMode: false);
             return;
         }
 
-        Dispatcher.UIThread.Post(() => ShowCrashDialog(crash), DispatcherPriority.Send);
+        Dispatcher.UIThread.Post(() => ShowCrashDialog(crash, testMode: false), DispatcherPriority.Send);
     }
 
-    private static void ShowCrashDialog(CrashArtifact? crash)
+    private static void ShowCrashDialog(CrashArtifact? crash, bool testMode)
     {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -146,7 +158,7 @@ internal static class CrashHandler
 
         var title = new TextBlock
         {
-            Text = L("Crash.Title", "VaultSync crashed"),
+            Text = testMode ? "Crash report test" : L("Crash.Title", "VaultSync crashed"),
             FontSize = 18,
             FontWeight = FontWeight.SemiBold
         };
@@ -154,7 +166,9 @@ internal static class CrashHandler
 
         var message = new TextBlock
         {
-            Text = L("Crash.Message", "VaultSync hit an unexpected error and must close."),
+            Text = testMode
+                ? "Test mode generated this report without crashing VaultSync. Review every action exactly as you would after a real crash."
+                : L("Crash.Message", "VaultSync hit an unexpected error and must close."),
             TextWrapping = TextWrapping.Wrap
         };
         if (GetBrush("TextSecondary") is { } messageBrush)
@@ -253,6 +267,8 @@ internal static class CrashHandler
         headerText.Children.Add(headerTitle);
         headerText.Children.Add(headerSubTitle);
 
+        Window? window = null;
+
         var headerClose = new Button
         {
             Content = "X",
@@ -260,7 +276,13 @@ internal static class CrashHandler
             MinHeight = 28,
             HorizontalAlignment = HorizontalAlignment.Right
         };
-        headerClose.Click += (_, _) => desktop.Shutdown(1);
+        headerClose.Click += (_, _) =>
+        {
+            if (testMode)
+                window?.Close();
+            else
+                desktop.Shutdown(1);
+        };
 
         var headerGrid = new Grid
         {
@@ -286,7 +308,6 @@ internal static class CrashHandler
         }
         header.Child = headerGrid;
 
-        Window? window = null;
         header.PointerPressed += (_, e) =>
         {
             if (e.GetCurrentPoint(header).Properties.IsLeftButtonPressed)
@@ -313,7 +334,7 @@ internal static class CrashHandler
 
         window = new Window
         {
-            Title = L("Crash.Title", "VaultSync crashed"),
+            Title = testMode ? "Crash report test" : L("Crash.Title", "VaultSync crashed"),
             Content = root,
             CanResize = true,
             Width = 820,
@@ -401,13 +422,22 @@ internal static class CrashHandler
             Content = L("Crash.Close", "Close"),
             MinWidth = 90
         };
-        closeButton.Click += (_, _) => desktop.Shutdown(1);
+        closeButton.Click += (_, _) =>
+        {
+            if (testMode)
+                window.Close();
+            else
+                desktop.Shutdown(1);
+        };
         buttonRow.Children.Add(closeButton);
 
         content.Children.Add(buttonRow);
 
         window.Closed += (_, _) =>
         {
+            if (testMode)
+                return;
+
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
             {
                 lifetime.Shutdown(1);
@@ -467,6 +497,18 @@ internal static class CrashHandler
         catch
         {
             return "unknown";
+        }
+    }
+
+    private static Exception CaptureTestException()
+    {
+        try
+        {
+            throw new InvalidOperationException("Intentional local crash-report test.");
+        }
+        catch (Exception exception)
+        {
+            return exception;
         }
     }
 

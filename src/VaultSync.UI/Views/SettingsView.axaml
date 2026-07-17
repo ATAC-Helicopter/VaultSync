@@ -1781,6 +1781,31 @@
                                   IsChecked="{Binding CrashReportAssistanceEnabled, Mode=TwoWay}" />
                   </Grid>
 
+                  <!-- TEMPORARY 1.8.4 development control: remove before release. -->
+                  <Border Classes="subtle-card"
+                          Margin="0,8,0,0"
+                          Padding="12"
+                          BorderBrush="{DynamicResource WarningBrush}"
+                          BorderThickness="1"
+                          CornerRadius="12">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Temporary crash-report test"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="Generates the real local report and opens its review workflow without crashing or closing VaultSync. Remove before release."
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                      <Button Grid.Column="1"
+                              Content="Test crash report"
+                              Classes="action-ghost"
+                              Command="{Binding TestCrashReportCommand}"
+                              IsEnabled="{Binding CrashReportAssistanceEnabled}"
+                              VerticalAlignment="Center" />
+                    </Grid>
+                  </Border>
+
                   <Border Classes="subtle-card"
                           Margin="0,8,0,0"
                           Padding="12"
