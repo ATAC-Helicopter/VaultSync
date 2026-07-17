@@ -1,5 +1,17 @@
 # What's New
 
+## [1.8.4]
+
+VaultSync `1.8.4` is the Disaster Recovery update. Its first completed slice adds a privacy-first crash-report workflow while recovery drills, 3-2-1 guidance, protected recovery points, and trigger-based protection remain in development.
+
+### Privacy-first crash reports
+- Crash assistance creates a minimal, strictly allowlisted report locally and never uploads or sends it automatically.
+- Every report receives a category-prefixed UUID generated for that report only; it is not a user, device, installation, or tracking ID.
+- The exact generated report is shown in a read-only view. Its report ID, operating-system family, crash category, and exception-type reason cannot be changed in VaultSync.
+- Exception messages, raw logs, paths, file content, project and backup names, credentials, configuration, detailed OS information, and user or machine identifiers are excluded.
+- Preparing a report opens the local report folder and a generic email draft. The user must attach the visible file, review the message, and press Send in their own email application.
+- Crash assistance can be disabled completely in Settings. Local reports are limited to ten files and seven days, with owner-only permissions requested on Unix-like systems.
+
 ## [1.8.3]
 
 VaultSync `1.8.3` introduces Compare & Change Intelligence with searchable file-level changes and safe, line-by-line text comparisons, while strengthening release safety and diagnostics retention.
