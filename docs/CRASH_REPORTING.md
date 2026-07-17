@@ -119,7 +119,7 @@ When a new report is saved, VaultSync removes managed reports older than seven d
 VaultSync asks the platform mail application to create a visible draft addressed to:
 
 ```text
-crash-reports@fglabs.dev
+crashes@fglabs.dev
 ```
 
 The generated report is attached before the draft is shown. VaultSync uses Apple Mail automation on macOS, `xdg-email --attach` on Linux, and the local Outlook automation interface on Windows. Arguments are passed separately to the platform process rather than interpolated into shell commands. No report contents are placed in a `mailto:` URI, and no SMTP or API credential is present in VaultSync.
@@ -132,7 +132,7 @@ Simplified construction:
 
 ```csharp
 ProcessStartInfo draft = CreatePlatformDraft(
-    recipient: "crash-reports@fglabs.dev",
+    recipient: "crashes@fglabs.dev",
     subject: $"[VaultSync crash {report.ReportId}]",
     body: genericInstructions,
     attachmentPath: managedReportPath);
