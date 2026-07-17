@@ -624,6 +624,7 @@ namespace VaultSync.UI
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
             ExportSupportBundleCommand   = new RelayCommand(_ => ExportSupportBundle());
             ImportSupportBundleCommand   = new RelayCommand(_ => ImportSupportBundle());
+            TestCrashReportCommand       = new RelayCommand(_ => CrashHandler.ShowCrashReportTest());
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
             OpenMicrosoftStoreCommand    = new RelayCommand(_ => OpenMicrosoftStoreListing());
             _scanBackupIndexRepairPlanCommand = new RelayCommand(_ => ScanBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy);
@@ -2736,6 +2737,7 @@ namespace VaultSync.UI
         public ICommand ExportLogConsoleCommand { get; }
         public ICommand ExportSupportBundleCommand { get; }
         public ICommand ImportSupportBundleCommand { get; }
+        public ICommand TestCrashReportCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
         public ICommand OpenMicrosoftStoreCommand { get; }
         public ICommand ScanBackupIndexRepairPlanCommand => _scanBackupIndexRepairPlanCommand!;
