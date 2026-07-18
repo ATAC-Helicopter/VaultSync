@@ -1,31 +1,31 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-07-17T05:48:52Z`
+Captured at: `2026-07-18T05:34:40Z`
 
 - Releases: **46**
 - Assets: **380**
-- Total asset downloads: **1807**
-- Change since previous snapshot: **+40**
+- Total asset downloads: **1837**
+- Change since previous snapshot: **+30**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.3** with **21** downloads (+21)
-- Latest prerelease: **VaultSync 1.7.5 Beta 1** with **29** downloads (+1)
+- Latest stable: **VaultSync 1.8.3** with **40** downloads (+19)
+- Latest prerelease: **VaultSync 1.7.5 Beta 1** with **29** downloads (0)
 
 ## Top assets
 
 | Asset | Release | Downloads | Delta |
 |---|---|---:|---:|
-| vaultsync-patch-windows.json | `v1.8.2` | 180 | +6 |
+| vaultsync-patch-windows.json | `v1.8.2` | 180 | 0 |
 | vaultsync-patch-windows.json | `v1.8.1` | 179 | 0 |
 | vaultsync-patch-windows.json | `v1.4.1` | 67 | 0 |
 | vaultsync-patch-windows.json | `v1.3.5` | 67 | 0 |
 | vaultsync-patch-windows.json | `v1.8.0` | 55 | 0 |
 | vaultsync-patch-windows.json | `v1.3.4` | 39 | 0 |
 | vaultsync-patch-windows.json | `v1.4.0` | 35 | 0 |
+| vaultsync-patch-windows.json | `v1.8.3` | 31 | +16 |
 | VaultSync-1.7.0-macos-apple-silicon.dmg | `v1.7.0` | 29 | 0 |
 | vaultsync-patch-linux-x64.json | `v1.7.5` | 18 | 0 |
-| vaultsync-patch-macos-apple-silicon.zip | `v1.7.4-Beta.3` | 17 | 0 |
 
 ## By release
 
@@ -33,15 +33,15 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v1.8.3`
 - Published: `2026-07-16T11:22:38Z`
-- Total downloads: **21**
-- Delta: **+21**
+- Total downloads: **40**
+- Delta: **+19**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| vaultsync-patch-windows.json | 15 | +15 | 58008 |
-| VaultSync-Setup-1.8.3.exe | 4 | +4 | 60748400 |
-| vaultsync-patch-macos-apple-silicon.json | 1 | +1 | 55826 |
-| vaultsync-patch-macos-apple-silicon.zip | 1 | +1 | 50861272 |
+| vaultsync-patch-windows.json | 31 | +16 | 58008 |
+| VaultSync-Setup-1.8.3.exe | 7 | +3 | 60748400 |
+| vaultsync-patch-macos-apple-silicon.json | 1 | 0 | 55826 |
+| vaultsync-patch-macos-apple-silicon.zip | 1 | 0 | 50861272 |
 | VaultSync-1.8.3-linux-arm64.deb | 0 | 0 | 37805820 |
 | VaultSync-1.8.3-linux-arm64.tar.gz | 0 | 0 | 48461314 |
 | VaultSync-1.8.3-linux-x64.AppImage | 0 | 0 | 51160256 |
@@ -62,12 +62,12 @@ Captured at: `2026-07-17T05:48:52Z`
 - Tag: `v1.8.2`
 - Published: `2026-07-04T17:44:43Z`
 - Total downloads: **199**
-- Delta: **+7**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| vaultsync-patch-windows.json | 180 | +6 | 56037 |
-| VaultSync-Setup-1.8.2.exe | 13 | +1 | 61196206 |
+| vaultsync-patch-windows.json | 180 | 0 | 56037 |
+| VaultSync-Setup-1.8.2.exe | 13 | 0 | 61196206 |
 | vaultsync-patch-linux-x64.json | 2 | 0 | 52697 |
 | VaultSync-1.8.2-linux-x64.deb | 1 | 0 | 39763868 |
 | VaultSync-1.8.2-macos-apple-silicon.dmg | 1 | 0 | 57127225 |
@@ -89,17 +89,18 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v1.8.1`
 - Published: `2026-06-25T13:27:39Z`
-- Total downloads: **214**
-- Delta: **0**
+- Total downloads: **216**
+- Delta: **+2**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 179 | 0 | 56018 |
-| VaultSync-Setup-1.8.1.exe | 9 | 0 | 59949865 |
+| VaultSync-Setup-1.8.1.exe | 10 | +1 | 59949865 |
 | vaultsync-patch-linux-x64.zip | 5 | 0 | 50161605 |
 | VaultSync-1.8.1-macos-apple-silicon.dmg | 3 | 0 | 56646785 |
 | VaultSync-1.8.1-linux-arm64.tar.gz | 2 | 0 | 47692555 |
 | VaultSync-1.8.1-linux-x64.tar.gz | 2 | 0 | 49913659 |
+| vaultsync-patch-linux-arm64.zip | 2 | +1 | 47938013 |
 | vaultsync-patch-linux-x64.json | 2 | 0 | 52679 |
 | vaultsync-patch-macos-apple-silicon.zip | 2 | 0 | 49998658 |
 | vaultsync-patch-macos-intel.zip | 2 | 0 | 52278585 |
@@ -108,7 +109,6 @@ Captured at: `2026-07-17T05:48:52Z`
 | VaultSync-1.8.1-linux-x64.AppImage | 1 | 0 | 50214080 |
 | VaultSync-1.8.1-linux-x64.deb | 1 | 0 | 39576544 |
 | VaultSync-1.8.1-macos-intel.dmg | 1 | 0 | 58594640 |
-| vaultsync-patch-linux-arm64.zip | 1 | 0 | 47938013 |
 | vaultsync-patch-macos-apple-silicon.json | 1 | 0 | 53897 |
 | vaultsync-patch-linux-arm64.json | 0 | 0 | 52684 |
 | vaultsync-patch-macos-intel.json | 0 | 0 | 53893 |
@@ -118,7 +118,7 @@ Captured at: `2026-07-17T05:48:52Z`
 - Tag: `v1.8.0`
 - Published: `2026-06-20T12:07:31Z`
 - Total downloads: **106**
-- Delta: **+2**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
@@ -130,9 +130,9 @@ Captured at: `2026-07-17T05:48:52Z`
 | VaultSync-1.8.0-linux-arm64.tar.gz | 3 | 0 | 47677557 |
 | VaultSync-Setup-1.8.0.exe | 3 | 0 | 59936514 |
 | VaultSync-1.8.0-linux-arm64.deb | 2 | 0 | 37162842 |
-| VaultSync-1.8.0-macos-apple-silicon.dmg | 2 | +1 | 56648571 |
+| VaultSync-1.8.0-macos-apple-silicon.dmg | 2 | 0 | 56648571 |
 | VaultSync-1.8.0-macos-intel.dmg | 2 | 0 | 58580469 |
-| vaultsync-patch-linux-arm64.zip | 2 | +1 | 47917572 |
+| vaultsync-patch-linux-arm64.zip | 2 | 0 | 47917572 |
 | vaultsync-patch-linux-x64.json | 2 | 0 | 52679 |
 | vaultsync-patch-linux-x64.zip | 2 | 0 | 50141147 |
 | vaultsync-patch-macos-apple-silicon.zip | 2 | 0 | 49978212 |
@@ -174,14 +174,14 @@ Captured at: `2026-07-17T05:48:52Z`
 - Tag: `v1.7.5-Beta.1`
 - Published: `2026-05-26T07:51:57Z`
 - Total downloads: **29**
-- Delta: **+1**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | VaultSync-1.7.5-Beta.1-linux-x64.deb | 4 | 0 | 39477568 |
 | vaultsync-patch-linux-x64.json | 3 | 0 | 52752 |
 | vaultsync-patch-macos-apple-silicon.zip | 3 | 0 | 49801883 |
-| VaultSync-1.7.5-Beta.1-linux-arm64.tar.gz | 2 | +1 | 47498192 |
+| VaultSync-1.7.5-Beta.1-linux-arm64.tar.gz | 2 | 0 | 47498192 |
 | VaultSync-1.7.5-Beta.1-linux-x64.AppImage | 2 | 0 | 50050240 |
 | VaultSync-1.7.5-Beta.1-macos-apple-silicon.dmg | 2 | 0 | 56695280 |
 | vaultsync-patch-linux-arm64.zip | 2 | 0 | 47745107 |
@@ -201,8 +201,8 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v1.7.4`
 - Published: `2026-05-20T14:58:51Z`
-- Total downloads: **59**
-- Delta: **0**
+- Total downloads: **60**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
@@ -212,9 +212,9 @@ Captured at: `2026-07-17T05:48:52Z`
 | VaultSync-Setup-1.7.4.exe | 6 | 0 | 86259193 |
 | VaultSync-1.7.4-linux-x64.deb | 5 | 0 | 40459408 |
 | vaultsync-patch-macos-apple-silicon.zip | 5 | 0 | 50962418 |
+| vaultsync-patch-windows.zip | 5 | +1 | 123969400 |
 | VaultSync-1.7.4-linux-x64.AppImage | 4 | 0 | 51213504 |
 | vaultsync-patch-windows.json | 4 | 0 | 113895 |
-| vaultsync-patch-windows.zip | 4 | 0 | 123969400 |
 | VaultSync-1.7.4-linux-arm64.deb | 2 | 0 | 38071230 |
 | VaultSync-1.7.4-linux-arm64.tar.gz | 2 | 0 | 48673576 |
 | VaultSync-1.7.4-linux-x64.tar.gz | 2 | 0 | 50900152 |
@@ -225,22 +225,22 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v1.7.4-Beta.3`
 - Published: `2026-05-19T08:39:09Z`
-- Total downloads: **48**
+- Total downloads: **49**
 - Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-macos-apple-silicon.zip | 17 | 0 | 50960763 |
-| vaultsync-patch-macos-intel.zip | 6 | +1 | 53235851 |
+| vaultsync-patch-macos-intel.zip | 6 | 0 | 53235851 |
 | VaultSync-1.7.4-Beta.3-macos-apple-silicon.dmg | 5 | 0 | 57799321 |
 | VaultSync-1.7.4-Beta.3-macos-intel.dmg | 5 | 0 | 59679068 |
 | VaultSync-1.7.4-Beta.3-linux-x64.deb | 3 | 0 | 40459080 |
 | vaultsync-patch-windows.zip | 3 | 0 | 123967816 |
 | VaultSync-1.7.4-Beta.3-linux-arm64.tar.gz | 2 | 0 | 48672131 |
+| VaultSync-1.7.4-Beta.3-linux-x64.AppImage | 2 | +1 | 51209408 |
 | VaultSync-1.7.4-Beta.3-linux-x64.tar.gz | 2 | 0 | 50893344 |
 | VaultSync-Setup-1.7.4-Beta.3.exe | 2 | 0 | 86258325 |
 | VaultSync-1.7.4-Beta.3-linux-arm64.deb | 1 | 0 | 38068606 |
-| VaultSync-1.7.4-Beta.3-linux-x64.AppImage | 1 | 0 | 51209408 |
 | vaultsync-patch-windows.json | 1 | 0 | 113688 |
 | vaultsync-patch-macos-apple-silicon.json | 0 | 0 | 55075 |
 | vaultsync-patch-macos-intel.json | 0 | 0 | 55071 |
@@ -250,13 +250,13 @@ Captured at: `2026-07-17T05:48:52Z`
 - Tag: `v1.7.4-Beta.2`
 - Published: `2026-05-17T12:08:04Z`
 - Total downloads: **30**
-- Delta: **+2**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | VaultSync-1.7.4-Beta.2-linux-arm64.tar.gz | 4 | 0 | 47530124 |
 | VaultSync-1.7.4-Beta.2-macos-intel.dmg | 4 | 0 | 59665670 |
-| vaultsync-patch-windows.zip | 4 | +1 | 96646889 |
+| vaultsync-patch-windows.zip | 4 | 0 | 96646889 |
 | VaultSync-1.7.4-Beta.2-linux-x64.tar.gz | 3 | 0 | 50151153 |
 | vaultsync-patch-linux-arm64.zip | 3 | 0 | 47765181 |
 | vaultsync-patch-macos-intel.zip | 3 | 0 | 53178978 |
@@ -264,7 +264,7 @@ Captured at: `2026-07-17T05:48:52Z`
 | VaultSync-1.7.4-Beta.2-macos-apple-silicon.dmg | 2 | 0 | 57725489 |
 | vaultsync-patch-linux-x64.zip | 2 | 0 | 50385337 |
 | vaultsync-patch-macos-apple-silicon.zip | 2 | 0 | 50903869 |
-| VaultSync-1.7.4-Beta.2-linux-arm64.deb | 1 | +1 | 37238632 |
+| VaultSync-1.7.4-Beta.2-linux-arm64.deb | 1 | 0 | 37238632 |
 | VaultSync-1.7.4-Beta.2-linux-x64.AppImage | 0 | 0 | 50455744 |
 | vaultsync-patch-linux-arm64.json | 0 | 0 | 53836 |
 | vaultsync-patch-linux-x64.json | 0 | 0 | 53831 |
@@ -277,8 +277,8 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v1.7.4-Beta.1`
 - Published: `2026-05-16T11:07:48Z`
-- Total downloads: **28**
-- Delta: **0**
+- Total downloads: **29**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
@@ -290,10 +290,10 @@ Captured at: `2026-07-17T05:48:52Z`
 | vaultsync-patch-macos-apple-silicon.zip | 3 | 0 | 50895469 |
 | vaultsync-patch-linux-x64.zip | 2 | 0 | 50376919 |
 | vaultsync-patch-macos-intel.zip | 2 | 0 | 53170542 |
+| VaultSync-1.7.4-Beta.1-linux-x64.AppImage | 1 | +1 | 50447552 |
 | vaultsync-patch-linux-x64.json | 1 | 0 | 53800 |
 | vaultsync-patch-macos-apple-silicon.json | 1 | 0 | 55019 |
 | vaultsync-patch-windows.zip | 1 | 0 | 96638435 |
-| VaultSync-1.7.4-Beta.1-linux-x64.AppImage | 0 | 0 | 50447552 |
 | vaultsync-patch-linux-arm64.json | 0 | 0 | 53805 |
 | vaultsync-patch-macos-intel.json | 0 | 0 | 55015 |
 | vaultsync-patch-windows.json | 0 | 0 | 113254 |
@@ -329,21 +329,21 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v1.7.3-Beta.1`
 - Published: `2026-04-20T09:13:13Z`
-- Total downloads: **59**
-- Delta: **+3**
+- Total downloads: **60**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | VaultSync-1.7.3-Beta.1-macos-intel.dmg | 7 | 0 | 56154179 |
-| vaultsync-patch-macos-intel.zip | 6 | +1 | 49760783 |
+| vaultsync-patch-macos-intel.zip | 6 | 0 | 49760783 |
 | VaultSync-1.7.3-Beta.1-linux-x64.AppImage | 5 | 0 | 46634176 |
 | VaultSync-1.7.3-Beta.1-linux-x64.tar.gz | 5 | 0 | 46406322 |
-| vaultsync-patch-linux-x64.zip | 5 | +1 | 46624546 |
+| vaultsync-patch-linux-x64.zip | 5 | 0 | 46624546 |
 | vaultsync-patch-macos-apple-silicon.zip | 5 | 0 | 48093076 |
 | vaultsync-patch-windows.zip | 5 | 0 | 92588547 |
-| VaultSync-1.7.3-Beta.1-macos-apple-silicon.dmg | 4 | +1 | 54546397 |
+| VaultSync-1.7.3-Beta.1-macos-apple-silicon.dmg | 4 | 0 | 54546397 |
+| vaultsync-patch-linux-arm64.zip | 4 | +1 | 44739023 |
 | VaultSync-1.7.3-Beta.1-linux-arm64.tar.gz | 3 | 0 | 44541150 |
-| vaultsync-patch-linux-arm64.zip | 3 | 0 | 44739023 |
 | vaultsync-patch-windows.json | 3 | 0 | 111648 |
 | VaultSync-Setup-1.7.3-Beta.1.exe | 3 | 0 | 66171772 |
 | vaultsync-patch-macos-apple-silicon.json | 2 | 0 | 54424 |
@@ -463,12 +463,12 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v1.5.0`
 - Published: `2026-02-19T21:46:30Z`
-- Total downloads: **44**
-- Delta: **0**
+- Total downloads: **45**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| VaultSync-1.5.0-macos-apple-silicon.dmg | 7 | 0 | 54935044 |
+| VaultSync-1.5.0-macos-apple-silicon.dmg | 8 | +1 | 54935044 |
 | VaultSync-1.5.0-macos-intel.dmg | 6 | 0 | 56240663 |
 | vaultsync-patch-windows.zip | 6 | 0 | 93284927 |
 | VaultSync-Setup-1.5.0.exe | 6 | 0 | 67048508 |
@@ -483,15 +483,15 @@ Captured at: `2026-07-17T05:48:52Z`
 - Tag: `v1.4.1`
 - Published: `2026-02-06T15:37:05Z`
 - Total downloads: **107**
-- Delta: **+2**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 67 | 0 | 110365 |
 | vaultsync-patch-windows.zip | 7 | 0 | 93157160 |
-| VaultSync-Setup-1.4.1.exe | 7 | +1 | 66949761 |
+| VaultSync-Setup-1.4.1.exe | 7 | 0 | 66949761 |
 | VaultSync-1.4.1-macos-intel.dmg | 6 | 0 | 56152634 |
-| vaultsync-patch-macos-apple-silicon.zip | 6 | +1 | 48632870 |
+| vaultsync-patch-macos-apple-silicon.zip | 6 | 0 | 48632870 |
 | VaultSync-1.4.1-macos-apple-silicon.dmg | 5 | 0 | 54599583 |
 | vaultsync-patch-macos-intel.zip | 4 | 0 | 50315529 |
 | vaultsync-patch-macos-apple-silicon.json | 3 | 0 | 53181 |
@@ -501,16 +501,16 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v1.4.0`
 - Published: `2026-02-03T18:30:25Z`
-- Total downloads: **57**
-- Delta: **0**
+- Total downloads: **58**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 35 | 0 | 110366 |
 | VaultSync-Setup-1.4.0.exe | 5 | 0 | 66927993 |
 | VaultSync-1.4.0-macos-apple-silicon.dmg | 4 | 0 | 54683027 |
+| vaultsync-patch-windows.zip | 4 | +1 | 93127844 |
 | VaultSync-1.4.0-macos-intel.dmg | 3 | 0 | 55958078 |
-| vaultsync-patch-windows.zip | 3 | 0 | 93127844 |
 | vaultsync-patch-macos-apple-silicon.json | 2 | 0 | 53182 |
 | vaultsync-patch-macos-apple-silicon.zip | 2 | 0 | 48603581 |
 | vaultsync-patch-macos-intel.zip | 2 | 0 | 50286270 |
@@ -539,13 +539,13 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v1.3.4`
 - Published: `2026-01-25T17:31:30Z`
-- Total downloads: **64**
-- Delta: **0**
+- Total downloads: **65**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 39 | 0 | 110366 |
-| VaultSync-Setup-1.3.4.exe | 7 | 0 | 66860843 |
+| VaultSync-Setup-1.3.4.exe | 8 | +1 | 66860843 |
 | vaultsync-patch-windows.zip | 6 | 0 | 93053538 |
 | VaultSync-1.3.4-macos-intel.dmg | 3 | 0 | 55892495 |
 | VaultSync-1.3.4-macos-apple-silicon.dmg | 2 | 0 | 54729000 |
@@ -559,13 +559,13 @@ Captured at: `2026-07-17T05:48:52Z`
 - Tag: `v1.3.3`
 - Published: `2026-01-22T17:16:43Z`
 - Total downloads: **33**
-- Delta: **+1**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | VaultSync-Setup-1.3.3.exe | 6 | 0 | 66787246 |
 | VaultSync-1.3.3-macos-apple-silicon.dmg | 4 | 0 | 54662713 |
-| VaultSync-1.3.3-macos-intel.dmg | 4 | +1 | 55960402 |
+| VaultSync-1.3.3-macos-intel.dmg | 4 | 0 | 55960402 |
 | vaultsync-patch-windows.json | 4 | 0 | 110366 |
 | vaultsync-patch-windows.zip | 4 | 0 | 93014375 |
 | vaultsync-patch-macos-apple-silicon.json | 3 | 0 | 53182 |
@@ -773,14 +773,14 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v0.9.7`
 - Published: `2025-12-04T10:47:18Z`
-- Total downloads: **15**
-- Delta: **0**
+- Total downloads: **16**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 7 | 0 | 26274 |
 | VaultSync-Setup-0.9.7.exe | 5 | 0 | 16403987 |
-| vaultsync-patch-windows.zip | 3 | 0 | 21325622 |
+| vaultsync-patch-windows.zip | 4 | +1 | 21325622 |
 
 ### V0.9.6 BETA
 
@@ -838,14 +838,14 @@ Captured at: `2026-07-17T05:48:52Z`
 
 - Tag: `v0.9.2`
 - Published: `2025-12-02T19:25:40Z`
-- Total downloads: **11**
-- Delta: **0**
+- Total downloads: **12**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 4 | 0 | 3163 |
 | vaultsync-patch-windows.zip | 4 | 0 | 1736331 |
-| VaultSync-Setup-0.9.2.exe | 3 | 0 | 63440958 |
+| VaultSync-Setup-0.9.2.exe | 4 | +1 | 63440958 |
 
 ### V0.9.1 BETA
 
