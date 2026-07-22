@@ -11,7 +11,11 @@ internal sealed record RecoveryReportProject(
     string ProjectName,
     string Status,
     int Score,
-    string Reason);
+    string Reason,
+    string Copies = "",
+    string Media = "",
+    string Offsite = "",
+    string LastDrill = "");
 
 internal sealed record RecoveryReportSnapshot(
     DateTimeOffset GeneratedAt,
@@ -30,7 +34,11 @@ internal sealed record RecoveryReportSnapshot(
     int Coverage30Days,
     int Coverage90Days,
     string TopRecommendation,
-    IReadOnlyList<RecoveryReportProject> Projects);
+    IReadOnlyList<RecoveryReportProject> Projects,
+    int ThreeTwoOneReadyCount = 0,
+    int DrilledProjectCount = 0,
+    int PassedDrillCount = 0,
+    int ProtectedPointCount = 0);
 
 internal sealed record RecoveryReportLabels(
     string Title,
@@ -45,7 +53,15 @@ internal sealed record RecoveryReportLabels(
     string Status,
     string Score,
     string Reason,
-    string NoProjects);
+    string NoProjects,
+    string Protection = "Disaster recovery protection",
+    string ThreeTwoOne = "3-2-1 ready",
+    string Drills = "Recovery drills",
+    string ProtectedPoints = "Protected recovery points",
+    string Copies = "Copies",
+    string Media = "Media",
+    string Offsite = "Offsite",
+    string LastDrill = "Last drill");
 
 internal static class RecoveryReportExporter
 {
@@ -101,6 +117,16 @@ internal static class RecoveryReportExporter
         builder.AppendLine(snapshot.TopRecommendation);
         builder.AppendLine();
 
+        builder.Append("## ").AppendLine(labels.Protection);
+        builder.AppendLine();
+        builder.Append("- **").Append(labels.ThreeTwoOne).Append(":** ")
+            .Append(snapshot.ThreeTwoOneReadyCount).Append('/').Append(snapshot.ProjectCount).AppendLine();
+        builder.Append("- **").Append(labels.Drills).Append(":** ")
+            .Append(snapshot.PassedDrillCount).Append(" passed / ").Append(snapshot.DrilledProjectCount).AppendLine(" run");
+        builder.Append("- **").Append(labels.ProtectedPoints).Append(":** ")
+            .Append(snapshot.ProtectedPointCount).AppendLine();
+        builder.AppendLine();
+
         builder.Append("## ").AppendLine(labels.ProjectMatrix);
         builder.AppendLine();
         if (snapshot.Projects.Count == 0)
@@ -112,13 +138,21 @@ internal static class RecoveryReportExporter
         builder.Append("| ").Append(labels.Project)
             .Append(" | ").Append(labels.Status)
             .Append(" | ").Append(labels.Score)
+            .Append(" | ").Append(labels.Copies)
+            .Append(" | ").Append(labels.Media)
+            .Append(" | ").Append(labels.Offsite)
+            .Append(" | ").Append(labels.LastDrill)
             .Append(" | ").Append(labels.Reason).AppendLine(" |");
-        builder.AppendLine("|---|---:|---:|---|");
+        builder.AppendLine("|---|---:|---:|---:|---:|---|---|---|");
         foreach (RecoveryReportProject project in snapshot.Projects)
         {
             builder.Append("| ").Append(EscapeCell(project.ProjectName))
                 .Append(" | ").Append(EscapeCell(project.Status))
                 .Append(" | ").Append(project.Score).Append("%")
+                .Append(" | ").Append(EscapeCell(project.Copies))
+                .Append(" | ").Append(EscapeCell(project.Media))
+                .Append(" | ").Append(EscapeCell(project.Offsite))
+                .Append(" | ").Append(EscapeCell(project.LastDrill))
                 .Append(" | ").Append(EscapeCell(project.Reason)).AppendLine(" |");
         }
 
