@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
@@ -12,9 +14,13 @@ public sealed class DisasterRecoveryAdvisorServiceTests
     [Fact]
     public void BuildSummary_RequiresThreeCopiesTwoMediaAndExplicitOffsiteConfirmation()
     {
-        var project = new Project { Id = 1, Name = "App", RootPath = "/Users/dev/App", Preset = "default" };
-        var local = new Backup { Id = 10, ProjectId = 1, SnapshotId = 20, DestinationPath = "/Volumes/Archive", CreatedUtc = DateTime.UtcNow };
-        var remote = new Backup { Id = 11, ProjectId = 1, SnapshotId = 21, DestinationPath = "smb://nas/backups", CreatedUtc = DateTime.UtcNow };
+        using var temp = new TempDirectory();
+        string projectRoot = Directory.CreateDirectory(Path.Combine(temp.Path, "project")).FullName;
+        string localContent = Directory.CreateDirectory(Path.Combine(temp.Path, "local-copy")).FullName;
+        string remoteContent = Directory.CreateDirectory(Path.Combine(temp.Path, "remote-copy")).FullName;
+        var project = new Project { Id = 1, Name = "App", RootPath = projectRoot, Preset = "default" };
+        var local = new Backup { Id = 10, ProjectId = 1, SnapshotId = 20, Path = localContent, DestinationPath = "/Volumes/Archive", CreatedUtc = DateTime.UtcNow };
+        var remote = new Backup { Id = 11, ProjectId = 1, SnapshotId = 21, Path = remoteContent, DestinationPath = "smb://nas/backups", CreatedUtc = DateTime.UtcNow };
         var config = new AppConfig
         {
             Backups = new BackupsConfig
@@ -43,6 +49,64 @@ public sealed class DisasterRecoveryAdvisorServiceTests
         Assert.True(assessment.MediaCount >= 2);
         Assert.True(assessment.HasOffsiteCopy);
         Assert.True(assessment.MeetsThreeTwoOne);
+    }
+
+    [Fact]
+    public void BuildSummary_DoesNotCountMissingRecordedCopiesAsThreeTwoOneProtection()
+    {
+        using var temp = new TempDirectory();
+        string projectRoot = Directory.CreateDirectory(Path.Combine(temp.Path, "project")).FullName;
+        var project = new Project { Id = 1, Name = "App", RootPath = projectRoot, Preset = "default" };
+        var missingLocal = new Backup
+        {
+            Id = 10,
+            ProjectId = 1,
+            SnapshotId = 20,
+            Path = "App/missing-local",
+            DestinationPath = Path.Combine(temp.Path, "offline-local"),
+            CreatedUtc = DateTime.UtcNow
+        };
+        var missingOffsite = new Backup
+        {
+            Id = 11,
+            ProjectId = 1,
+            SnapshotId = 21,
+            Path = "App/missing-offsite",
+            DestinationPath = Path.Combine(temp.Path, "offline-offsite"),
+            DestinationAlias = "Offsite",
+            CreatedUtc = DateTime.UtcNow
+        };
+        var config = new AppConfig
+        {
+            Backups = new BackupsConfig
+            {
+                Destinations =
+                [
+                    new BackupDestination
+                    {
+                        Path = missingOffsite.DestinationPath,
+                        Alias = "Offsite",
+                        IsOffsite = true
+                    }
+                ]
+            }
+        };
+
+        ProjectProtectionAssessment assessment = Assert.Single(
+            new DisasterRecoveryAdvisorService().BuildSummary(
+                [project],
+                [missingLocal, missingOffsite],
+                [
+                    new Snapshot { Id = 20, ProjectId = 1 },
+                    new Snapshot { Id = 21, ProjectId = 1 }
+                ],
+                new Dictionary<int, SnapshotHistoryMetadata>(),
+                config).Projects);
+
+        Assert.Equal(1, assessment.CopyCount);
+        Assert.Equal(1, assessment.MediaCount);
+        Assert.False(assessment.HasOffsiteCopy);
+        Assert.False(assessment.MeetsThreeTwoOne);
     }
 
     [Fact]
