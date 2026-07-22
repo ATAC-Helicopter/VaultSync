@@ -90,9 +90,16 @@ internal static class CrashHandler
             return;
         }
 
-        DiagnosticsLogger.Record($"Soft UI crash handled: {ex.GetType().Name}");
-        CrashArtifact? crash = WriteCrashLog(ex, "UI thread", isTerminating: false);
-        TryShowSoftCrashBanner(crash?.Path);
+        try
+        {
+            DiagnosticsLogger.Record($"Soft UI crash handled: {ex.GetType().Name}");
+            CrashArtifact? crash = WriteCrashLog(ex, "UI thread", isTerminating: false);
+            TryShowSoftCrashBanner(crash?.Path);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _softHandling, 0);
+        }
     }
 
     private static void TryShowSoftCrashBanner(string? logPath)
