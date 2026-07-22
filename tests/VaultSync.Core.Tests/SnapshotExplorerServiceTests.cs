@@ -118,6 +118,59 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public void FolderBackup_DoesNotBrowsePreviewOrRestoreLinkedSourceEntries()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string backup = CreateFolderBackup();
+        string outside = Path.Combine(_root, "linked-source-outside");
+        string target = Path.Combine(_root, "linked-source-restore");
+        Directory.CreateDirectory(outside);
+        File.WriteAllText(Path.Combine(outside, "secret.txt"), "outside backup root");
+        Directory.CreateSymbolicLink(Path.Combine(backup, "linked"), outside);
+
+        SnapshotExplorerResult listing = SnapshotExplorerService.List(backup);
+        SnapshotExplorerResult search = SnapshotExplorerService.List(backup, search: "secret");
+        SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(backup, "linked/secret.txt");
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.FindTextEquivalentFiles(
+            backup,
+            backup,
+            ["linked/secret.txt"]));
+
+        Assert.DoesNotContain(listing.Entries, entry => entry.Path == "linked");
+        Assert.Empty(search.Entries);
+        Assert.False(preview.Success);
+        Assert.Contains("linked path component", preview.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Throws<InvalidDataException>(() =>
+            SnapshotExplorerService.RestoreSelection(backup, target, ["linked"]));
+        Assert.False(File.Exists(Path.Combine(target, "linked", "secret.txt")));
+    }
+
+    [Fact]
+    public void ArchiveBackup_RejectsDuplicateFilePathsAcrossOperations()
+    {
+        string backup = Path.Combine(_root, "duplicate-path-archive");
+        string target = Path.Combine(_root, "duplicate-path-restore");
+        Directory.CreateDirectory(backup);
+        using (ZipArchive archive = ZipFile.Open(
+                   Path.Combine(backup, BackupArchiveCryptoService.PlainArchiveFileName),
+                   ZipArchiveMode.Create))
+        {
+            AddArchiveText(archive, "docs/repeated.txt", "first");
+            AddArchiveText(archive, "docs/repeated.txt", "second");
+        }
+
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.List(backup));
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.BuildFileInventory(backup));
+        SnapshotPreviewResult preview = SnapshotExplorerService.PreviewText(backup, "docs/repeated.txt");
+        Assert.False(preview.Success);
+        Assert.Contains("duplicate file path", preview.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Throws<InvalidDataException>(() =>
+            SnapshotExplorerService.RestoreSelection(backup, target, ["docs"]));
+    }
+
+    [Fact]
     public void ArchiveBackup_PreservesCaseDistinctFiles()
     {
         string backup = Path.Combine(_root, "case-distinct-archive");
