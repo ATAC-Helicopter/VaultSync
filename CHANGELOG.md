@@ -2,6 +2,12 @@
 ## [1.8.4] - Unreleased
 ### Added
 - [VS-1847] Added a fully local crash-report review workflow with strict allowlist redaction, a themed read-only attachment preview, category-prefixed random report IDs, locked OS/category/reason fields, platform-native email drafts with the reviewed report attached, bounded owner-only report storage, and a complete disable control; VaultSync never sends a report automatically.
+- [VS-1810] Added non-destructive recovery drills that validate record linkage, destination availability, readable folder/ZIP inventories, encrypted descriptors, and snapshot file counts without restoring into the project; results and actionable checks persist locally.
+- [VS-1810] Added a transparent 3-2-1 advisor for copy count, storage-media diversity, and explicitly user-confirmed offsite destinations, with the same measurements included in exported Recovery reports.
+- [VS-1810] Added release, delivery, large-deletion, high-churn, and pre-cleanup protection recommendations with one-click protection through the existing retention-safe recovery-point marker.
+### Changed
+- [VS-1810] Expanded the Recovery workspace with per-project drill actions, last-result guidance, copy/media/offsite status, protected-point totals, and a localized 3-2-1 overview across all maintained languages.
+- [VS-1810] Added an explicit offsite destination setting; VaultSync never guesses physical location from a path, hostname, mount, or network protocol.
 
 ## [1.8.3] - 16.07.2026
 ### Added

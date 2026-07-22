@@ -2,7 +2,15 @@
 
 ## [1.8.4]
 
-VaultSync `1.8.4` is the Disaster Recovery update. Its first completed slice adds a privacy-first crash-report workflow while recovery drills, 3-2-1 guidance, protected recovery points, and trigger-based protection remain in development.
+VaultSync `1.8.4` is the Disaster Recovery update. It adds measurable recovery drills, transparent 3-2-1 guidance, protected-point recommendations, and a privacy-first crash-report workflow.
+
+### Disaster recovery
+- Run a non-destructive drill against a project's newest recovery point without copying anything into the project.
+- See whether metadata links correctly, the destination is reachable, the payload opens, and its inventory agrees with the snapshot record.
+- Keep the latest drill result locally and include drill coverage and actionable project details in the exported Recovery report.
+- Measure three copies, two storage media, and one explicitly confirmed offsite destination per project.
+- Mark destinations as offsite yourself; VaultSync does not infer physical location from paths or network protocols.
+- Protect suggested release, delivery, post-deletion, high-churn, or baseline recovery points without creating a second protection system.
 
 ### Privacy-first crash reports
 - Crash assistance creates a minimal, strictly allowlisted report locally and never uploads or sends it automatically.
