@@ -28,14 +28,16 @@ public sealed partial class DisasterRecoveryAdvisorService
                 .Where(backup => backup.ProjectId == project.Id)
                 .OrderByDescending(backup => backup.CreatedUtc)
                 .ThenByDescending(backup => backup.Id)];
-            int destinationCopies = projectBackups
+            List<Backup> reachableBackups = [.. projectBackups
+                .Where(backup => BackupContentPathResolver.Resolve(backup, config) is not null)];
+            int destinationCopies = reachableBackups
                 .Select(GetDestinationIdentity)
                 .Where(identity => identity.Length > 0)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Distinct(GetPathComparer())
                 .Count();
-            int copyCount = projectBackups.Count == 0 ? 1 : 1 + destinationCopies;
-            int mediaCount = CountMedia(project, projectBackups);
-            bool offsite = projectBackups.Any(backup => IsOffsite(backup, config));
+            int copyCount = 1 + destinationCopies;
+            int mediaCount = CountMedia(project, reachableBackups);
+            bool offsite = reachableBackups.Any(backup => IsOffsite(backup, config));
             int protectedCount = projectBackups
                 .Select(backup => backup.SnapshotId)
                 .Distinct()
@@ -108,7 +110,7 @@ public sealed partial class DisasterRecoveryAdvisorService
 
     private static int CountMedia(Project project, IReadOnlyList<Backup> backups)
     {
-        var media = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { GetMediaIdentity(project.RootPath) };
+        var media = new HashSet<string>(GetPathComparer()) { GetMediaIdentity(project.RootPath) };
         foreach (Backup backup in backups)
         {
             string destination = string.IsNullOrWhiteSpace(backup.DestinationPath) ? backup.DestinationAlias : backup.DestinationPath;
@@ -118,6 +120,11 @@ public sealed partial class DisasterRecoveryAdvisorService
 
         return media.Count;
     }
+
+    private static StringComparer GetPathComparer() =>
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
 
     private static string GetMediaIdentity(string path)
     {
