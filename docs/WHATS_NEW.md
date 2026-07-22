@@ -11,6 +11,13 @@ VaultSync `1.8.4` is the Disaster Recovery update. It adds measurable recovery d
 - Measure three copies, two storage media, and one explicitly confirmed offsite destination per project.
 - Mark destinations as offsite yourself; VaultSync does not infer physical location from paths or network protocols.
 - Protect suggested release, delivery, post-deletion, high-churn, or baseline recovery points without creating a second protection system.
+- Only recovery points that are currently reachable at their recorded destination count toward 3-2-1 readiness; disconnected or missing copies remain visible but cannot create a false protection score.
+
+### Reliability and safety
+- Snapshot Explorer refuses linked source entries and ambiguous duplicate ZIP paths before browsing, comparing, or restoring them.
+- Archive-upload progress workers now stop promptly after completion or failure, stalled uploads retain checkpoint retry behavior, and prematurely ended source chunks fail closed.
+- Recoverable UI exceptions continue to enter the local review workflow throughout the session instead of only after the first event.
+- Supported SQLite, protected-data, and Windows drawing packages include their latest safe servicing updates; the rendering stack remains on its validated coordinated versions.
 
 ### Privacy-first crash reports
 - Crash assistance creates a minimal, strictly allowlisted report locally and never uploads or sends it automatically.

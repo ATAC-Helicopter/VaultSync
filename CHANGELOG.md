@@ -8,6 +8,12 @@
 ### Changed
 - [VS-1810] Expanded the Recovery workspace with per-project drill actions, last-result guidance, copy/media/offsite status, protected-point totals, and a localized 3-2-1 overview across all maintained languages.
 - [VS-1810] Added an explicit offsite destination setting; VaultSync never guesses physical location from a path, hostname, mount, or network protocol.
+- [VS-1849] Refreshed the supported SQLite, protected-data, and Windows drawing servicing packages while keeping the coordinated Avalonia rendering stack pinned to its validated ABI.
+### Fixed
+- [BUG-18066] Snapshot Explorer now rejects linked source paths across browsing, search, preview, comparison, inventory, and restore, and fails closed on ZIP archives with duplicate normalized file paths.
+- [BUG-18067] Disaster Recovery guidance now counts only currently reachable backup payloads and no longer mistakes same-named content on an unrelated destination for the recorded recovery point.
+- [BUG-18068] Archive uploads now stop and observe progress workers promptly, retry monitor-detected stalls as timeouts, and reject incomplete parallel chunks instead of checkpointing them as complete.
+- [BUG-18069] Recoverable UI exceptions can produce a reviewed local crash report after the first event in a session while remaining protected against recursive crash handling.
 
 ## [1.8.3] - 16.07.2026
 ### Added
