@@ -2,13 +2,20 @@ version: 2
 updates:
   - package-ecosystem: "nuget"
     directory: "/"
+    target-branch: "Dev"
     schedule:
       interval: "weekly"
+    groups:
+      rendering-stack:
+        patterns:
+          - "SkiaSharp*"
+          - "HarfBuzzSharp*"
     labels:
       - "dependencies"
 
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "Dev"
     schedule:
       interval: "weekly"
     labels:
