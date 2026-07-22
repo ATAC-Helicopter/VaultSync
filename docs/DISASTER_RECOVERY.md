@@ -25,13 +25,13 @@ Relevant implementation:
 
 For every project, the advisor measures:
 
-- **3 copies:** the project source plus recovery points recorded on distinct destinations.
-- **2 media:** distinct local volumes, mounted volumes, or network authorities represented by those copies.
-- **1 offsite:** at least one destination that the user explicitly marked as offsite.
+- **3 copies:** the project source plus currently reachable recovery points on distinct recorded destinations.
+- **2 media:** distinct local volumes, mounted volumes, or network authorities represented by those reachable copies.
+- **1 offsite:** at least one reachable destination that the user explicitly marked as offsite.
 
 VaultSync does not infer physical location from a path, mount name, hostname, or protocol. A NAS in the same room is not automatically offsite, and a cloud-mounted folder cannot be proven offsite from its filesystem path. Configure this in **Settings > Backups > Backup destinations > Count as offsite copy** only when you know the destination is held at a different physical location.
 
-The advisor counts recorded copies; it does not silently mount storage, read credentials, or create a backup while the Recovery page is being viewed.
+The advisor resolves each record only through its recorded destination identity (or an explicitly matching moved alias). Missing and disconnected payloads remain in history but do not count toward copies, media, or offsite readiness. VaultSync does not silently mount storage, read credentials, or create a backup while the Recovery page is being viewed.
 
 Relevant implementation:
 

@@ -1846,9 +1846,20 @@
 - [x] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Implemented for 1.8.4; tracked by #362)_
   - Done: non-destructive drills validate metadata linkage, availability, readable inventories, encrypted descriptors, and complete file counts without restoring data.
   - Done: drill results persist locally and Recovery/exported reports surface actionable failed or limited checks.
-  - Done: the 3-2-1 advisor measures recorded copies and media diversity while requiring explicit user confirmation for physical offsite status.
+  - Done: the 3-2-1 advisor measures currently reachable copies and media diversity while requiring explicit user confirmation for physical offsite status.
   - Done: Recovery recommends unprotected release/delivery markers, large deletions, significant churn, and a baseline before cleanup; protection remains an explicit user action shared with History, Backups, and retention.
   - Done: all new UI and report labels are available across every maintained localization.
+- [x] `VS-1847` `P1` Add privacy-first reviewed crash reports. _(Done in PR #440; target 1.8.4)_
+  - Done: reports are generated and redacted locally from a strict allowlist, shown read-only, and attached to a visible platform-native email draft that only the user can send.
+  - Done: category-prefixed per-report IDs are not installation or tracking identifiers; report assistance can be disabled completely and local retention is bounded.
+- [ ] `VS-1848` `P1` Port ProofRestore recoverability into VaultSync. _(In progress; tracked by #447; target 1.8.4)_
+  - Scope: port the contest prototype's useful recovery-proof logic into native VaultSync services and UI without merging repositories or shipping ProofRestore as a separate product.
+  - Acceptance: reuse VaultSync backup identities, local metadata, privacy rules, and Recovery workflows; do not add a hosted dependency.
+- [x] `BUG-18066` `P1` Block linked and ambiguous backup content in Snapshot Explorer. _(Done in PR #440; tracked by #448; target 1.8.4)_
+- [x] `BUG-18067` `P1` Count only reachable recovery copies in 3-2-1 guidance. _(Done in PR #440; tracked by #451; target 1.8.4)_
+- [x] `BUG-18068` `P1` Harden archive upload cancellation and stall handling. _(Done in PR #440; tracked by #449; target 1.8.4)_
+- [x] `BUG-18069` `P1` Keep recoverable crash reporting active after the first UI exception. _(Done in PR #440; tracked by #450; target 1.8.4)_
+- [x] `VS-1849` `P2` Refresh safe 1.8.4 servicing dependencies. _(Done in PR #440; tracked by #452; target 1.8.4)_
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
 - [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_
