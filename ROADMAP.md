@@ -1843,7 +1843,12 @@
   - Done: compare presentation now uses compact app-native summary cards, distinguishes unavailable inventory from verified no-change results, and hides the large file workspace when there are no changed files to inspect.
   - Done: the final UX pass adds labeled earlier/later selectors, plain-language result copy, compact affected-path chips, a two-pane files-to-diff workspace, vector controls, and keyboard-friendly default/cancel behavior.
   - Remaining: perform a manual desktop interaction pass before closing #361.
-- [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
+- [x] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Implemented for 1.8.4; tracked by #362)_
+  - Done: non-destructive drills validate metadata linkage, availability, readable inventories, encrypted descriptors, and complete file counts without restoring data.
+  - Done: drill results persist locally and Recovery/exported reports surface actionable failed or limited checks.
+  - Done: the 3-2-1 advisor measures recorded copies and media diversity while requiring explicit user confirmation for physical offsite status.
+  - Done: Recovery recommends unprotected release/delivery markers, large deletions, significant churn, and a baseline before cleanup; protection remains an explicit user action shared with History, Backups, and retention.
+  - Done: all new UI and report labels are available across every maintained localization.
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
 - [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_

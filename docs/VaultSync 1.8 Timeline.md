@@ -632,7 +632,7 @@ Users can understand project changes over time.
 
 ## Recovery Drill
 
-Simulate recovery without restoring.
+Simulate recovery without restoring by checking metadata linkage, destination reachability, payload readability, and bounded inventory consistency. Results persist locally with actionable check details.
 
 ---
 
@@ -643,6 +643,8 @@ Evaluate:
 - Copy count
 - Media diversity
 - Offsite protection
+
+Offsite status is explicitly confirmed by the user; it is never inferred from a path or network protocol.
 
 ---
 
@@ -664,6 +666,8 @@ Potential triggers:
 - Large deletion detected
 - Significant project changes
 - Before cleanup operations
+
+Recommendations require an explicit Protect action and reuse the retention-safe marker already shared by History and Backups.
 
 ---
 
