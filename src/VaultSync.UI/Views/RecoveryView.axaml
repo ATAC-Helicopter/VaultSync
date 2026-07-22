@@ -210,6 +210,29 @@
 
           <Border Classes="recovery-card"
                   Padding="18">
+            <StackPanel Spacing="12">
+              <TextBlock Text="{infra:LocalizedString Key=Recovery.Advisor.Title}"
+                         FontSize="16"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="{infra:LocalizedString Key=Recovery.Advisor.Detail}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap" />
+              <Border Classes="recovery-soft" Padding="12">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{CompiledBinding ThreeTwoOneSummary}" FontWeight="SemiBold" />
+                  <TextBlock Text="{CompiledBinding DrillSummary}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                  <TextBlock Text="{CompiledBinding ProtectedSummary}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+              </Border>
+              <TextBlock Text="{infra:LocalizedString Key=Recovery.Advisor.OffsiteDisclosure}"
+                         FontSize="10"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="recovery-card"
+                  Padding="18">
             <StackPanel Spacing="10">
               <TextBlock Text="{infra:LocalizedString Key=Recovery.Recommendation.Title}"
                          FontSize="16"
@@ -276,27 +299,27 @@
                           IsVisible="{CompiledBinding HasProjects}"
                           Margin="18,0,18,18">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vm:RecoveryProjectViewModel">
                   <Border Classes="recovery-soft"
                           Padding="14"
                           Margin="0,0,0,10">
-                    <Grid RowDefinitions="Auto,Auto,Auto"
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                           RowSpacing="8">
                       <Grid ColumnDefinitions="*,Auto,Auto"
                             ColumnSpacing="10">
-                        <TextBlock Text="{Binding ProjectName}"
+                        <TextBlock Text="{CompiledBinding ProjectName}"
                                    FontSize="15"
                                    FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis" />
                         <TextBlock Grid.Column="1"
-                                   Text="{Binding ScoreLabel}"
+                                   Text="{CompiledBinding ScoreLabel}"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center" />
                         <Border Grid.Column="2"
                                 Classes="recovery-pill"
-                                Background="{Binding Accent}"
-                                BorderBrush="{Binding Accent}">
-                          <TextBlock Text="{Binding Label}"
+                                Background="{CompiledBinding Accent}"
+                                BorderBrush="{CompiledBinding Accent}">
+                          <TextBlock Text="{CompiledBinding Label}"
                                      FontSize="10"
                                      Foreground="White"
                                      FontWeight="SemiBold" />
@@ -304,7 +327,7 @@
                       </Grid>
 
                       <TextBlock Grid.Row="1"
-                                 Text="{Binding Reason}"
+                                 Text="{CompiledBinding Reason}"
                                  Foreground="{DynamicResource TextSecondaryBrush}"
                                  TextWrapping="Wrap"
                                  MaxLines="2" />
@@ -313,13 +336,53 @@
                             ColumnDefinitions="*,Auto"
                             ColumnSpacing="12">
                         <ProgressBar Classes="recovery-bar"
-                                     Value="{Binding ScoreValue}"
-                                     Foreground="{Binding Accent}" />
+                                     Value="{CompiledBinding ScoreValue}"
+                                     Foreground="{CompiledBinding Accent}" />
                         <TextBlock Grid.Column="1"
-                                   Text="{Binding TrackLabel}"
+                                   Text="{CompiledBinding TrackLabel}"
                                    Classes="recovery-label"
                                    VerticalAlignment="Center" />
                       </Grid>
+
+                      <Grid Grid.Row="3"
+                            ColumnDefinitions="Auto,Auto,Auto,*,Auto"
+                            ColumnSpacing="8">
+                        <Border Classes="recovery-pill"><TextBlock Text="{CompiledBinding CopyLabel}" FontSize="10" /></Border>
+                        <Border Grid.Column="1" Classes="recovery-pill"><TextBlock Text="{CompiledBinding MediaLabel}" FontSize="10" /></Border>
+                        <Border Grid.Column="2" Classes="recovery-pill"><TextBlock Text="{CompiledBinding OffsiteLabel}" FontSize="10" /></Border>
+                        <TextBlock Grid.Column="3"
+                                   Text="{CompiledBinding LastDrillLabel}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontSize="10"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                        <Button Grid.Column="4"
+                                Classes="action-ghost"
+                                Content="{infra:LocalizedString Key=Recovery.Drill.Run}"
+                                Command="{CompiledBinding RunDrillCommand}" />
+                      </Grid>
+
+                      <Grid Grid.Row="4"
+                            ColumnDefinitions="*,Auto"
+                            ColumnSpacing="10"
+                            IsVisible="{CompiledBinding HasRecommendation}">
+                        <TextBlock Text="{CompiledBinding Recommendation}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Classes="action-ghost"
+                                Content="{infra:LocalizedString Key=Recovery.Protected.Protect}"
+                                Command="{CompiledBinding ProtectRecommendationCommand}" />
+                      </Grid>
+
+                      <TextBlock Grid.Row="5"
+                                 Text="{CompiledBinding DrillDetail}"
+                                 IsVisible="{CompiledBinding HasDrillDetail}"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 FontSize="10"
+                                 TextWrapping="Wrap"
+                                 MaxLines="2" />
                     </Grid>
                   </Border>
                 </DataTemplate>

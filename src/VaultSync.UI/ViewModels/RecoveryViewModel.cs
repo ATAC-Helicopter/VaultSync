@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -23,6 +24,8 @@ public sealed class RecoveryViewModel : ViewModelBase
     private readonly IAppConfigStore _configStore;
     private readonly IRepositoryFactory _repositoryFactory;
     private readonly RestoreReadinessService _readinessService = new();
+    private readonly DisasterRecoveryAdvisorService _disasterRecoveryService = new();
+    private readonly RecoveryDrillService _drillService = new();
     private readonly List<RecoveryProjectViewModel> _allProjects = [];
     private readonly object _lifecycleGate = new();
     private CancellationTokenSource? _viewLifetimeCts;
@@ -42,6 +45,10 @@ public sealed class RecoveryViewModel : ViewModelBase
     private int _coverage90Days;
     private string _coverageSummary = L("Recovery.Coverage.Empty", "Recovery coverage will appear after backups are available.");
     private string _topRecommendation = L("Recovery.Recommendation.Start", "Create backups for tracked projects to start measuring recovery coverage.");
+    private int _threeTwoOneReadyCount;
+    private int _drilledProjectCount;
+    private int _passedDrillCount;
+    private int _protectedPointCount;
     private int _readinessPercent;
     private string _readinessBand = L("Recovery.Band.NotMeasured", "Not measured");
     private string _insight = L("Recovery.Insight.Empty", "Add a project and create a backup to measure recovery readiness.");
@@ -160,6 +167,34 @@ public sealed class RecoveryViewModel : ViewModelBase
         get => _topRecommendation;
         private set => SetField(ref _topRecommendation, value);
     }
+
+    public int ThreeTwoOneReadyCount
+    {
+        get => _threeTwoOneReadyCount;
+        private set => SetField(ref _threeTwoOneReadyCount, value);
+    }
+
+    public int DrilledProjectCount
+    {
+        get => _drilledProjectCount;
+        private set => SetField(ref _drilledProjectCount, value);
+    }
+
+    public int PassedDrillCount
+    {
+        get => _passedDrillCount;
+        private set => SetField(ref _passedDrillCount, value);
+    }
+
+    public int ProtectedPointCount
+    {
+        get => _protectedPointCount;
+        private set => SetField(ref _protectedPointCount, value);
+    }
+
+    public string ThreeTwoOneSummary => LF("Recovery.Advisor.Summary", "{0} of {1} projects meet 3-2-1", ThreeTwoOneReadyCount, ProjectCount);
+    public string DrillSummary => LF("Recovery.Drill.Summary", "{0} passed · {1} run", PassedDrillCount, DrilledProjectCount);
+    public string ProtectedSummary => LF("Recovery.Protected.Summary", "{0} protected recovery points", ProtectedPointCount);
 
     public int ReadinessPercent
     {
@@ -354,7 +389,15 @@ public sealed class RecoveryViewModel : ViewModelBase
                 project.ProjectName,
                 project.TrackLabel,
                 project.Score,
-                project.Reason)).ToList());
+                project.Reason,
+                project.CopyLabel,
+                project.MediaLabel,
+                project.OffsiteLabel,
+                project.LastDrillLabel)).ToList(),
+            ThreeTwoOneReadyCount,
+            DrilledProjectCount,
+            PassedDrillCount,
+            ProtectedPointCount);
 
     private static RecoveryReportLabels BuildReportLabels() =>
         new(
@@ -370,7 +413,15 @@ public sealed class RecoveryViewModel : ViewModelBase
             L("Recovery.Export.Status", "Status"),
             L("Recovery.Export.Score", "Score"),
             L("Recovery.Export.Reason", "Reason"),
-            L("Recovery.Export.NoProjects", "No projects are currently available in the recovery assessment."));
+            L("Recovery.Export.NoProjects", "No projects are currently available in the recovery assessment."),
+            L("Recovery.Export.Protection", "Disaster recovery protection"),
+            L("Recovery.Export.ThreeTwoOne", "3-2-1 ready"),
+            L("Recovery.Export.Drills", "Recovery drills"),
+            L("Recovery.Export.ProtectedPoints", "Protected recovery points"),
+            L("Recovery.Export.Copies", "Copies"),
+            L("Recovery.Export.Media", "Media"),
+            L("Recovery.Export.Offsite", "Offsite"),
+            L("Recovery.Export.LastDrill", "Last drill"));
 
     private RecoveryData LoadData()
     {
@@ -379,6 +430,7 @@ public sealed class RecoveryViewModel : ViewModelBase
         repo.EnsureSchema();
         var projects = repo.GetAllProjects().ToList();
         var backups = repo.GetAllBackups();
+        var snapshots = repo.GetAllSnapshots().ToList();
         IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId =
             repo.GetSnapshotHistoryMetadataBySnapshotIds(backups.Select(backup => backup.SnapshotId));
         RestoreReadinessSummary summary = _readinessService.BuildSummary(
@@ -386,6 +438,13 @@ public sealed class RecoveryViewModel : ViewModelBase
             backups,
             config,
             snapshotMetadataById: metadataBySnapshotId);
+        DisasterRecoverySummary disasterRecovery = _disasterRecoveryService.BuildSummary(
+            projects,
+            backups,
+            snapshots,
+            metadataBySnapshotId,
+            config,
+            repo.GetRecoveryDrills());
 
         var latestBackups = backups
             .GroupBy(backup => backup.ProjectId)
@@ -423,7 +482,8 @@ public sealed class RecoveryViewModel : ViewModelBase
             within30Days,
             within90Days,
             coverageSummary,
-            topRecommendation);
+            topRecommendation,
+            disasterRecovery);
     }
 
     private void ApplyData(RecoveryData data)
@@ -452,13 +512,20 @@ public sealed class RecoveryViewModel : ViewModelBase
         Coverage90Days = data.Coverage90Days;
         CoverageSummary = data.CoverageSummary;
         TopRecommendation = data.TopRecommendation;
+        ThreeTwoOneReadyCount = data.DisasterRecovery.ThreeTwoOneReadyCount;
+        DrilledProjectCount = data.DisasterRecovery.DrilledProjectCount;
+        PassedDrillCount = data.DisasterRecovery.PassedDrillCount;
+        ProtectedPointCount = data.DisasterRecovery.ProtectedPointCount;
         Insight = BuildInsight(summary);
 
         _allProjects.Clear();
         foreach (ProjectRestoreReadiness project in summary.Projects
                      .OrderBy(project => project.Score)
                      .ThenBy(project => project.ProjectName, StringComparer.OrdinalIgnoreCase))
-            _allProjects.Add(new RecoveryProjectViewModel(project));
+        {
+            ProjectProtectionAssessment? protection = data.DisasterRecovery.Projects.FirstOrDefault(item => item.ProjectId == project.ProjectId);
+            _allProjects.Add(new RecoveryProjectViewModel(project, protection, RunDrillAsync, ProtectRecommendedPointAsync));
+        }
 
         RefreshProjectsView();
         OnPropertyChanged(nameof(HasTrackedProjects));
@@ -468,6 +535,9 @@ public sealed class RecoveryViewModel : ViewModelBase
         OnPropertyChanged(nameof(Coverage30Percent));
         OnPropertyChanged(nameof(Coverage90Percent));
         OnPropertyChanged(nameof(ProjectSummaryLabel));
+        OnPropertyChanged(nameof(ThreeTwoOneSummary));
+        OnPropertyChanged(nameof(DrillSummary));
+        OnPropertyChanged(nameof(ProtectedSummary));
     }
 
     private void RefreshProjectsView()
@@ -527,7 +597,42 @@ public sealed class RecoveryViewModel : ViewModelBase
         int Coverage30Days,
         int Coverage90Days,
         string CoverageSummary,
-        string TopRecommendation);
+        string TopRecommendation,
+        DisasterRecoverySummary DisasterRecovery);
+
+    private async Task RunDrillAsync(int projectId)
+    {
+        AppConfig config = _configStore.GetSnapshot();
+        SqliteRepository repo = _repositoryFactory.Create(config);
+        repo.EnsureSchema();
+        Project? project = repo.GetProjectById(projectId);
+        Backup? backup = repo.GetAllBackups()
+            .Where(item => item.ProjectId == projectId)
+            .OrderByDescending(item => item.CreatedUtc)
+            .ThenByDescending(item => item.Id)
+            .FirstOrDefault();
+        if (project is null || backup is null)
+            return;
+
+        Snapshot? snapshot = repo.GetSnapshotsByIds([backup.SnapshotId]).FirstOrDefault();
+        RecoveryDrillResult result = await _drillService.RunAsync(project, backup, snapshot, config).ConfigureAwait(false);
+        repo.AddRecoveryDrill(result);
+        _lastRefreshUtc = DateTime.MinValue;
+        await RefreshAsync(force: true).ConfigureAwait(false);
+    }
+
+    private async Task ProtectRecommendedPointAsync(int backupId)
+    {
+        AppConfig config = _configStore.GetSnapshot();
+        await Task.Run(() =>
+        {
+            SqliteRepository repo = _repositoryFactory.Create(config);
+            repo.EnsureSchema();
+            repo.SetBackupProtection(backupId, true);
+        }).ConfigureAwait(false);
+        _lastRefreshUtc = DateTime.MinValue;
+        await RefreshAsync(force: true).ConfigureAwait(false);
+    }
 }
 
 public sealed class RecoveryProjectViewModel
@@ -535,7 +640,11 @@ public sealed class RecoveryProjectViewModel
     private static string L(string key, string fallback) =>
         LocalizationProvider.Service?.GetString(key) ?? fallback;
 
-    public RecoveryProjectViewModel(ProjectRestoreReadiness project)
+    public RecoveryProjectViewModel(
+        ProjectRestoreReadiness project,
+        ProjectProtectionAssessment? protection = null,
+        Func<int, Task>? runDrill = null,
+        Func<int, Task>? protectPoint = null)
     {
         ProjectName = project.ProjectName;
         Label = project.Label;
@@ -549,6 +658,32 @@ public sealed class RecoveryProjectViewModel
             RestoreReadinessState.Risk => "#FF7A45",
             _ => "#D9534F"
         };
+        CopyLabel = LF("Recovery.Advisor.Copies", "{0}/3 copies", protection?.CopyCount ?? 1);
+        MediaLabel = LF("Recovery.Advisor.Media", "{0}/2 media", protection?.MediaCount ?? 1);
+        OffsiteLabel = protection?.HasOffsiteCopy == true
+            ? L("Recovery.Advisor.OffsiteReady", "Offsite confirmed")
+            : L("Recovery.Advisor.OffsiteMissing", "Offsite missing");
+        MeetsThreeTwoOne = protection?.MeetsThreeTwoOne == true;
+        LastDrillLabel = protection?.LastDrill is null
+            ? L("Recovery.Drill.NotRun", "Drill not run")
+            : LF(
+                "Recovery.Drill.LastRun",
+                "Last drill: {0} · {1}",
+                protection.LastDrill.Status,
+                protection.LastDrill.RunUtc.ToLocalTime().ToString("g"));
+        DrillDetail = BuildDrillDetail(protection?.LastDrill);
+        HasDrillDetail = DrillDetail.Length > 0;
+        Recommendation = protection?.Recommendation?.Reason ?? string.Empty;
+        HasRecommendation = protection?.Recommendation is not null;
+        RunDrillCommand = new AsyncRelayCommand(
+            _ => runDrill?.Invoke(project.ProjectId) ?? Task.CompletedTask,
+            operationName: $"recovery-drill-{project.ProjectId}");
+        ProtectRecommendationCommand = new AsyncRelayCommand(
+            _ => protection?.Recommendation is null || protectPoint is null
+                ? Task.CompletedTask
+                : protectPoint(protection.Recommendation.BackupId),
+            _ => protection?.Recommendation is not null,
+            operationName: $"protect-recovery-point-{project.ProjectId}");
     }
 
     public string ProjectName { get; }
@@ -557,6 +692,17 @@ public sealed class RecoveryProjectViewModel
     public string Reason { get; }
     public RestoreReadinessState State { get; }
     public string Accent { get; }
+    public string CopyLabel { get; }
+    public string MediaLabel { get; }
+    public string OffsiteLabel { get; }
+    public bool MeetsThreeTwoOne { get; }
+    public string LastDrillLabel { get; }
+    public string DrillDetail { get; }
+    public bool HasDrillDetail { get; }
+    public string Recommendation { get; }
+    public bool HasRecommendation { get; }
+    public ICommand RunDrillCommand { get; }
+    public ICommand ProtectRecommendationCommand { get; }
     public string ScoreLabel => $"{Score}%";
     public int ScoreValue => Score;
     public string TrackLabel => Score switch
@@ -566,6 +712,28 @@ public sealed class RecoveryProjectViewModel
         >= 35 => L("Recovery.Track.Risk", "Risk"),
         _ => L("Recovery.Track.Blocked", "Blocked")
     };
+
+    private static string LF(string key, string fallback, params object[] args) =>
+        string.Format(System.Globalization.CultureInfo.CurrentCulture, L(key, fallback), args);
+
+    private static string BuildDrillDetail(RecoveryDrillResult? drill)
+    {
+        if (drill is null)
+            return string.Empty;
+
+        try
+        {
+            List<RecoveryDrillCheck>? checks = JsonSerializer.Deserialize<List<RecoveryDrillCheck>>(drill.ChecksJson);
+            string[] actions = [.. (checks ?? [])
+                .Where(check => check.Status != RecoveryDrillCheckStatus.Passed)
+                .Select(check => check.Detail)];
+            return actions.Length > 0 ? string.Join(" ", actions) : drill.Summary;
+        }
+        catch (JsonException)
+        {
+            return drill.Summary;
+        }
+    }
 }
 
 public sealed record RecoveryFilterOption(RecoveryProjectFilter Filter, string Label);

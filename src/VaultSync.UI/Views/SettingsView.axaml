@@ -1050,6 +1050,9 @@
                                   <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
                                             ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
                                             IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
+                                  <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.Offsite}"
+                                            ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.OffsiteTooltip}"
+                                            IsChecked="{Binding IsOffsite, Mode=TwoWay}" />
                                 </StackPanel>
                                 <StackPanel x:Name="DestinationHistoryOptionsRow"
                                             Grid.Column="1"

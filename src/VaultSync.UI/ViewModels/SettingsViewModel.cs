@@ -196,6 +196,7 @@ namespace VaultSync.UI
             bool AutoMount,
             bool AutoUnmount,
             bool PreMounted,
+            bool IsOffsite,
             string? CredentialName,
             bool EnableMetadataSync,
             bool AutoImportMetadata,
@@ -849,6 +850,7 @@ namespace VaultSync.UI
                 AutoMount = dest.AutoMount,
                 AutoUnmount = dest.AutoUnmount,
                 PreMounted = dest.PreMounted,
+                IsOffsite = dest.IsOffsite,
                 EnableMetadataSync = dest.EnableMetadataSync,
                 AutoImportMetadata = dest.AutoImportMetadata,
                 ForceMetadataBackfill = dest.ForceMetadataBackfill,
@@ -948,6 +950,7 @@ namespace VaultSync.UI
                 AutoMount      = d.AutoMount,
                 AutoUnmount    = d.AutoUnmount,
                 PreMounted     = d.PreMounted,
+                IsOffsite      = d.IsOffsite,
                 EnableMetadataSync = d.EnableMetadataSync,
                 AutoImportMetadata = d.AutoImportMetadata,
                 ForceMetadataBackfill = d.ForceMetadataBackfill,
@@ -1079,6 +1082,7 @@ namespace VaultSync.UI
                 AutoMount: d.AutoMount,
                 AutoUnmount: d.AutoUnmount,
                 PreMounted: d.PreMounted,
+                IsOffsite: d.IsOffsite,
                 CredentialName: d.SelectedCredential?.Name ?? d.CredentialName,
                 EnableMetadataSync: d.EnableMetadataSync,
                 AutoImportMetadata: d.AutoImportMetadata,
@@ -1215,6 +1219,7 @@ namespace VaultSync.UI
                     left.AutoMount != right.AutoMount ||
                     left.AutoUnmount != right.AutoUnmount ||
                     left.PreMounted != right.PreMounted ||
+                    left.IsOffsite != right.IsOffsite ||
                     left.EnableMetadataSync != right.EnableMetadataSync ||
                     left.AutoImportMetadata != right.AutoImportMetadata ||
                     left.ForceMetadataBackfill != right.ForceMetadataBackfill ||
@@ -3092,6 +3097,7 @@ namespace VaultSync.UI
                 PreMounted     = dest.PreMounted,
                 AutoMount      = dest.AutoMount,
                 AutoUnmount    = dest.AutoUnmount,
+                IsOffsite      = dest.IsOffsite,
                 CredentialName = dest.CredentialName,
                 RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
                 RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10),
