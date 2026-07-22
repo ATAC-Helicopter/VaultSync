@@ -71,6 +71,25 @@ public sealed class AppConfigStoreTests
     }
 
     [Fact]
+    public void SaveLoad_RoundTripsExplicitOffsiteDestinationClassification()
+    {
+        using var scope = new TestAppConfigScope();
+        var config = new AppConfig();
+        config.Backups.UseAdvancedDestinations = true;
+        config.Backups.Destinations.Add(new BackupDestination
+        {
+            Alias = "Remote archive",
+            Path = "smb://backup.example/archive",
+            IsOffsite = true
+        });
+
+        AppConfigStore.Save(config);
+
+        BackupDestination destination = Assert.Single(AppConfigStore.Load().Backups.Destinations);
+        Assert.True(destination.IsOffsite);
+    }
+
+    [Fact]
     public void Save_PreservesMetadataImportCacheWhenPendingConfigHasNoCacheEntries()
     {
         using var scope = new TestAppConfigScope();
