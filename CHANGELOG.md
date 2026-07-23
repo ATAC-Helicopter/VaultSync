@@ -3,6 +3,7 @@
 ### Added
 - [VS-1847] Added local, user-reviewed crash reports with strict redaction, attached email drafts, bounded storage, and a complete disable control.
 - [VS-1810] Added recovery drills, reachable 3-2-1 guidance, explicit offsite confirmation, and protection recommendations for important recovery points.
+- [VS-1848] Ported ProofRestore's deterministic recovery-proof design into a native, local-only engine that verifies folder and ZIP bytes against snapshot SHA-256 metadata, produces stable evidence, simulates safe-copy or original-location restore actions, exposes expandable and exportable proof details, and preserves the last byte-verified point during retention without writing restored data; encrypted and bounded cases remain explicitly inconclusive.
 ### Changed
 - [VS-1849] Refreshed supported SQLite, protected-data, and Windows drawing packages while preserving the validated cross-platform rendering stack.
 ### Fixed
@@ -10,6 +11,11 @@
 - [BUG-18067] Disaster Recovery now counts only reachable payloads and cannot substitute content from an unrelated destination.
 - [BUG-18068] Archive uploads now stop background workers promptly, retry detected stalls, and reject incomplete parallel chunks.
 - [BUG-18069] Recoverable UI exceptions can open crash-report review after multiple separate failures in the same session.
+- [BUG-18070] Absolute backup records can no longer bypass their recorded destination identity or follow a linked child into unrelated local content.
+- [BUG-18071] Verification now rejects traversal, absolute, and linked file paths, including filesystem-root edge cases, instead of reading outside the selected recovery root.
+- [BUG-18072] Snapshot creation now preserves case-distinct file identities consistently instead of merging or failing on metadata such as `Foo` and `foo`.
+- [BUG-18073] Backup creation now rejects missing, absolute, traversing, or linked snapshot-source rows before they can read outside the project or write outside the backup point.
+- [BUG-18074] Restore previews and selective restores now keep case-distinct paths separate instead of conflating them on case-sensitive filesystems.
 
 ## [1.8.3] - 16.07.2026
 ### Added
