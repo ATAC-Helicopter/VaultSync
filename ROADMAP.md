@@ -1782,13 +1782,13 @@
 - `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
 - `1.8.2` Snapshot Explorer scope is tracked by the dedicated GitHub milestone `1.8.2`.
 - `1.8.3` Compare & Change Intelligence, security, maintenance, and diagnostics hardening shipped through release PR #410.
-- `1.8.4` Disaster Recovery, native recovery proofs, and reviewed crash reports are tracked by milestone `1.8.4` and draft release PR #440.
+- `1.8.4` Disaster Recovery, native recovery proofs, reviewed crash reports, and the theme refresh are tracked by milestone `1.8.4` and release PR #440.
 
-### 1.8.4 status (2026-07-23)
-- Feature scope is implemented in draft PR #440: non-destructive recovery drills, native byte-level proofs, restore-plan simulation, 3-2-1 guidance, protected-point recommendations, and reviewed crash reports.
-- App-wide hardening closes destination-identity, path-containment, linked-content, case-sensitivity, archive-upload, and repeated-crash-review gaps.
-- The current validation baseline is 386 passing tests with Windows, Linux, macOS, PR-quality, release-metadata, Store-metadata, CodeQL, and Sonar workflows green.
-- Remaining release work is review and real-platform interaction validation; the PR stays draft and unmerged until that release gate is complete.
+### 1.8.4 status (2026-07-24)
+- Feature scope is complete in PR #440: non-destructive recovery drills, native byte-level proofs, restore-plan simulation, 3-2-1 guidance, protected-point recommendations, reviewed crash reports, and a rebuilt Appearance studio with curated glass themes.
+- App-wide hardening closes destination-identity, path-containment, linked-content, case-sensitivity, archive-upload, repeated-crash-review, Recovery cancellation, and cross-theme readability gaps.
+- The release baseline is 391 passing tests and a warning-free Release build, backed by Windows, Linux, macOS, PR-quality, release-metadata, Store-metadata, CodeQL, and Sonar validation.
+- macOS interaction validation is complete; Windows and Linux release confidence is provided by the repository's mandatory platform builds and tests until those desktops are available for manual smoke testing.
 
 ### 1.8.3 status (released 2026-07-16)
 - Compare & Change Intelligence shipped under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
@@ -1878,10 +1878,13 @@
   - Done: four curated presets add warm editorial, neon, and dark/light glass directions while retaining the custom palette editor.
   - Done: glass themes render layered gradients, translucent surfaces, soft borders, and restrained highlight reflections without image assets or platform-specific blur dependencies.
   - Done: the theme studio collapses into a compact summary, presets use visual miniatures, and advanced component controls stay closed until requested.
-- [x] `BUG-18075` `P1` Keep every application view readable and aligned across supported themes. _(Done in PR #440; target 1.8.4)_
+- [x] `BUG-18075` `P1` Keep every application view readable and aligned across supported themes. _(Done in PR #440; tracked by #459; target 1.8.4)_
   - Done: custom palettes enforce accessible text contrast across window, surface, and alternate-surface colors.
   - Done: arbitrary accent, status, and avatar backgrounds select a readable light or dark foreground automatically.
   - Done: Appearance, History, Recovery, navigation, Snapshot Explorer, and remaining dark-only surfaces adapt without overlap or narrow-window clipping.
+- [x] `BUG-18076` `P1` Cancel Recovery work when the view closes. _(Done in PR #440; tracked by #460; target 1.8.4)_
+  - Done: refresh, export, drill, persistence, protection, and follow-up refresh work share the active Recovery page lifetime token.
+  - Done: leaving Recovery cancels page-scoped work without presenting cancellation as a user-facing export failure.
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
 - [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_
