@@ -134,7 +134,7 @@ public class SnapshotService
             ScanCacheState? cache = useScanCache ? ScanCacheStore.TryLoad(project, filterHash) : null;
             bool forceFullScan = ShouldForceFullScan(cache, useScanCache, aggressiveScanCache);
 
-            var dirMtimeCache = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            var dirMtimeCache = new Dictionary<string, long>(StringComparer.Ordinal);
             List<FileEntry> currentEntries = BuildCurrentEntries(
                 project,
                 filter,
@@ -173,13 +173,13 @@ public class SnapshotService
         if (previousSnapshot is null)
         {
             return new SnapshotBaseline(
-                new Dictionary<string, FileEntry>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, FileEntry>(StringComparer.Ordinal),
                 0L);
         }
 
         List<FileEntry> previousFiles = await _repo.GetFilesForSnapshotAsync(previousSnapshot.Id, ct).ConfigureAwait(false);
         return new SnapshotBaseline(
-            previousFiles.ToDictionary(f => f.RelPath, StringComparer.OrdinalIgnoreCase),
+            previousFiles.ToDictionary(f => f.RelPath, StringComparer.Ordinal),
             previousSnapshot.TotalBytes);
     }
 
@@ -196,11 +196,11 @@ public class SnapshotService
                 entry))];
 
         Dictionary<string, SnapshotFileMetadata> currentMetadataByRel =
-            currentMetadata.ToDictionary(m => m.Rel, StringComparer.OrdinalIgnoreCase);
+            currentMetadata.ToDictionary(m => m.Rel, StringComparer.Ordinal);
         Dictionary<string, FileEntry> currentFilesByRel = currentMetadataByRel.ToDictionary(
             kvp => kvp.Key,
             kvp => kvp.Value.Entry,
-            StringComparer.OrdinalIgnoreCase);
+            StringComparer.Ordinal);
 
         var added = new List<string>();
         var modified = new List<string>();
@@ -208,7 +208,7 @@ public class SnapshotService
         ClassifySnapshotChanges(currentMetadataByRel, previousFiles, added, modified, unchanged, ct);
 
         var deleted = previousFiles.Keys
-            .Except(currentMetadataByRel.Keys, StringComparer.OrdinalIgnoreCase)
+            .Except(currentMetadataByRel.Keys, StringComparer.Ordinal)
             .ToList();
 
         return new SnapshotChangeSet(
@@ -346,7 +346,7 @@ public class SnapshotService
         if (fullHash)
             return changes.CurrentMetadata;
 
-        HashSet<string> changedRel = new HashSet<string>(changes.Added, StringComparer.OrdinalIgnoreCase);
+        HashSet<string> changedRel = new HashSet<string>(changes.Added, StringComparer.Ordinal);
         changedRel.UnionWith(changes.Modified);
         return [.. changes.CurrentMetadata.Where(m => changedRel.Contains(m.Rel))];
     }
@@ -561,7 +561,7 @@ public class SnapshotService
 
     private static Dictionary<string, List<FileEntry>> BuildPrevByDir(IEnumerable<FileEntry> entries)
     {
-        var map = new Dictionary<string, List<FileEntry>>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, List<FileEntry>>(StringComparer.Ordinal);
         foreach (FileEntry entry in entries)
         {
             string rel = entry.RelPath.Replace('\\', '/');
@@ -650,7 +650,7 @@ public class SnapshotService
         if (added.Count == 0 && modified.Count == 0 && deleted.Count == 0)
             return SnapshotDiffSummary.Empty;
 
-        var pathStats = new Dictionary<string, (int Changes, long ChangedBytes)>(StringComparer.OrdinalIgnoreCase);
+        var pathStats = new Dictionary<string, (int Changes, long ChangedBytes)>(StringComparer.Ordinal);
 
         static void AddPathStat(
             IDictionary<string, (int Changes, long ChangedBytes)> stats,
