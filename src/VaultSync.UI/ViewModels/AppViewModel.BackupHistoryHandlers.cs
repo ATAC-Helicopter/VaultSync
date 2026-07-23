@@ -2205,8 +2205,8 @@ namespace VaultSync.UI.ViewModels
                     AppViewModel.L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup."));
             }
 
-            var sourceRelative = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var topLevelTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var sourceRelative = new HashSet<string>(StringComparer.Ordinal);
+            var topLevelTargets = new HashSet<string>(StringComparer.Ordinal);
             int totalFiles = 0;
             int newFiles = 0;
             int overwriteFiles = 0;
@@ -2976,7 +2976,7 @@ namespace VaultSync.UI.ViewModels
             if (selectedTopLevelTargets is null || selectedTopLevelTargets.Count == 0)
                 return null;
 
-            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var result = new HashSet<string>(StringComparer.Ordinal);
             foreach (string value in selectedTopLevelTargets)
             {
                 string? normalized = value?.Trim();

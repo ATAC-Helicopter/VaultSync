@@ -173,6 +173,42 @@ public sealed class SnapshotDiffSummaryTests : IDisposable
     }
 
     [Fact]
+    public async Task SnapshotService_CreateSnapshot_PreservesCaseDistinctMetadataPaths()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string projectRoot = CreateTempDir();
+        File.WriteAllText(Path.Combine(projectRoot, "Foo.txt"), "upper");
+
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(
+            repo,
+            "Case Distinct Project",
+            projectRoot,
+            preset: string.Empty,
+            createdUtc: DateTime.UtcNow);
+        int baselineId = repo.CreateSnapshot(projectId, 2, 10);
+        repo.InsertFiles(
+            baselineId,
+            [
+                new FileEntry("Foo.txt", 5, File.GetLastWriteTimeUtc(Path.Combine(projectRoot, "Foo.txt")), "UPPER"),
+                new FileEntry("foo.txt", 5, DateTime.UtcNow.AddDays(-1), "LOWER")
+            ]);
+
+        Project project = repo.GetProjectById(projectId)!;
+        int nextId = await new SnapshotService(repo, new HashService()).CreateSnapshotAsync(
+            project,
+            fullHash: false,
+            hashNow: false,
+            maxSnapshotsToKeep: null,
+            ct: CancellationToken.None);
+
+        Snapshot next = repo.GetSnapshotById(nextId)!;
+        Assert.Equal(1, next.DiffDeleted);
+        Assert.Equal(0, next.DiffAdded);
+        Assert.Equal("Foo.txt", Assert.Single(repo.GetFilesForSnapshot(nextId)).RelPath);
+    }
+
+    [Fact]
     public void MetadataSync_ImportFromStore_PreservesSnapshotDiffSummary()
     {
         string metaRoot = CreateTempDir();
