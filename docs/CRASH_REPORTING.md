@@ -184,4 +184,4 @@ Relevant implementation:
 - Confirm attachment failure is reported honestly and opens the report folder for manual recovery.
 - Confirm **Delete report** cannot delete an unrelated file.
 - Confirm permissions and retention on Windows, macOS, and Linux.
-- Send a deliberate test report and confirm the user retains a Sent copy and support can reply in the same thread.
+- In a development build, inject a deliberate UI exception and confirm the user retains a Sent copy and support can reply in the same thread. Release builds expose no crash-test control.

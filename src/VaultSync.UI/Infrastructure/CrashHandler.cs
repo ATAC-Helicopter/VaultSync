@@ -32,13 +32,6 @@ internal static class CrashHandler
         Dispatcher.UIThread.UnhandledException += OnUiUnhandledException;
     }
 
-    public static void ShowCrashReportTest()
-    {
-        Exception exception = CaptureTestException();
-        CrashArtifact? crash = CreateCrashArtifact(exception, "UI thread", isTerminating: false);
-        ShowCrashDialog(crash, testMode: true);
-    }
-
     private static void OnUiUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
     {
         DiagnosticsLogger.Record($"UI unhandled exception: {e.Exception.GetType().Name}");
@@ -148,14 +141,14 @@ internal static class CrashHandler
     {
         if (Dispatcher.UIThread.CheckAccess())
         {
-            ShowCrashDialog(crash, testMode: false);
+            ShowCrashDialog(crash);
             return;
         }
 
-        Dispatcher.UIThread.Post(() => ShowCrashDialog(crash, testMode: false), DispatcherPriority.Send);
+        Dispatcher.UIThread.Post(() => ShowCrashDialog(crash), DispatcherPriority.Send);
     }
 
-    private static void ShowCrashDialog(CrashArtifact? crash, bool testMode)
+    private static void ShowCrashDialog(CrashArtifact? crash)
     {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -165,7 +158,7 @@ internal static class CrashHandler
 
         var title = new TextBlock
         {
-            Text = testMode ? "Crash report test" : L("Crash.Title", "VaultSync crashed"),
+            Text = L("Crash.Title", "VaultSync crashed"),
             FontSize = 24,
             FontWeight = FontWeight.SemiBold
         };
@@ -173,9 +166,7 @@ internal static class CrashHandler
 
         var message = new TextBlock
         {
-            Text = testMode
-                ? "Test mode generated this report without crashing VaultSync. Review every action exactly as you would after a real crash."
-                : L("Crash.Message", "VaultSync hit an unexpected error and must close."),
+            Text = L("Crash.Message", "VaultSync hit an unexpected error and must close."),
             TextWrapping = TextWrapping.Wrap
         };
         if (GetBrush("TextSecondary") is { } messageBrush)
@@ -217,7 +208,7 @@ internal static class CrashHandler
         string? logPath = crash?.Path;
         TextBox? reportPreview = null;
         TextBlock? reportStatus = null;
-        bool assistanceEnabled = testMode || IsCrashReportAssistanceEnabled();
+        bool assistanceEnabled = IsCrashReportAssistanceEnabled();
         if (crash is not null)
         {
             content.Children.Add(new TextBlock
@@ -381,10 +372,7 @@ internal static class CrashHandler
         headerClose.Classes.Add("action-ghost");
         headerClose.Click += (_, _) =>
         {
-            if (testMode)
-                window?.Close();
-            else
-                desktop.Shutdown(1);
+            desktop.Shutdown(1);
         };
 
         var headerGrid = new Grid
@@ -437,7 +425,7 @@ internal static class CrashHandler
 
         window = new Window
         {
-            Title = testMode ? "Crash report test" : L("Crash.Title", "VaultSync crashed"),
+            Title = L("Crash.Title", "VaultSync crashed"),
             Content = root,
             CanResize = true,
             Width = 900,
@@ -543,10 +531,7 @@ internal static class CrashHandler
         };
         closeButton.Click += (_, _) =>
         {
-            if (testMode)
-                window.Close();
-            else
-                desktop.Shutdown(1);
+            desktop.Shutdown(1);
         };
         buttonRow.Children.Add(closeButton);
 
@@ -554,9 +539,6 @@ internal static class CrashHandler
 
         window.Closed += (_, _) =>
         {
-            if (testMode)
-                return;
-
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
             {
                 lifetime.Shutdown(1);
@@ -629,18 +611,6 @@ internal static class CrashHandler
         catch
         {
             return "unknown";
-        }
-    }
-
-    private static Exception CaptureTestException()
-    {
-        try
-        {
-            throw new InvalidOperationException("Intentional local crash-report test.");
-        }
-        catch (Exception exception)
-        {
-            return exception;
         }
     }
 
