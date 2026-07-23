@@ -1,11 +1,13 @@
 ﻿# Changelog
-## [1.8.4] - Unreleased
+## [1.8.4] - 24.07.2026
 ### Added
 - [VS-1847] Added strictly redacted, user-reviewed crash reports that only the user's email application can send.
 - [VS-1810] Added recovery drills, reachable 3-2-1 guidance, explicit offsite confirmation, and protected-point recommendations.
 - [VS-1848] Added local byte-level recovery proofs, restore-plan simulation, exportable evidence, and a verified-point retention safety floor.
+- [VS-1850] Added four curated themes, including dark and light glass treatments with layered reflections and translucent surfaces.
 ### Changed
 - [VS-1849] Refreshed supported servicing dependencies while preserving the validated cross-platform rendering stack.
+- [VS-1850] Reworked Appearance into a compact, collapsible theme studio with visual preset previews and optional advanced tuning, and rebuilt Aurora Glass and Porcelain Glass around platform acrylic or blur when available, distinct navigation, toolbar, and floating materials, restrained content opacity, ambient reflections, and solid fallbacks.
 ### Fixed
 - [BUG-18066] Snapshot Explorer now blocks linked source paths and ambiguous duplicate ZIP entries.
 - [BUG-18067] Recovery guidance now counts only reachable payloads at their recorded destinations.
@@ -16,6 +18,7 @@
 - [BUG-18072] Snapshot creation now preserves case-distinct file identities on case-sensitive filesystems.
 - [BUG-18073] Backup creation now rejects untrusted snapshot-source paths before reading or writing files.
 - [BUG-18074] Restore previews and selective restores now preserve case-distinct paths.
+- [BUG-18075] Fixed theme contrast, responsive History and Recovery layouts, active navigation feedback, dark-only surfaces across app views, and pointer-focused menus, presets, or navigation controls retaining bright outlines after selection or page changes while preserving keyboard-visible focus.
 
 ## [1.8.3] - 16.07.2026
 ### Added

@@ -4,6 +4,7 @@
     xmlns:fluent="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
     xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     xmlns:local="using:VaultSync.UI"
+    xmlns:viewControls="using:VaultSync.UI.Views.Controls"
     x:Class="VaultSync.UI.App"
     RequestedThemeVariant="Default">
 
@@ -55,6 +56,7 @@
             <x:Double x:Key="SectionHeaderFontSize">14</x:Double>
             <FontFamily x:Key="AppFontFamily">Inter, Noto Sans, Segoe UI, SF Pro Text, Helvetica Neue, Nirmala UI, Microsoft YaHei UI, Microsoft JhengHei UI, Meiryo, Malgun Gothic, Geeza Pro, Al Nile, Al Bayan, Kohinoor Arabic, Noto Sans Arabic, Noto Naskh Arabic, Arial Unicode MS, Arial, Tahoma</FontFamily>
             <infra:BooleanInvertConverter x:Key="BoolInvertConverter" />
+            <viewControls:ContrastForegroundConverter x:Key="ContrastForegroundConverter" />
         </ResourceDictionary>
     </Application.Resources>
 
@@ -79,6 +81,17 @@
             <Setter Property="ScrollViewer.BringIntoViewOnFocusChange" Value="False" />
         </Style>
 
+        <!-- Pointer focus must not leave Fluent's blue focus rectangle behind.
+             Keyboard navigation still receives an explicit :focus-visible treatment. -->
+        <Style Selector="Button, ToggleButton, ComboBox">
+            <Setter Property="FocusAdorner" Value="{x:Null}" />
+        </Style>
+
+        <Style Selector="Button:focus-visible, ToggleButton:focus-visible, ComboBox:focus-visible">
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderFocusedBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
         <Style Selector="Window.linux-performance Border.pulse-ring">
             <Setter Property="IsVisible" Value="False" />
         </Style>
@@ -99,19 +112,21 @@
 
         <!-- Sidebar + header -->
         <Style Selector="Border.sidebar">
-            <Setter Property="Background" Value="{DynamicResource Surface0}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="Background" Value="{DynamicResource ShellNavigationBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassRimSoftBrush}" />
             <Setter Property="BorderThickness" Value="0,0,1,0" />
+            <Setter Property="BoxShadow" Value="12 0 36 0 #18000000" />
         </Style>
 
         <Style Selector="Border.sidebar.compact">
-            <Setter Property="Background" Value="#0E1627" />
+            <Setter Property="Background" Value="{DynamicResource ShellNavigationBrush}" />
         </Style>
 
         <Style Selector="Border.header">
-            <Setter Property="Background" Value="{DynamicResource Surface0}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="Background" Value="{DynamicResource ShellToolbarBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassRimSoftBrush}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="BoxShadow" Value="0 12 32 0 #12000000" />
         </Style>
 
         <!-- Navigation buttons -->
@@ -121,21 +136,32 @@
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
             <Setter Property="CornerRadius" Value="14" />
-            <Setter Property="Padding" Value="10,8" />
-            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="Padding" Value="9,7" />
+            <Setter Property="Margin" Value="0,2,0,0" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
             <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="MinHeight" Value="52" />
+            <Setter Property="MinHeight" Value="48" />
         </Style>
 
         <Style Selector="Button.nav:pointerover">
-            <Setter Property="Background" Value="{DynamicResource Surface2}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="Background" Value="{DynamicResource GlassControlBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassRimSoftBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
         <Style Selector="Button.nav:pressed">
             <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+        </Style>
+
+        <Style Selector="Button.nav.active">
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassRimBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Button.nav.active Border.nav-icon-badge">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
 
         <Style Selector="Button.nav:pointerover Border.nav-icon-badge">
@@ -165,8 +191,8 @@
             <Setter Property="Height" Value="40" />
             <Setter Property="CornerRadius" Value="14" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Background" Value="{DynamicResource Surface2}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="Background" Value="{DynamicResource GlassControlBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassRimSoftBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
 
@@ -183,9 +209,9 @@
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="32" />
             <Setter Property="CornerRadius" Value="11" />
-            <Setter Property="Background" Value="{DynamicResource Surface2}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
         </Style>
 
         <Style Selector="Border.nav-icon-badge.compact">
@@ -236,7 +262,7 @@
 
         <Style Selector="Button.action-primary, Button.primary-button">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="10" />
@@ -249,24 +275,24 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.action-primary:pointerover, Button.primary-button:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
         <Style Selector="Button.action-primary:pressed, Button.primary-button:pressed">
-            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
         </Style>
         <Style Selector="Button.action-danger">
-            <Setter Property="Background" Value="#12FF6A6A" />
+            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.action-danger:pointerover">
-            <Setter Property="Background" Value="#1EFF6A6A" />
+            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
         </Style>
         <Style Selector="Button.action-danger:pressed">
-            <Setter Property="Background" Value="#28FF6A6A" />
+            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
         </Style>
 
         <Style Selector="Button.small-button">
@@ -308,20 +334,20 @@
             <Setter Property="MinHeight" Value="28" />
         </Style>
         <Style Selector="Border.stat-pill.info">
-            <Setter Property="Background" Value="#1F3559" />
-            <Setter Property="BorderBrush" Value="#345F96" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
         <Style Selector="Border.stat-pill.success">
-            <Setter Property="Background" Value="#1E4C3D" />
-            <Setter Property="BorderBrush" Value="#2F8D70" />
+            <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
         </Style>
         <Style Selector="Border.stat-pill.warning">
-            <Setter Property="Background" Value="#5C4420" />
-            <Setter Property="BorderBrush" Value="#B98833" />
+            <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
         </Style>
         <Style Selector="Border.stat-pill.danger">
-            <Setter Property="Background" Value="#5A2A2A" />
-            <Setter Property="BorderBrush" Value="#A54A4A" />
+            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
         </Style>
         <Style Selector="Border.stat-pill TextBlock">
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -348,20 +374,20 @@
             <Setter Property="Padding" Value="10,4" />
         </Style>
         <Style Selector="Border.backup-tag.info">
-            <Setter Property="Background" Value="#1F3559" />
-            <Setter Property="BorderBrush" Value="#345F96" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
         <Style Selector="Border.backup-tag.success">
-            <Setter Property="Background" Value="#1E4C3D" />
-            <Setter Property="BorderBrush" Value="#2F8D70" />
+            <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
         </Style>
         <Style Selector="Border.backup-tag.warning">
-            <Setter Property="Background" Value="#5C4420" />
-            <Setter Property="BorderBrush" Value="#B98833" />
+            <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
         </Style>
         <Style Selector="Border.backup-tag.danger">
-            <Setter Property="Background" Value="#5A2A2A" />
-            <Setter Property="BorderBrush" Value="#A54A4A" />
+            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
         </Style>
         <Style Selector="Border.backup-tag TextBlock">
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -483,20 +509,21 @@
 
         <!-- Shell brand banner -->
         <Style Selector="Border.shell-banner">
-            <Setter Property="Background" Value="{DynamicResource Surface2}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+            <Setter Property="Background" Value="{DynamicResource GlassFloatingBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassRimBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="16" />
             <Setter Property="Padding" Value="14,12" />
             <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="BoxShadow" Value="0 10 28 0 #18000000" />
         </Style>
 
         <Style Selector="Border.shell-monogram">
             <Setter Property="Width" Value="48" />
             <Setter Property="Height" Value="48" />
             <Setter Property="CornerRadius" Value="18" />
-            <Setter Property="Background" Value="#13213A" />
-            <Setter Property="BorderBrush" Value="#28456E" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="Margin" Value="0,2,0,12" />

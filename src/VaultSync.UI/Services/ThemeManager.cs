@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Avalonia.Styling;
 using VaultSync.Core.Config;
@@ -12,6 +15,8 @@ namespace VaultSync.UI.Services
         private const string ThemeDark = "Dark";
         private const string ThemeLight = "Light";
         private const string ThemeCustom = "Custom";
+        private const string VisualStyleGlass = "Glass";
+        private const string VisualStyleSolid = "Solid";
 
         private sealed record ThemePresetDefinition(string Id, string Description, ThemePaletteConfig Palette);
 
@@ -21,6 +26,20 @@ namespace VaultSync.UI.Services
                 "vaultsync-midnight",
                 "Default VaultSync dark palette with balanced contrast and blue accents.",
                 new ThemePaletteConfig()),
+            Preset(
+                "aurora-glass",
+                "Layered midnight glass with cool reflections and an aurora-blue accent.",
+                "Aurora Glass",
+                ThemeDark,
+                ["#07111F", "#13233A", "#203A59", "#67D8FF", "#F7FBFF", "#B7C9DC", "#55E0B2", "#FFD06A", "#FF7D91"],
+                VisualStyleGlass),
+            Preset(
+                "porcelain-glass",
+                "Bright frosted surfaces with soft blue reflections and crisp readable text.",
+                "Porcelain Glass",
+                ThemeLight,
+                ["#EAF1F8", "#F8FBFF", "#DCE8F4", "#2878E8", "#111A28", "#53677E", "#168A66", "#B87708", "#CF4055"],
+                VisualStyleGlass),
             Preset(
                 "studio-light",
                 "Clean light workspace with crisp surfaces and a bright accent.",
@@ -62,7 +81,19 @@ namespace VaultSync.UI.Services
                 "Pure black dark theme for OLED displays with bright blue highlights.",
                 "OLED Black",
                 ThemeDark,
-                ["#000000", "#090B10", "#111621", "#4F8DFF", "#F5F8FF", "#AAB5CB", "#4DDAA6", "#FFC766", "#FF7676"])
+                ["#000000", "#090B10", "#111621", "#4F8DFF", "#F5F8FF", "#AAB5CB", "#4DDAA6", "#FFC766", "#FF7676"]),
+            Preset(
+                "paper-ink",
+                "A warm, low-glare light theme inspired by paper, graphite, and editorial layouts.",
+                "Paper & Ink",
+                ThemeLight,
+                ["#F3EFE6", "#FFFCF5", "#E7DFD0", "#356A8A", "#211F1A", "#6A6258", "#287D62", "#A36B10", "#B84747"]),
+            Preset(
+                "neon-dusk",
+                "Deep violet surfaces with electric cyan accents and restrained neon contrast.",
+                "Neon Dusk",
+                ThemeDark,
+                ["#100C1E", "#19132A", "#29203E", "#64E8FF", "#FFF9FF", "#C3B4D7", "#5CE2AE", "#FFD066", "#FF719E"])
         };
 
         private static ThemePresetDefinition Preset(
@@ -70,7 +101,8 @@ namespace VaultSync.UI.Services
             string description,
             string name,
             string baseTheme,
-            string[] colors)
+            string[] colors,
+            string visualStyle = VisualStyleSolid)
         {
             if (colors.Length != 9)
                 throw new ArgumentException("Theme palette presets require exactly nine colors.", nameof(colors));
@@ -82,6 +114,7 @@ namespace VaultSync.UI.Services
                 {
                     Name = name,
                     BaseTheme = baseTheme,
+                    VisualStyle = visualStyle,
                     Background = colors[0],
                     Surface = colors[1],
                     SurfaceAlt = colors[2],
@@ -114,6 +147,12 @@ namespace VaultSync.UI.Services
             return palette;
         }
 
+        public static ThemePaletteConfig NormalizeCustomTheme(ThemePaletteConfig palette)
+        {
+            ArgumentNullException.ThrowIfNull(palette);
+            return NormalizePalette(palette);
+        }
+
         public static void ApplyAppearance(AppearanceConfig appearance)
         {
             Application? app = Application.Current;
@@ -122,6 +161,10 @@ namespace VaultSync.UI.Services
 
             ApplyThemeVariant(app, appearance.Theme, appearance.CustomTheme);
             ApplyPaletteOverrides(app, appearance.Theme, appearance.CustomTheme);
+            ApplyWindowTransparency(
+                app,
+                string.Equals(appearance.Theme, ThemeCustom, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(appearance.CustomTheme?.VisualStyle, VisualStyleGlass, StringComparison.OrdinalIgnoreCase));
         }
 
         public static void ApplyTheme(string themeName)
@@ -132,7 +175,10 @@ namespace VaultSync.UI.Services
 
             ApplyThemeVariant(app, themeName, null);
             if (!string.Equals(themeName, ThemeCustom, StringComparison.OrdinalIgnoreCase))
+            {
                 ClearPaletteOverrides(app);
+                ApplyWindowTransparency(app, useGlass: false);
+            }
         }
 
         public static void ApplyCompactLayout(bool compact)
@@ -210,6 +256,7 @@ namespace VaultSync.UI.Services
             ThemePaletteConfig palette = NormalizePalette(customTheme ?? GetDefaultCustomTheme());
             bool isLightBase = string.Equals(palette.BaseTheme, ThemeLight, StringComparison.OrdinalIgnoreCase);
             Color accentSoft = WithAlpha(palette.Accent, isLightBase ? 0.14 : 0.24);
+            Color textOnAccent = BestContrast(Color.Parse(palette.Accent));
             Color textMuted = Blend(palette.TextSecondary, palette.Background, isLightBase ? 0.45 : 0.60);
             Color inputBackground = Blend(palette.SurfaceAlt, palette.Background, isLightBase ? 0.45 : 0.25);
             Color inputBorder = Blend(palette.SurfaceAlt, palette.TextSecondary, isLightBase ? 0.35 : 0.28);
@@ -226,9 +273,13 @@ namespace VaultSync.UI.Services
             SetColorOverride(app, "VsTextMutedColor", textMuted);
             SetColorOverride(app, "VsAccentColor", palette.Accent);
             SetColorOverride(app, "VsAccentSoftColor", accentSoft);
+            SetColorOverride(app, "VsTextOnAccentColor", textOnAccent);
             SetColorOverride(app, "VsSuccessColor", palette.Success);
             SetColorOverride(app, "VsWarningColor", palette.Warning);
             SetColorOverride(app, "VsDangerColor", palette.Danger);
+            SetColorOverride(app, "VsSuccessSoftColor", WithAlpha(palette.Success, isLightBase ? 0.14 : 0.20));
+            SetColorOverride(app, "VsWarningSoftColor", WithAlpha(palette.Warning, isLightBase ? 0.14 : 0.20));
+            SetColorOverride(app, "VsDangerSoftColor", WithAlpha(palette.Danger, isLightBase ? 0.14 : 0.20));
             SetColorOverride(app, "VsInputBackgroundColor", inputBackground);
             SetColorOverride(app, "VsInputBorderColor", inputBorder);
             SetColorOverride(app, "VsInputBorderFocusedColor", palette.Accent);
@@ -236,27 +287,44 @@ namespace VaultSync.UI.Services
             SetColorOverride(app, "VsShellBrandStartColor", shellStart);
             SetColorOverride(app, "VsShellBrandEndColor", shellEnd);
             SetColorOverride(app, "VsShellBrandTextColor", shellText);
+
+            ApplyVisualStyleOverrides(app, palette, isLightBase);
         }
 
         private static void ClearPaletteOverrides(Application app)
         {
             foreach (string key in PaletteResourceKeys)
                 app.Resources.Remove(key);
+
+            foreach (string key in VisualStyleResourceKeys)
+                app.Resources.Remove(key);
         }
 
         private static ThemePaletteConfig NormalizePalette(ThemePaletteConfig palette)
         {
             ThemePaletteConfig defaults = GetDefaultCustomTheme();
+            string background = NormalizeHex(palette.Background, defaults.Background);
+            string surface = NormalizeHex(palette.Surface, defaults.Surface);
+            string surfaceAlt = NormalizeHex(palette.SurfaceAlt, defaults.SurfaceAlt);
             return new ThemePaletteConfig
             {
                 Name = string.IsNullOrWhiteSpace(palette.Name) ? defaults.Name : palette.Name.Trim(),
                 BaseTheme = string.Equals(palette.BaseTheme, ThemeLight, StringComparison.OrdinalIgnoreCase) ? ThemeLight : ThemeDark,
-                Background = NormalizeHex(palette.Background, defaults.Background),
-                Surface = NormalizeHex(palette.Surface, defaults.Surface),
-                SurfaceAlt = NormalizeHex(palette.SurfaceAlt, defaults.SurfaceAlt),
+                VisualStyle = string.Equals(palette.VisualStyle, VisualStyleGlass, StringComparison.OrdinalIgnoreCase)
+                    ? VisualStyleGlass
+                    : VisualStyleSolid,
+                Background = background,
+                Surface = surface,
+                SurfaceAlt = surfaceAlt,
                 Accent = NormalizeHex(palette.Accent, defaults.Accent),
-                TextPrimary = NormalizeHex(palette.TextPrimary, defaults.TextPrimary),
-                TextSecondary = NormalizeHex(palette.TextSecondary, defaults.TextSecondary),
+                TextPrimary = EnsureReadableText(
+                    NormalizeHex(palette.TextPrimary, defaults.TextPrimary),
+                    [background, surface, surfaceAlt],
+                    4.5),
+                TextSecondary = EnsureReadableText(
+                    NormalizeHex(palette.TextSecondary, defaults.TextSecondary),
+                    [background, surface, surfaceAlt],
+                    3.0),
                 Success = NormalizeHex(palette.Success, defaults.Success),
                 Warning = NormalizeHex(palette.Warning, defaults.Warning),
                 Danger = NormalizeHex(palette.Danger, defaults.Danger)
@@ -306,6 +374,52 @@ namespace VaultSync.UI.Services
             return luminance < 0.55;
         }
 
+        private static string EnsureReadableText(string preferredHex, string[] backgroundHexes, double minimumRatio)
+        {
+            Color preferred = Color.Parse(preferredHex);
+            Color[] backgrounds = backgroundHexes.Select(Color.Parse).ToArray();
+            if (backgrounds.All(background => ContrastRatio(preferred, background) >= minimumRatio))
+                return preferredHex;
+
+            Color best = new[] { Colors.White, Color.Parse("#11131A") }
+                .OrderByDescending(candidate => backgrounds.Min(background => ContrastRatio(candidate, background)))
+                .First();
+            return $"#{best.R:X2}{best.G:X2}{best.B:X2}";
+        }
+
+        private static Color BestContrast(Color background)
+        {
+            Color white = Colors.White;
+            Color nearBlack = Color.Parse("#11131A");
+            return ContrastRatio(white, background) >= ContrastRatio(nearBlack, background)
+                ? white
+                : nearBlack;
+        }
+
+        private static double ContrastRatio(Color first, Color second)
+        {
+            double firstLuminance = RelativeLuminance(first);
+            double secondLuminance = RelativeLuminance(second);
+            double lighter = Math.Max(firstLuminance, secondLuminance);
+            double darker = Math.Min(firstLuminance, secondLuminance);
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+
+        private static double RelativeLuminance(Color color)
+        {
+            static double Linearize(byte channel)
+            {
+                double value = channel / 255d;
+                return value <= 0.04045
+                    ? value / 12.92
+                    : Math.Pow((value + 0.055) / 1.055, 2.4);
+            }
+
+            return (0.2126 * Linearize(color.R))
+                + (0.7152 * Linearize(color.G))
+                + (0.0722 * Linearize(color.B));
+        }
+
         private static void SetColorOverride(Application app, string key, string hex)
         {
             app.Resources[key] = Color.Parse(hex);
@@ -314,6 +428,157 @@ namespace VaultSync.UI.Services
         private static void SetColorOverride(Application app, string key, Color color)
         {
             app.Resources[key] = color;
+        }
+
+        private static void ApplyWindowTransparency(Application app, bool useGlass)
+        {
+            if (app.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop
+                || desktop.MainWindow is not { } mainWindow)
+            {
+                return;
+            }
+
+            mainWindow.TransparencyLevelHint = useGlass
+                ?
+                [
+                    WindowTransparencyLevel.AcrylicBlur,
+                    WindowTransparencyLevel.Blur,
+                    WindowTransparencyLevel.Transparent,
+                    WindowTransparencyLevel.None
+                ]
+                : [WindowTransparencyLevel.None];
+        }
+
+        private static void ApplyVisualStyleOverrides(
+            Application app,
+            ThemePaletteConfig palette,
+            bool isLightBase)
+        {
+            foreach (string key in VisualStyleResourceKeys)
+                app.Resources.Remove(key);
+
+            if (!string.Equals(palette.VisualStyle, VisualStyleGlass, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            Color background = Color.Parse(palette.Background);
+            Color surface = Color.Parse(palette.Surface);
+            Color surfaceAlt = Color.Parse(palette.SurfaceAlt);
+            Color accent = Color.Parse(palette.Accent);
+            Color whiteReflection = WithAlpha(Colors.White, isLightBase ? 0.72 : 0.18);
+            Color softReflection = WithAlpha(Colors.White, isLightBase ? 0.36 : 0.10);
+            Color glassEdge = isLightBase
+                ? Color.FromArgb(0xB8, 0xFF, 0xFF, 0xFF)
+                : Color.FromArgb(0x54, 0xD9, 0xEE, 0xFF);
+            Color glassEdgeSoft = isLightBase
+                ? Color.FromArgb(0x72, 0x9B, 0xB0, 0xC5)
+                : Color.FromArgb(0x38, 0xA8, 0xD8, 0xFA);
+
+            IBrush backdrop = BackdropGradient(background, surfaceAlt, accent, isLightBase);
+            IBrush navigationGlass = GlassGradient(
+                whiteReflection,
+                WithAlpha(surface, isLightBase ? 0.78 : 0.68),
+                WithAlpha(Blend(accent, background, isLightBase ? 0.05 : 0.12), isLightBase ? 0.72 : 0.58));
+            IBrush toolbarGlass = GlassGradient(
+                softReflection,
+                WithAlpha(surface, isLightBase ? 0.82 : 0.72),
+                WithAlpha(background, isLightBase ? 0.74 : 0.62));
+            IBrush floatingGlass = GlassGradient(
+                whiteReflection,
+                WithAlpha(surface, isLightBase ? 0.90 : 0.82),
+                WithAlpha(surfaceAlt, isLightBase ? 0.82 : 0.72));
+            IBrush contentSurface = new SolidColorBrush(
+                WithAlpha(surface, isLightBase ? 0.96 : 0.94));
+            IBrush contentRaised = new SolidColorBrush(
+                WithAlpha(surfaceAlt, isLightBase ? 0.96 : 0.92));
+
+            app.Resources["WindowBackground"] = backdrop;
+            app.Resources["VsBackgroundBrush"] = app.Resources["WindowBackground"];
+            app.Resources["ShellNavigationBrush"] = navigationGlass;
+            app.Resources["ShellToolbarBrush"] = toolbarGlass;
+            app.Resources["GlassFloatingBrush"] = floatingGlass;
+            app.Resources["GlassControlBrush"] = GlassGradient(
+                softReflection,
+                WithAlpha(surfaceAlt, isLightBase ? 0.84 : 0.74),
+                WithAlpha(surface, isLightBase ? 0.78 : 0.66));
+            app.Resources["GlassRimBrush"] = new SolidColorBrush(glassEdge);
+            app.Resources["GlassRimSoftBrush"] = new SolidColorBrush(glassEdgeSoft);
+            app.Resources["GlassReflectionBrush"] = new SolidColorBrush(softReflection);
+            app.Resources["GlassAmbientGlowBrush"] = new RadialGradientBrush
+            {
+                Center = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
+                GradientOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
+                RadiusX = new RelativeScalar(0.5, RelativeUnit.Relative),
+                RadiusY = new RelativeScalar(0.5, RelativeUnit.Relative),
+                GradientStops =
+                {
+                    new GradientStop(WithAlpha(accent, isLightBase ? 0.14 : 0.20), 0),
+                    new GradientStop(WithAlpha(accent, isLightBase ? 0.05 : 0.07), 0.46),
+                    new GradientStop(WithAlpha(accent, 0), 1)
+                }
+            };
+            app.Resources["CardBackgroundBrush"] = contentSurface;
+            app.Resources["VsCardBrush"] = app.Resources["CardBackgroundBrush"];
+            app.Resources["SurfaceCardBrush"] = app.Resources["CardBackgroundBrush"];
+            app.Resources["CardRaisedBackgroundBrush"] = contentRaised;
+            app.Resources["VsCardHighlightBrush"] = app.Resources["CardRaisedBackgroundBrush"];
+            app.Resources["Surface0"] = toolbarGlass;
+            app.Resources["Surface1"] = contentSurface;
+            app.Resources["Surface2"] = contentRaised;
+            app.Resources["Surface3"] = new SolidColorBrush(
+                WithAlpha(surfaceAlt, isLightBase ? 0.98 : 0.95));
+            app.Resources["ItemBg"] = new SolidColorBrush(
+                WithAlpha(surface, isLightBase ? 0.92 : 0.88));
+            app.Resources["CardSelectedBrush"] = GlassGradient(
+                WithAlpha(accent, isLightBase ? 0.20 : 0.28),
+                WithAlpha(surfaceAlt, isLightBase ? 0.94 : 0.86),
+                WithAlpha(surface, isLightBase ? 0.90 : 0.78));
+            app.Resources["BorderSoft"] = new SolidColorBrush(glassEdgeSoft);
+            app.Resources["DividerBrush"] = new SolidColorBrush(
+                isLightBase ? Color.FromArgb(0x84, 0x8D, 0xA2, 0xB8) : Color.FromArgb(0x5C, 0x9D, 0xC2, 0xDE));
+            app.Resources["InputBackgroundBrush"] = new SolidColorBrush(
+                WithAlpha(surface, isLightBase ? 0.94 : 0.88));
+        }
+
+        private static LinearGradientBrush GlassGradient(Color reflection, Color body, Color depth)
+        {
+            return new LinearGradientBrush
+            {
+                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+                GradientStops =
+                {
+                    new GradientStop(reflection, 0),
+                    new GradientStop(body, 0.12),
+                    new GradientStop(body, 0.62),
+                    new GradientStop(depth, 1)
+                }
+            };
+        }
+
+        private static LinearGradientBrush BackdropGradient(
+            Color background,
+            Color surfaceAlt,
+            Color accent,
+            bool isLightBase)
+        {
+            Color ambient = Blend(accent, background, isLightBase ? 0.08 : 0.20);
+            Color depth = Blend(surfaceAlt, background, isLightBase ? 0.24 : 0.38);
+            return new LinearGradientBrush
+            {
+                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+                GradientStops =
+                {
+                    new GradientStop(WithAlpha(ambient, isLightBase ? 0.86 : 0.76), 0),
+                    new GradientStop(WithAlpha(background, isLightBase ? 0.94 : 0.88), 0.42),
+                    new GradientStop(WithAlpha(depth, isLightBase ? 0.86 : 0.78), 1)
+                }
+            };
+        }
+
+        private static Color WithAlpha(Color color, double opacity)
+        {
+            return Color.FromArgb((byte)Math.Round(Math.Clamp(opacity, 0d, 1d) * 255d), color.R, color.G, color.B);
         }
 
         private static readonly string[] PaletteResourceKeys =
@@ -326,9 +591,13 @@ namespace VaultSync.UI.Services
             "VsTextMutedColor",
             "VsAccentColor",
             "VsAccentSoftColor",
+            "VsTextOnAccentColor",
             "VsSuccessColor",
             "VsWarningColor",
             "VsDangerColor",
+            "VsSuccessSoftColor",
+            "VsWarningSoftColor",
+            "VsDangerSoftColor",
             "VsInputBackgroundColor",
             "VsInputBorderColor",
             "VsInputBorderFocusedColor",
@@ -336,6 +605,34 @@ namespace VaultSync.UI.Services
             "VsShellBrandStartColor",
             "VsShellBrandEndColor",
             "VsShellBrandTextColor"
+        };
+
+        private static readonly string[] VisualStyleResourceKeys =
+        {
+            "WindowBackground",
+            "VsBackgroundBrush",
+            "ShellNavigationBrush",
+            "ShellToolbarBrush",
+            "GlassFloatingBrush",
+            "GlassControlBrush",
+            "GlassRimBrush",
+            "GlassRimSoftBrush",
+            "GlassReflectionBrush",
+            "GlassAmbientGlowBrush",
+            "CardBackgroundBrush",
+            "VsCardBrush",
+            "SurfaceCardBrush",
+            "CardRaisedBackgroundBrush",
+            "VsCardHighlightBrush",
+            "Surface0",
+            "Surface1",
+            "Surface2",
+            "Surface3",
+            "ItemBg",
+            "CardSelectedBrush",
+            "BorderSoft",
+            "DividerBrush",
+            "InputBackgroundBrush"
         };
     }
 }

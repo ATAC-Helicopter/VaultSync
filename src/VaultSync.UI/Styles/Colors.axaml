@@ -18,11 +18,15 @@
       <!-- Accents -->
       <Color x:Key="VsAccentColor">#4F8DFF</Color>
       <Color x:Key="VsAccentSoftColor">#334F8DFF</Color>
+      <Color x:Key="VsTextOnAccentColor">#FFFFFF</Color>
 
       <!-- Status / semantic (BRIGHTER) -->
       <Color x:Key="VsSuccessColor">#4FF2B6</Color>
       <Color x:Key="VsWarningColor">#FFC766</Color>
       <Color x:Key="VsDangerColor">#FF7676</Color>
+      <Color x:Key="VsSuccessSoftColor">#334FF2B6</Color>
+      <Color x:Key="VsWarningSoftColor">#33FFC766</Color>
+      <Color x:Key="VsDangerSoftColor">#33FF7676</Color>
 
       <!-- Input + borders -->
       <Color x:Key="VsInputBackgroundColor">#1F2230</Color>
@@ -49,11 +53,15 @@
       <!-- Accents -->
       <Color x:Key="VsAccentColor">#2663FF</Color>
       <Color x:Key="VsAccentSoftColor">#1A2663FF</Color>
+      <Color x:Key="VsTextOnAccentColor">#FFFFFF</Color>
 
       <!-- Status / semantic (BRIGHTER) -->
       <Color x:Key="VsSuccessColor">#32DFA0</Color>
       <Color x:Key="VsWarningColor">#FFBF5F</Color>
       <Color x:Key="VsDangerColor">#FF6A6A</Color>
+      <Color x:Key="VsSuccessSoftColor">#2432DFA0</Color>
+      <Color x:Key="VsWarningSoftColor">#24FFBF5F</Color>
+      <Color x:Key="VsDangerSoftColor">#24FF6A6A</Color>
 
       <!-- Input + borders -->
       <Color x:Key="VsInputBackgroundColor">#F5F6FB</Color>
@@ -85,11 +93,15 @@
   <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource VsAccentColor}" />
   <SolidColorBrush x:Key="AccentSoftBrush" Color="{DynamicResource VsAccentSoftColor}" />
   <SolidColorBrush x:Key="AccentMutedBrush" Color="{DynamicResource VsAccentSoftColor}" />
+  <SolidColorBrush x:Key="TextOnAccentBrush" Color="{DynamicResource VsTextOnAccentColor}" />
 
   <!-- Status / semantic brushes -->
   <SolidColorBrush x:Key="SuccessBrush" Color="{DynamicResource VsSuccessColor}" />
   <SolidColorBrush x:Key="WarningBrush" Color="{DynamicResource VsWarningColor}" />
   <SolidColorBrush x:Key="DangerBrush" Color="{DynamicResource VsDangerColor}" />
+  <SolidColorBrush x:Key="SuccessSoftBrush" Color="{DynamicResource VsSuccessSoftColor}" />
+  <SolidColorBrush x:Key="WarningSoftBrush" Color="{DynamicResource VsWarningSoftColor}" />
+  <SolidColorBrush x:Key="DangerSoftBrush" Color="{DynamicResource VsDangerSoftColor}" />
   <SolidColorBrush x:Key="DangerTextBrush" Color="{DynamicResource VsDangerColor}" />
   <SolidColorBrush x:Key="WarningTextBrush" Color="{DynamicResource VsWarningColor}" />
 
@@ -106,6 +118,14 @@
 
   <!-- Window background -->
   <SolidColorBrush x:Key="WindowBackground" Color="{DynamicResource VsBackgroundColor}" />
+  <SolidColorBrush x:Key="ShellNavigationBrush" Color="{DynamicResource VsCardColor}" />
+  <SolidColorBrush x:Key="ShellToolbarBrush" Color="{DynamicResource VsCardColor}" />
+  <SolidColorBrush x:Key="GlassFloatingBrush" Color="{DynamicResource VsCardHighlightColor}" />
+  <SolidColorBrush x:Key="GlassControlBrush" Color="{DynamicResource VsCardHighlightColor}" />
+  <SolidColorBrush x:Key="GlassRimBrush" Color="{DynamicResource VsCardHighlightColor}" />
+  <SolidColorBrush x:Key="GlassRimSoftBrush" Color="{DynamicResource VsDividerColor}" />
+  <SolidColorBrush x:Key="GlassReflectionBrush" Color="Transparent" />
+  <SolidColorBrush x:Key="GlassAmbientGlowBrush" Color="Transparent" />
 
   <!-- Surfaces: sidebar/header/card stacks -->
   <SolidColorBrush x:Key="Surface0" Color="{DynamicResource VsCardColor}" />
@@ -132,11 +152,11 @@
   <SolidColorBrush x:Key="ItemBg" Color="{DynamicResource VsCardColor}" />
 
   <!-- Buttons / pills -->
-  <SolidColorBrush x:Key="ButtonForegroundBrush" Color="{DynamicResource VsTextPrimaryColor}" />
+  <SolidColorBrush x:Key="ButtonForegroundBrush" Color="{DynamicResource VsTextOnAccentColor}" />
   <SolidColorBrush x:Key="PillBackgroundBrush" Color="{DynamicResource VsSuccessColor}" />
   <!-- New: no visible outline, but available if ever needed -->
   <SolidColorBrush x:Key="PillBorderBrush" Color="Transparent" />
-  <SolidColorBrush x:Key="TextOnPillBrush" Color="{DynamicResource VsBackgroundColor}" />
+  <SolidColorBrush x:Key="TextOnPillBrush" Color="{DynamicResource VsTextOnAccentColor}" />
 
   <!-- Charts and subtle lines -->
   <SolidColorBrush x:Key="SubtleAxisBrush" Color="{DynamicResource VsDividerColor}" />

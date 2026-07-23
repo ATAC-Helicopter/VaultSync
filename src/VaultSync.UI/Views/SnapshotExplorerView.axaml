@@ -31,11 +31,11 @@
       </Setter>
     </Style>
     <Style Selector="#SnapshotEntryList ListBoxItem:pointerover">
-      <Setter Property="Background" Value="#5C15273A" />
-      <Setter Property="BorderBrush" Value="#365A7A" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
     </Style>
     <Style Selector="#SnapshotEntryList ListBoxItem:selected">
-      <Setter Property="Background" Value="#8A1E3A56" />
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
   </Window.Styles>
@@ -162,13 +162,19 @@
                          TextWrapping="Wrap"
                          Foreground="{DynamicResource TextSecondaryBrush}" />
             </Border>
-            <ScrollViewer Margin="12"
+            <Border Margin="12"
+                    Padding="12"
+                    CornerRadius="6"
+                    Background="#101722"
+                    IsVisible="{Binding !IsEncryptedBackup}">
+              <ScrollViewer
                           HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Auto"
-                          IsVisible="{Binding !IsEncryptedBackup}">
-              <controls:CodePreviewBlock CodeText="{Binding PreviewText}"
-                                         FileName="{Binding PreviewFileName}" />
-            </ScrollViewer>
+                          VerticalScrollBarVisibility="Auto">
+                <controls:CodePreviewBlock CodeText="{Binding PreviewText}"
+                                           FileName="{Binding PreviewFileName}"
+                                           Foreground="#E8EEF7" />
+              </ScrollViewer>
+            </Border>
           </Grid>
         </Grid>
       </Border>

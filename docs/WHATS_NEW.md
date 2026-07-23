@@ -4,6 +4,14 @@
 
 VaultSync `1.8.4` is the Disaster Recovery update. It adds byte-level recovery proofs, transparent 3-2-1 guidance, protected-point recommendations, and a privacy-first crash-report workflow.
 
+### Themes and appearance
+- Choose from four new curated themes: Aurora Glass, Porcelain Glass, Paper & Ink, and Neon Dusk.
+- Glass presets request platform acrylic or blur when available, then layer adaptive tint, reflected highlights, ambient color, and soft separation over a predictable cross-platform fallback.
+- Aurora Glass uses cool midnight depth and restrained cyan reflections; Porcelain Glass uses brighter frosted navigation with more opaque content surfaces for dependable dark-text contrast.
+- Preview themes visually before applying them, collapse the theme studio when it is not needed, and open advanced color tuning only when you want it.
+- Custom theme files retain their rendering style, while older configurations continue to load as solid themes.
+- Text contrast is checked across every custom-theme surface, while status colors, navigation, History, Recovery, and code previews remain readable in light or dark palettes.
+
 ### Disaster recovery
 - Run a non-destructive proof against a project's newest recovery point without copying anything into the project.
 - Verify the complete stored bytes and sizes of bounded folder or ZIP contents against the SHA-256 values captured by the selected snapshot.

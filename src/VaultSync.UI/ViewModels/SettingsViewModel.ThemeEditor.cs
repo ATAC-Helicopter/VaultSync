@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Input;
+using Avalonia;
 using Avalonia.Media;
 using VaultSync.Core.Config;
 using VaultSync.UI.Services;
@@ -106,6 +107,10 @@ namespace VaultSync.UI
             public required string Name { get; init; }
             public required string Description { get; init; }
             public required ThemePaletteConfig Palette { get; init; }
+            public required IBrush PreviewBackground { get; init; }
+            public required IBrush PreviewSurface { get; init; }
+            public required IBrush PreviewAccent { get; init; }
+            public bool UsesGlass => string.Equals(Palette.VisualStyle, "Glass", StringComparison.OrdinalIgnoreCase);
         }
 
         public sealed class ThemePaletteSwatchViewModel : ViewModelBase
@@ -215,7 +220,10 @@ namespace VaultSync.UI
                     Id = preset.Id,
                     Name = L($"Settings.Appearance.ThemePresets.{preset.Id}.Name", preset.Palette.Name),
                     Description = L($"Settings.Appearance.ThemePresets.{preset.Id}.Description", preset.Description),
-                    Palette = preset.Palette.Clone()
+                    Palette = preset.Palette.Clone(),
+                    PreviewBackground = CreatePresetBackground(preset.Palette),
+                    PreviewSurface = CreatePresetSurface(preset.Palette),
+                    PreviewAccent = new SolidColorBrush(Color.Parse(preset.Palette.Accent))
                 });
             }
 
@@ -245,6 +253,7 @@ namespace VaultSync.UI
                 return;
 
             SelectedTheme = ThemeOptionCustomLabel;
+            IsThemeEditorExpanded = true;
             LoadCustomTheme(preset.Palette.Clone());
             SaveStatus = string.Format(L("Settings.Appearance.ThemePresetApplied", "Theme preset applied: {0}."), preset.Name);
         }
@@ -292,6 +301,9 @@ namespace VaultSync.UI
             _customThemeBase = string.Equals(theme.BaseTheme, "Light", StringComparison.OrdinalIgnoreCase)
                 ? ThemeBaseLightLabel
                 : ThemeBaseDarkLabel;
+            _customThemeVisualStyle = string.Equals(theme.VisualStyle, "Glass", StringComparison.OrdinalIgnoreCase)
+                ? "Glass"
+                : "Solid";
 
             SetThemeSlotHex(ThemeSlotBackground, theme.Background);
             SetThemeSlotHex(ThemeSlotSurface, theme.Surface);
@@ -325,10 +337,11 @@ namespace VaultSync.UI
                 return ThemeColorSlots.FirstOrDefault(x => string.Equals(x.Id, slotId, StringComparison.Ordinal))?.Hex ?? fallback;
             }
 
-            return new ThemePaletteConfig
+            return ThemeManager.NormalizeCustomTheme(new ThemePaletteConfig
             {
                 Name = string.IsNullOrWhiteSpace(CustomThemeName) ? L("Settings.Appearance.ThemeNameDefault", "Custom theme") : CustomThemeName.Trim(),
                 BaseTheme = IsLightThemeBaseOption(CustomThemeBase) ? "Light" : "Dark",
+                VisualStyle = _customThemeVisualStyle,
                 Background = Get(ThemeSlotBackground, ThemeDefaultBackground),
                 Surface = Get(ThemeSlotSurface, ThemeDefaultSurface),
                 SurfaceAlt = Get(ThemeSlotSurfaceAlt, ThemeDefaultSurfaceAlt),
@@ -338,7 +351,7 @@ namespace VaultSync.UI
                 Success = Get(ThemeSlotSuccess, ThemeDefaultSuccess),
                 Warning = Get(ThemeSlotWarning, ThemeDefaultWarning),
                 Danger = Get(ThemeSlotDanger, ThemeDefaultDanger)
-            };
+            });
         }
 
         private void ApplyThemePreview()
@@ -363,6 +376,44 @@ namespace VaultSync.UI
             OnPropertyChanged(nameof(ThemePreviewTextPrimary));
             OnPropertyChanged(nameof(ThemePreviewTextSecondary));
             UpdateSelectedThemePaletteSwatchState();
+        }
+
+        private static IBrush CreatePresetBackground(ThemePaletteConfig palette)
+        {
+            Color background = Color.Parse(palette.Background);
+            if (!string.Equals(palette.VisualStyle, "Glass", StringComparison.OrdinalIgnoreCase))
+                return new SolidColorBrush(background);
+
+            return new LinearGradientBrush
+            {
+                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+                GradientStops =
+                {
+                    new GradientStop(Color.Parse(palette.Accent), 0),
+                    new GradientStop(background, 0.38),
+                    new GradientStop(Color.Parse(palette.SurfaceAlt), 1)
+                }
+            };
+        }
+
+        private static IBrush CreatePresetSurface(ThemePaletteConfig palette)
+        {
+            Color surface = Color.Parse(palette.Surface);
+            if (!string.Equals(palette.VisualStyle, "Glass", StringComparison.OrdinalIgnoreCase))
+                return new SolidColorBrush(surface);
+
+            return new LinearGradientBrush
+            {
+                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+                GradientStops =
+                {
+                    new GradientStop(Color.FromArgb(0xA0, 0xFF, 0xFF, 0xFF), 0),
+                    new GradientStop(surface, 0.22),
+                    new GradientStop(Color.Parse(palette.SurfaceAlt), 1)
+                }
+            };
         }
 
         private void UpdateSelectedThemePaletteSwatchState()
@@ -406,12 +457,18 @@ namespace VaultSync.UI
         }
 
         public string SelectedThemeColorHex => SelectedThemeColorSlot?.Hex ?? ThemeDefaultAccent;
-        public string ThemePreviewBackground => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotBackground)?.Hex ?? ThemeDefaultBackground;
-        public string ThemePreviewSurface => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotSurface)?.Hex ?? ThemeDefaultSurface;
-        public string ThemePreviewSurfaceAlt => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotSurfaceAlt)?.Hex ?? ThemeDefaultSurfaceAlt;
-        public string ThemePreviewAccent => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotAccent)?.Hex ?? ThemeDefaultAccent;
-        public string ThemePreviewTextPrimary => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotTextPrimary)?.Hex ?? ThemeDefaultTextPrimary;
-        public string ThemePreviewTextSecondary => ThemeColorSlots.FirstOrDefault(x => x.Id == ThemeSlotTextSecondary)?.Hex ?? ThemeDefaultTextSecondary;
+        public string ThemePreviewBackground => BuildCustomThemeConfig().Background;
+        public string ThemePreviewSurface => BuildCustomThemeConfig().Surface;
+        public string ThemePreviewSurfaceAlt => BuildCustomThemeConfig().SurfaceAlt;
+        public string ThemePreviewAccent => BuildCustomThemeConfig().Accent;
+        public string ThemePreviewTextPrimary => BuildCustomThemeConfig().TextPrimary;
+        public string ThemePreviewTextSecondary => BuildCustomThemeConfig().TextSecondary;
+
+        public bool IsThemeEditorExpanded
+        {
+            get => _isThemeEditorExpanded;
+            set => SetField(ref _isThemeEditorExpanded, value);
+        }
 
         public ICommand ApplyThemePresetCommand => _applyThemePresetCommand!;
         public ICommand ApplyThemePaletteSwatchCommand => _applyThemePaletteSwatchCommand!;

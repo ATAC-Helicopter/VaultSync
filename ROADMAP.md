@@ -1874,6 +1874,14 @@
 - [x] `BUG-18068` `P1` Harden archive upload cancellation and stall handling. _(Done in PR #440; tracked by #449; target 1.8.4)_
 - [x] `BUG-18069` `P1` Keep recoverable crash reporting active after the first UI exception. _(Done in PR #440; tracked by #450; target 1.8.4)_
 - [x] `VS-1849` `P2` Refresh safe 1.8.4 servicing dependencies. _(Done in PR #440; tracked by #452; target 1.8.4)_
+- [x] `VS-1850` `P2` Refresh themes and simplify the Appearance editor. _(Done in PR #440; tracked by #458; target 1.8.4)_
+  - Done: four curated presets add warm editorial, neon, and dark/light glass directions while retaining the custom palette editor.
+  - Done: glass themes render layered gradients, translucent surfaces, soft borders, and restrained highlight reflections without image assets or platform-specific blur dependencies.
+  - Done: the theme studio collapses into a compact summary, presets use visual miniatures, and advanced component controls stay closed until requested.
+- [x] `BUG-18075` `P1` Keep every application view readable and aligned across supported themes. _(Done in PR #440; target 1.8.4)_
+  - Done: custom palettes enforce accessible text contrast across window, surface, and alternate-surface colors.
+  - Done: arbitrary accent, status, and avatar backgrounds select a readable light or dark foreground automatically.
+  - Done: Appearance, History, Recovery, navigation, Snapshot Explorer, and remaining dark-only surfaces adapt without overlap or narrow-window clipping.
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
 - [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_
