@@ -2,12 +2,15 @@
 
 ## [1.8.4]
 
-VaultSync `1.8.4` is the Disaster Recovery update. It adds measurable recovery drills, transparent 3-2-1 guidance, protected-point recommendations, and a privacy-first crash-report workflow.
+VaultSync `1.8.4` is the Disaster Recovery update. It adds byte-level recovery proofs, transparent 3-2-1 guidance, protected-point recommendations, and a privacy-first crash-report workflow.
 
 ### Disaster recovery
-- Run a non-destructive drill against a project's newest recovery point without copying anything into the project.
-- See whether metadata links correctly, the destination is reachable, the payload opens, and its inventory agrees with the snapshot record.
-- Keep the latest drill result locally and include drill coverage and actionable project details in the exported Recovery report.
+- Run a non-destructive proof against a project's newest recovery point without copying anything into the project.
+- Verify the complete stored bytes and sizes of bounded folder or ZIP contents against the SHA-256 values captured by the selected snapshot.
+- See stable evidence for missing, unreadable, corrupted, inconclusive, verified, and destination-conflict outcomes; encrypted content is never described as verified while locked.
+- Simulate safe-copy or original-location restore actions without creating, overwriting, or deleting files.
+- Expand the latest evidence in Recovery and include the check codes, paths, evidence IDs, and results in the exported Markdown report.
+- Keep the last byte-verified point out of automatic retention pruning until another verified point exists.
 - Measure three copies, two storage media, and one explicitly confirmed offsite destination per project.
 - Mark destinations as offsite yourself; VaultSync does not infer physical location from paths or network protocols.
 - Protect suggested release, delivery, post-deletion, high-churn, or baseline recovery points without creating a second protection system.
@@ -15,6 +18,8 @@ VaultSync `1.8.4` is the Disaster Recovery update. It adds measurable recovery d
 
 ### Reliability and safety
 - Snapshot Explorer refuses linked source entries and ambiguous duplicate ZIP paths before browsing, comparing, or restoring them.
+- Absolute backup records cannot escape their recorded destination, and verification cannot follow imported traversal or linked paths outside its root.
+- Backup creation rejects untrusted snapshot paths before reading source bytes or creating destination files; restore previews and selective restores preserve case-distinct identities.
 - Archive-upload progress workers now stop promptly after completion or failure, stalled uploads retain checkpoint retry behavior, and prematurely ended source chunks fail closed.
 - Recoverable UI exceptions continue to enter the local review workflow throughout the session instead of only after the first event.
 - Supported SQLite, protected-data, and Windows drawing packages include their latest safe servicing updates; the rendering stack remains on its validated coordinated versions.

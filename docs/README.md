@@ -24,6 +24,7 @@ Use this page as the primary index for all project documentation.
 - Privacy overview: `docs/PRIVACY.md`
 - Crash reporting and user control: `docs/CRASH_REPORTING.md`
 - Disaster recovery drills and 3-2-1 advisor: `docs/DISASTER_RECOVERY.md`
+- Native recoverability engine and ProofRestore provenance: `docs/RECOVERABILITY_ENGINE.md`
 - Code of Conduct: `CODE_OF_CONDUCT.md`
 - SonarQube Cloud setup: `docs/SONARQUBE.md`
 

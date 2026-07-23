@@ -27,6 +27,8 @@ Core pillars:
 - `docs/RELEASING.md`: release packaging/publishing flow.
 - `docs/UPDATER.md`: patch asset contract and update flow.
 - `docs/WHATS_NEW.md`: user-facing release highlights.
+- `docs/DISASTER_RECOVERY.md`: recovery proofs, drills, 3-2-1 guidance, and protection behavior.
+- `docs/RECOVERABILITY_ENGINE.md`: native proof trust boundary, safety limits, evidence model, retention behavior, and ProofRestore provenance.
 
 ### 2.3 Wiki docs
 - `docs/wiki/Home.md`: wiki entry page.

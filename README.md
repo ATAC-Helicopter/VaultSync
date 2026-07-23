@@ -143,6 +143,7 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 - Roadmap: [ROADMAP.md](ROADMAP.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Updater details: [docs/UPDATER.md](docs/UPDATER.md)
+- Recoverability design: [docs/RECOVERABILITY_ENGINE.md](docs/RECOVERABILITY_ENGINE.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Security: [SECURITY.md](SECURITY.md)
 - Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)

@@ -1852,9 +1852,18 @@
 - [x] `VS-1847` `P1` Add privacy-first reviewed crash reports. _(Done in PR #440; target 1.8.4)_
   - Done: reports are generated and redacted locally from a strict allowlist, shown read-only, and attached to a visible platform-native email draft that only the user can send.
   - Done: category-prefixed per-report IDs are not installation or tracking identifiers; report assistance can be disabled completely and local retention is bounded.
-- [ ] `VS-1848` `P1` Port ProofRestore recoverability into VaultSync. _(In progress; tracked by #447; target 1.8.4)_
+- [x] `VS-1848` `P1` Port ProofRestore recoverability into VaultSync. _(Done in PR #440; tracked by #447; target 1.8.4)_
   - Scope: port the contest prototype's useful recovery-proof logic into native VaultSync services and UI without merging repositories or shipping ProofRestore as a separate product.
   - Acceptance: reuse VaultSync backup identities, local metadata, privacy rules, and Recovery workflows; do not add a hosted dependency.
+  - Done: a versioned native C# engine selects safe snapshot-relative paths, verifies bounded folder and ZIP bytes against expected SHA-256 and size metadata, and emits stable evidence without writing data.
+  - Done: safe-copy and original-location restore plans identify create, overwrite, identical, conflict, unavailable, and inconclusive actions; linked, traversal, duplicate, malformed, encrypted, offline, and capped inputs fail closed.
+  - Done: Recovery stores bounded evidence, exposes expandable proof details, exports a deterministic Markdown evidence appendix, and retention preserves the last byte-verified recovery point.
+  - Done: the port is fully local and offline with no ProofRestore runtime, Node, browser, hosted service, OpenAI, or new external dependency.
+- [x] `BUG-18070` `P1` Bind absolute backup records to their recorded destination identity. _(Done in PR #440; tracked by #453; target 1.8.4)_
+- [x] `BUG-18071` `P1` Keep verification reads inside the selected recovery root. _(Done in PR #440; tracked by #454; target 1.8.4)_
+- [x] `BUG-18072` `P1` Preserve case-distinct identities during snapshot creation. _(Done in PR #440; tracked by #455; target 1.8.4)_
+- [x] `BUG-18073` `P1` Keep snapshot-driven backup reads and writes inside their trusted roots. _(Done in PR #440; tracked by #456; target 1.8.4)_
+- [x] `BUG-18074` `P1` Preserve case-distinct identities in restore previews and selective restores. _(Done in PR #440; tracked by #457; target 1.8.4)_
 - [x] `BUG-18066` `P1` Block linked and ambiguous backup content in Snapshot Explorer. _(Done in PR #440; tracked by #448; target 1.8.4)_
 - [x] `BUG-18067` `P1` Count only reachable recovery copies in 3-2-1 guidance. _(Done in PR #440; tracked by #451; target 1.8.4)_
 - [x] `BUG-18068` `P1` Harden archive upload cancellation and stall handling. _(Done in PR #440; tracked by #449; target 1.8.4)_
