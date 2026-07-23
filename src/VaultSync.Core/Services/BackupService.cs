@@ -974,7 +974,7 @@ public sealed class BackupService(
         if (filesForProgress is { Count: > 0 })
         {
             filesForBackup = [.. filesForProgress
-                .Select(f => Path.Combine(project.RootPath, f.RelPath))
+                .Select(f => ResolveSnapshotSourceFile(project.RootPath, f.RelPath))
             ];
         }
 
@@ -1490,7 +1490,11 @@ public sealed class BackupService(
             {
                 int index = scanIndex++ % totalEntries;
                 FileEntry entry = filesForProgress[index];
-                string targetPath = Path.Combine(destDir, entry.RelPath);
+                if (!BackupSafetyService.TryCombinePathUnderRoot(destDir, entry.RelPath, out string targetPath))
+                {
+                    scanned++;
+                    continue;
+                }
 
                 long size = 0;
                 try
@@ -2691,13 +2695,28 @@ public sealed class BackupService(
         {
             ct.ThrowIfCancellationRequested();
 
-            if (filter.ShouldExclude(sourceDir, filePath))
+            string relative = Path.GetRelativePath(sourceDir, filePath);
+            if (filter.ShouldExclude(sourceDir, filePath) ||
+                !BackupSafetyService.TryResolveExistingFileUnderRoot(sourceDir, relative, out string safePath))
+            {
                 continue;
+            }
 
-            files.Add(filePath);
+            files.Add(safePath);
         }
 
         return [.. files];
+    }
+
+    internal static string ResolveSnapshotSourceFile(string sourceRoot, string relativePath)
+    {
+        if (!BackupSafetyService.TryResolveExistingFileUnderRoot(sourceRoot, relativePath, out string sourcePath))
+        {
+            throw new InvalidDataException(
+                $"Snapshot path '{relativePath}' is missing, unsafe, or escapes the project root.");
+        }
+
+        return sourcePath;
     }
 
     private static void CopyDirectoryRecursive(
@@ -2732,7 +2751,8 @@ public sealed class BackupService(
 
             var fileInfo = new FileInfo(filePath);
             string relative = Path.GetRelativePath(sourceDir, filePath);
-            string targetPath = Path.Combine(destDir, relative);
+            if (!BackupSafetyService.TryCombinePathUnderRoot(destDir, relative, out string targetPath))
+                throw new InvalidDataException($"Snapshot path '{relative}' escapes the backup destination.");
             string? targetDir = Path.GetDirectoryName(targetPath);
             if (!string.IsNullOrEmpty(targetDir))
                 Directory.CreateDirectory(targetDir);
@@ -2971,7 +2991,20 @@ public sealed class BackupService(
                 snapshotRefs[backup.SnapshotId] = 1;
         }
 
-        IReadOnlyList<BackupRetentionCandidateDecision> retentionPlan = BuildRetentionDeletionPlan(projectId, backups, candidates, projectSnapshots, deleteQuota);
+        var byteVerifiedBackupIds = _repo.GetRecoveryDrills()
+            .Where(drill => drill.ProjectId == projectId)
+            .GroupBy(drill => drill.BackupId)
+            .Select(group => group.OrderByDescending(drill => drill.RunUtc).ThenByDescending(drill => drill.Id).First())
+            .Where(RecoveryDrillService.HasPassedByteIntegrity)
+            .Select(drill => drill.BackupId)
+            .ToHashSet();
+        IReadOnlyList<BackupRetentionCandidateDecision> retentionPlan = BuildRetentionDeletionPlan(
+            projectId,
+            backups,
+            candidates,
+            projectSnapshots,
+            deleteQuota,
+            byteVerifiedBackupIds);
         foreach (BackupRetentionCandidateDecision? skipped in retentionPlan.Where(static decision => !decision.Selected))
         {
             RuntimeLog.WriteVerbose(
@@ -3113,13 +3146,17 @@ public sealed class BackupService(
         IReadOnlyList<Backup> backups,
         IReadOnlyList<Backup> candidates,
         IReadOnlyDictionary<int, Snapshot> snapshotsById,
-        int deleteQuota)
+        int deleteQuota,
+        IReadOnlySet<int>? byteVerifiedBackupIds = null)
     {
         var decisions = new List<BackupRetentionCandidateDecision>();
         if (deleteQuota <= 0 || candidates.Count == 0)
             return decisions;
 
         int remainingValidRestorePoints = CountValidRestorePoints(projectId, backups, snapshotsById);
+        int remainingByteVerifiedPoints = byteVerifiedBackupIds is null
+            ? 0
+            : backups.Count(backup => byteVerifiedBackupIds.Contains(backup.Id));
         int selected = 0;
 
         foreach (Backup? candidate in candidates.OrderBy(static backup => backup.CreatedUtc).ThenBy(static backup => backup.Id))
@@ -3135,6 +3172,7 @@ public sealed class BackupService(
             }
 
             bool isValidRestorePoint = IsMetadataValidRestorePoint(projectId, candidate, snapshotsById);
+            bool isByteVerified = byteVerifiedBackupIds?.Contains(candidate.Id) == true;
             if (isValidRestorePoint && remainingValidRestorePoints <= 1)
             {
                 decisions.Add(new BackupRetentionCandidateDecision(
@@ -3142,6 +3180,16 @@ public sealed class BackupService(
                     false,
                     "preserve-last-restorable-point",
                     "Deleting this backup would remove the last metadata-valid restore point for the project."));
+                continue;
+            }
+
+            if (isByteVerified && remainingByteVerifiedPoints <= 1)
+            {
+                decisions.Add(new BackupRetentionCandidateDecision(
+                    candidate.Id,
+                    false,
+                    "preserve-last-byte-verified-point",
+                    "Deleting this backup would remove the last recovery point that passed a byte-level recovery proof."));
                 continue;
             }
 
@@ -3153,6 +3201,8 @@ public sealed class BackupService(
             selected++;
             if (isValidRestorePoint)
                 remainingValidRestorePoints--;
+            if (isByteVerified)
+                remainingByteVerifiedPoints--;
         }
 
         return decisions;

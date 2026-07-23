@@ -15,7 +15,15 @@ internal sealed record RecoveryReportProject(
     string Copies = "",
     string Media = "",
     string Offsite = "",
-    string LastDrill = "");
+    string LastDrill = "",
+    IReadOnlyList<RecoveryReportEvidence>? Evidence = null);
+
+internal sealed record RecoveryReportEvidence(
+    string Code,
+    string Status,
+    string Detail,
+    string EvidenceId,
+    string Path);
 
 internal sealed record RecoveryReportSnapshot(
     DateTimeOffset GeneratedAt,
@@ -156,6 +164,32 @@ internal static class RecoveryReportExporter
                 .Append(" | ").Append(EscapeCell(project.Reason)).AppendLine(" |");
         }
 
+        IReadOnlyList<RecoveryReportProject> proofs = [.. snapshot.Projects
+            .Where(project => project.Evidence is { Count: > 0 })];
+        if (proofs.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("## Recovery proof evidence");
+            builder.AppendLine();
+            builder.AppendLine("> Read-only evidence captured by VaultSync. No restore was performed.");
+            foreach (RecoveryReportProject project in proofs)
+            {
+                builder.AppendLine();
+                builder.Append("### ").AppendLine(EscapeHeading(project.ProjectName));
+                builder.AppendLine();
+                builder.AppendLine("| Code | Result | Path | Evidence ID | Detail |");
+                builder.AppendLine("|---|---|---|---|---|");
+                foreach (RecoveryReportEvidence evidence in project.Evidence!)
+                {
+                    builder.Append("| ").Append(EscapeCell(evidence.Code))
+                        .Append(" | ").Append(EscapeCell(evidence.Status))
+                        .Append(" | ").Append(EscapeCell(evidence.Path))
+                        .Append(" | ").Append(EscapeCell(evidence.EvidenceId))
+                        .Append(" | ").Append(EscapeCell(evidence.Detail)).AppendLine(" |");
+                }
+            }
+        }
+
         return builder.ToString();
     }
 
@@ -173,6 +207,9 @@ internal static class RecoveryReportExporter
         .Replace("\r", " ", StringComparison.Ordinal)
         .Replace("\n", " ", StringComparison.Ordinal)
         .Trim();
+
+    private static string EscapeHeading(string value) =>
+        EscapeCell(value).Replace("#", "\\#", StringComparison.Ordinal);
 
     private static string GetDefaultExportDirectory()
     {

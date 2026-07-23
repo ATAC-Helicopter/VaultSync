@@ -393,7 +393,13 @@ public sealed class RecoveryViewModel : ViewModelBase
                 project.CopyLabel,
                 project.MediaLabel,
                 project.OffsiteLabel,
-                project.LastDrillLabel)).ToList(),
+                project.LastDrillLabel,
+                project.DrillChecks.Select(check => new RecoveryReportEvidence(
+                    check.Code,
+                    check.Status.ToString(),
+                    check.Detail,
+                    check.EvidenceId ?? string.Empty,
+                    check.Path ?? string.Empty)).ToList())).ToList(),
             ThreeTwoOneReadyCount,
             DrilledProjectCount,
             PassedDrillCount,
@@ -615,7 +621,15 @@ public sealed class RecoveryViewModel : ViewModelBase
             return;
 
         Snapshot? snapshot = repo.GetSnapshotsByIds([backup.SnapshotId]).FirstOrDefault();
-        RecoveryDrillResult result = await _drillService.RunAsync(project, backup, snapshot, config).ConfigureAwait(false);
+        IReadOnlyCollection<FileEntry> expectedFiles = snapshot is null
+            ? []
+            : [.. repo.GetFilesForSnapshot(snapshot.Id)];
+        RecoveryDrillResult result = await _drillService.RunAsync(
+            project,
+            backup,
+            snapshot,
+            config,
+            expectedFiles).ConfigureAwait(false);
         repo.AddRecoveryDrill(result);
         _lastRefreshUtc = DateTime.MinValue;
         await RefreshAsync(force: true).ConfigureAwait(false);
@@ -671,7 +685,8 @@ public sealed class RecoveryProjectViewModel
                 "Last drill: {0} · {1}",
                 protection.LastDrill.Status,
                 protection.LastDrill.RunUtc.ToLocalTime().ToString("g"));
-        DrillDetail = BuildDrillDetail(protection?.LastDrill);
+        DrillChecks = DeserializeDrillChecks(protection?.LastDrill);
+        DrillDetail = BuildDrillDetail(protection?.LastDrill, DrillChecks);
         HasDrillDetail = DrillDetail.Length > 0;
         Recommendation = protection?.Recommendation?.Reason ?? string.Empty;
         HasRecommendation = protection?.Recommendation is not null;
@@ -698,6 +713,7 @@ public sealed class RecoveryProjectViewModel
     public bool MeetsThreeTwoOne { get; }
     public string LastDrillLabel { get; }
     public string DrillDetail { get; }
+    public IReadOnlyList<RecoveryDrillCheck> DrillChecks { get; }
     public bool HasDrillDetail { get; }
     public string Recommendation { get; }
     public bool HasRecommendation { get; }
@@ -716,22 +732,32 @@ public sealed class RecoveryProjectViewModel
     private static string LF(string key, string fallback, params object[] args) =>
         string.Format(System.Globalization.CultureInfo.CurrentCulture, L(key, fallback), args);
 
-    private static string BuildDrillDetail(RecoveryDrillResult? drill)
+    private static string BuildDrillDetail(
+        RecoveryDrillResult? drill,
+        IReadOnlyList<RecoveryDrillCheck> checks)
     {
         if (drill is null)
             return string.Empty;
 
+        string[] actions = [.. checks
+            .Where(check => check.Status != RecoveryDrillCheckStatus.Passed)
+            .Select(check =>
+                $"[{check.Code}]{(string.IsNullOrWhiteSpace(check.Path) ? string.Empty : $" {check.Path}:")} {check.Detail}")];
+        return actions.Length > 0 ? string.Join(Environment.NewLine, actions) : drill.Summary;
+    }
+
+    private static IReadOnlyList<RecoveryDrillCheck> DeserializeDrillChecks(RecoveryDrillResult? drill)
+    {
+        if (drill is null)
+            return [];
+
         try
         {
-            List<RecoveryDrillCheck>? checks = JsonSerializer.Deserialize<List<RecoveryDrillCheck>>(drill.ChecksJson);
-            string[] actions = [.. (checks ?? [])
-                .Where(check => check.Status != RecoveryDrillCheckStatus.Passed)
-                .Select(check => check.Detail)];
-            return actions.Length > 0 ? string.Join(" ", actions) : drill.Summary;
+            return JsonSerializer.Deserialize<List<RecoveryDrillCheck>>(drill.ChecksJson) ?? [];
         }
         catch (JsonException)
         {
-            return drill.Summary;
+            return [];
         }
     }
 }

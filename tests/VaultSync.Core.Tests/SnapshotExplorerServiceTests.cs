@@ -252,6 +252,7 @@ public sealed class SnapshotExplorerServiceTests : IDisposable
         string backup = CreateFolderBackup();
 
         Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.PreviewText(backup, "../outside.txt"));
+        Assert.Throws<InvalidDataException>(() => SnapshotExplorerService.PreviewText(backup, "/absolute.txt"));
     }
 
     [Theory]

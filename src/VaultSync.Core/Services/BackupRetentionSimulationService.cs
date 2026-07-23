@@ -21,6 +21,12 @@ public sealed class BackupRetentionSimulationService(SqliteRepository repo)
             .ToList();
         var snapshotsById = _repo.GetAllSnapshots().ToDictionary(snapshot => snapshot.Id);
         var metadataBySnapshotId = _repo.GetSnapshotHistoryMetadataBySnapshotIds(backups.Select(backup => backup.SnapshotId));
+        var byteVerifiedBackupIds = _repo.GetRecoveryDrills()
+            .GroupBy(drill => drill.BackupId)
+            .Select(group => group.OrderByDescending(drill => drill.RunUtc).ThenByDescending(drill => drill.Id).First())
+            .Where(RecoveryDrillService.HasPassedByteIntegrity)
+            .Select(drill => drill.BackupId)
+            .ToHashSet();
 
         var projectResults = new List<ProjectRetentionSimulationProjectResult>();
 
@@ -56,7 +62,8 @@ public sealed class BackupRetentionSimulationService(SqliteRepository repo)
                 projectBackups,
                 candidates,
                 projectSnapshots,
-                deleteQuota);
+                deleteQuota,
+                byteVerifiedBackupIds);
             var selectedIds = decisions
                 .Where(static decision => decision.Selected)
                 .Select(static decision => decision.BackupId)
