@@ -72,6 +72,38 @@ public sealed class RecoveryReportExporterTests
         Assert.Contains("No projects measured.", report);
     }
 
+    [Fact]
+    public void BuildMarkdown_IncludesStableRecoveryProofEvidence()
+    {
+        RecoveryReportSnapshot snapshot = CreateSnapshot() with
+        {
+            Projects =
+            [
+                new RecoveryReportProject(
+                    "Project Alpha",
+                    "Review",
+                    72,
+                    "Proof needs review.",
+                    Evidence:
+                    [
+                        new RecoveryReportEvidence(
+                            "hash_mismatch",
+                            "Failed",
+                            "Stored SHA-256 does not match.",
+                            "hash_mismatch:src/app.txt",
+                            "src/app.txt")
+                    ])
+            ]
+        };
+
+        string report = RecoveryReportExporter.BuildMarkdown(snapshot, CreateLabels());
+
+        Assert.Contains("## Recovery proof evidence", report);
+        Assert.Contains("hash_mismatch:src/app.txt", report);
+        Assert.Contains("src/app.txt", report);
+        Assert.Contains("No restore was performed", report);
+    }
+
     private static RecoveryReportSnapshot CreateSnapshot() =>
         new(
             new DateTimeOffset(2026, 6, 23, 12, 0, 0, TimeSpan.Zero),

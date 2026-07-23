@@ -17,7 +17,9 @@ public enum RecoveryDrillCheckStatus
 public sealed record RecoveryDrillCheck(
     string Code,
     RecoveryDrillCheckStatus Status,
-    string Detail);
+    string Detail,
+    string? EvidenceId = null,
+    string? Path = null);
 
 public sealed record RecoveryDrillResult
 {

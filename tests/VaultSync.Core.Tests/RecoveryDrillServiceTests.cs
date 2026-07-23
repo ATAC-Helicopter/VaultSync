@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -32,7 +34,17 @@ public sealed class RecoveryDrillServiceTests : IDisposable
         var snapshot = new Snapshot { Id = 20, ProjectId = 1, FileCount = 2 };
         var config = new AppConfig { Backups = new BackupsConfig { BackupRoot = backupRoot } };
 
-        RecoveryDrillResult result = await new RecoveryDrillService().RunAsync(project, backup, snapshot, config);
+        IReadOnlyCollection<FileEntry> expectedFiles =
+        [
+            Expected("one.txt", "one"),
+            Expected("two.txt", "two")
+        ];
+        RecoveryDrillResult result = await new RecoveryDrillService().RunAsync(
+            project,
+            backup,
+            snapshot,
+            config,
+            expectedFiles);
 
         Assert.Equal(RecoveryDrillStatus.Passed, result.Status);
         Assert.Equal(2, result.FilesExamined);
@@ -101,12 +113,35 @@ public sealed class RecoveryDrillServiceTests : IDisposable
         Assert.Equal("Run 5", drills[^1].Summary);
     }
 
+    [Fact]
+    public void HasPassedByteIntegrity_DoesNotRequireOverallDrillToPass()
+    {
+        var drill = new RecoveryDrillResult
+        {
+            Status = RecoveryDrillStatus.Attention,
+            ChecksJson = System.Text.Json.JsonSerializer.Serialize(new[]
+            {
+                new RecoveryDrillCheck("integrity", RecoveryDrillCheckStatus.Passed, "Bytes verified."),
+                new RecoveryDrillCheck("restore-plan", RecoveryDrillCheckStatus.Attention, "Conflict found.")
+            })
+        };
+
+        Assert.True(RecoveryDrillService.HasPassedByteIntegrity(drill));
+    }
+
     private string CreateTempDir()
     {
         string path = Path.Combine(_tempRoot.Path, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
     }
+
+    private static FileEntry Expected(string path, string content) =>
+        new(
+            path,
+            Encoding.UTF8.GetByteCount(content),
+            DateTime.UtcNow.AddDays(-1),
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))));
 
     public void Dispose() => _tempRoot.Dispose();
 }

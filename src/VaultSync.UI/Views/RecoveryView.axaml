@@ -350,12 +350,6 @@
                         <Border Classes="recovery-pill"><TextBlock Text="{CompiledBinding CopyLabel}" FontSize="10" /></Border>
                         <Border Grid.Column="1" Classes="recovery-pill"><TextBlock Text="{CompiledBinding MediaLabel}" FontSize="10" /></Border>
                         <Border Grid.Column="2" Classes="recovery-pill"><TextBlock Text="{CompiledBinding OffsiteLabel}" FontSize="10" /></Border>
-                        <TextBlock Grid.Column="3"
-                                   Text="{CompiledBinding LastDrillLabel}"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="10"
-                                   VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" />
                         <Button Grid.Column="4"
                                 Classes="action-ghost"
                                 Content="{infra:LocalizedString Key=Recovery.Drill.Run}"
@@ -376,13 +370,18 @@
                                 Command="{CompiledBinding ProtectRecommendationCommand}" />
                       </Grid>
 
-                      <TextBlock Grid.Row="5"
-                                 Text="{CompiledBinding DrillDetail}"
-                                 IsVisible="{CompiledBinding HasDrillDetail}"
-                                 Foreground="{DynamicResource TextSecondaryBrush}"
-                                 FontSize="10"
-                                 TextWrapping="Wrap"
-                                 MaxLines="2" />
+                      <Expander Grid.Row="5"
+                                Header="{CompiledBinding LastDrillLabel}"
+                                IsVisible="{CompiledBinding HasDrillDetail}">
+                        <Border Classes="recovery-soft"
+                                Padding="10"
+                                Margin="0,6,0,0">
+                          <SelectableTextBlock Text="{CompiledBinding DrillDetail}"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontSize="10"
+                                               TextWrapping="Wrap" />
+                        </Border>
+                      </Expander>
                     </Grid>
                   </Border>
                 </DataTemplate>
