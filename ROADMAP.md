@@ -1885,6 +1885,9 @@
 - [x] `BUG-18076` `P1` Cancel Recovery work when the view closes. _(Done in PR #440; tracked by #460; target 1.8.4)_
   - Done: refresh, export, drill, persistence, protection, and follow-up refresh work share the active Recovery page lifetime token.
   - Done: leaving Recovery cancels page-scoped work without presenting cancellation as a user-facing export failure.
+- [x] `BUG-18077` `P1` Declare cancellation ownership for detached backup work. _(Done in PR #440; tracked by #461; target 1.8.4)_
+  - Done: user-confirmed backup deletion, exploration, sandbox apply, and restore tasks explicitly remain independent of update-check cancellation.
+  - Done: release analysis no longer associates backup or restore work with the unrelated updater lifetime.
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
 - [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_
