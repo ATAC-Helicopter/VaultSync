@@ -20,6 +20,7 @@
 - [BUG-18074] Restore previews and selective restores now preserve case-distinct paths.
 - [BUG-18075] Fixed theme contrast, responsive History and Recovery layouts, active navigation feedback, dark-only surfaces across app views, and pointer-focused menus, presets, or navigation controls retaining bright outlines after selection or page changes while preserving keyboard-visible focus.
 - [BUG-18076] Recovery refresh, export, drill, and protected-point work now stops with the page lifetime instead of continuing after the user leaves Recovery.
+- [BUG-18077] Backup deletion, exploration, sandbox apply, and restore tasks now declare their independent cancellation lifetime instead of inheriting the unrelated update-check lifecycle.
 
 ## [1.8.3] - 16.07.2026
 ### Added
