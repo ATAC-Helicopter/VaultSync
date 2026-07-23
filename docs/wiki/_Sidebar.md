@@ -1,35 +1,36 @@
 # VaultSync Wiki
 
-- [Home](Home)
+- [Home](Home.md)
 
 - Getting Started
-  - [Installation](Installation)
-  - [Quick start](Quick-Start)
-  - [Configuration](Configuration)
+  - [Installation](Installation.md)
+  - [Quick start](Quick-Start.md)
+  - [Configuration](Configuration.md)
 
 - Backups and Storage
-  - [Backups overview](Backups)
-  - [Backup pipeline](Backup-Pipeline)
-  - [Backup encryption](Encryption)
-  - [Destinations](Destinations)
-  - [Metadata sync](Metadata-Sync)
-  - [Network shares](Network-Shares)
-  - [Snapshots](Snapshots)
-  - [Tray menu](Tray)
+  - [Backups overview](Backups.md)
+  - [Backup pipeline](Backup-Pipeline.md)
+  - [Backup encryption](Encryption.md)
+  - [Destinations](Destinations.md)
+  - [Metadata sync](Metadata-Sync.md)
+  - [Network shares](Network-Shares.md)
+  - [Snapshots](Snapshots.md)
+  - [Recovery](Recovery.md)
+  - [Tray menu](Tray.md)
 
 - Updates
-  - [Updates](Updates)
+  - [Updates](Updates.md)
 
-- 1.7 areas
-  - Integrity / Doctor: [Configuration](Configuration)
-  - Restore readiness / history: [Backups overview](Backups)
-  - Update flow: [Updates](Updates)
-  - Troubleshooting: [Troubleshooting](Troubleshooting)
+- Chronicle (1.8)
+  - History and comparison: [Snapshots](Snapshots.md)
+  - Recovery readiness: [Recovery](Recovery.md)
+  - Update flow: [Updates](Updates.md)
+  - Troubleshooting: [Troubleshooting](Troubleshooting.md)
 
 - Support
-  - [Troubleshooting](Troubleshooting)
-  - [FAQ](FAQ)
-  - [Reporting bugs](Reporting-Bugs)
+  - [Troubleshooting](Troubleshooting.md)
+  - [FAQ](FAQ.md)
+  - [Reporting bugs](Reporting-Bugs.md)
 
 - Repository Docs
   - [Docs index](../README.md)

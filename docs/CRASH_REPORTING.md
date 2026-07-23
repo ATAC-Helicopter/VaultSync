@@ -72,7 +72,7 @@ This report was created and redacted locally.
 VaultSync did not send it automatically.
 
 Report ID: CRASH-UI-00112233445566778899AABBCCDDEEFF
-Application version: 1.9.0
+Application version: 1.8.4
 Operating system family: macOS
 Crash category: user-interface
 Crash reason: System.InvalidOperationException

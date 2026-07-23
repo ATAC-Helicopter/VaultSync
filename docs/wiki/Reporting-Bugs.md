@@ -23,7 +23,7 @@ Use GitHub Issues:
 - If the issue is backup-related, include the recent backup log output.
 - If it is update-related, include update banner text, current version, target version, and any patch-preflight diagnostics.
 - Prefer exporting a support bundle from Settings > Advanced when possible.
-- After a crash, VaultSync can prepare a strictly redacted local report for you to inspect and email manually. It never sends the report automatically; see `docs/CRASH_REPORTING.md` for the exact fields and privacy controls.
+- After a crash, VaultSync can prepare a strictly redacted local report for you to inspect and email manually. It never sends the report automatically; see [Crash reporting and user control](../CRASH_REPORTING.md) for the exact fields and privacy controls.
 
 ## Security issues
-If you believe you found a security issue, avoid public disclosure and follow `SECURITY.md`.
+If you believe you found a security issue, avoid public disclosure and follow the [security policy](../../SECURITY.md).

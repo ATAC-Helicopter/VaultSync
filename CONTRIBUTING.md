@@ -11,7 +11,7 @@ ID model:
 - `ISS-xxxx` (optional): grouped issue/UX cleanup batches in changelog-only tracking
 - `BUG-xxxx` (optional): explicit bug-fix IDs in changelog tracking
 - `REL-xxxx` (optional): release-gate follow-up tracking
-  - changelog version-family numbering: `1.0.x -> 10xxx`, `1.1.x -> 11xxx`, ... `1.5.x -> 15xxx`
+  - changelog version-family numbering: `1.0.x -> 10xxx`, `1.1.x -> 11xxx`, ... `1.8.x -> 18xxx`
 
 Rules:
 - For planned feature work, always create/use `VS-xxxx` in `ROADMAP.md`.
@@ -25,10 +25,14 @@ Rules:
 - For risky or cross-cutting changes, align scope first.
 
 ## 3) Development Setup
+Keep the working copy outside iCloud Drive, OneDrive, Dropbox, or another live file-sync root. On macOS, a directory ending in `.nosync` prevents iCloud from taking ownership of repository files and breaking builds or Git operations.
+
 1. Install .NET 10 SDK.
 2. Restore:
    `dotnet restore`
-3. Run UI:
+3. Run the UI on macOS or Linux:
+   `dotnet run -f net10.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
+4. Run the UI on Windows:
    `dotnet run -f net10.0-windows10.0.19041.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
 
 ## 4) Implementation Rules
@@ -107,9 +111,11 @@ Run before requesting review:
 - relevant tests for touched areas
 - smoke check of impacted UI flows if UI changed
 
-Pull requests and pushes to `Dev`/`Stable` also run the lightweight CI workflow:
+Pull requests and pushes to `Dev`/`Stable` also run CI and release-quality workflows:
 - Windows: full solution Release build plus core tests.
 - Linux: generic UI target Release build plus core tests.
+- macOS: generic UI target Release build plus core tests.
+- PR quality: release metadata, dependency vulnerability, localization, and packaging checks where applicable.
 - Warnings are treated as errors so review fixes do not hide compiler noise.
 
 ## 8) Release Hygiene
@@ -128,7 +134,7 @@ Source of truth:
 - Product planning: `ROADMAP.md`
 - Release notes: `CHANGELOG.md`
 - User-facing release summary: `docs/WHATS_NEW.md`
-- Project board: `ATAC-Helicopter` Project `#1` (`VaultSync 1.5.1 Stabilization`)
+- Project board: `ATAC-Helicopter` Project `#7` (`@VaultSync Roadmap`)
 
 Required workflow for changes:
 1. Implement code/docs changes.
@@ -165,4 +171,5 @@ Commit/push defaults:
 - If asked to commit everything, include all modified/new files unless paths are excluded.
 
 Reference:
-- `docs/PROJECT_OPERATIONS.md`
+- `DOCUMENTATION.md`
+- `docs/README.md`

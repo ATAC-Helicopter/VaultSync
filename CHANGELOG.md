@@ -1,21 +1,21 @@
 ﻿# Changelog
 ## [1.8.4] - Unreleased
 ### Added
-- [VS-1847] Added local, user-reviewed crash reports with strict redaction, attached email drafts, bounded storage, and a complete disable control.
-- [VS-1810] Added recovery drills, reachable 3-2-1 guidance, explicit offsite confirmation, and protection recommendations for important recovery points.
-- [VS-1848] Ported ProofRestore's deterministic recovery-proof design into a native, local-only engine that verifies folder and ZIP bytes against snapshot SHA-256 metadata, produces stable evidence, simulates safe-copy or original-location restore actions, exposes expandable and exportable proof details, and preserves the last byte-verified point during retention without writing restored data; encrypted and bounded cases remain explicitly inconclusive.
+- [VS-1847] Added strictly redacted, user-reviewed crash reports that only the user's email application can send.
+- [VS-1810] Added recovery drills, reachable 3-2-1 guidance, explicit offsite confirmation, and protected-point recommendations.
+- [VS-1848] Added local byte-level recovery proofs, restore-plan simulation, exportable evidence, and a verified-point retention safety floor.
 ### Changed
-- [VS-1849] Refreshed supported SQLite, protected-data, and Windows drawing packages while preserving the validated cross-platform rendering stack.
+- [VS-1849] Refreshed supported servicing dependencies while preserving the validated cross-platform rendering stack.
 ### Fixed
-- [BUG-18066] Snapshot Explorer now blocks linked source paths and rejects ambiguous duplicate paths in ZIP backups.
-- [BUG-18067] Disaster Recovery now counts only reachable payloads and cannot substitute content from an unrelated destination.
-- [BUG-18068] Archive uploads now stop background workers promptly, retry detected stalls, and reject incomplete parallel chunks.
-- [BUG-18069] Recoverable UI exceptions can open crash-report review after multiple separate failures in the same session.
-- [BUG-18070] Absolute backup records can no longer bypass their recorded destination identity or follow a linked child into unrelated local content.
-- [BUG-18071] Verification now rejects traversal, absolute, and linked file paths, including filesystem-root edge cases, instead of reading outside the selected recovery root.
-- [BUG-18072] Snapshot creation now preserves case-distinct file identities consistently instead of merging or failing on metadata such as `Foo` and `foo`.
-- [BUG-18073] Backup creation now rejects missing, absolute, traversing, or linked snapshot-source rows before they can read outside the project or write outside the backup point.
-- [BUG-18074] Restore previews and selective restores now keep case-distinct paths separate instead of conflating them on case-sensitive filesystems.
+- [BUG-18066] Snapshot Explorer now blocks linked source paths and ambiguous duplicate ZIP entries.
+- [BUG-18067] Recovery guidance now counts only reachable payloads at their recorded destinations.
+- [BUG-18068] Archive uploads now stop promptly, retry detected stalls, and reject incomplete chunks.
+- [BUG-18069] Separate recoverable UI failures can each open crash-report review during one session.
+- [BUG-18070] Absolute backup records can no longer escape their recorded destination identity through linked content.
+- [BUG-18071] Verification now rejects absolute, traversing, and linked paths outside the recovery root.
+- [BUG-18072] Snapshot creation now preserves case-distinct file identities on case-sensitive filesystems.
+- [BUG-18073] Backup creation now rejects untrusted snapshot-source paths before reading or writing files.
+- [BUG-18074] Restore previews and selective restores now preserve case-distinct paths.
 
 ## [1.8.3] - 16.07.2026
 ### Added

@@ -22,6 +22,9 @@ VaultSync supports two modes:
 - Pre-mounted: enable if the path is already mounted.
 - Auto-mount/unmount: allow VaultSync to mount and clean up network paths.
 - Sync history: enables portable metadata sync for this destination.
+- Count as offsite copy: gives the destination offsite credit in Recovery when it is reachable.
+
+VaultSync never infers physical location from a path, hostname, protocol, or mount name. Mark a destination as offsite only when you know its storage is held at a different physical location.
 
 ### macOS NFS
 - NFS auto-mount is not supported on macOS (requires admin privileges).
@@ -38,6 +41,7 @@ VaultSync supports two modes:
 - Keep at least 10 percent free space on the target drive.
 - Use a dedicated disk for large projects.
 - Use clear aliases so the tray and logs are easy to read.
+- Keep at least one tested copy physically offsite and confirm it explicitly for accurate 3-2-1 guidance.
 
 ## History metadata
 - VaultSync stores portable history in `.vaultsync/meta/` at the destination root.

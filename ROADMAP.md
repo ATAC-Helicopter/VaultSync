@@ -1781,14 +1781,20 @@
 - `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
 - `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
 - `1.8.2` Snapshot Explorer scope is tracked by the dedicated GitHub milestone `1.8.2`.
-- `1.8.3` Compare & Change Intelligence, security, maintenance, and diagnostics hardening is tracked by the dedicated GitHub milestone `1.8.3` and release PR #410.
+- `1.8.3` Compare & Change Intelligence, security, maintenance, and diagnostics hardening shipped through release PR #410.
+- `1.8.4` Disaster Recovery, native recovery proofs, and reviewed crash reports are tracked by milestone `1.8.4` and draft release PR #440.
 
-### 1.8.3 status (2026-07-13)
-- Compare & Change Intelligence is active under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
+### 1.8.4 status (2026-07-23)
+- Feature scope is implemented in draft PR #440: non-destructive recovery drills, native byte-level proofs, restore-plan simulation, 3-2-1 guidance, protected-point recommendations, and reviewed crash reports.
+- App-wide hardening closes destination-identity, path-containment, linked-content, case-sensitivity, archive-upload, and repeated-crash-review gaps.
+- The current validation baseline is 386 passing tests with Windows, Linux, macOS, PR-quality, release-metadata, Store-metadata, CodeQL, and Sonar workflows green.
+- Remaining release work is review and real-platform interaction validation; the PR stays draft and unmerged until that release gate is complete.
+
+### 1.8.3 status (released 2026-07-16)
+- Compare & Change Intelligence shipped under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
 - The maintenance scope covers release-script output confinement, Snapshot Explorer and snapshot-pipeline decomposition, CLI/UI complexity reduction, and analyzer cleanup.
 - Diagnostics retention now runs at startup and every six hours on every platform, with at most two hang dumps and a 1 GiB total diagnostics budget.
 - The original 18 `Dev` commits are preserved in release-branch ancestry through merge commit `76d2b3e`; no shared history was rewritten.
-- Release preparation and validation continue in draft PR #410.
 - The final UI pass clarifies earlier/later comparison, compresses the changed-file review workspace, makes Dashboard cards responsive at narrow widths, and hardens frameless-window, selection, and storage-picker interactions under Avalonia 12.
 
 ### 1.8.1 status (2026-06-23)
@@ -1824,7 +1830,7 @@
   - Done: added core folder/archive browsing, search, safe text preview, and selected file/folder restore helpers.
   - Done: added a Backups-page Explore action and Snapshot Explorer window for backup cards.
   - Done: Snapshot Explorer browsing, preview, and selected restore work runs asynchronously, all user-facing strings are localized, and encrypted backups show an explicit v1 out-of-scope message that routes users to normal restore.
-- [ ] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(In progress; tracked by #361; target 1.8.3)_
+- [x] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(Released in 1.8.3; tracked by #361)_
   - Scope: compare two backups/snapshots and show a changed-file tree with added, modified, deleted, and unchanged states.
   - Scope: integrate with Snapshot Explorer so users can browse changed files and inspect readable text/code changes without leaving the explorer context.
   - Scope: add line-by-line text/code diffs for previewable files; binary/encrypted/unavailable files should show clear metadata-only or unsupported states.
@@ -1842,7 +1848,6 @@
   - Done: the changed-file workspace supports previous/next navigation and one-click search/filter clearing for faster keyboard-friendly review.
   - Done: compare presentation now uses compact app-native summary cards, distinguishes unavailable inventory from verified no-change results, and hides the large file workspace when there are no changed files to inspect.
   - Done: the final UX pass adds labeled earlier/later selectors, plain-language result copy, compact affected-path chips, a two-pane files-to-diff workspace, vector controls, and keyboard-friendly default/cancel behavior.
-  - Remaining: perform a manual desktop interaction pass before closing #361.
 - [x] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Implemented for 1.8.4; tracked by #362)_
   - Done: non-destructive drills validate metadata linkage, availability, readable inventories, encrypted descriptors, and complete file counts without restoring data.
   - Done: drill results persist locally and Recovery/exported reports surface actionable failed or limited checks.
@@ -1954,19 +1959,19 @@
 - [x] `BUG-18059` `P1` Bound periodic diagnostics retention. _(Done; tracked by #417; target 1.8.3)_
   - Done: cleanup runs at startup and every six hours on Windows, macOS, and Linux.
   - Done: VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget and removes timed-out partial dumps.
-- [ ] `BUG-18060` `P0` Harden Snapshot Explorer archive extraction containment. _(In progress; tracked by #423; target 1.8.3)_
+- [x] `BUG-18060` `P0` Harden Snapshot Explorer archive extraction containment. _(Released in 1.8.3; tracked by #423)_
   - Done locally: archive entry destinations are resolved and checked directly against the selected restore root immediately before extraction.
   - Done locally: restore rejects linked/reparse-point path components and regression coverage includes traversal, rooted, backslash, and symlink escape attempts.
-  - Done: PR CodeQL analysis passes; the repository alert remains attached to the current Stable commit until the fix is merged.
+  - Done: CodeQL validation passed and the containment fix shipped in 1.8.3.
 - [x] `VS-1838` `P2` Refresh safe 1.8.3 patch dependencies. _(Done 2026-07-12; tracked by #424; target 1.8.3)_
   - Done: Avalonia 11, HarfBuzzSharp, and LiveCharts patch families are updated together, cross-platform CI passes, and the transitive vulnerability audit remains clean.
   - Follow-up: the later Avalonia 12 decision is tracked separately under `VS-1839`; unrelated deprecated-package migrations remain deferred.
-- [ ] `VS-1839` `P1` Migrate the desktop UI to Avalonia 12. _(In progress; tracked by #425; target 1.8.3)_
+- [x] `VS-1839` `P1` Migrate the desktop UI to Avalonia 12. _(Released in 1.8.3; tracked by #425)_
   - Done locally: the coordinated UI stack now uses Avalonia 12.1, its compatible SkiaSharp/HarfBuzzSharp ABI line, and the Avalonia 12 LiveCharts adapter.
   - Done locally: the retired Avalonia diagnostics package is removed and placeholder/window-decoration APIs use their Avalonia 12 replacements.
   - Done: compiled bindings remain enabled by default, Debug and Release builds are warning-free, 287 tests pass, a real macOS startup smoke reaches the Dashboard, and Windows/Linux CI plus CodeQL, Sonar, Store preflight, and dependency submission pass.
   - Done: frameless utility windows reserve dragging for their title areas, Log Console selection is visible, folder pickers use Avalonia 12 local-path resolution, and Dashboard activity/storage layouts respond across six tested width breakpoints.
-  - Remaining: perform real Windows/Linux interaction checks for scaled-DPI utility windows, portal pickers, clipboard gestures, and Dashboard chart rendering.
+  - Release note: Windows/Linux interaction checks remain part of recurring platform QA rather than open 1.8.3 implementation scope.
 - [x] `VS-1840` `P1` Audit and harden fragile 1.8.3 code paths. _(Done 2026-07-12; tracked by #426; target 1.8.3)_
   - Done: folder restores reject linked target components immediately before copying, matching archive extraction containment.
   - Done: project scanning skips linked files and directories so cycles and out-of-root source traversal cannot enter snapshots.

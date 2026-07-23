@@ -21,11 +21,12 @@ For encrypted archive mode:
 3. It uploads only `data.vse` to the destination.
 4. It copies the non-secret crypto descriptor and cleans the local temporary workspace.
 
-See [Backup encryption](Encryption) for setup, password storage, opening, restore, and format details.
+See [Backup encryption](Encryption.md) for setup, password storage, opening, restore, and format details.
 
 ## 3) Verification and hashing
 - Hashing ensures data integrity and supports snapshot comparisons.
 - These steps may run after the copy phase to keep backups fast.
+- A later Recovery drill can re-read bounded stored content and compare size and SHA-256 values with the recorded snapshot.
 
 ## 4) Post-backup actions
 - Updates snapshot metadata and UI status.
@@ -34,7 +35,7 @@ See [Backup encryption](Encryption) for setup, password storage, opening, restor
 
 ## Integrity guardrails
 - Startup consistency checks run separately from backup execution and persist a summary for diagnostics.
-- Retention preflight prevents cleanup from removing the last metadata-valid restore point for a project.
+- Retention preflight preserves protected points and the newest recovery point with a passing byte-level proof.
 - Repair flows are deterministic; VaultSync only applies exact remaps.
 
 ## How to read logs
