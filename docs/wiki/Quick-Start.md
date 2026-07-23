@@ -19,9 +19,10 @@ This guide gets you to a verified backup quickly.
 ## 4) Verify the result
 - The Backups page lists the latest snapshot and status.
 - Click a backup to view details and verify size and time.
-- Check the restore-readiness summary in Dashboard or Backups to confirm the project is still considered restorable.
+- Open Recovery and run a drill to check that the stored payload is reachable and readable.
+- Review the 3-2-1 advisor; mark a destination as offsite only when it is physically offsite.
 
 ## Tips
 - Use a local SSD for fastest backups.
 - For NAS or SMB, see `Network-Shares.md` for performance tips.
-- If you change destinations, re-test them from Settings and review any restore-readiness warnings on the Dashboard.
+- If you change destinations, re-test them from Settings and rerun the affected recovery drills.

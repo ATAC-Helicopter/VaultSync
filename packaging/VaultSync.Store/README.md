@@ -19,13 +19,14 @@ Current scope:
 Important notes:
 
 - this scaffold is intentionally not part of `VaultSync.sln` yet, so normal repo builds stay unchanged
-- the Store channel still needs explicit runtime distribution-channel awareness before release
+- runtime distribution-channel detection is implemented; Store builds disable the GitHub updater and direct users to Microsoft Store updates
 - Store-packaged filesystem, restore, removable-drive, and UNC/NAS behavior must be validated before submission
 - restricted capabilities such as `broadFileSystemAccess` and `runFullTrust` may require review or adjustments during submission
 
 Expected next steps:
 
-1. validate packaged app behavior for local folders, external drives, and network paths
-2. replace placeholder Store package assets with final submission-ready sizes if needed
-3. prepare Partner Center listing fields and restricted capability rationale
-4. keep the submission checklist in `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md` current
+1. build and inspect the 1.8.4 upload package
+2. validate packaged app behavior for local folders, external drives, and network paths
+3. replace placeholder Store package assets with final submission-ready sizes if needed
+4. prepare Partner Center listing fields and restricted capability rationale
+5. keep the submission checklist in `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md` current

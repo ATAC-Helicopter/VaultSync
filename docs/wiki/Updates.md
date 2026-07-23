@@ -4,7 +4,7 @@ VaultSync supports two Windows update models:
 - Direct builds use GitHub patch and installer updates.
 - Microsoft Store builds use Store-managed updates.
 
-## 1.7 highlights
+## Updater safeguards
 - Patch preflight persists clearer diagnostics about why patching is allowed or blocked.
 - Patch manifests can declare multiple exact allowed base versions for one target release.
 - Release tooling distinguishes pre-publish warnings from post-publish hard failures.
@@ -40,7 +40,7 @@ Switch channels in Settings > Advanced.
 ## Installers
 - Windows: `.exe` installer (Inno Setup).
 - macOS: unsigned `.dmg` of the `.app` bundle.
-- Linux: `.AppImage` or `.tar.gz` assets.
+- Linux: `.AppImage`, `.deb`, or `.tar.gz` assets, depending on architecture and distribution.
 - Windows Store: packaged Microsoft Store build when published.
 
 ## Safe update expectation
