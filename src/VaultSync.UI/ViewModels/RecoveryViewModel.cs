@@ -72,8 +72,13 @@ public sealed class RecoveryViewModel : ViewModelBase
     {
         _configStore = configStore;
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
-        RefreshCommand = new AsyncRelayCommand(_ => RefreshAsync(force: true), operationName: "refresh-recovery");
-        _exportReportCommand = new AsyncRelayCommand(async _ => await ExportReportAsync(), _ => !IsExporting, "export-recovery-report");
+        RefreshCommand = new AsyncRelayCommand(
+            _ => RefreshAsync(force: true, cancellationToken: GetViewLifetimeToken()),
+            operationName: "refresh-recovery");
+        _exportReportCommand = new AsyncRelayCommand(
+            _ => ExportReportAsync(cancellationToken: GetViewLifetimeToken()),
+            _ => !IsExporting,
+            "export-recovery-report");
         ExportReportCommand = _exportReportCommand;
         ProjectFilters =
         [
@@ -300,6 +305,12 @@ public sealed class RecoveryViewModel : ViewModelBase
         }
     }
 
+    private CancellationToken GetViewLifetimeToken()
+    {
+        lock (_lifecycleGate)
+            return _viewLifetimeCts?.Token ?? CancellationToken.None;
+    }
+
     public async Task RefreshAsync(bool force = false, CancellationToken cancellationToken = default)
     {
         await _refreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -326,7 +337,9 @@ public sealed class RecoveryViewModel : ViewModelBase
         }
     }
 
-    internal async Task<string?> ExportReportAsync(string? exportRoot = null)
+    internal async Task<string?> ExportReportAsync(
+        string? exportRoot = null,
+        CancellationToken cancellationToken = default)
     {
         if (IsExporting)
             return null;
@@ -335,11 +348,12 @@ public sealed class RecoveryViewModel : ViewModelBase
         ExportStatus = L("Recovery.Export.Working", "Preparing recovery report...");
         try
         {
-            await RefreshAsync().ConfigureAwait(false);
+            await RefreshAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             RecoveryReportSnapshot snapshot = await Dispatcher.UIThread.InvokeAsync(BuildReportSnapshot);
             RecoveryReportLabels labels = BuildReportLabels();
             string path = await Task.Run(() =>
-                RecoveryReportExporter.ExportMarkdown(snapshot, labels, exportRoot));
+                RecoveryReportExporter.ExportMarkdown(snapshot, labels, exportRoot),
+                cancellationToken);
             string message = LF("Recovery.Export.Success", "Recovery report exported to {0}", path);
             await Dispatcher.UIThread.InvokeAsync(() => ExportStatus = message);
             GlobalNotificationCenter.Instance.Show(
@@ -348,6 +362,10 @@ public sealed class RecoveryViewModel : ViewModelBase
                 L("Recovery.Export.Title", "Recovery report"),
                 groupKey: "recovery-report-export");
             return path;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -608,6 +626,8 @@ public sealed class RecoveryViewModel : ViewModelBase
 
     private async Task RunDrillAsync(int projectId)
     {
+        CancellationToken cancellationToken = GetViewLifetimeToken();
+        cancellationToken.ThrowIfCancellationRequested();
         AppConfig config = _configStore.GetSnapshot();
         SqliteRepository repo = _repositoryFactory.Create(config);
         repo.EnsureSchema();
@@ -629,23 +649,27 @@ public sealed class RecoveryViewModel : ViewModelBase
             backup,
             snapshot,
             config,
-            expectedFiles).ConfigureAwait(false);
+            expectedFiles,
+            cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
         repo.AddRecoveryDrill(result);
         _lastRefreshUtc = DateTime.MinValue;
-        await RefreshAsync(force: true).ConfigureAwait(false);
+        await RefreshAsync(force: true, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     private async Task ProtectRecommendedPointAsync(int backupId)
     {
+        CancellationToken cancellationToken = GetViewLifetimeToken();
         AppConfig config = _configStore.GetSnapshot();
         await Task.Run(() =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             SqliteRepository repo = _repositoryFactory.Create(config);
             repo.EnsureSchema();
             repo.SetBackupProtection(backupId, true);
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
         _lastRefreshUtc = DateTime.MinValue;
-        await RefreshAsync(force: true).ConfigureAwait(false);
+        await RefreshAsync(force: true, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }
 
