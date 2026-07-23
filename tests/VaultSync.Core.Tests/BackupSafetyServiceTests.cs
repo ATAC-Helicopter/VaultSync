@@ -105,6 +105,19 @@ public sealed class BackupSafetyServiceTests : IDisposable
         Assert.EndsWith(Path.Combine("Project", "2026-05-14_10-00-00"), fullPath);
     }
 
+    [Fact]
+    public void TryCombinePathUnderRoot_PreservesFilesystemRoot()
+    {
+        string fullPath = Path.GetFullPath(_tempDir.Path);
+        string root = Path.GetPathRoot(fullPath)!;
+        string relative = Path.GetRelativePath(root, fullPath);
+
+        bool combined = BackupSafetyService.TryCombinePathUnderRoot(root, relative, out string resolved);
+
+        Assert.True(combined);
+        Assert.Equal(fullPath, resolved);
+    }
+
     [Theory]
     [InlineData("../outside")]
     [InlineData("Project/../../outside")]
@@ -128,6 +141,51 @@ public sealed class BackupSafetyServiceTests : IDisposable
         bool combined = BackupSafetyService.TryCombinePathUnderRoot(backupRoot, absolutePath, out _);
 
         Assert.False(combined);
+    }
+
+    [Fact]
+    public void TryResolveExistingFileUnderRoot_RejectsLinkedPathComponents()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string root = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "verify-root")).FullName;
+        string outside = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "verify-outside")).FullName;
+        File.WriteAllText(Path.Combine(outside, "secret.txt"), "secret");
+        Directory.CreateSymbolicLink(Path.Combine(root, "linked"), outside);
+
+        bool resolved = BackupSafetyService.TryResolveExistingFileUnderRoot(
+            root,
+            "linked/secret.txt",
+            out _);
+
+        Assert.False(resolved);
+    }
+
+    [Theory]
+    [InlineData("../outside.txt")]
+    [InlineData("/absolute.txt")]
+    public void ResolveSnapshotSourceFile_RejectsPathsOutsideProject(string relativePath)
+    {
+        string root = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "snapshot-source")).FullName;
+
+        Assert.Throws<InvalidDataException>(() =>
+            BackupService.ResolveSnapshotSourceFile(root, relativePath));
+    }
+
+    [Fact]
+    public void ResolveSnapshotSourceFile_RejectsLinkedSource()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string root = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "snapshot-linked-source")).FullName;
+        string outside = Path.Combine(_tempDir.Path, "outside-source.txt");
+        File.WriteAllText(outside, "outside");
+        File.CreateSymbolicLink(Path.Combine(root, "linked.txt"), outside);
+
+        Assert.Throws<InvalidDataException>(() =>
+            BackupService.ResolveSnapshotSourceFile(root, "linked.txt"));
     }
 
     [Fact]

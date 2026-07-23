@@ -10,9 +10,6 @@ public static class BackupContentPathResolver
         ArgumentNullException.ThrowIfNull(backup);
         ArgumentNullException.ThrowIfNull(config);
 
-        if (Path.IsPathFullyQualified(backup.Path) && (Directory.Exists(backup.Path) || File.Exists(backup.Path)))
-            return backup.Path;
-
         IReadOnlyList<BackupDestination> destinations = config.Backups.Destinations ?? [];
         var roots = new List<string>();
         AddRoot(roots, backup.DestinationPath);
@@ -45,10 +42,25 @@ public static class BackupContentPathResolver
                 AddRoot(roots, destination.Path);
         }
 
+        if (Path.IsPathFullyQualified(backup.Path))
+        {
+            try
+            {
+                string candidate = Path.GetFullPath(backup.Path);
+                return roots.Any(root => BackupSafetyService.IsExistingPathSafeUnderRoot(root, candidate))
+                    ? candidate
+                    : null;
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return null;
+            }
+        }
+
         foreach (string root in roots)
         {
             if (BackupSafetyService.TryCombinePathUnderRoot(root, backup.Path, out string fullPath) &&
-                (Directory.Exists(fullPath) || File.Exists(fullPath)))
+                BackupSafetyService.IsExistingPathSafeUnderRoot(root, fullPath))
             {
                 return fullPath;
             }

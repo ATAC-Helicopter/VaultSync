@@ -12,15 +12,19 @@ namespace VaultSync.Core.Tests;
 public sealed class DisasterRecoveryAdvisorServiceTests
 {
     [Fact]
-    public void BuildSummary_RequiresThreeCopiesTwoMediaAndExplicitOffsiteConfirmation()
+    public void BuildSummary_DoesNotTreatTwoFoldersOnOneLocalFilesystemAsTwoMedia()
     {
         using var temp = new TempDirectory();
         string projectRoot = Directory.CreateDirectory(Path.Combine(temp.Path, "project")).FullName;
         string localContent = Directory.CreateDirectory(Path.Combine(temp.Path, "local-copy")).FullName;
         string remoteContent = Directory.CreateDirectory(Path.Combine(temp.Path, "remote-copy")).FullName;
         var project = new Project { Id = 1, Name = "App", RootPath = projectRoot, Preset = "default" };
-        var local = new Backup { Id = 10, ProjectId = 1, SnapshotId = 20, Path = localContent, DestinationPath = "/Volumes/Archive", CreatedUtc = DateTime.UtcNow };
-        var remote = new Backup { Id = 11, ProjectId = 1, SnapshotId = 21, Path = remoteContent, DestinationPath = "smb://nas/backups", CreatedUtc = DateTime.UtcNow };
+        string localRoot = localContent;
+        string remoteRoot = remoteContent;
+        Directory.CreateDirectory(Path.Combine(localRoot, "point"));
+        Directory.CreateDirectory(Path.Combine(remoteRoot, "point"));
+        var local = new Backup { Id = 10, ProjectId = 1, SnapshotId = 20, Path = "point", DestinationPath = localRoot, DestinationAlias = "Archive", CreatedUtc = DateTime.UtcNow };
+        var remote = new Backup { Id = 11, ProjectId = 1, SnapshotId = 21, Path = "point", DestinationPath = remoteRoot, DestinationAlias = "Offsite NAS", CreatedUtc = DateTime.UtcNow };
         var config = new AppConfig
         {
             Backups = new BackupsConfig
@@ -28,8 +32,8 @@ public sealed class DisasterRecoveryAdvisorServiceTests
                 UseAdvancedDestinations = true,
                 Destinations =
                 [
-                    new BackupDestination { Path = "/Volumes/Archive", Alias = "Archive" },
-                    new BackupDestination { Path = "smb://nas/backups", Alias = "Offsite NAS", IsOffsite = true }
+                    new BackupDestination { Path = localRoot, Alias = "Archive" },
+                    new BackupDestination { Path = remoteRoot, Alias = "Offsite NAS", IsOffsite = true }
                 ]
             }
         };
@@ -46,9 +50,9 @@ public sealed class DisasterRecoveryAdvisorServiceTests
 
         ProjectProtectionAssessment assessment = Assert.Single(result.Projects);
         Assert.Equal(3, assessment.CopyCount);
-        Assert.True(assessment.MediaCount >= 2);
+        Assert.Equal(1, assessment.MediaCount);
         Assert.True(assessment.HasOffsiteCopy);
-        Assert.True(assessment.MeetsThreeTwoOne);
+        Assert.False(assessment.MeetsThreeTwoOne);
     }
 
     [Fact]

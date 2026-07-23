@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -82,5 +83,68 @@ public sealed class BackupContentPathResolverTests
         };
 
         Assert.Equal(expected, BackupContentPathResolver.Resolve(backup, config));
+    }
+
+    [Fact]
+    public void Resolve_RejectsAbsoluteContentOutsideRecordedDestinations()
+    {
+        using var temp = new TempDirectory();
+        string destination = Directory.CreateDirectory(Path.Combine(temp.Path, "destination")).FullName;
+        string unrelated = Directory.CreateDirectory(Path.Combine(temp.Path, "unrelated", "point")).FullName;
+        var backup = new Backup
+        {
+            Path = unrelated,
+            DestinationPath = destination,
+            DestinationAlias = "Primary"
+        };
+        var config = new AppConfig
+        {
+            Backups = new BackupsConfig
+            {
+                Destinations = [new BackupDestination { Path = destination, Alias = "Primary" }]
+            }
+        };
+
+        Assert.Null(BackupContentPathResolver.Resolve(backup, config));
+    }
+
+    [Fact]
+    public void Resolve_AllowsLegacyAbsoluteContentInsideRecordedDestination()
+    {
+        using var temp = new TempDirectory();
+        string destination = Directory.CreateDirectory(Path.Combine(temp.Path, "destination")).FullName;
+        string content = Directory.CreateDirectory(Path.Combine(destination, "App", "point")).FullName;
+        var backup = new Backup { Path = content, DestinationPath = destination };
+        var config = new AppConfig { Backups = new BackupsConfig { BackupRoot = destination } };
+
+        Assert.Equal(content, BackupContentPathResolver.Resolve(backup, config));
+    }
+
+    [Fact]
+    public void Resolve_RejectsLinkedContentBelowRecordedDestination()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var temp = new TempDirectory();
+        string destination = Directory.CreateDirectory(Path.Combine(temp.Path, "destination")).FullName;
+        string unrelated = Directory.CreateDirectory(Path.Combine(temp.Path, "unrelated", "point")).FullName;
+        string linked = Path.Combine(destination, "linked");
+        Directory.CreateSymbolicLink(linked, unrelated);
+        var backup = new Backup
+        {
+            Path = linked,
+            DestinationPath = destination,
+            DestinationAlias = "Primary"
+        };
+        var config = new AppConfig
+        {
+            Backups = new BackupsConfig
+            {
+                Destinations = [new BackupDestination { Path = destination, Alias = "Primary" }]
+            }
+        };
+
+        Assert.Null(BackupContentPathResolver.Resolve(backup, config));
     }
 }

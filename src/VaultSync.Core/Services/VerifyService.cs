@@ -65,8 +65,7 @@ public class VerifyService(SqliteRepository repo, HashService hash)
 
     private async Task<VerifyMismatch?> VerifyFileAsync(string destination, FileEntry file, CancellationToken ct)
     {
-        string destPath = Path.Combine(destination, file.RelPath);
-        if (!File.Exists(destPath))
+        if (!BackupSafetyService.TryResolveExistingFileUnderRoot(destination, file.RelPath, out string destPath))
             return new VerifyMismatch(file.RelPath, "missing", Expected: file.HashSha256, Actual: null);
 
         try
