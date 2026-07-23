@@ -11,11 +11,11 @@ namespace VaultSync.UI.Views.Controls;
 public sealed class CodePreviewBlock : TextBlock
 {
     private const int MaxHighlightedLines = 6000;
-    private static readonly IBrush LineNumberBrush = Brush.Parse("#7E8EA3");
+    private static readonly IBrush LineNumberBrush = Brush.Parse("#93A4B8");
     private static readonly IBrush KeywordBrush = Brush.Parse("#7CB7FF");
     private static readonly IBrush StringBrush = Brush.Parse("#9FE6A0");
     private static readonly IBrush NumberBrush = Brush.Parse("#F5C16C");
-    private static readonly IBrush CommentBrush = Brush.Parse("#7E8EA3");
+    private static readonly IBrush CommentBrush = Brush.Parse("#93A4B8");
     private static readonly IBrush PunctuationBrush = Brush.Parse("#B8C7D9");
     private static readonly IBrush MarkupBrush = Brush.Parse("#FF9AA2");
 

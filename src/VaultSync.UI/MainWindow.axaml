@@ -11,6 +11,8 @@
     x:DataType="vm:AppViewModel"
     Width="1200" Height="800"
     MinWidth="600" MinHeight="500"
+    Background="Transparent"
+    TransparencyLevelHint="AcrylicBlur, Blur, Transparent, None"
     Title="{infra:LocalizedString Key=Shell.Title}">
 
   <Window.Styles>
@@ -40,7 +42,27 @@
     </Style>
   </Window.Styles>
 
-  <Grid x:Name="RootGrid" RowDefinitions="Auto,*" ColumnDefinitions="260,*">
+  <Grid x:Name="RootGrid"
+        RowDefinitions="Auto,*"
+        ColumnDefinitions="260,*"
+        Background="{DynamicResource WindowBackground}">
+
+    <Canvas Grid.RowSpan="2"
+            Grid.ColumnSpan="2"
+            IsHitTestVisible="False"
+            ClipToBounds="True">
+      <Ellipse Width="560"
+               Height="560"
+               Canvas.Left="-210"
+               Canvas.Top="-230"
+               Fill="{DynamicResource GlassAmbientGlowBrush}" />
+      <Ellipse Width="680"
+               Height="680"
+               Canvas.Right="-300"
+               Canvas.Bottom="-330"
+               Fill="{DynamicResource GlassAmbientGlowBrush}"
+               Opacity="0.72" />
+    </Canvas>
 
     <Border x:Name="SidebarRoot" Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
       <DockPanel>
@@ -99,7 +121,7 @@
           </Border>
           <TextBlock x:Name="NavigationHeader"
                      Text="{infra:LocalizedString Key=Shell.Navigation}"
-                     Foreground="{StaticResource TextSecondary}"
+                     Foreground="{DynamicResource TextSecondary}"
                      Margin="2,2,0,0"
                      FontSize="12" />
         </StackPanel>
@@ -112,11 +134,11 @@
                 BorderThickness="0,1,0,0">
           <StackPanel Spacing="2">
             <TextBlock Text="{CompiledBinding FooterProductDisplay}"
-                       Foreground="{StaticResource TextSecondary}"
+                       Foreground="{DynamicResource TextSecondary}"
                        FontSize="12"
                        TextWrapping="Wrap" />
             <TextBlock Text="{CompiledBinding FooterCopyrightDisplay}"
-                       Foreground="{StaticResource TextSecondary}"
+                       Foreground="{DynamicResource TextSecondary}"
                        FontSize="12"
                        TextWrapping="Wrap" />
           </StackPanel>
@@ -132,11 +154,11 @@
                 BorderThickness="1">
           <StackPanel Spacing="6">
             <TextBlock Text="{infra:LocalizedString Key=Tray.Destinations.Title}"
-                       Foreground="{StaticResource TextSecondary}"
+                       Foreground="{DynamicResource TextSecondary}"
                        FontSize="10"
                        FontWeight="SemiBold" />
             <TextBlock Text="{infra:LocalizedString Key=Tray.Destinations.None}"
-                       Foreground="{StaticResource TextSecondary}"
+                       Foreground="{DynamicResource TextSecondary}"
                        FontSize="9"
                        IsVisible="{Binding BackupsViewModel.HasActiveDestinationStatuses, Converter={StaticResource BoolInvertConverter}}" />
             <ItemsControl ItemsSource="{CompiledBinding BackupsViewModel.ActiveDestinationStatuses}"
@@ -151,7 +173,7 @@
         </Border>
 
         <StackPanel x:Name="NavButtonsPanel" Spacing="4" Margin="0,0,0,10">
-          <Button x:Name="NavDashboardButton" Classes="nav" Command="{CompiledBinding NavigateDashboard}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Dashboard}">
+          <Button x:Name="NavDashboardButton" Classes="nav" Classes.active="{CompiledBinding IsDashboardActive}" Command="{CompiledBinding NavigateDashboard}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Dashboard}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavDashboardIconBadge" Classes="nav-icon-badge">
                 <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -165,7 +187,7 @@
             </StackPanel>
           </Button>
 
-          <Button x:Name="NavProjectsButton" Classes="nav" Command="{CompiledBinding NavigateProjects}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Projects}">
+          <Button x:Name="NavProjectsButton" Classes="nav" Classes.active="{CompiledBinding IsProjectsViewActive}" Command="{CompiledBinding NavigateProjects}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Projects}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavProjectsIconBadge" Classes="nav-icon-badge">
                 <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -179,7 +201,7 @@
             </StackPanel>
           </Button>
 
-          <Button x:Name="NavBackupsButton" Classes="nav" Command="{CompiledBinding NavigateBackups}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Backups}">
+          <Button x:Name="NavBackupsButton" Classes="nav" Classes.active="{CompiledBinding IsBackupsViewActive}" Command="{CompiledBinding NavigateBackups}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Backups}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavBackupsIconBadge" Classes="nav-icon-badge">
                 <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -191,7 +213,7 @@
             </StackPanel>
           </Button>
 
-          <Button x:Name="NavHistoryButton" Classes="nav" Command="{CompiledBinding NavigateHistory}" ToolTip.Tip="{infra:LocalizedString Key=Nav.History}">
+          <Button x:Name="NavHistoryButton" Classes="nav" Classes.active="{CompiledBinding IsHistoryActive}" Command="{CompiledBinding NavigateHistory}" ToolTip.Tip="{infra:LocalizedString Key=Nav.History}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavHistoryIconBadge" Classes="nav-icon-badge">
                 <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -206,7 +228,7 @@
             </StackPanel>
           </Button>
 
-          <Button x:Name="NavRecoveryButton" Classes="nav" Command="{CompiledBinding NavigateRecovery}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Recovery}">
+          <Button x:Name="NavRecoveryButton" Classes="nav" Classes.active="{CompiledBinding IsRecoveryActive}" Command="{CompiledBinding NavigateRecovery}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Recovery}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavRecoveryIconBadge" Classes="nav-icon-badge">
                 <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -221,7 +243,7 @@
             </StackPanel>
           </Button>
 
-          <Button x:Name="NavSettingsButton" Classes="nav" Command="{CompiledBinding NavigateSettings}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Settings}">
+          <Button x:Name="NavSettingsButton" Classes="nav" Classes.active="{CompiledBinding IsSettingsActive}" Command="{CompiledBinding NavigateSettings}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Settings}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavSettingsIconBadge" Classes="nav-icon-badge">
                 <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -244,7 +266,7 @@
       <StackPanel Spacing="8">
         <StackPanel>
           <TextBlock Text="{CompiledBinding HeaderTitle}" FontSize="24" FontWeight="SemiBold"/>
-          <TextBlock Text="{CompiledBinding HeaderKicker}" Foreground="{StaticResource TextSecondary}" Margin="0,2,0,0"/>
+          <TextBlock Text="{CompiledBinding HeaderKicker}" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0"/>
         </StackPanel>
 
         <Border Margin="0,4,0,0"

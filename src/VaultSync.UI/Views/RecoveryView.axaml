@@ -46,8 +46,10 @@
                 Padding="{DynamicResource PagePadding}">
     <Grid RowDefinitions="Auto,Auto,*"
           RowSpacing="16">
-      <Grid Grid.Row="0"
+      <Grid x:Name="RecoveryHeaderGrid"
+            Grid.Row="0"
             ColumnDefinitions="*,Auto"
+            RowDefinitions="Auto"
             ColumnSpacing="16">
         <StackPanel Spacing="7">
           <TextBlock Text="{infra:LocalizedString Key=Recovery.Title}"
@@ -61,7 +63,8 @@
                      Foreground="{DynamicResource TextSecondaryBrush}"
                      TextWrapping="Wrap" />
         </StackPanel>
-        <StackPanel Grid.Column="1"
+        <StackPanel x:Name="RecoveryHeaderActions"
+                    Grid.Column="1"
                     Spacing="8"
                     VerticalAlignment="Top">
           <StackPanel Orientation="Horizontal"
@@ -83,10 +86,13 @@
         </StackPanel>
       </Grid>
 
-      <Grid Grid.Row="1"
+      <Grid x:Name="RecoveryKpiGrid"
+            Grid.Row="1"
             ColumnDefinitions="1.3*,*,*,*"
+            RowDefinitions="Auto"
             ColumnSpacing="12">
-        <Border Classes="recovery-card"
+        <Border x:Name="RecoveryScoreCard"
+                Classes="recovery-card"
                 Padding="18">
           <Grid RowDefinitions="Auto,Auto,Auto"
                 RowSpacing="10">
@@ -115,7 +121,8 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="1"
+        <Border x:Name="RecoveryReadyCard"
+                Grid.Column="1"
                 Classes="recovery-card"
                 Padding="16">
           <StackPanel Spacing="6">
@@ -131,7 +138,8 @@
           </StackPanel>
         </Border>
 
-        <Border Grid.Column="2"
+        <Border x:Name="RecoveryAttentionCard"
+                Grid.Column="2"
                 Classes="recovery-card"
                 Padding="16">
           <StackPanel Spacing="6">
@@ -147,7 +155,8 @@
           </StackPanel>
         </Border>
 
-        <Border Grid.Column="3"
+        <Border x:Name="RecoveryRiskCard"
+                Grid.Column="3"
                 Classes="recovery-card"
                 Padding="16">
           <StackPanel Spacing="6">
@@ -167,10 +176,13 @@
         </Border>
       </Grid>
 
-      <Grid Grid.Row="2"
+      <Grid x:Name="RecoveryContentGrid"
+            Grid.Row="2"
             ColumnDefinitions="360,*"
+            RowDefinitions="Auto"
             ColumnSpacing="16">
-        <StackPanel Spacing="12">
+        <StackPanel x:Name="RecoveryOverviewPanel"
+                    Spacing="12">
           <Border Classes="recovery-card"
                   Padding="18">
             <StackPanel Spacing="14">
@@ -244,7 +256,8 @@
           </Border>
         </StackPanel>
 
-        <Border Grid.Column="1"
+        <Border x:Name="RecoveryProjectsPanel"
+                Grid.Column="1"
                 Classes="recovery-card"
                 Padding="0">
           <Grid RowDefinitions="Auto,*">
@@ -321,7 +334,7 @@
                                 BorderBrush="{CompiledBinding Accent}">
                           <TextBlock Text="{CompiledBinding Label}"
                                      FontSize="10"
-                                     Foreground="White"
+                                     Foreground="{Binding Accent, Converter={StaticResource ContrastForegroundConverter}}"
                                      FontWeight="SemiBold" />
                         </Border>
                       </Grid>

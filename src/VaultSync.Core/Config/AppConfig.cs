@@ -272,6 +272,7 @@ namespace VaultSync.Core.Config
     {
         public string Name { get; set; } = "VaultSync Midnight";
         public string BaseTheme { get; set; } = "Dark";
+        public string VisualStyle { get; set; } = "Solid";
         public string Background { get; set; } = "#101218";
         public string Surface { get; set; } = "#181B24";
         public string SurfaceAlt { get; set; } = "#222635";
@@ -288,6 +289,7 @@ namespace VaultSync.Core.Config
             {
                 Name = Name,
                 BaseTheme = BaseTheme,
+                VisualStyle = VisualStyle,
                 Background = Background,
                 Surface = Surface,
                 SurfaceAlt = SurfaceAlt,

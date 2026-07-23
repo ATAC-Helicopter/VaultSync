@@ -38,39 +38,39 @@
       <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
     <Style Selector="Border.history-surface">
-      <Setter Property="Background" Value="#7A0B1420" />
-      <Setter Property="BorderBrush" Value="#21384F" />
+      <Setter Property="Background" Value="{DynamicResource Surface1}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="10" />
     </Style>
     <Style Selector="Border.history-panel">
-      <Setter Property="Background" Value="#A00C1724" />
-      <Setter Property="BorderBrush" Value="#274057" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="10" />
     </Style>
     <Style Selector="Border.history-badge">
-      <Setter Property="Background" Value="#4A18283A" />
-      <Setter Property="BorderBrush" Value="#3D5B76" />
+      <Setter Property="Background" Value="{DynamicResource ItemBg}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="999" />
       <Setter Property="Padding" Value="10,5" />
     </Style>
     <Style Selector="Border.history-badge.accent">
-      <Setter Property="Background" Value="#334F8DFF" />
-      <Setter Property="BorderBrush" Value="#684F8DFF" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="Border.history-badge.safe">
-      <Setter Property="Background" Value="#2F22CC88" />
-      <Setter Property="BorderBrush" Value="#6622CC88" />
+      <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
     </Style>
     <Style Selector="Border.history-badge.warn">
-      <Setter Property="Background" Value="#33FFB454" />
-      <Setter Property="BorderBrush" Value="#77FFB454" />
+      <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
     </Style>
     <Style Selector="Border.history-stat">
-      <Setter Property="Background" Value="#650A111B" />
-      <Setter Property="BorderBrush" Value="#20344A" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="12,10" />
@@ -78,8 +78,8 @@
     <Style Selector="TextBox.history-search">
       <Setter Property="MinHeight" Value="36" />
       <Setter Property="MinWidth" Value="300" />
-      <Setter Property="Background" Value="#77101A28" />
-      <Setter Property="BorderBrush" Value="#2B496B" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="12,8" />
@@ -87,8 +87,8 @@
       <Setter Property="FontSize" Value="13" />
     </Style>
     <Style Selector="TextBox.history-editor">
-      <Setter Property="Background" Value="#660A1422" />
-      <Setter Property="BorderBrush" Value="#27445F" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="10,8" />
@@ -98,8 +98,8 @@
     <Style Selector="ComboBox.history-filter">
       <Setter Property="MinWidth" Value="132" />
       <Setter Property="MinHeight" Value="36" />
-      <Setter Property="Background" Value="#77101A28" />
-      <Setter Property="BorderBrush" Value="#2B496B" />
+      <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="10,4" />
     </Style>
@@ -112,7 +112,7 @@
       <Setter Property="MinHeight" Value="36" />
       <Setter Property="Padding" Value="14,7" />
       <Setter Property="Background" Value="{DynamicResource VS.Primary}" />
-      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}" />
       <Setter Property="CornerRadius" Value="8" />
     </Style>
     <Style Selector="Button.history-action">
@@ -121,27 +121,27 @@
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Background" Value="#79132233" />
-      <Setter Property="BorderBrush" Value="#355876" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
     <Style Selector="Button.history-action:pointerover">
-      <Setter Property="Background" Value="#A0172B42" />
-      <Setter Property="BorderBrush" Value="#4D7AA3" />
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="Button.history-action.primary">
-      <Setter Property="Background" Value="#E34F8DFF" />
-      <Setter Property="BorderBrush" Value="#FF7DAAFF" />
-      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}" />
     </Style>
     <Style Selector="Button.history-action.primary:pointerover">
-      <Setter Property="Background" Value="#FF6DA2FF" />
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="Button.history-action.marker">
       <Setter Property="MinHeight" Value="36" />
-      <Setter Property="Background" Value="#4C102136" />
-      <Setter Property="BorderBrush" Value="#31516F" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
     </Style>
     <Style Selector="Button.history-action:disabled">
@@ -161,8 +161,8 @@
       <Setter Property="Padding" Value="0" />
       <Setter Property="Margin" Value="0,0,0,12" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-      <Setter Property="Background" Value="#E90D1825" />
-      <Setter Property="BorderBrush" Value="#253A50" />
+      <Setter Property="Background" Value="{DynamicResource Surface1}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="Template">
         <ControlTemplate TargetType="ListBoxItem">
           <Border Background="{TemplateBinding Background}"
@@ -177,19 +177,19 @@
       </Setter>
     </Style>
     <Style Selector="#TimelineList ListBoxItem:pointerover">
-      <Setter Property="Background" Value="#F0122030" />
-      <Setter Property="BorderBrush" Value="#466784" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="#TimelineList ListBoxItem:selected">
-      <Setter Property="Background" Value="#F2152638" />
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource VS.Primary}" />
     </Style>
     <Style Selector="#CompactList ListBoxItem">
       <Setter Property="Padding" Value="0" />
       <Setter Property="Margin" Value="0,0,0,8" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-      <Setter Property="Background" Value="#8A0D1826" />
-      <Setter Property="BorderBrush" Value="#233B54" />
+      <Setter Property="Background" Value="{DynamicResource Surface1}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="Template">
         <ControlTemplate TargetType="ListBoxItem">
           <Border Background="{TemplateBinding Background}"
@@ -204,25 +204,26 @@
       </Setter>
     </Style>
     <Style Selector="#CompactList ListBoxItem:pointerover">
-      <Setter Property="Background" Value="#A1132030" />
-      <Setter Property="BorderBrush" Value="#365A7A" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="#CompactList ListBoxItem:selected">
-      <Setter Property="Background" Value="#B3142436" />
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource VS.Primary}" />
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,*"
-        MinWidth="980">
+  <Grid RowDefinitions="Auto,*">
 
     <Border Grid.Row="0"
-            BorderBrush="#1C3148"
+            BorderBrush="{DynamicResource BorderSoft}"
             BorderThickness="0,0,0,1"
             Padding="28,22,28,18">
       <Grid RowDefinitions="Auto,Auto"
             RowSpacing="14">
-        <Grid ColumnDefinitions="*,Auto"
+        <Grid x:Name="HistoryHeaderGrid"
+              ColumnDefinitions="*,Auto"
+              RowDefinitions="Auto"
               ColumnSpacing="18">
           <StackPanel Spacing="5">
             <TextBlock Text="{infra:LocalizedString Key=History.Title}"
@@ -233,7 +234,8 @@
                        MaxWidth="760" />
           </StackPanel>
 
-          <WrapPanel Grid.Column="1"
+          <WrapPanel x:Name="HistoryHeaderBadges"
+                     Grid.Column="1"
                      ItemSpacing="8"
                      LineSpacing="8"
                      VerticalAlignment="Top">
@@ -252,8 +254,10 @@
           </WrapPanel>
         </Grid>
 
-        <Grid Grid.Row="1"
+        <Grid x:Name="HistoryFilterGrid"
+              Grid.Row="1"
               ColumnDefinitions="*,Auto"
+              RowDefinitions="Auto"
               ColumnSpacing="12">
           <WrapPanel ItemSpacing="8"
                      LineSpacing="8">
@@ -304,7 +308,8 @@
             </ComboBox>
           </WrapPanel>
 
-          <WrapPanel Grid.Column="1"
+          <WrapPanel x:Name="HistoryFilterActions"
+                     Grid.Column="1"
                      ItemSpacing="8"
                      LineSpacing="8"
                      HorizontalAlignment="Right">
@@ -323,9 +328,12 @@
           RowDefinitions="*"
           IsVisible="{CompiledBinding HasLoadedEvents}"
           Margin="28,22,28,28">
-      <Grid ColumnDefinitions="*,360"
+      <Grid x:Name="HistoryContentGrid"
+            ColumnDefinitions="*,360"
+            RowDefinitions="*"
             ColumnSpacing="22">
-        <Border Classes="history-surface"
+        <Border x:Name="HistoryTimelinePanel"
+                Classes="history-surface"
                 Padding="18">
           <Grid RowDefinitions="Auto,*,Auto"
                 RowSpacing="14">
@@ -490,7 +498,7 @@
             <Grid Grid.Row="1"
                   IsVisible="{CompiledBinding !HasTimelineItems}">
               <Border Classes="history-panel"
-                      Width="520"
+                      MaxWidth="520"
                       Padding="28"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center">
@@ -529,7 +537,8 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="1"
+        <Border x:Name="HistoryDetailPanel"
+                Grid.Column="1"
                 Classes="history-panel"
                 Padding="18"
                 VerticalAlignment="Stretch">
@@ -716,7 +725,7 @@
             Classes="history-panel"
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
-            Width="640"
+            MaxWidth="640"
             IsVisible="{CompiledBinding !HasLoadedEvents}">
       <StackPanel Spacing="12">
         <TextBlock Text="{infra:LocalizedString Key=History.Empty.Title}"

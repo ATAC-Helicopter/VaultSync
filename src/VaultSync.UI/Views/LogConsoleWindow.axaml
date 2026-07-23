@@ -34,7 +34,7 @@
                      FontSize="18"
                      FontWeight="SemiBold" />
           <TextBlock Text="{infra:LocalizedString Key=LogConsole.Description}"
-                     Foreground="{StaticResource TextSecondary}"
+                     Foreground="{DynamicResource TextSecondary}"
                      FontSize="11"
                      TextWrapping="Wrap" />
         </StackPanel>
@@ -62,7 +62,7 @@
 
         <TextBlock Grid.Row="1"
                    Text="{Binding StatusMessage}"
-                   Foreground="{StaticResource TextSecondary}"
+                   Foreground="{DynamicResource TextSecondary}"
                    FontSize="11"
                    TextWrapping="Wrap" />
       </Grid>

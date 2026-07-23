@@ -3,7 +3,11 @@
 This page summarizes key settings and how they affect behavior.
 
 ## Appearance
-- Theme: Light, Dark, or Follow system.
+- Theme: Light, Dark, Follow system, or Custom.
+- Custom themes: apply one of the visual presets, then optionally adjust the base, palette slots, or component values.
+- Aurora Glass and Porcelain Glass request operating-system acrylic or blur when available and fall back to VaultSync's own tint, reflection, and opaque-surface materials when it is unavailable or disabled.
+- Glass is intentionally concentrated in navigation, toolbars, and floating controls; content cards stay more opaque so text, charts, and status colors remain readable.
+- The theme studio can be collapsed from its header without changing the active theme.
 - Compact layout: reduces padding for dense views.
 
 ## Backups
