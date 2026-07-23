@@ -151,12 +151,83 @@ public static class BackupSafetyService
         }
     }
 
+    public static bool IsPathUnderRoot(string root, string candidatePath)
+    {
+        if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(candidatePath))
+            return false;
+
+        try
+        {
+            string normalizedRoot = NormalizeDirectoryPath(root);
+            string candidate = Path.GetFullPath(candidatePath);
+            return IsSameOrChildPath(normalizedRoot, candidate);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static bool TryResolveExistingFileUnderRoot(string root, string? relativePath, out string fullPath)
+    {
+        fullPath = string.Empty;
+        if (!TryCombinePathUnderRoot(root, relativePath, out string candidate) || !File.Exists(candidate))
+            return false;
+
+        if (ContainsLinkedComponentBelowRoot(root, candidate))
+            return false;
+
+        fullPath = candidate;
+        return true;
+    }
+
+    public static bool IsExistingPathSafeUnderRoot(string root, string candidatePath)
+    {
+        if (!IsPathUnderRoot(root, candidatePath) ||
+            (!File.Exists(candidatePath) && !Directory.Exists(candidatePath)))
+        {
+            return false;
+        }
+
+        return !ContainsLinkedComponentBelowRoot(root, candidatePath);
+    }
+
     private static string NormalizeDirectoryPath(string path)
     {
-        var full = Path.GetFullPath(path)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string full = TrimTrailingSeparatorsPreservingRoot(Path.GetFullPath(path));
 
-        return full + Path.DirectorySeparatorChar;
+        return Path.EndsInDirectorySeparator(full) ? full : full + Path.DirectorySeparatorChar;
+    }
+
+    private static bool ContainsLinkedComponentBelowRoot(string root, string candidate)
+    {
+        try
+        {
+            string normalizedRoot = TrimTrailingSeparatorsPreservingRoot(Path.GetFullPath(root));
+            string relative = Path.GetRelativePath(normalizedRoot, candidate);
+            string current = normalizedRoot;
+            foreach (string component in relative.Split(
+                         [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                         StringSplitOptions.RemoveEmptyEntries))
+            {
+                current = Path.Combine(current, component);
+                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                    return true;
+            }
+
+            return false;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    private static string TrimTrailingSeparatorsPreservingRoot(string path)
+    {
+        string root = Path.GetPathRoot(path) ?? string.Empty;
+        string trimmed = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return trimmed.Length == 0 || trimmed.Length < root.Length ? root : trimmed;
     }
 
     private static bool IsSameOrChildPath(string parent, string child)
