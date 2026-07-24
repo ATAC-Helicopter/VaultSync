@@ -374,6 +374,7 @@
   "RecoveryCoverage.Window.7d": "7 d: {0}/{1}",
   "RecoveryCoverage.Window.30d": "30 d: {0}/{1}",
   "RecoveryCoverage.Window.90d": "90 d: {0}/{1}",
+  "Dashboard.Hint.SnapshotsThisWeek": "Snapshots criados esta semana",
   "Dashboard.Hint.StorageEmpty": "Nenhum armazenamento usado",
   "Dashboard.Hint.StorageLatest": "Total dos últimos instantâneos",
   "Dashboard.Hint.StorageTotal": "Total de todos os backups",
