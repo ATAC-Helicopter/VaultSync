@@ -478,6 +478,9 @@ namespace VaultSync.UI.ViewModels
         private IReadOnlyList<(Project project, long bytes)> _lastStorageSlices = [];
         private readonly IAppConfigStore _configStore;
         private readonly IRepositoryFactory _repositoryFactory;
+        private RecoveryCoverageSummary _lastRecoveryCoverageSummary = new();
+        private double[]? _snapshotCountsByDayCache;
+        private double _lastWeeklyAverage;
 
         public DashboardViewModel()
             : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
@@ -984,6 +987,8 @@ namespace VaultSync.UI.ViewModels
             WeeklyChartHeight = chartHeight;
 
             double avg = _snapshotCountsByDay.Length == 0 ? 0d : _snapshotCountsByDay.Average();
+            _lastWeeklyAverage = avg;
+            _snapshotCountsByDayCache = _snapshotCountsByDay.ToArray();
             double avgNormalized = avg / max;
             double avgHeight = avg <= 0 ? 0 : barBase + avgNormalized * barRange;
             const double labelOffset = 10;
@@ -2166,6 +2171,12 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessRiskLabel = Lf("RestoreReadiness.Count.Risk", "{0} risk", RestoreReadinessRiskCount);
             RestoreReadinessUnavailableLabel = Lf("RestoreReadiness.Count.Unavailable", "{0} unavailable", RestoreReadinessUnavailableCount);
 
+            // Refresh recovery coverage labels with localized strings using cached summary data
+            ApplyRecoveryCoverageSummary(_lastRecoveryCoverageSummary);
+
+            // Refresh weekly activity average label with cached data
+            WeeklyAverageLabel = Lf("Dashboard.Chart.AvgLabel", "Avg {0:0.0}", _lastWeeklyAverage);
+
             OnPropertyChanged(nameof(TotalSnapshotsWeekLabel));
         }
 
@@ -2234,6 +2245,7 @@ namespace VaultSync.UI.ViewModels
 
         private void ApplyRecoveryCoverageSummary(RecoveryCoverageSummary summary)
         {
+            _lastRecoveryCoverageSummary = summary;
             using var timing = RuntimeTiming.Measure("Dashboard recovery coverage rebuild");
             int total = Math.Max(0, summary.ProjectCount);
             RecoveryCoverageDetail = total == 0

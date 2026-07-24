@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Avalonia.Data;
+using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
 using Xunit;
 
@@ -55,6 +58,28 @@ public sealed class LocalizationCoverageTests
             .ToArray();
 
         Assert.Equal(shippedCodes, supportedCodes);
+    }
+
+    [Fact]
+    public void LocalizedStringExtension_ReturnsBinding_WhenProviderIsNotAvailableYet()
+    {
+        PropertyInfo? serviceProperty = typeof(LocalizationProvider).GetProperty("Service", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        Assert.NotNull(serviceProperty);
+
+        object? previousService = serviceProperty!.GetValue(null);
+        serviceProperty.SetValue(null, null);
+
+        try
+        {
+            var extension = new LocalizedStringExtension { Key = "Dashboard.Kpi.Projects" };
+            object value = extension.ProvideValue(null!);
+
+            Assert.IsType<Binding>(value);
+        }
+        finally
+        {
+            serviceProperty.SetValue(null, previousService);
+        }
     }
 
     private static Dictionary<string, string> ReadLocale(string path)
