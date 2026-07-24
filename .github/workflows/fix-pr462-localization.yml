@@ -6,12 +6,18 @@ on:
       - Dev
     paths:
       - .github/workflows/fix-pr462-localization.yml
+  pull_request:
+    branches:
+      - Stable
+    paths:
+      - .github/workflows/fix-pr462-localization.yml
 
 permissions:
   contents: write
 
 jobs:
   apply-fix:
+    if: github.repository == 'ATAC-Helicopter/VaultSync'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
