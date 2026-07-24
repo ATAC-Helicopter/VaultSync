@@ -1,15 +1,15 @@
 # VaultSync 1.8 Roadmap
 ## Project History & Recovery
 
-Status: Approved Planning Draft
+Status: Active release-series plan
 Version: 1.8.x Series
-Last Updated: June 2026
+Last Updated: July 2026
 
 ---
 
 # Executive Summary
 
-VaultSync 1.8 is intended to be the largest release in the project's history.
+VaultSync 1.8 is the Chronicle release series.
 
 The goal of this release is not to become a source control system, an enterprise backup suite, or a cloud platform.
 
@@ -21,7 +21,7 @@ The goal is to evolve VaultSync from a backup utility into a platform that helps
 - Measure recoverability
 - Improve disaster recovery readiness
 
-Version 1.8 introduces two major concepts that do not currently exist in VaultSync:
+Version 1.8 introduced two major concepts to VaultSync:
 
 ## History
 
@@ -76,7 +76,9 @@ Create, verify, and maintain backups.
 
 Primary area:
 
-text Backups
+```text
+Backups
+```
 
 ---
 
@@ -86,7 +88,9 @@ Explore historical project states and changes.
 
 Primary area:
 
-text History
+```text
+History
+```
 
 ---
 
@@ -96,7 +100,9 @@ Validate recoverability and disaster readiness.
 
 Primary area:
 
-text Recovery
+```text
+Recovery
+```
 
 ---
 
@@ -104,11 +110,15 @@ text Recovery
 
 Current:
 
-text Dashboard Projects Backups Settings
+```text
+Dashboard · Projects · Backups · Settings
+```
 
 VaultSync 1.8:
 
-text Dashboard Projects Backups History Recovery Settings
+```text
+Dashboard · Projects · Backups · History · Recovery · Settings
+```
 
 ---
 
@@ -344,7 +354,9 @@ Foundation completed.
 
 ## New Navigation
 
-text Dashboard Projects Backups History Recovery Settings
+```text
+Dashboard · Projects · Backups · History · Recovery · Settings
+```
 
 ---
 
@@ -458,7 +470,9 @@ Visibility into recovery gaps.
 
 Example:
 
-text 24 Hours   ✓ 7 Days     ✓ 30 Days    ✓ 90 Days    ⚠
+```text
+24 Hours ✓   7 Days ✓   30 Days ✓   90 Days ⚠
+```
 
 ---
 
@@ -632,7 +646,11 @@ Users can understand project changes over time.
 
 ## Recovery Drill
 
-Simulate recovery without restoring.
+Simulate recovery without writing into the live project. VaultSync checks metadata linkage, destination reachability, readable folder or ZIP inventories, complete file counts when available, and bounded stored bytes against snapshot size and SHA-256 metadata.
+
+Results persist locally as **Passed**, **Attention**, or **Failed** with stable check codes, bounded evidence, and suggested actions. Encrypted, offline, malformed, and capped inputs remain explicitly limited or failed rather than receiving a false pass.
+
+The same native engine produces read-only safe-copy and original-location restore plans so users can see creates, overwrites, identical files, newer-file conflicts, and unavailable actions before restoring.
 
 ---
 
@@ -643,6 +661,8 @@ Evaluate:
 - Copy count
 - Media diversity
 - Offsite protection
+
+Offsite status is explicitly confirmed by the user; it is never inferred from a path or network protocol.
 
 ---
 
@@ -665,11 +685,30 @@ Potential triggers:
 - Significant project changes
 - Before cleanup operations
 
+Recommendations require an explicit Protect action and reuse the retention-safe marker already shared by History and Backups.
+
+Automatic retention also preserves the newest point with a passing byte-level proof until a newer point passes.
+
+---
+
+## Privacy-First Crash Reports
+
+Crash assistance creates a strict allowlist report locally, displays its complete contents read-only, and prepares a visible email draft with the report attached. VaultSync never uploads or sends the report automatically, and users can disable report creation completely.
+
+---
+
+## Reliability Hardening
+
+- Bind recovery content to its recorded destination identity.
+- Reject absolute, traversing, linked, missing, and ambiguous paths before browse, verify, backup, or restore operations.
+- Preserve case-distinct file identities on case-sensitive filesystems.
+- Stop archive-upload workers promptly and fail closed on incomplete source chunks.
+
 ---
 
 ## Success Criteria
 
-Users can measure disaster recovery readiness.
+Users can measure disaster-recovery readiness, inspect evidence, rehearse restore decisions, protect important points, and remain in control of every crash report.
 
 ---
 
@@ -685,9 +724,19 @@ Users can measure disaster recovery readiness.
 
 Examples:
 
-text VaultSync ├─ UI ├─ CLI ├─ Documentation └─ Website
+```text
+VaultSync
+├─ UI
+├─ CLI
+├─ Documentation
+└─ Website
 
-text Game Project ├─ Client ├─ Assets ├─ Audio └─ Documentation
+Game Project
+├─ Client
+├─ Assets
+├─ Audio
+└─ Documentation
+```
 
 ---
 
@@ -717,43 +766,57 @@ Users can manage project ecosystems efficiently.
 
 ## Snapshot Extensions
 
-text IsProtected IsKnownGood IsFavorite VersionTag
+```text
+IsProtected IsKnownGood IsFavorite VersionTag
+```
 
 ---
 
 ## Snapshot Tag
 
-text Id SnapshotExternalId Name CreatedUtc
+```text
+Id SnapshotExternalId Name CreatedUtc
+```
 
 ---
 
 ## Snapshot Note
 
-text Id SnapshotExternalId Content CreatedUtc
+```text
+Id SnapshotExternalId Content CreatedUtc
+```
 
 ---
 
 ## Milestone
 
-text Id ProjectId Name Description SnapshotExternalId CreatedUtc
+```text
+Id ProjectId Name Description SnapshotExternalId CreatedUtc
+```
 
 ---
 
 ## Recovery Drill
 
-text Id ProjectId Result CreatedUtc
+```text
+Id ProjectId Result CreatedUtc
+```
 
 ---
 
 ## Recovery Report
 
-text Id ProjectId GeneratedUtc
+```text
+Id ProjectId GeneratedUtc
+```
 
 ---
 
 ## Project Group
 
-text Id Name Description
+```text
+Id Name Description
+```
 
 ---
 

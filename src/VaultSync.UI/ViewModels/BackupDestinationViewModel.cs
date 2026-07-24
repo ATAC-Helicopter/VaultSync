@@ -109,6 +109,9 @@ public class BackupDestinationViewModel : ViewModelBase
         }
     }
 
+    private bool _isOffsite;
+    public bool IsOffsite { get => _isOffsite; set => SetField(ref _isOffsite, value); }
+
     public bool NeedsCredentialWarning =>
         AutoMount && !PreMounted && SelectedCredential is null;
 

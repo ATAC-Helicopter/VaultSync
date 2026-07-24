@@ -251,6 +251,36 @@ public sealed class BackupRetentionPreflightTests : IDisposable
         Assert.Contains(plan, x => x.BackupId == 3 && !x.Selected && x.Code == "quota-satisfied");
     }
 
+    [Fact]
+    public void BuildRetentionDeletionPlan_PreservesLastByteVerifiedPoint()
+    {
+        int projectId = 5;
+        Backup[] backups =
+        [
+            new Backup { Id = 1, ProjectId = projectId, SnapshotId = 10, CreatedUtc = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc) },
+            new Backup { Id = 2, ProjectId = projectId, SnapshotId = 20, CreatedUtc = new DateTime(2026, 3, 1, 11, 0, 0, DateTimeKind.Utc) },
+            new Backup { Id = 3, ProjectId = projectId, SnapshotId = 30, CreatedUtc = new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc) }
+        ];
+        Dictionary<int, Snapshot> snapshots = backups.ToDictionary(
+            backup => backup.SnapshotId,
+            backup => new Snapshot { Id = backup.SnapshotId, ProjectId = projectId });
+
+        System.Collections.Generic.IReadOnlyList<BackupService.BackupRetentionCandidateDecision> plan =
+            BackupService.BuildRetentionDeletionPlan(
+                projectId,
+                backups,
+                backups,
+                snapshots,
+                deleteQuota: 1,
+                byteVerifiedBackupIds: new HashSet<int> { 1 });
+
+        Assert.Contains(plan, decision =>
+            decision.BackupId == 1 &&
+            !decision.Selected &&
+            decision.Code == "preserve-last-byte-verified-point");
+        Assert.Contains(plan, decision => decision.BackupId == 2 && decision.Selected);
+    }
+
     private SqliteRepository CreateRepository()
     {
         return TestRepository.Create(_dbPath);

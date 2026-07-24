@@ -1,5 +1,45 @@
 # What's New
 
+## [1.8.4]
+
+VaultSync `1.8.4` is the Disaster Recovery update. It adds byte-level recovery proofs, transparent 3-2-1 guidance, protected-point recommendations, and a privacy-first crash-report workflow.
+
+### Themes and appearance
+- Choose from four new curated themes: Aurora Glass, Porcelain Glass, Paper & Ink, and Neon Dusk.
+- Glass presets request platform acrylic or blur when available, then layer adaptive tint, reflected highlights, ambient color, and soft separation over a predictable cross-platform fallback.
+- Aurora Glass uses cool midnight depth and restrained cyan reflections; Porcelain Glass uses brighter frosted navigation with more opaque content surfaces for dependable dark-text contrast.
+- Preview themes visually before applying them, collapse the theme studio when it is not needed, and open advanced color tuning only when you want it.
+- Custom theme files retain their rendering style, while older configurations continue to load as solid themes.
+- Text contrast is checked across every custom-theme surface, while status colors, navigation, History, Recovery, and code previews remain readable in light or dark palettes.
+
+### Disaster recovery
+- Run a non-destructive proof against a project's newest recovery point without copying anything into the project.
+- Verify the complete stored bytes and sizes of bounded folder or ZIP contents against the SHA-256 values captured by the selected snapshot.
+- See stable evidence for missing, unreadable, corrupted, inconclusive, verified, and destination-conflict outcomes; encrypted content is never described as verified while locked.
+- Simulate safe-copy or original-location restore actions without creating, overwriting, or deleting files.
+- Expand the latest evidence in Recovery and include the check codes, paths, evidence IDs, and results in the exported Markdown report.
+- Keep the last byte-verified point out of automatic retention pruning until another verified point exists.
+- Measure three copies, two storage media, and one explicitly confirmed offsite destination per project.
+- Mark destinations as offsite yourself; VaultSync does not infer physical location from paths or network protocols.
+- Protect suggested release, delivery, post-deletion, high-churn, or baseline recovery points without creating a second protection system.
+- Only recovery points that are currently reachable at their recorded destination count toward 3-2-1 readiness; disconnected or missing copies remain visible but cannot create a false protection score.
+
+### Reliability and safety
+- Snapshot Explorer refuses linked source entries and ambiguous duplicate ZIP paths before browsing, comparing, or restoring them.
+- Absolute backup records cannot escape their recorded destination, and verification cannot follow imported traversal or linked paths outside its root.
+- Backup creation rejects untrusted snapshot paths before reading source bytes or creating destination files; restore previews and selective restores preserve case-distinct identities.
+- Archive-upload progress workers now stop promptly after completion or failure, stalled uploads retain checkpoint retry behavior, and prematurely ended source chunks fail closed.
+- Recoverable UI exceptions continue to enter the local review workflow throughout the session instead of only after the first event.
+- Supported SQLite, protected-data, and Windows drawing packages include their latest safe servicing updates; the rendering stack remains on its validated coordinated versions.
+
+### Privacy-first crash reports
+- Crash assistance creates a minimal, strictly allowlisted report locally and never uploads or sends it automatically.
+- Every report receives a category-prefixed UUID generated for that report only; it is not a user, device, installation, or tracking ID.
+- The exact generated report is shown in a read-only view. Its report ID, operating-system family, crash category, and exception-type reason cannot be changed in VaultSync.
+- Exception messages, raw logs, paths, file content, project and backup names, credentials, configuration, detailed OS information, and user or machine identifiers are excluded.
+- Preparing a report opens a visible email draft with the reviewed report already attached. The user must inspect the message and attachment and press Send in their own email application; attachment failures fall back visibly to the local report folder.
+- Crash assistance can be disabled completely in Settings. Local reports are limited to ten files and seven days, with owner-only permissions requested on Unix-like systems.
+
 ## [1.8.3]
 
 VaultSync `1.8.3` introduces Compare & Change Intelligence with searchable file-level changes and safe, line-by-line text comparisons, while strengthening release safety and diagnostics retention.

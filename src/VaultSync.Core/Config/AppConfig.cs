@@ -212,6 +212,11 @@ namespace VaultSync.Core.Config
         public bool AutoMount { get; set; } = false;              // attempt to mount if unreachable
         public bool AutoUnmount { get; set; } = false;            // unmount after backup if we mounted it
         public bool PreMounted { get; set; } = false;             // treat as already mounted/guest; skip mount/creds
+        /// <summary>
+        /// User-confirmed offsite classification used by the transparent 3-2-1 advisor.
+        /// VaultSync never guesses physical location from a path or network protocol.
+        /// </summary>
+        public bool IsOffsite { get; set; } = false;
         public string? Alias { get; set; } = string.Empty;        // optional display label
         public bool EnableMetadataSync { get; set; } = true;
         public bool AutoImportMetadata { get; set; } = true;
@@ -267,6 +272,7 @@ namespace VaultSync.Core.Config
     {
         public string Name { get; set; } = "VaultSync Midnight";
         public string BaseTheme { get; set; } = "Dark";
+        public string VisualStyle { get; set; } = "Solid";
         public string Background { get; set; } = "#101218";
         public string Surface { get; set; } = "#181B24";
         public string SurfaceAlt { get; set; } = "#222635";
@@ -283,6 +289,7 @@ namespace VaultSync.Core.Config
             {
                 Name = Name,
                 BaseTheme = BaseTheme,
+                VisualStyle = VisualStyle,
                 Background = Background,
                 Surface = Surface,
                 SurfaceAlt = SurfaceAlt,
@@ -329,6 +336,7 @@ namespace VaultSync.Core.Config
     {
         public bool VerboseLogging   { get; set; } = false;
         public bool SaveVerboseLogs  { get; set; } = false;
+        public bool CrashReportAssistanceEnabled { get; set; } = true;
         public bool CheckUpdates     { get; set; } = true;
         public int UpdateCheckIntervalMinutes { get; set; } = 120;
         public bool BetaChannelEnabled { get; set; } = false;

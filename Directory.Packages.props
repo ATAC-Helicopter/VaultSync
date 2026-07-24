@@ -6,9 +6,9 @@
   <ItemGroup>
     <!-- Core storage and platform APIs -->
     <PackageVersion Include="Dapper" Version="2.1.79" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
-    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
-    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.4" />
+    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.10" />
 
     <!-- CLI -->
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
@@ -37,10 +37,10 @@
 
     <!-- Windows-only UI integrations -->
     <PackageVersion Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />
-    <PackageVersion Include="System.Drawing.Common" Version="10.0.9" />
+    <PackageVersion Include="System.Drawing.Common" Version="10.0.10" />
 
     <!-- Tests -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>

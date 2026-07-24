@@ -35,9 +35,9 @@ Current implementation status:
 - done: runtime `Direct` vs `Store` channel detection
 - done: Store builds disable the GitHub self-updater, show Store-managed update messaging, and offer an `Open Microsoft Store` action
 - done: the release asset workflow has Store upload-package generation behind the `include_store_upload` option
-- remaining: build and inspect the 1.8.3 Store upload artifact from GitHub Actions
+- remaining: build and inspect the 1.8.4 Store upload artifact from GitHub Actions
 - remaining: packaged-app validation for local folders, removable drives, restore targets, and UNC/NAS paths
-- remaining: full docs/help/wiki pass for Store-specific update/support guidance
+- done: Store-specific update and support guidance is covered in the maintained documentation set
 
 Compliance checklist:
 

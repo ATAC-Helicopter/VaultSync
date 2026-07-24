@@ -167,10 +167,12 @@ namespace VaultSync.UI.Services
     public static class LocalizationProvider
     {
         public static LocalizationService? Service { get; private set; }
+        public static event Action? ServiceChanged;
 
         public static void Initialize(LocalizationService service)
         {
             Service = service;
+            ServiceChanged?.Invoke();
         }
     }
 }

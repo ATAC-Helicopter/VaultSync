@@ -1,6 +1,8 @@
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using VaultSync.Core.Models;
+using VaultSync.Core.Recoverability;
 
 namespace VaultSync.Core.Services;
 
@@ -30,6 +32,198 @@ public sealed class SnapshotExplorerService
             : AddFolderInventory(source.Path, files, maxFiles, cancellationToken);
         return new SnapshotFileInventory(source.Kind, files, truncated);
     }
+
+    public static async Task<StoredContentEvidence> ReadStoredFileEvidenceAsync(
+        string backupRoot,
+        IReadOnlyCollection<FileEntry> expectedFiles,
+        int maximumFiles,
+        long maximumBytes,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedFiles);
+        if (maximumFiles <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumFiles));
+        if (maximumBytes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumBytes));
+
+        BackupSource source = ResolveSource(backupRoot);
+        if (source.Kind == SnapshotExplorerSourceKind.EncryptedArchive)
+            return new StoredContentEvidence(source.Kind, new Dictionary<string, StoredFileObservation>(), false, 0);
+
+        return source.Kind == SnapshotExplorerSourceKind.Archive
+            ? await ReadArchiveEvidenceAsync(
+                source.Path,
+                expectedFiles,
+                maximumFiles,
+                maximumBytes,
+                cancellationToken).ConfigureAwait(false)
+            : await ReadFolderEvidenceAsync(
+                source.Path,
+                expectedFiles,
+                maximumFiles,
+                maximumBytes,
+                cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<StoredContentEvidence> ReadFolderEvidenceAsync(
+        string root,
+        IReadOnlyCollection<FileEntry> expectedFiles,
+        int maximumFiles,
+        long maximumBytes,
+        CancellationToken cancellationToken)
+    {
+        var observations = new Dictionary<string, StoredFileObservation>(StringComparer.Ordinal);
+        long bytesRead = 0;
+        int filesExamined = 0;
+        bool limited = false;
+        foreach (FileEntry file in expectedFiles.OrderBy(item => item.RelPath, StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string relative = NormalizeExplorerPath(file.RelPath, allowEmpty: false);
+            if (filesExamined >= maximumFiles)
+            {
+                limited = true;
+                observations[relative] = LimitedObservation(relative);
+                continue;
+            }
+            filesExamined++;
+
+            string path = ResolvePathUnderRoot(root, relative);
+            if (!File.Exists(path))
+            {
+                observations[relative] = MissingObservation(relative);
+                continue;
+            }
+
+            try
+            {
+                EnsureNoLinkedSourcePathComponents(root, path);
+                var info = new FileInfo(path);
+                if (WouldExceedLimit(bytesRead, info.Length, maximumBytes))
+                {
+                    limited = true;
+                    observations[relative] = LimitedObservation(relative);
+                    continue;
+                }
+
+                await using var stream = new FileStream(
+                    path,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite,
+                    1024 * 1024,
+                    FileOptions.Asynchronous | FileOptions.SequentialScan);
+                byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+                bytesRead += info.Length;
+                observations[relative] = new StoredFileObservation(
+                    relative,
+                    Exists: true,
+                    info.Length,
+                    info.LastWriteTimeUtc,
+                    Convert.ToHexString(hash),
+                    WasRead: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                observations[relative] = new StoredFileObservation(
+                    relative,
+                    Exists: true,
+                    Size: null,
+                    ModifiedUtc: null,
+                    HashSha256: null,
+                    WasRead: false,
+                    FailureCode: ClassifyReadFailure(ex));
+            }
+        }
+
+        return new StoredContentEvidence(SnapshotExplorerSourceKind.Folder, observations, limited, bytesRead);
+    }
+
+    private static async Task<StoredContentEvidence> ReadArchiveEvidenceAsync(
+        string archivePath,
+        IReadOnlyCollection<FileEntry> expectedFiles,
+        int maximumFiles,
+        long maximumBytes,
+        CancellationToken cancellationToken)
+    {
+        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        ValidateUniqueArchiveFilePaths(archive);
+        IReadOnlyDictionary<string, ZipArchiveEntry> entries = archive.Entries
+            .Where(entry => !string.IsNullOrEmpty(entry.Name))
+            .ToDictionary(entry => NormalizeArchiveEntryPath(entry.FullName), StringComparer.Ordinal);
+        var observations = new Dictionary<string, StoredFileObservation>(StringComparer.Ordinal);
+        long bytesRead = 0;
+        int filesExamined = 0;
+        bool limited = false;
+        foreach (FileEntry file in expectedFiles.OrderBy(item => item.RelPath, StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string relative = NormalizeExplorerPath(file.RelPath, allowEmpty: false);
+            if (filesExamined >= maximumFiles)
+            {
+                limited = true;
+                observations[relative] = LimitedObservation(relative);
+                continue;
+            }
+            filesExamined++;
+
+            if (!entries.TryGetValue(relative, out ZipArchiveEntry? entry))
+            {
+                observations[relative] = MissingObservation(relative);
+                continue;
+            }
+
+            if (WouldExceedLimit(bytesRead, entry.Length, maximumBytes))
+            {
+                limited = true;
+                observations[relative] = LimitedObservation(relative);
+                continue;
+            }
+
+            try
+            {
+                await using Stream stream = entry.Open();
+                byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+                bytesRead += entry.Length;
+                observations[relative] = new StoredFileObservation(
+                    relative,
+                    Exists: true,
+                    entry.Length,
+                    entry.LastWriteTime.UtcDateTime,
+                    Convert.ToHexString(hash),
+                    WasRead: true);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException)
+            {
+                observations[relative] = new StoredFileObservation(
+                    relative,
+                    Exists: true,
+                    Size: entry.Length,
+                    ModifiedUtc: entry.LastWriteTime.UtcDateTime,
+                    HashSha256: null,
+                    WasRead: false,
+                    FailureCode: ClassifyReadFailure(ex));
+            }
+        }
+
+        return new StoredContentEvidence(SnapshotExplorerSourceKind.Archive, observations, limited, bytesRead);
+    }
+
+    private static bool WouldExceedLimit(long consumed, long next, long limit) =>
+        next < 0 || consumed > limit - next;
+
+    private static StoredFileObservation MissingObservation(string path) =>
+        new(path, Exists: false, Size: null, ModifiedUtc: null, HashSha256: null, WasRead: false, "object_missing");
+
+    private static StoredFileObservation LimitedObservation(string path) =>
+        new(path, Exists: false, Size: null, ModifiedUtc: null, HashSha256: null, WasRead: false, "verification_limit_reached");
+
+    private static string ClassifyReadFailure(Exception exception) => exception switch
+    {
+        UnauthorizedAccessException => "object_access_denied",
+        InvalidDataException => "object_unsafe",
+        _ => "object_read_failed"
+    };
 
     public static IReadOnlySet<string> FindTextEquivalentFiles(
         string olderBackupRoot,
@@ -121,6 +315,7 @@ public sealed class SnapshotExplorerService
         CancellationToken cancellationToken)
     {
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        ValidateUniqueArchiveFilePaths(archive);
         foreach (ZipArchiveEntry entry in archive.Entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -211,6 +406,7 @@ public sealed class SnapshotExplorerService
         string folderFullPath = ResolvePathUnderRoot(backupRoot, folderPath);
         if (!Directory.Exists(folderFullPath))
             return [];
+        EnsureNoLinkedSourcePathComponents(backupRoot, folderFullPath);
 
         List<SnapshotExplorerEntry> entries = string.IsNullOrWhiteSpace(search)
             ? ListFolderChildren(backupRoot, folderFullPath)
@@ -231,6 +427,9 @@ public sealed class SnapshotExplorerService
     {
         foreach (string dir in Directory.EnumerateDirectories(folderFullPath))
         {
+            if ((File.GetAttributes(dir) & FileAttributes.ReparsePoint) != 0)
+                continue;
+
             string relative = ToExplorerPath(Path.GetRelativePath(backupRoot, dir));
             entries.Add(SnapshotExplorerEntry.Folder(relative, Path.GetFileName(dir)));
         }
@@ -240,7 +439,8 @@ public sealed class SnapshotExplorerService
     {
         foreach (string file in Directory.EnumerateFiles(folderFullPath))
         {
-            if (IsInternalBackupArtifact(Path.GetFileName(file)))
+            if (IsInternalBackupArtifact(Path.GetFileName(file)) ||
+                (File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
                 continue;
 
             entries.Add(CreateFolderFileEntry(backupRoot, file, displayRelativePath: false));
@@ -250,7 +450,7 @@ public sealed class SnapshotExplorerService
     private static List<SnapshotExplorerEntry> SearchFolderFiles(string backupRoot, string folderFullPath, string search)
     {
         var entries = new List<SnapshotExplorerEntry>();
-        foreach (string file in Directory.EnumerateFiles(folderFullPath, "*", SearchOption.AllDirectories))
+        foreach (string file in EnumerateFolderFilesSafely(folderFullPath))
         {
             string relative = ToExplorerPath(Path.GetRelativePath(backupRoot, file));
             if (IsInternalBackupArtifact(Path.GetFileName(file)) ||
@@ -276,6 +476,7 @@ public sealed class SnapshotExplorerService
     private static IReadOnlyList<SnapshotExplorerEntry> ListArchive(string archivePath, string folderPath, string search)
     {
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        ValidateUniqueArchiveFilePaths(archive);
         string folderPrefix = string.IsNullOrWhiteSpace(folderPath) ? string.Empty : folderPath.TrimEnd('/') + "/";
         var folders = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.Ordinal);
         var files = new Dictionary<string, SnapshotExplorerEntry>(StringComparer.Ordinal);
@@ -382,6 +583,7 @@ public sealed class SnapshotExplorerService
         string path = ResolvePathUnderRoot(backupRoot, relativePath);
         if (!File.Exists(path))
             return SnapshotPreviewResult.Failure("File is missing from the backup.");
+        EnsureNoLinkedSourcePathComponents(backupRoot, path);
 
         byte[] buffer = ReadPrefix(path, maxBytes, out bool truncated);
         if (!LooksLikeText(buffer))
@@ -393,6 +595,7 @@ public sealed class SnapshotExplorerService
     private static SnapshotPreviewResult PreviewArchiveEntry(string archivePath, string relativePath, int maxBytes)
     {
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        ValidateUniqueArchiveFilePaths(archive);
         ZipArchiveEntry? entry = archive.Entries.FirstOrDefault(e =>
             string.Equals(NormalizeArchiveEntryPath(e.FullName), relativePath, StringComparison.Ordinal) &&
             !string.IsNullOrEmpty(e.Name));
@@ -414,6 +617,7 @@ public sealed class SnapshotExplorerService
         foreach (string selectedPath in selectedPaths)
         {
             string sourcePath = ResolvePathUnderRoot(backupRoot, selectedPath);
+            EnsureNoLinkedSourcePathComponents(backupRoot, sourcePath);
             if (File.Exists(sourcePath))
             {
                 CopyFileUnderRoot(sourcePath, targetRoot, selectedPath);
@@ -422,7 +626,7 @@ public sealed class SnapshotExplorerService
             }
             else if (Directory.Exists(sourcePath))
             {
-                foreach (string file in Directory.EnumerateFiles(sourcePath, "*", SearchOption.AllDirectories))
+                foreach (string file in EnumerateFolderFilesSafely(sourcePath))
                 {
                     string relative = ToExplorerPath(Path.GetRelativePath(backupRoot, file));
                     CopyFileUnderRoot(file, targetRoot, relative);
@@ -440,6 +644,7 @@ public sealed class SnapshotExplorerService
         int files = 0;
         long bytes = 0;
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        ValidateUniqueArchiveFilePaths(archive);
         foreach (ZipArchiveEntry entry in archive.Entries)
         {
             if (string.IsNullOrEmpty(entry.Name))
@@ -501,7 +706,9 @@ public sealed class SnapshotExplorerService
     private static string NormalizeRoot(string root)
     {
         string full = Path.GetFullPath(root);
-        return full.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string pathRoot = Path.GetPathRoot(full) ?? string.Empty;
+        string trimmed = full.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return trimmed.Length == 0 || trimmed.Length < pathRoot.Length ? pathRoot : trimmed;
     }
 
     private static string ResolvePathUnderRoot(string root, string relativePath)
@@ -510,7 +717,9 @@ public sealed class SnapshotExplorerService
         string safeRelative = NormalizeExplorerPath(relativePath, allowEmpty: true)
             .Replace('/', Path.DirectorySeparatorChar);
         string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, safeRelative));
-        string rootWithSeparator = normalizedRoot + Path.DirectorySeparatorChar;
+        string rootWithSeparator = Path.EndsInDirectorySeparator(normalizedRoot)
+            ? normalizedRoot
+            : normalizedRoot + Path.DirectorySeparatorChar;
         if (!string.Equals(candidate, normalizedRoot, StringComparison.OrdinalIgnoreCase) &&
             !candidate.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase))
         {
@@ -523,7 +732,9 @@ public sealed class SnapshotExplorerService
     private static string ResolveArchiveEntryPathUnderRoot(string root, string entryFullName)
     {
         string normalizedRoot = NormalizeRoot(root);
-        string rootWithSeparator = normalizedRoot + Path.DirectorySeparatorChar;
+        string rootWithSeparator = Path.EndsInDirectorySeparator(normalizedRoot)
+            ? normalizedRoot
+            : normalizedRoot + Path.DirectorySeparatorChar;
         string archivePath = (entryFullName ?? string.Empty)
             .Replace('/', Path.DirectorySeparatorChar)
             .Replace('\\', Path.DirectorySeparatorChar);
@@ -557,6 +768,63 @@ public sealed class SnapshotExplorerService
         }
     }
 
+    private static void EnsureNoLinkedSourcePathComponents(string root, string sourcePath)
+    {
+        string normalizedRoot = NormalizeRoot(root);
+        string relative = Path.GetRelativePath(normalizedRoot, sourcePath);
+        if (relative is "." or "")
+            return;
+
+        string current = normalizedRoot;
+        string[] components = relative.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+        foreach (string component in components)
+        {
+            current = Path.Combine(current, component);
+            if (!File.Exists(current) && !Directory.Exists(current))
+                continue;
+
+            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException($"Backup path '{relative}' contains a linked path component.");
+        }
+    }
+
+    private static IEnumerable<string> EnumerateFolderFilesSafely(string root)
+    {
+        var pending = new Stack<string>();
+        pending.Push(root);
+        while (pending.Count > 0)
+        {
+            string directory = pending.Pop();
+            foreach (string childDirectory in Directory.EnumerateDirectories(directory))
+            {
+                if ((File.GetAttributes(childDirectory) & FileAttributes.ReparsePoint) == 0)
+                    pending.Push(childDirectory);
+            }
+
+            foreach (string file in Directory.EnumerateFiles(directory))
+            {
+                if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) == 0)
+                    yield return file;
+            }
+        }
+    }
+
+    private static void ValidateUniqueArchiveFilePaths(ZipArchive archive)
+    {
+        var paths = new HashSet<string>(StringComparer.Ordinal);
+        foreach (ZipArchiveEntry entry in archive.Entries)
+        {
+            if (string.IsNullOrEmpty(entry.Name))
+                continue;
+
+            string path = NormalizeArchiveEntryPath(entry.FullName);
+            if (!paths.Add(path))
+                throw new InvalidDataException($"Archive contains duplicate file path '{path}'.");
+        }
+    }
+
     private static StringComparison GetPathComparison() =>
         OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
             ? StringComparison.OrdinalIgnoreCase
@@ -564,15 +832,19 @@ public sealed class SnapshotExplorerService
 
     private static string NormalizeExplorerPath(string? path, bool allowEmpty)
     {
-        string normalized = ToExplorerPath(path ?? string.Empty).Trim('/');
+        string converted = ToExplorerPath(path ?? string.Empty);
+        bool hasRootPrefix = converted.StartsWith("/", StringComparison.Ordinal) ||
+                             (converted.Length >= 2 && char.IsLetter(converted[0]) && converted[1] == ':');
+        string normalized = converted.TrimEnd('/');
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            if (allowEmpty)
+            if (allowEmpty && !hasRootPrefix)
                 return string.Empty;
             throw new ArgumentException("A relative path is required.", nameof(path));
         }
 
-        if (Path.IsPathFullyQualified(normalized) ||
+        if (hasRootPrefix ||
+            Path.IsPathFullyQualified(normalized) ||
             normalized.Split('/').Any(part => part is "" or "." or ".."))
         {
             throw new InvalidDataException($"Path '{path}' is not a safe backup-relative path.");
@@ -660,6 +932,7 @@ public sealed class SnapshotExplorerService
                 return;
 
             _archive = ZipFile.OpenRead(source.Path);
+            ValidateUniqueArchiveFilePaths(_archive);
             _archiveEntries = _archive.Entries
                 .Where(entry => !string.IsNullOrEmpty(entry.Name))
                 .GroupBy(entry => NormalizeArchiveEntryPath(entry.FullName), StringComparer.Ordinal)
@@ -686,6 +959,7 @@ public sealed class SnapshotExplorerService
                 string path = ResolvePathUnderRoot(_source.Path, relativePath);
                 if (!File.Exists(path))
                     return false;
+                EnsureNoLinkedSourcePathComponents(_source.Path, path);
 
                 buffer = ReadPrefix(path, maxBytes, out truncated);
             }

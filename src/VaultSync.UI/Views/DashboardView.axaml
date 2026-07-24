@@ -27,7 +27,7 @@
         <Border Classes="card" Background="{DynamicResource Surface2}" Width="336" MinHeight="192" Padding="18">
           <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-              <Border Width="12" Height="12" CornerRadius="6" Background="#4C7CFF" VerticalAlignment="Center"/>
+              <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
               <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=Dashboard.Kpi.Projects}" Classes="kicker" VerticalAlignment="Center"/>
             </Grid>
             <TextBlock Grid.Row="1"
@@ -55,7 +55,7 @@
         <Border Classes="card" Background="{DynamicResource Surface2}" Width="336" MinHeight="192" Padding="18">
           <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-              <Border Width="12" Height="12" CornerRadius="6" Background="#22CC88" VerticalAlignment="Center"/>
+              <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
               <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=Dashboard.Kpi.Backups}" Classes="kicker" VerticalAlignment="Center"/>
             </Grid>
             <TextBlock Grid.Row="1"
@@ -83,7 +83,7 @@
         <Border Classes="card" Background="{DynamicResource Surface2}" Width="336" MinHeight="192" Padding="18">
           <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-              <Border Width="12" Height="12" CornerRadius="6" Background="#47B3FF" VerticalAlignment="Center"/>
+              <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
               <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=Dashboard.Kpi.Storage}" Classes="kicker" VerticalAlignment="Center"/>
             </Grid>
             <TextBlock Grid.Row="1"
@@ -112,7 +112,7 @@
         <Border Classes="card" Background="{DynamicResource Surface2}" Width="500" MinHeight="224" Padding="18">
           <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="9">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-              <Border Width="12" Height="12" CornerRadius="6" Background="#A05CFF" VerticalAlignment="Center"/>
+              <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource WarningBrush}" VerticalAlignment="Center"/>
               <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker" VerticalAlignment="Center"/>
               <Button Grid.Column="2"
                       Classes="small-pill"
@@ -228,7 +228,7 @@
                             BorderBrush="{Binding StateBrush}">
                       <TextBlock Text="{Binding StateLabel}"
                                  FontSize="10"
-                                 Foreground="White" />
+                                 Foreground="{Binding StateBrush, Converter={StaticResource ContrastForegroundConverter}}" />
                     </Border>
                     <TextBlock Grid.Row="1"
                                Grid.Column="1"
@@ -270,21 +270,21 @@
                   ColumnSpacing="12">
               <Border x:Name="WeeklyActivitySummary"
                       Grid.Column="0"
-                      Background="#24304A"
+                      Background="{DynamicResource Surface2}"
                       CornerRadius="12"
                       Padding="12">
                 <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
                   <WrapPanel Grid.Row="0" ItemSpacing="10" LineSpacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                      <Border Width="8" Height="8" CornerRadius="4" Background="#3A7AFE" VerticalAlignment="Center"/>
+                      <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
                       <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterAuto}" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                      <Border Width="8" Height="8" CornerRadius="4" Background="#22CC88" VerticalAlignment="Center"/>
+                      <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
                       <TextBlock Text="{infra:LocalizedString Key=Backups.Section.FilterManual}" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                      <Border Width="8" Height="8" CornerRadius="4" Background="#FFB84C" VerticalAlignment="Center"/>
+                      <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource WarningBrush}" VerticalAlignment="Center"/>
                       <TextBlock Text="{infra:LocalizedString Key=Backups.Snapshot.Type.Imported}" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
                     </StackPanel>
                   </WrapPanel>
@@ -306,7 +306,7 @@
 
               <Border x:Name="WeeklyActivityChart"
                       Grid.Column="1"
-                      Background="#1E293D"
+                      Background="{DynamicResource Surface1}"
                       CornerRadius="12"
                       Padding="12"
                       MinHeight="320"

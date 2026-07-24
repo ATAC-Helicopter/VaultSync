@@ -33,4 +33,4 @@ The workflow lives in `.github/workflows/sonarqube.yml` and runs on:
 - Pushes to `Dev`, `Stable`, and `release/v1.8`.
 - Manual `workflow_dispatch` runs.
 
-Keep the SonarQube check non-required until the initial project import, exclusions, and quality gate are tuned.
+Keep the workflow exclusions and repository branch-protection requirement aligned with the active SonarQube quality gate. Missing secrets remain an intentional skip for forks and unconfigured copies of the repository.

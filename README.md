@@ -7,12 +7,12 @@
 </p>
 
 <p align="center">
-  <strong>Snapshot | Backup | Sync | Verify</strong><br/>
+  <strong>Snapshot | Backup | Understand | Recover</strong><br/>
   Cross-platform backup and snapshot manager built for project folders, NAS workflows, and reliable restores.
 </p>
 
 <p align="center">
-  <a href="#installation-cli-only">Install</a> |
+  <a href="#installation-cli">Install</a> |
   <a href="#features">Features</a> |
   <a href="DOCUMENTATION.md">Documentation</a> |
   <a href="docs/DOWNLOAD_STATS.md">Download Stats</a> |
@@ -46,14 +46,9 @@
 >
 > If Gatekeeper still blocks it:
 >
-> Apple Silicon (ARM64)
+> Both Apple Silicon and Intel
 > ```sh
-> xattr -dr com.apple.quarantine /Applications/VaultSync-macos-arm64.app
-> ```
->
-> Intel (x64)
-> ```sh
-> xattr -dr com.apple.quarantine /Applications/VaultSync-macos-x64.app
+> xattr -dr com.apple.quarantine /Applications/VaultSync.app
 > ```
 
 ---
@@ -128,7 +123,7 @@
 
 # VaultSync
 
-### Snapshot | Backup | Sync | Verify - for Projects & Workspaces
+### Snapshot | Backup | Understand | Recover - for Projects & Workspaces
 
 VaultSync is a cross-platform backup and snapshot manager built for developers, creators, and power-users working with large project folders.  
 It provides fast snapshots, filtering via presets, and a modern desktop UI.
@@ -143,6 +138,10 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 - Roadmap: [ROADMAP.md](ROADMAP.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Updater details: [docs/UPDATER.md](docs/UPDATER.md)
+- Recovery guide: [docs/wiki/Recovery.md](docs/wiki/Recovery.md)
+- Disaster-recovery design: [docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md)
+- Recoverability design: [docs/RECOVERABILITY_ENGINE.md](docs/RECOVERABILITY_ENGINE.md)
+- Privacy: [docs/PRIVACY.md](docs/PRIVACY.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Security: [SECURITY.md](SECURITY.md)
 - Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
@@ -172,13 +171,17 @@ It provides fast snapshots, filtering via presets, and a modern desktop UI.
 - Global and per-project encryption policies with secure credential-store integration ([how encryption works](docs/wiki/Encryption.md))
 - Password-gated encrypted backup open/restore flow with auto-lock timeout and manual `Lock now`
 - Backup history with type and encryption context (`Full`, `Incremental`, `Imported`, `Encrypted/Plain`)
-- Snapshot diff summaries (`added`, `modified`, `deleted`, net size, top changed paths) with export (`text` / `JSON`)
+- History with labels, notes, tags, protected restore points, and cross-project filtering
+- Snapshot Explorer for browsing available backup contents without restoring everything
+- Snapshot Compare with changed-file navigation and line-by-line text diffs
 - Backup policy controls (bandwidth limit + quiet hours) with policy state shown in cards/tray/logs
 - Metadata sync across machines (`.vaultsync/meta`) with source-machine tracking on imported backups
 - Retention with protected (`Keep`) backups and integrated cleanup behavior
+- Recovery drills with local byte-level proof, restore-plan simulation, and 3-2-1 guidance
 - Startup integrity scan, Doctor repair flow, metadata conflict review, and restore-readiness summaries
 - Destination quota suggestions, retention simulation, and maintenance window jobs
 - Update diagnostics, support-bundle export, and strict multi-base patch compatibility
+- Optional, fully reviewed crash-report email drafts; nothing is uploaded or sent automatically
 - Cross-platform desktop support: macOS, Windows, Linux
 
 ### Smart Presets
@@ -200,7 +203,8 @@ or choose **No preset** if no presets apply or you want no file exclusion.
 - Fast directory scanner with filtering
 - Tracks added / modified / deleted / unchanged files
 - Stores snapshots in SQLite
-- View snapshot history per project
+- Browse snapshot history and available backup contents
+- Compare restore points and inspect supported text changes without restoring the full backup
 
 ### Backup System
 
@@ -217,6 +221,7 @@ or choose **No preset** if no presets apply or you want no file exclusion.
   - `Incremental`: backup created using incremental copy mode
   - `Imported`: history discovered/imported from metadata sync or destination scan
 - Restore flow now shows a "What happens next" confirmation block before running restore.
+- Recovery drills prove bounded stored bytes against snapshot hashes without modifying the live project.
 - Encrypted archive backups are encrypted locally before upload; see [Backup encryption](docs/wiki/Encryption.md) for setup and usage.
 
 ### Network shares (SMB/NFS)
@@ -233,7 +238,8 @@ or choose **No preset** if no presets apply or you want no file exclusion.
 ## Installation (CLI)
 
 ```sh
-cd ~/Desktop/Dev/VaultSync
+git clone https://github.com/ATAC-Helicopter/VaultSync.git
+cd VaultSync
 dotnet pack src/VaultSync.CLI -c Release
 export PATH="$PATH:$HOME/.dotnet/tools"
 dotnet tool install --global --add-source src/VaultSync.CLI/bin/ToolPackages vaultsync.cli

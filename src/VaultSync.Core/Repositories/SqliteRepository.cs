@@ -16,6 +16,7 @@ namespace VaultSync.Core.Repositories
         private const string BackupsTable = "backups";
         private const string ProjectsTable = "projects";
         private const string SnapshotsTable = "snapshots";
+        private const int RecoveryDrillsPerProjectLimit = 20;
 
         private static readonly ConcurrentDictionary<string, byte> JournalModeConfigured = new(StringComparer.OrdinalIgnoreCase);
         private readonly string _dbPath = dbPath;
@@ -230,6 +231,25 @@ namespace VaultSync.Core.Repositories
           FOREIGN KEY(backup_id) REFERENCES backups(id) ON DELETE CASCADE,
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
         );
+
+        -- 1.8.4 non-destructive recovery drill history.
+        CREATE TABLE IF NOT EXISTS recovery_drills(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id INTEGER NOT NULL,
+          backup_id INTEGER NOT NULL,
+          snapshot_id INTEGER NOT NULL,
+          run_utc TEXT NOT NULL,
+          status INTEGER NOT NULL,
+          checks_passed INTEGER NOT NULL,
+          checks_total INTEGER NOT NULL,
+          files_examined INTEGER NOT NULL,
+          is_limited INTEGER NOT NULL DEFAULT 0,
+          summary TEXT NOT NULL DEFAULT '',
+          checks_json TEXT NOT NULL DEFAULT '[]',
+          FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+          FOREIGN KEY(backup_id) REFERENCES backups(id) ON DELETE CASCADE,
+          FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
+        );
     """);
         }
 
@@ -288,6 +308,9 @@ namespace VaultSync.Core.Repositories
           ON restore_history_events(project_id, created_utc DESC);
         CREATE INDEX IF NOT EXISTS idx_restore_history_snapshot
           ON restore_history_events(snapshot_id);
+
+        CREATE INDEX IF NOT EXISTS idx_recovery_drills_project_run
+          ON recovery_drills(project_id, run_utc DESC);
 
         -- Avoid duplicate file rows per snapshot (same logical path)
         CREATE UNIQUE INDEX IF NOT EXISTS ux_files_snapshot_rel
@@ -2218,6 +2241,76 @@ DELETE FROM sqlite_sequence;";
                 tx);
 
             tx.Commit();
+        }
+
+        public int AddRecoveryDrill(RecoveryDrillResult result)
+        {
+            ArgumentNullException.ThrowIfNull(result);
+            using SqliteConnection c = Open();
+            using SqliteTransaction tx = c.BeginTransaction();
+            int id = c.ExecuteScalar<int>(
+                """
+                INSERT INTO recovery_drills(
+                  project_id, backup_id, snapshot_id, run_utc, status,
+                  checks_passed, checks_total, files_examined, is_limited, summary, checks_json)
+                VALUES(
+                  @ProjectId, @BackupId, @SnapshotId, @RunUtc, @Status,
+                  @ChecksPassed, @ChecksTotal, @FilesExamined, @IsLimited, @Summary, @ChecksJson);
+                SELECT last_insert_rowid();
+                """,
+                new
+                {
+                    result.ProjectId,
+                    result.BackupId,
+                    result.SnapshotId,
+                    RunUtc = result.RunUtc.ToString("u", CultureInfo.InvariantCulture),
+                    Status = (int)result.Status,
+                    result.ChecksPassed,
+                    result.ChecksTotal,
+                    result.FilesExamined,
+                    result.IsLimited,
+                    result.Summary,
+                    result.ChecksJson
+                },
+                tx);
+            c.Execute(
+                """
+                DELETE FROM recovery_drills
+                WHERE project_id = @projectId
+                  AND id NOT IN (
+                    SELECT id
+                    FROM recovery_drills
+                    WHERE project_id = @projectId
+                    ORDER BY run_utc DESC, id DESC
+                    LIMIT @limit);
+                """,
+                new { projectId = result.ProjectId, limit = RecoveryDrillsPerProjectLimit },
+                tx);
+            tx.Commit();
+            return id;
+        }
+
+        public List<RecoveryDrillResult> GetRecoveryDrills()
+        {
+            using SqliteConnection c = Open();
+            return c.Query<RecoveryDrillResult>(
+                """
+                SELECT
+                  id,
+                  project_id as ProjectId,
+                  backup_id as BackupId,
+                  snapshot_id as SnapshotId,
+                  run_utc as RunUtc,
+                  status as Status,
+                  checks_passed as ChecksPassed,
+                  checks_total as ChecksTotal,
+                  files_examined as FilesExamined,
+                  is_limited as IsLimited,
+                  summary,
+                  checks_json as ChecksJson
+                FROM recovery_drills
+                ORDER BY run_utc DESC, id DESC;
+                """).AsList();
         }
     }
 

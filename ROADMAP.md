@@ -1781,14 +1781,20 @@
 - `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
 - `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
 - `1.8.2` Snapshot Explorer scope is tracked by the dedicated GitHub milestone `1.8.2`.
-- `1.8.3` Compare & Change Intelligence, security, maintenance, and diagnostics hardening is tracked by the dedicated GitHub milestone `1.8.3` and release PR #410.
+- `1.8.3` Compare & Change Intelligence, security, maintenance, and diagnostics hardening shipped through release PR #410.
+- `1.8.4` Disaster Recovery, native recovery proofs, reviewed crash reports, and the theme refresh are tracked by milestone `1.8.4` and release PR #440.
 
-### 1.8.3 status (2026-07-13)
-- Compare & Change Intelligence is active under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
+### 1.8.4 status (2026-07-24)
+- Feature scope is complete in PR #440: non-destructive recovery drills, native byte-level proofs, restore-plan simulation, 3-2-1 guidance, protected-point recommendations, reviewed crash reports, and a rebuilt Appearance studio with curated glass themes.
+- App-wide hardening closes destination-identity, path-containment, linked-content, case-sensitivity, archive-upload, repeated-crash-review, Recovery cancellation, and cross-theme readability gaps.
+- The release baseline is 391 passing tests and a warning-free Release build, backed by Windows, Linux, macOS, PR-quality, release-metadata, Store-metadata, CodeQL, and Sonar validation.
+- macOS interaction validation is complete; Windows and Linux release confidence is provided by the repository's mandatory platform builds and tests until those desktops are available for manual smoke testing.
+
+### 1.8.3 status (released 2026-07-16)
+- Compare & Change Intelligence shipped under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
 - The maintenance scope covers release-script output confinement, Snapshot Explorer and snapshot-pipeline decomposition, CLI/UI complexity reduction, and analyzer cleanup.
 - Diagnostics retention now runs at startup and every six hours on every platform, with at most two hang dumps and a 1 GiB total diagnostics budget.
 - The original 18 `Dev` commits are preserved in release-branch ancestry through merge commit `76d2b3e`; no shared history was rewritten.
-- Release preparation and validation continue in draft PR #410.
 - The final UI pass clarifies earlier/later comparison, compresses the changed-file review workspace, makes Dashboard cards responsive at narrow widths, and hardens frameless-window, selection, and storage-picker interactions under Avalonia 12.
 
 ### 1.8.1 status (2026-06-23)
@@ -1824,7 +1830,7 @@
   - Done: added core folder/archive browsing, search, safe text preview, and selected file/folder restore helpers.
   - Done: added a Backups-page Explore action and Snapshot Explorer window for backup cards.
   - Done: Snapshot Explorer browsing, preview, and selected restore work runs asynchronously, all user-facing strings are localized, and encrypted backups show an explicit v1 out-of-scope message that routes users to normal restore.
-- [ ] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(In progress; tracked by #361; target 1.8.3)_
+- [x] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(Released in 1.8.3; tracked by #361)_
   - Scope: compare two backups/snapshots and show a changed-file tree with added, modified, deleted, and unchanged states.
   - Scope: integrate with Snapshot Explorer so users can browse changed files and inspect readable text/code changes without leaving the explorer context.
   - Scope: add line-by-line text/code diffs for previewable files; binary/encrypted/unavailable files should show clear metadata-only or unsupported states.
@@ -1842,8 +1848,46 @@
   - Done: the changed-file workspace supports previous/next navigation and one-click search/filter clearing for faster keyboard-friendly review.
   - Done: compare presentation now uses compact app-native summary cards, distinguishes unavailable inventory from verified no-change results, and hides the large file workspace when there are no changed files to inspect.
   - Done: the final UX pass adds labeled earlier/later selectors, plain-language result copy, compact affected-path chips, a two-pane files-to-diff workspace, vector controls, and keyboard-friendly default/cancel behavior.
-  - Remaining: perform a manual desktop interaction pass before closing #361.
-- [ ] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Deferred to a later 1.8.x release; tracked by #362)_
+- [x] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Implemented for 1.8.4; tracked by #362)_
+  - Done: non-destructive drills validate metadata linkage, availability, readable inventories, encrypted descriptors, and complete file counts without restoring data.
+  - Done: drill results persist locally and Recovery/exported reports surface actionable failed or limited checks.
+  - Done: the 3-2-1 advisor measures currently reachable copies and media diversity while requiring explicit user confirmation for physical offsite status.
+  - Done: Recovery recommends unprotected release/delivery markers, large deletions, significant churn, and a baseline before cleanup; protection remains an explicit user action shared with History, Backups, and retention.
+  - Done: all new UI and report labels are available across every maintained localization.
+- [x] `VS-1847` `P1` Add privacy-first reviewed crash reports. _(Done in PR #440; target 1.8.4)_
+  - Done: reports are generated and redacted locally from a strict allowlist, shown read-only, and attached to a visible platform-native email draft that only the user can send.
+  - Done: category-prefixed per-report IDs are not installation or tracking identifiers; report assistance can be disabled completely and local retention is bounded.
+- [x] `VS-1848` `P1` Port ProofRestore recoverability into VaultSync. _(Done in PR #440; tracked by #447; target 1.8.4)_
+  - Scope: port the contest prototype's useful recovery-proof logic into native VaultSync services and UI without merging repositories or shipping ProofRestore as a separate product.
+  - Acceptance: reuse VaultSync backup identities, local metadata, privacy rules, and Recovery workflows; do not add a hosted dependency.
+  - Done: a versioned native C# engine selects safe snapshot-relative paths, verifies bounded folder and ZIP bytes against expected SHA-256 and size metadata, and emits stable evidence without writing data.
+  - Done: safe-copy and original-location restore plans identify create, overwrite, identical, conflict, unavailable, and inconclusive actions; linked, traversal, duplicate, malformed, encrypted, offline, and capped inputs fail closed.
+  - Done: Recovery stores bounded evidence, exposes expandable proof details, exports a deterministic Markdown evidence appendix, and retention preserves the last byte-verified recovery point.
+  - Done: the port is fully local and offline with no ProofRestore runtime, Node, browser, hosted service, OpenAI, or new external dependency.
+- [x] `BUG-18070` `P1` Bind absolute backup records to their recorded destination identity. _(Done in PR #440; tracked by #453; target 1.8.4)_
+- [x] `BUG-18071` `P1` Keep verification reads inside the selected recovery root. _(Done in PR #440; tracked by #454; target 1.8.4)_
+- [x] `BUG-18072` `P1` Preserve case-distinct identities during snapshot creation. _(Done in PR #440; tracked by #455; target 1.8.4)_
+- [x] `BUG-18073` `P1` Keep snapshot-driven backup reads and writes inside their trusted roots. _(Done in PR #440; tracked by #456; target 1.8.4)_
+- [x] `BUG-18074` `P1` Preserve case-distinct identities in restore previews and selective restores. _(Done in PR #440; tracked by #457; target 1.8.4)_
+- [x] `BUG-18066` `P1` Block linked and ambiguous backup content in Snapshot Explorer. _(Done in PR #440; tracked by #448; target 1.8.4)_
+- [x] `BUG-18067` `P1` Count only reachable recovery copies in 3-2-1 guidance. _(Done in PR #440; tracked by #451; target 1.8.4)_
+- [x] `BUG-18068` `P1` Harden archive upload cancellation and stall handling. _(Done in PR #440; tracked by #449; target 1.8.4)_
+- [x] `BUG-18069` `P1` Keep recoverable crash reporting active after the first UI exception. _(Done in PR #440; tracked by #450; target 1.8.4)_
+- [x] `VS-1849` `P2` Refresh safe 1.8.4 servicing dependencies. _(Done in PR #440; tracked by #452; target 1.8.4)_
+- [x] `VS-1850` `P2` Refresh themes and simplify the Appearance editor. _(Done in PR #440; tracked by #458; target 1.8.4)_
+  - Done: four curated presets add warm editorial, neon, and dark/light glass directions while retaining the custom palette editor.
+  - Done: glass themes render layered gradients, translucent surfaces, soft borders, and restrained highlight reflections without image assets or platform-specific blur dependencies.
+  - Done: the theme studio collapses into a compact summary, presets use visual miniatures, and advanced component controls stay closed until requested.
+- [x] `BUG-18075` `P1` Keep every application view readable and aligned across supported themes. _(Done in PR #440; tracked by #459; target 1.8.4)_
+  - Done: custom palettes enforce accessible text contrast across window, surface, and alternate-surface colors.
+  - Done: arbitrary accent, status, and avatar backgrounds select a readable light or dark foreground automatically.
+  - Done: Appearance, History, Recovery, navigation, Snapshot Explorer, and remaining dark-only surfaces adapt without overlap or narrow-window clipping.
+- [x] `BUG-18076` `P1` Cancel Recovery work when the view closes. _(Done in PR #440; tracked by #460; target 1.8.4)_
+  - Done: refresh, export, drill, persistence, protection, and follow-up refresh work share the active Recovery page lifetime token.
+  - Done: leaving Recovery cancels page-scoped work without presenting cancellation as a user-facing export failure.
+- [x] `BUG-18077` `P1` Declare cancellation ownership for detached backup work. _(Done in PR #440; tracked by #461; target 1.8.4)_
+  - Done: user-confirmed backup deletion, exploration, sandbox apply, and restore tasks explicitly remain independent of update-check cancellation.
+  - Done: release analysis no longer associates backup or restore work with the unrelated updater lifetime.
 - [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
 - [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
 - [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_
@@ -1929,19 +1973,19 @@
 - [x] `BUG-18059` `P1` Bound periodic diagnostics retention. _(Done; tracked by #417; target 1.8.3)_
   - Done: cleanup runs at startup and every six hours on Windows, macOS, and Linux.
   - Done: VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget and removes timed-out partial dumps.
-- [ ] `BUG-18060` `P0` Harden Snapshot Explorer archive extraction containment. _(In progress; tracked by #423; target 1.8.3)_
+- [x] `BUG-18060` `P0` Harden Snapshot Explorer archive extraction containment. _(Released in 1.8.3; tracked by #423)_
   - Done locally: archive entry destinations are resolved and checked directly against the selected restore root immediately before extraction.
   - Done locally: restore rejects linked/reparse-point path components and regression coverage includes traversal, rooted, backslash, and symlink escape attempts.
-  - Done: PR CodeQL analysis passes; the repository alert remains attached to the current Stable commit until the fix is merged.
+  - Done: CodeQL validation passed and the containment fix shipped in 1.8.3.
 - [x] `VS-1838` `P2` Refresh safe 1.8.3 patch dependencies. _(Done 2026-07-12; tracked by #424; target 1.8.3)_
   - Done: Avalonia 11, HarfBuzzSharp, and LiveCharts patch families are updated together, cross-platform CI passes, and the transitive vulnerability audit remains clean.
   - Follow-up: the later Avalonia 12 decision is tracked separately under `VS-1839`; unrelated deprecated-package migrations remain deferred.
-- [ ] `VS-1839` `P1` Migrate the desktop UI to Avalonia 12. _(In progress; tracked by #425; target 1.8.3)_
+- [x] `VS-1839` `P1` Migrate the desktop UI to Avalonia 12. _(Released in 1.8.3; tracked by #425)_
   - Done locally: the coordinated UI stack now uses Avalonia 12.1, its compatible SkiaSharp/HarfBuzzSharp ABI line, and the Avalonia 12 LiveCharts adapter.
   - Done locally: the retired Avalonia diagnostics package is removed and placeholder/window-decoration APIs use their Avalonia 12 replacements.
   - Done: compiled bindings remain enabled by default, Debug and Release builds are warning-free, 287 tests pass, a real macOS startup smoke reaches the Dashboard, and Windows/Linux CI plus CodeQL, Sonar, Store preflight, and dependency submission pass.
   - Done: frameless utility windows reserve dragging for their title areas, Log Console selection is visible, folder pickers use Avalonia 12 local-path resolution, and Dashboard activity/storage layouts respond across six tested width breakpoints.
-  - Remaining: perform real Windows/Linux interaction checks for scaled-DPI utility windows, portal pickers, clipboard gestures, and Dashboard chart rendering.
+  - Release note: Windows/Linux interaction checks remain part of recurring platform QA rather than open 1.8.3 implementation scope.
 - [x] `VS-1840` `P1` Audit and harden fragile 1.8.3 code paths. _(Done 2026-07-12; tracked by #426; target 1.8.3)_
   - Done: folder restores reject linked target components immediately before copying, matching archive extraction containment.
   - Done: project scanning skips linked files and directories so cycles and out-of-root source traversal cannot enter snapshots.

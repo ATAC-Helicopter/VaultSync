@@ -11,6 +11,8 @@ Core pillars:
 - Snapshot: capture project state.
 - Backup: write snapshot content to one or more destinations.
 - Verify: validate backup integrity.
+- Understand: browse history, inspect snapshots, and compare changes.
+- Recover: prove readable backup bytes and rehearse recovery without touching live project data.
 - Sync metadata: merge backup history across machines.
 
 ## 2. Documentation Structure
@@ -27,6 +29,10 @@ Core pillars:
 - `docs/RELEASING.md`: release packaging/publishing flow.
 - `docs/UPDATER.md`: patch asset contract and update flow.
 - `docs/WHATS_NEW.md`: user-facing release highlights.
+- `docs/DISASTER_RECOVERY.md`: recovery proofs, drills, 3-2-1 guidance, and protection behavior.
+- `docs/RECOVERABILITY_ENGINE.md`: native proof trust boundary, safety limits, evidence model, retention behavior, and ProofRestore provenance.
+- `docs/PRIVACY.md`: local-data and crash-reporting privacy guarantees.
+- `docs/CRASH_REPORTING.md`: reviewed, user-sent crash reports and their strict data boundary.
 
 ### 2.3 Wiki docs
 - `docs/wiki/Home.md`: wiki entry page.
@@ -51,6 +57,9 @@ Rules:
   - `1.3.x` -> `13xxx`
   - `1.4.x` -> `14xxx`
   - `1.5.x` -> `15xxx`
+  - `1.6.x` -> `16xxx`
+  - `1.7.x` -> `17xxx`
+  - `1.8.x` -> `18xxx`
 - If `ISS/BUG/REL` is used in changelog entries, define the scope clearly in the same release section.
 - Do not mix unrelated scopes under one ID.
 
@@ -79,9 +88,10 @@ When changing behavior, update all relevant artifacts in the same PR:
 ### End user help flow
 1. `docs/HELP.md`
 2. `docs/wiki/Quick-Start.md`
-3. `docs/wiki/Encryption.md` for encrypted-backup security and password handling
-4. `docs/wiki/Troubleshooting.md`
-5. `docs/wiki/FAQ.md`
+3. `docs/wiki/Recovery.md` for recovery drills and protection guidance
+4. `docs/wiki/Encryption.md` for encrypted-backup security and password handling
+5. `docs/wiki/Troubleshooting.md`
+6. `docs/wiki/FAQ.md`
 
 ## 6. Quality Checklist (Docs)
 Before merging documentation updates:
@@ -104,8 +114,10 @@ The metadata sync store under `<destination>/.vaultsync/meta/` currently exports
 
 This contract is regression-tested in `tests/VaultSync.Core.Tests/MetadataSyncTests.cs`. If metadata behavior changes, update both the tests and this section in the same PR.
 
-## 9. 1.7 Documentation Focus
-For the `1.7` release line, keep these areas aligned:
-- update/patch behavior (`docs/UPDATER.md`, `docs/wiki/Updates.md`, `docs/RELEASING.md`)
-- integrity and Doctor workflows (`docs/HELP.md`, `README.md`)
+## 9. 1.8 Documentation Focus
+For the `1.8` Chronicle release line, keep these areas aligned:
+- History, Snapshot Explorer, and Snapshot Compare (`README.md`, `docs/HELP.md`, `docs/wiki/Snapshots.md`)
+- recovery drills, native byte proofs, 3-2-1 guidance, and protected restore points (`docs/wiki/Recovery.md`, `docs/DISASTER_RECOVERY.md`, `docs/RECOVERABILITY_ENGINE.md`)
+- privacy-first crash-report assistance (`docs/PRIVACY.md`, `docs/CRASH_REPORTING.md`)
+- update, packaging, and release behavior (`docs/UPDATER.md`, `docs/MICROSOFT_STORE.md`, `docs/RELEASING.md`)
 - release highlights (`docs/WHATS_NEW.md`, `CHANGELOG.md`)

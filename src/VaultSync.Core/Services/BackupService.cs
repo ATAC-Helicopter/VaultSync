@@ -506,7 +506,10 @@ public sealed class BackupService(
         string cacheKey = $"{project.Id}|{backupRoot}|{project.Preset}|{useArchiveMode}";
         if (TryGetCachedPreflight(cacheKey, ttl, out BackupPreflightResult? cached))
         {
-            return cached with { UsedCache = true };
+            return cached with
+            {
+                UsedCache = true
+            };
         }
 
         (int totalFiles, long totalBytes) = await Task.Run(() => GetBackupStats(project, ttl, ct), ct);
@@ -830,7 +833,11 @@ public sealed class BackupService(
         // Create (or replace) a CTS for this project and link with caller token.
         if (_cancelMap.TryGetValue(project.Id, out CancellationTokenSource? existingCts))
         {
-            try { existingCts.Cancel(); } catch { }
+            try
+            {
+                existingCts.Cancel();
+            }
+            catch { }
             existingCts.Dispose();
         }
         var projectCts = new CancellationTokenSource();
@@ -967,7 +974,7 @@ public sealed class BackupService(
         if (filesForProgress is { Count: > 0 })
         {
             filesForBackup = [.. filesForProgress
-                .Select(f => Path.Combine(project.RootPath, f.RelPath))
+                .Select(f => ResolveSnapshotSourceFile(project.RootPath, f.RelPath))
             ];
         }
 
@@ -1483,7 +1490,11 @@ public sealed class BackupService(
             {
                 int index = scanIndex++ % totalEntries;
                 FileEntry entry = filesForProgress[index];
-                string targetPath = Path.Combine(destDir, entry.RelPath);
+                if (!BackupSafetyService.TryCombinePathUnderRoot(destDir, entry.RelPath, out string targetPath))
+                {
+                    scanned++;
+                    continue;
+                }
 
                 long size = 0;
                 try
@@ -1925,7 +1936,7 @@ public sealed class BackupService(
                 int stalled = 0;
 
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                var monitor = Task.Run(async () =>
+                async Task MonitorUploadAsync()
                 {
                     while (!linkedCts.IsCancellationRequested)
                     {
@@ -1946,91 +1957,105 @@ public sealed class BackupService(
                             return;
                         }
                     }
-                });
+                }
 
-                using (var src = new FileStream(
-                           localArchive,
-                           FileMode.Open,
-                           FileAccess.Read,
-                           FileShare.Read,
-                           bufferSize,
-                           FileOptions.SequentialScan | FileOptions.Asynchronous))
-                using (var dst = new FileStream(
-                           finalArchivePath,
-                           FileMode.OpenOrCreate,
-                           FileAccess.Write,
-                           FileShare.None,
-                           bufferSize,
-                           FileOptions.SequentialScan | FileOptions.Asynchronous))
+                Task monitor = MonitorUploadAsync();
+
+                try
                 {
-                    if (startOffset > 0)
+                    using (var src = new FileStream(
+                               localArchive,
+                               FileMode.Open,
+                               FileAccess.Read,
+                               FileShare.Read,
+                               bufferSize,
+                               FileOptions.SequentialScan | FileOptions.Asynchronous))
+                    using (var dst = new FileStream(
+                               finalArchivePath,
+                               FileMode.OpenOrCreate,
+                               FileAccess.Write,
+                               FileShare.None,
+                               bufferSize,
+                               FileOptions.SequentialScan | FileOptions.Asynchronous))
                     {
-                        src.Seek(startOffset, SeekOrigin.Begin);
-                        dst.Seek(startOffset, SeekOrigin.Begin);
-                        uploaded = startOffset;
-                    }
-
-                    int read;
-                    while ((read = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), linkedCts.Token)) > 0)
-                    {
-                        linkedCts.Token.ThrowIfCancellationRequested();
-
-                        await dst.WriteAsync(buffer.AsMemory(0, read), linkedCts.Token);
-                        uploaded += read;
-                        Interlocked.Exchange(ref lastProgressTicks, DateTime.UtcNow.Ticks);
-
-                        if (progressCallback is not null && zipSize > 0)
+                        if (startOffset > 0)
                         {
-                            double uploadPercent = Math.Min(100d, (uploaded * 100d / zipSize));
-                            double overallPercent = 90d + uploadPercent * 0.1; // map 0-100% upload into 90-100%
-                            if (overallPercent > 100d) overallPercent = 100d;
-
-                            DateTime now = DateTime.UtcNow;
-                            double intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
-                            long intervalBytes = Math.Max(0, uploaded - lastUiBytes);
-                            double speedBytesSec = intervalBytes / intervalSeconds;
-                            double speedMbSec = speedBytesSec / (1024 * 1024);
-                            lastUiUpdate = now;
-                            lastUiBytes = uploaded;
-
-                            double uploadedMb = uploaded / (1024d * 1024d);
-                            double totalMb = zipSize / (1024d * 1024d);
-
-                            string etaText;
-                            if (uploadPercent >= 100)
-                            {
-                                etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Finalizing";
-                            }
-                            else if (speedBytesSec < 1024)
-                            {
-                                etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Waiting for network...";
-                            }
-                            else
-                            {
-                                long remainingBytes = Math.Max(0, zipSize - uploaded);
-                                double remainingSeconds = remainingBytes / speedBytesSec;
-                                var eta = TimeSpan.FromSeconds(remainingSeconds);
-                                etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
-                            }
-
-                            progressCallback(overallPercent, Path.GetFileName(finalArchivePath), etaText);
+                            src.Seek(startOffset, SeekOrigin.Begin);
+                            dst.Seek(startOffset, SeekOrigin.Begin);
+                            uploaded = startOffset;
                         }
 
-                        if ((DateTime.UtcNow - lastLogTime) >= TimeSpan.FromSeconds(5))
+                        int read;
+                        while ((read = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), linkedCts.Token)) > 0)
                         {
-                            DateTime now = DateTime.UtcNow;
-                            double intervalSeconds = Math.Max(0.1, (now - lastLogTime).TotalSeconds);
-                            long intervalBytes = uploaded - lastLogBytes;
-                            double intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
-                            RuntimeLog.WriteVerbose($"[BackupService] Archive upload (single) {uploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
-                            lastLogTime = now;
-                            lastLogBytes = uploaded;
+                            linkedCts.Token.ThrowIfCancellationRequested();
+
+                            await dst.WriteAsync(buffer.AsMemory(0, read), linkedCts.Token);
+                            uploaded += read;
+                            Interlocked.Exchange(ref lastProgressTicks, DateTime.UtcNow.Ticks);
+
+                            if (progressCallback is not null && zipSize > 0)
+                            {
+                                double uploadPercent = Math.Min(100d, (uploaded * 100d / zipSize));
+                                double overallPercent = 90d + uploadPercent * 0.1; // map 0-100% upload into 90-100%
+                                if (overallPercent > 100d)
+                                    overallPercent = 100d;
+
+                                DateTime now = DateTime.UtcNow;
+                                double intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
+                                long intervalBytes = Math.Max(0, uploaded - lastUiBytes);
+                                double speedBytesSec = intervalBytes / intervalSeconds;
+                                double speedMbSec = speedBytesSec / (1024 * 1024);
+                                lastUiUpdate = now;
+                                lastUiBytes = uploaded;
+
+                                double uploadedMb = uploaded / (1024d * 1024d);
+                                double totalMb = zipSize / (1024d * 1024d);
+
+                                string etaText;
+                                if (uploadPercent >= 100)
+                                {
+                                    etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Finalizing";
+                                }
+                                else if (speedBytesSec < 1024)
+                                {
+                                    etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Waiting for network...";
+                                }
+                                else
+                                {
+                                    long remainingBytes = Math.Max(0, zipSize - uploaded);
+                                    double remainingSeconds = remainingBytes / speedBytesSec;
+                                    var eta = TimeSpan.FromSeconds(remainingSeconds);
+                                    etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
+                                }
+
+                                progressCallback(overallPercent, Path.GetFileName(finalArchivePath), etaText);
+                            }
+
+                            if ((DateTime.UtcNow - lastLogTime) >= TimeSpan.FromSeconds(5))
+                            {
+                                DateTime now = DateTime.UtcNow;
+                                double intervalSeconds = Math.Max(0.1, (now - lastLogTime).TotalSeconds);
+                                long intervalBytes = uploaded - lastLogBytes;
+                                double intervalMbSec = (intervalBytes / intervalSeconds) / (1024d * 1024d);
+                                RuntimeLog.WriteVerbose($"[BackupService] Archive upload (single) {uploaded}/{zipSize} bytes ({intervalMbSec:0.0} MB/s).");
+                                lastLogTime = now;
+                                lastLogBytes = uploaded;
+                            }
                         }
                     }
                 }
-
-                linkedCts.Cancel();
-                await monitor;
+                catch (OperationCanceledException) when (
+                    Interlocked.CompareExchange(ref stalled, 0, 0) == 1 &&
+                    !ct.IsCancellationRequested)
+                {
+                    throw new TimeoutException("No upload progress detected during single archive upload.");
+                }
+                finally
+                {
+                    linkedCts.Cancel();
+                    await monitor;
+                }
 
                 if (Interlocked.CompareExchange(ref stalled, 0, 0) == 1)
                 {
@@ -2340,80 +2365,93 @@ public sealed class BackupService(
         PersistParallelCheckpoint(resumableChunkIndexes);
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var monitor = Task.Run(async () =>
+        async Task MonitorUploadAsync()
         {
-            while (!cts.IsCancellationRequested)
+            try
             {
-                await Task.Delay(TimeSpan.FromSeconds(5));
-                if (cts.IsCancellationRequested)
-                    return;
-
-                var lastProgress = new DateTime(Interlocked.Read(ref lastProgressTicks), DateTimeKind.Utc);
-                if (DateTime.UtcNow - lastProgress > stallTimeout)
+                while (!cts.IsCancellationRequested)
                 {
-                    Interlocked.Exchange(ref stalled, 1);
-                    cts.Cancel();
-                    return;
+                    await Task.Delay(TimeSpan.FromSeconds(5), cts.Token);
+                    var lastProgress = new DateTime(Interlocked.Read(ref lastProgressTicks), DateTimeKind.Utc);
+                    if (DateTime.UtcNow - lastProgress > stallTimeout)
+                    {
+                        Interlocked.Exchange(ref stalled, 1);
+                        cts.Cancel();
+                        return;
+                    }
                 }
             }
-        });
-        var heartbeat = Task.Run(async () =>
+            catch (OperationCanceledException) when (cts.IsCancellationRequested)
+            {
+                // The upload completed, failed, or was cancelled.
+            }
+        }
+
+        async Task ReportHeartbeatAsync()
         {
             if (progressCallback is null)
                 return;
 
-            var heartbeatInterval = TimeSpan.FromSeconds(5);
-            while (!cts.IsCancellationRequested)
+            try
             {
-                await Task.Delay(heartbeatInterval);
-                if (cts.IsCancellationRequested)
-                    return;
-
-                long snapshotUploaded = Interlocked.Read(ref uploaded);
-                DateTime now = DateTime.UtcNow;
-                double intervalSeconds;
-                long intervalBytes;
-                lock (progressLock)
+                var heartbeatInterval = TimeSpan.FromSeconds(5);
+                while (!cts.IsCancellationRequested)
                 {
-                    if ((now - lastUiUpdate) < heartbeatInterval)
-                        continue;
+                    await Task.Delay(heartbeatInterval, cts.Token);
 
-                    intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
-                    intervalBytes = Math.Max(0, snapshotUploaded - lastUiBytes);
-                    lastUiUpdate = now;
-                    lastUiBytes = snapshotUploaded;
+                    long snapshotUploaded = Interlocked.Read(ref uploaded);
+                    DateTime now = DateTime.UtcNow;
+                    double intervalSeconds;
+                    long intervalBytes;
+                    lock (progressLock)
+                    {
+                        if ((now - lastUiUpdate) < heartbeatInterval)
+                            continue;
+
+                        intervalSeconds = Math.Max(0.1, (now - lastUiUpdate).TotalSeconds);
+                        intervalBytes = Math.Max(0, snapshotUploaded - lastUiBytes);
+                        lastUiUpdate = now;
+                        lastUiBytes = snapshotUploaded;
+                    }
+
+                    double speedBytesSec = intervalBytes / intervalSeconds;
+                    double speedMbSec = speedBytesSec / (1024 * 1024);
+                    double uploadPercent = Math.Min(100d, snapshotUploaded * 100d / zipSize);
+                    double overallPercent = 90d + uploadPercent * 0.1;
+                    if (overallPercent > 100d)
+                        overallPercent = 100d;
+
+                    double uploadedMb = snapshotUploaded / (1024d * 1024d);
+                    double totalMb = zipSize / (1024d * 1024d);
+
+                    string etaText;
+                    if (uploadPercent >= 100)
+                    {
+                        etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Finalizing";
+                    }
+                    else if (speedBytesSec < 1024)
+                    {
+                        etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Waiting for network...";
+                    }
+                    else
+                    {
+                        long remainingBytes = Math.Max(0, zipSize - snapshotUploaded);
+                        double remainingSeconds = remainingBytes / speedBytesSec;
+                        var eta = TimeSpan.FromSeconds(remainingSeconds);
+                        etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
+                    }
+
+                    progressCallback(overallPercent, fileName, etaText);
                 }
-
-                double speedBytesSec = intervalBytes / intervalSeconds;
-                double speedMbSec = speedBytesSec / (1024 * 1024);
-                double uploadPercent = Math.Min(100d, snapshotUploaded * 100d / zipSize);
-                double overallPercent = 90d + uploadPercent * 0.1;
-                if (overallPercent > 100d)
-                    overallPercent = 100d;
-
-                double uploadedMb = snapshotUploaded / (1024d * 1024d);
-                double totalMb = zipSize / (1024d * 1024d);
-
-                string etaText;
-                if (uploadPercent >= 100)
-                {
-                    etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Finalizing";
-                }
-                else if (speedBytesSec < 1024)
-                {
-                    etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - Waiting for network...";
-                }
-                else
-                {
-                    long remainingBytes = Math.Max(0, zipSize - snapshotUploaded);
-                    double remainingSeconds = remainingBytes / speedBytesSec;
-                    var eta = TimeSpan.FromSeconds(remainingSeconds);
-                    etaText = $"{speedMbSec:0.0} MB/s - Uploading archive ({uploadedMb:0.0}/{totalMb:0.0} MB) - ETA {eta:mm\\:ss}";
-                }
-
-                progressCallback(overallPercent, fileName, etaText);
             }
-        });
+            catch (OperationCanceledException) when (cts.IsCancellationRequested)
+            {
+                // The upload completed, failed, or was cancelled.
+            }
+        }
+
+        Task monitor = MonitorUploadAsync();
+        Task heartbeat = ReportHeartbeatAsync();
         var tasks = Enumerable.Range(0, parallelism)
             .Select(index =>
             {
@@ -2454,7 +2492,7 @@ public sealed class BackupService(
                         int toRead = (int)Math.Min(buffer.Length, remaining);
                         int read = await src.ReadAsync(buffer.AsMemory(0, toRead), cts.Token);
                         if (read == 0)
-                            break;
+                            throw new EndOfStreamException("The local archive ended before its upload chunk was complete.");
 
                         await dst.WriteAsync(buffer.AsMemory(0, read), cts.Token);
                         remaining -= read;
@@ -2550,20 +2588,17 @@ public sealed class BackupService(
         try
         {
             await Task.WhenAll(tasks);
-            cts.Cancel();
-            try
-            {
-                await Task.WhenAll(monitor, heartbeat);
-            }
-            catch (OperationCanceledException)
-            {
-                // expected once we cancel the monitor/heartbeat
-            }
         }
-        catch
+        catch (OperationCanceledException) when (
+            Interlocked.CompareExchange(ref stalled, 0, 0) == 1 &&
+            !ct.IsCancellationRequested)
+        {
+            throw new TimeoutException("No upload progress detected during parallel archive upload.");
+        }
+        finally
         {
             cts.Cancel();
-            throw;
+            await Task.WhenAll(monitor, heartbeat);
         }
 
         if (Interlocked.CompareExchange(ref stalled, 0, 0) == 1)
@@ -2660,13 +2695,28 @@ public sealed class BackupService(
         {
             ct.ThrowIfCancellationRequested();
 
-            if (filter.ShouldExclude(sourceDir, filePath))
+            string relative = Path.GetRelativePath(sourceDir, filePath);
+            if (filter.ShouldExclude(sourceDir, filePath) ||
+                !BackupSafetyService.TryResolveExistingFileUnderRoot(sourceDir, relative, out string safePath))
+            {
                 continue;
+            }
 
-            files.Add(filePath);
+            files.Add(safePath);
         }
 
         return [.. files];
+    }
+
+    internal static string ResolveSnapshotSourceFile(string sourceRoot, string relativePath)
+    {
+        if (!BackupSafetyService.TryResolveExistingFileUnderRoot(sourceRoot, relativePath, out string sourcePath))
+        {
+            throw new InvalidDataException(
+                $"Snapshot path '{relativePath}' is missing, unsafe, or escapes the project root.");
+        }
+
+        return sourcePath;
     }
 
     private static void CopyDirectoryRecursive(
@@ -2701,7 +2751,8 @@ public sealed class BackupService(
 
             var fileInfo = new FileInfo(filePath);
             string relative = Path.GetRelativePath(sourceDir, filePath);
-            string targetPath = Path.Combine(destDir, relative);
+            if (!BackupSafetyService.TryCombinePathUnderRoot(destDir, relative, out string targetPath))
+                throw new InvalidDataException($"Snapshot path '{relative}' escapes the backup destination.");
             string? targetDir = Path.GetDirectoryName(targetPath);
             if (!string.IsNullOrEmpty(targetDir))
                 Directory.CreateDirectory(targetDir);
@@ -2739,7 +2790,8 @@ public sealed class BackupService(
                                 double filesCompletedPortion = processedFiles * 100d / totalFiles;
                                 double currentFilePortion = (double)copiedForThisFile / Math.Max(1L, fileInfo.Length) * (100d / totalFiles);
                                 percent = filesCompletedPortion + currentFilePortion;
-                                if (percent > 100d) percent = 100d;
+                                if (percent > 100d)
+                                    percent = 100d;
                             }
 
                             TimeSpan elapsed = DateTime.UtcNow - startTime;
@@ -2939,7 +2991,20 @@ public sealed class BackupService(
                 snapshotRefs[backup.SnapshotId] = 1;
         }
 
-        IReadOnlyList<BackupRetentionCandidateDecision> retentionPlan = BuildRetentionDeletionPlan(projectId, backups, candidates, projectSnapshots, deleteQuota);
+        var byteVerifiedBackupIds = _repo.GetRecoveryDrills()
+            .Where(drill => drill.ProjectId == projectId)
+            .GroupBy(drill => drill.BackupId)
+            .Select(group => group.OrderByDescending(drill => drill.RunUtc).ThenByDescending(drill => drill.Id).First())
+            .Where(RecoveryDrillService.HasPassedByteIntegrity)
+            .Select(drill => drill.BackupId)
+            .ToHashSet();
+        IReadOnlyList<BackupRetentionCandidateDecision> retentionPlan = BuildRetentionDeletionPlan(
+            projectId,
+            backups,
+            candidates,
+            projectSnapshots,
+            deleteQuota,
+            byteVerifiedBackupIds);
         foreach (BackupRetentionCandidateDecision? skipped in retentionPlan.Where(static decision => !decision.Selected))
         {
             RuntimeLog.WriteVerbose(
@@ -3081,13 +3146,17 @@ public sealed class BackupService(
         IReadOnlyList<Backup> backups,
         IReadOnlyList<Backup> candidates,
         IReadOnlyDictionary<int, Snapshot> snapshotsById,
-        int deleteQuota)
+        int deleteQuota,
+        IReadOnlySet<int>? byteVerifiedBackupIds = null)
     {
         var decisions = new List<BackupRetentionCandidateDecision>();
         if (deleteQuota <= 0 || candidates.Count == 0)
             return decisions;
 
         int remainingValidRestorePoints = CountValidRestorePoints(projectId, backups, snapshotsById);
+        int remainingByteVerifiedPoints = byteVerifiedBackupIds is null
+            ? 0
+            : backups.Count(backup => byteVerifiedBackupIds.Contains(backup.Id));
         int selected = 0;
 
         foreach (Backup? candidate in candidates.OrderBy(static backup => backup.CreatedUtc).ThenBy(static backup => backup.Id))
@@ -3103,6 +3172,7 @@ public sealed class BackupService(
             }
 
             bool isValidRestorePoint = IsMetadataValidRestorePoint(projectId, candidate, snapshotsById);
+            bool isByteVerified = byteVerifiedBackupIds?.Contains(candidate.Id) == true;
             if (isValidRestorePoint && remainingValidRestorePoints <= 1)
             {
                 decisions.Add(new BackupRetentionCandidateDecision(
@@ -3110,6 +3180,16 @@ public sealed class BackupService(
                     false,
                     "preserve-last-restorable-point",
                     "Deleting this backup would remove the last metadata-valid restore point for the project."));
+                continue;
+            }
+
+            if (isByteVerified && remainingByteVerifiedPoints <= 1)
+            {
+                decisions.Add(new BackupRetentionCandidateDecision(
+                    candidate.Id,
+                    false,
+                    "preserve-last-byte-verified-point",
+                    "Deleting this backup would remove the last recovery point that passed a byte-level recovery proof."));
                 continue;
             }
 
@@ -3121,6 +3201,8 @@ public sealed class BackupService(
             selected++;
             if (isValidRestorePoint)
                 remainingValidRestorePoints--;
+            if (isByteVerified)
+                remainingByteVerifiedPoints--;
         }
 
         return decisions;
@@ -3321,9 +3403,18 @@ public sealed class BackupService(
         private readonly object _lock = new();
         private DateTime _lastUpdateUtc = DateTime.MinValue;
 
-        public double LastPercent { get; private set; }
-        public string? LastFile { get; private set; }
-        public string? LastEtaText { get; private set; }
+        public double LastPercent
+        {
+            get; private set;
+        }
+        public string? LastFile
+        {
+            get; private set;
+        }
+        public string? LastEtaText
+        {
+            get; private set;
+        }
 
         public void Update(double percent, string currentFile, string etaText)
         {

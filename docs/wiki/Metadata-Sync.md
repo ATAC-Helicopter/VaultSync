@@ -54,6 +54,6 @@ VaultSync can export a portable metadata store to backup destinations and later 
 ## Related docs
 - [Help](../HELP.md)
 - [Documentation hub](../../DOCUMENTATION.md)
-- [Backups overview](Backups)
-- [Destinations](Destinations)
-- [Troubleshooting](Troubleshooting)
+- [Backups overview](Backups.md)
+- [Destinations](Destinations.md)
+- [Troubleshooting](Troubleshooting.md)

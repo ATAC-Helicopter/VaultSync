@@ -40,3 +40,16 @@
 ## Language switching looks wrong
 - Switch back to English, then reselect your language.
 - Restart the app after changing language if UI does not refresh.
+
+## Recovery drill needs attention or fails
+- Expand the latest proof and start with the first warning or error action.
+- Confirm the recorded destination is configured, reachable, and readable.
+- If a stored file was changed or removed, create a new verified backup rather than dismissing the mismatch.
+- Encrypted points are intentionally limited until opened with their password.
+- If inventory was capped, treat the result as partial evidence and perform a real test restore for critical data.
+
+## Crash email draft cannot include the report
+- The report remains local and nothing has been sent.
+- Use **Open folder** in the report preview and attach the displayed `.txt` file manually.
+- On macOS, allow VaultSync to control Mail if you want automatic draft attachment.
+- You can copy or delete the report without opening an email draft.

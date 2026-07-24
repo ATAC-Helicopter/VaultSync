@@ -1,5 +1,28 @@
 ﻿# Changelog
-## [1.8.3] - Unreleased
+## [1.8.4] - 24.07.2026
+### Added
+- [VS-1847] Added strictly redacted, user-reviewed crash reports that only the user's email application can send.
+- [VS-1810] Added recovery drills, reachable 3-2-1 guidance, explicit offsite confirmation, and protected-point recommendations.
+- [VS-1848] Added local byte-level recovery proofs, restore-plan simulation, exportable evidence, and a verified-point retention safety floor.
+- [VS-1850] Added four curated themes, including dark and light glass treatments with layered reflections and translucent surfaces.
+### Changed
+- [VS-1849] Refreshed supported servicing dependencies while preserving the validated cross-platform rendering stack.
+- [VS-1850] Reworked Appearance into a compact, collapsible theme studio with visual preset previews and optional advanced tuning, and rebuilt Aurora Glass and Porcelain Glass around platform acrylic or blur when available, distinct navigation, toolbar, and floating materials, restrained content opacity, ambient reflections, and solid fallbacks.
+### Fixed
+- [BUG-18066] Snapshot Explorer now blocks linked source paths and ambiguous duplicate ZIP entries.
+- [BUG-18067] Recovery guidance now counts only reachable payloads at their recorded destinations.
+- [BUG-18068] Archive uploads now stop promptly, retry detected stalls, and reject incomplete chunks.
+- [BUG-18069] Separate recoverable UI failures can each open crash-report review during one session.
+- [BUG-18070] Absolute backup records can no longer escape their recorded destination identity through linked content.
+- [BUG-18071] Verification now rejects absolute, traversing, and linked paths outside the recovery root.
+- [BUG-18072] Snapshot creation now preserves case-distinct file identities on case-sensitive filesystems.
+- [BUG-18073] Backup creation now rejects untrusted snapshot-source paths before reading or writing files.
+- [BUG-18074] Restore previews and selective restores now preserve case-distinct paths.
+- [BUG-18075] Fixed theme contrast, responsive History and Recovery layouts, active navigation feedback, dark-only surfaces across app views, and pointer-focused menus, presets, or navigation controls retaining bright outlines after selection or page changes while preserving keyboard-visible focus.
+- [BUG-18076] Recovery refresh, export, drill, and protected-point work now stops with the page lifetime instead of continuing after the user leaves Recovery.
+- [BUG-18077] Backup deletion, exploration, sandbox apply, and restore tasks now declare their independent cancellation lifetime instead of inheriting the unrelated update-check lifecycle.
+
+## [1.8.3] - 16.07.2026
 ### Added
 - [VS-1809] Added asynchronous file-level comparison between any two snapshots from the same project, including added, modified, deleted, and unchanged counts, changed-path hotspots, and mass-deletion, growth, or high-churn signals.
 - [VS-1809] Added a searchable changed-file workspace with bounded line-by-line text comparisons for available folder and ZIP snapshots; encrypted, binary, offline, and unsupported content falls back safely to file details.

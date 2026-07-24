@@ -51,7 +51,9 @@ namespace VaultSync.UI.ViewModels
             if (!int.TryParse(snapshot.Id, out int backupId))
                 return;
 
-            DeleteBackupPreparation preparation = await Task.Run(() => PrepareDeleteBackup(backupId));
+            DeleteBackupPreparation preparation = await Task.Run(
+                () => PrepareDeleteBackup(backupId),
+                CancellationToken.None);
             if (!preparation.IsReady || preparation.Backup is null)
                 return;
             Backup backup      = preparation.Backup;
@@ -69,7 +71,7 @@ namespace VaultSync.UI.ViewModels
                 BackupDestination? matchedDestination = FindDestinationForBackup(backup, destinations, backupRoot);
                 bool hasCredentialProfile = HasCredentialProfile(cfg, matchedDestination);
                 return (cfg, matchedDestination, hasCredentialProfile);
-            });
+            }, CancellationToken.None);
             AppConfig cfg = deleteContext.cfg;
             BackupDestination? matchedDestination = deleteContext.matchedDestination;
             bool hasCredentialProfile = deleteContext.hasCredentialProfile;
@@ -256,7 +258,7 @@ namespace VaultSync.UI.ViewModels
                                 TryDeleteSnapshotIfOrphan(projectId, snapshotId);
                             }
                         }
-                    });
+                    }, CancellationToken.None);
                 }
 
                 await TryDeleteAsync(forceCredentials: false);
@@ -374,7 +376,9 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                RestoreBackupPreparation preparation = await Task.Run(() => PrepareRestoreBackup(backupId));
+                RestoreBackupPreparation preparation = await Task.Run(
+                    () => PrepareRestoreBackup(backupId),
+                    CancellationToken.None);
                 if (!preparation.IsReady)
                 {
                     BackupsViewModel.ShowNotification(
@@ -415,7 +419,7 @@ namespace VaultSync.UI.ViewModels
 
         private async Task<bool> ConfirmDeleteBackupAsync(string projectName, DateTime timestamp)
         {
-            AppConfig cfg = await Task.Run(_configStore.Load);
+            AppConfig cfg = await Task.Run(_configStore.Load, CancellationToken.None);
             if (!cfg.Behavior.ConfirmDeleteBackup)
                 return true;
 
@@ -2077,7 +2081,9 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            SandboxApplyPreview preview = await Task.Run(() => BuildSandboxApplyPreview(sandboxPath, targetPath));
+            SandboxApplyPreview preview = await Task.Run(
+                () => BuildSandboxApplyPreview(sandboxPath, targetPath),
+                CancellationToken.None);
             bool applyConfirmed = await ConfirmSandboxApplyAsync(projectName, targetPath, preview);
             if (!applyConfirmed)
                 return;
@@ -2112,7 +2118,7 @@ namespace VaultSync.UI.ViewModels
                             string.Empty,
                             allowCancel: false);
                     });
-                });
+                }, CancellationToken.None);
 
                 _repo.UpdateProjectNeedsRestore(project.Id, false);
                 applySucceeded = true;
@@ -2205,8 +2211,8 @@ namespace VaultSync.UI.ViewModels
                     AppViewModel.L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup."));
             }
 
-            var sourceRelative = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var topLevelTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var sourceRelative = new HashSet<string>(StringComparer.Ordinal);
+            var topLevelTargets = new HashSet<string>(StringComparer.Ordinal);
             int totalFiles = 0;
             int newFiles = 0;
             int overwriteFiles = 0;
@@ -2490,7 +2496,9 @@ namespace VaultSync.UI.ViewModels
                 return;
 
 
-            RestoreBackupPreparation preparation = await Task.Run(() => PrepareRestoreBackup(backupId));
+            RestoreBackupPreparation preparation = await Task.Run(
+                () => PrepareRestoreBackup(backupId),
+                CancellationToken.None);
             if (!preparation.IsReady)
             {
                 BackupsViewModel.ShowNotification(
@@ -2500,7 +2508,9 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            RestoreExecutionPreview restorePreview = await Task.Run(() => BuildRestoreExecutionPreview(preparation));
+            RestoreExecutionPreview restorePreview = await Task.Run(
+                () => BuildRestoreExecutionPreview(preparation),
+                CancellationToken.None);
             (bool Confirmed, string RestoreMode, IReadOnlyList<string> SelectedTopLevelTargets) restoreDecision = await ConfirmRestoreBackupAsync(preparation, restorePreview);
             if (!restoreDecision.Confirmed)
                 return;
@@ -2606,7 +2616,7 @@ namespace VaultSync.UI.ViewModels
                         RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
                         RunRestore(null);
                         RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
-                    });
+                    }, CancellationToken.None);
                     restoreSucceeded = true;
                 }
                 else
@@ -2645,7 +2655,7 @@ namespace VaultSync.UI.ViewModels
                                 RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
                                 RunRestore(restorePassword);
                                 RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
-                            });
+                            }, CancellationToken.None);
                             restoreSucceeded = true;
                             break;
                         }
@@ -2976,7 +2986,7 @@ namespace VaultSync.UI.ViewModels
             if (selectedTopLevelTargets is null || selectedTopLevelTargets.Count == 0)
                 return null;
 
-            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var result = new HashSet<string>(StringComparer.Ordinal);
             foreach (string value in selectedTopLevelTargets)
             {
                 string? normalized = value?.Trim();

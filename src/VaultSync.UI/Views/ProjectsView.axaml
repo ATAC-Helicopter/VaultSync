@@ -96,7 +96,7 @@
 
     <Style Selector="Border.preset-editor-shell">
       <Setter Property="CornerRadius" Value="20" />
-      <Setter Property="Background" Value="#141D31" />
+      <Setter Property="Background" Value="{DynamicResource Surface1}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="18" />
@@ -104,7 +104,7 @@
 
     <Style Selector="Border.preset-editor-section">
       <Setter Property="CornerRadius" Value="16" />
-      <Setter Property="Background" Value="#19243A" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="12" />
@@ -112,29 +112,29 @@
 
     <Style Selector="Border.preset-editor-badge">
       <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Background" Value="#1C2942" />
+      <Setter Property="Background" Value="{DynamicResource ItemBg}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="10,5" />
     </Style>
 
     <Style Selector="Border.preset-editor-status.ok">
-      <Setter Property="Background" Value="#153626" />
-      <Setter Property="BorderBrush" Value="#28734A" />
+      <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
     </Style>
 
     <Style Selector="Border.preset-editor-status.warn">
-      <Setter Property="Background" Value="#4C3A18" />
-      <Setter Property="BorderBrush" Value="#9A7530" />
+      <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
     </Style>
 
     <Style Selector="Border.preset-editor-status.error">
-      <Setter Property="Background" Value="#4B2428" />
-      <Setter Property="BorderBrush" Value="#9E4A55" />
+      <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
     </Style>
 
     <Style Selector="Button.preset-editor-action">
-      <Setter Property="Background" Value="#1C2942" />
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="12" />
@@ -148,7 +148,7 @@
     </Style>
 
     <Style Selector="Button.preset-editor-action:pointerover">
-      <Setter Property="Background" Value="#21304D" />
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
     </Style>
 
     <Style Selector="Button.preset-editor-primary">
@@ -449,7 +449,7 @@
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
                                    FontWeight="SemiBold"
-                                   Foreground="White"/>
+                                   Foreground="{Binding AvatarColor, Converter={StaticResource ContrastForegroundConverter}}"/>
                       </Grid>
                 <TextBlock
                         Grid.Column="1"
@@ -620,7 +620,7 @@
                          VerticalAlignment="Center"
                          FontWeight="Normal"
                          FontSize="12"
-                         Foreground="White"/>
+                         Foreground="{Binding AvatarColor, Converter={StaticResource ContrastForegroundConverter}}"/>
             </Grid>
 
             <StackPanel Grid.Column="1" Spacing="6">
@@ -971,7 +971,7 @@
                                 Padding="{DynamicResource ButtonTightPadding}"
                                 CornerRadius="12"
                                 Background="{DynamicResource AccentBrush}"
-                                Foreground="White">
+                                Foreground="{DynamicResource TextOnAccentBrush}">
                           <TextBlock Text="{infra:LocalizedString Key=Projects.Tags.Color.Apply}" />
                         </Button>
                       </WrapPanel>
@@ -1065,7 +1065,7 @@
                               Padding="0">
                         <Grid RowDefinitions="Auto,*"
                               RowSpacing="0">
-                          <Border Background="#1B2640"
+                          <Border Background="{DynamicResource Surface2}"
                                   CornerRadius="16,16,0,0"
                                   Padding="12,10"
                                   BorderBrush="{DynamicResource DividerBrush}"

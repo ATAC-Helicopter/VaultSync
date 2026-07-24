@@ -22,7 +22,7 @@
       <Setter Property="Padding" Value="10,6" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
-    <Style Selector="TextBox:focus">
+    <Style Selector="TextBox:focus-visible">
       <Setter Property="BorderBrush" Value="{DynamicResource InputBorderFocusedBrush}" />
     </Style>
 
@@ -34,7 +34,7 @@
       <Setter Property="Padding" Value="10,6" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
-    <Style Selector="ComboBox:focus">
+    <Style Selector="ComboBox:focus-visible">
       <Setter Property="BorderBrush" Value="{DynamicResource InputBorderFocusedBrush}" />
     </Style>
 
@@ -60,19 +60,51 @@
     </Style>
 
     <Style Selector="Button.theme-preset-card">
-      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
+      <Setter Property="Background" Value="{DynamicResource Surface1}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="14" />
-      <Setter Property="Padding" Value="14,12" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="10" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Stretch" />
-      <Setter Property="MinWidth" Value="220" />
-      <Setter Property="MaxWidth" Value="260" />
+      <Setter Property="MinWidth" Value="178" />
+      <Setter Property="MaxWidth" Value="202" />
     </Style>
     <Style Selector="Button.theme-preset-card:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.theme-editor-toggle">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="13" />
+      <Setter Property="Template">
+        <ControlTemplate TargetType="ToggleButton">
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="ToggleButton.theme-editor-toggle:pointerover">
+      <Setter Property="Background" Value="{DynamicResource Surface2}" />
+    </Style>
+    <Style Selector="ToggleButton.theme-editor-toggle:checked">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
 
   </UserControl.Styles>
@@ -106,7 +138,7 @@
             <TextBlock Classes="section-title"
                        Text="{infra:LocalizedString Key=Settings.General.Title}" />
             <TextBlock Text="{infra:LocalizedString Key=Settings.General.Description}"
-                       Foreground="{StaticResource TextSecondary}" />
+                       Foreground="{DynamicResource TextSecondary}" />
           </StackPanel>
         </Border>
 
@@ -132,7 +164,7 @@
                 <StackPanel Spacing="2">
                   <TextBlock Text="{infra:LocalizedString Key=Settings.General.Title}" FontWeight="SemiBold" />
                   <TextBlock Text="{infra:LocalizedString Key=Settings.General.Description}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
@@ -148,7 +180,7 @@
                               Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ProjectsRoot}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ProjectsRootDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
 
@@ -173,7 +205,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ResumeSession}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ResumeSessionDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -186,7 +218,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.LaunchOnLogin}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.LaunchOnLoginDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -199,7 +231,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowTrayIcon}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowTrayIconDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -212,7 +244,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.RunInBackground}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.RunInBackgroundDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -225,7 +257,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowWindowOnTray}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowWindowOnTrayDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -238,7 +270,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowMiniWidget}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.General.ShowMiniWidgetDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -259,7 +291,7 @@
                 <StackPanel Spacing="2">
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Title}" FontWeight="SemiBold" />
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Description}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
@@ -268,7 +300,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.EnableAuto}" />
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.EnableAutoDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -282,7 +314,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Interval}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.IntervalDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <TextBox Grid.Column="1"
@@ -298,7 +330,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.KeepSnapshots}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.KeepSnapshotsDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <TextBox Grid.Column="1"
@@ -316,7 +348,7 @@
                                 Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RetentionSimulationLabel}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RetentionSimulationDescription}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap" />
                     </StackPanel>
@@ -327,7 +359,7 @@
                     </Button>
                   </Grid>
                   <TextBlock Text="{Binding RetentionSimulationSummary}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="11"
                              TextWrapping="Wrap"
                              IsVisible="{Binding RetentionSimulationSummary, Converter={StaticResource StringNotEmptyConverter}}" />
@@ -352,7 +384,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ConfirmDelete}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ConfirmDeleteDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -366,7 +398,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.HistorySync}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.HistorySyncDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -379,7 +411,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AutoImportMetadata}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AutoImportMetadataDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -394,7 +426,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.PromptRestore}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.PromptRestoreDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -409,7 +441,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{Binding BandwidthLimitLabel}" />
                     <TextBlock Text="{Binding BandwidthLimitDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11"
                                TextWrapping="Wrap" />
                   </StackPanel>
@@ -426,7 +458,7 @@
                     <TextBlock VerticalAlignment="Center"
                                Text="{Binding BandwidthLimitValueLabel}" />
                     <TextBlock Text="{Binding BandwidthLimitValueDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11"
                                TextWrapping="Wrap" />
                   </StackPanel>
@@ -443,7 +475,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{Binding QuietHoursLabel}" />
                     <TextBlock Text="{Binding QuietHoursDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11"
                                TextWrapping="Wrap" />
                   </StackPanel>
@@ -483,7 +515,7 @@
                                   Spacing="4">
                         <TextBlock Text="{Binding QuietHoursStartLabel}"
                                    FontSize="11"
-                                   Foreground="{StaticResource TextSecondary}" />
+                                   Foreground="{DynamicResource TextSecondary}" />
                         <TextBox Width="110"
                                  HorizontalAlignment="Center"
                                  HorizontalContentAlignment="Center"
@@ -496,14 +528,14 @@
                                  Text="→"
                                  FontSize="16"
                                  VerticalAlignment="Center"
-                                 Foreground="{StaticResource TextSecondary}" />
+                                 Foreground="{DynamicResource TextSecondary}" />
 
                       <StackPanel Grid.Column="2"
                                   Spacing="4"
                                   HorizontalAlignment="Center">
                         <TextBlock Text="{Binding QuietHoursEndLabel}"
                                    FontSize="11"
-                                   Foreground="{StaticResource TextSecondary}" />
+                                   Foreground="{DynamicResource TextSecondary}" />
                         <TextBox Width="110"
                                  HorizontalAlignment="Center"
                                  HorizontalContentAlignment="Center"
@@ -520,7 +552,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RefreshHistory}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RefreshHistoryDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <Button Grid.Column="1"
@@ -545,7 +577,7 @@
                               Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FallbackLocation}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FallbackLocationDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                     <Border Background="{Binding BackupLocationStatus, Converter={StaticResource StatusToBrushConverter}, ConverterParameter=bg}"
                             BorderBrush="{Binding BackupLocationStatus, Converter={StaticResource StatusToBrushConverter}}"
@@ -600,7 +632,7 @@
                       <TextBlock Text="{infra:LocalizedString Key=Settings.DestinationsMode.Title}"
                                  FontWeight="SemiBold" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.DestinationsMode.Description}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap" />
                     </StackPanel>
@@ -624,7 +656,7 @@
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.Title}"
                                  FontWeight="SemiBold" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.Description}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap" />
                     </StackPanel>
@@ -633,7 +665,7 @@
                       <StackPanel Grid.Column="0" Spacing="2">
                         <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.Enable}" />
                         <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.EnableDescription}"
-                                   Foreground="{StaticResource TextSecondary}"
+                                   Foreground="{DynamicResource TextSecondary}"
                                    FontSize="11" />
                       </StackPanel>
                       <ToggleSwitch x:Name="SettingsEncryptionEnableToggle"
@@ -646,7 +678,7 @@
                       <StackPanel Grid.Column="0" Spacing="2">
                         <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.AllowSessionFallback}" />
                         <TextBlock Text="{infra:LocalizedString Key=Settings.Encryption.AllowSessionFallbackDescription}"
-                                   Foreground="{StaticResource TextSecondary}"
+                                   Foreground="{DynamicResource TextSecondary}"
                                    FontSize="11"
                                    TextWrapping="Wrap" />
                       </StackPanel>
@@ -660,7 +692,7 @@
                       <StackPanel Grid.Column="0" Spacing="2">
                         <TextBlock Text="{Binding EncryptionOpenTimeoutLabel}" />
                         <TextBlock Text="{Binding EncryptionOpenTimeoutDescription}"
-                                   Foreground="{StaticResource TextSecondary}"
+                                   Foreground="{DynamicResource TextSecondary}"
                                    FontSize="11"
                                    TextWrapping="Wrap" />
                       </StackPanel>
@@ -672,7 +704,7 @@
                     </Grid>
 
                     <TextBlock Text="{Binding BackupEncryptionSecretStatus}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11"
                                TextWrapping="Wrap" />
 
@@ -725,7 +757,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Compress}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.CompressDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -739,16 +771,16 @@
                     <StackPanel Grid.Column="0" Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RsyncDelta}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RsyncDeltaDescription}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.RsyncDeltaDisabledHint}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap"
                                  IsVisible="{Binding UseIncrementalBackups}" />
                       <TextBlock Text="{Binding RsyncStatusHint}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap"
                                  IsVisible="{Binding ShowRsyncStatusHint}" />
@@ -765,7 +797,7 @@
                     <StackPanel Grid.Column="0" Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Incremental}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.IncrementalDescription}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap" />
                     </StackPanel>
@@ -780,7 +812,7 @@
                     <StackPanel Grid.Column="0" Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AutoTuneArchive}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AutoTuneArchiveDescription}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap" />
                     </StackPanel>
@@ -795,7 +827,7 @@
                     <StackPanel Grid.Column="0" Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ParallelArchiveUploads}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ParallelArchiveUploadsDescription}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap" />
                     </StackPanel>
@@ -810,7 +842,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Verify}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.VerifyDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -824,7 +856,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FullHash}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.FullHashDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -838,7 +870,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ScanCache}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.ScanCacheDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -851,7 +883,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AggressiveScanCache}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.AggressiveScanCacheDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -866,7 +898,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.PauseBattery}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.PauseBatteryDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -887,7 +919,7 @@
                 <StackPanel Spacing="2">
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.Title}" FontWeight="SemiBold" />
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.Description}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
@@ -895,7 +927,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.PreferExternal}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.PreferExternalDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -908,7 +940,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.ShowDriveWarnings}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.ShowDriveWarningsDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -921,7 +953,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.ReserveFreeSpace}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Storage.ReserveFreeSpaceDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <TextBox Grid.Column="1"
@@ -942,7 +974,7 @@
                     <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Title}" FontWeight="SemiBold" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Description}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11" />
                       <Button Classes="settings-ghost"
                               HorizontalAlignment="Left"
@@ -977,7 +1009,7 @@
                                 <TextBlock Grid.Column="1"
                                            Text="{infra:LocalizedString Key=Settings.Destinations.ActiveToggle}"
                                            VerticalAlignment="Center"
-                                           Foreground="{StaticResource TextSecondary}" />
+                                           Foreground="{DynamicResource TextSecondary}" />
                                 <ToggleSwitch Grid.Column="2"
                                               IsChecked="{Binding Active, Mode=TwoWay}"
                                               VerticalAlignment="Center"
@@ -1050,6 +1082,9 @@
                                   <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.AutoUnmount}"
                                             ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.AutoUnmountTooltip}"
                                             IsChecked="{Binding AutoUnmount, Mode=TwoWay}" />
+                                  <CheckBox Content="{infra:LocalizedString Key=Settings.Destinations.Offsite}"
+                                            ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.OffsiteTooltip}"
+                                            IsChecked="{Binding IsOffsite, Mode=TwoWay}" />
                                 </StackPanel>
                                 <StackPanel x:Name="DestinationHistoryOptionsRow"
                                             Grid.Column="1"
@@ -1077,7 +1112,7 @@
                                             VerticalAlignment="Center">
                                   <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.RetryPolicyLabel}" />
                                   <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.RetryPolicyDescription}"
-                                             Foreground="{StaticResource TextSecondary}"
+                                             Foreground="{DynamicResource TextSecondary}"
                                              FontSize="11"
                                              TextWrapping="Wrap" />
                                 </StackPanel>
@@ -1114,7 +1149,7 @@
                                             VerticalAlignment="Center">
                                   <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.QuotaPolicyLabel}" />
                                   <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.QuotaPolicyDescription}"
-                                             Foreground="{StaticResource TextSecondary}"
+                                             Foreground="{DynamicResource TextSecondary}"
                                              FontSize="11"
                                              TextWrapping="Wrap" />
                                 </StackPanel>
@@ -1137,7 +1172,7 @@
                                            TextWrapping="Wrap"
                                            IsVisible="{Binding NeedsCredentialWarning}" />
                                   <TextBlock Text="{Binding LastTestStatus}"
-                                             Foreground="{StaticResource TextSecondary}"
+                                             Foreground="{DynamicResource TextSecondary}"
                                              FontSize="11"
                                              TextWrapping="Wrap"
                                              ToolTip.Tip="{Binding LastTestStatus}"
@@ -1161,7 +1196,7 @@
                                 Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.Title}" FontWeight="SemiBold" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Credentials.Description}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11" />
                     </StackPanel>
 
@@ -1251,7 +1286,7 @@
                 <StackPanel Spacing="2">
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Title}" FontWeight="SemiBold" />
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Description}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
@@ -1259,7 +1294,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Theme}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.ThemeDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
 
@@ -1274,28 +1309,64 @@
                         BorderBrush="{DynamicResource DividerBrush}"
                         BorderThickness="1"
                         CornerRadius="14"
-                        Padding="12"
+                        Padding="0"
                         Margin="0,6,0,0">
-                  <StackPanel Spacing="14">
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="{Binding ThemeEditorLabel}" FontWeight="SemiBold" />
+                  <StackPanel>
+                    <ToggleButton Classes="theme-editor-toggle"
+                                  IsChecked="{Binding IsThemeEditorExpanded, Mode=TwoWay}"
+                                  Padding="12"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch">
+                      <Grid ColumnDefinitions="Auto,*,Auto"
+                            ColumnSpacing="10">
+                        <Border Width="34"
+                                Height="34"
+                                CornerRadius="10"
+                                Background="{DynamicResource AccentSoftBrush}">
+                          <PathIcon Width="18"
+                                    Height="18"
+                                    Foreground="{DynamicResource AccentBrush}"
+                                    Data="M12,2 L14.4,8.1 L21,10.5 L14.4,12.9 L12,19 L9.6,12.9 L3,10.5 L9.6,8.1 Z" />
+                        </Border>
+                        <StackPanel Grid.Column="1"
+                                    Spacing="2"
+                                    VerticalAlignment="Center">
+                          <TextBlock Text="{Binding ThemeEditorLabel}"
+                                     FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding CustomThemeName}"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     FontSize="11"
+                                     TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <PathIcon Grid.Column="2"
+                                  Width="16"
+                                  Height="16"
+                                  VerticalAlignment="Center"
+                                  Foreground="{DynamicResource TextMutedBrush}"
+                                  Data="M4,7 L8,11 L12,7" />
+                      </Grid>
+                    </ToggleButton>
+
+                    <StackPanel IsVisible="{Binding IsThemeEditorExpanded}"
+                                Spacing="14"
+                                Margin="12,8,12,12">
                       <TextBlock Text="{Binding ThemeEditorDescription}"
-                                 Foreground="{StaticResource TextSecondary}"
-                                 FontSize="11" />
-                    </StackPanel>
+                                 Foreground="{DynamicResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
 
                     <Grid ColumnDefinitions="1.35*,0.65*,Auto"
                           ColumnSpacing="10">
                       <StackPanel Grid.Column="0" Spacing="4">
                         <TextBlock Text="{Binding ThemeNameLabel}"
-                                   Foreground="{StaticResource TextSecondary}"
+                                   Foreground="{DynamicResource TextSecondary}"
                                    FontSize="11" />
                         <TextBox Text="{Binding CustomThemeName, Mode=TwoWay}"
                                  PlaceholderText="{Binding ThemeNameLabel}" />
                       </StackPanel>
                       <StackPanel Grid.Column="1" Spacing="4">
                         <TextBlock Text="{Binding ThemeBaseLabel}"
-                                   Foreground="{StaticResource TextSecondary}"
+                                   Foreground="{DynamicResource TextSecondary}"
                                    FontSize="11" />
                         <ComboBox ItemsSource="{Binding CustomThemeBaseOptions}"
                                   SelectedItem="{Binding CustomThemeBase, Mode=TwoWay}" />
@@ -1309,7 +1380,7 @@
 
                     <StackPanel Spacing="6">
                       <TextBlock Text="{Binding ThemePresetsLabel}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11" />
                       <ItemsControl ItemsSource="{Binding ThemePresets}">
                         <ItemsControl.ItemsPanel>
@@ -1322,12 +1393,36 @@
                             <Button Classes="theme-preset-card"
                                     Command="{Binding DataContext.ApplyThemePresetCommand, ElementName=Root}"
                                     CommandParameter="{Binding}">
-                              <StackPanel Width="220"
-                                          Spacing="4">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                              <StackPanel Width="178"
+                                          Spacing="7">
+                                <Border Height="52"
+                                        CornerRadius="9"
+                                        Background="{Binding PreviewBackground}"
+                                        BorderBrush="{DynamicResource BorderSoft}"
+                                        BorderThickness="1"
+                                        ClipToBounds="True">
+                                  <Grid Margin="8">
+                                    <Border Width="72"
+                                            Height="28"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Bottom"
+                                            CornerRadius="7"
+                                            Background="{Binding PreviewSurface}" />
+                                    <Border Width="18"
+                                            Height="18"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            CornerRadius="9"
+                                            Background="{Binding PreviewAccent}" />
+                                  </Grid>
+                                </Border>
+                                <TextBlock Text="{Binding Name}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
                                 <TextBlock Text="{Binding Description}"
                                            FontSize="10"
                                            TextWrapping="Wrap"
+                                           MaxLines="2"
                                            Foreground="{DynamicResource TextMutedBrush}" />
                               </StackPanel>
                             </Button>
@@ -1350,7 +1445,7 @@
                           <StackPanel Spacing="6">
                             <StackPanel Spacing="2">
                               <TextBlock Text="{Binding ThemePaletteLabel}"
-                                         Foreground="{StaticResource TextSecondary}"
+                                         Foreground="{DynamicResource TextSecondary}"
                                          FontSize="11" />
                               <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.ThemeEditor.PaletteDescription}"
                                          Foreground="{DynamicResource TextMutedBrush}"
@@ -1388,7 +1483,7 @@
 
                           <StackPanel Spacing="6">
                             <TextBlock Text="{Binding ThemePickerLabel}"
-                                       Foreground="{StaticResource TextSecondary}"
+                                       Foreground="{DynamicResource TextSecondary}"
                                        FontSize="11" />
                             <ItemsControl ItemsSource="{Binding ThemeColorSlots}">
                               <ItemsControl.ItemsPanel>
@@ -1481,7 +1576,7 @@
                               VerticalAlignment="Top">
                         <StackPanel Spacing="10">
                           <TextBlock Text="{Binding ThemePreviewLabel}"
-                                     Foreground="{StaticResource TextSecondary}"
+                                     Foreground="{DynamicResource TextSecondary}"
                                      FontSize="11" />
                           <Border Background="{Binding ThemePreviewBackground}"
                                   BorderBrush="{Binding ThemePreviewSurfaceAlt}"
@@ -1513,7 +1608,7 @@
                                           CornerRadius="999"
                                           Padding="10,4">
                                     <TextBlock Text="{Binding DataContext.ThemePreviewAccentLabel, ElementName=Root}"
-                                               Foreground="{Binding ThemePreviewBackground}"
+                                               Foreground="{Binding ThemePreviewAccent, Converter={StaticResource ContrastForegroundConverter}}"
                                                FontWeight="SemiBold" />
                                   </Border>
                                   <Border Background="{Binding ThemePreviewSurface}"
@@ -1555,20 +1650,18 @@
                             </StackPanel>
                           </Border>
 
-                          <Border Background="{DynamicResource Surface1}"
-                                  BorderBrush="{DynamicResource DividerBrush}"
-                                  BorderThickness="1"
-                                  CornerRadius="12"
-                                  Padding="12">
-                            <StackPanel Spacing="8">
-                              <StackPanel Spacing="2">
-                                <TextBlock Text="{Binding ThemeAdvancedLabel}"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           FontSize="11" />
-                                <TextBlock Text="{Binding ThemeAdvancedDescription}"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           FontSize="11" />
-                              </StackPanel>
+                          <Expander Header="{Binding ThemeAdvancedLabel}"
+                                    Background="{DynamicResource Surface1}"
+                                    BorderBrush="{DynamicResource DividerBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="12">
+                            <StackPanel Spacing="8"
+                                        Margin="0,8,0,0">
+                              <TextBlock Text="{Binding ThemeAdvancedDescription}"
+                                         Foreground="{DynamicResource TextMutedBrush}"
+                                         FontSize="11"
+                                         TextWrapping="Wrap" />
                               <Border ClipToBounds="True"
                                       Background="Transparent">
                                 <colorpicker:ColorView Color="{Binding SelectedThemeColor, Mode=TwoWay}"
@@ -1588,10 +1681,11 @@
                                                        SelectedIndex="2" />
                               </Border>
                             </StackPanel>
-                          </Border>
+                          </Expander>
                         </StackPanel>
                       </Border>
                     </WrapPanel>
+                    </StackPanel>
                   </StackPanel>
                 </Border>
 
@@ -1600,7 +1694,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Compact}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.CompactDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -1613,7 +1707,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.Avatars}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Appearance.AvatarsDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -1634,7 +1728,7 @@
                 <StackPanel Spacing="2">
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.Title}" FontWeight="SemiBold" />
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.Description}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
@@ -1643,7 +1737,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.Enable}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.EnableDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -1655,7 +1749,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnSuccess}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnSuccessDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -1669,7 +1763,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnFailure}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnFailureDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -1683,7 +1777,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnLowDisk}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Notifications.OnLowDiskDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -1705,7 +1799,7 @@
                 <StackPanel Spacing="2">
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.Title}" FontWeight="SemiBold" />
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.Description}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
@@ -1713,7 +1807,7 @@
                     <StackPanel Grid.Column="0" Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.VerboseLogging}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.VerboseLoggingDescription}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11" />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1"
@@ -1726,7 +1820,7 @@
                     <StackPanel Grid.Column="0" Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SaveVerboseLogs}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.SaveVerboseLogsDescription}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11" />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1"
@@ -1741,7 +1835,7 @@
                     <StackPanel Spacing="2">
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LogConsole}" />
                       <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LogConsoleDescription}"
-                                 Foreground="{StaticResource TextSecondary}"
+                                 Foreground="{DynamicResource TextSecondary}"
                                  FontSize="11"
                                  TextWrapping="Wrap" />
                     </StackPanel>
@@ -1767,6 +1861,20 @@
                     </WrapPanel>
                   </Grid>
 
+                  <Grid ColumnDefinitions="*,Auto"
+                        Margin="0,8,0,0">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CrashReportAssistance}" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CrashReportAssistanceDescription}"
+                                 Foreground="{DynamicResource TextSecondary}"
+                                 FontSize="11"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding CrashReportAssistanceEnabled, Mode=TwoWay}" />
+                  </Grid>
+
                   <Border Classes="subtle-card"
                           Margin="0,8,0,0"
                           Padding="12"
@@ -1776,7 +1884,7 @@
                         <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.DoctorTitle}"
                                    FontWeight="SemiBold" />
                         <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.DoctorDescription}"
-                                   Foreground="{StaticResource TextSecondary}"
+                                   Foreground="{DynamicResource TextSecondary}"
                                    FontSize="11"
                                    TextWrapping="Wrap" />
                       </StackPanel>
@@ -1788,7 +1896,7 @@
                           <StackPanel Spacing="2">
                             <TextBlock Text="{Binding MaintenanceWindowLabel}" />
                             <TextBlock Text="{Binding MaintenanceWindowDescription}"
-                                       Foreground="{StaticResource TextSecondary}"
+                                       Foreground="{DynamicResource TextSecondary}"
                                        FontSize="11"
                                        TextWrapping="Wrap" />
                           </StackPanel>
@@ -1817,7 +1925,7 @@
                                         Spacing="8"
                                         VerticalAlignment="Center">
                               <TextBlock Text="{Binding MaintenanceWindowPreviewLabel}"
-                                         Foreground="{StaticResource TextSecondary}"
+                                         Foreground="{DynamicResource TextSecondary}"
                                          FontSize="11" />
                               <Border Background="{DynamicResource AccentBrush}"
                                       CornerRadius="999"
@@ -1837,7 +1945,7 @@
                             <StackPanel Grid.Column="0" Spacing="2">
                               <TextBlock Text="{Binding MaintenanceWindowConsistencyLabel}" />
                               <TextBlock Text="{Binding MaintenanceWindowConsistencyDescription}"
-                                         Foreground="{StaticResource TextSecondary}"
+                                         Foreground="{DynamicResource TextSecondary}"
                                          FontSize="11"
                                          TextWrapping="Wrap" />
                             </StackPanel>
@@ -1851,7 +1959,7 @@
                             <StackPanel Grid.Column="0" Spacing="2">
                               <TextBlock Text="{Binding MaintenanceWindowRepairLabel}" />
                               <TextBlock Text="{Binding MaintenanceWindowRepairDescription}"
-                                         Foreground="{StaticResource TextSecondary}"
+                                         Foreground="{DynamicResource TextSecondary}"
                                          FontSize="11"
                                          TextWrapping="Wrap" />
                             </StackPanel>
@@ -1865,7 +1973,7 @@
                             <StackPanel Grid.Column="0" Spacing="2">
                               <TextBlock Text="{Binding MaintenanceWindowMetadataLabel}" />
                               <TextBlock Text="{Binding MaintenanceWindowMetadataDescription}"
-                                         Foreground="{StaticResource TextSecondary}"
+                                         Foreground="{DynamicResource TextSecondary}"
                                          FontSize="11"
                                          TextWrapping="Wrap" />
                             </StackPanel>
@@ -1883,7 +1991,7 @@
                           <StackPanel Spacing="2">
                             <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BackupRepairTitle}" />
                             <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BackupRepairDescription}"
-                                       Foreground="{StaticResource TextSecondary}"
+                                       Foreground="{DynamicResource TextSecondary}"
                                        FontSize="11"
                                        TextWrapping="Wrap" />
                           </StackPanel>
@@ -1902,7 +2010,7 @@
                                      FontWeight="SemiBold"
                                      IsVisible="{Binding HasBackupIndexRepairPlan}" />
                           <TextBlock Text="{Binding BackupIndexRepairDetails}"
-                                     Foreground="{StaticResource TextSecondary}"
+                                     Foreground="{DynamicResource TextSecondary}"
                                      FontSize="11"
                                      TextWrapping="Wrap"
                                      IsVisible="{Binding HasBackupIndexRepairPlan}" />
@@ -1912,7 +2020,7 @@
                                      TextWrapping="Wrap"
                                      IsVisible="{Binding HasBackupIndexRepairFindings}" />
                           <TextBlock Text="{Binding BackupIndexRepairStatus}"
-                                     Foreground="{StaticResource TextSecondary}"
+                                     Foreground="{DynamicResource TextSecondary}"
                                      FontSize="11"
                                      TextWrapping="Wrap" />
                         </StackPanel>
@@ -1925,12 +2033,12 @@
                           <StackPanel Spacing="2">
                             <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsTitle}" />
                             <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsDescription}"
-                                       Foreground="{StaticResource TextSecondary}"
+                                       Foreground="{DynamicResource TextSecondary}"
                                        FontSize="11"
                                        TextWrapping="Wrap" />
                           </StackPanel>
                           <TextBlock Text="{Binding ProjectMetadataConflictStatus}"
-                                     Foreground="{StaticResource TextSecondary}"
+                                     Foreground="{DynamicResource TextSecondary}"
                                      FontSize="11"
                                      TextWrapping="Wrap" />
                           <ItemsControl ItemsSource="{Binding ProjectMetadataConflicts}"
@@ -1945,7 +2053,7 @@
                                     <StackPanel Spacing="2">
                                       <TextBlock Text="{Binding ProjectName}"
                                                  FontWeight="SemiBold" />
-                                      <TextBlock Foreground="{StaticResource TextSecondary}"
+                                      <TextBlock Foreground="{DynamicResource TextSecondary}"
                                                  FontSize="11"
                                                  TextWrapping="Wrap">
                                         <Run Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsSourceLabel}" />
@@ -2046,11 +2154,11 @@
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateManagedByStoreTitle}"
                                FontWeight="SemiBold" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateManagedByStoreDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11"
                                TextWrapping="Wrap" />
                     <TextBlock FontSize="11"
-                               Foreground="{StaticResource TextSecondary}">
+                               Foreground="{DynamicResource TextSecondary}">
                       <Run Text="{infra:LocalizedString Key=Settings.Advanced.UpdateChannelLabel}" />
                       <Run Text=": " />
                       <Run Text="{Binding DistributionChannelLabel}" />
@@ -2070,7 +2178,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdates}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
@@ -2084,7 +2192,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateInterval}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateIntervalDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <TextBox Grid.Column="1"
@@ -2102,7 +2210,7 @@
                   <StackPanel Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNow}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CheckUpdatesNowDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11"
                                TextWrapping="Wrap" />
                   </StackPanel>
@@ -2118,7 +2226,7 @@
                 <StackPanel Margin="0,4,0,0" Spacing="2">
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.UpdateStatusLabel}" />
                   <TextBlock Text="{Binding UpdateCheckStatusText}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="11" />
                   <Border Background="{DynamicResource Surface0}"
                           BorderBrush="{DynamicResource BorderSoft}"
@@ -2131,15 +2239,15 @@
                                   VerticalScrollBarVisibility="Auto">
                       <StackPanel Spacing="6">
                         <TextBlock Text="{Binding UpdateDiagnosticsText}"
-                                   Foreground="{StaticResource TextSecondary}"
+                                   Foreground="{DynamicResource TextSecondary}"
                                    FontSize="11"
                                    TextWrapping="Wrap" />
                         <TextBlock Text="{Binding StartupDiagnosticsText}"
-                                   Foreground="{StaticResource TextSecondary}"
+                                   Foreground="{DynamicResource TextSecondary}"
                                    FontSize="11"
                                    TextWrapping="Wrap" />
                         <TextBlock Text="{Binding CheckpointResumeDiagnosticsText}"
-                                   Foreground="{StaticResource TextSecondary}"
+                                   Foreground="{DynamicResource TextSecondary}"
                                    FontSize="11"
                                    TextWrapping="Wrap" />
                       </StackPanel>
@@ -2157,7 +2265,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BetaChannel}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BetaChannelDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11"
                                TextWrapping="Wrap" />
                   </StackPanel>
@@ -2177,7 +2285,7 @@
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageLabel}" />
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageDescription}"
-                               Foreground="{StaticResource TextSecondary}"
+                               Foreground="{DynamicResource TextSecondary}"
                                FontSize="11" />
                   </StackPanel>
                   <ComboBox x:Name="LanguageSelectCombo"
@@ -2220,7 +2328,7 @@
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource DangerBrush}" />
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.Description}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
 
@@ -2230,7 +2338,7 @@
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.ClearCache}" />
                   </Button>
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.ClearCacheDescription}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="11" />
                 </StackPanel>
 
@@ -2241,7 +2349,7 @@
                     <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.ForgetProjects}" />
                   </Button>
                   <TextBlock Text="{infra:LocalizedString Key=Settings.Danger.ForgetProjectsDescription}"
-                             Foreground="{StaticResource TextSecondary}"
+                             Foreground="{DynamicResource TextSecondary}"
                              FontSize="11" />
                 </StackPanel>
 
