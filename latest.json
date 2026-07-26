@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "captured_at": "2026-07-25T05:49:46Z",
+  "captured_at": "2026-07-26T06:13:19Z",
   "repository": "ATAC-Helicopter/VaultSync",
   "releases": [
     {
@@ -140,7 +140,7 @@
           "size": 55843,
           "content_type": "application/json",
           "download_count": 2,
-          "downloads_delta": 2,
+          "downloads_delta": 0,
           "created_at": "2026-07-24T18:14:24Z",
           "updated_at": "2026-07-24T18:14:30Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.4/vaultsync-patch-macos-apple-silicon.json"
@@ -151,7 +151,7 @@
           "size": 51017252,
           "content_type": "application/zip",
           "download_count": 2,
-          "downloads_delta": 2,
+          "downloads_delta": 0,
           "created_at": "2026-07-24T18:24:06Z",
           "updated_at": "2026-07-24T18:29:34Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.4/vaultsync-patch-macos-apple-silicon.zip"
@@ -183,8 +183,8 @@
           "name": "vaultsync-patch-windows.json",
           "size": 58026,
           "content_type": "application/json",
-          "download_count": 13,
-          "downloads_delta": 13,
+          "download_count": 28,
+          "downloads_delta": 15,
           "created_at": "2026-07-24T18:32:17Z",
           "updated_at": "2026-07-24T18:32:18Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.4/vaultsync-patch-windows.json"
@@ -195,7 +195,7 @@
           "size": 86975731,
           "content_type": "application/zip",
           "download_count": 1,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-07-24T18:32:18Z",
           "updated_at": "2026-07-24T18:36:03Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.4/vaultsync-patch-windows.zip"
@@ -205,15 +205,15 @@
           "name": "VaultSync-Setup-1.8.4.exe",
           "size": 60855747,
           "content_type": "application/octet-stream",
-          "download_count": 1,
-          "downloads_delta": 1,
+          "download_count": 4,
+          "downloads_delta": 3,
           "created_at": "2026-07-24T18:29:36Z",
           "updated_at": "2026-07-24T18:32:05Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.4/VaultSync-Setup-1.8.4.exe"
         }
       ],
-      "total_downloads": 19,
-      "downloads_delta": 19
+      "total_downloads": 37,
+      "downloads_delta": 18
     },
     {
       "id": 355015581,
@@ -396,7 +396,7 @@
           "size": 58008,
           "content_type": "application/json",
           "download_count": 115,
-          "downloads_delta": 5,
+          "downloads_delta": 0,
           "created_at": "2026-07-16T10:30:57Z",
           "updated_at": "2026-07-16T10:31:03Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.3/vaultsync-patch-windows.json"
@@ -418,14 +418,14 @@
           "size": 60748400,
           "content_type": "application/x-msdownload",
           "download_count": 21,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-07-16T11:18:00Z",
           "updated_at": "2026-07-16T11:21:09Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.3/VaultSync-Setup-1.8.3.exe"
         }
       ],
       "total_downloads": 145,
-      "downloads_delta": 6
+      "downloads_delta": 0
     },
     {
       "id": 349002328,
@@ -676,8 +676,8 @@
           "name": "VaultSync-1.8.1-linux-x64.AppImage",
           "size": 50214080,
           "content_type": "application/octet-stream",
-          "download_count": 1,
-          "downloads_delta": 0,
+          "download_count": 2,
+          "downloads_delta": 1,
           "created_at": "2026-06-25T13:16:15Z",
           "updated_at": "2026-06-25T13:16:43Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.1/VaultSync-1.8.1-linux-x64.AppImage"
@@ -688,7 +688,7 @@
           "size": 39576544,
           "content_type": "application/octet-stream",
           "download_count": 2,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-06-25T13:16:43Z",
           "updated_at": "2026-06-25T13:17:30Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.1/VaultSync-1.8.1-linux-x64.deb"
@@ -848,7 +848,7 @@
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.1/VaultSync-Setup-1.8.1.exe"
         }
       ],
-      "total_downloads": 220,
+      "total_downloads": 221,
       "downloads_delta": 1
     },
     {
@@ -867,7 +867,7 @@
           "size": 37162842,
           "content_type": "application/vnd.debian.binary-package",
           "download_count": 3,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-06-20T12:03:44Z",
           "updated_at": "2026-06-20T12:04:05Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.0/VaultSync-1.8.0-linux-arm64.deb"
@@ -1042,8 +1042,8 @@
           "name": "vaultsync-patch-windows.zip",
           "size": 85739432,
           "content_type": "application/zip",
-          "download_count": 16,
-          "downloads_delta": 0,
+          "download_count": 17,
+          "downloads_delta": 1,
           "created_at": "2026-06-20T12:06:30Z",
           "updated_at": "2026-06-20T12:07:02Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.0/vaultsync-patch-windows.zip"
@@ -1060,7 +1060,7 @@
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.0/VaultSync-Setup-1.8.0.exe"
         }
       ],
-      "total_downloads": 108,
+      "total_downloads": 109,
       "downloads_delta": 1
     },
     {
@@ -1324,7 +1324,7 @@
           "size": 39477568,
           "content_type": "application/octet-stream",
           "download_count": 5,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-05-26T08:32:35Z",
           "updated_at": "2026-05-26T08:34:44Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.5-Beta.1/VaultSync-1.7.5-Beta.1-linux-x64.deb"
@@ -1422,8 +1422,8 @@
           "name": "vaultsync-patch-macos-apple-silicon.zip",
           "size": 49801883,
           "content_type": "application/x-zip-compressed",
-          "download_count": 3,
-          "downloads_delta": 0,
+          "download_count": 4,
+          "downloads_delta": 1,
           "created_at": "2026-05-26T08:33:56Z",
           "updated_at": "2026-05-26T08:35:54Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.5-Beta.1/vaultsync-patch-macos-apple-silicon.zip"
@@ -1484,7 +1484,7 @@
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.5-Beta.1/VaultSync-Setup-1.7.5.exe"
         }
       ],
-      "total_downloads": 35,
+      "total_downloads": 36,
       "downloads_delta": 1
     },
     {
@@ -1893,8 +1893,8 @@
           "name": "VaultSync-1.7.4-Beta.2-macos-apple-silicon.dmg",
           "size": 57725489,
           "content_type": "application/x-apple-diskimage",
-          "download_count": 2,
-          "downloads_delta": 0,
+          "download_count": 3,
+          "downloads_delta": 1,
           "created_at": "2026-05-17T12:07:08Z",
           "updated_at": "2026-05-17T12:07:12Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.4-Beta.2/VaultSync-1.7.4-Beta.2-macos-apple-silicon.dmg"
@@ -1993,7 +1993,7 @@
           "size": 53178978,
           "content_type": "application/zip",
           "download_count": 4,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-05-17T12:07:26Z",
           "updated_at": "2026-05-17T12:07:30Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.4-Beta.2/vaultsync-patch-macos-intel.zip"
@@ -2032,7 +2032,7 @@
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.4-Beta.2/VaultSync-Setup-1.7.4-Beta.2.exe"
         }
       ],
-      "total_downloads": 34,
+      "total_downloads": 35,
       "downloads_delta": 1
     },
     {
@@ -2084,7 +2084,7 @@
           "size": 57732486,
           "content_type": "application/x-apple-diskimage",
           "download_count": 5,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-05-16T11:06:14Z",
           "updated_at": "2026-05-16T11:06:18Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.4-Beta.1/VaultSync-1.7.4-Beta.1-macos-apple-silicon.dmg"
@@ -2139,7 +2139,7 @@
           "size": 50376919,
           "content_type": "application/zip",
           "download_count": 3,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-05-16T11:07:40Z",
           "updated_at": "2026-05-16T11:07:43Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.4-Beta.1/vaultsync-patch-linux-x64.zip"
@@ -2204,8 +2204,8 @@
           "name": "vaultsync-patch-windows.zip",
           "size": 96638435,
           "content_type": "application/zip",
-          "download_count": 1,
-          "downloads_delta": 0,
+          "download_count": 2,
+          "downloads_delta": 1,
           "created_at": "2026-05-16T11:07:11Z",
           "updated_at": "2026-05-16T11:07:17Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.4-Beta.1/vaultsync-patch-windows.zip"
@@ -2216,14 +2216,14 @@
           "size": 68902855,
           "content_type": "application/x-msdownload",
           "download_count": 1,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-05-16T11:07:03Z",
           "updated_at": "2026-05-16T11:07:07Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.4-Beta.1/VaultSync-Setup-1.7.4-Beta.1.exe"
         }
       ],
-      "total_downloads": 34,
-      "downloads_delta": 3
+      "total_downloads": 35,
+      "downloads_delta": 1
     },
     {
       "id": 312480615,
@@ -2697,8 +2697,8 @@
           "name": "vaultsync-patch-windows.zip",
           "size": 92581600,
           "content_type": "application/x-zip-compressed",
-          "download_count": 5,
-          "downloads_delta": 0,
+          "download_count": 6,
+          "downloads_delta": 1,
           "created_at": "2026-04-09T16:18:34Z",
           "updated_at": "2026-04-09T16:21:33Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.2/vaultsync-patch-windows.zip"
@@ -2715,8 +2715,8 @@
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.2/VaultSync-Setup-1.7.2.exe"
         }
       ],
-      "total_downloads": 37,
-      "downloads_delta": 0
+      "total_downloads": 38,
+      "downloads_delta": 1
     },
     {
       "id": 305297996,
@@ -3084,7 +3084,7 @@
           "size": 94538520,
           "content_type": "application/x-zip-compressed",
           "download_count": 1,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-03-09T22:04:57Z",
           "updated_at": "2026-03-09T22:06:08Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.6.0/vaultsync-patch-windows.zip"
@@ -3102,7 +3102,7 @@
         }
       ],
       "total_downloads": 7,
-      "downloads_delta": 1
+      "downloads_delta": 0
     },
     {
       "id": 291634387,
@@ -3346,7 +3346,7 @@
           "size": 54599583,
           "content_type": "application/octet-stream",
           "download_count": 6,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-02-06T15:35:09Z",
           "updated_at": "2026-02-06T15:35:48Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.4.1/VaultSync-1.4.1-macos-apple-silicon.dmg"
@@ -3441,7 +3441,7 @@
         }
       ],
       "total_downloads": 110,
-      "downloads_delta": 1
+      "downloads_delta": 0
     },
     {
       "id": 282681108,
@@ -3492,7 +3492,7 @@
           "size": 48603581,
           "content_type": "application/x-zip-compressed",
           "download_count": 3,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-02-03T18:29:09Z",
           "updated_at": "2026-02-03T18:30:01Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.4.0/vaultsync-patch-macos-apple-silicon.zip"
@@ -3554,7 +3554,7 @@
         }
       ],
       "total_downloads": 59,
-      "downloads_delta": 1
+      "downloads_delta": 0
     },
     {
       "id": 280906747,
@@ -3685,7 +3685,7 @@
           "size": 54729000,
           "content_type": "application/octet-stream",
           "download_count": 3,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-01-25T17:28:47Z",
           "updated_at": "2026-01-25T17:30:17Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.3.4/VaultSync-1.3.4-macos-apple-silicon.dmg"
@@ -3718,7 +3718,7 @@
           "size": 48528800,
           "content_type": "application/x-zip-compressed",
           "download_count": 3,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2026-01-25T17:29:20Z",
           "updated_at": "2026-01-25T17:30:30Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.3.4/vaultsync-patch-macos-apple-silicon.zip"
@@ -3780,7 +3780,7 @@
         }
       ],
       "total_downloads": 67,
-      "downloads_delta": 2
+      "downloads_delta": 0
     },
     {
       "id": 279091179,
@@ -3830,8 +3830,8 @@
           "name": "vaultsync-patch-macos-apple-silicon.zip",
           "size": 48491306,
           "content_type": "application/x-zip-compressed",
-          "download_count": 3,
-          "downloads_delta": 0,
+          "download_count": 4,
+          "downloads_delta": 1,
           "created_at": "2026-01-22T17:13:47Z",
           "updated_at": "2026-01-22T17:14:17Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.3.3/vaultsync-patch-macos-apple-silicon.zip"
@@ -3892,8 +3892,8 @@
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.3.3/VaultSync-Setup-1.3.3.exe"
         }
       ],
-      "total_downloads": 34,
-      "downloads_delta": 0
+      "total_downloads": 35,
+      "downloads_delta": 1
     },
     {
       "id": 277746035,
@@ -4828,7 +4828,7 @@
           "size": 21318249,
           "content_type": "application/x-zip-compressed",
           "download_count": 7,
-          "downloads_delta": 1,
+          "downloads_delta": 0,
           "created_at": "2025-12-03T08:34:53Z",
           "updated_at": "2025-12-03T08:35:13Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v0.9.5/vaultsync-patch-windows.zip"
@@ -4846,7 +4846,7 @@
         }
       ],
       "total_downloads": 20,
-      "downloads_delta": 1
+      "downloads_delta": 0
     },
     {
       "id": 266884449,
@@ -5041,8 +5041,8 @@
     }
   ],
   "totals": {
-    "all_assets_downloads": 2017,
-    "all_assets_delta": 38,
+    "all_assets_downloads": 2042,
+    "all_assets_delta": 25,
     "release_count": 47,
     "asset_count": 398
   },
@@ -5050,14 +5050,14 @@
     "latest_stable": {
       "tag_name": "v1.8.4",
       "name": "VaultSync 1.8.4",
-      "total_downloads": 19,
-      "downloads_delta": 19,
+      "total_downloads": 37,
+      "downloads_delta": 18,
       "html_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.8.4"
     },
     "latest_prerelease": {
       "tag_name": "v1.7.5-Beta.1",
       "name": "VaultSync 1.7.5 Beta 1",
-      "total_downloads": 35,
+      "total_downloads": 36,
       "downloads_delta": 1,
       "html_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.7.5-Beta.1"
     },
@@ -5096,7 +5096,7 @@
         "size": 58008,
         "content_type": "application/json",
         "download_count": 115,
-        "downloads_delta": 5,
+        "downloads_delta": 0,
         "created_at": "2026-07-16T10:30:57Z",
         "updated_at": "2026-07-16T10:31:03Z",
         "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.3/vaultsync-patch-windows.json"
@@ -5180,17 +5180,17 @@
         "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.7.0/VaultSync-1.7.0-macos-apple-silicon.dmg"
       },
       {
-        "release_tag": "v1.8.3",
-        "release_name": "VaultSync 1.8.3",
-        "id": 479089406,
-        "name": "VaultSync-Setup-1.8.3.exe",
-        "size": 60748400,
-        "content_type": "application/x-msdownload",
-        "download_count": 21,
-        "downloads_delta": 1,
-        "created_at": "2026-07-16T11:18:00Z",
-        "updated_at": "2026-07-16T11:21:09Z",
-        "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.3/VaultSync-Setup-1.8.3.exe"
+        "release_tag": "v1.8.4",
+        "release_name": "VaultSync 1.8.4",
+        "id": 488698273,
+        "name": "vaultsync-patch-windows.json",
+        "size": 58026,
+        "content_type": "application/json",
+        "download_count": 28,
+        "downloads_delta": 15,
+        "created_at": "2026-07-24T18:32:17Z",
+        "updated_at": "2026-07-24T18:32:18Z",
+        "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.4/vaultsync-patch-windows.json"
       }
     ]
   }
