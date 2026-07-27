@@ -236,13 +236,21 @@ Only continue when the installer came from the official VaultSync repository or 
 4. Open **Applications**.
 5. Right-click VaultSync and select **Open**.
 
-If Gatekeeper still blocks the application, clear the quarantine attribute:
+If Gatekeeper still blocks the application, clear the quarantine attribute using the command for your build.
+
+#### Apple Silicon (ARM64)
 
 ```sh
 sudo xattr -dr com.apple.quarantine "/Applications/VaultSync-macos-arm64.app"
 ```
 
-This command applies to both Apple Silicon and Intel builds.
+#### Intel (x64)
+
+```sh
+sudo xattr -dr com.apple.quarantine "/Applications/VaultSync-macos-x64.app"
+```
+
+Only run the command that matches the VaultSync build installed in your **Applications** folder.
 
 </details>
 
