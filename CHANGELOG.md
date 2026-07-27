@@ -1,4 +1,12 @@
 ﻿# Changelog
+## [1.8.5] - Unreleased
+### Added
+- [VS-1851] Added an evidence-backed recovery-confidence state model that keeps measured, simulated, inferred, user-confirmed, stale, missing, failed, and unsupported evidence distinct.
+### Changed
+- [VS-1851] Recovery-confidence decisions now prioritize decisive blockers over aggregate scores so passed checks cannot hide unavailable destinations, missing credentials, failed verification, or failed drills.
+### Fixed
+- [BUG-18079] Restored the missing snapshot-count placeholder in the Portuguese Dashboard translation.
+
 ## [1.8.4] - 24.07.2026
 ### Added
 - [VS-1847] Added strictly redacted, user-reviewed crash reports that only the user's email application can send.

@@ -1,5 +1,16 @@
 # What's New
 
+## [1.8.5]
+
+VaultSync `1.8.5` is the Recovery Confidence update. It is being built around a direct question: can this project be recovered right now, what evidence supports that answer, and what should happen next?
+
+### Recovery Confidence
+- Recovery status is moving from percentage-first scoring to explicit, evidence-backed states.
+- Measured checks, restore-plan simulations, inferred conditions, user-confirmed offsite status, and unsupported checks remain visibly distinct.
+- Missing recovery points, unavailable destinations, missing encryption credentials, failed verification, and failed restore drills are decisive blockers that successful secondary checks cannot hide.
+- Verification and drill evidence have explicit freshness windows so an old success cannot remain green indefinitely.
+- The planned Recovery Inspector, checklist, guided isolated restore drill, History events, and evidence report will build on this shared model.
+
 ## [1.8.4]
 
 VaultSync `1.8.4` is the Disaster Recovery update. It adds byte-level recovery proofs, transparent 3-2-1 guidance, protected-point recommendations, and a privacy-first crash-report workflow.
