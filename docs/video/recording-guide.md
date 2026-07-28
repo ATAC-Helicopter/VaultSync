@@ -20,8 +20,9 @@ For VaultSync:
 - macOS Accessibility scripting may be added later for stable controls, but
   screen coordinates must not become the source of truth because window
   scaling and Settings layout can change;
-- Edge neural TTS creates narration and captions without an API key; and
-- `ffmpeg` aligns each real recording with the matching narration.
+- local Kokoro speech creates action-cued narration and captions without an API
+  key; and
+- `ffmpeg` aligns each real recording with the matching cues.
 
 This is deliberately chapter-based. A UI change requires rerecording one short
 scene, not the whole video.
@@ -126,30 +127,37 @@ The required value is `x,y,width,height` in screen coordinates.
    no menu bar, dock, desktop, other app, notification, or modal unrelated to
    the scene.
 
-## 5. Render the no-key voice first
+## 5. Render the local voice first
 
 Install and render:
 
 ```bash
-python3 -m pip install edge-tts
+python3 -m pip install -r docs/video/requirements.txt
+mkdir -p docs/video/build/models
+curl -L \
+  https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.int8.onnx \
+  -o docs/video/build/models/kokoro-v1.0.int8.onnx
+curl -L \
+  https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin \
+  -o docs/video/build/models/voices-v1.0.bin
 python3 docs/video/render-narration.py
 ```
 
-The renderer uses the conversational `en-US-BrianNeural` voice at a slightly
-slower rate.
-It writes one MP3 and one SRT per chapter. There is no per-character API bill
-and no API credential. Internet access is required while Microsoft produces
-the speech.
+The renderer uses Kokoro's `af_heart` voice by default. It synthesizes each
+timestamped cue separately, places it on the capture timeline, and writes one
+WAV and one SRT per chapter. Speech generation is local after the model files
+are downloaded.
 
-Get the required recording duration for a scene:
+Check the prepared timeline for a scene:
 
 ```bash
 ffprobe -v error -show_entries format=duration -of csv=p=0 \
-  docs/video/build/audio/01.mp3
+  docs/video/build/audio/01.wav
 ```
 
-Round up and add three to five seconds so the app recording has a clean start
-and ending.
+The WAV duration must match the scene capture. Narration begins at the cue times
+in [`walkthrough-script.md`](walkthrough-script.md), so visual actions must be
+rehearsed against those timestamps.
 
 ## 6. Record the scenes
 
@@ -196,12 +204,10 @@ bash docs/video/build-video.sh
 The assembler:
 
 - scales and pads each clip to 1920×1080;
-- uses the neural narration instead of recording audio;
+- uses the locally rendered narration instead of recording microphone audio;
 - normalizes speech to approximately -16 LUFS;
-- permits only a short transition hold and fails when narration would require
-  a visibly frozen scene;
-- fades scene boundaries through the app's dark background;
-- trims excess recording margin;
+- preserves the full scene recording and rejects stale narration timelines;
+- blends scene boundaries with short picture and audio crossfades;
 - creates H.264 video and 48 kHz stereo AAC audio; and
 - embeds a selectable English caption track and writes an SRT sidecar.
 
@@ -240,8 +246,7 @@ Suggested description:
 
 > Set up VaultSync, create and inspect backups, compare restore points, run a
 > read-only recovery drill, and understand every settings group. Narration is
-> AI-generated with a Microsoft Edge neural voice. No copyrighted music is
-> used.
+> AI-generated locally with Kokoro. No copyrighted music is used.
 
 Upload `vaultsync-guided-walkthrough.mp4`. If the host removes embedded
 subtitles, upload `captions.srt` separately and verify that captions remain

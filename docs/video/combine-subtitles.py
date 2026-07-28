@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""Combine per-scene Edge TTS subtitles onto one continuous timeline."""
+"""Combine action-cued scene subtitles onto the blended video timeline."""
 
 from __future__ import annotations
 
 import json
-import re
-import subprocess
-import sys
 from pathlib import Path
+import sys
 
 
 def milliseconds(value: str) -> int:
@@ -28,59 +26,40 @@ def timestamp(value: int) -> str:
     return f"{hours:02}:{minutes:02}:{seconds:02},{millis:03}"
 
 
-def duration_ms(path: Path) -> int:
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "csv=p=0",
-            str(path),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return round(float(result.stdout.strip()) * 1_000)
+def subtitle_blocks(content: str) -> list[tuple[int, int, str]]:
+    blocks: list[tuple[int, int, str]] = []
+    for block in content.strip().split("\n\n"):
+        lines = block.splitlines()
+        if len(lines) < 3 or " --> " not in lines[1]:
+            continue
+        start, end = lines[1].split(" --> ", maxsplit=1)
+        blocks.append((milliseconds(start), milliseconds(end), "\n".join(lines[2:])))
+    return blocks
 
 
 def main() -> int:
     manifest_path = Path(sys.argv[1]).resolve()
     output_path = Path(sys.argv[2]).resolve()
+    transition_ms = round(float(sys.argv[3]) * 1_000)
     root = manifest_path.parents[3]
     entries: list[tuple[int, int, str]] = [
-        (0, 2_500, "This guide uses AI-generated narration.")
+        (0, 1_800, "This guide uses AI-generated narration.")
     ]
     offset = 0
-    block_pattern = re.compile(
-        r"\d+\s*\n"
-        r"(?P<start>\d\d:\d\d:\d\d,\d\d\d) --> "
-        r"(?P<end>\d\d:\d\d:\d\d,\d\d\d)\s*\n"
-        r"(?P<text>.*?)(?=\n{2,}|\Z)",
-        re.DOTALL,
-    )
-
-    for scene in json.loads(manifest_path.read_text(encoding="utf-8")):
+    scenes = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for index, scene in enumerate(scenes):
         subtitle_path = root / scene["subtitles"]
-        edited_scene_path = manifest_path.parent / "scenes" / f"{scene['id']}.mp4"
-        for match in block_pattern.finditer(subtitle_path.read_text(encoding="utf-8")):
-            entries.append(
-                (
-                    offset + milliseconds(match.group("start")),
-                    offset + milliseconds(match.group("end")),
-                    match.group("text").strip(),
-                )
-            )
-        offset += duration_ms(edited_scene_path)
+        for start, end, text in subtitle_blocks(
+            subtitle_path.read_text(encoding="utf-8")
+        ):
+            entries.append((offset + start, offset + end, text))
+        offset += round(float(scene["duration"]) * 1_000)
+        if index + 1 < len(scenes):
+            offset -= transition_ms
 
-    lines = []
+    lines: list[str] = []
     for index, (start, end, text) in enumerate(entries, start=1):
-        lines.extend(
-            [str(index), f"{timestamp(start)} --> {timestamp(end)}", text, ""]
-        )
+        lines.extend([str(index), f"{timestamp(start)} --> {timestamp(end)}", text, ""])
     output_path.write_text("\n".join(lines), encoding="utf-8")
     return 0
 
