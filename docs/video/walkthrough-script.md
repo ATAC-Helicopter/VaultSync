@@ -1,8 +1,9 @@
 # VaultSync complete app walkthrough
 
-Target runtime: **7–9 minutes**. Record each numbered scene as a separate
-app-only clip. The action list is the visual timeline; the quoted text is the
-canonical AI narration.
+Target runtime: **8–10 minutes**. Record each numbered scene as a separate
+app-only clip. The action list is the visual timeline. Narration is split into
+timestamped cues so each explanation begins beside the control or result it
+describes.
 
 The recording account must contain the prepared `Client Portal` demo project,
 at least two completed restore points, and two destinations named `Local SSD`
@@ -21,9 +22,14 @@ names, notifications, or menu-bar content.
 5. Click **Back** once, then **Next**. Do not click **Skip** in the final take.
 6. End with the pointer resting on the current onboarding action.
 
-**Narration:**
+**Narration cues:**
 
-> Let’s set up VaultSync, make a real backup, and check that it can actually be recovered. This small guide card stays out of the way, so I can use the page behind it without closing the tour. Next moves forward, Back lets me check an earlier step, and Skip only dismisses the guide. The checklist is tied to the app: choose where projects live, choose where backups go, register one project, and finish its first backup.
+- **00:02** — Welcome to VaultSync. We’ll set up one project, create a backup,
+  and finish by proving the stored copy is readable.
+- **00:14** — The setup card is a guide, not a modal. I can move through its
+  steps while the page behind it remains fully usable.
+- **00:27** — Completed steps stay checked, so it is always clear what is ready
+  and what still needs attention.
 
 ## 02 — Complete the first backup
 
@@ -40,9 +46,16 @@ names, notifications, or menu-bar content.
 6. Hold on visible progress, then on the completed restore point.
 7. Click **Finish** on the onboarding card only after it reports completion.
 
-**Narration:**
+**Narration cues:**
 
-> I’ll start with two locations. The projects root tells VaultSync where to look; it does not silently back up every folder underneath it. The destination must be somewhere else—a separate folder, external disk, or mounted network share. On Projects, I register Client Portal and keep its suggested preset, so build output and disposable caches stay out of the backup. Then I open Backups and run it. The guide completes only after the restore point really exists.
+- **00:02** — Client Portal has been discovered, but VaultSync does not protect
+  it until I register it.
+- **00:11** — I create a snapshot first. That records the project’s current file
+  state without copying data yet.
+- **00:19** — On Backups, I start the first real copy. Progress and destination
+  health remain visible while it runs.
+- **00:27** — The setup step completes only after a restore point actually
+  exists.
 
 ## 03 — Dashboard
 
@@ -55,9 +68,14 @@ names, notifications, or menu-bar content.
 5. Click **Review** on Restore readiness, wait for Recovery to open, then return
    to Dashboard.
 
-**Narration:**
+**Narration cues:**
 
-> The Dashboard is where I’d check in day to day. These cards answer four quick questions: how many projects are registered, whether backups are running, how much space they use, and whether a recent restore point is ready. The weekly chart separates scheduled, manual, and imported work. Recent activity explains what happened, while storage shows what is growing. If readiness looks wrong, Review opens the evidence behind the score.
+- **00:02** — The Dashboard is the daily overview: registered projects, backup
+  activity, storage use, and recovery readiness.
+- **00:11** — Recent activity explains what happened, while the weekly chart
+  separates manual, scheduled, and imported work.
+- **00:21** — Lower on the page, storage shows what is growing and how much room
+  remains.
 
 ## 04 — Projects
 
@@ -72,9 +90,16 @@ names, notifications, or menu-bar content.
    it without saving.
 6. Point to the snapshot action.
 
-**Narration:**
+**Narration cues:**
 
-> Projects is the library of folders VaultSync knows about. Refresh searches the projects root, but nothing is tracked until I register it. A preset supplies sensible ignore rules for tools such as .NET, Unity, Blender, or Node, and I can inspect those rules before using them. Tags, colors, and avatars make a larger library easier to scan. For unusual projects, the editor can preview, clone, import, or export a custom preset. Snapshot records the current file state; copying that state to storage happens from Backups.
+- **00:02** — Projects is the library of folders VaultSync knows about. The
+  selected card shows snapshot age, size, and current health.
+- **00:13** — A preset removes disposable output from the backup. I can inspect
+  or change it without touching the project files.
+- **00:24** — Tags and colors make a larger library easier to scan, and the
+  destination choice can stay global or be overridden here.
+- **00:34** — Snapshot now records a fresh point in time. The actual stored copy
+  is created from Backups.
 
 ## 05 — Backups, policies, and restore points
 
@@ -92,9 +117,16 @@ names, notifications, or menu-bar content.
    a text preview, then return.
 8. Do not execute Restore or Delete in the final recording.
 
-**Narration:**
+**Narration cues:**
 
-> Backups is the working page. Backup all handles every eligible project, or I can run just this one. Each project may follow the global policy or override its schedule, destination, encryption, restore mode, and verification level. Down here are the completed restore points. Keep protects an important baseline from routine cleanup. Open shows its folder, Explore browses its contents, and Restore always asks for a target. Compare explains which files were added, changed, or removed and previews supported text differences. Delete is explicit, and a failed verification is never discarded without asking.
+- **00:02** — Backups starts with a quick health summary: recent work, storage,
+  restore readiness, and the active destination.
+- **00:13** — Each project can inherit the global policy or override its
+  destination, encryption, restore mode, and verification level.
+- **00:25** — Choose two restore points and Compare to understand what changed
+  before deciding which one to use.
+- **00:35** — This view separates added, modified, and deleted files, then shows
+  readable text differences without restoring the project.
 
 ## 06 — History
 
@@ -110,9 +142,16 @@ names, notifications, or menu-bar content.
    state.
 7. Point to compare, open-backup, and Recovery actions.
 
-**Narration:**
+**Narration cues:**
 
-> History brings every recorded event into one timeline. I can search by project or detail, then narrow the list by event type, date, or protected state. Selecting an item opens its facts on the right. A useful label and short note explain why a restore point matters months later; protection keeps it out of normal retention cleanup. From here I can compare it, open the stored copy, or continue into Recovery. Records imported from another machine are marked clearly, so they are not confused with backups made on this Mac.
+- **00:02** — History brings snapshots, backups, restores, and imported events
+  into one searchable timeline.
+- **00:13** — Selecting an event opens its recovery facts and the actions that
+  are safe for that point.
+- **00:24** — A label or note records why the point matters. Protection keeps an
+  important baseline out of routine cleanup.
+- **00:33** — From here I can open the stored copy, compare it, or continue into
+  Recovery.
 
 ## 07 — Recovery and proof
 
@@ -128,9 +167,17 @@ names, notifications, or menu-bar content.
 7. Click **Export report**, save to the prepared recording folder, and return
    to the app.
 
-**Narration:**
+**Narration cues:**
 
-> Recovery is the part that proves the backup is useful. The summary separates ready projects from those needing attention, at risk, or currently unavailable. Coverage checks for usable restore points across one day, one week, one month, and three months. The three-two-one advisor looks for three copies, two types of storage, and one genuinely offsite copy; VaultSync only grants offsite credit when I mark a destination that way. A drill checks the database link, destination, inventory, stored bytes, and a read-only restore plan. It does not touch the live project. Export report saves the result as Markdown.
+- **00:02** — Recovery answers the important question: can this project be
+  recovered now, and what evidence supports that answer?
+- **00:13** — Coverage looks across several time windows. The three-two-one
+  advisor counts only reachable copies and explicitly confirmed offsite storage.
+- **00:25** — Run drill reads the stored point without writing into the live
+  project.
+- **00:35** — A passing result covers linkage, destination access, inventory,
+  stored bytes, and a read-only restore plan.
+- **00:44** — Export report saves this evidence as a local Markdown document.
 
 ## 08 — Settings: general, scheduling, and transfer
 
@@ -151,9 +198,16 @@ names, notifications, or menu-bar content.
    return them to their prepared values.
 10. Point to **Refresh history now** and **Pause auto-backups on battery**.
 
-**Narration:**
+**Narration cues:**
 
-> Settings saves ordinary changes as I make them. General controls discovery and what happens when the app opens or closes: resume the last page, launch at sign-in, stay in the tray, or show the small progress widget. Scheduling turns automatic backups on and sets the interval. Retention limits ordinary points, but Simulate retention shows the proposed cleanup before anything is removed; I keep delete confirmation enabled. History sync moves non-secret backup metadata between machines, while auto-import and the restore prompt help avoid divergent histories. Bandwidth limits protect a busy network. Quiet hours postpone scheduled work, not manual backups, and battery pause avoids a heavy run while the laptop is unplugged.
+- **00:02** — Settings saves ordinary changes immediately. The projects root
+  controls discovery; it does not start a backup by itself.
+- **00:16** — Startup and tray controls decide whether VaultSync resumes the
+  last page, stays in the background, or shows the small progress widget.
+- **00:31** — Notifications can stay quiet on success while still warning about
+  failures or low disk space.
+- **00:47** — Automatic backup timing and retention live together. Simulate
+  retention previews cleanup before any restore point is removed.
 
 ## 09 — Settings: destination, encryption, performance, and storage
 
@@ -177,9 +231,20 @@ names, notifications, or menu-bar content.
    and final values.
 9. Point to external-drive preference, drive warnings, and reserve free space.
 
-**Narration:**
+**Narration cues:**
 
-> Simple mode uses one fallback location. Advanced mode is for separate local, removable, or network destinations. Each gets a unique name, a path, and a Test result. Pre-mounted means macOS owns the connection. Auto-mount can use a saved credential, and auto-unmount only removes a mount VaultSync created. “Offsite” should mean physically somewhere else. Each destination can sync history, resume interrupted transfers, retry with backoff, and warn against a soft quota. Credentials can live in the operating-system keychain, so there is no reason to expose a password here. Archive encryption happens before upload, and a forgotten encryption password cannot be recovered. Compression suits many small files. Delta sync sends changed blocks; incremental mode hard-links unchanged files where supported, so those modes do not run together. Auto-tuning and parallel uploads can improve throughput. Verification and full hashing trade speed for confidence. The scan cache is faster; aggressive timestamp trust is the least conservative option. Finally, storage rules can prefer external drives, report health warnings, and reserve free space.
+- **00:02** — History refresh, bandwidth limits, and quiet hours control when
+  background work can use the network.
+- **00:13** — Advanced mode adds separate local, removable, or network
+  destinations. Every destination gets a clear name, path, and Test result.
+- **00:28** — Pre-mounted leaves the connection to the operating system.
+  Offsite should be enabled only when the storage is physically elsewhere.
+- **00:43** — History sync, resume, retries, and quota warnings can be tuned per
+  destination.
+- **00:58** — Archive encryption happens locally before upload. Passwords belong
+  in the operating system’s secure credential store.
+- **00:72** — Compression, incremental copies, verification, hashing, and scan
+  caching trade speed, storage, and confidence in explicit ways.
 
 ## 10 — Settings: appearance and notifications
 
@@ -195,9 +260,14 @@ names, notifications, or menu-bar content.
 6. Toggle the master, success, failure, and low-disk switches twice each,
    ending with failure and low disk enabled.
 
-**Narration:**
+**Narration cues:**
 
-> Appearance can follow the system, stay light or dark, or use a custom theme. Custom themes start from a preset and expose practical roles such as surfaces, text, accent, success, warning, and danger. Compact mode fits more on screen; avatars add icons or initials. Notifications has a master switch plus choices for success, failure, and low disk space. Turning off the master preserves those choices.
+- **00:02** — Appearance can follow the system, stay light or dark, or use a
+  custom theme.
+- **00:13** — Compact mode fits more on screen, while project avatars make a
+  larger library easier to recognize.
+- **00:22** — Notification choices remain separate, so success can stay quiet
+  while failure and low disk space remain visible.
 
 ## 11 — Settings: diagnostics, maintenance, updates, and danger zone
 
@@ -219,9 +289,18 @@ names, notifications, or menu-bar content.
 9. Scroll to Danger zone. Point to **Clear local cache** and **Forget all
    projects** without clicking.
 
-**Narration:**
+**Narration cues:**
 
-> Advanced settings are mostly for diagnosis and maintenance. Verbose logging adds detail; disk logging keeps it locally. I can open the console, export logs, or create a support bundle that I can review before sharing. Crash assistance also prepares a local report—it never sends one by itself. A maintenance window can run consistency checks, prepare a repair plan, and refresh metadata. I always inspect the dry-run first; Fix now applies only that exact current plan. When imported metadata conflicts, I choose whether local or imported values win. Direct builds can follow stable or preview updates, while Store builds stay Store-managed. Language changes the interface, and Reset restores defaults. The Danger zone clears caches or forgets the local index, never the project or backup files, but forgetting that index cannot be undone inside the app.
+- **00:02** — Advanced settings begin with diagnostics. Logs and support bundles
+  stay local until I choose to share them.
+- **00:15** — Maintenance can scan consistency, prepare an exact repair plan,
+  and refresh imported metadata.
+- **00:28** — I review the dry-run before applying a repair. Metadata conflicts
+  also wait for an explicit local-or-imported choice.
+- **00:42** — Update checks, preview channel, and language are visible beside
+  their current status.
+- **00:52** — The Danger zone clears local state, not project or backup files,
+  but forgetting the index still requires deliberate confirmation.
 
 ## 12 — Tray, readiness checklist, and close
 
@@ -235,6 +314,13 @@ names, notifications, or menu-bar content.
 3. Trigger the prepared mini widget, show progress briefly, then close it.
 4. Return to Recovery and end on the successful `Client Portal` drill.
 
-**Narration:**
+**Narration cues:**
 
-> The tray keeps common actions close: open VaultSync, snapshot or back up everything, revisit recent work, open Settings, or quit. The mini widget follows a tray backup without opening the full window. Before I call setup finished, I want four things: a recent restore point, a destination that passes Test, a drill that reads stored data, and a plan for second-media and offsite copies. The illustrated tour and Settings reference are in the documentation. That is the loop: create it, find it, verify it, and know how to restore it.
+- **00:02** — That covers the main controls. The Dashboard brings the important
+  health signals back into one place.
+- **00:11** — Before calling setup complete, check for a recent restore point
+  and a destination that passes Test.
+- **00:20** — Then run a drill that reads stored data and review the plan for a
+  second storage type and an offsite copy.
+- **00:29** — That is the VaultSync loop: create it, find it, verify it, and know
+  how to restore it.
