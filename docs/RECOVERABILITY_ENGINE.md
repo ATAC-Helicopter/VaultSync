@@ -4,6 +4,8 @@ VaultSync 1.8.4 incorporates the useful deterministic recovery logic developed i
 
 The port is native C# under `VaultSync.Core.Recoverability` and works entirely with VaultSync projects, snapshots, backup identities, and local storage adapters.
 
+![Recovery drill evidence produced by the native recoverability engine](images/Recovery_Drill.png)
+
 ## What the proof establishes
 
 A recovery proof answers a narrower and more defensible question than “did the backup job finish?”:

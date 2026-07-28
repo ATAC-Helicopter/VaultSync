@@ -8,6 +8,8 @@ Use this page as the primary index for all project documentation.
 - Wiki home: [VaultSync Wiki](wiki/Home.md)
 - Help page (in-app target): [Help](HELP.md)
 
+![VaultSync dashboard](images/Dashboard.png)
+
 ## Planning and Release
 - Roadmap: [ROADMAP](../ROADMAP.md)
 - Changelog: [CHANGELOG](../CHANGELOG.md)

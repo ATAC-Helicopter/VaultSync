@@ -47,6 +47,8 @@ VaultSync can export a portable metadata store to backup destinations and later 
 - In particular, preferred destination, restore mode, verification policy, and tags can create a metadata conflict record instead.
 - Review these conflicts from `Settings > Advanced > Doctor`.
 
+![Doctor, metadata-conflict, maintenance, and update controls](../images/Settings_Maintenance.png)
+
 ## Missing backup paths
 - Import only materializes backups whose relative path still exists at the destination.
 - If metadata references a backup path that no longer exists, VaultSync can record a tombstone instead of importing broken history.
