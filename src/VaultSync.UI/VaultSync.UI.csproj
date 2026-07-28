@@ -119,6 +119,7 @@
   <!-- Windows notifications -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
     <PackageReference Include="CommunityToolkit.WinUI.Notifications" />
+    <!-- Keep the toolkit's legacy System.Drawing transitively resolved to the serviced runtime line. -->
     <PackageReference Include="System.Drawing.Common" />
   </ItemGroup>
 
