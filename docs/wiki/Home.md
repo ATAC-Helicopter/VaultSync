@@ -2,6 +2,8 @@
 
 Use this wiki for user-facing workflows and troubleshooting.
 
+![VaultSync dashboard showing protection, activity, storage, and recovery status](../images/Dashboard.png)
+
 ## Getting Started
 - [Quick start](Quick-Start.md)
 - [Guided app tour](Guided-Tour.md)

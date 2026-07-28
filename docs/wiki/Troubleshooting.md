@@ -1,5 +1,10 @@
 # Troubleshooting
 
+Settings > Advanced groups update diagnostics, Doctor, maintenance, and support
+actions in one place.
+
+![Maintenance, repair planning, metadata conflicts, and update diagnostics](../images/Settings_Maintenance.png)
+
 ## Backup is slow
 - Use a local disk or SSD when possible.
 - Avoid running backups during heavy network use.
@@ -47,6 +52,8 @@
 - If a stored file was changed or removed, create a new verified backup rather than dismissing the mismatch.
 - Encrypted points are intentionally limited until opened with their password.
 - If inventory was capped, treat the result as partial evidence and perform a real test restore for critical data.
+
+![Recovery drill evidence and the checks to review](../images/Recovery_Drill.png)
 
 ## Crash email draft cannot include the report
 - The report remains local and nothing has been sent.

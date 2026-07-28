@@ -26,12 +26,16 @@ every page, see [Guided tour](Guided-Tour.md).
 - Give the project a clear name; it appears in Backups, History, Recovery, and
   the tray menu.
 
+![Projects page with a registered project and snapshot controls](../images/Projects_Page.png)
+
 ## 4) Run a manual backup
 
 - Open **Backups**.
 - Select **Backup** for the project to create its first restore point.
 - Keep VaultSync open until the run reaches a completed or actionable error
   state.
+
+![Backups page with project backup actions and restore points](../images/Backup_Page.png)
 
 ## 5) Prove the result
 
@@ -41,6 +45,8 @@ every page, see [Guided tour](Guided-Tour.md).
 - Review the 3-2-1 advisor. Mark a destination as offsite only when it is
   physically offsite.
 - Create a second point after a small change and use **Compare**.
+
+![Recovery drill evidence for a tested restore point](../images/Recovery_Drill.png)
 
 ## Tips
 

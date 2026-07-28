@@ -15,6 +15,8 @@ Core pillars:
 - Recover: prove readable backup bytes and rehearse recovery without touching live project data.
 - Sync metadata: merge backup history across machines.
 
+![VaultSync dashboard showing the product's protection overview](docs/images/Dashboard.png)
+
 ## 2. Documentation Structure
 
 ### 2.1 Top-level docs

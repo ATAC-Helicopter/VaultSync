@@ -11,6 +11,8 @@ VaultSync `1.8.5` is the Recovery Confidence update. It is being built around a 
 - Verification and drill evidence have explicit freshness windows so an old success cannot remain green indefinitely.
 - The planned Recovery Inspector, checklist, guided isolated restore drill, History events, and evidence report will build on this shared model.
 
+![Recovery readiness with evidence-backed project status](images/Recovery_Readiness.png)
+
 ### Dependency maintenance
 - SQLite and the cross-platform rendering components are refreshed and validated together as one supported baseline.
 - Dependencies are removed only when their behavior is genuinely unused; intentional compatibility and security overrides remain documented when a transitive package still requires them.
@@ -27,6 +29,11 @@ VaultSync `1.8.4` is the Disaster Recovery update. It adds byte-level recovery p
 - Preview themes visually before applying them, collapse the theme studio when it is not needed, and open advanced color tuning only when you want it.
 - Custom theme files retain their rendering style, while older configurations continue to load as solid themes.
 - Text contrast is checked across every custom-theme surface, while status colors, navigation, History, Recovery, and code previews remain readable in light or dark palettes.
+
+<p align="center">
+  <img width="49%" alt="VaultSync dark theme gallery" src="images/Theme_Gallery_Dark.png" />
+  <img width="49%" alt="VaultSync light theme gallery" src="images/Theme_Gallery_Light.png" />
+</p>
 
 ### Disaster recovery
 - Run a non-destructive proof against a project's newest recovery point without copying anything into the project.
@@ -69,6 +76,8 @@ The comparison workflow now uses clear earlier/later restore-point choices, comp
 - Changed files can be searched and filtered by added, modified, or deleted state; selecting readable content opens a compact red/green comparison with old and new line numbers.
 - File inventory loading and comparison run away from the UI thread, and both file-list and text previews are capped safely for large histories.
 - Comparison QoL suggests the nearest valid restore point, explains invalid selections, supports cancellation, and clearly reports empty, filtered, and capped result states.
+
+![Snapshot comparison with file filters and a text diff](images/Compare_View.png)
 
 ### Diagnostics and reliability
 - Diagnostics cleanup now runs at startup and every six hours on Windows, macOS, and Linux.
