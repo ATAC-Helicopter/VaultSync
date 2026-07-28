@@ -1,6 +1,9 @@
 # Configuration
 
-This page summarizes key settings and how they affect behavior.
+This page explains how to choose a configuration. For the exhaustive
+control-by-control list, see [Settings reference](Settings-Reference.md).
+
+![VaultSync Settings](../images/tour/settings.png)
 
 ## Appearance
 - Theme: Light, Dark, Follow system, or Custom.
