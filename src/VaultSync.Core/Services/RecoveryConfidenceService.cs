@@ -2,7 +2,7 @@ using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Services;
 
-public sealed class RecoveryConfidenceService
+public static class RecoveryConfidenceService
 {
     public static readonly TimeSpan DefaultVerificationFreshness = TimeSpan.FromDays(7);
     public static readonly TimeSpan DefaultDrillFreshness = TimeSpan.FromDays(30);
