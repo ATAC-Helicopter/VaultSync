@@ -233,6 +233,28 @@ must never hide a missing, failed, stale, inferred, or unsupported check.
     format-argument contract.
   - Acceptance: localization validation reports no missing, extra, blank,
     duplicate, or placeholder-mismatched keys.
+- [ ] `VS-1858` `P1` Service and simplify the supported dependency baseline.
+  - Scope: apply compatible storage and rendering patch updates, remove
+    genuinely unused direct dependencies, document intentional compatibility
+    pins, and keep vulnerability checks clean.
+  - Acceptance: restore, warning-as-error builds, tests, NuGet vulnerability
+    checks, and Windows, macOS, and Linux CI pass without losing notifications,
+    charts, color editing, localization, secure storage, or CLI behavior.
+- [x] `BUG-18080` `P0` Reject impossible backup-target capacity readings.
+  - Scope: use the runtime filesystem API on macOS and validate total/free byte
+    relationships before computing or enforcing a free-space percentage.
+  - Acceptance: capacity percentages stay within zero and one hundred; invalid
+    readings disable the threshold check instead of reporting negative space.
+- [x] `BUG-18081` `P1` Remove avoidable view-binding errors from normal use.
+  - Scope: bind virtualized project, backup, destination, and credential
+    templates through stable named view roots and expose null-safe diff state.
+  - Acceptance: a clean startup and ordinary page construction produce no
+    missing-ancestor or null selected-diff binding diagnostics.
+- [x] `BUG-18082` `P0` Keep CLI self-tests out of production metadata.
+  - Scope: use a unique system-temporary database and workspace by default,
+    while retaining an explicit `--db` path for intentional integration tests.
+  - Acceptance: success, failure, and cancellation clean isolated state; an
+    ordinary self-test never inserts a project or snapshot into the user store.
 
 ### Explicitly out of scope
 
@@ -260,8 +282,18 @@ must never hide a missing, failed, stale, inferred, or unsupported check.
 **Status:** Planned
 **Tagline:** *Powerful when needed. Obvious by default.*
 
-- [ ] `VS-1861` `P0` Rebuild first-run setup around source, destination,
-  schedule, review, and recovery verification.
+- [ ] `VS-1861` `P0` Replace the current overlay tour with task-based first-run
+  setup around source, destination, schedule, review, and recovery verification.
+  - Scope: use a resumable setup workspace and contextual next actions instead
+    of a modal screen-covering tour; preserve skip, defer, restart, keyboard,
+    scaling, and screen-reader paths; measure completion only from real app
+    state.
+  - Acceptance: a new user can create, verify, and understand one recoverable
+    backup without hunting through unrelated Settings or having guidance cover
+    the control it describes.
+  - Exit rule: if usability testing cannot make the guided flow faster and
+    clearer than the ordinary app, remove forced onboarding and retain only a
+    first-run checklist, sample-safe defaults, and discoverable help.
 - [ ] `VS-1862` `P1` Add a dedicated Schedule experience with modes, quiet
   hours, next run, and delay explanations.
 - [ ] `VS-1863` `P1` Reorganize Dashboard hierarchy around protection,
@@ -346,6 +378,28 @@ compatibility, and smoke tests on all supported operating systems.
 requires cloning, validation, image-to-disk recovery, and bootable recovery
 media to be ready and tested together.
 
+## 1.9 UI migration program
+
+The 1.9 interface is a staged information-architecture migration, not a
+single-release visual rewrite. Existing workflows remain available until their
+replacement is complete, keyboard-accessible, localized, and proven against
+the same underlying operations.
+
+Migration principles:
+
+- organize around user intent: `Protect`, `History`, `Recover`, and `Manage`;
+- separate routine status and next actions from expert configuration;
+- keep one authoritative route/state model instead of page-specific navigation
+  flags and reflection-based fallbacks;
+- preserve deep links, selected project, filters, and unfinished work when
+  navigating;
+- migrate one workflow family at a time behind stable service contracts;
+- remove the legacy shell only after parity and usability qualification;
+- treat themes as presentation over shared semantic resources, not separate
+  layouts;
+- do not use hidden telemetry to judge the redesign; rely on explicit
+  usability sessions, opt-in feedback, and local diagnostics.
+
 ## Existing 1.9 foundation IDs
 
 - [ ] `VS-1902` `P1` Add trusted application signing where operationally and
@@ -360,6 +414,8 @@ media to be ready and tested together.
 contracts stabilize.
 **Tagline:** *Recover when the installed system cannot.*
 
+- [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
+  workflow boundaries, navigation invariants, and legacy-shell migration map.
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
   explicit operation states and checkpoint contracts.
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
@@ -392,6 +448,10 @@ contracts stabilize.
 - [ ] `VS-1912` `P1` Search and selectively extract files from images.
 - [ ] `VS-1913` `P1` Inspect image creation, verification, and compatibility.
 - [ ] `VS-1914` `P2` Compare supported clone images where safe and practical.
+- [ ] `VS-1915` `P0` Introduce the adaptive 1.9 shell and typed route/state
+  infrastructure without removing the existing workflow views.
+- [ ] `VS-1916` `P1` Migrate Dashboard and Recovery entry points into
+  goal-oriented home and recovery workspaces.
 
 ## 1.9.2 — Offsite Protection
 
@@ -400,6 +460,10 @@ contracts stabilize.
 - [ ] `VS-1923` `P0` Validate remote manifests and clean incomplete uploads.
 - [ ] `VS-1924` `P1` Explain immutability, object lock, retention, and cost.
 - [ ] `VS-1925` `P1` Prove clean-machine recovery from supported offsite data.
+- [ ] `VS-1926` `P1` Migrate Projects, Backups, and Schedule into one
+  progressive-disclosure Protection workspace.
+- [ ] `VS-1927` `P1` Add multi-destination health scoring and safe,
+  explainable automatic failover.
 
 ## 1.9.3 — Portable Recovery
 
@@ -409,14 +473,18 @@ contracts stabilize.
   specification.
 - [ ] `VS-1934` `P0` Define compatibility, migration, deprecation, and
   emergency read-only policies.
+- [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
+  focused activity, inspection, and management workspaces.
 
 ## 1.9.4 — Unified Recovery Experience
 
-- [ ] `VS-1941` `P1` Unify project, file, image, storage, and recovery
-  navigation after the underlying workflows exist.
+- [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
+  recovery navigation and retire the legacy shell after parity.
 - [ ] `VS-1942` `P1` Add a shared Recovery Inspector across recovery types.
 - [ ] `VS-1943` `P2` Revisit project groups and high-density organization if
   `VS-1811` moved out of 1.8.
+- [ ] `VS-1944` `P0` Qualify the complete 1.9 interface across supported
+  widths, scaling, keyboard, screen-reader, theme, and interrupted-work states.
 
 ## 1.9.5 — Recovery Operations
 
@@ -426,6 +494,10 @@ contracts stabilize.
 - [ ] `VS-1953` `P1` Add CLI and structured headless recovery reporting.
 - [ ] `VS-1954` `P2` Add multi-machine summaries without introducing hidden
   telemetry or mandatory hosted services.
+- [ ] `VS-1955` `P2` Add explicit local automation hooks for approved backup,
+  verification, and restore events.
+- [ ] `VS-1956` `P2` Bring the CLI to documented parity with stable,
+  automation-safe desktop workflows.
 
 ## 1.9.6 — Stability and LTS Baseline
 
@@ -442,11 +514,9 @@ contracts stabilize.
 These items are not assigned to a release until their contracts are approved:
 
 - `VS-1801` full repository backup mode including `.git` (tracked by #296);
-- multi-destination health scoring and automatic failover;
 - additional object-storage and WebDAV providers;
-- generic automation hooks;
-- complete CLI parity;
-- shared/team vault workflows;
+- `VS-1971` optional shared/team vault workflows with explicit ownership,
+  access, conflict, and audit contracts;
 - enterprise deployment and centralized administration;
 - universal boot media or guaranteed cross-hardware bare-metal recovery.
 

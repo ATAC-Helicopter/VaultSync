@@ -11,6 +11,11 @@ VaultSync `1.8.5` is the Recovery Confidence update. It is being built around a 
 - Verification and drill evidence have explicit freshness windows so an old success cannot remain green indefinitely.
 - The planned Recovery Inspector, checklist, guided isolated restore drill, History events, and evidence report will build on this shared model.
 
+### Dependency maintenance
+- SQLite and the cross-platform rendering components are refreshed and validated together as one supported baseline.
+- Dependencies are removed only when their behavior is genuinely unused; intentional compatibility and security overrides remain documented when a transitive package still requires them.
+- Notifications, charts, color editing, localization, secure storage, and CLI behavior remain part of the validation contract.
+
 ## [1.8.4]
 
 VaultSync `1.8.4` is the Disaster Recovery update. It adds byte-level recovery proofs, transparent 3-2-1 guidance, protected-point recommendations, and a privacy-first crash-report workflow.
