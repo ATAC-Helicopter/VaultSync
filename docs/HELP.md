@@ -35,6 +35,9 @@ Windows distribution channels:
 - Recovery: readiness, recovery drills, 3-2-1 coverage, protection recommendations, and reports.
 - Settings: destinations, encryption, Doctor tools, update diagnostics, maintenance, localization.
 
+Illustrated walkthrough: `docs/wiki/Guided-Tour.md`.
+Every Settings control and toggle: `docs/wiki/Settings-Reference.md`.
+
 ## Smart Presets
 - Presets apply `.vaultsyncignore` rules to project backups.
 - Consumer-friendly presets are available for:
