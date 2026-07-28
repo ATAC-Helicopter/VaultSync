@@ -7,7 +7,23 @@ public sealed class RecoveryConfidenceService
     public static readonly TimeSpan DefaultVerificationFreshness = TimeSpan.FromDays(7);
     public static readonly TimeSpan DefaultDrillFreshness = TimeSpan.FromDays(30);
 
-    public ProjectRecoveryConfidence Evaluate(
+    private static readonly (string Code, RecoveryConfidenceState State, string Action)[] DecisiveStates =
+    [
+        ("recovery-point.missing", RecoveryConfidenceState.NoRecoveryPoint, "action.create-backup"),
+        ("destination.unavailable", RecoveryConfidenceState.DestinationUnavailable, "action.reconnect-destination"),
+        ("credential.unavailable", RecoveryConfidenceState.CredentialUnavailable, "action.restore-credential"),
+        ("credential.not-checked", RecoveryConfidenceState.CredentialUnavailable, "action.check-credential"),
+        ("verification.failed", RecoveryConfidenceState.VerificationFailed, "action.run-verification"),
+        ("restore-plan.invalid", RecoveryConfidenceState.RestorePlanInvalid, "action.review-restore-plan"),
+        ("restore-drill.failed", RecoveryConfidenceState.DrillFailed, "action.review-drill"),
+        ("verification.not-run", RecoveryConfidenceState.VerificationPending, "action.run-verification"),
+        ("verification.unsupported", RecoveryConfidenceState.RecoverableWithWarnings, "action.review-limitations"),
+        ("verification.stale", RecoveryConfidenceState.RecoverableWithWarnings, "action.run-verification"),
+        ("restore-drill.not-run", RecoveryConfidenceState.DrillNotRun, "action.run-restore-drill"),
+        ("restore-drill.overdue", RecoveryConfidenceState.DrillOverdue, "action.run-restore-drill")
+    ];
+
+    public static ProjectRecoveryConfidence Evaluate(
         RecoveryConfidenceInput input,
         DateTime? nowUtc = null,
         TimeSpan? verificationFreshness = null,
@@ -47,7 +63,7 @@ public sealed class RecoveryConfidenceService
 
     private static void AddRecoveryPointEvidence(
         RecoveryConfidenceInput input,
-        ICollection<RecoveryConfidenceEvidence> evidence) =>
+        List<RecoveryConfidenceEvidence> evidence) =>
         evidence.Add(new(
             RecoveryEvidenceKind.RecoveryPoint,
             RecoveryEvidenceBasis.Measured,
@@ -56,7 +72,7 @@ public sealed class RecoveryConfidenceService
 
     private static void AddDestinationEvidence(
         RecoveryConfidenceInput input,
-        ICollection<RecoveryConfidenceEvidence> evidence)
+        List<RecoveryConfidenceEvidence> evidence)
     {
         if (!input.HasRecoveryPoint)
             return;
@@ -70,7 +86,7 @@ public sealed class RecoveryConfidenceService
 
     private static void AddCredentialEvidence(
         RecoveryConfidenceInput input,
-        ICollection<RecoveryConfidenceEvidence> evidence)
+        List<RecoveryConfidenceEvidence> evidence)
     {
         if (!input.HasRecoveryPoint || !input.IsEncrypted)
             return;
@@ -96,7 +112,7 @@ public sealed class RecoveryConfidenceService
 
     private static void AddVerificationEvidence(
         RecoveryConfidenceInput input,
-        ICollection<RecoveryConfidenceEvidence> evidence,
+        List<RecoveryConfidenceEvidence> evidence,
         DateTime nowUtc,
         TimeSpan freshness)
     {
@@ -150,7 +166,7 @@ public sealed class RecoveryConfidenceService
 
     private static void AddRestorePlanEvidence(
         RecoveryConfidenceInput input,
-        ICollection<RecoveryConfidenceEvidence> evidence)
+        List<RecoveryConfidenceEvidence> evidence)
     {
         if (!input.HasRecoveryPoint)
             return;
@@ -176,7 +192,7 @@ public sealed class RecoveryConfidenceService
 
     private static void AddDrillEvidence(
         RecoveryConfidenceInput input,
-        ICollection<RecoveryConfidenceEvidence> evidence,
+        List<RecoveryConfidenceEvidence> evidence,
         DateTime nowUtc,
         TimeSpan freshness)
     {
@@ -219,7 +235,7 @@ public sealed class RecoveryConfidenceService
 
     private static void AddOffsiteEvidence(
         RecoveryConfidenceInput input,
-        ICollection<RecoveryConfidenceEvidence> evidence)
+        List<RecoveryConfidenceEvidence> evidence)
     {
         if (!input.HasRecoveryPoint)
             return;
@@ -232,35 +248,17 @@ public sealed class RecoveryConfidenceService
     }
 
     private static (RecoveryConfidenceState State, string EvidenceCode, string ActionCode) SelectState(
-        IReadOnlyList<RecoveryConfidenceEvidence> evidence)
+        List<RecoveryConfidenceEvidence> evidence)
     {
         if (evidence.Count == 0)
             return (RecoveryConfidenceState.NotMeasured, "confidence.not-measured", "action.measure-recovery");
 
-        if (HasCode(evidence, "recovery-point.missing"))
-            return (RecoveryConfidenceState.NoRecoveryPoint, "recovery-point.missing", "action.create-backup");
-        if (HasCode(evidence, "destination.unavailable"))
-            return (RecoveryConfidenceState.DestinationUnavailable, "destination.unavailable", "action.reconnect-destination");
-        if (HasCode(evidence, "credential.unavailable"))
-            return (RecoveryConfidenceState.CredentialUnavailable, "credential.unavailable", "action.restore-credential");
-        if (HasCode(evidence, "credential.not-checked"))
-            return (RecoveryConfidenceState.CredentialUnavailable, "credential.not-checked", "action.check-credential");
-        if (HasCode(evidence, "verification.failed"))
-            return (RecoveryConfidenceState.VerificationFailed, "verification.failed", "action.run-verification");
-        if (HasCode(evidence, "restore-plan.invalid"))
-            return (RecoveryConfidenceState.RestorePlanInvalid, "restore-plan.invalid", "action.review-restore-plan");
-        if (HasCode(evidence, "restore-drill.failed"))
-            return (RecoveryConfidenceState.DrillFailed, "restore-drill.failed", "action.review-drill");
-        if (HasCode(evidence, "verification.not-run"))
-            return (RecoveryConfidenceState.VerificationPending, "verification.not-run", "action.run-verification");
-        if (HasCode(evidence, "verification.unsupported"))
-            return (RecoveryConfidenceState.RecoverableWithWarnings, "verification.unsupported", "action.review-limitations");
-        if (HasCode(evidence, "verification.stale"))
-            return (RecoveryConfidenceState.RecoverableWithWarnings, "verification.stale", "action.run-verification");
-        if (HasCode(evidence, "restore-drill.not-run"))
-            return (RecoveryConfidenceState.DrillNotRun, "restore-drill.not-run", "action.run-restore-drill");
-        if (HasCode(evidence, "restore-drill.overdue"))
-            return (RecoveryConfidenceState.DrillOverdue, "restore-drill.overdue", "action.run-restore-drill");
+        foreach ((string code, RecoveryConfidenceState state, string action) in DecisiveStates)
+        {
+            if (HasCode(evidence, code))
+                return (state, code, action);
+        }
+
         if (evidence.Any(item => item.Status is RecoveryEvidenceStatus.Warning or RecoveryEvidenceStatus.Missing))
         {
             RecoveryConfidenceEvidence decisive = evidence.First(item =>
