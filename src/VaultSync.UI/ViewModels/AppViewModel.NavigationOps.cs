@@ -91,6 +91,8 @@ namespace VaultSync.UI.ViewModels
 
         public ICommand NavigateRecovery { get; }
 
+        public ICommand NavigateGuide { get; }
+
         public ICommand NavigateSettings { get; }
 
         private void SetCurrentView(string viewKey, bool remember = true)
@@ -164,6 +166,14 @@ namespace VaultSync.UI.ViewModels
                     HeaderTitle = AppViewModel.L("Nav.Recovery", "Recovery");
                     HeaderKicker = AppViewModel.L("Main.HeaderRecovery", "Readiness & coverage");
                     _ = RecoveryViewModel.RefreshAsync();
+                    break;
+                case "Guide":
+                    BackupsViewModel.IsActiveView = false;
+                    CurrentViewName = "Guide";
+                    CurrentView = GuideViewModel;
+                    HeaderTitle = AppViewModel.L("Nav.Guide", "Guide");
+                    HeaderKicker = AppViewModel.L("Main.HeaderGuide", "Setup, backup & recovery");
+                    GuideViewModel.Refresh();
                     break;
                 default:
                     BackupsViewModel.IsActiveView = false;

@@ -3462,6 +3462,13 @@ namespace VaultSync.UI
 
         public void OpenHelp()
         {
+            if (App.AppViewModelInstance?.NavigateGuide.CanExecute(null) == true)
+            {
+                App.AppViewModelInstance.NavigateGuide.Execute(null);
+                SaveStatus = L("Settings.Destinations.OpenHelpSuccess", "Help guide opened.");
+                return;
+            }
+
             string? lastError = null;
 
             bool TryOpen(string target)
@@ -3505,7 +3512,7 @@ namespace VaultSync.UI
                     }
                 }
 
-                string onlineFallback = "https://github.com/flaviorame/vaultsync/tree/main/docs/wiki";
+                string onlineFallback = "https://github.com/flaviorame/VaultSync/wiki";
                 if (TryOpen(onlineFallback))
                 {
                     SaveStatus = L("Settings.Destinations.OpenHelpSuccess", "Help guide opened.");

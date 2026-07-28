@@ -137,6 +137,7 @@ namespace VaultSync.UI.ViewModels
             NavigateBackups = new RelayCommand(_ => SetCurrentView("Backups"));
             NavigateHistory = new RelayCommand(_ => SetCurrentView("History"));
             NavigateRecovery = new RelayCommand(_ => SetCurrentView("Recovery"));
+            NavigateGuide = new RelayCommand(_ => SetCurrentView("Guide"));
             NavigateSettings = new RelayCommand(_ => SetCurrentView("Settings"));
 
             OnboardingTour = new OnboardingTourViewModel(this);
