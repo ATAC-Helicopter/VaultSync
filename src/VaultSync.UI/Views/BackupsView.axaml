@@ -6,6 +6,7 @@
              xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
              xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
              x:Class="VaultSync.UI.Views.BackupsView"
+             x:Name="Root"
              x:DataType="vm:BackupsViewModel">
 
   <UserControl.Resources>
@@ -1363,7 +1364,7 @@
                                 VerticalAlignment="Center" />
                         <Grid Width="40"
                               Height="40"
-                              IsVisible="{ReflectionBinding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                              IsVisible="{Binding DataContext.ShowProjectAvatars, ElementName=Root}">
                           <Border Width="40"
                                   Height="40"
                                   CornerRadius="999"
@@ -1502,7 +1503,7 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox
                                 Classes="preset-combo"
-                                ItemsSource="{ReflectionBinding DataContext.DestinationOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ItemsSource="{Binding DataContext.DestinationOptions, ElementName=Root}"
                                 SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
@@ -1522,7 +1523,7 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox x:Name="BackupsProjectEncryptionPolicyCombo"
                                       Classes="preset-combo"
-                                      ItemsSource="{ReflectionBinding DataContext.EncryptionPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      ItemsSource="{Binding DataContext.EncryptionPolicyOptions, ElementName=Root}"
                                       SelectedItem="{Binding EncryptionPolicyOption, Mode=TwoWay}"
                                       HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
@@ -1542,7 +1543,7 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox
                                 Classes="preset-combo"
-                                ItemsSource="{ReflectionBinding DataContext.RestoreModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ItemsSource="{Binding DataContext.RestoreModeOptions, ElementName=Root}"
                                 SelectedItem="{Binding RestoreModeOption, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
@@ -1562,7 +1563,7 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                             <ComboBox
                                 Classes="preset-combo"
-                                ItemsSource="{ReflectionBinding DataContext.VerificationPolicyOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ItemsSource="{Binding DataContext.VerificationPolicyOptions, ElementName=Root}"
                                 SelectedItem="{Binding VerificationPolicyOption, Mode=TwoWay}"
                                 HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
@@ -1587,7 +1588,7 @@
                                   Content="{infra:LocalizedString Key=Settings.Encryption.SetPassword}"
                                   Classes="small-button"
                                   Margin="0,0,0,4"
-                                  Command="{ReflectionBinding DataContext.ManageProjectEncryptionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  Command="{Binding DataContext.ManageProjectEncryptionCommand, ElementName=Root}"
                                   CommandParameter="{Binding}" />
                         </WrapPanel>
 
@@ -1611,7 +1612,7 @@
                                   HorizontalAlignment="Right"
                                   VerticalAlignment="Center"
                                   Margin="0,0,0,2"
-                                  Command="{ReflectionBinding DataContext.BackupProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  Command="{Binding DataContext.BackupProjectCommand, ElementName=Root}"
                                   CommandParameter="{Binding}" />
                         </Grid>
                       </Grid>
@@ -1946,7 +1947,7 @@
                                   BorderThickness="0,1,0,0">
                             <StackPanel>
                               <ItemsControl ItemsSource="{Binding Snapshots}"
-                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                            Tag="{Binding DataContext, ElementName=Root}">
                                 <ItemsControl.ItemTemplate>
                                   <DataTemplate>
                                     <Border Background="{DynamicResource Surface1}"
@@ -2585,11 +2586,11 @@
                   <Grid ColumnDefinitions="*,Auto"
                         ColumnSpacing="10">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="{CompiledBinding SelectedDiffPreviewFile.Path}"
+                      <TextBlock Text="{CompiledBinding SelectedDiffPreviewPath}"
                                  FontSize="11"
                                  FontWeight="SemiBold"
                                  TextTrimming="CharacterEllipsis"
-                                 ToolTip.Tip="{CompiledBinding SelectedDiffPreviewFile.Path}" />
+                                 ToolTip.Tip="{CompiledBinding SelectedDiffPreviewPath}" />
                       <TextBlock Text="{CompiledBinding DiffFileContentStatus}"
                                  FontSize="10"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
