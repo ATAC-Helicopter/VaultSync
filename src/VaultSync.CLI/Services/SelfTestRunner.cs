@@ -88,8 +88,8 @@ internal sealed class SelfTestRunner(
         }
         finally
         {
-            if (projectRegistered && repository is not null && !usesTemporaryDatabase)
-                TryDeleteProject(repository, projectName);
+            if (projectRegistered && !usesTemporaryDatabase)
+                TryDeleteProject(repository!, projectName);
 
             if (usesTemporaryDatabase)
                 TryDeleteDirectory(workspacePath);
@@ -153,8 +153,8 @@ internal sealed class SelfTestRunner(
             Project project,
             string destination,
             bool dryRun,
-            CancellationToken cancellationToken) =>
-            _service.SyncAsync(project, destination, dryRun, cancellationToken);
+            CancellationToken ct) =>
+            _service.SyncAsync(project, destination, dryRun, ct);
     }
 }
 
