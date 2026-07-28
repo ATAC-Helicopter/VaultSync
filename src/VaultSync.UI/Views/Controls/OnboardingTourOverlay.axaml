@@ -9,7 +9,8 @@
     VerticalAlignment="Bottom"
     Margin="24"
     Width="430"
-    MaxWidth="430">
+    MaxWidth="430"
+    MinWidth="280">
 
   <!--
     The control is deliberately card-sized. A full-window UserControl remains
@@ -22,6 +23,8 @@
             BorderThickness="1"
             CornerRadius="8"
             Padding="18">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
             RowSpacing="14">
 
@@ -145,5 +148,6 @@
           </Grid>
         </Grid>
       </Grid>
+    </ScrollViewer>
   </Border>
 </UserControl>
