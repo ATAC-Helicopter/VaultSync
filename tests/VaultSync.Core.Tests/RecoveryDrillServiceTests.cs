@@ -53,6 +53,38 @@ public sealed class RecoveryDrillServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunIsolatedRestoreAsync_RestoresRepresentativeFilesOutsideProject()
+    {
+        string projectRoot = CreateTempDir();
+        string backupRoot = CreateTempDir();
+        string testRoot = CreateTempDir();
+        string relative = Path.Combine("App", "2026-07-28");
+        string content = Path.Combine(backupRoot, relative);
+        Directory.CreateDirectory(Path.Combine(content, "src"));
+        File.WriteAllText(Path.Combine(content, "src", "app.txt"), "verified content");
+
+        var project = new Project { Id = 1, Name = "App", RootPath = projectRoot, Preset = "default" };
+        var backup = new Backup { Id = 10, ProjectId = 1, SnapshotId = 20, Path = relative, DestinationPath = backupRoot };
+        var snapshot = new Snapshot { Id = 20, ProjectId = 1, FileCount = 1 };
+        var config = new AppConfig { Backups = new BackupsConfig { BackupRoot = backupRoot } };
+        IReadOnlyCollection<FileEntry> expectedFiles = [Expected("src/app.txt", "verified content")];
+
+        RecoveryDrillResult result = await new RecoveryDrillService().RunIsolatedRestoreAsync(
+            project,
+            backup,
+            snapshot,
+            config,
+            expectedFiles,
+            testRoot);
+
+        Assert.Equal(RecoveryDrillStatus.Passed, result.Status);
+        Assert.Empty(Directory.GetFileSystemEntries(projectRoot));
+        string restoredRoot = Assert.Single(Directory.GetDirectories(testRoot));
+        Assert.Equal("verified content", File.ReadAllText(Path.Combine(restoredRoot, "src", "app.txt")));
+        Assert.Contains("isolated-restore", result.ChecksJson);
+    }
+
+    [Fact]
     public void Repository_PersistsRecoveryDrillHistory()
     {
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
@@ -81,6 +113,30 @@ public sealed class RecoveryDrillServiceTests : IDisposable
         Assert.Equal(RecoveryDrillStatus.Attention, stored.Status);
         Assert.Equal(backupId, stored.BackupId);
         Assert.True(stored.IsLimited);
+    }
+
+    [Fact]
+    public void Repository_PersistsRecoveryEvidenceEvents()
+    {
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(repo, "Evidence", CreateTempDir());
+
+        int id = repo.AddRecoveryEvidenceEvent(new RecoveryEvidenceEvent
+        {
+            ProjectId = projectId,
+            Kind = "isolated-restore",
+            Status = "Passed",
+            EvidenceId = "restore:123",
+            SourceIdentity = "machine-test",
+            Summary = "Representative files restored."
+        });
+
+        RecoveryEvidenceEvent stored = Assert.Single(repo.GetRecentRecoveryEvidenceEvents());
+        Assert.True(id > 0);
+        Assert.Equal("isolated-restore", stored.Kind);
+        Assert.Equal("restore:123", stored.EvidenceId);
+        Assert.Equal("machine-test", stored.SourceIdentity);
     }
 
     [Fact]
