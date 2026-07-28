@@ -17,6 +17,8 @@ Use this page as the primary index for all project documentation.
 - Microsoft Store planning and packaging notes: [Microsoft Store](MICROSOFT_STORE.md)
 - Microsoft Store submission checklist: [Store submission checklist](MICROSOFT_STORE_SUBMISSION_CHECKLIST.md)
 - Download stats snapshots: [Download stats](DOWNLOAD_STATS.md)
+- Walkthrough recording and no-key narration:
+  [Video production guide](video/recording-guide.md)
 
 ## Contribution and Governance
 - Contributing: [CONTRIBUTING](../CONTRIBUTING.md)
@@ -30,7 +32,9 @@ Use this page as the primary index for all project documentation.
 
 ## User Guides (Wiki)
 - [Quick start](wiki/Quick-Start.md)
+- [Guided app tour](wiki/Guided-Tour.md)
 - [Installation](wiki/Installation.md)
+- [Settings reference](wiki/Settings-Reference.md)
 - [Backups overview](wiki/Backups.md)
 - [Backup pipeline](wiki/Backup-Pipeline.md)
 - [Backup encryption](wiki/Encryption.md)
