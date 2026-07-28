@@ -874,9 +874,8 @@ public sealed class BackupService(
             if (space is not null)
             {
                 (long volumeTotalBytes, long volumeFreeBytes) = space.Value;
-                if (volumeTotalBytes > 0)
+                if (TryCalculateFreeSpacePercent(volumeTotalBytes, volumeFreeBytes, out double freePercent))
                 {
-                    double freePercent = (double)volumeFreeBytes / volumeTotalBytes * 100d;
                     RuntimeLog.WriteVerbose($"[BackupService] Backup target free space for '{project.Name}': {freePercent:0.0}% remaining (threshold={minimumFreeSpacePercent.Value:0.0}%).");
 
                     if (freePercent < minimumFreeSpacePercent.Value)
@@ -3462,7 +3461,14 @@ public sealed class BackupService(
                     return null;
                 }
 
-                return ((long)totalNumberOfBytes, (long)freeBytesAvailable);
+                if (totalNumberOfBytes > long.MaxValue || freeBytesAvailable > long.MaxValue)
+                    return null;
+
+                long totalBytes = (long)totalNumberOfBytes;
+                long freeBytes = (long)freeBytesAvailable;
+                return IsValidDiskSpace(totalBytes, freeBytes)
+                    ? (totalBytes, freeBytes)
+                    : null;
             }
 
             if (OperatingSystem.IsMacOS() && IsMacManagedMountPath(fullPath) && !IsNetworkMountPath(fullPath))
@@ -3471,19 +3477,18 @@ public sealed class BackupService(
                 return null;
             }
 
-            if (OperatingSystem.IsMacOS())
-            {
-                (long totalBytes, long freeBytes)? unixSpace = TryGetUnixDiskSpace(fullPath);
-                if (unixSpace is not null)
-                    return unixSpace.Value;
-            }
-
-            // Non-Windows fallback: DriveInfo can handle full paths and mount points.
+            // Let the runtime query Unix filesystems. Hand-maintained statvfs layouts
+            // are ABI-sensitive and previously produced impossible negative capacity
+            // values on macOS.
             var driveInfo = new DriveInfo(fullPath);
             if (!driveInfo.IsReady)
                 return null;
 
-            return (driveInfo.TotalSize, driveInfo.AvailableFreeSpace);
+            long driveTotalBytes = driveInfo.TotalSize;
+            long driveFreeBytes = driveInfo.AvailableFreeSpace;
+            return IsValidDiskSpace(driveTotalBytes, driveFreeBytes)
+                ? (driveTotalBytes, driveFreeBytes)
+                : null;
         }
         catch (Exception ex)
         {
@@ -3492,30 +3497,21 @@ public sealed class BackupService(
         }
     }
 
-    private static (long totalBytes, long freeBytes)? TryGetUnixDiskSpace(string path)
+    internal static bool TryCalculateFreeSpacePercent(
+        long totalBytes,
+        long freeBytes,
+        out double freePercent)
     {
-        try
-        {
-            var stats = new Statvfs();
-            if (statvfs(path, ref stats) != 0)
-                return null;
+        freePercent = 0d;
+        if (!IsValidDiskSpace(totalBytes, freeBytes))
+            return false;
 
-            ulong blockSize = stats.f_frsize != 0 ? stats.f_frsize : stats.f_bsize;
-            if (blockSize == 0)
-                return null;
-
-            long total = (long)stats.f_blocks * (long)blockSize;
-            long free = (long)stats.f_bavail * (long)blockSize;
-            if (total <= 0)
-                return null;
-
-            return (total, free);
-        }
-        catch
-        {
-            return null;
-        }
+        freePercent = (double)freeBytes / totalBytes * 100d;
+        return double.IsFinite(freePercent) && freePercent is >= 0d and <= 100d;
     }
+
+    private static bool IsValidDiskSpace(long totalBytes, long freeBytes) =>
+        totalBytes > 0 && freeBytes >= 0 && freeBytes <= totalBytes;
 
     private static bool IsMacManagedMountPath(string path)
     {
@@ -3627,25 +3623,6 @@ public sealed class BackupService(
 
     private static bool IsNetworkMountPath(string path)
         => IsSmbfsMountPath(path) || IsNfsMountPath(path);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Statvfs
-    {
-        public ulong f_bsize;
-        public ulong f_frsize;
-        public ulong f_blocks;
-        public ulong f_bfree;
-        public ulong f_bavail;
-        public ulong f_files;
-        public ulong f_ffree;
-        public ulong f_favail;
-        public ulong f_fsid;
-        public ulong f_flag;
-        public ulong f_namemax;
-    }
-
-    [DllImport("libc", SetLastError = true, CharSet = CharSet.Ansi)]
-    private static extern int statvfs(string path, ref Statvfs buf);
 
     private static bool IsOnPath(string tool)
     {
