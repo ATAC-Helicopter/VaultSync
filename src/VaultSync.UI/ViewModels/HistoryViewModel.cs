@@ -554,6 +554,7 @@ public sealed class HistoryViewModel : ViewModelBase
             .Take(20)
             .ToList();
         var restores = repo.GetRecentRestoreHistoryEvents(30);
+        var recoveryEvidence = repo.GetRecentRecoveryEvidenceEvents(40);
         var metadataBySnapshotId = repo.GetSnapshotHistoryMetadataBySnapshotIds(
             backups.Select(backup => backup.SnapshotId)
                 .Concat(snapshotOnly.Select(snapshot => snapshot.Id))
@@ -567,6 +568,7 @@ public sealed class HistoryViewModel : ViewModelBase
         AddBackupTimelineItems(items, backups, projectsById, metadataBySnapshotId, snapshotById);
         AddRestoreTimelineItems(items, restores, projectsById, metadataBySnapshotId, backupBySnapshotId, snapshotById);
         AddSnapshotTimelineItems(items, snapshotOnly, projectsById, metadataBySnapshotId);
+        AddRecoveryEvidenceTimelineItems(items, recoveryEvidence, projectsById);
 
         items = items
             .OrderByDescending(item => item.CreatedUtc)
@@ -671,6 +673,43 @@ public sealed class HistoryViewModel : ViewModelBase
                 DiffModified = snapshot.DiffModified,
                 DiffDeleted = snapshot.DiffDeleted,
                 DiffNetBytes = snapshot.DiffNetBytes
+            }));
+        }
+    }
+
+    private static void AddRecoveryEvidenceTimelineItems(
+        List<HistoryTimelineItemViewModel> items,
+        IEnumerable<RecoveryEvidenceEvent> evidenceEvents,
+        IReadOnlyDictionary<int, Project> projectsById)
+    {
+        foreach (RecoveryEvidenceEvent evidence in evidenceEvents)
+        {
+            string projectName = ResolveProjectName(projectsById, evidence.ProjectId);
+            string kind = evidence.Kind switch
+            {
+                "isolated-restore" => "Test restore",
+                "recovery-proof" => "Recovery proof",
+                "protection" => "Protection",
+                "report-export" => "Evidence report",
+                _ => "Recovery evidence"
+            };
+            items.Add(new HistoryTimelineItemViewModel(new HistoryTimelineItemData
+            {
+                Kind = kind,
+                ProjectName = projectName,
+                ProjectId = evidence.ProjectId,
+                CreatedUtc = evidence.CreatedUtc,
+                Title = $"{projectName} · {kind}",
+                Detail = $"{evidence.Status}: {evidence.Summary}",
+                Lane = "Recovery evidence",
+                GraphLane = evidence.Kind == "isolated-restore"
+                    ? HistoryTimelineLane.Restore
+                    : HistoryTimelineLane.Metadata,
+                BackupId = evidence.BackupId,
+                SnapshotId = evidence.SnapshotId,
+                OriginSummary = string.IsNullOrWhiteSpace(evidence.EvidenceId)
+                    ? evidence.SourceIdentity
+                    : $"{evidence.EvidenceId} · {evidence.SourceIdentity}"
             }));
         }
     }
