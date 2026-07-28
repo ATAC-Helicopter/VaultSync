@@ -309,7 +309,7 @@ namespace VaultSync.CLI.Commands
             return result.ExitCode;
         }
 
-        private static void WriteResult(SelfTestRunResult result)
+        internal static void WriteResult(SelfTestRunResult result)
         {
             string databaseKind = result.UsesTemporaryDatabase
                 ? "isolated temporary database"
