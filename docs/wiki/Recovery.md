@@ -2,6 +2,8 @@
 
 Recovery answers a harder question than “did the backup finish?”: can VaultSync still find, open, and validate the stored recovery point?
 
+![Recovery readiness overview with coverage and project status](../images/Recovery_Readiness.png)
+
 ## Run a recovery drill
 
 1. Open **Recovery**.
@@ -10,6 +12,8 @@ Recovery answers a harder question than “did the backup finish?”: can VaultS
 4. Expand the result to review every check and any suggested action.
 
 The drill is read-only. It does not restore files into the project or change the backup.
+
+![Expanded recovery drill evidence for a passing restore point](../images/Recovery_Drill.png)
 
 For an available folder or ZIP recovery point, VaultSync checks:
 

@@ -2,6 +2,8 @@
 
 VaultSync creates snapshot-based backups with progress tracking, status history, and optional post-backup verification.
 
+![Backups page with project actions, destination status, and restore points](../images/Backup_Page.png)
+
 ## Core concepts
 - Project: a source folder you want to protect.
 - Snapshot: a point-in-time capture of project metadata.
@@ -39,6 +41,8 @@ For encrypted archive backups, VaultSync creates and encrypts the archive locall
 - Snapshot Explorer browses available folder and ZIP payloads without restoring the full backup.
 - Snapshot Compare shows changed files between two restore points from the same project.
 - Supported text files get line-by-line change groups; unavailable or unsupported content remains metadata-only.
+
+![Snapshot comparison with changed files and readable text differences](../images/Compare_View.png)
 
 ## Recovery proof
 - Run a drill from Recovery to verify record linkage, reachability, readable inventory, bounded stored bytes, and a read-only restore plan.

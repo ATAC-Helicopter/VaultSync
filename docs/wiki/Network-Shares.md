@@ -14,6 +14,8 @@ authentication, and reliability tips.
 - Prefer pre-mounted paths if your environment manages mounts.
 - On macOS, NFS requires pre-mounting with `sudo mount_nfs`; auto-mount is not supported.
 
+![Advanced destination settings for local and network backup targets](../images/Settings_Destinations.png)
+
 ## Optimizations
 - VaultSync prefers rsync delta when available to reduce network usage.
 - For large file trees, let the ETA stabilize after initial scanning.
