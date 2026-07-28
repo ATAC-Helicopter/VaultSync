@@ -8,12 +8,11 @@ namespace VaultSync.Core.Tests;
 public sealed class RecoveryConfidenceServiceTests
 {
     private static readonly DateTime NowUtc = new(2026, 7, 27, 12, 0, 0, DateTimeKind.Utc);
-    private readonly RecoveryConfidenceService _service = new();
 
     [Fact]
     public void Evaluate_MissingRecoveryPointIsTheDecisiveBlocker()
     {
-        ProjectRecoveryConfidence result = _service.Evaluate(
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
             new RecoveryConfidenceInput { ProjectId = 7 },
             NowUtc);
 
@@ -27,7 +26,7 @@ public sealed class RecoveryConfidenceServiceTests
     [Fact]
     public void Evaluate_DestinationFailureCannotBeHiddenByPassedEvidence()
     {
-        ProjectRecoveryConfidence result = _service.Evaluate(
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
             FullyVerifiedInput() with { IsDestinationReachable = false },
             NowUtc);
 
@@ -41,7 +40,7 @@ public sealed class RecoveryConfidenceServiceTests
     [Fact]
     public void Evaluate_EncryptedPointWithoutCredentialIsBlocked()
     {
-        ProjectRecoveryConfidence result = _service.Evaluate(
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
             FullyVerifiedInput() with
             {
                 IsEncrypted = true,
@@ -54,9 +53,43 @@ public sealed class RecoveryConfidenceServiceTests
     }
 
     [Fact]
+    public void Evaluate_EncryptedPointWithUncheckedCredentialRequestsCheck()
+    {
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
+            FullyVerifiedInput() with
+            {
+                IsEncrypted = true,
+                IsCredentialAvailable = null
+            },
+            NowUtc);
+
+        Assert.Equal(RecoveryConfidenceState.CredentialUnavailable, result.State);
+        Assert.Equal("credential.not-checked", result.DecisiveEvidenceCode);
+        Assert.Equal("action.check-credential", result.RecommendedActionCode);
+    }
+
+    [Fact]
+    public void Evaluate_EncryptedPointWithCredentialRecordsPassedEvidence()
+    {
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
+            FullyVerifiedInput() with
+            {
+                IsEncrypted = true,
+                IsCredentialAvailable = true
+            },
+            NowUtc);
+
+        RecoveryConfidenceEvidence credential = Assert.Single(
+            result.Evidence,
+            item => item.Kind == RecoveryEvidenceKind.Credential);
+        Assert.Equal(RecoveryEvidenceStatus.Passed, credential.Status);
+        Assert.Equal("credential.available", credential.Code);
+    }
+
+    [Fact]
     public void Evaluate_BackupCompletionWithoutVerificationRemainsPending()
     {
-        ProjectRecoveryConfidence result = _service.Evaluate(
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
             FullyVerifiedInput() with
             {
                 VerificationStatus = RecoveryVerificationStatus.NotRun,
@@ -72,7 +105,7 @@ public sealed class RecoveryConfidenceServiceTests
     [Fact]
     public void Evaluate_StalePassedDrillBecomesOverdue()
     {
-        ProjectRecoveryConfidence result = _service.Evaluate(
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
             FullyVerifiedInput() with { DrillUtc = NowUtc.AddDays(-31) },
             NowUtc);
 
@@ -86,7 +119,7 @@ public sealed class RecoveryConfidenceServiceTests
     [Fact]
     public void Evaluate_MissingDrillIsDistinctFromAnOverdueDrill()
     {
-        ProjectRecoveryConfidence result = _service.Evaluate(
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
             FullyVerifiedInput() with
             {
                 DrillStatus = null,
@@ -101,7 +134,7 @@ public sealed class RecoveryConfidenceServiceTests
     [Fact]
     public void Evaluate_InvalidRestorePlanHasItsOwnBlockerState()
     {
-        ProjectRecoveryConfidence result = _service.Evaluate(
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
             FullyVerifiedInput() with { IsRestorePlanValid = false },
             NowUtc);
 
@@ -111,9 +144,49 @@ public sealed class RecoveryConfidenceServiceTests
     }
 
     [Fact]
+    public void Evaluate_MissingRestorePlanIsAWarning()
+    {
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
+            FullyVerifiedInput() with { IsRestorePlanValid = null },
+            NowUtc);
+
+        Assert.Equal(RecoveryConfidenceState.RecoverableWithWarnings, result.State);
+        Assert.Equal("restore-plan.not-run", result.DecisiveEvidenceCode);
+        Assert.Equal("action.review-evidence", result.RecommendedActionCode);
+    }
+
+    [Theory]
+    [InlineData(RecoveryVerificationStatus.Limited, RecoveryConfidenceState.RecoverableWithWarnings, "verification.limited")]
+    [InlineData(RecoveryVerificationStatus.Failed, RecoveryConfidenceState.VerificationFailed, "verification.failed")]
+    public void Evaluate_MapsVerificationOutcomes(
+        RecoveryVerificationStatus verificationStatus,
+        RecoveryConfidenceState expectedState,
+        string expectedCode)
+    {
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
+            FullyVerifiedInput() with { VerificationStatus = verificationStatus },
+            NowUtc);
+
+        Assert.Equal(expectedState, result.State);
+        Assert.Equal(expectedCode, result.DecisiveEvidenceCode);
+    }
+
+    [Fact]
+    public void Evaluate_StaleVerificationRequestsNewVerification()
+    {
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
+            FullyVerifiedInput() with { VerificationUtc = NowUtc.AddDays(-8) },
+            NowUtc);
+
+        Assert.Equal(RecoveryConfidenceState.RecoverableWithWarnings, result.State);
+        Assert.Equal("verification.stale", result.DecisiveEvidenceCode);
+        Assert.Equal("action.run-verification", result.RecommendedActionCode);
+    }
+
+    [Fact]
     public void Evaluate_UnsupportedVerificationIsExplicitAndNeverFullyVerified()
     {
-        ProjectRecoveryConfidence result = _service.Evaluate(
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
             FullyVerifiedInput() with
             {
                 VerificationStatus = RecoveryVerificationStatus.Unsupported,
@@ -129,10 +202,37 @@ public sealed class RecoveryConfidenceServiceTests
         Assert.Equal(RecoveryEvidenceStatus.Unsupported, verification.Status);
     }
 
+    [Theory]
+    [InlineData(RecoveryDrillStatus.Attention, RecoveryConfidenceState.RecoverableWithWarnings, "restore-drill.limited")]
+    [InlineData(RecoveryDrillStatus.Failed, RecoveryConfidenceState.DrillFailed, "restore-drill.failed")]
+    public void Evaluate_MapsDrillOutcomes(
+        RecoveryDrillStatus drillStatus,
+        RecoveryConfidenceState expectedState,
+        string expectedCode)
+    {
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
+            FullyVerifiedInput() with { DrillStatus = drillStatus },
+            NowUtc);
+
+        Assert.Equal(expectedState, result.State);
+        Assert.Equal(expectedCode, result.DecisiveEvidenceCode);
+    }
+
+    [Fact]
+    public void Evaluate_MissingOffsiteConfirmationIsAWarning()
+    {
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
+            FullyVerifiedInput() with { HasOffsiteCopy = false },
+            NowUtc);
+
+        Assert.Equal(RecoveryConfidenceState.RecoverableWithWarnings, result.State);
+        Assert.Equal("offsite.not-confirmed", result.DecisiveEvidenceCode);
+    }
+
     [Fact]
     public void Evaluate_AllRequiredEvidencePassedIsFullyVerified()
     {
-        ProjectRecoveryConfidence result = _service.Evaluate(FullyVerifiedInput(), NowUtc);
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(FullyVerifiedInput(), NowUtc);
 
         Assert.Equal(RecoveryConfidenceState.FullyVerified, result.State);
         Assert.False(result.IsBlocked);
@@ -150,10 +250,33 @@ public sealed class RecoveryConfidenceServiceTests
     public void Evaluate_RejectsNonPositiveFreshness()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            _service.Evaluate(
+            RecoveryConfidenceService.Evaluate(
                 FullyVerifiedInput(),
                 NowUtc,
                 verificationFreshness: TimeSpan.Zero));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            RecoveryConfidenceService.Evaluate(
+                FullyVerifiedInput(),
+                NowUtc,
+                drillFreshness: TimeSpan.FromSeconds(-1)));
+    }
+
+    [Fact]
+    public void Evaluate_CustomFreshnessAndLocalTimeAreNormalized()
+    {
+        DateTime localNow = NowUtc.ToLocalTime();
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(
+            FullyVerifiedInput() with
+            {
+                VerificationUtc = localNow.AddHours(-2),
+                DrillUtc = localNow.AddHours(-3)
+            },
+            localNow,
+            verificationFreshness: TimeSpan.FromHours(4),
+            drillFreshness: TimeSpan.FromHours(4));
+
+        Assert.Equal(RecoveryConfidenceState.FullyVerified, result.State);
     }
 
     private static RecoveryConfidenceInput FullyVerifiedInput() =>

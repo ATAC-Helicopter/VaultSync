@@ -95,22 +95,25 @@ public sealed class SelfTestRunnerTests
     [Fact]
     public void WriteResult_HandlesSuccessAndBothFailureStages()
     {
-        SelfTestCommand.WriteResult(CreateResult(
-            usesTemporaryDatabase: true,
-            syncExitCode: 0,
-            verificationFailures: 0));
-        SelfTestCommand.WriteResult(CreateResult(
-            usesTemporaryDatabase: true,
-            syncExitCode: 9,
-            verificationFailures: null));
-        SelfTestCommand.WriteResult(CreateResult(
-            usesTemporaryDatabase: false,
-            syncExitCode: 0,
-            verificationFailures: 2));
-        SelfTestCommand.WriteResult(CreateResult(
-            usesTemporaryDatabase: false,
-            syncExitCode: 0,
-            verificationFailures: 0));
+        Assert.Null(Record.Exception(() =>
+        {
+            SelfTestCommand.WriteResult(CreateResult(
+                usesTemporaryDatabase: true,
+                syncExitCode: 0,
+                verificationFailures: 0));
+            SelfTestCommand.WriteResult(CreateResult(
+                usesTemporaryDatabase: true,
+                syncExitCode: 9,
+                verificationFailures: null));
+            SelfTestCommand.WriteResult(CreateResult(
+                usesTemporaryDatabase: false,
+                syncExitCode: 0,
+                verificationFailures: 2));
+            SelfTestCommand.WriteResult(CreateResult(
+                usesTemporaryDatabase: false,
+                syncExitCode: 0,
+                verificationFailures: 0));
+        }));
     }
 
     private static SelfTestRunner CreateRunner(string runRoot) =>
