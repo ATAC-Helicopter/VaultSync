@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using VaultSync.CLI.Commands;
 using VaultSync.CLI.Services;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
@@ -91,8 +92,44 @@ public sealed class SelfTestRunnerTests
         Assert.Empty(Directory.EnumerateDirectories(runRoot));
     }
 
+    [Fact]
+    public void WriteResult_HandlesSuccessAndBothFailureStages()
+    {
+        SelfTestCommand.WriteResult(CreateResult(
+            usesTemporaryDatabase: true,
+            syncExitCode: 0,
+            verificationFailures: 0));
+        SelfTestCommand.WriteResult(CreateResult(
+            usesTemporaryDatabase: true,
+            syncExitCode: 9,
+            verificationFailures: null));
+        SelfTestCommand.WriteResult(CreateResult(
+            usesTemporaryDatabase: false,
+            syncExitCode: 0,
+            verificationFailures: 2));
+        SelfTestCommand.WriteResult(CreateResult(
+            usesTemporaryDatabase: false,
+            syncExitCode: 0,
+            verificationFailures: 0));
+    }
+
     private static SelfTestRunner CreateRunner(string runRoot) =>
         new(() => new TestSyncRunner(exitCode: 0), runRoot);
+
+    private static SelfTestRunResult CreateResult(
+        bool usesTemporaryDatabase,
+        int syncExitCode,
+        int? verificationFailures) =>
+        new(
+            ExitCode: syncExitCode == 0 && verificationFailures == 0 ? 0 : 2,
+            UsesTemporaryDatabase: usesTemporaryDatabase,
+            DatabasePath: "/tmp/selftest.db",
+            WorkspacePath: "/tmp/selftest",
+            ProjectName: "SelfTest-test",
+            ProjectId: 1,
+            SnapshotId: 1,
+            SyncExitCode: syncExitCode,
+            VerificationFailures: verificationFailures);
 
     private sealed class TestSyncRunner(int exitCode) : ISyncRunner
     {
