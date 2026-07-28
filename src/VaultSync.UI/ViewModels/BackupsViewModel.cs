@@ -996,12 +996,16 @@ namespace VaultSync.UI.ViewModels
                 if (SetProperty(ref _selectedDiffPreviewFile, value))
                 {
                     OnPropertyChanged(nameof(SelectedDiffPreviewFile));
+                    OnPropertyChanged(nameof(SelectedDiffPreviewPath));
                     SyncSelectedDiffPreviewTreeNode(value);
                     RaiseDiffFileNavigationCanExecuteChanged();
                     LoadSelectedDiffFile(value);
                 }
             }
         }
+
+        public string SelectedDiffPreviewPath =>
+            SelectedDiffPreviewFile?.Path ?? string.Empty;
 
         public DiffPreviewTreeNode? SelectedDiffPreviewTreeNode
         {

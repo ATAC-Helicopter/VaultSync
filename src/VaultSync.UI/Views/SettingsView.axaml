@@ -1019,7 +1019,7 @@
                                       Classes="settings-ghost"
                                       HorizontalAlignment="Right"
                                       VerticalAlignment="Center"
-                                      Command="{ReflectionBinding DataContext.RemoveDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      Command="{Binding DataContext.RemoveDestinationCommand, ElementName=Root}"
                                       CommandParameter="{Binding}">
                                 <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
                               </Button>
@@ -1039,12 +1039,12 @@
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center">
                                   <Button Classes="settings-ghost"
-                                          Command="{ReflectionBinding DataContext.BrowseDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          Command="{Binding DataContext.BrowseDestinationCommand, ElementName=Root}"
                                           CommandParameter="{Binding}">
                                     <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Select}" />
                                   </Button>
                                   <Button Classes="settings-ghost"
-                                          Command="{ReflectionBinding DataContext.TestDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          Command="{Binding DataContext.TestDestinationCommand, ElementName=Root}"
                                           CommandParameter="{Binding}"
                                           ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.TestTooltip}">
                                     <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Test}" />
@@ -1056,7 +1056,7 @@
                                         Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2"
                                         MinWidth="160"
                                         HorizontalAlignment="Stretch"
-                                        ItemsSource="{ReflectionBinding DataContext.CredentialNames, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        ItemsSource="{Binding DataContext.CredentialNames, ElementName=Root}"
                                         SelectedItem="{Binding SelectedCredentialName, Mode=TwoWay}"
                                         ToolTip.Tip="{infra:LocalizedString Key=Settings.Destinations.CredentialTooltip}">
                                 <ComboBox.ItemTemplate>
@@ -1232,7 +1232,7 @@
                                         Classes="settings-ghost"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Center"
-                                        Command="{ReflectionBinding DataContext.RemoveCredentialCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Command="{Binding DataContext.RemoveCredentialCommand, ElementName=Root}"
                                         CommandParameter="{Binding}">
                                   <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Remove}" />
                                 </Button>
