@@ -3,6 +3,8 @@
 This is the control-by-control reference for the Settings page. Changes are
 saved automatically unless an action opens a confirmation or file picker.
 
+![General, scheduling, retention, and transfer settings](../images/Settings_General.png)
+
 ## General
 
 | Control | What it does |
@@ -33,6 +35,8 @@ saved automatically unless an action opens a confirmation or file picker.
 
 ## Backup location and encryption
 
+![Advanced destination configuration](../images/Settings_Destinations.png)
+
 | Control | What it does |
 | --- | --- |
 | Fallback backup location | The single destination used in simple mode, or when no advanced destination is configured. Never place it inside the protected project. |
@@ -49,6 +53,8 @@ VaultSync cannot recover a forgotten encryption password. Read
 [Backup encryption](Encryption.md) before enabling encryption.
 
 ## Backup format, performance, and safety
+
+![Encryption and backup-performance controls](../images/Settings_Encryption_Performance.png)
 
 | Toggle | What it does and when to use it |
 | --- | --- |
@@ -121,6 +127,8 @@ off the master does not erase those individual choices.
 
 ## Advanced, diagnostics, and maintenance
 
+![Maintenance, repair planning, metadata conflicts, and updates](../images/Settings_Maintenance.png)
+
 | Control or action | What it does |
 | --- | --- |
 | Enable verbose logging | Adds troubleshooting detail to the live log. |
@@ -170,4 +178,3 @@ The Backups page can override global behavior per project:
 
 Use global Settings for the normal policy, and project overrides only when a
 project genuinely needs different storage or safety behavior.
-

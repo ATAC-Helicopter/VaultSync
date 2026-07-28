@@ -68,6 +68,8 @@ not change or delete any configuration.
 - A verification failure offers an explicit choice to keep or delete the
   affected backup; VaultSync does not silently discard it.
 
+![Snapshot comparison with a text-file preview](../images/Compare_View.png)
+
 ## History
 
 ![Searchable history and restore-point details](../images/tour/history.png)
@@ -98,6 +100,42 @@ not change or delete any configuration.
 Settings are intentionally presented as one scrollable page. The complete
 control-by-control explanation is in [Settings reference](Settings-Reference.md).
 
+### General, scheduling, and transfer
+
+![General, scheduling, retention, and transfer settings](../images/Settings_General.png)
+
+This area controls startup behavior, automatic-backup timing, retention
+simulation, history synchronization, quiet hours, and bandwidth limits.
+
+### Destinations
+
+![Advanced local, external, and network destination settings](../images/Settings_Destinations.png)
+
+Advanced destinations expose mount ownership, offsite classification, history
+sync, retry and resume behavior, quota planning, and credential selection.
+
+### Encryption and performance
+
+![Encryption, backup format, and performance settings](../images/Settings_Encryption_Performance.png)
+
+Encryption credentials, compression, delta transfer, incremental backups,
+hashing, verification, and scan-cache tradeoffs are kept together so their
+dependencies remain visible.
+
+### Maintenance and updates
+
+![Maintenance, repair planning, metadata conflicts, and update settings](../images/Settings_Maintenance.png)
+
+Diagnostics and maintenance use reviewable scans and dry-run plans. Update
+status, metadata-conflict choices, and repair actions remain explicit.
+
+### Themes
+
+<p align="center">
+  <img width="49%" alt="Dark theme gallery" src="../images/Theme_Gallery_Dark.png" />
+  <img width="49%" alt="Light theme gallery" src="../images/Theme_Gallery_Light.png" />
+</p>
+
 ## Tray, mini widget, and notifications
 
 - The tray menu can open VaultSync, run Backup all or Snapshot all, open recent
@@ -112,4 +150,3 @@ control-by-control explanation is in [Settings reference](Settings-Reference.md)
 After the first backup, run a Recovery drill, test every advanced destination,
 and compare two restore points. Those three actions prove that VaultSync is not
 only creating data, but that you can find, read, and understand it.
-
