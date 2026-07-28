@@ -99,6 +99,7 @@ namespace VaultSync.UI.ViewModels
         private BackupsViewModel? _backupsViewModel;
         private HistoryViewModel? _historyViewModel;
         private RecoveryViewModel? _recoveryViewModel;
+        private GuideViewModel? _guideViewModel;
         private readonly SettingsViewModel _settingsViewModel;
         private readonly IAppConfigStore _configStore;
         private readonly IRepositoryFactory _repositoryFactory;
@@ -589,6 +590,7 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(IsBackupsViewActive));
                 OnPropertyChanged(nameof(IsHistoryActive));
                 OnPropertyChanged(nameof(IsRecoveryActive));
+                OnPropertyChanged(nameof(IsGuideActive));
                 OnPropertyChanged(nameof(IsSettingsActive));
             }
         }
@@ -602,6 +604,7 @@ namespace VaultSync.UI.ViewModels
         public bool IsBackupsViewActive => CurrentViewName == "Backups";
         public bool IsHistoryActive => CurrentViewName == "History";
         public bool IsRecoveryActive => CurrentViewName == "Recovery";
+        public bool IsGuideActive => CurrentViewName == "Guide";
         public bool IsSettingsActive => CurrentViewName == "Settings";
         public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
         public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(_configStore, _repositoryFactory);
@@ -621,6 +624,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
         public RecoveryViewModel RecoveryViewModel => _recoveryViewModel ??= new RecoveryViewModel(_configStore, _repositoryFactory);
+        public GuideViewModel GuideViewModel => _guideViewModel ??= new GuideViewModel(this, _configStore, _repositoryFactory);
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;
         public ICommand SkipUpdateCommand => _skipUpdateCommand;
