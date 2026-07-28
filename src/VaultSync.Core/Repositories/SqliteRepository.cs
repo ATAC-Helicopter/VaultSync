@@ -250,6 +250,21 @@ namespace VaultSync.Core.Repositories
           FOREIGN KEY(backup_id) REFERENCES backups(id) ON DELETE CASCADE,
           FOREIGN KEY(snapshot_id) REFERENCES snapshots(id) ON DELETE CASCADE
         );
+
+        -- 1.8.5 durable recovery evidence for History and exported reports.
+        CREATE TABLE IF NOT EXISTS recovery_evidence_events(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id INTEGER NOT NULL,
+          backup_id INTEGER NOT NULL DEFAULT 0,
+          snapshot_id INTEGER NOT NULL DEFAULT 0,
+          created_utc TEXT NOT NULL,
+          kind TEXT NOT NULL,
+          status TEXT NOT NULL,
+          evidence_id TEXT NOT NULL DEFAULT '',
+          source_identity TEXT NOT NULL DEFAULT '',
+          summary TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+        );
     """);
         }
 
@@ -311,6 +326,8 @@ namespace VaultSync.Core.Repositories
 
         CREATE INDEX IF NOT EXISTS idx_recovery_drills_project_run
           ON recovery_drills(project_id, run_utc DESC);
+        CREATE INDEX IF NOT EXISTS idx_recovery_evidence_project_created
+          ON recovery_evidence_events(project_id, created_utc DESC);
 
         -- Avoid duplicate file rows per snapshot (same logical path)
         CREATE UNIQUE INDEX IF NOT EXISTS ux_files_snapshot_rel
@@ -2311,6 +2328,52 @@ DELETE FROM sqlite_sequence;";
                 FROM recovery_drills
                 ORDER BY run_utc DESC, id DESC;
                 """).AsList();
+        }
+
+        public int AddRecoveryEvidenceEvent(RecoveryEvidenceEvent evidence)
+        {
+            ArgumentNullException.ThrowIfNull(evidence);
+            using SqliteConnection c = Open();
+            return c.ExecuteScalar<int>(
+                """
+                INSERT INTO recovery_evidence_events(
+                  project_id, backup_id, snapshot_id, created_utc, kind, status,
+                  evidence_id, source_identity, summary)
+                VALUES(
+                  @ProjectId, @BackupId, @SnapshotId, @CreatedUtc, @Kind, @Status,
+                  @EvidenceId, @SourceIdentity, @Summary);
+                SELECT last_insert_rowid();
+                """,
+                new
+                {
+                    evidence.ProjectId,
+                    evidence.BackupId,
+                    evidence.SnapshotId,
+                    CreatedUtc = evidence.CreatedUtc.ToString("u", CultureInfo.InvariantCulture),
+                    evidence.Kind,
+                    evidence.Status,
+                    evidence.EvidenceId,
+                    evidence.SourceIdentity,
+                    evidence.Summary
+                });
+        }
+
+        public List<RecoveryEvidenceEvent> GetRecentRecoveryEvidenceEvents(int limit = 100)
+        {
+            if (limit <= 0)
+                return [];
+            using SqliteConnection c = Open();
+            return c.Query<RecoveryEvidenceEvent>(
+                """
+                SELECT id, project_id as ProjectId, backup_id as BackupId,
+                       snapshot_id as SnapshotId, created_utc as CreatedUtc,
+                       kind, status, evidence_id as EvidenceId,
+                       source_identity as SourceIdentity, summary
+                FROM recovery_evidence_events
+                ORDER BY created_utc DESC, id DESC
+                LIMIT @limit;
+                """,
+                new { limit }).AsList();
         }
     }
 
