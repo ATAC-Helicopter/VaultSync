@@ -38,6 +38,8 @@ packages/
 *.tmp
 *.bak
 *.swp
+__pycache__/
+*.py[cod]
 
 # VaultSync local config
 .vaultsync/
@@ -57,3 +59,4 @@ artifacts/
 docs/localization-missing-keys-report.md
 docs/PROJECT_OPERATIONS.md
 .codex_tmp_merge_locales.cs
+docs/video/build/
