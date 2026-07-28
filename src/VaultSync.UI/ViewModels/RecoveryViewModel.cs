@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -354,6 +358,7 @@ public sealed class RecoveryViewModel : ViewModelBase
             string path = await Task.Run(() =>
                 RecoveryReportExporter.ExportMarkdown(snapshot, labels, exportRoot),
                 cancellationToken);
+            await Task.Run(() => RecordReportExport(snapshot, path), cancellationToken).ConfigureAwait(false);
             string message = LF("Recovery.Export.Success", "Recovery report exported to {0}", path);
             await Dispatcher.UIThread.InvokeAsync(() => ExportStatus = message);
             GlobalNotificationCenter.Instance.Show(
@@ -421,7 +426,41 @@ public sealed class RecoveryViewModel : ViewModelBase
             ThreeTwoOneReadyCount,
             DrilledProjectCount,
             PassedDrillCount,
-            ProtectedPointCount);
+            ProtectedPointCount,
+            Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+                ?? "unknown",
+            BuildSourceIdentity());
+
+    private static string BuildSourceIdentity()
+    {
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(Environment.MachineName));
+        return $"machine-{Convert.ToHexString(hash)[..12].ToLowerInvariant()}";
+    }
+
+    private void RecordReportExport(RecoveryReportSnapshot snapshot, string path)
+    {
+        AppConfig config = _configStore.GetSnapshot();
+        SqliteRepository repo = _repositoryFactory.Create(config);
+        repo.EnsureSchema();
+        string reportId = Path.GetFileNameWithoutExtension(path);
+        Dictionary<string, Project> projects = repo.GetAllProjects()
+            .ToDictionary(project => project.Name, StringComparer.OrdinalIgnoreCase);
+        foreach (RecoveryReportProject projectReport in snapshot.Projects)
+        {
+            if (!projects.TryGetValue(projectReport.ProjectName, out Project? project))
+                continue;
+            repo.AddRecoveryEvidenceEvent(new RecoveryEvidenceEvent
+            {
+                ProjectId = project.Id,
+                Kind = "report-export",
+                Status = "Completed",
+                EvidenceId = reportId,
+                SourceIdentity = snapshot.SourceIdentity,
+                Summary = "A redacted recovery evidence report was exported."
+            });
+        }
+    }
 
     private static RecoveryReportLabels BuildReportLabels() =>
         new(
@@ -469,6 +508,8 @@ public sealed class RecoveryViewModel : ViewModelBase
             metadataBySnapshotId,
             config,
             repo.GetRecoveryDrills());
+        IReadOnlyDictionary<int, ProjectRecoveryConfidence> confidenceByProject =
+            BuildConfidenceByProject(projects, backups, disasterRecovery, config);
 
         var latestBackups = backups
             .GroupBy(backup => backup.ProjectId)
@@ -507,7 +548,8 @@ public sealed class RecoveryViewModel : ViewModelBase
             within90Days,
             coverageSummary,
             topRecommendation,
-            disasterRecovery);
+            disasterRecovery,
+            confidenceByProject);
     }
 
     private void ApplyData(RecoveryData data)
@@ -548,7 +590,14 @@ public sealed class RecoveryViewModel : ViewModelBase
                      .ThenBy(project => project.ProjectName, StringComparer.OrdinalIgnoreCase))
         {
             ProjectProtectionAssessment? protection = data.DisasterRecovery.Projects.FirstOrDefault(item => item.ProjectId == project.ProjectId);
-            _allProjects.Add(new RecoveryProjectViewModel(project, protection, RunDrillAsync, ProtectRecommendedPointAsync));
+            data.ConfidenceByProject.TryGetValue(project.ProjectId, out ProjectRecoveryConfidence? confidence);
+            _allProjects.Add(new RecoveryProjectViewModel(
+                project,
+                protection,
+                confidence,
+                RunDrillAsync,
+                RunIsolatedRestoreAsync,
+                ProtectRecommendedPointAsync));
         }
 
         RefreshProjectsView();
@@ -622,9 +671,100 @@ public sealed class RecoveryViewModel : ViewModelBase
         int Coverage90Days,
         string CoverageSummary,
         string TopRecommendation,
-        DisasterRecoverySummary DisasterRecovery);
+        DisasterRecoverySummary DisasterRecovery,
+        IReadOnlyDictionary<int, ProjectRecoveryConfidence> ConfidenceByProject);
+
+    private static IReadOnlyList<RecoveryDrillCheck> DeserializeChecks(RecoveryDrillResult? drill)
+    {
+        if (drill is null)
+            return [];
+        try
+        {
+            return JsonSerializer.Deserialize<List<RecoveryDrillCheck>>(drill.ChecksJson) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static IReadOnlyDictionary<int, ProjectRecoveryConfidence> BuildConfidenceByProject(
+        IReadOnlyCollection<Project> projects,
+        IReadOnlyCollection<Backup> backups,
+        DisasterRecoverySummary disasterRecovery,
+        AppConfig config)
+    {
+        Dictionary<int, ProjectProtectionAssessment> protectionByProject =
+            disasterRecovery.Projects.ToDictionary(item => item.ProjectId);
+        Dictionary<int, Backup> latestBackupByProject = backups
+            .GroupBy(backup => backup.ProjectId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(backup => backup.CreatedUtc)
+                    .ThenByDescending(backup => backup.Id)
+                    .First());
+
+        return projects.ToDictionary(
+            project => project.Id,
+            project =>
+            {
+                latestBackupByProject.TryGetValue(project.Id, out Backup? latest);
+                protectionByProject.TryGetValue(project.Id, out ProjectProtectionAssessment? protection);
+                RecoveryDrillResult? drill = protection?.LastDrill;
+                IReadOnlyList<RecoveryDrillCheck> checks = DeserializeChecks(drill);
+                RecoveryDrillCheck? integrity = FindCheck(checks, "integrity");
+                RecoveryDrillCheck? restorePlan = FindCheck(checks, "restore-plan");
+                return RecoveryConfidenceService.Evaluate(new RecoveryConfidenceInput
+                {
+                    ProjectId = project.Id,
+                    HasRecoveryPoint = latest is not null,
+                    IsDestinationReachable = latest is not null &&
+                                             BackupContentPathResolver.Resolve(latest, config) is not null,
+                    IsEncrypted = latest?.IsEncrypted == true,
+                    IsCredentialAvailable = latest?.IsEncrypted == true ? null : true,
+                    VerificationStatus = MapVerificationStatus(integrity),
+                    VerificationUtc = integrity is null ? null : drill?.RunUtc,
+                    IsRestorePlanValid = MapRestorePlanStatus(restorePlan),
+                    DrillStatus = drill?.Status,
+                    DrillUtc = drill?.RunUtc,
+                    HasOffsiteCopy = protection?.HasOffsiteCopy == true
+                });
+            });
+    }
+
+    private static RecoveryDrillCheck? FindCheck(
+        IEnumerable<RecoveryDrillCheck> checks,
+        string code) =>
+        checks.FirstOrDefault(check => string.Equals(check.Code, code, StringComparison.Ordinal));
+
+    private static RecoveryVerificationStatus MapVerificationStatus(RecoveryDrillCheck? check) =>
+        check?.Status switch
+        {
+            RecoveryDrillCheckStatus.Passed => RecoveryVerificationStatus.Passed,
+            RecoveryDrillCheckStatus.Attention => RecoveryVerificationStatus.Limited,
+            RecoveryDrillCheckStatus.Failed => RecoveryVerificationStatus.Failed,
+            _ => RecoveryVerificationStatus.NotRun
+        };
+
+    private static bool? MapRestorePlanStatus(RecoveryDrillCheck? check) =>
+        check?.Status switch
+        {
+            RecoveryDrillCheckStatus.Passed => true,
+            RecoveryDrillCheckStatus.Failed => false,
+            _ => null
+        };
 
     private async Task RunDrillAsync(int projectId)
+    {
+        await RunRecoveryProofAsync(projectId, isolatedRestore: false).ConfigureAwait(false);
+    }
+
+    private async Task RunIsolatedRestoreAsync(int projectId)
+    {
+        await RunRecoveryProofAsync(projectId, isolatedRestore: true).ConfigureAwait(false);
+    }
+
+    private async Task RunRecoveryProofAsync(int projectId, bool isolatedRestore)
     {
         CancellationToken cancellationToken = GetViewLifetimeToken();
         cancellationToken.ThrowIfCancellationRequested();
@@ -644,15 +784,47 @@ public sealed class RecoveryViewModel : ViewModelBase
         IReadOnlyCollection<FileEntry> expectedFiles = snapshot is null
             ? []
             : [.. repo.GetFilesForSnapshot(snapshot.Id)];
-        RecoveryDrillResult result = await _drillService.RunAsync(
-            project,
-            backup,
-            snapshot,
-            config,
-            expectedFiles,
-            cancellationToken).ConfigureAwait(false);
+        RecoveryDrillResult result = isolatedRestore
+            ? await _drillService.RunIsolatedRestoreAsync(
+                project,
+                backup,
+                snapshot,
+                config,
+                expectedFiles,
+                cancellationToken: cancellationToken).ConfigureAwait(false)
+            : await _drillService.RunAsync(
+                project,
+                backup,
+                snapshot,
+                config,
+                expectedFiles,
+                cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         repo.AddRecoveryDrill(result);
+        repo.AddRecoveryEvidenceEvent(new RecoveryEvidenceEvent
+        {
+            ProjectId = project.Id,
+            BackupId = backup.Id,
+            SnapshotId = backup.SnapshotId,
+            CreatedUtc = result.RunUtc,
+            Kind = isolatedRestore ? "isolated-restore" : "recovery-proof",
+            Status = result.Status.ToString(),
+            EvidenceId = $"drill:{project.Id}:{result.RunUtc:yyyyMMddHHmmss}",
+            SourceIdentity = string.IsNullOrWhiteSpace(backup.OriginMachineName)
+                ? "local"
+                : backup.OriginMachineName,
+            Summary = result.Summary
+        });
+        if (isolatedRestore)
+        {
+            RecoveryDrillCheck? restoreCheck = DeserializeChecks(result).FirstOrDefault(check =>
+                string.Equals(check.Code, "isolated-restore", StringComparison.Ordinal));
+            if (restoreCheck?.Status == RecoveryDrillCheckStatus.Passed &&
+                !string.IsNullOrWhiteSpace(restoreCheck.Path))
+            {
+                SystemFileLauncher.OpenPath(restoreCheck.Path);
+            }
+        }
         _lastRefreshUtc = DateTime.MinValue;
         await RefreshAsync(force: true, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
@@ -667,6 +839,21 @@ public sealed class RecoveryViewModel : ViewModelBase
             SqliteRepository repo = _repositoryFactory.Create(config);
             repo.EnsureSchema();
             repo.SetBackupProtection(backupId, true);
+            Backup? backup = repo.GetBackupById(backupId);
+            if (backup is not null)
+            {
+                repo.AddRecoveryEvidenceEvent(new RecoveryEvidenceEvent
+                {
+                    ProjectId = backup.ProjectId,
+                    BackupId = backup.Id,
+                    SnapshotId = backup.SnapshotId,
+                    Kind = "protection",
+                    Status = "Protected",
+                    EvidenceId = $"protection:{backup.Id}",
+                    SourceIdentity = "local",
+                    Summary = "The recovery point was protected from automatic retention."
+                });
+            }
         }, cancellationToken).ConfigureAwait(false);
         _lastRefreshUtc = DateTime.MinValue;
         await RefreshAsync(force: true, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -681,7 +868,9 @@ public sealed class RecoveryProjectViewModel
     public RecoveryProjectViewModel(
         ProjectRestoreReadiness project,
         ProjectProtectionAssessment? protection = null,
+        ProjectRecoveryConfidence? confidence = null,
         Func<int, Task>? runDrill = null,
+        Func<int, Task>? runIsolatedRestore = null,
         Func<int, Task>? protectPoint = null)
     {
         ProjectName = project.ProjectName;
@@ -714,9 +903,22 @@ public sealed class RecoveryProjectViewModel
         HasDrillDetail = DrillDetail.Length > 0;
         Recommendation = protection?.Recommendation?.Reason ?? string.Empty;
         HasRecommendation = protection?.Recommendation is not null;
+        ConfidenceState = BuildStateLabel(confidence?.State ?? RecoveryConfidenceState.NotMeasured);
+        ConfidenceExplanation = BuildEvidenceExplanation(confidence);
+        RecommendedAction = BuildActionLabel(confidence?.RecommendedActionCode);
+        Evidence = confidence?.Evidence
+            .Select(item => new RecoveryEvidenceItemViewModel(
+                BuildEvidenceLabel(item.Kind),
+                item.Status.ToString(),
+                item.Basis.ToString(),
+                BuildEvidenceDetail(item.Code, item.ObservedUtc)))
+            .ToList() ?? [];
         RunDrillCommand = new AsyncRelayCommand(
             _ => runDrill?.Invoke(project.ProjectId) ?? Task.CompletedTask,
             operationName: $"recovery-drill-{project.ProjectId}");
+        RunIsolatedRestoreCommand = new AsyncRelayCommand(
+            _ => runIsolatedRestore?.Invoke(project.ProjectId) ?? Task.CompletedTask,
+            operationName: $"isolated-recovery-test-{project.ProjectId}");
         ProtectRecommendationCommand = new AsyncRelayCommand(
             _ => protection?.Recommendation is null || protectPoint is null
                 ? Task.CompletedTask
@@ -741,7 +943,12 @@ public sealed class RecoveryProjectViewModel
     public bool HasDrillDetail { get; }
     public string Recommendation { get; }
     public bool HasRecommendation { get; }
+    public string ConfidenceState { get; }
+    public string ConfidenceExplanation { get; }
+    public string RecommendedAction { get; }
+    public IReadOnlyList<RecoveryEvidenceItemViewModel> Evidence { get; }
     public ICommand RunDrillCommand { get; }
+    public ICommand RunIsolatedRestoreCommand { get; }
     public ICommand ProtectRecommendationCommand { get; }
     public string ScoreLabel => $"{Score}%";
     public int ScoreValue => Score;
@@ -784,6 +991,70 @@ public sealed class RecoveryProjectViewModel
             return [];
         }
     }
+
+    private static string BuildStateLabel(RecoveryConfidenceState state) => state switch
+    {
+        RecoveryConfidenceState.FullyVerified => "Fully verified",
+        RecoveryConfidenceState.RecoverableWithWarnings => "Recoverable with warnings",
+        RecoveryConfidenceState.NoRecoveryPoint => "No recovery point",
+        RecoveryConfidenceState.DestinationUnavailable => "Destination unavailable",
+        RecoveryConfidenceState.CredentialUnavailable => "Credential not proved",
+        RecoveryConfidenceState.VerificationFailed => "Integrity verification failed",
+        RecoveryConfidenceState.VerificationPending => "Integrity not verified",
+        RecoveryConfidenceState.RestorePlanInvalid => "Restore plan blocked",
+        RecoveryConfidenceState.DrillFailed => "Recovery drill failed",
+        RecoveryConfidenceState.DrillNotRun => "Recovery drill not run",
+        RecoveryConfidenceState.DrillOverdue => "Recovery drill overdue",
+        _ => "Not measured"
+    };
+
+    private static string BuildEvidenceExplanation(ProjectRecoveryConfidence? confidence)
+    {
+        if (confidence is null)
+            return "Recovery evidence has not been measured.";
+        RecoveryConfidenceEvidence? decisive = confidence.Evidence.FirstOrDefault(item =>
+            string.Equals(item.Code, confidence.DecisiveEvidenceCode, StringComparison.Ordinal));
+        return decisive is null
+            ? "All required recovery evidence is current."
+            : $"Decisive evidence: {BuildEvidenceLabel(decisive.Kind)} is {decisive.Status.ToString().ToLowerInvariant()}.";
+    }
+
+    private static string BuildActionLabel(string? code) => code switch
+    {
+        "action.create-backup" => "Create the first backup",
+        "action.reconnect-destination" => "Reconnect the backup destination",
+        "action.restore-credential" or "action.check-credential" => "Check the encryption credential",
+        "action.run-verification" => "Run an integrity proof",
+        "action.review-restore-plan" => "Review the restore plan",
+        "action.run-restore-drill" => "Run the recovery drill",
+        "action.review-drill" => "Review the failed drill",
+        "action.review-limitations" or "action.review-evidence" => "Review evidence limitations",
+        "action.none" => "No action required",
+        _ => "Measure recovery evidence"
+    };
+
+    private static string BuildEvidenceLabel(RecoveryEvidenceKind kind) => kind switch
+    {
+        RecoveryEvidenceKind.RecoveryPoint => "Recovery point",
+        RecoveryEvidenceKind.Destination => "Destination",
+        RecoveryEvidenceKind.Credential => "Credential",
+        RecoveryEvidenceKind.IntegrityVerification => "Integrity verification",
+        RecoveryEvidenceKind.RestorePlan => "Restore plan",
+        RecoveryEvidenceKind.RestoreDrill => "Recovery drill",
+        RecoveryEvidenceKind.OffsiteCopy => "Offsite copy",
+        _ => kind.ToString()
+    };
+
+    private static string BuildEvidenceDetail(string code, DateTime? observedUtc) =>
+        observedUtc is null
+            ? code.Replace('-', ' ').Replace('.', ' ')
+            : $"{code.Replace('-', ' ').Replace('.', ' ')} · {observedUtc.Value.ToLocalTime():g}";
 }
 
 public sealed record RecoveryFilterOption(RecoveryProjectFilter Filter, string Label);
+
+public sealed record RecoveryEvidenceItemViewModel(
+    string Label,
+    string Status,
+    string Basis,
+    string Detail);

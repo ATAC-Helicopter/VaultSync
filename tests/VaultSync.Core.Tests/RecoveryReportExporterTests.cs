@@ -101,7 +101,9 @@ public sealed class RecoveryReportExporterTests
         Assert.Contains("## Recovery proof evidence", report);
         Assert.Contains("hash_mismatch:src/app.txt", report);
         Assert.Contains("src/app.txt", report);
-        Assert.Contains("No restore was performed", report);
+        Assert.Contains("isolated test folder", report);
+        Assert.Contains("## Report identity", report);
+        Assert.Contains("SHA-256", report);
     }
 
     private static RecoveryReportSnapshot CreateSnapshot() =>

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Security.Cryptography;
 
 namespace VaultSync.UI.Services;
 
@@ -46,7 +47,9 @@ internal sealed record RecoveryReportSnapshot(
     int ThreeTwoOneReadyCount = 0,
     int DrilledProjectCount = 0,
     int PassedDrillCount = 0,
-    int ProtectedPointCount = 0);
+    int ProtectedPointCount = 0,
+    string AppVersion = "unknown",
+    string SourceIdentity = "local");
 
 internal sealed record RecoveryReportLabels(
     string Title,
@@ -96,6 +99,8 @@ internal static class RecoveryReportExporter
         builder.AppendLine();
         builder.Append("**").Append(labels.Generated).Append(":** ")
             .AppendLine(snapshot.GeneratedAt.ToLocalTime().ToString("F", CultureInfo.CurrentCulture));
+        builder.Append("**Application:** VaultSync ").AppendLine(snapshot.AppVersion);
+        builder.Append("**Source identity:** ").AppendLine(snapshot.SourceIdentity);
         builder.AppendLine();
 
         builder.Append("## ").AppendLine(labels.Overview);
@@ -171,7 +176,7 @@ internal static class RecoveryReportExporter
             builder.AppendLine();
             builder.AppendLine("## Recovery proof evidence");
             builder.AppendLine();
-            builder.AppendLine("> Read-only evidence captured by VaultSync. No restore was performed.");
+            builder.AppendLine("> Evidence captured by VaultSync. Each item states whether it was measured, planned, or restored into an isolated test folder.");
             foreach (RecoveryReportProject project in proofs)
             {
                 builder.AppendLine();
@@ -183,13 +188,21 @@ internal static class RecoveryReportExporter
                 {
                     builder.Append("| ").Append(EscapeCell(evidence.Code))
                         .Append(" | ").Append(EscapeCell(evidence.Status))
-                        .Append(" | ").Append(EscapeCell(evidence.Path))
+                        .Append(" | ").Append(EscapeCell(RedactEvidencePath(evidence.Path)))
                         .Append(" | ").Append(EscapeCell(evidence.EvidenceId))
                         .Append(" | ").Append(EscapeCell(evidence.Detail)).AppendLine(" |");
                 }
             }
         }
 
+        string body = builder.ToString();
+        string checksum = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
+        builder.AppendLine();
+        builder.AppendLine("## Report identity");
+        builder.AppendLine();
+        builder.Append("- **Report ID:** `recovery-").Append(checksum[..16]).AppendLine("`");
+        builder.Append("- **SHA-256:** `").Append(checksum).AppendLine("`");
+        builder.AppendLine("- The checksum covers the report content above this section.");
         return builder.ToString();
     }
 
@@ -210,6 +223,14 @@ internal static class RecoveryReportExporter
 
     private static string EscapeHeading(string value) =>
         EscapeCell(value).Replace("#", "\\#", StringComparison.Ordinal);
+
+    private static string RedactEvidencePath(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !Path.IsPathFullyQualified(value))
+            return value ?? string.Empty;
+
+        return $"[local path redacted]/{Path.GetFileName(value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))}";
+    }
 
     private static string GetDefaultExportDirectory()
     {
