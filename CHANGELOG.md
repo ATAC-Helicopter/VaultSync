@@ -4,8 +4,12 @@
 - [VS-1851] Added an evidence-backed recovery-confidence state model that keeps measured, simulated, inferred, user-confirmed, stale, missing, failed, and unsupported evidence distinct.
 ### Changed
 - [VS-1851] Recovery-confidence decisions now prioritize decisive blockers over aggregate scores so passed checks cannot hide unavailable destinations, missing credentials, failed verification, or failed drills.
+- [VS-1858] Updated the SQLite and cross-platform rendering dependency lines, documented the Windows notification security override, and removed no runtime capability.
 ### Fixed
 - [BUG-18079] Restored the missing snapshot-count placeholder in the Portuguese Dashboard translation.
+- [BUG-18080] Replaced the ABI-sensitive macOS disk-space probe with the runtime filesystem API and rejected impossible capacity readings before enforcing backup thresholds.
+- [BUG-18081] Removed startup and virtualized-list binding errors by using stable named view roots and a null-safe selected-diff path.
+- [BUG-18082] Isolated the CLI end-to-end self-test from the production database by default and guaranteed cleanup on success, failure, or cancellation.
 
 ## [1.8.4] - 24.07.2026
 ### Added
