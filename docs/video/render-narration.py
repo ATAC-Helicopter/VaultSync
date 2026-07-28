@@ -64,7 +64,7 @@ def parse_cue(lines: list[str], index: int) -> tuple[Cue, int]:
     index += 1
     while index < len(lines):
         continuation = lines[index]
-        if continuation.startswith("- **") or continuation.startswith("## "):
+        if continuation.startswith(("- **", "## ")):
             break
         if continuation.startswith("  "):
             parts.append(continuation.strip())
@@ -76,36 +76,47 @@ def parse_cue(lines: list[str], index: int) -> tuple[Cue, int]:
     return Cue(start, " ".join(parts)), index
 
 
-def parse_scenes(markdown: str) -> list[Scene]:
-    lines = markdown.splitlines()
-    parsed: list[Scene] = []
+def markdown_sections(markdown: str) -> list[tuple[str, str, list[str]]]:
+    sections: list[tuple[str, str, list[str]]] = []
     scene_id = ""
     title = ""
+    body: list[str] = []
+    for line in markdown.splitlines():
+        if not line.startswith("## "):
+            if scene_id:
+                body.append(line)
+            continue
+        if scene_id:
+            sections.append((scene_id, title, body))
+        heading = line[3:].split(" — ", maxsplit=1)
+        scene_id, title = heading if len(heading) == 2 else ("", "")
+        body = []
+    if scene_id:
+        sections.append((scene_id, title, body))
+    return sections
+
+
+def section_cues(lines: list[str]) -> list[Cue]:
+    try:
+        index = lines.index("**Narration cues:**") + 1
+    except ValueError:
+        return []
     cues: list[Cue] = []
-    in_narration = False
-    index = 0
     while index < len(lines):
-        line = lines[index]
-        if line.startswith("## "):
-            if scene_id and cues:
-                parsed.append(Scene(scene_id, title, cues))
-            heading = line[3:].split(" — ", maxsplit=1)
-            scene_id, title = heading if len(heading) == 2 else ("", "")
-            cues = []
-            in_narration = False
-            index += 1
-            continue
-        if line == "**Narration cues:**":
-            in_narration = True
-            index += 1
-            continue
-        if in_narration and line.startswith("- **"):
+        if lines[index].startswith("- **"):
             cue, index = parse_cue(lines, index)
             cues.append(cue)
             continue
         index += 1
-    if scene_id and cues:
-        parsed.append(Scene(scene_id, title, cues))
+    return cues
+
+
+def parse_scenes(markdown: str) -> list[Scene]:
+    parsed: list[Scene] = []
+    for scene_id, title, body in markdown_sections(markdown):
+        cues = section_cues(body)
+        if cues:
+            parsed.append(Scene(scene_id, title, cues))
     return parsed
 
 
@@ -238,8 +249,8 @@ def main() -> int:
         print("No narrated scenes found.", file=sys.stderr)
         return 1
 
-    Kokoro, soundfile, numpy = load_dependencies()
-    engine = Kokoro(str(MODEL_PATH), str(VOICES_PATH))
+    kokoro_class, soundfile, numpy = load_dependencies()
+    engine = kokoro_class(str(MODEL_PATH), str(VOICES_PATH))
     AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     TEXT_DIR.mkdir(parents=True, exist_ok=True)
     manifest: list[dict[str, object]] = []
