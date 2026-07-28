@@ -99,6 +99,12 @@ Review snapshots, restore points, metadata events, backup changes, and recovery 
 
 ![VaultSync history and recovery timeline](docs/images/History_Timeline.png)
 
+### Snapshot comparison
+
+Compare restore points by added, modified, and deleted files, with readable text previews for supported formats.
+
+![VaultSync snapshot comparison and text diff](docs/images/Compare_View.png)
+
 ### Themes and appearance
 
 VaultSync includes curated dark and light visual presets with optional advanced tuning.
