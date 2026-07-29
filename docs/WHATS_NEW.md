@@ -1,8 +1,8 @@
 # What's New
 
-## [1.8.5]
+## [1.8.5-Beta.1]
 
-VaultSync `1.8.5` is the Recovery Confidence update. It is being built around a direct question: can this project be recovered right now, what evidence supports that answer, and what should happen next?
+VaultSync `1.8.5-Beta.1` begins the Recovery Confidence update. It is being built around a direct question: can this project be recovered right now, what evidence supports that answer, and what should happen next?
 
 ### Recovery Confidence
 - Recovery status is moving from percentage-first scoring to explicit, evidence-backed states.

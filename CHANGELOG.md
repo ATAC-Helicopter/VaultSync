@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.8.5] - Unreleased
+## [1.8.5-Beta.1] - Unreleased
 ### Added
 - [VS-1851] Added an evidence-backed recovery-confidence state model that keeps measured, simulated, inferred, user-confirmed, stale, missing, failed, and unsupported evidence distinct.
 - [VS-1859] Added an illustrated whole-app guided tour, a control-by-control Settings reference, current onboarding/History/Recovery/Settings screenshots, and a maintainable real-app walkthrough-video workflow with no-key neural narration and selectable captions.
