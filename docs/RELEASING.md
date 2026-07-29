@@ -59,6 +59,20 @@ Stable example:
 - `previous_version = 1.8.3`
 - `target_version = 1.8.5`
 
+Pre-merge release candidate example:
+- branch: `release/v1.8.5`
+- release channel: `stable`
+- `release_candidate = true`
+- `previous_version = 1.8.4`
+- `target_version = 1.8.5`
+- candidate artifacts remain GitHub Actions artifacts; do not attach them to a
+  non-prerelease GitHub Release until the release PR is approved and merged
+  into `Stable`
+
+This mode builds the exact stable-version binaries from the release branch
+without merging the release PR. The workflow rejects a candidate build unless
+the branch name exactly matches `release/v<target_version>`.
+
 Current beta example:
 - branch: `Dev`
 - release channel: `beta`
