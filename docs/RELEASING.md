@@ -74,11 +74,16 @@ without merging the release PR. The workflow rejects a candidate build unless
 the branch name exactly matches `release/v<target_version>`.
 
 Current beta example:
-- branch: `Dev`
+- branch: `release/v1.8.5` (or `Dev` after the beta changes are present there)
 - release channel: `beta`
-- `previous_version = 1.8.5-Beta.1`
-- `target_version = 1.8.5-Beta.2`
+- `release_candidate = false`
+- `previous_version = 1.8.4`
+- `target_version = 1.8.5-Beta.1`
 - `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
+
+The `release_candidate` switch is not used for beta builds. It exists only to
+build unpublished, stable-version candidate assets from a matching release
+branch before the final merge into `Stable`.
 
 Example multi-base input:
 - `previous_version = 1.6.2`
@@ -94,6 +99,10 @@ This produces one manifest with:
 Older or unlisted installs must fall back to the full installer.
 
 ## 5) Release Checklist
+- Run the Beta 1 release gate before publishing:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.5-Beta.1 -ReleaseTrack 1.8.x -TargetMilestone 1.8.5
+  ```
 - Run the release gate before publishing:
   ```powershell
   powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.5 -ReleaseTrack 1.8.x -TargetMilestone 1.8.5

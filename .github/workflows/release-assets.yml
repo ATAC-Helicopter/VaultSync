@@ -131,8 +131,10 @@ jobs:
               echo "release_candidate can only be used with the stable channel."
               exit 1
             fi
-            if [[ "$branch" != "Dev" ]]; then
-              echo "Beta asset builds must be run from the Dev branch. Current branch: $branch"
+            beta_base_version="${target_key%%-*}"
+            expected_beta_branch="release/v${beta_base_version}"
+            if [[ "$branch" != "Dev" && "$branch" != "$expected_beta_branch" ]]; then
+              echo "Beta asset builds must run from Dev or '$expected_beta_branch'. Current branch: $branch"
               exit 1
             fi
             if [[ "$target" != *-* ]]; then
