@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
 using Xunit;
@@ -73,6 +74,27 @@ public sealed class PatchSecurityTests
     public void SafeZipExtractor_RejectsEscapingEntryPaths(string path)
     {
         Assert.ThrowsAny<Exception>(() => SafeZipExtractor.GetSafeEntryRelativePath(path));
+    }
+
+    [Fact]
+    public void SafeZipExtractor_RejectsLinkedDestinationComponents()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"vaultsync-zip-root-{Guid.NewGuid():N}");
+        string outside = Path.Combine(Path.GetTempPath(), $"vaultsync-zip-outside-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(outside);
+        try
+        {
+            Directory.CreateSymbolicLink(Path.Combine(root, "linked"), outside);
+
+            Assert.Throws<InvalidDataException>(() =>
+                SafeZipExtractor.GetSafeEntryPath(root, "linked/escaped.txt"));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+            Directory.Delete(outside, recursive: true);
+        }
     }
 
     private static PatchManifest CreateManifest(string path) => new()

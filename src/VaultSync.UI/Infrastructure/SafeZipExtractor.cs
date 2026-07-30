@@ -42,7 +42,38 @@ internal static class SafeZipExtractor
         if (!candidate.StartsWith(normalizedRoot, GetPathComparison()))
             throw new InvalidDataException($"Archive entry '{entryFullName}' escapes the extraction destination.");
 
+        EnsureNoLinkedPathComponents(destinationDirectory, candidate);
         return candidate;
+    }
+
+    public static void EnsureNoLinkedPathComponents(string rootDirectory, string destinationPath)
+    {
+        string normalizedRoot = NormalizeRoot(rootDirectory);
+        string candidate = Path.GetFullPath(destinationPath);
+        if (!candidate.StartsWith(normalizedRoot, GetPathComparison()))
+            throw new InvalidDataException($"Destination '{destinationPath}' escapes the selected root.");
+
+        string relative = Path.GetRelativePath(normalizedRoot, candidate);
+        string current = normalizedRoot;
+        foreach (string component in relative.Split(
+                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, component);
+            try
+            {
+                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidDataException($"Destination path '{relative}' contains a linked path component.");
+            }
+            catch (FileNotFoundException)
+            {
+                // The remaining path does not exist yet.
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // The remaining path does not exist yet.
+            }
+        }
     }
 
     public static string GetSafeEntryRelativePath(string entryFullName)
