@@ -1,0 +1,12 @@
+# Default owner and security-sensitive repository controls.
+* @ATAC-Helicopter
+
+/.github/ @ATAC-Helicopter
+/SECURITY.md @ATAC-Helicopter
+/Directory.Packages.props @ATAC-Helicopter
+/src/VaultSync.Core/Services/BackupArchiveCryptoService.cs @ATAC-Helicopter
+/src/VaultSync.Core/Services/BackupEncryptionSecretService.cs @ATAC-Helicopter
+/src/VaultSync.Core/Services/CredentialVault.cs @ATAC-Helicopter
+/src/VaultSync.UI/Services/GitHubUpdateService.cs @ATAC-Helicopter
+/src/VaultSync.UI/Services/PatchInstallService.cs @ATAC-Helicopter
+/src/VaultSync.UI/Services/PatchUpdateService.cs @ATAC-Helicopter
