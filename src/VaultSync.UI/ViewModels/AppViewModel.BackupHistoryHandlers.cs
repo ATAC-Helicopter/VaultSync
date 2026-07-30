@@ -2966,6 +2966,7 @@ namespace VaultSync.UI.ViewModels
                 if (!string.IsNullOrEmpty(parentDir))
                     Directory.CreateDirectory(parentDir);
 
+                SafeZipExtractor.EnsureNoLinkedPathComponents(targetDir, target);
                 File.Copy(filePath, target, overwrite: true);
                 processedBytes += fileLength;
                 processed++;
