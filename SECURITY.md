@@ -7,7 +7,9 @@ Preferred channel:
 - GitHub Security Advisory (private report)
 
 Fallback channel:
-- GitHub issue/discussion with minimal sensitive details, requesting private follow-up
+- Email the maintainer listed on the repository owner's GitHub profile
+
+Do not open a public issue or discussion for a suspected vulnerability.
 
 Please include:
 - affected version
