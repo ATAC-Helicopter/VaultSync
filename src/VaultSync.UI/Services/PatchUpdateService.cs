@@ -99,6 +99,8 @@ namespace VaultSync.UI.Services
     public sealed class PatchUpdateService
     {
         private const string InvalidBaseAllowlistStatus = "manifest-invalid-base-allowlist";
+        internal const long MaxPatchArchiveBytes = 4L * 1024 * 1024 * 1024;
+        internal const long MaxExtractedPatchBytes = 8L * 1024 * 1024 * 1024;
         private static readonly HttpClient s_httpClient = CreateHttpClient();
         private static readonly TimeSpan s_manifestCacheWindow = TimeSpan.FromMinutes(30);
         private static readonly ConcurrentDictionary<string, (PatchManifest Manifest, DateTimeOffset FetchedAt)> s_manifestCache =
@@ -193,9 +195,37 @@ namespace VaultSync.UI.Services
                     hasInstaller: hasInstaller);
             }
 
+            if (!TryValidatePatchManifest(manifest, out string? manifestStatusCode, out string? manifestMessage))
+            {
+                return new PatchPreflightResult(
+                    eligible: false,
+                    requiresInstaller: true,
+                    statusCode: manifestStatusCode,
+                    message: manifestMessage,
+                    plan: null,
+                    manifest: manifest,
+                    hasManifest: hasManifest,
+                    hasArchive: hasArchive,
+                    hasInstaller: hasInstaller);
+            }
+
             string archiveName = string.IsNullOrWhiteSpace(updateResult.PatchArchiveName)
                 ? Path.GetFileName(updateResult.PatchArchiveUrl!.AbsolutePath)
                 : updateResult.PatchArchiveName;
+            if (!TryGetSafeArchiveName(archiveName, out archiveName))
+            {
+                return new PatchPreflightResult(
+                    eligible: false,
+                    requiresInstaller: true,
+                    statusCode: "archive-name-invalid",
+                    message: "Patch archive name is not a safe ZIP file name.",
+                    plan: null,
+                    manifest: manifest,
+                    hasManifest: hasManifest,
+                    hasArchive: hasArchive,
+                    hasInstaller: hasInstaller);
+            }
+
             var plan = new PatchPlan(manifest, updateResult.PatchArchiveUrl!, archiveName);
 
             return new PatchPreflightResult(
@@ -221,7 +251,13 @@ namespace VaultSync.UI.Services
                 "patches");
             Directory.CreateDirectory(stagingDir);
 
-            string destinationPath = Path.Combine(stagingDir, plan.ArchiveName);
+            if (!TryGetSafeArchiveName(plan.ArchiveName, out string safeArchiveName) ||
+                !TryValidatePatchManifest(plan.Manifest, out _, out _))
+            {
+                return null;
+            }
+
+            string destinationPath = Path.Combine(stagingDir, safeArchiveName);
 
             // If the file already exists and matches size/hash, reuse it instead of re-downloading.
             if (File.Exists(destinationPath))
@@ -235,31 +271,67 @@ namespace VaultSync.UI.Services
                 }
             }
 
-            using (HttpResponseMessage response = await s_httpClient.GetAsync(plan.ArchiveUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
+            string temporaryPath = destinationPath + $".{Guid.NewGuid():N}.download";
+            try
             {
+                using HttpResponseMessage response = await s_httpClient.GetAsync(
+                    plan.ArchiveUrl,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
                 if (!response.IsSuccessStatusCode)
                     return null;
 
                 long? totalBytes = response.Content.Headers.ContentLength;
+                if (totalBytes is > MaxPatchArchiveBytes ||
+                    (totalBytes.HasValue && totalBytes.Value != plan.Manifest.ArchiveSize))
+                {
+                    return null;
+                }
+
                 await using Stream sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                await using FileStream destinationStream = File.Create(destinationPath);
-                await CopyToWithProgressAsync(sourceStream, destinationStream, totalBytes, progress, cancellationToken);
+                await using (var destinationStream = new FileStream(
+                    temporaryPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None))
+                {
+                    await CopyToWithProgressAsync(
+                        sourceStream,
+                        destinationStream,
+                        totalBytes,
+                        plan.Manifest.ArchiveSize,
+                        progress,
+                        cancellationToken);
+                }
+
+                var downloaded = new FileInfo(temporaryPath);
+                if (downloaded.Length != plan.Manifest.ArchiveSize)
+                    return null;
+
+                if (!await VerifyChecksumAsync(temporaryPath, plan.Manifest.ArchiveSha256, cancellationToken))
+                    return null;
+
+                File.Move(temporaryPath, destinationPath, overwrite: true);
+                return destinationPath;
             }
-
-            var downloaded = new FileInfo(destinationPath);
-            if (plan.Manifest.ArchiveSize > 0 && downloaded.Length != plan.Manifest.ArchiveSize)
-                return null;
-
-            if (!await VerifyChecksumAsync(destinationPath, plan.Manifest.ArchiveSha256, cancellationToken))
-                return null;
-
-            return destinationPath;
+            finally
+            {
+                try
+                {
+                    File.Delete(temporaryPath);
+                }
+                catch
+                {
+                    // Best-effort cleanup of an incomplete or rejected download.
+                }
+            }
         }
 
         private static async Task CopyToWithProgressAsync(
             Stream source,
             Stream destination,
             long? totalBytes,
+            long maximumBytes,
             Action<long, long?, double?>? progress,
             CancellationToken cancellationToken)
         {
@@ -275,8 +347,11 @@ namespace VaultSync.UI.Services
                 if (read <= 0)
                     break;
 
-                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
                 totalRead += read;
+                if (totalRead > maximumBytes || totalRead > MaxPatchArchiveBytes)
+                    throw new InvalidDataException("Patch archive exceeds its declared size.");
+
+                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
 
                 if (progress is null)
                     continue;
@@ -317,6 +392,100 @@ namespace VaultSync.UI.Services
             byte[] hash = await sha.ComputeHashAsync(stream, cancellationToken);
             string actual = HashService.FormatSha256Lower(hash);
             return string.Equals(actual, expectedSha256.Trim().ToLowerInvariant(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal static bool TryValidatePatchManifest(
+            PatchManifest manifest,
+            out string statusCode,
+            out string message)
+        {
+            statusCode = "manifest-invalid";
+            message = string.Empty;
+            if (manifest is null)
+            {
+                message = "Patch manifest is missing.";
+                return false;
+            }
+
+            if (manifest.ArchiveSize <= 0 || manifest.ArchiveSize > MaxPatchArchiveBytes)
+            {
+                message = "Patch archive size is missing or outside the supported limit.";
+                return false;
+            }
+
+            if (!IsSha256(manifest.ArchiveSha256))
+            {
+                message = "Patch archive SHA-256 is missing or invalid.";
+                return false;
+            }
+
+            if (manifest.Files is null || manifest.Files.Count == 0)
+            {
+                message = "Patch manifest does not contain any file entries.";
+                return false;
+            }
+
+            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            long extractedBytes = 0;
+            foreach (PatchFileEntry file in manifest.Files)
+            {
+                if (!IsSafePatchRelativePath(file.RelativePath) || !paths.Add(file.RelativePath.Replace('\\', '/')))
+                {
+                    message = $"Patch manifest contains an unsafe or duplicate file path: '{file.RelativePath}'.";
+                    return false;
+                }
+
+                if (file.Size < 0 || !IsSha256(file.Sha256))
+                {
+                    message = $"Patch manifest contains invalid size or SHA-256 metadata for '{file.RelativePath}'.";
+                    return false;
+                }
+
+                try
+                {
+                    extractedBytes = checked(extractedBytes + file.Size);
+                }
+                catch (OverflowException)
+                {
+                    message = "Patch manifest extracted size overflows the supported range.";
+                    return false;
+                }
+
+                if (extractedBytes > MaxExtractedPatchBytes)
+                {
+                    message = "Patch manifest extracted size exceeds the supported limit.";
+                    return false;
+                }
+            }
+
+            statusCode = "eligible";
+            return true;
+        }
+
+        internal static bool TryGetSafeArchiveName(string? archiveName, out string safeArchiveName)
+        {
+            safeArchiveName = (archiveName ?? string.Empty).Trim();
+            return !string.IsNullOrWhiteSpace(safeArchiveName) &&
+                   !safeArchiveName.Contains('/') &&
+                   !safeArchiveName.Contains('\\') &&
+                   !safeArchiveName.Contains(':') &&
+                   string.Equals(Path.GetFileName(safeArchiveName), safeArchiveName, StringComparison.Ordinal) &&
+                   safeArchiveName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+                   safeArchiveName.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
+        }
+
+        private static bool IsSha256(string? value) =>
+            value is { Length: 64 } && value.All(Uri.IsHexDigit);
+
+        private static bool IsSafePatchRelativePath(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            string normalized = value.Replace('\\', '/');
+            return !normalized.StartsWith("/", StringComparison.Ordinal) &&
+                   !normalized.Contains(':') &&
+                   normalized.Split('/').All(part => part is not ("" or "." or ".."));
         }
 
         private static bool VersionsMatch(string? previousVersion, string? currentVersion)

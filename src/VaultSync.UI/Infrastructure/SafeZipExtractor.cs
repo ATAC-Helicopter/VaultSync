@@ -49,12 +49,18 @@ internal static class SafeZipExtractor
     {
         string normalized = (entryFullName ?? string.Empty)
             .Replace('/', Path.DirectorySeparatorChar)
+            .Replace('\\', Path.DirectorySeparatorChar)
             .Trim();
 
         if (string.IsNullOrWhiteSpace(normalized))
             return string.Empty;
 
-        if (Path.IsPathFullyQualified(normalized))
+        bool hasDrivePrefix = normalized.Length >= 2 &&
+                              char.IsLetter(normalized[0]) &&
+                              normalized[1] == ':';
+        if (Path.IsPathFullyQualified(normalized) ||
+            Path.IsPathRooted(normalized) ||
+            hasDrivePrefix)
             throw new InvalidDataException($"Archive entry '{entryFullName}' is absolute.");
 
         string root = NormalizeRoot(Path.Combine(Path.GetTempPath(), "vaultsync-archive-root"));
