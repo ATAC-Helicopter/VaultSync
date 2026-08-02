@@ -169,7 +169,7 @@ Delivered:
 
 ## 1.8.5 — Recovery Confidence
 
-**Status:** Active
+**Status:** Release candidate
 **Tagline:** *Know before you need it.*
 **Branch:** `release/v1.8.5`
 **Milestone:** `1.8.5`
@@ -186,60 +186,75 @@ must never hide a missing, failed, stale, inferred, or unsupported check.
 
 ### Execution tickets
 
-- [ ] `VS-1851` `P0` Define the recovery-confidence state and evidence model.
+- [x] `VS-1851` `P0` Define the recovery-confidence state and evidence model.
   - Scope: represent current state, decisive blocker, evidence type, freshness,
     provenance, verification scope, drill scope, and recommended action.
   - Acceptance: every state is explainable without relying on color or an
     opaque percentage; measured, simulated, inferred, and user-confirmed
     evidence remain distinct.
-- [ ] `VS-1852` `P1` Add a project-level Recovery Inspector.
-  - Scope: show latest usable point, location, reachability, age, encryption,
-    credential availability, verification, drill result, blockers, and next
-    action in one inspectable view.
-  - Acceptance: a user can answer the twelve Recovery Confidence acceptance
-    questions without opening Settings or reading documentation.
-- [ ] `VS-1853` `P1` Add a Recovery Checklist and universal evidence actions.
+- [x] `VS-1852` `P1` Add a project-level Recovery Inspector.
+  - Scope: show the decisive state, reachability, credential, verification,
+    restore-plan, drill, and offsite evidence with basis, freshness, limitations,
+    and next action in one inspectable project card.
+  - Acceptance: a user can explain the current recovery state and identify the
+    next useful action without opening Settings or reading documentation.
+- [x] `VS-1853` `P1` Add a Recovery Checklist and universal evidence actions.
   - Scope: backup created, destination reachable, integrity verified, restore
-    plan valid, restore tested, and offsite status; add `Why?` and
-    `View evidence` from major recovery claims.
-  - Acceptance: incomplete checks route directly to a safe corrective action.
-- [ ] `VS-1854` `P0` Add a guided isolated restore drill.
+    plan valid, restore tested, and offsite status; expose the reason, evidence,
+    and safe proof, test-restore, or protection action where applicable.
+  - Acceptance: incomplete checks identify a safe corrective action and never
+    present an opaque recovery score as sufficient evidence.
+- [x] `VS-1854` `P0` Add a guided isolated restore drill.
   - Scope: select a recovery point and safe test folder, restore representative
     content, verify bytes, record file-open confirmation, and persist evidence.
   - Acceptance: the result explicitly states what was tested, what was skipped,
     and whether the operation was a simulation or a real restore.
-- [ ] `VS-1855` `P1` Record recovery evidence as first-class History events.
-  - Scope: verification, drill, destination availability, protected-point, and
-    evidence-export events with grouping and source identity.
+- [x] `VS-1855` `P1` Record recovery evidence as first-class History events.
+  - Scope: recovery proofs (including verification and availability), isolated
+    restore drills, protected points, and evidence exports with source identity.
   - Acceptance: status changes can be traced to timestamped evidence.
-- [ ] `VS-1856` `P1` Upgrade the Recovery Evidence Report.
-  - Scope: add app/build version, project and point identity, source machine,
-    destination, evidence methods, scope, freshness, exclusions, encryption,
-    drill result, unresolved risks, report ID, and checksum.
+- [x] `VS-1856` `P1` Upgrade the Recovery Evidence Report.
+  - Scope: add app/build and source identity, project protection and drill
+    results, redacted evidence methods and paths, unresolved reasons, report ID,
+    and checksum.
   - Acceptance: the export is deterministic, redacted, portable, and describes
     limitations without implying guaranteed recovery.
-- [ ] `VS-1857` `P1` Extend first-backup completion through recovery proof.
+- [x] `VS-1857` `P1` Extend first-backup completion through recovery proof.
   - Scope: distinguish backup completion from verification and test restore,
     with `Verify recovery`, `Run test restore`, and `Finish for now` actions.
   - Acceptance: onboarding progress survives dismissal and never marks recovery
     complete from a copy operation alone.
-- [ ] `BUG-18078` `P0` Keep onboarding guidance clear of its target controls.
-  - Scope: reposition guidance dynamically; retain visible Back, Next, Skip,
-    Dismiss, and Continue later controls; support keyboard and screen readers.
-  - Acceptance: every step is completable at narrow widths and high scaling
-    without dismissing the guide.
+- [x] `BUG-18078` `P0` Keep onboarding guidance clear of its target controls.
+  - Scope: keep guidance in a responsive card outside the full-window pointer
+    route; retain visible Back, primary, and Continue later controls.
+  - Acceptance: target pages remain interactive and the card stays bounded at
+    narrow supported window sizes without dismissing the guide.
 - [x] `BUG-18079` `P1` Preserve the Portuguese Dashboard count placeholder.
   - Scope: keep the localized weekly-snapshot hint aligned with the English
     format-argument contract.
   - Acceptance: localization validation reports no missing, extra, blank,
     duplicate, or placeholder-mismatched keys.
-- [ ] `VS-1858` `P1` Service and simplify the supported dependency baseline.
+- [x] `VS-1858` `P1` Service and simplify the supported dependency baseline.
   - Scope: apply compatible storage and rendering patch updates, remove
     genuinely unused direct dependencies, document intentional compatibility
     pins, and keep vulnerability checks clean.
   - Acceptance: restore, warning-as-error builds, tests, NuGet vulnerability
     checks, and Windows, macOS, and Linux CI pass without losing notifications,
     charts, color editing, localization, secure storage, or CLI behavior.
+- [x] `VS-1859` `P1` Publish the guided product walkthrough and current visual
+  documentation.
+  - Scope: document the complete app, refresh Recovery and onboarding visuals,
+    and keep a reproducible no-key narration and caption workflow.
+  - Acceptance: the repository contains current screenshots, guided-tour help,
+    and a maintainable walkthrough production path.
+- [x] `VS-1860` `P0` Harden unsigned release integrity and private local data.
+  - Scope: bind installers, patch manifests, and patch archives to GitHub asset
+    digests and exact sizes; reject unsafe archive paths and links; restrict
+    Unix configuration and application-data permissions; preserve immutable
+    workflow action pins; reduce macOS native payload size without mixing ABIs.
+  - Acceptance: tampered or unverified updates fail closed, private Unix data
+    is owner-only, security regression tests pass, vulnerability checks remain
+    clean, and thinned macOS builds pass a real launch test.
 - [x] `BUG-18080` `P0` Reject impossible backup-target capacity readings.
   - Scope: use the runtime filesystem API on macOS and validate total/free byte
     relationships before computing or enforcing a free-space percentage.
@@ -255,6 +270,11 @@ must never hide a missing, failed, stale, inferred, or unsupported check.
     while retaining an explicit `--db` path for intentional integration tests.
   - Acceptance: success, failure, and cancellation clean isolated state; an
     ordinary self-test never inserts a project or snapshot into the user store.
+- [x] `BUG-18083` `P0` Keep first-run onboarding interactive with the app.
+  - Scope: replace the screen-covering guide with a compact card that leaves
+    its target page usable and retains Back, Continue later, and primary actions.
+  - Acceptance: setup can continue without dismissing the guide, including at
+    narrow supported window sizes.
 
 ### Explicitly out of scope
 
@@ -274,6 +294,15 @@ must never hide a missing, failed, stale, inferred, or unsupported check.
 - deterministic report/checksum validation;
 - onboarding overlap tests at supported scale and width breakpoints;
 - Windows, macOS, and Linux build/test gates.
+
+### Unsigned distribution policy
+
+Direct desktop packages are intentionally unsigned because paid platform
+signing programs are not part of the supported release budget. Signing and
+notarization are therefore not a `1.8.5` release gate. Every direct release must
+instead publish through the official repository, expose SHA-256 asset digests,
+verify updater downloads before execution, document SmartScreen and Gatekeeper
+warnings, and fail closed when integrity metadata is missing or inconsistent.
 
 ---
 

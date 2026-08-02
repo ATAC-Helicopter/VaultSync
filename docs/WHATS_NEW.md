@@ -1,15 +1,19 @@
 # What's New
 
-## [1.8.5-Beta.1]
+## [1.8.5]
 
-VaultSync `1.8.5-Beta.1` begins the Recovery Confidence update. It is being built around a direct question: can this project be recovered right now, what evidence supports that answer, and what should happen next?
+VaultSync `1.8.5` is the Recovery Confidence update. It answers a direct question: can this project be recovered right now, what evidence supports that answer, and what should happen next?
 
 ### Recovery Confidence
-- Recovery status is moving from percentage-first scoring to explicit, evidence-backed states.
+- Recovery status now uses explicit, evidence-backed states instead of relying on a percentage.
 - Measured checks, restore-plan simulations, inferred conditions, user-confirmed offsite status, and unsupported checks remain visibly distinct.
 - Missing recovery points, unavailable destinations, missing encryption credentials, failed verification, and failed restore drills are decisive blockers that successful secondary checks cannot hide.
 - Verification and drill evidence have explicit freshness windows so an old success cannot remain green indefinitely.
-- The planned Recovery Inspector, checklist, guided isolated restore drill, History events, and evidence report will build on this shared model.
+- Expand the Recovery Inspector to review the latest usable point, destination and credential state, verification freshness, restore-plan evidence, drill result, offsite state, decisive blocker, and next useful action.
+- Run a read-only proof or restore representative files into a new isolated test folder, reopen them, verify their SHA-256 values, and retain the folder for inspection without touching the project.
+- Recovery proof, test-restore, protection, and report-export events are retained in History with timestamps and source identity.
+- Export a redacted, portable evidence report with application/source identity, drill and protection details, stable evidence IDs, a deterministic report ID, and SHA-256 checksum.
+- First-run setup distinguishes creating a backup from proving recovery and remains resumable through the real project, backup, and drill state.
 
 ![Recovery readiness with evidence-backed project status](images/Recovery_Readiness.png)
 
@@ -17,6 +21,14 @@ VaultSync `1.8.5-Beta.1` begins the Recovery Confidence update. It is being buil
 - SQLite and the cross-platform rendering components are refreshed and validated together as one supported baseline.
 - Dependencies are removed only when their behavior is genuinely unused; intentional compatibility and security overrides remain documented when a transitive package still requires them.
 - Notifications, charts, color editing, localization, secure storage, and CLI behavior remain part of the validation contract.
+- macOS release packaging removes unused native architectures after publishing, reducing each architecture-specific app without mixing rendering ABIs.
+
+### Update integrity and local privacy
+- Installer downloads, patch manifests, and patch archives must match the exact size and SHA-256 digest published by GitHub before VaultSync will use them.
+- Update URLs are restricted to the official VaultSync GitHub release path, and missing or inconsistent integrity metadata fails closed to the release page.
+- Patch extraction rejects traversing, colliding, linked, oversized, or non-portable paths before replacing application files.
+- On Unix-like systems, VaultSync restricts configuration, backups of configuration, and application-data roots to the current user.
+- Direct desktop packages remain intentionally unsigned. Use only official release assets, compare their published SHA-256 digests, and expect Windows SmartScreen or macOS Gatekeeper to ask for confirmation.
 
 ## [1.8.4]
 
