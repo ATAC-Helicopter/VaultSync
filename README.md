@@ -220,7 +220,9 @@ Windows users may also install VaultSync through the Microsoft Store when the cu
 
 ### Installer signing notice
 
-Current direct-download desktop installers are unsigned. This can cause Windows SmartScreen or macOS Gatekeeper to display a warning.
+Direct-download desktop installers are intentionally unsigned because paid platform signing programs are outside the project's release budget. This can cause Windows SmartScreen or macOS Gatekeeper to display a warning. Signing is not a release gate; official-source and SHA-256 verification are the supported trust controls.
+
+Download only from the official `ATAC-Helicopter/VaultSync` release page and compare the asset's published SHA-256 digest before bypassing an operating-system warning. VaultSync's updater also rejects installer and patch downloads whose trusted GitHub digest or exact size is missing or mismatched.
 
 <details>
 <summary><strong>Windows SmartScreen instructions</strong></summary>

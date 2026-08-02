@@ -164,6 +164,7 @@ $installerVersion = Get-FileVersionValue -Path "installer/VaultSyncInstaller.iss
 $changelogVersion = Get-ChangelogVersion
 $whatsNewVersion = Get-WhatsNewVersion
 $releasingDoc = Get-Content docs/RELEASING.md -Raw
+$securityDoc = Get-Content SECURITY.md -Raw
 
 Add-CheckResult -Results $results -Code "version-ui" -Condition ($uiVersion -eq $TargetVersion) `
     -PassMessage "UI project version is '$uiVersion'." `
@@ -229,6 +230,12 @@ Add-CheckResult -Results $results -Code "docs-release-checklist" -Condition ($re
     -PassMessage "Release guide includes the release gate and asset-upload checklist." `
     -FailMessage "Release guide is missing release gate and/or asset-upload checklist coverage." `
     -Data @{ path = "docs/RELEASING.md" }
+
+Add-CheckResult -Results $results -Code "docs-unsigned-integrity-policy" `
+    -Condition ($releasingDoc -match 'intentionally unsigned' -and $securityDoc -match 'Distribution Integrity' -and $securityDoc -match 'SHA-256') `
+    -PassMessage "Unsigned distribution and mandatory integrity controls are documented." `
+    -FailMessage "Unsigned distribution policy or mandatory SHA-256 integrity guidance is missing." `
+    -Data @{ paths = @("docs/RELEASING.md", "SECURITY.md") }
 
 if ($SkipGitHubChecks) {
     $results.Add((New-Result -Code "github-checks-skipped" -Status "warn" -Message "GitHub release and project checks were skipped for PR-local validation." -Data @{
@@ -334,7 +341,12 @@ $releaseItems = @($projectItems.items | Where-Object {
 
     $milestoneTitle -eq $TargetMilestone
 })
-$incompleteItems = @($releaseItems | Where-Object {
+$releaseWorkItems = @($releaseItems | Where-Object {
+    $contentTypeProperty = $_.content.PSObject.Properties["type"]
+    $contentType = if ($null -ne $contentTypeProperty) { $contentTypeProperty.Value } else { $null }
+    $contentType -ne "PullRequest"
+})
+$incompleteItems = @($releaseWorkItems | Where-Object {
     $statusProperty = $_.PSObject.Properties["status"]
     $itemStatus = if ($null -ne $statusProperty) { $statusProperty.Value } else { $null }
     $itemStatus -ne "Done"
@@ -346,8 +358,8 @@ Add-CheckResult -Results $results -Code "project-release-items" -Condition ($rel
     -Data @{ release = $ReleaseTrack; milestone = $TargetMilestone; count = $releaseItems.Count }
 
 Add-CheckResult -Results $results -Code "project-release-complete" -Condition ($incompleteItems.Count -eq 0) `
-    -PassMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' is complete." `
-    -FailMessage "Project release slice '$ReleaseTrack' milestone '$TargetMilestone' still has incomplete work." `
+    -PassMessage "Project release work items for '$ReleaseTrack' milestone '$TargetMilestone' are complete; the release PR is tracked separately until merge." `
+    -FailMessage "Project release work items for '$ReleaseTrack' milestone '$TargetMilestone' still have incomplete work." `
     -Data @{
         release = $ReleaseTrack
         milestone = $TargetMilestone

@@ -41,11 +41,13 @@ Switch channels in Settings > Advanced.
 
 ## Installers
 - Windows: `.exe` installer (Inno Setup).
-- macOS: unsigned `.dmg` of the `.app` bundle.
+- macOS: intentionally unsigned `.dmg` of the `.app` bundle.
 - Linux: `.AppImage`, `.deb`, or `.tar.gz` assets, depending on architecture and distribution.
 - Windows Store: packaged Microsoft Store build when published.
 
 ## Safe update expectation
+- Use only assets from the official `ATAC-Helicopter/VaultSync` release page and compare their published SHA-256 digests before bypassing SmartScreen or Gatekeeper warnings.
+- VaultSync rejects direct-update payloads whose trusted GitHub digest or exact size is missing or mismatched.
 - Use patch updates only for versions explicitly supported by the release manifest.
 - Use the installer for:
   - major version jumps
