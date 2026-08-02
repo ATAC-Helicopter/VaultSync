@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-08-01T06:06:49Z`
+Captured at: `2026-08-02T06:10:02Z`
 
 - Releases: **48**
 - Assets: **416**
-- Total asset downloads: **2114**
-- Change since previous snapshot: **+2**
+- Total asset downloads: **2118**
+- Change since previous snapshot: **+4**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.4** with **103** downloads (+2)
+- Latest stable: **VaultSync 1.8.4** with **107** downloads (+4)
 - Latest prerelease: **VaultSync 1.8.5 Beta 1** with **5** downloads (0)
 
 ## Top assets
@@ -19,7 +19,7 @@ Captured at: `2026-08-01T06:06:49Z`
 | vaultsync-patch-windows.json | `v1.8.2` | 180 | 0 |
 | vaultsync-patch-windows.json | `v1.8.1` | 179 | 0 |
 | vaultsync-patch-windows.json | `v1.8.3` | 115 | 0 |
-| vaultsync-patch-windows.json | `v1.8.4` | 72 | +1 |
+| vaultsync-patch-windows.json | `v1.8.4` | 75 | +3 |
 | vaultsync-patch-windows.json | `v1.4.1` | 67 | 0 |
 | vaultsync-patch-windows.json | `v1.3.5` | 67 | 0 |
 | vaultsync-patch-windows.json | `v1.8.0` | 55 | 0 |
@@ -61,13 +61,13 @@ Captured at: `2026-08-01T06:06:49Z`
 
 - Tag: `v1.8.4`
 - Published: `2026-07-24T18:42:28Z`
-- Total downloads: **103**
-- Delta: **+2**
+- Total downloads: **107**
+- Delta: **+4**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| vaultsync-patch-windows.json | 72 | +1 | 58026 |
-| VaultSync-Setup-1.8.4.exe | 15 | +1 | 60855747 |
+| vaultsync-patch-windows.json | 75 | +3 | 58026 |
+| VaultSync-Setup-1.8.4.exe | 16 | +1 | 60855747 |
 | VaultSync-1.8.4-macos-apple-silicon.dmg | 5 | 0 | 57994241 |
 | VaultSync-1.8.4-linux-x64.AppImage | 2 | 0 | 52036800 |
 | vaultsync-patch-macos-apple-silicon.json | 2 | 0 | 55843 |
