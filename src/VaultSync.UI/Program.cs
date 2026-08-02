@@ -12,6 +12,7 @@ using Avalonia;
 using Avalonia.Logging;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
+using VaultSync.Core.Services;
 
 namespace VaultSync.UI;
 
@@ -26,6 +27,7 @@ internal static class Program
     [System.STAThread]
     public static void Main(string[] args)
     {
+        RestrictPrivateDataRoots();
         DiagnosticsLogger.Initialize();
         DiagnosticsLogger.Record($"Process start. PID={Environment.ProcessId}, Args='{string.Join(' ', args)}'.");
         LogParentProcessInfo("startup");
@@ -93,6 +95,29 @@ internal static class Program
             _instanceLock = null;
             DiagnosticsLogger.Record("Process exit cleanup complete.");
             DiagnosticsLogger.Shutdown();
+        }
+    }
+
+    private static void RestrictPrivateDataRoots()
+    {
+        foreach (Environment.SpecialFolder folder in new[]
+                 {
+                     Environment.SpecialFolder.ApplicationData,
+                     Environment.SpecialFolder.LocalApplicationData
+                 })
+        {
+            string root = Environment.GetFolderPath(folder);
+            if (!string.IsNullOrWhiteSpace(root))
+            {
+                try
+                {
+                    PrivateDataPermissions.EnsureDirectory(Path.Combine(root, "VaultSync"));
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[Startup] Unable to restrict private data root: {ex.Message}");
+                }
+            }
         }
     }
 
