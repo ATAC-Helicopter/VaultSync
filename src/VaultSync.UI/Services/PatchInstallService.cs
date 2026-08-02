@@ -428,6 +428,8 @@ namespace VaultSync.UI.Services
             {
                 string source = CombineUnderRoot(stagingDir, file.RelativePath, "manifest source path");
                 string target = CombineUnderRoot(installDir, file.RelativePath, "manifest target path");
+                SafeZipExtractor.EnsureNoLinkedPathComponents(stagingDir, source);
+                SafeZipExtractor.EnsureNoLinkedPathComponents(installDir, target);
                 string? targetDir = Path.GetDirectoryName(target);
                 if (!string.IsNullOrWhiteSpace(targetDir))
                 {

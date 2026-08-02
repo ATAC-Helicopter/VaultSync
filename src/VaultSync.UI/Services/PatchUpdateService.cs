@@ -5,9 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Serialization;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Services;
@@ -101,6 +102,8 @@ namespace VaultSync.UI.Services
         private const string InvalidBaseAllowlistStatus = "manifest-invalid-base-allowlist";
         internal const long MaxPatchArchiveBytes = 4L * 1024 * 1024 * 1024;
         internal const long MaxExtractedPatchBytes = 8L * 1024 * 1024 * 1024;
+        internal const int MaxPatchFileCount = 100_000;
+        internal const long MaxPatchManifestBytes = 4L * 1024 * 1024;
         private static readonly HttpClient s_httpClient = CreateHttpClient();
         private static readonly TimeSpan s_manifestCacheWindow = TimeSpan.FromMinutes(30);
         private static readonly ConcurrentDictionary<string, (PatchManifest Manifest, DateTimeOffset FetchedAt)> s_manifestCache =
@@ -138,7 +141,37 @@ namespace VaultSync.UI.Services
                     hasInstaller: hasInstaller);
             }
 
-            PatchManifest? manifest = await GetManifestAsync(updateResult.PatchManifestUrl!, cancellationToken);
+            if (!updateResult.HasVerifiedPatch)
+            {
+                return new PatchPreflightResult(
+                    eligible: false,
+                    requiresInstaller: hasInstaller,
+                    statusCode: "patch-asset-digest-missing",
+                    message: "Patch assets are missing trusted GitHub digest metadata.",
+                    plan: null,
+                    manifest: null,
+                    hasManifest: hasManifest,
+                    hasArchive: hasArchive,
+                    hasInstaller: hasInstaller);
+            }
+
+            PatchManifest? manifest;
+            try
+            {
+                manifest = await GetManifestAsync(
+                    updateResult.PatchManifestUrl!,
+                    updateResult.PatchManifestSha256!,
+                    updateResult.PatchManifestSize,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                manifest = null;
+            }
             if (manifest is null)
             {
                 return new PatchPreflightResult(
@@ -202,6 +235,24 @@ namespace VaultSync.UI.Services
                     requiresInstaller: true,
                     statusCode: manifestStatusCode,
                     message: manifestMessage,
+                    plan: null,
+                    manifest: manifest,
+                    hasManifest: hasManifest,
+                    hasArchive: hasArchive,
+                    hasInstaller: hasInstaller);
+            }
+
+            if (manifest.ArchiveSize != updateResult.PatchArchiveSize ||
+                !string.Equals(
+                    manifest.ArchiveSha256,
+                    updateResult.PatchArchiveSha256,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return new PatchPreflightResult(
+                    eligible: false,
+                    requiresInstaller: true,
+                    statusCode: "archive-release-digest-mismatch",
+                    message: "Patch archive metadata does not match trusted GitHub release metadata.",
                     plan: null,
                     manifest: manifest,
                     hasManifest: hasManifest,
@@ -425,11 +476,20 @@ namespace VaultSync.UI.Services
                 return false;
             }
 
+            if (manifest.Files.Count > MaxPatchFileCount)
+            {
+                message = "Patch manifest contains too many file entries.";
+                return false;
+            }
+
             var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             long extractedBytes = 0;
             foreach (PatchFileEntry file in manifest.Files)
             {
-                if (!IsSafePatchRelativePath(file.RelativePath) || !paths.Add(file.RelativePath.Replace('\\', '/')))
+                string normalizedPath = file.RelativePath
+                    .Replace('\\', '/')
+                    .Normalize(NormalizationForm.FormC);
+                if (!IsSafePatchRelativePath(normalizedPath) || !paths.Add(normalizedPath))
                 {
                     message = $"Patch manifest contains an unsafe or duplicate file path: '{file.RelativePath}'.";
                     return false;
@@ -482,10 +542,27 @@ namespace VaultSync.UI.Services
             if (string.IsNullOrWhiteSpace(value))
                 return false;
 
-            string normalized = value.Replace('\\', '/');
+            string normalized = value.Replace('\\', '/').Normalize(NormalizationForm.FormC);
             return !normalized.StartsWith("/", StringComparison.Ordinal) &&
                    !normalized.Contains(':') &&
-                   normalized.Split('/').All(part => part is not ("" or "." or ".."));
+                   normalized.Split('/').All(IsSafePatchPathSegment);
+        }
+
+        private static bool IsSafePatchPathSegment(string part)
+        {
+            if (part is "" or "." or ".." ||
+                part.EndsWith(' ') ||
+                part.EndsWith('.') ||
+                part.Any(char.IsControl))
+            {
+                return false;
+            }
+
+            string stem = part.Split('.')[0];
+            return stem.ToUpperInvariant() is not
+                ("CON" or "PRN" or "AUX" or "NUL" or
+                 "COM1" or "COM2" or "COM3" or "COM4" or "COM5" or "COM6" or "COM7" or "COM8" or "COM9" or
+                 "LPT1" or "LPT2" or "LPT3" or "LPT4" or "LPT5" or "LPT6" or "LPT7" or "LPT8" or "LPT9");
         }
 
         private static bool VersionsMatch(string? previousVersion, string? currentVersion)
@@ -642,9 +719,14 @@ namespace VaultSync.UI.Services
             return client;
         }
 
-        private static async Task<PatchManifest?> GetManifestAsync(string manifestUrl, CancellationToken cancellationToken)
+        private static async Task<PatchManifest?> GetManifestAsync(
+            string manifestUrl,
+            string expectedSha256,
+            long expectedSize,
+            CancellationToken cancellationToken)
         {
-            if (s_manifestCache.TryGetValue(manifestUrl, out (PatchManifest Manifest, DateTimeOffset FetchedAt) cached))
+            string cacheKey = $"{manifestUrl}|{expectedSha256}|{expectedSize}";
+            if (s_manifestCache.TryGetValue(cacheKey, out (PatchManifest Manifest, DateTimeOffset FetchedAt) cached))
             {
                 if (DateTimeOffset.UtcNow - cached.FetchedAt < s_manifestCacheWindow)
                 {
@@ -652,12 +734,64 @@ namespace VaultSync.UI.Services
                 }
             }
 
-            PatchManifest? manifest = await s_httpClient.GetFromJsonAsync<PatchManifest>(manifestUrl, cancellationToken);
+            if (expectedSize <= 0 || expectedSize > MaxPatchManifestBytes || !IsSha256(expectedSha256))
+                return null;
+
+            using HttpResponseMessage response = await s_httpClient.GetAsync(
+                manifestUrl,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+            if (!response.IsSuccessStatusCode ||
+                response.Content.Headers.ContentLength is > MaxPatchManifestBytes ||
+                (response.Content.Headers.ContentLength.HasValue &&
+                 response.Content.Headers.ContentLength.Value != expectedSize))
+            {
+                return null;
+            }
+
+            byte[] payload = await ReadBoundedPayloadAsync(
+                response.Content,
+                expectedSize,
+                cancellationToken);
+            string actualSha256 = HashService.FormatSha256Lower(SHA256.HashData(payload));
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Convert.FromHexString(actualSha256),
+                    Convert.FromHexString(expectedSha256)))
+            {
+                return null;
+            }
+
+            PatchManifest? manifest = JsonSerializer.Deserialize<PatchManifest>(payload);
             if (manifest is null)
                 return null;
 
-            s_manifestCache[manifestUrl] = (manifest, DateTimeOffset.UtcNow);
+            s_manifestCache[cacheKey] = (manifest, DateTimeOffset.UtcNow);
             return manifest;
+        }
+
+        private static async Task<byte[]> ReadBoundedPayloadAsync(
+            HttpContent content,
+            long expectedSize,
+            CancellationToken cancellationToken)
+        {
+            await using Stream source = await content.ReadAsStreamAsync(cancellationToken);
+            using var destination = new MemoryStream((int)expectedSize);
+            byte[] buffer = new byte[64 * 1024];
+            long total = 0;
+            while (true)
+            {
+                int read = await source.ReadAsync(buffer, cancellationToken);
+                if (read == 0)
+                    break;
+                total += read;
+                if (total > expectedSize || total > MaxPatchManifestBytes)
+                    throw new InvalidDataException("Patch manifest exceeds its trusted release size.");
+                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            }
+
+            if (total != expectedSize)
+                throw new InvalidDataException("Patch manifest size does not match trusted release metadata.");
+            return destination.ToArray();
         }
 
     }

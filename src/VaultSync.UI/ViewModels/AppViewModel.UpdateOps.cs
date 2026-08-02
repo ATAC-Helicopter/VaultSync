@@ -828,9 +828,13 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            if (_pendingUpdateResult?.HasInstaller == true && _pendingUpdateResult.InstallerUrl is not null)
+            if (_pendingUpdateResult?.HasVerifiedInstaller == true && _pendingUpdateResult.InstallerUrl is not null)
             {
-                await DownloadAndLaunchInstallerAsync(_pendingUpdateResult.InstallerUrl, _pendingUpdateResult.InstallerName);
+                await DownloadAndLaunchInstallerAsync(
+                    _pendingUpdateResult.InstallerUrl,
+                    _pendingUpdateResult.InstallerName,
+                    _pendingUpdateResult.InstallerSha256!,
+                    _pendingUpdateResult.InstallerSize);
                 return;
             }
 
@@ -851,7 +855,11 @@ namespace VaultSync.UI.ViewModels
             TryOpenUrl(webStoreUrl);
         }
 
-        private async Task DownloadAndLaunchInstallerAsync(Uri installerUrl, string? installerName)
+        private async Task DownloadAndLaunchInstallerAsync(
+            Uri installerUrl,
+            string? installerName,
+            string expectedSha256,
+            long expectedSize)
         {
             IsInstallerDownloading = true;
             PatchStatusMessage = L("Update.Installer.Downloading", "Downloading installer...");
@@ -876,6 +884,11 @@ namespace VaultSync.UI.ViewModels
                 response.EnsureSuccessStatusCode();
 
                 long? totalBytes = response.Content.Headers.ContentLength;
+                if (expectedSize <= 0 ||
+                    expectedSize > InstallerIntegrityVerifier.MaxInstallerBytes ||
+                    (totalBytes.HasValue && totalBytes.Value != expectedSize))
+                    throw new InvalidDataException("Installer size does not match trusted release metadata.");
+
                 await using (Stream contentStream = await response.Content.ReadAsStreamAsync())
                 await using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
                 {
@@ -883,6 +896,7 @@ namespace VaultSync.UI.ViewModels
                         contentStream,
                         fileStream,
                         totalBytes,
+                        expectedSize,
                         (downloaded, total, rate) =>
                         {
                             UpdateDownloadStatus(
@@ -893,6 +907,9 @@ namespace VaultSync.UI.ViewModels
                         },
                         CancellationToken.None);
                 }
+
+                if (!InstallerIntegrityVerifier.Verify(tempPath, expectedSize, expectedSha256))
+                    throw new InvalidDataException("Installer failed its SHA-256 integrity check.");
 
                 File.Copy(tempPath, finalPath, overwrite: true);
                 File.Delete(tempPath);
