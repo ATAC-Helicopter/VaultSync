@@ -1,5 +1,7 @@
+using System;
 using System.IO;
 using VaultSync.Core.Config;
+using VaultSync.Core.Services;
 using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
@@ -23,6 +25,49 @@ public sealed class AppConfigStoreTests
         Assert.Equal(config.ProjectsRoot, reloaded.ProjectsRoot);
         Assert.Equal(config.DbPath, reloaded.DbPath);
         Assert.True(File.Exists(Path.Combine(scope.ConfigDirectory, "appsettings.json")));
+    }
+
+    [Fact]
+    public void Save_RestrictsUnixConfigAndBackupPermissions()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var scope = new TestAppConfigScope();
+        string configPath = Path.Combine(scope.ConfigDirectory, "appsettings.json");
+        string backupPath = Path.Combine(scope.ConfigDirectory, "appsettings.bak.json");
+
+        AppConfigStore.Save(new AppConfig());
+        AppConfigStore.Save(new AppConfig { ProjectsRoot = "updated" });
+
+        Assert.Equal(
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+            File.GetUnixFileMode(scope.ConfigDirectory));
+        Assert.Equal(
+            UnixFileMode.UserRead | UnixFileMode.UserWrite,
+            File.GetUnixFileMode(configPath));
+        Assert.Equal(
+            UnixFileMode.UserRead | UnixFileMode.UserWrite,
+            File.GetUnixFileMode(backupPath));
+    }
+
+    [Fact]
+    public void PrivateDataPermissions_RestrictsExistingUnixDirectory()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var directory = new TempDirectory();
+        File.SetUnixFileMode(
+            directory.Path,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+            UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+
+        PrivateDataPermissions.EnsureDirectory(directory.Path);
+
+        Assert.Equal(
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+            File.GetUnixFileMode(directory.Path));
     }
 
     [Fact]

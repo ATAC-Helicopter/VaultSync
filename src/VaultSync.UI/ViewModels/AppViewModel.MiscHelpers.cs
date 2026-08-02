@@ -100,6 +100,7 @@ namespace VaultSync.UI.ViewModels
             Stream source,
             Stream destination,
             long? totalBytes,
+            long maximumBytes,
             Action<long, long?, double?>? progress,
             CancellationToken cancellationToken)
         {
@@ -115,8 +116,11 @@ namespace VaultSync.UI.ViewModels
                 if (read <= 0)
                     break;
 
-                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
                 totalRead += read;
+                if (totalRead > maximumBytes)
+                    throw new InvalidDataException("Download exceeds its trusted release size.");
+
+                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
 
                 if (progress is null)
                     continue;

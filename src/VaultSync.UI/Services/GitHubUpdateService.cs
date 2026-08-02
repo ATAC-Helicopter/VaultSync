@@ -23,10 +23,16 @@ namespace VaultSync.UI.Services
             Uri releaseUrl,
             DateTime publishedAt,
             string? patchManifestUrl,
+            string? patchManifestSha256,
+            long patchManifestSize,
             Uri? patchArchiveUrl,
             string? patchArchiveName,
+            string? patchArchiveSha256,
+            long patchArchiveSize,
             Uri? installerUrl,
             string? installerName,
+            string? installerSha256,
+            long installerSize,
             UpdateCheckDiagnostics diagnostics)
         {
             TagName          = tagName;
@@ -35,10 +41,16 @@ namespace VaultSync.UI.Services
             ReleaseUrl       = releaseUrl;
             PublishedAt      = publishedAt;
             PatchManifestUrl = patchManifestUrl;
+            PatchManifestSha256 = patchManifestSha256;
+            PatchManifestSize = patchManifestSize;
             PatchArchiveUrl  = patchArchiveUrl;
             PatchArchiveName = patchArchiveName;
+            PatchArchiveSha256 = patchArchiveSha256;
+            PatchArchiveSize = patchArchiveSize;
             InstallerUrl     = installerUrl;
             InstallerName    = installerName;
+            InstallerSha256  = installerSha256;
+            InstallerSize    = installerSize;
             Diagnostics      = diagnostics;
         }
 
@@ -48,12 +60,29 @@ namespace VaultSync.UI.Services
         public Uri ReleaseUrl { get; }
         public DateTime PublishedAt { get; }
         public string? PatchManifestUrl { get; }
+        public string? PatchManifestSha256 { get; }
+        public long PatchManifestSize { get; }
         public Uri? PatchArchiveUrl { get; }
         public string? PatchArchiveName { get; }
+        public string? PatchArchiveSha256 { get; }
+        public long PatchArchiveSize { get; }
         public Uri? InstallerUrl { get; }
         public string? InstallerName { get; }
+        public string? InstallerSha256 { get; }
+        public long InstallerSize { get; }
         public bool HasPatch => !string.IsNullOrWhiteSpace(PatchManifestUrl) && PatchArchiveUrl != null;
+        public bool HasVerifiedPatch => HasPatch &&
+                                        PatchManifestSize > 0 &&
+                                        PatchArchiveSize > 0 &&
+                                        IsSha256(PatchManifestSha256) &&
+                                        IsSha256(PatchArchiveSha256);
         public bool HasInstaller => InstallerUrl != null;
+        public bool HasVerifiedInstaller => HasInstaller &&
+                                            InstallerSize > 0 &&
+                                            InstallerSha256 is { Length: 64 } &&
+                                            InstallerSha256.All(Uri.IsHexDigit);
+        private static bool IsSha256(string? value) =>
+            value is { Length: 64 } && value.All(Uri.IsHexDigit);
         public UpdateCheckDiagnostics Diagnostics { get; }
     }
 
@@ -162,8 +191,8 @@ namespace VaultSync.UI.Services
             string releaseNotes = candidate.Body ?? string.Empty;
             DateTime publishedAt = candidate.PublishedAt ?? DateTime.MinValue;
 
-            (string? manifestUrl, Uri? archiveUrl, string? archiveName) = GetPatchAssets(candidate.Assets);
-            (Uri? installerUrl, string? installerName) = GetInstallerAsset(candidate.Assets);
+            (string? manifestUrl, string? manifestSha256, long manifestSize, Uri? archiveUrl, string? archiveName, string? archiveSha256, long archiveSize) = GetPatchAssets(candidate.Assets);
+            (Uri? installerUrl, string? installerName, string? installerSha256, long installerSize) = GetInstallerAsset(candidate.Assets);
             diagnostics.SelectedCandidate = ToDiagnostics(candidate, !string.IsNullOrWhiteSpace(manifestUrl) && archiveUrl != null, installerUrl != null);
             diagnostics.Decision = channel == GitHubReleaseChannel.Beta
                 ? "beta-or-stable-candidate-selected"
@@ -177,10 +206,16 @@ namespace VaultSync.UI.Services
                 releaseUri,
                 publishedAt,
                 manifestUrl,
+                manifestSha256,
+                manifestSize,
                 archiveUrl,
                 archiveName,
+                archiveSha256,
+                archiveSize,
                 installerUrl,
                 installerName,
+                installerSha256,
+                installerSize,
                 diagnostics),
                 diagnostics);
         }
@@ -393,16 +428,19 @@ namespace VaultSync.UI.Services
 
             [JsonPropertyName("size")]
             public long Size { get; set; }
+
+            [JsonPropertyName("digest")]
+            public string? Digest { get; set; }
         }
 
-        private static (string? ManifestUrl, Uri? ArchiveUrl, string? ArchiveName) GetPatchAssets(List<GitHubAsset>? assets)
+        private static (string? ManifestUrl, string? ManifestSha256, long ManifestSize, Uri? ArchiveUrl, string? ArchiveName, string? ArchiveSha256, long ArchiveSize) GetPatchAssets(List<GitHubAsset>? assets)
         {
             if (assets is null || assets.Count == 0)
-                return (null, null, null);
+                return (null, null, 0, null, null, null, 0);
 
             List<string> suffixes = GetPlatformSuffixes();
             if (suffixes.Count == 0)
-                return (null, null, null);
+                return (null, null, 0, null, null, null, 0);
 
             foreach (string platformSuffix in suffixes)
             {
@@ -412,26 +450,30 @@ namespace VaultSync.UI.Services
                 GitHubAsset? manifest = assets.FirstOrDefault(a => string.Equals(a.Name, manifestName, StringComparison.OrdinalIgnoreCase));
                 GitHubAsset? archive = assets.FirstOrDefault(a => string.Equals(a.Name, archiveName, StringComparison.OrdinalIgnoreCase));
 
-                if (manifest is null || archive is null || string.IsNullOrEmpty(manifest.BrowserDownloadUrl))
+                if (manifest is null || archive is null ||
+                    !TryGetTrustedReleaseAssetUri(manifest.BrowserDownloadUrl, out Uri? manifestUri))
                     continue;
 
-                Uri? archiveUri = null;
-                if (!string.IsNullOrWhiteSpace(archive.BrowserDownloadUrl) &&
-                    Uri.TryCreate(archive.BrowserDownloadUrl, UriKind.Absolute, out Uri? parsed))
-                {
-                    archiveUri = parsed;
-                }
+                if (!TryGetTrustedReleaseAssetUri(archive.BrowserDownloadUrl, out Uri? archiveUri))
+                    continue;
 
-                return (manifest.BrowserDownloadUrl, archiveUri, archive.Name);
+                return (
+                    manifestUri!.AbsoluteUri,
+                    TryParseSha256Digest(manifest.Digest),
+                    manifest.Size,
+                    archiveUri,
+                    archive.Name,
+                    TryParseSha256Digest(archive.Digest),
+                    archive.Size);
             }
 
-            return (null, null, null);
+            return (null, null, 0, null, null, null, 0);
         }
 
-        private static (Uri? InstallerUrl, string? InstallerName) GetInstallerAsset(List<GitHubAsset>? assets)
+        private static (Uri? InstallerUrl, string? InstallerName, string? InstallerSha256, long InstallerSize) GetInstallerAsset(List<GitHubAsset>? assets)
         {
             if (assets is null || assets.Count == 0)
-                return (null, null);
+                return (null, null, null, 0);
 
             GitHubAsset? asset = null;
 
@@ -463,11 +505,44 @@ namespace VaultSync.UI.Services
             }
 
             if (asset is null || string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))
-                return (null, null);
+                return (null, null, null, 0);
 
-            return Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out Uri? url)
-                ? (url, asset.Name)
-                : (null, null);
+            string? sha256 = TryParseSha256Digest(asset.Digest);
+
+            return TryGetTrustedReleaseAssetUri(asset.BrowserDownloadUrl, out Uri? url)
+                ? (url, asset.Name, sha256, asset.Size)
+                : (null, null, null, 0);
+        }
+
+        internal static bool TryGetTrustedReleaseAssetUri(string? value, out Uri? uri)
+        {
+            uri = null;
+            if (!Uri.TryCreate(value, UriKind.Absolute, out Uri? parsed) ||
+                !string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(parsed.Host, "github.com", StringComparison.OrdinalIgnoreCase) ||
+                !parsed.IsDefaultPort ||
+                !parsed.AbsolutePath.StartsWith(
+                    "/ATAC-Helicopter/VaultSync/releases/download/",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            uri = parsed;
+            return true;
+        }
+
+        internal static string? TryParseSha256Digest(string? digest)
+        {
+            const string prefix = "sha256:";
+            string normalized = (digest ?? string.Empty).Trim();
+            if (!normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            string hash = normalized[prefix.Length..].Trim();
+            return hash.Length == 64 && hash.All(Uri.IsHexDigit)
+                ? hash.ToLowerInvariant()
+                : null;
         }
 
         private static GitHubAsset? FindLinuxAsset(List<GitHubAsset> assets, string extension)
@@ -570,8 +645,8 @@ namespace VaultSync.UI.Services
             if (release is null)
                 return new UpdateReleaseCandidateDiagnostics();
 
-            (string? manifestUrl, Uri? archiveUrl, string? _) = GetPatchAssets(release.Assets);
-            (Uri? installerUrl, string? _) = GetInstallerAsset(release.Assets);
+            (string? manifestUrl, string? _, long _, Uri? archiveUrl, string? _, string? _, long _) = GetPatchAssets(release.Assets);
+            (Uri? installerUrl, string? _, string? _, long _) = GetInstallerAsset(release.Assets);
             return new UpdateReleaseCandidateDiagnostics
             {
                 Tag = (release.TagName ?? string.Empty).Trim(),
