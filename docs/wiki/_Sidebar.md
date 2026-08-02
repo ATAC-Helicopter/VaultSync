@@ -5,7 +5,9 @@
 - Getting Started
   - [Installation](Installation.md)
   - [Quick start](Quick-Start.md)
+  - [Guided app tour](Guided-Tour.md)
   - [Configuration](Configuration.md)
+  - [Settings reference](Settings-Reference.md)
 
 - Backups and Storage
   - [Backups overview](Backups.md)

@@ -2,6 +2,8 @@
 
 VaultSync 1.8.4 adds local, explainable disaster-recovery checks. It does not upload backup metadata, contact a hosted service, or claim that a backup is recoverable without examining it.
 
+![Recovery readiness, coverage, recommendations, and project status](images/Recovery_Readiness.png)
+
 ## Recovery drills
 
 A recovery drill opens the newest recorded recovery point for a project without copying files back into the project. It checks:
@@ -14,6 +16,8 @@ A recovery drill opens the newest recorded recovery point for a project without 
 6. A read-only original-location plan identifies identical files, potential overwrites, and newer destination conflicts.
 
 The result is **Passed**, **Attention**, or **Failed** and is stored in the local VaultSync SQLite database. The Recovery page exposes the latest result and expandable evidence. The exported Markdown recovery report includes drill coverage and a per-check evidence appendix. History is bounded to the newest 20 drills per project, and each drill stores at most 100 warning/error evidence rows.
+
+![Expanded recovery drill with bounded evidence](images/Recovery_Drill.png)
 
 An encrypted recovery point is intentionally reported as limited unless it is unlocked: the drill validates that the encrypted payload and descriptor are present, but it does not request or retain a password merely to improve a score. A passed drill is evidence that the tested checks succeeded; it is not a replacement for periodically performing a real restore on important data.
 

@@ -2,9 +2,9 @@ name: PR Quality Gates
 
 on:
   pull_request:
-    branches: [ "Dev", "Stable", "release/v1.8" ]
+    branches: [ "Dev", "Stable", "release/v*" ]
   push:
-    branches: [ "Dev", "Stable", "release/v1.8" ]
+    branches: [ "Dev", "Stable", "release/v*" ]
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
       workflows_changed: ${{ steps.detect.outputs.workflows_changed }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -84,11 +84,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Lint GitHub YAML files
         run: |
-          npx --yes --ignore-scripts yaml-lint \
+          npx --yes --ignore-scripts yaml-lint@1.7.0 \
             .github/workflows/*.yml \
             .github/ISSUE_TEMPLATE/*.yml \
             .github/dependabot.yml
@@ -100,10 +100,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.x"
 
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Run local release gate
         shell: pwsh
@@ -130,15 +130,15 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: "10.0.x"
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Validate Store manifest metadata
         shell: pwsh

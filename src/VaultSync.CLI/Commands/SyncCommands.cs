@@ -11,6 +11,7 @@ using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.CLI.Config;
+using VaultSync.CLI.Services;
 
 namespace VaultSync.CLI.Commands
 {
@@ -295,54 +296,51 @@ namespace VaultSync.CLI.Commands
     {
         protected override async Task<int> ExecuteAsync(CommandContext context, SelfTestSettings s, CancellationToken cancellationToken)
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var tmpRoot = Path.Combine(home, ".vaultsync", "selftest");
-            var src = Path.Combine(tmpRoot, "src");
-            var dst = Path.Combine(tmpRoot, "dst");
+            string? explicitDatabasePath = string.IsNullOrWhiteSpace(s.Db)
+                ? null
+                : ConfigHelper.ResolveDb(s.Db);
+            SelfTestRunResult result = await new SelfTestRunner().RunAsync(
+                explicitDatabasePath,
+                cancellationToken);
 
-            Directory.CreateDirectory(src);
-            Directory.CreateDirectory(dst);
+            if (!s.Quiet)
+                WriteResult(result);
 
-            await File.WriteAllTextAsync(Path.Combine(src, "a.txt"), "hello", cancellationToken);
-            Directory.CreateDirectory(Path.Combine(src, "Sub"));
-            await File.WriteAllTextAsync(Path.Combine(src, "Sub", "b.txt"), "world", cancellationToken);
+            return result.ExitCode;
+        }
 
-            var name = $"SelfTest-{DateTime.UtcNow:yyyyMMddHHmmss}";
-            var db = ConfigHelper.ResolveDb(s.Db);
-            var repo = new SqliteRepository(db);
-            repo.EnsureSchema();
+        internal static void WriteResult(SelfTestRunResult result)
+        {
+            string databaseKind = result.UsesTemporaryDatabase
+                ? "isolated temporary database"
+                : "explicit database";
+            AnsiConsole.MarkupLine(
+                $"[blue]Self-test[/] using {databaseKind}: {Markup.Escape(result.DatabasePath)}");
+            AnsiConsole.MarkupLine(
+                $"Registered project [bold]{Markup.Escape(result.ProjectName)}[/] " +
+                $"(id {result.ProjectId})");
+            AnsiConsole.MarkupLine($"Snapshot {result.SnapshotId} created");
 
-            if (!s.Quiet) AnsiConsole.MarkupLine($"[blue]Self-test[/] using database {Markup.Escape(db)}");
-
-            var id = repo.AddProject(new Project { Name = name, RootPath = src, Preset = "custom" });
-            if (!s.Quiet) AnsiConsole.MarkupLine($"Registered project [bold]{Markup.Escape(name)}[/] (id {id}) -> {Markup.Escape(src)}");
-
-            var snapSvc = new SnapshotService(repo, new HashService());
-            var snapId = await snapSvc.CreateSnapshotAsync(
-                repo.GetProjectByName(name)!,
-                fullHash: true,
-                maxSnapshotsToKeep: null,
-                ct: cancellationToken);
-            if (!s.Quiet) AnsiConsole.MarkupLine($"Snapshot {snapId} created");
-
-            var syncSvc = new SyncService();
-            var syncCode = await syncSvc.SyncAsync(repo.GetProjectByName(name)!, dst, dryRun: false, cancellationToken);
-            if (syncCode != 0) { if (!s.Quiet) AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {syncCode})"); return 2; }
-            if (!s.Quiet) AnsiConsole.MarkupLine($"[green]Sync OK[/] -> {Markup.Escape(dst)}");
-
-            var verifySvc = new VerifyService(repo, new HashService());
-            var result = await verifySvc.VerifyAsync(repo.GetProjectByName(name)!, dst, percent: 100, full: true, cancellationToken);
-            if (result.Failures.Count > 0)
+            if (result.SyncExitCode != 0)
             {
-                if (!s.Quiet) AnsiConsole.MarkupLine($"[red]Verify failed[/]: {result.Failures.Count} issues");
-                return 2;
+                AnsiConsole.MarkupLine(
+                    $"[red]Sync failed[/] (exit {result.SyncExitCode})");
+                return;
             }
-            if (!s.Quiet) AnsiConsole.MarkupLine("[green]Verify OK[/] - all files matched");
 
-            repo.DeleteProjectCascade(name);
-            if (!s.Quiet) AnsiConsole.MarkupLine($"[grey]Cleanup[/]: removed project metadata; files remain under {Markup.Escape(tmpRoot)}");
+            AnsiConsole.MarkupLine("[green]Sync OK[/]");
+            if (result.VerificationFailures > 0)
+            {
+                AnsiConsole.MarkupLine(
+                    $"[red]Verify failed[/]: {result.VerificationFailures} issues");
+                return;
+            }
 
-            return 0;
+            AnsiConsole.MarkupLine("[green]Verify OK[/] - all files matched");
+            if (!result.UsesTemporaryDatabase)
+                AnsiConsole.MarkupLine(
+                    $"[grey]Cleanup[/]: removed temporary project metadata; " +
+                    $"files remain under {Markup.Escape(result.WorkspacePath)}");
         }
     }
 }

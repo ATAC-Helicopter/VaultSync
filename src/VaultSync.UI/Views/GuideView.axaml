@@ -1,0 +1,63 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
+    x:Class="VaultSync.UI.Views.GuideView"
+    x:DataType="vm:GuideViewModel">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{DynamicResource PagePadding}">
+    <StackPanel Spacing="18" MaxWidth="1040" HorizontalAlignment="Center">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+        <StackPanel Spacing="6">
+          <TextBlock Text="VaultSync guide" FontSize="28" FontWeight="SemiBold" />
+          <TextBlock Text="A practical path from first setup to a recovery you have actually proved."
+                     Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+          <TextBlock Text="{CompiledBinding ProgressSummary}"
+                     Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="0,5,0,0" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+          <Button Classes="action-ghost" Content="Restart guided setup"
+                  Command="{CompiledBinding RestartSetupCommand}" />
+          <Button Classes="action-ghost" Content="Full documentation"
+                  Command="{CompiledBinding OpenDocumentationCommand}" />
+        </StackPanel>
+      </Grid>
+
+      <Border Classes="card" Padding="20">
+        <StackPanel Spacing="8">
+          <TextBlock Text="The recovery rule" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="A backup is not recovery proof. VaultSync treats the destination, credentials, integrity check, restore plan, and drill as separate evidence. Recovery tells you exactly which one is missing."
+                     TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+      </Border>
+
+      <ItemsControl ItemsSource="{CompiledBinding Topics}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel Orientation="Horizontal" ItemWidth="490" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:GuideTopicViewModel">
+            <Border Classes="card" Margin="0,0,12,12" Padding="20" MinHeight="205">
+              <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                  <Border Width="34" Height="34" CornerRadius="17"
+                          Background="{DynamicResource AccentSoftBrush}">
+                    <TextBlock Text="{CompiledBinding Number}" HorizontalAlignment="Center"
+                               VerticalAlignment="Center" FontWeight="Bold" />
+                  </Border>
+                  <TextBlock Grid.Column="1" Text="{CompiledBinding Title}"
+                             FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Grid.Row="1" Text="{CompiledBinding Body}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <Button Grid.Row="2" Classes="action-primary" HorizontalAlignment="Left"
+                        Content="{CompiledBinding ActionLabel}" Command="{CompiledBinding ActionCommand}" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

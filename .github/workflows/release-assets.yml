@@ -19,6 +19,11 @@ on:
       target_version:
         description: "Target version for patch manifests (e.g., 1.8.0-Beta.1 or 1.8.0)"
         required: true
+      release_candidate:
+        description: "Build unpublished stable-version candidate assets from a matching release/vX.Y.Z branch"
+        required: false
+        type: boolean
+        default: false
       include_linux_patches:
         description: "Build Linux patch assets. Leave off when Linux installer fallback is required for protected installs."
         required: false
@@ -40,7 +45,7 @@ jobs:
       patch_base_versions: ${{ steps.validate_inputs.outputs.patch_base_versions }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Validate release inputs
         id: validate_inputs
@@ -50,6 +55,7 @@ jobs:
           PREVIOUS_VERSION: ${{ inputs.previous_version }}
           PREVIOUS_VERSIONS: ${{ inputs.previous_versions }}
           TARGET_VERSION: ${{ inputs.target_version }}
+          RELEASE_CANDIDATE: ${{ inputs.release_candidate }}
         run: |
           set -euo pipefail
 
@@ -57,6 +63,7 @@ jobs:
           previous="$PREVIOUS_VERSION"
           previous_versions_raw="$PREVIOUS_VERSIONS"
           target="$TARGET_VERSION"
+          release_candidate="$RELEASE_CANDIDATE"
           branch="${{ github.ref_name }}"
 
           trim() {
@@ -120,8 +127,14 @@ jobs:
           fi
 
           if [[ "$channel" == "beta" ]]; then
-            if [[ "$branch" != "Dev" ]]; then
-              echo "Beta asset builds must be run from the Dev branch. Current branch: $branch"
+            if [[ "$release_candidate" == "true" ]]; then
+              echo "release_candidate can only be used with the stable channel."
+              exit 1
+            fi
+            beta_base_version="${target_key%%-*}"
+            expected_beta_branch="release/v${beta_base_version}"
+            if [[ "$branch" != "Dev" && "$branch" != "$expected_beta_branch" ]]; then
+              echo "Beta asset builds must run from Dev or '$expected_beta_branch'. Current branch: $branch"
               exit 1
             fi
             if [[ "$target" != *-* ]]; then
@@ -131,8 +144,14 @@ jobs:
           fi
 
           if [[ "$channel" == "stable" ]]; then
-            if [[ "$branch" != "Stable" ]]; then
-              echo "Stable asset builds must be run from the Stable branch. Current branch: $branch"
+            if [[ "$release_candidate" == "true" ]]; then
+              expected_candidate_branch="release/v${target}"
+              if [[ "$branch" != "$expected_candidate_branch" ]]; then
+                echo "Release candidate asset builds must run from '$expected_candidate_branch'. Current branch: $branch"
+                exit 1
+              fi
+            elif [[ "$branch" != "Stable" ]]; then
+              echo "Stable asset builds must be run from the Stable branch unless release_candidate is enabled. Current branch: $branch"
               exit 1
             fi
             if [[ "$target" == *-* ]]; then
@@ -151,6 +170,7 @@ jobs:
           ## Release asset validation
           - Channel: \`$channel\`
           - Branch: \`$branch\`
+          - Release candidate: \`$release_candidate\`
           - Project version: \`$project_version\`
           - Primary previous version: \`${previous:-"(none)"}\`
           - Base allow-list:
@@ -168,10 +188,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: "10.0.x"
 
@@ -201,16 +221,16 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: "10.0.x"
 
       - name: Setup MSBuild
         if: ${{ inputs.include_store_upload }}
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Install Microsoft Store packaging workload
         if: ${{ inputs.include_store_upload }}
@@ -404,7 +424,7 @@ jobs:
           Add-Content $env:GITHUB_STEP_SUMMARY "- Upload artifact: ``$targetPath``"
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-release-assets
           if-no-files-found: error
@@ -415,7 +435,7 @@ jobs:
 
       - name: Upload Microsoft Store artifact
         if: ${{ inputs.include_store_upload }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-store-upload
           if-no-files-found: error
@@ -428,10 +448,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: "10.0.x"
 
@@ -450,6 +470,11 @@ jobs:
           -f net10.0
           -r osx-x64
           --self-contained true
+
+      - name: Thin architecture-specific native libraries
+        run: |
+          bash scripts/thin_macos_native_libraries.sh arm64 src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish
+          bash scripts/thin_macos_native_libraries.sh x64 src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish
 
       - name: Build DMGs
         env:
@@ -505,7 +530,7 @@ jobs:
           done
 
       - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: macos-release-assets
           if-no-files-found: error
@@ -522,10 +547,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: "10.0.x"
 
@@ -608,7 +633,7 @@ jobs:
           done
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: linux-release-assets
           if-no-files-found: error

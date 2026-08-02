@@ -15,6 +15,8 @@ Core pillars:
 - Recover: prove readable backup bytes and rehearse recovery without touching live project data.
 - Sync metadata: merge backup history across machines.
 
+![VaultSync dashboard showing the product's protection overview](docs/images/Dashboard.png)
+
 ## 2. Documentation Structure
 
 ### 2.1 Top-level docs
@@ -33,6 +35,8 @@ Core pillars:
 - `docs/RECOVERABILITY_ENGINE.md`: native proof trust boundary, safety limits, evidence model, retention behavior, and ProofRestore provenance.
 - `docs/PRIVACY.md`: local-data and crash-reporting privacy guarantees.
 - `docs/CRASH_REPORTING.md`: reviewed, user-sent crash reports and their strict data boundary.
+- `docs/video/recording-guide.md`: reproducible native-app walkthrough
+  recording, no-key neural narration, captions, assembly, and publishing QA.
 
 ### 2.3 Wiki docs
 - `docs/wiki/Home.md`: wiki entry page.
@@ -88,10 +92,12 @@ When changing behavior, update all relevant artifacts in the same PR:
 ### End user help flow
 1. `docs/HELP.md`
 2. `docs/wiki/Quick-Start.md`
-3. `docs/wiki/Recovery.md` for recovery drills and protection guidance
-4. `docs/wiki/Encryption.md` for encrypted-backup security and password handling
-5. `docs/wiki/Troubleshooting.md`
-6. `docs/wiki/FAQ.md`
+3. `docs/wiki/Guided-Tour.md` for every page and the first-run path
+4. `docs/wiki/Settings-Reference.md` for every setting and toggle
+5. `docs/wiki/Recovery.md` for recovery drills and protection guidance
+6. `docs/wiki/Encryption.md` for encrypted-backup security and password handling
+7. `docs/wiki/Troubleshooting.md`
+8. `docs/wiki/FAQ.md`
 
 ## 6. Quality Checklist (Docs)
 Before merging documentation updates:

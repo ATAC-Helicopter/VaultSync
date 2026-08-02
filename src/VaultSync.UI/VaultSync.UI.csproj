@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>1.8.4</Version>
+    <Version>1.8.5</Version>
     <Product>VaultSync</Product>
     <Company>Flavio Giacchetti</Company>
     <ApplicationIcon>Assets\vaultsync.ico</ApplicationIcon>
@@ -41,6 +41,7 @@
     <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.HarfBuzz" />
+    <!-- Keep native packages pinned directly so every RID resolves the same Skia/HarfBuzz ABI. -->
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
     <PackageReference Include="SkiaSharp.NativeAssets.macOS" />
     <PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" />
@@ -119,6 +120,7 @@
   <!-- Windows notifications -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
     <PackageReference Include="CommunityToolkit.WinUI.Notifications" />
+    <!-- Keep the toolkit's legacy System.Drawing transitively resolved to the serviced runtime line. -->
     <PackageReference Include="System.Drawing.Common" />
   </ItemGroup>
 

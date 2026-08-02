@@ -436,7 +436,7 @@
                             Height="36"
                             Margin="0,0,4,0"
                             VerticalAlignment="Center"
-                            IsVisible="{ReflectionBinding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                            IsVisible="{Binding DataContext.ShowProjectAvatars, ElementName=Root}">
                         <Border CornerRadius="18" Background="{Binding AvatarColor}"/>
                         <Image Source="{Binding AvatarImagePath}"
                                Stretch="UniformToFill"
@@ -605,7 +605,7 @@
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <Grid Width="48"
                   Height="48"
-                  IsVisible="{ReflectionBinding DataContext.ShowProjectAvatars, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                  IsVisible="{Binding DataContext.ShowProjectAvatars, ElementName=Root}">
               <Border CornerRadius="24"
                       Background="{Binding AvatarColor}" />
               <Image Source="{Binding AvatarImagePath}"

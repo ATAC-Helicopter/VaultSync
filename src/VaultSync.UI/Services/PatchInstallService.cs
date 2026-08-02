@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -265,23 +266,10 @@ namespace VaultSync.UI.Services
 
         private static string PrepareHelperDirectory(string installDir)
         {
-            string root = Path.Combine(Path.GetTempPath(), TempRootName);
-            Directory.CreateDirectory(root);
-
-            string helperDir = Path.Combine(root, "patch-helper");
-            try
-            {
-                if (Directory.Exists(helperDir))
-                {
-                    Directory.Delete(helperDir, recursive: true);
-                }
-            }
-            catch
-            {
-                helperDir = Path.Combine(root, $"patch-helper-{Guid.NewGuid():N}");
-            }
-
+            string root = GetTrustedPatchRoot();
+            string helperDir = Path.Combine(root, $"patch-helper-{Guid.NewGuid():N}");
             Directory.CreateDirectory(helperDir);
+            RestrictDirectoryToCurrentUser(helperDir);
             CopyInstallToHelper(installDir, helperDir);
             return helperDir;
         }
@@ -314,8 +302,7 @@ namespace VaultSync.UI.Services
             Action<string>? onLog,
             CancellationToken cancellationToken)
         {
-            string logDir = Path.Combine(Path.GetTempPath(), TempRootName);
-            Directory.CreateDirectory(logDir);
+            string logDir = GetTrustedPatchRoot();
             string logPath = Path.Combine(logDir, "patch-helper.log");
 
             using var log = new StreamWriter(logPath, append: true) { AutoFlush = true };
@@ -364,14 +351,18 @@ namespace VaultSync.UI.Services
                 PatchManifest? manifest = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(request.ManifestPath));
                 if (manifest is null)
                     throw new InvalidOperationException("Unable to parse patch manifest.");
+                if (!PatchUpdateService.TryValidatePatchManifest(manifest, out string? manifestStatus, out string? manifestError))
+                    throw new InvalidOperationException($"Patch manifest rejected ({manifestStatus}): {manifestError}");
                 VerifyBaseVersionCompatibility(manifest);
                 VerifyArchivePreflight(request.ArchivePath, manifest);
 
-                string stagingDir = Path.Combine(Path.GetTempPath(), TempRootName, $"patch-{Guid.NewGuid():N}");
+                string stagingDir = Path.Combine(GetTrustedPatchRoot(), $"patch-{Guid.NewGuid():N}");
                 Directory.CreateDirectory(stagingDir);
+                RestrictDirectoryToCurrentUser(stagingDir);
 
                 try
                 {
+                    VerifyArchiveContents(manifest, request.ArchivePath);
                     LogLine("Extracting patch archive.");
                     SafeZipExtractor.ExtractToDirectory(request.ArchivePath, stagingDir);
                     LogLine("Verifying extracted files.");
@@ -437,6 +428,8 @@ namespace VaultSync.UI.Services
             {
                 string source = CombineUnderRoot(stagingDir, file.RelativePath, "manifest source path");
                 string target = CombineUnderRoot(installDir, file.RelativePath, "manifest target path");
+                SafeZipExtractor.EnsureNoLinkedPathComponents(stagingDir, source);
+                SafeZipExtractor.EnsureNoLinkedPathComponents(installDir, target);
                 string? targetDir = Path.GetDirectoryName(target);
                 if (!string.IsNullOrWhiteSpace(targetDir))
                 {
@@ -493,18 +486,45 @@ namespace VaultSync.UI.Services
             if (!info.Exists)
                 throw new FileNotFoundException("Patch archive not found.", archivePath);
 
-            if (manifest.ArchiveSize > 0 && info.Length != manifest.ArchiveSize)
+            if (info.Length != manifest.ArchiveSize)
             {
                 throw new InvalidOperationException(
                     $"Patch archive size mismatch. Expected {manifest.ArchiveSize}, got {info.Length}.");
             }
 
-            if (!string.IsNullOrWhiteSpace(manifest.ArchiveSha256))
+            string actual = ComputeSha256(archivePath);
+            string expected = manifest.ArchiveSha256.Trim();
+            if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Patch archive checksum mismatch.");
+        }
+
+        private static void VerifyArchiveContents(PatchManifest manifest, string archivePath)
+        {
+            var expected = manifest.Files.ToDictionary(
+                file => SafeZipExtractor.GetSafeEntryRelativePath(file.RelativePath).Replace('\\', '/'),
+                file => file,
+                StringComparer.OrdinalIgnoreCase);
+            var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            using ZipArchive archive = ZipFile.OpenRead(archivePath);
+            foreach (ZipArchiveEntry entry in archive.Entries)
             {
-                string actual = ComputeSha256(archivePath);
-                string expected = manifest.ArchiveSha256.Trim();
-                if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException("Patch archive checksum mismatch.");
+                if (string.IsNullOrEmpty(entry.Name))
+                    continue;
+
+                string relative = SafeZipExtractor.GetSafeEntryRelativePath(entry.FullName).Replace('\\', '/');
+                if (!found.Add(relative))
+                    throw new InvalidDataException($"Patch archive contains duplicate file '{relative}'.");
+                if (!expected.TryGetValue(relative, out PatchFileEntry? file))
+                    throw new InvalidDataException($"Patch archive contains unexpected file '{relative}'.");
+                if (entry.Length != file.Size)
+                    throw new InvalidDataException($"Patch archive file size mismatch for '{relative}'.");
+            }
+
+            if (found.Count != expected.Count)
+            {
+                string missing = expected.Keys.First(path => !found.Contains(path));
+                throw new InvalidDataException($"Patch archive is missing manifest file '{missing}'.");
             }
         }
 
@@ -540,7 +560,7 @@ namespace VaultSync.UI.Services
             try
             {
                 string normalizedPath = Path.GetFullPath(path);
-                string root = Path.Combine(Path.GetTempPath(), TempRootName);
+                string root = GetTrustedPatchRoot();
                 string normalizedRoot = Path.GetFullPath(root)
                     .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                     + Path.DirectorySeparatorChar;
@@ -550,6 +570,28 @@ namespace VaultSync.UI.Services
             {
                 return false;
             }
+        }
+
+        private static string GetTrustedPatchRoot()
+        {
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(appData))
+                throw new InvalidOperationException("Current-user application data directory is unavailable.");
+
+            string root = Path.Combine(appData, TempRootName, "patch-runtime");
+            Directory.CreateDirectory(root);
+            RestrictDirectoryToCurrentUser(root);
+            return root;
+        }
+
+        private static void RestrictDirectoryToCurrentUser(string path)
+        {
+            if (OperatingSystem.IsWindows())
+                return;
+
+            File.SetUnixFileMode(
+                path,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
 
         private static PatchElevationKind GetElevationKind(string installDir)

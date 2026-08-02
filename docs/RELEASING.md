@@ -6,7 +6,7 @@ This document defines the current release packaging flow.
 - .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The prepared stable release target is `1.8.4`; prerelease builds for the active patch train use `1.8.4-Beta.N` until the stable release is cut.
+- The prepared stable release target is `1.8.5`; prerelease builds for the active patch train use `1.8.5-Beta.N` until the stable release is cut.
 
 ## 1) Windows Installer
 1. Publish:
@@ -33,8 +33,8 @@ This document defines the current release packaging flow.
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.8.4 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.8.4 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.8.5 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.8.5 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz`, `.deb`, and `linux-x64` `.AppImage` artifacts.
    The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a
@@ -57,14 +57,33 @@ Stable example:
 - branch: `Stable`
 - release channel: `stable`
 - `previous_version = 1.8.3`
-- `target_version = 1.8.4`
+- `target_version = 1.8.5`
 
-Current beta example:
-- branch: `Dev`
+Pre-merge release candidate example:
+- branch: `release/v1.8.5`
+- release channel: `stable`
+- `release_candidate = true`
+- `previous_version = 1.8.4`
+- `target_version = 1.8.5`
+- candidate artifacts remain GitHub Actions artifacts; do not attach them to a
+  non-prerelease GitHub Release until the release PR is approved and merged
+  into `Stable`
+
+This mode builds the exact stable-version binaries from the release branch
+without merging the release PR. The workflow rejects a candidate build unless
+the branch name exactly matches `release/v<target_version>`.
+
+Beta example for future prereleases:
+- branch: `release/v1.8.5` (or `Dev` after the beta changes are present there)
 - release channel: `beta`
-- `previous_version = 1.8.4-Beta.1`
-- `target_version = 1.8.4-Beta.2`
+- `release_candidate = false`
+- `previous_version = 1.8.4`
+- `target_version = <next-version>-Beta.1`
 - `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
+
+The `release_candidate` switch is not used for beta builds. It exists only to
+build unpublished, stable-version candidate assets from a matching release
+branch before the final merge into `Stable`.
 
 Example multi-base input:
 - `previous_version = 1.6.2`
@@ -82,20 +101,34 @@ Older or unlisted installs must fall back to the full installer.
 ## 5) Release Checklist
 - Run the release gate before publishing:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.4 -ReleaseTrack 1.8.x -TargetMilestone 1.8.4
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.5 -ReleaseTrack 1.8.x -TargetMilestone 1.8.5
   ```
 - Run the release gate again after GitHub Actions uploads assets:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.4 -ReleaseTrack 1.8.x -TargetMilestone 1.8.4 -Phase PostPublish
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.5 -ReleaseTrack 1.8.x -TargetMilestone 1.8.5 -Phase PostPublish
   ```
 - `CHANGELOG.md` updated
 - `docs/WHATS_NEW.md` updated
 - relevant wiki/help docs updated
 - build/test validation captured
 - release assets uploaded (installer/DMG/Linux archives/patch assets)
+- every direct-download asset exposes a GitHub SHA-256 digest and the updater
+  rejects missing, mismatched, or non-official integrity metadata
+- Windows SmartScreen and macOS Gatekeeper instructions remain current
 
-## 6) Unsigned Build Note
-VaultSync builds are currently unsigned.
+## 6) Unsigned Distribution Policy
+VaultSync direct-download builds are intentionally unsigned because paid
+platform signing programs are outside the supported release budget. Signing
+and notarization are not release gates. Integrity verification and clear user
+disclosure are mandatory compensating controls:
+
+- publish only through the official `ATAC-Helicopter/VaultSync` release page;
+- keep GitHub-provided SHA-256 asset digests available;
+- verify installer, manifest, and patch digests and exact sizes before use;
+- fail closed to the official release page when verification is unavailable;
+- document the expected SmartScreen and Gatekeeper prompts.
+
+Never describe an unsigned package as signed, notarized, or publisher-verified.
 
 macOS users may need to run:
 ```bash

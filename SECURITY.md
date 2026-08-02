@@ -7,7 +7,9 @@ Preferred channel:
 - GitHub Security Advisory (private report)
 
 Fallback channel:
-- GitHub issue/discussion with minimal sensitive details, requesting private follow-up
+- Email the maintainer listed on the repository owner's GitHub profile
+
+Do not open a public issue or discussion for a suspected vulnerability.
 
 Please include:
 - affected version
@@ -31,3 +33,24 @@ Backports to older versions are best-effort and depend on risk and implementatio
 - Patch-update compatibility is intentionally strict:
   - VaultSync only applies patch manifests to explicitly listed base versions
   - unsupported or older versions must use the installer fallback
+
+## Distribution Integrity
+
+Direct-download desktop packages are intentionally unsigned because paid
+platform signing and notarization programs are outside the project's supported
+budget. Do not interpret a direct package as publisher-signed or notarized.
+
+Compensating controls are mandatory for supported releases:
+
+- obtain packages only from the official `ATAC-Helicopter/VaultSync` release;
+- verify the SHA-256 digest published for the asset before bypassing an
+  operating-system warning;
+- updater installer, manifest, and archive downloads must match trusted GitHub
+  digests and exact sizes before use;
+- updater verification failures must fail closed without executing or applying
+  the downloaded payload;
+- Windows SmartScreen and macOS Gatekeeper warnings must remain documented.
+
+Release-asset digests protect against corruption and substitution outside the
+official release account. They do not replace independent signing if the GitHub
+account or release process itself is compromised.

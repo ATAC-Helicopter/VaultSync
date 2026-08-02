@@ -57,7 +57,7 @@ namespace VaultSync.Core.Config
                 throw new ArgumentException("Config directory is required.", nameof(directory));
 
             string fullPath = Path.GetFullPath(directory);
-            Directory.CreateDirectory(fullPath);
+            PrivateDataPermissions.EnsureDirectory(fullPath);
 
             string? previousOverride;
             lock (ConfigPathGate)
@@ -135,7 +135,7 @@ namespace VaultSync.Core.Config
 
         public static void Save(AppConfig config)
         {
-            Directory.CreateDirectory(ConfigDir);
+            PrivateDataPermissions.EnsureDirectory(ConfigDir);
             PreserveDurableConfigValues(config);
             string json = JsonSerializer.Serialize(config, JsonOptions);
             WriteConfigWithRetry(json);
@@ -145,7 +145,7 @@ namespace VaultSync.Core.Config
 
         public static async Task SaveAsync(AppConfig config, CancellationToken ct = default)
         {
-            Directory.CreateDirectory(ConfigDir);
+            PrivateDataPermissions.EnsureDirectory(ConfigDir);
             PreserveDurableConfigValues(config);
             string json = JsonSerializer.Serialize(config, JsonOptions);
             await WriteConfigWithRetryAsync(json, ct).ConfigureAwait(false);
@@ -239,6 +239,10 @@ namespace VaultSync.Core.Config
                 {
                     File.Move(tempPath, ConfigFilePath);
                 }
+
+                PrivateDataPermissions.RestrictFile(ConfigFilePath);
+                if (File.Exists(ConfigBackupFilePath))
+                    PrivateDataPermissions.RestrictFile(ConfigBackupFilePath);
             }
             finally
             {

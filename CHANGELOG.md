@@ -1,4 +1,25 @@
 ﻿# Changelog
+## [1.8.5] - 02.08.2026
+### Added
+- [VS-1851] Added an evidence-backed recovery-confidence state model that keeps measured, simulated, inferred, user-confirmed, stale, missing, failed, and unsupported evidence distinct while prioritizing decisive blockers over aggregate scores.
+- [VS-1852] Added a project-level Recovery Inspector with the decisive state, evidence basis and freshness, latest drill details, limitations, and next useful action.
+- [VS-1853] Added a Recovery Checklist covering the recovery point, destination, credentials, integrity, restore plan, restore drill, and offsite evidence, with direct proof and test-restore actions.
+- [VS-1854] Added guided isolated restore tests that copy representative files outside the project, reopen and verify their SHA-256 values, retain the test folder for inspection, and persist explicit evidence.
+- [VS-1855] Added recovery proof, isolated restore, protection, and report-export evidence to History with timestamps and source identities.
+- [VS-1856] Upgraded Recovery Evidence Reports with application and source identity, project protection and drill details, redacted proof evidence, a deterministic report ID, and a SHA-256 checksum.
+- [VS-1857] Extended first-run setup beyond backup completion to a separately tracked recovery proof and passed-drill baseline, while keeping Continue later and restart paths.
+- [VS-1859] Added an illustrated whole-app guided tour, a control-by-control Settings reference, current onboarding/History/Recovery/Settings screenshots, and a maintainable real-app walkthrough-video workflow with no-key neural narration and selectable captions.
+### Changed
+- [VS-1858] Updated and documented the supported SQLite and coordinated rendering baseline, retained required compatibility/security pins, upgraded immutable workflow-action pins, and thinned unused macOS native architectures without removing runtime capability.
+- [VS-1860] Bound installer and patch downloads to trusted GitHub release URLs, exact sizes, and SHA-256 digests; hardened patch extraction against traversal, collisions, unsafe names, oversized payloads, and linked paths; and restricted Unix configuration and application data to owner-only permissions.
+### Fixed
+- [BUG-18078] Reworked onboarding as a compact interactive card with visible Back, Continue later, and primary actions so guidance no longer blocks its target pages.
+- [BUG-18079] Restored the missing snapshot-count placeholder in the Portuguese Dashboard translation.
+- [BUG-18080] Replaced the ABI-sensitive macOS disk-space probe with the runtime filesystem API and rejected impossible capacity readings before enforcing backup thresholds.
+- [BUG-18081] Removed startup and virtualized-list binding errors by using stable named view roots and a null-safe selected-diff path.
+- [BUG-18082] Isolated the CLI end-to-end self-test from the production database by default and guaranteed cleanup on success, failure, or cancellation.
+- [BUG-18083] Kept Settings, Projects, Backups, and Recovery interactive behind first-run guidance, including at narrow supported window sizes.
+
 ## [1.8.4] - 24.07.2026
 ### Added
 - [VS-1847] Added strictly redacted, user-reviewed crash reports that only the user's email application can send.

@@ -4,19 +4,27 @@
     xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
     x:Class="VaultSync.UI.Views.Controls.OnboardingTourOverlay"
     x:DataType="vm:OnboardingTourViewModel"
-    IsVisible="{CompiledBinding IsActive}">
+    IsVisible="{CompiledBinding IsActive}"
+    HorizontalAlignment="Right"
+    VerticalAlignment="Bottom"
+    Margin="24"
+    Width="430"
+    MaxWidth="430"
+    MinWidth="280">
 
-  <Grid Background="#78000000">
-    <Border HorizontalAlignment="Right"
-            VerticalAlignment="Bottom"
-            Margin="24"
-            Width="430"
-            MaxWidth="430"
-            Background="{DynamicResource Surface1}"
+  <!--
+    The control is deliberately card-sized. A full-window UserControl remains
+    part of Avalonia's pointer route even when a visual scrim is marked as
+    non-hit-testable, which blocks the Settings/Projects/Backups interactions
+    that the guided tour asks the user to perform.
+  -->
+  <Border Background="{DynamicResource Surface1}"
             BorderBrush="{DynamicResource BorderSoft}"
             BorderThickness="1"
             CornerRadius="8"
             Padding="18">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
             RowSpacing="14">
 
@@ -140,6 +148,6 @@
           </Grid>
         </Grid>
       </Grid>
-    </Border>
-  </Grid>
+    </ScrollViewer>
+  </Border>
 </UserControl>

@@ -2,6 +2,8 @@
 
 This page explains the internal phases so you can interpret progress and logs.
 
+![Backups page showing project controls, progress context, and restore points](../images/Backup_Page.png)
+
 ## 1) Preparation
 - Reads the active destination settings.
 - Resolves network mounts, if configured.

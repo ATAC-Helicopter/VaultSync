@@ -243,6 +243,18 @@
             </StackPanel>
           </Button>
 
+          <Button x:Name="NavGuideButton" Classes="nav" Classes.active="{CompiledBinding IsGuideActive}" Command="{CompiledBinding NavigateGuide}" ToolTip.Tip="Guide">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Border x:Name="NavGuideIconBadge" Classes="nav-icon-badge">
+                <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <shapes:Path Data="M4 3.5H9.2C10.2 3.5 11 4.3 11 5.3V16.5C11 15.4 10.1 14.5 9 14.5H4V3.5ZM18 3.5H12.8C11.8 3.5 11 4.3 11 5.3V16.5C11 15.4 11.9 14.5 13 14.5H18V3.5Z"
+                               Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.5" Fill="Transparent" />
+                </Viewbox>
+              </Border>
+              <TextBlock x:Name="NavGuideText" Text="Guide" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+
           <Button x:Name="NavSettingsButton" Classes="nav" Classes.active="{CompiledBinding IsSettingsActive}" Command="{CompiledBinding NavigateSettings}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Settings}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavSettingsIconBadge" Classes="nav-icon-badge">
@@ -359,6 +371,9 @@
         </Panel>
         <Panel IsVisible="{Binding IsRecoveryActive}">
           <views:RecoveryView DataContext="{Binding RecoveryViewModel}" />
+        </Panel>
+        <Panel IsVisible="{Binding IsGuideActive}">
+          <views:GuideView DataContext="{Binding GuideViewModel}" />
         </Panel>
         <Panel IsVisible="{Binding IsSettingsActive}">
           <ui:SettingsView DataContext="{Binding SettingsViewModel}" />

@@ -28,12 +28,18 @@ Windows distribution channels:
   - no GitHub self-update or installer fallback from inside the app
 
 ## UI Primer
+
+![VaultSync dashboard with protection, activity, storage, and recovery summaries](images/Dashboard.png)
+
 - Dashboard: global status, restore readiness, storage, and recent activity.
 - Projects: project list, snapshot controls, per-project details, and tag management.
 - History: searchable backup activity, notes, labels, tags, and protected points.
 - Backups: per-project controls, restore guidance, Snapshot Explorer, and Snapshot Compare.
 - Recovery: readiness, recovery drills, 3-2-1 coverage, protection recommendations, and reports.
 - Settings: destinations, encryption, Doctor tools, update diagnostics, maintenance, localization.
+
+Illustrated walkthrough: `docs/wiki/Guided-Tour.md`.
+Every Settings control and toggle: `docs/wiki/Settings-Reference.md`.
 
 ## Smart Presets
 - Presets apply `.vaultsyncignore` rules to project backups.
@@ -75,6 +81,9 @@ Metadata sync does not carry:
 - Repair actions are deterministic only; VaultSync does not use fuzzy remaps.
 
 ## Restore Readiness
+
+![Recovery readiness, 3-2-1 coverage, and project status](images/Recovery_Readiness.png)
+
 - Dashboard and Backups show restore-readiness summaries so you can see whether projects are ready, need attention, or are unavailable.
 - The Dashboard review card links directly to Recovery for drill-down.
 - Run a drill from Recovery to check record linkage, reachability, readable inventory, stored bytes, and a read-only restore plan.
@@ -87,6 +96,9 @@ Metadata sync does not carry:
 Full recovery guidance: `docs/wiki/Recovery.md`.
 
 ## Explore and Compare
+
+![Snapshot comparison with changed files and readable text differences](images/Compare_View.png)
+
 - Open Snapshot Explorer from Backups to browse reachable folder and ZIP contents or preview supported text files.
 - Compare two restore points from the same project to see added, modified, and deleted files.
 - The changed-file tree supports search and type filters; supported text files show compact line-by-line change groups.

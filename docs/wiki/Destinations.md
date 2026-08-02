@@ -14,6 +14,8 @@ VaultSync supports two modes:
 - Add one or more destinations with aliases.
 - Destinations can be enabled or disabled without removing them.
 
+![Advanced destination cards with local, external, and network options](../images/Settings_Destinations.png)
+
 ## Destination fields (advanced mode)
 - Alias: short label shown in the UI and tray menu.
 - Path: the destination folder.

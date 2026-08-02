@@ -1,2020 +1,562 @@
-# Roadmap
-
-## Priority legend
-- `P0` Critical: core reliability/security and release blockers.
-- `P1` High: major UX/product impact for the target release.
-- `P2` Medium: valuable but can slip without harming release quality.
-
-## Planning convention
-- Use `VS-xxxx` IDs as the default planning unit for roadmap items, implementation tasks, and release work.
-- Pre-`2.0` planning uses explicit active release streams plus a future backlog; do not open a numbered future stream until work actually starts.
-- ID pattern:
-  - `VS` = VaultSync work item.
-  - First two digits map to release family (`15xx` for `1.5`, `16xx` for `1.6`, etc.).
-  - Last two digits are sequence numbers inside that release stream.
-- Use these IDs consistently in:
-  - `ROADMAP.md` task tracking.
-  - PR titles/descriptions and commit messages (when applicable).
-  - Test/QA references.
-- `CHANGELOG.md` rule:
-  - Use `VS-xxxx` IDs for actual feature entries.
-  - Cleanup/doc-only/test-only notes may omit IDs unless they map to a planned roadmap item.
-  - Keep each entry to one sentence and roughly 110 characters after the ID.
-  - If an entry needs more detail, put it in `docs/WHATS_NEW.md`, the issue, or the PR body.
-- If a task spans releases, split it into release-specific IDs to keep scope and acceptance criteria explicit.
-
-## Roadmap sync format (project automation)
-- Keep execution tickets in this canonical format so scripts can sync to GitHub Project reliably:
-  - `- [ ] \`VS-xxxx\` Title`
-  - Optional details/acceptance criteria stay as indented bullets below the ticket.
-- Use release sections as routing signals:
-  - `## 1.5.x`, `## 1.6.x`, `## 1.7.x`, `## 1.8.x`, `## Future backlog`, `## 1.9.x`
-- For new work, always include:
-  - ID (`VS-xxxx`)
-  - Priority marker (`P0/P1/P2`) at the start of the ticket line when relevant.
-  - Clear one-line scope so title can become an issue/project item title without rewriting.
-
-## Completed (highlights)
-- [x] Updater stabilization: relaunch fixes, clearer status, patch compatibility guardrails.
-- [x] Documentation refresh: expanded wiki for setup, usage, and troubleshooting.
-- [x] `1.3.0` macOS support: bundled per-arch rsync + updater/patch flow validation.
-- [x] `1.3.0` Cross-machine migration and metadata sync (import/merge/tombstones/safety checks).
-- [x] `1.4.0` Per-project destination selection (All/Auto/Specific).
-- [x] `1.4.0` Faster snapshot scanning (scan cache + aggressive mode + cadence safeguards).
-- [x] `1.4.0` Dry-run backup estimates (size/time/capacity warnings + throughput-based ETA).
-
-## 1.5.x (current focus)
-
-### 1.5.0 priorities
-- [x] `P0` Backup encryption and password-protected backups.
-- [x] `P1` Backup bandwidth limits and quiet hours.
-- [x] `P1` Incremental backup UX improvements.
-- [x] `P2` Snapshot diff summaries.
-
-### Current status (as of 2026-02-25)
-- `1.5` feature scope is functionally complete (`P0` + `P1` + `P2` done).
-- Recent UI stabilization pass completed for:
-  - Dashboard weekly analytics card redesign + data-binding correctness fixes.
-  - Dashboard storage donut layout/fallback improvements and tooltip overflow hardening.
-  - Backups/Projects windowed-layout alignment fixes (header/action spacing, chart overlap, avatar/title row alignment).
-  - Settings wording polish (English keys) for quiet-hours and destination controls.
-- Remaining release-gate work:
-  - `VS-1590` Performance and UI-thread hardening.
-  - `VS-1591` Compatibility matrix validation (`1.4` <-> `1.5`).
-  - `VS-1592` Localization/docs/release readiness final pass.
-
-### 1.5.1 stabilization backlog (bugs, glitches, optimization)
-- [x] `P0` `VS-1565` Remove `async void` from backup/history runtime handlers and route through `Task` + centralized exception/log handling.
-  - Scope: `AppViewModel.*` backup/history/runtime/tray handlers and `BackupsViewModel` export action.
-  - Acceptance: no unobserved task exceptions; no behavior regressions in backup/restore/delete/open-folder flows.
-  - Current status:
-    - Done: backup/history/runtime handler entry points now use `void` wrappers with `Task` implementations and centralized detached-operation exception logging.
-    - Done: Backups diff export action no longer uses `async void`.
-    - Done: tray open-folder + lock-now handlers and project/settings handlers now run through detached `Task` wrappers.
-    - Done: no `async void` handlers remain in `src/` (checked via repository scan).
-- [ ] `P1` `VS-1566` Backups history performance pass: reduce full-list/group rebuild churn on filter and refresh updates.
-  - Scope: optimize `BackupsViewModel.RefreshSnapshotsView` / grouping path, avoid unnecessary collection clears/rebuilds.
-  - Acceptance: smoother filter toggles and lower UI thread time on large history sets.
-  - Current status:
-    - In progress: group rebuild now uses a cached project lookup map instead of rebuilding dictionary/group mappings each refresh.
-    - In progress: snapshot metadata lookup now queries only required snapshot IDs (instead of loading all snapshots) when shaping backup history cards.
-- [x] `P1` `VS-1567` Convert hot repository reads from `Task.Run` wrappers to true async DB calls.
-  - Scope: `SqliteRepository` high-frequency read APIs used by Dashboard/Projects/Backups.
-  - Acceptance: reduced thread-pool pressure during refresh/auto-refresh; no query-result regressions.
-  - Current status:
-    - Done: `SqliteRepository` async read helpers for projects/snapshots/files/backups now use Dapper async query APIs (`CommandDefinition` + cancellation tokens) instead of `Task.Run` wrappers.
-- [ ] `P1` `VS-1568` macOS notification icon parity: use VaultSync app icon instead of default Avalonia icon.
-  - Scope: `MacSystemNotificationService` notification payload/icon path wiring.
-  - Acceptance: macOS system notifications display VaultSync branding icon consistently.
-  - Current status:
-    - In progress: macOS notifications now prefer `terminal-notifier` (when installed) and pass VaultSync icon path; fallback remains AppleScript notification.
-- [ ] `P2` `VS-1569` Replace blocking retry sleeps with async backoff in config/metadata I/O paths.
-  - Scope: `AppConfigStore`, `MetadataStore`, `MetadataSyncService`.
-  - Acceptance: cancellation-aware retries; no UI stalls from blocking waits.
-  - Current status:
-    - In progress: `AppConfigStore` now provides `SaveAsync` with cancellation-aware backoff (`Task.Delay`) and Settings async save path now uses it.
-    - In progress: metadata sync import/preview/export/tombstone flows now have async APIs, use `SemaphoreSlim.WaitAsync`, and use cancellation-aware `Task.Delay` backoff in retry loops.
-- [x] `P2` `VS-1574` Metadata schema migration guardrails for idempotent startup.
-  - Scope: `MetadataStore.EnsureSchema` duplicate-column migration behavior on existing stores.
-  - Acceptance: startup schema checks are idempotent and do not throw duplicate-column SQLite exceptions during debug runs.
-  - Current status:
-    - Done: column migrations now use `PRAGMA table_info(...)` presence checks before `ALTER TABLE`.
-    - Done: avoids first-chance `duplicate column name` exceptions on already-migrated metadata stores.
-- [x] `P2` `VS-1575` Drive health probe executable resolution hardening on Windows.
-  - Scope: `DriveHealthService` process-launch path resolution for `smartctl` and other external probes.
-  - Acceptance: manual backup start does not throw first-chance `Win32Exception` when `smartctl` is not installed; missing probe tools degrade to `Unknown` cleanly.
-  - Current status:
-    - Done: process runner now resolves executable paths from `PATH` (and `PATHEXT` on Windows) before `Process.Start`.
-    - Done: `smartctl` path resolution now returns empty when unavailable instead of attempting direct launch.
-- [x] `P2` `VS-1576` Network-drive path guardrails for SMB/UNC detection.
-  - Scope: `AppViewModel.IsNetworkDrivePath` path-root validation before `DriveInfo` construction.
-  - Acceptance: no `ArgumentException` on UNC roots (`\\\\server\\share`) during manual backup startup path checks.
-  - Current status:
-    - Done: UNC paths are now treated as network upfront.
-    - Done: `DriveInfo` is now invoked only for drive-letter roots (`C:` / `C:\\`), avoiding invalid-root exceptions.
-- [x] `P2` `VS-1577` Archive upload auto-tune timeout cancellation noise cleanup.
-  - Scope: `AppViewModel.RuntimeOps` archive probe timeout handling (`ProbeArchiveUploadBufferBytes` / `EnsureArchiveUploadBufferAsync`).
-  - Acceptance: timeout-based fallback does not throw `OperationCanceledException` during normal debug runs; explicit user cancellation still cancels backup flow.
-  - Current status:
-    - Done: timeout and user-cancel tokens are now handled separately in archive probe flow.
-    - Done: timeout path now returns a timed-out probe result and falls back cleanly without raising cancellation exceptions.
-- [x] `P2` `VS-1578` App config read retry on transient file-lock contention.
-  - Scope: `AppConfigStore.Load` config read path while export/save routines may hold a short file lock.
-  - Acceptance: transient lock on `appsettings.json` no longer causes immediate read failure in debug/runtime hot paths.
-  - Current status:
-    - Done: config reads now use shared-read stream mode with retry backoff.
-    - Done: fallback behavior remains unchanged for unrecoverable read errors.
-- [x] `P2` `VS-1579` Backup delete resilience and debug-noise cleanup for tool/runtime probes.
-  - Scope: backup history robust delete flow, diagnostics dump-tool startup guard, and projects dropdown selection stability during option refresh.
-  - Acceptance: delete flow handles protected marker files without throwing UI-level exceptions; missing `dotnet-dump` no longer throws process-start exceptions; destination/encryption dropdowns do not collapse to blank transient null state.
-  - Current status:
-    - Done: robust directory delete now clears read-only only when needed and returns failure details without rethrowing.
-    - Done: diagnostics dump collection now checks `dotnet-dump` availability before process launch and logs a skip when unavailable.
-    - Done: projects destination selection now ignores transient null selection events during options source refresh.
-- [x] `P0` `VS-1581` Windows elevated patch-helper argument parsing fix.
-  - Scope: `PatchInstallService` helper launch/parsing for Program Files installs that require elevation.
-  - Acceptance: elevated patch install keeps `InstallDir` clean, preserves `--restart` / `--waitpid`, and applies patches successfully on installed Windows builds.
-  - Current status:
-    - Done: helper launch now writes a patch-apply request file and passes only `--apply-patch-request <file>` through elevation.
-    - Done: restart and wait-pid settings are now loaded from the request payload instead of fragile elevated command-line quoting.
-- [x] `P1` `VS-1570` Adaptive archive compression policy tuning.
-  - Scope: archive backup creation path in `BackupService`.
-  - Acceptance: keep backup/restore format compatibility while improving speed/ratio balance by file type.
-  - Current status:
-    - Done: archive compression now selects per-file level (`NoCompression` for already-compressed/media, `Optimal` for text/code, `Fastest` fallback).
-    - Done: full solution build + core tests pass after change.
-- [x] `P2` `VS-1571` README feature/status refresh and screenshot placeholders.
-  - Scope: top-level repo README content and screenshot scaffolding.
-  - Acceptance: README reflects current 1.5.x capabilities and has clear placeholder locations for app screenshots.
-  - Current status:
-    - Done: outdated feature wording refreshed for current 1.5.x behavior.
-    - Done: placeholder SVGs added for Dashboard/Projects/Backups/Settings screenshots under `docs/images/placeholders/`.
-- [x] `P2` `VS-1572` Consumer-friendly preset catalog + preset guidance in Projects UI.
-  - Scope: add consumer presets (Photos/Documents/Steam mods/Creative suites), harden preset file-resolution via index mapping, and show preset description/examples in the Projects card.
-  - Acceptance: preset IDs can safely differ from file names, new presets appear in selector, and selected preset guidance text is visible in-app/docs.
-  - Current status:
-    - Done: added new preset definitions/files (`photos`, `documents`, `steam_mods`, `creative_suite`) with descriptions/examples in `presets.index.json`.
-    - Done: Core preset resolution paths now use index-aware fallback when `id` != file stem.
-    - Done: Projects UI now renders selected preset description + example hint; docs updated.
-- [x] `P1` `VS-1573` Projects action-state reliability and notification cancellation noise cleanup.
-  - Scope: keep project action buttons (`Open folder`, `Remove from VaultSync`) in sync with selection state and treat auto-dismiss cancellation as expected in notification flows.
-  - Acceptance: action buttons no longer remain incorrectly disabled after selection/state changes; no debug-noise cancellation exceptions from notification auto-dismiss during normal UI activity.
-  - Current status:
-    - Done: project action commands now raise `CanExecuteChanged` when `SelectedProject` changes, preventing stale disabled state.
-    - Done: notification auto-dismiss now uses race-safe CTS replacement/disposal and handles `OperationCanceledException` as normal superseded-flow behavior.
-    - Done: Projects detail row layout corrected so controls/stats do not overlap and hide preset/destination/encryption controls.
-
-### 1.5.0 scope and contracts
-
-#### `P0` Backup encryption and password-protected backups
-- Core scope:
-  - Per-project + global encryption settings.
-  - Password-protected encrypted backups (no plaintext secrets stored).
-  - AES-256 + per-backup salt/IV; KDF via PBKDF2/Argon2 profile.
-  - Encrypted backup container under vault path (for example: `.vaultsync/vault/`).
-- Integration contract:
-  - Discovery/readability:
-    - Backup discovery must work for both encrypted and plain backups.
-    - Encrypted entries still expose non-secret metadata (time, size, destination, source machine, keep/protected state).
-  - Metadata sync:
-    - Export/import must work for mixed encrypted/plain history.
-    - Sync includes only non-secret crypto descriptor fields (encrypted flag, algorithm/KDF profile, format/version, parameter identifiers).
-    - No passwords, raw keys, or recoverable secrets in metadata payloads.
-    - Tombstones/merge behavior remains unchanged.
-  - Existing feature compatibility:
-    - Delete/open/keep/retention/destination scan/import keep working unchanged for encrypted and plain entries.
-    - Backup-all and per-project routing behavior does not change.
-    - Imported-history pause checks treat encrypted entries as normal history entries.
-  - Restore/verify:
-    - Password prompt only when restoring encrypted backup.
-    - Wrong password fails safely (no partial writes).
-    - Integrity checks run after decrypt stage and preserve current verification semantics.
-    - Plain backups restore exactly as today (no prompt).
-  - Key handling:
-    - Password material only in OS secure store (or session memory when explicitly allowed).
-    - Config and metadata store only non-secret references/parameters.
-    - If secure store unavailable, fallback must be explicit and user-confirmed.
-- Delivery phases:
-  1. Format + schema contract.
-  2. Encrypted write path.
-  3. Password-gated read/restore path.
-  4. Mixed encrypted/plain interop and migration behavior.
-  5. UX hardening (errors/recovery messaging).
-- Acceptance:
-  - Encrypted backup is unreadable without password.
-  - Valid password restore succeeds; invalid password restore fails safely.
-  - Existing plain backups remain fully functional.
-  - Metadata sync carries encryption metadata but no secrets.
-  - Mixed `1.4`/`1.5` environments do not corrupt sync state.
-  - Status:
-    - Feature implementation is complete (`VS-1501`..`VS-1505`, `VS-1530`..`VS-1539`, `VS-1543`).
-    - Remaining release-gate validation is tracked under `VS-1591` (compatibility matrix) and `VS-1592` (localization/docs readiness).
-
-#### `P1` Bandwidth limits and quiet hours
-- Scope:
-  - Bandwidth caps for network copy/archive workers.
-  - Quiet-hours scheduling for defer/pause/start policy.
-  - Current policy visible in UI and logs.
-- Delivery phases:
-  1. Config model + settings UI.
-  2. Throttling enforcement in transfer paths.
-  3. Quiet-hours runtime behavior.
-  4. Status visibility in active cards/tray/logs.
-- Acceptance:
-  - Effective transfer caps are respected.
-  - Quiet-hours policy is predictable and visible.
-
-#### `P1` Incremental backup UX improvements
-- Scope:
-  - Clarify full/incremental/imported terminology.
-  - Surface retention outcome per backup.
-  - Add restore guidance by selected backup type.
-- Delivery phases:
-  1. Terminology cleanup.
-  2. History metadata chips/outcome line.
-  3. Restore helper content.
-  4. Docs/wiki parity.
-- Acceptance:
-  - Backup type and retention outcome are clear at a glance.
-  - Restore behavior is understandable before start.
-
-#### `P2` Snapshot diff summaries
-- Scope:
-  - Top changed folders/files.
-  - Added/modified/deleted and net size delta.
-  - Exportable summary (text/JSON).
-- Delivery phases:
-  1. Compute/store summary stats.
-  2. Surface in Projects/Backups.
-  3. Export action.
-- Acceptance:
-  - Accurate summaries with minimal UI delay.
-
-### 1.5.0 UI map
-- Encryption UX:
-  - Settings: global encryption section, policy toggles, key profile, warning copy.
-  - Projects: inherit/override mode per project.
-  - History/cards: encrypted badge and source-machine badge (when available).
-  - Restore: password dialog for encrypted entries, explicit wrong-password and corruption flows.
-  - Notifications: dedicated messages for decrypt success/failure states.
-- Bandwidth + quiet-hours UX:
-  - Settings scheduler card with timezone and caps.
-  - Active backup cards show `Throttled` / `Quiet hours` policy chips.
-  - Tray shows current policy state.
-- Incremental UX:
-  - History chips for type (`Full`, `Incremental`, `Imported`).
-  - Retention outcome line in details.
-  - Restore confirmation "what happens next" block.
-- Snapshot diff UX:
-  - Compact summary panel in Projects/Backups.
-  - Export summary action in details.
-- UI quality gates:
-  - No clipping in common windowed sizes.
-  - All new text localized.
-  - Keyboard-accessible actions/dialogs.
-  - Color status always paired with text.
-
-### 1.5 implementation order
-1. Encryption format/schema contract.
-2. Encrypted write/read path.
-3. Encryption controls and key management UX (global + per-project).
-4. Bandwidth + quiet-hours policy.
-5. Incremental UX clarity pass.
-6. Snapshot diff summaries.
-7. Stabilization pass + release gate.
-
-### 1.5 ticket backlog (execution-ready)
-
-#### `P0` Encryption and password-protected backups
-- [x] `VS-1501` Crypto format + metadata contract (schema/versioning).
-  - Scope: define encrypted container descriptor, algorithm/KDF parameter identifiers, and migration-safe format versioning.
-  - Depends on: none.
-  - Acceptance tests:
-    - Unit: descriptor serialize/deserialize round-trip with version field preserved.
-    - Unit: metadata export payload includes only non-secret crypto fields.
-    - Integration: existing plain backup metadata still parses unchanged.
-- [x] `VS-1502` Encrypted write pipeline.
-  - Scope: produce encrypted backup artifacts (AES-256 + per-backup salt/IV) in vault storage path.
-  - Depends on: `VS-1501`.
-  - Acceptance tests:
-    - Integration: encrypted backup artifact differs from plaintext source and cannot be opened as plain archive.
-    - Integration: backup job reports success and emits encrypted flag in metadata.
-    - Regression: plain (unencrypted) backup flow remains unchanged.
-- [x] `VS-1503` Password-gated restore/decrypt pipeline.
-  - Scope: restore path prompts for password only on encrypted entries and fails safely on wrong password.
-  - Depends on: `VS-1501`, `VS-1502`.
-  - Acceptance tests:
-    - Integration: valid password restores complete and verification passes.
-    - Integration: invalid password returns explicit error and leaves no partial restored files.
-    - Regression: restoring plain backups requires no password and matches current behavior.
-- [x] `VS-1504` Secret handling and secure-store fallback policy.
-  - Scope: store password material only in OS secure store or session memory when explicitly user-approved fallback is selected.
-  - Depends on: `VS-1501`.
-  - Acceptance tests:
-    - Unit: config persistence never contains plaintext password/key material.
-    - Integration: secure-store unavailable path requires explicit user confirmation before continuing.
-    - Security check: diagnostic export redacts all secret-like fields.
-- [x] `VS-1505` Mixed encrypted/plain interop + metadata sync compatibility.
-  - Scope: preserve merge/tombstone/import behavior across mixed `1.4` and `1.5` machines.
-  - Depends on: `VS-1501`, `VS-1502`, `VS-1503`.
-  - Acceptance tests:
-    - Integration: import/export round-trip with mixed encrypted/plain history works without data loss.
-    - Integration: `1.4` client ignores unknown crypto descriptors without corrupting sync state.
-    - Regression: delete/keep/retention/destination scan/import behavior remains stable.
-- [x] `VS-1530` Global encryption settings UX + secure secret enrollment.
-  - Scope: add Settings UI for global encryption enable/disable, password set/change, and secure-store enrollment using non-secret config refs only.
-  - Depends on: `VS-1504`.
-  - Acceptance tests:
-    - UI: user can enable/disable global encryption and set/change password without storing plaintext in config.
-    - Unit: encrypted backup run fails fast with actionable error when global encryption is enabled but secret is unavailable.
-    - Regression: existing backup settings persist unchanged.
-- [x] `VS-1531` Per-project encryption policy controls.
-  - Scope: add per-project toggle and policy mode (`inherit global`, `project encrypted`, `project plain`) with clear effective-state display.
-  - Depends on: `VS-1530`.
-  - Acceptance tests:
-    - UI: per-project policy can be changed and persists across restart.
-    - Integration: effective policy precedence works (`project override` > `global`).
-    - Regression: auto-backup per-project toggle behavior remains unchanged.
-- [x] `VS-1532` Per-project key reference model + migration.
-  - Scope: persist per-project encryption mode and optional project `KeyRef` in DB/config with migration-safe defaults.
-  - Depends on: `VS-1531`.
-  - Acceptance tests:
-    - Migration: existing project rows load with `inherit` defaults and no data loss.
-    - Unit: model serialization/persistence stores only key references (no secret material).
-    - Integration: import/export keeps non-secret encryption policy fields stable.
-- [x] `VS-1533` Backup pipeline effective-key resolution.
-  - Scope: resolve encryption mode and key source per project at backup runtime (global key, project key, or plain).
-  - Depends on: `VS-1532`.
-  - Acceptance tests:
-    - Integration: global encrypted + project plain produces plain backup for overridden project only.
-    - Integration: global plain + project encrypted produces encrypted backup for overridden project only.
-    - Regression: existing encrypted backup metadata contract (`is_encrypted`, descriptor JSON) remains unchanged.
-- [x] `VS-1534` Restore key resolution and prompt fallback.
-  - Scope: restore flow resolves project key first, then global key, and prompts only when required.
-  - Depends on: `VS-1532`, `VS-1533`.
-  - Acceptance tests:
-    - Integration: encrypted restore succeeds without prompt when matching key exists in secure store.
-    - Integration: missing key triggers prompt and succeeds with correct password.
-    - Integration: wrong password fails safely without partial writes.
-- [x] `VS-1535` Explorer `.vse` open flow (password dialog helper).
-  - Scope: register/handle encrypted artifact open action so opening `.vse` launches a minimal VaultSync dialog for password + temp extraction/open.
-  - Depends on: `VS-1534`.
-  - Acceptance tests:
-    - Integration: opening `.vse` triggers password dialog and opens extracted temp folder on success.
-    - Integration: wrong password shows explicit error and leaves no partial extracted data.
-    - Regression: standard “open backup folder” behavior remains unchanged.
-- [x] `VS-1536` Existing-backup key rotation job.
-  - Scope: explicit user-triggered re-encryption of existing encrypted backups from old key to new key (project or global scope) with atomic replacement.
-  - Depends on: `VS-1533`, `VS-1534`.
-  - Acceptance tests:
-    - Integration: rotate succeeds for selected backups and old password no longer decrypts rotated artifacts.
-    - Integration: interruption/failure leaves original backup intact (no corruption).
-    - UX: per-backup failure summary lists skipped/failed/succeeded entries.
-- [x] `VS-1537` Per-project password management in Projects + Backups pages.
-  - Scope: expose per-project password set/clear flow in both pages using one shared app-level handler and one persisted `encryption_key_ref` source of truth.
-  - Depends on: `VS-1531`, `VS-1532`, `VS-1533`.
-  - Acceptance tests:
-    - UI: setting/clearing a project encryption password from Projects is reflected in Backups without drift.
-    - UI: setting/clearing from Backups is reflected in Projects without drift.
-    - Regression: policy updates (`inherit/encrypted/plain`) preserve existing key reference and do not desync between pages.
-- [x] `VS-1538` Encrypted `Open folder` unlock entry flow.
-  - Scope: clicking `Open folder` on encrypted backups runs password/key resolution, decrypts into a temp workspace, and opens that decrypted workspace directly.
-  - Depends on: `VS-1534`, `VS-1535`.
-  - Acceptance tests:
-    - Integration: encrypted `Open folder` opens decrypted temp workspace after valid password/key.
-    - Integration: invalid password shows explicit error and creates no partial workspace.
-    - Regression: plain `Open folder` keeps current behavior unchanged.
-- [x] `VS-1539` Encrypted `Open folder` lock lifecycle + cleanup hardening.
-  - Scope: add lock/cleanup lifecycle for decrypted temp workspaces (explicit lock action, timeout auto-lock, startup stale cleanup, safe crash recovery path).
-  - Depends on: `VS-1538`.
-  - Plain-language behavior:
-    - When an encrypted backup is opened, VaultSync decrypts it to a temp workspace only.
-    - User can force-close that decrypted workspace with `Lock now`.
-    - If the user does nothing, VaultSync auto-locks (deletes temp decrypted data) after a timeout.
-    - On app restart/crash recovery, stale decrypted temp folders are cleaned automatically.
-  - Integration contract:
-    - Encrypted backups never expose decrypted files in destination roots.
-    - Decrypted temp workspaces are never persisted in metadata/config.
-    - Metadata sync/export/import remains unchanged (no secret material, no decrypted-path persistence).
-  - Acceptance tests:
-    - Integration: temp workspace is removed on lock/timeout/restart.
-    - Integration: stale workspace cleanup runs on app startup.
-    - Regression: restore and metadata sync behavior unchanged.
-  - Current status:
-    - Done: startup stale temp cleanup, timed auto-cleanup for decrypted open-folder staging roots, explicit `Lock now` action, and shared configurable timeout for in-app + external `.vse` open flows.
-- [x] `VS-1543` Session unlock cache + timed auto-relock for encrypted open flow.
-  - Scope: introduce a per-project encrypted-open session unlock cache so repeated `Open folder` actions within a configured timeout do not re-prompt for password.
-  - Depends on: `VS-1538`, `VS-1539`.
-  - Plain-language behavior:
-    - First encrypted open asks for password.
-    - Additional opens for the same project within the unlock window do not ask again.
-    - Once timeout expires (or user clicks `Lock now`), password is required again.
-    - This cache is memory-only for the current app session (never written to config/metadata).
-  - Integration contract:
-    - Session unlock is memory-only (no plaintext secrets persisted to config/metadata).
-    - Unlock timeout is configurable in Settings and auto-relocks on expiry.
-    - Lock state controls access checks (not temp folder lifetime): decrypted workspace handling remains governed by `VS-1539` cleanup/lock rules.
-    - Manual `Lock now` invalidates active session unlock immediately.
-  - Acceptance tests:
-    - Integration: first encrypted open prompts for password; repeated open within timeout does not.
-    - Integration: after timeout expiry, password prompt is required again.
-    - Integration: `Lock now` forces prompt on next open even before timeout.
-    - Regression: metadata sync/export/import and plain backup open flow are unchanged.
-
-#### `P1` Bandwidth limits and quiet hours
-- [x] `VS-1510` Config model + settings UI for caps and schedule.
-  - Scope: settings schema, validation, timezone-aware quiet-hours range editor.
-  - Depends on: none.
-  - Acceptance tests:
-    - Unit: invalid caps/schedules are rejected with actionable validation messages.
-    - UI: settings persist and reload accurately across restart.
-  - Current status:
-    - Done: config schema fields for bandwidth caps + quiet-hours and Settings UI controls with validation/persistence.
-- [x] `VS-1511` Transfer throttling enforcement.
-  - Scope: apply effective bandwidth cap to archive upload/network copy workers.
-  - Depends on: `VS-1510`.
-  - Acceptance tests:
-    - Integration: measured throughput stays within configured cap tolerance.
-    - Regression: no cap configured preserves current throughput behavior.
-  - Current status:
-    - Done: native copy runners now apply configured bandwidth caps (`rsync --bwlimit`, robocopy `/IPG`) via shared transfer policy math.
-- [x] `VS-1512` Quiet-hours runtime policy engine.
-  - Scope: defer/pause/start rules based on local time and running backup state.
-  - Depends on: `VS-1510`.
-  - Acceptance tests:
-    - Integration: backup start during quiet hours follows configured policy deterministically.
-    - Integration: crossing quiet-hours boundary transitions active jobs predictably.
-  - Current status:
-    - Done: auto-backup timer runs now evaluate quiet-hours policy before preflight and skip deterministically during the configured window.
-    - Done: active backup runs are not force-cancelled when quiet-hours begins; policy applies to new auto-backup starts only.
-    - Done: shared `QuietHoursPolicy` helper + automated unit coverage for overnight/daytime windows and invalid-time fallback.
-- [x] `VS-1513` Policy visibility in cards, tray, and logs.
-  - Scope: expose effective policy state (`Throttled`, `Quiet hours`) in UI and operational logs.
-  - Depends on: `VS-1511`, `VS-1512`.
-  - Acceptance tests:
-    - UI: active cards and tray always show current policy state when applicable.
-    - Log check: policy transition logs are informational, not error/warning noise.
-  - Current status:
-    - Done: active backup cards (Backups + backup widget) now show a policy chip when throttling/quiet-hours policy is active.
-    - Done: tray native menu + tray panel summary now include current policy state.
-    - Done: backup policy transitions are logged as informational `[Policy]` entries and trigger tray refresh on change.
-
-#### `P1` Incremental backup UX improvements
-- [x] `VS-1520` Terminology cleanup (`Full`, `Incremental`, `Imported`).
-  - Scope: unify labels across Dashboard/Projects/Backups/restore dialogs.
-  - Depends on: none.
-  - Acceptance tests:
-    - UI: no conflicting legacy terms remain in primary flows.
-    - Localization: new keys exist for all supported languages.
-  - Current status:
-    - Done: backup records now persist `backup_mode` (`full` / `incremental`) so terminology is rendered from real per-backup data.
-    - Done: Backups history cards now use `Full` / `Incremental` / `Imported` terminology based on stored mode + imported state.
-- [x] `VS-1521` Retention outcome surfacing in history/details.
-  - Scope: show what retention will do or did for the selected backup entry.
-  - Depends on: `VS-1520`.
-  - Acceptance tests:
-    - UI: retention outcome line appears for full/incremental/imported entries.
-    - Integration: values align with actual retention engine decisions.
-  - Current status:
-    - Done: Backups history cards now render a retention outcome line (`eligible`, `protected`, `imported history`) and update live when Keep is toggled.
-- [x] `VS-1522` Restore guidance block by backup type.
-  - Scope: show "what happens next" guidance before confirmation.
-  - Depends on: `VS-1520`.
-  - Acceptance tests:
-    - UI: guidance changes correctly with selected backup type.
-    - UX check: keyboard navigation reaches guidance and actions cleanly.
-  - Current status:
-    - Done: restore flow now shows a confirmation dialog with a "What happens next" guidance block before restore starts.
-    - Done: guidance content is type-aware (`Full` / `Incremental` / `Imported`) and encryption-aware.
-- [x] `VS-1523` Documentation and help parity.
-  - Scope: README/wiki/help text updated to match final terminology and restore guidance.
-  - Depends on: `VS-1520`, `VS-1521`, `VS-1522`.
-  - Acceptance tests:
-    - Docs: screenshots and terminology match shipped UI.
-    - Support check: troubleshooting references updated terms only.
-  - Current status:
-    - Done: README and docs/wiki pages now include backup-type terminology (`Full`, `Incremental`, `Imported`) and restore-guidance confirmation notes.
-
-#### `P2` Snapshot diff summaries
-- [x] `VS-1540` Compute + persist diff summary statistics.
-  - Scope: added/modified/deleted counts, top changed paths, net size delta.
-  - Depends on: none.
-  - Acceptance tests:
-    - Unit: summary math is correct for synthetic change sets.
-    - Perf: summary calculation does not introduce noticeable UI blocking.
-  - Current status:
-    - Done: snapshot creation now computes and persists diff counts, top-changed path stats, and net size delta in local DB schema.
-    - Done: metadata export/import for snapshots now carries diff summary fields with backward-compatible defaults for older metadata stores.
-    - Done: automated tests cover repository persistence, snapshot-service summary math, and metadata-sync summary round-trip import.
-- [x] `VS-1541` Projects/Backups summary panel.
-  - Scope: compact diff summary UI with concise labels and fallback states.
-  - Depends on: `VS-1540`.
-  - Acceptance tests:
-    - UI: summary panel renders correctly for empty, small, and large diffs.
-    - UI quality: no clipping in common windowed sizes.
-  - Current status:
-    - Done: Projects recent snapshot cards now show compact diff summary lines (+/~/- with signed net delta) and optional top-path preview.
-    - Done: Backups history cards now render per-snapshot diff summary and top changed paths (when present), with fallback text for no-change/unavailable states.
-    - Done: layout was reflowed to keep summary content inside card bounds in windowed mode.
-- [x] `VS-1542` Export summary action (text/JSON).
-  - Scope: export per-snapshot summary for sharing/troubleshooting.
-  - Depends on: `VS-1540`.
-  - Acceptance tests:
-    - Integration: exported file matches on-screen summary values.
-    - Regression: export failure path shows actionable error without crashing flow.
-  - Current status:
-    - Done: Backups history cards now include export actions for text and JSON snapshot diff summaries.
-    - Done: exports are written under `Documents/VaultSync/Exports/SnapshotDiff` with collision-safe filenames and user-facing success/failure notifications.
-    - Done: Backups history cards now include an in-app git-style diff preview dialog for per-snapshot inspection before export/share.
-
-#### Stabilization + release gate tickets
-- [x] `VS-1590` Performance and UI-thread hardening.
-  - Scope: tune defaults and remove hotspots introduced by new `1.5` flows.
-  - Acceptance tests:
-    - Benchmark: startup and backup path remain at or better than `1.4` baseline.
-    - QA: no blocking UI regressions in backup/restore/settings flows.
-- [x] `VS-1591` Compatibility matrix validation (`1.4` <-> `1.5`).
-  - Scope: mixed-version metadata sync, encrypted/plain coexistence, import/export behavior.
-  - Acceptance tests:
-    - Matrix run: pass on all supported mixed-version scenarios.
-    - Regression: no sync-state corruption or tombstone merge regressions.
-  - Current status:
-    - Done: compatibility runbook + case matrix drafted (`CM-1501`..`CM-1508`).
-    - Done: automated core-suite execution recorded (`65/65` passing) with matrix-to-test evidence mapping.
-    - Pending: execute remaining manual mixed-client cases (`CM-1502`, `CM-1507`, `CM-1508`) on real `1.4.x` and `1.5.x` binaries.
-- [x] `VS-1592` Localization, docs, and release readiness.
-  - Scope: complete localization coverage, release notes, troubleshooting updates.
-  - Acceptance tests:
-    - Localization: all new `1.5` keys present across supported language files.
-    - Release checklist: docs and troubleshooting pages updated and reviewed.
-
-### 1.5 release execution plan (how we tackle it)
-1. Phase `A` (security backbone): complete `VS-1501` -> `VS-1504` -> `VS-1502` -> `VS-1503` -> `VS-1505` before feature freeze.
-2. Phase `B` (encryption controls + usability): deliver `VS-1530` -> `VS-1531` -> `VS-1532` -> `VS-1533` -> `VS-1534`, then `VS-1535`, `VS-1536`, `VS-1538`, `VS-1539`, `VS-1543`.
-3. Phase `C` (operational controls): deliver `VS-1510` -> `VS-1511` -> `VS-1512` -> `VS-1513` with visible policy state in cards/tray/logs.
-4. Phase `D` (clarity and insights): run `VS-1520`/`VS-1521`/`VS-1522` in parallel with `VS-1540`, then close with `VS-1523`, `VS-1541`, `VS-1542`.
-5. Phase `E` (stabilization): execute `VS-1590`, `VS-1591`, `VS-1592` and block release until all exit gates pass.
-6. Weekly operating rhythm:
-   - Start-of-week: lock ticket scope and dependency order.
-   - Mid-week: integration checkpoint on mixed-version sync + backup/restore regressions.
-   - End-of-week: demo + hardening triage + release-gate burn-down.
-7. Release gate policy:
-   - No unresolved `P0` or compatibility defects.
-   - No known data-loss/corruption path.
-   - Localization/docs complete for all shipped `1.5` UX.
-
-### 1.5 stabilization pass
-- [x] `P0` Post-feature hardening.
-  - Tune defaults.
-  - Reduce UI-thread churn in new flows.
-  - Close regressions before 1.6 work starts.
-  - Exit gate checklist:
-    - No blocking UI regressions in backup/restore/settings flows.
-    - Startup impact unchanged or improved versus 1.4 baseline.
-    - Localization coverage complete for all new `1.5` strings.
-    - Metadata sync compatibility verified across mixed 1.4/1.5 machines.
-    - Release docs and troubleshooting updated.
-
-### 1.5 risks
-- Crypto UX risk: password loss/typo can make backups unusable without clear recovery messaging.
-- Performance risk: encryption and diff summaries can increase backup time on slower disks.
-- Compatibility risk: metadata sync across versions must preserve mixed encrypted/plain behavior.
-- Support risk: quiet-hours/throttling can appear as random pauses if status is not clear.
-
-## 1.6.x
-
-### 1.6.0 direction
-- Release target: **2026-03-09** (Monday).
-- Ship rule: only critical fixes and already in-progress `1.6.0` work should be pulled into this release window; all non-critical scope rolls forward.
-- Theme: control, restore safety, and organization.
-- Product goal: make VaultSync feel safer to restore from, easier to organize at scale, and more user-controlled in everyday project setup.
-- Release shape:
-  - Restore confidence: safer/clearer restore planning and optional sandbox-first restore.
-  - Preset ownership: full preset editor instead of file-only preset maintenance.
-  - Project organization: tags, smart groups, and bulk operations for larger vaults.
-
-### 1.6.0 priorities
-- [ ] `P0` Restore planning and sandbox-first restore workflow.
-- [ ] `P0` Full preset editor with live preview and project assignment.
-- [ ] `P1` Project tags, smart groups, and bulk actions.
-- [ ] `P1` Verification and storage insight upgrades.
-
-### 1.6.0 scope and contracts
-
-#### `P0` Restore planning and sandbox-first restore
-- Core scope:
-  - Optional sandbox restore mode with per-project default and per-run override.
-  - Restore preview before commit (overwrite, add, delete, size impact, conflict list).
-  - Promote sandbox contents into final destination only after explicit confirmation.
-  - Cleanup/retry controls for sandbox workspaces.
-- UX contract:
-  - Direct restore remains supported and stays the default unless user/project chooses sandbox-first.
-  - Per-project restore mode can be configured, but restore dialog can override for the current run.
-  - Restore summary must clearly distinguish preview-only, sandboxed, and final-apply stages.
-- Acceptance:
-  - Sandbox restore can be enabled per project and overridden per restore.
-  - User can inspect sandbox output before committing into the final location.
-  - Canceling before final apply leaves original destination unchanged.
-
-#### `P0` Full preset editor
-- Core scope:
-  - Create, clone, rename, and delete presets.
-  - Edit include/exclude rules in-app.
-  - Live match preview against project paths.
-  - Import/export preset definitions.
-  - Assign a preset to a project directly from the editor.
-- UX contract:
-  - Built-in presets remain protected or explicitly clone-to-edit.
-  - Preview clearly shows matched, ignored, and uncertain paths.
-  - Editor works for both technical and consumer-friendly presets.
-- Acceptance:
-  - User can fully manage custom presets without editing files manually.
-  - Preview updates without noticeable UI blocking on common project sizes.
-  - Preset changes persist safely and remain compatible with existing preset resolution.
-
-#### `P1` Project organization and grouping
-- Core scope:
-  - Manual project tags.
-  - Smart groups for common states (`Needs backup`, `Encrypted`, `Unprotected`, `Large projects`, `Auto backup off`, `Recently active`).
-  - Bulk actions by tag/group (backup, snapshot, pause/resume auto backup where applicable).
-  - Shared filtering model between Projects and Backups pages.
-- Acceptance:
-  - User can organize projects beyond flat list order.
-  - Smart groups remain predictable and refresh from real project state.
-  - Bulk actions are keyboard-accessible and confirm destructive operations.
-
-#### `P1` Verification and storage insight upgrades
-- Core scope:
-  - Per-project verification policy controls.
-  - Backup health overview (`last backup`, `last verified`, destination state, restore-tested state when available).
-  - Storage growth/delta insights by project and destination.
-- Acceptance:
-  - Verification policy is configurable per project.
-  - Health/storage summaries improve backup trust without cluttering core screens.
-  - Metrics remain understandable for both technical and non-technical users.
-
-### 1.6 implementation order
-1. Restore preview model + sandbox workspace contract.
-2. Restore UX flow and confirmation/apply path.
-3. Full preset editor with live preview.
-4. Tags, smart groups, and shared filtering.
-5. Verification policy and storage/health insight surfaces.
-6. Stabilization pass and release hardening.
-
-### 1.6 ticket backlog (execution-ready)
-- [x] `VS-1601` `P0` Richer restore flows (selective restore, dry-run previews, conflict prompts).
-  - Scope: add restore preview model, selective restore targets, and conflict classification before execution.
-  - Done:
-    - Restore confirmation includes a pre-run preview summary for plain backups (files in backup, new files, overwrite count, potential conflicts, project-only files kept, total bytes).
-    - Encrypted backups surface an explicit preview-unavailable reason before decrypt starts.
-    - Restore confirmation now supports selective top-level restore targets for plain backups/archives.
-    - Restore execution applies only selected top-level targets while preserving direct/sandbox mode behavior.
-  - Acceptance tests:
-    - UI: restore preview lists overwrite/add/delete/conflict counts before run.
-    - Integration: selective restore applies only chosen paths.
-    - Regression: standard direct restore still works unchanged when preview options are not used.
-- [x] `VS-1602` `P0` Restore point browser with compare + timeline.
-  - Scope: timeline-style restore point browser with compare support between selected backups/snapshots.
-  - Done:
-    - Backups history panel now exposes restore-point timeline selectors (`A` / `B`) bound to filtered chronological history.
-    - Added compare action that opens a structured compare summary (time range, elapsed interval, size delta, net-diff delta, and latest-point diff stats).
-    - Compare selection works with current history filters and project grouping without changing restore flow behavior.
-  - Acceptance tests:
-    - UI: user can navigate restore points chronologically and compare two points.
-    - UX: browser remains responsive on projects with long history.
-- [x] `VS-1603` `P1` Smarter storage usage reporting (per-project deltas, change summaries).
-  - Scope: per-project growth metrics, top storage consumers, and clearer dashboard/backups storage summaries.
-  - Current status:
-    - Done: Backups per-project cards now surface storage delta (`?`) versus the previous backup snapshot size for each project.
-    - Done: Backups summary now includes top storage consumers (top projects by local backup storage share).
-  - Acceptance tests:
-    - UI: metrics align with stored backup/snapshot data.
-    - Perf: reporting does not cause blocking UI refresh on common data sets.
-- [x] `VS-1604` `P0` Full preset editor with include/exclude rules, preview, clone, import/export.
-  - Scope: replace file-only preset maintenance with an in-app editor and preview workflow.
-  - Current status:
-    - Done: Projects details now includes a preset-rules editor (reload/save) for the selected preset file.
-    - Done: Preset editor now includes live preview counts (included/excluded) against the selected project path.
-    - Done: Preset editor now supports clone/import/export flows (clone to new preset id, import from file path, export to Documents preset exports).
-  - Acceptance tests:
-    - UI: user can create/edit/clone/delete/import/export presets.
-    - Integration: saved presets are immediately assignable to projects and resolve correctly at snapshot/backup time.
-- [x] `VS-1605` `P1` Backup health center and timeline (success/failure/verified trends).
-  - Scope: health summary model and timeline surfaces for backup freshness, verification, and failure visibility.
-  - Current status:
-    - Done: Backups summary now includes a health center mix (healthy/aging/stale/no-backup project distribution) derived from project backup freshness.
-  - Acceptance tests:
-    - UI: health state reflects real backup/verification history.
-    - UX: timeline/trend surfaces do not crowd primary actions.
-- [x] `VS-1606` `P2` Exportable config bundle for migration/support.
-  - Scope: export redacted app config, diagnostics context, and selected metadata for support/migration workflows.
-  - Acceptance tests:
-    - Integration: exported bundle opens and contains the expected redacted data set.
-    - Security: no secrets/passwords/raw keys are included.
-  - Done:
-    - Settings > Advanced now includes `Export support bundle` action that creates a shareable zip under `Documents/VaultSync/Exports/Support`.
-    - Bundle includes redacted config snapshot, local/destination metadata summaries, telemetry export zip, and recent diagnostics logs.
-    - Sensitive values (passwords, key refs, credential usernames/domains) are redacted in the exported report payload.
-- [x] `VS-1607` `P0` Optional sandbox restore mode with per-project default and per-run override.
-  - Scope: sandbox workspace creation, review/apply path, cleanup options, and per-project restore-mode preference.
-  - Done:
-    - Project schema/model persists `restore_mode` (`direct` / `sandbox`) with migration-safe default `direct`.
-    - Backups per-project cards expose restore-mode selection and persist it to project settings.
-    - Restore runtime honors sandbox mode by restoring into an isolated preview folder while direct mode keeps existing behavior.
-    - Restore confirmation supports per-run restore-mode override (`Direct` / `Sandbox`) before execution.
-    - Sandbox completion provides post-restore actions (`Keep`, `Open sandbox`, `Apply to project`) with optional cleanup-after-apply.
-    - Sandbox apply path includes pre-apply summary (files/overwrite/bytes) with explicit confirm/cancel gate.
-  - Acceptance tests:
-    - Integration: sandbox restore leaves destination untouched until confirm/apply.
-    - UI: project default can be overridden at restore time.
-    - Regression: direct restore remains available for users who do not want sandbox mode.
-- [x] `VS-1608` `P1` Preset recommendations for detected project/library types.
-  - Scope: suggest likely presets from observed folder structure/content when adding or editing a project.
-  - Done:
-    - Projects page computes high-signal preset recommendations from detected project markers (`Unity`, `Godot`, `Unreal`, `.NET`, `Node`, `Python`, `Rust`, `Avalonia`, `Blender`, `Video`) and caches results per project path.
-    - Preset card surfaces recommendation reason text with one-click `Apply recommendation` action; manual preset selection remains unchanged.
-    - Confidence gating was tightened for generic stacks (`Node`, `Python`, `.NET`) so recommendations are shown only when corroborating markers are present.
-  - Acceptance tests:
-    - UI: recommendations appear only when confidence is high enough to be useful.
-    - Regression: manual preset selection always remains available.
-- [x] `VS-1609` `P1` Project tagging + smart groups + bulk actions (pause/backup/snapshot by tag).
-  - Scope: manual tags, computed smart groups, shared group filters, and bulk actions in Projects/Backups.
-  - Current planning note:
-    - Pulled forward from the original `1.7.x` bucket because organization now has direct product value for medium/large vaults.
-  - Done:
-    - Project schema/model now persists `tags` text on projects with migration-safe default empty value.
-    - Projects page supports editable per-project tags (`comma-separated`) and persists updates to DB.
-    - Projects list supports smart group filtering (`All`, `Work`, `Games`, `Media`, `Critical`, `Archive`) driven by tags plus high-signal preset/health hints.
-    - Projects group controls now include bulk actions for `Snapshot group`, `Back up group`, and `Enable/Disable auto backups` for all registered projects in the active group.
-- [x] `VS-1610` `P2` Per-destination retry policy with backoff + user status summary.
-  - Scope: destination retry/backoff policy tuning and clearer retry status feedback for network/external targets.
-  - Done:
-    - Backup destination settings now persist per-destination retry policy (`attempts`, `base backoff seconds`) with bounded validation.
-    - Manual and auto-backup flows now apply destination-scoped retry loops with exponential backoff and retry telemetry events.
-    - Backups UI now surfaces retry status messaging and exhausted-retry summaries for failed destinations.
-- [x] `VS-1611` `P1` Per-project verification policies (always/scheduled/manual).
-  - Scope: verification mode per project, verification recency surfacing, and restore-confidence integration.
-  - Done:
-    - Projects schema/model now persists `verification_policy` with migration-safe default `always`.
-    - Backups per-project cards now expose verification-policy controls (`Always`, `Scheduled`, `Manual`) and persist updates live.
-    - Post-backup flow now evaluates project verification policy (`always` -> verify, `scheduled` -> auto runs, `manual` -> skip auto verify).
-    - Metadata sync project settings now export/import verification policy alongside encryption settings.
-  - Current planning note:
-    - Pulled forward from the original `1.9.x` bucket because verification policy directly supports restore trust in `1.6`.
-- [x] `VS-1612` `P1` Windowed backup-history card layout hardening.
-  - Scope: prevent chip/pill overlap in narrow window widths and keep retention/status text readable without clipping.
-  - Done:
-    - Backups history item layout now reserves dedicated rows for retention and actions to avoid right-column collisions.
-    - Size pill now uses adaptive width bounds instead of a fixed circular capsule in constrained layouts.
-- [x] `VS-1613` `P1` Restore active-card stage and throughput parity.
-  - Scope: ensure restore operations report a restore-specific stage and live transfer detail instead of backup-stage fallbacks.
-  - Done:
-    - Restore progress now emits processed/total bytes with live speed label in the active card.
-    - Active backup stage detection now recognizes restoring/decrypting progress and shows restore-specific status text.
-- [x] `VS-1614` `P2` Diff imported-type localization key parity.
-  - Scope: add missing key used by diff preview/imported-type chips to prevent raw key rendering.
-  - Done:
-    - Added English localization key `Backups.Section.TypeImported` used by diff preview status chips.
-- [x] `VS-1615` `P2` Quiet-hours window editor compact layout pass.
-  - Scope: tighten quiet-hours input composition for windowed mode and remove excessive edge spacing.
-  - Done:
-    - Quiet-hours start/end fields now use centered compact groups with consistent widths and spacing.
-- [x] `VS-1616` `P0` Patch updater trust-boundary hardening.
-  - Scope: harden patch helper input/manifest handling (path normalization, traversal guards, install-root constraints, argument validation) for elevated update flows.
-  - Done:
-    - Patch apply requests are now normalized/validated before execution (absolute paths only, invalid PID guardrails).
-    - Manifest file paths are resolved through strict `CombineUnderRoot` checks to block absolute/out-of-root traversal targets.
-    - Patch staging and install copy now enforce root-bounded file resolution for both verify and write phases.
-- [x] `VS-1617` `P1` Network-share delete fallback and user-guided recovery flow.
-  - Scope: make backup delete on SMB/NAS robust when marker files are protected/locked, with deterministic prompt/retry/skip behavior.
-  - Done:
-    - Backup delete path now enforces destination-root-bounded path resolution before file-system operations.
-    - Robust delete now performs a manual fallback pass after recursive delete failures and reports permission-denied outcomes explicitly.
-    - Failure notifications now add a clear permissions/credentials remediation hint when protected files block delete.
-- [x] `VS-1618` `P0` Updater request integrity binding and archive preflight validation.
-  - Scope: bind elevated helper request file to launcher-provided integrity metadata and verify archive hash/size again before extraction.
-  - Done:
-    - Elevated helper now requires request-file SHA-256 passed by launcher and rejects tampered request payloads.
-    - Request/manifest temp paths are constrained to trusted VaultSync temp roots in helper mode.
-    - Archive hash/size are re-validated against manifest in helper before extraction.
-- [x] `VS-1619` `P1` Backup path root-containment hardening for retention/restore/tray open flows.
-  - Scope: enforce destination-root containment when resolving backup paths in retention cleanup, restore preparation, and tray open-folder flow.
-  - Done:
-    - Retention cleanup now rejects out-of-root backup paths before deletion attempts.
-    - Restore preparation now rejects backup paths that resolve outside destination roots.
-    - Tray backup-folder resolution/open flow now uses root-containment checks before filesystem access.
-- [x] `VS-1620` `P2` Config read retry async cleanup.
-  - Scope: remove blocking sleep from config read retry path to reduce UI-thread contention under lock races.
-  - Done:
-    - Config load retry now uses async backoff/read flow (`Task.Delay`, async stream/file reads) instead of blocking `Thread.Sleep` loops.
-- [x] `VS-1621` `P1` Windowed viewport-width fill for primary pages.
-  - Scope: ensure Backups/Dashboard/Settings root content stretches to available `ScrollViewer` viewport width while preserving readability max-width caps.
-  - Done:
-    - Backups, Dashboard, and Settings roots now bind `MinWidth` to the containing `ScrollViewer` viewport width.
-    - Windowed layouts now use available horizontal space instead of collapsing to narrow centered columns.
-- [x] `VS-1622` `P1` Backups windowed panel and list-height normalization.
-  - Scope: remove hard vertical caps that caused uneven left/right panel heights and rebalance panel split for narrower windows.
-  - Done:
-    - Removed Backups per-project/history hard `MaxHeight` constraints that clipped panel utilization.
-    - Backups main area now uses a `3*:2*` split and tighter control widths/wrap behavior for per-project card fields.
-- [x] `VS-1623` `P2` Projects/Settings windowed control overflow cleanup.
-  - Scope: reflow dense control rows in Projects details and Settings Advanced to prevent truncation/overflow in windowed mode.
-  - Done:
-    - Projects details control panel now uses a 2x2 responsive grid for destination/encryption/health blocks.
-    - Settings Advanced action rows now wrap buttons and copy in narrow widths.
-    - Near-zero storage delta now displays neutral `? ~0 B` for sub-1KB changes.
-- [x] `VS-1624` `P2` Backups activity chart card empty-space collapse.
-  - Scope: remove oversized empty space under the Backups 7-day bars in windowed mode.
-  - Done:
-    - Summary/activity row now uses explicit auto row sizing.
-    - Activity card is top-aligned so it keeps chart content height instead of stretching to adjacent summary card height.
-
-### 1.6.1 follow-up patch backlog
-- [ ] `VS-1625` `P1` Restore runtime localization parity.
-  - Scope: ensure restore-progress and active-card restore states always resolve through shipped localization keys, including runtime status text such as `Backups.Status.Restoring`.
-  - Acceptance:
-    - Active restore cards never show raw localization keys in the UI.
-    - `strings.en.json` includes all restore-runtime keys required by current restore flows.
-- [ ] `VS-1626` `P1` Restore-mode dropdown display binding hardening.
-  - Scope: ensure restore confirmation dropdowns render `Direct` / `Sandbox` labels through explicit display templates/bindings instead of falling through to the view locator.
-  - Acceptance:
-    - Restore confirmation never shows `View not found for RestoreModeOption`.
-    - Both restore-mode options render correctly in the dialog and any shared restore-mode selector surface.
-
-## 1.7.x
-### Release intent
-- `1.7` should be the reliability/repair release:
-  - make backup history, retention, restore readiness, and updater eligibility deterministic and explainable.
-  - add guided remediation before adding new collaboration surface area.
-- This means `1.7` should optimize for:
-  1. deterministic data repair,
-  2. retention safety,
-  3. updater/serviceability diagnostics,
-  4. operator-facing doctor workflows.
-
-### 1.7.5 patch backlog
-- [x] `VS-1745`/`VS-1746`/`VS-1747` `P2` Centralize package, config, and logging plumbing. _(Done 2026-05-29; tracked by #323)_
-  - Scope: centralize package versions, route app configuration through `IAppConfigStore`, and share runtime logging/hash-formatting helpers.
-  - Acceptance: project package references stay versionless where centrally managed; core, CLI, and UI config access uses the shared adapter; duplicated service logging/hash helpers are removed.
-- [x] `VS-1748`/`VS-1751`/`VS-1755`/`VS-1756` `P2` Consolidate UI formatting and view-model reuse. _(Done 2026-05-29; tracked by #324)_
-  - Scope: reuse shared view-model notification helpers and centralize byte/signed-byte formatting across UI and CLI callers.
-  - Acceptance: Dashboard, Backups, Projects, and Settings dependent-property updates keep existing binding behavior while using shared helpers; formatting output remains stable.
-- [x] `VS-1749`/`VS-1754` `P2` Standardize core test fixtures and builders. _(Done 2026-05-29; tracked by #325)_
-  - Scope: consolidate temporary-directory, config-isolation, repository, project, backup, and destination setup into reusable test helpers.
-  - Acceptance: core tests keep coverage while reducing duplicated setup; fixture cleanup remains deterministic.
-- [x] `VS-1752`/`VS-1753`/`VS-1758` `P2` Improve dashboard and metadata import performance diagnostics. _(Done 2026-05-29; tracked by #326)_
-  - Scope: add verbose timing scopes for startup/background work, reuse project lookups for recent activity, and cache unchanged metadata import sources.
-  - Acceptance: normal runs stay quiet; verbose diagnostics expose slow phases; dashboard and metadata import refreshes avoid repeated broad scans.
-- [x] `VS-1750`/`VS-1757` `P2` Reuse destination normalization and NetworkMount diagnostics. _(Done 2026-05-29; tracked by #327)_
-  - Scope: share destination path normalization and route NetworkMount diagnostics through one local logging helper.
-  - Acceptance: identity/quota planning uses consistent normalized paths; NetworkMount log prefixes remain stable without duplicated inline formatting.
-- [x] `VS-1759` `P2` Harden metadata unchanged-source cache coverage checks. _(Done 2026-05-29; tracked by #330)_
-  - Scope: ensure skipped background metadata imports rerun when local repository coverage is incomplete.
-  - Acceptance: unchanged-source cache cannot hide missing local repository rows; metadata imports remain skipped only when coverage is complete.
-- [x] `VS-1760` `P1` Harden SQLite repository connection handling. _(Done 2026-05-29; tracked by #331)_
-  - Scope: escape SQLite connection-string paths, disable stale pooling, set busy timeouts, and negotiate WAL once to reduce lock contention.
-  - Acceptance: repository paths with special characters open reliably; stale pooled SQLite handles do not keep locks alive after app/test churn; concurrent repository work retries through busy timeout instead of failing immediately.
-- [x] `VS-1761` `P2` Split SQLite schema setup into focused helpers. _(Done 2026-05-29; tracked by #331)_
-  - Scope: separate schema creation, migrations, index creation, and path normalization while reusing one connection for column migrations.
-  - Acceptance: startup schema setup remains idempotent; migration code is easier to audit without changing persisted schema behavior; path normalization still runs after schema setup.
-- [x] `BUG-18038` `P1` Suppress repeated Windows toast failures and invalid empty tags. _(Done 2026-05-29; tracked by #332)_
-  - Scope: avoid assigning invalid empty toast tags and log repeated OS-toast failures only once per failure flow.
-  - Acceptance: Windows notification failures do not throw due to empty toast tags; repeated toast failures do not flood diagnostics.
-- [x] `BUG-18039` `P1` Marshal manual drive-health updates back to the UI thread. _(Done 2026-05-29; tracked by #332)_
-  - Scope: ensure manual storage-health rechecks update notifications and tray state through the Avalonia UI thread after background probing.
-  - Acceptance: manual drive-health rechecks no longer produce thread-affinity crashes; tray and notification state update correctly after background health probes.
-- [x] `BUG-18040` `P1` Record config fallback recovery diagnostics. _(Done 2026-05-29; tracked by #333)_
-  - Scope: capture primary, backup, and last-known-good config load diagnostics when falling back from damaged or unavailable config files.
-  - Acceptance: fallback source is visible in diagnostics/support context; fallback to defaults is distinguishable from backup or last-known-good recovery.
-- [x] `VS-1762` `P1` Extend metadata unchanged-source cache coverage with source external IDs. _(Done 2026-05-29; tracked by #334)_
-  - Scope: track source external IDs so background metadata imports are not skipped when unrelated local rows mask recreated or incomplete repositories.
-  - Acceptance: unchanged-source cache skips only when local repository coverage is complete for the source identity; recreated/imported repositories with different external IDs are rechecked.
-- [x] `VS-1763` `P2` Refresh 1.7.5 release manifest and docs metadata. _(Done 2026-05-29; tracked by #335)_
-  - Scope: align release-facing Windows, Store, issue-template, patch-base, and docs metadata to `1.7.5`.
-  - Acceptance: release manifests and package metadata target `1.7.5`; issue templates, release docs, and patch-base references do not point at stale versions.
-- [x] `VS-1764` `P2` Centralize DB path fallback resolution for UI repository callers. _(Done 2026-05-29; tracked by #336)_
-  - Scope: expose shared config-store DB path resolution and route UI repository creation through it.
-  - Acceptance: startup, dashboard, backups, projects, and settings flows stop duplicating `DbPath` fallback logic; blank paths still resolve to the default VaultSync database.
-- [x] `VS-1765` `P2` Centralize UI repository creation and detached task scheduling. _(Done 2026-05-29; tracked by #337)_
-  - Scope: add a UI repository factory and extend the shared detached-task helper for scheduled background operations.
-  - Acceptance: UI view models no longer construct repositories from resolved DB paths directly; converted detached operations log failures through one helper.
-- [x] `VS-1766` `P2` Split UI helper view models out of oversized files. _(Done 2026-05-29; tracked by #338)_
-  - Scope: move Projects option/snapshot helper models and Settings destination/credential models into focused files, plus share export-folder opening.
-  - Acceptance: helper classes keep binding-compatible names/namespaces; Projects and Settings main files shrink without workflow changes.
-- [x] `VS-1767` `P2` Consolidate tombstone export and Backups option helper plumbing. _(Done 2026-05-29; tracked by #340)_
-  - Scope: share metadata tombstone meta-info stamping, tombstone row creation, and Backups silent option setter logic.
-  - Acceptance: tombstone exporters keep existing writer metadata and lock-retry behavior; Backups option selections keep current transient-null handling.
-- [x] `VS-1768` `P2` Split Backups helper view models into a focused file. _(Done 2026-05-29; tracked by #345)_
-  - Scope: move Backups helper model/view-model classes out of the oversized main Backups view model while preserving binding-compatible names and namespaces.
-  - Acceptance: the main Backups view model is easier to scan; helper classes retain existing behavior; solution build remains clean.
-- [x] `VS-1769` `P2` Rework GitHub issue and PR templates. _(Done 2026-05-29; tracked by #346)_
-  - Scope: replace free-form Markdown issue templates with structured forms for bugs, crashes, beta feedback, backup/restore problems, update/install problems, and feature requests, plus add a lightweight pull request checklist.
-  - Acceptance: users are guided to include version, OS, install/update path, diagnostics, and impact; blank issues route to security/docs links; PRs call out linked issues, validation, release notes, and risk.
-- [x] `VS-1770` `P2` Consolidate Settings notifications and backup archive test fixtures. _(Done 2026-05-29; tracked by #347)_
-  - Scope: group repeated Settings reload/localization property notifications behind named helpers and share backup archive/encryption setup across crypto/key-rotation tests.
-  - Acceptance: Settings bindings still receive the same notifications; archive crypto tests keep their coverage while using one fixture factory; UI build and core tests remain clean.
-- [x] `VS-1771` `P2` Tighten release templates and remaining test temp fixtures. _(Done 2026-05-29; tracked by #348)_
-  - Scope: clarify PR/update templates, Store validation wording, and remaining MetadataSync/SnapshotDiff temp-directory fixture handling for the stable 1.7.5 build.
-  - Acceptance: release-facing templates point at stable validation, Store docs distinguish workflow support from remaining artifact validation, and focused fixture tests pass.
-- [x] `VS-1772` `P2` Standardize action button styles and alignment. _(Done 2026-05-29; tracked by #349; labels: `roadmap`, `kind:vs`, `release:1.7.5`, `priority:p2`, `area:ui`, `Improvement`, `status:done`)_
-  - Scope: move shared small/primary action button styles to app-level Avalonia styles and route shell update/crash banner buttons through shared action classes.
-  - Acceptance: Backups, tray widget, shell, Projects, and Settings action buttons keep existing behavior while centering wrapped labels consistently.
-  - Validation: Release build passed with 0 warnings; core tests passed 200/200; macOS UI launch exposed the tray menu.
-- [x] `VS-1773` `P2` Remove unused exception warning suppression. _(Done 2026-05-29; tracked by #350; labels: `roadmap`, `kind:vs`, `release:1.7.5`, `priority:p2`, `area:core`, `Improvement`, `status:done`)_
-  - Scope: remove the global `CS0168` suppression and clean up unused catch variables without changing catch behavior.
-  - Acceptance: unused exception variables are visible to future builds, while logged exceptions remain named and diagnostics behavior is unchanged.
-  - Validation: Release build passed with 0 warnings; core tests passed 200/200.
-- [x] `BUG-18045` `P1` Fix macOS tray Quit native menu crash. _(Done 2026-05-29; tracked by #351; labels: `bug`, `Crash`, `release:1.7.5`, `priority:p1`, `area:ui`, `status:done`)_
-  - Scope: make tray icon teardown idempotent, avoid macOS native menu detachment during shutdown, and stop queued tray refreshes once shutdown starts.
-  - Acceptance: quitting from the macOS tray `Quit VaultSync` item exits cleanly without Avalonia's "menu being updated does not match" exception.
-  - Validation: Accessibility automation opened the VaultSync status menu, clicked `Quit VaultSync`, and the `dotnet run` process exited with code 0.
-- [x] `BUG-18046` `P1` Fix credential profile card clipping. _(Done 2026-05-29; tracked by #352; labels: `bug`, `release:1.7.5`, `priority:p1`, `area:ui`, `status:done`)_
-  - Scope: replace the oversized password visibility toggle in Settings credential cards with a compact checkbox and stabilize label/action columns.
-  - Acceptance: Name, username, password, remove, and show-password controls fit inside the credential card without bottom/right clipping.
-  - Validation: Release build passed with 0 warnings; core tests passed 200/200; macOS app launched successfully after the layout fix.
-
-### Proposed delivery phases
-1. Phase `A` (integrity backbone): `VS-1706` -> `VS-1711` -> `VS-1701` -> `VS-1705` -> `VS-1712`
-   - Goal: know whether indexes are trustworthy before auto-repair or retention decisions run.
-2. Phase `B` (guided repair UX): `VS-1702` -> `VS-1714` -> `VS-1717`
-   - Goal: surface deterministic repair plans with dry-run/apply and conflict awareness.
-3. Phase `C` (update/serviceability): `VS-1707` -> `VS-1708` -> `VS-1709` -> `VS-1718`
-   - Goal: make update targeting, patch eligibility, and release gates auditable and support-friendly.
-4. Phase `D` (capacity + maintenance): `VS-1703` -> `VS-1720` -> `VS-1716` -> `VS-1710` -> `VS-1715` -> `VS-1713`
-   - Goal: give operators quota planning, checkpointed retry resilience, maintenance windows, startup diagnostics, and restore-readiness signals.
-5. Phase `E` (dashboard refresh): `VS-1719` -> `VS-1721`
-   - Goal: modernize the dashboard information hierarchy and visual clarity without losing VaultSync's current identity or familiar navigation, then carry shared project-tag color semantics consistently across the app.
-
-### Revised planning notes
-- `VS-1704` is moved out of the active `1.7` release checklist and into the future backlog as a deliberate scope cut.
-  - Reason: shared-vault access control and audit trails are a separate product stream and would dilute the reliability/repair focus of `1.7`.
-  - `1.7` release should not ship until:
-    - orphan detection/remap is deterministic and idempotent,
-    - retention can prove it preserves at least one restorable point per project,
-    - updater diagnostics explain channel/target/patch eligibility without debug builds,
-    - doctor workflows provide dry-run before mutation.
-  - Beta builds for the `1.7` cycle should use prerelease app versions such as `1.7.x-beta.N`, while the final Stable cut remains `1.7.0`.
-
-- [x] `VS-1701` `P0` Deterministic orphan-backup remap and repair engine. _(Done)_
-  - Scope: remap only through trusted exact links (`backup.snapshot_id -> snapshots.project_id` and exact external-id matches), never name/path heuristics.
-  - What it takes:
-    - introduce a repair-evidence model (`exact snapshot link`, `exact external-id match`, `destination identity match`, `rejected heuristic`).
-    - persist remap job results and reasons so re-runs are idempotent and diagnosable.
-    - expose unresolved buckets (`missing snapshot`, `missing project`, `ambiguous match`, `identity mismatch`) for doctor/support surfaces.
-  - Current status:
-    - Done: deterministic dry-run repair plans derive exact backup->project remaps from authoritative snapshot ownership and report unresolved orphan buckets with stable codes.
-    - Done: repair planning remains exact-link only and can be rerun idempotently without introducing name/path heuristics.
-  - Depends on:
-    - `VS-1706` startup consistency scan signals.
-    - `VS-1712` stable destination identity model.
-  - Acceptance:
-    - Orphan remap jobs are deterministic and idempotent.
-    - Diagnostics/support bundle include remapped/unresolved counts and reasons.
-- [x] `VS-1702` `P0` Manual repair action for backup/project links. _(Done)_
-  - Scope: add `Settings/Doctor` repair flow with dry-run and apply modes.
-  - What it takes:
-    - reusable repair-plan DTOs shared by UI, diagnostics export, and future CLI flows.
-    - dry-run/apply orchestration with explicit counts, sample items, and post-apply summary.
-    - mutation audit log entry for every repair apply action.
-  - Depends on:
-    - `VS-1701` deterministic repair engine.
-  - Current status:
-    - Done: Settings > Advanced exposes a manual backup-index repair panel with dry-run scan and exact-fix apply actions.
-    - Done: repair runs report exact remap counts, blocked orphan buckets, and post-apply rescans without mutating valid mappings.
-  - Acceptance:
-    - UI shows what will be relinked before apply.
-    - User can run safe repair without touching valid mappings.
-- [x] `VS-1703` `P1` Destination quotas + cleanup suggestions. _(Done)_
-  - Scope: per-destination quota targets, warning thresholds, and suggested cleanup candidates by age/size/protection status.
-  - What it takes:
-    - persist per-destination quota/threshold settings.
-    - rank cleanup candidates from existing retention metadata without suggesting protected backups.
-    - surface “space to recover” estimates and tie into health/readiness panels.
-  - Current status:
-    - Settings > Advanced now persists per-destination soft quota and warning-threshold values.
-    - Backups destination cards now show stored bytes plus cleanup suggestions derived from unprotected backup candidates only.
-  - Acceptance:
-    - Quota warnings are visible before destination exhaustion.
-    - Cleanup suggestions never include protected backups as auto-candidates.
-- [x] `VS-1705` `P0` Retention delete resilience v2. _(Done)_
-  - Scope: when oldest non-protected delete fails, continue to next eligible non-protected entry and report structured failure reasons.
-  - What it takes:
-    - refactor retention candidate evaluation into a reusable ordered plan.
-    - preserve per-candidate failure reasons (`permission denied`, `out-of-root`, `unreachable`, `locked`, `verify failed`).
-    - ensure delete attempts and skip decisions are visible in diagnostics and user-facing summaries.
-  - Depends on:
-    - `VS-1711` chain preflight.
-  - Current status:
-    - Done: retention now builds an ordered deletion plan that can skip the oldest candidate when deleting it would remove the last metadata-valid restore point.
-    - Done: delete failures emit structured reason codes so diagnostics and later summaries can reuse stable failure classifications.
-  - Acceptance:
-    - Retention does not halt on first non-protected delete failure when other eligible entries exist.
-    - Protected backups are always skipped.
-- [x] `VS-1706` `P1` Startup backup-index consistency checks. _(Done)_
-  - Scope: lightweight integrity scan for backup/snapshot/project links and destination-path consistency with non-blocking warnings.
-  - What it takes:
-    - add a cheap startup scan model with bounded work (sampled/full depending on vault size).
-    - classify findings as `warning`, `repairable`, `critical`.
-    - cache last scan summary so UI can show status without rescanning synchronously.
-  - Current status:
-    - Done: first pass now runs as a deferred startup task after metadata auto-import and before update checks.
-    - Done: initial scan covers missing/duplicate external IDs plus snapshot/project/backup relationship mismatches, with runtime diagnostics summary state in `AppViewModel`.
-    - Done: findings now emit deterministic samples and persist a lightweight last-scan summary for support-bundle reuse.
-  - Acceptance:
-    - Startup scan surfaces actionable warnings without blocking app launch.
-    - Scan output is available in diagnostics/support bundle.
-- [x] `VS-1707` `P1` Updater channel and release-target diagnostics hardening. _(Done)_
-  - Scope: expose candidate channel/branch resolution and release-target diagnostics to reduce mis-publish ambiguity.
-  - What it takes:
-    - persist update resolution trace (`channel`, `branch`, `tag`, `asset`, `why rejected`).
-    - add operator-facing diagnostics surface and support-bundle export.
-    - keep messages user-readable without exposing internal-only noise by default.
-  - Current status:
-    - Done: update checks now persist channel/decision/candidate diagnostics alongside the selected release result.
-    - Done: Settings > Advanced now surfaces the persisted diagnostics summary next to the existing update status block.
-    - Done: support bundles now export the same redacted update diagnostics so release-target decisions can be inspected off-box.
-  - Acceptance:
-    - Support diagnostics clearly show selected candidate release and why.
-    - Channel mismatch scenarios are visible to operators without debug builds.
-  - [x] `VS-1708` `P1` Patch chain compatibility preflight. _(Done)_
-    - Scope: explicit preflight validation for `current -> target` patch chain and required assets before showing patch install option.
-    - What it takes:
-      - explicit patch-chain model (`current`, `intermediate`, `target`, `supported`, `missing asset`, `requires installer`).
-      - UI gate so patch CTA is shown only when eligibility is proven.
-      - release tooling support so manifests expose enough chain metadata.
-    - Depends on:
-      - `VS-1707` updater target diagnostics.
-    - Current status:
-      - Done: patch checks now validate base version, target version, manifest availability, and manifest file entries before exposing patch install.
-      - Done: preflight outcomes now persist stable status codes/messages alongside update diagnostics and export through support bundles.
-      - Done: Settings > Advanced shows the current patch preflight outcome as part of the updater diagnostics summary.
-      - Done: prerelease labels are compared explicitly so beta `1.7.0-*` builds do not collapse into stable `1.7.0` during patch matching.
-      - Done: release asset workflow inputs are guarded so beta builds run from `Dev` with prerelease targets and stable builds run from `Stable` without prerelease targets.
-    - Acceptance:
-      - Patch button appears only when chain/assets are valid.
-      - Installer fallback messaging states precise incompatibility reason.
-      - Release asset workflow rejects beta/stable branch mismatches and invalid prerelease target formats before build work starts.
-- [x] `VS-1709` `P2` Support bundle update/repair telemetry expansion. _(Done)_
-  - Scope: include update candidate resolution trace, patch eligibility details, and orphan/repair summaries in redacted support exports.
-  - What it takes:
-    - extend support-bundle schema with stable redacted sections for updater/repair outcomes.
-    - version the schema so support tooling can rely on field names across minor releases.
-  - Current status:
-    - Done: support bundles now export persisted updater decision traces and patch-preflight eligibility results from advanced config.
-    - Done: doctor repair dry-run/apply flows now persist lightweight repair telemetry (actions, blocked buckets, codes, last apply state) for support exports.
-    - Done: metadata conflict tracking now persists conflict-resolution telemetry and exports pending conflict summaries for cross-machine triage.
-  - Acceptance:
-    - New telemetry sections are redacted and stable for support use.
-- [x] `VS-1710` `P2` Scheduled maintenance window jobs. _(Done)_
-  - Scope: optional scheduled health/repair/cleanup routines with summary notifications.
-  - What it takes:
-    - background scheduler model that reuses quiet-hours and retry policy concepts.
-    - job history/logging so maintenance is explainable and non-silent.
-    - opt-in defaults only; no surprise background mutation on upgrade.
-  - Current status:
-    - Done: Settings > Advanced now exposes an opt-in maintenance window with per-task toggles for consistency scan, repair dry-run, and metadata refresh.
-    - Done: App startup/settings reload now wire a maintenance timer that runs only inside the configured window and records last-run status in advanced config.
-  - Acceptance:
-    - Maintenance jobs run only within configured windows and emit clear run summaries.
-- [x] `VS-1711` `P0` Backup chain preflight before retention prune. _(Done)_
-  - Scope: validate there is at least one restorable point per project before pruning non-protected backups.
-  - What it takes:
-    - define “restorable point” precisely across direct/sandbox/encrypted/imported histories.
-    - integrate with retention planner before delete execution, not after.
-    - emit clear block reasons when prune would violate restore safety.
-  - Current status:
-    - Done: retention now simulates prune candidates and blocks when deletion would remove the last metadata-valid restore point for the project.
-  - Depends on:
-    - `VS-1706` consistency scan.
-  - Acceptance:
-    - Retention never leaves a project without a restorable backup chain unless explicitly user-confirmed.
-    - Preflight result is logged and surfaced in diagnostics.
-- [x] `VS-1712` `P1` Destination identity stability and remount continuity. _(Done)_
-  - Scope: introduce stable destination identity checks across remove/re-add cycles to reduce index drift and false-orphan scenarios.
-  - What it takes:
-    - define a durable destination identity fingerprint beyond path/alias.
-    - store identity in metadata/import/export so re-add and remount can be matched safely.
-    - distinguish same-path-new-device from same-device-new-mount cases.
-  - Current status:
-    - Stable destination fingerprints now derive from canonical path + credential + mount mode.
-    - Preferred-destination IDs in UI and metadata import now normalize legacy alias/path values onto stable destination identities.
-  - Acceptance:
-    - Re-adding the same destination path/identity preserves project routing and history linkage where exact identity matches.
-    - Mismatch cases are reported with explicit remediation guidance.
-- [x] `BUG-18006` `P1` Backups page stale-entry pruning for manually deleted destination backups. _(Done)_
-  - Scope: when the Backups page reloads, remove local database entries whose recorded backup path is missing from a reachable active destination.
-  - What it takes:
-    - resolve only active destinations that pass reachability checks, including configured credentials/mount behavior.
-    - validate recorded relative backup paths remain under the resolved destination root before trusting them for cleanup.
-    - leave offline, unresolved, or destination-mismatched histories untouched so disconnected drives are not mistaken for deleted backups.
-  - Current status:
-    - Done: Backups reload prunes missing backup rows before shaping the page cache and refreshes the history data afterward.
-    - Done: orphan snapshots are cleaned when the pruned backup was their last reference.
-  - Acceptance:
-    - Manually deleted backup folders disappear from the Backups page after the destination is reachable and the page refreshes.
-    - Offline destinations do not lose history entries during refresh.
-- [x] `BUG-18007` `P2` Reduce duplicate destination probe work and nested generated-output scans. _(Done in PR #283, issue #285; completed 2026-05-13)_
-  - Scope: coalesce archive upload buffer auto-tune work per destination and tighten development presets around nested generated output.
-  - What it takes:
-    - share an in-flight archive upload buffer probe when parallel backups target the same destination.
-    - cache the timeout fallback buffer so later backups do not repeat the same slow probe.
-    - exclude nested build, dependency, test-result, artifact, package, and cache outputs from development project scans.
-  - Current status:
-    - Done: destination buffer tuning now uses a single lazy in-flight task per destination.
-    - Done: timed-out probes persist the fallback buffer.
-    - Done: development preset exclusions cover nested generated outputs, with scanner regression coverage.
-  - Acceptance:
-    - parallel backup startup emits one archive buffer tune attempt per destination instead of duplicate timeout probes.
-    - nested generated outputs are not included in new snapshots for common development presets.
-- [x] `BUG-18008` `P1` Avoid waking destinations for passive status checks. _(Done in PR #283, issue #286; completed 2026-05-13)_
-  - Scope: run one deferred startup reachability probe, then update destinations only from backup execution and manual tests.
-  - What it takes:
-    - stop scheduling periodic destination reachability tests from the Backups overview path.
-    - keep cached destination status updated when backup execution already prepares a destination.
-    - run stale backup-entry cleanup only against a destination that backup execution has already prepared.
-  - Current status:
-    - Done: passive Backups refresh no longer resolves destinations or scans destination roots.
-    - Done: deferred startup runs a single destination probe and does not start a recurring probe timer.
-    - Done: backup preparation updates cached destination status and runs safe stale-entry cleanup for that prepared root.
-  - Acceptance:
-    - after the startup probe, opening the Backups page or leaving the app idle does not wake sleeping backup destinations for reachability checks.
-    - backup runs still fail fast and visibly when their destination cannot be prepared.
-- [x] `VS-1713` `P1` Restore-readiness scorecard in Backups and Dashboard. _(Done)_
-  - Scope: add an at-a-glance restore-readiness status using last backup recency, verification recency, destination reachability, and unresolved integrity warnings.
-  - What it takes:
-    - compute a stable readiness model from existing health/verification/reachability signals.
-    - make the score explainable with links to failing inputs rather than a black-box number.
-    - avoid expensive recompute on every page refresh.
-  - Depends on:
-    - `VS-1706`, `VS-1711`, and `VS-1712`
-  - Acceptance:
-    - Scorecard is explainable and links to the underlying failing signals.
-    - No blocking UI regressions on large project sets.
-  - Current status:
-    - Backups and Dashboard now compute a shared readiness summary with per-project labels, reasons, and aggregate ready/attention/risk/unavailable counts from backup recency, verification policy, destination reachability, and startup consistency results.
-    - Readiness headline/detail/count labels are now formatted from localized UI copy instead of hard-coded English dashboard strings.
-- [x] `VS-1714` `P1` Doctor workflows for guided remediation. _(Done)_
-  - Scope: guided repair actions for common states (orphaned links, unreachable destination, stale verification, inconsistent metadata cache).
-  - What it takes:
-    - reusable doctor card/action model with dry-run/apply + remediation guidance.
-    - action-specific validators for “can run now”, “needs destination online”, “needs user choice”.
-    - support/diagnostic logging for every doctor action.
-  - Depends on:
-    - `VS-1702`
-    - `VS-1706`
-  - Current status:
-    - Done: Settings > Advanced frames backup-index repair as a Doctor workflow with dry-run and Fix now actions plus guided remediation copy.
-    - Done: every doctor repair scan/apply action writes structured diagnostics log entries for support-bundle auditability.
-  - Acceptance:
-    - Each doctor action has a dry-run summary and explicit apply step.
-    - All mutations are audit-logged in diagnostics/support bundle.
-- [x] `VS-1715` `P2` Non-blocking startup diagnostics timeline. _(Done)_
-  - Scope: startup timeline with phase durations (config load, repo init, destination probe, metadata warm-up, update check) and slow-path attribution.
-  - What it takes:
-    - lightweight startup spans with bounded retention.
-    - diagnostics-only collection path that does not become another startup tax.
-  - Acceptance:
-    - Timeline is available in diagnostics and support bundle.
-    - Normal startup path remains non-blocking.
-  - Current status:
-    - Done: startup now records stable constructor/deferred-startup phase checkpoints and persists the latest timeline summary in advanced config.
-    - Done: Settings diagnostics and support bundles now surface the last startup timeline with total duration and per-phase elapsed milliseconds.
-- [x] `VS-1716` `P2` Retention simulation mode in settings. _(Done)_
-    - Scope: preview retention outcomes per project/destination without deleting data.
-    - What it takes:
-      - reuse the same retention planner as real delete flow.
-      - make simulation output diffable against current protected/kept/deleted buckets.
-    - Current status:
-      - Done: retention simulation reuses the retention preflight and delete planner without mutating data.
-      - Done: Settings > Backups exposes a simulation preview with per-project reclaim/block summaries and protected backups highlighted as retained.
-  - Acceptance:
-    - Simulation output matches actual retention behavior on subsequent apply.
-    - Protected backups are always highlighted as retained.
-- [x] `VS-1717` `P1` Cross-machine metadata conflict resolver UX. _(Done)_
-  - Scope: detect and resolve conflicting project-level metadata updates (destination/restore mode/tags/verification policy) with explicit conflict resolution options.
-  - What it takes:
-    - define conflict records with source machine/time/value deltas.
-    - choose precedence rules that are explicit, not implicit overwrite.
-    - provide batch-safe resolution actions for repeated conflicts.
-  - Depends on:
-    - `VS-1714`
-  - Acceptance:
-    - Conflicts are visible with source machine/time context.
-    - Resolver prevents silent overwrite of newer authoritative metadata.
-  - Current status:
-    - Done: metadata import now records tracked field conflicts instead of silently overwriting local destination / restore mode / verification / tags.
-    - Done: Settings > Advanced Doctor now exposes pending conflict cards with `Keep local` and `Accept imported` actions.
-- [x] `VS-1718` `P2` Release readiness gate checklist automation. _(Done)_
-  - Scope: scripted pre-release checks for patch assets, installer presence, changelog/whats-new parity, and project board release completeness.
-  - What it takes:
-    - one scripted gate command with machine-readable + human-readable output.
-    - GitHub/project/release-asset queries wired into a deterministic checklist.
-  - Current status:
-    - Done: added `scripts/release_readiness_gate.ps1` to validate UI/installer version parity, unreleased changelog alignment, What's New version alignment, release asset presence, and project-board completion for the target release slice.
-    - Done: release docs now point to the gate command as part of the release checklist.
-    - Done: gate now distinguishes `PrePublish` vs `PostPublish` verification so asset-generation steps are emitted as warnings before upload and hard-fail only during final release verification.
-  - Acceptance:
-    - One command emits pass/fail with actionable errors.
-    - Gate output is attachable to release notes/support workflows.
-- [x] `VS-1719` `P2` Dashboard information architecture and visual modernization pass. _(Done)_
-  - Scope: revisit the Dashboard layout so it feels more modern and operationally useful while keeping VaultSync's dark visual identity, navigation model, and familiar core cards.
-  - What it takes:
-    - redesign KPI/card hierarchy so the most actionable signals land first (`backups`, `restore readiness`, `alerts`, `storage`, `recent activity`).
-    - replace the current stretched/empty-space-prone sections with responsive card groups that scale cleanly in both maximized and windowed modes.
-  - Current status:
-    - Done: the dashboard redesign is in place with a stronger operations header, dedicated recent-activity rail, and responsive trend/storage groups that behave predictably in windowed layouts.
-    - Done: header and lower information groups were refined to remove random duplication and make readiness, activity, trend, and storage read as one consistent hierarchy.
-    - Done: summary cards use accent-strip hierarchy, restore-readiness review sits in its own section, and backup storage cards explain why capacity is currently at risk.
-    - Done: the KPI row wraps into stable-width cards so fullscreen layouts avoid oversized dead space and narrower windows keep a predictable card rhythm.
- - [x] `VS-1721` `P2` App-wide tag color editor and chip styling. _(Done)_
-  - Scope: add a complete app-wide tag-color system, edited primarily from Projects, and apply those colors consistently wherever project tags render.
-  - What it takes:
-    - persist per-tag background/foreground/border overrides in appearance settings.
-    - render colored chips through one shared tag appearance helper across Projects, Backups, and Dashboard activity.
-    - preserve configured colors through settings export/import flows.
-    - Current status:
-      - Done: shared tag appearance resolution supports configurable colors, and Projects hosts the primary visual editor with a ring picker, quick swatches, live preview, and app-wide save/reset flows.
-      - Done: the leftover Settings reminder panel was removed so tag-color editing lives only where users can actually do the work.
-      - Done: onboarding points new users at the Projects tag-color flow instead of a duplicate Settings surface.
-      - Done: Projects, Backups, and Dashboard activity render the same configured chips app-wide.
-      - Done: the Projects editor uses a wrap-friendly layout with stronger quick swatches so it still reads clearly in narrower windows.
-      - Done: the quick tag palette uses a standard hard-coded color set so it behaves more like familiar color pickers.
-      - Done: tag presets stay chip-friendly so the quick colors make sense for tags instead of mirroring generic theme slots.
-      - Done: swatch borders are contrast-aware so light preset colors remain readable on dark surfaces.
-  - Acceptance:
-    - Tag colors can be added, edited, reset, and removed from Projects without confusing duplicate entry points or broken layout.
-    - The same tag uses the same colors anywhere it appears in the app.
-    - Support-bundle settings export/import preserves configured tag colors.
-    - Quick swatches read as obvious colors instead of empty placeholders, and the editor keeps working across smaller window sizes.
-    - Quick tag colors cover the common neutral and accent colors users expect from a picker preset row.
-    - Tag presets stay useful for chip styling instead of drifting into unrelated theme-only colors.
-- [x] `BUG-17001` `P1` Doctor workflow command-state thread affinity fix. _(Done)_
-  - Scope: ensure detached Doctor scan/apply/conflict actions marshal command-state and bound status updates onto the UI thread.
-  - Current status:
-    - Done: backup repair and metadata-conflict flows now dispatch busy-state, status, notification, and command refresh updates through Avalonia's UI thread.
-  - Acceptance:
-    - Doctor workflows no longer emit `Call from invalid thread` traces during dry-run/apply operations.
-
-- [x] `BUG-17002` `P1` Restore corrupted bundled UI font assets. _(Done)_
-  - Scope: replace invalid bundled `.ttf` placeholders with valid Noto Sans binaries so the shipped font pack is deterministic across machines.
-  - Current status:
-    - Done: corrupted `NotoSans*` and `NotoSansArabic*` placeholder assets have been replaced with valid binaries so Avalonia stops ingesting HTML masquerading as font files.
-  - Acceptance:
-    - bundled font assets open as valid font binaries instead of text/HTML payloads.
-    - UI text rendering no longer depends on unpredictable system fallback caused by broken embedded assets.
-
-- [x] `BUG-17003` `P1` Projects page discovery fallback when filesystem scan is empty. _(Done)_
-  - Scope: keep the Projects page populated from registered database projects when directory discovery returns no items or misses known projects.
-  - Current status:
-    - Done: registered projects are now merged into the Projects page source list so tracked entries still render when folder discovery is unavailable or partial.
-    - Done: Projects now render explicit empty-state and no-selection placeholders instead of leaving the list/detail panes visually broken when scan results or selection state are empty.
-  - Acceptance:
-    - Projects page no longer appears blank just because discovery root scanning returned zero items.
-    - Registered projects remain visible and selectable from stored metadata paths.
-
-- [x] `BUG-17004` `P1` Preserve Projects root across startup config read/write races. _(Done)_
-  - Scope: stop `Projects root` from clearing itself across restarts when config reads race startup writes or transiently deserialize invalid/partial JSON.
-  - Current status:
-    - Done: config writes now use temp-file replace semantics with a backup file, and config loads fall back to backup/last-known-good snapshots before defaulting to empty values.
-    - Done: safeguard was verified against unreachable destination/startup stress scenarios so unrelated config saves cannot persist a blank projects root.
-  - Acceptance:
-    - `Projects root` persists across restart even if startup writes happen while the destination is unreachable or config reads are transiently busy.
-    - transient config read failures no longer downgrade the in-memory config to defaults and then overwrite the saved root path.
-
-- [x] `BUG-17005` `P2` Simplify custom theme editor hierarchy in Settings > Appearance. _(Done)_
-  - Scope: make the custom theme editor easier to understand visually by reducing duplicate emphasis, clarifying the edit order, and tightening the picker/preview layout.
-  - Current status:
-    - Done: the editor follows a clearer preset -> target -> pick -> preview flow with a cleaner spectrum-focused picker.
-    - Done: the theme editor uses wrap-based cards so the palette, picker, preview, and tuning controls scale better in windowed layouts.
-    - Done: theme swatches render from explicit brush-backed palette entries, and quick colors stay usable for the selected slot.
-  - Acceptance:
-    - The theme editor reads as one coherent workflow instead of a pile of equal-weight controls.
-    - Presets, target selection, picker, and preview are visually distinct and easier to scan in windowed mode.
-    - Quick swatches render as obvious colors instead of neutral placeholders, and the picker no longer wastes space on low-value chrome.
-    - Theme editing remains usable on narrower windows without the preview or tuning panels collapsing awkwardly.
-    - Theme quick colors adapt to the selected slot instead of serving one generic palette for everything.
-
-- [x] `VS-1722` `P2` Expand custom theme presets and advanced controls. _(Done)_
-  - Scope: add more useful starter themes and an optional advanced editing mode without cluttering the default theme workflow.
-    - Current status:
-      - Done: the custom theme presets include OLED Black and Deep Blue variants for darker display preferences.
-      - Done: the theme editor moves advanced sliders into the right-side panel and uses a more recognizable editor-style default palette.
-      - Done: theme swatches are tightened into stronger preset tiles so neutral and light colors read clearly at a glance.
-      - Done: palette clicks follow the active theme slot explicitly so users can see which section they are editing.
-      - Done: theme quick colors are visually aligned with the tag-color swatches so both editors feel like one system.
-      - Done: the theme default palette is unified with the tag picker presets instead of keeping a separate base row.
-      - Done: the custom-theme palette block matches the Projects tag-picker layout instead of using a near-duplicate variant.
-      - Done: the theme swatches no longer use a separate selected-state border and now render like the Projects tag swatches.
-      - Done: the theme editor uses the same full quick palette used by the Projects tag editor instead of slot-filtered swatches.
-      - Done: the theme section selector keeps one visible target active for palette clicks.
-      - Done: the theme section chips use an explicit slot-selection path instead of loose toggles.
-      - Done: theme palette clicks use an explicit immediate-apply path so the selected section updates instantly.
-  - Acceptance:
-    - Starter themes include clearly differentiated OLED black and dark blue options.
-    - The default palette is understandable at a glance as the app's core colors and accents.
-    - Advanced sliders are available in the spare right-side space without overwhelming the default theme editing flow.
-    - Quick theme colors cover common editor-style neutrals and accents instead of looking sparse or placeholder-like.
-    - Theme quick colors use familiar hard-coded presets instead of abstract placeholder swatches.
-    - Theme quick colors stay usable for the selected slot category instead of requiring manual guesswork.
-    - The active theme slot is obvious, and swatch clicks visibly apply to that slot instead of feeling ambiguous.
-    - Theme and tag quick palettes share the same swatch language instead of feeling like different controls.
-    - The default theme palette row matches the tag picker presets instead of diverging into a separate neutral set.
-    - The custom-theme palette block matches the Projects tag-picker layout instead of remaining a lookalike clone.
-    - Theme and tag swatches render the same borders instead of keeping subtly different selection chrome.
-    - Theme quick colors use the same full colorful palette as the Projects tag editor instead of a filtered subset.
-    - Theme quick colors always apply to the visibly selected theme section instead of an ambiguous stale target.
-    - Theme section selection is explicit before palette colors are applied.
-    - Theme quick colors update the selected section immediately instead of appearing to do nothing.
-
-- [x] `VS-1723` `P1` Refactor SettingsViewModel into feature partials. _(Done)_
-  - Scope: split Settings viewmodel responsibilities into feature-focused partial files, starting with the custom theme editor, to reduce risk for platform and settings changes.
-  - Current status:
-    - Done: the theme-editor logic now lives in `SettingsViewModel.ThemeEditor.cs`.
-    - Issue `#182` tracks the completed refactor slice.
-  - Acceptance:
-    - Theme-editor logic no longer lives in the monolithic `SettingsViewModel.cs` file.
-    - Existing Settings bindings continue to work without regressions.
-    - The split makes later platform-specific settings work lower-risk and easier to review.
-
-
-- [x] `BUG-17006` `P2` Polish dashboard readability, restore-readiness review flow, and shared shell controls. _(Done)_
-  - Scope:
-    - make restore-readiness risk states easy to inspect from Dashboard and Backups without hunting for the affected projects;
-    - remove corrupted English separator glyphs and tighten summary copy in Dashboard, Backups, Projects, and retention surfaces;
-    - improve collapsed sidebar presence, shared toggle/checkbox styling, Backups summary spacing, and the Projects tag-color editor layout.
-  - Current status:
-    - Done: Dashboard and Backups restore-readiness cards expose an in-place issue list with direct navigation back to Backups for action.
-    - Done: corrupted English glyphs now use ASCII-safe fallbacks so mojibake does not leak into release builds.
-    - Done: the shared shell/sidebar, toggle styling, Backups spacing, and Projects tag-color editor polish landed across the 1.7 UI passes.
-  - Acceptance:
-    - Restore-readiness summaries can be expanded in place to show who is affected and why.
-    - English summaries no longer render broken separator glyphs anywhere in the updated surfaces.
-    - Shared controls and collapsed navigation feel intentional instead of default or placeholder-like.
-
-- [x] `BUG-17008` `P2` Gate noisy dev logging behind verbose mode. _(Done)_
-  - Scope:
-    - reduce backup, restore, destination, and dashboard runtime chatter that was useful during development and performance testing;
-    - keep real failures visible while moving flow/progress tracing behind the explicit verbose logging path.
-  - Current status:
-    - Done: the shared runtime log gate now follows config instead of enabling verbose trace output automatically in debug builds.
-    - Done: developers can still force full trace output with `VAULTSYNC_FORCE_VERBOSE=1` when they need raw flow logs without flipping app settings.
-  - Acceptance:
-    - normal beta and release runs do not emit backup-progress and restore-path chatter by default.
-    - developers can explicitly re-enable the developer-oriented tracing when needed.
-    - enabling verbose logging restores the gated runtime chatter for troubleshooting.
-
-- [x] `BUG-17009` `P1` Batch diagnostics session-log writes behind one background writer. _(Done)_
-  - Scope:
-    - replace per-line `Task.Run` session-log writes in `DiagnosticsLogger` with a queued single-writer flush path;
-    - keep heartbeat and crash logging behavior unchanged while reducing log-path thread-pool churn.
-  - Current status:
-    - Done: session-log writes are now queued and flushed in batches through one background writer loop.
-  - Acceptance:
-    - verbose/debug sessions no longer spawn one background task per log line.
-    - session logs still capture lifecycle, crash, doctor, maintenance, and updater events reliably.
-    - diagnostics logging no longer becomes a performance bottleneck under noisy runs.
-
-- [x] `BUG-17010` `P1` Remove synchronous config reads from Projects group auto-backup command-state checks. _(Done)_
-  - Scope:
-    - stop calling `AppConfigStore.Load()` during Projects page `CanExecute` evaluation for group auto-backup actions;
-    - use refreshed cached preference state instead so group command enablement stays responsive.
-  - Current status:
-    - Done: Projects group auto-backup command-state now uses a cached disabled-project id set refreshed from config on load/refresh and after updates.
-  - Acceptance:
-    - Projects group action enablement stays responsive even when config I/O is contended.
-    - enable/disable group actions still reflect the latest saved preference state.
-    - refresh/update flows keep command-state synchronized without UI-thread file I/O.
-
-- [x] `BUG-17011` `P2` Left-align the Dashboard KPI card strip. _(Done)_
-  - Scope:
-    - keep the top Dashboard KPI cards anchored to the left edge instead of centering them within wide windows.
-  - Current status:
-    - Done: the Dashboard KPI `WrapPanel` now left-aligns its card row, so the cards stay anchored to the content edge instead of floating in the middle.
-  - Acceptance:
-    - Dashboard KPI cards align to the left in wide layouts.
-    - existing wrap behavior is preserved on narrower windows.
-
-- [x] `BUG-17012` `P1` Preserve Projects-managed tag colors when saving custom themes. _(Done)_
-  - Scope:
-    - stop Settings > Appearance from overwriting app-wide tag-color mappings while saving theme changes now that tag-color editing lives in Projects.
-  - Current status:
-    - Done: Settings no longer rewrites `Appearance.TagColors` during theme saves, so custom theme changes preserve the latest tag colors already stored in config.
-  - Acceptance:
-    - Saving a custom theme does not reset or replace existing tag colors.
-    - Projects remains the authoritative editor for app-wide tag colors.
-    - tag chips keep their saved colors after theme changes and app restart.
-
-- [x] `BUG-17013` `P2` Fix destructive Projects button label alignment and danger styling. _(Done)_
-  - Scope:
-    - center the destructive Projects action label correctly and tighten the outlined danger treatment so the button looks intentional instead of off-balance.
-  - Current status:
-    - Done: the Projects destructive action now uses the normal button content presenter path and the shared `action-danger` style centers content with a clearer red outline/fill treatment.
-  - Acceptance:
-    - the Projects destructive button label is centered cleanly.
-    - the danger button reads clearly against dark surfaces without looking washed out.
-    - shared outlined danger buttons keep consistent alignment and hover/pressed behavior.
-
-- [x] `BUG-17014` `P1` Make macOS release-assets patch generation portable without `mapfile`. _(Done)_
-  - Scope:
-    - replace the macOS workflow's Bash-4-only `mapfile` usage with a portable base-version loop that still expands the same `--previous` arguments.
-  - Current status:
-    - Done: the macOS patch step now reads base versions through a portable heredoc loop, so hosted macOS runners can build patch assets without `mapfile`.
-  - Acceptance:
-    - the macOS release-assets workflow no longer fails on `mapfile: command not found`.
-    - multiple exact base versions still expand into repeated `--previous` arguments.
-    - Windows and macOS keep matching manifest behavior.
-
-- [x] `VS-1720` `P1` Checkpointed retry support for interrupted backup transfers. _(Done)_
-  - Scope: allow large backup uploads to resume from the last completed checkpoint instead of restarting the full transfer after a transient failure.
-  - Why it matters:
-    - reduces wasted time and bandwidth on large backups and unstable network destinations.
-    - directly addresses user feedback about retry behavior on partial transfer failures.
-  - What it takes:
-    - define a durable checkpoint model for archive and non-archive transfer modes so partially uploaded data can be resumed safely.
-    - guarantee consistency of partial uploads (`checkpoint metadata`, `finalization marker`, `validation before resume`, `safe discard path`).
-    - integrate checkpoint awareness with retry/backoff logic, destination capability checks, and cleanup of abandoned partial payloads.
-    - surface resumable vs restart-required state in diagnostics so failures remain explainable.
-  - Dependencies:
-    - `VS-1712` destination identity stability so resumed transfers bind to the correct target.
-    - existing retry/backoff and upload-buffer logic in backup runtime.
-  - Acceptance:
-    - interrupted transfers resume from the last committed checkpoint when the destination supports it.
-    - unsafe or stale partial payloads are rejected and restarted cleanly instead of producing corrupted backups.
-    - diagnostics/support bundle clearly report checkpoint creation, resume, discard, and fallback-to-full-retry reasons.
-  - Current status:
-    - Done: archive uploads persist checkpoint metadata and preserve resumable incomplete backup folders per destination.
-    - Done: prefix validation restarts archive uploads cleanly if partial payload bytes no longer match the rebuilt local archive.
-    - Done: Settings diagnostics and support bundles surface the last checkpoint resume/discard/preserve outcome with byte progress and explanatory detail.
-    - Done: non-archive backup paths continue through native rsync/robocopy runners, which already use restartable transfer semantics instead of restarting the whole backup set on the next run.
-
-- [x] `VS-1724` `P1` Single-manifest multi-base patch compatibility. _(Done)_
-  - Scope: allow one patch manifest to declare multiple exact compatible base versions so one patch release can safely serve more than one prior build.
-  - What it takes:
-    - extend patch manifest schema with an explicit base-version allowlist while keeping legacy single-base manifests valid.
-    - enforce the same exact-match allowlist rules in both patch preflight and helper/apply paths.
-    - surface allowed/matched base versions in updater diagnostics and support bundles.
-    - update patch build tooling so release automation can emit one manifest with multiple explicit prior versions.
-  - Safety constraints:
-    - exact allowlist matching only; no version ranges or fuzzy compatibility.
-    - malformed or inconsistent manifests fail closed.
-    - helper/apply validation remains authoritative even if preflight previously succeeded.
-  - Acceptance:
-    - legacy manifests with only `previousVersion` still work unchanged.
-    - multi-base manifests accept only explicitly listed base versions.
-    - helper/apply rejects non-listed current versions before copying files.
-    - diagnostics clearly explain allowed bases, matched base, and mismatch reasons.
-  - Current status:
-    - Done: manifest schema, preflight validation, helper enforcement, diagnostics, and patch builder all support a strict exact-base allowlist while preserving legacy single-base manifests.
-    - Done: release workflow inputs now author multi-base manifests explicitly, and tests cover legacy manifests, exact allowlist matches, malformed allowlist rejection, and non-listed base rejection.
-
-## 1.7.1
-- [x] `VS-1725` `P2` GitHub release download stats snapshots and public report. _(Done)_
-- [x] `BUG-17086` `P1` Fix Projects details binding noise and selected-project tag editing reliability. _(Done)_
-  - Scope: correct the selected-project details-card visibility binding and keep selected-project tag entry fully separate from the bulk-tag toolbar.
-  - Acceptance: Projects no longer logs `HasSelectedProject` binding errors, duplicate tags cannot be saved through the selected-project editor, and adding multiple different tags behaves predictably.
-- [x] `BUG-17087` `P1` Fix Projects bulk-tag chip behavior and refresh diagnostics. _(Done)_
-  - Scope: make the top-of-page bulk tag toolbar treat each selected tag independently and record the real exception when a Projects refresh fails.
-  - Acceptance: multiple pending bulk tags are visible and removable individually, apply/remove acts on each tag separately, and refresh failures write useful diagnostics instead of only showing the generic banner.
-- [x] `BUG-17088` `P1` Restore locale key ordering and full pre-release localization parity. _(Done)_
-  - Scope: reorder non-English locale files to match English without changing translated values and rerun the release key diff.
-  - Acceptance: locale files follow English key order and the key diff returns `0 missing / 0 extra` for every shipped non-English locale.
-- [x] `BUG-17085` `P1` Group repeated backup advisories and stabilize OS notification identity. _(Done)_
-  - Scope: batch repeated project-level restore/root-missing/low-disk alerts into grouped notifications and use stable OS notification grouping keys.
-  - Acceptance: backup-all runs no longer emit one OS alert per project for the same warning reason; grouped notifications stay branded as VaultSync instead of raw `VaultSync.UI` attribution where the platform honors app identity metadata.
-- [x] `VS-1725` `P2` GitHub release download stats snapshots and public report. _(Done)_
-  - Scope: capture release asset download counts on a schedule, keep persistent history off `Dev`/`Stable`, and generate a human-readable public summary from the same JSON snapshots.
-  - Current status:
-    - Done: a scheduled/manual GitHub Actions workflow now snapshots GitHub Releases asset download counts into a dedicated `download-stats` branch.
-    - Done: the generator writes `latest.json`, timestamped `history/*.json`, `README.md`, and `index.html` so the same data is inspectable both as raw JSON and as a public-friendly report.
-    - Done: README now links to the stats branch directly and no longer depends on the stale third-party repo card for the top banner.
-  - Acceptance:
-    - Main branches remain free of daily stats commits.
-    - Snapshot history persists across workflow runs.
-    - Public summary output is easy to inspect without manually querying the GitHub API.
-
-## Microsoft Store readiness track
-- [ ] `VS-1726` `P1` Add Windows distribution-channel awareness for `Direct` vs `Store`.
-  - Scope: introduce explicit channel detection/config/diagnostics so Store builds can disable GitHub self-update and installer handoff while Direct builds keep the current updater flow.
-  - Current status:
-    - In progress: runtime distribution-channel detection now recognizes the reserved Store package family name and keeps Direct installs unchanged.
-    - In progress: support bundles now export distribution channel, detection source, and package identity details.
-  - Acceptance:
-    - the app can distinguish `Direct` and `Store` at runtime
-    - diagnostics/support bundles show channel and update source
-    - Store builds do not invoke GitHub updater or installer-based update flows
-
-- [ ] `VS-1727` `P1` Add Microsoft Store packaging pipeline and artifact separation.
-  - Scope: produce a Store-ready Windows package separately from the GitHub/Inno Setup installer flow, with clear CI/release separation between Direct and Store artifacts.
-  - Current status:
-    - In progress: an initial Store packaging scaffold now exists under `packaging/VaultSync.Store` with the reserved Partner Center identity values and placeholder package assets.
-    - In progress: a manual GitHub Actions workflow now builds Store package artifacts separately from the Direct release-assets flow.
-    - Next: confirm the exact upload artifact shape from workflow output and keep this out of the main solution until packaged-app behavior is validated.
-  - Acceptance:
-    - CI can build the Direct Windows installer and the Store package independently
-    - Store packaging does not reuse Direct-only updater/install assumptions
-    - release docs describe the two Windows artifact paths clearly
-
-- [ ] `VS-1728` `P0` Validate Store-packaged filesystem, restore, and NAS behavior.
-  - Scope: test packaged-app behavior for local folders, removable drives, restore targets, UNC/NAS paths, and helper-tool execution so VaultSync's core backup workflows remain viable in the Store build.
-  - Acceptance:
-    - local backup and restore flows work in the packaged build
-    - removable-drive and UNC/NAS scenarios are explicitly validated
-    - capability or packaging blockers are documented with mitigation decisions
-
-- [ ] `VS-1729` `P1` Add Store-specific update UX, docs, and support messaging.
-  - Scope: replace Direct-channel update prompts/help text with Store-managed update wording, and make channel-specific support guidance visible in app/docs.
-  - Current status:
-    - In progress: Store builds now suppress GitHub update checks and self-update banners at runtime.
-    - In progress: Settings > Advanced now swaps GitHub updater controls for Store-managed update messaging and an `Open Microsoft Store` action in Store builds.
-    - In progress: Help/wiki docs now explain the Store-vs-Direct update split and uninstall/switch-channel expectations.
-  - Acceptance:
-    - Store builds show Store-managed update messaging instead of GitHub updater UI
-    - README/help/wiki/release docs explain Direct vs Store behavior cleanly
-    - support guidance can distinguish Store installs from Direct installs quickly
-
-- [ ] `VS-1730` `P2` Prepare Partner Center submission assets and compliance checklist.
-  - Scope: gather Store listing copy, screenshots, capability rationale, policy/privacy checks, and a submission checklist so release submission can happen without last-minute scrambling.
-  - Current status:
-    - In progress: `docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md` now tracks the Microsoft Learn submission checklist against the current VaultSync Store state.
-    - Next: replace placeholder package assets with final Store assets and fill the Partner Center listing fields/certification notes.
-  - Acceptance:
-    - Store submission assets are prepared and versioned
-    - capability/privacy/licensing notes are ready for submission review
-    - a repeatable submission checklist exists for future Store releases
-
-## 1.7.2 polish track
-- [x] `BUG-17089` `P1` Rework in-app toast notifications for smarter grouping, clearer hierarchy, and bounded stack behavior. _(Done)_
-  - Scope: dedupe repeated global notifications by group key/content, keep toast actions clickable, cap visible toast count, and improve notification-card readability without breaking inline page banners.
-  - Current status:
-    - Done: repeated toast requests now refresh and increment an existing toast instead of spawning duplicates when the payload or explicit group key matches.
-    - Done: closed toasts now remove themselves from the host collection, the visible stack trims to four items, and repeated alerts surface a visible repeat badge.
-    - Done: notification cards now use a stronger severity accent rail, cleaner header hierarchy, and a more explicit dismiss/action layout.
-  - Acceptance:
-    - repeated backup/update/runtime alerts collapse into one toast when appropriate
-    - toast action and dismiss buttons remain clickable
-    - old hidden toasts do not accumulate in the host collection
-- [x] `BUG-17090` `P2` Open the `1.7.2` development line and clean the Settings update diagnostics presentation. _(Done)_
-  - Scope: align app/install/store version markers to `1.7.2`, refresh What's New for the new cycle, and reformat Settings diagnostics so long updater/startup lines remain readable.
-  - Current status:
-    - Done: desktop app, installer, Store package, workflow defaults, and issue-template examples now target `1.7.2`.
-    - Done: What's New and README now distinguish the `1.7.2` development line from the `1.7.1` stable line.
-    - Done: update, startup, and checkpoint diagnostics in Settings now render as multiline summaries instead of one long wrapped line.
-  - Acceptance:
-    - repo version markers are aligned to `1.7.2` for active development
-    - Settings diagnostics remain readable without horizontal soup
-- [x] `BUG-17091` `P1` Make Settings reliably reachable on smaller windows and higher scaling. _(Done)_
-  - Scope: remove the fragile two-column Settings content split so lower sections such as the danger zone remain reachable through normal page scrolling across smaller displays and higher DPI scaling.
-  - Current status:
-    - Done: the Settings content area now stacks its former left/right columns vertically inside the page scroll viewer.
-    - Done: destructive and advanced controls stay in the same scroll flow instead of depending on a wide two-column layout.
-  - Acceptance:
-    - Settings can scroll to the bottom on smaller screens/high scaling
-    - lower advanced and danger-zone controls remain reachable without clipped layouts
-- [x] `BUG-17092` `P1` Bound the Settings diagnostics block so it cannot dominate the page. _(Done)_
-  - Scope: keep long updater/startup/checkpoint diagnostics readable without letting the diagnostics area consume most of the Settings page height.
-  - Current status:
-    - Done: the diagnostics region inside Settings > Advanced now has its own bounded scroll area.
-    - Done: lower controls remain in practical reach even when diagnostics are verbose.
-  - Acceptance:
-    - lower Settings controls remain reachable when diagnostics are long
-    - diagnostics remain readable without taking over the page
-- [x] `BUG-17093` `P1` Harden backup fingerprinting and project preset probes against disappearing paths. _(Done)_
-  - Scope: prevent transient file/path disappearance from causing noisy debugger exceptions or backup failures during fingerprinting and preset recommendation probes.
-  - Current status:
-    - Done: archive resume fingerprinting now skips files that disappear or become inaccessible during stat collection.
-    - Done: project preset probing now exits early when the root path is missing and uses inaccessible-safe recursive enumeration.
-  - Acceptance:
-    - transient file disappearance during backup fingerprinting no longer fails the backup
-    - missing project roots no longer trigger noisy recursive enumeration exceptions during preset detection
-- [x] `BUG-17094` `P2` Show explicit drive-health unavailable status for network backup destinations. _(Done)_
-  - Scope: keep the Backups drive-health row visible for network or mapped destinations and show the returned unavailable status instead of blanking the field.
-  - Current status:
-    - Done: Backups no longer hides the health row when the health service returns `Unknown` for network/mapped paths.
-    - Done: users now see an explicit unavailable message for network-backed destinations.
-  - Acceptance:
-    - network or mapped backup destinations no longer render an empty health line
-    - local healthy/warning/failing health states still display normally
-- [x] `BUG-17095` `P0` Override vulnerable `Tmds.DBus.Protocol` transitive package on Windows builds. _(Done)_
-  - Scope: pin `Tmds.DBus.Protocol` `0.21.3` explicitly until the upstream Avalonia dependency graph ships the patched transitive version itself.
-  - Current status:
-    - Done: `VaultSync.UI.csproj` now adds a top-level `Tmds.DBus.Protocol` `0.21.3` reference, overriding the vulnerable `0.21.2` transitively pulled by `Avalonia.Desktop 11.3.13`.
-  - Acceptance:
-    - dependency graph resolves `Tmds.DBus.Protocol` `0.21.3` or newer for Windows desktop builds
-    - the Dependabot security alert is addressed without regressing Avalonia desktop startup
-- [x] `BUG-17096` `P1` Sync per-project backup preferences through metadata exports. _(Done)_
-  - Scope: carry project-specific auto-backup state through metadata, and export project-setting changes from the Projects page instead of leaving them machine-local.
-  - Current status:
-    - Done: metadata project settings now include `autoBackupEnabled`.
-    - Done: importing metadata applies the local auto-backup disabled list by the imported local project id.
-    - Done: Projects page destination and tag edits now trigger metadata export for the latest backup.
-  - Acceptance:
-    - project-specific backup preferences survive export/import across machines
-    - changing tags or preferred destination from Projects no longer drifts between machines after metadata sync
-- [x] `BUG-17097` `P1` Prevent removed projects from reappearing from metadata sync. _(Done)_
-  - Scope: export project tombstones on local removal and honor those tombstones during import, including cleanup of stale per-project auto-backup config.
-  - Current status:
-    - Done: removing a project now exports a `project` tombstone to metadata-enabled destinations.
-    - Done: importing metadata applies project tombstones before project/snapshot/backup recreation.
-    - Done: stale auto-backup disabled ids and metadata conflicts are cleared when a tombstoned project is removed locally.
-  - Acceptance:
-    - deleted projects no longer return in the Per-project backup view after metadata import
-    - removing a project does not leave stale auto-backup disabled ids behind
-- [x] `BUG-17098` `P2` Stream archive compression progress for large files. _(Done)_
-  - Scope: replace per-file-only compression progress updates with chunk-level progress so the UI does not appear stuck on large archive entries.
-  - Current status:
-    - Done: archive compression now reads and writes in chunks while updating progress continuously.
-  - Acceptance:
-    - compression progress continues moving on large files instead of freezing until the file completes
-- [x] `BUG-17099` `P1` Let checkpointed retry resume parallel archive uploads. _(Done)_
-  - Scope: stop treating parallel archive upload and checkpointed retry as mutually exclusive by tracking validated completed upload chunks in checkpoint metadata.
-  - Current status:
-    - Done: parallel archive uploads now persist chunk-level checkpoint state with completed chunk indexes.
-    - Done: retries validate completed chunks against the rebuilt local archive and only re-upload missing chunks when the checkpoint matches.
-    - Done: the old forced downgrade from parallel upload to single-stream upload was removed when checkpoint resume is enabled.
-  - Acceptance:
-    - enabling checkpointed retry no longer silently disables parallel archive uploads
-    - interrupted parallel uploads can resume safely without re-sending already validated chunks
-- [x] `BUG-17104` `P1` Keep Settings `Projects root` synchronized after config reloads in the cached Settings view. _(Done in PR #222, issue #227; completed 2026-04-18)_
-  - Scope: ensure `LoadFromConfig()` refreshes visible Settings fields reliably, avoids reload-time autosave churn, and keeps the persisted `ProjectsRoot` value visible after navigation or startup reloads.
-  - Current status:
-    - Done: implemented on PR `#222`.
-    - Issue `#227` tracks the regression report and expected behavior.
-  - Acceptance:
-    - Settings no longer shows `Projects root` as blank when the config file still contains a valid value
-    - reload-time field refreshes do not trigger spurious saves
-- [x] `BUG-17105` `P1` Repair blank project roots during startup when the project folder still exists under `ProjectsRoot`. _(Done in PR #222, issue #228; completed 2026-04-18)_
-  - Scope: reconcile blank `RootPath` values after startup initialization, repair from `ProjectsRoot\\ProjectName` when present, and prefer project-id-based updates where available.
-  - Current status:
-    - Done: implemented on PR `#222`.
-    - Issue `#228` tracks the startup repair gap.
-  - Acceptance:
-    - projects with recoverable blank roots are repaired during startup without waiting for backup/restore flows
-    - project root repairs prefer stable project identity over name-only matching
-- [x] `BUG-17106` `P2` Add explicit auto-scroll and selected-line copy controls to the in-app log console. _(Done)_
-  - Scope: expose an explicit tail-follow toggle, stop manual scroll from fighting live capture, and allow copying the selected log line via button and standard shortcut.
-  - Current status:
-    - Done: implemented and shipped in the `1.7.x` release line.
-    - Issue `#229` tracks the user-facing log console controls.
-  - Acceptance:
-    - the log console exposes an explicit auto-scroll toggle
-    - users can copy the selected log line from the UI and with the platform shortcut
-- [x] `BUG-17107` `P1` Preserve `Read-only` destination status for Linux paths that fail real write access. _(Done in PR #236, issue #230; completed 2026-04-21)_
-  - Scope: replace the Linux-unreliable read-only heuristic in background destination probes with a real writability check, and preserve read-only warning state instead of collapsing it back to green reachable success on status refresh.
-  - Current status:
-    - Done: implemented on PR `#236`.
-    - Issue `#230` tracked the `chmod 555` read-only refresh regression.
-  - Acceptance:
-    - Linux read-only destinations stay visibly `Read-only` during background and navigation refreshes
-    - status refresh paths preserve warning/read-only state instead of repainting it as success
-- [x] `BUG-17108` `P1` Make the in-app log console reliably surface runtime errors and exception paths. _(Done)_
-  - Scope: ensure exceptions and error-level diagnostics that currently only appear in terminal/stdout or external console paths are also routed into the in-app log console consistently across Linux and other desktop targets.
-  - Current status:
-    - Done: implemented on PR `#255`.
-    - Issue `#231` tracks the original runtime-error visibility report.
-  - Acceptance:
-    - reproducible runtime errors appear in the in-app log console without requiring an external terminal
-    - log console coverage is consistent for handled and surfaced error paths on supported desktop targets
-- [x] `BUG-17109` `P1` Fix destination status localization staying stale after navigation with cached views. _(Done in PR #222, issue #223; completed 2026-04-18)_
-  - Scope: keep destination status state in invariant internal keys, localize only at display time, and force destination-status refreshes when localization changes so cached navigation does not resurrect stale-language labels.
-  - Current status:
-    - Done: implemented on PR `#222`.
-    - Issue `#223` tracked the cached-view localization regression.
-  - Acceptance:
-    - destination status cards always render in the active UI language after navigation and menu reopen flows
-    - cached view reuse does not keep stale localized destination labels alive
-- [x] `VS-1732` `P1` Add Linux release assets and architecture-aware patch packaging to the release workflow. _(Done in PR #233, issue #232; completed 2026-04-18)_
-  - Scope: build Linux `tar.gz` assets for `x64` and `arm64`, produce a desktop-friendly `linux-x64` AppImage, generate Linux patch assets, and make updater asset selection architecture-aware.
-  - Current status:
-    - Done: implemented on PR `#233`.
-    - Issue `#232` tracks the release-asset work item.
-  - Acceptance:
-    - release-assets workflow uploads Linux install artifacts and Linux patch assets
-    - Linux update discovery prefers architecture-specific installers and patch assets before generic Linux fallback
-
-### 1.7.4 patch backlog
-- [x] `BUG-17115` `P2` Make Linux tray actions selectable through a compact native menu. _(Done)_
-  - Scope: simplify the fragile nested native tray menu on Linux/Windows so right-click actions reliably open the richer tray panel.
-  - Current status:
-    - Done: implemented on PR `#256`.
-    - Issue `#250` tracks the Linux tray-menu selection regression.
-  - Acceptance:
-    - Linux desktop environments can select tray actions from the native menu.
-    - deeper backup actions remain available from the richer tray panel.
-- [x] `BUG-17116` `P1` Harden notification auto-dismiss cleanup after dismiss. _(Done in PR #258, issue #257; completed 2026-05-12)_
-  - Scope: avoid disposed-token races when notifications are dismissed while auto-dismiss cleanup is still pending.
-  - Current status:
-    - Done: implemented on PR `#258`.
-    - Issue `#257` tracks the notification cleanup crash.
-  - Acceptance:
-    - dismissing toast-heavy notification flows no longer produces disposed-token crash reports.
-- [x] `BUG-17117` `P2` Keep tray panel action labels fitting in localized layouts. _(Done)_
-  - Scope: wrap long tray-panel button labels inside the fixed popover width.
-  - Current status:
-    - Done: implemented on PR `#252`.
-    - Issue `#249` tracks the original text-fit report.
-  - Acceptance:
-    - long localized tray panel action labels wrap instead of clipping or overflowing.
-- [x] `BUG-17118` `P2` Improve log console row formatting. _(Done)_
-  - Scope: format live diagnostics into readable time/source/message rows while keeping raw lines available for copy/export.
-  - Current status:
-    - Done: implemented alongside the log-console diagnostics work in PR `#255`.
-  - Acceptance:
-    - log console entries are easier to scan without losing raw diagnostic text.
-- [x] `BUG-17119` `P1` Preserve Linux metadata imports when source backup paths are rooted. _(Done in PR #263, issue #259; completed 2026-05-12)_
-  - Scope: remap rooted metadata backup paths from another machine to matching backup suffixes under the configured destination before marking imported history missing.
-  - Current status:
-    - Done: implemented on PR `#263`.
-    - Issue `#259` tracks the Linux import-history regression.
-  - Acceptance:
-    - Linux installs import backup history when the configured destination contains the backup folder even if metadata stores a rooted source-machine path.
-    - missing backup detection still tombstones genuinely absent backup paths.
-- [x] `BUG-17120` `P1` Isolate test config writes from real app settings. _(Done in PR #263, issue #260; completed 2026-05-12)_
-  - Scope: keep core tests that use `AppConfigStore` from writing temporary project roots into a developer's `~/.vaultsync/appsettings.json`.
-  - Current status:
-    - Done: implemented on PR `#263`.
-    - Issue `#260` tracks the test-config leakage.
-  - Acceptance:
-    - test runs use a temporary config directory unless `VAULTSYNC_CONFIG_DIR` is explicitly provided.
-    - running metadata/config tests no longer changes the visible Projects root in a developer app install.
-- [x] `BUG-17121` `P2` Separate imported origin from manual/auto trigger counts. _(Done in PR #263, issue #261; completed 2026-05-12)_
-  - Scope: adjust Backups summaries and activity charts so imported restore points are not misleadingly double-counted as both imported and manual/auto totals.
-  - Current status:
-    - Done: implemented on PR `#263`.
-    - Issue `#261` tracks the follow-up from the import/history audit.
-  - Acceptance:
-    - Backups totals make origin (`Local`/`Imported`) distinct from trigger (`Manual`/`Auto`).
-    - summary counts are internally consistent for mixed local/imported history.
-- [x] `VS-1731` `P1` Versioned backup history with imported timestamps and file-change identity. _(Done in PR #263, issue #262; completed 2026-05-12)_
-  - Scope: add explicit version/history identity fields so backup history can lead with restore-point version and file-change deltas instead of relying primarily on source timestamps.
-  - Current status:
-    - Done: implemented on PR `#263`.
-    - Issue `#262` tracks the design and implementation plan.
-  - Acceptance:
-    - history can show per-project restore-point versions alongside added/modified/deleted/net-size changes.
-    - imported history distinguishes source-created time from local imported/discovered time.
-    - future metadata sync can reconcile equal content across machines via a stable content fingerprint.
-
-- [x] `BUG-18003` `P0` Prevent recursive backup growth from nested backup destinations. _(Done in PR #278, issue #281; completed 2026-05-12)_
-  - Scope: block source/destination overlap, move offline staging outside project trees, force reserved VaultSync backup artifact exclusions, and prune reserved backup folders before scanner descent.
-  - Acceptance:
-    - backup roots inside project roots, project roots inside backup roots, and same-path roots are blocked
-    - offline staging is outside the project tree
-    - reserved VaultSync backup folders/files are excluded without requiring user ignore rules
-- [x] `BUG-18004` `P1` Keep backup delete operation cards visible and informative. _(Done in PR #278, issue #279; completed 2026-05-12)_
-  - Scope: keep the active-operation panel visible while operations remain, avoid delayed progress-card resurrection, and show delete target/progress details.
-  - Acceptance:
-    - overlapping backup deletes do not hide the active card area early
-    - delete cards show destination, target, current file, file counts, and removed bytes
-    - delete progress becomes determinate once file counts are known
-- [x] `BUG-18005` `P0` Keep metadata refresh/import work off the UI thread and ignore temp root hints. _(Done in PR #278, issue #280; completed 2026-05-12)_
-  - Scope: run manual metadata refresh/import work off the UI thread and reject VaultSync transient temp paths as imported project roots.
-  - Acceptance:
-    - accepting Refresh History changes does not freeze the app shell
-    - imported root hints under VaultSync temp folders fall back to the configured Projects Root
-    - temp root mapping behavior has regression coverage
-
-## 1.8.x
-### Release intent
-- `1.8` should introduce Project History and Recovery Intelligence without turning VaultSync into a Git replacement.
-- Full planning source: `docs/VaultSync 1.8 Timeline.md`.
-- Project board: GitHub Project 7 (`@VaultSync Roadmap`), release field `1.8.x`.
-- `1.8.0` stable scope is tracked by the dedicated GitHub milestone `1.8.0`; later train work remains under `1.8.x`.
-- `1.8.1` Recovery Intelligence scope is tracked by the dedicated GitHub milestone `1.8.1`.
-- `1.8.2` Snapshot Explorer scope is tracked by the dedicated GitHub milestone `1.8.2`.
-- `1.8.3` Compare & Change Intelligence, security, maintenance, and diagnostics hardening shipped through release PR #410.
-- `1.8.4` Disaster Recovery, native recovery proofs, reviewed crash reports, and the theme refresh are tracked by milestone `1.8.4` and release PR #440.
-
-### 1.8.4 status (2026-07-24)
-- Feature scope is complete in PR #440: non-destructive recovery drills, native byte-level proofs, restore-plan simulation, 3-2-1 guidance, protected-point recommendations, reviewed crash reports, and a rebuilt Appearance studio with curated glass themes.
-- App-wide hardening closes destination-identity, path-containment, linked-content, case-sensitivity, archive-upload, repeated-crash-review, Recovery cancellation, and cross-theme readability gaps.
-- The release baseline is 391 passing tests and a warning-free Release build, backed by Windows, Linux, macOS, PR-quality, release-metadata, Store-metadata, CodeQL, and Sonar validation.
-- macOS interaction validation is complete; Windows and Linux release confidence is provided by the repository's mandatory platform builds and tests until those desktops are available for manual smoke testing.
-
-### 1.8.3 status (released 2026-07-16)
-- Compare & Change Intelligence shipped under `VS-1809`, covering snapshot comparison, change exploration, text diffs, and large-change signals.
-- The maintenance scope covers release-script output confinement, Snapshot Explorer and snapshot-pipeline decomposition, CLI/UI complexity reduction, and analyzer cleanup.
-- Diagnostics retention now runs at startup and every six hours on every platform, with at most two hang dumps and a 1 GiB total diagnostics budget.
-- The original 18 `Dev` commits are preserved in release-branch ancestry through merge commit `76d2b3e`; no shared history was rewritten.
-- The final UI pass clarifies earlier/later comparison, compresses the changed-file review workspace, makes Dashboard cards responsive at narrow widths, and hardens frameless-window, selection, and storage-picker interactions under Avalonia 12.
-
-### 1.8.1 status (2026-06-23)
-- Release theme: complete the Recovery Intelligence slice planned in `docs/VaultSync 1.8 Timeline.md`.
-- Readiness, coverage, recommendations, and the Recovery project matrix shipped early in 1.8.0.
-- Recovery report export and focused project-triage refinement are implemented; product scope is complete.
-- Maintenance scope includes Linux updater repair and encryption/credential hardening carried forward from the 1.8.0 audit.
-- Automated validation is green: 254 core tests, warning-free Release build, clean dependency vulnerability audit, Windows/Linux CI, CodeQL, SonarQube, and PR quality gates.
-- The milestone-scoped pre-publish gate now identifies only two manual Linux desktop validations before release.
-
-### 1.8.0 status (released 2026-06-20)
-- Feature scope is complete for Project History, snapshot metadata/markers, Dashboard recovery awareness, and Recovery v1.
-- Release build, tests, locale-key parity, dependency vulnerability audit, and the live pre-publish gate pass.
-- GitHub Project 7 reports all `1.8.0` milestone issues Done, and release assets were published on 2026-06-20.
-
-### 1.8 execution tickets
-- [ ] `VS-1801` `P2` Explore full repository backup mode including `.git`. _(Deferred beyond 1.8.0; tracked by #296)_
-- [x] `VS-1802` `P0` Build 1.8 metadata foundation for history and recovery. _(Done in commit `1dcec31`, tracked by #354)_
-  - Done: snapshot history metadata and restore event tables are in place with idempotent schema coverage and repository tests.
-- [x] `VS-1803` `P1` Add 1.8 shell navigation for History and Recovery. _(Done in commit `72b77b2`, tracked by #355)_
-- [x] `VS-1804` `P1` Implement History v1 project timeline. _(Done in commit `d608986`, tracked by #356)_
-  - Done: History renders a full-window, selectable Git-client-style activity graph with persistent lanes for backups, snapshot metadata, imports, and restores.
-- [x] `VS-1805` `P1` Add version tags, snapshot notes, protected snapshots, and known good versions. _(Done in `release/v1.8`, tracked by #357)_
-  - Done: History edits labels, notes, tags, protected markers, and known-good markers.
-  - Done: History and Backups share snapshot protection state, and retention honors the shared marker.
-- [x] `VS-1806` `P1` Refresh Dashboard with recovery readiness and attention widgets. _(Done in `release/v1.8`, tracked by #358)_
-  - Done: Dashboard shows restore-readiness counts, headline/detail, and a review drawer for projects needing attention.
-  - Done: Recovery readiness scoring uses protected and known-good snapshot markers when metadata is available.
-  - Done: Dashboard recent activity includes restore milestones, and workflow links route directly to History, Recovery, and Backups.
-- [x] `VS-1807` `P1` Implement Recovery v1 readiness and coverage. _(Done in PR #365, tracked by #359)_
-  - Done: Recovery page shows readiness score/band, coverage windows, project priority ordering, and actionable recommendations.
-- [x] `VS-1808` `P2` Build Snapshot Explorer v1. _(Done for 1.8.2; tracked by #360)_
-  - Done: added core folder/archive browsing, search, safe text preview, and selected file/folder restore helpers.
-  - Done: added a Backups-page Explore action and Snapshot Explorer window for backup cards.
-  - Done: Snapshot Explorer browsing, preview, and selected restore work runs asynchronously, all user-facing strings are localized, and encrypted backups show an explicit v1 out-of-scope message that routes users to normal restore.
-- [x] `VS-1809` `P2` Add Git-style snapshot compare and change intelligence. _(Released in 1.8.3; tracked by #361)_
-  - Scope: compare two backups/snapshots and show a changed-file tree with added, modified, deleted, and unchanged states.
-  - Scope: integrate with Snapshot Explorer so users can browse changed files and inspect readable text/code changes without leaving the explorer context.
-  - Scope: add line-by-line text/code diffs for previewable files; binary/encrypted/unavailable files should show clear metadata-only or unsupported states.
-  - Acceptance: users can select older/newer restore points and understand what changed before restoring.
-  - Acceptance: large snapshots stay responsive through async loading, search/filtering, and capped preview work.
-  - Acceptance: existing summary diff cards and A/B restore-point compare remain intact, but the new view provides file-level detail.
-  - Done: arbitrary same-project snapshots now compare their stored file inventories asynchronously with added, modified, deleted, and unchanged classification.
-  - Done: the compare result includes changed-path hotspots plus mass-deletion, significant-growth, and high-churn signals.
-  - Done: Backups renders a searchable changed-file workspace with real size deltas instead of showing only the newer snapshot's aggregate summary.
-  - Done: selecting a readable file produces a bounded Git-style unified diff from reachable folder or ZIP snapshots; encrypted, binary, offline, and unsupported content falls back to an explicit metadata-only state.
-  - Done: changed-file search and added/modified/deleted filters keep large comparisons navigable.
-  - Done: comparison QoL suggests a nearby same-project restore point, explains invalid selections, supports cancellation, reports filtered/capped counts, and distinguishes no-change from no-match states.
-  - Done: focused view-model coverage verifies selection guidance and a 10,000-file inventory regression test verifies large comparisons retain all changes.
-  - Done: changed-file selection now cancels superseded unified-diff computation instead of only suppressing stale presentation.
-  - Done: the changed-file workspace supports previous/next navigation and one-click search/filter clearing for faster keyboard-friendly review.
-  - Done: compare presentation now uses compact app-native summary cards, distinguishes unavailable inventory from verified no-change results, and hides the large file workspace when there are no changed files to inspect.
-  - Done: the final UX pass adds labeled earlier/later selectors, plain-language result copy, compact affected-path chips, a two-pane files-to-diff workspace, vector controls, and keyboard-friendly default/cancel behavior.
-- [x] `VS-1810` `P2` Add disaster recovery drills and 3-2-1 advisor. _(Implemented for 1.8.4; tracked by #362)_
-  - Done: non-destructive drills validate metadata linkage, availability, readable inventories, encrypted descriptors, and complete file counts without restoring data.
-  - Done: drill results persist locally and Recovery/exported reports surface actionable failed or limited checks.
-  - Done: the 3-2-1 advisor measures currently reachable copies and media diversity while requiring explicit user confirmation for physical offsite status.
-  - Done: Recovery recommends unprotected release/delivery markers, large deletions, significant churn, and a baseline before cleanup; protection remains an explicit user action shared with History, Backups, and retention.
-  - Done: all new UI and report labels are available across every maintained localization.
-- [x] `VS-1847` `P1` Add privacy-first reviewed crash reports. _(Done in PR #440; target 1.8.4)_
-  - Done: reports are generated and redacted locally from a strict allowlist, shown read-only, and attached to a visible platform-native email draft that only the user can send.
-  - Done: category-prefixed per-report IDs are not installation or tracking identifiers; report assistance can be disabled completely and local retention is bounded.
-- [x] `VS-1848` `P1` Port ProofRestore recoverability into VaultSync. _(Done in PR #440; tracked by #447; target 1.8.4)_
-  - Scope: port the contest prototype's useful recovery-proof logic into native VaultSync services and UI without merging repositories or shipping ProofRestore as a separate product.
-  - Acceptance: reuse VaultSync backup identities, local metadata, privacy rules, and Recovery workflows; do not add a hosted dependency.
-  - Done: a versioned native C# engine selects safe snapshot-relative paths, verifies bounded folder and ZIP bytes against expected SHA-256 and size metadata, and emits stable evidence without writing data.
-  - Done: safe-copy and original-location restore plans identify create, overwrite, identical, conflict, unavailable, and inconclusive actions; linked, traversal, duplicate, malformed, encrypted, offline, and capped inputs fail closed.
-  - Done: Recovery stores bounded evidence, exposes expandable proof details, exports a deterministic Markdown evidence appendix, and retention preserves the last byte-verified recovery point.
-  - Done: the port is fully local and offline with no ProofRestore runtime, Node, browser, hosted service, OpenAI, or new external dependency.
-- [x] `BUG-18070` `P1` Bind absolute backup records to their recorded destination identity. _(Done in PR #440; tracked by #453; target 1.8.4)_
-- [x] `BUG-18071` `P1` Keep verification reads inside the selected recovery root. _(Done in PR #440; tracked by #454; target 1.8.4)_
-- [x] `BUG-18072` `P1` Preserve case-distinct identities during snapshot creation. _(Done in PR #440; tracked by #455; target 1.8.4)_
-- [x] `BUG-18073` `P1` Keep snapshot-driven backup reads and writes inside their trusted roots. _(Done in PR #440; tracked by #456; target 1.8.4)_
-- [x] `BUG-18074` `P1` Preserve case-distinct identities in restore previews and selective restores. _(Done in PR #440; tracked by #457; target 1.8.4)_
-- [x] `BUG-18066` `P1` Block linked and ambiguous backup content in Snapshot Explorer. _(Done in PR #440; tracked by #448; target 1.8.4)_
-- [x] `BUG-18067` `P1` Count only reachable recovery copies in 3-2-1 guidance. _(Done in PR #440; tracked by #451; target 1.8.4)_
-- [x] `BUG-18068` `P1` Harden archive upload cancellation and stall handling. _(Done in PR #440; tracked by #449; target 1.8.4)_
-- [x] `BUG-18069` `P1` Keep recoverable crash reporting active after the first UI exception. _(Done in PR #440; tracked by #450; target 1.8.4)_
-- [x] `VS-1849` `P2` Refresh safe 1.8.4 servicing dependencies. _(Done in PR #440; tracked by #452; target 1.8.4)_
-- [x] `VS-1850` `P2` Refresh themes and simplify the Appearance editor. _(Done in PR #440; tracked by #458; target 1.8.4)_
-  - Done: four curated presets add warm editorial, neon, and dark/light glass directions while retaining the custom palette editor.
-  - Done: glass themes render layered gradients, translucent surfaces, soft borders, and restrained highlight reflections without image assets or platform-specific blur dependencies.
-  - Done: the theme studio collapses into a compact summary, presets use visual miniatures, and advanced component controls stay closed until requested.
-- [x] `BUG-18075` `P1` Keep every application view readable and aligned across supported themes. _(Done in PR #440; tracked by #459; target 1.8.4)_
-  - Done: custom palettes enforce accessible text contrast across window, surface, and alternate-surface colors.
-  - Done: arbitrary accent, status, and avatar backgrounds select a readable light or dark foreground automatically.
-  - Done: Appearance, History, Recovery, navigation, Snapshot Explorer, and remaining dark-only surfaces adapt without overlap or narrow-window clipping.
-- [x] `BUG-18076` `P1` Cancel Recovery work when the view closes. _(Done in PR #440; tracked by #460; target 1.8.4)_
-  - Done: refresh, export, drill, persistence, protection, and follow-up refresh work share the active Recovery page lifetime token.
-  - Done: leaving Recovery cancels page-scoped work without presenting cancellation as a user-facing export failure.
-- [x] `BUG-18077` `P1` Declare cancellation ownership for detached backup work. _(Done in PR #440; tracked by #461; target 1.8.4)_
-  - Done: user-confirmed backup deletion, exploration, sandbox apply, and restore tasks explicitly remain independent of update-check cancellation.
-  - Done: release analysis no longer associates backup or restore work with the unrelated updater lifetime.
-- [ ] `VS-1811` `P2` Add project groups and group health. _(Deferred to a later 1.8.x release; tracked by #363)_
-- [x] `VS-1812` `P2` Tighten 1.8 roadmap and localization foundations. _(Done in commits `494ff7a` and `09e962d`, tracked by #364)_
-- [x] `VS-1814` `P2` Add SonarQube Cloud analysis workflow. _(Done, tracked by #372; completed 2026-06-08)_
-  - Done: guarded SonarQube Cloud analysis, setup docs, and 1.8 changelog coverage are in place for active release branches.
-- [x] `VS-1815` `P1` Tune SonarQube scope for vendored tooling. _(Done, tracked by #373; completed 2026-06-08)_
-  - Done: rsync vendored documentation, binary assets, build outputs, and backup artifacts are excluded from maintained-code analysis scope.
-- [x] `VS-1816` `P0` Harden release asset workflow inputs. _(Done, tracked by #374; completed 2026-06-08)_
-  - Done: manual release inputs are passed through environment variables before shell use and PR YAML lint blocks npm lifecycle scripts.
-- [x] `VS-1817` `P1` Review backup archive IV Sonar finding. _(Done, tracked by #375; completed 2026-06-08)_
-  - Done: per-archive random salt/IV generation remains intact and is now analyzer-visible before encryption.
-- [x] `BUG-18052` `P1` Dispose cancellation resources flagged by Sonar. _(Done, tracked by #376; completed 2026-06-08)_
-  - Done: linked backup CTS, diagnostics writer CTS, and onboarding scroll CTS resources are disposed on replacement or shutdown.
-- [x] `VS-1818` `P2` Triage Stable Sonar maintainability backlog. _(Done in `release/v1.8`, tracked by #377)_
-  - Done: first-pass reliability and unreachable-code cleanup landed, release/v1.8 quality triggers are active, and remaining complexity hotspots are follow-up maintenance work rather than 1.8.0 feature blockers.
-- [x] `BUG-18053` `P1` Keep restore target paths under intended roots. _(Done in `release/v1.8`)_
-  - Done: generated restore project folders sanitize project names, and restore preview/copy paths use the existing root-bound combine guard.
-- [x] `BUG-18047` `P1` Let Linux patch updates elevate through `pkexec` before falling back to `.deb` installer flows. _(Done in `release/v1.8`, tracked by #368)_
-- [x] `BUG-18048` `P1` Harden Projects page loading so visible project content appears reliably. _(Done in `release/v1.8`, tracked by #366)_
-  - Done: Projects refresh runs on the UI thread, page attach triggers loading, and stale visible lists rebuild from the backing project cache.
-- [x] `BUG-18049` `P1` Preserve macOS `/Volumes` destination semantics when mounted paths deny access. _(Done in `release/v1.8`, tracked by #367)_
-- [x] `BUG-18050` `P1` Keep Projects and Backups navigation responsive while data loads. _(Done in `release/v1.8`)_
-  - Done: Projects and Backups switch views before hydration work starts, and Backups history filtering/grouping is coalesced and shaped off the UI thread.
-- [x] `VS-1813` `P1` Clarify Backups versus History responsibilities and add History view customization. _(Done in `release/v1.8`)_
-  - Done: Backups now presents its lower section as snapshot inventory for restore-point operations, while History owns project/activity/lane/time filtering for timeline exploration.
-- [x] `BUG-18051` `P1` Keep project selection and History paging responsive. _(Done in `release/v1.8`)_
-  - Done: Projects no longer reload preset files or persist refreshed DB state during selection, selected-project snapshot detail is capped to recent entries, and History filters/pages are shaped off the UI thread.
-- [x] `BUG-18055` `P0` Replace vulnerable SQLite native bundle before 1.8.0. _(Done 2026-06-18, tracked by #378)_
-  - Done: SQLitePCLRaw 3.0.3 resolves a maintained native SQLite graph and the full vulnerability audit is clean.
-- [x] `VS-1820` `P1` Complete 1.8.0 release-readiness hardening. _(Done 2026-06-18, tracked by #379)_
-  - Done: Dashboard recovery coverage, locale key parity, release docs, release-gate milestone scoping, and regression tests are complete.
-- [x] `BUG-18056` `P1` Fix Linux `.deb` patch and reinstall updater flows. _(Done 2026-06-25; tracked by #394; released in 1.8.1)_
-  - Done locally: elevated Linux patch application runs headlessly after `pkexec` authentication.
-  - Done locally: `.deb` fallback uses `apt-get install --reinstall` and helper failures return a non-zero exit code.
-  - Done: Windows/Linux CI, updater-focused coverage, CodeQL, SonarQube, and dependency checks pass on `Dev`.
-  - Released: the guarded patch and full-package updater work shipped in 1.8.1; further distro validation remains ongoing release QA rather than open implementation scope.
-- [x] `BUG-18057` `P1` Prevent multiple VaultSync UI instances on Linux. _(Done 2026-06-22, tracked by #397; target 1.8.1)_
-  - Done: Linux startup holds a per-user OS file lock for the UI process lifetime and repeated launches signal the existing instance.
-  - Done: regression coverage verifies that concurrent acquisition is rejected and the lock becomes available after shutdown.
-- [x] `BUG-18058` `P1` Prevent intermittent duplicate VaultSync UI sessions on macOS. _(Done locally; target 1.8.2)_
-  - Done: macOS startup now uses an exclusive per-user lock file instead of the named mutex path.
-  - Done: single-instance regression coverage now exercises the macOS file-lock path on macOS.
-- [x] `VS-1824` `P1` Add basic Recovery report export. _(Done locally; tracked by #395; target 1.8.1)_
-  - Scope: export the current readiness score, coverage windows, recommendations, and per-project recovery matrix.
-  - Acceptance: reports are readable outside VaultSync, localized where practical, and do not expose secrets or credentials.
-  - Done: Recovery exports the same readiness snapshot shown in the UI as a portable Markdown report.
-  - Done: reports include generation time, overview, coverage windows, recommendation, and the ordered project matrix.
-  - Done: exports use localized headings, unique filenames, empty-state output, Markdown escaping, and focused regression tests.
-- [x] `VS-1826` `P1` Refine Recovery project triage. _(Done locally; tracked by #398; target 1.8.1)_
-  - Scope: add project search, ready/needs-attention filters, visible-result counts, and distinct no-match guidance.
-  - Done locally: matrix filtering preserves weakest-first ordering and report export continues to include the complete assessment.
-  - Acceptance: search covers names, statuses, and reasons; empty repositories remain distinct from filtered no-match results.
-- [x] `VS-1827` `P1` Scope release readiness checks by milestone. _(Done locally; tracked by #399; target 1.8.1)_
-  - Scope: make the documented `TargetMilestone` gate input filter Project completion independently from the broader `1.8.x` release train.
-  - Acceptance: deferred later-train work does not block 1.8.1, while incomplete 1.8.1 milestone items remain visible.
-  - Done: the live 1.8.1 pre-publish gate finds only milestone items and reports Linux updater and credential validation as the remaining blockers.
-- [x] `VS-1825` `P0` Harden encrypted backup staging and platform credential integration. _(Done 2026-06-25; tracked by #396; released in 1.8.1)_
-  - Scope: encrypt archive artifacts before destination upload, isolate Linux Secret Service entries by `keyRef`, validate embedded crypto parameters, and reduce plaintext staging exposure.
-  - Done locally: encrypted backups upload `data.vse` directly and never place `data.zip` on the destination.
-  - Done locally: Linux store, lookup, cleanup, and deletion use both account and `key-ref` attributes.
-  - Done locally: envelope versions, algorithms, KDF identifiers, iteration bounds, salt/IV lengths, and HMAC identifiers are validated before key derivation.
-  - Done locally: encryption output uses temporary atomic artifacts with cancellation cleanup, plus tamper, crash-cleanup, and platform credential contract tests.
-  - Done locally: public encryption documentation explains the format, credential storage, threat model, temporary plaintext boundary, and password-loss implications.
-  - Done: full Windows/Linux CI, CodeQL, SonarQube, quality gates, and dependency vulnerability audit pass on `Dev`.
-  - Released: encrypted staging and credential isolation shipped in 1.8.1; real-desktop Secret Service checks remain part of platform release QA.
-- [ ] `VS-1821` `P2` Split backup and metadata service complexity hotspots. _(Tracked by #380)_
-  - Done: Sonar-flagged script path writes now route through workspace/child-path guards, download stats child-path validation handles macOS-resolved roots, encrypted archive IV handling has an analyzer-visible justification, and duplicated service literals were reduced across telemetry, drive health, support bundles, patch staging, SQLite schema checks, metadata sync, rsync lookup, and backup progress stages.
-  - Remaining: split the large backup/metadata service methods that still drive cognitive-complexity findings.
-- [ ] `VS-1822` `P2` Split oversized desktop view-model hotspots. _(Tracked by #381)_
-  - Done: backup, Settings, shell, and onboarding UI/view-model duplicate literals were reduced for telemetry fields, filter labels, restore/delete dialogs, action styles, status labels, theme/default values, navigation targets, and repeated presentation constants.
-  - Remaining: split oversized desktop view-model flows that still drive cognitive-complexity findings.
-- [ ] `VS-1823` `P1` Add large-history performance budgets and release benchmarks. _(Tracked by #382)_
-- [x] `VS-1829` `P1` Rebuild first-run onboarding around the first successful backup. _(Done locally; target 1.8.2)_
-  - Done: onboarding now uses a six-step setup path instead of a broad feature tour, stops auto-jumping between pages, and focuses first-time users on project root, backup destination, first project, first backup, and where restore points live.
-  - Done: the overlay was rebuilt as an interactive progress card with actionable next-step copy, completed-state feedback, Back/Skip/Continue controls, and a non-blocking highlight mask for the target control.
-- [x] `VS-1830` `P2` Warn on reused changelog IDs during release readiness. _(Done locally; tracked by #408; target 1.8.2)_
-  - Done: the release gate now reports repeated changelog work-item IDs as a warning with line-level details so maintainers can confirm each reused ID stays within one coherent scope.
-- [x] `VS-1831` `P2` Harden release-script output paths. _(Done; tracked by #411; target 1.8.3)_
-- [x] `VS-1832` `P2` Split Snapshot Explorer complexity hotspots. _(Done; tracked by #412; target 1.8.3)_
-- [x] `VS-1833` `P2` Split snapshot creation flow. _(Done; tracked by #413; target 1.8.3)_
-- [x] `VS-1834` `P2` Split CLI command complexity hotspots. _(Done; tracked by #414; target 1.8.3)_
-- [x] `VS-1835` `P2` Split Projects and Settings UI complexity hotspots. _(Done; tracked by #415; target 1.8.3)_
-- [x] `VS-1836` `P2` Complete Sonar analyzer cleanup. _(Done; tracked by #416; target 1.8.3)_
-- [x] `BUG-18059` `P1` Bound periodic diagnostics retention. _(Done; tracked by #417; target 1.8.3)_
-  - Done: cleanup runs at startup and every six hours on Windows, macOS, and Linux.
-  - Done: VaultSync keeps at most two hang dumps within a 1 GiB total diagnostics budget and removes timed-out partial dumps.
-- [x] `BUG-18060` `P0` Harden Snapshot Explorer archive extraction containment. _(Released in 1.8.3; tracked by #423)_
-  - Done locally: archive entry destinations are resolved and checked directly against the selected restore root immediately before extraction.
-  - Done locally: restore rejects linked/reparse-point path components and regression coverage includes traversal, rooted, backslash, and symlink escape attempts.
-  - Done: CodeQL validation passed and the containment fix shipped in 1.8.3.
-- [x] `VS-1838` `P2` Refresh safe 1.8.3 patch dependencies. _(Done 2026-07-12; tracked by #424; target 1.8.3)_
-  - Done: Avalonia 11, HarfBuzzSharp, and LiveCharts patch families are updated together, cross-platform CI passes, and the transitive vulnerability audit remains clean.
-  - Follow-up: the later Avalonia 12 decision is tracked separately under `VS-1839`; unrelated deprecated-package migrations remain deferred.
-- [x] `VS-1839` `P1` Migrate the desktop UI to Avalonia 12. _(Released in 1.8.3; tracked by #425)_
-  - Done locally: the coordinated UI stack now uses Avalonia 12.1, its compatible SkiaSharp/HarfBuzzSharp ABI line, and the Avalonia 12 LiveCharts adapter.
-  - Done locally: the retired Avalonia diagnostics package is removed and placeholder/window-decoration APIs use their Avalonia 12 replacements.
-  - Done: compiled bindings remain enabled by default, Debug and Release builds are warning-free, 287 tests pass, a real macOS startup smoke reaches the Dashboard, and Windows/Linux CI plus CodeQL, Sonar, Store preflight, and dependency submission pass.
-  - Done: frameless utility windows reserve dragging for their title areas, Log Console selection is visible, folder pickers use Avalonia 12 local-path resolution, and Dashboard activity/storage layouts respond across six tested width breakpoints.
-  - Release note: Windows/Linux interaction checks remain part of recurring platform QA rather than open 1.8.3 implementation scope.
-- [x] `VS-1840` `P1` Audit and harden fragile 1.8.3 code paths. _(Done 2026-07-12; tracked by #426; target 1.8.3)_
-  - Done: folder restores reject linked target components immediately before copying, matching archive extraction containment.
-  - Done: project scanning skips linked files and directories so cycles and out-of-root source traversal cannot enter snapshots.
-  - Done: snapshot comparison and archive browsing preserve case-distinct stored paths instead of collapsing Linux files such as `Foo` and `foo`.
-  - Done: archive encryption and decryption clear the temporary PBKDF2 result buffer in addition to the split key buffers.
-  - Done: all 22 exposed nullable-warning locations are corrected and the global suppression is removed; Debug/Release warning-as-error builds now enforce the complete baseline.
-  - Done: high-risk async UI commands are observed and single-flight, Recovery refresh is lifecycle-cancellable, and command failure/re-entry/cancellation behavior has focused coverage.
-  - Done: macOS credential storage uses native Security.framework calls, Linux helper timeouts terminate process trees, and credential index persistence is atomic, permission-restricted, and corruption-safe.
-  - Done: release packaging requires build, test, and vulnerability gates; AppImageKit is pinned and checksum-verified; required artifact uploads fail hard; macOS build/test runs in CI.
-  - Done: backup history renders incrementally, core Avalonia views use compiled bindings with explicit reflective exceptions only for typed ancestor handoffs, and compare controls expose accessible names/help.
-  - Done: metadata synchronization coordinates per destination instead of globally, presentation hooks are instance-injected, and required schema migration failures no longer leave a silently partial database.
-  - Validated: 320 tests pass locally, Debug and Release builds have zero warnings/errors with warnings treated as errors, analyzer verification passes, localization keys remain in parity, and the dependency vulnerability audit is clean.
-- [x] `VS-1837` `P1` Align 1.8.3 release metadata. _(Done 2026-07-10; tracked by #418; target 1.8.3)_
-
-## Future backlog
-- [ ] `VS-1733` `P1` Multi-destination health scoring and auto-failover.
-- [ ] `VS-1734` `P1` Cloud targets (S3-compatible, Backblaze, etc.) with encryption.
-- [ ] `VS-1735` `P2` Automation hooks (webhooks/scripts on backup/restore events).
-- [ ] `VS-1736` `P2` CLI parity with all major UI features.
-- [ ] `VS-1704` `P2` Team workflows (shared vaults, access control, audit trails).
-  - Scope: shared-vault collaboration primitives and operator audit visibility.
-  - Planning note:
-    - Moved out of the active `1.7.x` release checklist so `1.7` can stay focused on reliability, repair, and updater determinism.
-  - Acceptance:
-    - Shared workflows stay optional and do not regress solo mode defaults.
-
-## 1.9.x
-- Planning note:
-  - Default path after `1.9` is to continue with `1.10` / `1.11` unless a genuinely breaking product or distribution shift justifies `2.0`.
-  - Revisit the `2.0` decision near the end of `1.9` based on actual scope, not milestone vanity.
-- [ ] `VS-1902` `P1` App signing for trusted distribution.
-- [ ] `VS-1903` `P2` Background integrity audits with alerts.
+# VaultSync Roadmap
+
+This is the canonical product and delivery roadmap for VaultSync.
+
+It records what shipped, defines the active release, reserves identifiers for
+planned work, and establishes the boundary between the Chronicle (`1.8`) and
+Recovery Horizon (`1.9`) release families.
+
+> **1.8 proves and explains recovery.**
+>
+> **1.9 expands what VaultSync can recover.**
+
+## How to read this roadmap
+
+- `Released` sections are historical records derived from tags, commits,
+  `CHANGELOG.md`, and their linked GitHub issues.
+- `Active` is approved implementation scope.
+- `Planned` is sequenced but may be refined before its release branch opens.
+- `Candidate` is directional and must not be presented as committed delivery.
+- `P0` means release-blocking reliability, security, or usability work.
+- `P1` means primary release value.
+- `P2` means valuable work that may move without invalidating the release.
+
+## Work-item protocol
+
+- Product and engineering work uses `VS-xxxx`.
+- Defects use `BUG-xxxxx`.
+- Release gates may use `REL-xxxxx`.
+- The first two digits of a `VS` identifier map to the release family:
+  `18xx` for `1.8` and `19xx` for `1.9`.
+- The remaining digits are allocated sequentially and are never reused.
+- A work item spanning releases must be split into release-specific IDs.
+- Changelog entries use the owning work ID; internal test-only or documentation
+  notes may omit an ID when they do not represent separate user-facing scope.
+- Issue, pull-request, project, changelog, and roadmap IDs must agree.
+
+### Canonical execution-ticket format
+
+```text
+- [ ] `VS-xxxx` `P1` Clear one-line scope.
+  - Scope: ...
+  - Acceptance: ...
+```
+
+The checkbox is the delivery state. GitHub Project status, milestone, labels,
+assignee, and dates mirror this file rather than defining a second roadmap.
+
+## Product arc
+
+| Family | Name | Product question |
+|---|---|---|
+| `1.7` | Sentinel | Can I trust the stored data? |
+| `1.8` | Chronicle | What was protected, what changed, and what can be recovered? |
+| `1.9` | Recovery Horizon | Can I recover from a disk or machine-level failure? |
+
+---
+
+# VaultSync 1.8 — Chronicle
+
+## Family promise
+
+> Understand what was protected, inspect how it changed, and see the evidence
+> that supports recovery.
+
+Chronicle remains focused on file/project protection, history, inspection,
+verification evidence, understandable recovery decisions, usability, trust,
+and stabilization. It does not add disk cloning or a new backup category.
+
+## Released history
+
+### 1.8.0 — History and Recovery Foundation
+
+**Released:** 2026-06-20
+**Tag:** `v1.8.0`
+**Stable integration:** `874358e` / PR #365
+
+Delivered:
+
+- `VS-1802` history and recovery metadata foundation;
+- `VS-1803` first-class History and Recovery navigation;
+- `VS-1804` project timeline and event inspector;
+- `VS-1805` labels, notes, tags, protected points, and known-good markers;
+- `VS-1806` Dashboard recovery awareness and workflow links;
+- `VS-1807` Recovery readiness, coverage, and prioritization;
+- `VS-1812` roadmap, metadata, and localization alignment;
+- `VS-1813` clear Backups/History responsibilities;
+- `VS-1814`–`VS-1818` analysis, release-security, and maintainability work;
+- `VS-1819` History shaping and analyzer cleanup;
+- `VS-1820` release-readiness hardening;
+- `BUG-18045`, `BUG-18047`–`BUG-18055` reliability, updater, path,
+  responsiveness, cancellation, and dependency corrections.
+
+### 1.8.1 — Recovery Assessment
+
+**Released:** 2026-06-25
+**Tag:** `v1.8.1`
+**Release metadata:** `7d0cf0a`
+
+Delivered:
+
+- `VS-1824` portable Recovery assessment export;
+- `VS-1825` encrypted staging and credential integration hardening;
+- `VS-1826` Recovery search and focused triage;
+- `VS-1827` milestone-scoped release gates;
+- `BUG-18056` Linux updater and shared metadata fixes;
+- `BUG-18057` Linux single-instance enforcement.
+
+### 1.8.2 — Snapshot Explorer
+
+**Released:** 2026-07-04
+**Tag:** `v1.8.2`
+**Release metadata:** `18f2eee`
+
+Delivered:
+
+- `VS-1808` asynchronous Snapshot Explorer browsing, preview, search, and
+  selective restore;
+- `VS-1821` initial core-service complexity and path-write hardening;
+- `VS-1822` initial desktop view-model complexity cleanup;
+- `VS-1828` supported dependency refresh;
+- `VS-1829` first-run setup checklist;
+- `VS-1830` duplicate changelog-ID release warning;
+- `BUG-18058` macOS single-instance enforcement.
+
+### 1.8.3 — Snapshot Compare and Change Intelligence
+
+**Released:** 2026-07-16
+**Tag:** `v1.8.3`
+**Release PR:** #410
+**Stable integration:** `ab0a27b`
+
+Delivered:
+
+- `VS-1809` snapshot comparison, changed-file navigation, text diffs, and
+  change-intelligence signals;
+- `VS-1831`–`VS-1836` release-script, explorer, snapshot, CLI, UI, and
+  analyzer hardening;
+- `VS-1837` release metadata alignment;
+- `VS-1838` supported patch dependency refresh;
+- `VS-1839` Avalonia 12.1 and .NET 10 UI stack;
+- `VS-1840` app-wide security, nullability, lifecycle, CI, and performance
+  hardening;
+- `VS-1841`–`VS-1846` compare navigation, localization, density, and
+  presentation refinement;
+- `BUG-18059`–`BUG-18065` diagnostics, restore containment, diff recovery,
+  credential prompts, diff presentation, folder picking, and large-diff fixes.
+
+### 1.8.4 — Recovery Proof
+
+**Released:** 2026-07-24
+**Tag:** `v1.8.4`
+**Release PR:** #440
+**Stable integration:** `f3170e8`
+
+Delivered:
+
+- `VS-1810` non-destructive drills, reachable 3-2-1 guidance, explicit offsite
+  confirmation, and protected-point recommendations;
+- `VS-1847` strictly redacted, user-reviewed crash-report drafts;
+- `VS-1848` local byte-level recovery proof, restore-plan simulation,
+  deterministic evidence, and verified-point retention safety;
+- `VS-1849` supported servicing dependency refresh;
+- `VS-1850` curated themes and the rebuilt Appearance studio;
+- `BUG-18066`–`BUG-18077` linked-content, destination identity, cancellation,
+  upload, path, case-sensitivity, repeated crash review, theme, and Recovery
+  lifecycle fixes.
+
+---
+
+## 1.8.5 — Recovery Confidence
+
+**Status:** Release candidate
+**Tagline:** *Know before you need it.*
+**Branch:** `release/v1.8.5`
+**Milestone:** `1.8.5`
+
+### Release objective
+
+Turn the existing Recovery capabilities into a direct, evidence-backed answer:
+
+> Can I recover this project right now, why does VaultSync believe that, and
+> what should I do next?
+
+States take precedence over scores. A percentage may summarize evidence, but it
+must never hide a missing, failed, stale, inferred, or unsupported check.
+
+### Execution tickets
+
+- [x] `VS-1851` `P0` Define the recovery-confidence state and evidence model.
+  - Scope: represent current state, decisive blocker, evidence type, freshness,
+    provenance, verification scope, drill scope, and recommended action.
+  - Acceptance: every state is explainable without relying on color or an
+    opaque percentage; measured, simulated, inferred, and user-confirmed
+    evidence remain distinct.
+- [x] `VS-1852` `P1` Add a project-level Recovery Inspector.
+  - Scope: show the decisive state, reachability, credential, verification,
+    restore-plan, drill, and offsite evidence with basis, freshness, limitations,
+    and next action in one inspectable project card.
+  - Acceptance: a user can explain the current recovery state and identify the
+    next useful action without opening Settings or reading documentation.
+- [x] `VS-1853` `P1` Add a Recovery Checklist and universal evidence actions.
+  - Scope: backup created, destination reachable, integrity verified, restore
+    plan valid, restore tested, and offsite status; expose the reason, evidence,
+    and safe proof, test-restore, or protection action where applicable.
+  - Acceptance: incomplete checks identify a safe corrective action and never
+    present an opaque recovery score as sufficient evidence.
+- [x] `VS-1854` `P0` Add a guided isolated restore drill.
+  - Scope: select a recovery point and safe test folder, restore representative
+    content, verify bytes, record file-open confirmation, and persist evidence.
+  - Acceptance: the result explicitly states what was tested, what was skipped,
+    and whether the operation was a simulation or a real restore.
+- [x] `VS-1855` `P1` Record recovery evidence as first-class History events.
+  - Scope: recovery proofs (including verification and availability), isolated
+    restore drills, protected points, and evidence exports with source identity.
+  - Acceptance: status changes can be traced to timestamped evidence.
+- [x] `VS-1856` `P1` Upgrade the Recovery Evidence Report.
+  - Scope: add app/build and source identity, project protection and drill
+    results, redacted evidence methods and paths, unresolved reasons, report ID,
+    and checksum.
+  - Acceptance: the export is deterministic, redacted, portable, and describes
+    limitations without implying guaranteed recovery.
+- [x] `VS-1857` `P1` Extend first-backup completion through recovery proof.
+  - Scope: distinguish backup completion from verification and test restore,
+    with `Verify recovery`, `Run test restore`, and `Finish for now` actions.
+  - Acceptance: onboarding progress survives dismissal and never marks recovery
+    complete from a copy operation alone.
+- [x] `BUG-18078` `P0` Keep onboarding guidance clear of its target controls.
+  - Scope: keep guidance in a responsive card outside the full-window pointer
+    route; retain visible Back, primary, and Continue later controls.
+  - Acceptance: target pages remain interactive and the card stays bounded at
+    narrow supported window sizes without dismissing the guide.
+- [x] `BUG-18079` `P1` Preserve the Portuguese Dashboard count placeholder.
+  - Scope: keep the localized weekly-snapshot hint aligned with the English
+    format-argument contract.
+  - Acceptance: localization validation reports no missing, extra, blank,
+    duplicate, or placeholder-mismatched keys.
+- [x] `VS-1858` `P1` Service and simplify the supported dependency baseline.
+  - Scope: apply compatible storage and rendering patch updates, remove
+    genuinely unused direct dependencies, document intentional compatibility
+    pins, and keep vulnerability checks clean.
+  - Acceptance: restore, warning-as-error builds, tests, NuGet vulnerability
+    checks, and Windows, macOS, and Linux CI pass without losing notifications,
+    charts, color editing, localization, secure storage, or CLI behavior.
+- [x] `VS-1859` `P1` Publish the guided product walkthrough and current visual
+  documentation.
+  - Scope: document the complete app, refresh Recovery and onboarding visuals,
+    and keep a reproducible no-key narration and caption workflow.
+  - Acceptance: the repository contains current screenshots, guided-tour help,
+    and a maintainable walkthrough production path.
+- [x] `VS-1860` `P0` Harden unsigned release integrity and private local data.
+  - Scope: bind installers, patch manifests, and patch archives to GitHub asset
+    digests and exact sizes; reject unsafe archive paths and links; restrict
+    Unix configuration and application-data permissions; preserve immutable
+    workflow action pins; reduce macOS native payload size without mixing ABIs.
+  - Acceptance: tampered or unverified updates fail closed, private Unix data
+    is owner-only, security regression tests pass, vulnerability checks remain
+    clean, and thinned macOS builds pass a real launch test.
+- [x] `BUG-18080` `P0` Reject impossible backup-target capacity readings.
+  - Scope: use the runtime filesystem API on macOS and validate total/free byte
+    relationships before computing or enforcing a free-space percentage.
+  - Acceptance: capacity percentages stay within zero and one hundred; invalid
+    readings disable the threshold check instead of reporting negative space.
+- [x] `BUG-18081` `P1` Remove avoidable view-binding errors from normal use.
+  - Scope: bind virtualized project, backup, destination, and credential
+    templates through stable named view roots and expose null-safe diff state.
+  - Acceptance: a clean startup and ordinary page construction produce no
+    missing-ancestor or null selected-diff binding diagnostics.
+- [x] `BUG-18082` `P0` Keep CLI self-tests out of production metadata.
+  - Scope: use a unique system-temporary database and workspace by default,
+    while retaining an explicit `--db` path for intentional integration tests.
+  - Acceptance: success, failure, and cancellation clean isolated state; an
+    ordinary self-test never inserts a project or snapshot into the user store.
+- [x] `BUG-18083` `P0` Keep first-run onboarding interactive with the app.
+  - Scope: replace the screen-covering guide with a compact card that leaves
+    its target page usable and retains Back, Continue later, and primary actions.
+  - Acceptance: setup can continue without dismissing the guide, including at
+    narrow supported window sizes.
+
+### Explicitly out of scope
+
+- disk or partition cloning;
+- bootable recovery media;
+- native cloud/object-storage destinations;
+- standalone restore application;
+- major navigation replacement;
+- project groups unless all release-critical Recovery work is complete.
+
+### Release gates
+
+- state-model unit and transition coverage;
+- real isolated restore-drill test for folder and archive backups;
+- encrypted and unavailable-destination evidence tests;
+- stale-evidence and unsupported-check presentation;
+- deterministic report/checksum validation;
+- onboarding overlap tests at supported scale and width breakpoints;
+- Windows, macOS, and Linux build/test gates.
+
+### Unsigned distribution policy
+
+Direct desktop packages are intentionally unsigned because paid platform
+signing programs are not part of the supported release budget. Signing and
+notarization are therefore not a `1.8.5` release gate. Every direct release must
+instead publish through the official repository, expose SHA-256 asset digests,
+verify updater downloads before execution, document SmartScreen and Gatekeeper
+warnings, and fail closed when integrity metadata is missing or inconsistent.
+
+---
+
+## 1.8.6 — Everyday Clarity
+
+**Status:** Planned
+**Tagline:** *Powerful when needed. Obvious by default.*
+
+- [ ] `VS-1861` `P0` Replace the current overlay tour with task-based first-run
+  setup around source, destination, schedule, review, and recovery verification.
+  - Scope: use a resumable setup workspace and contextual next actions instead
+    of a modal screen-covering tour; preserve skip, defer, restart, keyboard,
+    scaling, and screen-reader paths; measure completion only from real app
+    state.
+  - Acceptance: a new user can create, verify, and understand one recoverable
+    backup without hunting through unrelated Settings or having guidance cover
+    the control it describes.
+  - Exit rule: if usability testing cannot make the guided flow faster and
+    clearer than the ordinary app, remove forced onboarding and retain only a
+    first-run checklist, sample-safe defaults, and discoverable help.
+- [ ] `VS-1862` `P1` Add a dedicated Schedule experience with modes, quiet
+  hours, next run, and delay explanations.
+- [ ] `VS-1863` `P1` Reorganize Dashboard hierarchy around protection,
+  activity, required actions, next run, and latest verified recovery point.
+- [ ] `VS-1864` `P1` Surface consistent scanning, hashing, writing, verifying,
+  retrying, queued, and waiting states.
+- [ ] `VS-1865` `P1` Make project edit, pause, removal, stored-data deletion,
+  repository assignment, inclusions, and exclusions explicit.
+- [ ] `VS-1866` `P1` Standardize backup, snapshot, restore-point,
+  verification, known-good, protected, and drill terminology with contextual
+  help.
+- [ ] `VS-1867` `P1` Complete accessibility and destructive-action preview
+  work across primary workflows.
+- [ ] `VS-1811` `P2` Add project groups and group health if the core
+  experience scope is complete. _(Existing issue #363.)_
+
+Project Groups remain a stretch item. If they would delay the core usability
+work, `VS-1811` moves to the 1.9 unified information-architecture release
+without changing the rest of 1.8.6.
+
+---
+
+## 1.8.7 — Trust and Portability
+
+**Status:** Planned
+**Tagline:** *Show the proof.*
+
+- [ ] `VS-1871` `P1` Expose build, channel, commit, runtime, architecture,
+  package, and update-source information.
+- [ ] `VS-1872` `P0` Publish artifact checksums and a machine-readable release
+  manifest from one release source of truth.
+- [ ] `VS-1873` `P1` Generate and publish a Software Bill of Materials and
+  build provenance where supported.
+- [ ] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
+- [ ] `VS-1875` `P1` Strengthen explicitly redacted support bundles.
+- [ ] `VS-1876` `P1` Document repository layouts, manifests, encryption
+  envelopes, compatibility, and emergency recovery expectations.
+- [ ] `VS-1877` `P1` Add source-machine identity, repository writer locking,
+  and explicit dual-boot/concurrent-writer guidance.
+- [ ] `VS-1878` `P1` Synchronize website, updater, changelog, Store metadata,
+  badges, and public roadmap from canonical release metadata.
+
+Signing and notarization remain desirable trust work, but availability and cost
+must not make truthful checksums, manifests, SBOMs, or provenance optional.
+
+---
+
+## 1.8.8 — Chronicle Stabilization
+
+**Status:** Planned and required before `1.9.0`
+**Tagline:** *A stable foundation for larger recovery.*
+
+- [ ] `VS-1823` `P0` Establish large-history and high-file-count performance
+  budgets with repeatable benchmarks. _(Existing issue #382.)_
+- [ ] `VS-1821` `P1` Finish backup and metadata orchestration decomposition
+  needed for fault isolation. _(Existing issue #380.)_
+- [ ] `VS-1822` `P1` Finish oversized desktop view-model decomposition needed
+  for fault isolation. _(Existing issue #381.)_
+- [ ] `VS-1881` `P0` Run the complete Windows, macOS, and Linux release matrix.
+- [ ] `VS-1882` `P0` Harden interruption, cancellation, archive corruption,
+  retention, migration, and clean-state recovery.
+- [ ] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
+  narrow-layout defects.
+- [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
+  prior-version compatibility.
+
+The mandatory exit matrix includes plain and encrypted backup/restore,
+clean-machine recovery, interruption, destination disconnection, corruption
+detection, retention safety, patch fallback, prior-version restore
+compatibility, and smoke tests on all supported operating systems.
+
+---
+
+# VaultSync 1.9 — Recovery Horizon
+
+## Family promise
+
+> Recover from disk and machine-level failure with inspectable evidence and a
+> bootable path that does not depend on the installed operating system.
+
+`1.9.0` will not ship disk cloning as an isolated feature. The stable release
+requires cloning, validation, image-to-disk recovery, and bootable recovery
+media to be ready and tested together.
+
+## 1.9 UI migration program
+
+The 1.9 interface is a staged information-architecture migration, not a
+single-release visual rewrite. Existing workflows remain available until their
+replacement is complete, keyboard-accessible, localized, and proven against
+the same underlying operations.
+
+Migration principles:
+
+- organize around user intent: `Protect`, `History`, `Recover`, and `Manage`;
+- separate routine status and next actions from expert configuration;
+- keep one authoritative route/state model instead of page-specific navigation
+  flags and reflection-based fallbacks;
+- preserve deep links, selected project, filters, and unfinished work when
+  navigating;
+- migrate one workflow family at a time behind stable service contracts;
+- remove the legacy shell only after parity and usability qualification;
+- treat themes as presentation over shared semantic resources, not separate
+  layouts;
+- do not use hidden telemetry to judge the redesign; rely on explicit
+  usability sessions, opt-in feedback, and local diagnostics.
+
+## Existing 1.9 foundation IDs
+
+- [ ] `VS-1902` `P1` Add trusted application signing where operationally and
+  financially feasible. _(Tracked by #113.)_
+- [x] `VS-1903` `P2` Add background integrity audits with alerts.
+  _(Historical issue #114 is complete; later scheduling work receives a new
+  release-specific ID.)_
+
+## 1.9.0 — Disk and Bootable Recovery Foundation
+
+**Status:** Planned; architecture work may begin only after the `1.8.5` design
+contracts stabilize.
+**Tagline:** *Recover when the installed system cannot.*
+
+- [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
+  workflow boundaries, navigation invariants, and legacy-shell migration map.
+- [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
+  explicit operation states and checkpoint contracts.
+- [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
+  capacity checks, interruption semantics, and block validation.
+- [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
+  systems with offline device discovery and recovery workflows.
+- [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
+  bootable environment.
+- [ ] `VS-1908` `P1` Record clone, validation, boot, and restore evidence with
+  source-machine and tool-version identity.
+- [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on
+  representative hardware and virtual machines.
+
+### 1.9.0 stable release gate
+
+- source and destination cannot be confused silently;
+- destructive actions require an exact wipe/overwrite preview;
+- interrupted clones are rejected or safely resumable;
+- clone verification detects incomplete or corrupt images;
+- recovery media boots independently of the installed OS;
+- supported images can be restored from that environment;
+- restored media passes the documented validation procedure;
+- limitations for filesystems, encryption, Secure Boot, and live-system
+  capture are explicit;
+- no claim of universal bare-metal recovery is made.
+
+## 1.9.1 — Clone Explorer
+
+- [ ] `VS-1911` `P1` Browse supported image partitions and files read-only.
+- [ ] `VS-1912` `P1` Search and selectively extract files from images.
+- [ ] `VS-1913` `P1` Inspect image creation, verification, and compatibility.
+- [ ] `VS-1914` `P2` Compare supported clone images where safe and practical.
+- [ ] `VS-1915` `P0` Introduce the adaptive 1.9 shell and typed route/state
+  infrastructure without removing the existing workflow views.
+- [ ] `VS-1916` `P1` Migrate Dashboard and Recovery entry points into
+  goal-oriented home and recovery workspaces.
+
+## 1.9.2 — Offsite Protection
+
+- [ ] `VS-1921` `P0` Add resumable S3-compatible object-storage destinations.
+- [ ] `VS-1922` `P1` Add Backblaze B2 and SFTP destination profiles.
+- [ ] `VS-1923` `P0` Validate remote manifests and clean incomplete uploads.
+- [ ] `VS-1924` `P1` Explain immutability, object lock, retention, and cost.
+- [ ] `VS-1925` `P1` Prove clean-machine recovery from supported offsite data.
+- [ ] `VS-1926` `P1` Migrate Projects, Backups, and Schedule into one
+  progressive-disclosure Protection workspace.
+- [ ] `VS-1927` `P1` Add multi-destination health scoring and safe,
+  explainable automatic failover.
+
+## 1.9.3 — Portable Recovery
+
+- [ ] `VS-1931` `P0` Ship a standalone desktop restore utility.
+- [ ] `VS-1932` `P1` Generate an emergency recovery kit.
+- [ ] `VS-1933` `P0` Publish the supported backup and encryption format
+  specification.
+- [ ] `VS-1934` `P0` Define compatibility, migration, deprecation, and
+  emergency read-only policies.
+- [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
+  focused activity, inspection, and management workspaces.
+
+## 1.9.4 — Unified Recovery Experience
+
+- [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
+  recovery navigation and retire the legacy shell after parity.
+- [ ] `VS-1942` `P1` Add a shared Recovery Inspector across recovery types.
+- [ ] `VS-1943` `P2` Revisit project groups and high-density organization if
+  `VS-1811` moved out of 1.8.
+- [ ] `VS-1944` `P0` Qualify the complete 1.9 interface across supported
+  widths, scaling, keyboard, screen-reader, theme, and interrupted-work states.
+
+## 1.9.5 — Recovery Operations
+
+- [ ] `VS-1951` `P1` Schedule full verification and recovery drills.
+- [ ] `VS-1952` `P1` Add user-controlled stale, missed, offline, credential,
+  and offsite alerts.
+- [ ] `VS-1953` `P1` Add CLI and structured headless recovery reporting.
+- [ ] `VS-1954` `P2` Add multi-machine summaries without introducing hidden
+  telemetry or mandatory hosted services.
+- [ ] `VS-1955` `P2` Add explicit local automation hooks for approved backup,
+  verification, and restore events.
+- [ ] `VS-1956` `P2` Bring the CLI to documented parity with stable,
+  automation-safe desktop workflows.
+
+## 1.9.6 — Stability and LTS Baseline
+
+- [ ] `VS-1961` `P0` Stabilize disk-image, offsite, and portable-recovery
+  formats.
+- [ ] `VS-1962` `P0` Complete long-duration, large-dataset, migration,
+  filesystem, and fault-injection qualification.
+- [ ] `VS-1963` `P1` Publish the supported compatibility window and LTS policy.
+
+---
+
+# Candidate backlog
+
+These items are not assigned to a release until their contracts are approved:
+
+- `VS-1801` full repository backup mode including `.git` (tracked by #296);
+- additional object-storage and WebDAV providers;
+- `VS-1971` optional shared/team vault workflows with explicit ownership,
+  access, conflict, and audit contracts;
+- enterprise deployment and centralized administration;
+- universal boot media or guaranteed cross-hardware bare-metal recovery.
+
+# Roadmap governance
+
+- `ROADMAP.md` is the only canonical planning document.
+- `CHANGELOG.md` records shipped behavior, not future promises.
+- `docs/WHATS_NEW.md` explains the active release in user-facing language.
+- GitHub milestones define release gates.
+- GitHub Project 7 mirrors roadmap execution state.
+- A release branch and draft PR contain only work for that release.
+- Stable history is never rewritten to make a release branch appear cleaner.
+- Scope changes must update this file, the owning issue, milestone, project
+  fields, and draft PR description together.

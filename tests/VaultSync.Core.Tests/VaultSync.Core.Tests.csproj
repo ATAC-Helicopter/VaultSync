@@ -8,6 +8,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.analyzers">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="xunit.runner.visualstudio">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -15,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\VaultSync.CLI\VaultSync.CLI.csproj" />
     <ProjectReference Include="..\..\src\VaultSync.Core\VaultSync.Core.csproj" />
     <ProjectReference Include="..\..\src\VaultSync.UI\VaultSync.UI.csproj" />
   </ItemGroup>

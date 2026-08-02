@@ -2,6 +2,8 @@
 
 VaultSync can password-protect archive backups. When encryption is enabled, the backup stored on your destination is unreadable without its password.
 
+![Encryption, archive format, verification, and performance controls](../images/Settings_Encryption_Performance.png)
+
 ## Enable encryption
 
 ### Use one password for all projects

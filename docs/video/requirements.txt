@@ -1,0 +1,2 @@
+kokoro-onnx==0.4.7
+soundfile==0.14.0

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -42,6 +43,129 @@ public sealed class RecoveryDrillService
             config,
             expectedFiles,
             cancellationToken).ConfigureAwait(false);
+
+    public async Task<RecoveryDrillResult> RunIsolatedRestoreAsync(
+        Project project,
+        Backup backup,
+        Snapshot? snapshot,
+        AppConfig config,
+        IReadOnlyCollection<FileEntry>? expectedFiles = null,
+        string? testRoot = null,
+        CancellationToken cancellationToken = default)
+    {
+        RecoveryDrillResult baseline = await RunAsyncCore(
+            project,
+            backup,
+            snapshot,
+            config,
+            expectedFiles,
+            cancellationToken).ConfigureAwait(false);
+        List<RecoveryDrillCheck> checks =
+            JsonSerializer.Deserialize<List<RecoveryDrillCheck>>(baseline.ChecksJson) ?? [];
+        string? contentPath = BackupContentPathResolver.Resolve(backup, config);
+        string root = string.IsNullOrWhiteSpace(testRoot)
+            ? Path.Combine(Path.GetTempPath(), "VaultSync", "recovery-tests")
+            : Path.GetFullPath(testRoot);
+        string folderName = $"{SafeName(project.Name)}-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}";
+        string target = Path.Combine(root, folderName[..Math.Min(64, folderName.Length)]);
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (contentPath is null)
+                throw new DirectoryNotFoundException("The recorded recovery point is unavailable.");
+            if (expectedFiles is not { Count: > 0 })
+                throw new InvalidDataException("Snapshot file metadata is unavailable.");
+
+            FileEntry[] selection = [.. expectedFiles
+                .Where(file => file.Size >= 0 && file.Size <= 16 * 1024 * 1024)
+                .OrderBy(file => file.RelPath, StringComparer.Ordinal)
+                .Take(12)];
+            if (selection.Length == 0)
+                throw new InvalidDataException("No representative files are eligible for the isolated restore.");
+
+            Directory.CreateDirectory(target);
+            SnapshotRestoreSelectionResult restored = await Task.Run(
+                () => SnapshotExplorerService.RestoreSelection(
+                    contentPath,
+                    target,
+                    selection.Select(file => file.RelPath).ToArray()),
+                cancellationToken).ConfigureAwait(false);
+            int verified = 0;
+            foreach (FileEntry file in selection)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string restoredPath = Path.GetFullPath(Path.Combine(
+                    target,
+                    file.RelPath.Replace('/', Path.DirectorySeparatorChar)));
+                if (!BackupSafetyService.IsPathUnderRoot(target, restoredPath) ||
+                    !File.Exists(restoredPath))
+                {
+                    continue;
+                }
+
+                await using var stream = new FileStream(
+                    restoredPath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    1024 * 1024,
+                    FileOptions.Asynchronous | FileOptions.SequentialScan);
+                string hash = Convert.ToHexString(
+                    await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
+                if (!string.IsNullOrWhiteSpace(file.HashSha256) &&
+                    string.Equals(hash, file.HashSha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    verified++;
+                }
+            }
+
+            bool passed = restored.FileCount == selection.Length && verified == selection.Length;
+            checks.Add(new RecoveryDrillCheck(
+                "isolated-restore",
+                passed ? RecoveryDrillCheckStatus.Passed : RecoveryDrillCheckStatus.Failed,
+                passed
+                    ? $"{verified:N0} representative file(s) were restored into a new isolated folder and reopened successfully. Original project files were not touched."
+                    : $"{restored.FileCount:N0}/{selection.Length:N0} file(s) restored and {verified:N0}/{selection.Length:N0} reopened with matching evidence.",
+                $"isolated_restore:{backup.Id}:{snapshot?.Id ?? backup.SnapshotId}",
+                target));
+        }
+        catch (Exception ex) when (ex is IOException or
+                                       UnauthorizedAccessException or
+                                       InvalidDataException or
+                                       InvalidOperationException)
+        {
+            checks.Add(new RecoveryDrillCheck(
+                "isolated-restore",
+                RecoveryDrillCheckStatus.Failed,
+                $"The isolated restore could not be completed: {ex.Message}"));
+        }
+
+        RecoveryDrillStatus status = checks.Any(check => check.Status == RecoveryDrillCheckStatus.Failed)
+            ? RecoveryDrillStatus.Failed
+            : checks.Any(check => check.Status == RecoveryDrillCheckStatus.Attention)
+                ? RecoveryDrillStatus.Attention
+                : RecoveryDrillStatus.Passed;
+        return baseline with
+        {
+            RunUtc = DateTime.UtcNow,
+            Status = status,
+            ChecksPassed = checks.Count(check => check.Status == RecoveryDrillCheckStatus.Passed),
+            ChecksTotal = checks.Count,
+            IsLimited = baseline.IsLimited || status == RecoveryDrillStatus.Attention,
+            Summary = status == RecoveryDrillStatus.Passed
+                ? "Isolated recovery test passed. Representative content was restored and reopened outside the project."
+                : "Isolated recovery test completed with evidence that needs attention.",
+            ChecksJson = JsonSerializer.Serialize(checks)
+        };
+    }
+
+    private static string SafeName(string value)
+    {
+        char[] invalid = Path.GetInvalidFileNameChars();
+        string safe = new(value.Select(character => invalid.Contains(character) ? '-' : character).ToArray());
+        return string.IsNullOrWhiteSpace(safe) ? "project" : safe.Trim();
+    }
 
     private async Task<RecoveryDrillResult> RunAsyncCore(
         Project project,

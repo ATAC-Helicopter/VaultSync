@@ -27,6 +27,8 @@ VaultSync supports two Windows update models:
 - The update banner shows the channel and current status.
 - Microsoft Store builds replace GitHub update actions with `Open Microsoft Store`.
 
+![Maintenance and update controls in Settings](../images/Settings_Maintenance.png)
+
 ## Skipping a version
 - Use the Skip version action in the update banner.
 - You can re-enable the banner by clearing the skipped tag in Settings.
@@ -39,11 +41,13 @@ Switch channels in Settings > Advanced.
 
 ## Installers
 - Windows: `.exe` installer (Inno Setup).
-- macOS: unsigned `.dmg` of the `.app` bundle.
+- macOS: intentionally unsigned `.dmg` of the `.app` bundle.
 - Linux: `.AppImage`, `.deb`, or `.tar.gz` assets, depending on architecture and distribution.
 - Windows Store: packaged Microsoft Store build when published.
 
 ## Safe update expectation
+- Use only assets from the official `ATAC-Helicopter/VaultSync` release page and compare their published SHA-256 digests before bypassing SmartScreen or Gatekeeper warnings.
+- VaultSync rejects direct-update payloads whose trusted GitHub digest or exact size is missing or mismatched.
 - Use patch updates only for versions explicitly supported by the release manifest.
 - Use the installer for:
   - major version jumps
