@@ -37,17 +37,19 @@ Linux can use architecture-specific patch names:
 ## Runtime Expectations
 - Updater checks according to Settings policy.
 - Patch apply does not replace user config/data.
+- A failed in-process replacement restores overwritten files and removes newly created files before reporting failure.
+- Full power-loss atomicity requires a future directory-level installer transaction; until then, release qualification must exercise interrupted updates and retain full-installer recovery.
 - Installer fallback is used when patch update is not viable.
 
 ## Patch Manifest Base-Version Rules
 - Legacy manifests may declare one exact base version via `previousVersion`.
-- Multi-base manifests may additionally declare `baseVersions`.
+- Current release automation emits one qualified base in `baseVersions`.
 - `baseVersions` is an exact allowlist, not a version range.
 - Patch preflight and helper apply both require the installed version to match one listed base exactly.
 - If the installed version is not listed, VaultSync must fall back to the installer.
 - Prerelease labels are part of the exact version identity, so `1.7.4-Beta.1` and `1.7.4` are treated as different bases.
 
-This is required because patch archives are partial target payloads. Files omitted from the patch are assumed to already be correct on every listed base version.
+This is required because patch archives do not remove obsolete files. The automated release path therefore accepts exactly one explicitly tested predecessor. Older or additional base versions use the full installer.
 
 ## Release Validation
 After publishing assets, verify:
@@ -55,7 +57,7 @@ After publishing assets, verify:
 - patch downloads succeed
 - patch apply succeeds on target platform
 - installer fallback remains functional
-- every base version listed in `baseVersions` was actually validated against that same patch payload
+- the single base version listed in `baseVersions` was validated against that same patch payload
 
 ## Related Docs
 - `docs/RELEASING.md`
