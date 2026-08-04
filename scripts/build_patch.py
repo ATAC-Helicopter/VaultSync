@@ -97,6 +97,24 @@ def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str
         raise ValueError("Patch archive output must use a .zip extension.")
     if out_manifest.suffix.lower() != ".json":
         raise ValueError("Patch manifest output must use a .json extension.")
+
+    normalized_previous = []
+    seen_previous = set()
+    for previous in previous_versions:
+        trimmed = previous.strip()
+        if not trimmed or trimmed in seen_previous:
+            continue
+        seen_previous.add(trimmed)
+        normalized_previous.append(trimmed)
+
+    if not normalized_previous:
+        raise ValueError("At least one --previous version is required.")
+    if len(normalized_previous) > 1:
+        raise ValueError(
+            "Automated patch manifests support exactly one qualified base version. "
+            "Use a full installer for older or additional base versions."
+        )
+
     paths = [ensure_child_path(p, base_dir) for p in base_dir.rglob("*") if p.is_file()]
     paths.sort(key=lambda p: str(p.relative_to(base_dir)).lower())
 
@@ -122,18 +140,6 @@ def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str
                     "size": path.stat().st_size,
                 }
             )
-
-    normalized_previous = []
-    seen_previous = set()
-    for previous in previous_versions:
-        trimmed = previous.strip()
-        if not trimmed or trimmed in seen_previous:
-            continue
-        seen_previous.add(trimmed)
-        normalized_previous.append(trimmed)
-
-    if not normalized_previous:
-        raise ValueError("At least one --previous version is required.")
 
     manifest = {
         "previousVersion": normalized_previous[0],

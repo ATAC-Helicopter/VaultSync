@@ -74,7 +74,7 @@ without merging the release PR. The workflow rejects a candidate build unless
 the branch name exactly matches `release/v<target_version>`.
 
 Beta example for future prereleases:
-- branch: `release/v1.8.5` (or `Dev` after the beta changes are present there)
+- branch: `Dev` after the beta changes are merged there
 - release channel: `beta`
 - `release_candidate = false`
 - `previous_version = 1.8.4`
@@ -85,18 +85,11 @@ The `release_candidate` switch is not used for beta builds. It exists only to
 build unpublished, stable-version candidate assets from a matching release
 branch before the final merge into `Stable`.
 
-Example multi-base input:
-- `previous_version = 1.6.2`
-- `previous_versions =`
-  - `1.6.0`
-  - `1.6.1`
-  - `1.6.2`
-
-This produces one manifest with:
+Patch builds require one qualified predecessor through `previous_version`. This produces a manifest with:
 - `previousVersion` for backward compatibility
-- `baseVersions` as the exact allowed base-version list
+- `baseVersions` containing that same qualified predecessor
 
-Older or unlisted installs must fall back to the full installer.
+Do not broaden the allowlist to older releases without a separate qualification mechanism and test evidence for every platform. Older or unlisted installs must fall back to the full installer.
 
 ## 5) Release Checklist
 - Run the release gate before publishing:
@@ -132,7 +125,7 @@ Never describe an unsigned package as signed, notarized, or publisher-verified.
 
 macOS users may need to run:
 ```bash
-xattr -dr com.apple.quarantine /Applications/VaultSync.app
+xattr -dr com.apple.quarantine /Applications/VaultSync-macos-<arch>.app
 ```
 
 Linux AppImage users may need to run:

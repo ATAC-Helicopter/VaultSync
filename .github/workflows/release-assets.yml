@@ -11,11 +11,8 @@ on:
           - beta
           - stable
       previous_version:
-        description: "Primary previous/base version for patch manifests (optional if the allowlist is provided)"
-        required: false
-      previous_versions:
-        description: "Optional comma/newline separated exact base-version allowlist for one manifest (defaults to previous_version only)"
-        required: false
+        description: "Single qualified previous/base version for patch manifests"
+        required: true
       target_version:
         description: "Target version for patch manifests (e.g., 1.8.0-Beta.1 or 1.8.0)"
         required: true
@@ -53,7 +50,6 @@ jobs:
         env:
           RELEASE_CHANNEL: ${{ inputs.release_channel }}
           PREVIOUS_VERSION: ${{ inputs.previous_version }}
-          PREVIOUS_VERSIONS: ${{ inputs.previous_versions }}
           TARGET_VERSION: ${{ inputs.target_version }}
           RELEASE_CANDIDATE: ${{ inputs.release_candidate }}
         run: |
@@ -61,7 +57,6 @@ jobs:
 
           channel="$RELEASE_CHANNEL"
           previous="$PREVIOUS_VERSION"
-          previous_versions_raw="$PREVIOUS_VERSIONS"
           target="$TARGET_VERSION"
           release_candidate="$RELEASE_CANDIDATE"
           branch="${{ github.ref_name }}"
@@ -98,31 +93,13 @@ jobs:
             exit 1
           fi
 
-          declare -A seen_versions=()
-          requested_versions=()
-          while IFS= read -r candidate; do
-            candidate="$(printf '%s' "$candidate" | trim)"
-            [[ -n "$candidate" ]] || continue
-
-            candidate_key="$(normalize_version "$candidate")"
-            if [[ "$candidate_key" == "$target_key" ]]; then
-              echo "::warning::Ignoring base version '$candidate' because it matches target_version '$target'."
-              continue
-            fi
-
-            if [[ -z "${seen_versions[$candidate_key]+x}" ]]; then
-              seen_versions[$candidate_key]=1
-              requested_versions+=("$candidate")
-            fi
-          done < <(
-            {
-              printf '%s\n' "$previous"
-              printf '%s\n' "$previous_versions_raw" | tr ',;' '\n'
-            }
-          )
-
-          if [[ ${#requested_versions[@]} -eq 0 ]]; then
-            echo "At least one previous/base version different from target_version '$target' is required."
+          previous_key="$(normalize_version "$previous")"
+          if [[ -z "$previous" ]]; then
+            echo "previous_version is required. Automated patch builds support one explicitly qualified base version."
+            exit 1
+          fi
+          if [[ "$previous_key" == "$target_key" ]]; then
+            echo "previous_version must be different from target_version '$target'."
             exit 1
           fi
 
@@ -131,10 +108,8 @@ jobs:
               echo "release_candidate can only be used with the stable channel."
               exit 1
             fi
-            beta_base_version="${target_key%%-*}"
-            expected_beta_branch="release/v${beta_base_version}"
-            if [[ "$branch" != "Dev" && "$branch" != "$expected_beta_branch" ]]; then
-              echo "Beta asset builds must run from Dev or '$expected_beta_branch'. Current branch: $branch"
+            if [[ "$branch" != "Dev" ]]; then
+              echo "Beta asset builds must run from Dev. Current branch: $branch"
               exit 1
             fi
             if [[ "$target" != *-* ]]; then
@@ -162,7 +137,7 @@ jobs:
 
           {
             echo "patch_base_versions<<EOF"
-            printf '%s\n' "${requested_versions[@]}"
+            printf '%s\n' "$previous"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -173,11 +148,9 @@ jobs:
           - Release candidate: \`$release_candidate\`
           - Project version: \`$project_version\`
           - Primary previous version: \`${previous:-"(none)"}\`
-          - Base allow-list:
+          - Qualified patch base:
           EOF
-          for base in "${requested_versions[@]}"; do
-            echo "  - \`$base\`" >> "$GITHUB_STEP_SUMMARY"
-          done
+          echo "  - \`$previous\`" >> "$GITHUB_STEP_SUMMARY"
           cat <<EOF >> "$GITHUB_STEP_SUMMARY"
           - Target version: \`$target\`
           EOF

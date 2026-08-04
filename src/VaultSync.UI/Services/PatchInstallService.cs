@@ -367,7 +367,7 @@ namespace VaultSync.UI.Services
                     SafeZipExtractor.ExtractToDirectory(request.ArchivePath, stagingDir);
                     LogLine("Verifying extracted files.");
                     VerifyExtractedFiles(manifest, stagingDir);
-                    LogLine("Copying updated files.");
+                    LogLine("Installing updated files with rollback protection.");
                     CopyIntoInstall(manifest, stagingDir, request.InstallDir, LogLine);
                 }
                 finally
@@ -422,22 +422,207 @@ namespace VaultSync.UI.Services
             }
         }
 
-        private static void CopyIntoInstall(PatchManifest manifest, string stagingDir, string installDir, Action<string> logLine)
+        internal static void CopyIntoInstall(PatchManifest manifest, string stagingDir, string installDir, Action<string> logLine)
         {
-            foreach (PatchFileEntry file in manifest.Files)
+            string transactionDir = Path.Combine(GetTrustedPatchRoot(), $"patch-rollback-{Guid.NewGuid():N}");
+            string backupDir = Path.Combine(transactionDir, "backup");
+            var operations = new List<PatchInstallOperation>();
+            var createdDirectories = new List<string>();
+
+            Directory.CreateDirectory(backupDir);
+            RestrictDirectoryToCurrentUser(transactionDir);
+
+            try
             {
-                string source = CombineUnderRoot(stagingDir, file.RelativePath, "manifest source path");
-                string target = CombineUnderRoot(installDir, file.RelativePath, "manifest target path");
-                SafeZipExtractor.EnsureNoLinkedPathComponents(stagingDir, source);
-                SafeZipExtractor.EnsureNoLinkedPathComponents(installDir, target);
-                string? targetDir = Path.GetDirectoryName(target);
-                if (!string.IsNullOrWhiteSpace(targetDir))
+                foreach (PatchFileEntry file in manifest.Files)
                 {
-                    Directory.CreateDirectory(targetDir);
+                    string source = CombineUnderRoot(stagingDir, file.RelativePath, "manifest source path");
+                    string target = CombineUnderRoot(installDir, file.RelativePath, "manifest target path");
+                    SafeZipExtractor.EnsureNoLinkedPathComponents(stagingDir, source);
+                    SafeZipExtractor.EnsureNoLinkedPathComponents(installDir, target);
+
+                    bool targetExisted = File.Exists(target);
+                    string? backup = null;
+                    if (targetExisted)
+                    {
+                        backup = CombineUnderRoot(backupDir, file.RelativePath, "rollback backup path");
+                        string? backupParent = Path.GetDirectoryName(backup);
+                        if (!string.IsNullOrWhiteSpace(backupParent))
+                            Directory.CreateDirectory(backupParent);
+
+                        File.Copy(target, backup, overwrite: false);
+                    }
+
+                    operations.Add(new PatchInstallOperation(file.RelativePath, source, target, backup, targetExisted));
                 }
 
-                File.Copy(source, target, overwrite: true);
-                logLine($"Replaced {file.RelativePath}");
+                foreach (PatchInstallOperation operation in operations)
+                {
+                    string? targetDir = Path.GetDirectoryName(operation.Target);
+                    if (!string.IsNullOrWhiteSpace(targetDir) && !Directory.Exists(targetDir))
+                    {
+                        CreateDirectoryTree(targetDir, installDir, createdDirectories);
+                    }
+
+                    ReplaceFromSource(operation.Source, operation.Target);
+                    operation.Applied = true;
+                    logLine($"Replaced {operation.RelativePath}");
+                }
+            }
+            catch (Exception installError)
+            {
+                var rollbackErrors = RollBackInstall(operations, createdDirectories);
+                if (rollbackErrors.Count > 0)
+                {
+                    rollbackErrors.Insert(0, installError);
+                    throw new AggregateException("Patch installation failed and rollback was incomplete.", rollbackErrors);
+                }
+
+                throw;
+            }
+            finally
+            {
+                try
+                {
+                    Directory.Delete(transactionDir, recursive: true);
+                }
+                catch
+                {
+                    // Best effort cleanup. A failed cleanup only leaves rollback data in the trusted runtime directory.
+                }
+            }
+        }
+
+        private static void ReplaceFromSource(string source, string target)
+        {
+            string temporary = target + $".vaultsync-patch-{Guid.NewGuid():N}.tmp";
+            try
+            {
+                File.Copy(source, temporary, overwrite: false);
+                File.Move(temporary, target, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(temporary))
+                    File.Delete(temporary);
+            }
+        }
+
+        private static List<Exception> RollBackInstall(
+            IReadOnlyList<PatchInstallOperation> operations,
+            IReadOnlyList<string> createdDirectories)
+        {
+            var errors = new List<Exception>();
+            foreach (PatchInstallOperation operation in operations.Reverse())
+            {
+                if (!operation.Applied)
+                    continue;
+
+                try
+                {
+                    if (operation.TargetExisted)
+                    {
+                        if (string.IsNullOrWhiteSpace(operation.Backup) || !File.Exists(operation.Backup))
+                            throw new FileNotFoundException($"Rollback backup is missing for {operation.RelativePath}.", operation.Backup);
+
+                        ReplaceFromSource(operation.Backup, operation.Target);
+                    }
+                    else if (File.Exists(operation.Target))
+                    {
+                        File.Delete(operation.Target);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errors.Add(new IOException($"Failed to roll back {operation.RelativePath}.", ex));
+                }
+            }
+
+            foreach (string directory in createdDirectories.Reverse())
+            {
+                try
+                {
+                    if (Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
+                        Directory.Delete(directory);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add(new IOException($"Failed to remove patch-created directory {directory}.", ex));
+                }
+            }
+
+            return errors;
+        }
+
+        private static void CreateDirectoryTree(string directory, string installDir, ICollection<string> createdDirectories)
+        {
+            var missing = new Stack<string>();
+            string? current = directory;
+            string normalizedRoot = Path.GetFullPath(installDir)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            while (!string.IsNullOrWhiteSpace(current) && !Directory.Exists(current))
+            {
+                if (string.Equals(current, normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                    break;
+
+                missing.Push(current);
+                current = Path.GetDirectoryName(current);
+            }
+
+            while (missing.Count > 0)
+            {
+                string created = missing.Pop();
+                Directory.CreateDirectory(created);
+                createdDirectories.Add(created);
+            }
+        }
+
+        private sealed class PatchInstallOperation
+        {
+            public PatchInstallOperation(
+                string relativePath,
+                string source,
+                string target,
+                string? backup,
+                bool targetExisted)
+            {
+                RelativePath = relativePath;
+                Source = source;
+                Target = target;
+                Backup = backup;
+                TargetExisted = targetExisted;
+            }
+
+            public string RelativePath
+            {
+                get;
+            }
+
+            public string Source
+            {
+                get;
+            }
+
+            public string Target
+            {
+                get;
+            }
+
+            public string? Backup
+            {
+                get;
+            }
+
+            public bool TargetExisted
+            {
+                get;
+            }
+
+            public bool Applied
+            {
+                get;
+                set;
             }
         }
 
