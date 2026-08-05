@@ -659,12 +659,14 @@ namespace VaultSync.UI.ViewModels
         {
             _autoBackupTimer?.Dispose();
             _autoBackupTimer = null;
+            _nextAutoBackupDueUtc = null;
 
             int intervalMinutes = _config.Backups.IntervalMinutes;
             if (!_config.Backups.EnableAutoBackups || intervalMinutes <= 0)
             {
                 DiagnosticsLogger.Record(
                     $"[AutoBackup] Timer disabled. Enabled={_config.Backups.EnableAutoBackups}; IntervalMinutes={intervalMinutes}.");
+                _scheduleViewModel.Refresh();
                 return;
             }
 
@@ -676,11 +678,16 @@ namespace VaultSync.UI.ViewModels
                 null,
                 interval,
                 interval);
-            DiagnosticsLogger.Record($"[AutoBackup] Timer configured. IntervalMinutes={intervalMinutes}; FirstDueUtc={DateTime.UtcNow.Add(interval):O}.");
+            _nextAutoBackupDueUtc = DateTimeOffset.UtcNow.Add(interval);
+            _scheduleViewModel.Refresh();
+            DiagnosticsLogger.Record($"[AutoBackup] Timer configured. IntervalMinutes={intervalMinutes}; FirstDueUtc={_nextAutoBackupDueUtc:O}.");
         }
 
         private async Task SafeRunAutoBackupsAsync()
         {
+            int intervalMinutes = Math.Max(1, _config.Backups.IntervalMinutes);
+            _nextAutoBackupDueUtc = DateTimeOffset.UtcNow.AddMinutes(intervalMinutes);
+            _scheduleViewModel.Refresh();
             try
             {
                 await RunAutoBackupsAsync();

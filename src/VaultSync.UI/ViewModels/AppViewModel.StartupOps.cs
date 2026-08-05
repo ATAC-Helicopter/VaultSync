@@ -71,6 +71,10 @@ namespace VaultSync.UI.ViewModels
             _projectsViewModel.ProjectRemovedFromDatabase += OnProjectRemovedFromDatabase;
             _backupsViewModel = null;
             _settingsViewModel = new SettingsViewModel(_localizationService, _configStore, _repositoryFactory);
+            _scheduleViewModel = new ScheduleViewModel(
+                _settingsViewModel,
+                _localizationService,
+                () => _nextAutoBackupDueUtc);
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
             _settingsViewModel.DestinationSettingsSaved += OnDestinationSettingsSaved;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
@@ -135,6 +139,7 @@ namespace VaultSync.UI.ViewModels
             NavigateDashboard = new RelayCommand(_ => SetCurrentView("Dashboard"));
             NavigateProjects = new RelayCommand(_ => SetCurrentView("Projects"));
             NavigateBackups = new RelayCommand(_ => SetCurrentView("Backups"));
+            NavigateSchedule = new RelayCommand(_ => SetCurrentView("Schedule"));
             NavigateHistory = new RelayCommand(_ => SetCurrentView("History"));
             NavigateRecovery = new RelayCommand(_ => SetCurrentView("Recovery"));
             NavigateGuide = new RelayCommand(_ => SetCurrentView("Guide"));

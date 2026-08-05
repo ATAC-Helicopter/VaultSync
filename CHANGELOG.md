@@ -1,4 +1,8 @@
 ﻿# Changelog
+## [1.8.6] - Unreleased
+### Changed
+- [VS-1862] Added a dedicated Schedule experience with manual and automatic modes, interval and quiet-hours controls, projected next-run timing, and clear delay explanations.
+
 ## [1.8.5] - 02.08.2026
 ### Added
 - [VS-1851] Added an evidence-backed recovery-confidence state model that keeps measured, simulated, inferred, user-confirmed, stale, missing, failed, and unsupported evidence distinct while prioritizing decisive blockers over aggregate scores.
