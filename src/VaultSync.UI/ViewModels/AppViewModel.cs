@@ -101,6 +101,7 @@ namespace VaultSync.UI.ViewModels
         private RecoveryViewModel? _recoveryViewModel;
         private GuideViewModel? _guideViewModel;
         private readonly SettingsViewModel _settingsViewModel;
+        private readonly ScheduleViewModel _scheduleViewModel;
         private readonly IAppConfigStore _configStore;
         private readonly IRepositoryFactory _repositoryFactory;
         private AppConfig _config;
@@ -111,6 +112,7 @@ namespace VaultSync.UI.ViewModels
         private int _nasMonitorInFlight;
         private Timer? _autoBackupTimer;
         private int _autoBackupInFlight;
+        private DateTimeOffset? _nextAutoBackupDueUtc;
         private Timer? _maintenanceTimer;
         private int _maintenanceInFlight;
         private int _destinationProbeInFlight;
@@ -588,6 +590,7 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(IsDashboardActive));
                 OnPropertyChanged(nameof(IsProjectsViewActive));
                 OnPropertyChanged(nameof(IsBackupsViewActive));
+                OnPropertyChanged(nameof(IsScheduleActive));
                 OnPropertyChanged(nameof(IsHistoryActive));
                 OnPropertyChanged(nameof(IsRecoveryActive));
                 OnPropertyChanged(nameof(IsGuideActive));
@@ -602,6 +605,7 @@ namespace VaultSync.UI.ViewModels
         public bool IsDashboardActive => CurrentViewName == "Dashboard";
         public bool IsProjectsViewActive => CurrentViewName == "Projects";
         public bool IsBackupsViewActive => CurrentViewName == "Backups";
+        public bool IsScheduleActive => CurrentViewName == "Schedule";
         public bool IsHistoryActive => CurrentViewName == "History";
         public bool IsRecoveryActive => CurrentViewName == "Recovery";
         public bool IsGuideActive => CurrentViewName == "Guide";

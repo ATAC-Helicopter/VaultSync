@@ -87,6 +87,8 @@ namespace VaultSync.UI.ViewModels
 
         public ICommand NavigateBackups { get; }
 
+        public ICommand NavigateSchedule { get; }
+
         public ICommand NavigateHistory { get; }
 
         public ICommand NavigateRecovery { get; }
@@ -150,6 +152,14 @@ namespace VaultSync.UI.ViewModels
                     CurrentView = _settingsViewModel;
                     HeaderTitle = AppViewModel.L("Nav.Settings", "Settings");
                     HeaderKicker = AppViewModel.L("Main.HeaderSettings", "Preferences");
+                    break;
+                case "Schedule":
+                    BackupsViewModel.IsActiveView = false;
+                    CurrentViewName = "Schedule";
+                    _scheduleViewModel.Refresh();
+                    CurrentView = _scheduleViewModel;
+                    HeaderTitle = AppViewModel.L("Nav.Schedule", "Schedule");
+                    HeaderKicker = AppViewModel.L("Main.HeaderSchedule", "Timing & quiet hours");
                     break;
                 case "History":
                     BackupsViewModel.IsActiveView = false;
