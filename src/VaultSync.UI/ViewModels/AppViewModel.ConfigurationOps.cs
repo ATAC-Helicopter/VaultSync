@@ -778,9 +778,25 @@ namespace VaultSync.UI.ViewModels
                         .Where(p => !disabled.Contains(p.Id))
                         .Select(async project =>
                         {
+                            string projectActivityId = project.Id.ToString();
+                            BackupsViewModel.UpdateActiveBackup(
+                                projectActivityId,
+                                project.Name,
+                                0,
+                                AppViewModel.L("Backups.Activity.Queued", "Queued"),
+                                string.Empty,
+                                allowCancel: false,
+                                activityPhase: ProtectionActivityPhase.Queued);
                             await throttler.WaitAsync();
                             try
                             {
+                                BackupsViewModel.UpdateActiveBackup(
+                                    projectActivityId,
+                                    project.Name,
+                                    0,
+                                    AppViewModel.L(BackupsStatusPreparingKey, BackupsStatusPreparingFallback),
+                                    string.Empty,
+                                    activityPhase: ProtectionActivityPhase.Preparing);
                                 ProjectDestinationSelection selection = ResolveDestinationsForProject(project, cfg);
                                 if (!string.IsNullOrWhiteSpace(selection.WarningMessage))
                                 {
@@ -886,7 +902,14 @@ namespace VaultSync.UI.ViewModels
                                                         project,
                                                         resolution.EffectivePath,
                                                         isAuto: true,
-                                                        progressCallback: null,
+                                                        progressCallback: (percent, currentFile, etaText) =>
+                                                            BackupsViewModel.UpdateActiveBackup(
+                                                                projectActivityId,
+                                                                project.Name,
+                                                                percent,
+                                                                currentFile,
+                                                                etaText,
+                                                                destinationLabel: destLabel),
                                                         useArchiveMode: useArchiveMode,
                                                         fullSnapshotHash: _settingsViewModel.UseFullSnapshotHash,
                                                         maxSnapshotsToKeep: cfg.Backups.MaxSnapshotsPerProject,
@@ -951,6 +974,22 @@ namespace VaultSync.UI.ViewModels
                                                         .WithCount("maxAttempts", retryMaxAttempts)
                                                         .WithFlag("useArchiveMode", useArchiveMode)
                                                         .WithException(ex));
+                                                    BackupsViewModel.UpdateActiveBackup(
+                                                        projectActivityId,
+                                                        project.Name,
+                                                        0,
+                                                        Lf(
+                                                            "Backups.Destinations.Retrying",
+                                                            "Retrying destination in {0}s (attempt {1}/{2})",
+                                                            delaySeconds,
+                                                            attemptIndex + 1,
+                                                            retryMaxAttempts),
+                                                        string.Empty,
+                                                        allowCancel: false,
+                                                        destinationLabel: destLabel,
+                                                        activityPhase: ProtectionActivityPhase.Retrying,
+                                                        attempt: attemptIndex + 1,
+                                                        maxAttempts: retryMaxAttempts);
                                                     await Task.Delay(TimeSpan.FromSeconds(delaySeconds), CancellationToken.None);
                                                 }
                                             }
@@ -1004,6 +1043,7 @@ namespace VaultSync.UI.ViewModels
                             }
                             finally
                             {
+                                BackupsViewModel.RemoveActiveBackup(projectActivityId);
                                 _ = throttler.Release();
                             }
                         })

@@ -1,4 +1,8 @@
 ﻿# Changelog
+## [1.8.6] - Unreleased
+### Changed
+- [VS-1864] Replaced display-text-derived backup stages with shared typed protection activity states, including explicit queued, scanning, hashing, writing, verifying, waiting, retrying, completion, cancellation, and failure semantics across manual and automatic backup activity.
+
 ## [1.8.5] - 02.08.2026
 ### Added
 - [VS-1851] Added an evidence-backed recovery-confidence state model that keeps measured, simulated, inferred, user-confirmed, stale, missing, failed, and unsupported evidence distinct while prioritizing decisive blockers over aggregate scores.

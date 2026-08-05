@@ -224,7 +224,8 @@ namespace VaultSync.UI.ViewModels
                 0,
                 AppViewModel.L(BackupsStatusPreparingKey, BackupsStatusPreparingFallback),
                 string.Empty,
-                policyText: activePolicyText);
+                policyText: activePolicyText,
+                activityPhase: ProtectionActivityPhase.Preparing);
             if (isFirstManual)
             {
                 bool allowToggle = cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 };
@@ -411,7 +412,8 @@ namespace VaultSync.UI.ViewModels
                                         AppViewModel.L("Backups.Status.Cancelled", "Cancelled"),
                                         string.Empty,
                                         allowCancel: false,
-                                        policyText: activePolicyText);
+                                        policyText: activePolicyText,
+                                        activityPhase: ProtectionActivityPhase.Cancelled);
                                     Telemetry.Log("backup_single_cancelled", b => b
                                         .WithHashedString(TelemetryProject, project.Name)
                                         .WithHashedString(TelemetryDestinationPath, dest.Path ?? string.Empty)
@@ -428,7 +430,8 @@ namespace VaultSync.UI.ViewModels
                                         100,
                                         AppViewModel.L("Backups.Status.Completed", "Completed"),
                                         string.Empty,
-                                        policyText: activePolicyText);
+                                        policyText: activePolicyText,
+                                        activityPhase: ProtectionActivityPhase.Completed);
                                     succeeded++;
                                     RecordBackupThroughput(Result.BackupId, Elapsed, useArchiveMode);
                                     TryExportMetadataForBackup(cfg, dest, resolution.EffectivePath, Result.BackupId);
@@ -451,6 +454,23 @@ namespace VaultSync.UI.ViewModels
                                         attemptIndex + 1,
                                         retryMaxAttempts),
                                     BackupsViewModel.SeverityStatus.Warning);
+                                BackupsViewModel.UpdateActiveBackup(
+                                    project.Id.ToString(),
+                                    project.Name,
+                                    0,
+                                    Lf(
+                                        "Backups.Destinations.Retrying",
+                                        "Retrying destination in {0}s (attempt {1}/{2})",
+                                        delaySeconds,
+                                        attemptIndex + 1,
+                                        retryMaxAttempts),
+                                    string.Empty,
+                                    allowCancel: false,
+                                    destinationLabel: labelPrefix,
+                                    policyText: activePolicyText,
+                                    activityPhase: ProtectionActivityPhase.Retrying,
+                                    attempt: attemptIndex + 1,
+                                    maxAttempts: retryMaxAttempts);
                                 Telemetry.Log("backup_single_destination_retry", b => b
                                     .WithHashedString(TelemetryProject, project.Name)
                                     .WithHashedString(TelemetryDestinationPath, dest.Path)
@@ -703,7 +723,7 @@ namespace VaultSync.UI.ViewModels
                     int remaining = Interlocked.Decrement(ref _manualBackupInFlightCount);
                     if (remaining <= 0)
                     {
-                        BackupsViewModel.ClearActiveBackups();
+                        BackupsViewModel.RemoveActiveBackup(projectId.ToString());
                         BackupsViewModel.IsBusy = false;
                         BackupsViewModel.BusyMessage = string.Empty;
                         TrayMenuRefreshRequested?.Invoke();
@@ -797,9 +817,11 @@ namespace VaultSync.UI.ViewModels
                             p.Id.ToString(),
                             p.Name,
                             0,
-                            AppViewModel.L(BackupsStatusPreparingKey, BackupsStatusPreparingFallback),
+                            AppViewModel.L("Backups.Activity.Queued", "Queued"),
                             string.Empty,
-                            policyText: activePolicyText);
+                            allowCancel: false,
+                            policyText: activePolicyText,
+                            activityPhase: ProtectionActivityPhase.Queued);
                     }
 
                     void UpdateAggregateProgress(string currentFile, string etaText)
@@ -1056,7 +1078,8 @@ namespace VaultSync.UI.ViewModels
                                     AppViewModel.L("Backups.Status.Cancelled", "Cancelled"),
                                     string.Empty,
                                     allowCancel: false,
-                                    policyText: activePolicyText);
+                                    policyText: activePolicyText,
+                                    activityPhase: ProtectionActivityPhase.Cancelled);
                                 return;
                             }
 
@@ -1068,7 +1091,8 @@ namespace VaultSync.UI.ViewModels
                                 100,
                                 AppViewModel.L("Backups.Status.Completed", "Completed"),
                                 string.Empty,
-                                policyText: activePolicyText);
+                                policyText: activePolicyText,
+                                activityPhase: ProtectionActivityPhase.Completed);
                             results.Add((project.Name, project.RootPath, backupResult.BackupId > 0));
                             if (backupResult.BackupId > 0)
                             {
@@ -1095,7 +1119,8 @@ namespace VaultSync.UI.ViewModels
                                 AppViewModel.L("Backups.Status.Cancelled", "Cancelled"),
                                 string.Empty,
                                 allowCancel: false,
-                                policyText: activePolicyText);
+                                policyText: activePolicyText,
+                                activityPhase: ProtectionActivityPhase.Cancelled);
                             return;
                         }
                         catch (Exception ex)
@@ -1161,7 +1186,7 @@ namespace VaultSync.UI.ViewModels
                 // so the overlay collapses only after history is updated.
                 Dispatcher.UIThread.Post(() =>
                 {
-                    BackupsViewModel.ClearActiveBackups();
+                    BackupsViewModel.ClearPrimaryBackupActivities();
 
                     if (NotificationsEnabled && _settingsViewModel.NotifyOnBackupSuccess)
                     {
