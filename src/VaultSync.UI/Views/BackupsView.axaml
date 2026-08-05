@@ -2101,6 +2101,7 @@
                                           <CheckBox Content="{infra:LocalizedString Key=Backups.Section.Keep}"
                                                     VerticalAlignment="Center"
                                                     IsChecked="{Binding IsProtected, Mode=TwoWay}"
+                                                    AutomationProperties.HelpText="{infra:LocalizedString Key=History.Status.ProtectedDetail}"
                                                     Command="{ReflectionBinding Tag.ToggleBackupProtectionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}"
                                                     FontSize="11"/>

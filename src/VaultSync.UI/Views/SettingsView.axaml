@@ -847,6 +847,8 @@
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
+                                AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.Verify}"
+                                AutomationProperties.HelpText="{infra:LocalizedString Key=Settings.Backups.VerifyDescription}"
                                 IsChecked="{Binding VerifyBackupsAfterCreate, Mode=TwoWay}" />
                 </Grid>
 

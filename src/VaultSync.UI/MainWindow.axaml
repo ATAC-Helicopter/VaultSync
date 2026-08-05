@@ -259,7 +259,7 @@
             </StackPanel>
           </Button>
 
-          <Button x:Name="NavGuideButton" Classes="nav" Classes.active="{CompiledBinding IsGuideActive}" Command="{CompiledBinding NavigateGuide}" ToolTip.Tip="Guide" AutomationProperties.Name="Guide">
+          <Button x:Name="NavGuideButton" Classes="nav" Classes.active="{CompiledBinding IsGuideActive}" Command="{CompiledBinding NavigateGuide}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Guide}" AutomationProperties.Name="{infra:LocalizedString Key=Nav.Guide}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavGuideIconBadge" Classes="nav-icon-badge">
                 <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">

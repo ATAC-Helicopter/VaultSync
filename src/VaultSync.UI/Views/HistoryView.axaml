@@ -658,11 +658,13 @@
                     <Button Content="{CompiledBinding SelectedProtectedActionLabel}"
                             Command="{CompiledBinding ToggleSelectedProtectedCommand}"
                             IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}"
+                            AutomationProperties.HelpText="{infra:LocalizedString Key=History.Status.ProtectedDetail}"
                             Classes="history-action marker" />
                     <Button Grid.Column="1"
                             Content="{CompiledBinding SelectedKnownGoodActionLabel}"
                             Command="{CompiledBinding ToggleSelectedKnownGoodCommand}"
                             IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}"
+                            AutomationProperties.HelpText="{infra:LocalizedString Key=History.Status.KnownGoodDetail}"
                             Classes="history-action marker" />
                   </Grid>
                 </StackPanel>

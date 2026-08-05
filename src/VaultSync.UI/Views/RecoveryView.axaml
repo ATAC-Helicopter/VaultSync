@@ -371,12 +371,14 @@
                         <Border Grid.Column="2" Classes="recovery-pill"><TextBlock Text="{CompiledBinding OffsiteLabel}" FontSize="10" /></Border>
                         <Button Grid.Column="4"
                                 Classes="action-ghost"
-                                Content="Read-only proof"
+                                Content="{infra:LocalizedString Key=Recovery.Drill.ReadOnly}"
+                                AutomationProperties.HelpText="{infra:LocalizedString Key=Recovery.Drill.ReadOnlyHelp}"
                                 Command="{CompiledBinding RunDrillCommand}" />
                         <Button Grid.Column="5"
                                 Classes="action-primary"
-                                Content="Test restore"
-                                ToolTip.Tip="Restore representative files into a new isolated folder, reopen them, and record the evidence."
+                                Content="{infra:LocalizedString Key=Recovery.Drill.IsolatedRestore}"
+                                ToolTip.Tip="{infra:LocalizedString Key=Recovery.Drill.IsolatedRestoreHelp}"
+                                AutomationProperties.HelpText="{infra:LocalizedString Key=Recovery.Drill.IsolatedRestoreHelp}"
                                 Command="{CompiledBinding RunIsolatedRestoreCommand}" />
                       </Grid>
 
@@ -391,15 +393,16 @@
                         <Button Grid.Column="1"
                                 Classes="action-ghost"
                                 Content="{infra:LocalizedString Key=Recovery.Protected.Protect}"
+                                AutomationProperties.HelpText="{infra:LocalizedString Key=History.Status.ProtectedDetail}"
                                 Command="{CompiledBinding ProtectRecommendationCommand}" />
                       </Grid>
 
                       <Expander Grid.Row="6"
-                                Header="Recovery inspector">
+                                Header="{infra:LocalizedString Key=Recovery.Inspector.Title}">
                         <StackPanel Spacing="8" Margin="0,8,0,0">
                           <Border Classes="recovery-soft" Padding="10">
                             <StackPanel Spacing="3">
-                              <TextBlock Text="Next useful action" Classes="recovery-label" />
+                              <TextBlock Text="{infra:LocalizedString Key=Recovery.Inspector.NextAction}" Classes="recovery-label" />
                               <TextBlock Text="{CompiledBinding RecommendedAction}"
                                          FontWeight="SemiBold" TextWrapping="Wrap" />
                             </StackPanel>
