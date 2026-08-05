@@ -1,5 +1,19 @@
 # What's New
 
+## [1.8.6]
+
+VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and background work easier to understand while strengthening the release and patch path.
+
+### Schedule and activity
+- Open the dedicated Schedule page to choose manual or automatic protection, set the interval and quiet hours, and see the next expected run with any delay explanation.
+- Follow consistent queued, scanning, hashing, writing, verifying, waiting, and retrying states across manual and automatic backups.
+- Keep post-backup hashing and verification visible independently from the primary backup operation.
+
+### Release safety
+- Patch installation restores replaced files and removes patch-created files when an ordinary installation failure interrupts replacement.
+- Automated patch manifests name one qualified predecessor; older or unlisted installations fall back to a full installer.
+- Beta assets are built from `Dev`, stable assets from `Stable`, and rendering dependencies remain aligned across supported platforms.
+
 ## [1.8.5]
 
 VaultSync `1.8.5` is the Recovery Confidence update. It answers a direct question: can this project be recovered right now, what evidence supports that answer, and what should happen next?

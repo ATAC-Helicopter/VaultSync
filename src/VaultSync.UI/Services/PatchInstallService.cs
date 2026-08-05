@@ -518,43 +518,51 @@ namespace VaultSync.UI.Services
                 if (!operation.Applied)
                     continue;
 
-                try
-                {
-                    if (operation.TargetExisted)
-                    {
-                        if (string.IsNullOrWhiteSpace(operation.Backup) || !File.Exists(operation.Backup))
-                            throw new FileNotFoundException($"Rollback backup is missing for {operation.RelativePath}.", operation.Backup);
-
-                        ReplaceFromSource(operation.Backup, operation.Target);
-                    }
-                    else if (File.Exists(operation.Target))
-                    {
-                        File.Delete(operation.Target);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    errors.Add(new IOException($"Failed to roll back {operation.RelativePath}.", ex));
-                }
+                RollBackOperation(operation, errors);
             }
 
             foreach (string directory in createdDirectories.Reverse())
-            {
-                try
-                {
-                    if (Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
-                        Directory.Delete(directory);
-                }
-                catch (Exception ex)
-                {
-                    errors.Add(new IOException($"Failed to remove patch-created directory {directory}.", ex));
-                }
-            }
+                RemoveCreatedDirectory(directory, errors);
 
             return errors;
         }
 
-        private static void CreateDirectoryTree(string directory, string installDir, ICollection<string> createdDirectories)
+        private static void RollBackOperation(PatchInstallOperation operation, List<Exception> errors)
+        {
+            try
+            {
+                if (operation.TargetExisted)
+                {
+                    if (string.IsNullOrWhiteSpace(operation.Backup) || !File.Exists(operation.Backup))
+                        throw new FileNotFoundException($"Rollback backup is missing for {operation.RelativePath}.", operation.Backup);
+
+                    ReplaceFromSource(operation.Backup, operation.Target);
+                }
+                else if (File.Exists(operation.Target))
+                {
+                    File.Delete(operation.Target);
+                }
+            }
+            catch (Exception ex)
+            {
+                errors.Add(new IOException($"Failed to roll back {operation.RelativePath}.", ex));
+            }
+        }
+
+        private static void RemoveCreatedDirectory(string directory, List<Exception> errors)
+        {
+            try
+            {
+                if (Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
+                    Directory.Delete(directory);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(new IOException($"Failed to remove patch-created directory {directory}.", ex));
+            }
+        }
+
+        private static void CreateDirectoryTree(string directory, string installDir, List<string> createdDirectories)
         {
             var missing = new Stack<string>();
             string? current = directory;

@@ -15,6 +15,18 @@ public sealed class ProtectionActivityStateTests
     [InlineData("Queued for destination", "", ProtectionActivityPhase.Queued)]
     [InlineData("", "Waiting for network...", ProtectionActivityPhase.Waiting)]
     [InlineData("Retrying destination", "attempt 2/3", ProtectionActivityPhase.Retrying)]
+    [InlineData("Backup failed", "", ProtectionActivityPhase.Failed)]
+    [InlineData("", "Error writing destination", ProtectionActivityPhase.Failed)]
+    [InlineData("Cancelled", "", ProtectionActivityPhase.Cancelled)]
+    [InlineData("", "Cancelling operation", ProtectionActivityPhase.Cancelling)]
+    [InlineData("Finalizing", "", ProtectionActivityPhase.Finalizing)]
+    [InlineData("Encrypting archive", "", ProtectionActivityPhase.Compressing)]
+    [InlineData("", "Uploading archive", ProtectionActivityPhase.Uploading)]
+    [InlineData("Decrypting files", "", ProtectionActivityPhase.Restoring)]
+    [InlineData("", "Deleting backup", ProtectionActivityPhase.Deleting)]
+    [InlineData("No changes detected", "", ProtectionActivityPhase.Completed)]
+    [InlineData("Preparing backup", "", ProtectionActivityPhase.Preparing)]
+    [InlineData("", "", ProtectionActivityPhase.Unknown)]
     public void Classifier_MapsRequiredProtectionPhases(
         string detail,
         string status,
@@ -74,5 +86,86 @@ public sealed class ProtectionActivityStateTests
             ProtectionActivityPhase.Retrying,
             attempt: 4,
             maxAttempts: 3));
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(100.1)]
+    public void Progress_MustStayWithinPercentageBounds(double progress)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProtectionActivityState(
+            ProtectionActivityPhase.Writing,
+            progress));
+    }
+
+    [Fact]
+    public void RetryMetadata_MustUsePositiveValues()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProtectionActivityState(
+            ProtectionActivityPhase.Retrying,
+            attempt: 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProtectionActivityState(
+            ProtectionActivityPhase.Retrying,
+            maxAttempts: 0));
+    }
+
+    [Theory]
+    [InlineData(ProtectionActivityPhase.Queued)]
+    [InlineData(ProtectionActivityPhase.Preparing)]
+    [InlineData(ProtectionActivityPhase.Waiting)]
+    [InlineData(ProtectionActivityPhase.Retrying)]
+    [InlineData(ProtectionActivityPhase.Finalizing)]
+    [InlineData(ProtectionActivityPhase.Cancelling)]
+    public void NonProgressPhases_AreIndeterminate(ProtectionActivityPhase phase)
+    {
+        var state = new ProtectionActivityState(phase, progress: 50);
+
+        Assert.True(state.IsIndeterminate);
+    }
+
+    [Theory]
+    [InlineData(ProtectionActivityPhase.Completed, ProtectionActivityTone.Success)]
+    [InlineData(ProtectionActivityPhase.Cancelled, ProtectionActivityTone.Error)]
+    [InlineData(ProtectionActivityPhase.Failed, ProtectionActivityTone.Error)]
+    [InlineData(ProtectionActivityPhase.Retrying, ProtectionActivityTone.Attention)]
+    [InlineData(ProtectionActivityPhase.Waiting, ProtectionActivityTone.Attention)]
+    [InlineData(ProtectionActivityPhase.Cancelling, ProtectionActivityTone.Attention)]
+    [InlineData(ProtectionActivityPhase.Unknown, ProtectionActivityTone.Neutral)]
+    [InlineData(ProtectionActivityPhase.Queued, ProtectionActivityTone.Neutral)]
+    [InlineData(ProtectionActivityPhase.Preparing, ProtectionActivityTone.Neutral)]
+    [InlineData(ProtectionActivityPhase.Writing, ProtectionActivityTone.Active)]
+    public void Tone_ReflectsSemanticPhase(
+        ProtectionActivityPhase phase,
+        ProtectionActivityTone expected)
+    {
+        Assert.Equal(expected, new ProtectionActivityState(phase).Tone);
+    }
+
+    [Fact]
+    public void TerminalAndFinalizingStates_CannotBeCancelledOrRestarted()
+    {
+        var failed = new ProtectionActivityState(ProtectionActivityPhase.Failed);
+        var cancelled = new ProtectionActivityState(ProtectionActivityPhase.Cancelled);
+        var finalizing = new ProtectionActivityState(ProtectionActivityPhase.Finalizing);
+
+        Assert.True(failed.IsTerminal);
+        Assert.True(cancelled.IsTerminal);
+        Assert.False(failed.IsSuccessful);
+        Assert.False(cancelled.IsSuccessful);
+        Assert.False(failed.CanCancel);
+        Assert.False(finalizing.CanCancel);
+        Assert.False(failed.CanTransitionTo(ProtectionActivityPhase.Preparing));
+    }
+
+    [Fact]
+    public void ActiveState_AllowsValidTransitionsAndRejectsUnknown()
+    {
+        var state = new ProtectionActivityState(ProtectionActivityPhase.Writing, progress: 20);
+
+        Assert.False(state.IsIndeterminate);
+        Assert.True(state.CanCancel);
+        Assert.True(state.CanTransitionTo(ProtectionActivityPhase.Writing));
+        Assert.True(state.CanTransitionTo(ProtectionActivityPhase.Verifying));
+        Assert.False(state.CanTransitionTo(ProtectionActivityPhase.Unknown));
     }
 }
