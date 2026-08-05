@@ -1,13 +1,19 @@
 # Walkthrough video
 
-This is a real native-app recording workflow, modeled on the published
-ProofRestore demo. It does not build a slideshow and does not require an API
-key.
+This is a native-app walkthrough workflow modeled on the published
+ProofRestore demo. It supports real chapter recordings and deterministic
+full-frame chapter captures when macOS cannot sustain a long recording
+session. Both paths use verified app-only 16:9 source frames and require no
+narration API key.
 
 - [`walkthrough-script.md`](walkthrough-script.md) is the exact click, scroll,
   toggle, and narration timeline.
 - [`recording-guide.md`](recording-guide.md) is the production runbook.
 - `record-macos.sh` captures one app-only macOS scene with visible click pulses.
+- Canonical screenshots may be held as chapter footage for a release build
+  when they were captured from the same isolated profile and pass the same
+  16:9, no-crop, no-desktop review. This keeps the walkthrough current without
+  accepting a hung recorder or stale interaction footage.
 - `render-narration.py` uses the local, open Kokoro speech model and places
   every narration cue at its scripted on-screen time. Set
   `VAULTSYNC_NARRATION_VOICE` to choose another voice from the model bundle.

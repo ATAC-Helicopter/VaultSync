@@ -4,16 +4,18 @@ This page follows the same path as first-run onboarding and then explains the
 rest of the app. If you already skipped onboarding, you can use this page
 without resetting VaultSync.
 
-## The six main pages
+## The eight main pages
 
 | Page | Use it for |
 | --- | --- |
-| Dashboard | Check backup activity, storage use, and restore readiness at a glance. |
-| Projects | Discover folders, register projects, choose presets, manage tags, and create snapshots. |
+| Dashboard | Check restore readiness, required action, next run, newest known-good point, activity, and storage. |
+| Projects | Discover and group folders; register, edit, pause, remove, and snapshot projects. |
+| Schedule | Choose manual or automatic protection and understand the next run or delay. |
 | Backups | Run backups, tune each project, inspect restore points, compare snapshots, and restore. |
 | History | Search all recorded activity and maintain labels, notes, tags, and protected points. |
 | Recovery | Measure restore readiness, run read-only drills, review 3-2-1 coverage, and export a report. |
 | Settings | Configure automation, destinations, encryption, storage safety, appearance, alerts, updates, and diagnostics. |
+| Guide | Review workflows and the shared backup and recovery terminology. |
 
 ## First-run onboarding
 
@@ -27,8 +29,11 @@ and complete each action without skipping the tour.
 3. Set a **Fallback backup location**, or enable advanced destinations and add
    one active destination.
 4. Open **Projects** and register one project.
-5. Open **Backups** and run its first backup.
-6. Confirm the restore point, then select **Finish**.
+5. Open **Schedule** and review or choose the protection timing.
+6. Open **Backups** and create the first restore point.
+7. Review that restore point in **Backups**.
+8. Open **Recovery** and run a drill. **Finish** becomes available only after
+   the drill passes.
 
 **Back** revisits the previous instruction. **Skip** closes the guide; it does
 not change or delete any configuration.
@@ -37,8 +42,9 @@ not change or delete any configuration.
 
 ![VaultSync dashboard](../images/Dashboard.png)
 
-- **Projects**, **Backups**, and **Storage** summarize the protected set.
-- **Restore readiness** opens Recovery when a project needs attention.
+- **Restore readiness**, **Required action**, **Next run**, and **Known good**
+  put the most useful decisions first.
+- Each overview card opens the page that can explain or resolve its state.
 - **Backups this week** separates automatic, manual, and imported activity.
 - **Recent activity** shows the newest backup events.
 - **Storage usage** shows the largest consumers and can be sorted.
@@ -51,8 +57,21 @@ not change or delete any configuration.
 - Choose a preset to apply suitable `.vaultsyncignore` rules.
 - Create snapshots independently of copying them to a destination.
 - Use project tags and avatars to keep larger libraries readable.
-- Project-level backup, encryption, destination, restore, and verification
-  choices are available from the project controls in Backups.
+- Edit destination, preset, exclusions, tags, encryption, and automatic-backup
+  state without leaving Projects.
+- Groups summarize member health and provide group snapshot, backup, pause, and
+  resume actions.
+- Remove shows an exact preview: local registration and indexed history are
+  removed, while source files and stored backup payloads remain untouched.
+
+## Schedule
+
+![VaultSync schedule page](../images/Schedule_Page.png)
+
+- Choose manual protection or an automatic interval.
+- Set quiet hours without losing sight of the effective next run.
+- When a run is delayed, read the reason instead of guessing whether the
+  scheduler is working.
 
 ## Backups
 
@@ -93,6 +112,15 @@ not change or delete any configuration.
   and a read-only restore plan. A drill never writes into the live project.
 - **Export report** creates a shareable Markdown readiness report.
 
+## Guide
+
+![VaultSync in-app guide](../images/Guide_Page.png)
+
+- Topic cards connect everyday actions to Projects, Schedule, Backups,
+  History, and Recovery.
+- The glossary keeps backup, snapshot, restore point, verification, known
+  good, protected, and recovery drill distinct.
+
 ## Settings
 
 ![The top of Settings](../images/tour/settings.png)
@@ -128,6 +156,8 @@ dependencies remain visible.
 
 Diagnostics and maintenance use reviewable scans and dry-run plans. Update
 status, metadata-conflict choices, and repair actions remain explicit.
+Reset, cache clearing, forgetting the local project index, credential removal,
+and encryption-password removal each show their exact effect before execution.
 
 ### Themes
 

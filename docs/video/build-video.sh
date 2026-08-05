@@ -21,6 +21,7 @@ fi
 mkdir -p "$build_dir/scenes"
 scene_paths=()
 scene_durations=()
+reference_size=""
 
 while IFS=$'\t' read -r scene_id capture_rel audio_rel expected_duration; do
   capture="$repo_dir/$capture_rel"
@@ -33,6 +34,20 @@ while IFS=$'\t' read -r scene_id capture_rel audio_rel expected_duration; do
 
   capture_duration="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$capture")"
   audio_duration="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$audio")"
+  capture_size="$(ffprobe -v error -select_streams v:0 \
+    -show_entries stream=width,height -of csv=s=x:p=0 "$capture")"
+  capture_width="${capture_size%x*}"
+  capture_height="${capture_size#*x}"
+  if (( capture_width * 9 != capture_height * 16 )); then
+    echo "Scene $scene_id is ${capture_size}, not 16:9. Re-record it; assembly will not crop it." >&2
+    exit 2
+  fi
+  if [[ -z "$reference_size" ]]; then
+    reference_size="$capture_size"
+  elif [[ "$capture_size" != "$reference_size" ]]; then
+    echo "Scene $scene_id is ${capture_size}; all scenes must match ${reference_size}." >&2
+    exit 2
+  fi
   if ! awk -v capture="$capture_duration" -v audio="$audio_duration" \
     'BEGIN { difference = capture - audio; if (difference < 0) difference = -difference; exit !(difference < 0.08) }'; then
     echo "Scene $scene_id narration does not match the capture duration." >&2
@@ -61,11 +76,7 @@ while IFS=$'\t' read -r scene_id capture_rel audio_rel expected_duration; do
     ffmpeg -hide_banner -loglevel warning -nostdin -y \
       -i "$capture" -i "$audio" \
       -filter_complex \
-        "[0:v]split=2[background_source][foreground_source];\
-[background_source]scale=1920:1080:force_original_aspect_ratio=increase,\
-crop=1920:1080,gblur=sigma=28:steps=3,eq=brightness=-0.16[background];\
-[foreground_source]scale=1920:1080:force_original_aspect_ratio=decrease[foreground];\
-[background][foreground]overlay=(W-w)/2:(H-h)/2,fps=30,\
+        "[0:v]scale=1920:1080:flags=lanczos,fps=30,\
 format=yuv420p,settb=AVTB,setpts=PTS-STARTPTS[v];\
 [1:a]loudnorm=I=-16:TP=-1.5:LRA=7,aresample=48000,\
 aformat=sample_fmts=fltp:channel_layouts=stereo,asetpts=PTS-STARTPTS[a]" \

@@ -7,6 +7,8 @@ website, wiki, release material, and promotional pages.
 | --- | --- |
 | `Dashboard.png` | README hero, website hero, daily overview |
 | `Projects_Page.png` | Project discovery, registration, presets, and tags |
+| `Schedule_Page.png` | Automatic/manual timing, quiet hours, and next run |
+| `Guide_Page.png` | In-app workflow guide and recovery terminology |
 | `Backup_Page.png` | Backup health, storage, and restore points |
 | `Compare_View.png` | Snapshot comparison and text diff |
 | `History_Timeline.png` | Searchable history and restore-point details |

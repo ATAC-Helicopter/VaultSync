@@ -4,14 +4,33 @@
 
 VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and background work easier to understand while strengthening the release and patch path.
 
+### Guided setup and plain language
+- Follow a compact, resumable setup sequence through source, destination, project registration, schedule, first restore point, and a passed recovery drill. The card stays out of the way and completion comes from real app state.
+- Open Guide at any time for consistent definitions of backups, snapshots, restore points, verification, known-good points, protected points, and recovery drills.
+
+![In-app setup and recovery guide](images/Guide_Page.png)
+
 ### Schedule and activity
 - Open the dedicated Schedule page to choose manual or automatic protection, set the interval and quiet hours, and see the next expected run with any delay explanation.
 - Follow consistent queued, scanning, hashing, writing, verifying, waiting, and retrying states across manual and automatic backups.
 - Keep post-backup hashing and verification visible independently from the primary backup operation.
 
+![Dedicated protection schedule](images/Schedule_Page.png)
+
 ### Protection overview
 - Start on an action-first Dashboard that shows overall restore readiness, the project needing attention most, the next scheduled run, and the newest recovery point marked known good.
 - Jump directly from each overview card to Recovery, Schedule, or History, while keeping recent activity, backup trends, and storage detail available below.
+
+![Action-first protection Dashboard](images/Dashboard.png)
+
+### Projects and groups
+- Edit each project's destination, preset, exclusions, tags, encryption policy, and automatic-backup state in one place.
+- Review exactly what project removal changes before confirming. VaultSync removes the local registration and history index, never the source folder or stored backup payloads.
+- Organize projects into groups, see aggregate group health, and run or pause deliberate group actions.
+
+### Safer and more accessible controls
+- Primary navigation, scheduling, project, backup, recovery, and Settings controls now expose clearer screen-reader names and help.
+- Reset, cache, project-index, credential, and encryption-password removal actions show their exact effects before execution.
 
 ### Release safety
 - Patch installation restores replaced files and removes patch-created files when an ordinary installation failure interrupts replacement.

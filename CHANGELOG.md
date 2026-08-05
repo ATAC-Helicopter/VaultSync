@@ -1,9 +1,23 @@
 ﻿# Changelog
 ## [1.8.6] - Unreleased
+### Added
+- [VS-1861] Replaced first-run overlays with a compact, resumable task sequence driven by real source, destination, project, schedule, restore-point, and passed recovery-drill state.
+- [VS-1865] Added explicit per-project editing for destination, preset, exclusions, tags, encryption, and automatic-backup pause state, plus a detailed removal preview that distinguishes local registration from source and stored backup data.
+- [VS-1866] Added a localized Guide with consistent definitions for backup, snapshot, restore point, verification, known good, protected, and recovery drill.
+- [VS-1867] Added screen-reader names and help across primary workflows and confirmation previews for reset, cache, project-index, credential, and encryption-password removal.
+- [VS-1811] Added project groups with aggregate health and group snapshot, backup, pause, and resume actions.
 ### Changed
 - [VS-1862] Added a dedicated Schedule experience with manual and automatic modes, interval and quiet-hours controls, projected next-run timing, and clear delay explanations.
 - [VS-1863] Reorganized the Dashboard around protection status, the highest-priority required action, the next scheduled run, recent activity, and the latest known-good recovery point, with direct links into Recovery, Schedule, and History.
 - [VS-1864] Replaced display-text-derived backup stages with shared typed protection activity states, including explicit queued, scanning, hashing, writing, verifying, waiting, retrying, completion, cancellation, and failure semantics across manual and automatic backup activity.
+- [VS-1865] Clarified desktop and CLI project removal so it removes only local registration and history-index state while leaving source files and stored backup payloads intact.
+
+### Fixed
+- [BUG-18084] Restored the missing Schedule page content and added responsive layouts for wide and narrow windows.
+- [BUG-18085] Rebuilt Dashboard hierarchy and empty states so required actions, the next run, and known-good recovery evidence remain readable without duplicate or misleading cards.
+- [BUG-18086] Corrected onboarding order and required a passed recovery drill before reporting recovery proof complete.
+- [BUG-18087] Fixed project-removal confirmation enablement and refreshed the project list only after repository removal completes.
+- [BUG-18088] Corrected the Clear local cache label and added reviewable previews for every destructive Settings action.
 
 ## [1.8.5] - 02.08.2026
 ### Added
