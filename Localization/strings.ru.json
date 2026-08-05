@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Имя профиля",
   "Settings.Credentials.Watermark.Password": "Хранится локально",
   "Settings.Credentials.Watermark.Username": "пользователь или DOMAIN\\пользователь",
-  "Settings.Danger.ClearCache": "Очистить кэш",
+  "Settings.Danger.ClearCache": "Очистить локальный кеш",
   "Settings.Danger.ClearCacheDescription": "Удаляет кэшированные метаданные и состояние. Данные проектов не удаляются.",
   "Settings.Danger.Description": "Опасные действия. Их нельзя отменить.",
   "Settings.Danger.ForgetProjects": "Забыть все проекты",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Тестовое восстановление",
   "Recovery.Drill.IsolatedRestoreHelp": "Восстановите репрезентативные файлы в новую изолированную папку, снова откройте их и запишите доказательства.",
   "Recovery.Inspector.Title": "Инспектор восстановления",
-  "Recovery.Inspector.NextAction": "Следующее полезное действие"
+  "Recovery.Inspector.NextAction": "Следующее полезное действие",
+  "Dashboard.KnownGood.Empty": "Заведомо исправной точки восстановления пока нет.",
+  "Dashboard.KnownGood.EmptyDetail": "Просмотрите точку восстановления в истории и отметьте ее как заведомо исправную после проверки ее доказательств.",
+  "Onboarding.Setup.Proof.Passed": "Восстановление было подтверждено пройденным упражнением.",
+  "Settings.Danger.PreviewTitle": "Просмотрите это действие",
+  "Settings.Danger.ResetDefaultsDescription": "Восстановите настройки приложения до значений по умолчанию. Данные индекса проекта и резервной копии остаются на диске, но пользовательские пути и настройки необходимо настроить заново.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Удалите зарегистрированный пароль шифрования с этого устройства. Для зашифрованных резервных копий потребуется еще раз ввести пароль, прежде чем их можно будет открыть или восстановить.",
+  "Settings.Danger.RemoveCredentialDescription": "Удалите профиль учетных данных «{0}» и его сохраненный секрет с этого устройства. Назначения, использующие его, могут стать недоступными, пока не будут назначены другие учетные данные."
 }

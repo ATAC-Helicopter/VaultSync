@@ -112,6 +112,10 @@ namespace VaultSync.UI
         private bool _notifyOnLowDiskSpace = true;
         private bool _showTrayBackupWidget = true;
         private bool _confirmDeleteBackup = true;
+        private bool _isDestructivePreviewOpen;
+        private string _destructivePreviewActionLabel = string.Empty;
+        private string _destructivePreviewDetail = string.Empty;
+        private Action? _pendingDestructiveAction;
 
         private bool _notifyOnSnapshotSuccess = false;
         private bool _notifyOnSnapshotFailure = true;
@@ -603,17 +607,28 @@ namespace VaultSync.UI
 
             BrowseProjectsRootCommand    = new RelayCommand(_ => BrowseProjectsRoot());
             BrowseBackupLocationCommand  = new RelayCommand(_ => BrowseBackupLocation());
-            ResetToDefaultsCommand       = new RelayCommand(_ => ResetToDefaults());
+            ResetToDefaultsCommand       = new RelayCommand(_ => BeginDestructivePreview(
+                L("Settings.Advanced.ResetToDefaults", "Reset to defaults"),
+                L("Settings.Danger.ResetDefaultsDescription", "Restore application settings to their defaults. Project and backup index data stays on disk, but custom paths and preferences must be configured again."),
+                ResetToDefaults));
             ApplySettingsCommand         = new RelayCommand(async _ => await SaveToConfigAsync(notifyOnValidationError: true));
-            ClearLocalCacheCommand       = new RelayCommand(_ => ClearLocalCache());
-            ForgetAllProjectsCommand     = new RelayCommand(_ => ForgetAllProjects());
+            ClearLocalCacheCommand       = new RelayCommand(_ => BeginDestructivePreview(
+                L("Settings.Danger.ClearCache", "Clear local cache"),
+                L("Settings.Danger.ClearCacheDescription", "Removes cached metadata and state. Project data is not deleted."),
+                ClearLocalCache));
+            ForgetAllProjectsCommand     = new RelayCommand(_ => BeginDestructivePreview(
+                L("Settings.Danger.ForgetProjects", "Forget all projects"),
+                L("Settings.Danger.ForgetProjectsDescription", "Resets VaultSync's internal database (projects, snapshots, backups). No files on disk or NAS are removed."),
+                ForgetAllProjects));
+            CancelDestructivePreviewCommand = new RelayCommand(_ => CloseDestructivePreview());
+            ConfirmDestructivePreviewCommand = new RelayCommand(_ => ConfirmDestructivePreview());
             TestBackupLocationCommand    = new RelayCommand(_ => TestBackupLocation(), _ => !string.IsNullOrWhiteSpace(BackupLocationPath));
             AddDestinationCommand        = new RelayCommand(_ => AddDestination());
             RemoveDestinationCommand     = new RelayCommand(p => RemoveDestination(p as BackupDestinationViewModel));
             BrowseDestinationCommand     = new RelayCommand(p => BrowseDestination(p as BackupDestinationViewModel));
             TestDestinationCommand       = new RelayCommand(p => TestDestination(p as BackupDestinationViewModel));
             AddCredentialCommand         = new RelayCommand(_ => AddCredential());
-            RemoveCredentialCommand      = new RelayCommand(p => RemoveCredential(p as NetworkCredentialViewModel));
+            RemoveCredentialCommand      = new RelayCommand(p => PreviewCredentialRemoval(p as NetworkCredentialViewModel));
             _addTagColorRuleCommand      = new RelayCommand(_ => AddTagColorRule());
             _removeTagColorRuleCommand   = new RelayCommand(p => RemoveTagColorRule(p as TagColorRuleViewModel), p => p is TagColorRuleViewModel);
             _resetTagColorRuleCommand    = new RelayCommand(p => ResetTagColorRule(p as TagColorRuleViewModel), p => p is TagColorRuleViewModel);
@@ -640,7 +655,10 @@ namespace VaultSync.UI
             _runRetentionSimulationCommand = new RelayCommand(_ => RunRetentionSimulation(), _ => !IsRetentionSimulationBusy);
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
             SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
-            ClearBackupEncryptionPasswordCommand = new RelayCommand(_ => ClearBackupEncryptionPassword());
+            ClearBackupEncryptionPasswordCommand = new RelayCommand(_ => BeginDestructivePreview(
+                L("Settings.Encryption.ClearPassword", "Clear password"),
+                L("Settings.Danger.ClearEncryptionPasswordDescription", "Remove the enrolled encryption password from this device. Encrypted backups will require the password again before they can be opened or restored."),
+                ClearBackupEncryptionPassword));
             RotateEncryptedBackupsCommand = new RelayCommand(_ => RotateEncryptedBackupsRequested?.Invoke());
             EnrollProjectEncryptionPasswordCommand = new RelayCommand(_ => EnrollProjectEncryptionRequested?.Invoke());
             LockEncryptedOpenWorkspacesCommand = new RelayCommand(_ => LockEncryptedOpenWorkspacesRequested?.Invoke());
@@ -2727,6 +2745,8 @@ namespace VaultSync.UI
         public ICommand ApplySettingsCommand { get; }
         public ICommand ClearLocalCacheCommand { get; }
         public ICommand ForgetAllProjectsCommand { get; }
+        public ICommand CancelDestructivePreviewCommand { get; }
+        public ICommand ConfirmDestructivePreviewCommand { get; }
         public ICommand TestBackupLocationCommand { get; }
         public ICommand AddDestinationCommand { get; }
     public ICommand RemoveDestinationCommand { get; }
@@ -2790,6 +2810,64 @@ namespace VaultSync.UI
             L("Settings.Encryption.OpenTimeoutDescription", "Auto-lock decrypted open-folder sessions and temp content after this many minutes.");
         public string LockEncryptedOpenNowLabel =>
             L("Settings.Encryption.LockNow", "Lock now (close decrypted open folders)");
+
+        public bool IsDestructivePreviewOpen
+        {
+            get => _isDestructivePreviewOpen;
+            private set => SetField(ref _isDestructivePreviewOpen, value);
+        }
+
+        public string DestructivePreviewActionLabel
+        {
+            get => _destructivePreviewActionLabel;
+            private set => SetField(ref _destructivePreviewActionLabel, value);
+        }
+
+        public string DestructivePreviewDetail
+        {
+            get => _destructivePreviewDetail;
+            private set => SetField(ref _destructivePreviewDetail, value);
+        }
+
+        public string DestructivePreviewTitle =>
+            L("Settings.Danger.PreviewTitle", "Review this action");
+
+        private void BeginDestructivePreview(string actionLabel, string detail, Action action)
+        {
+            DestructivePreviewActionLabel = actionLabel;
+            DestructivePreviewDetail = detail;
+            _pendingDestructiveAction = action;
+            IsDestructivePreviewOpen = true;
+        }
+
+        private void PreviewCredentialRemoval(NetworkCredentialViewModel? credential)
+        {
+            if (credential is null)
+                return;
+
+            BeginDestructivePreview(
+                L("Settings.Destinations.RemoveCredential", "Remove credential"),
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    L(
+                        "Settings.Danger.RemoveCredentialDescription",
+                        "Remove credential profile '{0}' and its stored secret from this device. Destinations using it may become unavailable until another credential is assigned."),
+                    credential.Name),
+                () => RemoveCredential(credential));
+        }
+
+        private void CloseDestructivePreview()
+        {
+            IsDestructivePreviewOpen = false;
+            _pendingDestructiveAction = null;
+        }
+
+        private void ConfirmDestructivePreview()
+        {
+            Action? action = _pendingDestructiveAction;
+            CloseDestructivePreview();
+            action?.Invoke();
+        }
 
         private void SetBackupEncryptionPassword()
         {

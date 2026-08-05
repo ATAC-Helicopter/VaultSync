@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Profielnaam",
   "Settings.Credentials.Watermark.Password": "Lokaal opgeslagen",
   "Settings.Credentials.Watermark.Username": "user of DOMAIN\\user",
-  "Settings.Danger.ClearCache": "Verwijdert gecachte metadata en status. Projectgegevens worden niet verwijderd.",
+  "Settings.Danger.ClearCache": "Wis de lokale cache",
   "Settings.Danger.ClearCacheDescription": "Verwijdert gecachte metadata en status. Projectgegevens worden niet verwijderd.",
   "Settings.Danger.Description": "Destructieve acties. Deze kunnen niet ongedaan worden gemaakt.",
   "Settings.Danger.ForgetProjects": "Vergeet alle projecten",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Testherstel",
   "Recovery.Drill.IsolatedRestoreHelp": "Representatieve bestanden herstellen in een nieuwe geïsoleerde map, opnieuw openen en het bewijsmateriaal opnemen.",
   "Recovery.Inspector.Title": "Herstelinspecteur",
-  "Recovery.Inspector.NextAction": "Volgende nuttige actie"
+  "Recovery.Inspector.NextAction": "Volgende nuttige actie",
+  "Dashboard.KnownGood.Empty": "Nog geen bekend herstelpunt",
+  "Dashboard.KnownGood.EmptyDetail": "Bekijk een herstelpunt in Geschiedenis en markeer het als goed nadat u het bewijsmateriaal hebt gecontroleerd.",
+  "Onboarding.Setup.Proof.Passed": "Herstel is bewezen met een geslaagde oefening.",
+  "Settings.Danger.PreviewTitle": "Bekijk deze actie",
+  "Settings.Danger.ResetDefaultsDescription": "Herstel de applicatie-instellingen naar hun standaardwaarden. Project- en back-upindexgegevens blijven op schijf, maar aangepaste paden en voorkeuren moeten opnieuw worden geconfigureerd.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Verwijder het geregistreerde encryptiewachtwoord van dit apparaat. Voor gecodeerde back-ups is het wachtwoord opnieuw vereist voordat ze kunnen worden geopend of hersteld.",
+  "Settings.Danger.RemoveCredentialDescription": "Verwijder het inlogprofiel '{0}' en het opgeslagen geheim ervan van dit apparaat. Bestemmingen die hiervan gebruik maken, zijn mogelijk niet meer beschikbaar totdat er een andere identificatie wordt toegewezen."
 }

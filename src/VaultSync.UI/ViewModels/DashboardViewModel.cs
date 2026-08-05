@@ -2441,10 +2441,10 @@ namespace VaultSync.UI.ViewModels
             }
             else
             {
-                LatestKnownGoodTitle = L("History.Status.NotSelected", "No snapshot selected");
+                LatestKnownGoodTitle = L("Dashboard.KnownGood.Empty", "No known-good restore point yet");
                 LatestKnownGoodDetail = L(
-                    "History.Status.NotSelectedDetail",
-                    "Select an event in History to review and mark a reliable recovery point.");
+                    "Dashboard.KnownGood.EmptyDetail",
+                    "Review a restore point in History and mark it known good after checking its evidence.");
             }
         }
 

@@ -267,7 +267,7 @@
                                Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.5" Fill="Transparent" />
                 </Viewbox>
               </Border>
-              <TextBlock x:Name="NavGuideText" Text="Guide" VerticalAlignment="Center"/>
+              <TextBlock x:Name="NavGuideText" Text="{infra:LocalizedString Key=Nav.Guide}" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
 

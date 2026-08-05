@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Nome do perfil",
   "Settings.Credentials.Watermark.Password": "Armazenado localmente",
   "Settings.Credentials.Watermark.Username": "usuário ou DOMÍNIO\\usuário",
-  "Settings.Danger.ClearCache": "Remove metadados e estado em cache. Dados do projeto não são apagados.",
+  "Settings.Danger.ClearCache": "Limpar cache local",
   "Settings.Danger.ClearCacheDescription": "Remove metadados e estado em cache. Dados do projeto não são apagados.",
   "Settings.Danger.Description": "Ações destrutivas. Não podem ser desfeitas.",
   "Settings.Danger.ForgetProjects": "Esquecer todos os projetos",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Teste restauração",
   "Recovery.Drill.IsolatedRestoreHelp": "Restaure os arquivos representativos em uma nova pasta isolada, reabra-os e registre as evidências.",
   "Recovery.Inspector.Title": "Inspetor de recuperação",
-  "Recovery.Inspector.NextAction": "Próxima ação útil"
+  "Recovery.Inspector.NextAction": "Próxima ação útil",
+  "Dashboard.KnownGood.Empty": "Nenhum ponto de restauração em bom estado ainda",
+  "Dashboard.KnownGood.EmptyDetail": "Revise um ponto de restauração no Histórico e marque-o como bom após verificar suas evidências.",
+  "Onboarding.Setup.Proof.Passed": "A recuperação foi comprovada com um exercício aprovado.",
+  "Settings.Danger.PreviewTitle": "Revise esta ação",
+  "Settings.Danger.ResetDefaultsDescription": "Restaure as configurações do aplicativo aos padrões. Os dados do índice de projeto e de backup permanecem no disco, mas os caminhos e preferências personalizados devem ser configurados novamente.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Remova a senha de criptografia registrada deste dispositivo. Os backups criptografados exigirão a senha novamente antes de serem abertos ou restaurados.",
+  "Settings.Danger.RemoveCredentialDescription": "Remova o perfil de credencial '{0}' e seu segredo armazenado deste dispositivo. Os destinos que a utilizam podem ficar indisponíveis até que outra credencial seja atribuída."
 }

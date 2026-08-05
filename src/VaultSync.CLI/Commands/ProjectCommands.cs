@@ -67,7 +67,10 @@ namespace VaultSync.CLI.Commands
 
             if (!s.Yes && !s.Quiet)
             {
-                bool confirm = AnsiConsole.Confirm($"Delete project [bold]{Markup.Escape(s.Name)}[/] and all its snapshots/files?");
+                AnsiConsole.MarkupLine(
+                    "[yellow]This removes the project registration and local history index only.[/] " +
+                    "Source files and stored backup files remain.");
+                bool confirm = AnsiConsole.Confirm($"Unregister project [bold]{Markup.Escape(s.Name)}[/]?");
                 if (!confirm) { AnsiConsole.MarkupLine("[yellow]Aborted[/]"); return Task.FromResult(1); }
             }
 
@@ -75,7 +78,10 @@ namespace VaultSync.CLI.Commands
             if (stats.Projects == 0) throw new Exception($"Project '{s.Name}' not found (nothing deleted)");
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[green]Removed[/] project [bold]{Markup.Escape(s.Name)}[/] - Snapshots: {stats.Snapshots}, Files: {stats.Files}");
+                AnsiConsole.MarkupLine(
+                    $"[green]Unregistered[/] project [bold]{Markup.Escape(s.Name)}[/] - " +
+                    $"Local snapshots indexed: {stats.Snapshots}, indexed files: {stats.Files}. " +
+                    "Source files and stored backup files were not deleted.");
 
             return Task.FromResult(0);
         }

@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Nome profilo",
   "Settings.Credentials.Watermark.Password": "Memorizzata in locale",
   "Settings.Credentials.Watermark.Username": "utente o DOMAIN\\utente",
-  "Settings.Danger.ClearCache": "Rimuove metadati e stato in cache. I dati del progetto non vengono cancellati.",
+  "Settings.Danger.ClearCache": "Svuota la cache locale",
   "Settings.Danger.ClearCacheDescription": "Rimuove metadati e stato memorizzati. I dati dei progetti non vengono eliminati.",
   "Settings.Danger.Description": "Azioni distruttive. Non possono essere annullate.",
   "Settings.Danger.ForgetProjects": "Dimentica tutti i progetti",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Ripristino di prova",
   "Recovery.Drill.IsolatedRestoreHelp": "Ripristina i file rappresentativi in una nuova cartella isolata, riaprili e registra le prove.",
   "Recovery.Inspector.Title": "Ispettore del recupero",
-  "Recovery.Inspector.NextAction": "Azione utile successiva"
+  "Recovery.Inspector.NextAction": "Azione utile successiva",
+  "Dashboard.KnownGood.Empty": "Nessun punto di ripristino ancora funzionante",
+  "Dashboard.KnownGood.EmptyDetail": "Esaminare un punto di ripristino nella Cronologia e contrassegnarlo come noto dopo averne verificato le prove.",
+  "Onboarding.Setup.Proof.Passed": "Il recupero è stato dimostrato con un esercizio superato.",
+  "Settings.Danger.PreviewTitle": "Rivedi questa azione",
+  "Settings.Danger.ResetDefaultsDescription": "Ripristina le impostazioni dell'applicazione ai valori predefiniti. I dati dell'indice del progetto e del backup rimangono sul disco, ma i percorsi e le preferenze personalizzati devono essere configurati nuovamente.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Rimuovi la password di crittografia registrata da questo dispositivo. I backup crittografati richiederanno nuovamente la password prima di poter essere aperti o ripristinati.",
+  "Settings.Danger.RemoveCredentialDescription": "Rimuovi il profilo credenziale '{0}' e il relativo segreto archiviato da questo dispositivo. Le destinazioni che la utilizzano potrebbero non essere più disponibili finché non verrà assegnata un'altra credenziale."
 }

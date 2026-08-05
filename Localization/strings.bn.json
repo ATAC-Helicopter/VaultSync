@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "প্রোফাইলের নাম",
   "Settings.Credentials.Watermark.Password": "লোকালি সংরক্ষিত",
   "Settings.Credentials.Watermark.Username": "user অথবা DOMAIN\\user",
-  "Settings.Danger.ClearCache": "ক্যাশ করা মেটাডাটা ও অবস্থা মুছে দেয়। প্রকল্পের ডেটা মুছে ফেলা হয় না।",
+  "Settings.Danger.ClearCache": "স্থানীয় ক্যাশে সাফ করুন",
   "Settings.Danger.ClearCacheDescription": "ক্যাশ করা মেটাডাটা ও অবস্থা মুছে দেয়। প্রকল্পের ডেটা মুছে ফেলা হয় না।",
   "Settings.Danger.Description": "ধ্বংসাত্মক কার্যক্রম। এগুলো পূর্বাবস্থায় ফেরানো যাবে না।",
   "Settings.Danger.ForgetProjects": "সব প্রকল্প ভুলে যান",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "পরীক্ষা পুনরুদ্ধার",
   "Recovery.Drill.IsolatedRestoreHelp": "প্রতিনিধি ফাইলগুলিকে একটি নতুন বিচ্ছিন্ন ফোল্ডারে পুনরুদ্ধার করুন, সেগুলি পুনরায় খুলুন এবং প্রমাণ রেকর্ড করুন।",
   "Recovery.Inspector.Title": "রিকভারি ইন্সপেক্টর",
-  "Recovery.Inspector.NextAction": "পরবর্তী দরকারী কর্ম"
+  "Recovery.Inspector.NextAction": "পরবর্তী দরকারী কর্ম",
+  "Dashboard.KnownGood.Empty": "এখনও কোন পরিচিত-ভাল পুনরুদ্ধার পয়েন্ট নেই",
+  "Dashboard.KnownGood.EmptyDetail": "ইতিহাসে একটি পুনরুদ্ধার পয়েন্ট পর্যালোচনা করুন এবং এর প্রমাণ পরীক্ষা করার পরে এটিকে ভাল চিহ্নিত করুন।",
+  "Onboarding.Setup.Proof.Passed": "একটি পাস ড্রিল দিয়ে পুনরুদ্ধার প্রমাণিত হয়েছে।",
+  "Settings.Danger.PreviewTitle": "এই কর্ম পর্যালোচনা করুন",
+  "Settings.Danger.ResetDefaultsDescription": "অ্যাপ্লিকেশন সেটিংস তাদের ডিফল্টে পুনরুদ্ধার করুন। প্রকল্প এবং ব্যাকআপ সূচক ডেটা ডিস্কে থাকে, তবে কাস্টম পাথ এবং পছন্দগুলি আবার কনফিগার করতে হবে।",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "এই ডিভাইস থেকে নথিভুক্ত এনক্রিপশন পাসওয়ার্ড সরান. এনক্রিপ্ট করা ব্যাকআপগুলি খোলা বা পুনরুদ্ধার করার আগে আবার পাসওয়ার্ডের প্রয়োজন হবে৷",
+  "Settings.Danger.RemoveCredentialDescription": "এই ডিভাইস থেকে শংসাপত্রের প্রোফাইল '{0}' এবং এর সঞ্চিত গোপনীয়তা সরান৷ অন্য শংসাপত্র বরাদ্দ না করা পর্যন্ত এটি ব্যবহার করে গন্তব্যগুলি অনুপলব্ধ হতে পারে৷"
 }

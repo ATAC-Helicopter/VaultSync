@@ -52,7 +52,7 @@ public static class Program
                     .WithDescription("Register a folder with a preset");
 
                 cfg.AddCommand<VaultSync.CLI.Commands.RemoveProjectCommand>("remove-project")
-                    .WithDescription("Remove a project (and all snapshots/files)");
+                    .WithDescription("Unregister a project and remove its local history index; source and stored backup files remain");
 
                 cfg.AddCommand<VaultSync.CLI.Commands.ListProjectsCommand>("list-projects")
                     .WithDescription("List registered projects");

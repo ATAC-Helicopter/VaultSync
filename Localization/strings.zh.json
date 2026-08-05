@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "配置文件名称",
   "Settings.Credentials.Watermark.Password": "本地存储",
   "Settings.Credentials.Watermark.Username": "用户名 或 DOMAIN\\用户名",
-  "Settings.Danger.ClearCache": "清除缓存",
+  "Settings.Danger.ClearCache": "清除本地缓存",
   "Settings.Danger.ClearCacheDescription": "删除缓存的元数据和状态信息，不会删除项目数据。",
   "Settings.Danger.Description": "危险操作，无法撤销。",
   "Settings.Danger.ForgetProjects": "忘记所有项目",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "测试恢复",
   "Recovery.Drill.IsolatedRestoreHelp": "将代表性文件恢复到新的隔离文件夹中，重新打开它们，并记录证据。",
   "Recovery.Inspector.Title": "回收检验员",
-  "Recovery.Inspector.NextAction": "下一个有用的行动"
+  "Recovery.Inspector.NextAction": "下一个有用的行动",
+  "Dashboard.KnownGood.Empty": "尚无已知良好的还原点",
+  "Dashboard.KnownGood.EmptyDetail": "查看历史记录中的还原点，并在检查其证据后将其标记为已知良好。",
+  "Onboarding.Setup.Proof.Passed": "已通过钻探证明恢复情况。",
+  "Settings.Danger.PreviewTitle": "检查此操作",
+  "Settings.Danger.ResetDefaultsDescription": "将应用程序设置恢复为默认值。项目和备份索引数据保留在磁盘上，但必须重新配置自定义路径和首选项。",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "从此设备中删除注册的加密密码。加密的备份将需要再次输入密码才能打开或恢复。",
+  "Settings.Danger.RemoveCredentialDescription": "从此设备中删除凭据配置文件“{0}”及其存储的机密。在分配另一个凭证之前，使用它的目的地可能会变得不可用。"
 }

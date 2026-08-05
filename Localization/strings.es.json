@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Nombre del perfil",
   "Settings.Credentials.Watermark.Password": "Almacenado localmente",
   "Settings.Credentials.Watermark.Username": "usuario o DOMINIO\\usuario",
-  "Settings.Danger.ClearCache": "Elimina metadatos y estado en caché. No se borran datos de proyecto.",
+  "Settings.Danger.ClearCache": "Borrar caché local",
   "Settings.Danger.ClearCacheDescription": "Elimina metadatos y estado en caché. No se borran datos de proyecto.",
   "Settings.Danger.Description": "Acciones destructivas. No se pueden deshacer.",
   "Settings.Danger.ForgetProjects": "Olvidar todos los proyectos",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Restauración de prueba",
   "Recovery.Drill.IsolatedRestoreHelp": "Restaurar archivos representativos en una nueva carpeta aislada, volver a abrirlos y registrar la evidencia.",
   "Recovery.Inspector.Title": "Inspector de recuperación",
-  "Recovery.Inspector.NextAction": "Próxima acción útil"
+  "Recovery.Inspector.NextAction": "Próxima acción útil",
+  "Dashboard.KnownGood.Empty": "Aún no se conoce ningún punto de restauración en buen estado",
+  "Dashboard.KnownGood.EmptyDetail": "Revise un punto de restauración en el Historial y márquelo como bueno después de verificar su evidencia.",
+  "Onboarding.Setup.Proof.Passed": "La recuperación se ha comprobado con un simulacro superado.",
+  "Settings.Danger.PreviewTitle": "Revisa esta acción",
+  "Settings.Danger.ResetDefaultsDescription": "Restaure la configuración de la aplicación a sus valores predeterminados. Los datos del índice del proyecto y de la copia de seguridad permanecen en el disco, pero las rutas y preferencias personalizadas deben configurarse nuevamente.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Elimine la contraseña de cifrado registrada de este dispositivo. Las copias de seguridad cifradas requerirán nuevamente la contraseña antes de poder abrirlas o restaurarlas.",
+  "Settings.Danger.RemoveCredentialDescription": "Elimine el perfil de credenciales '{0}' y su secreto almacenado de este dispositivo. Los destinos que lo utilizan pueden dejar de estar disponibles hasta que se asigne otra credencial."
 }

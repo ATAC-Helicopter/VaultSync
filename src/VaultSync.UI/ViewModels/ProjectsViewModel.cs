@@ -166,6 +166,7 @@ public class ProjectsViewModel : ViewModelBase
 
                 _openFolderCommand.RaiseCanExecuteChanged();
                 _removeProjectCommand.RaiseCanExecuteChanged();
+                _confirmRemoveProjectCommand.RaiseCanExecuteChanged();
                 _applyPresetRecommendationCommand.RaiseCanExecuteChanged();
                 _snapshotGroupCommand.RaiseCanExecuteChanged();
                 _backupGroupCommand.RaiseCanExecuteChanged();
@@ -2364,6 +2365,25 @@ public class ProjectsViewModel : ViewModelBase
                     Dispatcher.UIThread.Post(() =>
                         ShowNotification(Lf("Projects.Notification.RemoveSuccess", "Removed project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Info));
                 }
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (SelectedProject is not null &&
+                        string.Equals(SelectedProject.Name, removedProjectName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        SelectedProject.LastSnapshot = default;
+                        SelectedProject.SizeBytes = 0;
+                        SelectedProject.SetSnapshots([]);
+                        SelectedProject.Health = ProjectHealthStatus.OutOfDate;
+                        SelectedProject.HealthTag = L("Projects.Health.NotBackedUp", "Not backed up");
+                        SelectedProject.IsRegistered = false;
+                    }
+
+                    RemoveProjectFromCurrentList(removedProjectPath);
+                    DetachedTask.Run(
+                        () => RefreshAsync(forceDiscovery: false),
+                        "refresh-projects-after-removal");
+                });
             }
             catch (Exception)
             {
@@ -2372,21 +2392,6 @@ public class ProjectsViewModel : ViewModelBase
             }
         });
 
-        // Reset the selected project's details so the right panel no longer shows stale data.
-        if (SelectedProject != null && SelectedProject.Name == removedProjectName)
-        {
-            SelectedProject.LastSnapshot = default;
-            SelectedProject.SizeBytes = 0;
-            SelectedProject.SetSnapshots([]);
-            SelectedProject.Health = ProjectHealthStatus.OutOfDate;
-            SelectedProject.HealthTag = L("Projects.Health.NotBackedUp", "Not backed up");
-            SelectedProject.IsRegistered = false;
-        }
-
-        // After removing from DB, keep the project visible in the list but mark it as unregistered
-        // so the primary action becomes "Add project" again.
-        RemoveProjectFromCurrentList(removedProjectPath);
-        _ = RefreshAsync(forceDiscovery: false);
     }
 
     private void TakeSnapshot()

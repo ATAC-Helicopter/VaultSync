@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Profilname",
   "Settings.Credentials.Watermark.Password": "Lokal gespeichert",
   "Settings.Credentials.Watermark.Username": "benutzer oder DOMÄNE\\benutzer",
-  "Settings.Danger.ClearCache": "Entfernt Zwischenspeicher und Status. Projektdaten werden nicht gelöscht.",
+  "Settings.Danger.ClearCache": "Lokalen Cache leeren",
   "Settings.Danger.ClearCacheDescription": "Entfernt Zwischenspeicher und Status. Projektdaten werden nicht gelöscht.",
   "Settings.Danger.Description": "Destruktive Aktionen. Nicht rückgängig zu machen.",
   "Settings.Danger.ForgetProjects": "Alle Projekte vergessen",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Wiederherstellung testen",
   "Recovery.Drill.IsolatedRestoreHelp": "Stellen Sie repräsentative Dateien in einem neuen isolierten Ordner wieder her, öffnen Sie sie erneut und zeichnen Sie die Beweise auf.",
   "Recovery.Inspector.Title": "Wiederherstellungsinspektor",
-  "Recovery.Inspector.NextAction": "Nächste nützliche Aktion"
+  "Recovery.Inspector.NextAction": "Nächste nützliche Aktion",
+  "Dashboard.KnownGood.Empty": "Noch kein bekanntermaßen funktionierender Wiederherstellungspunkt",
+  "Dashboard.KnownGood.EmptyDetail": "Überprüfen Sie einen Wiederherstellungspunkt im Verlauf und markieren Sie ihn nach Überprüfung seiner Beweise als „gut“.",
+  "Onboarding.Setup.Proof.Passed": "Die Erholung wurde durch eine bestandene Übung nachgewiesen.",
+  "Settings.Danger.PreviewTitle": "Überprüfen Sie diese Aktion",
+  "Settings.Danger.ResetDefaultsDescription": "Stellen Sie die Anwendungseinstellungen auf ihre Standardeinstellungen zurück. Projekt- und Sicherungsindexdaten bleiben auf der Festplatte, benutzerdefinierte Pfade und Einstellungen müssen jedoch erneut konfiguriert werden.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Entfernen Sie das registrierte Verschlüsselungskennwort von diesem Gerät. Für verschlüsselte Backups ist erneut das Passwort erforderlich, bevor sie geöffnet oder wiederhergestellt werden können.",
+  "Settings.Danger.RemoveCredentialDescription": "Entfernen Sie das Anmeldeinformationsprofil „{0}“ und sein gespeichertes Geheimnis von diesem Gerät. Ziele, die es verwenden, sind möglicherweise nicht mehr verfügbar, bis ein anderer Berechtigungsnachweis zugewiesen wird."
 }

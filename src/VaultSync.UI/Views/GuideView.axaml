@@ -6,7 +6,7 @@
     x:DataType="vm:GuideViewModel">
   <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{DynamicResource PagePadding}">
     <StackPanel Spacing="18" MaxWidth="1040" HorizontalAlignment="Center">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+      <Grid x:Name="GuideHeaderGrid" ColumnDefinitions="*,Auto" ColumnSpacing="20">
         <StackPanel Spacing="6">
           <TextBlock Text="{CompiledBinding PageTitle}" FontSize="28" FontWeight="SemiBold" />
           <TextBlock Text="{CompiledBinding PageDescription}"
@@ -14,7 +14,7 @@
           <TextBlock Text="{CompiledBinding ProgressSummary}"
                      Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="0,5,0,0" />
         </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+        <StackPanel x:Name="GuideHeaderActions" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
           <Button Classes="action-ghost" Content="{CompiledBinding RestartSetupLabel}"
                   Command="{CompiledBinding RestartSetupCommand}" />
           <Button Classes="action-ghost" Content="{CompiledBinding DocumentationLabel}"
@@ -30,10 +30,10 @@
         </StackPanel>
       </Border>
 
-      <ItemsControl ItemsSource="{CompiledBinding Topics}">
+      <ItemsControl x:Name="GuideTopicsItems" ItemsSource="{CompiledBinding Topics}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
-            <WrapPanel Orientation="Horizontal" ItemWidth="490" />
+            <UniformGrid Columns="2" />
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
@@ -68,10 +68,10 @@
         </StackPanel>
       </Border>
 
-      <ItemsControl ItemsSource="{CompiledBinding Terms}">
+      <ItemsControl x:Name="GuideTermsItems" ItemsSource="{CompiledBinding Terms}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
-            <WrapPanel Orientation="Horizontal" ItemWidth="330" />
+            <UniformGrid Columns="3" />
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>

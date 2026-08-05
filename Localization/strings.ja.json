@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "プロフィール名",
   "Settings.Credentials.Watermark.Password": "地元に保管",
   "Settings.Credentials.Watermark.Username": "ユーザーまたはDOMAIN\\user",
-  "Settings.Danger.ClearCache": "キャッシュされたメタデータと状態を削除します。プロジェクトデータは削除されません。",
+  "Settings.Danger.ClearCache": "ローカルキャッシュをクリアする",
   "Settings.Danger.ClearCacheDescription": "キャッシュされたメタデータと状態を削除します。プロジェクトデータは削除されません。",
   "Settings.Danger.Description": "破壊的な行動。これらは取り消せない。",
   "Settings.Danger.ForgetProjects": "すべてのプロジェクトは忘れてください",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "テスト復元",
   "Recovery.Drill.IsolatedRestoreHelp": "代表的なファイルを新しい分離フォルダーに復元し、再度開き、証拠を記録します。",
   "Recovery.Inspector.Title": "回収検査官",
-  "Recovery.Inspector.NextAction": "次の役立つアクション"
+  "Recovery.Inspector.NextAction": "次の役立つアクション",
+  "Dashboard.KnownGood.Empty": "正常な復元ポイントはまだありません",
+  "Dashboard.KnownGood.EmptyDetail": "履歴内の復元ポイントを確認し、証拠を確認した後、正常であるとマークします。",
+  "Onboarding.Setup.Proof.Passed": "回復は合格した訓練で証明されました。",
+  "Settings.Danger.PreviewTitle": "このアクションを確認してください",
+  "Settings.Danger.ResetDefaultsDescription": "アプリケーションの設定をデフォルトに戻します。プロジェクトとバックアップのインデックス データはディスク上に残りますが、カスタム パスと設定を再度構成する必要があります。",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "登録されている暗号化パスワードをこのデバイスから削除します。暗号化されたバックアップを開いたり復元したりするには、再度パスワードが必要になります。",
+  "Settings.Danger.RemoveCredentialDescription": "認証情報プロファイル '{0}' とそれに保存されているシークレットをこのデバイスから削除します。これを使用している宛先は、別の資格情報が割り当てられるまで使用できなくなる可能性があります。"
 }

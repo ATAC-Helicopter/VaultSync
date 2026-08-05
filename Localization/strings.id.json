@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Nama profil",
   "Settings.Credentials.Watermark.Password": "Disimpan secara lokal",
   "Settings.Credentials.Watermark.Username": "pengguna atau DOMAIN\\user",
-  "Settings.Danger.ClearCache": "Menghapus metadata dan status yang di-cache. Data proyek tidak dihapus.",
+  "Settings.Danger.ClearCache": "Hapus cache lokal",
   "Settings.Danger.ClearCacheDescription": "Menghapus metadata dan status yang di-cache. Data proyek tidak dihapus.",
   "Settings.Danger.Description": "Tindakan yang merusak. Ini tidak dapat dibatalkan.",
   "Settings.Danger.ForgetProjects": "Lupakan semua proyek",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Uji pemulihan",
   "Recovery.Drill.IsolatedRestoreHelp": "Pulihkan file representatif ke dalam folder baru yang terisolasi, buka kembali, dan catat buktinya.",
   "Recovery.Inspector.Title": "Inspektur pemulihan",
-  "Recovery.Inspector.NextAction": "Tindakan bermanfaat berikutnya"
+  "Recovery.Inspector.NextAction": "Tindakan bermanfaat berikutnya",
+  "Dashboard.KnownGood.Empty": "Belum ada titik pemulihan yang diketahui bagus",
+  "Dashboard.KnownGood.EmptyDetail": "Tinjau titik pemulihan di Riwayat dan tandai titik pemulihan tersebut dikenal baik setelah memeriksa buktinya.",
+  "Onboarding.Setup.Proof.Passed": "Pemulihan telah dibuktikan dengan latihan yang berhasil.",
+  "Settings.Danger.PreviewTitle": "Tinjau tindakan ini",
+  "Settings.Danger.ResetDefaultsDescription": "Kembalikan pengaturan aplikasi ke defaultnya. Data indeks proyek dan cadangan tetap ada di disk, namun jalur dan preferensi khusus harus dikonfigurasi lagi.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Hapus kata sandi enkripsi yang terdaftar dari perangkat ini. Cadangan terenkripsi memerlukan kata sandi lagi sebelum dapat dibuka atau dipulihkan.",
+  "Settings.Danger.RemoveCredentialDescription": "Hapus profil kredensial '{0}' dan rahasia tersimpannya dari perangkat ini. Tujuan yang menggunakannya mungkin tidak tersedia hingga kredensial lain diberikan."
 }

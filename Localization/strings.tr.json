@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Profil adı",
   "Settings.Credentials.Watermark.Password": "Yerel olarak depolanıyor",
   "Settings.Credentials.Watermark.Username": "kullanıcı veya DOMAIN\\user",
-  "Settings.Danger.ClearCache": "Önbelleklenmiş meta verileri ve durumu kaldırır. Proje verileri silinmez.",
+  "Settings.Danger.ClearCache": "Yerel önbelleği temizle",
   "Settings.Danger.ClearCacheDescription": "Önbelleklenmiş meta verileri ve durumu kaldırır. Proje verileri silinmez.",
   "Settings.Danger.Description": "Yıkıcı eylemler. Bunlar geri alınamaz.",
   "Settings.Danger.ForgetProjects": "Tüm projeleri unutun",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Test geri yüklemesi",
   "Recovery.Drill.IsolatedRestoreHelp": "Temsili dosyaları yeni, yalıtılmış bir klasöre geri yükleyin, yeniden açın ve kanıtları kaydedin.",
   "Recovery.Inspector.Title": "Kurtarma denetçisi",
-  "Recovery.Inspector.NextAction": "Sonraki yararlı eylem"
+  "Recovery.Inspector.NextAction": "Sonraki yararlı eylem",
+  "Dashboard.KnownGood.Empty": "Henüz bilinen iyi bir geri yükleme noktası yok",
+  "Dashboard.KnownGood.EmptyDetail": "Geçmiş'te bir geri yükleme noktasını inceleyin ve kanıtlarını kontrol ettikten sonra iyi olduğu biliniyor olarak işaretleyin.",
+  "Onboarding.Setup.Proof.Passed": "Başarılı bir tatbikatla iyileşme kanıtlanmıştır.",
+  "Settings.Danger.PreviewTitle": "Bu işlemi inceleyin",
+  "Settings.Danger.ResetDefaultsDescription": "Uygulama ayarlarını varsayılan değerlerine geri yükleyin. Proje ve yedekleme dizin verileri diskte kalır ancak özel yollar ve tercihlerin yeniden yapılandırılması gerekir.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Kayıtlı şifreleme şifresini bu cihazdan kaldırın. Şifrelenmiş yedeklemeler, açılmadan veya geri yüklenmeden önce tekrar parola gerektirecektir.",
+  "Settings.Danger.RemoveCredentialDescription": "'{0}' kimlik bilgisi profilini ve saklanan sırrını bu cihazdan kaldırın. Bunu kullanan hedefler, başka bir kimlik bilgisi atanana kadar kullanılamayabilir."
 }

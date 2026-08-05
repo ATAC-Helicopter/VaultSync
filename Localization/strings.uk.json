@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Назва профілю",
   "Settings.Credentials.Watermark.Password": "Зберігається локально",
   "Settings.Credentials.Watermark.Username": "user або DOMAIN\\user",
-  "Settings.Danger.ClearCache": "Видаляє кешовані метадані та стан. Дані проєкту не видаляються.",
+  "Settings.Danger.ClearCache": "Очистити локальний кеш",
   "Settings.Danger.ClearCacheDescription": "Видаляє кешовані метадані та стан. Дані проєкту не видаляються.",
   "Settings.Danger.Description": "Руйнівні дії. Це не можна скасувати.",
   "Settings.Danger.ForgetProjects": "Забудь про всі проєкти",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Тестове відновлення",
   "Recovery.Drill.IsolatedRestoreHelp": "Відновити репрезентативні файли в нову ізольовану папку, знову відкрити їх і записати докази.",
   "Recovery.Inspector.Title": "Інспектор з відновлення",
-  "Recovery.Inspector.NextAction": "Наступна корисна дія"
+  "Recovery.Inspector.NextAction": "Наступна корисна дія",
+  "Dashboard.KnownGood.Empty": "Відомо справної точки відновлення ще немає",
+  "Dashboard.KnownGood.EmptyDetail": "Перегляньте точку відновлення в Історії та позначте її як справну після перевірки доказів.",
+  "Onboarding.Setup.Proof.Passed": "Відновлення доведено пройденим тренуванням.",
+  "Settings.Danger.PreviewTitle": "Перегляньте цю дію",
+  "Settings.Danger.ResetDefaultsDescription": "Відновлення налаштувань програми до стандартних значень. Дані проекту та резервного індексу залишаються на диску, але настроювані шляхи та параметри потрібно налаштувати знову.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Видаліть зареєстрований пароль шифрування з цього пристрою. Зашифровані резервні копії вимагатимуть знову ввести пароль, перш ніж їх можна буде відкрити чи відновити.",
+  "Settings.Danger.RemoveCredentialDescription": "Видаліть профіль облікових даних \"{0}\" і його збережений секрет із цього пристрою. Пункти призначення, які його використовують, можуть стати недоступними, доки не буде призначено інший обліковий запис."
 }

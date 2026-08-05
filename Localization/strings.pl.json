@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Nazwa profilu",
   "Settings.Credentials.Watermark.Password": "Przechowywane lokalnie",
   "Settings.Credentials.Watermark.Username": "user lub DOMAIN\\user",
-  "Settings.Danger.ClearCache": "Usuwa buforowane metadane i stan. Dane projektu nie są usuwane.",
+  "Settings.Danger.ClearCache": "Wyczyść lokalną pamięć podręczną",
   "Settings.Danger.ClearCacheDescription": "Usuwa buforowane metadane i stan. Dane projektu nie są usuwane.",
   "Settings.Danger.Description": "Destrukcyjne działania. Tego nie da się cofnąć.",
   "Settings.Danger.ForgetProjects": "Zapomnij o wszystkich projektach",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Test przywracania",
   "Recovery.Drill.IsolatedRestoreHelp": "Przywróć reprezentatywne pliki do nowego, izolowanego folderu, otwórz je ponownie i zapisz dowody.",
   "Recovery.Inspector.Title": "Inspektor odzyskiwania",
-  "Recovery.Inspector.NextAction": "Następna przydatna akcja"
+  "Recovery.Inspector.NextAction": "Następna przydatna akcja",
+  "Dashboard.KnownGood.Empty": "Nie ma jeszcze znanego dobrego punktu przywracania",
+  "Dashboard.KnownGood.EmptyDetail": "Przejrzyj punkt przywracania w Historii i oznacz go jako znany po sprawdzeniu dowodów.",
+  "Onboarding.Setup.Proof.Passed": "Powrót do zdrowia został potwierdzony zaliczonym wiertłem.",
+  "Settings.Danger.PreviewTitle": "Przejrzyj to działanie",
+  "Settings.Danger.ResetDefaultsDescription": "Przywróć ustawienia aplikacji do wartości domyślnych. Dane indeksu projektu i kopii zapasowej pozostają na dysku, ale niestandardowe ścieżki i preferencje muszą zostać skonfigurowane ponownie.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Usuń zarejestrowane hasło szyfrowania z tego urządzenia. Zaszyfrowane kopie zapasowe będą wymagały ponownego podania hasła, zanim będzie można je otworzyć lub przywrócić.",
+  "Settings.Danger.RemoveCredentialDescription": "Usuń profil danych uwierzytelniających „{0}” i przechowywany w nim klucz tajny z tego urządzenia. Miejsca docelowe, które z niego korzystają, mogą stać się niedostępne do czasu przypisania innego poświadczenia."
 }

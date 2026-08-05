@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Tên hồ sơ",
   "Settings.Credentials.Watermark.Password": "Lưu trữ cục bộ",
   "Settings.Credentials.Watermark.Username": "user hoặc DOMAIN\\user",
-  "Settings.Danger.ClearCache": "Xóa siêu dữ liệu và trạng thái được lưu trong bộ nhớ đệm. Dữ liệu dự án không bị xóa.",
+  "Settings.Danger.ClearCache": "Xóa bộ nhớ đệm cục bộ",
   "Settings.Danger.ClearCacheDescription": "Xóa siêu dữ liệu và trạng thái được lưu trong bộ nhớ đệm. Dữ liệu dự án không bị xóa.",
   "Settings.Danger.Description": "Hành động phá hoại. Những điều này không thể hoàn tác.",
   "Settings.Danger.ForgetProjects": "Quên tất cả các dự án",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Kiểm tra khôi phục",
   "Recovery.Drill.IsolatedRestoreHelp": "Khôi phục các tập tin đại diện vào một thư mục riêng biệt mới, mở lại chúng và ghi lại bằng chứng.",
   "Recovery.Inspector.Title": "Thanh tra phục hồi",
-  "Recovery.Inspector.NextAction": "Hành động hữu ích tiếp theo"
+  "Recovery.Inspector.NextAction": "Hành động hữu ích tiếp theo",
+  "Dashboard.KnownGood.Empty": "Chưa có điểm khôi phục nào được biết đến",
+  "Dashboard.KnownGood.EmptyDetail": "Xem lại một điểm khôi phục trong Lịch sử và đánh dấu điểm đó là tốt sau khi kiểm tra bằng chứng của nó.",
+  "Onboarding.Setup.Proof.Passed": "Sự phục hồi đã được chứng minh bằng một cuộc diễn tập đã được thông qua.",
+  "Settings.Danger.PreviewTitle": "Xem lại hành động này",
+  "Settings.Danger.ResetDefaultsDescription": "Khôi phục cài đặt ứng dụng về mặc định. Dữ liệu chỉ mục dự án và sao lưu vẫn còn trên đĩa, nhưng các đường dẫn và tùy chọn tùy chỉnh phải được định cấu hình lại.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Xóa mật khẩu mã hóa đã đăng ký khỏi thiết bị này. Các bản sao lưu được mã hóa sẽ yêu cầu nhập lại mật khẩu trước khi có thể mở hoặc khôi phục chúng.",
+  "Settings.Danger.RemoveCredentialDescription": "Xóa hồ sơ thông tin xác thực '{0}' và bí mật được lưu trữ của hồ sơ đó khỏi thiết bị này. Các đích sử dụng nó có thể không khả dụng cho đến khi thông tin xác thực khác được chỉ định."
 }

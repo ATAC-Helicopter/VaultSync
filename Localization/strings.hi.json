@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "प्रोफ़ाइल नाम",
   "Settings.Credentials.Watermark.Password": "स्थानीय रूप से संग्रहीत",
   "Settings.Credentials.Watermark.Username": "user या DOMAIN\\user",
-  "Settings.Danger.ClearCache": "कैश मेटाडेटा और स्थिति हटाता है। प्रोजेक्ट डेटा नहीं हटता।",
+  "Settings.Danger.ClearCache": "स्थानीय कैश साफ़ करें",
   "Settings.Danger.ClearCacheDescription": "कैश मेटाडेटा और स्थिति हटाता है। प्रोजेक्ट डेटा नहीं हटता।",
   "Settings.Danger.Description": "विनाशकारी क्रियाएँ। इन्हें पूर्ववत नहीं किया जा सकता।",
   "Settings.Danger.ForgetProjects": "सभी प्रोजेक्ट भूलें",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "परीक्षण पुनर्स्थापना",
   "Recovery.Drill.IsolatedRestoreHelp": "प्रतिनिधि फ़ाइलों को एक नए पृथक फ़ोल्डर में पुनर्स्थापित करें, उन्हें फिर से खोलें, और साक्ष्य रिकॉर्ड करें।",
   "Recovery.Inspector.Title": "वसूली निरीक्षक",
-  "Recovery.Inspector.NextAction": "अगली उपयोगी कार्रवाई"
+  "Recovery.Inspector.NextAction": "अगली उपयोगी कार्रवाई",
+  "Dashboard.KnownGood.Empty": "अभी तक कोई ज्ञात-अच्छा पुनर्स्थापना बिंदु नहीं है",
+  "Dashboard.KnownGood.EmptyDetail": "इतिहास में एक पुनर्स्थापना बिंदु की समीक्षा करें और उसके साक्ष्यों की जाँच करने के बाद उसे 'अच्छा ज्ञात' के रूप में चिह्नित करें।",
+  "Onboarding.Setup.Proof.Passed": "पारित ड्रिल से पुनर्प्राप्ति सिद्ध हो चुकी है।",
+  "Settings.Danger.PreviewTitle": "इस कार्रवाई की समीक्षा करें",
+  "Settings.Danger.ResetDefaultsDescription": "एप्लिकेशन सेटिंग्स को उनके डिफ़ॉल्ट पर पुनर्स्थापित करें। प्रोजेक्ट और बैकअप इंडेक्स डेटा डिस्क पर रहता है, लेकिन कस्टम पथ और प्राथमिकताओं को फिर से कॉन्फ़िगर किया जाना चाहिए।",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "इस डिवाइस से नामांकित एन्क्रिप्शन पासवर्ड हटा दें। एन्क्रिप्टेड बैकअप को खोलने या पुनर्स्थापित करने से पहले दोबारा पासवर्ड की आवश्यकता होगी।",
+  "Settings.Danger.RemoveCredentialDescription": "इस डिवाइस से क्रेडेंशियल प्रोफ़ाइल '{0}' और उसके संग्रहीत रहस्य को हटा दें। इसका उपयोग करने वाले गंतव्य तब तक अनुपलब्ध हो सकते हैं जब तक कि कोई अन्य क्रेडेंशियल असाइन नहीं किया जाता है।"
 }

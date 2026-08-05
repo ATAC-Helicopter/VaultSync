@@ -1201,7 +1201,7 @@
   "Settings.Credentials.Watermark.Name": "Profile name",
   "Settings.Credentials.Watermark.Password": "Stored locally",
   "Settings.Credentials.Watermark.Username": "user or DOMAIN\\user",
-  "Settings.Danger.ClearCache": "Removes cached metadata and state. Project data is not deleted.",
+  "Settings.Danger.ClearCache": "Clear local cache",
   "Settings.Danger.ClearCacheDescription": "Removes cached metadata and state. Project data is not deleted.",
   "Settings.Danger.Description": "Destructive actions. These cannot be undone.",
   "Settings.Danger.ForgetProjects": "Forget all projects",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Test restore",
   "Recovery.Drill.IsolatedRestoreHelp": "Restore representative files into a new isolated folder, reopen them, and record the evidence.",
   "Recovery.Inspector.Title": "Recovery inspector",
-  "Recovery.Inspector.NextAction": "Next useful action"
+  "Recovery.Inspector.NextAction": "Next useful action",
+  "Dashboard.KnownGood.Empty": "No known-good restore point yet",
+  "Dashboard.KnownGood.EmptyDetail": "Review a restore point in History and mark it known good after checking its evidence.",
+  "Onboarding.Setup.Proof.Passed": "Recovery has been proved with a passed drill.",
+  "Settings.Danger.PreviewTitle": "Review this action",
+  "Settings.Danger.ResetDefaultsDescription": "Restore application settings to their defaults. Project and backup index data stays on disk, but custom paths and preferences must be configured again.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Remove the enrolled encryption password from this device. Encrypted backups will require the password again before they can be opened or restored.",
+  "Settings.Danger.RemoveCredentialDescription": "Remove credential profile '{0}' and its stored secret from this device. Destinations using it may become unavailable until another credential is assigned."
 }

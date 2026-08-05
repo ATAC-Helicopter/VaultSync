@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "Nom du profil",
   "Settings.Credentials.Watermark.Password": "Stocké localement",
   "Settings.Credentials.Watermark.Username": "utilisateur ou DOMAINE\\utilisateur",
-  "Settings.Danger.ClearCache": "Vider le cache",
+  "Settings.Danger.ClearCache": "Vider le cache local",
   "Settings.Danger.ClearCacheDescription": "Supprime les métadonnées et l'état en cache. Les données projet ne sont pas supprimées.",
   "Settings.Danger.Description": "Actions destructrices. Irréversibles.",
   "Settings.Danger.ForgetProjects": "Oublier tous les projets",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "Test de restauration",
   "Recovery.Drill.IsolatedRestoreHelp": "Restaurez les fichiers représentatifs dans un nouveau dossier isolé, rouvrez-les et enregistrez les preuves.",
   "Recovery.Inspector.Title": "Inspecteur de récupération",
-  "Recovery.Inspector.NextAction": "Prochaine action utile"
+  "Recovery.Inspector.NextAction": "Prochaine action utile",
+  "Dashboard.KnownGood.Empty": "Pas encore de point de restauration connu",
+  "Dashboard.KnownGood.EmptyDetail": "Examinez un point de restauration dans l’historique et marquez-le comme étant connu après avoir vérifié ses preuves.",
+  "Onboarding.Setup.Proof.Passed": "La récupération a été prouvée avec un exercice réussi.",
+  "Settings.Danger.PreviewTitle": "Revoir cette action",
+  "Settings.Danger.ResetDefaultsDescription": "Restaurez les paramètres de l'application à leurs valeurs par défaut. Les données du projet et de l'index de sauvegarde restent sur le disque, mais les chemins et préférences personnalisés doivent être à nouveau configurés.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "Supprimez le mot de passe de cryptage enregistré de cet appareil. Les sauvegardes cryptées nécessiteront à nouveau le mot de passe avant de pouvoir être ouvertes ou restaurées.",
+  "Settings.Danger.RemoveCredentialDescription": "Supprimez le profil d'identification « {0} » et son secret stocké de cet appareil. Les destinations qui l'utilisent peuvent devenir indisponibles jusqu'à ce qu'un autre identifiant soit attribué."
 }

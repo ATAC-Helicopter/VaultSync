@@ -1203,7 +1203,7 @@
   "Settings.Credentials.Watermark.Name": "اسم الملف الشخصي",
   "Settings.Credentials.Watermark.Password": "مخزنة محليا",
   "Settings.Credentials.Watermark.Username": "المستخدم أو المجال\\المستخدم",
-  "Settings.Danger.ClearCache": "يزيل بيانات التعريف والحالة المخزنة مؤقتًا. لا يتم حذف بيانات المشروع.",
+  "Settings.Danger.ClearCache": "مسح ذاكرة التخزين المؤقت المحلية",
   "Settings.Danger.ClearCacheDescription": "يزيل بيانات التعريف والحالة المخزنة مؤقتًا. لا يتم حذف بيانات المشروع.",
   "Settings.Danger.Description": "الإجراءات المدمرة. لا يمكن التراجع عن هذه.",
   "Settings.Danger.ForgetProjects": "نسيان جميع المشاريع",
@@ -1735,5 +1735,12 @@
   "Recovery.Drill.IsolatedRestore": "اختبار الاستعادة",
   "Recovery.Drill.IsolatedRestoreHelp": "قم باستعادة الملفات التمثيلية إلى مجلد جديد معزول، ثم أعد فتحها وتسجيل الأدلة.",
   "Recovery.Inspector.Title": "مفتش الاسترداد",
-  "Recovery.Inspector.NextAction": "الإجراء المفيد التالي"
+  "Recovery.Inspector.NextAction": "الإجراء المفيد التالي",
+  "Dashboard.KnownGood.Empty": "لا توجد نقطة استعادة جيدة معروفة حتى الآن",
+  "Dashboard.KnownGood.EmptyDetail": "مراجعة نقطة الاستعادة في التاريخ ووضع علامة \"المعروفة\" عليها بعد التحقق من أدلتها.",
+  "Onboarding.Setup.Proof.Passed": "تم إثبات التعافي من خلال تمرين ناجح.",
+  "Settings.Danger.PreviewTitle": "قم بمراجعة هذا الإجراء",
+  "Settings.Danger.ResetDefaultsDescription": "استعادة إعدادات التطبيق إلى إعداداتها الافتراضية. تبقى بيانات فهرس المشروع والنسخ الاحتياطي على القرص، ولكن يجب تكوين المسارات والتفضيلات المخصصة مرة أخرى.",
+  "Settings.Danger.ClearEncryptionPasswordDescription": "قم بإزالة كلمة مرور التشفير المسجلة من هذا الجهاز. ستتطلب النسخ الاحتياطية المشفرة كلمة المرور مرة أخرى قبل أن يتم فتحها أو استعادتها.",
+  "Settings.Danger.RemoveCredentialDescription": "قم بإزالة ملف تعريف الاعتماد '{0}' وسره المخزن من هذا الجهاز. قد تصبح الوجهات التي تستخدمها غير متاحة حتى يتم تعيين بيانات اعتماد أخرى."
 }
