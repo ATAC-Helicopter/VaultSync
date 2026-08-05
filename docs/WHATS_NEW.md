@@ -9,6 +9,10 @@ VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and
 - Follow consistent queued, scanning, hashing, writing, verifying, waiting, and retrying states across manual and automatic backups.
 - Keep post-backup hashing and verification visible independently from the primary backup operation.
 
+### Protection overview
+- Start on an action-first Dashboard that shows overall restore readiness, the project needing attention most, the next scheduled run, and the newest recovery point marked known good.
+- Jump directly from each overview card to Recovery, Schedule, or History, while keeping recent activity, backup trends, and storage detail available below.
+
 ### Release safety
 - Patch installation restores replaced files and removes patch-created files when an ordinary installation failure interrupts replacement.
 - Automated patch manifests name one qualified predecessor; older or unlisted installations fall back to a full installer.

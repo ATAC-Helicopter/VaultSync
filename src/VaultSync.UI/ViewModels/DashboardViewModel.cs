@@ -63,6 +63,12 @@ namespace VaultSync.UI.ViewModels
         private string _recoveryCoverage7Label = string.Empty;
         private string _recoveryCoverage30Label = string.Empty;
         private string _recoveryCoverage90Label = string.Empty;
+        private string _requiredActionTitle = string.Empty;
+        private string _requiredActionDetail = string.Empty;
+        private string _nextRunText = string.Empty;
+        private string _nextRunDetail = string.Empty;
+        private string _latestKnownGoodTitle = string.Empty;
+        private string _latestKnownGoodDetail = string.Empty;
 
         // Backup storage segmented usage bar (Other + per-project)
         public IReadOnlyList<BackupUsageSegment> BackupUsageSegments { get; private set; } =
@@ -411,6 +417,72 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        public string RequiredActionTitle
+        {
+            get => _requiredActionTitle;
+            private set
+            {
+                if (_requiredActionTitle == value) return;
+                _requiredActionTitle = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string RequiredActionDetail
+        {
+            get => _requiredActionDetail;
+            private set
+            {
+                if (_requiredActionDetail == value) return;
+                _requiredActionDetail = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string NextRunText
+        {
+            get => _nextRunText;
+            private set
+            {
+                if (_nextRunText == value) return;
+                _nextRunText = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string NextRunDetail
+        {
+            get => _nextRunDetail;
+            private set
+            {
+                if (_nextRunDetail == value) return;
+                _nextRunDetail = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string LatestKnownGoodTitle
+        {
+            get => _latestKnownGoodTitle;
+            private set
+            {
+                if (_latestKnownGoodTitle == value) return;
+                _latestKnownGoodTitle = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string LatestKnownGoodDetail
+        {
+            get => _latestKnownGoodDetail;
+            private set
+            {
+                if (_latestKnownGoodDetail == value) return;
+                _latestKnownGoodDetail = value;
+                OnPropertyChanged();
+            }
+        }
+
         // Search / actions (your RelayCommand expects Action<object?>)
         public string? SearchText { get; set; }
         public RelayCommand RefreshCommand { get; }
@@ -419,6 +491,7 @@ namespace VaultSync.UI.ViewModels
         public RelayCommand OpenBackupsCommand { get; }
         public RelayCommand OpenHistoryCommand { get; }
         public RelayCommand OpenRecoveryCommand { get; }
+        public RelayCommand OpenScheduleCommand { get; }
 
         // Chart bindings
         public ISeries[] SnapshotSeries { get; private set; } = [];
@@ -478,6 +551,7 @@ namespace VaultSync.UI.ViewModels
         private IReadOnlyList<(Project project, long bytes)> _lastStorageSlices = [];
         private readonly IAppConfigStore _configStore;
         private readonly IRepositoryFactory _repositoryFactory;
+        private readonly ScheduleViewModel? _scheduleViewModel;
         private RecoveryCoverageSummary _lastRecoveryCoverageSummary = new();
         private double[]? _snapshotCountsByDayCache;
         private double _lastWeeklyAverage;
@@ -487,10 +561,14 @@ namespace VaultSync.UI.ViewModels
         {
         }
 
-        internal DashboardViewModel(IAppConfigStore configStore, IRepositoryFactory? repositoryFactory = null)
+        internal DashboardViewModel(
+            IAppConfigStore configStore,
+            IRepositoryFactory? repositoryFactory = null,
+            ScheduleViewModel? scheduleViewModel = null)
         {
             _configStore = configStore;
             _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
+            _scheduleViewModel = scheduleViewModel;
             RefreshCommand = new RelayCommand(async _ => await RefreshAsync(force: true));
             NewSnapshotCommand = new RelayCommand(_ => { /* wired later from dashboard actions */ });
             ToggleRestoreReadinessIssuesCommand = new RelayCommand(_ => ShowRestoreReadinessIssues = !ShowRestoreReadinessIssues, _ => HasRestoreReadinessIssues);
@@ -503,6 +581,9 @@ namespace VaultSync.UI.ViewModels
             OpenRecoveryCommand = new RelayCommand(
                 _ => App.AppViewModelInstance?.NavigateRecovery?.Execute(null),
                 _ => App.AppViewModelInstance?.NavigateRecovery?.CanExecute(null) == true);
+            OpenScheduleCommand = new RelayCommand(
+                _ => App.AppViewModelInstance?.NavigateSchedule?.Execute(null),
+                _ => App.AppViewModelInstance?.NavigateSchedule?.CanExecute(null) == true);
 
             BuildStaticAxes();
             RebuildStorageSortOptions();
@@ -693,6 +774,14 @@ namespace VaultSync.UI.ViewModels
                     List<Backup> restoreReadinessBackups = repo.GetAllBackups().ToList();
                     IReadOnlyDictionary<int, SnapshotHistoryMetadata> restoreReadinessMetadata =
                         repo.GetSnapshotHistoryMetadataBySnapshotIds(restoreReadinessBackups.Select(backup => backup.SnapshotId));
+                    Backup? latestKnownGoodBackup = restoreReadinessBackups
+                        .Where(backup => restoreReadinessMetadata.TryGetValue(backup.SnapshotId, out SnapshotHistoryMetadata? metadata) && metadata.IsKnownGood)
+                        .OrderByDescending(backup => backup.CreatedUtc)
+                        .ThenByDescending(backup => backup.Id)
+                        .FirstOrDefault();
+                    string? latestKnownGoodProjectName = latestKnownGoodBackup is null
+                        ? null
+                        : projects.FirstOrDefault(project => project.Id == latestKnownGoodBackup.ProjectId)?.Name;
 
                     var dashboardData = new DashboardData
                     {
@@ -718,7 +807,9 @@ namespace VaultSync.UI.ViewModels
                             snapshotMetadataById: restoreReadinessMetadata),
                         RecoveryCoverage = new RecoveryCoverageService().BuildSummary(
                             projects,
-                            restoreReadinessBackups)
+                            restoreReadinessBackups),
+                        LatestKnownGoodBackup = latestKnownGoodBackup,
+                        LatestKnownGoodProjectName = latestKnownGoodProjectName
                     };
                     _lastDashboardData = dashboardData;
                     _lastDashboardDataUtc = DateTime.UtcNow;
@@ -769,6 +860,7 @@ namespace VaultSync.UI.ViewModels
                             : L("Dashboard.Hint.StorageTotal", "Total across all backups");
                         ApplyRestoreReadinessSummary(data.RestoreReadiness);
                         ApplyRecoveryCoverageSummary(data.RecoveryCoverage);
+                        ApplyPriorityOverview(data);
 
                         List<ActivityItem> activityItems = BuildRecentActivityItems(data);
 
@@ -866,6 +958,8 @@ namespace VaultSync.UI.ViewModels
             public int[] ImportedCounts { get; init; } = [];
             public RestoreReadinessSummary RestoreReadiness { get; init; } = new();
             public RecoveryCoverageSummary RecoveryCoverage { get; init; } = new();
+            public Backup? LatestKnownGoodBackup { get; init; }
+            public string? LatestKnownGoodProjectName { get; init; }
         }
 
         private static List<ActivityItem> BuildRecentActivityItems(DashboardData data)
@@ -2173,6 +2267,10 @@ namespace VaultSync.UI.ViewModels
 
             // Refresh recovery coverage labels with localized strings using cached summary data
             ApplyRecoveryCoverageSummary(_lastRecoveryCoverageSummary);
+            if (_lastDashboardData is not null)
+            {
+                ApplyPriorityOverview(_lastDashboardData);
+            }
 
             // Refresh weekly activity average label with cached data
             WeeklyAverageLabel = Lf("Dashboard.Chart.AvgLabel", "Avg {0:0.0}", _lastWeeklyAverage);
@@ -2261,6 +2359,60 @@ namespace VaultSync.UI.ViewModels
             RecoveryCoverage7Label = Lf("RecoveryCoverage.Window.7d", "7d: {0}/{1}", summary.Within7Days, total);
             RecoveryCoverage30Label = Lf("RecoveryCoverage.Window.30d", "30d: {0}/{1}", summary.Within30Days, total);
             RecoveryCoverage90Label = Lf("RecoveryCoverage.Window.90d", "90d: {0}/{1}", summary.Within90Days, total);
+        }
+
+        private void ApplyPriorityOverview(DashboardData data)
+        {
+            ProjectRestoreReadiness? requiredAction = data.RestoreReadiness.Projects
+                .Where(project => project.State != RestoreReadinessState.Ready)
+                .OrderBy(project => project.Score)
+                .ThenBy(project => project.ProjectName, StringComparer.CurrentCultureIgnoreCase)
+                .FirstOrDefault();
+
+            RequiredActionTitle = requiredAction?.ProjectName
+                ?? L("RestoreReadiness.ReviewEmpty", "Everything currently looks restore-ready.");
+            RequiredActionDetail = requiredAction?.Reason ?? RestoreReadinessHeadline;
+
+            if (_scheduleViewModel is null)
+            {
+                BackupScheduleProjection projection = BackupSchedulePolicy.Project(
+                    data.Config.Backups.EnableAutoBackups,
+                    data.Config.Backups.IntervalMinutes,
+                    data.Config.Backups.EnableQuietHours,
+                    data.Config.Backups.QuietHoursStart,
+                    data.Config.Backups.QuietHoursEnd,
+                    DateTimeOffset.Now,
+                    timerDueAtLocal: null);
+                NextRunText = projection.NextRunAtLocal is { } nextRun
+                    ? nextRun.ToString("ddd, d MMM · HH:mm", System.Globalization.CultureInfo.CurrentCulture)
+                    : L("Schedule.NextRun.None", "No automatic run scheduled");
+                NextRunDetail = projection.Status == BackupScheduleStatus.ManualOnly
+                    ? L("Schedule.Delay.Manual", "Automatic backups are off. You can still start a backup at any time.")
+                    : Lf("Schedule.Delay.Interval", "VaultSync checks for work every {0} minutes.", data.Config.Backups.IntervalMinutes);
+            }
+            else
+            {
+                _scheduleViewModel.Refresh();
+                NextRunText = _scheduleViewModel.NextRunText;
+                NextRunDetail = _scheduleViewModel.DelayExplanation;
+            }
+
+            if (data.LatestKnownGoodBackup is { } knownGood)
+            {
+                LatestKnownGoodTitle = string.IsNullOrWhiteSpace(data.LatestKnownGoodProjectName)
+                    ? L("History.Status.KnownGood", "Known good restore point")
+                    : data.LatestKnownGoodProjectName;
+                LatestKnownGoodDetail = knownGood.CreatedUtc.ToLocalTime().ToString(
+                    "ddd, d MMM yyyy · HH:mm",
+                    System.Globalization.CultureInfo.CurrentCulture);
+            }
+            else
+            {
+                LatestKnownGoodTitle = L("History.Status.NotSelected", "No snapshot selected");
+                LatestKnownGoodDetail = L(
+                    "History.Status.NotSelectedDetail",
+                    "Select an event in History to review and mark a reliable recovery point.");
+            }
         }
 
         private static string LocalizeRestoreReadinessState(RestoreReadinessState state)

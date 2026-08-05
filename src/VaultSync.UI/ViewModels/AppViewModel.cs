@@ -611,7 +611,10 @@ namespace VaultSync.UI.ViewModels
         public bool IsGuideActive => CurrentViewName == "Guide";
         public bool IsSettingsActive => CurrentViewName == "Settings";
         public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
-        public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(_configStore, _repositoryFactory);
+        public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(
+            _configStore,
+            _repositoryFactory,
+            _scheduleViewModel);
         public HistoryViewModel HistoryViewModel
         {
             get
