@@ -140,6 +140,7 @@ namespace VaultSync.UI.ViewModels
             double Progress,
             string CurrentFile,
             string EtaText,
+            ProtectionActivityState ActivityState,
             bool AllowCancel,
             string? DestinationLabel,
             string PolicyText);
@@ -2722,10 +2723,19 @@ namespace VaultSync.UI.ViewModels
             string etaText,
             bool allowCancel = true,
             string? destinationLabel = null,
-            string? policyText = null)
+            string? policyText = null,
+            ProtectionActivityPhase? activityPhase = null,
+            int? attempt = null,
+            int? maxAttempts = null)
         {
             if (string.IsNullOrWhiteSpace(projectId))
                 return;
+
+            ProtectionActivityPhase phase = activityPhase ??
+                ProtectionActivityClassifier.Classify(progress, currentFile, etaText);
+            double? semanticProgress = progress > 0.1d || phase == ProtectionActivityPhase.Completed
+                ? Math.Clamp(progress, 0d, 100d)
+                : null;
 
             var update = new PendingBackupUpdate(
                 projectId,
@@ -2733,6 +2743,7 @@ namespace VaultSync.UI.ViewModels
                 progress,
                 currentFile,
                 etaText,
+                new ProtectionActivityState(phase, semanticProgress, attempt, maxAttempts),
                 allowCancel,
                 destinationLabel,
                 policyText ?? string.Empty);
@@ -2834,6 +2845,7 @@ namespace VaultSync.UI.ViewModels
             }
             item.PolicyText = update.PolicyText;
 
+            item.ActivityState = update.ActivityState;
             item.AllowCancel = update.AllowCancel;
 
             if (!string.IsNullOrWhiteSpace(update.CurrentFile))
@@ -2864,6 +2876,24 @@ namespace VaultSync.UI.ViewModels
 
             ActiveBackups.Clear();
         }
+
+        public void ClearPrimaryBackupActivities()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(ClearPrimaryBackupActivities);
+                return;
+            }
+
+            foreach (string projectId in _pendingActiveBackupUpdates.Keys.Where(IsPrimaryBackupActivityId))
+                _pendingActiveBackupUpdates.TryRemove(projectId, out _);
+
+            foreach (BackupProgressItem item in ActiveBackups.Where(item => IsPrimaryBackupActivityId(item.ProjectId)).ToList())
+                ActiveBackups.Remove(item);
+        }
+
+        private static bool IsPrimaryBackupActivityId(string projectId) =>
+            int.TryParse(projectId, NumberStyles.Integer, CultureInfo.InvariantCulture, out _);
 
         public void ResetDestinationStatuses(IEnumerable<BackupDestination> destinations, bool allowToggle)
         {
