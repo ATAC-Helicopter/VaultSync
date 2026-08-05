@@ -129,11 +129,12 @@ public sealed record OnboardingSetupState(
     bool HasProjectsRoot,
     bool HasBackupDestination,
     int RegisteredProjectCount,
+    bool HasValidSchedule,
     int BackupCount,
     int RecoveryDrillCount,
     int PassedRecoveryDrillCount)
 {
-    public static OnboardingSetupState Empty { get; } = new(false, false, 0, 0, 0, 0);
+    public static OnboardingSetupState Empty { get; } = new(false, false, 0, false, 0, 0, 0);
 }
 
 public sealed class OnboardingTourViewModel : ViewModelBase
@@ -142,6 +143,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private const string ProjectsViewName = "Projects";
     private const string SettingsViewName = "Settings";
     private const string RecoveryViewName = "Recovery";
+    private const string ScheduleViewName = "Schedule";
 
     private readonly AppViewModel _app;
     private readonly List<OnboardingTourStep> _steps = [];
@@ -234,6 +236,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                     SettingsViewName => L("Onboarding.GoSettings", "Open Settings"),
                     ProjectsViewName => L("Onboarding.GoProjects", "Open Projects"),
                     BackupsViewName => L("Onboarding.GoBackups", "Open Backups"),
+                    ScheduleViewName => L("Nav.Schedule", "Schedule"),
                     RecoveryViewName => L("Onboarding.GoRecovery", "Open Recovery"),
                     _ => L("Onboarding.Go", "Go")
                 };
@@ -326,6 +329,9 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             case BackupsViewName:
                 _app.NavigateBackups.Execute(null);
                 break;
+            case ScheduleViewName:
+                _app.NavigateSchedule.Execute(null);
+                break;
             case RecoveryViewName:
                 _app.NavigateRecovery.Execute(null);
                 break;
@@ -376,6 +382,14 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Project.Done", "First project registered."),
             ProjectsViewName,
             state => state.RegisteredProjectCount > 0));
+
+        _steps.Add(new OnboardingTourStep(
+            L("Schedule.Overview.Title", "Your protection schedule"),
+            L("Schedule.Mode.Description", "Choose whether VaultSync runs automatically or only when you start a backup."),
+            L("Schedule.SaveHint", "Review the mode, interval, and quiet hours. Changes are saved automatically."),
+            L("Onboarding.Status.Done", "Done"),
+            ScheduleViewName,
+            state => state.HasValidSchedule));
 
         _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Backup.Title", "Run the first backup"),
@@ -502,6 +516,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             hasProjectsRoot,
             hasDestination,
             projectCount,
+            !cfg.Backups.EnableAutoBackups || cfg.Backups.IntervalMinutes > 0,
             backupCount,
             drillCount,
             passedDrillCount);

@@ -385,6 +385,7 @@ namespace VaultSync.UI.ViewModels
         private static bool CanUseSelfUpdate => !DistributionChannelService.Current.IsStore;
 
         public SettingsViewModel SettingsViewModel => _settingsViewModel;
+        public ScheduleViewModel ScheduleViewModel => _scheduleViewModel;
         public BackupsViewModel BackupsViewModel => _backupsViewModel ??= CreateBackupsViewModel();
 
         private static List<BackupDestination> GetActiveDestinations(AppConfig cfg)

@@ -16,7 +16,7 @@
           RowSpacing="16">
 
       <Border Grid.Row="0" Classes="card" Padding="20">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+        <Grid x:Name="ScheduleOverviewGrid" ColumnDefinitions="*,Auto" ColumnSpacing="20">
           <StackPanel Spacing="6">
             <TextBlock Text="{infra:LocalizedString Key=Schedule.Overview.Title}"
                        FontSize="18"
@@ -25,7 +25,7 @@
                        Foreground="{DynamicResource TextSecondary}"
                        TextWrapping="Wrap" />
           </StackPanel>
-          <Border Grid.Column="1" Classes="stat-pill lg info" VerticalAlignment="Center">
+          <Border x:Name="NextRunPill" Grid.Column="1" Classes="stat-pill lg info" VerticalAlignment="Center">
             <StackPanel Spacing="2">
               <TextBlock Text="{infra:LocalizedString Key=Schedule.NextRun.Label}"
                          FontSize="11"
@@ -38,7 +38,7 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16">
+      <Grid x:Name="ScheduleOptionsGrid" Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16">
         <Border Grid.Column="0" Classes="card" Padding="20">
           <StackPanel Spacing="14">
             <StackPanel Spacing="4">
@@ -53,10 +53,14 @@
             <RadioButton GroupName="ScheduleMode"
                          IsChecked="{CompiledBinding IsAutomaticMode, Mode=TwoWay}"
                          Command="{CompiledBinding UseAutomaticModeCommand}"
+                         AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Mode.Automatic}"
+                         AutomationProperties.HelpText="{infra:LocalizedString Key=Schedule.Mode.Description}"
                          Content="{infra:LocalizedString Key=Schedule.Mode.Automatic}" />
             <RadioButton GroupName="ScheduleMode"
                          IsChecked="{CompiledBinding IsManualMode, Mode=TwoWay}"
                          Command="{CompiledBinding UseManualModeCommand}"
+                         AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Mode.Manual}"
+                         AutomationProperties.HelpText="{infra:LocalizedString Key=Schedule.Delay.Manual}"
                          Content="{infra:LocalizedString Key=Schedule.Mode.Manual}" />
 
             <Grid ColumnDefinitions="*,120" ColumnSpacing="16" IsEnabled="{CompiledBinding IsAutomaticMode}">
@@ -70,12 +74,14 @@
                              Minimum="1"
                              Maximum="10080"
                              Increment="5"
+                             AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.Interval}"
+                             AutomationProperties.HelpText="{infra:LocalizedString Key=Settings.Backups.IntervalDescription}"
                              Value="{CompiledBinding IntervalMinutes, Mode=TwoWay}" />
             </Grid>
           </StackPanel>
         </Border>
 
-        <Border Grid.Column="1" Classes="card" Padding="20">
+        <Border x:Name="QuietHoursCard" Grid.Column="1" Classes="card" Padding="20">
           <StackPanel Spacing="14">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
               <StackPanel Spacing="4">
@@ -89,6 +95,8 @@
               <ToggleSwitch Grid.Column="1"
                             VerticalAlignment="Center"
                             IsChecked="{CompiledBinding EnableQuietHours, Mode=TwoWay}"
+                            AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.QuietHours}"
+                            AutomationProperties.HelpText="{infra:LocalizedString Key=Settings.Backups.QuietHoursDescription}"
                             IsEnabled="{CompiledBinding IsAutomaticMode}" />
             </Grid>
 
@@ -100,6 +108,7 @@
                            Foreground="{DynamicResource TextSecondary}" />
                 <TextBox Text="{CompiledBinding QuietHoursStart, Mode=TwoWay}"
                          HorizontalContentAlignment="Center"
+                         AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.QuietHoursStart}"
                          PlaceholderText="HH:mm" />
               </StackPanel>
               <TextBlock Grid.Column="1" Text="→" VerticalAlignment="Center" />
@@ -109,6 +118,7 @@
                            Foreground="{DynamicResource TextSecondary}" />
                 <TextBox Text="{CompiledBinding QuietHoursEnd, Mode=TwoWay}"
                          HorizontalContentAlignment="Center"
+                         AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.QuietHoursEnd}"
                          PlaceholderText="HH:mm" />
               </StackPanel>
             </Grid>

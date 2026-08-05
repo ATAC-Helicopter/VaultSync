@@ -114,6 +114,9 @@ public class ProjectsViewModel : ViewModelBase
     private int _refreshQueued;
     private readonly RelayCommand _openFolderCommand;
     private readonly RelayCommand _removeProjectCommand;
+    private readonly RelayCommand _cancelRemoveProjectCommand;
+    private readonly RelayCommand _confirmRemoveProjectCommand;
+    private readonly RelayCommand _reviewStoredBackupsCommand;
     private readonly RelayCommand _applyPresetRecommendationCommand;
     private readonly RelayCommand _togglePresetEditorCommand;
     private readonly RelayCommand _reloadPresetEditorCommand;
@@ -159,6 +162,7 @@ public class ProjectsViewModel : ViewModelBase
 
                 OnPropertyChanged(nameof(HasSelectedProject));
                 OnPropertyChanged(nameof(ShowSelectedProjectEmptyState));
+                IsRemoveProjectPreviewOpen = false;
 
                 _openFolderCommand.RaiseCanExecuteChanged();
                 _removeProjectCommand.RaiseCanExecuteChanged();
@@ -184,6 +188,27 @@ public class ProjectsViewModel : ViewModelBase
     public bool HasSelectedProject => SelectedProject is not null;
     public bool ShowSelectedProjectEmptyState => !HasSelectedProject;
 
+    private bool _isRemoveProjectPreviewOpen;
+    public bool IsRemoveProjectPreviewOpen
+    {
+        get => _isRemoveProjectPreviewOpen;
+        private set => SetField(ref _isRemoveProjectPreviewOpen, value);
+    }
+
+    private string _removeProjectPreviewTitle = string.Empty;
+    public string RemoveProjectPreviewTitle
+    {
+        get => _removeProjectPreviewTitle;
+        private set => SetField(ref _removeProjectPreviewTitle, value);
+    }
+
+    private string _removeProjectPreviewDetail = string.Empty;
+    public string RemoveProjectPreviewDetail
+    {
+        get => _removeProjectPreviewDetail;
+        private set => SetField(ref _removeProjectPreviewDetail, value);
+    }
+
     public bool ShowProjectAvatars { get; private set; } = true;
 
     private string _snapshotActionLabel = L(DefaultSnapshotActionKey, DefaultSnapshotActionFallback);
@@ -206,6 +231,9 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand RefreshCommand { get; }
     public ICommand OpenFolderCommand { get; }
     public ICommand RemoveProjectCommand { get; }
+    public ICommand CancelRemoveProjectCommand { get; }
+    public ICommand ConfirmRemoveProjectCommand { get; }
+    public ICommand ReviewStoredBackupsCommand { get; }
     public ICommand SnapshotCommand { get; }
     public ICommand SnapshotGroupCommand { get; }
     public ICommand BackupGroupCommand { get; }
@@ -544,6 +572,7 @@ public class ProjectsViewModel : ViewModelBase
             if (SetField(ref _selectedGroup, value))
             {
                 ApplyFilterAndSort();
+                OnPropertyChanged(nameof(SelectedGroupHealthSummary));
                 _snapshotGroupCommand.RaiseCanExecuteChanged();
                 _backupGroupCommand.RaiseCanExecuteChanged();
                 _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
@@ -551,6 +580,26 @@ public class ProjectsViewModel : ViewModelBase
                 _applyTagToGroupCommand.RaiseCanExecuteChanged();
                 _removeTagFromGroupCommand.RaiseCanExecuteChanged();
             }
+        }
+    }
+
+    public string SelectedGroupHealthSummary
+    {
+        get
+        {
+            string selectedGroupId = SelectedGroup?.Id ?? ProjectGroupOption.AllId;
+            List<ProjectItemViewModel> members = [.. _allProjects.Where(project =>
+                project.IsRegistered &&
+                (string.Equals(selectedGroupId, ProjectGroupOption.AllId, StringComparison.OrdinalIgnoreCase) ||
+                 ProjectMatchesGroup(project, selectedGroupId)))];
+            int healthy = members.Count(project => project.Health == ProjectHealthStatus.Healthy);
+            int attention = members.Count - healthy;
+            return Lf(
+                "Projects.Group.HealthSummary",
+                "{0} project(s) · {1} healthy · {2} need attention",
+                members.Count,
+                healthy,
+                attention);
         }
     }
 
@@ -565,7 +614,11 @@ public class ProjectsViewModel : ViewModelBase
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
         RefreshCommand = new RelayCommand(_ => Refresh());
         _openFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
-        _removeProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
+        _removeProjectCommand = new RelayCommand(_ => BeginRemoveProjectPreview(), _ => SelectedProject is not null);
+        _cancelRemoveProjectCommand = new RelayCommand(_ => IsRemoveProjectPreviewOpen = false);
+        _confirmRemoveProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
+        _reviewStoredBackupsCommand = new RelayCommand(_ =>
+            App.AppViewModelInstance?.NavigateBackups?.Execute(null));
         _applyPresetRecommendationCommand = new RelayCommand(_ => ApplyPresetRecommendation(), _ =>
             SelectedProject is { RecommendedPreset.Length: > 0 });
         _togglePresetEditorCommand = new RelayCommand(_ => TogglePresetEditor(), _ => HasPresetEditorTarget);
@@ -607,6 +660,9 @@ public class ProjectsViewModel : ViewModelBase
         _removeGroupTagCommand = new RelayCommand(tag => RemoveGroupTag(tag as string), _ => true);
         OpenFolderCommand = _openFolderCommand;
         RemoveProjectCommand = _removeProjectCommand;
+        CancelRemoveProjectCommand = _cancelRemoveProjectCommand;
+        ConfirmRemoveProjectCommand = _confirmRemoveProjectCommand;
+        ReviewStoredBackupsCommand = _reviewStoredBackupsCommand;
         ApplyPresetRecommendationCommand = _applyPresetRecommendationCommand;
         TogglePresetEditorCommand = _togglePresetEditorCommand;
         ReloadPresetEditorCommand = _reloadPresetEditorCommand;
@@ -939,6 +995,7 @@ public class ProjectsViewModel : ViewModelBase
 
         PopulateProjectSnapshots(vm, source);
         vm.IsRegistered = existingProject is not null;
+        vm.IsAutoBackupEnabled = existingProject is null || !_autoBackupDisabledProjectIds.Contains(existingProject.Id);
         if (!vm.IsRegistered)
             vm.SnapshotHistoryLoaded = true;
 
@@ -1202,7 +1259,8 @@ public class ProjectsViewModel : ViewModelBase
             nameof(HasProjects),
             nameof(ShowProjectsEmptyState),
             nameof(HasSelectedProject),
-            nameof(ShowSelectedProjectEmptyState));
+            nameof(ShowSelectedProjectEmptyState),
+            nameof(SelectedGroupHealthSummary));
     }
 
     private IEnumerable<ProjectItemViewModel> GetFilteredProjects()
@@ -2045,6 +2103,17 @@ public class ProjectsViewModel : ViewModelBase
             else
                 _autoBackupDisabledProjectIds.UnionWith(ids);
 
+            Interlocked.Increment(ref _suppressProjectPersistence);
+            try
+            {
+                foreach (ProjectItemViewModel project in _allProjects.Where(project => ids.Contains(project.ProjectId)))
+                    project.IsAutoBackupEnabled = enabled;
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _suppressProjectPersistence);
+            }
+
             ShowNotification(
                 enabled
                     ? Lf("Projects.Group.AutoBackupEnabled", "Enabled auto backups for {0} projects.", ids.Count)
@@ -2201,10 +2270,67 @@ public class ProjectsViewModel : ViewModelBase
         }
     }
 
+    private void BeginRemoveProjectPreview()
+    {
+        ProjectItemViewModel? project = SelectedProject;
+        if (project is null)
+            return;
+
+        RemoveProjectPreviewTitle = Lf(
+            "Projects.Remove.PreviewTitle",
+            "Remove {0} from VaultSync?",
+            project.Name);
+        RemoveProjectPreviewDetail = L(
+            "Projects.Remove.PreviewLoading",
+            "Checking indexed backups and stored data...");
+        IsRemoveProjectPreviewOpen = true;
+
+        _ = Task.Run(() => BuildRemoveProjectPreview(project.Name)).ContinueWith(
+            task => Dispatcher.UIThread.Post(() =>
+            {
+                if (!IsRemoveProjectPreviewOpen ||
+                    SelectedProject is null ||
+                    !string.Equals(SelectedProject.Name, project.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                RemoveProjectPreviewDetail = task.IsCompletedSuccessfully
+                    ? task.Result
+                    : L(
+                        "Projects.Remove.PreviewFallback",
+                        "The project registration and local history index will be removed. Stored backup files are kept unless you delete them from Backups first.");
+            }),
+            TaskScheduler.Default);
+    }
+
+    private string BuildRemoveProjectPreview(string projectName)
+    {
+        AppConfig config = _configStore.GetSnapshot();
+        SqliteRepository repo = CreateRepository(config);
+        Project? project = repo.GetProjectByName(projectName);
+        if (project is null)
+        {
+            return L(
+                "Projects.Remove.PreviewUnregistered",
+                "This discovered folder will be hidden from Projects. No source files will be deleted.");
+        }
+
+        List<Backup> backups = repo.GetBackupsForProject(project.Id).ToList();
+        long bytes = backups.Sum(backup => Math.Max(0, backup.TotalBytes));
+        return Lf(
+            "Projects.Remove.PreviewDetail",
+            "VaultSync will remove the registration and local history index for {0} backup(s) ({1}). Stored backup files remain on their destinations. Review and delete them from Backups first if that is your intent. Source files are never deleted.",
+            backups.Count,
+            UiFormat.FormatBytes(bytes, "0.#"));
+    }
+
     private void RemoveProject()
     {
         if (SelectedProject is null)
             return;
+
+        IsRemoveProjectPreviewOpen = false;
 
         var removedProjectName = SelectedProject.Name;
         var removedProjectPath = SelectedProject.Path;
@@ -2630,6 +2756,7 @@ public class ProjectsViewModel : ViewModelBase
                 SelectedProject.EncryptionPolicy = snapshot.EncryptionPolicy;
                 SelectedProject.EncryptionKeyRef = snapshot.EncryptionKeyRef;
                 var cfg = _configStore.GetSnapshot();
+                SelectedProject.IsAutoBackupEnabled = !cfg.Backups.AutoBackupDisabledProjects.Contains(snapshot.ProjectId);
                 UpdateProjectDestinationDisplay(SelectedProject, cfg);
                 UpdateProjectEncryptionDisplay(SelectedProject, cfg);
                 UpdateProjectPresetDisplay(SelectedProject);
@@ -2696,6 +2823,20 @@ public class ProjectsViewModel : ViewModelBase
 
         if (change.ChangedTags)
             PersistProjectTags(vm, project.Id, repo);
+
+        if (change.ChangedAutoBackup)
+            PersistProjectAutoBackup(vm, project.Id, config);
+    }
+
+    private void PersistProjectAutoBackup(ProjectItemViewModel vm, int projectId, AppConfig config)
+    {
+        List<int> disabled = config.Backups.AutoBackupDisabledProjects ?? [];
+        config.Backups.AutoBackupDisabledProjects = vm.IsAutoBackupEnabled
+            ? [.. disabled.Where(id => id != projectId).Distinct()]
+            : [.. disabled.Append(projectId).Distinct()];
+        _configStore.Save(config);
+        RefreshGroupAutoBackupStateFromConfig(config);
+        AutoBackupGroupPreferenceChanged?.Invoke([projectId], vm.IsAutoBackupEnabled);
     }
 
     private void PersistProjectDestination(ProjectItemViewModel vm, int projectId, SqliteRepository repo, AppConfig config)
@@ -3510,9 +3651,10 @@ public class ProjectsViewModel : ViewModelBase
         bool ChangedTags,
         bool ChangedRecommendedPreset,
         bool ChangedDestination,
-        bool ChangedEncryption)
+        bool ChangedEncryption,
+        bool ChangedAutoBackup)
     {
-        public bool ShouldPersist => ChangedPreset || ChangedDestination || ChangedEncryption || ChangedTags;
+        public bool ShouldPersist => ChangedPreset || ChangedDestination || ChangedEncryption || ChangedTags || ChangedAutoBackup;
 
         public static ProjectItemChange FromProperty(string? propertyName) =>
             new(
@@ -3520,7 +3662,8 @@ public class ProjectsViewModel : ViewModelBase
                 string.Equals(propertyName, nameof(ProjectItemViewModel.TagsCsv), StringComparison.Ordinal),
                 string.Equals(propertyName, nameof(ProjectItemViewModel.RecommendedPreset), StringComparison.Ordinal),
                 string.Equals(propertyName, nameof(ProjectItemViewModel.PreferredDestinationId), StringComparison.Ordinal),
-                string.Equals(propertyName, nameof(ProjectItemViewModel.EncryptionPolicy), StringComparison.Ordinal));
+                string.Equals(propertyName, nameof(ProjectItemViewModel.EncryptionPolicy), StringComparison.Ordinal),
+                string.Equals(propertyName, nameof(ProjectItemViewModel.IsAutoBackupEnabled), StringComparison.Ordinal));
     }
 
     private sealed record ProjectBuildContext(
@@ -3884,6 +4027,13 @@ public class ProjectItemViewModel : ViewModelBase
     {
         get => _isRegistered;
         set => SetField(ref _isRegistered, value);
+    }
+
+    private bool _isAutoBackupEnabled = true;
+    public bool IsAutoBackupEnabled
+    {
+        get => _isAutoBackupEnabled;
+        set => SetField(ref _isAutoBackupEnabled, value);
     }
 
     public bool SnapshotHistoryLoaded { get; set; }

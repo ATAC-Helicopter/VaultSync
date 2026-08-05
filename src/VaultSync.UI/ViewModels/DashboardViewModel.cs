@@ -65,6 +65,7 @@ namespace VaultSync.UI.ViewModels
         private string _recoveryCoverage90Label = string.Empty;
         private string _requiredActionTitle = string.Empty;
         private string _requiredActionDetail = string.Empty;
+        private string _requiredActionButtonLabel = string.Empty;
         private string _nextRunText = string.Empty;
         private string _nextRunDetail = string.Empty;
         private string _latestKnownGoodTitle = string.Empty;
@@ -439,6 +440,17 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        public string RequiredActionButtonLabel
+        {
+            get => _requiredActionButtonLabel;
+            private set
+            {
+                if (_requiredActionButtonLabel == value) return;
+                _requiredActionButtonLabel = value;
+                OnPropertyChanged();
+            }
+        }
+
         public string NextRunText
         {
             get => _nextRunText;
@@ -492,6 +504,7 @@ namespace VaultSync.UI.ViewModels
         public RelayCommand OpenHistoryCommand { get; }
         public RelayCommand OpenRecoveryCommand { get; }
         public RelayCommand OpenScheduleCommand { get; }
+        public RelayCommand OpenRequiredActionCommand { get; }
 
         // Chart bindings
         public ISeries[] SnapshotSeries { get; private set; } = [];
@@ -584,6 +597,14 @@ namespace VaultSync.UI.ViewModels
             OpenScheduleCommand = new RelayCommand(
                 _ => App.AppViewModelInstance?.NavigateSchedule?.Execute(null),
                 _ => App.AppViewModelInstance?.NavigateSchedule?.CanExecute(null) == true);
+            OpenRequiredActionCommand = new RelayCommand(_ =>
+            {
+                System.Windows.Input.ICommand? command = ProjectCount == 0
+                    ? App.AppViewModelInstance?.NavigateProjects
+                    : App.AppViewModelInstance?.NavigateRecovery;
+                if (command?.CanExecute(null) == true)
+                    command.Execute(null);
+            });
 
             BuildStaticAxes();
             RebuildStorageSortOptions();
@@ -2369,9 +2390,21 @@ namespace VaultSync.UI.ViewModels
                 .ThenBy(project => project.ProjectName, StringComparer.CurrentCultureIgnoreCase)
                 .FirstOrDefault();
 
-            RequiredActionTitle = requiredAction?.ProjectName
-                ?? L("RestoreReadiness.ReviewEmpty", "Everything currently looks restore-ready.");
-            RequiredActionDetail = requiredAction?.Reason ?? RestoreReadinessHeadline;
+            if (data.Projects.Count == 0)
+            {
+                RequiredActionTitle = L("Onboarding.Setup.Project.Title", "Add your first project");
+                RequiredActionDetail = L(
+                    "Onboarding.Setup.Project.Action",
+                    "Open Projects, select one project candidate, and add it to VaultSync.");
+                RequiredActionButtonLabel = L("Onboarding.OpenProjects", "Open projects");
+            }
+            else
+            {
+                RequiredActionTitle = requiredAction?.ProjectName
+                    ?? L("RestoreReadiness.ReviewEmpty", "Everything currently looks restore-ready.");
+                RequiredActionDetail = requiredAction?.Reason ?? RestoreReadinessHeadline;
+                RequiredActionButtonLabel = L("RestoreReadiness.Review", "Review");
+            }
 
             if (_scheduleViewModel is null)
             {
