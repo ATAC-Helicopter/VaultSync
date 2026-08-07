@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-08-06T06:02:51Z`
+Captured at: `2026-08-07T05:05:46Z`
 
 - Releases: **49**
 - Assets: **434**
-- Total asset downloads: **2170**
-- Change since previous snapshot: **+10**
+- Total asset downloads: **2178**
+- Change since previous snapshot: **+8**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.5 — Recovery Confidence** with **46** downloads (+10)
+- Latest stable: **VaultSync 1.8.5 — Recovery Confidence** with **52** downloads (+6)
 - Latest prerelease: **VaultSync 1.8.5 Beta 1** with **6** downloads (0)
 
 ## Top assets
@@ -33,23 +33,23 @@ Captured at: `2026-08-06T06:02:51Z`
 
 - Tag: `v1.8.5`
 - Published: `2026-08-02T21:01:25Z`
-- Total downloads: **46**
-- Delta: **+10**
+- Total downloads: **52**
+- Delta: **+6**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| vaultsync-patch-windows.json | 13 | +3 | 58069 |
+| vaultsync-patch-windows.json | 16 | +3 | 58069 |
+| VaultSync-Setup-1.8.5.exe | 12 | +3 | 62092889 |
 | vaultsync-patch-linux-x64.json | 9 | 0 | 54666 |
-| VaultSync-Setup-1.8.5.exe | 9 | +3 | 62092889 |
 | vaultsync-patch-macos-apple-silicon.json | 3 | 0 | 55882 |
-| vaultsync-patch-macos-intel.json | 3 | +1 | 55878 |
+| vaultsync-patch-macos-intel.json | 3 | 0 | 55878 |
 | vaultsync-patch-linux-arm64.json | 2 | 0 | 54671 |
-| vaultsync-patch-windows.zip | 2 | +1 | 89003677 |
+| vaultsync-patch-windows.zip | 2 | 0 | 89003677 |
 | VaultSync-1.8.5-macos-apple-silicon.dmg | 1 | 0 | 53207617 |
-| VaultSync-1.8.5-macos-intel.dmg | 1 | +1 | 55805967 |
+| VaultSync-1.8.5-macos-intel.dmg | 1 | 0 | 55805967 |
 | vaultsync-patch-linux-x64.zip | 1 | 0 | 51403538 |
 | vaultsync-patch-macos-apple-silicon.zip | 1 | 0 | 46715353 |
-| vaultsync-patch-macos-intel.zip | 1 | +1 | 49619918 |
+| vaultsync-patch-macos-intel.zip | 1 | 0 | 49619918 |
 | VaultSync-1.8.5-linux-arm64.deb | 0 | 0 | 38185596 |
 | VaultSync-1.8.5-linux-arm64.tar.gz | 0 | 0 | 48884976 |
 | VaultSync-1.8.5-linux-x64.AppImage | 0 | 0 | 51455168 |
@@ -89,8 +89,8 @@ Captured at: `2026-08-06T06:02:51Z`
 
 - Tag: `v1.8.4`
 - Published: `2026-07-24T18:42:28Z`
-- Total downloads: **112**
-- Delta: **0**
+- Total downloads: **113**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
@@ -98,10 +98,10 @@ Captured at: `2026-08-06T06:02:51Z`
 | VaultSync-Setup-1.8.4.exe | 18 | 0 | 60855747 |
 | VaultSync-1.8.4-macos-apple-silicon.dmg | 5 | 0 | 57994241 |
 | VaultSync-1.8.4-linux-x64.AppImage | 2 | 0 | 52036800 |
+| VaultSync-1.8.4-macos-intel.dmg | 2 | +1 | 59816480 |
 | vaultsync-patch-macos-apple-silicon.json | 2 | 0 | 55843 |
 | vaultsync-patch-macos-apple-silicon.zip | 2 | 0 | 51017252 |
 | VaultSync-1.8.4-linux-x64.deb | 1 | 0 | 40617274 |
-| VaultSync-1.8.4-macos-intel.dmg | 1 | 0 | 59816480 |
 | vaultsync-patch-linux-arm64.json | 1 | 0 | 54807 |
 | vaultsync-patch-linux-x64.json | 1 | 0 | 54802 |
 | vaultsync-patch-windows.zip | 1 | 0 | 86975731 |
@@ -117,17 +117,17 @@ Captured at: `2026-08-06T06:02:51Z`
 
 - Tag: `v1.8.3`
 - Published: `2026-07-16T11:22:38Z`
-- Total downloads: **145**
-- Delta: **0**
+- Total downloads: **146**
+- Delta: **+1**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 115 | 0 | 58008 |
 | VaultSync-Setup-1.8.3.exe | 21 | 0 | 60748400 |
 | vaultsync-patch-windows.zip | 3 | 0 | 86809056 |
+| VaultSync-1.8.3-linux-x64.deb | 2 | +1 | 40361842 |
 | VaultSync-1.8.3-linux-arm64.deb | 1 | 0 | 37805820 |
 | VaultSync-1.8.3-linux-x64.AppImage | 1 | 0 | 51160256 |
-| VaultSync-1.8.3-linux-x64.deb | 1 | 0 | 40361842 |
 | VaultSync-1.8.3-macos-intel.dmg | 1 | 0 | 59658802 |
 | vaultsync-patch-macos-apple-silicon.json | 1 | 0 | 55826 |
 | vaultsync-patch-macos-apple-silicon.zip | 1 | 0 | 50861272 |
