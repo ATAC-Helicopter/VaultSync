@@ -688,8 +688,8 @@
                                     BorderThickness="0"
                                     Command="{Binding DataContext.RemoveProjectTagCommand, ElementName=Root}"
                                     CommandParameter="{Binding Value}"
-                                    AutomationProperties.Name="{infra:LocalizedString Key=Projects.Group.TagRemove}"
-                                    ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.TagRemove}">
+                                    AutomationProperties.Name="{infra:LocalizedString Key=Projects.Tags.Remove}"
+                                    ToolTip.Tip="{infra:LocalizedString Key=Projects.Tags.Remove}">
                               <shapes:Path Data="M 2,2 L 10,10 M 10,2 L 2,10"
                                            Width="10"
                                            Height="10"
