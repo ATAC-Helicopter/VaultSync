@@ -36,6 +36,11 @@ public sealed class ProjectFolderViewModelTests
         Assert.Equal(1, folder.AttentionProjectCount);
         Assert.Equal(1, folder.PausedProjectCount);
         Assert.True(folder.CanRunBatchActions);
+        Assert.True(folder.ShowBatchActions);
+
+        folder.IsRenaming = true;
+
+        Assert.False(folder.ShowBatchActions);
     }
 
     [Fact]

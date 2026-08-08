@@ -44,7 +44,11 @@ public sealed class ProjectFolderViewModel : ViewModelBase
     public bool IsRenaming
     {
         get => _isRenaming;
-        set => SetField(ref _isRenaming, value);
+        set
+        {
+            if (SetField(ref _isRenaming, value))
+                OnPropertyChanged(nameof(ShowBatchActions));
+        }
     }
 
     public bool IsDeleteConfirmationVisible
@@ -66,6 +70,7 @@ public sealed class ProjectFolderViewModel : ViewModelBase
     public int PausedProjectCount => AllProjects.Count(project => project.IsRegistered && !project.IsAutoBackupEnabled);
     public bool HasProjects => Projects.Count > 0;
     public bool CanRunBatchActions => RegisteredProjectCount > 0;
+    public bool ShowBatchActions => CanRunBatchActions && !IsRenaming;
 
     public string Summary
     {
@@ -123,6 +128,7 @@ public sealed class ProjectFolderViewModel : ViewModelBase
             nameof(PausedProjectCount),
             nameof(HasProjects),
             nameof(CanRunBatchActions),
+            nameof(ShowBatchActions),
             nameof(Summary),
             nameof(DeleteExplanation));
     }
