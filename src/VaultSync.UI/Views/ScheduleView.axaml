@@ -10,129 +10,309 @@
   <ScrollViewer VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
                 Padding="{DynamicResource PagePadding}">
-    <Grid MaxWidth="1200"
+    <Grid MaxWidth="1280"
           HorizontalAlignment="Stretch"
-          RowDefinitions="Auto,Auto,Auto"
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
           RowSpacing="16">
 
-      <Border Grid.Row="0" Classes="card" Padding="20">
-        <Grid x:Name="ScheduleOverviewGrid" ColumnDefinitions="*,Auto" ColumnSpacing="20">
-          <StackPanel Spacing="6">
-            <TextBlock Text="{infra:LocalizedString Key=Schedule.Overview.Title}"
-                       FontSize="18"
-                       FontWeight="SemiBold" />
-            <TextBlock Text="{CompiledBinding DelayExplanation}"
-                       Foreground="{DynamicResource TextSecondary}"
+      <Border Grid.Row="0" Classes="card" Padding="22">
+        <Grid x:Name="ScheduleOverviewGrid" ColumnDefinitions="*,Auto" ColumnSpacing="24">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{CompiledBinding ReadinessTitle}"
+                       FontSize="22"
+                       FontWeight="SemiBold"
                        TextWrapping="Wrap" />
+            <TextBlock Text="{CompiledBinding ReadinessDetail}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap"
+                       MaxWidth="720"
+                       HorizontalAlignment="Left" />
+            <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,6,0,0">
+              <Button Classes="action-primary"
+                      Command="{CompiledBinding OpenBackupsCommand}"
+                      AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Action.OpenBackups}">
+                <TextBlock Text="{infra:LocalizedString Key=Schedule.Action.OpenBackups}" />
+              </Button>
+              <Button Classes="small-pill"
+                      Command="{CompiledBinding RefreshCommand}"
+                      AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Action.Refresh}">
+                <TextBlock Text="{infra:LocalizedString Key=Schedule.Action.Refresh}" />
+              </Button>
+            </WrapPanel>
           </StackPanel>
-          <Border x:Name="NextRunPill" Grid.Column="1" Classes="stat-pill lg info" VerticalAlignment="Center">
-            <StackPanel Spacing="2">
+
+          <Border x:Name="NextRunPill"
+                  Grid.Column="1"
+                  Classes="card"
+                  Background="{DynamicResource Surface2}"
+                  BorderBrush="{DynamicResource AccentBrush}"
+                  BorderThickness="1"
+                  CornerRadius="18"
+                  Padding="16,12"
+                  MinWidth="300"
+                  VerticalAlignment="Center"
+                  AutomationProperties.Name="{infra:LocalizedString Key=Schedule.NextRun.Label}">
+            <StackPanel Spacing="4">
               <TextBlock Text="{infra:LocalizedString Key=Schedule.NextRun.Label}"
                          FontSize="11"
                          Foreground="{DynamicResource TextSecondary}" />
               <TextBlock Text="{CompiledBinding NextRunText}"
-                         FontSize="16"
-                         FontWeight="SemiBold" />
+                         FontSize="17"
+                         FontWeight="SemiBold"
+                         TextWrapping="Wrap" />
+              <TextBlock Text="{CompiledBinding DelayExplanation}"
+                         FontSize="11"
+                         Foreground="{DynamicResource TextSecondary}"
+                         TextWrapping="Wrap"
+                         MaxWidth="340" />
             </StackPanel>
           </Border>
         </Grid>
       </Border>
 
-      <Grid x:Name="ScheduleOptionsGrid" Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16">
-        <Border Grid.Column="0" Classes="card" Padding="20">
-          <StackPanel Spacing="14">
-            <StackPanel Spacing="4">
-              <TextBlock Text="{infra:LocalizedString Key=Schedule.Mode.Title}"
-                         FontSize="17"
-                         FontWeight="SemiBold" />
-              <TextBlock Text="{infra:LocalizedString Key=Schedule.Mode.Description}"
-                         Foreground="{DynamicResource TextSecondary}"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-
-            <RadioButton GroupName="ScheduleMode"
-                         IsChecked="{CompiledBinding IsAutomaticMode, Mode=TwoWay}"
-                         Command="{CompiledBinding UseAutomaticModeCommand}"
-                         AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Mode.Automatic}"
-                         AutomationProperties.HelpText="{infra:LocalizedString Key=Schedule.Mode.Description}"
-                         Content="{infra:LocalizedString Key=Schedule.Mode.Automatic}" />
-            <RadioButton GroupName="ScheduleMode"
-                         IsChecked="{CompiledBinding IsManualMode, Mode=TwoWay}"
-                         Command="{CompiledBinding UseManualModeCommand}"
-                         AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Mode.Manual}"
-                         AutomationProperties.HelpText="{infra:LocalizedString Key=Schedule.Delay.Manual}"
-                         Content="{infra:LocalizedString Key=Schedule.Mode.Manual}" />
-
-            <Grid ColumnDefinitions="*,120" ColumnSpacing="16" IsEnabled="{CompiledBinding IsAutomaticMode}">
-              <StackPanel Spacing="3">
-                <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Interval}" />
-                <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.IntervalDescription}"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextSecondary}" />
-              </StackPanel>
-              <NumericUpDown Grid.Column="1"
-                             Minimum="1"
-                             Maximum="10080"
-                             Increment="5"
-                             AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.Interval}"
-                             AutomationProperties.HelpText="{infra:LocalizedString Key=Settings.Backups.IntervalDescription}"
-                             Value="{CompiledBinding IntervalMinutes, Mode=TwoWay}" />
-            </Grid>
+      <Grid x:Name="StatusMetricsGrid"
+            Grid.Row="1"
+            ColumnDefinitions="*,*,*"
+            ColumnSpacing="12">
+        <Border x:Name="CoverageMetricCard" Grid.Column="0" Classes="card" Padding="18" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{infra:LocalizedString Key=Schedule.Coverage.Title}" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding CoverageValue}" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Text="{CompiledBinding CoverageSummary}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap" />
           </StackPanel>
         </Border>
-
-        <Border x:Name="QuietHoursCard" Grid.Column="1" Classes="card" Padding="20">
-          <StackPanel Spacing="14">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-              <StackPanel Spacing="4">
-                <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.QuietHours}"
-                           FontSize="17"
-                           FontWeight="SemiBold" />
-                <TextBlock Text="{CompiledBinding QuietHoursSummary}"
-                           Foreground="{DynamicResource TextSecondary}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-              <ToggleSwitch Grid.Column="1"
-                            VerticalAlignment="Center"
-                            IsChecked="{CompiledBinding EnableQuietHours, Mode=TwoWay}"
-                            AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.QuietHours}"
-                            AutomationProperties.HelpText="{infra:LocalizedString Key=Settings.Backups.QuietHoursDescription}"
-                            IsEnabled="{CompiledBinding IsAutomaticMode}" />
-            </Grid>
-
-            <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="12"
-                  IsEnabled="{CompiledBinding CanEditQuietHours}">
-              <StackPanel Spacing="4">
-                <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.QuietHoursStart}"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextSecondary}" />
-                <TextBox Text="{CompiledBinding QuietHoursStart, Mode=TwoWay}"
-                         HorizontalContentAlignment="Center"
-                         AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.QuietHoursStart}"
-                         PlaceholderText="HH:mm" />
-              </StackPanel>
-              <TextBlock Grid.Column="1" Text="→" VerticalAlignment="Center" />
-              <StackPanel Grid.Column="2" Spacing="4">
-                <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.QuietHoursEnd}"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextSecondary}" />
-                <TextBox Text="{CompiledBinding QuietHoursEnd, Mode=TwoWay}"
-                         HorizontalContentAlignment="Center"
-                         AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.QuietHoursEnd}"
-                         PlaceholderText="HH:mm" />
-              </StackPanel>
-            </Grid>
+        <Border x:Name="DestinationMetricCard" Grid.Column="1" Classes="card" Padding="18" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{infra:LocalizedString Key=Schedule.Destination.Title}" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding DestinationSummary}"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{infra:LocalizedString Key=Schedule.Destination.Detail}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+        <Border x:Name="PowerMetricCard" Grid.Column="2" Classes="card" Padding="18" Background="{DynamicResource Surface2}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{infra:LocalizedString Key=Schedule.Power.Title}" Classes="kicker" />
+            <TextBlock Text="{CompiledBinding PowerSummary}"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{CompiledBinding LastAutomaticBackupText}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap" />
           </StackPanel>
         </Border>
       </Grid>
 
-      <Border Grid.Row="2" Classes="card" Padding="18" Background="{DynamicResource Surface2}">
+      <Grid x:Name="ScheduleOperationalGrid"
+            Grid.Row="2"
+            ColumnDefinitions="*,*"
+            ColumnSpacing="16">
+        <Border Grid.Column="0" Classes="card" Padding="20">
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{infra:LocalizedString Key=Schedule.Upcoming.Title}"
+                         FontSize="17"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="{infra:LocalizedString Key=Schedule.Upcoming.Description}"
+                         Foreground="{DynamicResource TextSecondary}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+
+            <TextBlock Grid.Row="1"
+                       Text="{infra:LocalizedString Key=Schedule.Upcoming.Empty}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       IsVisible="{CompiledBinding !HasUpcomingRuns}" />
+
+            <ItemsControl Grid.Row="2" ItemsSource="{CompiledBinding UpcomingRuns}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScheduleOpportunityViewModel">
+                  <Border Classes="card" Padding="12" Margin="0,0,0,8" Background="{DynamicResource Surface2}">
+                    <Grid ColumnDefinitions="34,*,Auto" ColumnSpacing="10">
+                      <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource AccentBrush}">
+                        <TextBlock Text="{CompiledBinding Sequence}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontWeight="SemiBold" />
+                      </Border>
+                      <StackPanel Grid.Column="1" Spacing="2">
+                        <TextBlock Text="{CompiledBinding Day}" FontWeight="SemiBold" />
+                        <TextBlock Text="{CompiledBinding Status}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextSecondary}" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="2"
+                                 Text="{CompiledBinding Time}"
+                                 FontSize="17"
+                                 FontWeight="SemiBold"
+                                 VerticalAlignment="Center" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Grid>
+        </Border>
+
+        <Border x:Name="ProjectCoverageCard" Grid.Column="1" Classes="card" Padding="20">
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{infra:LocalizedString Key=Schedule.Projects.Title}"
+                           FontSize="17"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="{infra:LocalizedString Key=Schedule.Projects.Description}"
+                           Foreground="{DynamicResource TextSecondary}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Classes="small-pill"
+                      Command="{CompiledBinding OpenProjectsCommand}"
+                      AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Action.ReviewProjects}">
+                <TextBlock Text="{infra:LocalizedString Key=Schedule.Action.ReviewProjects}" />
+              </Button>
+            </Grid>
+
+            <TextBlock Grid.Row="1"
+                       Text="{infra:LocalizedString Key=Schedule.Coverage.Empty}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       IsVisible="{CompiledBinding !HasProjects}" />
+
+            <ItemsControl Grid.Row="2" ItemsSource="{CompiledBinding ProjectCoverage}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScheduleProjectRowViewModel">
+                  <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="2,10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="{CompiledBinding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{CompiledBinding LastBackup}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <Border Grid.Column="1" Classes="stat-pill sm info" VerticalAlignment="Center">
+                        <TextBlock Text="{CompiledBinding AutomaticStatus}" />
+                      </Border>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <Border Grid.Row="3" Classes="card" Padding="20">
+        <Grid RowDefinitions="Auto,Auto" RowSpacing="16">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{infra:LocalizedString Key=Schedule.Policy.Title}"
+                         FontSize="17"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="{infra:LocalizedString Key=Schedule.Policy.Description}"
+                         Foreground="{DynamicResource TextSecondary}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Classes="small-pill"
+                    Command="{CompiledBinding OpenSettingsCommand}"
+                    AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Action.OpenSettings}">
+              <TextBlock Text="{infra:LocalizedString Key=Schedule.Action.OpenSettings}" />
+            </Button>
+          </Grid>
+
+          <Grid x:Name="SchedulePolicyGrid" Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="20">
+            <StackPanel Grid.Column="0" Spacing="12">
+              <TextBlock Text="{infra:LocalizedString Key=Schedule.Mode.Title}" FontWeight="SemiBold" />
+              <RadioButton GroupName="ScheduleMode"
+                           IsChecked="{CompiledBinding IsAutomaticMode, Mode=TwoWay}"
+                           Command="{CompiledBinding UseAutomaticModeCommand}"
+                           AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Mode.Automatic}"
+                           AutomationProperties.HelpText="{infra:LocalizedString Key=Schedule.Mode.Description}"
+                           Content="{infra:LocalizedString Key=Schedule.Mode.Automatic}" />
+              <RadioButton GroupName="ScheduleMode"
+                           IsChecked="{CompiledBinding IsManualMode, Mode=TwoWay}"
+                           Command="{CompiledBinding UseManualModeCommand}"
+                           AutomationProperties.Name="{infra:LocalizedString Key=Schedule.Mode.Manual}"
+                           AutomationProperties.HelpText="{infra:LocalizedString Key=Schedule.Delay.Manual}"
+                           Content="{infra:LocalizedString Key=Schedule.Mode.Manual}" />
+              <Grid ColumnDefinitions="*,120" ColumnSpacing="16" IsEnabled="{CompiledBinding IsAutomaticMode}">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.Interval}" />
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.IntervalDescription}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondary}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <NumericUpDown Grid.Column="1"
+                               Minimum="1"
+                               Maximum="10080"
+                               Increment="5"
+                               AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.Interval}"
+                               AutomationProperties.HelpText="{infra:LocalizedString Key=Settings.Backups.IntervalDescription}"
+                               Value="{CompiledBinding IntervalMinutes, Mode=TwoWay}" />
+              </Grid>
+            </StackPanel>
+
+            <StackPanel x:Name="QuietHoursPanel" Grid.Column="1" Spacing="12">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.QuietHours}" FontWeight="SemiBold" />
+                  <TextBlock Text="{CompiledBinding QuietHoursSummary}"
+                             Foreground="{DynamicResource TextSecondary}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1"
+                              VerticalAlignment="Center"
+                              IsChecked="{CompiledBinding EnableQuietHours, Mode=TwoWay}"
+                              AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.QuietHours}"
+                              AutomationProperties.HelpText="{infra:LocalizedString Key=Settings.Backups.QuietHoursDescription}"
+                              IsEnabled="{CompiledBinding IsAutomaticMode}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="12" IsEnabled="{CompiledBinding CanEditQuietHours}">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.QuietHoursStart}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondary}" />
+                  <TextBox Text="{CompiledBinding QuietHoursStart, Mode=TwoWay}"
+                           HorizontalContentAlignment="Center"
+                           AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.QuietHoursStart}"
+                           PlaceholderText="HH:mm" />
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="→" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="2" Spacing="4">
+                  <TextBlock Text="{infra:LocalizedString Key=Settings.Backups.QuietHoursEnd}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextSecondary}" />
+                  <TextBox Text="{CompiledBinding QuietHoursEnd, Mode=TwoWay}"
+                           HorizontalContentAlignment="Center"
+                           AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.QuietHoursEnd}"
+                           PlaceholderText="HH:mm" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <Border Grid.Row="4" Classes="card" Padding="18" Background="{DynamicResource Surface2}">
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
           <TextBlock Text="ⓘ" FontSize="18" Foreground="{DynamicResource AccentBrush}" />
-          <TextBlock Grid.Column="1"
-                     Text="{infra:LocalizedString Key=Schedule.SaveHint}"
-                     Foreground="{DynamicResource TextSecondary}"
-                     TextWrapping="Wrap" />
+          <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock Text="{infra:LocalizedString Key=Schedule.Behavior.Title}" FontWeight="SemiBold" />
+            <TextBlock Text="{CompiledBinding RunBehaviorSummary}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{infra:LocalizedString Key=Schedule.SaveHint}"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextSecondary}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
         </Grid>
       </Border>
     </Grid>

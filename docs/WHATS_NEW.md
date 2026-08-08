@@ -11,7 +11,8 @@ VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and
 ![In-app setup and recovery guide](images/Guide_Page.png)
 
 ### Schedule and activity
-- Open the dedicated Schedule page to choose manual or automatic protection, set the interval and quiet hours, and see the next expected run with any delay explanation.
+- Open the dedicated Schedule page to see whether automatic protection can run now, preview the next timer opportunities after quiet-hours deferrals, and review which projects participate and when each was last backed up.
+- Use quick mode, interval, and quiet-hours edits from Schedule when planning work. They update the same saved policy as Settings; advanced retention, battery, destination, and transfer rules remain in Settings.
 - Follow consistent queued, scanning, hashing, writing, verifying, waiting, and retrying states across manual and automatic backups.
 - Keep post-backup hashing and verification visible independently from the primary backup operation.
 

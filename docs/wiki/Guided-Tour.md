@@ -10,7 +10,7 @@ without resetting VaultSync.
 | --- | --- |
 | Dashboard | Check restore readiness, required action, next run, newest known-good point, activity, and storage. |
 | Projects | Discover and group folders; register, edit, pause, remove, and snapshot projects. |
-| Schedule | Choose manual or automatic protection and understand the next run or delay. |
+| Schedule | Understand whether protection can run, what will participate, and the next timer opportunities or delays. |
 | Backups | Run backups, tune each project, inspect restore points, compare snapshots, and restore. |
 | History | Search all recorded activity and maintain labels, notes, tags, and protected points. |
 | Recovery | Measure restore readiness, run read-only drills, review 3-2-1 coverage, and export a report. |
@@ -69,9 +69,14 @@ not change or delete any configuration.
 ![VaultSync schedule page](../images/Schedule_Page.png)
 
 - Choose manual protection or an automatic interval.
-- Set quiet hours without losing sight of the effective next run.
-- When a run is delayed, read the reason instead of guessing whether the
-  scheduler is working.
+- Read the live readiness verdict for missing destinations, paused projects,
+  battery power, and active quiet hours.
+- Preview the next four timer opportunities after quiet-hours deferrals and
+  review each project's inclusion and last-backup state.
+- Use quick mode, interval, and quiet-hours edits here; they update the same
+  saved values exposed in Settings.
+- Remember that an opportunity is a check, not a promise to write data:
+  unchanged projects are skipped.
 
 ## Backups
 

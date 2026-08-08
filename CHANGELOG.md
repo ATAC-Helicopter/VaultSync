@@ -7,11 +7,10 @@
 - [VS-1867] Added screen-reader names and help across primary workflows and confirmation previews for reset, cache, project-index, credential, and encryption-password removal.
 - [VS-1811] Added project groups with aggregate health and group snapshot, backup, pause, and resume actions.
 ### Changed
-- [VS-1862] Added a dedicated Schedule experience with manual and automatic modes, interval and quiet-hours controls, projected next-run timing, and clear delay explanations.
+- [VS-1862] Added a dedicated operational Schedule experience with a live readiness verdict, upcoming timer opportunities, per-project automatic coverage and last-backup state, runtime constraints, shared policy edits, and clear delay explanations.
 - [VS-1863] Reorganized the Dashboard around protection status, the highest-priority required action, the next scheduled run, recent activity, and the latest known-good recovery point, with direct links into Recovery, Schedule, and History.
 - [VS-1864] Replaced display-text-derived backup stages with shared typed protection activity states, including explicit queued, scanning, hashing, writing, verifying, waiting, retrying, completion, cancellation, and failure semantics across manual and automatic backup activity.
 - [VS-1865] Clarified desktop and CLI project removal so it removes only local registration and history-index state while leaving source files and stored backup payloads intact.
-
 ### Fixed
 - [BUG-18084] Restored the missing Schedule page content and added responsive layouts for wide and narrow windows.
 - [BUG-18085] Rebuilt Dashboard hierarchy and empty states so required actions, the next run, and known-good recovery evidence remain readable without duplicate or misleading cards.

@@ -33,7 +33,7 @@ Windows distribution channels:
 
 - Dashboard: restore readiness, required action, next run, known-good evidence, storage, and activity.
 - Projects: discovery, groups, health, snapshots, per-project policy editing, pause/resume, and safe removal previews.
-- Schedule: automatic or manual mode, timing, quiet hours, next run, and delay explanations.
+- Schedule: live readiness, upcoming timer opportunities, per-project automatic coverage, runtime constraints, shared policy edits, and delay explanations.
 - History: searchable backup activity, notes, labels, tags, and protected points.
 - Backups: per-project controls, restore guidance, Snapshot Explorer, and Snapshot Compare.
 - Recovery: readiness, recovery drills, 3-2-1 coverage, protection recommendations, and reports.

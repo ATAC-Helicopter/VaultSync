@@ -89,24 +89,25 @@ or macOS chrome.
   registration and indexed history are removed, while source files and stored
   backup payloads remain untouched.
 
-## 05 — Schedule and delay explanations
+## 05 — Operational schedule and constraints
 
 **On screen:**
 
 1. Open **Schedule**.
-2. Switch to manual mode and back to automatic mode.
-3. Point to interval, quiet hours, effective next run, and status explanation.
-4. Finish with the prepared schedule restored.
+2. Point to the readiness verdict, next run, destination, and power condition.
+3. Show upcoming opportunities and per-project coverage.
+4. Scroll to quick policy edits, switch to manual mode, and return to automatic.
+5. Point to interval and quiet hours, then finish with the prepared policy restored.
 
 **Narration cues:**
 
-- **00:02** — Schedule has its own page instead of being buried in Settings.
-  Manual and automatic protection are visibly different modes.
-- **00:15** — Interval and quiet hours are shown beside the effective next
-  run. When work is waiting, the page explains the delay rather than leaving
-  an empty or ambiguous schedule.
-- **00:30** — These controls update the same scheduling policy used by
-  background backups.
+- **00:02** — Schedule is the operational view of automatic protection. It
+  explains whether work can run now and which runtime rule is decisive.
+- **00:15** — The forecast shows upcoming timer opportunities after quiet-hour
+  deferrals, while project coverage shows what participates and its latest
+  stored backup.
+- **00:30** — Quick edits update the same scheduling policy as Settings.
+  Unchanged projects are checked and skipped without writing another backup.
 
 ## 06 — Backups, policies, and compare
 

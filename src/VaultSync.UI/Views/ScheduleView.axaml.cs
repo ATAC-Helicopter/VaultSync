@@ -1,5 +1,5 @@
-using Avalonia.Controls;
 using Avalonia;
+using Avalonia.Controls;
 
 namespace VaultSync.UI.Views;
 
@@ -12,10 +12,17 @@ public partial class ScheduleView : UserControl
         SizeChanged += (_, _) => UpdateResponsiveLayout();
     }
 
-    internal readonly record struct ResponsiveLayout(bool StackOptions, bool StackOverview);
+    internal readonly record struct ResponsiveLayout(
+        bool StackMetrics,
+        bool StackOperations,
+        bool StackPolicy,
+        bool StackOverview);
 
-    internal static ResponsiveLayout GetResponsiveLayout(double width) =>
-        new(StackOptions: width < 760, StackOverview: width < 560);
+    internal static ResponsiveLayout GetResponsiveLayout(double width) => new(
+        StackMetrics: width < 920,
+        StackOperations: width < 900,
+        StackPolicy: width < 760,
+        StackOverview: width < 620);
 
     private void UpdateResponsiveLayout()
     {
@@ -24,19 +31,59 @@ public partial class ScheduleView : UserControl
             return;
 
         ResponsiveLayout layout = GetResponsiveLayout(width);
-        ScheduleOptionsGrid.ColumnDefinitions = new ColumnDefinitions(layout.StackOptions ? "*" : "*,*");
-        ScheduleOptionsGrid.RowDefinitions = new RowDefinitions(layout.StackOptions ? "Auto,Auto" : "Auto");
-        Grid.SetColumn(QuietHoursCard, layout.StackOptions ? 0 : 1);
-        Grid.SetRow(QuietHoursCard, layout.StackOptions ? 1 : 0);
-        QuietHoursCard.Margin = layout.StackOptions ? new Thickness(0, 16, 0, 0) : default;
+        ApplyMetricsLayout(layout.StackMetrics);
+        ApplyTwoCardLayout(
+            ScheduleOperationalGrid,
+            ProjectCoverageCard,
+            layout.StackOperations,
+            spacing: 16);
+        ApplyTwoCardLayout(
+            SchedulePolicyGrid,
+            QuietHoursPanel,
+            layout.StackPolicy,
+            spacing: 16);
+        ApplyOverviewLayout(layout.StackOverview);
+    }
 
-        ScheduleOverviewGrid.ColumnDefinitions = new ColumnDefinitions(layout.StackOverview ? "*" : "*,Auto");
-        ScheduleOverviewGrid.RowDefinitions = new RowDefinitions(layout.StackOverview ? "Auto,Auto" : "Auto");
-        Grid.SetColumn(NextRunPill, layout.StackOverview ? 0 : 1);
-        Grid.SetRow(NextRunPill, layout.StackOverview ? 1 : 0);
-        NextRunPill.Margin = layout.StackOverview ? new Thickness(0, 12, 0, 0) : default;
-        NextRunPill.HorizontalAlignment = layout.StackOverview
-            ? Avalonia.Layout.HorizontalAlignment.Left
+    private void ApplyMetricsLayout(bool stacked)
+    {
+        StatusMetricsGrid.ColumnDefinitions = new ColumnDefinitions(stacked ? "*" : "*,*,*");
+        StatusMetricsGrid.RowDefinitions = new RowDefinitions(stacked ? "Auto,Auto,Auto" : "Auto");
+
+        PositionMetric(CoverageMetricCard, stacked, 0);
+        PositionMetric(DestinationMetricCard, stacked, 1);
+        PositionMetric(PowerMetricCard, stacked, 2);
+    }
+
+    private static void PositionMetric(Control card, bool stacked, int index)
+    {
+        Grid.SetColumn(card, stacked ? 0 : index);
+        Grid.SetRow(card, stacked ? index : 0);
+        card.Margin = stacked && index > 0 ? new Thickness(0, 12, 0, 0) : default;
+    }
+
+    private static void ApplyTwoCardLayout(
+        Grid grid,
+        Control secondCard,
+        bool stacked,
+        double spacing)
+    {
+        grid.ColumnDefinitions = new ColumnDefinitions(stacked ? "*" : "*,*");
+        grid.RowDefinitions = new RowDefinitions(stacked ? "Auto,Auto" : "Auto");
+        Grid.SetColumn(secondCard, stacked ? 0 : 1);
+        Grid.SetRow(secondCard, stacked ? 1 : 0);
+        secondCard.Margin = stacked ? new Thickness(0, spacing, 0, 0) : default;
+    }
+
+    private void ApplyOverviewLayout(bool stacked)
+    {
+        ScheduleOverviewGrid.ColumnDefinitions = new ColumnDefinitions(stacked ? "*" : "*,Auto");
+        ScheduleOverviewGrid.RowDefinitions = new RowDefinitions(stacked ? "Auto,Auto" : "Auto");
+        Grid.SetColumn(NextRunPill, stacked ? 0 : 1);
+        Grid.SetRow(NextRunPill, stacked ? 1 : 0);
+        NextRunPill.Margin = stacked ? new Thickness(0, 14, 0, 0) : default;
+        NextRunPill.HorizontalAlignment = stacked
+            ? Avalonia.Layout.HorizontalAlignment.Stretch
             : Avalonia.Layout.HorizontalAlignment.Right;
     }
 }

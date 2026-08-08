@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VaultSync.Core.Config;
+using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
@@ -74,7 +76,12 @@ namespace VaultSync.UI.ViewModels
             _scheduleViewModel = new ScheduleViewModel(
                 _settingsViewModel,
                 _localizationService,
-                () => _nextAutoBackupDueUtc);
+                () => _nextAutoBackupDueUtc,
+                BuildScheduleProjectSnapshots,
+                () => _powerStatusProvider.GetPowerState(),
+                () => SetCurrentView("Projects"),
+                () => SetCurrentView(BackupsViewKey),
+                () => SetCurrentView("Settings"));
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
             _settingsViewModel.DestinationSettingsSaved += OnDestinationSettingsSaved;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
@@ -170,6 +177,43 @@ namespace VaultSync.UI.ViewModels
             catch (Exception ex)
             {
                 DiagnosticsLogger.Record($"Startup config persist failed ({reason}): {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        private IReadOnlyList<ScheduleProjectSnapshot> BuildScheduleProjectSnapshots()
+        {
+            try
+            {
+                AppConfig config = _configStore.GetSnapshot();
+                HashSet<int> disabled = config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? [];
+                Dictionary<int, Backup[]> backupsByProject = _repo
+                    .GetRecentBackupsByProject(limitPerProject: 50)
+                    .GroupBy(backup => backup.ProjectId)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.OrderByDescending(backup => backup.CreatedUtc).ToArray());
+
+                return _repo.GetAllProjects()
+                    .OrderBy(project => project.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(project =>
+                    {
+                        _ = backupsByProject.TryGetValue(project.Id, out Backup[]? backups);
+                        Backup? latest = backups?.FirstOrDefault();
+                        Backup? latestAutomatic = backups?.FirstOrDefault(backup =>
+                            string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase));
+                        return new ScheduleProjectSnapshot(
+                            project.Id,
+                            project.Name,
+                            !disabled.Contains(project.Id),
+                            latest?.CreatedUtc,
+                            latestAutomatic?.CreatedUtc);
+                    })
+                    .ToArray();
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Schedule project summary unavailable: {ex.GetType().Name} - {ex.Message}");
+                return [];
             }
         }
 
