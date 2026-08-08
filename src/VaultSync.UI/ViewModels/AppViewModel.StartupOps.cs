@@ -76,12 +76,13 @@ namespace VaultSync.UI.ViewModels
             _scheduleViewModel = new ScheduleViewModel(
                 _settingsViewModel,
                 _localizationService,
-                () => _nextAutoBackupDueUtc,
-                BuildScheduleProjectSnapshots,
-                () => _powerStatusProvider.GetPowerState(),
-                () => SetCurrentView("Projects"),
-                () => SetCurrentView(BackupsViewKey),
-                () => SetCurrentView("Settings"));
+                new ScheduleViewModelDependencies(
+                    () => _nextAutoBackupDueUtc,
+                    BuildScheduleProjectSnapshots,
+                    () => _powerStatusProvider.GetPowerState(),
+                    () => SetCurrentView("Projects"),
+                    () => SetCurrentView(BackupsViewKey),
+                    () => SetCurrentView("Settings")));
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
             _settingsViewModel.DestinationSettingsSaved += OnDestinationSettingsSaved;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
@@ -180,7 +181,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private IReadOnlyList<ScheduleProjectSnapshot> BuildScheduleProjectSnapshots()
+        private ScheduleProjectSnapshot[] BuildScheduleProjectSnapshots()
         {
             try
             {

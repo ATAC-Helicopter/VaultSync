@@ -19,6 +19,13 @@ public readonly record struct BackupScheduleOpportunity(
     DateTimeOffset OccursAtLocal,
     bool WasDeferredByQuietHours);
 
+public readonly record struct BackupScheduleSettings(
+    bool AutomaticBackupsEnabled,
+    int IntervalMinutes,
+    bool QuietHoursEnabled,
+    string? QuietHoursStart,
+    string? QuietHoursEnd);
+
 /// <summary>
 /// Projects the next automatic-backup opportunity from the timer cadence and quiet-hours policy.
 /// </summary>
@@ -74,16 +81,12 @@ public static class BackupSchedulePolicy
     /// not promise that a backup will be written when no project changed.
     /// </summary>
     public static IReadOnlyList<BackupScheduleOpportunity> ProjectUpcoming(
-        bool automaticBackupsEnabled,
-        int intervalMinutes,
-        bool quietHoursEnabled,
-        string? quietHoursStart,
-        string? quietHoursEnd,
+        BackupScheduleSettings settings,
         DateTimeOffset nowLocal,
         DateTimeOffset? timerDueAtLocal = null,
         int count = 4)
     {
-        if (!automaticBackupsEnabled || intervalMinutes <= 0 || count <= 0)
+        if (!settings.AutomaticBackupsEnabled || settings.IntervalMinutes <= 0 || count <= 0)
             return [];
 
         int opportunityCount = Math.Clamp(count, 1, 24);
@@ -94,10 +97,10 @@ public static class BackupSchedulePolicy
         {
             BackupScheduleProjection projection = Project(
                 true,
-                intervalMinutes,
-                quietHoursEnabled,
-                quietHoursStart,
-                quietHoursEnd,
+                settings.IntervalMinutes,
+                settings.QuietHoursEnabled,
+                settings.QuietHoursStart,
+                settings.QuietHoursEnd,
                 nowLocal,
                 candidate);
 
@@ -107,7 +110,7 @@ public static class BackupSchedulePolicy
             opportunities.Add(new BackupScheduleOpportunity(
                 nextRun,
                 projection.Status == BackupScheduleStatus.QuietHours));
-            candidate = nextRun.AddMinutes(intervalMinutes);
+            candidate = nextRun.AddMinutes(settings.IntervalMinutes);
         }
 
         return opportunities;

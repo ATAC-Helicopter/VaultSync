@@ -14,7 +14,6 @@ namespace VaultSync.Core.Repositories
     public class SqliteRepository(string dbPath)
     {
         private const string BackupsTable = "backups";
-        private const string ProjectGroupsTable = "project_groups";
         private const string ProjectsTable = "projects";
         private const string SnapshotsTable = "snapshots";
         private const int RecoveryDrillsPerProjectLimit = 20;

@@ -76,7 +76,9 @@ public sealed class BackupSchedulePolicyTests
         var now = new DateTimeOffset(2026, 8, 8, 12, 0, 0, TimeSpan.FromHours(2));
 
         var result = BackupSchedulePolicy.ProjectUpcoming(
-            false, 30, false, "23:00", "07:00", now, count: 4);
+            new BackupScheduleSettings(false, 30, false, "23:00", "07:00"),
+            now,
+            count: 4);
 
         Assert.Empty(result);
     }
@@ -87,11 +89,7 @@ public sealed class BackupSchedulePolicyTests
         var now = new DateTimeOffset(2026, 8, 8, 22, 40, 0, TimeSpan.FromHours(2));
 
         var result = BackupSchedulePolicy.ProjectUpcoming(
-            true,
-            30,
-            true,
-            "23:00",
-            "07:00",
+            new BackupScheduleSettings(true, 30, true, "23:00", "07:00"),
             now,
             now.AddMinutes(10),
             count: 4);

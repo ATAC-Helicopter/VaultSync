@@ -57,7 +57,7 @@ public partial class ProjectsViewModel
     {
         ProjectGroupOption option = GroupOptions.FirstOrDefault(candidate =>
             string.Equals(candidate.Id, project.GroupId, StringComparison.OrdinalIgnoreCase))
-            ?? GroupOptions.First();
+            ?? GroupOptions[0];
         project.SetGroupOption(option);
     }
 
@@ -293,6 +293,9 @@ public partial class ProjectsViewModel
 
     private async Task SnapshotProjectGroupAsync(ProjectFolderViewModel? folder)
     {
+        if (folder is null)
+            return;
+
         List<int> ids = GetProjectGroupRegisteredProjectIds(folder);
         if (ids.Count == 0)
             return;
@@ -304,13 +307,13 @@ public partial class ProjectsViewModel
             var fullHash = config.Backups.UseFullSnapshotHash;
             var enableScanCache = config.Backups.EnableScanCache;
             var aggressiveScanCache = config.Backups.AggressiveScanCache;
-            List<ProjectItemViewModel> targets = [.. folder!.AllProjects.Where(project => ids.Contains(project.ProjectId))];
+            List<ProjectItemViewModel> targets = [.. folder.AllProjects.Where(project => ids.Contains(project.ProjectId))];
 
             if (targets.Count == 0)
                 return;
 
             var repo = CreateRepository(config);
-            var existingByName = repo.GetAllProjects()
+            var existingByName = (await repo.GetAllProjectsAsync().ConfigureAwait(false))
                 .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
@@ -320,9 +323,9 @@ public partial class ProjectsViewModel
             var success = 0;
             var failure = 0;
 
-            foreach (var target in targets)
+            foreach (string targetName in targets.Select(target => target.Name))
             {
-                if (!existingByName.TryGetValue(target.Name, out var existing))
+                if (!existingByName.TryGetValue(targetName, out var existing))
                     continue;
 
                 try
@@ -340,7 +343,7 @@ public partial class ProjectsViewModel
                 }
                 catch (Exception ex)
                 {
-                    DiagnosticsLogger.Record($"Folder snapshot failed for '{target.Name}': {ex.GetType().Name} - {ex.Message}");
+                    DiagnosticsLogger.Record($"Folder snapshot failed for '{targetName}': {ex.GetType().Name} - {ex.Message}");
                     failure++;
                 }
             }

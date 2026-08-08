@@ -20,6 +20,14 @@ public readonly record struct ScheduleProjectSnapshot(
     DateTime? LastAutomaticBackupUtc,
     string GroupName = "");
 
+public sealed record ScheduleViewModelDependencies(
+    Func<DateTimeOffset?> TimerDueProvider,
+    Func<IReadOnlyList<ScheduleProjectSnapshot>> ProjectSnapshotProvider,
+    Func<PowerState> PowerStateProvider,
+    Action OpenProjects,
+    Action OpenBackups,
+    Action OpenSettings);
+
 public sealed class ScheduleOpportunityViewModel
 {
     public required string Sequence
@@ -75,24 +83,19 @@ public sealed class ScheduleViewModel : ViewModelBase
     public ScheduleViewModel(
         SettingsViewModel settings,
         LocalizationService localizationService,
-        Func<DateTimeOffset?> timerDueProvider,
-        Func<IReadOnlyList<ScheduleProjectSnapshot>> projectSnapshotProvider,
-        Func<PowerState> powerStateProvider,
-        Action openProjects,
-        Action openBackups,
-        Action openSettings)
+        ScheduleViewModelDependencies dependencies)
     {
         _settings = settings;
-        _timerDueProvider = timerDueProvider;
-        _projectSnapshotProvider = projectSnapshotProvider;
-        _powerStateProvider = powerStateProvider;
+        _timerDueProvider = dependencies.TimerDueProvider;
+        _projectSnapshotProvider = dependencies.ProjectSnapshotProvider;
+        _powerStateProvider = dependencies.PowerStateProvider;
         _settings.PropertyChanged += OnSettingsPropertyChanged;
         localizationService.LanguageChanged += Refresh;
         UseManualModeCommand = new RelayCommand(_ => IsManualMode = true);
         UseAutomaticModeCommand = new RelayCommand(_ => IsAutomaticMode = true);
-        OpenProjectsCommand = new RelayCommand(_ => openProjects());
-        OpenBackupsCommand = new RelayCommand(_ => openBackups());
-        OpenSettingsCommand = new RelayCommand(_ => openSettings());
+        OpenProjectsCommand = new RelayCommand(_ => dependencies.OpenProjects());
+        OpenBackupsCommand = new RelayCommand(_ => dependencies.OpenBackups());
+        OpenSettingsCommand = new RelayCommand(_ => dependencies.OpenSettings());
         RefreshCommand = new RelayCommand(_ => Refresh());
         Refresh();
     }
@@ -376,11 +379,12 @@ public sealed class ScheduleViewModel : ViewModelBase
     private void RebuildUpcomingRuns(DateTimeOffset now, DateTimeOffset? timerDue)
     {
         IReadOnlyList<BackupScheduleOpportunity> opportunities = BackupSchedulePolicy.ProjectUpcoming(
-            IsAutomaticMode,
-            IntervalMinutes,
-            EnableQuietHours,
-            QuietHoursStart,
-            QuietHoursEnd,
+            new BackupScheduleSettings(
+                IsAutomaticMode,
+                IntervalMinutes,
+                EnableQuietHours,
+                QuietHoursStart,
+                QuietHoursEnd),
             now,
             timerDue,
             count: 4);

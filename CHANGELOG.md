@@ -24,6 +24,7 @@
 - [BUG-18091] Included project tags, external identity, and folder membership in Backups refresh signatures so metadata edits no longer leave stale project cards.
 - [BUG-18092] Added diagnostics for scan-cache writes, NAS staging checks, and deferred-backup migration failures that were previously silent.
 - [BUG-18093] Restored the normal project-card list for projects outside folders, moved optional folder creation into a compact toolbar flyout, and reduced explicit folders to collapsible headers with contextual management and batch actions.
+- [BUG-18094] Cleared the 1.8.6 Sonar quality gate by restricting brand-icon build paths, covering the ICO builder, and simplifying schedule and folder code flagged during static analysis.
 
 ## [1.8.5] - 02.08.2026
 ### Added

@@ -32,20 +32,21 @@ public sealed class ScheduleViewModelTests
         var schedule = new ScheduleViewModel(
             settings,
             localization,
-            () => DateTimeOffset.Now.AddMinutes(30),
-            () =>
-            [
-                new ScheduleProjectSnapshot(
-                    1,
-                    "Client Portal",
-                    AutomaticEnabled: true,
-                    LastBackupUtc: DateTime.UtcNow.AddHours(-1),
-                    LastAutomaticBackupUtc: DateTime.UtcNow.AddHours(-2))
-            ],
-            () => PowerState.PluggedIn,
-            () => { },
-            () => { },
-            () => { });
+            new ScheduleViewModelDependencies(
+                () => DateTimeOffset.Now.AddMinutes(30),
+                () =>
+                [
+                    new ScheduleProjectSnapshot(
+                        1,
+                        "Client Portal",
+                        AutomaticEnabled: true,
+                        LastBackupUtc: DateTime.UtcNow.AddHours(-1),
+                        LastAutomaticBackupUtc: DateTime.UtcNow.AddHours(-2))
+                ],
+                () => PowerState.PluggedIn,
+                () => { },
+                () => { },
+                () => { }));
 
         schedule.UseManualModeCommand.Execute(null);
         Assert.False(settings.EnableAutoBackups);
