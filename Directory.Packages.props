@@ -23,17 +23,17 @@
     <PackageVersion Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.1.0-dev-798" />
 
     <!-- Text and rendering native assets -->
-    <PackageVersion Include="SkiaSharp" Version="4.150.1" />
+    <PackageVersion Include="SkiaSharp" Version="4.151.1" />
     <PackageVersion Include="SkiaSharp.HarfBuzz" Version="4.150.1" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.150.1" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="4.150.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="4.151.1" />
     <PackageVersion Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.150.1" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.150.1" />
-    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.151.1" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.2" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.1" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.2" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="14.2.1.1" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.2" />
 
     <!-- Windows-only UI integrations -->
     <PackageVersion Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />
