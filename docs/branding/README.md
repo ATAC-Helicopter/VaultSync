@@ -1,12 +1,13 @@
 # VaultSync brand assets
 
-The VaultSync mark combines two ideas: continuous synchronization around a protected recovery point, and a clear verification check. It is deliberately simple enough to remain recognizable in the system tray and at 16 px.
+The VaultSync mark is a direct evolution of the original open-vault identity. It retains the open safe, visible protected files, gold vault mechanism, and green health indicator while simplifying the geometry and strengthening the silhouette for tray and 16 px rendering.
 
 ## Source assets
 
 - `vaultsync-logo-icon.svg` is the canonical square app mark.
-- `vaultsync-lockup-light.svg` is the transparent horizontal lockup for dark backgrounds.
-- `vaultsync-logo-horizontal.svg` is the self-contained horizontal brand card.
+- `vaultsync-wordmark-light.svg` is the vector wordmark source for dark backgrounds.
+- `vaultsync-lockup-light.png` is the transparent icon-and-wordmark lockup.
+- `vaultsync-logo-horizontal.png` is the self-contained horizontal brand card.
 - `backgrounds/vaultsync-data-flow.png` is the generated campaign background used for social banners.
 
 ## Exported assets

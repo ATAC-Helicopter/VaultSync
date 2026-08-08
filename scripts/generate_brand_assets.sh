@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source_svg="$repo_root/docs/branding/vaultsync-logo-icon.svg"
-lockup_svg="$repo_root/docs/branding/vaultsync-lockup-light.svg"
+wordmark_svg="$repo_root/docs/branding/vaultsync-wordmark-light.svg"
 background="$repo_root/docs/branding/backgrounds/vaultsync-data-flow.png"
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
@@ -16,7 +16,16 @@ for command_name in sips ffmpeg iconutil python3; do
 done
 
 sips -s format png "$source_svg" --out "$work_dir/icon-512.png" >/dev/null
-sips -s format png "$lockup_svg" --out "$work_dir/lockup.png" >/dev/null
+sips -s format png "$wordmark_svg" --out "$work_dir/wordmark.png" >/dev/null
+
+lockup_png="$repo_root/docs/branding/vaultsync-lockup-light.png"
+ffmpeg -hide_banner -loglevel error -y -i "$work_dir/icon-512.png" -i "$work_dir/wordmark.png" \
+  -filter_complex "[0:v]scale=224:224[icon];[icon]pad=1000:240:8:8:color=0x00000000[canvas];[1:v]scale=720:160[word];[canvas][word]overlay=272:40" \
+  -frames:v 1 "$lockup_png"
+
+ffmpeg -hide_banner -loglevel error -y -f lavfi -i "color=c=#07111F:s=1200x320" -i "$lockup_png" \
+  -filter_complex "[1:v]scale=1100:264[logo];[0:v][logo]overlay=(W-w)/2:(H-h)/2" \
+  -frames:v 1 "$repo_root/docs/branding/vaultsync-logo-horizontal.png"
 
 resize_icon() {
   local size="$1"
@@ -51,19 +60,19 @@ for spec in "16 icon_16x16" "32 icon_16x16@2x" "32 icon_32x32" "64 icon_32x32@2x
 done
 iconutil -c icns "$iconset" -o "$repo_root/src/VaultSync.UI/Assets/VaultSync.icns"
 
-ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$work_dir/lockup.png" \
+ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$lockup_png" \
   -filter_complex "[0:v]scale=1080:445,crop=1080:128:(iw-ow)/2:(ih-oh)/2[bg];[1:v]scale=-1:92[logo];[bg][logo]overlay=(W-w)/2:(H-h)/2" \
   -frames:v 1 "$repo_root/docs/branding/vaultsync-reddit-banner.png"
 
-ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$work_dir/lockup.png" \
+ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$lockup_png" \
   -filter_complex "[0:v]scale=1280:640:force_original_aspect_ratio=increase,crop=1280:640[bg];[1:v]scale=820:-1[logo];[bg][logo]overlay=(W-w)/2:(H-h)/2" \
   -frames:v 1 "$repo_root/docs/branding/vaultsync-social-preview.png"
 
-ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$work_dir/lockup.png" \
+ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$lockup_png" \
   -filter_complex "[0:v]scale=620:300:force_original_aspect_ratio=increase,crop=620:300[bg];[1:v]scale=450:-1[logo];[bg][logo]overlay=(W-w)/2:(H-h)/2" \
   -frames:v 1 "$repo_root/packaging/VaultSync.Store/Assets/SplashScreen.png"
 
-ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$work_dir/lockup.png" \
+ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$lockup_png" \
   -filter_complex "[0:v]scale=310:150:force_original_aspect_ratio=increase,crop=310:150[bg];[1:v]scale=250:-1[logo];[bg][logo]overlay=(W-w)/2:(H-h)/2" \
   -frames:v 1 "$repo_root/packaging/VaultSync.Store/Assets/Wide310x150Logo.png"
 

@@ -12,7 +12,7 @@
 - [VS-1864] Replaced display-text-derived backup stages with shared typed protection activity states, including explicit queued, scanning, hashing, writing, verifying, waiting, retrying, completion, cancellation, and failure semantics across manual and automatic backup activity.
 - [VS-1865] Clarified desktop and CLI project removal so it removes only local registration and history-index state while leaving source files and stored backup payloads intact.
 - [VS-1811] Carried project folder identity into Schedule, Backups, Recovery, and History, including folder-aware search and grouped schedule coverage.
-- [VS-1868] Replaced the detailed safe illustration with a scalable sync-and-recovery brand system across desktop, tray, macOS, Windows, Linux, Store, website, repository, Reddit, and social-preview assets.
+- [VS-1868] Evolved the established open-vault identity into a cleaner, small-size-safe brand system across desktop, tray, macOS, Windows, Linux, Store, website, repository, Reddit, and social-preview assets.
 ### Fixed
 - [BUG-18089] Aligned release-candidate validation with the `release/<version>` branch convention and made the direct-to-stable, no-beta delivery path for 1.8.6 explicit.
 - [BUG-18084] Restored the missing Schedule page content and added responsive layouts for wide and narrow windows.
