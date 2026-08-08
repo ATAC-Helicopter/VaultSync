@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-08-07T05:05:46Z`
+Captured at: `2026-08-08T04:19:12Z`
 
 - Releases: **49**
 - Assets: **434**
-- Total asset downloads: **2178**
-- Change since previous snapshot: **+8**
+- Total asset downloads: **2195**
+- Change since previous snapshot: **+17**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.5 — Recovery Confidence** with **52** downloads (+6)
+- Latest stable: **VaultSync 1.8.5 — Recovery Confidence** with **57** downloads (+5)
 - Latest prerelease: **VaultSync 1.8.5 Beta 1** with **6** downloads (0)
 
 ## Top assets
@@ -33,13 +33,13 @@ Captured at: `2026-08-07T05:05:46Z`
 
 - Tag: `v1.8.5`
 - Published: `2026-08-02T21:01:25Z`
-- Total downloads: **52**
-- Delta: **+6**
+- Total downloads: **57**
+- Delta: **+5**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| vaultsync-patch-windows.json | 16 | +3 | 58069 |
-| VaultSync-Setup-1.8.5.exe | 12 | +3 | 62092889 |
+| vaultsync-patch-windows.json | 17 | +1 | 58069 |
+| VaultSync-Setup-1.8.5.exe | 16 | +4 | 62092889 |
 | vaultsync-patch-linux-x64.json | 9 | 0 | 54666 |
 | vaultsync-patch-macos-apple-silicon.json | 3 | 0 | 55882 |
 | vaultsync-patch-macos-intel.json | 3 | 0 | 55878 |
@@ -89,26 +89,26 @@ Captured at: `2026-08-07T05:05:46Z`
 
 - Tag: `v1.8.4`
 - Published: `2026-07-24T18:42:28Z`
-- Total downloads: **113**
-- Delta: **+1**
+- Total downloads: **115**
+- Delta: **+2**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 78 | 0 | 58026 |
 | VaultSync-Setup-1.8.4.exe | 18 | 0 | 60855747 |
-| VaultSync-1.8.4-macos-apple-silicon.dmg | 5 | 0 | 57994241 |
+| VaultSync-1.8.4-macos-apple-silicon.dmg | 6 | +1 | 57994241 |
 | VaultSync-1.8.4-linux-x64.AppImage | 2 | 0 | 52036800 |
-| VaultSync-1.8.4-macos-intel.dmg | 2 | +1 | 59816480 |
+| VaultSync-1.8.4-macos-intel.dmg | 2 | 0 | 59816480 |
 | vaultsync-patch-macos-apple-silicon.json | 2 | 0 | 55843 |
 | vaultsync-patch-macos-apple-silicon.zip | 2 | 0 | 51017252 |
 | VaultSync-1.8.4-linux-x64.deb | 1 | 0 | 40617274 |
 | vaultsync-patch-linux-arm64.json | 1 | 0 | 54807 |
+| vaultsync-patch-linux-arm64.zip | 1 | +1 | 49590376 |
 | vaultsync-patch-linux-x64.json | 1 | 0 | 54802 |
 | vaultsync-patch-windows.zip | 1 | 0 | 86975731 |
 | VaultSync-1.8.4-linux-arm64.deb | 0 | 0 | 38048864 |
 | VaultSync-1.8.4-linux-arm64.tar.gz | 0 | 0 | 49410057 |
 | VaultSync-1.8.4-linux-x64.tar.gz | 0 | 0 | 51776031 |
-| vaultsync-patch-linux-arm64.zip | 0 | 0 | 49590376 |
 | vaultsync-patch-linux-x64.zip | 0 | 0 | 51977343 |
 | vaultsync-patch-macos-intel.json | 0 | 0 | 55839 |
 | vaultsync-patch-macos-intel.zip | 0 | 0 | 53301025 |
@@ -117,51 +117,51 @@ Captured at: `2026-08-07T05:05:46Z`
 
 - Tag: `v1.8.3`
 - Published: `2026-07-16T11:22:38Z`
-- Total downloads: **146**
-- Delta: **+1**
+- Total downloads: **150**
+- Delta: **+4**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 115 | 0 | 58008 |
 | VaultSync-Setup-1.8.3.exe | 21 | 0 | 60748400 |
 | vaultsync-patch-windows.zip | 3 | 0 | 86809056 |
-| VaultSync-1.8.3-linux-x64.deb | 2 | +1 | 40361842 |
-| VaultSync-1.8.3-linux-arm64.deb | 1 | 0 | 37805820 |
+| VaultSync-1.8.3-linux-arm64.deb | 2 | +1 | 37805820 |
+| VaultSync-1.8.3-linux-x64.deb | 2 | 0 | 40361842 |
 | VaultSync-1.8.3-linux-x64.AppImage | 1 | 0 | 51160256 |
 | VaultSync-1.8.3-macos-intel.dmg | 1 | 0 | 59658802 |
+| vaultsync-patch-linux-arm64.zip | 1 | +1 | 48689135 |
+| vaultsync-patch-linux-x64.zip | 1 | +1 | 51106322 |
 | vaultsync-patch-macos-apple-silicon.json | 1 | 0 | 55826 |
 | vaultsync-patch-macos-apple-silicon.zip | 1 | 0 | 50861272 |
+| vaultsync-patch-macos-intel.zip | 1 | +1 | 53140808 |
 | VaultSync-1.8.3-linux-arm64.tar.gz | 0 | 0 | 48461314 |
 | VaultSync-1.8.3-linux-x64.tar.gz | 0 | 0 | 50865405 |
 | VaultSync-1.8.3-macos-apple-silicon.dmg | 0 | 0 | 57772698 |
 | vaultsync-patch-linux-arm64.json | 0 | 0 | 54613 |
-| vaultsync-patch-linux-arm64.zip | 0 | 0 | 48689135 |
 | vaultsync-patch-linux-x64.json | 0 | 0 | 54608 |
-| vaultsync-patch-linux-x64.zip | 0 | 0 | 51106322 |
 | vaultsync-patch-macos-intel.json | 0 | 0 | 55822 |
-| vaultsync-patch-macos-intel.zip | 0 | 0 | 53140808 |
 
 ### VaultSync 1.8.2
 
 - Tag: `v1.8.2`
 - Published: `2026-07-04T17:44:43Z`
-- Total downloads: **199**
-- Delta: **0**
+- Total downloads: **203**
+- Delta: **+4**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 180 | 0 | 56037 |
-| VaultSync-Setup-1.8.2.exe | 13 | 0 | 61196206 |
+| VaultSync-Setup-1.8.2.exe | 14 | +1 | 61196206 |
 | vaultsync-patch-linux-x64.json | 2 | 0 | 52697 |
+| VaultSync-1.8.2-linux-arm64.tar.gz | 1 | +1 | 47761996 |
+| VaultSync-1.8.2-linux-x64.AppImage | 1 | +1 | 50398400 |
 | VaultSync-1.8.2-linux-x64.deb | 1 | 0 | 39763868 |
 | VaultSync-1.8.2-macos-apple-silicon.dmg | 1 | 0 | 57127225 |
+| VaultSync-1.8.2-macos-intel.dmg | 1 | +1 | 59189070 |
 | vaultsync-patch-linux-x64.zip | 1 | 0 | 50346838 |
 | vaultsync-patch-windows.zip | 1 | 0 | 87810873 |
 | VaultSync-1.8.2-linux-arm64.deb | 0 | 0 | 37287806 |
-| VaultSync-1.8.2-linux-arm64.tar.gz | 0 | 0 | 47761996 |
-| VaultSync-1.8.2-linux-x64.AppImage | 0 | 0 | 50398400 |
 | VaultSync-1.8.2-linux-x64.tar.gz | 0 | 0 | 50087006 |
-| VaultSync-1.8.2-macos-intel.dmg | 0 | 0 | 59189070 |
 | vaultsync-patch-linux-arm64.json | 0 | 0 | 52702 |
 | vaultsync-patch-linux-arm64.zip | 0 | 0 | 48013717 |
 | vaultsync-patch-macos-apple-silicon.json | 0 | 0 | 53915 |
@@ -896,14 +896,14 @@ Captured at: `2026-08-07T05:05:46Z`
 
 - Tag: `v0.9.4`
 - Published: `2025-12-02T21:07:16Z`
-- Total downloads: **11**
-- Delta: **0**
+- Total downloads: **13**
+- Delta: **+2**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
+| VaultSync-Setup-0.9.4.exe | 5 | +1 | 63451737 |
 | vaultsync-patch-windows.json | 4 | 0 | 1319 |
-| VaultSync-Setup-0.9.4.exe | 4 | 0 | 63451737 |
-| vaultsync-patch-windows.zip | 3 | 0 | 1602979 |
+| vaultsync-patch-windows.zip | 4 | +1 | 1602979 |
 
 ### V0.9.3 BETA
 
