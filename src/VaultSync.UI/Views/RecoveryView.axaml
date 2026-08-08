@@ -316,7 +316,7 @@
                   <Border Classes="recovery-soft"
                           Padding="14"
                           Margin="0,0,0,10">
-                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                           RowSpacing="8">
                       <Grid ColumnDefinitions="*,Auto,Auto"
                             ColumnSpacing="10">
@@ -340,18 +340,25 @@
                       </Grid>
 
                       <TextBlock Grid.Row="1"
+                                 Text="{CompiledBinding GroupName}"
+                                 FontSize="10"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 TextTrimming="CharacterEllipsis" />
+
+                      <TextBlock Grid.Row="2"
                                  Text="{CompiledBinding ConfidenceState}"
                                  FontSize="16"
                                  FontWeight="SemiBold"
                                  TextWrapping="Wrap" />
 
-                      <TextBlock Grid.Row="2"
+                      <TextBlock Grid.Row="3"
                                  Text="{CompiledBinding ConfidenceExplanation}"
                                  Foreground="{DynamicResource TextSecondaryBrush}"
                                  TextWrapping="Wrap"
                                  MaxLines="2" />
 
-                      <Grid Grid.Row="3"
+                      <Grid Grid.Row="4"
                             ColumnDefinitions="*,Auto"
                             ColumnSpacing="12">
                         <ProgressBar Classes="recovery-bar"
@@ -363,7 +370,7 @@
                                    VerticalAlignment="Center" />
                       </Grid>
 
-                      <Grid Grid.Row="4"
+                      <Grid Grid.Row="5"
                             ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto"
                             ColumnSpacing="8">
                         <Border Classes="recovery-pill"><TextBlock Text="{CompiledBinding CopyLabel}" FontSize="10" /></Border>
@@ -382,7 +389,7 @@
                                 Command="{CompiledBinding RunIsolatedRestoreCommand}" />
                       </Grid>
 
-                      <Grid Grid.Row="5"
+                      <Grid Grid.Row="6"
                             ColumnDefinitions="*,Auto"
                             ColumnSpacing="10"
                             IsVisible="{CompiledBinding HasRecommendation}">
@@ -397,7 +404,7 @@
                                 Command="{CompiledBinding ProtectRecommendationCommand}" />
                       </Grid>
 
-                      <Expander Grid.Row="6"
+                      <Expander Grid.Row="7"
                                 Header="{infra:LocalizedString Key=Recovery.Inspector.Title}">
                         <StackPanel Spacing="8" Margin="0,8,0,0">
                           <Border Classes="recovery-soft" Padding="10">

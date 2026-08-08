@@ -192,6 +192,8 @@ namespace VaultSync.UI.ViewModels
                     .ToDictionary(
                         group => group.Key,
                         group => group.OrderByDescending(backup => backup.CreatedUtc).ToArray());
+                Dictionary<string, string> groupNames = _repo.GetProjectGroups()
+                    .ToDictionary(group => group.Id, group => group.Name, StringComparer.OrdinalIgnoreCase);
 
                 return _repo.GetAllProjects()
                     .OrderBy(project => project.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -206,7 +208,10 @@ namespace VaultSync.UI.ViewModels
                             project.Name,
                             !disabled.Contains(project.Id),
                             latest?.CreatedUtc,
-                            latestAutomatic?.CreatedUtc);
+                            latestAutomatic?.CreatedUtc,
+                            !string.IsNullOrWhiteSpace(project.GroupId) && groupNames.TryGetValue(project.GroupId, out string? groupName)
+                                ? groupName
+                                : string.Empty);
                     })
                     .ToArray();
             }

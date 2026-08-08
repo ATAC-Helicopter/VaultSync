@@ -17,7 +17,8 @@ public readonly record struct ScheduleProjectSnapshot(
     string Name,
     bool AutomaticEnabled,
     DateTime? LastBackupUtc,
-    DateTime? LastAutomaticBackupUtc);
+    DateTime? LastAutomaticBackupUtc,
+    string GroupName = "");
 
 public sealed class ScheduleOpportunityViewModel
 {
@@ -41,6 +42,14 @@ public sealed class ScheduleOpportunityViewModel
 
 public sealed class ScheduleProjectRowViewModel
 {
+    public required string GroupName
+    {
+        get; init;
+    }
+    public required bool ShowGroupHeader
+    {
+        get; init;
+    }
     public required string Name
     {
         get; init;
@@ -322,10 +331,16 @@ public sealed class ScheduleViewModel : ViewModelBase
         }
 
         ProjectCoverage.Clear();
-        foreach (ScheduleProjectSnapshot project in projects.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase))
+        string previousGroup = string.Empty;
+        foreach (ScheduleProjectSnapshot project in projects
+                     .OrderBy(item => ResolveGroupName(item.GroupName), StringComparer.CurrentCultureIgnoreCase)
+                     .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase))
         {
+            string groupName = ResolveGroupName(project.GroupName);
             ProjectCoverage.Add(new ScheduleProjectRowViewModel
             {
+                GroupName = groupName,
+                ShowGroupHeader = !string.Equals(previousGroup, groupName, StringComparison.CurrentCultureIgnoreCase),
                 Name = project.Name,
                 AutomaticStatus = project.AutomaticEnabled
                     ? L("Schedule.Project.Included", "Included")
@@ -334,6 +349,7 @@ public sealed class ScheduleViewModel : ViewModelBase
                     ? lastBackup.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
                     : L("Schedule.Project.Never", "No backup yet")
             });
+            previousGroup = groupName;
         }
 
         RegisteredProjectCount = projects.Count;
@@ -351,6 +367,11 @@ public sealed class ScheduleViewModel : ViewModelBase
                 last.ToLocalTime().ToString("g", CultureInfo.CurrentCulture))
             : L("Schedule.LastRun.None", "No automatic backup recorded");
     }
+
+    private static string ResolveGroupName(string? groupName) =>
+        string.IsNullOrWhiteSpace(groupName)
+            ? L("Projects.Folder.Ungrouped", "Ungrouped")
+            : groupName.Trim();
 
     private void RebuildUpcomingRuns(DateTimeOffset now, DateTimeOffset? timerDue)
     {

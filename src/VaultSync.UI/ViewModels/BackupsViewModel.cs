@@ -4448,6 +4448,18 @@ namespace VaultSync.UI.ViewModels
                         : DateTime.MinValue)
                 .ThenBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+            var projectGroupNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                SqliteRepository groupRepository = _repositoryFactory.Create(config);
+                groupRepository.EnsureSchema();
+                projectGroupNames = groupRepository.GetProjectGroups()
+                    .ToDictionary(group => group.Id, group => group.Name, StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Backup project folders unavailable: {ex.GetType().Name} - {ex.Message}");
+            }
 
             foreach (Project? project in orderedProjects)
             {
@@ -4461,6 +4473,10 @@ namespace VaultSync.UI.ViewModels
                 {
                     Id                = project.Id.ToString(),
                     Name              = projectName,
+                    FolderName        = !string.IsNullOrWhiteSpace(project.GroupId) &&
+                                        projectGroupNames.TryGetValue(project.GroupId, out string? groupName)
+                        ? groupName
+                        : L("Projects.Folder.Ungrouped", "Ungrouped"),
                     ExternalId        = project.ExternalId ?? string.Empty,
                     ProjectTagsCsv    = project.Tags ?? string.Empty,
                     LastBackupTime    = stats.LastBackupTime,
@@ -4688,6 +4704,9 @@ namespace VaultSync.UI.ViewModels
                     hash = (hash * 397) ^ project.Id;
                     hash = (hash * 397) ^ (project.Name?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.RootPath?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.ExternalId?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.Tags?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.GroupId?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.PreferredDestinationId?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.EncryptionPolicy?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.EncryptionKeyRef?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);

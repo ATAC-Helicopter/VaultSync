@@ -1395,6 +1395,11 @@
                                      FontSize="14"
                                      FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding FolderName}"
+                                     FontSize="10"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     TextTrimming="CharacterEllipsis" />
                           <ItemsControl ItemsSource="{Binding ProjectTagChips}"
                                         IsVisible="{Binding HasProjectTags}">
                             <ItemsControl.ItemsPanel>

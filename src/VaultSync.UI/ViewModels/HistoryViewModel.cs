@@ -570,6 +570,19 @@ public sealed class HistoryViewModel : ViewModelBase
         AddSnapshotTimelineItems(items, snapshotOnly, projectsById, metadataBySnapshotId);
         AddRecoveryEvidenceTimelineItems(items, recoveryEvidence, projectsById);
 
+        Dictionary<string, string> groupNames = repo.GetProjectGroups()
+            .ToDictionary(group => group.Id, group => group.Name, StringComparer.OrdinalIgnoreCase);
+        string ungroupedName = L("Projects.Folder.Ungrouped", "Ungrouped");
+        foreach (HistoryTimelineItemViewModel item in items)
+        {
+            string groupName = projectsById.TryGetValue(item.ProjectId, out Project? project) &&
+                               !string.IsNullOrWhiteSpace(project.GroupId) &&
+                               groupNames.TryGetValue(project.GroupId, out string? storedGroupName)
+                ? storedGroupName
+                : ungroupedName;
+            item.SetGroupName(groupName);
+        }
+
         items = items
             .OrderByDescending(item => item.CreatedUtc)
             .Take(80)
@@ -1541,6 +1554,7 @@ public sealed class HistoryTimelineItemViewModel
 
     public string Kind { get; }
     public string ProjectName { get; }
+    public string GroupName { get; private set; } = string.Empty;
     public int ProjectId { get; }
     public DateTime CreatedUtc { get; }
     public string Title { get; }
@@ -1688,9 +1702,12 @@ public sealed class HistoryTimelineItemViewModel
 
     public void SetDateGroupLabel(string value) => DateGroupLabel = value ?? string.Empty;
 
+    internal void SetGroupName(string value) => GroupName = value ?? string.Empty;
+
     public bool MatchesSearch(string search)
     {
         return Contains(ProjectName, search) ||
+            Contains(GroupName, search) ||
             Contains(Title, search) ||
             Contains(Detail, search) ||
             Contains(Kind, search) ||

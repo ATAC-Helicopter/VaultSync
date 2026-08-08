@@ -492,6 +492,13 @@ public sealed class RecoveryViewModel : ViewModelBase
         SqliteRepository repo = _repositoryFactory.Create(config);
         repo.EnsureSchema();
         var projects = repo.GetAllProjects().ToList();
+        Dictionary<string, string> groupNames = repo.GetProjectGroups()
+            .ToDictionary(group => group.Id, group => group.Name, StringComparer.OrdinalIgnoreCase);
+        Dictionary<int, string> groupNameByProject = projects.ToDictionary(
+            project => project.Id,
+            project => !string.IsNullOrWhiteSpace(project.GroupId) && groupNames.TryGetValue(project.GroupId, out string? groupName)
+                ? groupName
+                : L("Projects.Folder.Ungrouped", "Ungrouped"));
         var backups = repo.GetAllBackups();
         var snapshots = repo.GetAllSnapshots().ToList();
         IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId =
@@ -549,7 +556,8 @@ public sealed class RecoveryViewModel : ViewModelBase
             coverageSummary,
             topRecommendation,
             disasterRecovery,
-            confidenceByProject);
+            confidenceByProject,
+            groupNameByProject);
     }
 
     private void ApplyData(RecoveryData data)
@@ -586,13 +594,16 @@ public sealed class RecoveryViewModel : ViewModelBase
 
         _allProjects.Clear();
         foreach (ProjectRestoreReadiness project in summary.Projects
-                     .OrderBy(project => project.Score)
+                     .OrderBy(project => data.GroupNameByProject.GetValueOrDefault(project.ProjectId), StringComparer.OrdinalIgnoreCase)
+                     .ThenBy(project => project.Score)
                      .ThenBy(project => project.ProjectName, StringComparer.OrdinalIgnoreCase))
         {
             ProjectProtectionAssessment? protection = data.DisasterRecovery.Projects.FirstOrDefault(item => item.ProjectId == project.ProjectId);
             data.ConfidenceByProject.TryGetValue(project.ProjectId, out ProjectRecoveryConfidence? confidence);
             _allProjects.Add(new RecoveryProjectViewModel(
                 project,
+                data.GroupNameByProject.GetValueOrDefault(project.ProjectId)
+                    ?? L("Projects.Folder.Ungrouped", "Ungrouped"),
                 protection,
                 confidence,
                 RunDrillAsync,
@@ -672,7 +683,8 @@ public sealed class RecoveryViewModel : ViewModelBase
         string CoverageSummary,
         string TopRecommendation,
         DisasterRecoverySummary DisasterRecovery,
-        IReadOnlyDictionary<int, ProjectRecoveryConfidence> ConfidenceByProject);
+        IReadOnlyDictionary<int, ProjectRecoveryConfidence> ConfidenceByProject,
+        IReadOnlyDictionary<int, string> GroupNameByProject);
 
     private static IReadOnlyList<RecoveryDrillCheck> DeserializeChecks(RecoveryDrillResult? drill)
     {
@@ -867,6 +879,7 @@ public sealed class RecoveryProjectViewModel
 
     public RecoveryProjectViewModel(
         ProjectRestoreReadiness project,
+        string groupName = "",
         ProjectProtectionAssessment? protection = null,
         ProjectRecoveryConfidence? confidence = null,
         Func<int, Task>? runDrill = null,
@@ -874,6 +887,9 @@ public sealed class RecoveryProjectViewModel
         Func<int, Task>? protectPoint = null)
     {
         ProjectName = project.ProjectName;
+        GroupName = string.IsNullOrWhiteSpace(groupName)
+            ? L("Projects.Folder.Ungrouped", "Ungrouped")
+            : groupName;
         Label = project.Label;
         Score = project.Score;
         Reason = project.Reason;
@@ -928,6 +944,7 @@ public sealed class RecoveryProjectViewModel
     }
 
     public string ProjectName { get; }
+    public string GroupName { get; }
     public string Label { get; }
     public int Score { get; }
     public string Reason { get; }

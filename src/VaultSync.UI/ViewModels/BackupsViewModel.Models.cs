@@ -655,6 +655,7 @@ namespace VaultSync.UI.ViewModels
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string FolderName { get; set; } = string.Empty;
         public string ExternalId { get; set; } = string.Empty;
         private string _projectTagsCsv = string.Empty;
         public string ProjectTagsCsv

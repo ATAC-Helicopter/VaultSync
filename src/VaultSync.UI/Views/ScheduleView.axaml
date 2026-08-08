@@ -186,20 +186,32 @@
             <ItemsControl Grid.Row="2" ItemsSource="{CompiledBinding ProjectCoverage}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ScheduleProjectRowViewModel">
-                  <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="2,10">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                      <StackPanel Spacing="3">
-                        <TextBlock Text="{CompiledBinding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{CompiledBinding LastBackup}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextSecondary}"
-                                   TextTrimming="CharacterEllipsis" />
-                      </StackPanel>
-                      <Border Grid.Column="1" Classes="stat-pill sm info" VerticalAlignment="Center">
-                        <TextBlock Text="{CompiledBinding AutomaticStatus}" />
-                      </Border>
-                    </Grid>
-                  </Border>
+                  <StackPanel>
+                    <Border IsVisible="{CompiledBinding ShowGroupHeader}"
+                            Margin="0,8,0,2"
+                            Padding="9,5"
+                            CornerRadius="8"
+                            Background="{DynamicResource Surface2}">
+                      <TextBlock Text="{CompiledBinding GroupName}"
+                                 FontSize="11"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource AccentBrush}" />
+                    </Border>
+                    <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="2,10">
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <StackPanel Spacing="3">
+                          <TextBlock Text="{CompiledBinding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{CompiledBinding LastBackup}"
+                                     FontSize="11"
+                                     Foreground="{DynamicResource TextSecondary}"
+                                     TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Classes="stat-pill sm info" VerticalAlignment="Center">
+                          <TextBlock Text="{CompiledBinding AutomaticStatus}" />
+                        </Border>
+                      </Grid>
+                    </Border>
+                  </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
