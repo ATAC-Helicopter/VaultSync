@@ -236,344 +236,209 @@
                   Background="{DynamicResource InputBackgroundBrush}"
                   BorderBrush="{DynamicResource DividerBrush}"
                   BorderThickness="1"
-                  Padding="12,10">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
-                  ColumnDefinitions="Auto,*"
-                  ColumnSpacing="8"
-                  RowSpacing="8">
-              <TextBlock VerticalAlignment="Center"
-                         Text="{infra:LocalizedString Key=Projects.Group.Label}"
-                         Foreground="{DynamicResource TextSecondaryBrush}"
-                         FontSize="12"
-                         FontWeight="SemiBold" />
-              <ComboBox Grid.Column="1"
-                        Classes="preset-combo"
-                        ItemsSource="{Binding GroupOptions}"
-                        SelectedItem="{Binding SelectedGroup, Mode=TwoWay}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate>
-                    <TextBlock Text="{Binding Label}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <WrapPanel Grid.Row="1"
-                         Grid.ColumnSpan="2"
-                         Orientation="Horizontal"
-                         ItemSpacing="8"
-                         LineSpacing="8">
-                <Button Padding="{DynamicResource ButtonTightPadding}"
-                        CornerRadius="10"
-                        Background="{DynamicResource Surface2}"
-                        Foreground="{DynamicResource TextPrimaryBrush}"
-                        Command="{Binding SnapshotGroupCommand}">
-                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.SnapshotAction}" />
-                </Button>
-                <Button Padding="{DynamicResource ButtonTightPadding}"
-                        CornerRadius="10"
-                        Background="{DynamicResource Surface2}"
-                        Foreground="{DynamicResource TextPrimaryBrush}"
-                        Command="{Binding BackupGroupCommand}">
-                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.BackupAction}" />
-                </Button>
-                <Button Padding="{DynamicResource ButtonTightPadding}"
-                        CornerRadius="10"
-                        Background="{DynamicResource Surface2}"
-                        Foreground="{DynamicResource TextPrimaryBrush}"
-                        Command="{Binding DisableAutoBackupGroupCommand}">
-                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.DisableAuto}" />
-                </Button>
-                <Button Padding="{DynamicResource ButtonTightPadding}"
-                        CornerRadius="10"
-                        Background="{DynamicResource Surface2}"
-                        Foreground="{DynamicResource TextPrimaryBrush}"
-                        Command="{Binding EnableAutoBackupGroupCommand}">
-                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.EnableAuto}" />
-                </Button>
-              </WrapPanel>
-              <TextBlock Grid.Row="2"
-                         VerticalAlignment="Center"
-                         Text="{infra:LocalizedString Key=Projects.Group.TagLabel}"
-                         Foreground="{DynamicResource TextSecondaryBrush}"
-                         FontSize="11"
-                         FontWeight="SemiBold" />
-              <TextBox Grid.Row="2"
-                       Grid.Column="1"
-                       Text="{Binding GroupTagInput, Mode=TwoWay}"
-                       PlaceholderText="{infra:LocalizedString Key=Projects.Group.TagWatermark}"
+                  Padding="12">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="8" RowSpacing="6">
+              <TextBox Text="{Binding NewProjectGroupName, Mode=TwoWay}"
+                       PlaceholderText="{infra:LocalizedString Key=Projects.Folder.NewName}"
                        Background="{DynamicResource InputBackgroundBrush}"
                        BorderBrush="{DynamicResource DividerBrush}"
                        BorderThickness="1"
                        Padding="{DynamicResource InputPadding}" />
-              <ItemsControl Grid.Row="3"
-                            Grid.ColumnSpan="2"
-                            ItemsSource="{Binding SelectedGroupTags}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" />
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Border CornerRadius="999"
-                            Background="{Binding Background}"
-                            BorderBrush="{Binding Border}"
-                            BorderThickness="1"
-                            Padding="10,4">
-                      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Value}"
-                                   FontSize="10"
-                                   FontWeight="Bold"
-                                   Foreground="{Binding Foreground}"
-                                   VerticalAlignment="Center" />
-                        <Button Classes="small-button"
-                                Padding="4,0"
-                                MinWidth="18"
-                                MinHeight="18"
-                                VerticalAlignment="Center"
-                                Background="#00000000"
-                                Foreground="{Binding Foreground}"
-                                BorderThickness="0"
-                                Command="{Binding DataContext.RemoveGroupTagCommand, ElementName=Root}"
-                                CommandParameter="{Binding Value}"
-                                AutomationProperties.Name="{infra:LocalizedString Key=Projects.Group.TagRemove}"
-                                ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.TagRemove}">
-                          <shapes:Path Data="M 2,2 L 10,10 M 10,2 L 2,10"
-                                       Width="10"
-                                       Height="10"
-                                       Stretch="Uniform"
-                                       Stroke="{Binding Foreground}"
-                                       StrokeThickness="1.5" />
-                        </Button>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <WrapPanel Grid.Row="4"
+              <Button Grid.Column="1"
+                      Padding="{DynamicResource ButtonTightPadding}"
+                      CornerRadius="10"
+                      Background="{DynamicResource AccentBrush}"
+                      Foreground="{DynamicResource ButtonForegroundBrush}"
+                      Command="{Binding CreateProjectGroupCommand}">
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Folder.Create}" />
+              </Button>
+              <TextBlock Grid.Row="1"
                          Grid.ColumnSpan="2"
-                         Orientation="Horizontal"
-                         ItemSpacing="8"
-                         LineSpacing="8">
-                <Button Padding="{DynamicResource ButtonTightPadding}"
-                        CornerRadius="10"
-                        Background="{DynamicResource Surface2}"
-                        Foreground="{DynamicResource TextPrimaryBrush}"
-                        Command="{Binding ApplyTagToGroupCommand}">
-                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.TagApply}" />
-                </Button>
-                <Button Padding="{DynamicResource ButtonTightPadding}"
-                        CornerRadius="10"
-                        Background="{DynamicResource Surface2}"
-                        Foreground="{DynamicResource TextPrimaryBrush}"
-                        Command="{Binding RemoveTagFromGroupCommand}">
-                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.TagRemove}" />
-                </Button>
-                <TextBlock VerticalAlignment="Center"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="11"
-                           Text="{infra:LocalizedString Key=Projects.Group.TagHelp}" />
-              </WrapPanel>
-              <ItemsControl Grid.Row="5"
-                            Grid.ColumnSpan="2"
-                            ItemsSource="{Binding ReusableProjectTags}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" />
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Button Padding="8,2"
-                            CornerRadius="999"
-                            Background="{Binding Background}"
-                            BorderBrush="{Binding Border}"
-                            BorderThickness="1"
-                            Foreground="{Binding Foreground}"
-                            HorizontalContentAlignment="Center"
-                            VerticalContentAlignment="Center"
-                            Command="{Binding DataContext.SelectGroupTagCommand, ElementName=Root}"
-                            CommandParameter="{Binding Value}">
-                      <TextBlock Text="{Binding Value}" FontSize="10" FontWeight="Bold" TextAlignment="Center" />
-                    </Button>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <TextBlock Grid.Row="6"
-                         Grid.ColumnSpan="2"
-                         Text="{Binding SelectedGroupHealthSummary}"
-                         FontSize="11"
-                         FontWeight="SemiBold"
-                         Foreground="{DynamicResource AccentBrush}"
-                         TextWrapping="Wrap" />
-              <TextBlock Grid.Row="7"
-                         Grid.Column="0"
-                         Grid.ColumnSpan="2"
-                         Text="{infra:LocalizedString Key=Projects.Group.Help}"
+                         Text="{infra:LocalizedString Key=Projects.Folder.Help}"
                          FontSize="11"
                          Foreground="{DynamicResource TextMutedBrush}"
                          TextWrapping="Wrap" />
             </Grid>
           </Border>
-
           <!-- Projects list -->
           <Grid Grid.Row="3">
-            <ListBox
-              x:Name="ProjectList"
-              ItemsSource="{Binding Projects}"
-              SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
-              Background="Transparent"
-              BorderThickness="0"
-              HorizontalAlignment="Stretch"
-              ScrollViewer.VerticalScrollBarVisibility="Auto"
-              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-              Padding="0,0,0,8"
-              IsVisible="{Binding HasProjects}">
+            <ScrollViewer IsVisible="{Binding HasProjects}"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding ProjectFolders}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ProjectFolderViewModel">
+                    <Border Margin="0,0,0,10"
+                            CornerRadius="16"
+                            Background="{DynamicResource Surface2}"
+                            BorderBrush="{DynamicResource DividerBrush}"
+                            BorderThickness="1"
+                            Padding="12">
+                      <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+                        <Expander.Header>
+                          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalAlignment="Center">
+                            <StackPanel Spacing="2">
+                              <TextBlock Text="{Binding Name}"
+                                         FontSize="15"
+                                         FontWeight="SemiBold"
+                                         Foreground="{DynamicResource TextPrimaryBrush}" />
+                              <TextBlock Text="{Binding Summary}"
+                                         FontSize="11"
+                                         Foreground="{DynamicResource TextMutedBrush}" />
+                            </StackPanel>
+                            <WrapPanel Grid.Column="1" ItemSpacing="6">
+                              <Button Padding="8,5"
+                                      CornerRadius="8"
+                                      Command="{Binding DataContext.SnapshotGroupCommand, ElementName=Root}"
+                                      CommandParameter="{Binding}"
+                                      ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.SnapshotAction}">
+                                <TextBlock Text="Snapshot" FontSize="10" />
+                              </Button>
+                              <Button Padding="8,5"
+                                      CornerRadius="8"
+                                      Command="{Binding DataContext.BackupGroupCommand, ElementName=Root}"
+                                      CommandParameter="{Binding}"
+                                      ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.BackupAction}">
+                                <TextBlock Text="Backup" FontSize="10" />
+                              </Button>
+                            </WrapPanel>
+                          </Grid>
+                        </Expander.Header>
+                        <StackPanel Margin="0,10,0,0" Spacing="8">
+                          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"
+                                IsVisible="{Binding CanManage}">
+                            <TextBox Text="{Binding EditName, Mode=TwoWay}"
+                                     IsVisible="{Binding IsRenaming}"
+                                     Padding="{DynamicResource InputPadding}" />
+                            <WrapPanel Grid.Column="1" ItemSpacing="6">
+                              <Button IsVisible="{Binding !IsRenaming}"
+                                      Padding="8,5"
+                                      Command="{Binding DataContext.BeginRenameProjectGroupCommand, ElementName=Root}"
+                                      CommandParameter="{Binding}">
+                                <TextBlock Text="{infra:LocalizedString Key=Projects.Folder.Rename}" FontSize="10" />
+                              </Button>
+                              <Button IsVisible="{Binding IsRenaming}"
+                                      Padding="8,5"
+                                      Command="{Binding DataContext.SaveRenameProjectGroupCommand, ElementName=Root}"
+                                      CommandParameter="{Binding}">
+                                <TextBlock Text="{infra:LocalizedString Key=Common.Save}" FontSize="10" />
+                              </Button>
+                              <Button IsVisible="{Binding IsRenaming}"
+                                      Padding="8,5"
+                                      Command="{Binding DataContext.CancelRenameProjectGroupCommand, ElementName=Root}"
+                                      CommandParameter="{Binding}">
+                                <TextBlock Text="{infra:LocalizedString Key=Common.Cancel}" FontSize="10" />
+                              </Button>
+                              <Button Padding="8,5"
+                                      IsVisible="{Binding !IsRenaming}"
+                                      Command="{Binding DataContext.RequestDeleteProjectGroupCommand, ElementName=Root}"
+                                      CommandParameter="{Binding}">
+                                <TextBlock Text="{infra:LocalizedString Key=Common.Delete}" FontSize="10" />
+                              </Button>
+                            </WrapPanel>
+                          </Grid>
 
-              <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="{DynamicResource ListRowSpacing}">
-                    <!-- Name + last snapshot short + size + avatar -->
-                    <Grid Grid.Row="0"
-                          ColumnDefinitions="Auto,*,Auto,Auto"
-                          ColumnSpacing="8"
-                          MinHeight="40"
-                          VerticalAlignment="Center">
-                      <Grid Grid.Column="0"
-                            Width="36"
-                            Height="36"
-                            Margin="0,0,4,0"
-                            VerticalAlignment="Center"
-                            IsVisible="{Binding DataContext.ShowProjectAvatars, ElementName=Root}">
-                        <Border CornerRadius="18" Background="{Binding AvatarColor}"/>
-                        <Image Source="{Binding AvatarImagePath}"
-                               Stretch="UniformToFill"
-                               IsVisible="{Binding HasCustomAvatar}">
-                          <Image.Clip>
-                            <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/>
-                          </Image.Clip>
-                        </Image>
-                        <TextBlock Text="{Binding AvatarInitials}"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontWeight="SemiBold"
-                                   Foreground="{Binding AvatarColor, Converter={StaticResource ContrastForegroundConverter}}"/>
-                      </Grid>
-                <TextBlock
-                        Grid.Column="1"
-                        Text="{Binding Name}"
-                        FontSize="{DynamicResource SectionHeaderFontSize}"
-                        FontWeight="Bold"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource TextPrimaryBrush}"
-                        TextWrapping="NoWrap"
-                        TextTrimming="CharacterEllipsis" />
-                      <TextBlock
-                        Grid.Column="2"
-                        Text="{Binding LastSnapshotShort}"
-                        FontSize="{DynamicResource PageSubtitleFontSize}"
-                        Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <TextBlock
-                        Grid.Column="3"
-                        Text="{Binding LatestSnapshotSizeDisplay}"
-                        FontSize="{DynamicResource PageSubtitleFontSize}"
-                        FontWeight="SemiBold"
-                        Foreground="{DynamicResource TextPrimaryBrush}" />
-                    </Grid>
+                          <WrapPanel ItemSpacing="6">
+                            <Button Padding="8,5"
+                                    Command="{Binding DataContext.DisableAutoBackupGroupCommand, ElementName=Root}"
+                                    CommandParameter="{Binding}">
+                              <TextBlock Text="{infra:LocalizedString Key=Projects.Group.DisableAuto}" FontSize="10" />
+                            </Button>
+                            <Button Padding="8,5"
+                                    Command="{Binding DataContext.EnableAutoBackupGroupCommand, ElementName=Root}"
+                                    CommandParameter="{Binding}">
+                              <TextBlock Text="{infra:LocalizedString Key=Projects.Group.EnableAuto}" FontSize="10" />
+                            </Button>
+                          </WrapPanel>
 
-                    <!-- Path -->
-                    <TextBlock
-                      Grid.Row="1"
-                      Grid.ColumnSpan="2"
-                      Margin="0,6,0,0"
-                      Text="{Binding Path}"
-                      Foreground="{DynamicResource TextMutedBrush}"
-                      FontSize="{DynamicResource PageSubtitleFontSize}"
-                      TextWrapping="NoWrap"
-                      TextTrimming="CharacterEllipsis" />
-
-                    <!-- Destination -->
-                    <TextBlock
-                      Grid.Row="2"
-                      Grid.ColumnSpan="2"
-                      Margin="0,2,0,0"
-                      Foreground="{DynamicResource TextMutedBrush}"
-                      FontSize="{DynamicResource PageSubtitleFontSize}"
-                      TextWrapping="NoWrap"
-                      TextTrimming="CharacterEllipsis">
-                      <Run Text="{infra:LocalizedString Key=Projects.List.DestinationPrefix}" />
-                      <Run Text="{Binding PreferredDestinationDisplay}" />
-                    </TextBlock>
-
-                    <ItemsControl Grid.Row="3"
-                                  Grid.ColumnSpan="2"
-                                  IsVisible="{Binding HasTags}"
-                                  ItemsSource="{Binding TagChips}">
-                      <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                          <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4" />
-                        </ItemsPanelTemplate>
-                      </ItemsControl.ItemsPanel>
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                          <Border CornerRadius="999"
-                                  Padding="8,2"
-                                  HorizontalAlignment="Left"
-                                  Background="{Binding Background}"
-                                  BorderBrush="{Binding Border}"
-                                  BorderThickness="1">
-                            <TextBlock Text="{Binding Value}"
-                                       FontSize="10"
-                                       FontWeight="Bold"
-                                       Foreground="{Binding Foreground}"
-                                       TextWrapping="NoWrap"
-                                       TextTrimming="CharacterEllipsis"
-                                       MaxWidth="160" />
+                          <Border IsVisible="{Binding IsDeleteConfirmationVisible}"
+                                  CornerRadius="10"
+                                  Background="{DynamicResource DangerSoftBrush}"
+                                  BorderBrush="{DynamicResource DangerBrush}"
+                                  BorderThickness="1"
+                                  Padding="10">
+                            <StackPanel Spacing="8">
+                              <TextBlock Text="{Binding DeleteExplanation}"
+                                         TextWrapping="Wrap"
+                                         FontSize="11"
+                                         Foreground="{DynamicResource TextPrimaryBrush}" />
+                              <WrapPanel ItemSpacing="8">
+                                <Button Command="{Binding DataContext.ConfirmDeleteProjectGroupCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Common.Delete}" />
+                                </Button>
+                                <Button Command="{Binding DataContext.CancelDeleteProjectGroupCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Common.Cancel}" />
+                                </Button>
+                              </WrapPanel>
+                            </StackPanel>
                           </Border>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
 
-                    <StackPanel Grid.Row="4"
-                                Grid.ColumnSpan="2"
-                                Margin="0,4,0,0"
-                                Orientation="Horizontal"
-                                Spacing="8"
-                                VerticalAlignment="Center">
-                      <TextBlock Text="{infra:LocalizedString Key=Projects.List.EncryptionPrefix}"
-                                 Foreground="{DynamicResource TextMutedBrush}"
-                                 FontSize="{DynamicResource PageSubtitleFontSize}" />
-                      <Border CornerRadius="999"
-                              Padding="8,2"
-                              Background="{Binding EncryptionBadgeBackground}">
-                        <TextBlock Text="{Binding EncryptionBadgeText}"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="{Binding EncryptionBadgeForeground}"
-                                   TextWrapping="NoWrap"
-                                   TextTrimming="CharacterEllipsis" />
-                      </Border>
-                    </StackPanel>
+                          <ItemsControl ItemsSource="{Binding Projects}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:ProjectItemViewModel">
+                                <Button Margin="0,2"
+                                        Padding="0"
+                                        HorizontalContentAlignment="Stretch"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Command="{Binding DataContext.SelectProjectCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}">
+                                  <Border CornerRadius="12"
+                                          Background="{DynamicResource CardBackgroundBrush}"
+                                          BorderBrush="{DynamicResource DividerBrush}"
+                                          BorderThickness="1"
+                                          Padding="12">
+                                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="5">
+                                      <TextBlock Text="{Binding Name}"
+                                                 FontWeight="SemiBold"
+                                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                                 TextTrimming="CharacterEllipsis" />
+                                      <TextBlock Grid.Column="1"
+                                                 Text="{Binding LastSnapshotShort}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+                                      <TextBlock Grid.Row="1"
+                                                 Grid.ColumnSpan="2"
+                                                 Text="{Binding Path}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource TextMutedBrush}"
+                                                 TextTrimming="CharacterEllipsis" />
+                                      <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding PreferredDestinationDisplay}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <Border Grid.Column="1"
+                                                CornerRadius="999"
+                                                Padding="8,2"
+                                                Background="{Binding HealthBackground}">
+                                          <TextBlock Text="{Binding HealthTag}"
+                                                     FontSize="10"
+                                                     Foreground="{Binding HealthForeground}" />
+                                        </Border>
+                                      </Grid>
+                                    </Grid>
+                                  </Border>
+                                </Button>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
 
-                    <!-- Health pill bar -->
-                    <Border
-                      Grid.Row="5"
-                      Grid.ColumnSpan="2"
-                      Margin="0,10,0,0"
-                      CornerRadius="999"
-                      Height="20"
-                      Background="{Binding HealthBackground}">
-                      <TextBlock
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        Text="{Binding HealthTag}"
-                        FontSize="11"
-                        FontWeight="SemiBold"
-                        Foreground="{Binding HealthForeground}" />
+                          <TextBlock IsVisible="{Binding !HasProjects}"
+                                     Text="{infra:LocalizedString Key=Projects.Folder.Empty}"
+                                     FontSize="11"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     HorizontalAlignment="Center"
+                                     Margin="0,8" />
+                        </StackPanel>
+                      </Expander>
                     </Border>
-                  </Grid>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
 
             <Border IsVisible="{Binding ShowProjectsEmptyState}"
                     CornerRadius="18"
@@ -1250,8 +1115,8 @@
                     Background="{DynamicResource CardBackgroundBrush}"
                     Padding="{DynamicResource CardPaddingSmall}"
                     Margin="0">
-              <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
-                <TextBlock Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Folder.Assignment}"
                            FontSize="11"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextSecondaryBrush}"
@@ -1259,6 +1124,27 @@
                            TextTrimming="CharacterEllipsis" />
                 <ComboBox
                     Grid.Row="1"
+                    Classes="preset-combo"
+                    ItemsSource="{Binding DataContext.GroupOptions, ElementName=Root}"
+                    SelectedItem="{Binding SelectedGroupOption, Mode=TwoWay}"
+                    IsEnabled="{Binding IsRegistered}"
+                    HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Grid.Row="2"
+                           Margin="0,6,0,0"
+                           Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis" />
+                <ComboBox
+                    Grid.Row="3"
                     Classes="preset-combo"
                     ItemsSource="{Binding DataContext.DestinationOptions, ElementName=Root}"
                     SelectedItem="{Binding PreferredDestinationOption, Mode=TwoWay}"
