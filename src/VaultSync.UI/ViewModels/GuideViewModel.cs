@@ -15,6 +15,14 @@ public sealed class GuideViewModel : ViewModelBase
     private readonly IAppConfigStore _configStore;
     private readonly IRepositoryFactory _repositoryFactory;
     private string _progressSummary = "Checking your setup…";
+    private string _pageTitle = string.Empty;
+    private string _pageDescription = string.Empty;
+    private string _restartSetupLabel = string.Empty;
+    private string _documentationLabel = string.Empty;
+    private string _recoveryRuleTitle = string.Empty;
+    private string _recoveryRuleBody = string.Empty;
+    private string _terminologyTitle = string.Empty;
+    private string _terminologyDescription = string.Empty;
 
     public GuideViewModel(
         AppViewModel app,
@@ -27,22 +35,41 @@ public sealed class GuideViewModel : ViewModelBase
         RestartSetupCommand = new RelayCommand(_ => _app.OnboardingTour.Start());
         OpenDocumentationCommand = new RelayCommand(_ =>
             SystemFileLauncher.OpenUri("https://github.com/flaviorame/VaultSync/wiki"));
+        RefreshHeaderText();
         RebuildContent();
     }
 
     public ObservableCollection<GuideTopicViewModel> Topics { get; } = [];
     public ObservableCollection<GuideTermViewModel> Terms { get; } = [];
-    public ICommand RestartSetupCommand { get; }
-    public ICommand OpenDocumentationCommand { get; }
+    public ICommand RestartSetupCommand
+    {
+        get;
+    }
+    public ICommand OpenDocumentationCommand
+    {
+        get;
+    }
 
-    public string PageTitle => L("Guide.Title", "VaultSync guide");
-    public string PageDescription => L("Guide.Description", "A practical path from first setup to a recovery you have actually proved.");
-    public string RestartSetupLabel => L("Guide.RestartSetup", "Restart guided setup");
-    public string DocumentationLabel => L("Guide.Documentation", "Full documentation");
-    public string RecoveryRuleTitle => L("Guide.RecoveryRule.Title", "The recovery rule");
-    public string RecoveryRuleBody => L("Guide.RecoveryRule.Body", "A backup is not recovery proof. VaultSync treats the destination, credentials, integrity check, restore plan, and drill as separate evidence. Recovery tells you exactly which one is missing.");
-    public string TerminologyTitle => L("Guide.Terms.Title", "What VaultSync terms mean");
-    public string TerminologyDescription => L("Guide.Terms.Description", "These labels describe different artifacts or evidence. They are not interchangeable.");
+    public string PageTitle => _pageTitle;
+    public string PageDescription => _pageDescription;
+    public string RestartSetupLabel => _restartSetupLabel;
+    public string DocumentationLabel => _documentationLabel;
+    public string RecoveryRuleTitle => _recoveryRuleTitle;
+    public string RecoveryRuleBody => _recoveryRuleBody;
+    public string TerminologyTitle => _terminologyTitle;
+    public string TerminologyDescription => _terminologyDescription;
+
+    private void RefreshHeaderText()
+    {
+        _pageTitle = L("Guide.Title", "VaultSync guide");
+        _pageDescription = L("Guide.Description", "A practical path from first setup to a recovery you have actually proved.");
+        _restartSetupLabel = L("Guide.RestartSetup", "Restart guided setup");
+        _documentationLabel = L("Guide.Documentation", "Full documentation");
+        _recoveryRuleTitle = L("Guide.RecoveryRule.Title", "The recovery rule");
+        _recoveryRuleBody = L("Guide.RecoveryRule.Body", "A backup is not recovery proof. VaultSync treats the destination, credentials, integrity check, restore plan, and drill as separate evidence. Recovery tells you exactly which one is missing.");
+        _terminologyTitle = L("Guide.Terms.Title", "What VaultSync terms mean");
+        _terminologyDescription = L("Guide.Terms.Description", "These labels describe different artifacts or evidence. They are not interchangeable.");
+    }
 
     private void RebuildContent()
     {
@@ -108,6 +135,7 @@ public sealed class GuideViewModel : ViewModelBase
 
     public void Refresh()
     {
+        RefreshHeaderText();
         RebuildContent();
         OnPropertiesChanged(
             nameof(PageTitle),

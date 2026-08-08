@@ -23,7 +23,15 @@ public partial class GuideView : UserControl
         new(
             StackHeader: width < 720,
             TopicColumns: width < 820 ? 1 : 2,
-            TermColumns: width < 620 ? 1 : width < 980 ? 2 : 3);
+            TermColumns: GetTermColumns(width));
+
+    private static int GetTermColumns(double width)
+    {
+        if (width < 620)
+            return 1;
+
+        return width < 980 ? 2 : 3;
+    }
 
     private void UpdateResponsiveLayout()
     {

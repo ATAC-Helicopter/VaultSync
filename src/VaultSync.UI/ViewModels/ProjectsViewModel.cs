@@ -114,9 +114,7 @@ public class ProjectsViewModel : ViewModelBase
     private int _refreshQueued;
     private readonly RelayCommand _openFolderCommand;
     private readonly RelayCommand _removeProjectCommand;
-    private readonly RelayCommand _cancelRemoveProjectCommand;
     private readonly RelayCommand _confirmRemoveProjectCommand;
-    private readonly RelayCommand _reviewStoredBackupsCommand;
     private readonly RelayCommand _applyPresetRecommendationCommand;
     private readonly RelayCommand _togglePresetEditorCommand;
     private readonly RelayCommand _reloadPresetEditorCommand;
@@ -616,9 +614,9 @@ public class ProjectsViewModel : ViewModelBase
         RefreshCommand = new RelayCommand(_ => Refresh());
         _openFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
         _removeProjectCommand = new RelayCommand(_ => BeginRemoveProjectPreview(), _ => SelectedProject is not null);
-        _cancelRemoveProjectCommand = new RelayCommand(_ => IsRemoveProjectPreviewOpen = false);
+        var cancelRemoveProjectCommand = new RelayCommand(_ => IsRemoveProjectPreviewOpen = false);
         _confirmRemoveProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
-        _reviewStoredBackupsCommand = new RelayCommand(_ =>
+        var reviewStoredBackupsCommand = new RelayCommand(_ =>
             App.AppViewModelInstance?.NavigateBackups?.Execute(null));
         _applyPresetRecommendationCommand = new RelayCommand(_ => ApplyPresetRecommendation(), _ =>
             SelectedProject is { RecommendedPreset.Length: > 0 });
@@ -661,9 +659,9 @@ public class ProjectsViewModel : ViewModelBase
         _removeGroupTagCommand = new RelayCommand(tag => RemoveGroupTag(tag as string), _ => true);
         OpenFolderCommand = _openFolderCommand;
         RemoveProjectCommand = _removeProjectCommand;
-        CancelRemoveProjectCommand = _cancelRemoveProjectCommand;
+        CancelRemoveProjectCommand = cancelRemoveProjectCommand;
         ConfirmRemoveProjectCommand = _confirmRemoveProjectCommand;
-        ReviewStoredBackupsCommand = _reviewStoredBackupsCommand;
+        ReviewStoredBackupsCommand = reviewStoredBackupsCommand;
         ApplyPresetRecommendationCommand = _applyPresetRecommendationCommand;
         TogglePresetEditorCommand = _togglePresetEditorCommand;
         ReloadPresetEditorCommand = _reloadPresetEditorCommand;

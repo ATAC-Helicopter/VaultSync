@@ -168,13 +168,29 @@ public partial class DashboardView : UserControl
 
     internal static ResponsiveLayout GetResponsiveLayout(double width) =>
         new(
-            OverviewColumns: width < 520 ? 1 : width < 1100 ? 2 : 4,
+            OverviewColumns: GetOverviewColumns(width),
             KpiColumns: width < 700 ? 1 : 3,
             StackSections: width < StackedSectionsWidth,
             StackActivityContent: width < StackedActivityContentWidth,
             StackStorageContent: width < StackedStorageContentWidth,
             CompactStorageHeader: width < CompactStorageHeaderWidth,
-            DonutHostSize: width < 400 ? 220 : width < StackedStorageContentWidth ? 250 : 300);
+            DonutHostSize: GetDonutHostSize(width));
+
+    private static int GetOverviewColumns(double width)
+    {
+        if (width < 520)
+            return 1;
+
+        return width < 1100 ? 2 : 4;
+    }
+
+    private static double GetDonutHostSize(double width)
+    {
+        if (width < 400)
+            return 220;
+
+        return width < StackedStorageContentWidth ? 250 : 300;
+    }
 
     private static void ConfigureCardGrid(Grid grid, IReadOnlyList<Control> cards, int columnCount)
     {
