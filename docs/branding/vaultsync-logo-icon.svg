@@ -1,74 +1,38 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="tile" x1="76" y1="70" x2="438" y2="442" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#1C2E49"/>
-      <stop offset="1" stop-color="#0C1421"/>
+    <linearGradient id="tile" x1="72" y1="52" x2="440" y2="468" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#132B47"/>
+      <stop offset="1" stop-color="#07111F"/>
     </linearGradient>
-    <linearGradient id="safeFace" x1="78" y1="86" x2="322" y2="430" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#253B59"/>
-      <stop offset="1" stop-color="#132131"/>
+    <linearGradient id="blue" x1="112" y1="118" x2="398" y2="205" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#78C4FF"/>
+      <stop offset="1" stop-color="#268DFF"/>
     </linearGradient>
-    <linearGradient id="safeInner" x1="96" y1="110" x2="290" y2="388" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#08111E"/>
-      <stop offset="1" stop-color="#0B1524"/>
+    <linearGradient id="mint" x1="400" y1="296" x2="116" y2="392" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#62E6BE"/>
+      <stop offset="1" stop-color="#25B98E"/>
     </linearGradient>
-    <linearGradient id="doorFace" x1="308" y1="112" x2="456" y2="388" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#203554"/>
-      <stop offset="1" stop-color="#132235"/>
-    </linearGradient>
-    <linearGradient id="gold" x1="336" y1="172" x2="430" y2="306" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFD95C"/>
-      <stop offset="1" stop-color="#E1A400"/>
-    </linearGradient>
-    <linearGradient id="fileA" x1="170" y1="250" x2="250" y2="346" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2BA8F7"/>
-      <stop offset="1" stop-color="#1692E3"/>
-    </linearGradient>
-    <linearGradient id="fileB" x1="214" y1="270" x2="298" y2="356" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3DC6FF"/>
-      <stop offset="1" stop-color="#21AEEF"/>
-    </linearGradient>
+    <filter id="glow" x="70" y="70" width="372" height="372" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
   </defs>
 
-  <rect x="36" y="36" width="440" height="440" rx="96" fill="url(#tile)"/>
-  <rect x="36.5" y="36.5" width="439" height="439" rx="95.5" stroke="#2D4770"/>
+  <rect x="32" y="32" width="448" height="448" rx="108" fill="url(#tile)"/>
+  <rect x="33" y="33" width="446" height="446" rx="107" stroke="#29496D" stroke-width="2"/>
 
-  <g transform="translate(-7 11) scale(0.95)">
-  <ellipse cx="252" cy="420" rx="134" ry="18" fill="#07101C" fill-opacity="0.42"/>
+  <circle cx="256" cy="256" r="150" stroke="#3A9BFF" stroke-opacity="0.18" stroke-width="34" filter="url(#glow)"/>
 
-  <rect x="78" y="78" width="284" height="312" rx="34" fill="url(#safeFace)"/>
-  <rect x="78.5" y="78.5" width="283" height="311" rx="33.5" stroke="#304F79" stroke-width="5"/>
-  <rect x="104" y="102" width="236" height="270" rx="24" fill="#091321"/>
-  <rect x="104.5" y="102.5" width="235" height="269" rx="23.5" stroke="#17314F" stroke-width="5"/>
+  <path d="M112 253C112 174 176 110 255 110C307 110 355 138 381 181"
+        stroke="url(#blue)" stroke-width="38" stroke-linecap="round"/>
+  <path d="M366 151L409 193L351 204L366 151Z" fill="#268DFF"/>
 
-  <rect x="118" y="116" width="206" height="240" rx="18" fill="url(#safeInner)"/>
+  <path d="M400 259C400 338 336 402 257 402C205 402 157 374 131 331"
+        stroke="url(#mint)" stroke-width="38" stroke-linecap="round"/>
+  <path d="M146 361L103 319L161 308L146 361Z" fill="#25B98E"/>
 
-  <rect x="136" y="136" width="126" height="110" rx="18" fill="#0E1E34"/>
-  <rect x="148" y="150" width="28" height="66" rx="8" fill="#27D24C"/>
-  <rect x="180" y="150" width="28" height="66" rx="8" fill="#F2F6FC"/>
-  <rect x="212" y="150" width="28" height="66" rx="8" fill="#27D24C"/>
-  <rect x="250" y="152" width="30" height="18" rx="9" fill="#132742"/>
-  <rect x="250" y="182" width="30" height="18" rx="9" fill="#132742"/>
-
-  <rect x="134" y="262" width="92" height="92" rx="18" fill="url(#fileA)"/>
-  <rect x="192" y="282" width="110" height="86" rx="18" fill="url(#fileB)"/>
-  <rect x="220" y="306" width="54" height="12" rx="6" fill="#CFE9FB"/>
-  <rect x="220" y="330" width="42" height="12" rx="6" fill="#CFE9FB"/>
-
-  <rect x="316" y="156" width="16" height="46" rx="8" fill="#F2B72C"/>
-  <rect x="316" y="272" width="16" height="46" rx="8" fill="#F2B72C"/>
-
-  <g transform="rotate(3 286 236)">
-    <rect x="278" y="92" width="190" height="286" rx="24" fill="#0B1524"/>
-    <rect x="286" y="86" width="190" height="286" rx="24" fill="url(#doorFace)"/>
-    <rect x="286.5" y="86.5" width="189" height="285" rx="23.5" stroke="#2E4A70" stroke-width="5"/>
-    <rect x="304" y="104" width="154" height="250" rx="18" stroke="#44658F" stroke-width="5"/>
-
-    <circle cx="382" cy="230" r="46" fill="#101C2B"/>
-    <circle cx="382" cy="230" r="40" stroke="url(#gold)" stroke-width="12"/>
-    <circle cx="382" cy="230" r="8" fill="#FFE9A8"/>
-    <path d="M382 196V264" stroke="url(#gold)" stroke-width="12" stroke-linecap="round"/>
-    <path d="M348 230H416" stroke="url(#gold)" stroke-width="12" stroke-linecap="round"/>
-  </g>
-  </g>
+  <rect x="178" y="178" width="156" height="156" rx="34"
+        transform="rotate(45 256 256)"
+        fill="#0B192A" stroke="#BBD8F5" stroke-opacity="0.74" stroke-width="10"/>
+  <path d="M190 239L246 300L326 207"
+        stroke="#F5FAFF" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

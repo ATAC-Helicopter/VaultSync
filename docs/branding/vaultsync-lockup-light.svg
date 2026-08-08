@@ -1,0 +1,25 @@
+<svg width="1000" height="240" viewBox="0 0 1000 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(8 8) scale(.4375)">
+    <defs>
+      <linearGradient id="lTile" x1="72" y1="52" x2="440" y2="468" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#132B47"/><stop offset="1" stop-color="#07111F"/>
+      </linearGradient>
+      <linearGradient id="lBlue" x1="112" y1="118" x2="398" y2="205" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#78C4FF"/><stop offset="1" stop-color="#268DFF"/>
+      </linearGradient>
+      <linearGradient id="lMint" x1="400" y1="296" x2="116" y2="392" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#62E6BE"/><stop offset="1" stop-color="#25B98E"/>
+      </linearGradient>
+    </defs>
+    <rect x="32" y="32" width="448" height="448" rx="108" fill="url(#lTile)"/>
+    <rect x="33" y="33" width="446" height="446" rx="107" stroke="#29496D" stroke-width="2"/>
+    <path d="M112 253C112 174 176 110 255 110C307 110 355 138 381 181" stroke="url(#lBlue)" stroke-width="38" stroke-linecap="round"/>
+    <path d="M366 151L409 193L351 204L366 151Z" fill="#268DFF"/>
+    <path d="M400 259C400 338 336 402 257 402C205 402 157 374 131 331" stroke="url(#lMint)" stroke-width="38" stroke-linecap="round"/>
+    <path d="M146 361L103 319L161 308L146 361Z" fill="#25B98E"/>
+    <rect x="178" y="178" width="156" height="156" rx="34" transform="rotate(45 256 256)" fill="#0B192A" stroke="#BBD8F5" stroke-opacity="0.74" stroke-width="10"/>
+    <path d="M190 239L246 300L326 207" stroke="#F5FAFF" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="272" y="142" fill="#F5FAFF" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="108" font-weight="750" letter-spacing="-4">VaultSync</text>
+  <text x="277" y="194" fill="#B8CAE0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="26" font-weight="500" letter-spacing="3">BACK UP WITH CONFIDENCE</text>
+</svg>
