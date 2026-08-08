@@ -29,8 +29,8 @@ The workflow is intentionally guarded. If the secret or required variables are m
 
 The workflow lives in `.github/workflows/sonarqube.yml` and runs on:
 
-- Pull requests into `Dev`, `Stable`, and `release/v1.8`.
-- Pushes to `Dev`, `Stable`, and `release/v1.8`.
+- Pull requests into `Dev`, `Stable`, and versioned `release/*` branches.
+- Pushes to `Dev`, `Stable`, and versioned `release/*` branches.
 - Manual `workflow_dispatch` runs.
 
 Keep the workflow exclusions and repository branch-protection requirement aligned with the active SonarQube quality gate. Missing secrets remain an intentional skip for forks and unconfigured copies of the repository.

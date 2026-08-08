@@ -12,6 +12,7 @@
 - [VS-1864] Replaced display-text-derived backup stages with shared typed protection activity states, including explicit queued, scanning, hashing, writing, verifying, waiting, retrying, completion, cancellation, and failure semantics across manual and automatic backup activity.
 - [VS-1865] Clarified desktop and CLI project removal so it removes only local registration and history-index state while leaving source files and stored backup payloads intact.
 ### Fixed
+- [BUG-18089] Aligned release-candidate validation with the `release/<version>` branch convention and made the direct-to-stable, no-beta delivery path for 1.8.6 explicit.
 - [BUG-18084] Restored the missing Schedule page content and added responsive layouts for wide and narrow windows.
 - [BUG-18085] Rebuilt Dashboard hierarchy and empty states so required actions, the next run, and known-good recovery evidence remain readable without duplicate or misleading cards.
 - [BUG-18086] Corrected onboarding order and required a passed recovery drill before reporting recovery proof complete.

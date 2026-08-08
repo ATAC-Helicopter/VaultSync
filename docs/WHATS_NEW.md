@@ -36,7 +36,8 @@ VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and
 ### Release safety
 - Patch installation restores replaced files and removes patch-created files when an ordinary installation failure interrupts replacement.
 - Automated patch manifests name one qualified predecessor; older or unlisted installations fall back to a full installer.
-- Beta assets are built from `Dev`, stable assets from `Stable`, and rendering dependencies remain aligned across supported platforms.
+- `1.8.6` ships directly as a stable release with no beta build; unpublished release-candidate artifacts use the release branch, and final assets use `Stable`.
+- Rendering dependencies remain aligned across supported platforms.
 
 ## [1.8.5]
 

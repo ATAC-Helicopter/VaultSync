@@ -311,6 +311,9 @@ warnings, and fail closed when integrity metadata is missing or inconsistent.
 **Status:** Release candidate
 **Tagline:** *Powerful when needed. Obvious by default.*
 
+Delivery note: `1.8.6` proceeds directly to the stable release after
+qualification. It does not have a beta build or prerelease GitHub release.
+
 - [x] `VS-1861` `P0` Replace the current overlay tour with task-based first-run
   setup around source, destination, schedule, review, and recovery verification.
   - Scope: use a resumable setup workspace and contextual next actions instead

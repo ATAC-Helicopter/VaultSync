@@ -2,9 +2,9 @@ name: SonarQube
 
 on:
   pull_request:
-    branches: [ "Dev", "Stable", "release/v*" ]
+    branches: [ "Dev", "Stable", "release/**" ]
   push:
-    branches: [ "Dev", "Stable", "release/v*" ]
+    branches: [ "Dev", "Stable", "release/**" ]
   workflow_dispatch:
 
 permissions:

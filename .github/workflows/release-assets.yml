@@ -17,7 +17,7 @@ on:
         description: "Target version for patch manifests (e.g., 1.8.0-Beta.1 or 1.8.0)"
         required: true
       release_candidate:
-        description: "Build unpublished stable-version candidate assets from a matching release/vX.Y.Z branch"
+        description: "Build unpublished stable-version candidate assets from a matching release/X.Y.Z branch"
         required: false
         type: boolean
         default: false
@@ -120,7 +120,7 @@ jobs:
 
           if [[ "$channel" == "stable" ]]; then
             if [[ "$release_candidate" == "true" ]]; then
-              expected_candidate_branch="release/v${target}"
+              expected_candidate_branch="release/${target}"
               if [[ "$branch" != "$expected_candidate_branch" ]]; then
                 echo "Release candidate asset builds must run from '$expected_candidate_branch'. Current branch: $branch"
                 exit 1

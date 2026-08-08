@@ -6,7 +6,9 @@ This document defines the current release packaging flow.
 - .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The prepared stable release target is `1.8.6`; prerelease builds for the active patch train use `1.8.6-Beta.N` until the stable release is cut.
+- The prepared stable release target is `1.8.6`.
+- `1.8.6` ships directly as a stable release. There are no `1.8.6-Beta.N`
+  builds or prerelease GitHub releases.
 
 ## 1) Windows Installer
 1. Publish:
@@ -47,11 +49,10 @@ This document defines the current release packaging flow.
 ## 4) Patch/Updater Assets
 Create patch manifest and patch archives as described in `docs/UPDATER.md`.
 
-For `VS-1724` multi-base patch support:
-- use `previous_version` as the primary legacy base version
-- optionally provide `previous_versions` as a comma/newline separated exact allowlist
-- only include versions you have actually validated against the same patch payload
-- do not use ranges or inferred compatibility
+Patch automation accepts one qualified predecessor:
+- set `previous_version` to the exact version validated against the patch
+- do not use ranges or infer compatibility with older releases
+- unlisted versions must use the full installer fallback
 
 Stable example:
 - branch: `Stable`
@@ -60,7 +61,7 @@ Stable example:
 - `target_version = 1.8.6`
 
 Pre-merge release candidate example:
-- branch: `release/v1.8.6`
+- branch: `release/1.8.6`
 - release channel: `stable`
 - `release_candidate = true`
 - `previous_version = 1.8.5`
@@ -71,9 +72,9 @@ Pre-merge release candidate example:
 
 This mode builds the exact stable-version binaries from the release branch
 without merging the release PR. The workflow rejects a candidate build unless
-the branch name exactly matches `release/v<target_version>`.
+the branch name exactly matches `release/<target_version>`.
 
-Beta example for future prereleases:
+Future prerelease example (not used for `1.8.6`):
 - branch: `Dev` after the beta changes are merged there
 - release channel: `beta`
 - `release_candidate = false`
