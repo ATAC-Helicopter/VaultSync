@@ -5,12 +5,13 @@
 - [VS-1865] Added explicit per-project editing for destination, preset, exclusions, tags, encryption, and automatic-backup pause state, plus a detailed removal preview that distinguishes local registration from source and stored backup data.
 - [VS-1866] Added a localized Guide with consistent definitions for backup, snapshot, restore point, verification, known good, protected, and recovery drill.
 - [VS-1867] Added screen-reader names and help across primary workflows and confirmation previews for reset, cache, project-index, credential, and encryption-password removal.
-- [VS-1811] Added project groups with aggregate health and group snapshot, backup, pause, and resume actions.
+- [VS-1811] Added persistent project folders with explicit membership, expandable project lists, aggregate health, safe folder deletion, and folder-scoped snapshot, backup, pause, and resume actions.
 ### Changed
 - [VS-1862] Added a dedicated operational Schedule experience with a live readiness verdict, upcoming timer opportunities, per-project automatic coverage and last-backup state, runtime constraints, shared policy edits, and clear delay explanations.
 - [VS-1863] Reorganized the Dashboard around protection status, the highest-priority required action, the next scheduled run, recent activity, and the latest known-good recovery point, with direct links into Recovery, Schedule, and History.
 - [VS-1864] Replaced display-text-derived backup stages with shared typed protection activity states, including explicit queued, scanning, hashing, writing, verifying, waiting, retrying, completion, cancellation, and failure semantics across manual and automatic backup activity.
 - [VS-1865] Clarified desktop and CLI project removal so it removes only local registration and history-index state while leaving source files and stored backup payloads intact.
+- [VS-1811] Carried project folder identity into Schedule, Backups, Recovery, and History, including folder-aware search and grouped schedule coverage.
 ### Fixed
 - [BUG-18089] Aligned release-candidate validation with the `release/<version>` branch convention and made the direct-to-stable, no-beta delivery path for 1.8.6 explicit.
 - [BUG-18084] Restored the missing Schedule page content and added responsive layouts for wide and narrow windows.
@@ -18,6 +19,9 @@
 - [BUG-18086] Corrected onboarding order and required a passed recovery drill before reporting recovery proof complete.
 - [BUG-18087] Fixed project-removal confirmation enablement and refreshed the project list only after repository removal completes.
 - [BUG-18088] Corrected the Clear local cache label and added reviewable previews for every destructive Settings action.
+- [BUG-18090] Restricted rich-text links to approved external URI schemes so file, script, data, and shell links cannot be launched from rendered content.
+- [BUG-18091] Included project tags, external identity, and folder membership in Backups refresh signatures so metadata edits no longer leave stale project cards.
+- [BUG-18092] Added diagnostics for scan-cache writes, NAS staging checks, and deferred-backup migration failures that were previously silent.
 
 ## [1.8.5] - 02.08.2026
 ### Added

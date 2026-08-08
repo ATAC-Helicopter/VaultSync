@@ -342,9 +342,20 @@ qualification. It does not have a beta build or prerelease GitHub release.
 - [x] `VS-1811` `P2` Add project groups and group health if the core
   experience scope is complete. _(Existing issue #363.)_
 
-Project Groups completed after the core usability scope. Groups now expose
-aggregate health and deliberate group actions without replacing per-project
-controls.
+Project Groups completed after the core usability scope as persistent folders,
+not inferred tag views. A project has one explicit folder assignment; folders
+expand to show their projects and support deliberate snapshot, backup, pause,
+and resume actions without replacing per-project controls. Renaming preserves
+membership, and deleting a folder moves its projects to Ungrouped without
+deleting source files, snapshots, or backups. Schedule, Backups, Recovery, and
+History carry the same folder identity.
+
+- [x] `BUG-18090` `P0` Restrict rendered rich-text navigation to approved web,
+  mail, and Store URI schemes.
+- [x] `BUG-18091` `P1` Refresh Backups when project tags, external identity, or
+  folder membership changes.
+- [x] `BUG-18092` `P1` Surface previously silent cache and deferred-backup
+  background failures in diagnostics.
 
 ---
 

@@ -27,7 +27,9 @@ VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and
 ### Projects and groups
 - Edit each project's destination, preset, exclusions, tags, encryption policy, and automatic-backup state in one place.
 - Review exactly what project removal changes before confirming. VaultSync removes the local registration and history index, never the source folder or stored backup payloads.
-- Organize projects into groups, see aggregate group health, and run or pause deliberate group actions.
+- Organize projects into real, persistent folders instead of inferred tag views. Expand a folder to work with one project or run folder-scoped snapshot, backup, pause, and resume actions.
+- Assign a project from its details. Renaming a folder preserves membership; deleting one moves its projects to Ungrouped and never deletes source files, snapshots, or backups.
+- Keep folder identity visible in Schedule, Backups, Recovery, and History so the same organization follows each project through protection and recovery workflows.
 
 ### Safer and more accessible controls
 - Primary navigation, scheduling, project, backup, recovery, and Settings controls now expose clearer screen-reader names and help.
@@ -38,6 +40,7 @@ VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and
 - Automated patch manifests name one qualified predecessor; older or unlisted installations fall back to a full installer.
 - `1.8.6` ships directly as a stable release with no beta build; unpublished release-candidate artifacts use the release branch, and final assets use `Stable`.
 - Rendering dependencies remain aligned across supported platforms.
+- Rich-text links are limited to approved external schemes, dependency vulnerability checks are clean, and previously silent cache or deferred-backup failures now leave diagnostic evidence.
 
 ## [1.8.5]
 
