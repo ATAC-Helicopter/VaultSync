@@ -30,7 +30,6 @@ public sealed class DestinationOption(string id, string label)
 
 public sealed class ProjectGroupOption(string id, string label)
 {
-    public const string AllId = "all";
     public const string UngroupedId = "";
     public string Id { get; } = id?.Trim() ?? UngroupedId;
     public string Label { get; } = label ?? string.Empty;

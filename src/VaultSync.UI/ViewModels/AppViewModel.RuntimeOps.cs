@@ -1418,8 +1418,9 @@ namespace VaultSync.UI.ViewModels
                     StopNasMonitor();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                DiagnosticsLogger.RecordException("NAS staging monitor failed", ex, includeStack: false);
             }
             finally
             {

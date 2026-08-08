@@ -44,8 +44,9 @@ public static class ScanCacheStore
 
             return cache;
         }
-        catch
+        catch (Exception ex)
         {
+            RuntimeLog.WriteVerbose($"[ScanCache] Ignoring unreadable cache for project {project.Id}: {ex.GetType().Name} - {ex.Message}");
             return null;
         }
     }
@@ -63,8 +64,9 @@ public static class ScanCacheStore
             string json = JsonSerializer.Serialize(cache, s_jsonOptions);
             File.WriteAllText(path, json);
         }
-        catch
+        catch (Exception ex)
         {
+            RuntimeLog.WriteVerbose($"[ScanCache] Failed to persist cache for project {project.Id}: {ex.GetType().Name} - {ex.Message}");
         }
     }
 

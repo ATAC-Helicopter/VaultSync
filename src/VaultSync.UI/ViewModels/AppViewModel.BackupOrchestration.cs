@@ -219,8 +219,10 @@ namespace VaultSync.UI.ViewModels
                     if (!Directory.Exists(dest))
                         Directory.Move(dir, dest);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    DiagnosticsLogger.Record(
+                        $"Deferred backup migration failed from '{dir}' to '{dest}': {ex.GetType().Name} - {ex.Message}");
                 }
             }
 
@@ -229,8 +231,10 @@ namespace VaultSync.UI.ViewModels
                 if (!Directory.EnumerateFileSystemEntries(tempRoot).Any())
                     Directory.Delete(tempRoot, recursive: true);
             }
-            catch
+            catch (Exception ex)
             {
+                DiagnosticsLogger.Record(
+                    $"Deferred backup staging cleanup failed for '{tempRoot}': {ex.GetType().Name} - {ex.Message}");
             }
         }
 

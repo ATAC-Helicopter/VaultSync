@@ -69,7 +69,7 @@ internal static class SystemFileLauncher
         Process.Start(psi);
     }
 
-    private static bool IsAllowedExternalScheme(string scheme) =>
+    internal static bool IsAllowedExternalScheme(string scheme) =>
         string.Equals(scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
         string.Equals(scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
         string.Equals(scheme, Uri.UriSchemeMailto, StringComparison.OrdinalIgnoreCase) ||

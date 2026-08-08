@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Avalonia;
 using Avalonia.Controls;
@@ -7,6 +6,7 @@ using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Interactivity;
+using VaultSync.UI.Infrastructure;
 
 namespace VaultSync.UI.Views.Controls;
 
@@ -285,21 +285,24 @@ public class RichTextBlock : TextBlock
         if (string.IsNullOrWhiteSpace(raw))
             return false;
 
-        if (Uri.TryCreate(raw, UriKind.Absolute, out uri))
-            return true;
+        if (!Uri.TryCreate(raw, UriKind.Absolute, out Uri? candidate) &&
+            !Uri.TryCreate($"https://{raw}", UriKind.Absolute, out candidate))
+        {
+            return false;
+        }
 
-        return Uri.TryCreate($"https://{raw}", UriKind.Absolute, out uri);
+        if (!SystemFileLauncher.IsAllowedExternalScheme(candidate.Scheme))
+            return false;
+
+        uri = candidate;
+        return true;
     }
 
     private static void OpenUrl(Uri uri)
     {
         try
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = uri.ToString(),
-                UseShellExecute = true
-            });
+            SystemFileLauncher.OpenUri(uri.AbsoluteUri);
         }
         catch
         {
