@@ -93,11 +93,20 @@ public sealed class ProjectFolderViewModel : ViewModelBase
         }
     }
 
-    public string ContentsLabel => L("Projects.Folder.Contents", "Projects in this folder");
+    public string ContentsLabel => string.Format(
+        CultureInfo.CurrentCulture,
+        L("Projects.Folder.ContentsNamed", "Projects in {0}"),
+        Name);
 
-    public string SnapshotAllLabel => L("Projects.Group.SnapshotAll", "Snapshot all");
+    public string SnapshotAllLabel => string.Format(
+        CultureInfo.CurrentCulture,
+        L("Projects.Group.SnapshotCount", "Snapshot all {0}"),
+        ProjectCount);
 
-    public string BackupAllLabel => L("Projects.Group.BackupAll", "Back up all");
+    public string BackupAllLabel => string.Format(
+        CultureInfo.CurrentCulture,
+        L("Projects.Group.BackupCount", "Back up all {0}"),
+        ProjectCount);
 
     public string HealthSummary
     {
@@ -175,6 +184,9 @@ public sealed class ProjectFolderViewModel : ViewModelBase
             nameof(CanPauseAutoBackups),
             nameof(CanResumeAutoBackups),
             nameof(ProjectCountLabel),
+            nameof(ContentsLabel),
+            nameof(SnapshotAllLabel),
+            nameof(BackupAllLabel),
             nameof(HealthSummary),
             nameof(Summary),
             nameof(DeleteExplanation));

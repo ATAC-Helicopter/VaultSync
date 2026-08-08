@@ -3423,16 +3423,29 @@ public class ProjectItemViewModel : ViewModelBase
             "Currently shown only inside “{0}”.",
             _assignedGroupOption?.Label ?? L("Projects.Folder.Ungrouped", "Ungrouped"));
 
-    public string FolderMovePreview => !HasPendingGroupChange
-        ? FolderLocationText
-        : string.IsNullOrWhiteSpace(_selectedGroupOption?.Id)
-            ? L("Projects.Folder.MoveToMain", "Move this project back to the main project list.")
-            : Lf(
+    public string FolderMovePreview
+    {
+        get
+        {
+            if (!HasPendingGroupChange)
+                return FolderLocationText;
+
+            if (string.IsNullOrWhiteSpace(_selectedGroupOption!.Id))
+                return L("Projects.Folder.MoveToMain", "Move this project back to the main project list.");
+
+            return Lf(
                 "Projects.Folder.MoveInside",
                 "Move this project into “{0}”. It will appear only when that folder is open.",
-                _selectedGroupOption?.Label ?? string.Empty);
+                _selectedGroupOption.Label);
+        }
+    }
 
-    public string MoveProjectLabel => L("Projects.Folder.Move", "Move project");
+    public string MoveProjectLabel => string.IsNullOrWhiteSpace(_selectedGroupOption?.Id)
+        ? L("Projects.Folder.MoveToMainButton", "Move to main list")
+        : Lf(
+            "Projects.Folder.MoveToFolderButton",
+            "Move to {0}",
+            _selectedGroupOption.Label);
 
     public void SetGroupOption(ProjectGroupOption? option)
     {
