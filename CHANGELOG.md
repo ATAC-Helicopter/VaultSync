@@ -22,6 +22,7 @@
 - [BUG-18090] Restricted rich-text links to approved external URI schemes so file, script, data, and shell links cannot be launched from rendered content.
 - [BUG-18091] Included project tags, external identity, and folder membership in Backups refresh signatures so metadata edits no longer leave stale project cards.
 - [BUG-18092] Added diagnostics for scan-cache writes, NAS staging checks, and deferred-backup migration failures that were previously silent.
+- [BUG-18093] Restored the normal project-card list for projects outside folders, made folder creation optional and collapsed by default, and reserved folder chrome and batch actions for explicitly created folders only.
 
 ## [1.8.5] - 02.08.2026
 ### Added

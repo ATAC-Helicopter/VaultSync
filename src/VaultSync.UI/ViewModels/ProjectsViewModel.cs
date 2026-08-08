@@ -101,6 +101,8 @@ public partial class ProjectsViewModel : ViewModelBase
         [];
     public ObservableCollection<ProjectFolderViewModel> ProjectFolders { get; } =
         [];
+    public ObservableCollection<ProjectItemViewModel> UngroupedProjects { get; } =
+        [];
     public ObservableCollection<ProjectItemViewModel> Projects { get; } =
         [];
     private readonly Dictionary<string, PresetInfo> _presetCatalogById =
@@ -186,6 +188,8 @@ public partial class ProjectsViewModel : ViewModelBase
     }
 
     public bool HasProjects => Projects.Count > 0;
+    public bool HasProjectFolders => ProjectFolders.Count > 0;
+    public bool HasUngroupedProjects => UngroupedProjects.Count > 0;
     public bool ShowProjectsEmptyState => !HasProjects;
     public bool HasSelectedProject => SelectedProject is not null;
     public bool ShowSelectedProjectEmptyState => !HasSelectedProject;

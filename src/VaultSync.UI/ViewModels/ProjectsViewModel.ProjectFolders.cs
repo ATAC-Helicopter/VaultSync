@@ -99,27 +99,16 @@ public partial class ProjectsViewModel
         List<ProjectItemViewModel> ungroupedProjects = [.. visibleProjects.Where(project =>
             string.IsNullOrWhiteSpace(project.GroupId) ||
             GroupOptions.All(option => !string.Equals(option.Id, project.GroupId, StringComparison.OrdinalIgnoreCase)))];
-        List<ProjectItemViewModel> allUngroupedProjects = [.. _allProjects.Where(project =>
-            string.IsNullOrWhiteSpace(project.GroupId) ||
-            GroupOptions.All(option => !string.Equals(option.Id, project.GroupId, StringComparison.OrdinalIgnoreCase)))];
-        string ungroupedName = L("Projects.Folder.Ungrouped", "Ungrouped");
-        if (!string.IsNullOrWhiteSpace(SearchText) &&
-            ungroupedName.Contains(SearchText.Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            ungroupedProjects = allUngroupedProjects;
-        }
-        if (includeEmptyFolders || ungroupedProjects.Count > 0)
-        {
-            ProjectFolderViewModel ungrouped = existing.TryGetValue(ProjectFolderViewModel.UngroupedId, out ProjectFolderViewModel? current)
-                ? current
-                : new ProjectFolderViewModel(null, ungroupedName);
-            ungrouped.ReplaceProjects(ungroupedProjects, allUngroupedProjects);
-            rebuilt.Add(ungrouped);
-        }
 
         ProjectFolders.Clear();
         foreach (ProjectFolderViewModel folder in rebuilt)
             ProjectFolders.Add(folder);
+
+        UngroupedProjects.Clear();
+        foreach (ProjectItemViewModel project in ungroupedProjects)
+            UngroupedProjects.Add(project);
+
+        OnPropertiesChanged(nameof(HasProjectFolders), nameof(HasUngroupedProjects));
 
         RaiseProjectGroupCommandStates();
     }
