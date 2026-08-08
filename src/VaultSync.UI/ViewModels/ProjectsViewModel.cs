@@ -55,8 +55,13 @@ public partial class ProjectsViewModel : ViewModelBase
     private string? _cachedDiscoveryRoot;
     private DateTime _cachedDiscoveryUtc;
     private static readonly TimeSpan DiscoveryCacheTtl = TimeSpan.FromSeconds(10);
-    private static string L(string key, string fallback) =>
-        LocalizationProvider.Service?.GetString(key) ?? fallback;
+    private static string L(string key, string fallback)
+    {
+        string? value = LocalizationProvider.Service?.GetString(key);
+        return string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal)
+            ? fallback
+            : value;
+    }
 
     private static string Lf(string key, string fallback, params object[] args)
     {
@@ -140,6 +145,7 @@ public partial class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _requestDeleteProjectGroupCommand;
     private readonly RelayCommand _confirmDeleteProjectGroupCommand;
     private readonly RelayCommand _cancelDeleteProjectGroupCommand;
+    private readonly RelayCommand _moveSelectedProjectToFolderCommand;
     private readonly RelayCommand _commitProjectTagInputCommand;
     private readonly RelayCommand _removeProjectTagCommand;
     private readonly RelayCommand _addExistingTagToSelectedProjectCommand;
@@ -174,6 +180,7 @@ public partial class ProjectsViewModel : ViewModelBase
                 _openFolderCommand.RaiseCanExecuteChanged();
                 _removeProjectCommand.RaiseCanExecuteChanged();
                 _confirmRemoveProjectCommand.RaiseCanExecuteChanged();
+                _moveSelectedProjectToFolderCommand.RaiseCanExecuteChanged();
                 _applyPresetRecommendationCommand.RaiseCanExecuteChanged();
                 _commitProjectTagInputCommand.RaiseCanExecuteChanged();
                 _removeProjectTagCommand.RaiseCanExecuteChanged();
@@ -253,6 +260,7 @@ public partial class ProjectsViewModel : ViewModelBase
     public ICommand RequestDeleteProjectGroupCommand { get; }
     public ICommand ConfirmDeleteProjectGroupCommand { get; }
     public ICommand CancelDeleteProjectGroupCommand { get; }
+    public ICommand MoveSelectedProjectToFolderCommand { get; }
     public ICommand CommitProjectTagInputCommand { get; }
     public ICommand RemoveProjectTagCommand { get; }
     public ICommand AddExistingTagToSelectedProjectCommand { get; }
@@ -621,6 +629,9 @@ public partial class ProjectsViewModel : ViewModelBase
             folder => DeleteProjectGroup(folder as ProjectFolderViewModel),
             folder => folder is ProjectFolderViewModel { CanManage: true });
         _cancelDeleteProjectGroupCommand = new RelayCommand(folder => CancelDeleteProjectGroup(folder as ProjectFolderViewModel));
+        _moveSelectedProjectToFolderCommand = new RelayCommand(
+            _ => MoveSelectedProjectToFolder(),
+            _ => SelectedProject is { HasPendingGroupChange: true, IsRegistered: true });
         _commitProjectTagInputCommand = new RelayCommand(_ => CommitProjectTagInput(), _ => SelectedProject is not null);
         _removeProjectTagCommand = new RelayCommand(tag => RemoveProjectTag(tag as string), _ => SelectedProject is not null);
         _addExistingTagToSelectedProjectCommand = new RelayCommand(
@@ -656,6 +667,7 @@ public partial class ProjectsViewModel : ViewModelBase
         RequestDeleteProjectGroupCommand = _requestDeleteProjectGroupCommand;
         ConfirmDeleteProjectGroupCommand = _confirmDeleteProjectGroupCommand;
         CancelDeleteProjectGroupCommand = _cancelDeleteProjectGroupCommand;
+        MoveSelectedProjectToFolderCommand = _moveSelectedProjectToFolderCommand;
         CommitProjectTagInputCommand = _commitProjectTagInputCommand;
         RemoveProjectTagCommand = _removeProjectTagCommand;
         AddExistingTagToSelectedProjectCommand = _addExistingTagToSelectedProjectCommand;
@@ -2354,6 +2366,12 @@ public partial class ProjectsViewModel : ViewModelBase
         if (sender is not ProjectItemViewModel vm)
             return;
 
+        if (string.Equals(e.PropertyName, nameof(ProjectItemViewModel.SelectedGroupOption), StringComparison.Ordinal) &&
+            ReferenceEquals(vm, SelectedProject))
+        {
+            _moveSelectedProjectToFolderCommand.RaiseCanExecuteChanged();
+        }
+
         var change = ProjectItemChange.FromProperty(e.PropertyName);
         if (change.ChangedPreset)
         {
@@ -3329,8 +3347,13 @@ public enum ProjectHealthStatus
 /// </summary>
 public class ProjectItemViewModel : ViewModelBase
 {
-    private static string L(string key, string fallback) =>
-        LocalizationProvider.Service?.GetString(key) ?? fallback;
+    private static string L(string key, string fallback)
+    {
+        string? value = LocalizationProvider.Service?.GetString(key);
+        return string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal)
+            ? fallback
+            : value;
+    }
 
     private static string Lf(string key, string fallback, params object[] args)
     {
@@ -3374,6 +3397,7 @@ public class ProjectItemViewModel : ViewModelBase
     }
 
     private ProjectGroupOption? _selectedGroupOption;
+    private ProjectGroupOption? _assignedGroupOption;
     public ProjectGroupOption? SelectedGroupOption
     {
         get => _selectedGroupOption;
@@ -3384,17 +3408,53 @@ public class ProjectItemViewModel : ViewModelBase
                 return;
 
             if (SetField(ref _selectedGroupOption, value))
-                GroupId = value.Id;
+                OnPropertiesChanged(nameof(HasPendingGroupChange), nameof(FolderMovePreview));
         }
     }
 
+    public bool HasPendingGroupChange =>
+        _selectedGroupOption is not null &&
+        !string.Equals(_selectedGroupOption.Id, GroupId, StringComparison.OrdinalIgnoreCase);
+
+    public string FolderLocationText => string.IsNullOrWhiteSpace(GroupId)
+        ? L("Projects.Folder.Location.Main", "Currently shown in the main project list.")
+        : Lf(
+            "Projects.Folder.Location.Inside",
+            "Currently shown only inside “{0}”.",
+            _assignedGroupOption?.Label ?? L("Projects.Folder.Ungrouped", "Ungrouped"));
+
+    public string FolderMovePreview => !HasPendingGroupChange
+        ? FolderLocationText
+        : string.IsNullOrWhiteSpace(_selectedGroupOption?.Id)
+            ? L("Projects.Folder.MoveToMain", "Move this project back to the main project list.")
+            : Lf(
+                "Projects.Folder.MoveInside",
+                "Move this project into “{0}”. It will appear only when that folder is open.",
+                _selectedGroupOption?.Label ?? string.Empty);
+
+    public string MoveProjectLabel => L("Projects.Folder.Move", "Move project");
+
     public void SetGroupOption(ProjectGroupOption? option)
     {
-        if (ReferenceEquals(_selectedGroupOption, option))
-            return;
-
+        _assignedGroupOption = option;
         _selectedGroupOption = option;
-        OnPropertyChanged(nameof(SelectedGroupOption));
+        OnPropertiesChanged(
+            nameof(SelectedGroupOption),
+            nameof(HasPendingGroupChange),
+            nameof(FolderLocationText),
+            nameof(FolderMovePreview));
+    }
+
+    public void CommitGroupOption(ProjectGroupOption option)
+    {
+        _assignedGroupOption = option;
+        _selectedGroupOption = option;
+        GroupId = option.Id;
+        OnPropertiesChanged(
+            nameof(SelectedGroupOption),
+            nameof(HasPendingGroupChange),
+            nameof(FolderLocationText),
+            nameof(FolderMovePreview));
     }
 
     private ProjectHealthStatus _health;

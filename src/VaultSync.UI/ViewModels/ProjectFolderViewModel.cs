@@ -18,6 +18,14 @@ public sealed class ProjectFolderViewModel : ViewModelBase
     private bool _isDeleteConfirmationVisible;
     private string _editName;
 
+    private static string L(string key, string fallback)
+    {
+        string? value = LocalizationProvider.Service?.GetString(key);
+        return string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal)
+            ? fallback
+            : value;
+    }
+
     public ProjectFolderViewModel(ProjectGroup? group, string ungroupedName)
     {
         Id = group?.Id ?? UngroupedId;
@@ -71,6 +79,41 @@ public sealed class ProjectFolderViewModel : ViewModelBase
     public bool HasProjects => Projects.Count > 0;
     public bool CanRunBatchActions => RegisteredProjectCount > 0;
     public bool ShowBatchActions => CanRunBatchActions && !IsRenaming;
+    public bool CanPauseAutoBackups => RegisteredProjectCount > PausedProjectCount;
+    public bool CanResumeAutoBackups => PausedProjectCount > 0;
+
+    public string ProjectCountLabel
+    {
+        get
+        {
+            string format = ProjectCount == 1
+                ? L("Projects.Folder.OneProject", "{0} project")
+                : L("Projects.Folder.ProjectCount", "{0} projects");
+            return string.Format(CultureInfo.CurrentCulture, format, ProjectCount);
+        }
+    }
+
+    public string ContentsLabel => L("Projects.Folder.Contents", "Projects in this folder");
+
+    public string SnapshotAllLabel => L("Projects.Group.SnapshotAll", "Snapshot all");
+
+    public string BackupAllLabel => L("Projects.Group.BackupAll", "Back up all");
+
+    public string HealthSummary
+    {
+        get
+        {
+            string format = L(
+                "Projects.Folder.HealthSummary",
+                "{0} healthy · {1} need attention · {2} paused");
+            return string.Format(
+                CultureInfo.CurrentCulture,
+                format,
+                HealthyProjectCount,
+                AttentionProjectCount,
+                PausedProjectCount);
+        }
+    }
 
     public string Summary
     {
@@ -129,6 +172,10 @@ public sealed class ProjectFolderViewModel : ViewModelBase
             nameof(HasProjects),
             nameof(CanRunBatchActions),
             nameof(ShowBatchActions),
+            nameof(CanPauseAutoBackups),
+            nameof(CanResumeAutoBackups),
+            nameof(ProjectCountLabel),
+            nameof(HealthSummary),
             nameof(Summary),
             nameof(DeleteExplanation));
     }

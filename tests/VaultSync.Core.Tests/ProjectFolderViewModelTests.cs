@@ -1,3 +1,4 @@
+using System;
 using VaultSync.Core.Models;
 using VaultSync.UI.ViewModels;
 using Xunit;
@@ -51,5 +52,56 @@ public sealed class ProjectFolderViewModelTests
         Assert.True(folder.IsUngrouped);
         Assert.False(folder.CanManage);
         Assert.Equal(ProjectFolderViewModel.UngroupedId, folder.Id);
+    }
+
+    [Fact]
+    public void FolderChoiceIsStagedUntilTheProjectMoveIsCommitted()
+    {
+        var ungrouped = new ProjectGroupOption(ProjectGroupOption.UngroupedId, "Ungrouped");
+        var work = new ProjectGroupOption("work", "Work");
+        var project = new ProjectItemViewModel { Name = "VaultSync" };
+        project.SetGroupOption(ungrouped);
+
+        project.SelectedGroupOption = work;
+
+        Assert.True(project.HasPendingGroupChange);
+        Assert.Equal(ProjectGroupOption.UngroupedId, project.GroupId);
+        Assert.Contains("Work", project.FolderMovePreview, StringComparison.Ordinal);
+
+        project.CommitGroupOption(work);
+
+        Assert.False(project.HasPendingGroupChange);
+        Assert.Equal("work", project.GroupId);
+        Assert.Contains("Work", project.FolderLocationText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FolderSummarySeparatesMembershipHealthAndPausedCounts()
+    {
+        var active = new ProjectItemViewModel
+        {
+            ProjectId = 1,
+            IsRegistered = true,
+            Health = ProjectHealthStatus.Healthy,
+            IsAutoBackupEnabled = true
+        };
+        var paused = new ProjectItemViewModel
+        {
+            ProjectId = 2,
+            IsRegistered = true,
+            Health = ProjectHealthStatus.Warning,
+            IsAutoBackupEnabled = false
+        };
+        var folder = new ProjectFolderViewModel(
+            new ProjectGroup { Id = "work", Name = "Work" },
+            "Ungrouped");
+
+        folder.ReplaceProjects([active, paused]);
+
+        Assert.Equal(2, folder.ProjectCount);
+        Assert.Equal("2 projects", folder.ProjectCountLabel);
+        Assert.Contains("1 healthy", folder.HealthSummary, StringComparison.Ordinal);
+        Assert.True(folder.CanPauseAutoBackups);
+        Assert.True(folder.CanResumeAutoBackups);
     }
 }

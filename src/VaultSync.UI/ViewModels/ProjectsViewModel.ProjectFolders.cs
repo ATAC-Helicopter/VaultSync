@@ -116,6 +116,87 @@ public partial class ProjectsViewModel
     private bool CanCreateProjectGroup() =>
         !string.IsNullOrWhiteSpace(ProjectGroup.NormalizeName(NewProjectGroupName));
 
+    private void MoveSelectedProjectToFolder()
+    {
+        ProjectItemViewModel? project = SelectedProject;
+        ProjectGroupOption? destination = project?.SelectedGroupOption;
+        if (project is not { IsRegistered: true, HasPendingGroupChange: true } || destination is null)
+            return;
+
+        try
+        {
+            SqliteRepository repo = CreateRepository(_configStore.GetSnapshot());
+            if (!repo.SetProjectGroup(project.ProjectId, destination.Id))
+                throw new InvalidOperationException(L("Projects.Folder.Missing", "That folder no longer exists."));
+
+            Interlocked.Increment(ref _suppressProjectPersistence);
+            try
+            {
+                project.CommitGroupOption(destination);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _suppressProjectPersistence);
+            }
+
+            MoveProjectCardToCommittedFolder(project);
+            ProjectSettingsMetadataChanged?.Invoke(project.ProjectId);
+            _moveSelectedProjectToFolderCommand.RaiseCanExecuteChanged();
+
+            string message = string.IsNullOrWhiteSpace(destination.Id)
+                ? Lf("Projects.Folder.MovedToMain", "Moved “{0}” to the main project list.", project.Name)
+                : Lf("Projects.Folder.MovedInside", "Moved “{0}” into “{1}”.", project.Name, destination.Label);
+            ShowNotification(message, NotificationSeverity.Info);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            SetProjectGroupOption(project);
+            ShowNotification(ex.Message, NotificationSeverity.Warning);
+        }
+        catch (Exception ex)
+        {
+            SetProjectGroupOption(project);
+            ShowNotification(
+                Lf("Projects.Folder.MoveFailed", "Could not move the project: {0}", ex.Message),
+                NotificationSeverity.Error);
+        }
+    }
+
+    private void MoveProjectCardToCommittedFolder(ProjectItemViewModel project)
+    {
+        foreach (ProjectFolderViewModel folder in ProjectFolders)
+        {
+            if (!folder.AllProjects.Contains(project))
+                continue;
+
+            folder.ReplaceProjects(
+                folder.Projects.Where(candidate => !ReferenceEquals(candidate, project)),
+                folder.AllProjects.Where(candidate => !ReferenceEquals(candidate, project)));
+        }
+
+        UngroupedProjects.Remove(project);
+
+        ProjectFolderViewModel? destinationFolder = ProjectFolders.FirstOrDefault(folder =>
+            string.Equals(folder.Id, project.GroupId, StringComparison.OrdinalIgnoreCase));
+        if (destinationFolder is not null)
+        {
+            List<ProjectItemViewModel> visible = [.. SortProjectItems(destinationFolder.Projects.Append(project))];
+            List<ProjectItemViewModel> all = [.. SortProjectItems(destinationFolder.AllProjects.Append(project))];
+            destinationFolder.ReplaceProjects(visible, all);
+            destinationFolder.IsExpanded = true;
+        }
+        else
+        {
+            List<ProjectItemViewModel> ungrouped = [.. SortProjectItems(UngroupedProjects.Append(project))];
+            UngroupedProjects.Clear();
+            foreach (ProjectItemViewModel candidate in ungrouped)
+                UngroupedProjects.Add(candidate);
+        }
+
+        OnPropertiesChanged(nameof(HasProjectFolders), nameof(HasUngroupedProjects));
+        RaiseProjectGroupCommandStates();
+    }
+
     private void CreateProjectGroup()
     {
         try
