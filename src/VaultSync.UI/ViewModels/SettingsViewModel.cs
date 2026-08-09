@@ -149,7 +149,7 @@ namespace VaultSync.UI
         private bool _isRetentionSimulationBusy;
         private string _rsyncStatusHint = string.Empty;
         private bool _showRsyncStatusHint;
-        private string _selectedLanguageCode = "en";
+        private string _selectedLanguageCode;
         private readonly IAppConfigStore _configStore;
         private readonly IRepositoryFactory _repositoryFactory;
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;

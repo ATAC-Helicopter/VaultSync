@@ -50,8 +50,6 @@ public partial class MainWindow : Window
             Classes.Add("linux-performance");
         }
 
-        // Use the shared AppViewModel created in App.axaml.cs when available;
-        // fall back to a new instance (e.g. for design-time preview).
         _appVm = App.AppViewModelInstance ?? new AppViewModel();
         DataContext = _appVm;
 

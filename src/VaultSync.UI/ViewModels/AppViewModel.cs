@@ -656,8 +656,8 @@ namespace VaultSync.UI.ViewModels
             private set => SetField(ref _softCrashBannerMessage, value);
         }
         public bool CanCopySoftCrashLog => !string.IsNullOrWhiteSpace(_softCrashLogPath);
-        public string SoftCrashDismissLabel => L("Errors.SoftCrash.Dismiss", "Dismiss");
-        public string SoftCrashCopyLabel => L("Errors.SoftCrash.CopyLogPath", "Copy log path");
+        public static string SoftCrashDismissLabel => L("Errors.SoftCrash.Dismiss", "Dismiss");
+        public static string SoftCrashCopyLabel => L("Errors.SoftCrash.CopyLogPath", "Copy log path");
 
     }
 }

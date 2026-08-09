@@ -574,7 +574,9 @@ public sealed class MetadataStore
         try
         {
             int timeoutMs = IsLikelyNetworkPath(_dbPath) ? 10000 : 5000;
-            conn.Execute($"PRAGMA busy_timeout = {timeoutMs};");
+            conn.Execute(timeoutMs == 10000
+                ? "PRAGMA busy_timeout = 10000;"
+                : "PRAGMA busy_timeout = 5000;");
         }
         catch
         {

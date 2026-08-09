@@ -33,7 +33,10 @@ namespace VaultSync.CLI.Utils
                     await Task.Delay(_delayMs, localCts.Token);
                     await work(localCts.Token);
                 }
-                catch (OperationCanceledException) { }
+                catch (OperationCanceledException) when (localCts.IsCancellationRequested)
+                {
+                    return;
+                }
                 catch (Exception ex)
                 {
                     AnsiConsole.MarkupLine($"[red]watch error:[/] {Markup.Escape(ex.Message)}");
