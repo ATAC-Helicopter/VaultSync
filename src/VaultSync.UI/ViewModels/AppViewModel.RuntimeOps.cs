@@ -458,7 +458,6 @@ namespace VaultSync.UI.ViewModels
                 : [scopedProject];
 
             List<BackupDestination> destinations = GetAllDestinations(cfg);
-            var rotationService = new BackupKeyRotationService();
             BackupsViewModel.IsBusy = true;
             BackupsViewModel.BusyMessage = L("Settings.Encryption.RotateBusy", "Rotating encrypted backups...");
             try
@@ -517,7 +516,7 @@ namespace VaultSync.UI.ViewModels
                     }
 
                     return (succeeded, failed, skipped, failureMessages);
-                });
+                }, CancellationToken.None);
 
                 if (summary.succeeded > 0)
                 {

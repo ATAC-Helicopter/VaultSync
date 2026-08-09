@@ -551,7 +551,7 @@ public sealed class MetadataStore
             }
         }
 
-        throw lastError ?? new InvalidOperationException("Metadata store could not be opened.");
+        throw new InvalidOperationException("Metadata store could not be opened after all retry attempts.", lastError);
     }
 
     private SqliteConnection OpenCore(bool write)
