@@ -342,7 +342,7 @@ qualification. It does not have a beta build or prerelease GitHub release.
 - [x] `VS-1811` `P2` Add project groups and group health if the core
   experience scope is complete. _(Existing issue #363.)_
 
-Project Groups completed after the core usability scope as persistent folders,
+Project folders completed after the core usability scope as persistent folders,
 not inferred tag views. A project has one explicit folder assignment; folders
 expand to show their projects and support deliberate snapshot, backup, pause,
 and resume actions without replacing per-project controls. Renaming preserves

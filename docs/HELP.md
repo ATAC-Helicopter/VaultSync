@@ -32,7 +32,7 @@ Windows distribution channels:
 ![VaultSync dashboard with protection, activity, storage, and recovery summaries](images/Dashboard.png)
 
 - Dashboard: restore readiness, required action, next run, known-good evidence, storage, and activity.
-- Projects: discovery, groups, health, snapshots, per-project policy editing, pause/resume, and safe removal previews.
+- Projects: discovery, optional folders, health, snapshots, per-project policy editing, pause/resume, and safe removal previews.
 - Schedule: live readiness, upcoming timer opportunities, per-project automatic coverage, runtime constraints, shared policy edits, and delay explanations.
 - History: searchable backup activity, notes, labels, tags, and protected points.
 - Backups: per-project controls, restore guidance, Snapshot Explorer, and Snapshot Compare.

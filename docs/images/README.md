@@ -6,7 +6,7 @@ website, wiki, release material, and promotional pages.
 | File | Primary use |
 | --- | --- |
 | `Dashboard.png` | README hero, website hero, daily overview |
-| `Projects_Page.png` | Project discovery, registration, presets, and tags |
+| `Projects_Page.png` | Project discovery, optional folders, folder actions, assignment, presets, and tags |
 | `Schedule_Page.png` | Operational readiness, upcoming opportunities, project coverage, shared policy, and runtime constraints |
 | `Guide_Page.png` | In-app workflow guide and recovery terminology |
 | `Backup_Page.png` | Backup health, storage, and restore points |

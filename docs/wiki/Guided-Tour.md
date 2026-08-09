@@ -9,7 +9,7 @@ without resetting VaultSync.
 | Page | Use it for |
 | --- | --- |
 | Dashboard | Check restore readiness, required action, next run, newest known-good point, activity, and storage. |
-| Projects | Discover and group folders; register, edit, pause, remove, and snapshot projects. |
+| Projects | Discover projects; optionally place them in folders; edit, pause, remove, and snapshot them. |
 | Schedule | Understand whether protection can run, what will participate, and the next timer opportunities or delays. |
 | Backups | Run backups, tune each project, inspect restore points, compare snapshots, and restore. |
 | History | Search all recorded activity and maintain labels, notes, tags, and protected points. |
@@ -59,8 +59,9 @@ not change or delete any configuration.
 - Use project tags and avatars to keep larger libraries readable.
 - Edit destination, preset, exclusions, tags, encryption, and automatic-backup
   state without leaving Projects.
-- Groups summarize member health and provide group snapshot, backup, pause, and
-  resume actions.
+- Optional folders keep assigned projects out of the top-level list, summarize
+  member health, and provide folder-wide snapshot, backup, pause, and resume
+  actions. Collapse a folder to hide its members without changing membership.
 - Remove shows an exact preview: local registration and indexed history are
   removed, while source files and stored backup payloads remain untouched.
 
