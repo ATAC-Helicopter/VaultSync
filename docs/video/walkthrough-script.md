@@ -68,14 +68,15 @@ or macOS chrome.
 - **00:31** — Activity, weekly trends, and storage detail remain below the
   action-first overview for routine monitoring.
 
-## 04 — Projects, groups, and safe removal
+## 04 — Projects, optional folders, and safe removal
 
 **On screen:**
 
 1. Open **Projects**, select `Client Portal`, and point to its health.
 2. Show destination, preset, exclusions, tags, encryption, and auto-backup.
 3. Pause automatic backup, show the state, then resume it.
-4. Expand a prepared group and point to group health and actions.
+4. Expand the prepared `Client work` folder and point to its membership,
+   health summary, batch actions, and compact management menu.
 5. Select **Remove**, read the preview, and cancel.
 
 **Narration cues:**
@@ -84,7 +85,8 @@ or macOS chrome.
   exposes health, destination, preset, exclusions, tags, encryption, and its
   own automatic-backup state.
 - **00:20** — Pausing a project does not delete its history or stored data.
-  Groups summarize member health and provide deliberate group actions.
+  Optional folders keep members together, summarize health, and expose
+  deliberate folder-wide actions without replacing each project card.
 - **00:36** — Remove shows the exact boundary before it runs: local
   registration and indexed history are removed, while source files and stored
   backup payloads remain untouched.
