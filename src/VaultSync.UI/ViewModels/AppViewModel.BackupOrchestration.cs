@@ -166,55 +166,5 @@ namespace VaultSync.UI.ViewModels
             public static BackupAllPreparationResult Success(AppConfig cfg) => new(true, null, cfg);
         }
 
-        private static void TryMigrateTempBackups(Project project, string targetRoot)
-        {
-            TryMigrateTempBackupsFromRoot(BackupSafetyService.GetOfflineStagingRoot(project), targetRoot);
-            TryMigrateTempBackupsFromRoot(BackupSafetyService.GetLegacyProjectTempRoot(project), targetRoot);
-        }
-
-        private static void TryMigrateTempBackupsFromRoot(string tempRoot, string targetRoot)
-        {
-            if (!Directory.Exists(tempRoot))
-                return;
-
-            Directory.CreateDirectory(targetRoot);
-
-            foreach (string dir in Directory.EnumerateDirectories(tempRoot))
-            {
-                string dest = Path.Combine(targetRoot, Path.GetFileName(dir));
-
-                try
-                {
-                    if (!Directory.Exists(dest))
-                        Directory.Move(dir, dest);
-                }
-                catch (Exception ex)
-                {
-                    DiagnosticsLogger.Record(
-                        $"Deferred backup migration failed from '{dir}' to '{dest}': {ex.GetType().Name} - {ex.Message}");
-                }
-            }
-
-            try
-            {
-                if (!Directory.EnumerateFileSystemEntries(tempRoot).Any())
-                    Directory.Delete(tempRoot, recursive: true);
-            }
-            catch (Exception ex)
-            {
-                DiagnosticsLogger.Record(
-                    $"Deferred backup staging cleanup failed for '{tempRoot}': {ex.GetType().Name} - {ex.Message}");
-            }
-        }
-
-        private static bool IsNetworkPath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                return false;
-
-            return path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
-                   path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase) ||
-                   path.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase);
-        }
     }
 }
