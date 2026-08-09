@@ -27,6 +27,7 @@
 - [BUG-18094] Cleared the 1.8.6 Sonar quality gate by restricting brand-icon build paths, covering the ICO builder, and simplifying schedule and folder code flagged during static analysis.
 - [BUG-18095] Made folder assignment an explicit preview-and-move action, stopped rebuilding the complete project hierarchy after a move, kept grouped projects out of the top-level list, and clarified expanded folders with membership and protection summaries.
 - [BUG-18096] Aligned folder headers, batch actions, count badges, and management menus with the app's compact control geometry and theme-aware surface system in dark, light, and custom themes.
+- [BUG-18097] Completed the optional-folder workflow translations across all maintained locales, including membership, move, health-summary, snapshot, and backup actions.
 
 ## [1.8.5] - 02.08.2026
 ### Added
