@@ -122,6 +122,58 @@
       <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
     </Style>
 
+    <Style Selector="Border.folder-action-strip">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8" />
+    </Style>
+
+    <Style Selector="Button.folder-action">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Background" Value="{DynamicResource CardRaisedBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Button.folder-action.primary">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="Button.folder-action:pointerover">
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+    </Style>
+
+    <Style Selector="FlyoutPresenter.folder-flyout">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="6" />
+    </Style>
+
+    <Style Selector="Button.folder-menu-item">
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Padding" Value="10,7" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Button.folder-menu-item:pointerover">
+      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+    </Style>
+
+    <Style Selector="Button.folder-menu-item.danger">
+      <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    </Style>
+
     <Style Selector="Border.preset-editor-shell">
       <Setter Property="CornerRadius" Value="20" />
       <Setter Property="Background" Value="{DynamicResource Surface1}" />
@@ -460,19 +512,22 @@
                             IsVisible="{Binding HasProjectFolders}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ProjectFolderViewModel">
-                    <StackPanel Margin="0,0,0,12" Spacing="4">
+                    <StackPanel Margin="0,0,0,12"
+                                Spacing="4"
+                                HorizontalAlignment="Stretch">
                       <ToggleButton Classes="folder-header"
                                     IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                    HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Stretch"
                                     Background="{DynamicResource CardBackgroundBrush}"
                                     BorderBrush="{DynamicResource DividerBrush}"
                                     BorderThickness="1"
-                                    CornerRadius="14"
+                                    CornerRadius="6"
                                     Padding="12,10">
                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10" VerticalAlignment="Center">
                           <Border Width="30"
                                   Height="30"
-                                  CornerRadius="9"
+                                  CornerRadius="4"
                                   Background="{DynamicResource AccentSoftBrush}">
                             <shapes:Path Width="16"
                                          Height="16"
@@ -491,7 +546,7 @@
                                        TextTrimming="CharacterEllipsis" />
                           </StackPanel>
                           <Border Grid.Column="2"
-                                  CornerRadius="999"
+                                  CornerRadius="4"
                                   Background="{DynamicResource Surface2}"
                                   Padding="9,4">
                             <TextBlock Text="{Binding ProjectCountLabel}"
@@ -513,22 +568,17 @@
                       </ToggleButton>
 
                       <StackPanel IsVisible="{Binding IsExpanded}" Spacing="6">
-                        <Border Background="{DynamicResource Surface2}"
-                                CornerRadius="12"
-                                Padding="8">
+                        <Border Classes="folder-action-strip"
+                                HorizontalAlignment="Stretch">
                           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                             <WrapPanel ItemSpacing="6" IsVisible="{Binding ShowBatchActions}">
-                              <Button Padding="10,6"
-                                      CornerRadius="8"
-                                      Background="{DynamicResource AccentSoftBrush}"
-                                      Foreground="{DynamicResource TextPrimaryBrush}"
+                              <Button Classes="folder-action primary"
                                       Command="{Binding DataContext.SnapshotGroupCommand, ElementName=Root}"
                                       CommandParameter="{Binding}"
                                       ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.SnapshotAction}">
                                 <TextBlock Text="{Binding SnapshotAllLabel}" FontSize="11" FontWeight="SemiBold" />
                               </Button>
-                              <Button Padding="10,6"
-                                      CornerRadius="8"
+                              <Button Classes="folder-action"
                                       Command="{Binding DataContext.BackupGroupCommand, ElementName=Root}"
                                       CommandParameter="{Binding}"
                                       ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.BackupAction}">
@@ -557,30 +607,23 @@
                             </Grid>
 
                             <Button Grid.Column="1"
+                                    Classes="folder-action"
                                     Width="34"
                                     Height="32"
                                     Padding="0"
-                                    CornerRadius="8"
                                     IsVisible="{Binding !IsRenaming}"
                                     ToolTip.Tip="{infra:LocalizedString Key=Projects.Folder.Rename}">
                               <Button.Flyout>
-                                <Flyout Placement="BottomEdgeAlignedRight">
-                                  <Border Width="170"
-                                          Padding="6"
-                                          CornerRadius="10"
-                                          Background="{DynamicResource CardBackgroundBrush}"
-                                          BorderBrush="{DynamicResource DividerBrush}"
-                                          BorderThickness="1">
-                                    <StackPanel Spacing="4">
-                                      <Button HorizontalContentAlignment="Left"
-                                              Padding="10,7"
+                                <Flyout Placement="BottomEdgeAlignedRight"
+                                        FlyoutPresenterClasses="folder-flyout">
+                                    <StackPanel Width="190" Spacing="2">
+                                      <Button Classes="folder-menu-item"
                                               IsVisible="{Binding CanPauseAutoBackups}"
                                               Command="{Binding DataContext.DisableAutoBackupGroupCommand, ElementName=Root}"
                                               CommandParameter="{Binding}">
                                         <TextBlock Text="{infra:LocalizedString Key=Projects.Group.DisableAuto}" FontSize="11" />
                                       </Button>
-                                      <Button HorizontalContentAlignment="Left"
-                                              Padding="10,7"
+                                      <Button Classes="folder-menu-item"
                                               IsVisible="{Binding CanResumeAutoBackups}"
                                               Command="{Binding DataContext.EnableAutoBackupGroupCommand, ElementName=Root}"
                                               CommandParameter="{Binding}">
@@ -589,21 +632,17 @@
                                       <Border Height="1"
                                               Margin="6,3"
                                               Background="{DynamicResource DividerBrush}" />
-                                      <Button HorizontalContentAlignment="Left"
-                                              Padding="10,7"
+                                      <Button Classes="folder-menu-item"
                                               Command="{Binding DataContext.BeginRenameProjectGroupCommand, ElementName=Root}"
                                               CommandParameter="{Binding}">
                                         <TextBlock Text="{infra:LocalizedString Key=Projects.Folder.Rename}" FontSize="11" />
                                       </Button>
-                                      <Button HorizontalContentAlignment="Left"
-                                              Padding="10,7"
-                                              Foreground="{DynamicResource DangerBrush}"
+                                      <Button Classes="folder-menu-item danger"
                                               Command="{Binding DataContext.RequestDeleteProjectGroupCommand, ElementName=Root}"
                                               CommandParameter="{Binding}">
                                         <TextBlock Text="{infra:LocalizedString Key=Common.Delete}" FontSize="11" />
                                       </Button>
                                     </StackPanel>
-                                  </Border>
                                 </Flyout>
                               </Button.Flyout>
                               <TextBlock Text="•••"
