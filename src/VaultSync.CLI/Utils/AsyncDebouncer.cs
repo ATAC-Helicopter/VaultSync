@@ -35,7 +35,7 @@ namespace VaultSync.CLI.Utils
                 }
                 catch (OperationCanceledException) when (localCts.IsCancellationRequested)
                 {
-                    return;
+                    // A newer trigger or an explicit cancel superseded this pending invocation.
                 }
                 catch (Exception ex)
                 {

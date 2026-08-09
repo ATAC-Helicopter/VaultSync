@@ -329,18 +329,18 @@ namespace VaultSync.UI.ViewModels
             return new BackupProjectPreparation(cfg, selection.Destinations, project, selection.WarningMessage, selection.WarningCode);
         }
 
-        private int PruneMissingBackupsFromPreparedDestination(BackupDestination dest, string effectivePath, AppConfig cfg)
+        private void PruneMissingBackupsFromPreparedDestination(BackupDestination dest, string effectivePath, AppConfig cfg)
         {
             if (string.IsNullOrWhiteSpace(effectivePath))
-                return 0;
+                return;
 
             List<Backup> backups = [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
             if (backups.Count == 0)
-                return 0;
+                return;
 
             List<BackupDestination> destinations = AppViewModel.GetActiveDestinations(cfg);
             if (destinations.Count == 0)
-                return 0;
+                return;
 
             int removed = 0;
             foreach (Backup backup in backups)
@@ -367,7 +367,6 @@ namespace VaultSync.UI.ViewModels
                 RuntimeLog.WriteVerbose($"[Backups] Pruned {removed} missing backup database entr{(removed == 1 ? "y" : "ies")} from prepared destination '{dest.Alias ?? dest.Path}'.");
             }
 
-            return removed;
         }
 
         private static bool BackupBelongsToDestination(Backup backup, BackupDestination dest, int activeDestinationCount)

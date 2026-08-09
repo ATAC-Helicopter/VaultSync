@@ -166,37 +166,6 @@ namespace VaultSync.UI.ViewModels
             public static BackupAllPreparationResult Success(AppConfig cfg) => new(true, null, cfg);
         }
 
-        private void ResolveBackupRoots(
-            Project project,
-            string configuredBackupRoot,
-            out string effectiveBackupRoot,
-            out string? preferredFinalBackupRoot)
-        {
-            BackupSafetyService.EnsureSafeBackupRoot(project, configuredBackupRoot);
-
-            effectiveBackupRoot = configuredBackupRoot;
-            preferredFinalBackupRoot = null;
-
-            if (_settingsViewModel?.PreferExternalDrives == true && IsNetworkPath(configuredBackupRoot))
-            {
-                if (Directory.Exists(configuredBackupRoot))
-                {
-                    TryMigrateTempBackups(project, configuredBackupRoot);
-                }
-                else
-                {
-                    var tempRoot = BackupSafetyService.GetOfflineStagingRoot(project);
-                    Directory.CreateDirectory(tempRoot);
-                    BackupSafetyService.EnsureSafeBackupRoot(project, tempRoot);
-
-                    effectiveBackupRoot = tempRoot;
-                    preferredFinalBackupRoot = configuredBackupRoot;
-                    EnsureNasMonitorStarted();
-                    RuntimeLog.WriteVerbose($"[Backup] Network destination unavailable for project '{project.Name}'. Using safe offline staging root '{tempRoot}'.");
-                }
-            }
-        }
-
         private static void TryMigrateTempBackups(Project project, string targetRoot)
         {
             TryMigrateTempBackupsFromRoot(BackupSafetyService.GetOfflineStagingRoot(project), targetRoot);

@@ -25,6 +25,7 @@ namespace VaultSync.UI.ViewModels
 {
     public class DashboardViewModel : ViewModelBase
     {
+        private const string OtherStorageLocalizationKey = "Dashboard.Storage.Other";
         public enum StorageLegendSortMode
         {
             LargestFirst,
@@ -566,7 +567,6 @@ namespace VaultSync.UI.ViewModels
         private readonly IRepositoryFactory _repositoryFactory;
         private readonly ScheduleViewModel? _scheduleViewModel;
         private RecoveryCoverageSummary _lastRecoveryCoverageSummary = new();
-        private double[]? _snapshotCountsByDayCache;
         private double _lastWeeklyAverage;
 
         public DashboardViewModel()
@@ -922,7 +922,7 @@ namespace VaultSync.UI.ViewModels
                             (BackupUsageSegments.Count == 0 ||
                              (BackupUsageSegments.Count == 1 &&
                               BackupUsageSegments[0].Name.StartsWith(
-                                  L("Dashboard.Storage.Other", "Other"),
+                                  L(OtherStorageLocalizationKey, "Other"),
                                   StringComparison.OrdinalIgnoreCase))))
                         {
                             BuildBackupUsageBarFromVaultSync(
@@ -1099,7 +1099,6 @@ namespace VaultSync.UI.ViewModels
 
             double avg = _snapshotCountsByDay.Length == 0 ? 0d : _snapshotCountsByDay.Average();
             _lastWeeklyAverage = avg;
-            _snapshotCountsByDayCache = _snapshotCountsByDay.ToArray();
             double avgNormalized = avg / max;
             double avgHeight = avg <= 0 ? 0 : barBase + avgNormalized * barRange;
             const double labelOffset = 10;
@@ -1364,11 +1363,11 @@ namespace VaultSync.UI.ViewModels
         if (otherPercent > 0)
         {
             segments.Add(new BackupUsageSegment(
-                L("Dashboard.Storage.Other", "Other"),
+                L(OtherStorageLocalizationKey, "Other"),
                 FormatBytes(otherBytes),
                 otherPercent,
                 new ImmutableSolidColorBrush(Color.Parse("#8E8E93")),
-                Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", L("Dashboard.Storage.Other", "Other"), FormatBytes(otherBytes))));
+                Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", L(OtherStorageLocalizationKey, "Other"), FormatBytes(otherBytes))));
         }
 
                 // 2) One segment per project for its latest snapshot size, as percent of total disk.
@@ -1697,7 +1696,7 @@ namespace VaultSync.UI.ViewModels
                 return [];
 
             var projectSegments = segments
-                .Where(s => !string.Equals(s.Name, L("Dashboard.Storage.Other", "Other"), StringComparison.Ordinal))
+                .Where(s => !string.Equals(s.Name, L(OtherStorageLocalizationKey, "Other"), StringComparison.Ordinal))
                 .ToList();
 
             if (projectSegments.Count == 0)
