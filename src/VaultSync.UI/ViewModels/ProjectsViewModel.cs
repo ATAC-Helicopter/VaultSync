@@ -1282,28 +1282,7 @@ public partial class ProjectsViewModel : ViewModelBase
 
     private void SyncProjectsCollection(IReadOnlyList<ProjectItemViewModel> newList)
     {
-        for (int i = 0; i < newList.Count; i++)
-        {
-            var item = newList[i];
-            if (i < Projects.Count && ReferenceEquals(Projects[i], item))
-                continue;
-
-            var currentIndex = Projects.IndexOf(item);
-            if (currentIndex >= 0)
-            {
-                Projects.Move(currentIndex, i);
-            }
-            else
-            {
-                Projects.Insert(i, item);
-            }
-        }
-
-        // Remove any extra items not in newList
-        for (int i = Projects.Count - 1; i >= newList.Count; i--)
-        {
-            Projects.RemoveAt(i);
-        }
+        Projects.SyncWith(newList);
     }
 
     private void RestoreProjectSelection(bool autoSelectIfNone)

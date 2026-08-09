@@ -1044,14 +1044,13 @@ public sealed class HistoryViewModel : ViewModelBase
         _filteredEventCount = result.FilteredEventCount;
         _pageIndex = result.PageIndex;
 
-        TimelineItems.Clear();
         for (int i = 0; i < result.PageItems.Count; i++)
         {
             HistoryTimelineItemViewModel item = result.PageItems[i];
             HistoryGraphPaths paths = result.GraphPaths[i];
             item.SetPageGraphPaths(paths.BackupPath, paths.MetadataPath, paths.RestorePath);
-            TimelineItems.Add(item);
         }
+        TimelineItems.SyncWith(result.PageItems);
 
         if (TimelineItems.Count == 0)
         {
@@ -1134,10 +1133,8 @@ public sealed class HistoryViewModel : ViewModelBase
             .OrderBy(option => option.Label, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        ProjectFilterOptions.Clear();
-        ProjectFilterOptions.Add(new HistoryProjectFilterOption(null, L("History.Project.All", "All projects")));
-        foreach (HistoryProjectFilterOption option in options)
-            ProjectFilterOptions.Add(option);
+        options.Insert(0, new HistoryProjectFilterOption(null, L("History.Project.All", "All projects")));
+        ProjectFilterOptions.SyncWith(options);
 
         _selectedProjectFilter = ProjectFilterOptions.FirstOrDefault(option => option.ProjectId == previousProjectId)
             ?? ProjectFilterOptions[0];

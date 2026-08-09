@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Specialized;
 using VaultSync.Core.Models;
 using VaultSync.UI.ViewModels;
 using Xunit;
@@ -103,5 +104,26 @@ public sealed class ProjectFolderViewModelTests
         Assert.Contains("1 healthy", folder.HealthSummary, StringComparison.Ordinal);
         Assert.True(folder.CanPauseAutoBackups);
         Assert.True(folder.CanResumeAutoBackups);
+    }
+
+    [Fact]
+    public void ReplacingFolderProjectsReconcilesWithoutResettingTheBoundList()
+    {
+        var first = new ProjectItemViewModel { ProjectId = 1, Name = "First" };
+        var second = new ProjectItemViewModel { ProjectId = 2, Name = "Second" };
+        var third = new ProjectItemViewModel { ProjectId = 3, Name = "Third" };
+        var folder = new ProjectFolderViewModel(
+            new ProjectGroup { Id = "work", Name = "Work" },
+            "Ungrouped");
+        folder.ReplaceProjects([first, second]);
+
+        bool resetRaised = false;
+        folder.Projects.CollectionChanged += (_, args) =>
+            resetRaised |= args.Action == NotifyCollectionChangedAction.Reset;
+
+        folder.ReplaceProjects([second, third]);
+
+        Assert.False(resetRaised);
+        Assert.Equal([second, third], folder.Projects);
     }
 }

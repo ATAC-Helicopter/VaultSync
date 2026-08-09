@@ -153,11 +153,9 @@ public sealed class ProjectFolderViewModel : ViewModelBase
         IEnumerable<ProjectItemViewModel> visibleProjects,
         IEnumerable<ProjectItemViewModel>? allProjects = null)
     {
-        Projects.Clear();
-        foreach (ProjectItemViewModel project in visibleProjects)
-            Projects.Add(project);
-
-        AllProjects = [.. allProjects ?? Projects];
+        IReadOnlyList<ProjectItemViewModel> visible = [.. visibleProjects];
+        Projects.SyncWith(visible);
+        AllProjects = [.. allProjects ?? visible];
 
         NotifyAggregateChanged();
     }

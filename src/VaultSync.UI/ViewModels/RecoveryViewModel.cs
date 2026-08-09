@@ -630,9 +630,7 @@ public sealed class RecoveryViewModel : ViewModelBase
         IReadOnlyList<RecoveryProjectViewModel> visible =
             RecoveryProjectListFilter.Apply(_allProjects, ProjectSearchText, filter);
 
-        Projects.Clear();
-        foreach (RecoveryProjectViewModel project in visible)
-            Projects.Add(project);
+        Projects.SyncWith(visible);
 
         OnPropertyChanged(nameof(HasProjects));
         OnPropertyChanged(nameof(VisibleProjectSummaryLabel));

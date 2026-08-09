@@ -2628,9 +2628,7 @@ namespace VaultSync.UI.ViewModels
 
             string? selectedId = SelectedProject?.Id;
             var orderedList = ordered.ToList();
-            ProjectBackups.Clear();
-            foreach (ProjectBackupItem? item in orderedList)
-                ProjectBackups.Add(item);
+            ProjectBackups.SyncWith(orderedList);
 
             if (!string.IsNullOrWhiteSpace(selectedId))
             {
@@ -2983,14 +2981,8 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            ActiveDestinationStatuses.Clear();
-            foreach (DestinationStatusItem item in DestinationStatuses)
-            {
-                if (item.IsActive)
-                {
-                    ActiveDestinationStatuses.Add(item);
-                }
-            }
+            List<DestinationStatusItem> active = [.. DestinationStatuses.Where(item => item.IsActive)];
+            ActiveDestinationStatuses.SyncWith(active);
             OnPropertyChanged(nameof(HasActiveDestinationStatuses));
         }
 
@@ -3141,9 +3133,7 @@ namespace VaultSync.UI.ViewModels
                 .OrderByDescending(s => s.Timestamp)
                 .ToList();
 
-            Snapshots.Clear();
-            foreach (BackupSnapshotItem? s in ordered)
-                Snapshots.Add(s);
+            Snapshots.SyncWith(ordered);
 
             // If we are not forcing a reset, try to restore previous selection by Id.
             if (!forceResetCompare)
@@ -3303,9 +3293,7 @@ namespace VaultSync.UI.ViewModels
 
         private void ReplaceSnapshotGroups(IReadOnlyList<SnapshotProjectGroup> groups)
         {
-            SnapshotGroups.Clear();
-            foreach (SnapshotProjectGroup group in groups)
-                SnapshotGroups.Add(group);
+            SnapshotGroups.SyncWith(groups);
         }
 
         private List<SnapshotProjectGroup> BuildSnapshotGroups(

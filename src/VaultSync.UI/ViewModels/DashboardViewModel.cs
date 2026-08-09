@@ -885,11 +885,7 @@ namespace VaultSync.UI.ViewModels
 
                         List<ActivityItem> activityItems = BuildRecentActivityItems(data);
 
-                        ActivityItems.Clear();
-                        foreach (ActivityItem item in activityItems)
-                        {
-                            ActivityItems.Add(item);
-                        }
+                        ActivityItems.SyncWith(activityItems);
 
                         for (int i = 0; i < _days.Length && i < data.DayLabels.Length; i++)
                         {
@@ -1088,7 +1084,7 @@ namespace VaultSync.UI.ViewModels
         private void BuildWeeklyActivity()
         {
             using var timing = RuntimeTiming.Measure("Dashboard weekly activity rebuild");
-            WeeklySnapshotActivity.Clear();
+            var activity = new List<SnapshotActivityPoint>(_snapshotCountsByDay.Length);
 
             double max = _snapshotCountsByDay.DefaultIfEmpty(0d).Max();
             if (max < 1)
@@ -1143,7 +1139,7 @@ namespace VaultSync.UI.ViewModels
                     }
                 }
 
-                WeeklySnapshotActivity.Add(new SnapshotActivityPoint
+                activity.Add(new SnapshotActivityPoint
                 {
                     DayLabel     = dayLabel,
                     ShowLabel    = true,
@@ -1157,6 +1153,7 @@ namespace VaultSync.UI.ViewModels
                     TooltipText  = tooltip
                 });
             }
+            WeeklySnapshotActivity.SyncWith(activity);
 
             OnPropertyChanged(nameof(WeeklyAverageLineOffset));
             OnPropertyChanged(nameof(WeeklyAverageLabel));
@@ -2340,7 +2337,7 @@ namespace VaultSync.UI.ViewModels
             RestoreReadinessRiskLabel = Lf("RestoreReadiness.Count.Risk", "{0} risk", summary.RiskCount);
             RestoreReadinessUnavailableLabel = Lf("RestoreReadiness.Count.Unavailable", "{0} unavailable", summary.UnavailableCount);
 
-            RestoreReadinessIssues.Clear();
+            var issues = new List<RestoreReadinessIssueItem>();
             foreach (ProjectRestoreReadiness? item in summary.Projects
                          .Where(project => project.State != RestoreReadinessState.Ready)
                          .OrderByDescending(project => project.State == RestoreReadinessState.Risk)
@@ -2348,12 +2345,13 @@ namespace VaultSync.UI.ViewModels
                          .ThenBy(project => project.ProjectName, StringComparer.CurrentCultureIgnoreCase)
                          .Take(6))
             {
-                RestoreReadinessIssues.Add(new RestoreReadinessIssueItem(
+                issues.Add(new RestoreReadinessIssueItem(
                     item.ProjectName,
                     LocalizeRestoreReadinessState(item.State),
                     item.Reason,
                     GetRestoreReadinessBrush(item.State)));
             }
+            RestoreReadinessIssues.SyncWith(issues);
 
             if (RestoreReadinessIssues.Count == 0)
                 ShowRestoreReadinessIssues = false;

@@ -333,14 +333,14 @@ public sealed class ScheduleViewModel : ViewModelBase
             projects = [];
         }
 
-        ProjectCoverage.Clear();
+        var coverage = new List<ScheduleProjectRowViewModel>(projects.Count);
         string previousGroup = string.Empty;
         foreach (ScheduleProjectSnapshot project in projects
                      .OrderBy(item => ResolveGroupName(item.GroupName), StringComparer.CurrentCultureIgnoreCase)
                      .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase))
         {
             string groupName = ResolveGroupName(project.GroupName);
-            ProjectCoverage.Add(new ScheduleProjectRowViewModel
+            coverage.Add(new ScheduleProjectRowViewModel
             {
                 GroupName = groupName,
                 ShowGroupHeader = !string.Equals(previousGroup, groupName, StringComparison.CurrentCultureIgnoreCase),
@@ -354,6 +354,7 @@ public sealed class ScheduleViewModel : ViewModelBase
             });
             previousGroup = groupName;
         }
+        ProjectCoverage.SyncWith(coverage);
 
         RegisteredProjectCount = projects.Count;
         IncludedProjectCount = projects.Count(project => project.AutomaticEnabled);
@@ -389,11 +390,11 @@ public sealed class ScheduleViewModel : ViewModelBase
             timerDue,
             count: 4);
 
-        UpcomingRuns.Clear();
+        var upcomingRuns = new List<ScheduleOpportunityViewModel>(opportunities.Count);
         for (int index = 0; index < opportunities.Count; index++)
         {
             BackupScheduleOpportunity opportunity = opportunities[index];
-            UpcomingRuns.Add(new ScheduleOpportunityViewModel
+            upcomingRuns.Add(new ScheduleOpportunityViewModel
             {
                 Sequence = (index + 1).ToString(CultureInfo.CurrentCulture),
                 Day = opportunity.OccursAtLocal.ToString("ddd, d MMM", CultureInfo.CurrentCulture),
@@ -403,6 +404,7 @@ public sealed class ScheduleViewModel : ViewModelBase
                     : L("Schedule.Opportunity.Ready", "Timer opportunity")
             });
         }
+        UpcomingRuns.SyncWith(upcomingRuns);
     }
 
     private void UpdateReadiness(DateTimeOffset now)

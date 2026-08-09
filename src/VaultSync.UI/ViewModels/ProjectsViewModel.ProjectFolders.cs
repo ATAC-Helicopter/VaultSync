@@ -100,13 +100,8 @@ public partial class ProjectsViewModel
             string.IsNullOrWhiteSpace(project.GroupId) ||
             GroupOptions.All(option => !string.Equals(option.Id, project.GroupId, StringComparison.OrdinalIgnoreCase)))];
 
-        ProjectFolders.Clear();
-        foreach (ProjectFolderViewModel folder in rebuilt)
-            ProjectFolders.Add(folder);
-
-        UngroupedProjects.Clear();
-        foreach (ProjectItemViewModel project in ungroupedProjects)
-            UngroupedProjects.Add(project);
+        ProjectFolders.SyncWith(rebuilt);
+        UngroupedProjects.SyncWith(ungroupedProjects);
 
         OnPropertiesChanged(nameof(HasProjectFolders), nameof(HasUngroupedProjects));
 
@@ -188,9 +183,7 @@ public partial class ProjectsViewModel
         else
         {
             List<ProjectItemViewModel> ungrouped = [.. SortProjectItems(UngroupedProjects.Append(project))];
-            UngroupedProjects.Clear();
-            foreach (ProjectItemViewModel candidate in ungrouped)
-                UngroupedProjects.Add(candidate);
+            UngroupedProjects.SyncWith(ungrouped);
         }
 
         OnPropertiesChanged(nameof(HasProjectFolders), nameof(HasUngroupedProjects));
