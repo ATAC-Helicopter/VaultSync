@@ -24,25 +24,6 @@ namespace VaultSync.UI.ViewModels
 {
     public partial class AppViewModel
     {
-        private void EnsureNasMonitorStarted()
-        {
-            if (_nasMonitorTimer != null)
-                return;
-
-            // Check every 5 minutes; first check after 2 minutes.
-            _nasMonitorTimer = new Timer(
-                _ => _ = CheckNasAndMigrateAsync(),
-                null,
-                TimeSpan.FromMinutes(2),
-                TimeSpan.FromMinutes(5));
-        }
-
-        private void StopNasMonitor()
-        {
-            _nasMonitorTimer?.Dispose();
-            _nasMonitorTimer = null;
-        }
-
         private async Task RunStartupDestinationProbeAsync()
         {
             if (Interlocked.Exchange(ref _startupDestinationProbeQueued, 1) == 1)
@@ -1376,58 +1357,6 @@ namespace VaultSync.UI.ViewModels
                 string.Equals(alias, target.Alias, StringComparison.OrdinalIgnoreCase);
         }
 
-        private Task CheckNasAndMigrateAsync()
-        {
-            if (Interlocked.Exchange(ref _nasMonitorInFlight, 1) == 1)
-                return Task.CompletedTask;
-
-            try
-            {
-                if (BackupsViewModel.IsBusy)
-                    return Task.CompletedTask;
-
-                AppConfig cfg = _configStore.GetSnapshot();
-
-                if (_settingsViewModel?.PreferExternalDrives != true)
-                    return Task.CompletedTask;
-
-                string? backupRoot = cfg.Backups.BackupRoot;
-                if (string.IsNullOrWhiteSpace(backupRoot) || !IsNetworkPath(backupRoot))
-                    return Task.CompletedTask;
-
-                if (!Directory.Exists(backupRoot))
-                    return Task.CompletedTask;
-
-                var projects = _repo.GetAllProjects().ToList();
-                bool hadTemp = false;
-
-                foreach (Project? project in projects)
-                {
-                    string tempRoot = Path.Combine(project.RootPath, ".vaultsync-temp-backups");
-                    if (Directory.Exists(tempRoot))
-                    {
-                        hadTemp = true;
-                        TryMigrateTempBackups(project, backupRoot);
-                    }
-                }
-
-                // If no temp backups remain anywhere, stop the monitor to avoid unnecessary pings.
-                if (!hadTemp)
-                {
-                    StopNasMonitor();
-                }
-            }
-            catch (Exception ex)
-            {
-                DiagnosticsLogger.RecordException("NAS staging monitor failed", ex, includeStack: false);
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _nasMonitorInFlight, 0);
-            }
-
-            return Task.CompletedTask;
-        }
         private static bool TryWriteProbeFile(string effectivePath)
         {
             string testFile = Path.Combine(effectivePath, $".vaultsync_destination_test_{Guid.NewGuid():N}");

@@ -107,9 +107,6 @@ namespace VaultSync.UI.ViewModels
         private AppConfig _config;
         private IBackupWidgetService? _backupWidgetService;
 
-        // NAS monitor to move temp backups when the preferred network root becomes reachable again.
-        private Timer? _nasMonitorTimer;
-        private int _nasMonitorInFlight;
         private Timer? _autoBackupTimer;
         private int _autoBackupInFlight;
         private DateTimeOffset? _nextAutoBackupDueUtc;

@@ -26,6 +26,7 @@ namespace VaultSync.UI.ViewModels
     public class DashboardViewModel : ViewModelBase
     {
         private const string OtherStorageLocalizationKey = "Dashboard.Storage.Other";
+        private const string OtherStorageFallback = "Other";
         public enum StorageLegendSortMode
         {
             LargestFirst,
@@ -922,7 +923,7 @@ namespace VaultSync.UI.ViewModels
                             (BackupUsageSegments.Count == 0 ||
                              (BackupUsageSegments.Count == 1 &&
                               BackupUsageSegments[0].Name.StartsWith(
-                                  L(OtherStorageLocalizationKey, "Other"),
+                                  L(OtherStorageLocalizationKey, OtherStorageFallback),
                                   StringComparison.OrdinalIgnoreCase))))
                         {
                             BuildBackupUsageBarFromVaultSync(
@@ -1363,11 +1364,11 @@ namespace VaultSync.UI.ViewModels
         if (otherPercent > 0)
         {
             segments.Add(new BackupUsageSegment(
-                L(OtherStorageLocalizationKey, "Other"),
+                L(OtherStorageLocalizationKey, OtherStorageFallback),
                 FormatBytes(otherBytes),
                 otherPercent,
                 new ImmutableSolidColorBrush(Color.Parse("#8E8E93")),
-                Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", L(OtherStorageLocalizationKey, "Other"), FormatBytes(otherBytes))));
+                Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", L(OtherStorageLocalizationKey, OtherStorageFallback), FormatBytes(otherBytes))));
         }
 
                 // 2) One segment per project for its latest snapshot size, as percent of total disk.
@@ -1696,7 +1697,7 @@ namespace VaultSync.UI.ViewModels
                 return [];
 
             var projectSegments = segments
-                .Where(s => !string.Equals(s.Name, L(OtherStorageLocalizationKey, "Other"), StringComparison.Ordinal))
+                .Where(s => !string.Equals(s.Name, L(OtherStorageLocalizationKey, OtherStorageFallback), StringComparison.Ordinal))
                 .ToList();
 
             if (projectSegments.Count == 0)
