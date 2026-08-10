@@ -50,8 +50,6 @@ public partial class MainWindow : Window
             Classes.Add("linux-performance");
         }
 
-        // Use the shared AppViewModel created in App.axaml.cs when available;
-        // fall back to a new instance (e.g. for design-time preview).
         _appVm = App.AppViewModelInstance ?? new AppViewModel();
         DataContext = _appVm;
 
@@ -184,6 +182,7 @@ public partial class MainWindow : Window
         NavDashboardText.IsVisible = !collapsed;
         NavProjectsText.IsVisible = !collapsed;
         NavBackupsText.IsVisible = !collapsed;
+        NavScheduleText.IsVisible = !collapsed;
         NavHistoryText.IsVisible = !collapsed;
         NavRecoveryText.IsVisible = !collapsed;
         NavGuideText.IsVisible = !collapsed;
@@ -196,6 +195,7 @@ public partial class MainWindow : Window
         NavDashboardButton.HorizontalContentAlignment = contentAlignment;
         NavProjectsButton.HorizontalContentAlignment = contentAlignment;
         NavBackupsButton.HorizontalContentAlignment = contentAlignment;
+        NavScheduleButton.HorizontalContentAlignment = contentAlignment;
         NavHistoryButton.HorizontalContentAlignment = contentAlignment;
         NavRecoveryButton.HorizontalContentAlignment = contentAlignment;
         NavGuideButton.HorizontalContentAlignment = contentAlignment;
@@ -203,6 +203,7 @@ public partial class MainWindow : Window
         NavDashboardButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         NavProjectsButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         NavBackupsButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        NavScheduleButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         NavHistoryButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         NavRecoveryButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         NavGuideButton.HorizontalAlignment = collapsed ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
@@ -210,6 +211,7 @@ public partial class MainWindow : Window
         NavDashboardButton.Width = navButtonWidth;
         NavProjectsButton.Width = navButtonWidth;
         NavBackupsButton.Width = navButtonWidth;
+        NavScheduleButton.Width = navButtonWidth;
         NavHistoryButton.Width = navButtonWidth;
         NavRecoveryButton.Width = navButtonWidth;
         NavGuideButton.Width = navButtonWidth;
@@ -217,6 +219,7 @@ public partial class MainWindow : Window
         NavDashboardButton.Height = navButtonHeight;
         NavProjectsButton.Height = navButtonHeight;
         NavBackupsButton.Height = navButtonHeight;
+        NavScheduleButton.Height = navButtonHeight;
         NavHistoryButton.Height = navButtonHeight;
         NavRecoveryButton.Height = navButtonHeight;
         NavGuideButton.Height = navButtonHeight;
@@ -224,6 +227,7 @@ public partial class MainWindow : Window
         NavDashboardButton.Padding = navButtonPadding;
         NavProjectsButton.Padding = navButtonPadding;
         NavBackupsButton.Padding = navButtonPadding;
+        NavScheduleButton.Padding = navButtonPadding;
         NavHistoryButton.Padding = navButtonPadding;
         NavRecoveryButton.Padding = navButtonPadding;
         NavGuideButton.Padding = navButtonPadding;
@@ -232,6 +236,7 @@ public partial class MainWindow : Window
         NavDashboardButton.Classes.Set(CompactClass, collapsed);
         NavProjectsButton.Classes.Set(CompactClass, collapsed);
         NavBackupsButton.Classes.Set(CompactClass, collapsed);
+        NavScheduleButton.Classes.Set(CompactClass, collapsed);
         NavHistoryButton.Classes.Set(CompactClass, collapsed);
         NavRecoveryButton.Classes.Set(CompactClass, collapsed);
         NavGuideButton.Classes.Set(CompactClass, collapsed);
@@ -239,6 +244,7 @@ public partial class MainWindow : Window
         NavDashboardIconBadge.Classes.Set(CompactClass, collapsed);
         NavProjectsIconBadge.Classes.Set(CompactClass, collapsed);
         NavBackupsIconBadge.Classes.Set(CompactClass, collapsed);
+        NavScheduleIconBadge.Classes.Set(CompactClass, collapsed);
         NavHistoryIconBadge.Classes.Set(CompactClass, collapsed);
         NavRecoveryIconBadge.Classes.Set(CompactClass, collapsed);
         NavGuideIconBadge.Classes.Set(CompactClass, collapsed);

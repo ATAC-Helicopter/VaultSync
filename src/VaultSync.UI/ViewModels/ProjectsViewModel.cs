@@ -29,7 +29,7 @@ namespace VaultSync.UI.ViewModels;
 /// Projects page view model - drives the list on the left and the
 /// details / actions panel on the right.
 /// </summary>
-public class ProjectsViewModel : ViewModelBase
+public partial class ProjectsViewModel : ViewModelBase
 {
     private const string GenericPresetId = "generic";
     private const string NoPresetId = "no preset";
@@ -43,6 +43,7 @@ public class ProjectsViewModel : ViewModelBase
         int ProjectId,
         string Preset,
         string TagsCsv,
+        string GroupId,
         string PreferredDestinationId,
         string EncryptionPolicy,
         string EncryptionKeyRef);
@@ -54,8 +55,13 @@ public class ProjectsViewModel : ViewModelBase
     private string? _cachedDiscoveryRoot;
     private DateTime _cachedDiscoveryUtc;
     private static readonly TimeSpan DiscoveryCacheTtl = TimeSpan.FromSeconds(10);
-    private static string L(string key, string fallback) =>
-        LocalizationProvider.Service?.GetString(key) ?? fallback;
+    private static string L(string key, string fallback)
+    {
+        string? value = LocalizationProvider.Service?.GetString(key);
+        return string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal)
+            ? fallback
+            : value;
+    }
 
     private static string Lf(string key, string fallback, params object[] args)
     {
@@ -98,6 +104,10 @@ public class ProjectsViewModel : ViewModelBase
         [];
     public ObservableCollection<ProjectGroupOption> GroupOptions { get; } =
         [];
+    public ObservableCollection<ProjectFolderViewModel> ProjectFolders { get; } =
+        [];
+    public ObservableCollection<ProjectItemViewModel> UngroupedProjects { get; } =
+        [];
     public ObservableCollection<ProjectItemViewModel> Projects { get; } =
         [];
     private readonly Dictionary<string, PresetInfo> _presetCatalogById =
@@ -113,7 +123,9 @@ public class ProjectsViewModel : ViewModelBase
     private int _refreshInFlight;
     private int _refreshQueued;
     private readonly RelayCommand _openFolderCommand;
+    private readonly RelayCommand _selectProjectCommand;
     private readonly RelayCommand _removeProjectCommand;
+    private readonly RelayCommand _confirmRemoveProjectCommand;
     private readonly RelayCommand _applyPresetRecommendationCommand;
     private readonly RelayCommand _togglePresetEditorCommand;
     private readonly RelayCommand _reloadPresetEditorCommand;
@@ -126,6 +138,14 @@ public class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _backupGroupCommand;
     private readonly RelayCommand _disableAutoBackupGroupCommand;
     private readonly RelayCommand _enableAutoBackupGroupCommand;
+    private readonly RelayCommand _createProjectGroupCommand;
+    private readonly RelayCommand _beginRenameProjectGroupCommand;
+    private readonly RelayCommand _saveRenameProjectGroupCommand;
+    private readonly RelayCommand _cancelRenameProjectGroupCommand;
+    private readonly RelayCommand _requestDeleteProjectGroupCommand;
+    private readonly RelayCommand _confirmDeleteProjectGroupCommand;
+    private readonly RelayCommand _cancelDeleteProjectGroupCommand;
+    private readonly RelayCommand _moveSelectedProjectToFolderCommand;
     private readonly RelayCommand _commitProjectTagInputCommand;
     private readonly RelayCommand _removeProjectTagCommand;
     private readonly RelayCommand _addExistingTagToSelectedProjectCommand;
@@ -133,10 +153,6 @@ public class ProjectsViewModel : ViewModelBase
     private readonly RelayCommand _applyProjectTagColorCommand;
     private readonly RelayCommand _resetProjectTagColorCommand;
     private readonly RelayCommand _applyProjectTagColorSwatchCommand;
-    private readonly RelayCommand _applyTagToGroupCommand;
-    private readonly RelayCommand _removeTagFromGroupCommand;
-    private readonly RelayCommand _selectGroupTagCommand;
-    private readonly RelayCommand _removeGroupTagCommand;
     private bool _isProjectTagColorEditorOpen;
     private bool _projectTagColorSyncing;
     private string _projectTagColorHex = "#3A7AFE";
@@ -159,14 +175,13 @@ public class ProjectsViewModel : ViewModelBase
 
                 OnPropertyChanged(nameof(HasSelectedProject));
                 OnPropertyChanged(nameof(ShowSelectedProjectEmptyState));
+                IsRemoveProjectPreviewOpen = false;
 
                 _openFolderCommand.RaiseCanExecuteChanged();
                 _removeProjectCommand.RaiseCanExecuteChanged();
+                _confirmRemoveProjectCommand.RaiseCanExecuteChanged();
+                _moveSelectedProjectToFolderCommand.RaiseCanExecuteChanged();
                 _applyPresetRecommendationCommand.RaiseCanExecuteChanged();
-                _snapshotGroupCommand.RaiseCanExecuteChanged();
-                _backupGroupCommand.RaiseCanExecuteChanged();
-                _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
-                _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
                 _commitProjectTagInputCommand.RaiseCanExecuteChanged();
                 _removeProjectTagCommand.RaiseCanExecuteChanged();
                 _addExistingTagToSelectedProjectCommand.RaiseCanExecuteChanged();
@@ -180,9 +195,32 @@ public class ProjectsViewModel : ViewModelBase
     }
 
     public bool HasProjects => Projects.Count > 0;
+    public bool HasProjectFolders => ProjectFolders.Count > 0;
+    public bool HasUngroupedProjects => UngroupedProjects.Count > 0;
     public bool ShowProjectsEmptyState => !HasProjects;
     public bool HasSelectedProject => SelectedProject is not null;
     public bool ShowSelectedProjectEmptyState => !HasSelectedProject;
+
+    private bool _isRemoveProjectPreviewOpen;
+    public bool IsRemoveProjectPreviewOpen
+    {
+        get => _isRemoveProjectPreviewOpen;
+        private set => SetField(ref _isRemoveProjectPreviewOpen, value);
+    }
+
+    private string _removeProjectPreviewTitle = string.Empty;
+    public string RemoveProjectPreviewTitle
+    {
+        get => _removeProjectPreviewTitle;
+        private set => SetField(ref _removeProjectPreviewTitle, value);
+    }
+
+    private string _removeProjectPreviewDetail = string.Empty;
+    public string RemoveProjectPreviewDetail
+    {
+        get => _removeProjectPreviewDetail;
+        private set => SetField(ref _removeProjectPreviewDetail, value);
+    }
 
     public bool ShowProjectAvatars { get; private set; } = true;
 
@@ -205,12 +243,24 @@ public class ProjectsViewModel : ViewModelBase
 
     public ICommand RefreshCommand { get; }
     public ICommand OpenFolderCommand { get; }
+    public ICommand SelectProjectCommand { get; }
     public ICommand RemoveProjectCommand { get; }
+    public ICommand CancelRemoveProjectCommand { get; }
+    public ICommand ConfirmRemoveProjectCommand { get; }
+    public ICommand ReviewStoredBackupsCommand { get; }
     public ICommand SnapshotCommand { get; }
     public ICommand SnapshotGroupCommand { get; }
     public ICommand BackupGroupCommand { get; }
     public ICommand DisableAutoBackupGroupCommand { get; }
     public ICommand EnableAutoBackupGroupCommand { get; }
+    public ICommand CreateProjectGroupCommand { get; }
+    public ICommand BeginRenameProjectGroupCommand { get; }
+    public ICommand SaveRenameProjectGroupCommand { get; }
+    public ICommand CancelRenameProjectGroupCommand { get; }
+    public ICommand RequestDeleteProjectGroupCommand { get; }
+    public ICommand ConfirmDeleteProjectGroupCommand { get; }
+    public ICommand CancelDeleteProjectGroupCommand { get; }
+    public ICommand MoveSelectedProjectToFolderCommand { get; }
     public ICommand CommitProjectTagInputCommand { get; }
     public ICommand RemoveProjectTagCommand { get; }
     public ICommand AddExistingTagToSelectedProjectCommand { get; }
@@ -218,10 +268,6 @@ public class ProjectsViewModel : ViewModelBase
     public ICommand ApplyProjectTagColorCommand { get; }
     public ICommand ResetProjectTagColorCommand { get; }
     public ICommand ApplyProjectTagColorSwatchCommand { get; }
-    public ICommand ApplyTagToGroupCommand { get; }
-    public ICommand RemoveTagFromGroupCommand { get; }
-    public ICommand SelectGroupTagCommand { get; }
-    public ICommand RemoveGroupTagCommand { get; }
     public ICommand TakeSnapshotCommand => SnapshotCommand;
     public ICommand ManageProjectEncryptionCommand { get; }
     public ICommand ApplyPresetRecommendationCommand { get; }
@@ -241,21 +287,15 @@ public class ProjectsViewModel : ViewModelBase
     public event Action<IReadOnlyList<int>, bool>? AutoBackupGroupPreferenceChanged;
     public event Action<int, string>? ProjectRemovedFromDatabase;
     public ObservableCollection<ProjectTagChip> SelectedProjectTags { get; } = [];
-    public ObservableCollection<ProjectTagChip> SelectedGroupTags { get; } = [];
     public ObservableCollection<ProjectTagChip> ReusableProjectTags { get; } = [];
-    private string _groupTagInput = string.Empty;
-    public string GroupTagInput
+    private string _newProjectGroupName = string.Empty;
+    public string NewProjectGroupName
     {
-        get => _groupTagInput;
+        get => _newProjectGroupName;
         set
         {
-            if (!SetField(ref _groupTagInput, value ?? string.Empty))
-                return;
-
-            ConsumeGroupTagInputDelimiters();
-            _applyTagToGroupCommand.RaiseCanExecuteChanged();
-            _removeTagFromGroupCommand.RaiseCanExecuteChanged();
-            _addExistingTagToSelectedProjectCommand.RaiseCanExecuteChanged();
+            if (SetField(ref _newProjectGroupName, value ?? string.Empty))
+                _createProjectGroupCommand.RaiseCanExecuteChanged();
         }
     }
     private string _projectTagInput = string.Empty;
@@ -535,24 +575,6 @@ public class ProjectsViewModel : ViewModelBase
     private HashSet<int> _autoBackupDisabledProjectIds = [];
     private string _searchText = string.Empty;
     private int _initialLoadQueued;
-    private ProjectGroupOption? _selectedGroup;
-    public ProjectGroupOption? SelectedGroup
-    {
-        get => _selectedGroup;
-        set
-        {
-            if (SetField(ref _selectedGroup, value))
-            {
-                ApplyFilterAndSort();
-                _snapshotGroupCommand.RaiseCanExecuteChanged();
-                _backupGroupCommand.RaiseCanExecuteChanged();
-                _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
-                _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
-                _applyTagToGroupCommand.RaiseCanExecuteChanged();
-                _removeTagFromGroupCommand.RaiseCanExecuteChanged();
-            }
-        }
-    }
 
     public ProjectsViewModel()
         : this(StaticAppConfigStore.Instance, new SqliteRepositoryFactory(StaticAppConfigStore.Instance))
@@ -564,8 +586,13 @@ public class ProjectsViewModel : ViewModelBase
         _configStore = configStore;
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
         RefreshCommand = new RelayCommand(_ => Refresh());
+        _selectProjectCommand = new RelayCommand(project => SelectedProject = project as ProjectItemViewModel);
         _openFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
-        _removeProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
+        _removeProjectCommand = new RelayCommand(_ => BeginRemoveProjectPreview(), _ => SelectedProject is not null);
+        var cancelRemoveProjectCommand = new RelayCommand(_ => IsRemoveProjectPreviewOpen = false);
+        _confirmRemoveProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
+        var reviewStoredBackupsCommand = new RelayCommand(_ =>
+            App.AppViewModelInstance?.NavigateBackups?.Execute(null));
         _applyPresetRecommendationCommand = new RelayCommand(_ => ApplyPresetRecommendation(), _ =>
             SelectedProject is { RecommendedPreset.Length: > 0 });
         _togglePresetEditorCommand = new RelayCommand(_ => TogglePresetEditor(), _ => HasPresetEditorTarget);
@@ -576,17 +603,35 @@ public class ProjectsViewModel : ViewModelBase
         _exportPresetEditorCommand = new RelayCommand(_ => ExportPresetEditor(), _ => HasPresetEditorTarget);
         _importPresetEditorCommand = new RelayCommand(_ => ImportPresetEditor());
         _snapshotGroupCommand = new RelayCommand(
-            _ => _ = DetachedTask.RunAsync(SnapshotSelectedGroupAsync, "snapshot-selected-group"),
-            _ => CanSnapshotSelectedGroup());
+            folder => _ = DetachedTask.RunAsync(() => SnapshotProjectGroupAsync(folder as ProjectFolderViewModel), "snapshot-project-folder"),
+            folder => CanRunProjectGroupAction(folder as ProjectFolderViewModel));
         _backupGroupCommand = new RelayCommand(
-            _ => _ = DetachedTask.RunAsync(BackupSelectedGroupAsync, "backup-selected-group"),
-            _ => CanBackupSelectedGroup());
+            folder => _ = DetachedTask.RunAsync(() => BackupProjectGroupAsync(folder as ProjectFolderViewModel), "backup-project-folder"),
+            folder => CanRunProjectGroupAction(folder as ProjectFolderViewModel));
         _disableAutoBackupGroupCommand = new RelayCommand(
-            _ => _ = DetachedTask.RunAsync(() => SetAutoBackupForSelectedGroupAsync(false), "disable-auto-backup-selected-group"),
-            _ => CanDisableAutoBackupForSelectedGroup());
+            folder => _ = DetachedTask.RunAsync(() => SetAutoBackupForProjectGroupAsync(folder as ProjectFolderViewModel, false), "disable-auto-backup-project-folder"),
+            folder => CanSetProjectGroupAutoBackup(folder as ProjectFolderViewModel, enabled: false));
         _enableAutoBackupGroupCommand = new RelayCommand(
-            _ => _ = DetachedTask.RunAsync(() => SetAutoBackupForSelectedGroupAsync(true), "enable-auto-backup-selected-group"),
-            _ => CanEnableAutoBackupForSelectedGroup());
+            folder => _ = DetachedTask.RunAsync(() => SetAutoBackupForProjectGroupAsync(folder as ProjectFolderViewModel, true), "enable-auto-backup-project-folder"),
+            folder => CanSetProjectGroupAutoBackup(folder as ProjectFolderViewModel, enabled: true));
+        _createProjectGroupCommand = new RelayCommand(_ => CreateProjectGroup(), _ => CanCreateProjectGroup());
+        _beginRenameProjectGroupCommand = new RelayCommand(
+            folder => BeginRenameProjectGroup(folder as ProjectFolderViewModel),
+            folder => folder is ProjectFolderViewModel { CanManage: true });
+        _saveRenameProjectGroupCommand = new RelayCommand(
+            folder => SaveRenameProjectGroup(folder as ProjectFolderViewModel),
+            folder => CanSaveRenameProjectGroup(folder as ProjectFolderViewModel));
+        _cancelRenameProjectGroupCommand = new RelayCommand(folder => CancelRenameProjectGroup(folder as ProjectFolderViewModel));
+        _requestDeleteProjectGroupCommand = new RelayCommand(
+            folder => RequestDeleteProjectGroup(folder as ProjectFolderViewModel),
+            folder => folder is ProjectFolderViewModel { CanManage: true });
+        _confirmDeleteProjectGroupCommand = new RelayCommand(
+            folder => DeleteProjectGroup(folder as ProjectFolderViewModel),
+            folder => folder is ProjectFolderViewModel { CanManage: true });
+        _cancelDeleteProjectGroupCommand = new RelayCommand(folder => CancelDeleteProjectGroup(folder as ProjectFolderViewModel));
+        _moveSelectedProjectToFolderCommand = new RelayCommand(
+            _ => MoveSelectedProjectToFolder(),
+            _ => SelectedProject is { HasPendingGroupChange: true, IsRegistered: true });
         _commitProjectTagInputCommand = new RelayCommand(_ => CommitProjectTagInput(), _ => SelectedProject is not null);
         _removeProjectTagCommand = new RelayCommand(tag => RemoveProjectTag(tag as string), _ => SelectedProject is not null);
         _addExistingTagToSelectedProjectCommand = new RelayCommand(
@@ -597,16 +642,12 @@ public class ProjectsViewModel : ViewModelBase
         _applyProjectTagColorCommand = new RelayCommand(_ => ApplyProjectTagColor(), _ => CanEditProjectTagColor);
         _resetProjectTagColorCommand = new RelayCommand(_ => ResetProjectTagColor(), _ => CanEditProjectTagColor);
         _applyProjectTagColorSwatchCommand = new RelayCommand(hex => ApplyProjectTagColorSwatch(hex as string), hex => !string.IsNullOrWhiteSpace(hex as string));
-        _applyTagToGroupCommand = new RelayCommand(
-            _ => _ = DetachedTask.RunAsync(() => SetTagForSelectedGroupAsync(add: true), "apply-tag-selected-group"),
-            _ => CanSetTagForSelectedGroup());
-        _removeTagFromGroupCommand = new RelayCommand(
-            _ => _ = DetachedTask.RunAsync(() => SetTagForSelectedGroupAsync(add: false), "remove-tag-selected-group"),
-            _ => CanSetTagForSelectedGroup());
-        _selectGroupTagCommand = new RelayCommand(tag => SelectGroupTag(tag as string));
-        _removeGroupTagCommand = new RelayCommand(tag => RemoveGroupTag(tag as string), _ => true);
         OpenFolderCommand = _openFolderCommand;
+        SelectProjectCommand = _selectProjectCommand;
         RemoveProjectCommand = _removeProjectCommand;
+        CancelRemoveProjectCommand = cancelRemoveProjectCommand;
+        ConfirmRemoveProjectCommand = _confirmRemoveProjectCommand;
+        ReviewStoredBackupsCommand = reviewStoredBackupsCommand;
         ApplyPresetRecommendationCommand = _applyPresetRecommendationCommand;
         TogglePresetEditorCommand = _togglePresetEditorCommand;
         ReloadPresetEditorCommand = _reloadPresetEditorCommand;
@@ -619,6 +660,14 @@ public class ProjectsViewModel : ViewModelBase
         BackupGroupCommand = _backupGroupCommand;
         DisableAutoBackupGroupCommand = _disableAutoBackupGroupCommand;
         EnableAutoBackupGroupCommand = _enableAutoBackupGroupCommand;
+        CreateProjectGroupCommand = _createProjectGroupCommand;
+        BeginRenameProjectGroupCommand = _beginRenameProjectGroupCommand;
+        SaveRenameProjectGroupCommand = _saveRenameProjectGroupCommand;
+        CancelRenameProjectGroupCommand = _cancelRenameProjectGroupCommand;
+        RequestDeleteProjectGroupCommand = _requestDeleteProjectGroupCommand;
+        ConfirmDeleteProjectGroupCommand = _confirmDeleteProjectGroupCommand;
+        CancelDeleteProjectGroupCommand = _cancelDeleteProjectGroupCommand;
+        MoveSelectedProjectToFolderCommand = _moveSelectedProjectToFolderCommand;
         CommitProjectTagInputCommand = _commitProjectTagInputCommand;
         RemoveProjectTagCommand = _removeProjectTagCommand;
         AddExistingTagToSelectedProjectCommand = _addExistingTagToSelectedProjectCommand;
@@ -626,10 +675,6 @@ public class ProjectsViewModel : ViewModelBase
         ApplyProjectTagColorCommand = _applyProjectTagColorCommand;
         ResetProjectTagColorCommand = _resetProjectTagColorCommand;
         ApplyProjectTagColorSwatchCommand = _applyProjectTagColorSwatchCommand;
-        ApplyTagToGroupCommand = _applyTagToGroupCommand;
-        RemoveTagFromGroupCommand = _removeTagFromGroupCommand;
-        SelectGroupTagCommand = _selectGroupTagCommand;
-        RemoveGroupTagCommand = _removeGroupTagCommand;
         SnapshotCommand = new RelayCommand(_ => TakeSnapshot());
         ManageProjectEncryptionCommand = new RelayCommand(p => RequestProjectEncryptionPasswordEdit(p as ProjectItemViewModel ?? SelectedProject));
         ToggleSortCommand = new RelayCommand(_ => ToggleSortMode());
@@ -935,10 +980,12 @@ public class ProjectsViewModel : ViewModelBase
         UpdateProjectDestinationDisplay(vm, config);
         UpdateProjectEncryptionDisplay(vm, config);
         UpdateProjectPresetDisplay(vm);
+        SetProjectGroupOption(vm);
         vm.PropertyChanged += OnProjectItemPropertyChanged;
 
         PopulateProjectSnapshots(vm, source);
         vm.IsRegistered = existingProject is not null;
+        vm.IsAutoBackupEnabled = existingProject is null || !_autoBackupDisabledProjectIds.Contains(existingProject.Id);
         if (!vm.IsRegistered)
             vm.SnapshotHistoryLoaded = true;
 
@@ -980,6 +1027,7 @@ public class ProjectsViewModel : ViewModelBase
             SizeBytes = stats.LastSnapshotBytes ?? 0,
             Preset = existingProject?.Preset ?? string.Empty,
             TagsCsv = existingProject?.Tags ?? string.Empty,
+            GroupId = existingProject?.GroupId ?? ProjectGroupOption.UngroupedId,
             PreferredDestinationId = existingProject?.PreferredDestinationId ?? string.Empty,
             EncryptionPolicy = ProjectEncryptionPolicy.Normalize(existingProject?.EncryptionPolicy),
             EncryptionKeyRef = existingProject?.EncryptionKeyRef ?? string.Empty
@@ -1203,16 +1251,12 @@ public class ProjectsViewModel : ViewModelBase
             nameof(ShowProjectsEmptyState),
             nameof(HasSelectedProject),
             nameof(ShowSelectedProjectEmptyState));
+        RebuildProjectFolders(newList);
     }
 
     private IEnumerable<ProjectItemViewModel> GetFilteredProjects()
     {
         IEnumerable<ProjectItemViewModel> filtered = _allProjects;
-        var selectedGroupId = SelectedGroup?.Id ?? ProjectGroupOption.AllId;
-        if (!string.Equals(selectedGroupId, ProjectGroupOption.AllId, StringComparison.OrdinalIgnoreCase))
-        {
-            filtered = filtered.Where(p => ProjectMatchesGroup(p, selectedGroupId));
-        }
 
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
@@ -1238,28 +1282,7 @@ public class ProjectsViewModel : ViewModelBase
 
     private void SyncProjectsCollection(IReadOnlyList<ProjectItemViewModel> newList)
     {
-        for (int i = 0; i < newList.Count; i++)
-        {
-            var item = newList[i];
-            if (i < Projects.Count && ReferenceEquals(Projects[i], item))
-                continue;
-
-            var currentIndex = Projects.IndexOf(item);
-            if (currentIndex >= 0)
-            {
-                Projects.Move(currentIndex, i);
-            }
-            else
-            {
-                Projects.Insert(i, item);
-            }
-        }
-
-        // Remove any extra items not in newList
-        for (int i = Projects.Count - 1; i >= newList.Count; i--)
-        {
-            Projects.RemoveAt(i);
-        }
+        Projects.SyncWith(newList);
     }
 
     private void RestoreProjectSelection(bool autoSelectIfNone)
@@ -1287,17 +1310,6 @@ public class ProjectsViewModel : ViewModelBase
             SelectedProject = Projects[0];
     }
 
-    private void LoadGroupOptions()
-    {
-        GroupOptions.Clear();
-        GroupOptions.Add(new ProjectGroupOption(ProjectGroupOption.AllId, L("Projects.Group.All", "All projects")));
-        GroupOptions.Add(new ProjectGroupOption("work", L("Projects.Group.Work", "Work")));
-        GroupOptions.Add(new ProjectGroupOption("games", L("Projects.Group.Games", "Games")));
-        GroupOptions.Add(new ProjectGroupOption("media", L("Projects.Group.Media", "Media")));
-        GroupOptions.Add(new ProjectGroupOption("critical", L("Projects.Group.Critical", "Critical")));
-        GroupOptions.Add(new ProjectGroupOption("archive", L("Projects.Group.Archive", "Archive")));
-        SelectedGroup = GroupOptions.FirstOrDefault();
-    }
 
     private void RefreshSelectedProjectTags()
     {
@@ -1314,7 +1326,6 @@ public class ProjectsViewModel : ViewModelBase
 
     private void RefreshReusableProjectTags()
     {
-        var selected = GroupTagInput;
         var allTags = DefaultReusableTags
             .Concat(_allProjects
             .SelectMany(p => ParseTags(p.TagsCsv))
@@ -1327,36 +1338,6 @@ public class ProjectsViewModel : ViewModelBase
         var config = ProjectTagAppearance.TryLoadConfig();
         foreach (var tag in allTags)
             ReusableProjectTags.Add(ProjectTagChip.Create(tag, config));
-
-        if (string.IsNullOrWhiteSpace(selected) ||
-            allTags.Any(t => string.Equals(t, selected, StringComparison.OrdinalIgnoreCase)))
-        {
-            return;
-        }
-
-        GroupTagInput = string.Empty;
-    }
-
-    private void ConsumeGroupTagInputDelimiters()
-    {
-        var input = GroupTagInput;
-        if (string.IsNullOrWhiteSpace(input))
-            return;
-
-        var separators = new[] { ',', '\n', '\r', ';' };
-        if (input.IndexOfAny(separators) < 0)
-            return;
-
-        var trailingDelimiter = separators.Contains(input[^1]);
-        var parts = input.Split(separators, StringSplitOptions.None);
-        var completeCount = trailingDelimiter ? parts.Length : Math.Max(parts.Length - 1, 0);
-
-        for (var i = 0; i < completeCount; i++)
-            TryAddGroupTagChip(parts[i]);
-
-        var remainder = trailingDelimiter ? string.Empty : parts.LastOrDefault()?.Trim() ?? string.Empty;
-        if (!string.Equals(GroupTagInput, remainder, StringComparison.Ordinal))
-            GroupTagInput = remainder;
     }
 
     private void ConsumeProjectTagInputDelimiters()
@@ -1684,87 +1665,6 @@ public class ProjectsViewModel : ViewModelBase
         ProjectTagColorHex = hex.Trim();
     }
 
-    private void SelectGroupTag(string? tag)
-    {
-        if (string.IsNullOrWhiteSpace(tag))
-            return;
-
-        TryAddGroupTagChip(tag);
-        if (!string.IsNullOrWhiteSpace(GroupTagInput))
-            GroupTagInput = string.Empty;
-    }
-
-    private void RemoveGroupTag(string? tag)
-    {
-        if (string.IsNullOrWhiteSpace(tag))
-            return;
-
-        var existing = SelectedGroupTags.FirstOrDefault(t =>
-            string.Equals(t.Value, tag, StringComparison.OrdinalIgnoreCase));
-        if (existing is null)
-            return;
-
-        SelectedGroupTags.Remove(existing);
-        _applyTagToGroupCommand.RaiseCanExecuteChanged();
-        _removeTagFromGroupCommand.RaiseCanExecuteChanged();
-    }
-
-    private bool TryAddGroupTagChip(string? token)
-    {
-        token = NormalizeTag(token);
-        if (string.IsNullOrWhiteSpace(token))
-            return false;
-
-        if (SelectedGroupTags.Any(t => string.Equals(t.Value, token, StringComparison.OrdinalIgnoreCase)))
-            return false;
-
-        SelectedGroupTags.Add(ProjectTagChip.Create(token, ProjectTagAppearance.TryLoadConfig()));
-        _applyTagToGroupCommand.RaiseCanExecuteChanged();
-        _removeTagFromGroupCommand.RaiseCanExecuteChanged();
-        return true;
-    }
-
-    private List<string> GetPendingGroupTags()
-    {
-        var tags = SelectedGroupTags
-            .Select(t => NormalizeTag(t.Value))
-            .Where(t => !string.IsNullOrWhiteSpace(t))
-            .ToList();
-
-        var input = GroupTagInput;
-        if (!string.IsNullOrWhiteSpace(input))
-        {
-            tags.AddRange(input
-                .Split([',', ';', '|', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
-                .Select(NormalizeTag)
-                .Where(t => !string.IsNullOrWhiteSpace(t)));
-        }
-
-        return [.. tags.Distinct(StringComparer.OrdinalIgnoreCase)];
-    }
-
-    private static bool ProjectMatchesGroup(ProjectItemViewModel project, string groupId)
-    {
-        var tagSet = ParseTags(project.TagsCsv);
-        var preset = project.Preset ?? string.Empty;
-
-        bool Tagged(params string[] tags) =>
-            tags.Any(tag => tagSet.Contains(tag, StringComparer.OrdinalIgnoreCase));
-
-        return groupId.ToLowerInvariant() switch
-        {
-            "work" => Tagged("work", "client", "business", "job", "office"),
-            "games" => Tagged("games", "game", "mod", "steam") ||
-                       preset is "unity" or "unreal" or "godot" or "gamemaker" or "steam_mods",
-            "media" => Tagged("media", "photo", "photos", VideoPresetId, "music", "creative") ||
-                       preset is "blender" or VideoPresetId or "premiere" or "after_effects" or "davinci" or "creative_suite" or "photos",
-            "critical" => Tagged("critical", "important", "prod", "production") ||
-                          project.Health == ProjectHealthStatus.OutOfDate,
-            "archive" => Tagged("archive", "legacy", "cold", "old"),
-            _ => true
-        };
-    }
-
     private static List<string> ParseTags(string? tagsCsv)
     {
         if (string.IsNullOrWhiteSpace(tagsCsv))
@@ -1787,274 +1687,6 @@ public class ProjectsViewModel : ViewModelBase
             .Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries));
     }
 
-    private bool CanSnapshotSelectedGroup()
-    {
-        return GetSelectedGroupRegisteredProjectIds().Count > 0;
-    }
-
-    private bool CanBackupSelectedGroup() => GetSelectedGroupRegisteredProjectIds().Count > 0;
-
-    private bool CanSetTagForSelectedGroup()
-    {
-        return GetSelectedGroupRegisteredProjectIds().Count > 0 &&
-               GetPendingGroupTags().Count > 0;
-    }
-
-    private bool CanDisableAutoBackupForSelectedGroup()
-    {
-        var ids = GetSelectedGroupRegisteredProjectIds();
-        if (ids.Count == 0)
-            return false;
-
-        return ids.Any(id => !_autoBackupDisabledProjectIds.Contains(id));
-    }
-
-    private bool CanEnableAutoBackupForSelectedGroup()
-    {
-        var ids = GetSelectedGroupRegisteredProjectIds();
-        if (ids.Count == 0)
-            return false;
-
-        return ids.Any(_autoBackupDisabledProjectIds.Contains);
-    }
-
-    private void RefreshGroupAutoBackupStateFromConfig(AppConfig? config = null)
-    {
-        config ??= _configStore.GetSnapshot();
-        _autoBackupDisabledProjectIds = [.. config.Backups.AutoBackupDisabledProjects ?? []];
-        _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
-        _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
-    }
-
-    private List<int> GetSelectedGroupRegisteredProjectIds()
-    {
-        var selectedGroupId = SelectedGroup?.Id ?? ProjectGroupOption.AllId;
-        return [.. _allProjects
-            .Where(p =>
-                p.IsRegistered &&
-                (string.Equals(selectedGroupId, ProjectGroupOption.AllId, StringComparison.OrdinalIgnoreCase) ||
-                 ProjectMatchesGroup(p, selectedGroupId)))
-            .Select(p => p.ProjectId)
-            .Distinct()];
-    }
-
-    private async Task SetTagForSelectedGroupAsync(bool add)
-    {
-        var ids = GetSelectedGroupRegisteredProjectIds();
-        var tagsToProcess = GetPendingGroupTags();
-        if (ids.Count == 0 || tagsToProcess.Count == 0)
-            return;
-
-        await Task.Run(() =>
-        {
-            var repo = CreateRepository(_configStore.GetSnapshot());
-            var projectsById = repo.GetAllProjects().ToDictionary(p => p.Id);
-            foreach (var projectId in ids)
-            {
-                UpdateProjectTagsForGroup(repo, projectsById, projectId, tagsToProcess, add);
-            }
-        }).ConfigureAwait(false);
-
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            SelectedGroupTags.Clear();
-            GroupTagInput = string.Empty;
-            _applyTagToGroupCommand.RaiseCanExecuteChanged();
-            _removeTagFromGroupCommand.RaiseCanExecuteChanged();
-            RefreshReusableProjectTags();
-            ApplyFilterAndSort(autoSelectIfNone: false);
-            ShowNotification(
-                add
-                    ? Lf("Projects.Group.TagApplied", "Applied {0} tag(s) to {1} projects.", tagsToProcess.Count, ids.Count)
-                    : Lf("Projects.Group.TagRemoved", "Removed {0} tag(s) from {1} projects.", tagsToProcess.Count, ids.Count),
-                NotificationSeverity.Info);
-        });
-    }
-
-    private void UpdateProjectTagsForGroup(
-        SqliteRepository repo,
-        IReadOnlyDictionary<int, Project> projectsById,
-        int projectId,
-        IReadOnlyList<string> tagsToProcess,
-        bool add)
-    {
-        if (!projectsById.TryGetValue(projectId, out var project))
-            return;
-
-        var tags = ParseTags(project.Tags);
-        if (!ApplyTags(tags, tagsToProcess, add))
-            return;
-
-        var csv = string.Join(", ", tags);
-        repo.UpdateProjectTags(projectId, csv);
-        var vm = _allProjects.FirstOrDefault(p => p.ProjectId == projectId);
-        if (vm is not null)
-            vm.TagsCsv = csv;
-    }
-
-    private static bool ApplyTags(List<string> tags, IReadOnlyList<string> tagsToProcess, bool add)
-    {
-        var changed = false;
-        foreach (var tag in tagsToProcess)
-        {
-            changed |= add
-                ? AddTagIfMissing(tags, tag)
-                : RemoveTagIfPresent(tags, tag);
-        }
-
-        return changed;
-    }
-
-    private static bool AddTagIfMissing(List<string> tags, string tag)
-    {
-        if (tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
-            return false;
-
-        tags.Add(tag);
-        return true;
-    }
-
-    private static bool RemoveTagIfPresent(List<string> tags, string tag) =>
-        tags.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)) > 0;
-
-    private async Task SnapshotSelectedGroupAsync()
-    {
-        if (!CanSnapshotSelectedGroup())
-            return;
-
-        try
-        {
-            var config = await Task.Run(_configStore.GetSnapshot).ConfigureAwait(false);
-            var maxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject;
-            var fullHash = config.Backups.UseFullSnapshotHash;
-            var enableScanCache = config.Backups.EnableScanCache;
-            var aggressiveScanCache = config.Backups.AggressiveScanCache;
-            var selectedGroupId = SelectedGroup?.Id ?? ProjectGroupOption.AllId;
-
-            var targets = _allProjects
-                .Where(p =>
-                    p.IsRegistered &&
-                    (string.Equals(selectedGroupId, ProjectGroupOption.AllId, StringComparison.OrdinalIgnoreCase) ||
-                     ProjectMatchesGroup(p, selectedGroupId)))
-                .ToList();
-
-            if (targets.Count == 0)
-                return;
-
-            var repo = CreateRepository(config);
-            var existingByName = repo.GetAllProjects()
-                .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-
-            var hashService = new HashService();
-            var snapshotService = new SnapshotService(repo, hashService);
-
-            var success = 0;
-            var failure = 0;
-
-            foreach (var target in targets)
-            {
-                if (!existingByName.TryGetValue(target.Name, out var existing))
-                    continue;
-
-                try
-                {
-                    await snapshotService.CreateSnapshotAsync(
-                        existing,
-                        fullHash: fullHash,
-                        hashNow: true,
-                        maxSnapshotsToKeep: maxSnapshotsToKeep,
-                        ct: CancellationToken.None,
-                        progressCallback: null,
-                        useScanCache: enableScanCache,
-                        aggressiveScanCache: aggressiveScanCache).ConfigureAwait(false);
-                    success++;
-                }
-                catch
-                {
-                    failure++;
-                }
-            }
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (success > 0)
-                {
-                    ShowNotification(
-                        Lf("Projects.Group.SnapshotSuccess", "Created snapshots for {0} projects.", success),
-                        NotificationSeverity.Info);
-                }
-
-                if (failure > 0)
-                {
-                    ShowNotification(
-                        Lf("Projects.Group.SnapshotFailure", "Failed to create snapshots for {0} projects.", failure),
-                        NotificationSeverity.Warning);
-                }
-            });
-
-            await RefreshAsync(forceDiscovery: false).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                ShowNotification(
-                    Lf("Projects.Group.SnapshotError", "Failed to run grouped snapshot operation: {0}", ex.Message),
-                    NotificationSeverity.Error);
-            });
-        }
-    }
-
-    private async Task BackupSelectedGroupAsync()
-    {
-        var ids = GetSelectedGroupRegisteredProjectIds();
-        if (ids.Count == 0)
-            return;
-
-        BackupGroupRequested?.Invoke(ids);
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            ShowNotification(
-                Lf("Projects.Group.BackupQueued", "Queued backup for {0} projects.", ids.Count),
-                NotificationSeverity.Info);
-        });
-    }
-
-    private async Task SetAutoBackupForSelectedGroupAsync(bool enabled)
-    {
-        var ids = GetSelectedGroupRegisteredProjectIds();
-        if (ids.Count == 0)
-            return;
-
-        await Task.Run(() =>
-        {
-            var cfg = _configStore.Load();
-            var disabled = cfg.Backups.AutoBackupDisabledProjects ?? [];
-            disabled = enabled
-                ? [.. disabled.Except(ids).Distinct()]
-                : [.. disabled.Concat(ids).Distinct()];
-            cfg.Backups.AutoBackupDisabledProjects = disabled;
-            _configStore.Save(cfg);
-        }).ConfigureAwait(false);
-
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            if (enabled)
-                _autoBackupDisabledProjectIds.ExceptWith(ids);
-            else
-                _autoBackupDisabledProjectIds.UnionWith(ids);
-
-            ShowNotification(
-                enabled
-                    ? Lf("Projects.Group.AutoBackupEnabled", "Enabled auto backups for {0} projects.", ids.Count)
-                    : Lf("Projects.Group.AutoBackupDisabled", "Disabled auto backups for {0} projects.", ids.Count),
-                NotificationSeverity.Info);
-            _disableAutoBackupGroupCommand.RaiseCanExecuteChanged();
-            _enableAutoBackupGroupCommand.RaiseCanExecuteChanged();
-            AutoBackupGroupPreferenceChanged?.Invoke(ids, enabled);
-        });
-    }
 
     private string? DetectPreset(string projectPath)
     {
@@ -2201,10 +1833,67 @@ public class ProjectsViewModel : ViewModelBase
         }
     }
 
+    private void BeginRemoveProjectPreview()
+    {
+        ProjectItemViewModel? project = SelectedProject;
+        if (project is null)
+            return;
+
+        RemoveProjectPreviewTitle = Lf(
+            "Projects.Remove.PreviewTitle",
+            "Remove {0} from VaultSync?",
+            project.Name);
+        RemoveProjectPreviewDetail = L(
+            "Projects.Remove.PreviewLoading",
+            "Checking indexed backups and stored data...");
+        IsRemoveProjectPreviewOpen = true;
+
+        _ = Task.Run(() => BuildRemoveProjectPreview(project.Name)).ContinueWith(
+            task => Dispatcher.UIThread.Post(() =>
+            {
+                if (!IsRemoveProjectPreviewOpen ||
+                    SelectedProject is null ||
+                    !string.Equals(SelectedProject.Name, project.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                RemoveProjectPreviewDetail = task.IsCompletedSuccessfully
+                    ? task.Result
+                    : L(
+                        "Projects.Remove.PreviewFallback",
+                        "The project registration and local history index will be removed. Stored backup files are kept unless you delete them from Backups first.");
+            }),
+            TaskScheduler.Default);
+    }
+
+    private string BuildRemoveProjectPreview(string projectName)
+    {
+        AppConfig config = _configStore.GetSnapshot();
+        SqliteRepository repo = CreateRepository(config);
+        Project? project = repo.GetProjectByName(projectName);
+        if (project is null)
+        {
+            return L(
+                "Projects.Remove.PreviewUnregistered",
+                "This discovered folder will be hidden from Projects. No source files will be deleted.");
+        }
+
+        List<Backup> backups = repo.GetBackupsForProject(project.Id).ToList();
+        long bytes = backups.Sum(backup => Math.Max(0, backup.TotalBytes));
+        return Lf(
+            "Projects.Remove.PreviewDetail",
+            "VaultSync will remove the registration and local history index for {0} backup(s) ({1}). Stored backup files remain on their destinations. Review and delete them from Backups first if that is your intent. Source files are never deleted.",
+            backups.Count,
+            UiFormat.FormatBytes(bytes, "0.#"));
+    }
+
     private void RemoveProject()
     {
         if (SelectedProject is null)
             return;
+
+        IsRemoveProjectPreviewOpen = false;
 
         var removedProjectName = SelectedProject.Name;
         var removedProjectPath = SelectedProject.Path;
@@ -2238,6 +1927,25 @@ public class ProjectsViewModel : ViewModelBase
                     Dispatcher.UIThread.Post(() =>
                         ShowNotification(Lf("Projects.Notification.RemoveSuccess", "Removed project '{0}' from the backup database.", removedProjectName), NotificationSeverity.Info));
                 }
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (SelectedProject is not null &&
+                        string.Equals(SelectedProject.Name, removedProjectName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        SelectedProject.LastSnapshot = default;
+                        SelectedProject.SizeBytes = 0;
+                        SelectedProject.SetSnapshots([]);
+                        SelectedProject.Health = ProjectHealthStatus.OutOfDate;
+                        SelectedProject.HealthTag = L("Projects.Health.NotBackedUp", "Not backed up");
+                        SelectedProject.IsRegistered = false;
+                    }
+
+                    RemoveProjectFromCurrentList(removedProjectPath);
+                    DetachedTask.Run(
+                        () => RefreshAsync(forceDiscovery: false),
+                        "refresh-projects-after-removal");
+                });
             }
             catch (Exception)
             {
@@ -2246,21 +1954,6 @@ public class ProjectsViewModel : ViewModelBase
             }
         });
 
-        // Reset the selected project's details so the right panel no longer shows stale data.
-        if (SelectedProject != null && SelectedProject.Name == removedProjectName)
-        {
-            SelectedProject.LastSnapshot = default;
-            SelectedProject.SizeBytes = 0;
-            SelectedProject.SetSnapshots([]);
-            SelectedProject.Health = ProjectHealthStatus.OutOfDate;
-            SelectedProject.HealthTag = L("Projects.Health.NotBackedUp", "Not backed up");
-            SelectedProject.IsRegistered = false;
-        }
-
-        // After removing from DB, keep the project visible in the list but mark it as unregistered
-        // so the primary action becomes "Add project" again.
-        RemoveProjectFromCurrentList(removedProjectPath);
-        _ = RefreshAsync(forceDiscovery: false);
     }
 
     private void TakeSnapshot()
@@ -2582,13 +2275,14 @@ public class ProjectsViewModel : ViewModelBase
                 existing?.Id ?? 0,
                 existing?.Preset ?? string.Empty,
                 existing?.Tags ?? string.Empty,
+                existing?.GroupId ?? ProjectGroupOption.UngroupedId,
                 existing?.PreferredDestinationId ?? string.Empty,
                 ProjectEncryptionPolicy.Normalize(existing?.EncryptionPolicy),
                 existing?.EncryptionKeyRef ?? string.Empty);
         }
         catch
         {
-            return new ProjectRegistrationSnapshot(true, 0, string.Empty, string.Empty, string.Empty, ProjectEncryptionPolicy.Inherit, string.Empty);
+            return new ProjectRegistrationSnapshot(true, 0, string.Empty, string.Empty, string.Empty, string.Empty, ProjectEncryptionPolicy.Inherit, string.Empty);
         }
     }
 
@@ -2611,6 +2305,8 @@ public class ProjectsViewModel : ViewModelBase
                 SnapshotActionLabel = L("Snapshots.Action.AddProject", "Add project");
                 SelectedProject.IsRegistered = false;
                 SelectedProject.ProjectId = 0;
+                SelectedProject.GroupId = ProjectGroupOption.UngroupedId;
+                SetProjectGroupOption(SelectedProject);
                 SelectedProject.EncryptionKeyRef = string.Empty;
 
                 SelectedProject.Preset = ResolveRequiredPreset(SelectedProject);
@@ -2626,10 +2322,13 @@ public class ProjectsViewModel : ViewModelBase
                 SelectedProject.ProjectId = snapshot.ProjectId;
                 SelectedProject.Preset = ResolveRequiredPreset(SelectedProject, snapshot.Preset);
                 SelectedProject.TagsCsv = snapshot.TagsCsv;
+                SelectedProject.GroupId = snapshot.GroupId;
+                SetProjectGroupOption(SelectedProject);
                 SelectedProject.PreferredDestinationId = snapshot.PreferredDestinationId;
                 SelectedProject.EncryptionPolicy = snapshot.EncryptionPolicy;
                 SelectedProject.EncryptionKeyRef = snapshot.EncryptionKeyRef;
                 var cfg = _configStore.GetSnapshot();
+                SelectedProject.IsAutoBackupEnabled = !cfg.Backups.AutoBackupDisabledProjects.Contains(snapshot.ProjectId);
                 UpdateProjectDestinationDisplay(SelectedProject, cfg);
                 UpdateProjectEncryptionDisplay(SelectedProject, cfg);
                 UpdateProjectPresetDisplay(SelectedProject);
@@ -2645,6 +2344,12 @@ public class ProjectsViewModel : ViewModelBase
     {
         if (sender is not ProjectItemViewModel vm)
             return;
+
+        if (string.Equals(e.PropertyName, nameof(ProjectItemViewModel.SelectedGroupOption), StringComparison.Ordinal) &&
+            ReferenceEquals(vm, SelectedProject))
+        {
+            _moveSelectedProjectToFolderCommand.RaiseCanExecuteChanged();
+        }
 
         var change = ProjectItemChange.FromProperty(e.PropertyName);
         if (change.ChangedPreset)
@@ -2674,7 +2379,7 @@ public class ProjectsViewModel : ViewModelBase
 
             PersistProjectItemChange(change, vm, project, repo, config);
 
-            if (change.ChangedPreset || change.ChangedDestination || change.ChangedTags)
+            if (change.ChangedPreset || change.ChangedDestination || change.ChangedTags || change.ChangedGroup)
                 ProjectSettingsMetadataChanged?.Invoke(project.Id);
         }
         catch (Exception ex)
@@ -2696,6 +2401,26 @@ public class ProjectsViewModel : ViewModelBase
 
         if (change.ChangedTags)
             PersistProjectTags(vm, project.Id, repo);
+
+        if (change.ChangedGroup)
+        {
+            repo.SetProjectGroup(project.Id, vm.GroupId);
+            ApplyFilterAndSort(autoSelectIfNone: false);
+        }
+
+        if (change.ChangedAutoBackup)
+            PersistProjectAutoBackup(vm, project.Id, config);
+    }
+
+    private void PersistProjectAutoBackup(ProjectItemViewModel vm, int projectId, AppConfig config)
+    {
+        List<int> disabled = config.Backups.AutoBackupDisabledProjects ?? [];
+        config.Backups.AutoBackupDisabledProjects = vm.IsAutoBackupEnabled
+            ? [.. disabled.Where(id => id != projectId).Distinct()]
+            : [.. disabled.Append(projectId).Distinct()];
+        _configStore.Save(config);
+        RefreshGroupAutoBackupStateFromConfig(config);
+        AutoBackupGroupPreferenceChanged?.Invoke([projectId], vm.IsAutoBackupEnabled);
     }
 
     private void PersistProjectDestination(ProjectItemViewModel vm, int projectId, SqliteRepository repo, AppConfig config)
@@ -3508,19 +3233,23 @@ public class ProjectsViewModel : ViewModelBase
     private sealed record ProjectItemChange(
         bool ChangedPreset,
         bool ChangedTags,
+        bool ChangedGroup,
         bool ChangedRecommendedPreset,
         bool ChangedDestination,
-        bool ChangedEncryption)
+        bool ChangedEncryption,
+        bool ChangedAutoBackup)
     {
-        public bool ShouldPersist => ChangedPreset || ChangedDestination || ChangedEncryption || ChangedTags;
+        public bool ShouldPersist => ChangedPreset || ChangedDestination || ChangedEncryption || ChangedTags || ChangedGroup || ChangedAutoBackup;
 
         public static ProjectItemChange FromProperty(string? propertyName) =>
             new(
                 string.Equals(propertyName, nameof(ProjectItemViewModel.Preset), StringComparison.Ordinal),
                 string.Equals(propertyName, nameof(ProjectItemViewModel.TagsCsv), StringComparison.Ordinal),
+                string.Equals(propertyName, nameof(ProjectItemViewModel.GroupId), StringComparison.Ordinal),
                 string.Equals(propertyName, nameof(ProjectItemViewModel.RecommendedPreset), StringComparison.Ordinal),
                 string.Equals(propertyName, nameof(ProjectItemViewModel.PreferredDestinationId), StringComparison.Ordinal),
-                string.Equals(propertyName, nameof(ProjectItemViewModel.EncryptionPolicy), StringComparison.Ordinal));
+                string.Equals(propertyName, nameof(ProjectItemViewModel.EncryptionPolicy), StringComparison.Ordinal),
+                string.Equals(propertyName, nameof(ProjectItemViewModel.IsAutoBackupEnabled), StringComparison.Ordinal));
     }
 
     private sealed record ProjectBuildContext(
@@ -3597,8 +3326,13 @@ public enum ProjectHealthStatus
 /// </summary>
 public class ProjectItemViewModel : ViewModelBase
 {
-    private static string L(string key, string fallback) =>
-        LocalizationProvider.Service?.GetString(key) ?? fallback;
+    private static string L(string key, string fallback)
+    {
+        string? value = LocalizationProvider.Service?.GetString(key);
+        return string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal)
+            ? fallback
+            : value;
+    }
 
     private static string Lf(string key, string fallback, params object[] args)
     {
@@ -3632,6 +3366,87 @@ public class ProjectItemViewModel : ViewModelBase
     {
         get => _projectId;
         set => SetField(ref _projectId, value);
+    }
+
+    private string _groupId = ProjectGroupOption.UngroupedId;
+    public string GroupId
+    {
+        get => _groupId;
+        set => SetField(ref _groupId, value?.Trim() ?? ProjectGroupOption.UngroupedId);
+    }
+
+    private ProjectGroupOption? _selectedGroupOption;
+    private ProjectGroupOption? _assignedGroupOption;
+    public ProjectGroupOption? SelectedGroupOption
+    {
+        get => _selectedGroupOption;
+        set
+        {
+            // Ignore transient null selection events while the shared option list refreshes.
+            if (value is null)
+                return;
+
+            if (SetField(ref _selectedGroupOption, value))
+                OnPropertiesChanged(nameof(HasPendingGroupChange), nameof(FolderMovePreview));
+        }
+    }
+
+    public bool HasPendingGroupChange =>
+        _selectedGroupOption is not null &&
+        !string.Equals(_selectedGroupOption.Id, GroupId, StringComparison.OrdinalIgnoreCase);
+
+    public string FolderLocationText => string.IsNullOrWhiteSpace(GroupId)
+        ? L("Projects.Folder.Location.Main", "Currently shown in the main project list.")
+        : Lf(
+            "Projects.Folder.Location.Inside",
+            "Currently shown only inside “{0}”.",
+            _assignedGroupOption?.Label ?? L("Projects.Folder.Ungrouped", "Ungrouped"));
+
+    public string FolderMovePreview
+    {
+        get
+        {
+            if (!HasPendingGroupChange)
+                return FolderLocationText;
+
+            if (string.IsNullOrWhiteSpace(_selectedGroupOption!.Id))
+                return L("Projects.Folder.MoveToMain", "Move this project back to the main project list.");
+
+            return Lf(
+                "Projects.Folder.MoveInside",
+                "Move this project into “{0}”. It will appear only when that folder is open.",
+                _selectedGroupOption.Label);
+        }
+    }
+
+    public string MoveProjectLabel => string.IsNullOrWhiteSpace(_selectedGroupOption?.Id)
+        ? L("Projects.Folder.MoveToMainButton", "Move to main list")
+        : Lf(
+            "Projects.Folder.MoveToFolderButton",
+            "Move to {0}",
+            _selectedGroupOption.Label);
+
+    public void SetGroupOption(ProjectGroupOption? option)
+    {
+        _assignedGroupOption = option;
+        _selectedGroupOption = option;
+        OnPropertiesChanged(
+            nameof(SelectedGroupOption),
+            nameof(HasPendingGroupChange),
+            nameof(FolderLocationText),
+            nameof(FolderMovePreview));
+    }
+
+    public void CommitGroupOption(ProjectGroupOption option)
+    {
+        _assignedGroupOption = option;
+        _selectedGroupOption = option;
+        GroupId = option.Id;
+        OnPropertiesChanged(
+            nameof(SelectedGroupOption),
+            nameof(HasPendingGroupChange),
+            nameof(FolderLocationText),
+            nameof(FolderMovePreview));
     }
 
     private ProjectHealthStatus _health;
@@ -3884,6 +3699,13 @@ public class ProjectItemViewModel : ViewModelBase
     {
         get => _isRegistered;
         set => SetField(ref _isRegistered, value);
+    }
+
+    private bool _isAutoBackupEnabled = true;
+    public bool IsAutoBackupEnabled
+    {
+        get => _isAutoBackupEnabled;
+        set => SetField(ref _isAutoBackupEnabled, value);
     }
 
     public bool SnapshotHistoryLoaded { get; set; }

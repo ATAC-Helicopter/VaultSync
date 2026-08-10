@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VaultSync.Core.Config;
+using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
@@ -71,6 +73,16 @@ namespace VaultSync.UI.ViewModels
             _projectsViewModel.ProjectRemovedFromDatabase += OnProjectRemovedFromDatabase;
             _backupsViewModel = null;
             _settingsViewModel = new SettingsViewModel(_localizationService, _configStore, _repositoryFactory);
+            _scheduleViewModel = new ScheduleViewModel(
+                _settingsViewModel,
+                _localizationService,
+                new ScheduleViewModelDependencies(
+                    () => _nextAutoBackupDueUtc,
+                    BuildScheduleProjectSnapshots,
+                    () => _powerStatusProvider.GetPowerState(),
+                    () => SetCurrentView("Projects"),
+                    () => SetCurrentView(BackupsViewKey),
+                    () => SetCurrentView("Settings")));
             _settingsViewModel.PropertyChanged += OnSettingsChanged;
             _settingsViewModel.DestinationSettingsSaved += OnDestinationSettingsSaved;
             _settingsViewModel.OpenLogConsoleRequested += OnOpenLogConsoleRequested;
@@ -135,6 +147,7 @@ namespace VaultSync.UI.ViewModels
             NavigateDashboard = new RelayCommand(_ => SetCurrentView("Dashboard"));
             NavigateProjects = new RelayCommand(_ => SetCurrentView("Projects"));
             NavigateBackups = new RelayCommand(_ => SetCurrentView("Backups"));
+            NavigateSchedule = new RelayCommand(_ => SetCurrentView("Schedule"));
             NavigateHistory = new RelayCommand(_ => SetCurrentView("History"));
             NavigateRecovery = new RelayCommand(_ => SetCurrentView("Recovery"));
             NavigateGuide = new RelayCommand(_ => SetCurrentView("Guide"));
@@ -165,6 +178,48 @@ namespace VaultSync.UI.ViewModels
             catch (Exception ex)
             {
                 DiagnosticsLogger.Record($"Startup config persist failed ({reason}): {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        private ScheduleProjectSnapshot[] BuildScheduleProjectSnapshots()
+        {
+            try
+            {
+                AppConfig config = _configStore.GetSnapshot();
+                HashSet<int> disabled = config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? [];
+                Dictionary<int, Backup[]> backupsByProject = _repo
+                    .GetRecentBackupsByProject(limitPerProject: 50)
+                    .GroupBy(backup => backup.ProjectId)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.OrderByDescending(backup => backup.CreatedUtc).ToArray());
+                Dictionary<string, string> groupNames = _repo.GetProjectGroups()
+                    .ToDictionary(group => group.Id, group => group.Name, StringComparer.OrdinalIgnoreCase);
+
+                return _repo.GetAllProjects()
+                    .OrderBy(project => project.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(project =>
+                    {
+                        _ = backupsByProject.TryGetValue(project.Id, out Backup[]? backups);
+                        Backup? latest = backups?.FirstOrDefault();
+                        Backup? latestAutomatic = backups?.FirstOrDefault(backup =>
+                            string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase));
+                        return new ScheduleProjectSnapshot(
+                            project.Id,
+                            project.Name,
+                            !disabled.Contains(project.Id),
+                            latest?.CreatedUtc,
+                            latestAutomatic?.CreatedUtc,
+                            !string.IsNullOrWhiteSpace(project.GroupId) && groupNames.TryGetValue(project.GroupId, out string? groupName)
+                                ? groupName
+                                : string.Empty);
+                    })
+                    .ToArray();
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Schedule project summary unavailable: {ex.GetType().Name} - {ex.Message}");
+                return [];
             }
         }
 

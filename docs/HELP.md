@@ -31,15 +31,21 @@ Windows distribution channels:
 
 ![VaultSync dashboard with protection, activity, storage, and recovery summaries](images/Dashboard.png)
 
-- Dashboard: global status, restore readiness, storage, and recent activity.
-- Projects: project list, snapshot controls, per-project details, and tag management.
+- Dashboard: restore readiness, required action, next run, known-good evidence, storage, and activity.
+- Projects: discovery, optional folders, health, snapshots, per-project policy editing, pause/resume, and safe removal previews.
+- Schedule: live readiness, upcoming timer opportunities, per-project automatic coverage, runtime constraints, shared policy edits, and delay explanations.
 - History: searchable backup activity, notes, labels, tags, and protected points.
 - Backups: per-project controls, restore guidance, Snapshot Explorer, and Snapshot Compare.
 - Recovery: readiness, recovery drills, 3-2-1 coverage, protection recommendations, and reports.
 - Settings: destinations, encryption, Doctor tools, update diagnostics, maintenance, localization.
+- Guide: workflow explanations and the shared backup/recovery glossary.
 
 Illustrated walkthrough: `docs/wiki/Guided-Tour.md`.
 Every Settings control and toggle: `docs/wiki/Settings-Reference.md`.
+
+Destructive Settings and project-removal actions show a preview before they
+run. Read it carefully: forgetting local registration is different from
+deleting source files or stored backup data.
 
 ## Smart Presets
 - Presets apply `.vaultsyncignore` rules to project backups.

@@ -4,7 +4,7 @@ title: "[Crash]: "
 labels:
   - Crash
   - bug
-  - release:1.8.2
+  - release:1.8.x
 assignees:
   - ATAC-Helicopter
 body:
@@ -16,7 +16,7 @@ body:
     id: version
     attributes:
       label: VaultSync version
-      placeholder: "1.8.2-Beta.1"
+      placeholder: "1.8.6"
     validations:
       required: true
   - type: dropdown

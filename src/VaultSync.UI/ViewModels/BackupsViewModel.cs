@@ -140,6 +140,7 @@ namespace VaultSync.UI.ViewModels
             double Progress,
             string CurrentFile,
             string EtaText,
+            ProtectionActivityState ActivityState,
             bool AllowCancel,
             string? DestinationLabel,
             string PolicyText);
@@ -2627,9 +2628,7 @@ namespace VaultSync.UI.ViewModels
 
             string? selectedId = SelectedProject?.Id;
             var orderedList = ordered.ToList();
-            ProjectBackups.Clear();
-            foreach (ProjectBackupItem? item in orderedList)
-                ProjectBackups.Add(item);
+            ProjectBackups.SyncWith(orderedList);
 
             if (!string.IsNullOrWhiteSpace(selectedId))
             {
@@ -2722,10 +2721,19 @@ namespace VaultSync.UI.ViewModels
             string etaText,
             bool allowCancel = true,
             string? destinationLabel = null,
-            string? policyText = null)
+            string? policyText = null,
+            ProtectionActivityPhase? activityPhase = null,
+            int? attempt = null,
+            int? maxAttempts = null)
         {
             if (string.IsNullOrWhiteSpace(projectId))
                 return;
+
+            ProtectionActivityPhase phase = activityPhase ??
+                ProtectionActivityClassifier.Classify(progress, currentFile, etaText);
+            double? semanticProgress = progress > 0.1d || phase == ProtectionActivityPhase.Completed
+                ? Math.Clamp(progress, 0d, 100d)
+                : null;
 
             var update = new PendingBackupUpdate(
                 projectId,
@@ -2733,6 +2741,7 @@ namespace VaultSync.UI.ViewModels
                 progress,
                 currentFile,
                 etaText,
+                new ProtectionActivityState(phase, semanticProgress, attempt, maxAttempts),
                 allowCancel,
                 destinationLabel,
                 policyText ?? string.Empty);
@@ -2834,6 +2843,7 @@ namespace VaultSync.UI.ViewModels
             }
             item.PolicyText = update.PolicyText;
 
+            item.ActivityState = update.ActivityState;
             item.AllowCancel = update.AllowCancel;
 
             if (!string.IsNullOrWhiteSpace(update.CurrentFile))
@@ -2864,6 +2874,24 @@ namespace VaultSync.UI.ViewModels
 
             ActiveBackups.Clear();
         }
+
+        public void ClearPrimaryBackupActivities()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(ClearPrimaryBackupActivities);
+                return;
+            }
+
+            foreach (string projectId in _pendingActiveBackupUpdates.Keys.Where(IsPrimaryBackupActivityId))
+                _pendingActiveBackupUpdates.TryRemove(projectId, out _);
+
+            foreach (BackupProgressItem item in ActiveBackups.Where(item => IsPrimaryBackupActivityId(item.ProjectId)).ToList())
+                ActiveBackups.Remove(item);
+        }
+
+        private static bool IsPrimaryBackupActivityId(string projectId) =>
+            int.TryParse(projectId, NumberStyles.Integer, CultureInfo.InvariantCulture, out _);
 
         public void ResetDestinationStatuses(IEnumerable<BackupDestination> destinations, bool allowToggle)
         {
@@ -2953,14 +2981,8 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            ActiveDestinationStatuses.Clear();
-            foreach (DestinationStatusItem item in DestinationStatuses)
-            {
-                if (item.IsActive)
-                {
-                    ActiveDestinationStatuses.Add(item);
-                }
-            }
+            List<DestinationStatusItem> active = [.. DestinationStatuses.Where(item => item.IsActive)];
+            ActiveDestinationStatuses.SyncWith(active);
             OnPropertyChanged(nameof(HasActiveDestinationStatuses));
         }
 
@@ -3111,9 +3133,7 @@ namespace VaultSync.UI.ViewModels
                 .OrderByDescending(s => s.Timestamp)
                 .ToList();
 
-            Snapshots.Clear();
-            foreach (BackupSnapshotItem? s in ordered)
-                Snapshots.Add(s);
+            Snapshots.SyncWith(ordered);
 
             // If we are not forcing a reset, try to restore previous selection by Id.
             if (!forceResetCompare)
@@ -3273,9 +3293,7 @@ namespace VaultSync.UI.ViewModels
 
         private void ReplaceSnapshotGroups(IReadOnlyList<SnapshotProjectGroup> groups)
         {
-            SnapshotGroups.Clear();
-            foreach (SnapshotProjectGroup group in groups)
-                SnapshotGroups.Add(group);
+            SnapshotGroups.SyncWith(groups);
         }
 
         private List<SnapshotProjectGroup> BuildSnapshotGroups(
@@ -4418,6 +4436,18 @@ namespace VaultSync.UI.ViewModels
                         : DateTime.MinValue)
                 .ThenBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+            var projectGroupNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                SqliteRepository groupRepository = _repositoryFactory.Create(config);
+                groupRepository.EnsureSchema();
+                projectGroupNames = groupRepository.GetProjectGroups()
+                    .ToDictionary(group => group.Id, group => group.Name, StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Backup project folders unavailable: {ex.GetType().Name} - {ex.Message}");
+            }
 
             foreach (Project? project in orderedProjects)
             {
@@ -4431,6 +4461,10 @@ namespace VaultSync.UI.ViewModels
                 {
                     Id                = project.Id.ToString(),
                     Name              = projectName,
+                    FolderName        = !string.IsNullOrWhiteSpace(project.GroupId) &&
+                                        projectGroupNames.TryGetValue(project.GroupId, out string? groupName)
+                        ? groupName
+                        : L("Projects.Folder.Ungrouped", "Ungrouped"),
                     ExternalId        = project.ExternalId ?? string.Empty,
                     ProjectTagsCsv    = project.Tags ?? string.Empty,
                     LastBackupTime    = stats.LastBackupTime,
@@ -4658,6 +4692,9 @@ namespace VaultSync.UI.ViewModels
                     hash = (hash * 397) ^ project.Id;
                     hash = (hash * 397) ^ (project.Name?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.RootPath?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.ExternalId?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.Tags?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
+                    hash = (hash * 397) ^ (project.GroupId?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.PreferredDestinationId?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.EncryptionPolicy?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);
                     hash = (hash * 397) ^ (project.EncryptionKeyRef?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0);

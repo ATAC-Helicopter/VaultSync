@@ -10,7 +10,8 @@
     Margin="24"
     Width="430"
     MaxWidth="430"
-    MinWidth="280">
+    MinWidth="280"
+    AutomationProperties.Name="{CompiledBinding Title}">
 
   <!--
     The control is deliberately card-sized. A full-window UserControl remains

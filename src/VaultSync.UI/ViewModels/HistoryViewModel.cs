@@ -570,6 +570,19 @@ public sealed class HistoryViewModel : ViewModelBase
         AddSnapshotTimelineItems(items, snapshotOnly, projectsById, metadataBySnapshotId);
         AddRecoveryEvidenceTimelineItems(items, recoveryEvidence, projectsById);
 
+        Dictionary<string, string> groupNames = repo.GetProjectGroups()
+            .ToDictionary(group => group.Id, group => group.Name, StringComparer.OrdinalIgnoreCase);
+        string ungroupedName = L("Projects.Folder.Ungrouped", "Ungrouped");
+        foreach (HistoryTimelineItemViewModel item in items)
+        {
+            string groupName = projectsById.TryGetValue(item.ProjectId, out Project? project) &&
+                               !string.IsNullOrWhiteSpace(project.GroupId) &&
+                               groupNames.TryGetValue(project.GroupId, out string? storedGroupName)
+                ? storedGroupName
+                : ungroupedName;
+            item.SetGroupName(groupName);
+        }
+
         items = items
             .OrderByDescending(item => item.CreatedUtc)
             .Take(80)
@@ -1031,14 +1044,13 @@ public sealed class HistoryViewModel : ViewModelBase
         _filteredEventCount = result.FilteredEventCount;
         _pageIndex = result.PageIndex;
 
-        TimelineItems.Clear();
         for (int i = 0; i < result.PageItems.Count; i++)
         {
             HistoryTimelineItemViewModel item = result.PageItems[i];
             HistoryGraphPaths paths = result.GraphPaths[i];
             item.SetPageGraphPaths(paths.BackupPath, paths.MetadataPath, paths.RestorePath);
-            TimelineItems.Add(item);
         }
+        TimelineItems.SyncWith(result.PageItems);
 
         if (TimelineItems.Count == 0)
         {
@@ -1121,10 +1133,8 @@ public sealed class HistoryViewModel : ViewModelBase
             .OrderBy(option => option.Label, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        ProjectFilterOptions.Clear();
-        ProjectFilterOptions.Add(new HistoryProjectFilterOption(null, L("History.Project.All", "All projects")));
-        foreach (HistoryProjectFilterOption option in options)
-            ProjectFilterOptions.Add(option);
+        options.Insert(0, new HistoryProjectFilterOption(null, L("History.Project.All", "All projects")));
+        ProjectFilterOptions.SyncWith(options);
 
         _selectedProjectFilter = ProjectFilterOptions.FirstOrDefault(option => option.ProjectId == previousProjectId)
             ?? ProjectFilterOptions[0];
@@ -1541,6 +1551,7 @@ public sealed class HistoryTimelineItemViewModel
 
     public string Kind { get; }
     public string ProjectName { get; }
+    public string GroupName { get; private set; } = string.Empty;
     public int ProjectId { get; }
     public DateTime CreatedUtc { get; }
     public string Title { get; }
@@ -1688,9 +1699,12 @@ public sealed class HistoryTimelineItemViewModel
 
     public void SetDateGroupLabel(string value) => DateGroupLabel = value ?? string.Empty;
 
+    internal void SetGroupName(string value) => GroupName = value ?? string.Empty;
+
     public bool MatchesSearch(string search)
     {
         return Contains(ProjectName, search) ||
+            Contains(GroupName, search) ||
             Contains(Title, search) ||
             Contains(Detail, search) ||
             Contains(Kind, search) ||

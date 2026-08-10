@@ -31,6 +31,15 @@ namespace VaultSync.UI.ViewModels
 
         private void StartPostBackupHashingAsync(Project project, int snapshotId)
         {
+            string operationId = $"hash-{project.Id}";
+            BackupsViewModel.UpdateActiveBackup(
+                operationId,
+                project.Name,
+                0,
+                L("Backups.Stage.Hashing", "Hashing files"),
+                string.Empty,
+                allowCancel: false,
+                activityPhase: ProtectionActivityPhase.Hashing);
             _ = Task.Run(async () =>
             {
                 Console.WriteLine($"[Backup] Post-hash start: project='{project.Name}', snapshotId={snapshotId}");
@@ -49,6 +58,10 @@ namespace VaultSync.UI.ViewModels
                         .WithHashedString("project", project.Name)
                         .WithException(ex));
                     Console.WriteLine($"[Backup] Post-hash failed: project='{project.Name}', error={ex.Message}");
+                }
+                finally
+                {
+                    BackupsViewModel.RemoveActiveBackup(operationId);
                 }
             });
         }
@@ -113,6 +126,15 @@ namespace VaultSync.UI.ViewModels
 
         private void StartVerificationAsync(Project project, Backup latest, string backupRoot, string telemetryEvent)
         {
+            string operationId = $"verify-{project.Id}";
+            BackupsViewModel.UpdateActiveBackup(
+                operationId,
+                project.Name,
+                0,
+                L("Backups.Activity.Verifying", "Verifying"),
+                string.Empty,
+                allowCancel: false,
+                activityPhase: ProtectionActivityPhase.Verifying);
             _ = Task.Run(async () =>
             {
                 try
@@ -165,6 +187,10 @@ namespace VaultSync.UI.ViewModels
                         BackupsViewModel.MarkSnapshotAsFailed(backupId);
                         BackupsViewModel.ShowVerificationFailure(backupId, project.Name);
                     });
+                }
+                finally
+                {
+                    BackupsViewModel.RemoveActiveBackup(operationId);
                 }
             });
         }

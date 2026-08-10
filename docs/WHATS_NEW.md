@@ -1,5 +1,52 @@
 # What's New
 
+## [1.8.6]
+
+VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and background work easier to understand while strengthening the release and patch path.
+
+Released on 10 August 2026.
+
+### Guided setup and plain language
+- Follow a compact, resumable setup sequence through source, destination, project registration, schedule, first restore point, and a passed recovery drill. The card stays out of the way and completion comes from real app state.
+- Open Guide at any time for consistent definitions of backups, snapshots, restore points, verification, known-good points, protected points, and recovery drills.
+
+![In-app setup and recovery guide](images/Guide_Page.png)
+
+### Schedule and activity
+- Open the dedicated Schedule page to see whether automatic protection can run now, preview the next timer opportunities after quiet-hours deferrals, and review which projects participate and when each was last backed up.
+- Use quick mode, interval, and quiet-hours edits from Schedule when planning work. They update the same saved policy as Settings; advanced retention, battery, destination, and transfer rules remain in Settings.
+- Follow consistent queued, scanning, hashing, writing, verifying, waiting, and retrying states across manual and automatic backups.
+- Keep post-backup hashing and verification visible independently from the primary backup operation.
+
+![Dedicated protection schedule](images/Schedule_Page.png)
+
+### Protection overview
+- Start on an action-first Dashboard that shows overall restore readiness, the project needing attention most, the next scheduled run, and the newest recovery point marked known good.
+- Jump directly from each overview card to Recovery, Schedule, or History, while keeping recent activity, backup trends, and storage detail available below.
+
+![Action-first protection Dashboard](images/Dashboard.png)
+
+### Projects and optional folders
+- Edit each project's destination, preset, exclusions, tags, encryption policy, and automatic-backup state in one place.
+- Review exactly what project removal changes before confirming. VaultSync removes the local registration and history index, never the source folder or stored backup payloads.
+- Organize projects into real, persistent folders instead of inferred tag views. Expand a folder to work with one project or run folder-scoped snapshot, backup, pause, and resume actions.
+- Assign a project from its details. Renaming a folder preserves membership; deleting one moves its projects to Ungrouped and never deletes source files, snapshots, or backups.
+- Keep folder identity visible in Schedule, Backups, Recovery, and History so the same organization follows each project through protection and recovery workflows.
+- Keep unassigned projects in the normal project list. Expanded folders use the same compact cards, straight control geometry, and theme-aware surfaces as the rest of the app; collapsing a folder hides only its members.
+
+![Projects with an expanded optional folder](images/Projects_Page.png)
+
+### Safer and more accessible controls
+- Primary navigation, scheduling, project, backup, recovery, and Settings controls now expose clearer screen-reader names and help.
+- Reset, cache, project-index, credential, and encryption-password removal actions show their exact effects before execution.
+
+### Release safety
+- Patch installation restores replaced files and removes patch-created files when an ordinary installation failure interrupts replacement.
+- Automated patch manifests name one qualified predecessor; older or unlisted installations fall back to a full installer.
+- `1.8.6` ships directly as a stable release with no beta build; unpublished release-candidate artifacts use the release branch, and final assets use `Stable`.
+- Rendering dependencies remain aligned across supported platforms.
+- Rich-text links are limited to approved external schemes, dependency vulnerability checks are clean, and previously silent cache or deferred-backup failures now leave diagnostic evidence.
+
 ## [1.8.5]
 
 VaultSync `1.8.5` is the Recovery Confidence update. It answers a direct question: can this project be recovered right now, what evidence supports that answer, and what should happen next?

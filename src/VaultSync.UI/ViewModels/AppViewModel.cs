@@ -101,16 +101,15 @@ namespace VaultSync.UI.ViewModels
         private RecoveryViewModel? _recoveryViewModel;
         private GuideViewModel? _guideViewModel;
         private readonly SettingsViewModel _settingsViewModel;
+        private readonly ScheduleViewModel _scheduleViewModel;
         private readonly IAppConfigStore _configStore;
         private readonly IRepositoryFactory _repositoryFactory;
         private AppConfig _config;
         private IBackupWidgetService? _backupWidgetService;
 
-        // NAS monitor to move temp backups when the preferred network root becomes reachable again.
-        private Timer? _nasMonitorTimer;
-        private int _nasMonitorInFlight;
         private Timer? _autoBackupTimer;
         private int _autoBackupInFlight;
+        private DateTimeOffset? _nextAutoBackupDueUtc;
         private Timer? _maintenanceTimer;
         private int _maintenanceInFlight;
         private int _destinationProbeInFlight;
@@ -383,6 +382,7 @@ namespace VaultSync.UI.ViewModels
         private static bool CanUseSelfUpdate => !DistributionChannelService.Current.IsStore;
 
         public SettingsViewModel SettingsViewModel => _settingsViewModel;
+        public ScheduleViewModel ScheduleViewModel => _scheduleViewModel;
         public BackupsViewModel BackupsViewModel => _backupsViewModel ??= CreateBackupsViewModel();
 
         private static List<BackupDestination> GetActiveDestinations(AppConfig cfg)
@@ -588,6 +588,7 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(IsDashboardActive));
                 OnPropertyChanged(nameof(IsProjectsViewActive));
                 OnPropertyChanged(nameof(IsBackupsViewActive));
+                OnPropertyChanged(nameof(IsScheduleActive));
                 OnPropertyChanged(nameof(IsHistoryActive));
                 OnPropertyChanged(nameof(IsRecoveryActive));
                 OnPropertyChanged(nameof(IsGuideActive));
@@ -602,12 +603,16 @@ namespace VaultSync.UI.ViewModels
         public bool IsDashboardActive => CurrentViewName == "Dashboard";
         public bool IsProjectsViewActive => CurrentViewName == "Projects";
         public bool IsBackupsViewActive => CurrentViewName == "Backups";
+        public bool IsScheduleActive => CurrentViewName == "Schedule";
         public bool IsHistoryActive => CurrentViewName == "History";
         public bool IsRecoveryActive => CurrentViewName == "Recovery";
         public bool IsGuideActive => CurrentViewName == "Guide";
         public bool IsSettingsActive => CurrentViewName == "Settings";
         public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
-        public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(_configStore, _repositoryFactory);
+        public DashboardViewModel DashboardViewModel => _dashboardViewModel ??= new DashboardViewModel(
+            _configStore,
+            _repositoryFactory,
+            _scheduleViewModel);
         public HistoryViewModel HistoryViewModel
         {
             get
@@ -648,8 +653,8 @@ namespace VaultSync.UI.ViewModels
             private set => SetField(ref _softCrashBannerMessage, value);
         }
         public bool CanCopySoftCrashLog => !string.IsNullOrWhiteSpace(_softCrashLogPath);
-        public string SoftCrashDismissLabel => L("Errors.SoftCrash.Dismiss", "Dismiss");
-        public string SoftCrashCopyLabel => L("Errors.SoftCrash.CopyLogPath", "Copy log path");
+        public static string SoftCrashDismissLabel => L("Errors.SoftCrash.Dismiss", "Dismiss");
+        public static string SoftCrashCopyLabel => L("Errors.SoftCrash.CopyLogPath", "Copy log path");
 
     }
 }

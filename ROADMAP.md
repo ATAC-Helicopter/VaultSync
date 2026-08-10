@@ -169,10 +169,12 @@ Delivered:
 
 ## 1.8.5 — Recovery Confidence
 
-**Status:** Release candidate
+**Status:** Released
 **Tagline:** *Know before you need it.*
-**Branch:** `release/v1.8.5`
-**Milestone:** `1.8.5`
+**Released:** 2026-08-02
+**Tag:** `v1.8.5`
+**Release PR:** #499
+**Stable integration:** `464eab5`
 
 ### Release objective
 
@@ -308,10 +310,16 @@ warnings, and fail closed when integrity metadata is missing or inconsistent.
 
 ## 1.8.6 — Everyday Clarity
 
-**Status:** Planned
+**Status:** Released
 **Tagline:** *Powerful when needed. Obvious by default.*
+**Released:** 2026-08-10
+**Tag:** `v1.8.6`
+**Release PR:** #532
 
-- [ ] `VS-1861` `P0` Replace the current overlay tour with task-based first-run
+Delivery note: `1.8.6` proceeds directly to the stable release after
+qualification. It does not have a beta build or prerelease GitHub release.
+
+- [x] `VS-1861` `P0` Replace the current overlay tour with task-based first-run
   setup around source, destination, schedule, review, and recovery verification.
   - Scope: use a resumable setup workspace and contextual next actions instead
     of a modal screen-covering tour; preserve skip, defer, restart, keyboard,
@@ -323,25 +331,36 @@ warnings, and fail closed when integrity metadata is missing or inconsistent.
   - Exit rule: if usability testing cannot make the guided flow faster and
     clearer than the ordinary app, remove forced onboarding and retain only a
     first-run checklist, sample-safe defaults, and discoverable help.
-- [ ] `VS-1862` `P1` Add a dedicated Schedule experience with modes, quiet
+- [x] `VS-1862` `P1` Add a dedicated Schedule experience with modes, quiet
   hours, next run, and delay explanations.
-- [ ] `VS-1863` `P1` Reorganize Dashboard hierarchy around protection,
+- [x] `VS-1863` `P1` Reorganize Dashboard hierarchy around protection,
   activity, required actions, next run, and latest verified recovery point.
-- [ ] `VS-1864` `P1` Surface consistent scanning, hashing, writing, verifying,
+- [x] `VS-1864` `P1` Surface consistent scanning, hashing, writing, verifying,
   retrying, queued, and waiting states.
-- [ ] `VS-1865` `P1` Make project edit, pause, removal, stored-data deletion,
+- [x] `VS-1865` `P1` Make project edit, pause, removal, stored-data deletion,
   repository assignment, inclusions, and exclusions explicit.
-- [ ] `VS-1866` `P1` Standardize backup, snapshot, restore-point,
+- [x] `VS-1866` `P1` Standardize backup, snapshot, restore-point,
   verification, known-good, protected, and drill terminology with contextual
   help.
-- [ ] `VS-1867` `P1` Complete accessibility and destructive-action preview
+- [x] `VS-1867` `P1` Complete accessibility and destructive-action preview
   work across primary workflows.
-- [ ] `VS-1811` `P2` Add project groups and group health if the core
+- [x] `VS-1811` `P2` Add project groups and group health if the core
   experience scope is complete. _(Existing issue #363.)_
 
-Project Groups remain a stretch item. If they would delay the core usability
-work, `VS-1811` moves to the 1.9 unified information-architecture release
-without changing the rest of 1.8.6.
+Project folders completed after the core usability scope as persistent folders,
+not inferred tag views. A project has one explicit folder assignment; folders
+expand to show their projects and support deliberate snapshot, backup, pause,
+and resume actions without replacing per-project controls. Renaming preserves
+membership, and deleting a folder moves its projects to Ungrouped without
+deleting source files, snapshots, or backups. Schedule, Backups, Recovery, and
+History carry the same folder identity.
+
+- [x] `BUG-18090` `P0` Restrict rendered rich-text navigation to approved web,
+  mail, and Store URI schemes.
+- [x] `BUG-18091` `P1` Refresh Backups when project tags, external identity, or
+  folder membership changes.
+- [x] `BUG-18092` `P1` Surface previously silent cache and deferred-backup
+  background failures in diagnostics.
 
 ---
 

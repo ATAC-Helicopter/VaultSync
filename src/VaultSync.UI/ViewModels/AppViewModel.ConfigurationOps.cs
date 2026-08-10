@@ -329,18 +329,18 @@ namespace VaultSync.UI.ViewModels
             return new BackupProjectPreparation(cfg, selection.Destinations, project, selection.WarningMessage, selection.WarningCode);
         }
 
-        private int PruneMissingBackupsFromPreparedDestination(BackupDestination dest, string effectivePath, AppConfig cfg)
+        private void PruneMissingBackupsFromPreparedDestination(BackupDestination dest, string effectivePath, AppConfig cfg)
         {
             if (string.IsNullOrWhiteSpace(effectivePath))
-                return 0;
+                return;
 
             List<Backup> backups = [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
             if (backups.Count == 0)
-                return 0;
+                return;
 
             List<BackupDestination> destinations = AppViewModel.GetActiveDestinations(cfg);
             if (destinations.Count == 0)
-                return 0;
+                return;
 
             int removed = 0;
             foreach (Backup backup in backups)
@@ -367,7 +367,6 @@ namespace VaultSync.UI.ViewModels
                 RuntimeLog.WriteVerbose($"[Backups] Pruned {removed} missing backup database entr{(removed == 1 ? "y" : "ies")} from prepared destination '{dest.Alias ?? dest.Path}'.");
             }
 
-            return removed;
         }
 
         private static bool BackupBelongsToDestination(Backup backup, BackupDestination dest, int activeDestinationCount)
@@ -659,12 +658,14 @@ namespace VaultSync.UI.ViewModels
         {
             _autoBackupTimer?.Dispose();
             _autoBackupTimer = null;
+            _nextAutoBackupDueUtc = null;
 
             int intervalMinutes = _config.Backups.IntervalMinutes;
             if (!_config.Backups.EnableAutoBackups || intervalMinutes <= 0)
             {
                 DiagnosticsLogger.Record(
                     $"[AutoBackup] Timer disabled. Enabled={_config.Backups.EnableAutoBackups}; IntervalMinutes={intervalMinutes}.");
+                _scheduleViewModel.Refresh();
                 return;
             }
 
@@ -676,11 +677,16 @@ namespace VaultSync.UI.ViewModels
                 null,
                 interval,
                 interval);
-            DiagnosticsLogger.Record($"[AutoBackup] Timer configured. IntervalMinutes={intervalMinutes}; FirstDueUtc={DateTime.UtcNow.Add(interval):O}.");
+            _nextAutoBackupDueUtc = DateTimeOffset.UtcNow.Add(interval);
+            _scheduleViewModel.Refresh();
+            DiagnosticsLogger.Record($"[AutoBackup] Timer configured. IntervalMinutes={intervalMinutes}; FirstDueUtc={_nextAutoBackupDueUtc:O}.");
         }
 
         private async Task SafeRunAutoBackupsAsync()
         {
+            int intervalMinutes = Math.Max(1, _config.Backups.IntervalMinutes);
+            _nextAutoBackupDueUtc = DateTimeOffset.UtcNow.AddMinutes(intervalMinutes);
+            _scheduleViewModel.Refresh();
             try
             {
                 await RunAutoBackupsAsync();
@@ -778,9 +784,25 @@ namespace VaultSync.UI.ViewModels
                         .Where(p => !disabled.Contains(p.Id))
                         .Select(async project =>
                         {
+                            string projectActivityId = project.Id.ToString();
+                            BackupsViewModel.UpdateActiveBackup(
+                                projectActivityId,
+                                project.Name,
+                                0,
+                                AppViewModel.L("Backups.Activity.Queued", "Queued"),
+                                string.Empty,
+                                allowCancel: false,
+                                activityPhase: ProtectionActivityPhase.Queued);
                             await throttler.WaitAsync();
                             try
                             {
+                                BackupsViewModel.UpdateActiveBackup(
+                                    projectActivityId,
+                                    project.Name,
+                                    0,
+                                    AppViewModel.L(BackupsStatusPreparingKey, BackupsStatusPreparingFallback),
+                                    string.Empty,
+                                    activityPhase: ProtectionActivityPhase.Preparing);
                                 ProjectDestinationSelection selection = ResolveDestinationsForProject(project, cfg);
                                 if (!string.IsNullOrWhiteSpace(selection.WarningMessage))
                                 {
@@ -886,7 +908,14 @@ namespace VaultSync.UI.ViewModels
                                                         project,
                                                         resolution.EffectivePath,
                                                         isAuto: true,
-                                                        progressCallback: null,
+                                                        progressCallback: (percent, currentFile, etaText) =>
+                                                            BackupsViewModel.UpdateActiveBackup(
+                                                                projectActivityId,
+                                                                project.Name,
+                                                                percent,
+                                                                currentFile,
+                                                                etaText,
+                                                                destinationLabel: destLabel),
                                                         useArchiveMode: useArchiveMode,
                                                         fullSnapshotHash: _settingsViewModel.UseFullSnapshotHash,
                                                         maxSnapshotsToKeep: cfg.Backups.MaxSnapshotsPerProject,
@@ -951,6 +980,22 @@ namespace VaultSync.UI.ViewModels
                                                         .WithCount("maxAttempts", retryMaxAttempts)
                                                         .WithFlag("useArchiveMode", useArchiveMode)
                                                         .WithException(ex));
+                                                    BackupsViewModel.UpdateActiveBackup(
+                                                        projectActivityId,
+                                                        project.Name,
+                                                        0,
+                                                        Lf(
+                                                            "Backups.Destinations.Retrying",
+                                                            "Retrying destination in {0}s (attempt {1}/{2})",
+                                                            delaySeconds,
+                                                            attemptIndex + 1,
+                                                            retryMaxAttempts),
+                                                        string.Empty,
+                                                        allowCancel: false,
+                                                        destinationLabel: destLabel,
+                                                        activityPhase: ProtectionActivityPhase.Retrying,
+                                                        attempt: attemptIndex + 1,
+                                                        maxAttempts: retryMaxAttempts);
                                                     await Task.Delay(TimeSpan.FromSeconds(delaySeconds), CancellationToken.None);
                                                 }
                                             }
@@ -1004,6 +1049,7 @@ namespace VaultSync.UI.ViewModels
                             }
                             finally
                             {
+                                BackupsViewModel.RemoveActiveBackup(projectActivityId);
                                 _ = throttler.Release();
                             }
                         })

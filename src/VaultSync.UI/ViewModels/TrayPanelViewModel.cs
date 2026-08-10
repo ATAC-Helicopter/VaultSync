@@ -80,9 +80,7 @@ public sealed class TrayPanelViewModel : ViewModelBase
             return;
         }
 
-        Destinations.Clear();
-        foreach (TrayDestinationItem? item in list)
-            Destinations.Add(item);
+        Destinations.SyncWith(list);
 
         DestinationsSummary = summary;
         OnPropertyChanged(nameof(HasDestinations));
@@ -94,9 +92,7 @@ public sealed class TrayPanelViewModel : ViewModelBase
         if (TryUpdateRecentBackups(list))
             return;
 
-        RecentBackups.Clear();
-        foreach (TrayRecentBackupItem? item in list)
-            RecentBackups.Add(item);
+        RecentBackups.SyncWith(list);
 
         OnPropertyChanged(nameof(HasRecentBackups));
     }

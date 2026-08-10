@@ -1,74 +1,57 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="tile" x1="76" y1="70" x2="438" y2="442" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#1C2E49"/>
-      <stop offset="1" stop-color="#0C1421"/>
+    <linearGradient id="tile" x1="64" y1="52" x2="448" y2="468" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1B304C"/><stop offset="1" stop-color="#081321"/>
     </linearGradient>
-    <linearGradient id="safeFace" x1="78" y1="86" x2="322" y2="430" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#253B59"/>
-      <stop offset="1" stop-color="#132131"/>
+    <linearGradient id="safe" x1="92" y1="102" x2="338" y2="414" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#294664"/><stop offset="1" stop-color="#14263A"/>
     </linearGradient>
-    <linearGradient id="safeInner" x1="96" y1="110" x2="290" y2="388" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#08111E"/>
-      <stop offset="1" stop-color="#0B1524"/>
+    <linearGradient id="door" x1="300" y1="108" x2="452" y2="396" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#284766"/><stop offset="1" stop-color="#13263A"/>
     </linearGradient>
-    <linearGradient id="doorFace" x1="308" y1="112" x2="456" y2="388" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#203554"/>
-      <stop offset="1" stop-color="#132235"/>
+    <linearGradient id="blue" x1="144" y1="196" x2="298" y2="352" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#67C8FF"/><stop offset="1" stop-color="#168DE0"/>
     </linearGradient>
-    <linearGradient id="gold" x1="336" y1="172" x2="430" y2="306" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFD95C"/>
-      <stop offset="1" stop-color="#E1A400"/>
+    <linearGradient id="mint" x1="126" y1="174" x2="258" y2="318" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#62E6BE"/><stop offset="1" stop-color="#24B58A"/>
     </linearGradient>
-    <linearGradient id="fileA" x1="170" y1="250" x2="250" y2="346" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2BA8F7"/>
-      <stop offset="1" stop-color="#1692E3"/>
-    </linearGradient>
-    <linearGradient id="fileB" x1="214" y1="270" x2="298" y2="356" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3DC6FF"/>
-      <stop offset="1" stop-color="#21AEEF"/>
+    <linearGradient id="gold" x1="342" y1="188" x2="422" y2="292" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE38A"/><stop offset="1" stop-color="#E6A91F"/>
     </linearGradient>
   </defs>
 
-  <rect x="36" y="36" width="440" height="440" rx="96" fill="url(#tile)"/>
-  <rect x="36.5" y="36.5" width="439" height="439" rx="95.5" stroke="#2D4770"/>
+  <rect x="32" y="32" width="448" height="448" rx="104" fill="url(#tile)"/>
+  <rect x="33" y="33" width="446" height="446" rx="103" stroke="#36587C" stroke-width="2"/>
+  <ellipse cx="260" cy="424" rx="150" ry="19" fill="#020912" fill-opacity=".38"/>
 
-  <g transform="translate(-7 11) scale(0.95)">
-  <ellipse cx="252" cy="420" rx="134" ry="18" fill="#07101C" fill-opacity="0.42"/>
+  <rect x="76" y="88" width="292" height="326" rx="42" fill="url(#safe)"/>
+  <rect x="78.5" y="90.5" width="287" height="321" rx="39.5" stroke="#4B6D91" stroke-width="5"/>
+  <rect x="104" y="116" width="236" height="270" rx="27" fill="#091522"/>
+  <rect x="106.5" y="118.5" width="231" height="265" rx="24.5" stroke="#1F3B58" stroke-width="5"/>
 
-  <rect x="78" y="78" width="284" height="312" rx="34" fill="url(#safeFace)"/>
-  <rect x="78.5" y="78.5" width="283" height="311" rx="33.5" stroke="#304F79" stroke-width="5"/>
-  <rect x="104" y="102" width="236" height="270" rx="24" fill="#091321"/>
-  <rect x="104.5" y="102.5" width="235" height="269" rx="23.5" stroke="#17314F" stroke-width="5"/>
+  <rect x="126" y="142" width="122" height="26" rx="13" fill="#132B42"/>
+  <circle cx="147" cy="155" r="7" fill="#62E6BE"/>
+  <rect x="164" y="149" width="62" height="12" rx="6" fill="#B5CBE0" fill-opacity=".66"/>
 
-  <rect x="118" y="116" width="206" height="240" rx="18" fill="url(#safeInner)"/>
+  <rect x="128" y="188" width="126" height="128" rx="20" fill="url(#mint)"/>
+  <path d="M218 188H234C245 188 254 197 254 208V224L218 188Z" fill="#B8F4E1" fill-opacity=".72"/>
+  <rect x="166" y="218" width="140" height="138" rx="22" fill="url(#blue)"/>
+  <path d="M266 218H284C296 218 306 228 306 240V258L266 218Z" fill="#D8F2FF" fill-opacity=".78"/>
+  <rect x="194" y="274" width="78" height="13" rx="6.5" fill="#E8F7FF"/>
+  <rect x="194" y="300" width="62" height="13" rx="6.5" fill="#E8F7FF" fill-opacity=".76"/>
 
-  <rect x="136" y="136" width="126" height="110" rx="18" fill="#0E1E34"/>
-  <rect x="148" y="150" width="28" height="66" rx="8" fill="#27D24C"/>
-  <rect x="180" y="150" width="28" height="66" rx="8" fill="#F2F6FC"/>
-  <rect x="212" y="150" width="28" height="66" rx="8" fill="#27D24C"/>
-  <rect x="250" y="152" width="30" height="18" rx="9" fill="#132742"/>
-  <rect x="250" y="182" width="30" height="18" rx="9" fill="#132742"/>
+  <rect x="337" y="154" width="15" height="52" rx="7.5" fill="#F2B82F"/>
+  <rect x="337" y="286" width="15" height="52" rx="7.5" fill="#F2B82F"/>
 
-  <rect x="134" y="262" width="92" height="92" rx="18" fill="url(#fileA)"/>
-  <rect x="192" y="282" width="110" height="86" rx="18" fill="url(#fileB)"/>
-  <rect x="220" y="306" width="54" height="12" rx="6" fill="#CFE9FB"/>
-  <rect x="220" y="330" width="42" height="12" rx="6" fill="#CFE9FB"/>
-
-  <rect x="316" y="156" width="16" height="46" rx="8" fill="#F2B72C"/>
-  <rect x="316" y="272" width="16" height="46" rx="8" fill="#F2B72C"/>
-
-  <g transform="rotate(3 286 236)">
-    <rect x="278" y="92" width="190" height="286" rx="24" fill="#0B1524"/>
-    <rect x="286" y="86" width="190" height="286" rx="24" fill="url(#doorFace)"/>
-    <rect x="286.5" y="86.5" width="189" height="285" rx="23.5" stroke="#2E4A70" stroke-width="5"/>
-    <rect x="304" y="104" width="154" height="250" rx="18" stroke="#44658F" stroke-width="5"/>
-
-    <circle cx="382" cy="230" r="46" fill="#101C2B"/>
-    <circle cx="382" cy="230" r="40" stroke="url(#gold)" stroke-width="12"/>
-    <circle cx="382" cy="230" r="8" fill="#FFE9A8"/>
-    <path d="M382 196V264" stroke="url(#gold)" stroke-width="12" stroke-linecap="round"/>
-    <path d="M348 230H416" stroke="url(#gold)" stroke-width="12" stroke-linecap="round"/>
-  </g>
+  <g transform="rotate(3 378 246)">
+    <rect x="282" y="84" width="194" height="324" rx="31" fill="#07111D"/>
+    <rect x="290" y="80" width="190" height="320" rx="30" fill="url(#door)"/>
+    <rect x="293" y="83" width="184" height="314" rx="27" stroke="#4A6E94" stroke-width="6"/>
+    <rect x="312" y="104" width="146" height="270" rx="21" stroke="#6384A6" stroke-opacity=".72" stroke-width="5"/>
+    <circle cx="385" cy="238" r="56" fill="#0B1724"/>
+    <circle cx="385" cy="238" r="43" stroke="url(#gold)" stroke-width="14"/>
+    <circle cx="385" cy="238" r="10" fill="#FFF2C3"/>
+    <path d="M385 199V277M346 238H424" stroke="url(#gold)" stroke-width="13" stroke-linecap="round"/>
+    <circle cx="433" cy="331" r="9" fill="#62E6BE"/>
   </g>
 </svg>

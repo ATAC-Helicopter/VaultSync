@@ -5,7 +5,10 @@ using Avalonia.Threading;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 
 namespace VaultSync.UI.Views;
 
@@ -18,6 +21,8 @@ public partial class DashboardView : UserControl
     private INotifyPropertyChanged? _currentVmNotifier;
 
     internal readonly record struct ResponsiveLayout(
+        int OverviewColumns,
+        int KpiColumns,
         bool StackSections,
         bool StackActivityContent,
         bool StackStorageContent,
@@ -110,6 +115,14 @@ public partial class DashboardView : UserControl
             return;
 
         ResponsiveLayout layout = GetResponsiveLayout(width);
+        ConfigureCardGrid(
+            ProtectionOverviewGrid,
+            [ProtectionStatusCard, RequiredActionCard, NextRunCard, KnownGoodCard],
+            layout.OverviewColumns);
+        ConfigureCardGrid(
+            KpiGrid,
+            [ProjectsKpiCard, BackupsKpiCard, StorageKpiCard],
+            layout.KpiColumns);
         ConfigureSectionGrid(
             ActivitySectionsGrid,
             RecentActivityCard,
@@ -155,11 +168,44 @@ public partial class DashboardView : UserControl
 
     internal static ResponsiveLayout GetResponsiveLayout(double width) =>
         new(
+            OverviewColumns: GetOverviewColumns(width),
+            KpiColumns: width < 700 ? 1 : 3,
             StackSections: width < StackedSectionsWidth,
             StackActivityContent: width < StackedActivityContentWidth,
             StackStorageContent: width < StackedStorageContentWidth,
             CompactStorageHeader: width < CompactStorageHeaderWidth,
-            DonutHostSize: width < 400 ? 220 : width < StackedStorageContentWidth ? 250 : 300);
+            DonutHostSize: GetDonutHostSize(width));
+
+    private static int GetOverviewColumns(double width)
+    {
+        if (width < 520)
+            return 1;
+
+        return width < 1100 ? 2 : 4;
+    }
+
+    private static double GetDonutHostSize(double width)
+    {
+        if (width < 400)
+            return 220;
+
+        return width < StackedStorageContentWidth ? 250 : 300;
+    }
+
+    private static void ConfigureCardGrid(Grid grid, IReadOnlyList<Control> cards, int columnCount)
+    {
+        int columns = Math.Clamp(columnCount, 1, cards.Count);
+        int rows = (int)Math.Ceiling(cards.Count / (double)columns);
+        grid.ColumnDefinitions = new ColumnDefinitions(string.Join(",", Enumerable.Repeat("*", columns)));
+        grid.RowDefinitions = new RowDefinitions(string.Join(",", Enumerable.Repeat("Auto", rows)));
+        grid.RowSpacing = 12;
+
+        for (int index = 0; index < cards.Count; index++)
+        {
+            Grid.SetColumn(cards[index], index % columns);
+            Grid.SetRow(cards[index], index / columns);
+        }
+    }
 
     private static void ConfigureSectionGrid(
         Grid grid,

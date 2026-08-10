@@ -91,8 +91,8 @@ synthetic names and paths.
 1. Use a clean macOS desktop or recording Space.
 2. Set display scaling before determining the capture rectangle. Do not change
    scaling during production.
-3. Set VaultSync to exactly `1600×900` logical pixels if the display allows it.
-   A larger window is acceptable if the final crop remains 16:9.
+3. Set the VaultSync **content area** to exactly `1600×900` logical pixels if
+   the display allows it. `1440×810` is the supported smaller alternative.
 4. Disable notifications and Focus-sensitive popups at the operating-system
    level.
 5. Close or move every other window behind VaultSync.
@@ -109,7 +109,8 @@ The required value is `x,y,width,height` in screen coordinates.
 
 1. Bring VaultSync to the front.
 2. Press Shift-Command-4 and drag exactly around the app content that should
-   appear in the finished video.
+   appear in the finished video. The measured width and height must be exactly
+   16:9; do not approximate the bottom or side edge.
 3. Note the displayed origin and size, then press Escape instead of capturing.
 4. Save the value for the terminal session:
 
@@ -123,7 +124,9 @@ The required value is `x,y,width,height` in screen coordinates.
    bash docs/video/record-macos.sh 00 5
    ```
 
-6. Inspect `docs/video/build/capture/00.mov`. It must contain only VaultSync:
+6. Inspect `docs/video/build/capture/00.mov` at 100% size. It must contain the
+   complete intended content area with no clipped sidebar, header, or lower
+   controls, and only VaultSync:
    no menu bar, dock, desktop, other app, notification, or modal unrelated to
    the scene.
 
@@ -195,7 +198,7 @@ final take.
 
 ## 7. Assemble
 
-When `build/capture/01.mov` through `build/capture/12.mov` exist:
+When `build/capture/01.mov` through `build/capture/14.mov` exist:
 
 ```bash
 bash docs/video/build-video.sh
@@ -203,7 +206,8 @@ bash docs/video/build-video.sh
 
 The assembler:
 
-- scales and pads each clip to 1920×1080;
+- rejects non-16:9 or mismatched captures instead of hiding framing mistakes;
+- scales each complete clip directly to 1920×1080 without cropping;
 - uses the locally rendered narration instead of recording microphone audio;
 - normalizes speech to approximately -16 LUFS;
 - preserves the full scene recording and rejects stale narration timelines;

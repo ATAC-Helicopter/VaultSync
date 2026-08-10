@@ -407,6 +407,10 @@
                           <TextBlock Text="{Binding ProjectName}"
                                      Classes="history-eyebrow"
                                      VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding GroupName}"
+                                     Classes="history-eyebrow"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     VerticalAlignment="Center" />
                           <TextBlock Text="{Binding SizeLabel}"
                                      Classes="history-eyebrow"
                                      VerticalAlignment="Center" />
@@ -469,6 +473,9 @@
                                    LineSpacing="4">
                           <TextBlock Text="{Binding ProjectName}"
                                      Classes="history-eyebrow" />
+                          <TextBlock Text="{Binding GroupName}"
+                                     Classes="history-eyebrow"
+                                     Foreground="{DynamicResource AccentBrush}" />
                           <TextBlock Text="{Binding PrimaryBadge}"
                                      Classes="history-eyebrow" />
                           <TextBlock Text="{Binding SafetyBadge}"
@@ -658,11 +665,13 @@
                     <Button Content="{CompiledBinding SelectedProtectedActionLabel}"
                             Command="{CompiledBinding ToggleSelectedProtectedCommand}"
                             IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}"
+                            AutomationProperties.HelpText="{infra:LocalizedString Key=History.Status.ProtectedDetail}"
                             Classes="history-action marker" />
                     <Button Grid.Column="1"
                             Content="{CompiledBinding SelectedKnownGoodActionLabel}"
                             Command="{CompiledBinding ToggleSelectedKnownGoodCommand}"
                             IsEnabled="{CompiledBinding CanEditSelectedSnapshotMetadata}"
+                            AutomationProperties.HelpText="{infra:LocalizedString Key=History.Status.KnownGoodDetail}"
                             Classes="history-action marker" />
                   </Grid>
                 </StackPanel>

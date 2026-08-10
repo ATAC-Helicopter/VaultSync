@@ -36,7 +36,7 @@ namespace VaultSync.CLI.Commands
                 throw new DirectoryNotFoundException(fullPath);
 
             if (repo.GetProjectByName(s.Name) is not null)
-                throw new Exception($"Project '{s.Name}' already exists");
+                throw new InvalidOperationException($"Project '{s.Name}' already exists");
 
             int id = repo.AddProject(new Project { Name = s.Name, RootPath = fullPath, Preset = s.Preset });
 
@@ -63,19 +63,27 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            if (repo.GetProjectByName(s.Name) is null)
+                throw new InvalidOperationException($"Project '{s.Name}' not found");
 
             if (!s.Yes && !s.Quiet)
             {
-                bool confirm = AnsiConsole.Confirm($"Delete project [bold]{Markup.Escape(s.Name)}[/] and all its snapshots/files?");
+                AnsiConsole.MarkupLine(
+                    "[yellow]This removes the project registration and local history index only.[/] " +
+                    "Source files and stored backup files remain.");
+                bool confirm = AnsiConsole.Confirm($"Unregister project [bold]{Markup.Escape(s.Name)}[/]?");
                 if (!confirm) { AnsiConsole.MarkupLine("[yellow]Aborted[/]"); return Task.FromResult(1); }
             }
 
             DeleteStats stats = repo.DeleteProjectCascade(s.Name);
-            if (stats.Projects == 0) throw new Exception($"Project '{s.Name}' not found (nothing deleted)");
+            if (stats.Projects == 0)
+                throw new InvalidOperationException($"Project '{s.Name}' not found (nothing deleted)");
 
             if (!s.Quiet)
-                AnsiConsole.MarkupLine($"[green]Removed[/] project [bold]{Markup.Escape(s.Name)}[/] - Snapshots: {stats.Snapshots}, Files: {stats.Files}");
+                AnsiConsole.MarkupLine(
+                    $"[green]Unregistered[/] project [bold]{Markup.Escape(s.Name)}[/] - " +
+                    $"Local snapshots indexed: {stats.Snapshots}, indexed files: {stats.Files}. " +
+                    "Source files and stored backup files were not deleted.");
 
             return Task.FromResult(0);
         }
@@ -101,7 +109,7 @@ namespace VaultSync.CLI.Commands
             if (!Directory.Exists(full)) throw new DirectoryNotFoundException(full);
 
             if (!repo.UpdateProjectPath(s.Name, full, out string? oldPath))
-                throw new Exception($"Project '{s.Name}' not found");
+                throw new InvalidOperationException($"Project '{s.Name}' not found");
 
             if (!s.Quiet)
                 AnsiConsole.MarkupLine($"[green]Updated[/] [bold]{Markup.Escape(s.Name)}[/] path: {Markup.Escape(oldPath ?? "?")} -> {Markup.Escape(full)}");

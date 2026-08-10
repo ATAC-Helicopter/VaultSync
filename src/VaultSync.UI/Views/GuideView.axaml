@@ -6,34 +6,34 @@
     x:DataType="vm:GuideViewModel">
   <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{DynamicResource PagePadding}">
     <StackPanel Spacing="18" MaxWidth="1040" HorizontalAlignment="Center">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+      <Grid x:Name="GuideHeaderGrid" ColumnDefinitions="*,Auto" ColumnSpacing="20">
         <StackPanel Spacing="6">
-          <TextBlock Text="VaultSync guide" FontSize="28" FontWeight="SemiBold" />
-          <TextBlock Text="A practical path from first setup to a recovery you have actually proved."
+          <TextBlock Text="{CompiledBinding PageTitle}" FontSize="28" FontWeight="SemiBold" />
+          <TextBlock Text="{CompiledBinding PageDescription}"
                      Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
           <TextBlock Text="{CompiledBinding ProgressSummary}"
                      Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="0,5,0,0" />
         </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
-          <Button Classes="action-ghost" Content="Restart guided setup"
+        <StackPanel x:Name="GuideHeaderActions" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+          <Button Classes="action-ghost" Content="{CompiledBinding RestartSetupLabel}"
                   Command="{CompiledBinding RestartSetupCommand}" />
-          <Button Classes="action-ghost" Content="Full documentation"
+          <Button Classes="action-ghost" Content="{CompiledBinding DocumentationLabel}"
                   Command="{CompiledBinding OpenDocumentationCommand}" />
         </StackPanel>
       </Grid>
 
       <Border Classes="card" Padding="20">
         <StackPanel Spacing="8">
-          <TextBlock Text="The recovery rule" FontSize="18" FontWeight="SemiBold" />
-          <TextBlock Text="A backup is not recovery proof. VaultSync treats the destination, credentials, integrity check, restore plan, and drill as separate evidence. Recovery tells you exactly which one is missing."
+          <TextBlock Text="{CompiledBinding RecoveryRuleTitle}" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="{CompiledBinding RecoveryRuleBody}"
                      TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
         </StackPanel>
       </Border>
 
-      <ItemsControl ItemsSource="{CompiledBinding Topics}">
+      <ItemsControl x:Name="GuideTopicsItems" ItemsSource="{CompiledBinding Topics}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
-            <WrapPanel Orientation="Horizontal" ItemWidth="490" />
+            <UniformGrid Columns="2" />
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
@@ -54,6 +54,37 @@
                 <Button Grid.Row="2" Classes="action-primary" HorizontalAlignment="Left"
                         Content="{CompiledBinding ActionLabel}" Command="{CompiledBinding ActionCommand}" />
               </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Border Classes="card" Padding="20">
+        <StackPanel Spacing="6">
+          <TextBlock Text="{CompiledBinding TerminologyTitle}" FontSize="20" FontWeight="SemiBold" />
+          <TextBlock Text="{CompiledBinding TerminologyDescription}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <ItemsControl x:Name="GuideTermsItems" ItemsSource="{CompiledBinding Terms}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="3" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:GuideTermViewModel">
+            <Border Classes="card" Margin="0,0,12,12" Padding="16" MinHeight="142">
+              <StackPanel Spacing="7">
+                <TextBlock Text="{CompiledBinding Title}"
+                           FontSize="16"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="{CompiledBinding Body}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
             </Border>
           </DataTemplate>
         </ItemsControl.ItemTemplate>

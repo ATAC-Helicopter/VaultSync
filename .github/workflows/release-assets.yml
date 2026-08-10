@@ -11,16 +11,13 @@ on:
           - beta
           - stable
       previous_version:
-        description: "Primary previous/base version for patch manifests (optional if the allowlist is provided)"
-        required: false
-      previous_versions:
-        description: "Optional comma/newline separated exact base-version allowlist for one manifest (defaults to previous_version only)"
-        required: false
+        description: "Single qualified previous/base version for patch manifests"
+        required: true
       target_version:
         description: "Target version for patch manifests (e.g., 1.8.0-Beta.1 or 1.8.0)"
         required: true
       release_candidate:
-        description: "Build unpublished stable-version candidate assets from a matching release/vX.Y.Z branch"
+        description: "Build unpublished stable-version candidate assets from a matching release/X.Y.Z branch"
         required: false
         type: boolean
         default: false
@@ -45,7 +42,7 @@ jobs:
       patch_base_versions: ${{ steps.validate_inputs.outputs.patch_base_versions }}
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Validate release inputs
         id: validate_inputs
@@ -53,7 +50,6 @@ jobs:
         env:
           RELEASE_CHANNEL: ${{ inputs.release_channel }}
           PREVIOUS_VERSION: ${{ inputs.previous_version }}
-          PREVIOUS_VERSIONS: ${{ inputs.previous_versions }}
           TARGET_VERSION: ${{ inputs.target_version }}
           RELEASE_CANDIDATE: ${{ inputs.release_candidate }}
         run: |
@@ -61,7 +57,6 @@ jobs:
 
           channel="$RELEASE_CHANNEL"
           previous="$PREVIOUS_VERSION"
-          previous_versions_raw="$PREVIOUS_VERSIONS"
           target="$TARGET_VERSION"
           release_candidate="$RELEASE_CANDIDATE"
           branch="${{ github.ref_name }}"
@@ -98,31 +93,13 @@ jobs:
             exit 1
           fi
 
-          declare -A seen_versions=()
-          requested_versions=()
-          while IFS= read -r candidate; do
-            candidate="$(printf '%s' "$candidate" | trim)"
-            [[ -n "$candidate" ]] || continue
-
-            candidate_key="$(normalize_version "$candidate")"
-            if [[ "$candidate_key" == "$target_key" ]]; then
-              echo "::warning::Ignoring base version '$candidate' because it matches target_version '$target'."
-              continue
-            fi
-
-            if [[ -z "${seen_versions[$candidate_key]+x}" ]]; then
-              seen_versions[$candidate_key]=1
-              requested_versions+=("$candidate")
-            fi
-          done < <(
-            {
-              printf '%s\n' "$previous"
-              printf '%s\n' "$previous_versions_raw" | tr ',;' '\n'
-            }
-          )
-
-          if [[ ${#requested_versions[@]} -eq 0 ]]; then
-            echo "At least one previous/base version different from target_version '$target' is required."
+          previous_key="$(normalize_version "$previous")"
+          if [[ -z "$previous" ]]; then
+            echo "previous_version is required. Automated patch builds support one explicitly qualified base version."
+            exit 1
+          fi
+          if [[ "$previous_key" == "$target_key" ]]; then
+            echo "previous_version must be different from target_version '$target'."
             exit 1
           fi
 
@@ -131,10 +108,8 @@ jobs:
               echo "release_candidate can only be used with the stable channel."
               exit 1
             fi
-            beta_base_version="${target_key%%-*}"
-            expected_beta_branch="release/v${beta_base_version}"
-            if [[ "$branch" != "Dev" && "$branch" != "$expected_beta_branch" ]]; then
-              echo "Beta asset builds must run from Dev or '$expected_beta_branch'. Current branch: $branch"
+            if [[ "$branch" != "Dev" ]]; then
+              echo "Beta asset builds must run from Dev. Current branch: $branch"
               exit 1
             fi
             if [[ "$target" != *-* ]]; then
@@ -145,7 +120,7 @@ jobs:
 
           if [[ "$channel" == "stable" ]]; then
             if [[ "$release_candidate" == "true" ]]; then
-              expected_candidate_branch="release/v${target}"
+              expected_candidate_branch="release/${target}"
               if [[ "$branch" != "$expected_candidate_branch" ]]; then
                 echo "Release candidate asset builds must run from '$expected_candidate_branch'. Current branch: $branch"
                 exit 1
@@ -162,7 +137,7 @@ jobs:
 
           {
             echo "patch_base_versions<<EOF"
-            printf '%s\n' "${requested_versions[@]}"
+            printf '%s\n' "$previous"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -173,11 +148,9 @@ jobs:
           - Release candidate: \`$release_candidate\`
           - Project version: \`$project_version\`
           - Primary previous version: \`${previous:-"(none)"}\`
-          - Base allow-list:
+          - Qualified patch base:
           EOF
-          for base in "${requested_versions[@]}"; do
-            echo "  - \`$base\`" >> "$GITHUB_STEP_SUMMARY"
-          done
+          echo "  - \`$previous\`" >> "$GITHUB_STEP_SUMMARY"
           cat <<EOF >> "$GITHUB_STEP_SUMMARY"
           - Target version: \`$target\`
           EOF
@@ -188,7 +161,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -221,7 +194,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -230,7 +203,7 @@ jobs:
 
       - name: Setup MSBuild
         if: ${{ inputs.include_store_upload }}
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Install Microsoft Store packaging workload
         if: ${{ inputs.include_store_upload }}
@@ -424,7 +397,7 @@ jobs:
           Add-Content $env:GITHUB_STEP_SUMMARY "- Upload artifact: ``$targetPath``"
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: windows-release-assets
           if-no-files-found: error
@@ -435,7 +408,7 @@ jobs:
 
       - name: Upload Microsoft Store artifact
         if: ${{ inputs.include_store_upload }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: windows-store-upload
           if-no-files-found: error
@@ -448,7 +421,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -530,7 +503,7 @@ jobs:
           done
 
       - name: Upload macOS artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: macos-release-assets
           if-no-files-found: error
@@ -547,7 +520,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -633,7 +606,7 @@ jobs:
           done
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linux-release-assets
           if-no-files-found: error

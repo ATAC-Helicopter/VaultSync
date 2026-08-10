@@ -64,6 +64,26 @@ class BuildPatchTests(unittest.TestCase):
             self.assertTrue((root / "patch.zip").is_file())
             self.assertTrue((root / "patch.json").is_file())
 
+    def test_build_patch_rejects_unqualified_multi_base_manifest(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            root = Path(tmp)
+            base_dir = root / "publish"
+            base_dir.mkdir()
+            (base_dir / "VaultSync.UI").write_bytes(b"binary")
+
+            with self.assertRaisesRegex(ValueError, "exactly one qualified base version"):
+                build_patch.build_patch(
+                    base_dir,
+                    root / "patch.zip",
+                    root / "patch.json",
+                    "linux",
+                    ["1.8.4", "1.8.5-Beta.1"],
+                    "1.8.5",
+                )
+
+            self.assertFalse((root / "patch.zip").exists())
+            self.assertFalse((root / "patch.json").exists())
+
     def test_build_patch_rejects_symlink_outside_base(self) -> None:
         if os.name == "nt":
             self.skipTest("Creating symlinks is not reliably permitted on Windows.")
