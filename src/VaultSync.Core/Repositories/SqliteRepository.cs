@@ -17,6 +17,7 @@ namespace VaultSync.Core.Repositories
         private const string ProjectsTable = "projects";
         private const string SnapshotsTable = "snapshots";
         private const int RecoveryDrillsPerProjectLimit = 20;
+        private const string ProjectSelectColumns = "id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, group_id as GroupId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc";
 
         private static readonly ConcurrentDictionary<string, byte> JournalModeConfigured = new(StringComparer.OrdinalIgnoreCase);
         private readonly string _dbPath = dbPath;
@@ -138,6 +139,14 @@ namespace VaultSync.Core.Repositories
         private static void CreateBaseSchema(SqliteConnection connection)
         {
             connection.Execute("""
+        -- User-defined folders for organizing projects.
+        CREATE TABLE IF NOT EXISTS project_groups(
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_utc TEXT NOT NULL
+        );
+
         -- Projects
         CREATE TABLE IF NOT EXISTS projects(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -149,10 +158,12 @@ namespace VaultSync.Core.Repositories
           restore_mode TEXT NOT NULL DEFAULT 'direct',
           verification_policy TEXT NOT NULL DEFAULT 'always',
           tags TEXT NOT NULL DEFAULT '',
+          group_id TEXT,
           name TEXT NOT NULL UNIQUE,
           root_path TEXT NOT NULL,
           preset TEXT NOT NULL,
-          created_utc TEXT NOT NULL
+          created_utc TEXT NOT NULL,
+          FOREIGN KEY(group_id) REFERENCES project_groups(id) ON DELETE SET NULL
         );
 
         -- Snapshots (cascade to files when a snapshot is deleted; cascade to snapshots when project is deleted)
@@ -270,6 +281,14 @@ namespace VaultSync.Core.Repositories
 
         private static void ApplyMigrations(SqliteConnection connection)
         {
+            connection.Execute("""
+                CREATE TABLE IF NOT EXISTS project_groups(
+                  id TEXT PRIMARY KEY,
+                  name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                  sort_order INTEGER NOT NULL DEFAULT 0,
+                  created_utc TEXT NOT NULL
+                );
+                """);
             EnsureColumnExists(connection, BackupsTable, "is_protected", "ALTER TABLE backups ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0;");
             EnsureColumnExists(connection, BackupsTable, "is_imported", "ALTER TABLE backups ADD COLUMN is_imported INTEGER NOT NULL DEFAULT 0;");
             EnsureColumnExists(connection, BackupsTable, "destination_path", "ALTER TABLE backups ADD COLUMN destination_path TEXT NOT NULL DEFAULT '';");
@@ -286,6 +305,7 @@ namespace VaultSync.Core.Repositories
             EnsureColumnExists(connection, ProjectsTable, "restore_mode", "ALTER TABLE projects ADD COLUMN restore_mode TEXT NOT NULL DEFAULT 'direct';");
             EnsureColumnExists(connection, ProjectsTable, "verification_policy", "ALTER TABLE projects ADD COLUMN verification_policy TEXT NOT NULL DEFAULT 'always';");
             EnsureColumnExists(connection, ProjectsTable, "tags", "ALTER TABLE projects ADD COLUMN tags TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, ProjectsTable, "group_id", "ALTER TABLE projects ADD COLUMN group_id TEXT REFERENCES project_groups(id) ON DELETE SET NULL;");
             EnsureColumnExists(connection, SnapshotsTable, "external_id", "ALTER TABLE snapshots ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
             EnsureColumnExists(connection, SnapshotsTable, "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
             EnsureColumnExists(connection, SnapshotsTable, "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
@@ -300,6 +320,8 @@ namespace VaultSync.Core.Repositories
             connection.Execute("""
         CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
         CREATE INDEX IF NOT EXISTS idx_projects_external ON projects(external_id);
+        CREATE INDEX IF NOT EXISTS idx_projects_group ON projects(group_id);
+        CREATE INDEX IF NOT EXISTS idx_project_groups_sort ON project_groups(sort_order, name);
 
         CREATE INDEX IF NOT EXISTS idx_snapshots_project_created
           ON snapshots(project_id, created_utc DESC);
@@ -388,6 +410,7 @@ DELETE FROM backups;
 DELETE FROM files;
 DELETE FROM snapshots;
 DELETE FROM projects;
+DELETE FROM project_groups;
 DELETE FROM sqlite_sequence;";
                 cmd.ExecuteNonQuery();
             }
@@ -399,7 +422,7 @@ DELETE FROM sqlite_sequence;";
         {
             using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE name=@name",
+                $"SELECT {ProjectSelectColumns} FROM projects WHERE name=@name",
                 new { name });
         }
 
@@ -407,7 +430,7 @@ DELETE FROM sqlite_sequence;";
         {
             using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects WHERE id=@id",
+                $"SELECT {ProjectSelectColumns} FROM projects WHERE id=@id",
                 new { id });
         }
 
@@ -437,7 +460,7 @@ DELETE FROM sqlite_sequence;";
         {
             using SqliteConnection c = Open();
             return c.Query<Project>(
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name");
+                $"SELECT {ProjectSelectColumns} FROM projects ORDER BY name");
         }
 
         /// <summary>
@@ -455,8 +478,7 @@ DELETE FROM sqlite_sequence;";
         /// </summary>
         public async Task<List<Project>> GetAllProjectsAsync(CancellationToken ct = default)
         {
-            const string sql =
-                "SELECT id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc FROM projects ORDER BY name";
+            string sql = $"SELECT {ProjectSelectColumns} FROM projects ORDER BY name";
             await using SqliteConnection c = Open();
             IEnumerable<Project> rows = await c.QueryAsync<Project>(new CommandDefinition(sql, cancellationToken: ct)).ConfigureAwait(false);
             return [.. rows];
@@ -470,8 +492,8 @@ DELETE FROM sqlite_sequence;";
                 : p.ExternalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, encryption_policy, encryption_key_ref, restore_mode, verification_policy, tags, name, root_path, preset, created_utc)
-                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @EncryptionPolicy, @EncryptionKeyRef, @RestoreMode, @VerificationPolicy, @Tags, @Name, @RootPath, @Preset, @CreatedUtc);
+                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, encryption_policy, encryption_key_ref, restore_mode, verification_policy, tags, group_id, name, root_path, preset, created_utc)
+                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @EncryptionPolicy, @EncryptionKeyRef, @RestoreMode, @VerificationPolicy, @Tags, @GroupId, @Name, @RootPath, @Preset, @CreatedUtc);
                 SELECT last_insert_rowid();
                 """,
                 new
@@ -484,6 +506,7 @@ DELETE FROM sqlite_sequence;";
                     RestoreMode = ProjectRestoreMode.Normalize(p.RestoreMode),
                     VerificationPolicy = ProjectVerificationPolicy.Normalize(p.VerificationPolicy),
                     Tags = string.IsNullOrWhiteSpace(p.Tags) ? string.Empty : p.Tags,
+                    GroupId = string.IsNullOrWhiteSpace(p.GroupId) ? null : p.GroupId,
                     p.Name,
                     p.RootPath,
                     p.Preset,
@@ -591,13 +614,128 @@ DELETE FROM sqlite_sequence;";
 
             using SqliteConnection c = Open();
             return c.QueryFirstOrDefault<Project>(
-                """
-                SELECT id, external_id as ExternalId, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc
-                FROM projects
-                WHERE external_id = @externalId
-                LIMIT 1;
-                """,
+                $"SELECT {ProjectSelectColumns} FROM projects WHERE external_id = @externalId LIMIT 1;",
                 new { externalId });
+        }
+
+        // ---------- Project groups ----------
+        public IReadOnlyList<ProjectGroup> GetProjectGroups()
+        {
+            using SqliteConnection c = Open();
+            return [.. c.Query<ProjectGroup>(
+                """
+                SELECT id, name, sort_order as SortOrder, created_utc as CreatedUtc
+                FROM project_groups
+                ORDER BY sort_order, name COLLATE NOCASE;
+                """)];
+        }
+
+        public ProjectGroup CreateProjectGroup(string name)
+        {
+            string normalizedName = ProjectGroup.NormalizeName(name);
+            if (string.IsNullOrWhiteSpace(normalizedName))
+                throw new ArgumentException("Project group name is required.", nameof(name));
+
+            using SqliteConnection c = Open();
+            using SqliteTransaction tx = c.BeginTransaction();
+
+            bool duplicate = c.ExecuteScalar<int>(
+                "SELECT COUNT(1) FROM project_groups WHERE name = @name COLLATE NOCASE;",
+                new { name = normalizedName },
+                tx) > 0;
+            if (duplicate)
+                throw new InvalidOperationException($"A project group named '{normalizedName}' already exists.");
+
+            int sortOrder = c.ExecuteScalar<int>(
+                "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM project_groups;",
+                transaction: tx);
+            var group = new ProjectGroup
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Name = normalizedName,
+                SortOrder = sortOrder,
+                CreatedUtc = DateTime.UtcNow
+            };
+
+            c.Execute(
+                """
+                INSERT INTO project_groups(id, name, sort_order, created_utc)
+                VALUES(@Id, @Name, @SortOrder, @CreatedUtc);
+                """,
+                new
+                {
+                    group.Id,
+                    group.Name,
+                    group.SortOrder,
+                    CreatedUtc = group.CreatedUtc.ToString("u", CultureInfo.InvariantCulture)
+                },
+                tx);
+            tx.Commit();
+            return group;
+        }
+
+        public bool RenameProjectGroup(string groupId, string name)
+        {
+            if (string.IsNullOrWhiteSpace(groupId))
+                return false;
+
+            string normalizedName = ProjectGroup.NormalizeName(name);
+            if (string.IsNullOrWhiteSpace(normalizedName))
+                throw new ArgumentException("Project group name is required.", nameof(name));
+
+            using SqliteConnection c = Open();
+            bool duplicate = c.ExecuteScalar<int>(
+                "SELECT COUNT(1) FROM project_groups WHERE id != @id AND name = @name COLLATE NOCASE;",
+                new { id = groupId, name = normalizedName }) > 0;
+            if (duplicate)
+                throw new InvalidOperationException($"A project group named '{normalizedName}' already exists.");
+
+            return c.Execute(
+                "UPDATE project_groups SET name = @name WHERE id = @id;",
+                new { id = groupId, name = normalizedName }) > 0;
+        }
+
+        public bool DeleteProjectGroup(string groupId)
+        {
+            if (string.IsNullOrWhiteSpace(groupId))
+                return false;
+
+            using SqliteConnection c = Open();
+            using SqliteTransaction tx = c.BeginTransaction();
+            c.Execute(
+                "UPDATE projects SET group_id = NULL WHERE group_id = @id;",
+                new { id = groupId },
+                tx);
+            int removed = c.Execute(
+                "DELETE FROM project_groups WHERE id = @id;",
+                new { id = groupId },
+                tx);
+            tx.Commit();
+            return removed > 0;
+        }
+
+        public bool SetProjectGroup(int projectId, string? groupId)
+        {
+            string? normalizedGroupId = string.IsNullOrWhiteSpace(groupId) ? null : groupId.Trim();
+            using SqliteConnection c = Open();
+            using SqliteTransaction tx = c.BeginTransaction();
+
+            if (normalizedGroupId is not null)
+            {
+                bool groupExists = c.ExecuteScalar<int>(
+                    "SELECT COUNT(1) FROM project_groups WHERE id = @id;",
+                    new { id = normalizedGroupId },
+                    tx) > 0;
+                if (!groupExists)
+                    throw new InvalidOperationException("The selected project group no longer exists.");
+            }
+
+            int updated = c.Execute(
+                "UPDATE projects SET group_id = @groupId WHERE id = @projectId;",
+                new { projectId, groupId = normalizedGroupId },
+                tx);
+            tx.Commit();
+            return updated > 0;
         }
 
         public void UpdateProjectExternalId(int projectId, string externalId)

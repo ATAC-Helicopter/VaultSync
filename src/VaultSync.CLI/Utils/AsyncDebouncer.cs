@@ -14,15 +14,18 @@ namespace VaultSync.CLI.Utils
 
         public void Trigger(Func<CancellationToken, Task> work)
         {
+            ArgumentNullException.ThrowIfNull(work);
+
             CancellationTokenSource? toCancel;
+            CancellationTokenSource localCts;
             lock (_gate)
             {
                 toCancel = _cts;
-                _cts = new CancellationTokenSource();
-                toCancel?.Cancel();
+                localCts = new CancellationTokenSource();
+                _cts = localCts;
             }
+            toCancel?.Cancel();
 
-            CancellationTokenSource localCts = _cts!;
             _ = Task.Run(async () =>
             {
                 try
@@ -30,21 +33,35 @@ namespace VaultSync.CLI.Utils
                     await Task.Delay(_delayMs, localCts.Token);
                     await work(localCts.Token);
                 }
-                catch (OperationCanceledException) { }
+                catch (OperationCanceledException) when (localCts.IsCancellationRequested)
+                {
+                    // A newer trigger or an explicit cancel superseded this pending invocation.
+                }
                 catch (Exception ex)
                 {
                     AnsiConsole.MarkupLine($"[red]watch error:[/] {Markup.Escape(ex.Message)}");
                 }
-            });
+                finally
+                {
+                    lock (_gate)
+                    {
+                        if (ReferenceEquals(_cts, localCts))
+                            _cts = null;
+                    }
+                    localCts.Dispose();
+                }
+            }, CancellationToken.None);
         }
 
         public void Cancel()
         {
+            CancellationTokenSource? toCancel;
             lock (_gate)
             {
-                _cts?.Cancel();
+                toCancel = _cts;
                 _cts = null;
             }
+            toCancel?.Cancel();
         }
     }
 }

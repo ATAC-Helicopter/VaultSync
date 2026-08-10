@@ -38,7 +38,8 @@ namespace VaultSync.UI.ViewModels
                 AppViewModel.L("Backups.Status.Cancelling", "Cancelling..."),
                 string.Empty,
                 allowCancel: false,
-                policyText: item.PolicyText);
+                policyText: item.PolicyText,
+                activityPhase: ProtectionActivityPhase.Cancelling);
             Console.WriteLine($"[Backup] Cancel requested for projectId={projectId} ({item.ProjectName}).");
             Telemetry.Log("backup_cancel_requested", b => b
                 .WithHashedString("projectId", item.ProjectId));
@@ -619,16 +620,11 @@ namespace VaultSync.UI.ViewModels
             TimeSpan cleanupDelay = GetEncryptedOpenTimeout();
 
             var cts = new CancellationTokenSource();
-            CancellationTokenSource previous = _encryptedOpenCleanup.AddOrUpdate(stagingRoot, cts, (_, old) =>
+            _encryptedOpenCleanup.AddOrUpdate(stagingRoot, cts, (_, old) =>
             {
-                try { old.Cancel(); } catch { }
-                old.Dispose();
+                old.Cancel();
                 return cts;
             });
-            if (!ReferenceEquals(previous, cts))
-            {
-                // no-op, handled above
-            }
 
             _ = Task.Run(async () =>
             {
@@ -647,12 +643,11 @@ namespace VaultSync.UI.ViewModels
                 }
                 finally
                 {
-                    if (_encryptedOpenCleanup.TryRemove(stagingRoot, out CancellationTokenSource? token))
-                    {
-                        token.Dispose();
-                    }
+                    ((ICollection<KeyValuePair<string, CancellationTokenSource>>)_encryptedOpenCleanup)
+                        .Remove(new KeyValuePair<string, CancellationTokenSource>(stagingRoot, cts));
+                    cts.Dispose();
                 }
-            });
+            }, CancellationToken.None);
         }
 
         private static string? ResolveEncryptedOpenStagingRoot(string extractedDir)
@@ -706,7 +701,7 @@ namespace VaultSync.UI.ViewModels
 
         private TimeSpan GetEncryptedOpenTimeout()
         {
-            int minutes = DefaultEncryptedOpenTimeoutMinutes;
+            int minutes;
             try
             {
                 int configured = _config?.Backups?.Encryption?.OpenUnlockTimeoutMinutes ?? DefaultEncryptedOpenTimeoutMinutes;
@@ -763,9 +758,10 @@ namespace VaultSync.UI.ViewModels
 
             foreach (KeyValuePair<string, CancellationTokenSource> entry in _encryptedOpenCleanup.ToArray())
             {
-                try { entry.Value.Cancel(); } catch { }
-                entry.Value.Dispose();
-                _encryptedOpenCleanup.TryRemove(entry.Key, out _);
+                bool removed = ((ICollection<KeyValuePair<string, CancellationTokenSource>>)_encryptedOpenCleanup)
+                    .Remove(entry);
+                if (removed)
+                    await entry.Value.CancelAsync().ConfigureAwait(false);
             }
 
             await CleanupAllOpenBackupFoldersAsync().ConfigureAwait(false);
@@ -851,9 +847,6 @@ namespace VaultSync.UI.ViewModels
             {
                 var projects = _repo.GetAllProjects().ToList();
                 var result   = new List<TrayProjectBackups>();
-                var projectsById = projects
-                    .GroupBy(p => p.Id)
-                    .ToDictionary(g => g.Key, g => g.First());
                 IReadOnlyList<Backup> recent = _repo.GetRecentBackupsByProject(maxPerProject);
                 var grouped = recent
                     .GroupBy(b => b.ProjectId)

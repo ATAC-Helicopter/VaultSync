@@ -115,6 +115,7 @@
       <controls:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
     </UserControl.Resources>
 
+  <Grid>
   <ScrollViewer x:Name="SettingsScrollViewer"
                 VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
@@ -847,6 +848,8 @@
                   </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 VerticalAlignment="Center"
+                                AutomationProperties.Name="{infra:LocalizedString Key=Settings.Backups.Verify}"
+                                AutomationProperties.HelpText="{infra:LocalizedString Key=Settings.Backups.VerifyDescription}"
                                 IsChecked="{Binding VerifyBackupsAfterCreate, Mode=TwoWay}" />
                 </Grid>
 
@@ -2363,5 +2366,40 @@
       </Grid>
 
   </ScrollViewer>
+
+    <Border IsVisible="{Binding IsDestructivePreviewOpen}"
+            Background="{DynamicResource OverlayScrimBrush}"
+            Padding="24"
+            AutomationProperties.LiveSetting="Polite">
+      <Border Background="{DynamicResource CardBackgroundBrush}"
+              BorderBrush="{DynamicResource DangerBrush}"
+              BorderThickness="1"
+              CornerRadius="16"
+              Padding="20"
+              MaxWidth="520"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{Binding DestructivePreviewTitle}"
+                     FontSize="19"
+                     FontWeight="SemiBold" />
+          <TextBlock Text="{Binding DestructivePreviewActionLabel}"
+                     Foreground="{DynamicResource DangerTextBrush}"
+                     FontWeight="SemiBold" />
+          <TextBlock Text="{Binding DestructivePreviewDetail}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextWrapping="Wrap" />
+          <WrapPanel ItemSpacing="8" LineSpacing="8" HorizontalAlignment="Right">
+            <Button Classes="settings-ghost"
+                    Content="{infra:LocalizedString Key=Common.Cancel}"
+                    Command="{Binding CancelDestructivePreviewCommand}" />
+            <Button Classes="action-danger"
+                    Content="{Binding DestructivePreviewActionLabel}"
+                    Command="{Binding ConfirmDestructivePreviewCommand}" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+  </Grid>
 
 </UserControl>

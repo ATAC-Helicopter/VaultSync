@@ -2,9 +2,9 @@ name: SonarQube
 
 on:
   pull_request:
-    branches: [ "Dev", "Stable", "release/v*" ]
+    branches: [ "Dev", "Stable", "release/**" ]
   push:
-    branches: [ "Dev", "Stable", "release/v*" ]
+    branches: [ "Dev", "Stable", "release/**" ]
   workflow_dispatch:
 
 permissions:
@@ -50,7 +50,7 @@ jobs:
 
       - name: Checkout
         if: steps.config.outputs.configured == 'true'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -60,9 +60,15 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Setup Python
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v6
+        with:
+          python-version: "3.x"
+
       - name: Setup Java
         if: steps.config.outputs.configured == 'true'
-        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: "17"
@@ -72,6 +78,7 @@ jobs:
         run: |
           dotnet tool install --global dotnet-sonarscanner --version 11.2.1
           dotnet tool install --global dotnet-coverage --version 18.9.0
+          python -m pip install coverage==7.10.4
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Restore
@@ -91,7 +98,8 @@ jobs:
             /d:sonar.host.url="${host_url}" \
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml \
-            /d:sonar.exclusions="coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
+            /d:sonar.python.coverage.reportPaths=python-coverage.xml \
+            /d:sonar.exclusions="coverage.xml,python-coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
             /d:sonar.coverage.exclusions="docs/video/**,src/VaultSync.UI/**,src/VaultSync.Core/Services/BackupService.cs,src/VaultSync.Core/Services/NetworkMountService.cs,src/VaultSync.Core/Services/SnapshotService.cs" \
             /d:sonar.test.inclusions="tests/**/*" \
             /d:sonar.python.version="3"
@@ -107,6 +115,12 @@ jobs:
           "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build"
           -f xml
           -o coverage.xml
+
+      - name: Test Python with coverage
+        if: steps.config.outputs.configured == 'true'
+        run: |
+          python -m coverage run --source=scripts -m unittest discover -s tests/scripts -p 'test_*.py'
+          python -m coverage xml -o python-coverage.xml
 
       - name: End SonarQube analysis
         if: steps.config.outputs.configured == 'true'

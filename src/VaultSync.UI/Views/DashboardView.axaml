@@ -15,16 +15,69 @@
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
           MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
-          RowDefinitions="Auto,Auto,Auto,Auto"
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
           RowSpacing="{DynamicResource PageRowSpacing}">
 
-      <WrapPanel Grid.Row="0"
-                 Margin="4,8,4,0"
-                 Orientation="Horizontal"
-                 ItemSpacing="16"
-                 LineSpacing="16"
-                 HorizontalAlignment="Left">
-        <Border Classes="card" Background="{DynamicResource Surface2}" Width="336" MinHeight="192" Padding="18">
+      <Grid x:Name="ProtectionOverviewGrid"
+            Grid.Row="0"
+            Margin="4,8,4,0"
+            ColumnDefinitions="*,*,*,*"
+            ColumnSpacing="12">
+        <Border x:Name="ProtectionStatusCard" Grid.Column="0" Classes="card" Background="{DynamicResource Surface2}" MinHeight="176" Padding="18">
+          <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="9">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker"/>
+            </Grid>
+            <TextBlock Grid.Row="1" Text="{Binding RestoreReadinessHeadline}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2"/>
+            <TextBlock Grid.Row="2" Text="{Binding RestoreReadinessDetail}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="2"/>
+            <Button Grid.Row="3" Classes="small-pill" Content="{infra:LocalizedString Key=Dashboard.Workflow.Recovery}" Command="{Binding OpenRecoveryCommand}" HorizontalAlignment="Left"/>
+          </Grid>
+        </Border>
+
+        <Border x:Name="RequiredActionCard" Grid.Column="1" Classes="card" Background="{DynamicResource Surface2}" MinHeight="176" Padding="18">
+          <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="9">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource WarningBrush}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=RestoreReadiness.ReviewTitle}" Classes="kicker"/>
+            </Grid>
+            <TextBlock Grid.Row="1" Text="{Binding RequiredActionTitle}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2"/>
+            <TextBlock Grid.Row="2" Text="{Binding RequiredActionDetail}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="3"/>
+            <Button Grid.Row="3" Classes="small-pill" Content="{Binding RequiredActionButtonLabel}" Command="{Binding OpenRequiredActionCommand}" HorizontalAlignment="Left"/>
+          </Grid>
+        </Border>
+
+        <Border x:Name="NextRunCard" Grid.Column="2" Classes="card" Background="{DynamicResource Surface2}" MinHeight="176" Padding="18">
+          <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="9">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=Schedule.NextRun.Label}" Classes="kicker"/>
+            </Grid>
+            <TextBlock Grid.Row="1" Text="{Binding NextRunText}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2"/>
+            <TextBlock Grid.Row="2" Text="{Binding NextRunDetail}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="3"/>
+            <Button Grid.Row="3" Classes="small-pill" Content="{infra:LocalizedString Key=Nav.Schedule}" Command="{Binding OpenScheduleCommand}" HorizontalAlignment="Left"/>
+          </Grid>
+        </Border>
+
+        <Border x:Name="KnownGoodCard" Grid.Column="3" Classes="card" Background="{DynamicResource Surface2}" MinHeight="176" Padding="18">
+          <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="9">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=History.Status.KnownGood}" Classes="kicker"/>
+            </Grid>
+            <TextBlock Grid.Row="1" Text="{Binding LatestKnownGoodTitle}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2"/>
+            <TextBlock Grid.Row="2" Text="{Binding LatestKnownGoodDetail}" Classes="metric-hint" TextWrapping="Wrap" MaxLines="3"/>
+            <Button Grid.Row="3" Classes="small-pill" Content="{infra:LocalizedString Key=Dashboard.Workflow.History}" Command="{Binding OpenHistoryCommand}" HorizontalAlignment="Left"/>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <Grid x:Name="KpiGrid"
+            Grid.Row="1"
+            Margin="4,8,4,0"
+            ColumnDefinitions="*,*,*"
+            ColumnSpacing="12">
+        <Border x:Name="ProjectsKpiCard" Grid.Column="0" Classes="card" Background="{DynamicResource Surface2}" MinHeight="176" Padding="18">
           <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
               <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
@@ -52,7 +105,7 @@
           </Grid>
         </Border>
 
-        <Border Classes="card" Background="{DynamicResource Surface2}" Width="336" MinHeight="192" Padding="18">
+        <Border x:Name="BackupsKpiCard" Grid.Column="1" Classes="card" Background="{DynamicResource Surface2}" MinHeight="176" Padding="18">
           <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
               <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
@@ -80,7 +133,7 @@
           </Grid>
         </Border>
 
-        <Border Classes="card" Background="{DynamicResource Surface2}" Width="336" MinHeight="192" Padding="18">
+        <Border x:Name="StorageKpiCard" Grid.Column="2" Classes="card" Background="{DynamicResource Surface2}" MinHeight="176" Padding="18">
           <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
               <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
@@ -109,66 +162,9 @@
           </Grid>
         </Border>
 
-        <Border Classes="card" Background="{DynamicResource Surface2}" Width="500" MinHeight="224" Padding="18">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="9">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-              <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource WarningBrush}" VerticalAlignment="Center"/>
-              <TextBlock Grid.Column="1" Text="{infra:LocalizedString Key=Dashboard.Kpi.RestoreReadiness}" Classes="kicker" VerticalAlignment="Center"/>
-              <Button Grid.Column="2"
-                      Classes="small-pill"
-                      Content="{infra:LocalizedString Key=RestoreReadiness.Review}"
-                      Command="{Binding ToggleRestoreReadinessIssuesCommand}"
-                      IsVisible="{Binding HasRestoreReadinessIssues}" />
-            </Grid>
-            <TextBlock Grid.Row="1"
-                       Text="{Binding RestoreReadinessHeadline}"
-                       FontSize="16"
-                       FontWeight="SemiBold"
-                       TextWrapping="Wrap"
-                       MaxLines="3"/>
-            <TextBlock Grid.Row="2"
-                       Text="{Binding RestoreReadinessDetail}"
-                       FontSize="15"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       TextWrapping="Wrap"
-                       MaxLines="2"/>
-            <Border Grid.Row="3"
-                    Background="{DynamicResource ItemBg}"
-                    CornerRadius="12"
-                    Padding="12,10">
-              <WrapPanel ItemSpacing="6" LineSpacing="6">
-                <Border Classes="stat-pill sm success">
-                  <TextBlock Text="{Binding RestoreReadinessReadyLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="96" TextTrimming="CharacterEllipsis"/>
-                </Border>
-                <Border Classes="stat-pill sm warning">
-                  <TextBlock Text="{Binding RestoreReadinessAttentionLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="96" TextTrimming="CharacterEllipsis"/>
-                </Border>
-                <Border Classes="stat-pill sm danger">
-                  <TextBlock Text="{Binding RestoreReadinessRiskLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="96" TextTrimming="CharacterEllipsis"/>
-                </Border>
-                <Border Classes="stat-pill sm info">
-                  <TextBlock Text="{Binding RestoreReadinessUnavailableLabel}" FontSize="10" FontWeight="SemiBold" MaxWidth="110" TextTrimming="CharacterEllipsis"/>
-                </Border>
-              </WrapPanel>
-            </Border>
-            <StackPanel Grid.Row="4" Spacing="7">
-              <TextBlock Text="{Binding RecoveryCoverageDetail}"
-                         FontSize="11"
-                         Foreground="{DynamicResource TextSecondaryBrush}"
-                         TextWrapping="Wrap"
-                         MaxLines="2" />
-              <WrapPanel ItemSpacing="6" LineSpacing="6">
-                <Border Classes="stat-pill sm info"><TextBlock Text="{Binding RecoveryCoverage24Label}" FontSize="10"/></Border>
-                <Border Classes="stat-pill sm info"><TextBlock Text="{Binding RecoveryCoverage7Label}" FontSize="10"/></Border>
-                <Border Classes="stat-pill sm info"><TextBlock Text="{Binding RecoveryCoverage30Label}" FontSize="10"/></Border>
-                <Border Classes="stat-pill sm info"><TextBlock Text="{Binding RecoveryCoverage90Label}" FontSize="10"/></Border>
-              </WrapPanel>
-            </StackPanel>
-          </Grid>
-        </Border>
-      </WrapPanel>
+      </Grid>
 
-      <Border Grid.Row="1"
+      <Border Grid.Row="2"
               Classes="card"
               IsVisible="{Binding ShowRestoreReadinessIssues}"
               Padding="{DynamicResource CardPaddingSmall}"
@@ -247,7 +243,7 @@
       </Border>
 
       <Grid x:Name="ActivitySectionsGrid"
-            Grid.Row="2"
+            Grid.Row="3"
             ColumnDefinitions="1.65*,0.85*"
             ColumnSpacing="16"
             Margin="4,12,4,0">
@@ -447,7 +443,7 @@
       </Grid>
 
       <Grid x:Name="StorageSectionsGrid"
-            Grid.Row="3"
+            Grid.Row="4"
             ColumnDefinitions="1.15*,0.85*"
             ColumnSpacing="16"
             Margin="4,12,4,0">

@@ -1,8 +1,8 @@
 <p align="center">
   <img
     width="960"
-    alt="VaultSync dashboard showing backup health, recovery readiness, and project status"
-    src="docs/images/Dashboard.png"
+    alt="VaultSync — back up with confidence"
+    src="docs/branding/vaultsync-social-preview.png"
   />
 </p>
 

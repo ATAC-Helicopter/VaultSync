@@ -81,19 +81,45 @@ namespace VaultSync.UI.ViewModels
         }
 
         // Commands used by the shell / main window
-        public ICommand NavigateDashboard { get; }
+        public ICommand NavigateDashboard
+        {
+            get;
+        }
 
-        public ICommand NavigateProjects { get; }
+        public ICommand NavigateProjects
+        {
+            get;
+        }
 
-        public ICommand NavigateBackups { get; }
+        public ICommand NavigateBackups
+        {
+            get;
+        }
 
-        public ICommand NavigateHistory { get; }
+        public ICommand NavigateSchedule
+        {
+            get;
+        }
 
-        public ICommand NavigateRecovery { get; }
+        public ICommand NavigateHistory
+        {
+            get;
+        }
 
-        public ICommand NavigateGuide { get; }
+        public ICommand NavigateRecovery
+        {
+            get;
+        }
 
-        public ICommand NavigateSettings { get; }
+        public ICommand NavigateGuide
+        {
+            get;
+        }
+
+        public ICommand NavigateSettings
+        {
+            get;
+        }
 
         private void SetCurrentView(string viewKey, bool remember = true)
         {
@@ -150,6 +176,14 @@ namespace VaultSync.UI.ViewModels
                     CurrentView = _settingsViewModel;
                     HeaderTitle = AppViewModel.L("Nav.Settings", "Settings");
                     HeaderKicker = AppViewModel.L("Main.HeaderSettings", "Preferences");
+                    break;
+                case "Schedule":
+                    BackupsViewModel.IsActiveView = false;
+                    CurrentViewName = "Schedule";
+                    _scheduleViewModel.Refresh();
+                    CurrentView = _scheduleViewModel;
+                    HeaderTitle = AppViewModel.L("Nav.Schedule", "Schedule");
+                    HeaderKicker = AppViewModel.L("Schedule.Overview.Title", "Your protection schedule");
                     break;
                 case "History":
                     BackupsViewModel.IsActiveView = false;

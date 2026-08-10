@@ -1,12 +1,33 @@
 using System;
 using System.IO;
 using VaultSync.UI;
+using VaultSync.UI.Services;
+using VaultSync.Core.Config;
+using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
 namespace VaultSync.Core.Tests;
 
 public sealed class SettingsPersistencePolicyTests
 {
+    [Fact]
+    public void DestructiveSettingsActions_RequirePreviewBeforeExecution()
+    {
+        using var configScope = new TestAppConfigScope();
+        AppConfigStore.Save(new AppConfig());
+        var viewModel = new SettingsViewModel(new LocalizationService());
+
+        viewModel.ClearLocalCacheCommand.Execute(null);
+
+        Assert.True(viewModel.IsDestructivePreviewOpen);
+        Assert.Equal("Clear local cache", viewModel.DestructivePreviewActionLabel);
+        Assert.NotEmpty(viewModel.DestructivePreviewDetail);
+
+        viewModel.CancelDestructivePreviewCommand.Execute(null);
+
+        Assert.False(viewModel.IsDestructivePreviewOpen);
+    }
+
     [Fact]
     public void FolderPickerStartCandidates_PreferCurrentFolderThenHome()
     {
