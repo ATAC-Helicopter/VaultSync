@@ -169,10 +169,12 @@ Delivered:
 
 ## 1.8.5 — Recovery Confidence
 
-**Status:** Release candidate
+**Status:** Released
 **Tagline:** *Know before you need it.*
-**Branch:** `release/v1.8.5`
-**Milestone:** `1.8.5`
+**Released:** 2026-08-02
+**Tag:** `v1.8.5`
+**Release PR:** #499
+**Stable integration:** `464eab5`
 
 ### Release objective
 
@@ -308,8 +310,11 @@ warnings, and fail closed when integrity metadata is missing or inconsistent.
 
 ## 1.8.6 — Everyday Clarity
 
-**Status:** Release candidate
+**Status:** Released
 **Tagline:** *Powerful when needed. Obvious by default.*
+**Released:** 2026-08-10
+**Tag:** `v1.8.6`
+**Release PR:** #532
 
 Delivery note: `1.8.6` proceeds directly to the stable release after
 qualification. It does not have a beta build or prerelease GitHub release.

@@ -4,6 +4,8 @@
 
 VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and background work easier to understand while strengthening the release and patch path.
 
+Released on 10 August 2026.
+
 ### Guided setup and plain language
 - Follow a compact, resumable setup sequence through source, destination, project registration, schedule, first restore point, and a passed recovery drill. The card stays out of the way and completion comes from real app state.
 - Open Guide at any time for consistent definitions of backups, snapshots, restore points, verification, known-good points, protected points, and recovery drills.

@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.8.6] - Unreleased
+## [1.8.6] - 10.08.2026
 ### Added
 - [VS-1861] Replaced first-run overlays with a compact, resumable task sequence driven by real source, destination, project, schedule, restore-point, and passed recovery-drill state.
 - [VS-1865] Added explicit per-project editing for destination, preset, exclusions, tags, encryption, and automatic-backup pause state, plus a detailed removal preview that distinguishes local registration from source and stored backup data.
