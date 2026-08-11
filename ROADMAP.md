@@ -315,6 +315,8 @@ warnings, and fail closed when integrity metadata is missing or inconsistent.
 **Released:** 2026-08-10
 **Tag:** `v1.8.6`
 **Release PR:** #532
+**Stable integration:** `430dc15` / PR #539
+**Published assets:** 18 qualified assets on 2026-08-10
 
 Delivery note: `1.8.6` proceeds directly to the stable release after
 qualification. It does not have a beta build or prerelease GitHub release.
@@ -366,23 +368,138 @@ History carry the same folder identity.
 
 ## 1.8.7 — Trust and Portability
 
-**Status:** Planned
+**Status:** Active planning; implementation begins after the release contracts and
+cross-machine safety model are approved.
 **Tagline:** *Show the proof.*
+**Target:** 2026-10-30
+**Working branch:** `release/1.8.7`
+**Integration target:** `Dev`
 
 - [ ] `VS-1871` `P1` Expose build, channel, commit, runtime, architecture,
   package, and update-source information.
+  - Scope: define one build-information contract used by the desktop About and
+    diagnostics surfaces plus machine-readable CLI output; distinguish version,
+    channel, commit, runtime, architecture, package kind, update source, and
+    whether the build is official without treating unsigned packages as signed.
+  - Acceptance: a user or support bundle can identify the exact running build
+    without inspecting filenames, and unavailable values are shown as unknown
+    rather than guessed.
 - [ ] `VS-1872` `P0` Publish artifact checksums and a machine-readable release
   manifest from one release source of truth.
+  - Scope: generate version, channel, tag, commit, compatible predecessors,
+    asset names, platform, architecture, package kind, byte size, and SHA-256
+    from the artifacts that are actually published; keep the manifest itself
+    outside its own digest set and validate every consumer against one schema.
+  - Acceptance: changing an asset, version, or digest makes release validation
+    fail, while an offline user can validate every downloaded package using the
+    published manifest and documented commands.
 - [ ] `VS-1873` `P1` Generate and publish a Software Bill of Materials and
   build provenance where supported.
+  - Scope: create an SBOM for each self-contained platform artifact, attest the
+    published artifact rather than an intermediate build directory, and expose
+    online and offline verification instructions.
+  - Acceptance: SBOM schemas validate, provenance binds each package to the
+    repository, workflow, and commit that produced it, and verification is
+    exercised in the release-candidate gate.
 - [ ] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
+  - Scope: package a versioned JSON record, readable report, package manifest,
+    checksums, build identity, recovery state, drill evidence, and repository
+    identity without backup payloads, credentials, encryption secrets, or raw
+    unrestricted local paths.
+  - Acceptance: repeated exports of the same evidence are deterministic,
+    tampering is detected, schema compatibility is explicit, and the package
+    can be inspected without VaultSync.
 - [ ] `VS-1875` `P1` Strengthen explicitly redacted support bundles.
+  - Scope: define an allowlisted bundle schema, path pseudonymization, secret
+    denylist, size limits, and a review screen that lists every included file
+    and category before export.
+  - Acceptance: automated fixtures containing credentials, tokens, passwords,
+    user paths, and encryption material cannot leak them; users can cancel or
+    remove optional sections before the archive is written.
 - [ ] `VS-1876` `P1` Document repository layouts, manifests, encryption
   envelopes, compatibility, and emergency recovery expectations.
-- [ ] `VS-1877` `P1` Add source-machine identity, repository writer locking,
+  - Scope: document supported repository records and versions, portable versus
+    machine-local fields, encryption descriptors, legacy behavior, manual
+    recovery, locks and leases, release verification, and failure recovery.
+  - Acceptance: documentation matches executable schemas and tests, includes a
+    clean-machine recovery path, and states every known compatibility limit.
+- [ ] `VS-1877` `P0` Add source-machine identity, repository writer locking,
   and explicit dual-boot/concurrent-writer guidance.
+  - Scope: use a durable installation identity and a repository-scoped lease
+    with owner, operation, nonce, heartbeat, expiry, and application version;
+    allow safe read-only inspection, explicit stale takeover, and diagnostic
+    evidence without relying on process-local semaphores or machine names.
+  - Acceptance: two 1.8.7 clients cannot write concurrently, interrupted leases
+    recover predictably, NAS/SMB and clock-skew cases are covered, and the UI
+    states that pre-1.8.7 clients cannot cooperate with the lease protocol.
 - [ ] `VS-1878` `P1` Synchronize website, updater, changelog, Store metadata,
   badges, and public roadmap from canonical release metadata.
+  - Scope: make public and in-app release consumers derive from or validate
+    against the canonical release contract, including dry-run generation before
+    publication.
+  - Acceptance: CI rejects inconsistent public metadata and one unpublished
+    release-candidate run produces every expected consumer without publishing.
+- [ ] `VS-1879` `P0` Replace two-way cross-machine settings import with a
+  versioned, reviewable, and reversible merge contract.
+  - Scope: persist a durable writer identity, per-record revision and base
+    revision, field-level portable-value provenance, and an explicit merge plan;
+    classify local-only fields separately, keep imports preview-only until the
+    user confirms conflicts, and make Keep local publish or remember a durable
+    resolution instead of rediscovering the same conflict.
+  - Acceptance: independent edits on two machines never silently overwrite one
+    another; non-overlapping changes merge, overlapping changes show old, local,
+    and remote values with timestamps and writers; accepting either side is
+    durable and auditable; the operation can be undone before the next write.
+
+### Confirmed defects entering 1.8.7
+
+- [ ] `BUG-18098` `P1` Preserve complete wrapped roadmap ticket titles, scope,
+  and acceptance text when synchronizing GitHub issues and Project entries.
+  - Acceptance: parser fixtures cover multiline titles and nested scope bullets,
+    and a dry run reports exact changes without rewriting valid issue contracts.
+- [ ] `BUG-18099` `P0` Service the .NET runtime and coordinated Microsoft
+  packages to the security-fixed `10.0.11` baseline or newer validated patch.
+  - Acceptance: all current runtime-pack Dependabot alerts are closed, direct
+    and runtime-pack vulnerability audits agree, and self-contained packages on
+    every supported RID contain the qualified runtime patch.
+- [x] `BUG-18100` `P0` Restore the permanent `Dev` branch and prevent Stable
+  promotion merges from automatically deleting it.
+  - Completed: `Dev` was restored at the exact `v1.8.6` Stable commit on
+    2026-08-12 and automatic head-branch deletion was disabled.
+- [ ] `BUG-18101` `P0` Stop cross-machine metadata import from applying
+  unreviewed settings or repeatedly resurfacing a rejected remote edit.
+  - Scope: encryption policy and key references, auto-backup state, avatar
+    color, tombstones, and all existing conflict fields must follow an explicit
+    portability and conflict policy; Keep local must be durable.
+  - Acceptance: imports do not silently apply machine-local key references or
+    destructive tombstones, every changed portable field appears in preview,
+    writer attribution is record-specific, and resolved conflicts stay resolved.
+
+### Delivery sequence
+
+1. **12–16 August:** contracts, issue repair, threat model, metadata schema.
+2. **17–30 August:** release manifest and in-app build identity.
+3. **31 August–13 September:** platform SBOMs and artifact provenance.
+4. **14–27 September:** durable machine identity, repository lease, and
+   cross-machine three-way merge.
+5. **28 September–11 October:** evidence package, support bundle, and repository
+   documentation.
+6. **12–18 October:** public metadata consumers, UI polish, localization, and
+   release dry run.
+7. **19–25 October:** unpublished candidate, multi-machine/NAS exercises, and
+   the complete Windows, macOS, and Linux qualification matrix.
+8. **30 October:** Stable release after every P0 and release gate is complete.
+
+### Release gates
+
+- every published asset is represented by an exact size and SHA-256 digest;
+- platform SBOMs validate and build attestations verify online and offline;
+- two 1.8.7 clients cannot write concurrently to one repository;
+- divergent cross-machine edits are previewed and resolved without silent loss;
+- upgrades from 1.8.6 preserve local projects, repositories, and recovery data;
+- support and evidence exports pass adversarial privacy and tamper tests;
+- all maintained translations, themes, accessibility paths, SonarQube, CodeQL,
+  dependency audits, and supported-platform builds pass.
 
 Signing and notarization remain desirable trust work, but availability and cost
 must not make truthful checksums, manifests, SBOMs, or provenance optional.

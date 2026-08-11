@@ -47,6 +47,33 @@ VaultSync can export a portable metadata store to backup destinations and later 
 - In particular, preferred destination, restore mode, verification policy, and tags can create a metadata conflict record instead.
 - Review these conflicts from `Settings > Advanced > Doctor`.
 
+### Current 1.8.6 limitations
+
+The 1.8.6 metadata store is a portable inventory and recovery aid, not a fully
+synchronized multi-writer configuration database.
+
+- It compares the current local value with the latest value in the destination
+  store. It does not retain a common base revision, so it cannot prove which of
+  two independent edits is newer or automatically perform a true three-way
+  merge.
+- The store-level writer machine is not record-level provenance. A conflict can
+  therefore identify the most recent store writer rather than the machine that
+  originally changed that specific project field.
+- `Keep local` dismisses the current conflict record but does not publish a
+  durable resolution to the destination. The same unchanged remote value can be
+  discovered again by a later import.
+- Encryption policy and key-reference metadata, auto-backup state, avatar color,
+  and tombstones do not all use the same review path as the four visible
+  conflict fields. Treat cross-machine imports as a review operation and avoid
+  editing the same project from multiple machines concurrently.
+- The in-process metadata gate coordinates one running VaultSync process only.
+  It is not a cross-machine writer lock.
+
+VaultSync 1.8.7 tracks a versioned three-way merge contract, durable conflict
+resolution, per-record writer provenance, and a repository-scoped writer lease.
+Until that ships, use one machine as the writer for a destination and use other
+machines for recovery inspection or deliberate imports.
+
 ![Doctor, metadata-conflict, maintenance, and update controls](../images/Settings_Maintenance.png)
 
 ## Missing backup paths
