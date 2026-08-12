@@ -1588,7 +1588,7 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
-            RuntimeLog.WriteVerbose($"[MetadataSync] Existing project root could not be inspected: {ex.Message}");
+            RuntimeLog.WriteVerbose($"[MetadataSync] Legacy backup root could not be enumerated: {ex.Message}");
             return result;
         }
 
@@ -1905,8 +1905,9 @@ public sealed class MetadataSyncService
             if (Directory.Exists(existingRoot))
                 return false;
         }
-        catch
+        catch (Exception ex)
         {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Existing project root could not be inspected: {ex.Message}");
         }
 
         return Directory.Exists(importedRoot);

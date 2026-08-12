@@ -79,8 +79,9 @@ namespace VaultSync.CLI.Commands
                 NetworkCredentialProfile? profile = ResolveCredential(config, dest);
                 DestinationResolution resolution = mountService.PrepareDestination(dest, profile);
                 bool reachable = resolution.IsSuccess;
+                string defaultMessage = reachable ? "Reachable" : "Unreachable";
                 string message = string.IsNullOrWhiteSpace(resolution.Message)
-                    ? (reachable ? "Reachable" : "Unreachable")
+                    ? defaultMessage
                     : resolution.Message;
                 NetworkMountService.Cleanup(resolution);
                 return new DestinationInfo(alias, path, status, reachable, message);
@@ -114,8 +115,9 @@ namespace VaultSync.CLI.Commands
 
             foreach (DestinationInfo row in results)
             {
+                string testedDetail = row.Reachable ? "Reachable" : row.Message;
                 string detail = test
-                    ? (row.Reachable ? "Reachable" : row.Message)
+                    ? testedDetail
                     : row.Message;
 
                 table.AddRow(row.Alias, row.Path, row.Status, detail);
