@@ -46,14 +46,17 @@ function Get-FileVersionValue {
     return $match.Groups[1].Value.Trim()
 }
 
-function Get-ChangelogVersion {
+function Get-ChangelogHeader {
     $line = Get-Content CHANGELOG.md | Select-Object -First 3 | Where-Object { $_ -match '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})' } | Select-Object -First 1
     if (-not $line) {
         throw "Could not find release changelog header in CHANGELOG.md."
     }
 
     $match = [regex]::Match($line, '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})')
-    return $match.Groups[1].Value.Trim()
+    return [pscustomobject]@{
+        version = $match.Groups[1].Value.Trim()
+        status  = $match.Groups[2].Value.Trim()
+    }
 }
 
 function Get-WhatsNewVersion {
@@ -161,7 +164,13 @@ if ([string]::IsNullOrWhiteSpace($TargetMilestone)) {
 $results = New-Object System.Collections.Generic.List[object]
 $uiVersion = Get-FileVersionValue -Path "src/VaultSync.UI/VaultSync.UI.csproj" -Pattern '<Version>([^<]+)</Version>'
 $installerVersion = Get-FileVersionValue -Path "installer/VaultSyncInstaller.iss" -Pattern '#define MyAppVersion "([^"]+)"'
-$changelogVersion = Get-ChangelogVersion
+$changelogHeader = Get-ChangelogHeader
+$changelogVersion = $changelogHeader.version
+$changelogHasTargetSection = [regex]::IsMatch(
+    (Get-Content CHANGELOG.md -Raw),
+    "(?m)^## \[$([regex]::Escape($TargetVersion))\] - ")
+$changelogMatchesTarget = $changelogVersion -eq $TargetVersion -or (
+    $changelogHeader.status -eq "Unreleased" -and $changelogHasTargetSection)
 $whatsNewVersion = Get-WhatsNewVersion
 $releasingDoc = Get-Content docs/RELEASING.md -Raw
 $securityDoc = Get-Content SECURITY.md -Raw
@@ -176,10 +185,10 @@ Add-CheckResult -Results $results -Code "version-installer" -Condition ($install
     -FailMessage "Installer version '$installerVersion' does not match target '$TargetVersion'." `
     -Data @{ expected = $TargetVersion; actual = $installerVersion }
 
-Add-CheckResult -Results $results -Code "docs-changelog" -Condition ($changelogVersion -eq $TargetVersion) `
-    -PassMessage "Top changelog version is '$changelogVersion'." `
-    -FailMessage "Top changelog version '$changelogVersion' does not match target '$TargetVersion'." `
-    -Data @{ expected = $TargetVersion; actual = $changelogVersion }
+Add-CheckResult -Results $results -Code "docs-changelog" -Condition $changelogMatchesTarget `
+    -PassMessage "Changelog contains target '$TargetVersion'; top entry is '$changelogVersion' ($($changelogHeader.status))." `
+    -FailMessage "Top changelog entry '$changelogVersion' ($($changelogHeader.status)) is incompatible with target '$TargetVersion'." `
+    -Data @{ expected = $TargetVersion; actual = $changelogVersion; status = $changelogHeader.status }
 
 Add-CheckResult -Results $results -Code "docs-whats-new" -Condition ($whatsNewVersion -eq $TargetVersion) `
     -PassMessage "Top What's New version is '$whatsNewVersion'." `
