@@ -8,7 +8,6 @@
 
     <!-- Multi-target: generic .NET 10 + Windows-specific TFM -->
     <TargetFrameworks>net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
-    <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
 
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
@@ -25,7 +24,7 @@
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
     <!-- Allow building the Windows TFM on non-Windows agents (e.g., macOS CI/local) -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <!-- Ensure Windows TFM restore generates packaged Windows output assets without requesting the invalid "any" RID. -->
+    <!-- Release builds default to win-x64, so solution restore must include that target graph. -->
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <!-- Default Release publishes to win-x64 self-contained to avoid missing runtime prompts -->
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">win-x64</RuntimeIdentifier>

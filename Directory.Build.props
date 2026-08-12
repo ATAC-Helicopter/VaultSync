@@ -1,7 +1,8 @@
 <Project>
   <PropertyGroup>
-    <!-- Pin ASP.NET Core runtime packs to a patched servicing release for self-contained RID restores. -->
-    <MicrosoftAspNetCoreAppRuntimePackageVersion>10.0.9</MicrosoftAspNetCoreAppRuntimePackageVersion>
+    <!-- Self-contained releases must resolve at least this security-serviced runtime. -->
+    <VaultSyncMinimumRuntimeVersion>10.0.11</VaultSyncMinimumRuntimeVersion>
+    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
   </PropertyGroup>
 
   <ItemGroup>
