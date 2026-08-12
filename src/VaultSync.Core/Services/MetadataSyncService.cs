@@ -52,6 +52,45 @@ public sealed class MetadataSyncService
         string MachineId,
         bool ForceBackfill);
 
+    private sealed record LegacyPreviewContext(
+        string RootPath,
+        bool AllowCreateProjects,
+        LegacyPreviewIndexes Indexes,
+        LegacyPreviewSeen Seen);
+
+    private sealed record LegacyPreviewIndexes(
+        IReadOnlySet<string> ProjectsByName,
+        IReadOnlyDictionary<string, int> SnapshotExternalMap,
+        IReadOnlyDictionary<string, int> BackupExternalMap,
+        IReadOnlySet<string> ExistingBackupPaths);
+
+    private sealed record LegacyPreviewSeen(
+        ISet<string> Projects,
+        ISet<string> Snapshots,
+        ISet<string> Backups);
+
+    private sealed record PreviewProjectCounts(int Add, int Link);
+
+    private sealed record PreviewTombstoneAnalysis(
+        HashSet<string> BackupIds,
+        HashSet<string> SnapshotIds,
+        int DeleteBackups);
+
+    private sealed record PreviewBackupAnalysis(HashSet<string> LiveSnapshotIds, int Add, int Delete);
+
+    private sealed class LegacyImportState
+    {
+        public required Dictionary<string, Project> ProjectsByName { get; init; }
+        public required IReadOnlyDictionary<string, int> SnapshotExternalMap { get; init; }
+        public required IReadOnlyDictionary<string, int> BackupExternalMap { get; init; }
+        public required Dictionary<string, Backup> ExistingBackupByPath { get; init; }
+        public HashSet<int> AffectedProjectIds { get; } = [];
+        public int ImportedProjects { get; set; }
+        public int ImportedSnapshots { get; set; }
+        public int ImportedBackups { get; set; }
+        public int RepairedBackups { get; set; }
+    }
+
     private readonly SqliteRepository _repo;
     private readonly IAppConfigStore _configStore;
     private readonly IInstallationIdentityProvider? _installationIdentityProvider;
@@ -576,13 +615,11 @@ public sealed class MetadataSyncService
             if (string.IsNullOrWhiteSpace(tombstone.EntityId))
                 continue;
 
-            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase) &&
+                backupExternalMap.TryGetValue(tombstone.EntityId, out int existingId))
             {
-                if (backupExternalMap.TryGetValue(tombstone.EntityId, out int existingId))
-                {
-                    _repo.DeleteBackupById(existingId);
-                    appliedTombstones++;
-                }
+                _repo.DeleteBackupById(existingId);
+                appliedTombstones++;
             }
         }
 
@@ -619,16 +656,13 @@ public sealed class MetadataSyncService
                 if (project == null)
                     continue;
 
-                (int Snapshots, int Files) = _repo.DeleteSnapshotsById(project.Name, [snapshot.Id]);
-                removedSnapshots += Snapshots;
+                (int snapshots, _) = _repo.DeleteSnapshotsById(project.Name, [snapshot.Id]);
+                removedSnapshots += snapshots;
             }
 
-            if (removedSnapshots > 0)
+            if (removedSnapshots > 0 && opts.ExportMissingTombstonesOnImport)
             {
-                if (opts.ExportMissingTombstonesOnImport)
-                {
-                    TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
-                }
+                TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
             }
         }
 
@@ -949,65 +983,16 @@ public sealed class MetadataSyncService
     {
         try
         {
-            var stack = new Stack<string>();
-            stack.Push(rootPath);
+            var stack = new Stack<string>([rootPath]);
 
             while (stack.Count > 0)
             {
                 string current = stack.Pop();
+                foreach (string directory in GetTraversableDirectories(current))
+                    stack.Push(directory);
 
-                IEnumerable<string> dirs;
-                try
-                {
-                    dirs = Directory.EnumerateDirectories(current);
-                }
-                catch
-                {
-                    continue;
-                }
-
-                foreach (string dir in dirs)
-                {
-                    string name = Path.GetFileName(dir);
-                    if (string.Equals(name, VaultSyncDirectoryName, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    try
-                    {
-                        var di = new DirectoryInfo(dir);
-                        if (di.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                            continue;
-                    }
-                    catch
-                    {
-                        continue;
-                    }
-
-                    stack.Push(dir);
-                }
-
-                IEnumerable<string> files;
-                try
-                {
-                    files = Directory.EnumerateFiles(current);
-                }
-                catch
-                {
-                    continue;
-                }
-
-                foreach (string file in files)
-                {
-                    try
-                    {
-                        if (File.GetLastWriteTimeUtc(file) > importedLatestUtc)
-                            return true;
-                    }
-                    catch
-                    {
-                        continue;
-                    }
-                }
+                if (ContainsFileNewerThan(current, importedLatestUtc))
+                    return true;
             }
         }
         catch
@@ -1016,6 +1001,60 @@ public sealed class MetadataSyncService
         }
 
         return false;
+    }
+
+    private static IEnumerable<string> GetTraversableDirectories(string path)
+    {
+        IEnumerable<string> directories;
+        try
+        {
+            directories = Directory.EnumerateDirectories(path);
+        }
+        catch
+        {
+            return [];
+        }
+
+        return directories.Where(IsTraversableDirectory).ToList();
+    }
+
+    private static bool IsTraversableDirectory(string path)
+    {
+        if (string.Equals(Path.GetFileName(path), VaultSyncDirectoryName, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        try
+        {
+            return !new DirectoryInfo(path).Attributes.HasFlag(FileAttributes.ReparsePoint);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool ContainsFileNewerThan(string path, DateTime timestampUtc)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(path).Any(file => IsFileNewerThan(file, timestampUtc));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsFileNewerThan(string path, DateTime timestampUtc)
+    {
+        try
+        {
+            return File.GetLastWriteTimeUtc(path) > timestampUtc;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private MetadataSyncPreview PreviewImportFromStoreInternal(string rootPath, MetadataStore store, MetadataSyncOptions opts)
@@ -1048,12 +1087,6 @@ public sealed class MetadataSyncService
             return cached.Preview;
         }
 
-        int addProjects = 0;
-        int linkProjects = 0;
-        int addSnapshots = 0;
-        int addBackups = 0;
-        int deleteBackups = 0;
-
         var projectMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var localProjects = _repo.GetAllProjects().ToList();
         IReadOnlyDictionary<string, int> projectExternalMap = _repo.GetProjectExternalIdMap();
@@ -1062,17 +1095,17 @@ public sealed class MetadataSyncService
             projectMap[pair.Key] = pair.Value;
         }
 
-        IEnumerable<MetaProject> metaProjects;
-        IEnumerable<MetaSnapshot> metaSnapshots;
-        IEnumerable<MetaBackup> metaBackups;
-        IEnumerable<MetaTombstone> metaTombstones;
+        IReadOnlyList<MetaProject> metaProjects;
+        IReadOnlyList<MetaSnapshot> metaSnapshots;
+        IReadOnlyList<MetaBackup> metaBackups;
+        IReadOnlyList<MetaTombstone> metaTombstones;
 
         try
         {
-            metaProjects = store.ListProjects();
-            metaSnapshots = store.ListSnapshots();
-            metaBackups = store.ListBackups();
-            metaTombstones = store.ListTombstones();
+            metaProjects = [.. store.ListProjects()];
+            metaSnapshots = [.. store.ListSnapshots()];
+            metaBackups = [.. store.ListBackups()];
+            metaTombstones = [.. store.ListTombstones()];
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
@@ -1080,34 +1113,11 @@ public sealed class MetadataSyncService
             return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
         }
 
-        foreach (MetaProject metaProject in metaProjects)
-        {
-            if (string.IsNullOrWhiteSpace(metaProject.ExternalId))
-                continue;
-
-            if (projectMap.ContainsKey(metaProject.ExternalId))
-                continue;
-
-            Project? existingByName = localProjects.FirstOrDefault(p =>
-                string.Equals(p.Name, metaProject.Name, StringComparison.OrdinalIgnoreCase));
-
-            if (existingByName != null)
-            {
-                if (string.IsNullOrWhiteSpace(existingByName.ExternalId))
-                {
-                    linkProjects++;
-                }
-
-                projectMap[metaProject.ExternalId] = existingByName.Id;
-                continue;
-            }
-
-            if (!opts.AllowCreateProjects)
-                continue;
-
-            addProjects++;
-            projectMap[metaProject.ExternalId] = -1;
-        }
+        PreviewProjectCounts projectCounts = CountPreviewProjects(
+            metaProjects,
+            projectMap,
+            localProjects,
+            opts.AllowCreateProjects);
 
         IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
         IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
@@ -1117,95 +1127,34 @@ public sealed class MetadataSyncService
             .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.Path)))
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var tombstonedBackupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var tombstonedSnapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var liveSnapshotExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (MetaTombstone tombstone in metaTombstones)
-        {
-            if (string.IsNullOrWhiteSpace(tombstone.EntityId))
-                continue;
-
-            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
-            {
-                tombstonedBackupIds.Add(tombstone.EntityId);
-                if (backupExternalMap.ContainsKey(tombstone.EntityId))
-                    deleteBackups++;
-            }
-            else if (string.Equals(tombstone.EntityType, "snapshot", StringComparison.OrdinalIgnoreCase))
-            {
-                tombstonedSnapshotIds.Add(tombstone.EntityId);
-            }
-        }
-
-        foreach (MetaBackup metaBackup in metaBackups)
-        {
-            if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
-                continue;
-
-            if (!string.IsNullOrWhiteSpace(metaBackup.SnapshotExternalId) &&
-                !tombstonedBackupIds.Contains(metaBackup.ExternalId))
-            {
-                liveSnapshotExternalIds.Add(metaBackup.SnapshotExternalId);
-            }
-
-            if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
-                continue;
-
-            if (!TryResolveBackupPath(rootPath, metaBackup.PathRel, out _))
-            {
-                tombstonedBackupIds.Add(metaBackup.ExternalId);
-                if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
-                    deleteBackups++;
-                continue;
-            }
-
-            if (!projectMap.ContainsKey(metaBackup.ProjectExternalId))
-                continue;
-
-            if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
-                continue;
-
-            addBackups++;
-        }
-
-        foreach (MetaSnapshot metaSnapshot in metaSnapshots)
-        {
-            if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
-                continue;
-
-            if (!liveSnapshotExternalIds.Contains(metaSnapshot.ExternalId))
-            {
-                tombstonedSnapshotIds.Add(metaSnapshot.ExternalId);
-                continue;
-            }
-
-            if (tombstonedSnapshotIds.Contains(metaSnapshot.ExternalId))
-                continue;
-
-            if (!projectMap.ContainsKey(metaSnapshot.ProjectExternalId))
-                continue;
-
-            if (snapshotExternalMap.ContainsKey(metaSnapshot.ExternalId))
-                continue;
-
-            addSnapshots++;
-        }
+        PreviewTombstoneAnalysis tombstones = AnalyzePreviewTombstones(metaTombstones, backupExternalMap);
+        PreviewBackupAnalysis backups = AnalyzePreviewBackups(
+            metaBackups,
+            rootPath,
+            projectMap,
+            backupExternalMap,
+            tombstones.BackupIds);
+        int addSnapshots = CountPreviewSnapshots(
+            metaSnapshots,
+            projectMap,
+            snapshotExternalMap,
+            tombstones.SnapshotIds,
+            backups.LiveSnapshotIds);
 
         MetadataSyncPreview filesystemPreview = PreviewBackupFoldersFromDestination(rootPath, opts, store.DatabasePath);
-        addProjects += filesystemPreview.NewProjects;
+        int addProjects = projectCounts.Add + filesystemPreview.NewProjects;
         addSnapshots += filesystemPreview.NewSnapshots;
-        addBackups += filesystemPreview.NewBackups;
+        int addBackups = backups.Add + filesystemPreview.NewBackups;
 
         var preview = new MetadataSyncPreview(
             MetadataSyncStatus.Success,
             rootPath,
             store.DatabasePath,
             addProjects,
-            linkProjects,
+            projectCounts.Link,
             addSnapshots,
             addBackups,
-            deleteBackups,
+            tombstones.DeleteBackups + backups.Delete,
             string.Empty);
 
         if (metaInfo != null)
@@ -1214,6 +1163,118 @@ public sealed class MetadataSyncService
         }
 
         return preview;
+    }
+
+    private static PreviewProjectCounts CountPreviewProjects(
+        IEnumerable<MetaProject> projects,
+        IDictionary<string, int> projectMap,
+        IReadOnlyCollection<Project> localProjects,
+        bool allowCreateProjects)
+    {
+        int add = 0;
+        int link = 0;
+        foreach (MetaProject project in projects)
+        {
+            if (string.IsNullOrWhiteSpace(project.ExternalId) || projectMap.ContainsKey(project.ExternalId))
+                continue;
+
+            Project? local = localProjects.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, project.Name, StringComparison.OrdinalIgnoreCase));
+            if (local is not null)
+            {
+                if (string.IsNullOrWhiteSpace(local.ExternalId))
+                    link++;
+                projectMap[project.ExternalId] = local.Id;
+            }
+            else if (allowCreateProjects)
+            {
+                add++;
+                projectMap[project.ExternalId] = -1;
+            }
+        }
+
+        return new PreviewProjectCounts(add, link);
+    }
+
+    private static PreviewTombstoneAnalysis AnalyzePreviewTombstones(
+        IEnumerable<MetaTombstone> tombstones,
+        IReadOnlyDictionary<string, int> backupExternalMap)
+    {
+        var backupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var snapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int deletes = 0;
+        foreach (MetaTombstone tombstone in tombstones.Where(tombstone => !string.IsNullOrWhiteSpace(tombstone.EntityId)))
+        {
+            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
+            {
+                backupIds.Add(tombstone.EntityId);
+                deletes += backupExternalMap.ContainsKey(tombstone.EntityId) ? 1 : 0;
+            }
+            else if (string.Equals(tombstone.EntityType, "snapshot", StringComparison.OrdinalIgnoreCase))
+            {
+                snapshotIds.Add(tombstone.EntityId);
+            }
+        }
+
+        return new PreviewTombstoneAnalysis(backupIds, snapshotIds, deletes);
+    }
+
+    private static PreviewBackupAnalysis AnalyzePreviewBackups(
+        IEnumerable<MetaBackup> backups,
+        string rootPath,
+        IReadOnlyDictionary<string, int> projectMap,
+        IReadOnlyDictionary<string, int> backupExternalMap,
+        ISet<string> tombstonedBackupIds)
+    {
+        var liveSnapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int add = 0;
+        int delete = 0;
+        foreach (MetaBackup backup in backups)
+        {
+            if (string.IsNullOrWhiteSpace(backup.ExternalId))
+                continue;
+
+            if (!string.IsNullOrWhiteSpace(backup.SnapshotExternalId) && !tombstonedBackupIds.Contains(backup.ExternalId))
+                liveSnapshotIds.Add(backup.SnapshotExternalId);
+            if (tombstonedBackupIds.Contains(backup.ExternalId))
+                continue;
+            if (!TryResolveBackupPath(rootPath, backup.PathRel, out _))
+            {
+                tombstonedBackupIds.Add(backup.ExternalId);
+                delete += backupExternalMap.ContainsKey(backup.ExternalId) ? 1 : 0;
+                continue;
+            }
+            if (projectMap.ContainsKey(backup.ProjectExternalId) && !backupExternalMap.ContainsKey(backup.ExternalId))
+                add++;
+        }
+
+        return new PreviewBackupAnalysis(liveSnapshotIds, add, delete);
+    }
+
+    private static int CountPreviewSnapshots(
+        IEnumerable<MetaSnapshot> snapshots,
+        IReadOnlyDictionary<string, int> projectMap,
+        IReadOnlyDictionary<string, int> snapshotExternalMap,
+        ISet<string> tombstonedSnapshotIds,
+        IReadOnlySet<string> liveSnapshotIds)
+    {
+        int add = 0;
+        foreach (MetaSnapshot snapshot in snapshots.Where(snapshot => !string.IsNullOrWhiteSpace(snapshot.ExternalId)))
+        {
+            if (!liveSnapshotIds.Contains(snapshot.ExternalId))
+            {
+                tombstonedSnapshotIds.Add(snapshot.ExternalId);
+                continue;
+            }
+            if (!tombstonedSnapshotIds.Contains(snapshot.ExternalId) &&
+                projectMap.ContainsKey(snapshot.ProjectExternalId) &&
+                !snapshotExternalMap.ContainsKey(snapshot.ExternalId))
+            {
+                add++;
+            }
+        }
+
+        return add;
     }
 
     private MetadataSyncResult ImportBackupFoldersFromDestination(string rootPath, MetadataSyncOptions opts, AppConfig config)
@@ -1229,11 +1290,6 @@ public sealed class MetadataSyncService
             return new MetadataSyncResult(MetadataSyncStatus.Success, 0, 0, 0, 0, string.Empty);
         }
 
-        int importedProjects = 0;
-        int importedSnapshots = 0;
-        int importedBackups = 0;
-        int repairedBackups = 0;
-        var affectedProjectIds = new HashSet<int>();
         var projectsByName = _repo
             .GetAllProjects()
             .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
@@ -1251,130 +1307,196 @@ public sealed class MetadataSyncService
             .GroupBy(entry => entry.Path, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().Backup, StringComparer.OrdinalIgnoreCase);
 
-        foreach (IGrouping<string, LegacyBackupFolder> projectGroup in discovered.GroupBy(folder => folder.ProjectName, StringComparer.OrdinalIgnoreCase))
+        var state = new LegacyImportState
         {
-            List<LegacyBackupFolder> importableFolders = [.. projectGroup
-                .Where(folder => !existingBackupByPath.ContainsKey(NormalizeStablePath(folder.RelativePath)))
-                .OrderBy(folder => folder.CreatedUtc)];
-            List<LegacyBackupFolder> repairableFolders = [.. projectGroup
-                .Where(folder =>
-                    existingBackupByPath.TryGetValue(NormalizeStablePath(folder.RelativePath), out Backup? backup) &&
-                    backup.IsImported &&
-                    backup.TotalBytes <= 0)
-                .OrderBy(folder => folder.CreatedUtc)];
-            if (importableFolders.Count == 0 && repairableFolders.Count == 0)
-                continue;
-
-            string projectName = projectGroup.Key;
-            string projectExternalId = BuildStableExternalId("legacy-project", rootPath, projectName);
-
-            if (!projectsByName.TryGetValue(projectName, out Project? project))
-            {
-                if (!opts.AllowCreateProjects)
-                    continue;
-
-                string projectRoot = ResolveImportedProjectRoot(null, config.ProjectsRoot, projectName, projectExternalId);
-                int projectId = _repo.AddProject(new Project
-                {
-                    ExternalId = projectExternalId,
-                    Name = projectName,
-                    RootPath = projectRoot,
-                    Preset = "generic",
-                    CreatedUtc = projectGroup.Min(folder => folder.CreatedUtc),
-                    NeedsRestore = false
-                });
-
-                project = _repo.GetProjectById(projectId);
-                if (project is null)
-                    continue;
-
-                projectsByName[projectName] = project;
-                importedProjects++;
-            }
-            else if (string.IsNullOrWhiteSpace(project.ExternalId))
-            {
-                _repo.UpdateProjectExternalId(project.Id, projectExternalId);
-                project = project with { ExternalId = projectExternalId };
-                projectsByName[projectName] = project;
-            }
-
-            foreach (LegacyBackupFolder folder in repairableFolders)
-            {
-                string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
-                if (!existingBackupByPath.TryGetValue(normalizedRelativePath, out Backup? existingBackup))
-                    continue;
-
-                long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
-                if (sizeBytes <= 0)
-                    continue;
-
-                _repo.UpdateBackupTotalBytes(existingBackup.Id, sizeBytes);
-                Snapshot? existingSnapshot = _repo.GetSnapshotById(existingBackup.SnapshotId);
-                if (existingSnapshot is not null && existingSnapshot.TotalBytes <= 0)
-                    _repo.UpdateSnapshotTotalBytes(existingSnapshot.Id, sizeBytes);
-
-                repairedBackups++;
-                affectedProjectIds.Add(existingBackup.ProjectId);
-            }
-
-            foreach (LegacyBackupFolder folder in importableFolders)
-            {
-                string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
-                string snapshotExternalId = BuildStableExternalId("legacy-snapshot", rootPath, folder.RelativePath);
-                string backupExternalId = BuildStableExternalId("legacy-backup", rootPath, folder.RelativePath);
-                long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
-
-                if (!snapshotExternalMap.TryGetValue(snapshotExternalId, out int snapshotId))
-                {
-                    snapshotId = _repo.CreateSnapshotFromMetadata(
-                        snapshotExternalId,
-                        project.Id,
-                        folder.CreatedUtc,
-                        fileCount: 0,
-                        totalBytes: sizeBytes);
-                    importedSnapshots++;
-                }
-
-                if (backupExternalMap.ContainsKey(backupExternalId))
-                    continue;
-
-                _repo.CreateBackupFromMetadata(
-                    backupExternalId,
-                    project.Id,
-                    snapshotId,
-                    folder.CreatedUtc,
-                    "manual",
-                    sizeBytes,
-                    folder.RelativePath,
-                    rootPath,
-                    string.Empty,
-                    isProtected: false,
-                    isImported: true,
-                    backupMode: BackupModes.Full);
-
-                importedBackups++;
-                affectedProjectIds.Add(project.Id);
-                existingBackupByPath[normalizedRelativePath] = _repo.GetBackupByExternalId(backupExternalId)
-                    ?? new Backup { Id = 0, ProjectId = project.Id, SnapshotId = snapshotId, Path = folder.RelativePath, TotalBytes = sizeBytes, IsImported = true };
-            }
-
-            if (opts.MarkNeedsRestoreOnImport && affectedProjectIds.Contains(project.Id))
-            {
-                _repo.UpdateProjectNeedsRestore(project.Id, true);
-            }
-        }
+            ProjectsByName = projectsByName,
+            SnapshotExternalMap = snapshotExternalMap,
+            BackupExternalMap = backupExternalMap,
+            ExistingBackupByPath = existingBackupByPath
+        };
+        foreach (IGrouping<string, LegacyBackupFolder> projectGroup in discovered.GroupBy(folder => folder.ProjectName, StringComparer.OrdinalIgnoreCase))
+            ImportLegacyProjectGroup(projectGroup, rootPath, opts, config, state);
 
         return new MetadataSyncResult(
             MetadataSyncStatus.Success,
-            importedProjects,
-            importedSnapshots,
-            importedBackups,
+            state.ImportedProjects,
+            state.ImportedSnapshots,
+            state.ImportedBackups,
             0,
             string.Empty)
         {
-            AffectedProjectIds = [.. affectedProjectIds],
-            RepairedBackups = repairedBackups
+            AffectedProjectIds = [.. state.AffectedProjectIds],
+            RepairedBackups = state.RepairedBackups
         };
+    }
+
+    private void ImportLegacyProjectGroup(
+        IGrouping<string, LegacyBackupFolder> projectGroup,
+        string rootPath,
+        MetadataSyncOptions options,
+        AppConfig config,
+        LegacyImportState state)
+    {
+        List<LegacyBackupFolder> importableFolders = [.. projectGroup
+            .Where(folder => !state.ExistingBackupByPath.ContainsKey(NormalizeStablePath(folder.RelativePath)))
+            .OrderBy(folder => folder.CreatedUtc)];
+        List<LegacyBackupFolder> repairableFolders = [.. projectGroup
+            .Where(folder => IsRepairableLegacyBackup(folder, state.ExistingBackupByPath))
+            .OrderBy(folder => folder.CreatedUtc)];
+        if (importableFolders.Count == 0 && repairableFolders.Count == 0)
+            return;
+
+        Project? project = ResolveLegacyProject(projectGroup, rootPath, options, config, state);
+        if (project is null)
+            return;
+
+        RepairLegacyBackups(repairableFolders, rootPath, state);
+        ImportLegacyBackups(importableFolders, rootPath, project, state);
+        if (options.MarkNeedsRestoreOnImport && state.AffectedProjectIds.Contains(project.Id))
+            _repo.UpdateProjectNeedsRestore(project.Id, true);
+    }
+
+    private static bool IsRepairableLegacyBackup(
+        LegacyBackupFolder folder,
+        IReadOnlyDictionary<string, Backup> existingBackupByPath) =>
+        existingBackupByPath.TryGetValue(NormalizeStablePath(folder.RelativePath), out Backup? backup) &&
+        backup.IsImported &&
+        backup.TotalBytes <= 0;
+
+    private Project? ResolveLegacyProject(
+        IGrouping<string, LegacyBackupFolder> projectGroup,
+        string rootPath,
+        MetadataSyncOptions options,
+        AppConfig config,
+        LegacyImportState state)
+    {
+        string projectName = projectGroup.Key;
+        string externalId = BuildStableExternalId("legacy-project", rootPath, projectName);
+        if (!state.ProjectsByName.TryGetValue(projectName, out Project? project))
+            return options.AllowCreateProjects
+                ? CreateLegacyProject(projectGroup, config, externalId, state)
+                : null;
+
+        if (string.IsNullOrWhiteSpace(project.ExternalId))
+        {
+            _repo.UpdateProjectExternalId(project.Id, externalId);
+            project = project with { ExternalId = externalId };
+            state.ProjectsByName[projectName] = project;
+        }
+
+        return project;
+    }
+
+    private Project? CreateLegacyProject(
+        IGrouping<string, LegacyBackupFolder> projectGroup,
+        AppConfig config,
+        string externalId,
+        LegacyImportState state)
+    {
+        string projectRoot = ResolveImportedProjectRoot(null, config.ProjectsRoot, projectGroup.Key, externalId);
+        int projectId = _repo.AddProject(new Project
+        {
+            ExternalId = externalId,
+            Name = projectGroup.Key,
+            RootPath = projectRoot,
+            Preset = "generic",
+            CreatedUtc = projectGroup.Min(folder => folder.CreatedUtc),
+            NeedsRestore = false
+        });
+        Project? project = _repo.GetProjectById(projectId);
+        if (project is null)
+            return null;
+
+        state.ProjectsByName[projectGroup.Key] = project;
+        state.ImportedProjects++;
+        return project;
+    }
+
+    private void RepairLegacyBackups(
+        IEnumerable<LegacyBackupFolder> folders,
+        string rootPath,
+        LegacyImportState state)
+    {
+        foreach (LegacyBackupFolder folder in folders)
+        {
+            string path = NormalizeStablePath(folder.RelativePath);
+            if (!state.ExistingBackupByPath.TryGetValue(path, out Backup? backup))
+                continue;
+
+            long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
+            if (sizeBytes <= 0)
+                continue;
+
+            _repo.UpdateBackupTotalBytes(backup.Id, sizeBytes);
+            Snapshot? snapshot = _repo.GetSnapshotById(backup.SnapshotId);
+            if (snapshot is not null && snapshot.TotalBytes <= 0)
+                _repo.UpdateSnapshotTotalBytes(snapshot.Id, sizeBytes);
+
+            state.RepairedBackups++;
+            state.AffectedProjectIds.Add(backup.ProjectId);
+        }
+    }
+
+    private void ImportLegacyBackups(
+        IEnumerable<LegacyBackupFolder> folders,
+        string rootPath,
+        Project project,
+        LegacyImportState state)
+    {
+        foreach (LegacyBackupFolder folder in folders)
+            ImportLegacyBackup(folder, rootPath, project, state);
+    }
+
+    private void ImportLegacyBackup(
+        LegacyBackupFolder folder,
+        string rootPath,
+        Project project,
+        LegacyImportState state)
+    {
+        string normalizedPath = NormalizeStablePath(folder.RelativePath);
+        string snapshotExternalId = BuildStableExternalId("legacy-snapshot", rootPath, folder.RelativePath);
+        string backupExternalId = BuildStableExternalId("legacy-backup", rootPath, folder.RelativePath);
+        long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
+        int snapshotId = ResolveLegacySnapshot(snapshotExternalId, project.Id, folder, sizeBytes, state);
+        if (state.BackupExternalMap.ContainsKey(backupExternalId))
+            return;
+
+        _repo.CreateBackupFromMetadata(
+            backupExternalId,
+            project.Id,
+            snapshotId,
+            folder.CreatedUtc,
+            "manual",
+            sizeBytes,
+            folder.RelativePath,
+            rootPath,
+            string.Empty,
+            isProtected: false,
+            isImported: true,
+            backupMode: BackupModes.Full);
+        state.ImportedBackups++;
+        state.AffectedProjectIds.Add(project.Id);
+        state.ExistingBackupByPath[normalizedPath] = _repo.GetBackupByExternalId(backupExternalId)
+            ?? new Backup { Id = 0, ProjectId = project.Id, SnapshotId = snapshotId, Path = folder.RelativePath, TotalBytes = sizeBytes, IsImported = true };
+    }
+
+    private int ResolveLegacySnapshot(
+        string externalId,
+        int projectId,
+        LegacyBackupFolder folder,
+        long sizeBytes,
+        LegacyImportState state)
+    {
+        if (state.SnapshotExternalMap.TryGetValue(externalId, out int snapshotId))
+            return snapshotId;
+
+        state.ImportedSnapshots++;
+        return _repo.CreateSnapshotFromMetadata(
+            externalId,
+            projectId,
+            folder.CreatedUtc,
+            fileCount: 0,
+            totalBytes: sizeBytes);
     }
 
     private MetadataSyncPreview PreviewBackupFoldersFromDestination(string rootPath, MetadataSyncOptions opts, string databasePath)
@@ -1409,29 +1531,18 @@ public sealed class MetadataSyncService
         var previewedProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var previewedSnapshots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var previewedBackups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var previewContext = new LegacyPreviewContext(
+            rootPath,
+            opts.AllowCreateProjects,
+            new LegacyPreviewIndexes(projectsByName, snapshotExternalMap, backupExternalMap, existingBackupPaths),
+            new LegacyPreviewSeen(previewedProjects, previewedSnapshots, previewedBackups));
 
         foreach (LegacyBackupFolder folder in discovered)
         {
-            string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
-            if (existingBackupPaths.Contains(normalizedRelativePath))
-                continue;
-
-            bool projectExists = projectsByName.Contains(folder.ProjectName);
-            if (!projectExists && !opts.AllowCreateProjects)
-                continue;
-
-            if (!projectExists && previewedProjects.Add(folder.ProjectName))
-            {
-                addProjects++;
-            }
-
-            string snapshotExternalId = BuildStableExternalId("legacy-snapshot", rootPath, folder.RelativePath);
-            if (!snapshotExternalMap.ContainsKey(snapshotExternalId) && previewedSnapshots.Add(snapshotExternalId))
-                addSnapshots++;
-
-            string backupExternalId = BuildStableExternalId("legacy-backup", rootPath, folder.RelativePath);
-            if (!backupExternalMap.ContainsKey(backupExternalId) && previewedBackups.Add(backupExternalId))
-                addBackups++;
+            (int projects, int snapshots, int backups) = CountLegacyFolderPreview(folder, previewContext);
+            addProjects += projects;
+            addSnapshots += snapshots;
+            addBackups += backups;
         }
 
         return new MetadataSyncPreview(
@@ -1444,6 +1555,25 @@ public sealed class MetadataSyncService
             addBackups,
             0,
             string.Empty);
+    }
+
+    private static (int Projects, int Snapshots, int Backups) CountLegacyFolderPreview(
+        LegacyBackupFolder folder,
+        LegacyPreviewContext context)
+    {
+        if (context.Indexes.ExistingBackupPaths.Contains(NormalizeStablePath(folder.RelativePath)))
+            return default;
+
+        bool projectExists = context.Indexes.ProjectsByName.Contains(folder.ProjectName);
+        if (!projectExists && !context.AllowCreateProjects)
+            return default;
+
+        int projects = !projectExists && context.Seen.Projects.Add(folder.ProjectName) ? 1 : 0;
+        string snapshotExternalId = BuildStableExternalId("legacy-snapshot", context.RootPath, folder.RelativePath);
+        int snapshots = !context.Indexes.SnapshotExternalMap.ContainsKey(snapshotExternalId) && context.Seen.Snapshots.Add(snapshotExternalId) ? 1 : 0;
+        string backupExternalId = BuildStableExternalId("legacy-backup", context.RootPath, folder.RelativePath);
+        int backups = !context.Indexes.BackupExternalMap.ContainsKey(backupExternalId) && context.Seen.Backups.Add(backupExternalId) ? 1 : 0;
+        return (projects, snapshots, backups);
     }
 
     private static IReadOnlyList<LegacyBackupFolder> DiscoverLegacyBackupFolders(string rootPath)
