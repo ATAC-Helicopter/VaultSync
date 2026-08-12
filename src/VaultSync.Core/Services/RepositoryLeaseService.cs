@@ -720,7 +720,8 @@ public sealed class RepositoryLeaseService
             DataSource = databasePath,
             Mode = readOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
             Cache = SqliteCacheMode.Private,
-            DefaultTimeout = 5
+            DefaultTimeout = 5,
+            Pooling = false
         };
         var connection = new SqliteConnection(builder.ToString());
         connection.Open();
