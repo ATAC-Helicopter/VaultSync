@@ -368,12 +368,16 @@ History carry the same folder identity.
 
 ## 1.8.7 — Trust and Portability
 
-**Status:** Active planning; implementation begins after the release contracts and
-cross-machine safety model are approved.
+**Status:** Active development. Release contracts were approved and implementation
+started on 2026-08-12.
 **Tagline:** *Show the proof.*
 **Target:** 2026-10-30
 **Working branch:** `release/1.8.7`
 **Integration target:** `Dev`
+
+The maintained implementation status and safety contracts for this release live
+in `docs/RELEASE_1.8.7.md`. That page distinguishes shipped behavior from work
+that exists only on the release branch or remains planned.
 
 - [ ] `VS-1871` `P1` Expose build, channel, commit, runtime, architecture,
   package, and update-source information.

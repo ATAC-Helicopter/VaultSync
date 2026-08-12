@@ -74,6 +74,13 @@ resolution, per-record writer provenance, and a repository-scoped writer lease.
 Until that ships, use one machine as the writer for a destination and use other
 machines for recovery inspection or deliberate imports.
 
+The maintained 1.8.7 implementation status is recorded in the
+[1.8.7 release contract](../RELEASE_1.8.7.md). The current and planned on-disk
+layouts, compatibility rules, and emergency inspection boundary are documented
+in [Repository formats](../REPOSITORY_FORMATS.md).
+The writer and merge threat model is in
+[Cross-machine safety](../CROSS_MACHINE_SAFETY.md).
+
 ![Doctor, metadata-conflict, maintenance, and update controls](../images/Settings_Maintenance.png)
 
 ## Missing backup paths
