@@ -33,14 +33,11 @@ namespace VaultSync.UI.Services
         public string? DownloadUrl { get; init; }
     }
 
-    internal static class ReleaseManifestVerifier
+    internal static partial class ReleaseManifestVerifier
     {
         internal const string ManifestName = "vaultsync-release-manifest.json";
-        private const string Repository = "ATAC-Helicopter/VaultSync";
-        private const int SchemaVersion = 1;
-        private static readonly Regex s_versionPattern = new(
-            "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$",
-            RegexOptions.CultureInvariant);
+        private const string OfficialRepository = "ATAC-Helicopter/VaultSync";
+        private const int SupportedSchemaVersion = 1;
         private static readonly HashSet<string> s_platforms = ["windows", "macos", "linux"];
         private static readonly HashSet<string> s_architectures = ["x64", "arm64"];
         private static readonly HashSet<string> s_packageKinds =
@@ -98,17 +95,17 @@ namespace VaultSync.UI.Services
         {
             ReleaseManifestIdentity? release = manifest?.Release;
             string expectedChannel = prerelease ? "beta" : "stable";
-            if (manifest?.SchemaVersion != SchemaVersion ||
+            if (manifest?.SchemaVersion != SupportedSchemaVersion ||
                 release is null ||
                 release.Version is null ||
-                !s_versionPattern.IsMatch(release.Version) ||
+                !VersionPattern().IsMatch(release.Version) ||
                 !HasValidPredecessors(release))
             {
                 return false;
             }
 
             return
-                   string.Equals(release.Repository, Repository, StringComparison.Ordinal) &&
+                   string.Equals(release.Repository, OfficialRepository, StringComparison.Ordinal) &&
                    string.Equals(release.Tag, releaseTag, StringComparison.Ordinal) &&
                    string.Equals($"v{release.Version}", releaseTag, StringComparison.Ordinal) &&
                    string.Equals(release.Channel, expectedChannel, StringComparison.Ordinal) &&
@@ -123,7 +120,7 @@ namespace VaultSync.UI.Services
 
             var unique = new HashSet<string>(StringComparer.Ordinal);
             return release.CompatiblePredecessors.All(version =>
-                s_versionPattern.IsMatch(version) &&
+                VersionPattern().IsMatch(version) &&
                 !string.Equals(version, release.Version, StringComparison.Ordinal) &&
                 unique.Add(version));
         }
@@ -145,7 +142,7 @@ namespace VaultSync.UI.Services
         private static bool TryValidateAsset(
             ReleaseManifestAsset asset,
             string releaseTag,
-            IReadOnlyDictionary<string, PublishedReleaseAsset> published,
+            Dictionary<string, PublishedReleaseAsset> published,
             out string name)
         {
             name = asset.Name ?? string.Empty;
@@ -161,7 +158,7 @@ namespace VaultSync.UI.Services
                 return false;
             }
 
-            string expectedUrl = $"https://github.com/{Repository}/releases/download/{releaseTag}/{Uri.EscapeDataString(name)}";
+            string expectedUrl = $"https://github.com/{OfficialRepository}/releases/download/{releaseTag}/{Uri.EscapeDataString(name)}";
             string? digest = GitHubUpdateService.TryParseSha256Digest(publishedAsset.Digest);
             return string.Equals(asset.DownloadUrl, expectedUrl, StringComparison.Ordinal) &&
                    string.Equals(publishedAsset.DownloadUrl, expectedUrl, StringComparison.Ordinal) &&
@@ -173,6 +170,9 @@ namespace VaultSync.UI.Services
             value is not null &&
             value.Length == length &&
             value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
+
+        [GeneratedRegex("^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$", RegexOptions.CultureInvariant)]
+        private static partial Regex VersionPattern();
 
         private sealed class ReleaseManifestDocument
         {
