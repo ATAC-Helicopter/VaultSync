@@ -31,6 +31,27 @@ public sealed class MetadataSyncService
         TimeSpan.FromSeconds(5)
     ];
 
+    private sealed record TombstoneExportContext(
+        string RootPath,
+        string EntityType,
+        IReadOnlyCollection<string> ExternalIds,
+        string MachineId,
+        string LogLabel,
+        string AppVersion,
+        string LeaseOwnerId);
+
+    private sealed record BackupExportEntities(Backup Backup, Project Project, Snapshot Snapshot);
+
+    private sealed record BackupExportCounts(int Projects, int Snapshots, int Backups, bool Backfilled);
+
+    private sealed record BackupExportWriteContext(
+        string ProjectExternalId,
+        string SnapshotExternalId,
+        string BackupExternalId,
+        DateTime Now,
+        string MachineId,
+        bool ForceBackfill);
+
     private readonly SqliteRepository _repo;
     private readonly IAppConfigStore _configStore;
     private readonly IInstallationIdentityProvider? _installationIdentityProvider;
@@ -1876,27 +1897,31 @@ public sealed class MetadataSyncService
 
     private void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
+        string machineId = Environment.MachineName;
         TryExportTombstonesCore(
-            rootPath,
-            BackupEntityType,
-            missingExternalIds,
-            Environment.MachineName,
-            "Missing backup tombstone export",
-            UnknownAppVersion,
-            ResolveLeaseOwnerId(Environment.MachineName),
+            new TombstoneExportContext(
+                rootPath,
+                BackupEntityType,
+                missingExternalIds,
+                machineId,
+                "Missing backup tombstone export",
+                UnknownAppVersion,
+                ResolveLeaseOwnerId(machineId)),
             _repositoryLeaseService);
     }
 
     private void TryExportMissingSnapshotTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
+        string machineId = Environment.MachineName;
         TryExportTombstonesCore(
-            rootPath,
-            "snapshot",
-            missingExternalIds,
-            Environment.MachineName,
-            "Missing snapshot tombstone export",
-            UnknownAppVersion,
-            ResolveLeaseOwnerId(Environment.MachineName),
+            new TombstoneExportContext(
+                rootPath,
+                "snapshot",
+                missingExternalIds,
+                machineId,
+                "Missing snapshot tombstone export",
+                UnknownAppVersion,
+                ResolveLeaseOwnerId(machineId)),
             _repositoryLeaseService);
     }
 
@@ -1912,40 +1937,35 @@ public sealed class MetadataSyncService
         string machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
         var leaseService = new RepositoryLeaseService();
         TryExportTombstonesCore(
-            rootPath,
-            "project",
-            [projectExternalId],
-            machineId,
-            "Project tombstone export",
-            UnknownAppVersion,
-            leaseOwnerId ?? CreateCompatibilityInstallationId(machineId),
+            new TombstoneExportContext(
+                rootPath,
+                "project",
+                [projectExternalId],
+                machineId,
+                "Project tombstone export",
+                UnknownAppVersion,
+                leaseOwnerId ?? CreateCompatibilityInstallationId(machineId)),
             leaseService);
     }
 
     private static void TryExportTombstonesCore(
-        string rootPath,
-        string entityType,
-        IReadOnlyCollection<string> externalIds,
-        string machineId,
-        string logLabel,
-        string appVersion,
-        string leaseOwnerId,
+        TombstoneExportContext context,
         RepositoryLeaseService leaseService)
     {
-        if (string.IsNullOrWhiteSpace(rootPath) || externalIds.Count == 0)
+        if (string.IsNullOrWhiteSpace(context.RootPath) || context.ExternalIds.Count == 0)
             return;
 
         RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
-            rootPath,
-            CreateLeaseRequest(leaseOwnerId, machineId, logLabel, appVersion));
+            context.RootPath,
+            CreateLeaseRequest(context.LeaseOwnerId, context.MachineId, context.LogLabel, context.AppVersion));
         if (!leaseResult.Acquired)
         {
-            Console.WriteLine($"[MetadataSync] {logLabel} skipped: {leaseResult.Inspection.Message}");
+            Console.WriteLine($"[MetadataSync] {context.LogLabel} skipped: {leaseResult.Inspection.Message}");
             return;
         }
 
         using RepositoryLeaseHandle lease = leaseResult.Handle!;
-        var store = new MetadataStore(rootPath);
+        var store = new MetadataStore(context.RootPath);
         try
         {
             if (!lease.IsOwner)
@@ -1954,7 +1974,7 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] {logLabel} failed: store init error at '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] {context.LogLabel} failed: store init error at '{context.RootPath}': {ex.Message}");
             return;
         }
 
@@ -1962,8 +1982,8 @@ public sealed class MetadataSyncService
         MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
             store,
             now,
-            appVersion,
-            machineId,
+            context.AppVersion,
+            context.MachineId,
             updateExistingAppVersion: false);
 
         try
@@ -1973,12 +1993,12 @@ public sealed class MetadataSyncService
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                AddTombstones(store, externalIds, entityType, now, machineId);
+                AddTombstones(store, context.ExternalIds, context.EntityType, now, context.MachineId);
             });
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] {logLabel} failed writing store '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] {context.LogLabel} failed writing store '{context.RootPath}': {ex.Message}");
         }
     }
 
@@ -2092,7 +2112,7 @@ public sealed class MetadataSyncService
         string operationLabel,
         CancellationToken ct)
     {
-        for (int attempt = 0; ; attempt++)
+        for (int attempt = 0; attempt <= StoreRetryDelays.Length; attempt++)
         {
             try
             {
@@ -2111,6 +2131,8 @@ public sealed class MetadataSyncService
                 await Task.Delay(delay, ct).ConfigureAwait(false);
             }
         }
+
+        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, $"{operationLabel} failed after retries.");
     }
 
     private MetadataSyncResult? ValidateDestinationLease(
@@ -2190,24 +2212,12 @@ public sealed class MetadataSyncService
 
         string projectExternalId = EnsureProjectExternalId(project);
         DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = appVersion,
-                WriterMachineId = machineId
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterAppVersion = appVersion;
-            metaInfo.WriterMachineId = machineId;
-        }
+        MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+            store,
+            now,
+            appVersion,
+            machineId,
+            updateExistingAppVersion: true);
 
         try
         {
@@ -2314,38 +2324,12 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
         }
 
-        Backup? backup = _repo.GetBackupById(backupId);
-        if (backup == null)
-        {
-            Console.WriteLine($"[MetadataSync] Export skipped: backup {backupId} no longer exists.");
-            return new MetadataSyncResult(
-                MetadataSyncStatus.Success,
-                0,
-                0,
-                0,
-                0,
-                "Backup no longer exists; metadata export skipped.");
-        }
+        if (!TryResolveBackupExportEntities(backupId, out BackupExportEntities? entities, out MetadataSyncResult? entityFailure))
+            return entityFailure!;
 
-        Project? project = _repo.GetProjectById(backup.ProjectId);
-        if (project == null)
-        {
-            Console.WriteLine($"[MetadataSync] Export failed: project {backup.ProjectId} not found.");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
-        }
-
-        Snapshot? snapshot = _repo.GetSnapshotById(backup.SnapshotId);
-        if (snapshot == null)
-        {
-            Console.WriteLine($"[MetadataSync] Export skipped: snapshot {backup.SnapshotId} no longer exists.");
-            return new MetadataSyncResult(
-                MetadataSyncStatus.Success,
-                0,
-                0,
-                0,
-                0,
-                "Snapshot no longer exists; metadata export skipped.");
-        }
+        Backup backup = entities!.Backup;
+        Project project = entities.Project;
+        Snapshot snapshot = entities.Snapshot;
 
         MetadataSyncResult? destinationFailure = ValidateDestinationLease(
             rootPath, appVersion, machineId, destinationLease);
@@ -2379,78 +2363,29 @@ public sealed class MetadataSyncService
         string backupExternalId = EnsureBackupExternalId(backup);
 
         DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
-        {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = appVersion,
-                WriterMachineId = machineId
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterAppVersion = appVersion;
-            metaInfo.WriterMachineId = machineId;
-        }
+        MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+            store,
+            now,
+            appVersion,
+            machineId,
+            updateExistingAppVersion: true);
 
-        int exportedProjects = 0;
-        int exportedSnapshots = 0;
-        int exportedBackups = 0;
-        bool backfilled = forceBackfill || !store.HasProject(projectExternalId);
-
+        BackupExportCounts counts;
         try
         {
             if (!activeLease.IsOwner)
                 return LostLeaseFailure();
-            store.ExecuteWriteBatch(() =>
-            {
-                store.UpsertMetaInfo(metaInfo);
-                if (backfilled)
-                {
-                    (int snapshots, int backups) = ExportProjectHistory(store, project, projectExternalId, now, machineId);
-                    exportedProjects = 1;
-                    exportedSnapshots = snapshots;
-                    exportedBackups = backups;
-                }
-                else
-                {
-                    store.UpsertProject(new MetaProject
-                    {
-                        ExternalId = projectExternalId,
-                        Name = project.Name,
-                        Preset = project.Preset,
-                        RootPathHint = project.RootPath,
-                        CreatedUtc = project.CreatedUtc,
-                        SettingsJson = BuildProjectSettingsJson(project),
-                        UpdatedUtc = now
-                    });
-                    store.UpsertSnapshot(new MetaSnapshot
-                    {
-                        ExternalId = snapshotExternalId,
-                        ProjectExternalId = projectExternalId,
-                        CreatedUtc = snapshot.CreatedUtc,
-                        FileCount = snapshot.FileCount,
-                        TotalBytes = snapshot.TotalBytes,
-                        DiffAdded = snapshot.DiffAdded,
-                        DiffModified = snapshot.DiffModified,
-                        DiffDeleted = snapshot.DiffDeleted,
-                        DiffNetBytes = snapshot.DiffNetBytes,
-                        DiffTopPathsJson = string.IsNullOrWhiteSpace(snapshot.DiffTopPathsJson) ? "[]" : snapshot.DiffTopPathsJson
-                    });
-                    store.UpsertBackup(CreateMetaBackup(
-                        backup,
-                        backupExternalId,
-                        projectExternalId,
-                        snapshotExternalId,
-                        machineId));
-                    exportedBackups = 1;
-                }
-            });
+            counts = WriteBackupExport(
+                store,
+                metaInfo,
+                entities,
+                new BackupExportWriteContext(
+                    projectExternalId,
+                    snapshotExternalId,
+                    backupExternalId,
+                    now,
+                    machineId,
+                    forceBackfill));
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
@@ -2460,13 +2395,13 @@ public sealed class MetadataSyncService
 
         var exportResult = new MetadataSyncResult(
             MetadataSyncStatus.Success,
-            exportedProjects,
-            exportedSnapshots,
-            exportedBackups,
+            counts.Projects,
+            counts.Snapshots,
+            counts.Backups,
             0,
             string.Empty);
-        Console.WriteLine(backfilled
-            ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{storeRoot}': snapshots={exportedSnapshots}, backups={exportedBackups}."
+        Console.WriteLine(counts.Backfilled
+            ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{storeRoot}': snapshots={counts.Snapshots}, backups={counts.Backups}."
             : $"[MetadataSync] Export complete for backup {backupId} to '{storeRoot}'.");
         LogStoreCounts(store);
         if (useDeferredStore)
@@ -2477,6 +2412,109 @@ public sealed class MetadataSyncService
         }
 
         return exportResult;
+    }
+
+    private bool TryResolveBackupExportEntities(
+        int backupId,
+        out BackupExportEntities? entities,
+        out MetadataSyncResult? failure)
+    {
+        entities = null;
+        Backup? backup = _repo.GetBackupById(backupId);
+        if (backup is null)
+        {
+            Console.WriteLine($"[MetadataSync] Export skipped: backup {backupId} no longer exists.");
+            failure = SuccessfulSkip("Backup no longer exists; metadata export skipped.");
+            return false;
+        }
+
+        Project? project = _repo.GetProjectById(backup.ProjectId);
+        if (project is null)
+        {
+            Console.WriteLine($"[MetadataSync] Export failed: project {backup.ProjectId} not found.");
+            failure = MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
+            return false;
+        }
+
+        Snapshot? snapshot = _repo.GetSnapshotById(backup.SnapshotId);
+        if (snapshot is null)
+        {
+            Console.WriteLine($"[MetadataSync] Export skipped: snapshot {backup.SnapshotId} no longer exists.");
+            failure = SuccessfulSkip("Snapshot no longer exists; metadata export skipped.");
+            return false;
+        }
+
+        entities = new BackupExportEntities(backup, project, snapshot);
+        failure = null;
+        return true;
+    }
+
+    private static MetadataSyncResult SuccessfulSkip(string message) =>
+        new(MetadataSyncStatus.Success, 0, 0, 0, 0, message);
+
+    private BackupExportCounts WriteBackupExport(
+        MetadataStore store,
+        MetaInfo metaInfo,
+        BackupExportEntities entities,
+        BackupExportWriteContext context)
+    {
+        int exportedProjects = 0;
+        int exportedSnapshots = 0;
+        int exportedBackups = 0;
+        bool backfilled = context.ForceBackfill || !store.HasProject(context.ProjectExternalId);
+
+        store.ExecuteWriteBatch(() =>
+        {
+            store.UpsertMetaInfo(metaInfo);
+            if (backfilled)
+            {
+                (int snapshots, int backups) = ExportProjectHistory(
+                    store,
+                    entities.Project,
+                    context.ProjectExternalId,
+                    context.Now,
+                    context.MachineId);
+                exportedProjects = 1;
+                exportedSnapshots = snapshots;
+                exportedBackups = backups;
+                return;
+            }
+
+            store.UpsertProject(new MetaProject
+            {
+                ExternalId = context.ProjectExternalId,
+                Name = entities.Project.Name,
+                Preset = entities.Project.Preset,
+                RootPathHint = entities.Project.RootPath,
+                CreatedUtc = entities.Project.CreatedUtc,
+                SettingsJson = BuildProjectSettingsJson(entities.Project),
+                UpdatedUtc = context.Now
+            });
+            store.UpsertSnapshot(new MetaSnapshot
+            {
+                ExternalId = context.SnapshotExternalId,
+                ProjectExternalId = context.ProjectExternalId,
+                CreatedUtc = entities.Snapshot.CreatedUtc,
+                FileCount = entities.Snapshot.FileCount,
+                TotalBytes = entities.Snapshot.TotalBytes,
+                DiffAdded = entities.Snapshot.DiffAdded,
+                DiffModified = entities.Snapshot.DiffModified,
+                DiffDeleted = entities.Snapshot.DiffDeleted,
+                DiffNetBytes = entities.Snapshot.DiffNetBytes,
+                DiffTopPathsJson = string.IsNullOrWhiteSpace(entities.Snapshot.DiffTopPathsJson)
+                    ? "[]"
+                    : entities.Snapshot.DiffTopPathsJson
+            });
+            store.UpsertBackup(CreateMetaBackup(
+                entities.Backup,
+                context.BackupExternalId,
+                context.ProjectExternalId,
+                context.SnapshotExternalId,
+                context.MachineId));
+            exportedBackups = 1;
+        });
+
+        return new BackupExportCounts(exportedProjects, exportedSnapshots, exportedBackups, backfilled);
     }
 
     public static void ExportBackupTombstoneToStore(
@@ -2491,8 +2529,8 @@ public sealed class MetadataSyncService
                 backupExternalId,
                 appVersion,
                 machineId,
-                CancellationToken.None,
-                leaseOwnerId)
+                leaseOwnerId,
+                CancellationToken.None)
             .GetAwaiter().GetResult();
     }
 
@@ -2501,8 +2539,8 @@ public sealed class MetadataSyncService
         string backupExternalId,
         string appVersion,
         string machineId,
-        CancellationToken ct = default,
-        string? leaseOwnerId = null)
+        string? leaseOwnerId = null,
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
             return;
@@ -2514,6 +2552,14 @@ public sealed class MetadataSyncService
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
             var leaseService = new RepositoryLeaseService();
             string ownerId = leaseOwnerId ?? CreateCompatibilityInstallationId(machineId);
+            var context = new TombstoneExportContext(
+                rootPath,
+                BackupEntityType,
+                [backupExternalId],
+                machineId,
+                "Backup tombstone export",
+                appVersion,
+                ownerId);
             RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
                 rootPath,
                 CreateLeaseRequest(ownerId, machineId, "backup-tombstone-export", appVersion));
@@ -2525,25 +2571,12 @@ public sealed class MetadataSyncService
             }
 
             using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
-            TimeSpan[] retryDelays =
-            [
-                TimeSpan.FromMilliseconds(200),
-                TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromSeconds(2),
-                TimeSpan.FromSeconds(5)
-            ];
-
-            for (int attempt = 0; attempt <= retryDelays.Length; attempt++)
+            for (int attempt = 0; attempt <= StoreRetryDelays.Length; attempt++)
             {
                 try
                 {
                     ExportBackupTombstoneInternal(
-                        rootPath,
-                        backupExternalId,
-                        appVersion,
-                        machineId,
-                        ownerId,
+                        context,
                         leaseService,
                         destinationLease,
                         useDeferredStore);
@@ -2551,20 +2584,16 @@ public sealed class MetadataSyncService
                 }
                 catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
                 {
-                    if (attempt >= retryDelays.Length)
+                    if (attempt >= StoreRetryDelays.Length)
                     {
                         Console.WriteLine($"[MetadataSync] Tombstone export failed after retries: {ex.Message}");
                         TryExportBackupTombstoneToDeferred(
-                            rootPath,
-                            backupExternalId,
-                            appVersion,
-                            machineId,
-                            ownerId,
+                            context,
                             leaseService);
                         return;
                     }
 
-                    TimeSpan delay = retryDelays[attempt];
+                    TimeSpan delay = StoreRetryDelays[attempt];
                     Console.WriteLine($"[MetadataSync] Tombstone store locked; retrying in {delay.TotalMilliseconds:0}ms.");
                     await Task.Delay(delay, ct).ConfigureAwait(false);
                 }
@@ -2599,20 +2628,20 @@ public sealed class MetadataSyncService
             : StringComparer.Ordinal;
 
     private static void TryExportBackupTombstoneToDeferred(
-        string rootPath,
-        string backupExternalId,
-        string appVersion,
-        string machineId,
-        string leaseOwnerId,
+        TombstoneExportContext context,
         RepositoryLeaseService leaseService)
     {
         try
         {
-            string deferredRoot = GetDeferredExportRoot(rootPath);
+            string deferredRoot = GetDeferredExportRoot(context.RootPath);
             Directory.CreateDirectory(deferredRoot);
             RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
                 deferredRoot,
-                CreateLeaseRequest(leaseOwnerId, machineId, "deferred-backup-tombstone-export", appVersion));
+                CreateLeaseRequest(
+                    context.LeaseOwnerId,
+                    context.MachineId,
+                    "deferred-backup-tombstone-export",
+                    context.AppVersion));
             if (!leaseResult.Acquired)
                 return;
 
@@ -2626,8 +2655,8 @@ public sealed class MetadataSyncService
             MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
                 store,
                 now,
-                appVersion,
-                machineId,
+                context.AppVersion,
+                context.MachineId,
                 updateExistingAppVersion: true);
 
             if (!lease.IsOwner)
@@ -2635,50 +2664,37 @@ public sealed class MetadataSyncService
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                AddTombstones(store, [backupExternalId], BackupEntityType, now, machineId);
+                AddTombstones(store, context.ExternalIds, context.EntityType, now, context.MachineId);
             });
 
-            Console.WriteLine($"[MetadataSync] Tombstone export deferred locally for '{rootPath}'.");
+            Console.WriteLine($"[MetadataSync] Tombstone export deferred locally for '{context.RootPath}'.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] Tombstone defer failed for '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] Tombstone defer failed for '{context.RootPath}': {ex.Message}");
         }
     }
 
     private static void ExportBackupTombstoneInternal(
-        string rootPath,
-        string backupExternalId,
-        string appVersion,
-        string machineId,
-        string leaseOwnerId,
+        TombstoneExportContext context,
         RepositoryLeaseService leaseService,
         RepositoryLeaseHandle? destinationLease,
         bool useDeferredStore)
     {
-        if (destinationLease is not null)
-        {
-            if (!destinationLease.IsOwner)
-                return;
-            if (HasDeferredExport(rootPath) &&
-                !TryFlushDeferredExport(
-                    rootPath,
-                    appVersion,
-                    machineId,
-                    leaseOwnerId,
-                    leaseService))
-            {
-                return;
-            }
-        }
+        if (!CanWriteTombstoneDestination(context, leaseService, destinationLease))
+            return;
 
-        string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
+        string storeRoot = useDeferredStore ? GetDeferredExportRoot(context.RootPath) : context.RootPath;
         if (useDeferredStore)
             Directory.CreateDirectory(storeRoot);
         RepositoryLeaseAcquireResult? deferredLeaseResult = useDeferredStore
             ? leaseService.TryAcquire(
                 storeRoot,
-                CreateLeaseRequest(leaseOwnerId, machineId, "deferred-backup-tombstone-export", appVersion))
+                CreateLeaseRequest(
+                    context.LeaseOwnerId,
+                    context.MachineId,
+                    "deferred-backup-tombstone-export",
+                    context.AppVersion))
             : null;
         using RepositoryLeaseHandle? deferredLease = deferredLeaseResult?.Handle;
         RepositoryLeaseHandle? activeLease = destinationLease ?? deferredLease;
@@ -2694,7 +2710,7 @@ public sealed class MetadataSyncService
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            Console.WriteLine($"[MetadataSync] Tombstone export failed: store init error at '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] Tombstone export failed: store init error at '{context.RootPath}': {ex.Message}");
             return;
         }
 
@@ -2702,8 +2718,8 @@ public sealed class MetadataSyncService
         MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
             store,
             now,
-            appVersion,
-            machineId,
+            context.AppVersion,
+            context.MachineId,
             updateExistingAppVersion: true);
 
         try
@@ -2713,17 +2729,35 @@ public sealed class MetadataSyncService
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                AddTombstones(store, [backupExternalId], BackupEntityType, now, machineId);
+                AddTombstones(store, context.ExternalIds, context.EntityType, now, context.MachineId);
             });
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            Console.WriteLine($"[MetadataSync] Tombstone export failed writing store '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] Tombstone export failed writing store '{context.RootPath}': {ex.Message}");
             return;
         }
 
         if (useDeferredStore)
-            Console.WriteLine($"[MetadataSync] Tombstone export queued locally for '{rootPath}'.");
+            Console.WriteLine($"[MetadataSync] Tombstone export queued locally for '{context.RootPath}'.");
+    }
+
+    private static bool CanWriteTombstoneDestination(
+        TombstoneExportContext context,
+        RepositoryLeaseService leaseService,
+        RepositoryLeaseHandle? destinationLease)
+    {
+        if (destinationLease is null)
+            return true;
+        if (!destinationLease.IsOwner)
+            return false;
+        return !HasDeferredExport(context.RootPath) ||
+               TryFlushDeferredExport(
+                   context.RootPath,
+                   context.AppVersion,
+                   context.MachineId,
+                   context.LeaseOwnerId,
+                   leaseService);
     }
 
     private static string GetMetaDir(string rootPath) =>
