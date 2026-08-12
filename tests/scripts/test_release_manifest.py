@@ -177,9 +177,9 @@ class ReleaseManifestTests(unittest.TestCase):
             root = Path(tmp)
             self.write_assets(root)
             output = root / release_manifest.MANIFEST_NAME
-            release_manifest.write_manifest(output, self.build(root))
+            self.assertEqual(output, release_manifest.write_manifest(root, self.build(root)))
             first = output.read_bytes()
-            release_manifest.write_manifest(output, self.build(root))
+            release_manifest.write_manifest(root, self.build(root))
 
             self.assertEqual(first, output.read_bytes())
             payload = json.loads(first)
