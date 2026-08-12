@@ -13,6 +13,24 @@ namespace VaultSync.Core.Tests;
 public sealed class RepositoryLeaseServiceTests
 {
     [Fact]
+    public void Constructor_RejectsUnsupportedClockSkewTolerance()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RepositoryLeaseService(clockSkewTolerance: TimeSpan.FromMinutes(11)));
+    }
+
+    [Fact]
+    public void Inspect_EmptyRootIsInvalid()
+    {
+        var service = new RepositoryLeaseService();
+
+        RepositoryLeaseInspection inspection = service.Inspect(string.Empty);
+
+        Assert.Equal(RepositoryLeaseState.Invalid, inspection.State);
+        Assert.Null(inspection.Lease);
+    }
+
+    [Fact]
     public void Inspect_MissingCoordinationDatabaseIsAvailableAndReadOnly()
     {
         using var root = new TempDirectory();
@@ -155,6 +173,69 @@ public sealed class RepositoryLeaseServiceTests
 
         Assert.Equal(RepositoryLeaseAcquireStatus.Invalid, result.Status);
         Assert.False(File.Exists(service.GetDatabasePath(root.Path)));
+    }
+
+    [Theory]
+    [InlineData("operation")]
+    [InlineData("version")]
+    [InlineData("host")]
+    [InlineData("duration")]
+    public void TryAcquire_InvalidRequestFieldsFailClosed(string invalidField)
+    {
+        using var root = new TempDirectory();
+        var service = new RepositoryLeaseService();
+        RepositoryLeaseRequest request = CreateRequest("metadata-export") with
+        {
+            Operation = invalidField == "operation" ? string.Empty : "metadata-export",
+            AppVersion = invalidField == "version" ? string.Empty : "1.8.7",
+            HostLabel = invalidField == "host" ? new string('h', 201) : "Test host",
+            Duration = invalidField == "duration" ? TimeSpan.FromSeconds(1) : TimeSpan.FromMinutes(5)
+        };
+
+        RepositoryLeaseAcquireResult result = service.TryAcquire(root.Path, request);
+
+        Assert.Equal(RepositoryLeaseAcquireStatus.Invalid, result.Status);
+        Assert.False(File.Exists(service.GetDatabasePath(root.Path)));
+    }
+
+    [Fact]
+    public void Inspect_ExistingDatabaseWithoutLeaseSchemaIsInvalid()
+    {
+        using var root = new TempDirectory();
+        var service = new RepositoryLeaseService();
+        string databasePath = service.GetDatabasePath(root.Path);
+        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
+        using (var connection = new SqliteConnection($"Data Source={databasePath};Pooling=False"))
+        {
+            connection.Open();
+            connection.Execute("CREATE TABLE unrelated(id INTEGER PRIMARY KEY);");
+        }
+
+        RepositoryLeaseInspection inspection = service.Inspect(root.Path);
+
+        Assert.Equal(RepositoryLeaseState.Invalid, inspection.State);
+    }
+
+    [Fact]
+    public void ListEvidence_MissingDatabaseReturnsEmpty()
+    {
+        using var root = new TempDirectory();
+        var service = new RepositoryLeaseService();
+
+        Assert.Empty(service.ListEvidence(root.Path));
+    }
+
+    [Fact]
+    public void TakeOverStale_InvalidNonceFailsWithoutChangingOwner()
+    {
+        using var root = new TempDirectory();
+        var service = new RepositoryLeaseService();
+        using RepositoryLeaseHandle owner = AssertAcquired(service.TryAcquire(root.Path, CreateRequest("metadata-export")));
+
+        RepositoryLeaseAcquireResult result = service.TakeOverStale(root.Path, "invalid", CreateRequest("takeover"));
+
+        Assert.Equal(RepositoryLeaseAcquireStatus.Invalid, result.Status);
+        Assert.True(owner.IsOwner);
     }
 
     [Fact]
