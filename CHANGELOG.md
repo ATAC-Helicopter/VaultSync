@@ -2,7 +2,7 @@
 ## [1.8.7] - Unreleased
 
 ### Added
-- [VS-1872] Added the versioned canonical release manifest generator and schema, with exact artifact sizes, SHA-256 digests, official download identities, strict platform-matrix validation, deterministic output, and release-workflow generation from the final Windows, macOS, and Linux artifacts.
+- [VS-1872] Added the versioned canonical release manifest generator and schema, with exact artifact sizes, SHA-256 digests, official download identities, strict platform-matrix validation, deterministic output, release-workflow generation, post-publish verification, and fail-closed updater consumption across Windows, macOS, and Linux artifacts.
 - [VS-1877] Added a durable, owner-private installation identity for cross-machine coordination without treating mutable host names or telemetry identifiers as writer identity.
 - [VS-1877] Added repository-scoped writer leases with atomic acquisition, heartbeat and expiry, read-only busy inspection, nonce-bound release, explicit stale takeover, and retained takeover evidence.
 

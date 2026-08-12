@@ -51,7 +51,10 @@ assumed and must be approved explicitly if the release needs one.
 - The canonical release-manifest v1 schema, deterministic generator, artifact
   classifier, exact size/SHA-256 verification, and complete platform-matrix
   gate are implemented. Release automation generates the manifest only after
-  all direct-download platform artifacts have been built and collected.
+  all direct-download platform artifacts have been built and collected. The
+  post-publish gate and desktop updater consume the same schema; the updater
+  rejects a release when its manifest identity or any GitHub asset name, URL,
+  size, or digest disagrees.
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -62,8 +65,8 @@ branch package.
 
 1. Surface repository status and an explicit stale-takeover decision in UI.
 2. Make metadata imports previewable, versioned, durable, and reversible.
-3. Connect the canonical manifest to post-publish verification and expose its
-   release identity through the app and CLI.
+3. Expose the running build and canonical release identity through the app,
+   CLI, diagnostics, and support exports.
 4. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB
    behavior before enabling supported concurrent-machine workflows.
 5. Reduce codebase duplication and oversized orchestration through shared,

@@ -388,7 +388,7 @@ that exists only on the release branch or remains planned.
   - Acceptance: a user or support bundle can identify the exact running build
     without inspecting filenames, and unavailable values are shown as unknown
     rather than guessed.
-- [ ] `VS-1872` `P0` Publish artifact checksums and a machine-readable release
+- [x] `VS-1872` `P0` Publish artifact checksums and a machine-readable release
   manifest from one release source of truth.
   - Scope: generate version, channel, tag, commit, compatible predecessors,
     asset names, platform, architecture, package kind, byte size, and SHA-256

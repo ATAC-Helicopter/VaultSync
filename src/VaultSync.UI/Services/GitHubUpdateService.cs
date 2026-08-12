@@ -7,6 +7,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -111,6 +113,7 @@ namespace VaultSync.UI.Services
         private const int MaxReleasePages = 1;
         private const string StableBranchName = "stable";
         private const string DevBranchName = "dev";
+        private const int MaxReleaseManifestBytes = 1024 * 1024;
 
         private static readonly HttpClient s_httpClient = CreateHttpClient();
         private static readonly object s_releaseCacheLock = new();
@@ -191,8 +194,19 @@ namespace VaultSync.UI.Services
             string releaseNotes = candidate.Body ?? string.Empty;
             DateTime publishedAt = candidate.PublishedAt ?? DateTime.MinValue;
 
-            (string? manifestUrl, string? manifestSha256, long manifestSize, Uri? archiveUrl, string? archiveName, string? archiveSha256, long archiveSize) = GetPatchAssets(candidate.Assets);
-            (Uri? installerUrl, string? installerName, string? installerSha256, long installerSize) = GetInstallerAsset(candidate.Assets);
+            IReadOnlyCollection<ReleaseManifestAsset>? verifiedAssets = await GetVerifiedReleaseAssetsAsync(
+                candidate,
+                releaseTag,
+                cancellationToken).ConfigureAwait(false);
+            if (verifiedAssets is null)
+            {
+                Console.WriteLine("[Update] Candidate release manifest is missing or inconsistent with GitHub assets.");
+                diagnostics.Decision = "candidate-release-manifest-invalid";
+                return new UpdateCheckEvaluation(null, diagnostics);
+            }
+
+            (string? manifestUrl, string? manifestSha256, long manifestSize, Uri? archiveUrl, string? archiveName, string? archiveSha256, long archiveSize) = GetPatchAssets(verifiedAssets);
+            (Uri? installerUrl, string? installerName, string? installerSha256, long installerSize) = GetInstallerAsset(verifiedAssets);
             diagnostics.SelectedCandidate = ToDiagnostics(candidate, !string.IsNullOrWhiteSpace(manifestUrl) && archiveUrl != null, installerUrl != null);
             diagnostics.Decision = channel == GitHubReleaseChannel.Beta
                 ? "beta-or-stable-candidate-selected"
@@ -433,9 +447,71 @@ namespace VaultSync.UI.Services
             public string? Digest { get; set; }
         }
 
-        private static (string? ManifestUrl, string? ManifestSha256, long ManifestSize, Uri? ArchiveUrl, string? ArchiveName, string? ArchiveSha256, long ArchiveSize) GetPatchAssets(List<GitHubAsset>? assets)
+        private static async Task<IReadOnlyCollection<ReleaseManifestAsset>?> GetVerifiedReleaseAssetsAsync(
+            GitHubRelease release,
+            string releaseTag,
+            CancellationToken cancellationToken)
         {
-            if (assets is null || assets.Count == 0)
+            List<GitHubAsset> manifestAssets = release.Assets?
+                .Where(asset => string.Equals(asset.Name, ReleaseManifestVerifier.ManifestName, StringComparison.Ordinal))
+                .ToList() ?? [];
+            if (manifestAssets.Count != 1)
+                return null;
+
+            GitHubAsset manifestAsset = manifestAssets[0];
+            if (manifestAsset.Size <= 0 ||
+                manifestAsset.Size > MaxReleaseManifestBytes ||
+                !TryGetTrustedReleaseAssetUri(manifestAsset.BrowserDownloadUrl, out Uri? manifestUri) ||
+                manifestUri is null ||
+                !string.Equals(
+                    manifestUri.AbsoluteUri,
+                    $"https://github.com/ATAC-Helicopter/VaultSync/releases/download/{releaseTag}/{ReleaseManifestVerifier.ManifestName}",
+                    StringComparison.Ordinal) ||
+                TryParseSha256Digest(manifestAsset.Digest) is not { } expectedHash)
+            {
+                return null;
+            }
+
+            try
+            {
+                byte[] bytes = await s_httpClient.GetByteArrayAsync(manifestUri, cancellationToken).ConfigureAwait(false);
+                if (bytes.LongLength != manifestAsset.Size || bytes.Length > MaxReleaseManifestBytes)
+                    return null;
+
+                string actualHash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+                if (!string.Equals(actualHash, expectedHash, StringComparison.Ordinal))
+                    return null;
+
+                var publishedAssets = release.Assets!
+                    .Where(asset => asset.Name is not null)
+                    .Select(asset => new PublishedReleaseAsset(
+                        asset.Name!,
+                        asset.BrowserDownloadUrl,
+                        asset.Size,
+                        asset.Digest))
+                    .ToList();
+                return ReleaseManifestVerifier.TryValidate(
+                    Encoding.UTF8.GetString(bytes),
+                    releaseTag,
+                    release.Prerelease,
+                    publishedAssets,
+                    out IReadOnlyDictionary<string, ReleaseManifestAsset> assets)
+                    ? assets.Values.ToList()
+                    : null;
+            }
+            catch (HttpRequestException)
+            {
+                return null;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return null;
+            }
+        }
+
+        private static (string? ManifestUrl, string? ManifestSha256, long ManifestSize, Uri? ArchiveUrl, string? ArchiveName, string? ArchiveSha256, long ArchiveSize) GetPatchAssets(IReadOnlyCollection<ReleaseManifestAsset> assets)
+        {
+            if (assets.Count == 0)
                 return (null, null, 0, null, null, null, 0);
 
             List<string> suffixes = GetPlatformSuffixes();
@@ -447,35 +523,35 @@ namespace VaultSync.UI.Services
                 string manifestName = $"vaultsync-patch-{platformSuffix}.json";
                 string archiveName = $"vaultsync-patch-{platformSuffix}.zip";
 
-                GitHubAsset? manifest = assets.FirstOrDefault(a => string.Equals(a.Name, manifestName, StringComparison.OrdinalIgnoreCase));
-                GitHubAsset? archive = assets.FirstOrDefault(a => string.Equals(a.Name, archiveName, StringComparison.OrdinalIgnoreCase));
+                ReleaseManifestAsset? manifest = assets.FirstOrDefault(a => string.Equals(a.Name, manifestName, StringComparison.OrdinalIgnoreCase));
+                ReleaseManifestAsset? archive = assets.FirstOrDefault(a => string.Equals(a.Name, archiveName, StringComparison.OrdinalIgnoreCase));
 
                 if (manifest is null || archive is null ||
-                    !TryGetTrustedReleaseAssetUri(manifest.BrowserDownloadUrl, out Uri? manifestUri))
+                    !TryGetTrustedReleaseAssetUri(manifest.DownloadUrl, out Uri? manifestUri))
                     continue;
 
-                if (!TryGetTrustedReleaseAssetUri(archive.BrowserDownloadUrl, out Uri? archiveUri))
+                if (!TryGetTrustedReleaseAssetUri(archive.DownloadUrl, out Uri? archiveUri))
                     continue;
 
                 return (
                     manifestUri!.AbsoluteUri,
-                    TryParseSha256Digest(manifest.Digest),
-                    manifest.Size,
+                    manifest.Sha256,
+                    manifest.SizeBytes,
                     archiveUri,
                     archive.Name,
-                    TryParseSha256Digest(archive.Digest),
-                    archive.Size);
+                    archive.Sha256,
+                    archive.SizeBytes);
             }
 
             return (null, null, 0, null, null, null, 0);
         }
 
-        private static (Uri? InstallerUrl, string? InstallerName, string? InstallerSha256, long InstallerSize) GetInstallerAsset(List<GitHubAsset>? assets)
+        private static (Uri? InstallerUrl, string? InstallerName, string? InstallerSha256, long InstallerSize) GetInstallerAsset(IReadOnlyCollection<ReleaseManifestAsset> assets)
         {
-            if (assets is null || assets.Count == 0)
+            if (assets.Count == 0)
                 return (null, null, null, 0);
 
-            GitHubAsset? asset = null;
+            ReleaseManifestAsset? asset = null;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -504,13 +580,11 @@ namespace VaultSync.UI.Services
                 asset ??= preferDebianPackage ? null : FindLinuxAsset(assets, ".deb");
             }
 
-            if (asset is null || string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))
+            if (asset is null || string.IsNullOrWhiteSpace(asset.DownloadUrl))
                 return (null, null, null, 0);
 
-            string? sha256 = TryParseSha256Digest(asset.Digest);
-
-            return TryGetTrustedReleaseAssetUri(asset.BrowserDownloadUrl, out Uri? url)
-                ? (url, asset.Name, sha256, asset.Size)
+            return TryGetTrustedReleaseAssetUri(asset.DownloadUrl, out Uri? url)
+                ? (url, asset.Name, asset.Sha256, asset.SizeBytes)
                 : (null, null, null, 0);
         }
 
@@ -545,11 +619,11 @@ namespace VaultSync.UI.Services
                 : null;
         }
 
-        private static GitHubAsset? FindLinuxAsset(List<GitHubAsset> assets, string extension)
+        private static ReleaseManifestAsset? FindLinuxAsset(IReadOnlyCollection<ReleaseManifestAsset> assets, string extension)
         {
             foreach (string suffix in GetLinuxAssetSuffixes())
             {
-                GitHubAsset? asset = assets.FirstOrDefault(a =>
+                ReleaseManifestAsset? asset = assets.FirstOrDefault(a =>
                     a.Name is not null &&
                     a.Name.Contains(suffix, StringComparison.OrdinalIgnoreCase) &&
                     a.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
@@ -645,16 +719,14 @@ namespace VaultSync.UI.Services
             if (release is null)
                 return new UpdateReleaseCandidateDiagnostics();
 
-            (string? manifestUrl, string? _, long _, Uri? archiveUrl, string? _, string? _, long _) = GetPatchAssets(release.Assets);
-            (Uri? installerUrl, string? _, string? _, long _) = GetInstallerAsset(release.Assets);
             return new UpdateReleaseCandidateDiagnostics
             {
                 Tag = (release.TagName ?? string.Empty).Trim(),
                 TargetCommitish = (release.TargetCommitish ?? string.Empty).Trim(),
                 Prerelease = release.Prerelease,
                 PublishedUtc = release.PublishedAt?.ToUniversalTime().ToString("O") ?? string.Empty,
-                HasPatch = hasPatch ?? (!string.IsNullOrWhiteSpace(manifestUrl) && archiveUrl != null),
-                HasInstaller = hasInstaller ?? installerUrl != null
+                HasPatch = hasPatch ?? false,
+                HasInstaller = hasInstaller ?? false
             };
         }
     }

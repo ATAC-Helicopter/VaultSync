@@ -115,6 +115,32 @@ The post-publish readiness gate downloads the manifest and compares it with
 GitHub's live asset metadata. Any missing or unexpected name, byte-size change,
 digest change, unsafe URL, or schema mismatch blocks the release.
 
+### Offline checksum verification
+
+Download `vaultsync-release-manifest.json` and the package to verify into the
+same directory. This macOS command reads the expected SHA-256 and checks the
+local bytes without trusting the package filename supplied by a different
+source (`sha256sum -c -` is the equivalent final command on Linux):
+
+```bash
+asset="VaultSync-1.8.7-linux-x64.tar.gz"
+expected="$(jq -er --arg name "$asset" '.assets[] | select(.name == $name) | .sha256' vaultsync-release-manifest.json)"
+printf '%s  %s\n' "$expected" "$asset" | shasum -a 256 -c -
+```
+
+On Windows PowerShell:
+
+```powershell
+$asset = "VaultSync-Setup-1.8.7.exe"
+$manifest = Get-Content .\vaultsync-release-manifest.json -Raw | ConvertFrom-Json
+$expected = ($manifest.assets | Where-Object name -eq $asset).sha256
+$actual = (Get-FileHash ".\$asset" -Algorithm SHA256).Hash.ToLowerInvariant()
+if (-not $expected -or $actual -cne $expected) { throw "SHA-256 verification failed for $asset" }
+```
+
+Before using a checksum, confirm the manifest itself came from the matching tag
+on the official `ATAC-Helicopter/VaultSync` GitHub Releases page.
+
 ## 5) Release Checklist
 - Run the release gate before publishing:
   ```powershell
