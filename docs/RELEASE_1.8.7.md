@@ -61,6 +61,9 @@ branch package.
 3. Generate the release manifest and expose complete build identity.
 4. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB
    behavior before enabling supported concurrent-machine workflows.
+5. Reduce codebase duplication and oversized orchestration through shared,
+   regression-tested primitives without combining genuinely different platform
+   behavior.
 
 ### Still planned
 
@@ -68,6 +71,8 @@ branch package.
 - checksummed Recovery Evidence Packages;
 - allowlisted, reviewable support bundles;
 - synchronized public release metadata;
+- standardized retry, path, serialization, lifecycle, dialog, and projection
+  infrastructure plus review of every remaining duplicated block;
 - full repository and emergency-recovery documentation after schemas stabilize;
 - final localization, theme, accessibility, static-analysis, dependency, and
   cross-platform release qualification.

@@ -454,6 +454,18 @@ that exists only on the release branch or remains planned.
     another; non-overlapping changes merge, overlapping changes show old, local,
     and remote values with timestamps and writers; accepting either side is
     durable and auditable; the operation can be undone before the next write.
+- [ ] `VS-1880` `P1` Simplify and standardize shared application code without
+  changing user-visible behavior.
+  - Scope: consolidate repeated retry, path, serialization, status, dialog,
+    lifecycle, and projection logic behind focused tested primitives; decompose
+    oversized backup, metadata, Dashboard, Settings, Projects, and history
+    orchestration; remove confirmed dead code; and document the few intentional
+    platform-specific duplications that cannot safely share an implementation.
+  - Acceptance: every touched behavior retains regression coverage, no new
+    Sonar duplication is introduced, the repository duplication baseline falls
+    release over release, all remaining duplicated blocks are reviewed and
+    justified or tracked, and builds remain warning-free on every supported
+    platform.
 
 ### Confirmed defects entering 1.8.7
 
