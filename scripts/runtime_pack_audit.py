@@ -5,9 +5,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
-import xml.etree.ElementTree as ET
 from pathlib import Path
+
+
+MINIMUM_VERSION_PROPERTY = re.compile(
+    r"<VaultSyncMinimumRuntimeVersion>\s*(\d+\.\d+\.\d+)\s*"
+    r"</VaultSyncMinimumRuntimeVersion>"
+)
 
 
 def version_tuple(value: str) -> tuple[int, ...]:
@@ -15,11 +21,11 @@ def version_tuple(value: str) -> tuple[int, ...]:
 
 
 def configured_minimum(repo_root: Path) -> str:
-    root = ET.parse(repo_root / "Directory.Build.props").getroot()
-    element = root.find(".//VaultSyncMinimumRuntimeVersion")
-    if element is None or not element.text or not element.text.strip():
+    content = (repo_root / "Directory.Build.props").read_text(encoding="utf-8-sig")
+    match = MINIMUM_VERSION_PROPERTY.search(content)
+    if match is None:
         raise ValueError("VaultSyncMinimumRuntimeVersion is not configured")
-    return element.text.strip()
+    return match.group(1)
 
 
 def audit_runtimeconfig(path: Path, minimum: str) -> list[str]:
