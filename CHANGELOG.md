@@ -1,8 +1,4 @@
 ﻿# Changelog
-## [Unreleased]
-### Fixed
-- [BUG-18099] Serviced the .NET SDK, self-contained runtime packs, and coordinated Microsoft packages to `10.0.11`, stopped ordinary restores from resolving unused cross-platform runtime packs, and added published-output gates that prevent vulnerable runtimes from bypassing the ordinary NuGet audit.
-
 ## [1.8.6] - 10.08.2026
 ### Added
 - [VS-1861] Replaced first-run overlays with a compact, resumable task sequence driven by real source, destination, project, schedule, restore-point, and passed recovery-drill state.
