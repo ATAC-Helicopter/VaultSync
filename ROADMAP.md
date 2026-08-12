@@ -457,11 +457,15 @@ cross-machine safety model are approved.
   and acceptance text when synchronizing GitHub issues and Project entries.
   - Acceptance: parser fixtures cover multiline titles and nested scope bullets,
     and a dry run reports exact changes without rewriting valid issue contracts.
-- [ ] `BUG-18099` `P0` Service the .NET runtime and coordinated Microsoft
+- [x] `BUG-18099` `P0` Service the .NET runtime and coordinated Microsoft
   packages to the security-fixed `10.0.11` baseline or newer validated patch.
   - Acceptance: all current runtime-pack Dependabot alerts are closed, direct
     and runtime-pack vulnerability audits agree, and self-contained packages on
     every supported RID contain the qualified runtime patch.
+  - Completed: SDK `10.0.303`, runtime `10.0.11`, and coordinated Microsoft
+    packages were pinned on 2026-08-12; unused cross-RID restore declarations
+    were removed, CI audits a real self-contained publish, and release jobs
+    verify the runtime embedded in every supported RID.
 - [x] `BUG-18100` `P0` Restore the permanent `Dev` branch and prevent Stable
   promotion merges from automatically deleting it.
   - Completed: `Dev` was restored at the exact `v1.8.6` Stable commit on
