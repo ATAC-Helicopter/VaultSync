@@ -71,6 +71,23 @@ class RuntimePackAuditTests(unittest.TestCase):
             self.assertEqual(1, len(errors))
             self.assertIn("metadata is missing", errors[0])
 
+    def test_resolve_runtimeconfig_rejects_paths_outside_allowed_roots(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as repo_tmp:
+            with tempfile.TemporaryDirectory() as outside_tmp:
+                path = Path(outside_tmp) / "app.runtimeconfig.json"
+                self.write_runtimeconfig(path, "10.0.11")
+                with patch.object(runtime_pack_audit.tempfile, "gettempdir", return_value=repo_tmp):
+                    with self.assertRaisesRegex(ValueError, "must stay inside"):
+                        runtime_pack_audit.resolve_runtimeconfig(path, Path(repo_tmp))
+
+    def test_resolve_runtimeconfig_requires_the_expected_filename(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "metadata.json"
+            self.write_runtimeconfig(path, "10.0.11")
+            with self.assertRaisesRegex(ValueError, r"\.runtimeconfig\.json"):
+                runtime_pack_audit.resolve_runtimeconfig(path, root)
+
     def test_main_returns_success_for_a_serviced_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -78,10 +95,8 @@ class RuntimePackAuditTests(unittest.TestCase):
             self.write_repo(root)
             self.write_runtimeconfig(config, "10.0.11")
             output = StringIO()
-            with patch.object(
-                sys,
-                "argv",
-                ["runtime_pack_audit.py", "--repo-root", str(root), "--runtimeconfig", str(config)],
+            with patch.object(runtime_pack_audit, "REPOSITORY_ROOT", root), patch.object(
+                sys, "argv", ["runtime_pack_audit.py", "--runtimeconfig", str(config)]
             ), redirect_stdout(output):
                 self.assertEqual(0, runtime_pack_audit.main())
             self.assertIn("Runtime security audit passed", output.getvalue())
@@ -93,10 +108,8 @@ class RuntimePackAuditTests(unittest.TestCase):
             self.write_repo(root)
             self.write_runtimeconfig(config, "10.0.8")
             output = StringIO()
-            with patch.object(
-                sys,
-                "argv",
-                ["runtime_pack_audit.py", "--repo-root", str(root), "--runtimeconfig", str(config)],
+            with patch.object(runtime_pack_audit, "REPOSITORY_ROOT", root), patch.object(
+                sys, "argv", ["runtime_pack_audit.py", "--runtimeconfig", str(config)]
             ), redirect_stderr(output):
                 self.assertEqual(1, runtime_pack_audit.main())
             self.assertIn("require >= 10.0.11", output.getvalue())
