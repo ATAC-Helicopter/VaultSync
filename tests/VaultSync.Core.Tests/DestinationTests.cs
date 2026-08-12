@@ -11,6 +11,55 @@ namespace VaultSync.Core.Tests;
 
 public sealed class NetworkMountServiceTests
 {
+    [Theory]
+    [InlineData("smb://server/share/folder/child", "server", "share", "folder/child")]
+    [InlineData(@"\\server\share\folder", "server", "share", "folder")]
+    [InlineData("//user@server:445/share", "server", "share", "")]
+    public void TryParseShareWithSubpath_NormalizesSupportedShareForms(
+        string raw,
+        string expectedHost,
+        string expectedShare,
+        string expectedSubPath)
+    {
+        bool parsed = NetworkMountService.TryParseShareWithSubpath(
+            raw,
+            out string host,
+            out string share,
+            out string subPath);
+
+        Assert.True(parsed);
+        Assert.Equal(expectedHost, host);
+        Assert.Equal(expectedShare, share);
+        Assert.Equal(expectedSubPath, subPath);
+    }
+
+    [Theory]
+    [InlineData("//user@server/share on /Volumes/Share (smbfs, nodev, nosuid)", "//user@server/share", "/Volumes/Share")]
+    [InlineData("//server/share on /Users/test/VaultSync mounts/work (SMBFS)", "//server/share", "/Users/test/VaultSync mounts/work")]
+    public void TryParseMacSmbMountLine_ExtractsSourceAndMountPoint(
+        string line,
+        string expectedSource,
+        string expectedMountPoint)
+    {
+        bool parsed = NetworkMountService.TryParseMacSmbMountLine(
+            line,
+            out string source,
+            out string mountPoint);
+
+        Assert.True(parsed);
+        Assert.Equal(expectedSource, source);
+        Assert.Equal(expectedMountPoint, mountPoint);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("/dev/disk3 on /Volumes/Data (apfs)")]
+    [InlineData("smbfs without mount separator")]
+    public void TryParseMacSmbMountLine_RejectsUnrelatedOrMalformedLines(string line)
+    {
+        Assert.False(NetworkMountService.TryParseMacSmbMountLine(line, out _, out _));
+    }
+
     [Fact]
     public void PrepareDestination_WithLocalPath_ReturnsSuccessAndEffectivePath()
     {
