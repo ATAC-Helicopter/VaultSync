@@ -122,6 +122,7 @@ revision.
 ## Safe rollout order
 
 1. Land and test durable installation identity without changing repository data.
+   **Implemented on the 1.8.7 release branch on 2026-08-12.**
 2. Add lease parsing and read-only busy diagnostics.
 3. Protect every metadata writer, including tombstones and repair/migration.
 4. Add the versioned schema and forward migration fixtures.
