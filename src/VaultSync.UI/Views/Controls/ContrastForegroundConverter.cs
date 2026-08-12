@@ -3,6 +3,7 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI.Views.Controls;
 
@@ -16,7 +17,7 @@ public sealed class ContrastForegroundConverter : IValueConverter
         if (!TryGetColor(value, out Color background))
             return LightForeground;
 
-        return ContrastRatio(Colors.White, background) >= ContrastRatio(Color.Parse("#11131A"), background)
+        return ThemeColor.BestContrast(background) == Colors.White
             ? LightForeground
             : DarkForeground;
     }
@@ -39,27 +40,4 @@ public sealed class ContrastForegroundConverter : IValueConverter
         return false;
     }
 
-    private static double ContrastRatio(Color first, Color second)
-    {
-        double firstLuminance = RelativeLuminance(first);
-        double secondLuminance = RelativeLuminance(second);
-        double lighter = Math.Max(firstLuminance, secondLuminance);
-        double darker = Math.Min(firstLuminance, secondLuminance);
-        return (lighter + 0.05) / (darker + 0.05);
-    }
-
-    private static double RelativeLuminance(Color color)
-    {
-        static double Linearize(byte channel)
-        {
-            double value = channel / 255d;
-            return value <= 0.04045
-                ? value / 12.92
-                : Math.Pow((value + 0.055) / 1.055, 2.4);
-        }
-
-        return (0.2126 * Linearize(color.R))
-            + (0.7152 * Linearize(color.G))
-            + (0.0722 * Linearize(color.B));
-    }
 }
