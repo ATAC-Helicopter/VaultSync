@@ -21,6 +21,15 @@ public sealed class MetadataSyncService
     private const string BackupEntityType = "backup";
     private const string InvalidRootPathMessage = "Root path is empty.";
     private const string VaultSyncDirectoryName = ".vaultsync";
+    private const string UnknownAppVersion = "unknown";
+    private static readonly TimeSpan[] StoreRetryDelays =
+    [
+        TimeSpan.FromMilliseconds(200),
+        TimeSpan.FromMilliseconds(500),
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(5)
+    ];
 
     private readonly SqliteRepository _repo;
     private readonly IAppConfigStore _configStore;
@@ -1873,7 +1882,7 @@ public sealed class MetadataSyncService
             missingExternalIds,
             Environment.MachineName,
             "Missing backup tombstone export",
-            "unknown",
+            UnknownAppVersion,
             ResolveLeaseOwnerId(Environment.MachineName),
             _repositoryLeaseService);
     }
@@ -1886,7 +1895,7 @@ public sealed class MetadataSyncService
             missingExternalIds,
             Environment.MachineName,
             "Missing snapshot tombstone export",
-            "unknown",
+            UnknownAppVersion,
             ResolveLeaseOwnerId(Environment.MachineName),
             _repositoryLeaseService);
     }
@@ -1908,7 +1917,7 @@ public sealed class MetadataSyncService
             [projectExternalId],
             machineId,
             "Project tombstone export",
-            "unknown",
+            UnknownAppVersion,
             leaseOwnerId ?? CreateCompatibilityInstallationId(machineId),
             leaseService);
     }
@@ -2060,47 +2069,75 @@ public sealed class MetadataSyncService
                 return LeaseFailure(leaseResult);
 
             using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
-            TimeSpan[] retryDelays =
-            [
-                TimeSpan.FromMilliseconds(200),
-                TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromSeconds(2),
-                TimeSpan.FromSeconds(5)
-            ];
-
-            for (int attempt = 0; attempt <= retryDelays.Length; attempt++)
-            {
-                try
-                {
-                    return ExportProjectToStoreInternal(
+            return await ExecuteStoreWriteWithRetryAsync(
+                    () => ExportProjectToStoreInternal(
                         rootPath,
                         projectId,
                         appVersion,
                         machineId,
                         destinationLease,
-                        useDeferredStore);
-                }
-                catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
-                {
-                    if (attempt >= retryDelays.Length)
-                    {
-                        Console.WriteLine($"[MetadataSync] Project export failed after retries: {ex.Message}");
-                        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
-                    }
-
-                    TimeSpan delay = retryDelays[attempt];
-                    Console.WriteLine($"[MetadataSync] Project export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
-                    await Task.Delay(delay, ct).ConfigureAwait(false);
-                }
-            }
-
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Project export failed after retries.");
+                        useDeferredStore),
+                    "Project export",
+                    ct)
+                .ConfigureAwait(false);
         }
         finally
         {
             metadataIoGate.Release();
         }
+    }
+
+    private static async Task<MetadataSyncResult> ExecuteStoreWriteWithRetryAsync(
+        Func<MetadataSyncResult> write,
+        string operationLabel,
+        CancellationToken ct)
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return write();
+            }
+            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+            {
+                if (attempt >= StoreRetryDelays.Length)
+                {
+                    Console.WriteLine($"[MetadataSync] {operationLabel} failed after retries: {ex.Message}");
+                    return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+                }
+
+                TimeSpan delay = StoreRetryDelays[attempt];
+                Console.WriteLine($"[MetadataSync] {operationLabel} store locked; retrying in {delay.TotalMilliseconds:0}ms.");
+                await Task.Delay(delay, ct).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private MetadataSyncResult? ValidateDestinationLease(
+        string rootPath,
+        string appVersion,
+        string machineId,
+        RepositoryLeaseHandle? destinationLease)
+    {
+        if (destinationLease is null)
+            return null;
+        if (!destinationLease.IsOwner)
+            return LostLeaseFailure();
+        if (!HasDeferredExport(rootPath))
+            return null;
+        if (TryFlushDeferredExport(
+                rootPath,
+                appVersion,
+                machineId,
+                ResolveLeaseOwnerId(machineId),
+                _repositoryLeaseService))
+        {
+            return null;
+        }
+
+        return MetadataSyncResult.Failure(
+            MetadataSyncStatus.RepositoryBusy,
+            "Deferred metadata was preserved because destination metadata already exists or the queue could not be locked safely.");
     }
 
     private MetadataSyncResult ExportProjectToStoreInternal(
@@ -2117,23 +2154,10 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
         }
 
-        if (destinationLease is not null)
-        {
-            if (!destinationLease.IsOwner)
-                return LostLeaseFailure();
-            if (HasDeferredExport(rootPath) &&
-                !TryFlushDeferredExport(
-                    rootPath,
-                    appVersion,
-                    machineId,
-                    ResolveLeaseOwnerId(machineId),
-                    _repositoryLeaseService))
-            {
-                return MetadataSyncResult.Failure(
-                    MetadataSyncStatus.RepositoryBusy,
-                    "Deferred metadata was preserved because destination metadata already exists or the queue could not be locked safely.");
-            }
-        }
+        MetadataSyncResult? destinationFailure = ValidateDestinationLease(
+            rootPath, appVersion, machineId, destinationLease);
+        if (destinationFailure is not null)
+            return destinationFailure;
 
         string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
         using RepositoryLeaseHandle? deferredLease = useDeferredStore
@@ -2256,43 +2280,18 @@ public sealed class MetadataSyncService
                 return LeaseFailure(leaseResult);
 
             using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
-            TimeSpan[] retryDelays =
-            [
-                TimeSpan.FromMilliseconds(200),
-                TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromSeconds(2),
-                TimeSpan.FromSeconds(5)
-            ];
-
-            for (int attempt = 0; attempt <= retryDelays.Length; attempt++)
-            {
-                try
-                {
-                    return ExportBackupToStoreInternal(
+            return await ExecuteStoreWriteWithRetryAsync(
+                    () => ExportBackupToStoreInternal(
                         rootPath,
                         backupId,
                         appVersion,
                         machineId,
                         forceBackfill,
                         destinationLease,
-                        useDeferredStore);
-                }
-                catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
-                {
-                    if (attempt >= retryDelays.Length)
-                    {
-                        Console.WriteLine($"[MetadataSync] Export failed after retries: {ex.Message}");
-                        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
-                    }
-
-                    TimeSpan delay = retryDelays[attempt];
-                    Console.WriteLine($"[MetadataSync] Export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
-                    await Task.Delay(delay, ct).ConfigureAwait(false);
-                }
-            }
-
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Export failed after retries.");
+                        useDeferredStore),
+                    "Backup export",
+                    ct)
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -2348,23 +2347,10 @@ public sealed class MetadataSyncService
                 "Snapshot no longer exists; metadata export skipped.");
         }
 
-        if (destinationLease is not null)
-        {
-            if (!destinationLease.IsOwner)
-                return LostLeaseFailure();
-            if (HasDeferredExport(rootPath) &&
-                !TryFlushDeferredExport(
-                    rootPath,
-                    appVersion,
-                    machineId,
-                    ResolveLeaseOwnerId(machineId),
-                    _repositoryLeaseService))
-            {
-                return MetadataSyncResult.Failure(
-                    MetadataSyncStatus.RepositoryBusy,
-                    "Deferred metadata was preserved because destination metadata already exists or the queue could not be locked safely.");
-            }
-        }
+        MetadataSyncResult? destinationFailure = ValidateDestinationLease(
+            rootPath, appVersion, machineId, destinationLease);
+        if (destinationFailure is not null)
+            return destinationFailure;
 
         string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
         using RepositoryLeaseHandle? deferredLease = useDeferredStore
@@ -2456,23 +2442,12 @@ public sealed class MetadataSyncService
                         DiffNetBytes = snapshot.DiffNetBytes,
                         DiffTopPathsJson = string.IsNullOrWhiteSpace(snapshot.DiffTopPathsJson) ? "[]" : snapshot.DiffTopPathsJson
                     });
-                    var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
-                    store.UpsertBackup(new MetaBackup
-                    {
-                        ExternalId = backupExternalId,
-                        ProjectExternalId = projectExternalId,
-                        SnapshotExternalId = snapshotExternalId,
-                        CreatedUtc = backup.CreatedUtc,
-                        Type = backup.Type,
-                        BackupMode = BackupModes.Normalize(backup.BackupMode),
-                        TotalBytes = backup.TotalBytes,
-                        PathRel = backup.Path,
-                        DestinationAlias = backup.DestinationAlias ?? string.Empty,
-                        OriginMachineName = machineId,
-                        IsProtected = backup.IsProtected,
-                        IsEncrypted = backup.IsEncrypted,
-                        KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
-                    });
+                    store.UpsertBackup(CreateMetaBackup(
+                        backup,
+                        backupExternalId,
+                        projectExternalId,
+                        snapshotExternalId,
+                        machineId));
                     exportedBackups = 1;
                 }
             });
@@ -2805,11 +2780,11 @@ public sealed class MetadataSyncService
             installationId,
             string.IsNullOrWhiteSpace(machineLabel) ? "Unknown host" : machineLabel.Trim(),
             operation,
-            string.IsNullOrWhiteSpace(appVersion) ? "unknown" : appVersion.Trim());
+            string.IsNullOrWhiteSpace(appVersion) ? UnknownAppVersion : appVersion.Trim());
 
     private static string CreateCompatibilityInstallationId(string machineLabel)
     {
-        string source = string.IsNullOrWhiteSpace(machineLabel) ? "unknown" : machineLabel.Trim();
+        string source = string.IsNullOrWhiteSpace(machineLabel) ? UnknownAppVersion : machineLabel.Trim();
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes($"vaultsync-lease:{source}"));
         return new Guid(hash.AsSpan(0, 16)).ToString("N");
     }
@@ -3032,23 +3007,12 @@ public sealed class MetadataSyncService
             }
 
             string backupExternalId = EnsureBackupExternalId(backup);
-            var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
-            store.UpsertBackup(new MetaBackup
-            {
-                ExternalId = backupExternalId,
-                ProjectExternalId = projectExternalId,
-                SnapshotExternalId = snapshotExternalId,
-                CreatedUtc = backup.CreatedUtc,
-                Type = backup.Type,
-                BackupMode = BackupModes.Normalize(backup.BackupMode),
-                TotalBytes = backup.TotalBytes,
-                PathRel = backup.Path,
-                DestinationAlias = backup.DestinationAlias ?? string.Empty,
-                OriginMachineName = machineId,
-                IsProtected = backup.IsProtected,
-                IsEncrypted = backup.IsEncrypted,
-                KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
-            });
+            store.UpsertBackup(CreateMetaBackup(
+                backup,
+                backupExternalId,
+                projectExternalId,
+                snapshotExternalId,
+                machineId));
             exportedBackups++;
         }
 
@@ -3058,6 +3022,32 @@ public sealed class MetadataSyncService
         }
 
         return (snapshots.Count, exportedBackups);
+    }
+
+    private static MetaBackup CreateMetaBackup(
+        Backup backup,
+        string backupExternalId,
+        string projectExternalId,
+        string snapshotExternalId,
+        string machineId)
+    {
+        var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
+        return new MetaBackup
+        {
+            ExternalId = backupExternalId,
+            ProjectExternalId = projectExternalId,
+            SnapshotExternalId = snapshotExternalId,
+            CreatedUtc = backup.CreatedUtc,
+            Type = backup.Type,
+            BackupMode = BackupModes.Normalize(backup.BackupMode),
+            TotalBytes = backup.TotalBytes,
+            PathRel = backup.Path,
+            DestinationAlias = backup.DestinationAlias ?? string.Empty,
+            OriginMachineName = machineId,
+            IsProtected = backup.IsProtected,
+            IsEncrypted = backup.IsEncrypted,
+            KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
+        };
     }
 
     private static void LogStoreCounts(MetadataStore store)
@@ -3440,7 +3430,7 @@ public sealed class MetadataSyncService
             ProjectId = current.Id,
             ProjectExternalId = string.IsNullOrWhiteSpace(current.ExternalId) ? metaProject.ExternalId : current.ExternalId,
             ProjectName = current.Name,
-            SourceMachineId = string.IsNullOrWhiteSpace(sourceMachineId) ? "unknown" : sourceMachineId,
+            SourceMachineId = string.IsNullOrWhiteSpace(sourceMachineId) ? UnknownAppVersion : sourceMachineId,
             SourceUpdatedUtc = metaProject.UpdatedUtc == default
                 ? string.Empty
                 : metaProject.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),

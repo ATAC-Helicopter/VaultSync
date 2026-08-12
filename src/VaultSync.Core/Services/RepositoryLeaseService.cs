@@ -440,7 +440,7 @@ public sealed class RepositoryLeaseService
     internal ITimer CreateHeartbeatTimer(TimerCallback callback, object state, TimeSpan interval) =>
         _timeProvider.CreateTimer(callback, state, interval, interval);
 
-    private RepositoryLeaseSnapshot CreateSnapshot(RepositoryLeaseRequest request, DateTimeOffset now)
+    private static RepositoryLeaseSnapshot CreateSnapshot(RepositoryLeaseRequest request, DateTimeOffset now)
     {
         TimeSpan duration = ResolveDuration(request.Duration);
         return new RepositoryLeaseSnapshot(
@@ -812,19 +812,10 @@ public sealed class RepositoryLeaseService
 
     private sealed class LeaseRow
     {
-        public int ProtocolVersion
-        {
-            get; set;
-        }
+        public int ProtocolVersion { get; set; } = CurrentProtocolVersion;
         public string InstallationId { get; set; } = string.Empty;
-        public string? HostLabel
-        {
-            get; set;
-        }
-        public int ProcessId
-        {
-            get; set;
-        }
+        public string? HostLabel { get; set; } = string.Empty;
+        public int ProcessId { get; set; } = Environment.ProcessId;
         public string Operation { get; set; } = string.Empty;
         public string Nonce { get; set; } = string.Empty;
         public string AppVersion { get; set; } = string.Empty;
@@ -835,20 +826,11 @@ public sealed class RepositoryLeaseService
 
     private sealed class LeaseParameters
     {
-        public int LeaseId
-        {
-            get; set;
-        }
-        public int ProtocolVersion
-        {
-            get; set;
-        }
+        public int LeaseId { get; set; }
+        public int ProtocolVersion { get; set; } = CurrentProtocolVersion;
         public string InstallationId { get; set; } = string.Empty;
         public string HostLabel { get; set; } = string.Empty;
-        public int ProcessId
-        {
-            get; set;
-        }
+        public int ProcessId { get; set; } = Environment.ProcessId;
         public string Operation { get; set; } = string.Empty;
         public string Nonce { get; set; } = string.Empty;
         public string AppVersion { get; set; } = string.Empty;
@@ -861,10 +843,7 @@ public sealed class RepositoryLeaseService
     {
         public string Nonce { get; set; } = string.Empty;
         public string InstallationId { get; set; } = string.Empty;
-        public string? HostLabel
-        {
-            get; set;
-        }
+        public string? HostLabel { get; set; } = string.Empty;
         public string Operation { get; set; } = string.Empty;
         public string AppVersion { get; set; } = string.Empty;
         public string AcquiredUtc { get; set; } = string.Empty;
