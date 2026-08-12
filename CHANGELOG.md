@@ -1,4 +1,19 @@
 ﻿# Changelog
+## [1.8.7] - Unreleased
+### Added
+- [VS-1877] Added a durable, owner-private installation identity for cross-machine coordination without treating mutable host names or telemetry identifiers as writer identity.
+- [VS-1877] Added repository-scoped writer leases with atomic acquisition, heartbeat and expiry, read-only busy inspection, nonce-bound release, explicit stale takeover, and retained takeover evidence.
+
+### Changed
+- [BUG-18099] Serviced the .NET 10 baseline to SDK `10.0.303`, runtime `10.0.11`, and coordinated Microsoft packages, with CI auditing real self-contained publishes and release artifacts for every supported runtime identifier.
+- [VS-1877] Protected project settings, backup history, tombstones, deferred metadata writes, and deferred flushing with repository lease ownership checks while keeping imports and previews readable when another writer is active.
+- [VS-1877] Made unavailable-destination metadata queues fail closed: queued metadata can initialize an empty destination once, while an existing destination is preserved for explicit merge review.
+
+### Fixed
+- [BUG-18100] Restored `Dev` as the permanent integration branch at the `1.8.6` Stable commit and disabled automatic head-branch deletion so Stable promotion cannot remove it again.
+- [BUG-18102] Prevented deferred metadata replay from overwriting repository metadata changed on another machine or replaying repeatedly after a successful flush.
+- [BUG-18102] Disabled connection pooling for the repository coordination database so disposed writer leases release their file handles predictably on Windows.
+
 ## [1.8.6] - 10.08.2026
 ### Added
 - [VS-1861] Replaced first-run overlays with a compact, resumable task sequence driven by real source, destination, project, schedule, restore-point, and passed recovery-drill state.
