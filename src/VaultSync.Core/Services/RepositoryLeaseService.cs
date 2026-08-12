@@ -95,7 +95,7 @@ public sealed class RepositoryLeaseService
             throw new ArgumentOutOfRangeException(nameof(clockSkewTolerance));
     }
 
-    public string GetDatabasePath(string rootPath) =>
+    public static string GetDatabasePath(string rootPath) =>
         Path.Combine(GetMetadataDirectory(rootPath), CoordinationDatabaseName);
 
     public RepositoryLeaseInspection Inspect(string rootPath)

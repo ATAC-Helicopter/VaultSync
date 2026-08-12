@@ -39,7 +39,7 @@ public sealed class RepositoryLeaseServiceTests
         RepositoryLeaseInspection inspection = service.Inspect(root.Path);
 
         Assert.Equal(RepositoryLeaseState.Available, inspection.State);
-        Assert.False(File.Exists(service.GetDatabasePath(root.Path)));
+        Assert.False(File.Exists(RepositoryLeaseService.GetDatabasePath(root.Path)));
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class RepositoryLeaseServiceTests
             CreateRequest("metadata-export", identity));
 
         Assert.Equal(RepositoryLeaseAcquireStatus.Invalid, result.Status);
-        Assert.False(File.Exists(service.GetDatabasePath(root.Path)));
+        Assert.False(File.Exists(RepositoryLeaseService.GetDatabasePath(root.Path)));
     }
 
     [Theory]
@@ -195,7 +195,7 @@ public sealed class RepositoryLeaseServiceTests
         RepositoryLeaseAcquireResult result = service.TryAcquire(root.Path, request);
 
         Assert.Equal(RepositoryLeaseAcquireStatus.Invalid, result.Status);
-        Assert.False(File.Exists(service.GetDatabasePath(root.Path)));
+        Assert.False(File.Exists(RepositoryLeaseService.GetDatabasePath(root.Path)));
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public sealed class RepositoryLeaseServiceTests
     {
         using var root = new TempDirectory();
         var service = new RepositoryLeaseService();
-        string databasePath = service.GetDatabasePath(root.Path);
+        string databasePath = RepositoryLeaseService.GetDatabasePath(root.Path);
         Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
         using (var connection = new SqliteConnection($"Data Source={databasePath};Pooling=False"))
         {
@@ -246,7 +246,7 @@ public sealed class RepositoryLeaseServiceTests
         using RepositoryLeaseHandle handle = AssertAcquired(service.TryAcquire(root.Path, CreateRequest("metadata-export")));
         handle.Dispose();
 
-        using (var connection = new SqliteConnection($"Data Source={service.GetDatabasePath(root.Path)}"))
+        using (var connection = new SqliteConnection($"Data Source={RepositoryLeaseService.GetDatabasePath(root.Path)}"))
         {
             connection.Open();
             connection.Execute(
