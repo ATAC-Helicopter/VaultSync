@@ -607,7 +607,7 @@ namespace VaultSync.UI.ViewModels
                 }
                 finally
                 {
-                    _networkMountService.Cleanup(resolution);
+                    NetworkMountService.Cleanup(resolution);
                 }
             }
 
@@ -723,7 +723,7 @@ namespace VaultSync.UI.ViewModels
                     };
 
                     DestinationResolution cleanupResolution = resolution with { Destination = cleanupDest };
-                    _networkMountService.Cleanup(cleanupResolution);
+                    NetworkMountService.Cleanup(cleanupResolution);
                 }
             }
         }

@@ -342,7 +342,7 @@ namespace VaultSync.UI.ViewModels
 
                 if (deleteResolution is not null)
                 {
-                    _networkMountService.Cleanup(deleteResolution);
+                    NetworkMountService.Cleanup(deleteResolution);
                 }
             }
         }

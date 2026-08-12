@@ -236,7 +236,7 @@ namespace VaultSync.UI.ViewModels
                         Console.WriteLine($"[BackupCleanup] Removed {removed} incomplete backup(s) under '{resolution.EffectivePath}'.");
                     }
 
-                    _networkMountService.Cleanup(resolution);
+                    NetworkMountService.Cleanup(resolution);
                 }
             }
             catch (Exception ex)
@@ -488,7 +488,7 @@ namespace VaultSync.UI.ViewModels
                         }
                     }
 
-                    _networkMountService.Cleanup(resolution);
+                    NetworkMountService.Cleanup(resolution);
                 }
 
                 if (added > 0)
@@ -1027,7 +1027,7 @@ namespace VaultSync.UI.ViewModels
                                 {
                                     foreach ((_, DestinationResolution resolution) in destinationResolutions)
                                     {
-                                        _networkMountService.Cleanup(resolution);
+                                        NetworkMountService.Cleanup(resolution);
                                     }
                                 }
 

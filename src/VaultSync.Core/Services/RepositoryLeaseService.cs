@@ -268,7 +268,7 @@ public sealed class RepositoryLeaseService
         }
     }
 
-    public IReadOnlyList<RepositoryLeaseEvidence> ListEvidence(string rootPath)
+    public static IReadOnlyList<RepositoryLeaseEvidence> ListEvidence(string rootPath)
     {
         string databasePath;
         try
