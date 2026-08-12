@@ -146,6 +146,15 @@ public sealed class RepositoryLeaseService
         try
         {
             databasePath = GetDatabasePath(rootPath);
+            if (!Directory.Exists(Path.GetFullPath(rootPath)))
+            {
+                return FailedAcquire(
+                    RepositoryLeaseAcquireStatus.Unavailable,
+                    new RepositoryLeaseInspection(
+                        RepositoryLeaseState.Unavailable,
+                        null,
+                        "Repository root is unavailable."));
+            }
             Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
         }
         catch (Exception ex) when (IsStorageException(ex))
@@ -209,7 +218,15 @@ public sealed class RepositoryLeaseService
                 InvalidInspection(validationError ?? "Expected lease nonce is invalid."));
         }
 
-        string databasePath = GetDatabasePath(rootPath);
+        string databasePath;
+        try
+        {
+            databasePath = GetDatabasePath(rootPath);
+        }
+        catch (Exception ex) when (IsStorageException(ex))
+        {
+            return FailedAcquire(RepositoryLeaseAcquireStatus.Invalid, InvalidInspection("Repository root is invalid."));
+        }
         if (!File.Exists(databasePath) || IsLinkedFile(databasePath))
             return FailedAcquire(RepositoryLeaseAcquireStatus.Invalid, InvalidInspection("No valid stale lease is available for takeover."));
 
@@ -253,7 +270,15 @@ public sealed class RepositoryLeaseService
 
     public IReadOnlyList<RepositoryLeaseEvidence> ListEvidence(string rootPath)
     {
-        string databasePath = GetDatabasePath(rootPath);
+        string databasePath;
+        try
+        {
+            databasePath = GetDatabasePath(rootPath);
+        }
+        catch (Exception ex) when (IsStorageException(ex))
+        {
+            return [];
+        }
         if (!File.Exists(databasePath) || IsLinkedFile(databasePath))
             return [];
 
@@ -656,7 +681,7 @@ public sealed class RepositoryLeaseService
             return "Repository operation is required and must not exceed 100 characters.";
         if (string.IsNullOrWhiteSpace(request.AppVersion) || request.AppVersion.Trim().Length > 64)
             return "Application version is required and must not exceed 64 characters.";
-        if (request.HostLabel?.Trim().Length > 200)
+        if (request.HostLabel is null || request.HostLabel.Trim().Length > 200)
             return "Host label must not exceed 200 characters.";
 
         try

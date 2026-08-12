@@ -59,10 +59,9 @@ single-writer guidance are documented in
 
 ## Repository coordination — Planned for 1.8.7
 
-The coordination database and durable installation identity are implemented on
-the 1.8.7 release branch. Protection of every metadata writer is the next rollout
-slice. The later portable-metadata schema revision will add, with explicit
-migrations and fixtures:
+The coordination database, durable installation identity, and protection of all
+existing metadata writers are implemented on the 1.8.7 release branch. The later
+portable-metadata schema revision will add, with explicit migrations and fixtures:
 
 - durable installation identity distinct from host name;
 - per-record revision, base revision, writer identity, and timestamp;
@@ -75,6 +74,13 @@ owner, diagnostic host label, process, operation, nonce, application version,
 acquisition, heartbeat, and expiry. Normal release clears the active row without
 growing history. Explicit stale takeover preserves the displaced record as
 diagnostic evidence.
+
+Offline metadata is queued in an app-created, destination-specific temporary
+store. It is installed and retired once only when the returning destination has
+no metadata database. If destination metadata already exists, VaultSync preserves
+both stores and stops; it does not replay a whole queued database over potentially
+divergent cross-machine changes. That case remains blocked until the versioned
+merge/review workflow can reconcile it.
 
 The migration must preserve every readable version-1 record. A 1.8.7 client may
 inspect a repository read-only while another valid lease exists, but it must not

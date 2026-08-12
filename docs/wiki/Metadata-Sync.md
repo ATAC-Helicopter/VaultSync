@@ -74,6 +74,12 @@ resolution, per-record writer provenance, and a repository-scoped writer lease.
 Until that ships, use one machine as the writer for a destination and use other
 machines for recovery inspection or deliberate imports.
 
+On the active 1.8.7 development branch, cooperating metadata writers are now
+serialized by a durable repository lease. A second client can still preview and
+import read-only, but it cannot write tombstones or exports while the repository
+is busy. This protection is not considered shipped, and it cannot constrain a
+pre-1.8.7 client that does not understand the protocol.
+
 The maintained 1.8.7 implementation status is recorded in the
 [1.8.7 release contract](../RELEASE_1.8.7.md). The current and planned on-disk
 layouts, compatibility rules, and emergency inspection boundary are documented

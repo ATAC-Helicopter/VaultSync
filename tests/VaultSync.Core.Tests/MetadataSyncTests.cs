@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
@@ -648,6 +650,59 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_ActiveWriterAutomaticallyMakesSourceReadOnly()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string projectRoot = CreateTempDir();
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "machine-active-writer");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "proj-busy-source",
+            Name = "Project Busy Source",
+            Preset = "unity",
+            RootPathHint = projectRoot,
+            CreatedUtc = DateTime.UtcNow.AddDays(-2),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "snap-busy-source",
+            ProjectExternalId = "proj-busy-source",
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            FileCount = 5,
+            TotalBytes = 4096
+        });
+        store.UpsertBackup(new MetaBackup
+        {
+            ExternalId = "backup-busy-source-missing",
+            ProjectExternalId = "proj-busy-source",
+            SnapshotExternalId = "snap-busy-source",
+            CreatedUtc = DateTime.UtcNow.AddMinutes(-1),
+            Type = "manual",
+            TotalBytes = 4096,
+            PathRel = "missing-folder/backup-1",
+            DestinationAlias = "Primary",
+            KdfParamsJson = "{}"
+        });
+
+        var leaseService = new RepositoryLeaseService();
+        using RepositoryLeaseHandle writer = AcquireTestLease(leaseService, metaRoot, "another-writer");
+        SqliteRepository repo = CreateRepository(dbPath);
+        var service = new MetadataSyncService(repo, repositoryLeaseService: leaseService);
+
+        MetadataSyncResult result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+        Assert.DoesNotContain(
+            new MetadataStore(metaRoot).ListTombstones(),
+            tombstone => string.Equals(tombstone.EntityId, "backup-busy-source-missing", StringComparison.Ordinal));
+        Assert.True(writer.IsOwner);
+    }
+
+    [Fact]
     public void ImportFromStore_CanSkipRestoreFlag()
     {
         string metaRoot = CreateTempDir();
@@ -952,6 +1007,160 @@ public sealed class MetadataSyncTests : IDisposable
 
         Backup updatedBackup = repo.GetBackupById(backupId);
         Assert.False(string.IsNullOrWhiteSpace(updatedBackup?.ExternalId));
+    }
+
+    [Fact]
+    public void ExportBackupToStore_ActiveWriterBlocksMetadataMutation()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = TestRepository.AddProject(repo, "Project Busy Export", CreateTempDir(), "unity", DateTime.UtcNow);
+        int snapshotId = repo.CreateSnapshot(projectId, 2, 500);
+        int backupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            500,
+            "project-busy/2026-08-12_00-00-00",
+            metaRoot,
+            "Primary");
+        var leaseService = new RepositoryLeaseService();
+        using RepositoryLeaseHandle writer = AcquireTestLease(leaseService, metaRoot, "another-writer");
+        var service = new MetadataSyncService(repo, repositoryLeaseService: leaseService);
+
+        MetadataSyncResult result = service.ExportBackupToStore(metaRoot, backupId, "1.8.7", "machine-local");
+
+        Assert.Equal(MetadataSyncStatus.RepositoryBusy, result.Status);
+        Assert.False(File.Exists(new MetadataStore(metaRoot).DatabasePath));
+        Assert.True(writer.IsOwner);
+    }
+
+    [Fact]
+    public void ExportProjectToStore_ActiveWriterBlocksMetadataMutation()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = TestRepository.AddProject(repo, "Project Busy Settings", CreateTempDir(), "unity", DateTime.UtcNow);
+        var leaseService = new RepositoryLeaseService();
+        using RepositoryLeaseHandle writer = AcquireTestLease(leaseService, metaRoot, "another-writer");
+        var service = new MetadataSyncService(repo, repositoryLeaseService: leaseService);
+
+        MetadataSyncResult result = service.ExportProjectToStore(metaRoot, projectId, "1.8.7", "machine-local");
+
+        Assert.Equal(MetadataSyncStatus.RepositoryBusy, result.Status);
+        Assert.False(File.Exists(new MetadataStore(metaRoot).DatabasePath));
+        Assert.True(writer.IsOwner);
+    }
+
+    [Fact]
+    public void ExportBackupToStore_DeferredQueueFlushesOnceAndIsRemoved()
+    {
+        string unavailableRoot = Path.Combine(CreateTempDir(), "offline-destination");
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = TestRepository.AddProject(repo, "Project Deferred Export", CreateTempDir(), "unity", DateTime.UtcNow);
+        int snapshotId = repo.CreateSnapshot(projectId, 2, 500);
+        int backupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            500,
+            "project-deferred/2026-08-12_00-00-00",
+            unavailableRoot,
+            "Offline");
+        var service = new MetadataSyncService(repo);
+        string deferredRoot = GetExpectedDeferredRoot(unavailableRoot);
+
+        MetadataSyncResult queued = service.ExportBackupToStore(
+            unavailableRoot,
+            backupId,
+            "1.8.7",
+            "machine-local");
+        Assert.Equal(MetadataSyncStatus.WriteFailed, queued.Status);
+        Assert.True(File.Exists(new MetadataStore(deferredRoot).DatabasePath));
+
+        Directory.CreateDirectory(unavailableRoot);
+        MetadataSyncResult flushed = service.ExportBackupToStore(
+            unavailableRoot,
+            backupId,
+            "1.8.7",
+            "machine-local");
+
+        Assert.Equal(MetadataSyncStatus.Success, flushed.Status);
+        Assert.False(Directory.Exists(deferredRoot));
+        Assert.Single(new MetadataStore(unavailableRoot).ListBackups());
+    }
+
+    [Fact]
+    public void ExportBackupToStore_DeferredQueueCannotOverwriteDivergedDestination()
+    {
+        string unavailableRoot = Path.Combine(CreateTempDir(), "diverged-destination");
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = TestRepository.AddProject(repo, "Project Deferred Conflict", CreateTempDir(), "unity", DateTime.UtcNow);
+        int snapshotId = repo.CreateSnapshot(projectId, 2, 500);
+        int backupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            500,
+            "project-conflict/2026-08-12_00-00-00",
+            unavailableRoot,
+            "Offline");
+        var service = new MetadataSyncService(repo);
+        string deferredRoot = GetExpectedDeferredRoot(unavailableRoot);
+
+        MetadataSyncResult queued = service.ExportBackupToStore(
+            unavailableRoot,
+            backupId,
+            "1.8.7",
+            "machine-local");
+        Assert.Equal(MetadataSyncStatus.WriteFailed, queued.Status);
+
+        Directory.CreateDirectory(unavailableRoot);
+        MetadataStore destinationStore = CreateStore(unavailableRoot);
+        destinationStore.UpsertProject(new MetaProject
+        {
+            ExternalId = "remote-project",
+            Name = "Remote Project",
+            Preset = "generic",
+            RootPathHint = "/remote/project",
+            CreatedUtc = DateTime.UtcNow,
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+
+        MetadataSyncResult blocked = service.ExportBackupToStore(
+            unavailableRoot,
+            backupId,
+            "1.8.7",
+            "machine-local");
+
+        Assert.Equal(MetadataSyncStatus.RepositoryBusy, blocked.Status);
+        Assert.True(File.Exists(new MetadataStore(deferredRoot).DatabasePath));
+        MetaProject remote = Assert.Single(new MetadataStore(unavailableRoot).ListProjects());
+        Assert.Equal("remote-project", remote.ExternalId);
+        Directory.Delete(deferredRoot, recursive: true);
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task ExportBackupTombstoneToStoreAsync_ActiveWriterBlocksTombstone()
+    {
+        string metaRoot = CreateTempDir();
+        var leaseService = new RepositoryLeaseService();
+        using RepositoryLeaseHandle writer = AcquireTestLease(leaseService, metaRoot, "another-writer");
+
+        await MetadataSyncService.ExportBackupTombstoneToStoreAsync(
+            metaRoot,
+            "backup-must-not-write",
+            "1.8.7",
+            "machine-local",
+            leaseOwnerId: Guid.NewGuid().ToString("N"));
+
+        Assert.False(File.Exists(new MetadataStore(metaRoot).DatabasePath));
+        Assert.True(writer.IsOwner);
     }
 
     [Fact]
@@ -1899,6 +2108,31 @@ public sealed class MetadataSyncTests : IDisposable
             WriterAppVersion = "1.0.0",
             WriterMachineId = machineId
         });
+    }
+
+    private static RepositoryLeaseHandle AcquireTestLease(
+        RepositoryLeaseService service,
+        string rootPath,
+        string operation)
+    {
+        RepositoryLeaseAcquireResult result = service.TryAcquire(
+            rootPath,
+            new RepositoryLeaseRequest(
+                Guid.NewGuid().ToString("N"),
+                "Test writer",
+                operation,
+                "1.8.7"));
+        Assert.Equal(RepositoryLeaseAcquireStatus.Acquired, result.Status);
+        return Assert.IsType<RepositoryLeaseHandle>(result.Handle);
+    }
+
+    private static string GetExpectedDeferredRoot(string rootPath)
+    {
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(rootPath));
+        return Path.Combine(
+            Path.GetTempPath(),
+            "vaultsync-meta-export",
+            HashService.FormatHexLower(hash));
     }
 
     private static void SeedUnrelatedImportedHistory(SqliteRepository repo, string rootPath)

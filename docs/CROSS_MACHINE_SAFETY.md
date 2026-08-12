@@ -87,8 +87,11 @@ only when installation id and nonce still match the on-disk record.
 
 The lease primitive, read-only inspection, automatic heartbeat, nonce-bound
 release, conservative expiry, explicit stale takeover, and takeover evidence
-were implemented on the 1.8.7 release branch on 2026-08-12. Metadata writers
-are connected to this boundary in the next rollout slice.
+were implemented on the 1.8.7 release branch on 2026-08-12. Backup/history,
+project-settings, project/snapshot/backup tombstone, deferred, and deferred-flush
+writers now require lease ownership and verify their nonce again immediately
+before changing metadata. Import and preview remain readable while a writer is
+active; optional source-side tombstone repair is suppressed in that state.
 
 Expiry is evidence that a lease may be stale, not permission for invisible
 takeover. The user must explicitly confirm takeover; the old record is preserved
@@ -132,7 +135,10 @@ revision.
 1. Land and test durable installation identity without changing repository data.
    **Implemented on the 1.8.7 release branch on 2026-08-12.**
 2. Add lease parsing and read-only busy diagnostics.
+   **Implemented on the 1.8.7 release branch on 2026-08-12.**
 3. Protect every metadata writer, including tombstones and repair/migration.
+   **Implemented for the existing version-1 writers on 2026-08-12; every future
+   migration or repair writer must enter through the same boundary.**
 4. Add the versioned schema and forward migration fixtures.
 5. Produce merge plans without applying them.
 6. Add explicit apply, durable resolution, and bounded undo.

@@ -25,6 +25,21 @@ public sealed class RepositoryLeaseServiceTests
     }
 
     [Fact]
+    public void TryAcquire_UnavailableRootDoesNotCreateDestination()
+    {
+        using var parent = new TempDirectory();
+        string unavailableRoot = Path.Combine(parent.Path, "offline");
+        var service = new RepositoryLeaseService();
+
+        RepositoryLeaseAcquireResult result = service.TryAcquire(
+            unavailableRoot,
+            CreateRequest("metadata-export"));
+
+        Assert.Equal(RepositoryLeaseAcquireStatus.Unavailable, result.Status);
+        Assert.False(Directory.Exists(unavailableRoot));
+    }
+
+    [Fact]
     public void TryAcquire_SecondWriterIsBusyAndReadOnlyInspectionRemainsAvailable()
     {
         using var root = new TempDirectory();

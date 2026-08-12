@@ -196,7 +196,8 @@ namespace VaultSync.UI.ViewModels
                         backup.DestinationPath,
                         backup.ExternalId,
                         _currentVersionString,
-                        machineId);
+                        machineId,
+                        _installationIdentityProvider.GetOrCreate());
                 }
                 catch (Exception ex)
                 {
@@ -1243,7 +1244,8 @@ namespace VaultSync.UI.ViewModels
                         MetadataSyncService.TryExportProjectTombstone(
                             resolution.EffectivePath,
                             externalId,
-                            Environment.MachineName);
+                            Environment.MachineName,
+                            _installationIdentityProvider.GetOrCreate());
                     }
                 }
                 catch (Exception ex)

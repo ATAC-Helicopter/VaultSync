@@ -1223,7 +1223,12 @@ namespace VaultSync.UI.ViewModels
                         _currentVersionString,
                         machineId,
                         forceBackfill);
-                    Console.WriteLine($"[MetadataSync] Export ({name}) result: {result.Status}.");
+                    Console.WriteLine($"[MetadataSync] Export ({name}) result: {result.Status}; message='{result.Message}'.");
+                    if (result.Status == MetadataSyncStatus.RepositoryBusy)
+                    {
+                        DiagnosticsLogger.Record(
+                            $"[MetadataSync] Repository busy for destination '{name}'; metadata write remained read-only. {result.Message}");
+                    }
                     if (forceBackfillOverride is null &&
                         dest.ForceMetadataBackfill &&
                         result.Status == MetadataSyncStatus.Success &&
