@@ -37,6 +37,11 @@ assumed and must be approved explicitly if the release needs one.
   creates one atomic owner-private identity, rejects malformed or linked
   identity files, and remains separate from telemetry and host name. Repository
   records do not consume it yet; lease integration is the next safety slice.
+- The repository lease primitive is implemented and tested in a separate
+  coordination database: atomic acquisition, busy/read-only inspection,
+  automatic heartbeat, conservative expiry, nonce-bound release, explicit
+  stale takeover, and exceptional takeover evidence. Metadata writer integration
+  is still in progress and no UI takeover control is exposed yet.
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -45,8 +50,8 @@ branch package.
 
 ### In progress next
 
-1. Add repository lease parsing and read-only busy diagnostics.
-2. Protect every metadata writer with durable identity and nonce ownership.
+1. Protect every metadata writer with durable identity and nonce ownership.
+2. Surface busy/read-only status and an explicit stale-takeover decision in UI.
 3. Make metadata imports previewable, versioned, durable, and reversible.
 4. Generate the release manifest and expose complete build identity.
 

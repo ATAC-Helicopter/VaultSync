@@ -62,7 +62,10 @@ than assuming it is the same process.
 
 ## Writer lease
 
-The repository stores one coordination record containing:
+The repository stores one coordination record in
+`.vaultsync/meta/writer.lease.db`, separate from the portable metadata schema.
+SQLite immediate transactions provide compare-and-swap ownership for cooperating
+clients. The active record contains:
 
 | Field | Meaning |
 |---|---|
@@ -81,6 +84,11 @@ Acquisition uses create-if-absent semantics. If a valid unexpired record exists,
 the second client receives a busy result and may continue read-only. A lease
 holder renews before one third of the lease duration elapses. Release succeeds
 only when installation id and nonce still match the on-disk record.
+
+The lease primitive, read-only inspection, automatic heartbeat, nonce-bound
+release, conservative expiry, explicit stale takeover, and takeover evidence
+were implemented on the 1.8.7 release branch on 2026-08-12. Metadata writers
+are connected to this boundary in the next rollout slice.
 
 Expiry is evidence that a lease may be stale, not permission for invisible
 takeover. The user must explicitly confirm takeover; the old record is preserved
