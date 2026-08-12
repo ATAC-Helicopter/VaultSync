@@ -44,9 +44,9 @@ public sealed class ThemeManagerTests
                 Color.Parse(preset.Palette.SurfaceAlt)
             ];
             Assert.All(surfaces, surface =>
-                Assert.True(ContrastRatio(Color.Parse(preset.Palette.TextPrimary), surface) >= 4.5));
+                Assert.True(ThemeColor.ContrastRatio(Color.Parse(preset.Palette.TextPrimary), surface) >= 4.5));
             Assert.All(surfaces, surface =>
-                Assert.True(ContrastRatio(Color.Parse(preset.Palette.TextSecondary), surface) >= 3.0));
+                Assert.True(ThemeColor.ContrastRatio(Color.Parse(preset.Palette.TextSecondary), surface) >= 3.0));
         }
     }
 
@@ -92,27 +92,28 @@ public sealed class ThemeManagerTests
         Assert.Equal(Color.Parse(expected), brush.Color);
     }
 
-    private static double ContrastRatio(Color first, Color second)
+    [Theory]
+    [InlineData(null, "#123456", "#123456")]
+    [InlineData("  ", "#123456", "#123456")]
+    [InlineData("00d9ff", "#123456", "#00D9FF")]
+    [InlineData(" #14213d ", "#123456", "#14213D")]
+    [InlineData("not-a-color", "#123456", "#123456")]
+    public void ThemeColor_NormalizeHex_ProducesCanonicalRgb(
+        string value,
+        string fallback,
+        string expected)
     {
-        double firstLuminance = RelativeLuminance(first);
-        double secondLuminance = RelativeLuminance(second);
-        double lighter = Math.Max(firstLuminance, secondLuminance);
-        double darker = Math.Min(firstLuminance, secondLuminance);
-        return (lighter + 0.05) / (darker + 0.05);
+        Assert.Equal(expected, ThemeColor.NormalizeHex(value, fallback));
     }
 
-    private static double RelativeLuminance(Color color)
+    [Fact]
+    public void ThemeColor_ContrastRatio_IsSymmetricAndUsesWcagExtremes()
     {
-        static double Linearize(byte channel)
-        {
-            double value = channel / 255d;
-            return value <= 0.04045
-                ? value / 12.92
-                : Math.Pow((value + 0.055) / 1.055, 2.4);
-        }
+        double lightToDark = ThemeColor.ContrastRatio(Colors.White, Colors.Black);
+        double darkToLight = ThemeColor.ContrastRatio(Colors.Black, Colors.White);
 
-        return (0.2126 * Linearize(color.R))
-            + (0.7152 * Linearize(color.G))
-            + (0.0722 * Linearize(color.B));
+        Assert.Equal(21d, lightToDark, precision: 10);
+        Assert.Equal(lightToDark, darkToLight, precision: 10);
+        Assert.Equal(1d, ThemeColor.ContrastRatio(Colors.Black, Colors.Black), precision: 10);
     }
 }

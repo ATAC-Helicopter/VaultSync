@@ -3210,7 +3210,7 @@ namespace VaultSync.UI
                 }
                 finally
                 {
-                    _networkMountService.Cleanup(resolution);
+                    NetworkMountService.Cleanup(resolution);
                 }
             });
             DestinationTested?.Invoke(destModel, result.success, result.writable, result.message);

@@ -51,38 +51,8 @@ public sealed class NetworkMountService
                 : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is marked pre-mounted but is not accessible.");
         }
 
-        bool isNetwork = IsNetworkPath(normalizedPath);
-        if (!isNetwork)
-        {
-            if (IsMacVolumesPath(normalizedPath))
-            {
-                if (IsAccessibleDirectory(normalizedPath, out string? accessError))
-                {
-                    Log($"Using macOS mounted volume path '{normalizedPath}'.");
-                    return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using mounted volume path '{normalizedPath}'");
-                }
-
-                string detail = string.IsNullOrWhiteSpace(accessError)
-                    ? "The mounted volume path is not accessible."
-                    : accessError;
-                Log($"Mounted volume path '{normalizedPath}' failed: {detail}");
-                return DestinationResolution.CreateFailure(
-                    dest,
-                    $"Cannot use destination '{alias}': {detail} Use a reachable /Volumes mount point, or configure the destination as smb://host/share for auto-mount.");
-            }
-
-            try
-            {
-                Directory.CreateDirectory(normalizedPath);
-                Log($"Using local path '{normalizedPath}'.");
-                return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using local path '{normalizedPath}'");
-            }
-            catch (Exception ex)
-            {
-                Log($"Local path '{normalizedPath}' failed: {ex.Message}");
-                return DestinationResolution.CreateFailure(dest, $"Cannot use destination '{alias}': {ex.Message}");
-            }
-        }
+        if (!IsNetworkPath(normalizedPath))
+            return PrepareLocalDestination(dest, alias, normalizedPath);
 
         if (!dest.AutoMount)
         {
@@ -122,7 +92,7 @@ public sealed class NetworkMountService
         return DestinationResolution.CreateFailure(dest, "Auto-mount is only supported on Windows and macOS.");
     }
 
-    public void Cleanup(DestinationResolution resolution)
+    public static void Cleanup(DestinationResolution resolution)
     {
         if (!resolution.MountedByUs || !resolution.Destination.AutoUnmount)
             return;
@@ -136,6 +106,47 @@ public sealed class NetworkMountService
         {
             UnmountMac(resolution);
         }
+    }
+
+    private static DestinationResolution PrepareLocalDestination(
+        BackupDestination destination,
+        string alias,
+        string normalizedPath)
+    {
+        if (IsMacVolumesPath(normalizedPath))
+            return PrepareMacVolumeDestination(destination, alias, normalizedPath);
+
+        try
+        {
+            Directory.CreateDirectory(normalizedPath);
+            Log($"Using local path '{normalizedPath}'.");
+            return CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using local path '{normalizedPath}'");
+        }
+        catch (Exception ex)
+        {
+            Log($"Local path '{normalizedPath}' failed: {ex.Message}");
+            return DestinationResolution.CreateFailure(destination, $"Cannot use destination '{alias}': {ex.Message}");
+        }
+    }
+
+    private static DestinationResolution PrepareMacVolumeDestination(
+        BackupDestination destination,
+        string alias,
+        string normalizedPath)
+    {
+        if (IsAccessibleDirectory(normalizedPath, out string? accessError))
+        {
+            Log($"Using macOS mounted volume path '{normalizedPath}'.");
+            return CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using mounted volume path '{normalizedPath}'");
+        }
+
+        string detail = string.IsNullOrWhiteSpace(accessError)
+            ? "The mounted volume path is not accessible."
+            : accessError;
+        Log($"Mounted volume path '{normalizedPath}' failed: {detail}");
+        return DestinationResolution.CreateFailure(
+            destination,
+            $"Cannot use destination '{alias}': {detail} Use a reachable /Volumes mount point, or configure the destination as smb://host/share for auto-mount.");
     }
 
     private string? ResolvePassword(NetworkCredentialProfile? profile)
@@ -307,41 +318,13 @@ public sealed class NetworkMountService
         string normalizedPath,
         NetworkCredentialProfile? profile)
     {
-        if (!TryParseShareWithSubpath(normalizedPath, out string? shareHost, out string? shareName, out string? shareSubPath))
+        if (!TryParseShareWithSubpath(normalizedPath, out string shareHost, out string shareName, out string shareSubPath))
         {
             return DestinationResolution.CreateFailure(dest, "Destination must be an smb:// or UNC path for auto-mount.");
         }
 
-        string mountRoot = GetMacMountRoot();
-        try
-        {
-            Directory.CreateDirectory(mountRoot);
-        }
-        catch (Exception ex)
-        {
-            return DestinationResolution.CreateFailure(dest, $"Unable to create mount root '{mountRoot}': {ex.Message}");
-        }
-
-        string mountPoint = Path.Combine(mountRoot, string.IsNullOrWhiteSpace(dest.Alias) ? shareName : Slugify(dest.Alias!));
-        if (!Directory.Exists(mountPoint))
-        {
-            try
-            {
-                Directory.CreateDirectory(mountPoint);
-            }
-            catch (Exception ex)
-            {
-                string? existing = FindExistingMountPoint(shareName, mountRoot);
-                if (!string.IsNullOrWhiteSpace(existing))
-                {
-                    mountPoint = existing;
-                }
-                else
-                {
-                    return DestinationResolution.CreateFailure(dest, $"Unable to create mount point '{mountPoint}': {ex.Message}");
-                }
-            }
-        }
+        if (!TryPrepareMacMountPoint(dest, shareName, out string mountPoint, out string? mountError))
+            return DestinationResolution.CreateFailure(dest, mountError ?? "Unable to prepare the SMB mount point.");
 
         if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out string? existingMount))
         {
@@ -361,13 +344,68 @@ public sealed class NetworkMountService
             ? "guest"
             : profile.Username;
 
+        return RunMacMount(dest, shareHost, shareName, shareSubPath, mountPoint, password, userPart);
+    }
+
+    private static bool TryPrepareMacMountPoint(
+        BackupDestination destination,
+        string shareName,
+        out string mountPoint,
+        out string? error)
+    {
+        string mountRoot = GetMacMountRoot();
+        mountPoint = string.Empty;
+        error = null;
+        try
+        {
+            Directory.CreateDirectory(mountRoot);
+        }
+        catch (Exception ex)
+        {
+            error = $"Unable to create mount root '{mountRoot}': {ex.Message}";
+            return false;
+        }
+
+        string mountName = string.IsNullOrWhiteSpace(destination.Alias)
+            ? shareName
+            : Slugify(destination.Alias);
+        mountPoint = Path.Combine(mountRoot, mountName);
+        if (Directory.Exists(mountPoint))
+            return true;
+
+        try
+        {
+            Directory.CreateDirectory(mountPoint);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            string? existing = FindExistingMountPoint(shareName, mountRoot);
+            if (!string.IsNullOrWhiteSpace(existing))
+            {
+                mountPoint = existing;
+                return true;
+            }
+
+            error = $"Unable to create mount point '{mountPoint}': {ex.Message}";
+            return false;
+        }
+    }
+
+    private static DestinationResolution RunMacMount(
+        BackupDestination destination,
+        string shareHost,
+        string shareName,
+        string shareSubPath,
+        string mountPoint,
+        string? password,
+        string userPart)
+    {
         string passwordPart = string.IsNullOrWhiteSpace(password)
             ? string.Empty
             : ":" + Uri.EscapeDataString(password);
-
         string share = $"//{userPart}{passwordPart}@{shareHost}/{shareName}";
         string shareDisplay = $"//{userPart}@{shareHost}/{shareName}";
-
         var psi = new ProcessStartInfo
         {
             FileName               = "/sbin/mount_smbfs",
@@ -384,7 +422,7 @@ public sealed class NetworkMountService
         {
             using var proc = Process.Start(psi);
             if (proc is null)
-                return DestinationResolution.CreateFailure(dest, "Unable to start mount_smbfs.");
+                return DestinationResolution.CreateFailure(destination, "Unable to start mount_smbfs.");
 
             proc.WaitForExit(10_000);
 
@@ -392,20 +430,20 @@ public sealed class NetworkMountService
             {
                 string stderr = proc.StandardError.ReadToEnd();
                 string sanitized = SanitizeMountError(stderr, password, share, shareDisplay);
-                Log($"mount_smbfs failed for '{DisplayName(dest)}': {sanitized.Trim()}");
+                Log($"mount_smbfs failed for '{DisplayName(destination)}': {sanitized.Trim()}");
                 if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out string? existingMountAfterFail))
                 {
-                    return CreateMacMountResolution(dest, existingMountAfterFail, shareSubPath, mountedByUs: false);
+                    return CreateMacMountResolution(destination, existingMountAfterFail, shareSubPath, mountedByUs: false);
                 }
 
-                return DestinationResolution.CreateFailure(dest, $"Mount failed for {DisplayName(dest)}: {sanitized}".Trim());
+                return DestinationResolution.CreateFailure(destination, $"Mount failed for {DisplayName(destination)}: {sanitized}".Trim());
             }
 
-            return CreateMacMountResolution(dest, mountPoint, shareSubPath, mountedByUs: true);
+            return CreateMacMountResolution(destination, mountPoint, shareSubPath, mountedByUs: true);
         }
         catch (Exception ex)
         {
-            return DestinationResolution.CreateFailure(dest, $"Mount failed for {DisplayName(dest)}: {ex.Message}");
+            return DestinationResolution.CreateFailure(destination, $"Mount failed for {DisplayName(destination)}: {ex.Message}");
         }
     }
 
@@ -508,13 +546,11 @@ public sealed class NetworkMountService
 
         try
         {
-            foreach (MacMountEntry mount in mounts)
+            foreach (MacMountEntry mount in mounts.Where(
+                         mount => string.Equals(mount.MountPoint, mountPoint, StringComparison.OrdinalIgnoreCase)))
             {
-                if (string.Equals(mount.MountPoint, mountPoint, StringComparison.OrdinalIgnoreCase))
-                {
-                    mountLine = mount.RawLine;
-                    return true;
-                }
+                mountLine = mount.RawLine;
+                return true;
             }
         }
         catch
@@ -688,12 +724,13 @@ public sealed class NetworkMountService
 
                 if (host.Contains('@'))
                 {
-                    host = host.Split('@').Last();
+                    string[] hostParts = host.Split('@');
+                    host = hostParts[^1];
                 }
 
                 if (host.Contains(':'))
                 {
-                    host = host.Split(':').First();
+                    host = host.Split(':')[0];
                 }
 
                 if (parts.Length > 2)
@@ -818,7 +855,7 @@ public sealed class NetworkMountService
     private static string DisplayName(BackupDestination dest)
     {
         if (!string.IsNullOrWhiteSpace(dest.Alias))
-            return dest.Alias!;
+            return dest.Alias;
         if (!string.IsNullOrWhiteSpace(dest.Path))
             return dest.Path;
         return "Destination";
@@ -879,13 +916,13 @@ public sealed class NetworkMountService
         try
         {
             string candidate = string.Empty;
-            foreach (MacMountEntry mount in mounts)
+            foreach (string mountPoint in mounts.Select(mount => mount.MountPoint))
             {
-                if (!path.StartsWith(mount.MountPoint, StringComparison.OrdinalIgnoreCase))
+                if (!path.StartsWith(mountPoint, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                if (mount.MountPoint.Length > candidate.Length)
-                    candidate = mount.MountPoint;
+                if (mountPoint.Length > candidate.Length)
+                    candidate = mountPoint;
             }
 
             if (string.IsNullOrWhiteSpace(candidate))

@@ -109,7 +109,7 @@ public sealed class RepositoryLeaseServiceTests
         handle.Dispose();
 
         Assert.Equal(RepositoryLeaseState.Available, service.Inspect(root.Path).State);
-        Assert.Empty(service.ListEvidence(root.Path));
+        Assert.Empty(RepositoryLeaseService.ListEvidence(root.Path));
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class RepositoryLeaseServiceTests
         Assert.False(oldHandle.Renew());
         oldHandle.Dispose();
         Assert.True(replacement.IsOwner);
-        RepositoryLeaseEvidence evidence = Assert.Single(service.ListEvidence(root.Path));
+        RepositoryLeaseEvidence evidence = Assert.Single(RepositoryLeaseService.ListEvidence(root.Path));
         Assert.Equal("stale-takeover", evidence.Disposition);
         Assert.Equal(ordinaryAcquire.Inspection.Lease?.Nonce, evidence.Nonce);
     }
@@ -222,7 +222,7 @@ public sealed class RepositoryLeaseServiceTests
         using var root = new TempDirectory();
         var service = new RepositoryLeaseService();
 
-        Assert.Empty(service.ListEvidence(root.Path));
+        Assert.Empty(RepositoryLeaseService.ListEvidence(root.Path));
     }
 
     [Fact]

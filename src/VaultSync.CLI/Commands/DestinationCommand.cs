@@ -82,7 +82,7 @@ namespace VaultSync.CLI.Commands
                 string message = string.IsNullOrWhiteSpace(resolution.Message)
                     ? (reachable ? "Reachable" : "Unreachable")
                     : resolution.Message;
-                mountService.Cleanup(resolution);
+                NetworkMountService.Cleanup(resolution);
                 return new DestinationInfo(alias, path, status, reachable, message);
             }
             catch (Exception ex)

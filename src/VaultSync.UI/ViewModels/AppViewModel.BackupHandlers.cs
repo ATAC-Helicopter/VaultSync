@@ -284,7 +284,7 @@ namespace VaultSync.UI.ViewModels
                     {
                         driveBlocked++;
                         BackupsViewModel.UpdateDestinationStatus(destId, driveDecision.Message, BackupsViewModel.SeverityStatus.Warning);
-                        _networkMountService.Cleanup(resolution);
+                        NetworkMountService.Cleanup(resolution);
                         continue;
                     }
 
@@ -515,7 +515,7 @@ namespace VaultSync.UI.ViewModels
                     }
                     finally
                     {
-                        _networkMountService.Cleanup(resolution);
+                        NetworkMountService.Cleanup(resolution);
                     }
                 }
 
