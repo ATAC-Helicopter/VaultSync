@@ -8,6 +8,7 @@
 - [BUG-18099] Serviced the .NET 10 baseline to SDK `10.0.303`, runtime `10.0.11`, and coordinated Microsoft packages, with CI auditing real self-contained publishes and release artifacts for every supported runtime identifier.
 - [VS-1877] Protected project settings, backup history, tombstones, deferred metadata writes, and deferred flushing with repository lease ownership checks while keeping imports and previews readable when another writer is active.
 - [VS-1877] Made unavailable-destination metadata queues fail closed: queued metadata can initialize an empty destination once, while an existing destination is preserved for explicit merge review.
+- [VS-1880] Consolidated metadata export orchestration, SMB mount parsing, mounted-share validation, theme color normalization, and contrast calculations behind focused shared primitives with regression coverage.
 
 ### Fixed
 - [BUG-18100] Restored `Dev` as the permanent integration branch at the `1.8.6` Stable commit and disabled automatic head-branch deletion so Stable promotion cannot remove it again.
