@@ -47,13 +47,15 @@ namespace VaultSync.UI.ViewModels
 
             _backupService = new BackupService(_repo, configStore: _configStore);
             _backupService.BackupRetentionDeleted += OnBackupRetentionDeleted;
+            _installationIdentityProvider = new InstallationIdentityService();
             _metadataSyncService = new MetadataSyncService(
                 _repo,
                 _configStore,
                 projectColorResolver: project =>
                     AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId),
                 projectColorApplier: (externalId, color) =>
-                    AvatarColorProvider.SetColorForExternalId(externalId, color));
+                    AvatarColorProvider.SetColorForExternalId(externalId, color),
+                installationIdentityProvider: _installationIdentityProvider);
             _networkMountService = new NetworkMountService();
             _credentialVault = CredentialVault.Instance;
             _notificationService = new NotificationService();

@@ -35,13 +35,19 @@ assumed and must be approved explicitly if the release needs one.
   automatic head-branch deletion was disabled.
 - The durable installation-identity provider is implemented and tested. It
   creates one atomic owner-private identity, rejects malformed or linked
-  identity files, and remains separate from telemetry and host name. Repository
-  records do not consume it yet; lease integration is the next safety slice.
+  identity files, and remains separate from telemetry and host name. Production
+  metadata writers now use it as their lease owner while retaining host name as
+  a diagnostic label only.
 - The repository lease primitive is implemented and tested in a separate
   coordination database: atomic acquisition, busy/read-only inspection,
   automatic heartbeat, conservative expiry, nonce-bound release, explicit
-  stale takeover, and exceptional takeover evidence. Metadata writer integration
-  is still in progress and no UI takeover control is exposed yet.
+  stale takeover, and exceptional takeover evidence.
+- Every existing portable-metadata writer now requires lease ownership:
+  project settings, backup/history exports, all tombstone paths, deferred writes,
+  and deferred flushing. Import and preview remain readable while busy and
+  suppress optional source writes. Deferred stores flush only into an empty
+  destination; divergent destination metadata is preserved for merge review
+  instead of being overwritten. No UI takeover control is exposed yet.
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -50,10 +56,11 @@ branch package.
 
 ### In progress next
 
-1. Protect every metadata writer with durable identity and nonce ownership.
-2. Surface busy/read-only status and an explicit stale-takeover decision in UI.
-3. Make metadata imports previewable, versioned, durable, and reversible.
-4. Generate the release manifest and expose complete build identity.
+1. Surface repository status and an explicit stale-takeover decision in UI.
+2. Make metadata imports previewable, versioned, durable, and reversible.
+3. Generate the release manifest and expose complete build identity.
+4. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB
+   behavior before enabling supported concurrent-machine workflows.
 
 ### Still planned
 

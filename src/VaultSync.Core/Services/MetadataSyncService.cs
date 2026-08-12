@@ -24,6 +24,8 @@ public sealed class MetadataSyncService
 
     private readonly SqliteRepository _repo;
     private readonly IAppConfigStore _configStore;
+    private readonly IInstallationIdentityProvider? _installationIdentityProvider;
+    private readonly RepositoryLeaseService _repositoryLeaseService;
     private readonly Func<Project, string?>? _projectColorResolver;
     private readonly Action<string, string>? _projectColorApplier;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
@@ -35,12 +37,16 @@ public sealed class MetadataSyncService
         SqliteRepository repo,
         IAppConfigStore? configStore = null,
         Func<Project, string?>? projectColorResolver = null,
-        Action<string, string>? projectColorApplier = null)
+        Action<string, string>? projectColorApplier = null,
+        IInstallationIdentityProvider? installationIdentityProvider = null,
+        RepositoryLeaseService? repositoryLeaseService = null)
     {
         _repo = repo ?? throw new ArgumentNullException(nameof(repo));
         _configStore = configStore ?? StaticAppConfigStore.Instance;
         _projectColorResolver = projectColorResolver;
         _projectColorApplier = projectColorApplier;
+        _installationIdentityProvider = installationIdentityProvider;
+        _repositoryLeaseService = repositoryLeaseService ?? new RepositoryLeaseService();
     }
 
     public MetadataSyncResult ImportFromStore(string rootPath, MetadataSyncOptions? options = null)
@@ -65,6 +71,15 @@ public sealed class MetadataSyncService
             {
                 Console.WriteLine("[MetadataSync] Import failed: root path is empty.");
                 return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
+            }
+
+            RepositoryLeaseInspection leaseInspection = _repositoryLeaseService.Inspect(rootPath);
+            if (leaseInspection.State is RepositoryLeaseState.Active or
+                RepositoryLeaseState.Stale or
+                RepositoryLeaseState.Invalid or
+                RepositoryLeaseState.Unavailable)
+            {
+                opts = opts.AsReadOnlySource();
             }
 
             var store = new MetadataStore(rootPath);
@@ -1850,54 +1865,82 @@ public sealed class MetadataSyncService
         }
     }
 
-    private static void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
+    private void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
-        TryExportTombstones(
+        TryExportTombstonesCore(
             rootPath,
             BackupEntityType,
             missingExternalIds,
             Environment.MachineName,
-            "Missing backup tombstone export");
+            "Missing backup tombstone export",
+            "unknown",
+            ResolveLeaseOwnerId(Environment.MachineName),
+            _repositoryLeaseService);
     }
 
-    private static void TryExportMissingSnapshotTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
+    private void TryExportMissingSnapshotTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
-        TryExportTombstones(
+        TryExportTombstonesCore(
             rootPath,
             "snapshot",
             missingExternalIds,
             Environment.MachineName,
-            "Missing snapshot tombstone export");
+            "Missing snapshot tombstone export",
+            "unknown",
+            ResolveLeaseOwnerId(Environment.MachineName),
+            _repositoryLeaseService);
     }
 
-    public static void TryExportProjectTombstone(string rootPath, string projectExternalId, string? originMachineId = null)
+    public static void TryExportProjectTombstone(
+        string rootPath,
+        string projectExternalId,
+        string? originMachineId = null,
+        string? leaseOwnerId = null)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(projectExternalId))
             return;
 
         string machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
-        TryExportTombstones(
+        var leaseService = new RepositoryLeaseService();
+        TryExportTombstonesCore(
             rootPath,
             "project",
             [projectExternalId],
             machineId,
-            "Project tombstone export");
+            "Project tombstone export",
+            "unknown",
+            leaseOwnerId ?? CreateCompatibilityInstallationId(machineId),
+            leaseService);
     }
 
-    private static void TryExportTombstones(
+    private static void TryExportTombstonesCore(
         string rootPath,
         string entityType,
         IReadOnlyCollection<string> externalIds,
         string machineId,
         string logLabel,
-        string appVersion = "unknown")
+        string appVersion,
+        string leaseOwnerId,
+        RepositoryLeaseService leaseService)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || externalIds.Count == 0)
             return;
 
+        RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
+            rootPath,
+            CreateLeaseRequest(leaseOwnerId, machineId, logLabel, appVersion));
+        if (!leaseResult.Acquired)
+        {
+            Console.WriteLine($"[MetadataSync] {logLabel} skipped: {leaseResult.Inspection.Message}");
+            return;
+        }
+
+        using RepositoryLeaseHandle lease = leaseResult.Handle!;
         var store = new MetadataStore(rootPath);
         try
         {
+            if (!lease.IsOwner)
+                return;
             store.EnsureSchema();
         }
         catch (Exception ex)
@@ -1916,6 +1959,8 @@ public sealed class MetadataSyncService
 
         try
         {
+            if (!lease.IsOwner)
+                return;
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
@@ -2002,6 +2047,19 @@ public sealed class MetadataSyncService
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(rootPath))
+                return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
+
+            RepositoryLeaseAcquireResult leaseResult = TryAcquireRepositoryLease(
+                rootPath,
+                "project-metadata-export",
+                appVersion,
+                machineId);
+            bool useDeferredStore = leaseResult.Status == RepositoryLeaseAcquireStatus.Unavailable;
+            if (!leaseResult.Acquired && !useDeferredStore)
+                return LeaseFailure(leaseResult);
+
+            using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
             TimeSpan[] retryDelays =
             [
                 TimeSpan.FromMilliseconds(200),
@@ -2015,7 +2073,13 @@ public sealed class MetadataSyncService
             {
                 try
                 {
-                    return ExportProjectToStoreInternal(rootPath, projectId, appVersion, machineId);
+                    return ExportProjectToStoreInternal(
+                        rootPath,
+                        projectId,
+                        appVersion,
+                        machineId,
+                        destinationLease,
+                        useDeferredStore);
                 }
                 catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
                 {
@@ -2039,7 +2103,13 @@ public sealed class MetadataSyncService
         }
     }
 
-    private MetadataSyncResult ExportProjectToStoreInternal(string rootPath, int projectId, string appVersion, string machineId)
+    private MetadataSyncResult ExportProjectToStoreInternal(
+        string rootPath,
+        int projectId,
+        string appVersion,
+        string machineId,
+        RepositoryLeaseHandle? destinationLease,
+        bool useDeferredStore)
     {
         if (string.IsNullOrWhiteSpace(rootPath))
         {
@@ -2047,21 +2117,38 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
         }
 
-        TryFlushDeferredExport(rootPath);
-
-        string storeRoot = rootPath;
-        bool isDeferred = false;
-        string destMetaDir = GetMetaDir(rootPath);
-        if (!TryEnsureMetadataDirWritable(destMetaDir))
+        if (destinationLease is not null)
         {
-            storeRoot = GetDeferredExportRoot(rootPath);
-            isDeferred = true;
+            if (!destinationLease.IsOwner)
+                return LostLeaseFailure();
+            if (HasDeferredExport(rootPath) &&
+                !TryFlushDeferredExport(
+                    rootPath,
+                    appVersion,
+                    machineId,
+                    ResolveLeaseOwnerId(machineId),
+                    _repositoryLeaseService))
+            {
+                return MetadataSyncResult.Failure(
+                    MetadataSyncStatus.RepositoryBusy,
+                    "Deferred metadata was preserved because destination metadata already exists or the queue could not be locked safely.");
+            }
         }
+
+        string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
+        using RepositoryLeaseHandle? deferredLease = useDeferredStore
+            ? TryAcquireDeferredLease(storeRoot, appVersion, machineId, "deferred-project-metadata-export")
+            : null;
+        RepositoryLeaseHandle? activeLease = destinationLease ?? deferredLease;
+        if (activeLease is null || !activeLease.IsOwner)
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Metadata export could not acquire its deferred writer lease.");
 
         var store = new MetadataStore(storeRoot);
         Console.WriteLine($"[MetadataSync] Project export target store: '{store.DatabasePath}'.");
         try
         {
+            if (!activeLease.IsOwner)
+                return LostLeaseFailure();
             store.EnsureSchema();
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
@@ -2100,6 +2187,8 @@ public sealed class MetadataSyncService
 
         try
         {
+            if (!activeLease.IsOwner)
+                return LostLeaseFailure();
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
@@ -2131,11 +2220,8 @@ public sealed class MetadataSyncService
         Console.WriteLine($"[MetadataSync] Project export complete for project '{project.Name}' to '{storeRoot}'.");
         LogStoreCounts(store);
 
-        if (isDeferred)
+        if (useDeferredStore)
         {
-            if (TryFlushDeferredExport(rootPath))
-                return exportResult;
-
             return MetadataSyncResult.Failure(
                 MetadataSyncStatus.WriteFailed,
                 "Project export queued: destination not writable. Will retry when available.");
@@ -2157,6 +2243,19 @@ public sealed class MetadataSyncService
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(rootPath))
+                return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
+
+            RepositoryLeaseAcquireResult leaseResult = TryAcquireRepositoryLease(
+                rootPath,
+                "backup-metadata-export",
+                appVersion,
+                machineId);
+            bool useDeferredStore = leaseResult.Status == RepositoryLeaseAcquireStatus.Unavailable;
+            if (!leaseResult.Acquired && !useDeferredStore)
+                return LeaseFailure(leaseResult);
+
+            using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
             TimeSpan[] retryDelays =
             [
                 TimeSpan.FromMilliseconds(200),
@@ -2170,7 +2269,14 @@ public sealed class MetadataSyncService
             {
                 try
                 {
-                    return ExportBackupToStoreInternal(rootPath, backupId, appVersion, machineId, forceBackfill);
+                    return ExportBackupToStoreInternal(
+                        rootPath,
+                        backupId,
+                        appVersion,
+                        machineId,
+                        forceBackfill,
+                        destinationLease,
+                        useDeferredStore);
                 }
                 catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
                 {
@@ -2194,7 +2300,14 @@ public sealed class MetadataSyncService
         }
     }
 
-    private MetadataSyncResult ExportBackupToStoreInternal(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill)
+    private MetadataSyncResult ExportBackupToStoreInternal(
+        string rootPath,
+        int backupId,
+        string appVersion,
+        string machineId,
+        bool forceBackfill,
+        RepositoryLeaseHandle? destinationLease,
+        bool useDeferredStore)
     {
         if (string.IsNullOrWhiteSpace(rootPath))
         {
@@ -2235,21 +2348,38 @@ public sealed class MetadataSyncService
                 "Snapshot no longer exists; metadata export skipped.");
         }
 
-        TryFlushDeferredExport(rootPath);
-
-        string storeRoot = rootPath;
-        bool isDeferred = false;
-        string destMetaDir = GetMetaDir(rootPath);
-        if (!TryEnsureMetadataDirWritable(destMetaDir))
+        if (destinationLease is not null)
         {
-            storeRoot = GetDeferredExportRoot(rootPath);
-            isDeferred = true;
+            if (!destinationLease.IsOwner)
+                return LostLeaseFailure();
+            if (HasDeferredExport(rootPath) &&
+                !TryFlushDeferredExport(
+                    rootPath,
+                    appVersion,
+                    machineId,
+                    ResolveLeaseOwnerId(machineId),
+                    _repositoryLeaseService))
+            {
+                return MetadataSyncResult.Failure(
+                    MetadataSyncStatus.RepositoryBusy,
+                    "Deferred metadata was preserved because destination metadata already exists or the queue could not be locked safely.");
+            }
         }
+
+        string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
+        using RepositoryLeaseHandle? deferredLease = useDeferredStore
+            ? TryAcquireDeferredLease(storeRoot, appVersion, machineId, "deferred-backup-metadata-export")
+            : null;
+        RepositoryLeaseHandle? activeLease = destinationLease ?? deferredLease;
+        if (activeLease is null || !activeLease.IsOwner)
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Metadata export could not acquire its deferred writer lease.");
 
         var store = new MetadataStore(storeRoot);
         Console.WriteLine($"[MetadataSync] Export target store: '{store.DatabasePath}'.");
         try
         {
+            if (!activeLease.IsOwner)
+                return LostLeaseFailure();
             store.EnsureSchema();
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
@@ -2289,6 +2419,8 @@ public sealed class MetadataSyncService
 
         try
         {
+            if (!activeLease.IsOwner)
+                return LostLeaseFailure();
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
@@ -2362,11 +2494,8 @@ public sealed class MetadataSyncService
             ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{storeRoot}': snapshots={exportedSnapshots}, backups={exportedBackups}."
             : $"[MetadataSync] Export complete for backup {backupId} to '{storeRoot}'.");
         LogStoreCounts(store);
-        if (isDeferred)
+        if (useDeferredStore)
         {
-            if (TryFlushDeferredExport(rootPath))
-                return exportResult;
-
             return MetadataSyncResult.Failure(
                 MetadataSyncStatus.WriteFailed,
                 "Export queued: destination not writable. Will retry when available.");
@@ -2375,9 +2504,20 @@ public sealed class MetadataSyncService
         return exportResult;
     }
 
-    public static void ExportBackupTombstoneToStore(string rootPath, string backupExternalId, string appVersion, string machineId)
+    public static void ExportBackupTombstoneToStore(
+        string rootPath,
+        string backupExternalId,
+        string appVersion,
+        string machineId,
+        string? leaseOwnerId = null)
     {
-        ExportBackupTombstoneToStoreAsync(rootPath, backupExternalId, appVersion, machineId, CancellationToken.None)
+        ExportBackupTombstoneToStoreAsync(
+                rootPath,
+                backupExternalId,
+                appVersion,
+                machineId,
+                CancellationToken.None,
+                leaseOwnerId)
             .GetAwaiter().GetResult();
     }
 
@@ -2386,7 +2526,8 @@ public sealed class MetadataSyncService
         string backupExternalId,
         string appVersion,
         string machineId,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? leaseOwnerId = null)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
             return;
@@ -2396,6 +2537,19 @@ public sealed class MetadataSyncService
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
+            var leaseService = new RepositoryLeaseService();
+            string ownerId = leaseOwnerId ?? CreateCompatibilityInstallationId(machineId);
+            RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
+                rootPath,
+                CreateLeaseRequest(ownerId, machineId, "backup-tombstone-export", appVersion));
+            bool useDeferredStore = leaseResult.Status == RepositoryLeaseAcquireStatus.Unavailable;
+            if (!leaseResult.Acquired && !useDeferredStore)
+            {
+                Console.WriteLine($"[MetadataSync] Tombstone export skipped: {leaseResult.Inspection.Message}");
+                return;
+            }
+
+            using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
             TimeSpan[] retryDelays =
             [
                 TimeSpan.FromMilliseconds(200),
@@ -2409,7 +2563,15 @@ public sealed class MetadataSyncService
             {
                 try
                 {
-                    ExportBackupTombstoneInternal(rootPath, backupExternalId, appVersion, machineId);
+                    ExportBackupTombstoneInternal(
+                        rootPath,
+                        backupExternalId,
+                        appVersion,
+                        machineId,
+                        ownerId,
+                        leaseService,
+                        destinationLease,
+                        useDeferredStore);
                     return;
                 }
                 catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
@@ -2417,7 +2579,13 @@ public sealed class MetadataSyncService
                     if (attempt >= retryDelays.Length)
                     {
                         Console.WriteLine($"[MetadataSync] Tombstone export failed after retries: {ex.Message}");
-                        TryExportBackupTombstoneToDeferred(rootPath, backupExternalId, appVersion, machineId);
+                        TryExportBackupTombstoneToDeferred(
+                            rootPath,
+                            backupExternalId,
+                            appVersion,
+                            machineId,
+                            ownerId,
+                            leaseService);
                         return;
                     }
 
@@ -2459,12 +2627,24 @@ public sealed class MetadataSyncService
         string rootPath,
         string backupExternalId,
         string appVersion,
-        string machineId)
+        string machineId,
+        string leaseOwnerId,
+        RepositoryLeaseService leaseService)
     {
         try
         {
             string deferredRoot = GetDeferredExportRoot(rootPath);
+            Directory.CreateDirectory(deferredRoot);
+            RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
+                deferredRoot,
+                CreateLeaseRequest(leaseOwnerId, machineId, "deferred-backup-tombstone-export", appVersion));
+            if (!leaseResult.Acquired)
+                return;
+
+            using RepositoryLeaseHandle lease = leaseResult.Handle!;
             var store = new MetadataStore(deferredRoot);
+            if (!lease.IsOwner)
+                return;
             store.EnsureSchema();
 
             DateTime now = DateTime.UtcNow;
@@ -2475,6 +2655,8 @@ public sealed class MetadataSyncService
                 machineId,
                 updateExistingAppVersion: true);
 
+            if (!lease.IsOwner)
+                return;
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
@@ -2489,21 +2671,50 @@ public sealed class MetadataSyncService
         }
     }
 
-    private static void ExportBackupTombstoneInternal(string rootPath, string backupExternalId, string appVersion, string machineId)
+    private static void ExportBackupTombstoneInternal(
+        string rootPath,
+        string backupExternalId,
+        string appVersion,
+        string machineId,
+        string leaseOwnerId,
+        RepositoryLeaseService leaseService,
+        RepositoryLeaseHandle? destinationLease,
+        bool useDeferredStore)
     {
-        TryFlushDeferredExport(rootPath);
-        string storeRoot = rootPath;
-        bool isDeferred = false;
-        string destMetaDir = GetMetaDir(rootPath);
-        if (!TryEnsureMetadataDirWritable(destMetaDir))
+        if (destinationLease is not null)
         {
-            storeRoot = GetDeferredExportRoot(rootPath);
-            isDeferred = true;
+            if (!destinationLease.IsOwner)
+                return;
+            if (HasDeferredExport(rootPath) &&
+                !TryFlushDeferredExport(
+                    rootPath,
+                    appVersion,
+                    machineId,
+                    leaseOwnerId,
+                    leaseService))
+            {
+                return;
+            }
         }
+
+        string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
+        if (useDeferredStore)
+            Directory.CreateDirectory(storeRoot);
+        RepositoryLeaseAcquireResult? deferredLeaseResult = useDeferredStore
+            ? leaseService.TryAcquire(
+                storeRoot,
+                CreateLeaseRequest(leaseOwnerId, machineId, "deferred-backup-tombstone-export", appVersion))
+            : null;
+        using RepositoryLeaseHandle? deferredLease = deferredLeaseResult?.Handle;
+        RepositoryLeaseHandle? activeLease = destinationLease ?? deferredLease;
+        if (activeLease is null || !activeLease.IsOwner)
+            return;
 
         var store = new MetadataStore(storeRoot);
         try
         {
+            if (!activeLease.IsOwner)
+                return;
             store.EnsureSchema();
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
@@ -2522,6 +2733,8 @@ public sealed class MetadataSyncService
 
         try
         {
+            if (!activeLease.IsOwner)
+                return;
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
@@ -2534,14 +2747,82 @@ public sealed class MetadataSyncService
             return;
         }
 
-        if (isDeferred)
-        {
-            TryFlushDeferredExport(rootPath);
-        }
+        if (useDeferredStore)
+            Console.WriteLine($"[MetadataSync] Tombstone export queued locally for '{rootPath}'.");
     }
 
     private static string GetMetaDir(string rootPath) =>
         Path.Combine(rootPath, VaultSyncDirectoryName, "meta");
+
+    private RepositoryLeaseAcquireResult TryAcquireRepositoryLease(
+        string rootPath,
+        string operation,
+        string appVersion,
+        string machineLabel) =>
+        _repositoryLeaseService.TryAcquire(
+            rootPath,
+            CreateLeaseRequest(
+                ResolveLeaseOwnerId(machineLabel),
+                machineLabel,
+                operation,
+                appVersion));
+
+    private RepositoryLeaseHandle? TryAcquireDeferredLease(
+        string deferredRoot,
+        string appVersion,
+        string machineLabel,
+        string operation)
+    {
+        try
+        {
+            Directory.CreateDirectory(deferredRoot);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+
+        RepositoryLeaseAcquireResult result = _repositoryLeaseService.TryAcquire(
+            deferredRoot,
+            CreateLeaseRequest(
+                ResolveLeaseOwnerId(machineLabel),
+                machineLabel,
+                operation,
+                appVersion));
+        return result.Handle;
+    }
+
+    private string ResolveLeaseOwnerId(string machineLabel) =>
+        _installationIdentityProvider?.GetOrCreate() ??
+        CreateCompatibilityInstallationId(machineLabel);
+
+    private static RepositoryLeaseRequest CreateLeaseRequest(
+        string installationId,
+        string machineLabel,
+        string operation,
+        string appVersion) =>
+        new(
+            installationId,
+            string.IsNullOrWhiteSpace(machineLabel) ? "Unknown host" : machineLabel.Trim(),
+            operation,
+            string.IsNullOrWhiteSpace(appVersion) ? "unknown" : appVersion.Trim());
+
+    private static string CreateCompatibilityInstallationId(string machineLabel)
+    {
+        string source = string.IsNullOrWhiteSpace(machineLabel) ? "unknown" : machineLabel.Trim();
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes($"vaultsync-lease:{source}"));
+        return new Guid(hash.AsSpan(0, 16)).ToString("N");
+    }
+
+    private static MetadataSyncResult LeaseFailure(RepositoryLeaseAcquireResult leaseResult) =>
+        MetadataSyncResult.Failure(
+            MetadataSyncStatus.RepositoryBusy,
+            leaseResult.Inspection.Message);
+
+    private static MetadataSyncResult LostLeaseFailure() =>
+        MetadataSyncResult.Failure(
+            MetadataSyncStatus.RepositoryBusy,
+            "Repository writer ownership changed before the metadata update could commit.");
 
     private static string GetDeferredExportRoot(string rootPath)
     {
@@ -2591,30 +2872,56 @@ public sealed class MetadataSyncService
         return false;
     }
 
-    private static bool TryEnsureMetadataDirWritable(string metaDir)
+    private static bool TryFlushDeferredExport(
+        string rootPath,
+        string appVersion,
+        string machineLabel,
+        string leaseOwnerId,
+        RepositoryLeaseService leaseService)
     {
+        string deferredRoot = GetDeferredExportRoot(rootPath);
+        if (!File.Exists(new MetadataStore(deferredRoot).DatabasePath))
+            return false;
+        if (File.Exists(new MetadataStore(rootPath).DatabasePath))
+            return false;
+
+        RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
+            deferredRoot,
+            CreateLeaseRequest(
+                leaseOwnerId,
+                machineLabel,
+                "deferred-metadata-flush",
+                appVersion));
+        if (!leaseResult.Acquired)
+            return false;
+
+        bool copied;
+        using (RepositoryLeaseHandle lease = leaseResult.Handle!)
+        {
+            if (!lease.IsOwner)
+                return false;
+            copied = TryCopyStoreFiles(deferredRoot, rootPath);
+        }
+
+        return copied && TryRetireDeferredExport(deferredRoot);
+    }
+
+    private static bool HasDeferredExport(string rootPath) =>
+        File.Exists(new MetadataStore(GetDeferredExportRoot(rootPath)).DatabasePath);
+
+    private static bool TryRetireDeferredExport(string deferredRoot)
+    {
+        string retiredRoot = deferredRoot + ".consumed-" + Guid.NewGuid().ToString("N");
         try
         {
-            string? rootDir = Directory.GetParent(Directory.GetParent(metaDir)?.FullName ?? string.Empty)?.FullName;
-            if (string.IsNullOrWhiteSpace(rootDir) || !Directory.Exists(rootDir))
-                return false;
-
-            _ = Directory.CreateDirectory(metaDir);
-            string probe = Path.Combine(metaDir, ".write_test");
-            using var fs = new FileStream(probe, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose);
-            fs.WriteByte(0);
+            Directory.Move(deferredRoot, retiredRoot);
+            TryDeleteTempStore(retiredRoot);
             return true;
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return false;
         }
-    }
-
-    private static bool TryFlushDeferredExport(string rootPath)
-    {
-        string deferredRoot = GetDeferredExportRoot(rootPath);
-        return TryCopyStoreFiles(deferredRoot, rootPath);
     }
 
     private static bool TryCopyStoreFiles(string fromRoot, string toRoot)
@@ -3246,7 +3553,10 @@ public sealed record MetadataSyncResult(
     string Message)
 {
     public IReadOnlyCollection<int> AffectedProjectIds { get; init; } = [];
-    public int RepairedBackups { get; init; }
+    public int RepairedBackups
+    {
+        get; init;
+    }
 
     public static MetadataSyncResult Failure(MetadataSyncStatus status, string message) =>
         new(status, 0, 0, 0, 0, message);
@@ -3281,5 +3591,6 @@ public enum MetadataSyncStatus
     InvalidPath,
     InvalidStore,
     Incompatible,
+    RepositoryBusy,
     WriteFailed
 }

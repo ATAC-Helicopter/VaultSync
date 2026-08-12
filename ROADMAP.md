@@ -482,6 +482,13 @@ that exists only on the release branch or remains planned.
   - Acceptance: imports do not silently apply machine-local key references or
     destructive tombstones, every changed portable field appears in preview,
     writer attribution is record-specific, and resolved conflicts stay resolved.
+- [x] `BUG-18102` `P0` Prevent deferred metadata replay from overwriting a
+  destination that changed while it was unavailable.
+  - Acceptance: deferred stores are lease-protected, flush at most once into an
+    empty metadata destination, and remain preserved for merge review when the
+    destination already contains metadata.
+  - Completed on the 1.8.7 release branch on 2026-08-12 together with durable
+    writer protection for every existing metadata export and tombstone path.
 
 ### Delivery sequence
 
