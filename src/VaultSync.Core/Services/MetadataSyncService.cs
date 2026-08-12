@@ -78,6 +78,13 @@ public sealed class MetadataSyncService
 
     private sealed record PreviewBackupAnalysis(HashSet<string> LiveSnapshotIds, int Add, int Delete);
 
+    private sealed record ProjectMetadataConflictContext(
+        Project Current,
+        MetaProject Imported,
+        string? SourceMachineId,
+        ProjectMetadataConflictValues Local,
+        ProjectMetadataConflictValues Incoming);
+
     private sealed class LegacyImportState
     {
         public required Dictionary<string, Project> ProjectsByName { get; init; }
@@ -1121,12 +1128,6 @@ public sealed class MetadataSyncService
 
         IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
         IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
-        var existingBackupPaths = _repo
-            .GetAllProjects()
-            .SelectMany(project => _repo.GetBackupsForProject(project.Id))
-            .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.Path)))
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         PreviewTombstoneAnalysis tombstones = AnalyzePreviewTombstones(metaTombstones, backupExternalMap);
         PreviewBackupAnalysis backups = AnalyzePreviewBackups(
             metaBackups,
@@ -1417,13 +1418,13 @@ public sealed class MetadataSyncService
         string rootPath,
         LegacyImportState state)
     {
-        foreach (LegacyBackupFolder folder in folders)
+        foreach (string relativePath in folders.Select(folder => folder.RelativePath))
         {
-            string path = NormalizeStablePath(folder.RelativePath);
+            string path = NormalizeStablePath(relativePath);
             if (!state.ExistingBackupByPath.TryGetValue(path, out Backup? backup))
                 continue;
 
-            long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
+            long sizeBytes = GetLegacyBackupFolderSize(rootPath, relativePath);
             if (sizeBytes <= 0)
                 continue;
 
@@ -1585,8 +1586,9 @@ public sealed class MetadataSyncService
         {
             projectDirs = Directory.EnumerateDirectories(rootPath);
         }
-        catch
+        catch (Exception ex)
         {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Existing project root could not be inspected: {ex.Message}");
             return result;
         }
 
@@ -2008,8 +2010,9 @@ public sealed class MetadataSyncService
             if (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative))
                 return false;
 
+            char[] separators = [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar];
             var firstSegment = relative
-                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Split(separators, StringSplitOptions.RemoveEmptyEntries)
                 .FirstOrDefault(segment => !string.IsNullOrWhiteSpace(segment));
 
             return firstSegment is not null &&
@@ -3314,23 +3317,7 @@ public sealed class MetadataSyncService
     private ParsedProjectSettings ParseProjectSettings(string? settingsJson)
     {
         if (string.IsNullOrWhiteSpace(settingsJson))
-        {
-            return new ParsedProjectSettings(
-                ProjectEncryptionPolicy.Inherit,
-                null,
-                string.Empty,
-                ProjectRestoreMode.Direct,
-                ProjectVerificationPolicy.Always,
-                true,
-                string.Empty,
-                HasEncryptionPolicy: false,
-                HasEncryptionKeyRef: false,
-                HasPreferredDestinationId: false,
-                HasRestoreMode: false,
-                HasVerificationPolicy: false,
-                HasAutoBackupEnabled: false,
-                HasTags: false);
-        }
+            return EmptyParsedProjectSettings();
 
         try
         {
@@ -3419,23 +3406,26 @@ public sealed class MetadataSyncService
         }
         catch
         {
-            return new ParsedProjectSettings(
-                ProjectEncryptionPolicy.Inherit,
-                null,
-                string.Empty,
-                ProjectRestoreMode.Direct,
-                ProjectVerificationPolicy.Always,
-                true,
-                string.Empty,
-                HasEncryptionPolicy: false,
-                HasEncryptionKeyRef: false,
-                HasPreferredDestinationId: false,
-                HasRestoreMode: false,
-                HasVerificationPolicy: false,
-                HasAutoBackupEnabled: false,
-                HasTags: false);
+            return EmptyParsedProjectSettings();
         }
     }
+
+    private static ParsedProjectSettings EmptyParsedProjectSettings() =>
+        new(
+            ProjectEncryptionPolicy.Inherit,
+            null,
+            string.Empty,
+            ProjectRestoreMode.Direct,
+            ProjectVerificationPolicy.Always,
+            true,
+            string.Empty,
+            HasEncryptionPolicy: false,
+            HasEncryptionKeyRef: false,
+            HasPreferredDestinationId: false,
+            HasRestoreMode: false,
+            HasVerificationPolicy: false,
+            HasAutoBackupEnabled: false,
+            HasTags: false);
 
     private bool ApplyImportedProjectSettings(
         int projectId,
@@ -3533,17 +3523,24 @@ public sealed class MetadataSyncService
         }
 
         return UpsertProjectMetadataConflict(
-            current,
-            metaProject,
-            sourceMachineId,
-            currentPreferredDestinationId,
-            currentRestoreMode,
-            currentVerificationPolicy,
-            currentTags,
-            nextPreferredDestinationId,
-            nextRestoreMode,
-            nextVerificationPolicy,
-            nextTags,
+            new ProjectMetadataConflictContext(
+                current,
+                metaProject,
+                sourceMachineId,
+                new ProjectMetadataConflictValues
+                {
+                    PreferredDestinationId = currentPreferredDestinationId,
+                    RestoreMode = currentRestoreMode,
+                    VerificationPolicy = currentVerificationPolicy,
+                    Tags = currentTags
+                },
+                new ProjectMetadataConflictValues
+                {
+                    PreferredDestinationId = nextPreferredDestinationId,
+                    RestoreMode = nextRestoreMode,
+                    VerificationPolicy = nextVerificationPolicy,
+                    Tags = nextTags
+                }),
             pendingConflicts);
     }
 
@@ -3576,42 +3573,22 @@ public sealed class MetadataSyncService
     }
 
     private static bool UpsertProjectMetadataConflict(
-        Project current,
-        MetaProject metaProject,
-        string? sourceMachineId,
-        string currentPreferredDestinationId,
-        string currentRestoreMode,
-        string currentVerificationPolicy,
-        string currentTags,
-        string importedPreferredDestinationId,
-        string importedRestoreMode,
-        string importedVerificationPolicy,
-        string importedTags,
+        ProjectMetadataConflictContext context,
         IList<ProjectMetadataConflictRecord> pendingConflicts)
     {
+        Project current = context.Current;
+        MetaProject metaProject = context.Imported;
         var next = new ProjectMetadataConflictRecord
         {
             ProjectId = current.Id,
             ProjectExternalId = string.IsNullOrWhiteSpace(current.ExternalId) ? metaProject.ExternalId : current.ExternalId,
             ProjectName = current.Name,
-            SourceMachineId = string.IsNullOrWhiteSpace(sourceMachineId) ? UnknownAppVersion : sourceMachineId,
+            SourceMachineId = string.IsNullOrWhiteSpace(context.SourceMachineId) ? UnknownAppVersion : context.SourceMachineId,
             SourceUpdatedUtc = metaProject.UpdatedUtc == default
                 ? string.Empty
                 : metaProject.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
-            Local = new ProjectMetadataConflictValues
-            {
-                PreferredDestinationId = currentPreferredDestinationId,
-                RestoreMode = currentRestoreMode,
-                VerificationPolicy = currentVerificationPolicy,
-                Tags = currentTags
-            },
-            Imported = new ProjectMetadataConflictValues
-            {
-                PreferredDestinationId = importedPreferredDestinationId,
-                RestoreMode = importedRestoreMode,
-                VerificationPolicy = importedVerificationPolicy,
-                Tags = importedTags
-            }
+            Local = context.Local,
+            Imported = context.Incoming
         };
 
         ProjectMetadataConflictRecord? existing = pendingConflicts.FirstOrDefault(conflict =>
