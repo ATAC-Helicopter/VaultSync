@@ -13,6 +13,7 @@ tests land.
 | Application database | Local projects, snapshots, backups, and application state | Machine-local |
 | Application configuration | UI, destinations, schedules, and operational preferences | Machine-local |
 | `<destination>/.vaultsync/meta/vaultsync.meta.db` | Portable project and backup-history metadata | Cross-machine |
+| `<destination>/.vaultsync/meta/writer.lease.db` | 1.8.7 cooperating-writer coordination and exceptional takeover evidence | Repository-local coordination |
 | Backup payload folders/archives | Recoverable project bytes | Cross-machine when the destination is reachable |
 | Recovery evidence reports | Readable proof and drill summaries | Exportable, redacted |
 
@@ -58,14 +59,22 @@ single-writer guidance are documented in
 
 ## Repository coordination — Planned for 1.8.7
 
-The next schema revision will add, with explicit migrations and fixtures:
+The coordination database and durable installation identity are implemented on
+the 1.8.7 release branch. Protection of every metadata writer is the next rollout
+slice. The later portable-metadata schema revision will add, with explicit
+migrations and fixtures:
 
 - durable installation identity distinct from host name;
 - per-record revision, base revision, writer identity, and timestamp;
 - field-level portability and provenance for project settings;
 - durable conflict-resolution records;
-- a repository-scoped writer lease with owner, operation, nonce, heartbeat,
-  expiry, and application version.
+- per-record linkage to the repository-scoped writer identity where required.
+
+The separate coordination database currently records one active lease with
+owner, diagnostic host label, process, operation, nonce, application version,
+acquisition, heartbeat, and expiry. Normal release clears the active row without
+growing history. Explicit stale takeover preserves the displaced record as
+diagnostic evidence.
 
 The migration must preserve every readable version-1 record. A 1.8.7 client may
 inspect a repository read-only while another valid lease exists, but it must not
