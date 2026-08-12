@@ -22,7 +22,7 @@ The release branch accumulates the qualified 1.8.7 work. `Dev` is the
 integration branch; `Stable` represents shipped releases only. A beta is not
 assumed and must be approved explicitly if the release needs one.
 
-## Status as of 2026-08-12
+## Status as of 2026-08-13
 
 ### Implemented on the release branch
 
@@ -48,6 +48,10 @@ assumed and must be approved explicitly if the release needs one.
   suppress optional source writes. Deferred stores flush only into an empty
   destination; divergent destination metadata is preserved for merge review
   instead of being overwritten. No UI takeover control is exposed yet.
+- The canonical release-manifest v1 schema, deterministic generator, artifact
+  classifier, exact size/SHA-256 verification, and complete platform-matrix
+  gate are implemented. Release automation generates the manifest only after
+  all direct-download platform artifacts have been built and collected.
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -58,7 +62,8 @@ branch package.
 
 1. Surface repository status and an explicit stale-takeover decision in UI.
 2. Make metadata imports previewable, versioned, durable, and reversible.
-3. Generate the release manifest and expose complete build identity.
+3. Connect the canonical manifest to post-publish verification and expose its
+   release identity through the app and CLI.
 4. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB
    behavior before enabling supported concurrent-machine workflows.
 5. Reduce codebase duplication and oversized orchestration through shared,

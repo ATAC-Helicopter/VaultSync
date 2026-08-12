@@ -16,6 +16,8 @@ Use this page as the primary index for all project documentation.
 - Current release highlights: [What's New](WHATS_NEW.md)
 - Active 1.8.7 development status: [1.8.7 release contract](RELEASE_1.8.7.md)
 - Release process: [Releasing](RELEASING.md)
+- Canonical direct-download manifest schema:
+  [release manifest v1](schemas/release-manifest-v1.schema.json)
 - Updater and patch assets: [Updater](UPDATER.md)
 - Microsoft Store planning and packaging notes: [Microsoft Store](MICROSOFT_STORE.md)
 - Microsoft Store submission checklist: [Store submission checklist](MICROSOFT_STORE_SUBMISSION_CHECKLIST.md)

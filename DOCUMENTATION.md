@@ -29,6 +29,8 @@ Core pillars:
 ### 2.2 Operational docs
 - `docs/HELP.md`: in-app help target and concise user guidance.
 - `docs/RELEASING.md`: release packaging/publishing flow.
+- `docs/schemas/release-manifest-v1.schema.json`: canonical direct-download
+  artifact identity, size, SHA-256, and compatibility schema.
 - `docs/RELEASE_1.8.7.md`: active-release status, contracts, sequencing, and gates.
 - `docs/REPOSITORY_FORMATS.md`: repository layouts, compatibility boundaries,
   and emergency read-only recovery guidance.
