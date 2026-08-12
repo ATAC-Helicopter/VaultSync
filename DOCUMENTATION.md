@@ -29,6 +29,11 @@ Core pillars:
 ### 2.2 Operational docs
 - `docs/HELP.md`: in-app help target and concise user guidance.
 - `docs/RELEASING.md`: release packaging/publishing flow.
+- `docs/RELEASE_1.8.7.md`: active-release status, contracts, sequencing, and gates.
+- `docs/REPOSITORY_FORMATS.md`: repository layouts, compatibility boundaries,
+  and emergency read-only recovery guidance.
+- `docs/CROSS_MACHINE_SAFETY.md`: cross-machine threat model, identity,
+  repository lease, merge, and recovery contracts.
 - `docs/UPDATER.md`: patch asset contract and update flow.
 - `docs/WHATS_NEW.md`: user-facing release highlights.
 - `docs/DISASTER_RECOVERY.md`: recovery proofs, drills, 3-2-1 guidance, and protection behavior.
@@ -42,6 +47,8 @@ Core pillars:
 - `docs/wiki/Home.md`: wiki entry page.
 - `docs/wiki/*`: task and feature guides (installation, backups, destinations, troubleshooting, etc.).
 - `docs/wiki/Encryption.md`: backup encryption setup, format, credential storage, password changes, opening, and restore.
+- `docs/wiki/Metadata-Sync.md`: portable metadata behavior, current limitations,
+  and cross-machine safety guidance.
 
 ## 3. Work-Item and ID Conventions
 Primary planning IDs use `VS-xxxx`.
@@ -127,3 +134,19 @@ For the `1.8` Chronicle release line, keep these areas aligned:
 - privacy-first crash-report assistance (`docs/PRIVACY.md`, `docs/CRASH_REPORTING.md`)
 - update, packaging, and release behavior (`docs/UPDATER.md`, `docs/MICROSOFT_STORE.md`, `docs/RELEASING.md`)
 - release highlights (`docs/WHATS_NEW.md`, `CHANGELOG.md`)
+
+## 10. Active 1.8.7 Documentation Contract
+
+VaultSync 1.8.7 is in development. Use `docs/RELEASE_1.8.7.md` as the status
+page and `ROADMAP.md` as the canonical scope. Planned behavior must stay labeled
+as planned until its implementation, tests, and user documentation land.
+
+Every repository-format or metadata-sync change must update, in the same
+logical commit:
+
+- `docs/REPOSITORY_FORMATS.md` for on-disk schema and compatibility;
+- `docs/CROSS_MACHINE_SAFETY.md` for identity, lease, and merge invariants;
+- `docs/wiki/Metadata-Sync.md` for user-visible behavior and safety guidance;
+- this file for the exported field-level contract;
+- executable migration and regression tests;
+- `CHANGELOG.md` only when the behavior exists on the release branch.

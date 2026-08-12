@@ -6,9 +6,11 @@ This document defines the current release packaging flow.
 - .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The prepared stable release target is `1.8.6`.
-- `1.8.6` ships directly as a stable release. There are no `1.8.6-Beta.N`
-  builds or prerelease GitHub releases.
+- The current stable release is `1.8.6`.
+- The active development target is `1.8.7` on `release/1.8.7`, integrating
+  through `Dev` and promoted to `Stable` only after its release gates pass.
+- Do not create a beta or prerelease implicitly. A prerelease requires an
+  explicit release decision, a version suffix, and the beta workflow inputs.
 
 ## 1) Windows Installer
 1. Publish:
@@ -35,8 +37,8 @@ This document defines the current release packaging flow.
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.8.6 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.8.6 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.8.7 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.8.7 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz`, `.deb`, and `linux-x64` `.AppImage` artifacts.
    The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a
@@ -57,15 +59,15 @@ Patch automation accepts one qualified predecessor:
 Stable example:
 - branch: `Stable`
 - release channel: `stable`
-- `previous_version = 1.8.5`
-- `target_version = 1.8.6`
+- `previous_version = 1.8.6`
+- `target_version = 1.8.7`
 
 Pre-merge release candidate example:
-- branch: `release/1.8.6`
+- branch: `release/1.8.7`
 - release channel: `stable`
 - `release_candidate = true`
-- `previous_version = 1.8.5`
-- `target_version = 1.8.6`
+- `previous_version = 1.8.6`
+- `target_version = 1.8.7`
 - candidate artifacts remain GitHub Actions artifacts; do not attach them to a
   non-prerelease GitHub Release until the release PR is approved and merged
   into `Stable`
@@ -74,11 +76,11 @@ This mode builds the exact stable-version binaries from the release branch
 without merging the release PR. The workflow rejects a candidate build unless
 the branch name exactly matches `release/<target_version>`.
 
-Future prerelease example (not used for `1.8.6`):
+Optional prerelease example (only after an explicit release decision):
 - branch: `Dev` after the beta changes are merged there
 - release channel: `beta`
 - `release_candidate = false`
-- `previous_version = 1.8.5`
+- `previous_version = 1.8.6`
 - `target_version = <next-version>-Beta.1`
 - `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
 
@@ -95,11 +97,11 @@ Do not broaden the allowlist to older releases without a separate qualification 
 ## 5) Release Checklist
 - Run the release gate before publishing:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.6 -ReleaseTrack 1.8.x -TargetMilestone 1.8.6
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.7 -ReleaseTrack 1.8.x -TargetMilestone 1.8.7
   ```
 - Run the release gate again after GitHub Actions uploads assets:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.6 -ReleaseTrack 1.8.x -TargetMilestone 1.8.6 -Phase PostPublish
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.7 -ReleaseTrack 1.8.x -TargetMilestone 1.8.7 -Phase PostPublish
   ```
 - `CHANGELOG.md` updated
 - `docs/WHATS_NEW.md` updated
