@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -14,6 +16,7 @@ MINIMUM_VERSION_PROPERTY = re.compile(
     r"<VaultSyncMinimumRuntimeVersion>\s*(\d+\.\d+\.\d+)\s*"
     r"</VaultSyncMinimumRuntimeVersion>"
 )
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 def version_tuple(value: str) -> tuple[int, ...]:
@@ -26,6 +29,20 @@ def configured_minimum(repo_root: Path) -> str:
     if match is None:
         raise ValueError("VaultSyncMinimumRuntimeVersion is not configured")
     return match.group(1)
+
+
+def resolve_runtimeconfig(path_text: str, repo_root: Path) -> Path:
+    """Resolve runtime metadata without allowing arbitrary filesystem reads."""
+    candidate = Path(path_text).expanduser().resolve(strict=True)
+    allowed_roots = [repo_root.resolve(strict=True), Path(tempfile.gettempdir()).resolve(strict=True)]
+    runner_temp = os.environ.get("RUNNER_TEMP")
+    if runner_temp:
+        allowed_roots.append(Path(runner_temp).resolve(strict=True))
+    if not any(candidate.is_relative_to(root) for root in allowed_roots):
+        raise ValueError(f"runtimeconfig must stay inside the repository or runner temp: {path_text}")
+    if not candidate.is_file() or not candidate.name.endswith(".runtimeconfig.json"):
+        raise ValueError(f"runtimeconfig must be an existing .runtimeconfig.json file: {path_text}")
+    return candidate
 
 
 def audit_runtimeconfig(path: Path, minimum: str) -> list[str]:
@@ -45,13 +62,13 @@ def audit_runtimeconfig(path: Path, minimum: str) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--runtimeconfig", type=Path, action="append", required=True)
+    parser.add_argument("--runtimeconfig", action="append", required=True)
     args = parser.parse_args()
 
-    minimum = configured_minimum(args.repo_root)
+    minimum = configured_minimum(REPOSITORY_ROOT)
     errors: list[str] = []
-    for path in args.runtimeconfig:
+    for path_text in args.runtimeconfig:
+        path = resolve_runtimeconfig(path_text, REPOSITORY_ROOT)
         errors.extend(audit_runtimeconfig(path, minimum))
 
     if errors:
