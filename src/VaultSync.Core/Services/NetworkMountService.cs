@@ -546,19 +546,15 @@ public sealed class NetworkMountService
 
         try
         {
-            foreach (MacMountEntry mount in mounts.Where(
-                         mount => string.Equals(mount.MountPoint, mountPoint, StringComparison.OrdinalIgnoreCase)))
-            {
-                mountLine = mount.RawLine;
-                return true;
-            }
+            MacMountEntry? mount = mounts.FirstOrDefault(
+                candidate => string.Equals(candidate.MountPoint, mountPoint, StringComparison.OrdinalIgnoreCase));
+            mountLine = mount?.RawLine;
+            return mount is not null;
         }
         catch
         {
             return false;
         }
-
-        return false;
     }
 
     private static string? FindExistingMountPoint(string shareName, string mountRoot)
