@@ -57,7 +57,7 @@ namespace VaultSync.UI
                 get => _hex;
                 set
                 {
-                    string normalized = NormalizeHex(value, _hex);
+                    string normalized = ThemeColor.NormalizeHex(value, _hex);
                     if (_hex == normalized)
                         return;
 
@@ -84,20 +84,6 @@ namespace VaultSync.UI
 
             public Color SwatchColor => Color.Parse(_hex);
             public IBrush SwatchBrush => _swatchBrush;
-
-            private static string NormalizeHex(string? value, string fallback)
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                    return fallback;
-
-                string candidate = value.Trim();
-                if (!candidate.StartsWith("#", StringComparison.Ordinal))
-                    candidate = "#" + candidate;
-
-                return Color.TryParse(candidate, out Color color)
-                    ? $"#{color.R:X2}{color.G:X2}{color.B:X2}"
-                    : fallback;
-            }
 
         }
 
