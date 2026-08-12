@@ -232,6 +232,18 @@ def validate_published_assets(manifest: object, published_assets: object) -> Non
         raise ValueError("Published asset comparison requires a manifest and GitHub asset array")
 
     expected = {asset["name"]: asset for asset in manifest["assets"]}
+    actual = index_published_assets(published_assets)
+
+    if set(actual) != set(expected):
+        missing = sorted(set(expected) - set(actual))
+        unexpected = sorted(set(actual) - set(expected))
+        raise ValueError(f"Published release asset set differs from manifest; missing={missing}, unexpected={unexpected}")
+
+    for name, expected_asset in expected.items():
+        validate_published_asset(name, expected_asset, actual[name])
+
+
+def index_published_assets(published_assets: list[object]) -> dict[str, dict[str, object]]:
     actual: dict[str, dict[str, object]] = {}
     for asset in published_assets:
         if not isinstance(asset, dict) or not isinstance(asset.get("name"), str):
@@ -242,47 +254,30 @@ def validate_published_assets(manifest: object, published_assets: object) -> Non
         if name in actual:
             raise ValueError(f"GitHub release contains a duplicate asset name: {name}")
         actual[name] = asset
+    return actual
 
-    if set(actual) != set(expected):
-        missing = sorted(set(expected) - set(actual))
-        unexpected = sorted(set(actual) - set(expected))
-        raise ValueError(f"Published release asset set differs from manifest; missing={missing}, unexpected={unexpected}")
 
-    for name, expected_asset in expected.items():
-        actual_asset = actual[name]
-        digest = str(actual_asset.get("digest") or "")
-        if digest.startswith("sha256:"):
-            digest = digest.removeprefix("sha256:")
-        if actual_asset.get("size") != expected_asset["sizeBytes"]:
-            raise ValueError(f"Published release asset size differs from manifest: {name}")
-        if digest != expected_asset["sha256"]:
-            raise ValueError(f"Published release asset digest differs from manifest: {name}")
-        if actual_asset.get("url") != expected_asset["downloadUrl"]:
-            raise ValueError(f"Published release asset URL differs from manifest: {name}")
+def validate_published_asset(
+    name: str,
+    expected_asset: dict[str, object],
+    actual_asset: dict[str, object],
+) -> None:
+    digest = str(actual_asset.get("digest") or "").removeprefix("sha256:")
+    comparisons = (
+        ("size", actual_asset.get("size"), expected_asset["sizeBytes"]),
+        ("digest", digest, expected_asset["sha256"]),
+        ("URL", actual_asset.get("url"), expected_asset["downloadUrl"]),
+    )
+    for label, actual_value, expected_value in comparisons:
+        if actual_value != expected_value:
+            raise ValueError(f"Published release asset {label} differs from manifest: {name}")
 
 
 def validate_asset_entry(asset: object, release: dict[str, object], names: set[str], asset_root: Path | None) -> None:
     fields = {"name", "platform", "architecture", "packageKind", "sizeBytes", "sha256", "downloadUrl"}
     if not isinstance(asset, dict) or set(asset) != fields:
         raise ValueError("Release asset fields do not match schema v1")
-    name = asset["name"]
-    if not isinstance(name, str) or not name or Path(name).name != name:
-        raise ValueError(f"Unsafe release asset name: {name}")
-    if name == MANIFEST_NAME or name.casefold() in names:
-        raise ValueError(f"Duplicate or self-referencing release asset: {name}")
-    names.add(name.casefold())
-    expected_role = classify_asset(name)
-    if tuple(asset[field] for field in ("platform", "architecture", "packageKind")) != expected_role:
-        raise ValueError(f"Release asset classification mismatch: {name}")
-    if not isinstance(asset["sizeBytes"], int) or asset["sizeBytes"] <= 0:
-        raise ValueError(f"Release asset size must be positive: {name}")
-    if not isinstance(asset["sha256"], str) or not SHA256_PATTERN.fullmatch(asset["sha256"]):
-        raise ValueError(f"Invalid SHA-256 digest: {name}")
-
-    expected_url = f"https://github.com/{release['repository']}/releases/download/{release['tag']}/{quote(name)}"
-    parsed_url = urlparse(str(asset["downloadUrl"]))
-    if parsed_url.scheme != "https" or parsed_url.hostname != "github.com" or asset["downloadUrl"] != expected_url:
-        raise ValueError(f"Unsafe or inconsistent release asset URL: {name}")
+    name = validate_asset_metadata(asset, release, names)
 
     if asset_root is not None:
         root = asset_root.resolve(strict=True)
@@ -296,9 +291,38 @@ def validate_asset_entry(asset: object, release: dict[str, object], names: set[s
             raise ValueError(f"Release asset bytes do not match the manifest: {name}")
 
 
-def write_manifest(path: Path, manifest: dict[str, object]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+def validate_asset_metadata(asset: dict[str, object], release: dict[str, object], names: set[str]) -> str:
+    name = asset["name"]
+    if not isinstance(name, str) or not name or Path(name).name != name:
+        raise ValueError(f"Unsafe release asset name: {name}")
+    if name == MANIFEST_NAME or name.casefold() in names:
+        raise ValueError(f"Duplicate or self-referencing release asset: {name}")
+    names.add(name.casefold())
+
+    expected_role = classify_asset(name)
+    if tuple(asset[field] for field in ("platform", "architecture", "packageKind")) != expected_role:
+        raise ValueError(f"Release asset classification mismatch: {name}")
+    if not isinstance(asset["sizeBytes"], int) or asset["sizeBytes"] <= 0:
+        raise ValueError(f"Release asset size must be positive: {name}")
+    if not isinstance(asset["sha256"], str) or not SHA256_PATTERN.fullmatch(asset["sha256"]):
+        raise ValueError(f"Invalid SHA-256 digest: {name}")
+
+    expected_url = f"https://github.com/{release['repository']}/releases/download/{release['tag']}/{quote(name)}"
+    parsed_url = urlparse(str(asset["downloadUrl"]))
+    if parsed_url.scheme != "https" or parsed_url.hostname != "github.com" or asset["downloadUrl"] != expected_url:
+        raise ValueError(f"Unsafe or inconsistent release asset URL: {name}")
+    return name
+
+
+def write_manifest(asset_root: Path, manifest: dict[str, object]) -> Path:
+    root = asset_root.resolve(strict=True)
+    if not root.is_dir():
+        raise ValueError(f"Asset root is not a directory: {root}")
+    path = (root / MANIFEST_NAME).resolve(strict=False)
+    if path.parent != root:
+        raise ValueError("Release manifest target escaped the asset root")
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
 
 
 def main() -> int:
@@ -338,8 +362,8 @@ def main() -> int:
                 include_linux_patches=args.include_linux_patches,
                 include_store_upload=args.include_store_upload,
             )
-            write_manifest(output, manifest)
-            print(f"Wrote {output} with {len(manifest['assets'])} assets.")
+            written_path = write_manifest(asset_root, manifest)
+            print(f"Wrote {written_path} with {len(manifest['assets'])} assets.")
         elif args.command == "validate":
             manifest = json.loads(args.manifest.read_text(encoding="utf-8-sig"))
             validate_manifest(manifest, asset_root=args.asset_root)
@@ -350,7 +374,7 @@ def main() -> int:
             validate_published_assets(manifest, published_assets)
             print(f"Validated published assets against {args.manifest}.")
         return 0
-    except (OSError, ValueError, json.JSONDecodeError) as error:
+    except (OSError, ValueError) as error:
         print(f"Release manifest error: {error}", file=sys.stderr)
         return 1
 
