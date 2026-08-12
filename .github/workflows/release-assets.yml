@@ -637,3 +637,51 @@ jobs:
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.zip
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.zip
+
+  release-manifest:
+    name: Generate canonical release manifest
+    needs: [validate, windows, macos, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download direct-release artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: "*-release-assets"
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate and verify canonical manifest
+        shell: bash
+        env:
+          INCLUDE_LINUX_PATCHES: ${{ inputs.include_linux_patches }}
+          PREVIOUS_VERSION: ${{ inputs.previous_version }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          optional_args=()
+          if [[ "$INCLUDE_LINUX_PATCHES" == "true" ]]; then
+            optional_args+=( --include-linux-patches )
+          fi
+          python3 scripts/release_manifest.py generate \
+            --asset-root release-assets \
+            --output release-assets/vaultsync-release-manifest.json \
+            --version "$TARGET_VERSION" \
+            --channel "$RELEASE_CHANNEL" \
+            --commit "${{ github.sha }}" \
+            --repository "${{ github.repository }}" \
+            --previous "$PREVIOUS_VERSION" \
+            "${optional_args[@]}"
+          python3 scripts/release_manifest.py validate \
+            --manifest release-assets/vaultsync-release-manifest.json \
+            --asset-root release-assets
+
+      - name: Upload canonical release manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: canonical-release-manifest
+          if-no-files-found: error
+          path: release-assets/vaultsync-release-manifest.json

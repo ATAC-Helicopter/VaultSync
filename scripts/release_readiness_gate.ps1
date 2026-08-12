@@ -235,6 +235,12 @@ Add-CheckResult -Results $results -Code "script-release-gate" -Condition (Test-P
     -FailMessage "Release readiness gate script is missing." `
     -Data @{ path = "scripts/release_readiness_gate.ps1" }
 
+Add-CheckResult -Results $results -Code "release-manifest-contract" `
+    -Condition ((Test-Path "scripts/release_manifest.py") -and (Test-Path "docs/schemas/release-manifest-v1.schema.json")) `
+    -PassMessage "Canonical release manifest generator and schema are present." `
+    -FailMessage "Canonical release manifest generator or schema is missing." `
+    -Data @{ script = "scripts/release_manifest.py"; schema = "docs/schemas/release-manifest-v1.schema.json" }
+
 Add-CheckResult -Results $results -Code "docs-release-checklist" -Condition ($releasingDoc -match 'release assets uploaded' -and $releasingDoc -match 'release_readiness_gate\.ps1') `
     -PassMessage "Release guide includes the release gate and asset-upload checklist." `
     -FailMessage "Release guide is missing release gate and/or asset-upload checklist coverage." `
@@ -282,6 +288,7 @@ if ($null -eq $release) {
     $hasInstaller = [bool]($assetNames | Where-Object { $_ -like "VaultSync-Setup-*.exe" } | Select-Object -First 1)
     $hasPatchManifest = [bool]($assetNames | Where-Object { $_ -like "vaultsync-patch-*.json" } | Select-Object -First 1)
     $hasPatchArchive = [bool]($assetNames | Where-Object { $_ -like "vaultsync-patch-*.zip" } | Select-Object -First 1)
+    $hasCanonicalManifest = $assetNames -contains "vaultsync-release-manifest.json"
 
     Add-CheckResult -Results $results -Code "github-release" -Condition $true `
         -PassMessage "GitHub release '$releaseTag' found." `
@@ -306,12 +313,47 @@ if ($null -eq $release) {
         -Data @{ expectedPattern = "vaultsync-patch-*.zip"; assets = $assetNames } `
         -WarningOnFail:$warnForPublishArtifacts
 
-    if ($warnForPublishArtifacts -and (-not ($hasInstaller -and $hasPatchManifest -and $hasPatchArchive))) {
+    Add-CheckResult -Results $results -Code "asset-release-manifest" -Condition $hasCanonicalManifest `
+        -PassMessage "Canonical release manifest is present on the release." `
+        -FailMessage "Canonical release manifest is missing from the release." `
+        -Data @{ expected = "vaultsync-release-manifest.json"; assets = $assetNames } `
+        -WarningOnFail:$warnForPublishArtifacts
+
+    if ($Phase -eq "PostPublish" -and $hasCanonicalManifest) {
+        $manifestTempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("vaultsync-release-manifest-" + [guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $manifestTempRoot | Out-Null
+        try {
+            & gh release download $releaseTag --repo $Repository --pattern "vaultsync-release-manifest.json" --dir $manifestTempRoot --clobber
+            if ($LASTEXITCODE -ne 0) {
+                throw "Could not download canonical release manifest."
+            }
+
+            $githubAssetsPath = Join-Path $manifestTempRoot "github-assets.json"
+            $release.assets | ConvertTo-Json -Depth 8 | Set-Content -Path $githubAssetsPath -Encoding utf8
+            $pythonCommand = if (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
+            & $pythonCommand scripts/release_manifest.py validate-published `
+                --manifest (Join-Path $manifestTempRoot "vaultsync-release-manifest.json") `
+                --github-assets $githubAssetsPath
+            $manifestMatchesPublishedAssets = ($LASTEXITCODE -eq 0)
+        } catch {
+            $manifestMatchesPublishedAssets = $false
+        } finally {
+            Remove-Item -LiteralPath $manifestTempRoot -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        Add-CheckResult -Results $results -Code "asset-release-manifest-content" -Condition $manifestMatchesPublishedAssets `
+            -PassMessage "Published asset names, sizes, SHA-256 digests, and URLs match the canonical manifest." `
+            -FailMessage "Published assets do not exactly match the canonical release manifest." `
+            -Data @{ manifest = "vaultsync-release-manifest.json"; release = $releaseTag }
+    }
+
+    if ($warnForPublishArtifacts -and (-not ($hasInstaller -and $hasPatchManifest -and $hasPatchArchive -and $hasCanonicalManifest))) {
         $results.Add((New-Result -Code "publish-assets-next-step" -Status "warn" -Message "Release exists but assets are incomplete. Run release asset generation before final verification." -Data @{
             missing = @(
                 if (-not $hasInstaller) { "installer" }
                 if (-not $hasPatchManifest) { "patch-manifest" }
                 if (-not $hasPatchArchive) { "patch-archive" }
+                if (-not $hasCanonicalManifest) { "release-manifest" }
             )
             nextSteps = @(
                 "Trigger the release-assets GitHub Actions workflow for the target version.",

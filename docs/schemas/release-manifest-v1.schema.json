@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fglabs.dev/vaultsync/schemas/release-manifest-v1.schema.json",
+  "title": "VaultSync release manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "release", "assets"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "channel", "tag", "commit", "repository", "compatiblePredecessors"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+        "channel": { "enum": ["stable", "beta"] },
+        "tag": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "compatiblePredecessors": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "platform", "architecture", "packageKind", "sizeBytes", "sha256", "downloadUrl"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "platform": { "enum": ["windows", "macos", "linux"] },
+          "architecture": { "enum": ["x64", "arm64"] },
+          "packageKind": { "enum": ["installer", "store-upload", "disk-image", "archive", "debian-package", "appimage", "patch-manifest", "patch-archive"] },
+          "sizeBytes": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "downloadUrl": { "type": "string", "format": "uri", "pattern": "^https://github\\.com/" }
+        }
+      }
+    }
+  }
+}

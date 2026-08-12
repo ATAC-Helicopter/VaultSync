@@ -94,6 +94,27 @@ Patch builds require one qualified predecessor through `previous_version`. This 
 
 Do not broaden the allowlist to older releases without a separate qualification mechanism and test evidence for every platform. Older or unlisted installs must fall back to the full installer.
 
+After all platform jobs complete, the workflow downloads the artifacts they
+actually produced and generates `vaultsync-release-manifest.json`. Its v1 schema
+is [`docs/schemas/release-manifest-v1.schema.json`](schemas/release-manifest-v1.schema.json).
+The manifest records the release identity, qualified predecessor, source
+commit, and each direct-download asset's platform, architecture, package kind,
+exact byte size, SHA-256 digest, and official GitHub download URL. The generator
+fails on missing, duplicate, unexpected, empty, or altered assets; the manifest
+is deliberately excluded from its own digest set.
+
+To validate a downloaded manifest and its colocated assets offline:
+
+```bash
+python3 scripts/release_manifest.py validate \
+  --manifest release-assets/vaultsync-release-manifest.json \
+  --asset-root release-assets
+```
+
+The post-publish readiness gate downloads the manifest and compares it with
+GitHub's live asset metadata. Any missing or unexpected name, byte-size change,
+digest change, unsafe URL, or schema mismatch blocks the release.
+
 ## 5) Release Checklist
 - Run the release gate before publishing:
   ```powershell
@@ -108,6 +129,8 @@ Do not broaden the allowlist to older releases without a separate qualification 
 - relevant wiki/help docs updated
 - build/test validation captured
 - release assets uploaded (installer/DMG/Linux archives/patch assets)
+- canonical release manifest generated from the final direct-download assets
+  and validated against the same bytes before upload
 - every direct-download asset exposes a GitHub SHA-256 digest and the updater
   rejects missing, mismatched, or non-official integrity metadata
 - Windows SmartScreen and macOS Gatekeeper instructions remain current
