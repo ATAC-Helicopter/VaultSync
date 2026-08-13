@@ -14,6 +14,3 @@ autosave/**
 *.tmp
 Thumbs.db
 .DS_Store
-
-# Git
-.git/

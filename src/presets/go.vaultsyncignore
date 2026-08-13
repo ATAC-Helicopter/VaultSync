@@ -12,6 +12,3 @@ pkg/**
 
 # OS
 .DS_Store
-
-# Git
-.git/
