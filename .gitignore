@@ -60,3 +60,9 @@ docs/localization-missing-keys-report.md
 docs/PROJECT_OPERATIONS.md
 .codex_tmp_merge_locales.cs
 docs/video/build/
+
+# Blueprints local project state (generated when this repository is added)
+/.blueprints/
+/log/
+/project/
+/versions
