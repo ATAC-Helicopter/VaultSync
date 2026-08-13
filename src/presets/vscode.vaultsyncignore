@@ -1,7 +1,12 @@
-.vscode/**
-!.vscode/settings.json
-!.vscode/extensions.json
+# Keep shareable settings, tasks, launch profiles, snippets, and extension
+# recommendations. Exclude only machine-local indexes and state.
+.vscode/.ropeproject/**
+.vscode/.browse.VC.db
+.vscode/.browse.VC.db-wal
+.vscode/.browse.VC.db-shm
+.vscode/ipch/**
+.vscode/*.log
+.history/**
 .DS_Store
+._*
 Thumbs.db
-
-.git/

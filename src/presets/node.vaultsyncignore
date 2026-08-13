@@ -2,10 +2,24 @@ node_modules/**
 dist/**
 build/**
 .cache/**
+.next/**
+.nuxt/**
+.svelte-kit/**
+.turbo/**
+.parcel-cache/**
+.vite/**
+.eslintcache
+.stylelintcache
 **/node_modules/**
 **/dist/**
 **/build/**
 **/.cache/**
+**/.next/**
+**/.nuxt/**
+**/.svelte-kit/**
+**/.turbo/**
+**/.parcel-cache/**
+**/.vite/**
 *.log
 *.tmp
 
@@ -23,6 +37,5 @@ lerna-debug.log*
 
 # OS
 .DS_Store
-
-# Git
-.git/
+._*
+Thumbs.db

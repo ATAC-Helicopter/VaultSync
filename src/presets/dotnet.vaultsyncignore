@@ -5,6 +5,10 @@ obj/**
 *.exe
 TestResults/**
 **/TestResults/**
+artifacts/**
+**/artifacts/**
+coverage/**
+**/coverage/**
 *.user
 *.csproj.user
 *.suo
@@ -22,7 +26,5 @@ TestResults/**
 
 # OS
 .DS_Store
+._*
 Thumbs.db
-
-# Git
-.git/

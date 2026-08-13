@@ -61,7 +61,6 @@ Thumbs.db
 *.exe
 
 # Git metadata
-.git/
 
 # --- Temporary / backup / lock files ---
 *.tmp

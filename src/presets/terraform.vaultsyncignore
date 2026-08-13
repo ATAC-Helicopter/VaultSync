@@ -9,5 +9,3 @@ crash.*.log
 
 .DS_Store
 Thumbs.db
-
-.git/

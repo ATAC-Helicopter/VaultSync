@@ -28,6 +28,3 @@ Makefile
 
 # OS
 .DS_Store
-
-# Git
-.git/
