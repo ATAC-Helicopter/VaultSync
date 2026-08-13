@@ -39,3 +39,4 @@ lerna-debug.log*
 .DS_Store
 ._*
 Thumbs.db
+.git/

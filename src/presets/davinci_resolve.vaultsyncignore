@@ -12,3 +12,4 @@ AudioCache/**
 *.log
 .DS_Store
 Thumbs.db
+.git/

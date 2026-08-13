@@ -42,3 +42,4 @@ logs/**
 .DS_Store
 ._*
 Thumbs.db
+.git/

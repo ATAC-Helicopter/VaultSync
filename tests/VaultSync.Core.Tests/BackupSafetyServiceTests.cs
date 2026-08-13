@@ -276,7 +276,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [InlineData("python", "module/__pycache__/tool.cpython-310.pyc")]
     [InlineData("unity", "Library/metadata/cache.bin")]
     [InlineData("unreal", "Intermediate/Build/cache.bin")]
-    public void BuiltInSourcePresets_ExcludeGeneratedOutputsButKeepRepoMetadata(string preset, string generatedPath)
+    public void BuiltInSourcePresets_ExcludeGeneratedOutputsAndLiveGitInternals(string preset, string generatedPath)
     {
         var projectRoot = Path.Combine(_tempDir.Path, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(projectRoot);
@@ -297,8 +297,8 @@ public sealed class BackupSafetyServiceTests : IDisposable
         Assert.Contains(".github/workflows/ci.yml", entries);
         Assert.Contains(".gitignore", entries);
         Assert.Contains(".gitattributes", entries);
-        Assert.Contains(".git/refs/heads/local-feature", entries);
-        Assert.Contains(".git/objects/aa/object", entries);
+        Assert.DoesNotContain(".git/refs/heads/local-feature", entries);
+        Assert.DoesNotContain(".git/objects/aa/object", entries);
         Assert.DoesNotContain(entries, path => path.Equals(generatedPath, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -377,7 +377,6 @@ public sealed class BackupSafetyServiceTests : IDisposable
         {
             string[] rules = File.ReadAllLines(Path.Combine(presetsDir, presetFile));
             Assert.DoesNotContain(rules, rule => rule.TrimStart().StartsWith('!'));
-            Assert.DoesNotContain(rules, rule => rule.Trim().Equals(".git/", StringComparison.OrdinalIgnoreCase));
         }
     }
 

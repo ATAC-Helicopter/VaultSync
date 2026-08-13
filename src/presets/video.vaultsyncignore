@@ -12,3 +12,4 @@ RenderCache/**
 
 .DS_Store
 Thumbs.db
+.git/

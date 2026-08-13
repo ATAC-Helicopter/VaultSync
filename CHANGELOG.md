@@ -11,14 +11,15 @@
 - [VS-1877] Protected project settings, backup history, tombstones, deferred metadata writes, and deferred flushing with repository lease ownership checks while keeping imports and previews readable when another writer is active.
 - [VS-1877] Made unavailable-destination metadata queues fail closed: queued metadata can initialize an empty destination once, while an existing destination is preserved for explicit merge review.
 - [VS-1880] Consolidated metadata export orchestration, SMB mount parsing, mounted-share validation, theme color normalization, and contrast calculations behind focused shared primitives with regression coverage.
-- [VS-1880] Unified Windows Robocopy exclusions with the shared preset resolver and modernized Snapshot Explorer, metadata-import review, and updater windows around the current compact, theme-aware app layout.
-- Reworked development presets to preserve complete Git history and shareable IDE configuration while excluding modern build, package, test, framework, and machine-local caches.
+- [VS-1880] Unified Windows Robocopy exclusions with the shared preset resolver.
+- [BUG-18103] Modernized Snapshot Explorer, metadata-import review, and updater windows around the current compact, theme-aware app layout.
+- [BUG-18104] Reworked development presets to preserve Git control files and shareable IDE configuration while excluding live Git internals and modern build, package, test, framework, and machine-local caches.
 
 ### Fixed
 - [BUG-18100] Restored `Dev` as the permanent integration branch at the `1.8.6` Stable commit and disabled automatic head-branch deletion so Stable promotion cannot remove it again.
 - [BUG-18102] Prevented deferred metadata replay from overwriting repository metadata changed on another machine or replaying repeatedly after a successful flush.
 - [BUG-18102] Disabled connection pooling for the repository coordination database so disposed writer leases release their file handles predictably on Windows.
-- Corrected the Python pytest-cache rule and removed unsupported VS Code negation rules that previously excluded intended shared configuration.
+- [BUG-18104] Corrected the Python pytest-cache rule and removed unsupported VS Code negation rules that previously excluded intended shared configuration.
 
 ## [1.8.6] - 10.08.2026
 ### Added

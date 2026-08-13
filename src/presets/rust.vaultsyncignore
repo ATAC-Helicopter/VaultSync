@@ -10,3 +10,4 @@ Cargo.lock.bak
 
 # OS
 .DS_Store
+.git/

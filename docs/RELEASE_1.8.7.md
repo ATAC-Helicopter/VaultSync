@@ -55,6 +55,12 @@ assumed and must be approved explicitly if the release needs one.
   post-publish gate and desktop updater consume the same schema; the updater
   rejects a release when its manifest identity or any GitHub asset name, URL,
   size, or digest disagrees.
+- Snapshot Explorer, metadata-import review, and updater windows now use the
+  current compact, theme-aware utility layout (`BUG-18103`).
+- Built-in development presets now cover current generated caches and local IDE
+  state without relying on unsupported negation rules; Windows Robocopy also
+  consumes the shared preset resolver. Live `.git` internals remain excluded
+  pending the separately gated full-repository mode (`BUG-18104`, `VS-1801`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime

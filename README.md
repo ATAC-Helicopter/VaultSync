@@ -204,9 +204,10 @@ Included presets cover:
 
 Choose **No preset** to include everything, or configure your own exclusion rules.
 Development presets remove disposable build output, package caches, test caches,
-logs, and machine-local IDE state while preserving Git repository history and
-shareable editor configuration. VaultSync rules are exclusion-only; `!` negation
-rules from `.gitignore` are not supported.
+logs, and machine-local IDE state while preserving Git control files and shareable
+editor configuration. Live `.git` internals remain excluded until full-repository
+backup consistency and restore safeguards are available. VaultSync rules are
+exclusion-only; `!` negation rules from `.gitignore` are not supported.
 
 ---
 
