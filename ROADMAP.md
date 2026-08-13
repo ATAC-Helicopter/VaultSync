@@ -501,6 +501,19 @@ that exists only on the release branch or remains planned.
     destination already contains metadata.
   - Completed on the 1.8.7 release branch on 2026-08-12 together with durable
     writer protection for every existing metadata export and tombstone path.
+- [x] `BUG-18103` `P1` Modernize outdated utility windows and restore theme
+  consistency across Snapshot Explorer, metadata-import review, and updater UI.
+  - Acceptance: the utility windows use the current compact layout and dynamic
+    theme resources without regressing browsing, preview, import, or update
+    behavior.
+  - Completed on the 1.8.7 release branch on 2026-08-13 in PR #546.
+- [x] `BUG-18104` `P0` Correct stale preset exclusions and eliminate Windows
+  preset-resolution drift.
+  - Acceptance: current generated state is excluded, shared editor and Git
+    control files remain protected, live `.git` internals remain gated by
+    `VS-1801`, unsupported negation rules are absent, and every backup path uses
+    the shared preset resolver with regression coverage.
+  - Completed on the 1.8.7 release branch on 2026-08-13 in PR #546.
 
 ### Delivery sequence
 

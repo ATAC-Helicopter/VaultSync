@@ -70,3 +70,4 @@ Thumbs.db
 *.old
 *.swp
 *.lock
+.git/

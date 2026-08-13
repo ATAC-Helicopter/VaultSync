@@ -28,3 +28,4 @@ Thumbs.db
 *.old
 
 # Git / metadata
+.git/

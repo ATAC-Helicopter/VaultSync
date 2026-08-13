@@ -106,7 +106,7 @@
       "name": "Avalonia",
       "category": "Mobile / UI",
       "file": "avalonia.vaultsyncignore",
-      "description": "Excludes build output, test artefacts, caches, local tooling state, and IDE junk while preserving repository history."
+      "description": "Excludes build output, test artefacts, caches, local tooling state, IDE junk, and live Git internals while preserving shareable repository files."
     },
 
     {
