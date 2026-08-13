@@ -260,7 +260,9 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.
 - Filter coverage now includes nested `**/bin/**`, `**/Intermediate/**`, `.import`, and render-cache style folders.
-- Source-code presets now keep useful repository metadata such as `.github` workflows and Git config files while still excluding `.git` internals and generated build outputs.
+- Source-code presets now keep the complete `.git` repository history, `.github`
+  workflows, Git config files, and shareable editor settings while excluding
+  generated build output and machine-local caches.
 
 ## [1.7.4]
 

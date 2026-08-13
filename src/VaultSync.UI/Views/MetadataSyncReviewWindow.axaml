@@ -67,10 +67,6 @@
         </StackPanel>
 
         <StackPanel Spacing="10">
-          <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.Title}"
-                     FontSize="13"
-                     FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextSecondary}" />
           <Border Background="{DynamicResource Surface1}"
                   BorderBrush="{DynamicResource BorderSoft}"
                   BorderThickness="1"

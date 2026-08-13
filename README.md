@@ -203,6 +203,10 @@ Included presets cover:
 - General project workflows
 
 Choose **No preset** to include everything, or configure your own exclusion rules.
+Development presets remove disposable build output, package caches, test caches,
+logs, and machine-local IDE state while preserving Git repository history and
+shareable editor configuration. VaultSync rules are exclusion-only; `!` negation
+rules from `.gitignore` are not supported.
 
 ---
 

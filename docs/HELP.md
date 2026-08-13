@@ -55,6 +55,11 @@ deleting source files or stored backup data.
   - Steam mods
   - Creative suite workspaces
 - Projects show a short preset description and example hint under the preset selector.
+- Development presets keep `.git` repository history and shared editor/project
+  configuration while excluding generated output, package and test caches, logs,
+  and machine-local IDE indexes.
+- `.vaultsyncignore` supports exclusion rules only. Git-style `!` include/negation
+  rules are not supported, and VaultSync does not automatically import `.gitignore`.
 
 ## Destination Modes
 VaultSync supports two destination modes:
