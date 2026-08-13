@@ -6,62 +6,142 @@
     x:Class="VaultSync.UI.Views.MetadataSyncReviewWindow"
     x:DataType="vm:MetadataSyncReviewViewModel"
     Title="{infra:LocalizedString Key=MetadataSync.Review.Title}"
-    Width="520"
-    Height="420"
-    MinWidth="480"
-    MinHeight="360"
+    Width="680"
+    Height="560"
+    MinWidth="560"
+    MinHeight="480"
     WindowStartupLocation="CenterOwner"
     Opened="OnWindowOpened"
     Closing="OnWindowClosing">
 
-    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
-        <StackPanel Grid.Row="0" Spacing="6">
-            <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.Title}" FontSize="20" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding SourceLabel}" Foreground="{DynamicResource TextSecondary}" />
+  <Grid RowDefinitions="Auto,*,Auto" Background="{DynamicResource WindowBackground}">
+    <Border Grid.Row="0"
+            Background="{DynamicResource Surface1}"
+            BorderBrush="{DynamicResource BorderSoft}"
+            BorderThickness="0,0,0,1"
+            Padding="28,22">
+      <StackPanel Spacing="5">
+        <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.Title}"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimary}" />
+        <TextBlock Text="{Binding SourceLabel}"
+                   FontSize="13"
+                   Foreground="{DynamicResource TextSecondary}" />
+      </StackPanel>
+    </Border>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="28,22" Spacing="20">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.SourceLabel}"
+                     FontSize="13"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextSecondary}" />
+          <Border Background="{DynamicResource Surface1}"
+                  BorderBrush="{DynamicResource BorderSoft}"
+                  BorderThickness="1"
+                  CornerRadius="12"
+                  Padding="16">
+            <Grid RowDefinitions="Auto,1,Auto" ColumnDefinitions="132,*" RowSpacing="12" ColumnSpacing="14">
+              <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.SourceProjectsRoot}"
+                         Foreground="{DynamicResource TextSecondary}" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding Preview.RootPath}"
+                         FontFamily="Consolas"
+                         FontSize="12"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextPrimary}" />
+              <Border Grid.Row="1" Grid.ColumnSpan="2" Background="{DynamicResource DividerBrush}" />
+              <TextBlock Grid.Row="2"
+                         Text="{infra:LocalizedString Key=MetadataSync.Review.StoreLabel}"
+                         Foreground="{DynamicResource TextSecondary}" />
+              <TextBlock Grid.Row="2" Grid.Column="1"
+                         Text="{Binding Preview.DatabasePath}"
+                         FontFamily="Consolas"
+                         FontSize="12"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextPrimary}" />
+            </Grid>
+          </Border>
         </StackPanel>
 
-        <StackPanel Grid.Row="1" Spacing="10" Margin="0,10,0,0">
-            <Border Classes="card" Padding="{DynamicResource CardPaddingSmall}">
-                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" RowSpacing="4" ColumnSpacing="8">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{infra:LocalizedString Key=MetadataSync.Review.SourceLabel}" />
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Preview.RootPath}" TextWrapping="Wrap" />
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{infra:LocalizedString Key=MetadataSync.Review.StoreLabel}" />
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Preview.DatabasePath}" TextWrapping="Wrap" />
+        <StackPanel Spacing="10">
+          <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.Title}"
+                     FontSize="13"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextSecondary}" />
+          <Border Background="{DynamicResource Surface1}"
+                  BorderBrush="{DynamicResource BorderSoft}"
+                  BorderThickness="1"
+                  CornerRadius="12"
+                  Padding="6">
+            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*">
+              <Border Padding="14,12" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,1">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding Preview.NewProjects}" FontSize="22" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.AddProjects}" Foreground="{DynamicResource TextSecondary}" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="1" Padding="14,12" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding Preview.LinkedProjects}" FontSize="22" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.LinkProjects}" Foreground="{DynamicResource TextSecondary}" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Row="1" Padding="14,12" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,1">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding Preview.NewSnapshots}" FontSize="22" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.AddSnapshots}" Foreground="{DynamicResource TextSecondary}" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Row="1" Grid.Column="1" Padding="14,12" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding Preview.NewBackups}" FontSize="22" FontWeight="SemiBold" />
+                  <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.AddBackups}" Foreground="{DynamicResource TextSecondary}" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Row="2" Grid.ColumnSpan="2" Padding="14,12">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.DeleteBackups}"
+                             Foreground="{DynamicResource TextSecondary}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Preview.DeletedBackups}"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource DangerTextBrush}" />
                 </Grid>
-            </Border>
-
-            <Border Classes="card" Padding="{DynamicResource CardPaddingSmall}">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="6" ColumnSpacing="10">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{infra:LocalizedString Key=MetadataSync.Review.AddProjects}" />
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Preview.NewProjects}" />
-
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{infra:LocalizedString Key=MetadataSync.Review.LinkProjects}" />
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Preview.LinkedProjects}" />
-
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{infra:LocalizedString Key=MetadataSync.Review.AddSnapshots}" />
-                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Preview.NewSnapshots}" />
-
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{infra:LocalizedString Key=MetadataSync.Review.AddBackups}" />
-                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Preview.NewBackups}" />
-
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{infra:LocalizedString Key=MetadataSync.Review.DeleteBackups}" />
-                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Preview.DeletedBackups}" />
-                </Grid>
-            </Border>
-
-            <TextBlock Text="{Binding WarningDeletesText}"
-                       Foreground="{DynamicResource WarningTextBrush}"
-                       IsVisible="{Binding HasDeletes}"
-                       TextWrapping="Wrap" />
+              </Border>
+            </Grid>
+          </Border>
         </StackPanel>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0" Spacing="8">
-            <Button Content="{infra:LocalizedString Key=MetadataSync.Review.Cancel}"
-                    Command="{Binding CancelCommand}"
-                    MinWidth="96" />
-            <Button Content="{infra:LocalizedString Key=MetadataSync.Review.Confirm}"
-                    Command="{Binding ConfirmCommand}"
-                    MinWidth="96" />
-        </StackPanel>
-    </Grid>
+        <Border Background="{DynamicResource DangerSoftBrush}"
+                BorderBrush="{DynamicResource DangerBrush}"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="14"
+                IsVisible="{Binding HasDeletes}">
+          <TextBlock Text="{Binding WarningDeletesText}"
+                     Foreground="{DynamicResource DangerTextBrush}"
+                     TextWrapping="Wrap" />
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="2"
+            Background="{DynamicResource Surface1}"
+            BorderBrush="{DynamicResource BorderSoft}"
+            BorderThickness="0,1,0,0"
+            Padding="20,16">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+        <Button Content="{infra:LocalizedString Key=MetadataSync.Review.Cancel}"
+                Classes="action-ghost"
+                Command="{Binding CancelCommand}"
+                MinWidth="108" />
+        <Button Content="{infra:LocalizedString Key=MetadataSync.Review.Confirm}"
+                Classes="action-primary"
+                Command="{Binding ConfirmCommand}"
+                MinWidth="108" />
+      </StackPanel>
+    </Border>
+  </Grid>
 </Window>
