@@ -46,6 +46,60 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void PreviewImportFromStore_RejectsNewerMetadataSchemaWithoutMutatingRepository()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        MetadataStore store = CreateStore(metaRoot);
+        store.UpsertMetaInfo(new MetaInfo
+        {
+            SchemaVersion = MetadataStore.CurrentSchemaVersion + 1,
+            CreatedUtc = DateTime.UtcNow,
+            LastWriteUtc = DateTime.UtcNow,
+            WriterAppVersion = "future-version",
+            WriterMachineId = "future-machine"
+        });
+        SqliteRepository repo = CreateRepository(dbPath);
+
+        MetadataSyncPreview preview = new MetadataSyncService(repo).PreviewImportFromStore(metaRoot);
+
+        Assert.Equal(MetadataSyncStatus.Incompatible, preview.Status);
+        Assert.Empty(repo.GetAllProjects());
+    }
+
+    [Fact]
+    public void PreviewImportFromStore_CountsLegacyFoldersOnlyWhenProjectsMayBeCreated()
+    {
+        string metaRoot = CreateTempDir();
+        string firstBackup = Path.Combine(metaRoot, "Legacy Project", "2026-08-14_09-30-00");
+        string secondBackup = Path.Combine(metaRoot, "Legacy Project", "2026-08-15_10-45-00");
+        Directory.CreateDirectory(firstBackup);
+        Directory.CreateDirectory(secondBackup);
+        File.WriteAllText(Path.Combine(firstBackup, "first.txt"), "first");
+        File.WriteAllText(Path.Combine(secondBackup, "second.txt"), "second");
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = CreateRepository(dbPath);
+        var service = new MetadataSyncService(repo);
+
+        MetadataSyncPreview allowed = service.PreviewImportFromStore(
+            metaRoot,
+            new MetadataSyncOptions(AllowCreateProjects: true, MarkNeedsRestoreOnImport: true));
+        MetadataSyncPreview blocked = service.PreviewImportFromStore(
+            metaRoot,
+            new MetadataSyncOptions(AllowCreateProjects: false, MarkNeedsRestoreOnImport: true));
+
+        Assert.Equal(MetadataSyncStatus.Success, allowed.Status);
+        Assert.Equal(1, allowed.NewProjects);
+        Assert.Equal(2, allowed.NewSnapshots);
+        Assert.Equal(2, allowed.NewBackups);
+        Assert.Equal(MetadataSyncStatus.NoStore, blocked.Status);
+        Assert.Equal(0, blocked.NewProjects);
+        Assert.Equal(0, blocked.NewSnapshots);
+        Assert.Equal(0, blocked.NewBackups);
+        Assert.Empty(repo.GetAllProjects());
+    }
+
+    [Fact]
     public void PreviewImportFromStore_CountsChangesWithoutMutatingTheRepository()
     {
         string metaRoot = CreateTempDir();

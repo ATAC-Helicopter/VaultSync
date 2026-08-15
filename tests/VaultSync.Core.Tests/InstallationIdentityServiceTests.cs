@@ -11,6 +11,19 @@ namespace VaultSync.Core.Tests;
 public sealed class InstallationIdentityServiceTests
 {
     [Fact]
+    public void Constructor_WithoutOverrideUsesVaultSyncApplicationDataDirectory()
+    {
+        var service = new InstallationIdentityService();
+
+        Assert.Equal(
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "VaultSync",
+                InstallationIdentityService.IdentityFileName),
+            service.IdentityPath);
+    }
+
+    [Fact]
     public void GetOrCreate_CreatesCanonicalDurableIdentity()
     {
         using var directory = new TempDirectory();
