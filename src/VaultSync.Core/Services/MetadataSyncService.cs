@@ -1142,7 +1142,24 @@ public sealed class MetadataSyncService
             tombstones.SnapshotIds,
             backups.LiveSnapshotIds);
 
-        MetadataSyncPreview filesystemPreview = PreviewBackupFoldersFromDestination(rootPath, opts, store.DatabasePath);
+        HashSet<string> metadataProjectNames = metaProjects
+            .Where(project => !string.IsNullOrWhiteSpace(project.Name))
+            .Select(project => project.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> metadataBackupPaths = metaBackups
+            .Where(backup =>
+                !string.IsNullOrWhiteSpace(backup.PathRel) &&
+                !tombstones.BackupIds.Contains(backup.ExternalId) &&
+                TryResolveBackupPath(rootPath, backup.PathRel, out _))
+            .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.PathRel)))
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        MetadataSyncPreview filesystemPreview = PreviewBackupFoldersFromDestination(
+            rootPath,
+            opts,
+            store.DatabasePath,
+            metadataProjectNames,
+            metadataBackupPaths);
         int addProjects = projectCounts.Add + filesystemPreview.NewProjects;
         addSnapshots += filesystemPreview.NewSnapshots;
         int addBackups = backups.Add + filesystemPreview.NewBackups;
@@ -1500,7 +1517,12 @@ public sealed class MetadataSyncService
             totalBytes: sizeBytes);
     }
 
-    private MetadataSyncPreview PreviewBackupFoldersFromDestination(string rootPath, MetadataSyncOptions opts, string databasePath)
+    private MetadataSyncPreview PreviewBackupFoldersFromDestination(
+        string rootPath,
+        MetadataSyncOptions opts,
+        string databasePath,
+        IReadOnlySet<string>? representedProjectNames = null,
+        IReadOnlySet<string>? representedBackupPaths = null)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
         {
@@ -1517,6 +1539,8 @@ public sealed class MetadataSyncService
             .GetAllProjects()
             .Select(p => p.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (representedProjectNames is not null)
+            projectsByName.UnionWith(representedProjectNames);
         IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
         IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
         var existingBackupPaths = _repo
@@ -1525,6 +1549,8 @@ public sealed class MetadataSyncService
             .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.Path)))
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (representedBackupPaths is not null)
+            existingBackupPaths.UnionWith(representedBackupPaths);
 
         int addProjects = 0;
         int addSnapshots = 0;
