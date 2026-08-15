@@ -468,20 +468,20 @@ public sealed class NetworkMountService
             $"Mounted {DisplayName(destination)}");
     }
 
-    private static string SanitizeMountError(string stderr, string? password, string share, string shareDisplay)
+    internal static string SanitizeMountError(string stderr, string? password, string share, string shareDisplay)
     {
         string sanitized = stderr ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(share))
+        {
+            sanitized = sanitized.Replace(share, shareDisplay, StringComparison.OrdinalIgnoreCase);
+        }
 
         if (!string.IsNullOrWhiteSpace(password))
         {
             sanitized = sanitized.Replace(password, "******", StringComparison.Ordinal);
             string escaped = Uri.EscapeDataString(password);
             sanitized = sanitized.Replace(escaped, "******", StringComparison.Ordinal);
-        }
-
-        if (!string.IsNullOrWhiteSpace(share))
-        {
-            sanitized = sanitized.Replace(share, shareDisplay, StringComparison.OrdinalIgnoreCase);
         }
 
         return sanitized;
@@ -809,7 +809,7 @@ public sealed class NetworkMountService
         return !string.IsNullOrWhiteSpace(source) && !string.IsNullOrWhiteSpace(mountPoint);
     }
 
-    private static string AppendShareSubPath(string mountPoint, string subPath)
+    internal static string AppendShareSubPath(string mountPoint, string subPath)
     {
         if (string.IsNullOrWhiteSpace(subPath))
             return mountPoint;
@@ -862,7 +862,7 @@ public sealed class NetworkMountService
         RuntimeVaultLogger.Instance.Info($"[NetworkMount] {message}");
     }
 
-    private static string Slugify(string input)
+    internal static string Slugify(string input)
     {
         var sb = new StringBuilder();
         foreach (char ch in input)

@@ -64,6 +64,9 @@ assumed and must be approved explicitly if the release needs one.
 - Metadata-import previews now deduplicate portable metadata and corresponding
   legacy repository folders, count each proposed change once, and remain
   repeatable without mutating the local repository (`BUG-18105`).
+- macOS SMB mount errors now normalize the complete credential-bearing share
+  identity before masking any remaining raw or escaped password text, producing
+  clean credential-free diagnostics (`BUG-18106`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime

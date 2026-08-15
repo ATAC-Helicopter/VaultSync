@@ -1010,7 +1010,7 @@ public sealed class MetadataSyncService
         return false;
     }
 
-    private static IEnumerable<string> GetTraversableDirectories(string path)
+    private static List<string> GetTraversableDirectories(string path)
     {
         IEnumerable<string> directories;
         try
@@ -1185,7 +1185,7 @@ public sealed class MetadataSyncService
 
     private static PreviewProjectCounts CountPreviewProjects(
         IEnumerable<MetaProject> projects,
-        IDictionary<string, int> projectMap,
+        Dictionary<string, int> projectMap,
         IReadOnlyCollection<Project> localProjects,
         bool allowCreateProjects)
     {
@@ -1240,41 +1240,62 @@ public sealed class MetadataSyncService
     private static PreviewBackupAnalysis AnalyzePreviewBackups(
         IEnumerable<MetaBackup> backups,
         string rootPath,
-        IReadOnlyDictionary<string, int> projectMap,
+        Dictionary<string, int> projectMap,
         IReadOnlyDictionary<string, int> backupExternalMap,
-        ISet<string> tombstonedBackupIds)
+        HashSet<string> tombstonedBackupIds)
     {
         var liveSnapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         int add = 0;
         int delete = 0;
         foreach (MetaBackup backup in backups)
         {
-            if (string.IsNullOrWhiteSpace(backup.ExternalId))
-                continue;
-
-            if (!string.IsNullOrWhiteSpace(backup.SnapshotExternalId) && !tombstonedBackupIds.Contains(backup.ExternalId))
-                liveSnapshotIds.Add(backup.SnapshotExternalId);
-            if (tombstonedBackupIds.Contains(backup.ExternalId))
-                continue;
-            if (!TryResolveBackupPath(rootPath, backup.PathRel, out _))
-            {
-                tombstonedBackupIds.Add(backup.ExternalId);
-                delete += backupExternalMap.ContainsKey(backup.ExternalId) ? 1 : 0;
-                continue;
-            }
-            if (projectMap.ContainsKey(backup.ProjectExternalId) && !backupExternalMap.ContainsKey(backup.ExternalId))
-                add++;
+            (int backupAdd, int backupDelete) = AnalyzePreviewBackup(
+                backup,
+                rootPath,
+                projectMap,
+                backupExternalMap,
+                tombstonedBackupIds,
+                liveSnapshotIds);
+            add += backupAdd;
+            delete += backupDelete;
         }
 
         return new PreviewBackupAnalysis(liveSnapshotIds, add, delete);
     }
 
+    private static (int Add, int Delete) AnalyzePreviewBackup(
+        MetaBackup backup,
+        string rootPath,
+        Dictionary<string, int> projectMap,
+        IReadOnlyDictionary<string, int> backupExternalMap,
+        HashSet<string> tombstonedBackupIds,
+        HashSet<string> liveSnapshotIds)
+    {
+        if (string.IsNullOrWhiteSpace(backup.ExternalId))
+            return default;
+
+        bool isTombstoned = tombstonedBackupIds.Contains(backup.ExternalId);
+        if (!string.IsNullOrWhiteSpace(backup.SnapshotExternalId) && !isTombstoned)
+            liveSnapshotIds.Add(backup.SnapshotExternalId);
+        if (isTombstoned)
+            return default;
+        if (!TryResolveBackupPath(rootPath, backup.PathRel, out _))
+        {
+            tombstonedBackupIds.Add(backup.ExternalId);
+            return (0, backupExternalMap.ContainsKey(backup.ExternalId) ? 1 : 0);
+        }
+
+        bool isNew = projectMap.ContainsKey(backup.ProjectExternalId) &&
+                     !backupExternalMap.ContainsKey(backup.ExternalId);
+        return (isNew ? 1 : 0, 0);
+    }
+
     private static int CountPreviewSnapshots(
         IEnumerable<MetaSnapshot> snapshots,
-        IReadOnlyDictionary<string, int> projectMap,
+        Dictionary<string, int> projectMap,
         IReadOnlyDictionary<string, int> snapshotExternalMap,
-        ISet<string> tombstonedSnapshotIds,
-        IReadOnlySet<string> liveSnapshotIds)
+        HashSet<string> tombstonedSnapshotIds,
+        HashSet<string> liveSnapshotIds)
     {
         int add = 0;
         foreach (MetaSnapshot snapshot in snapshots.Where(snapshot => !string.IsNullOrWhiteSpace(snapshot.ExternalId)))
@@ -1376,7 +1397,7 @@ public sealed class MetadataSyncService
 
     private static bool IsRepairableLegacyBackup(
         LegacyBackupFolder folder,
-        IReadOnlyDictionary<string, Backup> existingBackupByPath) =>
+        Dictionary<string, Backup> existingBackupByPath) =>
         existingBackupByPath.TryGetValue(NormalizeStablePath(folder.RelativePath), out Backup? backup) &&
         backup.IsImported &&
         backup.TotalBytes <= 0;

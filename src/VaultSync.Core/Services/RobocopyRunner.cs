@@ -283,48 +283,43 @@ namespace VaultSync.Core.Services
         {
             foreach (string raw in patterns)
             {
-                string line = raw.Trim();
-
-                // Skip comments / empty
-                if (line.Length == 0 || line.StartsWith("#"))
+                if (!TryNormalizeIgnorePattern(raw, out string pattern, out bool isDirectory))
                     continue;
 
-                // A trailing recursive wildcard denotes a directory. Robocopy's /XD
-                // is recursive already, so reduce **/bin/** to the portable name bin.
-                if (line.EndsWith("/**", StringComparison.Ordinal) ||
-                    line.EndsWith("\\**", StringComparison.Ordinal))
-                {
-                    string d = line[..^3].TrimEnd('/', '\\');
-                    if (d.StartsWith("**/", StringComparison.Ordinal) ||
-                        d.StartsWith("**\\", StringComparison.Ordinal))
-                    {
-                        d = d[3..];
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(d))
-                        dirs.Add(NormalizeRobocopyGlob(d));
-
-                    continue;
-                }
-
-                // Very simple parsing:
-                // - trailing slash => treat as directory pattern
-                // - everything else => file/glob pattern
-                // - strip leading "./"
-                if (line.StartsWith("./")) line = line.Substring(2);
-
-                if (line.EndsWith("/"))
-                {
-                    // robocopy /XD likes bare dir names or relative paths; leave as-is
-                    string d = line.TrimEnd('/');
-                    if (!string.IsNullOrWhiteSpace(d))
-                        dirs.Add(NormalizeRobocopyGlob(d));
-                }
-                else
-                {
-                    files.Add(NormalizeRobocopyGlob(line));
-                }
+                (isDirectory ? dirs : files).Add(pattern);
             }
+        }
+
+        internal static bool TryNormalizeIgnorePattern(string raw, out string pattern, out bool isDirectory)
+        {
+            string line = raw.Trim();
+            pattern = string.Empty;
+            isDirectory = false;
+            if (line.Length == 0 || line.StartsWith('#'))
+                return false;
+
+            // Robocopy's /XD is recursive already, so reduce **/bin/** to bin.
+            if (line.EndsWith("/**", StringComparison.Ordinal) ||
+                line.EndsWith("\\**", StringComparison.Ordinal))
+            {
+                string directory = line[..^3].TrimEnd('/', '\\');
+                if (directory.StartsWith("**/", StringComparison.Ordinal) ||
+                    directory.StartsWith("**\\", StringComparison.Ordinal))
+                {
+                    directory = directory[3..];
+                }
+
+                pattern = NormalizeRobocopyGlob(directory);
+                isDirectory = true;
+                return pattern.Length > 0;
+            }
+
+            if (line.StartsWith("./", StringComparison.Ordinal))
+                line = line[2..];
+
+            isDirectory = line.EndsWith('/');
+            pattern = NormalizeRobocopyGlob(isDirectory ? line.TrimEnd('/') : line);
+            return pattern.Length > 0;
         }
 
         private static string NormalizeRobocopyGlob(string pattern)
