@@ -1,0 +1,39 @@
+{
+  "items": [
+    {
+      "id": "item-managed",
+      "title": "VS-2001: Preserve a complete wrapped ticket title across",
+      "status": "Todo",
+      "priority": "P1",
+      "release": "1.8.x",
+      "area": "Release",
+      "content": {
+        "type": "Issue",
+        "number": 2001,
+        "body": "Synced from ROADMAP.md\nDescription:\nfragment"
+      }
+    },
+    {
+      "id": "item-manual",
+      "title": "BUG-2002: Preserve completed item state",
+      "status": "Done",
+      "priority": "P0",
+      "release": "1.8.x",
+      "area": "Core",
+      "content": {
+        "type": "Issue",
+        "number": 2002,
+        "body": "## Goal\n\nThis manually maintained contract must remain byte-for-byte unchanged."
+      }
+    },
+    {
+      "id": "item-draft",
+      "title": "REL-2003: Consecutive ticket parsing",
+      "content": {
+        "id": "draft-content-2003",
+        "type": "DraftIssue",
+        "body": ""
+      }
+    }
+  ]
+}

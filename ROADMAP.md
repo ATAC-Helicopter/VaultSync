@@ -45,6 +45,12 @@ Recovery Horizon (`1.9`) release families.
 The checkbox is the delivery state. GitHub Project status, milestone, labels,
 assignee, and dates mirror this file rather than defining a second roadmap.
 
+Before synchronizing descriptions, run
+`pwsh scripts/sync_project_descriptions.ps1 -ProjectNumber 7 -DryRun` and review
+the structured change report. The synchronizer reconstructs wrapped roadmap
+titles for matching, preserves manually maintained issue contracts, and writes
+only bodies carrying its `Synced from ROADMAP.md` ownership marker.
+
 ## Product arc
 
 | Family | Name | Product question |
@@ -469,10 +475,11 @@ that exists only on the release branch or remains planned.
 
 ### Confirmed defects entering 1.8.7
 
-- [ ] `BUG-18098` `P1` Preserve complete wrapped roadmap ticket titles, scope,
+- [x] `BUG-18098` `P1` Preserve complete wrapped roadmap ticket titles, scope,
   and acceptance text when synchronizing GitHub issues and Project entries.
   - Acceptance: parser fixtures cover multiline titles and nested scope bullets,
     and a dry run reports exact changes without rewriting valid issue contracts.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
 - [x] `BUG-18099` `P0` Service the .NET runtime and coordinated Microsoft
   packages to the security-fixed `10.0.11` baseline or newer validated patch.
   - Acceptance: all current runtime-pack Dependabot alerts are closed, direct

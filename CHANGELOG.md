@@ -16,6 +16,7 @@
 - [BUG-18104] Reworked development presets to preserve Git control files and shareable IDE configuration while excluding live Git internals and modern build, package, test, framework, and machine-local caches.
 
 ### Fixed
+- [BUG-18098] Rebuilt roadmap description synchronization around tested wrapped-title parsing, ownership-aware body preservation, and an exact write-free dry-run report.
 - [BUG-18100] Restored `Dev` as the permanent integration branch at the `1.8.6` Stable commit and disabled automatic head-branch deletion so Stable promotion cannot remove it again.
 - [BUG-18102] Prevented deferred metadata replay from overwriting repository metadata changed on another machine or replaying repeatedly after a successful flush.
 - [BUG-18102] Disabled connection pooling for the repository coordination database so disposed writer leases release their file handles predictably on Windows.
