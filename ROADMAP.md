@@ -530,6 +530,11 @@ that exists only on the release branch or remains planned.
     IDs never produce deletion tombstones; each locally deleted unreferenced
     snapshot produces exactly one tombstone.
   - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18108` `P1` Stop repeated immutable updater manifest downloads.
+  - Acceptance: canonical and platform patch manifests are reused across
+    application restarts only when their release URL, exact size, and trusted
+    SHA-256 identity still match; tampered and linked entries fail closed.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
 
 ### Delivery sequence
 

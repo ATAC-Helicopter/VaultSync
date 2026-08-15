@@ -45,6 +45,12 @@ Linux can use architecture-specific patch names:
   SHA-256. A missing manifest, unsupported schema, duplicate or unexpected
   asset, unsafe URL, or metadata mismatch fails closed instead of presenting an
   unverified download.
+- Canonical and platform patch manifests are immutable for a published release
+  and are cached on disk by official URL, exact size, and GitHub-published
+  SHA-256. Cache bytes are rehashed before every use; linked, truncated,
+  oversized, or tampered entries are ignored and never trusted as release
+  metadata. This keeps scheduled checks and restarts from repeatedly increasing
+  GitHub asset download counters for the same release.
 - Patch apply does not replace user config/data.
 - A failed in-process replacement restores overwritten files and removes newly created files before reporting failure.
 - Full power-loss atomicity requires a future directory-level installer transaction; until then, release qualification must exercise interrupted updates and retain full-installer recovery.
