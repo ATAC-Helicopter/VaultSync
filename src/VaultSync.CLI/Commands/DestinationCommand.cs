@@ -79,10 +79,7 @@ namespace VaultSync.CLI.Commands
                 NetworkCredentialProfile? profile = ResolveCredential(config, dest);
                 DestinationResolution resolution = mountService.PrepareDestination(dest, profile);
                 bool reachable = resolution.IsSuccess;
-                string defaultMessage = reachable ? "Reachable" : "Unreachable";
-                string message = string.IsNullOrWhiteSpace(resolution.Message)
-                    ? defaultMessage
-                    : resolution.Message;
+                string message = ResolveDestinationMessage(reachable, resolution.Message);
                 NetworkMountService.Cleanup(resolution);
                 return new DestinationInfo(alias, path, status, reachable, message);
             }
@@ -115,16 +112,27 @@ namespace VaultSync.CLI.Commands
 
             foreach (DestinationInfo row in results)
             {
-                string testedDetail = row.Reachable ? "Reachable" : row.Message;
-                string detail = test
-                    ? testedDetail
-                    : row.Message;
-
-                table.AddRow(row.Alias, row.Path, row.Status, detail);
+                table.AddRow(row.Alias, row.Path, row.Status, ResolveTableDetail(row, test));
             }
 
             AnsiConsole.MarkupLine("[bold]Configured backup destinations[/]");
             AnsiConsole.Write(table);
+        }
+
+        internal static string ResolveDestinationMessage(bool reachable, string? message)
+        {
+            if (!string.IsNullOrWhiteSpace(message))
+                return message;
+
+            return reachable ? "Reachable" : "Unreachable";
+        }
+
+        internal static string ResolveTableDetail(DestinationInfo row, bool test)
+        {
+            if (!test)
+                return row.Message;
+
+            return row.Reachable ? "Reachable" : row.Message;
         }
 
         private static List<BackupDestination> BuildActiveDestinations(AppConfig config)
