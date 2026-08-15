@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using VaultSync.UI.Services;
 using Xunit;
@@ -74,6 +76,57 @@ public sealed class ReleaseManifestVerifierTests
             CreateManifest(), Tag, prerelease: false, [], out _));
     }
 
+    [Fact]
+    public void PlatformAssets_AreSelectedOnlyFromVerifiedManifestEntries()
+    {
+        List<ReleaseManifestAsset> assets = CreatePlatformAssets();
+
+        var patch = GitHubUpdateService.GetPatchAssets(assets);
+        var installer = GitHubUpdateService.GetInstallerAsset(assets);
+
+        Assert.NotNull(patch.ManifestUrl);
+        Assert.NotNull(patch.ArchiveUrl);
+        Assert.Equal(Hash, patch.ManifestSha256);
+        Assert.Equal(Hash, patch.ArchiveSha256);
+        Assert.Equal(10, patch.ManifestSize);
+        Assert.Equal(20, patch.ArchiveSize);
+        Assert.EndsWith(".zip", patch.ArchiveName, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(installer.InstallerUrl);
+        Assert.Equal(Hash, installer.InstallerSha256);
+        Assert.Equal(30, installer.InstallerSize);
+
+        if (OperatingSystem.IsWindows())
+            Assert.EndsWith(".exe", installer.InstallerName, StringComparison.OrdinalIgnoreCase);
+        else if (OperatingSystem.IsMacOS())
+            Assert.EndsWith(".dmg", installer.InstallerName, StringComparison.OrdinalIgnoreCase);
+        else
+            Assert.Contains(
+                new[] { ".deb", ".AppImage", ".tar.gz" },
+                extension => installer.InstallerName!.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void PlatformAssets_RejectUntrustedUrlsAndEmptyCollections()
+    {
+        List<ReleaseManifestAsset> untrusted = CreatePlatformAssets()
+            .Select(asset => new ReleaseManifestAsset
+            {
+                Name = asset.Name,
+                Platform = asset.Platform,
+                Architecture = asset.Architecture,
+                PackageKind = asset.PackageKind,
+                SizeBytes = asset.SizeBytes,
+                Sha256 = asset.Sha256,
+                DownloadUrl = $"https://evil.example/{asset.Name}"
+            })
+            .ToList();
+
+        Assert.Null(GitHubUpdateService.GetPatchAssets([]).ArchiveUrl);
+        Assert.Null(GitHubUpdateService.GetInstallerAsset([]).InstallerUrl);
+        Assert.Null(GitHubUpdateService.GetPatchAssets(untrusted).ArchiveUrl);
+        Assert.Null(GitHubUpdateService.GetInstallerAsset(untrusted).InstallerUrl);
+    }
+
     private static string CreateManifest()
     {
         var manifest = new
@@ -117,4 +170,40 @@ public sealed class ReleaseManifestVerifierTests
                 100,
                 $"sha256:{Hash}")
         ];
+
+    private static List<ReleaseManifestAsset> CreatePlatformAssets()
+    {
+        var assets = new List<ReleaseManifestAsset>();
+        foreach (string suffix in new[]
+                 {
+                     "windows", "macos", "macos-apple-silicon", "macos-intel",
+                     "linux", "linux-x64", "linux-arm64"
+                 })
+        {
+            assets.Add(CreateAsset($"vaultsync-patch-{suffix}.json", 10));
+            assets.Add(CreateAsset($"vaultsync-patch-{suffix}.zip", 20));
+        }
+
+        assets.Add(CreateAsset("VaultSync-1.8.7-setup.exe", 30));
+        assets.Add(CreateAsset("VaultSync-1.8.7-macos.dmg", 30));
+        foreach (string suffix in new[] { "linux-x64", "linux-arm64" })
+        {
+            assets.Add(CreateAsset($"VaultSync-1.8.7-{suffix}.deb", 30));
+            assets.Add(CreateAsset($"VaultSync-1.8.7-{suffix}.AppImage", 30));
+            assets.Add(CreateAsset($"VaultSync-1.8.7-{suffix}.tar.gz", 30));
+        }
+
+        return assets;
+    }
+
+    private static ReleaseManifestAsset CreateAsset(string name, long size) => new()
+    {
+        Name = name,
+        Platform = "test",
+        Architecture = "test",
+        PackageKind = "test",
+        SizeBytes = size,
+        Sha256 = Hash,
+        DownloadUrl = $"https://github.com/ATAC-Helicopter/VaultSync/releases/download/{Tag}/{name}"
+    };
 }

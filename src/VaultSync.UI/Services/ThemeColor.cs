@@ -13,7 +13,7 @@ internal static class ThemeColor
             return fallback;
 
         string candidate = value.Trim();
-        if (!candidate.StartsWith("#", StringComparison.Ordinal))
+        if (!candidate.StartsWith('#'))
             candidate = "#" + candidate;
 
         return Color.TryParse(candidate, out Color color)

@@ -509,7 +509,7 @@ namespace VaultSync.UI.Services
             }
         }
 
-        private static (string? ManifestUrl, string? ManifestSha256, long ManifestSize, Uri? ArchiveUrl, string? ArchiveName, string? ArchiveSha256, long ArchiveSize) GetPatchAssets(IReadOnlyCollection<ReleaseManifestAsset> assets)
+        internal static (string? ManifestUrl, string? ManifestSha256, long ManifestSize, Uri? ArchiveUrl, string? ArchiveName, string? ArchiveSha256, long ArchiveSize) GetPatchAssets(IReadOnlyCollection<ReleaseManifestAsset> assets)
         {
             if (assets.Count == 0)
                 return (null, null, 0, null, null, null, 0);
@@ -546,7 +546,7 @@ namespace VaultSync.UI.Services
             return (null, null, 0, null, null, null, 0);
         }
 
-        private static (Uri? InstallerUrl, string? InstallerName, string? InstallerSha256, long InstallerSize) GetInstallerAsset(IReadOnlyCollection<ReleaseManifestAsset> assets)
+        internal static (Uri? InstallerUrl, string? InstallerName, string? InstallerSha256, long InstallerSize) GetInstallerAsset(IReadOnlyCollection<ReleaseManifestAsset> assets)
         {
             if (assets.Count == 0)
                 return (null, null, null, 0);

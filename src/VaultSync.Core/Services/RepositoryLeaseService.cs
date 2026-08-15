@@ -347,7 +347,7 @@ public sealed class RepositoryLeaseService
                string.Equals(inspection.Lease.Nonce, nonce, StringComparison.Ordinal);
     }
 
-    internal bool TryRelease(string rootPath, string installationId, string nonce)
+    internal static bool TryRelease(string rootPath, string installationId, string nonce)
     {
         string databasePath = GetDatabasePath(rootPath);
         if (!File.Exists(databasePath) || IsLinkedFile(databasePath))
@@ -911,6 +911,6 @@ public sealed class RepositoryLeaseHandle : IDisposable
             return;
 
         _heartbeatTimer.Dispose();
-        _service.TryRelease(_rootPath, Lease.InstallationId, Lease.Nonce);
+        RepositoryLeaseService.TryRelease(_rootPath, Lease.InstallationId, Lease.Nonce);
     }
 }

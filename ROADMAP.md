@@ -519,6 +519,11 @@ that exists only on the release branch or remains planned.
   - Acceptance: a preview reports each project, snapshot, and backup once,
     remains read-only, and repeated previews return the same result.
   - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18106` `P1` Normalize credential-free macOS SMB mount diagnostics.
+  - Acceptance: mount errors contain neither raw nor URL-escaped passwords,
+    replace known credential-bearing share URLs with their credential-free
+    display identity, and preserve unrelated diagnostic text.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
 
 ### Delivery sequence
 

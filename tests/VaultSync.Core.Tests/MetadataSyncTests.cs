@@ -177,6 +177,198 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void PreviewImportFromStore_LinksExistingProjectsAndRejectsUnimportableRecords()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string linkedBackupPath = Path.Combine("linked-project", "2026-08-15_11-00-00");
+        string existingBackupPath = Path.Combine("existing-project", "2026-08-15_09-00-00");
+        string orphanBackupPath = Path.Combine("orphan-project", "2026-08-15_08-00-00");
+        Directory.CreateDirectory(Path.Combine(metaRoot, linkedBackupPath));
+        Directory.CreateDirectory(Path.Combine(metaRoot, existingBackupPath));
+        Directory.CreateDirectory(Path.Combine(metaRoot, orphanBackupPath));
+        Directory.CreateDirectory(Path.Combine(metaRoot, "legacy-only", "2026-08-15_07-00-00"));
+
+        SqliteRepository repo = CreateRepository(dbPath);
+        int linkedProjectId = repo.AddProject(new Project
+        {
+            ExternalId = string.Empty,
+            Name = "Linked Project",
+            RootPath = CreateTempDir(),
+            Preset = "dotnet",
+            CreatedUtc = DateTime.UtcNow.AddDays(-4)
+        });
+        using (var connection = new SqliteConnection($"Data Source={dbPath}"))
+        {
+            connection.Open();
+            using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = "UPDATE projects SET external_id = '' WHERE id = $id;";
+            command.Parameters.AddWithValue("$id", linkedProjectId);
+            Assert.Equal(1, command.ExecuteNonQuery());
+        }
+        int existingProjectId = repo.AddProject(new Project
+        {
+            ExternalId = "existing-project",
+            Name = "Existing Project",
+            RootPath = CreateTempDir(),
+            Preset = "node",
+            CreatedUtc = DateTime.UtcNow.AddDays(-3)
+        });
+        int existingSnapshotId = repo.CreateSnapshotFromMetadata(
+            "existing-snapshot",
+            existingProjectId,
+            DateTime.UtcNow.AddDays(-1),
+            fileCount: 2,
+            totalBytes: 128);
+        repo.CreateBackupFromMetadata(
+            "existing-backup",
+            existingProjectId,
+            existingSnapshotId,
+            DateTime.UtcNow.AddHours(-3),
+            "manual",
+            128,
+            existingBackupPath,
+            metaRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "remote-machine");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "linked-project",
+            Name = "Linked Project",
+            Preset = "dotnet",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-5),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "existing-project",
+            Name = "Existing Project",
+            Preset = "node",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-5),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "blocked-project",
+            Name = "Blocked Project",
+            Preset = "generic",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-5),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = string.Empty,
+            Name = "Invalid Project",
+            Preset = "generic",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-5),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "linked-snapshot",
+            ProjectExternalId = "linked-project",
+            CreatedUtc = DateTime.UtcNow.AddHours(-4),
+            FileCount = 1,
+            TotalBytes = 64
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "existing-snapshot",
+            ProjectExternalId = "existing-project",
+            CreatedUtc = DateTime.UtcNow.AddHours(-5),
+            FileCount = 2,
+            TotalBytes = 128
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "orphan-snapshot",
+            ProjectExternalId = "missing-project",
+            CreatedUtc = DateTime.UtcNow.AddHours(-6),
+            FileCount = 1,
+            TotalBytes = 32
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = string.Empty,
+            ProjectExternalId = "linked-project",
+            CreatedUtc = DateTime.UtcNow.AddHours(-7),
+            FileCount = 0,
+            TotalBytes = 0
+        });
+
+        AddMetaBackup("linked-backup", "linked-project", "linked-snapshot", linkedBackupPath);
+        AddMetaBackup("existing-backup", "existing-project", "existing-snapshot", existingBackupPath);
+        AddMetaBackup("orphan-backup", "missing-project", "orphan-snapshot", orphanBackupPath);
+        AddMetaBackup("invalid-path", "linked-project", "orphan-snapshot", "../outside-repository");
+        AddMetaBackup(string.Empty, "linked-project", "linked-snapshot", linkedBackupPath);
+        AddMetaBackup("tombstoned-backup", "linked-project", "tombstoned-snapshot", linkedBackupPath);
+        store.AddTombstone(new MetaTombstone
+        {
+            EntityType = "backup",
+            EntityId = "tombstoned-backup",
+            DeletedUtc = DateTime.UtcNow,
+            OriginMachineId = "remote-machine"
+        });
+        store.AddTombstone(new MetaTombstone
+        {
+            EntityType = "other",
+            EntityId = "ignored-tombstone",
+            DeletedUtc = DateTime.UtcNow,
+            OriginMachineId = "remote-machine"
+        });
+        store.AddTombstone(new MetaTombstone
+        {
+            EntityType = "backup",
+            EntityId = string.Empty,
+            DeletedUtc = DateTime.UtcNow,
+            OriginMachineId = "remote-machine"
+        });
+
+        var service = new MetadataSyncService(repo);
+        MetadataSyncPreview preview = service.PreviewImportFromStore(
+            metaRoot,
+            new MetadataSyncOptions(AllowCreateProjects: false, MarkNeedsRestoreOnImport: true));
+
+        Assert.Equal(MetadataSyncStatus.Success, preview.Status);
+        Assert.Equal(0, preview.NewProjects);
+        Assert.Equal(1, preview.LinkedProjects);
+        Assert.Equal(1, preview.NewSnapshots);
+        Assert.Equal(1, preview.NewBackups);
+        Assert.Equal(0, preview.DeletedBackups);
+        Assert.Equal(string.Empty, repo.GetProjectById(linkedProjectId)?.ExternalId);
+        Assert.Null(repo.GetBackupByExternalId("linked-backup"));
+
+        void AddMetaBackup(string externalId, string projectExternalId, string snapshotExternalId, string pathRel)
+        {
+            store.UpsertBackup(new MetaBackup
+            {
+                ExternalId = externalId,
+                ProjectExternalId = projectExternalId,
+                SnapshotExternalId = snapshotExternalId,
+                CreatedUtc = DateTime.UtcNow.AddHours(-2),
+                Type = "manual",
+                TotalBytes = 64,
+                PathRel = pathRel,
+                DestinationAlias = "Primary",
+                KdfParamsJson = "{}"
+            });
+        }
+    }
+
+    [Fact]
     public async System.Threading.Tasks.Task ExportBackupTombstoneToStoreAsync_PersistsTombstoneAndReleasesItsPerRootGate()
     {
         string rootPath = CreateTempDir();
@@ -1132,9 +1324,9 @@ public sealed class MetadataSyncTests : IDisposable
         var backups = store.ListBackups().ToList();
         var projects = store.ListProjects().ToList();
 
-        Assert.Single(backups);
+        MetaBackup exportedBackup = Assert.Single(backups);
         Assert.Single(projects);
-        Assert.Equal("Primary", backups[0].DestinationAlias);
+        Assert.Equal("Primary", exportedBackup.DestinationAlias);
 
         Backup updatedBackup = repo.GetBackupById(backupId);
         Assert.False(string.IsNullOrWhiteSpace(updatedBackup?.ExternalId));

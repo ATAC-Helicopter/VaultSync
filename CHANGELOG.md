@@ -21,6 +21,7 @@
 - [BUG-18102] Disabled connection pooling for the repository coordination database so disposed writer leases release their file handles predictably on Windows.
 - [BUG-18104] Corrected the Python pytest-cache rule and removed unsupported VS Code negation rules that previously excluded intended shared configuration.
 - [BUG-18105] Prevented metadata-import previews from double-counting projects and backups that are represented by both portable metadata and legacy repository folders.
+- [BUG-18106] Normalized macOS SMB mount diagnostics to remove the complete credential-bearing share identity before masking any remaining raw or escaped password text.
 
 ## [1.8.6] - 10.08.2026
 ### Added
