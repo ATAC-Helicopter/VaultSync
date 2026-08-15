@@ -173,7 +173,6 @@ namespace VaultSync.UI.Services
             expectedSize > 0 &&
             expectedSize <= maximumSize &&
             expectedSize <= int.MaxValue &&
-            maximumSize > 0 &&
             !string.IsNullOrWhiteSpace(expectedSha256) &&
             expectedSha256.Length == 64 &&
             expectedSha256.All(Uri.IsHexDigit);
@@ -199,6 +198,7 @@ namespace VaultSync.UI.Services
             }
             catch (Exception ex) when (IsCacheException(ex))
             {
+                // Temporary-file cleanup is best effort; update checks must continue.
             }
         }
 
