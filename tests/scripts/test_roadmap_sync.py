@@ -113,6 +113,8 @@ class RoadmapSyncTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             roadmap_sync.validate_owner("--help")
         with self.assertRaises(ValueError):
+            roadmap_sync.validate_owner("different-owner")
+        with self.assertRaises(ValueError):
             roadmap_sync.validate_project_number(0)
         with tempfile.NamedTemporaryFile() as external:
             with self.assertRaises(ValueError):
@@ -164,7 +166,12 @@ class RoadmapSyncTests(unittest.TestCase):
 
         self.assertEqual(2, run_gh.call_count)
         self.assertIn("ATAC-Helicopter/VaultSync", run_gh.call_args_list[0].args[0])
-        self.assertIn("PVTI_draft", run_gh.call_args_list[1].args[0])
+        self.assertNotIn("body", run_gh.call_args_list[0].args[0])
+        self.assertEqual("body", run_gh.call_args_list[0].args[1])
+        self.assertEqual(["api", "graphql", "--input", "-"], run_gh.call_args_list[1].args[0])
+        draft_request = json.loads(run_gh.call_args_list[1].args[1])
+        self.assertEqual("PVTI_draft", draft_request["variables"]["itemId"])
+        self.assertEqual("body", draft_request["variables"]["body"])
 
     def test_apply_change_rejects_invalid_remote_identifiers(self):
         invalid_issue = roadmap_sync.PlannedChange(
