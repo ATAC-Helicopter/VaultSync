@@ -110,6 +110,9 @@ public sealed class RepositoryLeaseServiceTests
 
         Assert.Equal(RepositoryLeaseState.Available, service.Inspect(root.Path).State);
         Assert.Empty(RepositoryLeaseService.ListEvidence(root.Path));
+        Assert.False(handle.Renew());
+        Assert.False(handle.IsOwner);
+        handle.Dispose();
     }
 
     [Fact]
@@ -140,6 +143,14 @@ public sealed class RepositoryLeaseServiceTests
         RepositoryLeaseEvidence evidence = Assert.Single(RepositoryLeaseService.ListEvidence(root.Path));
         Assert.Equal("stale-takeover", evidence.Disposition);
         Assert.Equal(ordinaryAcquire.Inspection.Lease?.Nonce, evidence.Nonce);
+        Assert.Equal(oldHandle.Lease.InstallationId, evidence.InstallationId);
+        Assert.Equal(oldHandle.Lease.HostLabel, evidence.HostLabel);
+        Assert.Equal(oldHandle.Lease.Operation, evidence.Operation);
+        Assert.Equal(oldHandle.Lease.AppVersion, evidence.AppVersion);
+        Assert.Equal(oldHandle.Lease.AcquiredUtc, evidence.AcquiredUtc);
+        Assert.Equal(oldHandle.Lease.HeartbeatUtc, evidence.HeartbeatUtc);
+        Assert.Equal(oldHandle.Lease.ExpiresUtc, evidence.ExpiresUtc);
+        Assert.Equal(clock.GetUtcNow(), evidence.RecordedUtc);
     }
 
     [Fact]
@@ -220,9 +231,136 @@ public sealed class RepositoryLeaseServiceTests
     public void ListEvidence_MissingDatabaseReturnsEmpty()
     {
         using var root = new TempDirectory();
-        var service = new RepositoryLeaseService();
 
         Assert.Empty(RepositoryLeaseService.ListEvidence(root.Path));
+    }
+
+    [Fact]
+    public void ListEvidence_DatabaseWithoutEvidenceSchemaReturnsEmpty()
+    {
+        using var root = new TempDirectory();
+        string databasePath = RepositoryLeaseService.GetDatabasePath(root.Path);
+        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
+        using (var connection = new SqliteConnection($"Data Source={databasePath};Pooling=False"))
+        {
+            connection.Open();
+            connection.Execute("CREATE TABLE unrelated(id INTEGER PRIMARY KEY);");
+        }
+
+        Assert.Empty(RepositoryLeaseService.ListEvidence(root.Path));
+    }
+
+    [Fact]
+    public void CorruptCoordinationDatabaseFailsClosedAcrossReadAndMutationOperations()
+    {
+        using var root = new TempDirectory();
+        string databasePath = RepositoryLeaseService.GetDatabasePath(root.Path);
+        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
+        File.WriteAllText(databasePath, "not a SQLite database");
+        var service = new RepositoryLeaseService();
+        string installationId = Guid.NewGuid().ToString("N");
+        string nonce = Guid.NewGuid().ToString("N");
+
+        Assert.Equal(RepositoryLeaseState.Unavailable, service.Inspect(root.Path).State);
+        Assert.Empty(RepositoryLeaseService.ListEvidence(root.Path));
+        Assert.False(RepositoryLeaseService.TryRelease(root.Path, installationId, nonce));
+        Assert.Null(service.TryRenew(root.Path, installationId, nonce, TimeSpan.FromMinutes(5)));
+    }
+
+    [Fact]
+    public void MissingLeaseCannotBeTakenOverRenewedOrReleased()
+    {
+        using var root = new TempDirectory();
+        var service = new RepositoryLeaseService();
+        string installationId = Guid.NewGuid().ToString("N");
+        string nonce = Guid.NewGuid().ToString("N");
+
+        RepositoryLeaseAcquireResult takeover = service.TakeOverStale(
+            root.Path,
+            nonce,
+            CreateRequest("stale-takeover", installationId));
+
+        Assert.Equal(RepositoryLeaseAcquireStatus.Invalid, takeover.Status);
+        Assert.False(RepositoryLeaseService.TryRelease(root.Path, installationId, nonce));
+        Assert.Null(service.TryRenew(root.Path, installationId, nonce, TimeSpan.FromMinutes(5)));
+    }
+
+    [Fact]
+    public void ForeignOwnerCannotRenewOrReleaseLease()
+    {
+        using var root = new TempDirectory();
+        var service = new RepositoryLeaseService();
+        using RepositoryLeaseHandle owner = AssertAcquired(
+            service.TryAcquire(root.Path, CreateRequest("metadata-export")));
+
+        Assert.Null(service.TryRenew(
+            root.Path,
+            Guid.NewGuid().ToString("N"),
+            owner.Lease.Nonce,
+            TimeSpan.FromMinutes(5)));
+        Assert.False(RepositoryLeaseService.TryRelease(
+            root.Path,
+            owner.Lease.InstallationId,
+            Guid.NewGuid().ToString("N")));
+        Assert.True(owner.IsOwner);
+    }
+
+    [Fact]
+    public void ExpiredOwnerCannotRenewLease()
+    {
+        using var root = new TempDirectory();
+        var clock = new ManualTimeProvider(new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero));
+        var service = new RepositoryLeaseService(clock, TimeSpan.Zero);
+        using RepositoryLeaseHandle owner = AssertAcquired(
+            service.TryAcquire(root.Path, CreateRequest("metadata-export")));
+
+        clock.Advance(TimeSpan.FromMinutes(6));
+
+        Assert.False(owner.Renew());
+        Assert.Equal(RepositoryLeaseState.Stale, service.Inspect(root.Path).State);
+    }
+
+    [Fact]
+    public void InvalidRepositoryRootFailsClosedWithoutThrowing()
+    {
+        var service = new RepositoryLeaseService();
+        const string invalidRoot = "invalid\0root";
+        string nonce = Guid.NewGuid().ToString("N");
+
+        Assert.Equal(RepositoryLeaseState.Invalid, service.Inspect(invalidRoot).State);
+        Assert.Equal(
+            RepositoryLeaseAcquireStatus.Invalid,
+            service.TakeOverStale(invalidRoot, nonce, CreateRequest("stale-takeover")).Status);
+        Assert.Empty(RepositoryLeaseService.ListEvidence(invalidRoot));
+    }
+
+    [Fact]
+    public void LinkedCoordinationDatabaseFailsClosed()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var root = new TempDirectory();
+        using var target = new TempDirectory();
+        string databasePath = RepositoryLeaseService.GetDatabasePath(root.Path);
+        string targetPath = Path.Combine(target.Path, "coordination.db");
+        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
+        File.WriteAllText(targetPath, "external data");
+        File.CreateSymbolicLink(databasePath, targetPath);
+        var service = new RepositoryLeaseService();
+        string installationId = Guid.NewGuid().ToString("N");
+        string nonce = Guid.NewGuid().ToString("N");
+
+        Assert.Equal(RepositoryLeaseState.Invalid, service.Inspect(root.Path).State);
+        Assert.Equal(
+            RepositoryLeaseAcquireStatus.Invalid,
+            service.TryAcquire(root.Path, CreateRequest("metadata-export")).Status);
+        Assert.Equal(
+            RepositoryLeaseAcquireStatus.Invalid,
+            service.TakeOverStale(root.Path, nonce, CreateRequest("stale-takeover")).Status);
+        Assert.Empty(RepositoryLeaseService.ListEvidence(root.Path));
+        Assert.False(RepositoryLeaseService.TryRelease(root.Path, installationId, nonce));
+        Assert.Null(service.TryRenew(root.Path, installationId, nonce, TimeSpan.FromMinutes(5)));
     }
 
     [Fact]
