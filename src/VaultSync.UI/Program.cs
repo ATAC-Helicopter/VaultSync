@@ -64,6 +64,14 @@ internal static class Program
             return;
         }
 
+        StorageCleanupSummary cleanup = StorageHygieneService.RunStartupCleanup();
+        if (cleanup.FilesRemoved > 0 || cleanup.DirectoriesRemoved > 0)
+        {
+            DiagnosticsLogger.Record(
+                $"Storage hygiene reclaimed {cleanup.BytesReclaimed} bytes from " +
+                $"{cleanup.FilesRemoved} file(s) and {cleanup.DirectoriesRemoved} directory/directories.");
+        }
+
         try
         {
             _activationListenerCts = new CancellationTokenSource();

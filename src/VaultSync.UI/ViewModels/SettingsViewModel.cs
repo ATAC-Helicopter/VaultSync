@@ -3103,8 +3103,16 @@ namespace VaultSync.UI
 
             Count(TryDeleteDir(Path.Combine(localRoot, "logs")));
             Count(TryDeleteDir(Path.Combine(localRoot, "crash")));
+            Count(TryDeleteDir(Path.Combine(localRoot, "cache")));
+            Count(TryDeleteDir(Path.Combine(localRoot, "patches")));
+            Count(TryDeleteDir(Path.Combine(localRoot, "patch-runtime")));
             Count(TryDeleteFile(Path.Combine(localRoot, "avatars.json")));
             Count(TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json")));
+
+            string userRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".vaultsync");
+            Count(TryDeleteDir(Path.Combine(userRoot, "logs")));
 
             string tempRoot = Path.GetTempPath();
             Count(TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import")));
