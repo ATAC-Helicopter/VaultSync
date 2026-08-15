@@ -542,6 +542,13 @@ that exists only on the release branch or remains planned.
     application restarts only when their release URL, exact size, and trusted
     SHA-256 identity still match; tampered and linked entries fail closed.
   - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18109` `P0` Bound disposable local storage and reject unbacked
+  macOS managed mount paths.
+  - Acceptance: startup cleanup applies tested age and size limits only to
+    re-creatable VaultSync data; databases, configuration, credentials,
+    backups, and mount contents remain outside cleanup; a managed mount path
+    cannot accept backup bytes unless SMB or NFS is currently mounted.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
 
 ### Delivery sequence
 

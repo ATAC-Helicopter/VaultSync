@@ -73,6 +73,11 @@ assumed and must be approved explicitly if the release needs one.
 - Canonical and platform patch manifests now use an immutable, digest-verified
   on-disk cache, preventing routine update checks and application restarts from
   inflating GitHub JSON asset download counts (`BUG-18108`).
+- Disposable local storage now has explicit age and size limits for diagnostics,
+  logs, caches, updater artifacts, and abandoned temporary work. Managed macOS
+  mount paths also fail closed unless SMB or NFS is still mounted, preventing
+  remote backup payloads from falling through onto the system drive
+  (`BUG-18109`). See [Local storage and cleanup](STORAGE_HYGIENE.md).
 - Roadmap-to-GitHub synchronization now reconstructs wrapped ticket contracts,
   preserves manually maintained issue bodies, constrains file inputs to the
   repository, validates every remote identifier, and provides an exact

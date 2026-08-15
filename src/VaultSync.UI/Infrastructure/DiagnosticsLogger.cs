@@ -15,8 +15,8 @@ internal static class DiagnosticsLogger
     private const int MaxRecent = 1000;
     private const int MaxFirstChanceTotal = 250;
     private const int MaxFirstChancePerSignature = 5;
-    private const int MaxHangDumpFiles = 2;
-    private const long MaxDiagnosticsBytes = 1024L * 1024L * 1024L;
+    private const int MaxHangDumpFiles = 1;
+    private const long MaxDiagnosticsBytes = 128L * 1024L * 1024L;
     private const string ProductDirectoryName = "VaultSync";
     private const string DiagnosticsDirectoryName = "diagnostics";
     private static readonly TimeSpan DiagnosticsPruneInterval = TimeSpan.FromHours(6);

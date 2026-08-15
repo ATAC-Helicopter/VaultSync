@@ -855,6 +855,15 @@ public sealed class BackupService(
 
         // Normalise backup root and ensure it exists (e.g. mounted NAS/share).
         backupRoot = Path.GetFullPath(backupRoot);
+        if (ShouldRejectUnbackedManagedMount(
+                OperatingSystem.IsMacOS(),
+                IsMacManagedMountPath(backupRoot),
+                IsNetworkMountPath(backupRoot)))
+        {
+            throw new InvalidOperationException(
+                $"Backup root '{backupRoot}' is a VaultSync-managed network mount point, but its share is not mounted. " +
+                "The backup was stopped to avoid writing remote backup data onto the local system drive.");
+        }
         if (!Directory.Exists(backupRoot))
         {
             throw new InvalidOperationException(
@@ -3623,6 +3632,12 @@ public sealed class BackupService(
 
     private static bool IsNetworkMountPath(string path)
         => IsSmbfsMountPath(path) || IsNfsMountPath(path);
+
+    internal static bool ShouldRejectUnbackedManagedMount(
+        bool isMacOs,
+        bool isManagedMountPath,
+        bool isNetworkMountPath) =>
+        isMacOs && isManagedMountPath && !isNetworkMountPath;
 
     private static bool IsOnPath(string tool)
     {
