@@ -74,8 +74,9 @@ assumed and must be approved explicitly if the release needs one.
   on-disk cache, preventing routine update checks and application restarts from
   inflating GitHub JSON asset download counts (`BUG-18108`).
 - Roadmap-to-GitHub synchronization now reconstructs wrapped ticket contracts,
-  preserves manually maintained issue bodies, and provides an exact structured
-  dry run before any Project or issue write (`BUG-18098`).
+  preserves manually maintained issue bodies, constrains file inputs to the
+  repository, validates every remote identifier, and provides an exact
+  structured dry run before any Project or issue write (`BUG-18098`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
