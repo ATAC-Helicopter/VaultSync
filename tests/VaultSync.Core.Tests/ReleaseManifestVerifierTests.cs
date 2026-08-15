@@ -15,6 +15,7 @@ public sealed class ReleaseManifestVerifierTests
     private const string Hash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     private const string Tag = "v1.8.7";
     private const string Url = "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.7/VaultSync-1.8.7-linux-x64.tar.gz";
+    private static readonly string[] s_linuxInstallerExtensions = [".deb", ".AppImage", ".tar.gz"];
 
     [Fact]
     public void ExactPublishedManifest_IsAccepted()
@@ -170,7 +171,7 @@ public sealed class ReleaseManifestVerifierTests
             Assert.EndsWith(".dmg", installer.InstallerName, StringComparison.OrdinalIgnoreCase);
         else
             Assert.Contains(
-                new[] { ".deb", ".AppImage", ".tar.gz" },
+                s_linuxInstallerExtensions,
                 extension => installer.InstallerName!.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
     }
 

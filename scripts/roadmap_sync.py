@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-TICKET_ID_PATTERN = re.compile(r"(?:VS|ISS|BUG|REL)-[0-9]+")
-OWNER_PATTERN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})")
+TICKET_ID_PATTERN = re.compile(r"(?:VS|ISS|BUG|REL)-\d+")
+OWNER_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}")
 PROJECT_ID_PATTERN = re.compile(r"PVT[A-Za-z0-9_-]+")
 ITEM_ID_PATTERN = re.compile(r"PVTI_[A-Za-z0-9_-]+")
 MANAGED_BODY_PREFIX = "Synced from ROADMAP.md"
@@ -231,15 +231,18 @@ def _plan_item_change(
     )
 
 
-def run_gh(arguments: list[str]) -> str:
+def run_gh(arguments: list[str], stdin_text: str | None = None) -> str:
     executable = shutil.which("gh")
     if executable is None:
         raise RuntimeError("GitHub CLI (gh) is required")
+    # The executable is resolved locally, shell expansion is disabled, remote
+    # identifiers are validated, and document content travels only via stdin.
     completed = subprocess.run(
-        [executable, *arguments],  # NOSONAR: fixed executable, no shell, validated identifiers.
+        [executable, *arguments],  # NOSONAR
         check=True,
         shell=False,
         text=True,
+        input=stdin_text,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -281,9 +284,9 @@ def load_items(args: argparse.Namespace) -> tuple[str, list[dict[str, Any]]]:
 
 
 def validate_owner(owner: str) -> str:
-    if OWNER_PATTERN.fullmatch(owner) is None:
-        raise ValueError("--owner must be a valid GitHub account name")
-    return owner
+    if OWNER_PATTERN.fullmatch(owner) is None or owner != "ATAC-Helicopter":
+        raise ValueError("--owner must identify the VaultSync repository owner")
+    return "ATAC-Helicopter"
 
 
 def validate_project_number(project_number: int) -> str:
@@ -296,7 +299,7 @@ def resolve_input_path(raw_path: str) -> Path:
     candidate = Path(raw_path)
     if not candidate.is_absolute():
         candidate = REPOSITORY_ROOT / candidate
-    resolved = candidate.resolve(strict=True)  # NOSONAR: containment is enforced before use.
+    resolved = candidate.resolve(strict=True)
     if not resolved.is_relative_to(REPOSITORY_ROOT) or not resolved.is_file():
         raise ValueError("Input files must be regular files inside the repository")
     return resolved
@@ -304,34 +307,52 @@ def resolve_input_path(raw_path: str) -> Path:
 
 def apply_change(change: PlannedChange, owner: str, project_id: str) -> None:
     if change.content_type == "Issue" and change.issue_number:
-        validated_owner = validate_owner(owner)
-        if change.issue_number <= 0:
-            raise ValueError("Issue number must be positive")
-        arguments = [
-            "issue",
-            "edit",
-            str(change.issue_number),
-            "--repo",
-            f"{validated_owner}/{REPOSITORY_NAME}",
-        ]
-        if change.title_changed:
-            arguments.extend(["--title", change.new_title])
-        if change.body_action == "update":
-            arguments.extend(["--body", change.new_body])
-        run_gh(arguments)
+        _apply_issue_change(change, owner)
         return
 
     if change.content_type == "DraftIssue" and change.item_id:
-        if ITEM_ID_PATTERN.fullmatch(change.item_id) is None:
-            raise ValueError("Draft item identifier is invalid")
-        if PROJECT_ID_PATTERN.fullmatch(project_id) is None:
-            raise ValueError("Project identifier is invalid")
-        arguments = ["project", "item-edit", "--id", change.item_id, "--project-id", project_id]
-        if change.title_changed:
-            arguments.extend(["--title", change.new_title])
-        if change.body_action == "update":
-            arguments.extend(["--body", change.new_body])
-        run_gh(arguments)
+        _apply_draft_change(change, project_id)
+
+
+def _apply_issue_change(change: PlannedChange, owner: str) -> None:
+    validated_owner = validate_owner(owner)
+    if change.issue_number is None or change.issue_number <= 0:
+        raise ValueError("Issue number must be positive")
+    arguments = [
+        "issue",
+        "edit",
+        str(change.issue_number),
+        "--repo",
+        f"{validated_owner}/{REPOSITORY_NAME}",
+        "--body-file",
+        "-",
+    ]
+    run_gh(arguments, change.new_body)
+
+
+def _apply_draft_change(change: PlannedChange, project_id: str) -> None:
+    if ITEM_ID_PATTERN.fullmatch(change.item_id) is None:
+        raise ValueError("Draft item identifier is invalid")
+    if PROJECT_ID_PATTERN.fullmatch(project_id) is None:
+        raise ValueError("Project identifier is invalid")
+    query = """mutation($projectId: ID!, $itemId: ID!, $body: String!) {
+  updateProjectV2DraftIssue(input: {
+    projectId: $projectId,
+    draftIssueId: $itemId,
+    body: $body
+  }) { projectV2DraftIssue { id } }
+}"""
+    request = json.dumps(
+        {
+            "query": query,
+            "variables": {
+                "projectId": project_id,
+                "itemId": change.item_id,
+                "body": change.new_body,
+            },
+        }
+    )
+    run_gh(["api", "graphql", "--input", "-"], request)
 
 
 def parse_args() -> argparse.Namespace:
