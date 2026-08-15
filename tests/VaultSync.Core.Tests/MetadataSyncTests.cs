@@ -46,6 +46,137 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void PreviewImportFromStore_CountsChangesWithoutMutatingTheRepository()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string remoteBackupPath = Path.Combine("remote-project", "2026-08-15_10-00-00");
+        Directory.CreateDirectory(Path.Combine(metaRoot, remoteBackupPath));
+
+        SqliteRepository repo = CreateRepository(dbPath);
+        int localProjectId = repo.AddProject(new Project
+        {
+            ExternalId = "local-project",
+            Name = "Local Project",
+            RootPath = CreateTempDir(),
+            Preset = "dotnet",
+            CreatedUtc = DateTime.UtcNow.AddDays(-2)
+        });
+        int localSnapshotId = repo.CreateSnapshotFromMetadata(
+            "local-snapshot",
+            localProjectId,
+            DateTime.UtcNow.AddDays(-1),
+            fileCount: 1,
+            totalBytes: 64);
+        repo.CreateBackupFromMetadata(
+            "deleted-by-tombstone",
+            localProjectId,
+            localSnapshotId,
+            DateTime.UtcNow.AddHours(-2),
+            "manual",
+            64,
+            "local/tombstoned",
+            metaRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+        repo.CreateBackupFromMetadata(
+            "missing-remote-path",
+            localProjectId,
+            localSnapshotId,
+            DateTime.UtcNow.AddHours(-1),
+            "manual",
+            64,
+            "local/missing",
+            metaRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "remote-machine");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "remote-project",
+            Name = "Remote Project",
+            Preset = "node",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-3),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "remote-snapshot",
+            ProjectExternalId = "remote-project",
+            CreatedUtc = DateTime.UtcNow.AddHours(-3),
+            FileCount = 3,
+            TotalBytes = 512
+        });
+        store.UpsertSnapshot(new MetaSnapshot
+        {
+            ExternalId = "dead-snapshot",
+            ProjectExternalId = "remote-project",
+            CreatedUtc = DateTime.UtcNow.AddHours(-4),
+            FileCount = 1,
+            TotalBytes = 32
+        });
+        store.UpsertBackup(new MetaBackup
+        {
+            ExternalId = "remote-backup",
+            ProjectExternalId = "remote-project",
+            SnapshotExternalId = "remote-snapshot",
+            CreatedUtc = DateTime.UtcNow.AddHours(-2),
+            Type = "manual",
+            TotalBytes = 512,
+            PathRel = remoteBackupPath,
+            DestinationAlias = "Primary",
+            KdfParamsJson = "{}"
+        });
+        store.UpsertBackup(new MetaBackup
+        {
+            ExternalId = "missing-remote-path",
+            ProjectExternalId = "remote-project",
+            SnapshotExternalId = "dead-snapshot",
+            CreatedUtc = DateTime.UtcNow.AddHours(-1),
+            Type = "manual",
+            TotalBytes = 32,
+            PathRel = "../outside-repository",
+            DestinationAlias = "Primary",
+            KdfParamsJson = "{}"
+        });
+        store.AddTombstone(new MetaTombstone
+        {
+            EntityType = "backup",
+            EntityId = "deleted-by-tombstone",
+            DeletedUtc = DateTime.UtcNow,
+            OriginMachineId = "remote-machine"
+        });
+        store.AddTombstone(new MetaTombstone
+        {
+            EntityType = "snapshot",
+            EntityId = "dead-snapshot",
+            DeletedUtc = DateTime.UtcNow,
+            OriginMachineId = "remote-machine"
+        });
+
+        var service = new MetadataSyncService(repo);
+        MetadataSyncPreview preview = service.PreviewImportFromStore(metaRoot, MetadataSyncOptions.Default);
+        MetadataSyncPreview cachedPreview = service.PreviewImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+        Assert.Equal(MetadataSyncStatus.Success, preview.Status);
+        Assert.Equal(1, preview.NewProjects);
+        Assert.Equal(0, preview.LinkedProjects);
+        Assert.Equal(1, preview.NewSnapshots);
+        Assert.Equal(1, preview.NewBackups);
+        Assert.Equal(2, preview.DeletedBackups);
+        Assert.Equal(preview, cachedPreview);
+        Assert.Null(repo.GetProjectByExternalId("remote-project"));
+        Assert.NotNull(repo.GetBackupByExternalId("deleted-by-tombstone"));
+        Assert.NotNull(repo.GetBackupByExternalId("missing-remote-path"));
+    }
+
+    [Fact]
     public async System.Threading.Tasks.Task ExportBackupTombstoneToStoreAsync_PersistsTombstoneAndReleasesItsPerRootGate()
     {
         string rootPath = CreateTempDir();

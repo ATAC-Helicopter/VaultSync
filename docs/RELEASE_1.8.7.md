@@ -22,7 +22,7 @@ The release branch accumulates the qualified 1.8.7 work. `Dev` is the
 integration branch; `Stable` represents shipped releases only. A beta is not
 assumed and must be approved explicitly if the release needs one.
 
-## Status as of 2026-08-13
+## Status as of 2026-08-15
 
 ### Implemented on the release branch
 
@@ -61,6 +61,9 @@ assumed and must be approved explicitly if the release needs one.
   state without relying on unsupported negation rules; Windows Robocopy also
   consumes the shared preset resolver. Live `.git` internals remain excluded
   pending the separately gated full-repository mode (`BUG-18104`, `VS-1801`).
+- Metadata-import previews now deduplicate portable metadata and corresponding
+  legacy repository folders, count each proposed change once, and remain
+  repeatable without mutating the local repository (`BUG-18105`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime

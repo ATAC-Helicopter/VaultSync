@@ -514,6 +514,11 @@ that exists only on the release branch or remains planned.
     `VS-1801`, unsupported negation rules are absent, and every backup path uses
     the shared preset resolver with regression coverage.
   - Completed on the 1.8.7 release branch on 2026-08-13 in PR #546.
+- [x] `BUG-18105` `P1` Prevent metadata-import previews from double-counting
+  projects and backups represented by both metadata and legacy folders.
+  - Acceptance: a preview reports each project, snapshot, and backup once,
+    remains read-only, and repeated previews return the same result.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
 
 ### Delivery sequence
 
