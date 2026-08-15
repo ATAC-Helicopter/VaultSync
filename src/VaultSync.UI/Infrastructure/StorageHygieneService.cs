@@ -126,13 +126,13 @@ internal static class StorageHygieneService
             file => file.Name.StartsWith("vaultsync_exclude_", StringComparison.OrdinalIgnoreCase) &&
                     file.Extension.Equals(".txt", StringComparison.OrdinalIgnoreCase),
             utcNow - TemporaryRetention));
-        summary = summary.Add(PruneDirectories(
-            Path.Combine(tempRoot, "VaultSync"),
-            "updates",
+        summary = summary.Add(PruneFiles(
+            Path.Combine(tempRoot, "VaultSync", "updates"),
+            static _ => true,
             utcNow - TemporaryRetention));
         summary = summary.Add(PruneDirectories(
-            Path.Combine(tempRoot, "VaultSync"),
-            "recovery-tests",
+            Path.Combine(tempRoot, "VaultSync", "recovery-tests"),
+            "*",
             utcNow - TemporaryRetention));
         return summary;
     }

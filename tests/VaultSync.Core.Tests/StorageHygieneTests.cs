@@ -69,6 +69,9 @@ public sealed class StorageHygieneTests
         string recentOpen = CreateDirectory(root.Path, "vaultsync-open-recent", 12, now.AddHours(-1));
         string unrelated = CreateDirectory(root.Path, "another-app", 12, now.AddYears(-1));
         string oldExclude = CreateFile(root.Path, "vaultsync_exclude_old.txt", 4, now.AddDays(-2));
+        string oldInstaller = CreateFile(root.Path, "VaultSync/updates/old-installer", 10, now.AddDays(-2));
+        string recentInstaller = CreateFile(root.Path, "VaultSync/updates/recent-installer", 10, now.AddHours(-2));
+        string oldRecovery = CreateDirectory(root.Path, "VaultSync/recovery-tests/old", 14, now.AddDays(-2));
 
         StorageCleanupSummary result = StorageHygieneService.PruneTemporaryData(root.Path, now);
 
@@ -76,8 +79,11 @@ public sealed class StorageHygieneTests
         Assert.True(Directory.Exists(recentOpen));
         Assert.True(Directory.Exists(unrelated));
         Assert.False(File.Exists(oldExclude));
-        Assert.Equal(1, result.FilesRemoved);
-        Assert.Equal(1, result.DirectoriesRemoved);
+        Assert.False(File.Exists(oldInstaller));
+        Assert.True(File.Exists(recentInstaller));
+        Assert.False(Directory.Exists(oldRecovery));
+        Assert.Equal(2, result.FilesRemoved);
+        Assert.Equal(2, result.DirectoriesRemoved);
     }
 
     [Theory]
