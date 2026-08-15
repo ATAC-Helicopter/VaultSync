@@ -369,6 +369,85 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_RemovesUnreferencedSnapshotsAndPreservesSnapshotsWithLocalBackups()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = repo.AddProject(new Project
+        {
+            ExternalId = "snapshot-cleanup-project",
+            Name = "Snapshot Cleanup",
+            RootPath = CreateTempDir(),
+            Preset = "dotnet",
+            CreatedUtc = DateTime.UtcNow.AddDays(-5)
+        });
+        repo.CreateSnapshotFromMetadata(
+            "remote-unreferenced",
+            projectId,
+            DateTime.UtcNow.AddDays(-3),
+            fileCount: 1,
+            totalBytes: 32);
+        int protectedSnapshotId = repo.CreateSnapshotFromMetadata(
+            "remote-locally-backed",
+            projectId,
+            DateTime.UtcNow.AddDays(-2),
+            fileCount: 2,
+            totalBytes: 64);
+        repo.CreateBackupFromMetadata(
+            "local-backup",
+            projectId,
+            protectedSnapshotId,
+            DateTime.UtcNow.AddDays(-1),
+            "manual",
+            64,
+            "local/backup",
+            metaRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "remote-machine");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "snapshot-cleanup-project",
+            Name = "Snapshot Cleanup",
+            Preset = "dotnet",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-5),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        AddSnapshot("remote-unreferenced");
+        AddSnapshot("remote-locally-backed");
+        AddSnapshot("remote-not-local");
+
+        MetadataSyncResult result = new MetadataSyncService(repo)
+            .ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+        Assert.Null(repo.GetSnapshotByExternalId("remote-unreferenced"));
+        Assert.NotNull(repo.GetSnapshotByExternalId("remote-locally-backed"));
+        Assert.NotNull(repo.GetBackupByExternalId("local-backup"));
+        MetaTombstone exportedTombstone = Assert.Single(
+            store.ListTombstones(),
+            tombstone => tombstone.EntityType == "snapshot");
+        Assert.Equal("remote-unreferenced", exportedTombstone.EntityId);
+        void AddSnapshot(string externalId)
+        {
+            store.UpsertSnapshot(new MetaSnapshot
+            {
+                ExternalId = externalId,
+                ProjectExternalId = "snapshot-cleanup-project",
+                CreatedUtc = DateTime.UtcNow.AddDays(-2),
+                FileCount = 1,
+                TotalBytes = 32
+            });
+        }
+    }
+
+    [Fact]
     public async System.Threading.Tasks.Task ExportBackupTombstoneToStoreAsync_PersistsTombstoneAndReleasesItsPerRootGate()
     {
         string rootPath = CreateTempDir();

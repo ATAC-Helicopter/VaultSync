@@ -524,6 +524,12 @@ that exists only on the release branch or remains planned.
     replace known credential-bearing share URLs with their credential-free
     display identity, and preserve unrelated diagnostic text.
   - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18107` `P0` Export snapshot tombstones only for snapshots actually
+  deleted during metadata import.
+  - Acceptance: snapshots retained by local backups and unknown remote snapshot
+    IDs never produce deletion tombstones; each locally deleted unreferenced
+    snapshot produces exactly one tombstone.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
 
 ### Delivery sequence
 

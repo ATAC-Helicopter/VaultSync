@@ -67,6 +67,9 @@ assumed and must be approved explicitly if the release needs one.
 - macOS SMB mount errors now normalize the complete credential-bearing share
   identity before masking any remaining raw or escaped password text, producing
   clean credential-free diagnostics (`BUG-18106`).
+- Metadata import now exports snapshot tombstones only for snapshots it actually
+  deletes; snapshots retained by local backups and unknown remote-only IDs are
+  no longer advertised as deleted (`BUG-18107`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
