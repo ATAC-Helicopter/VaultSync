@@ -432,7 +432,7 @@ namespace VaultSync.UI.Services
             public List<GitHubAsset>? Assets { get; set; }
         }
 
-        private sealed class GitHubAsset
+        internal sealed class GitHubAsset
         {
             [JsonPropertyName("name")]
             public string? Name { get; set; }
@@ -452,52 +452,24 @@ namespace VaultSync.UI.Services
             string releaseTag,
             CancellationToken cancellationToken)
         {
-            List<GitHubAsset> manifestAssets = release.Assets?
-                .Where(asset => string.Equals(asset.Name, ReleaseManifestVerifier.ManifestName, StringComparison.Ordinal))
-                .ToList() ?? [];
-            if (manifestAssets.Count != 1)
+            if (!TryGetReleaseManifestAsset(
+                    release.Assets,
+                    releaseTag,
+                    out GitHubAsset? manifestAsset,
+                    out Uri? manifestUri,
+                    out string? expectedHash))
                 return null;
-
-            GitHubAsset manifestAsset = manifestAssets[0];
-            if (manifestAsset.Size <= 0 ||
-                manifestAsset.Size > MaxReleaseManifestBytes ||
-                !TryGetTrustedReleaseAssetUri(manifestAsset.BrowserDownloadUrl, out Uri? manifestUri) ||
-                manifestUri is null ||
-                !string.Equals(
-                    manifestUri.AbsoluteUri,
-                    $"https://github.com/ATAC-Helicopter/VaultSync/releases/download/{releaseTag}/{ReleaseManifestVerifier.ManifestName}",
-                    StringComparison.Ordinal) ||
-                TryParseSha256Digest(manifestAsset.Digest) is not { } expectedHash)
-            {
-                return null;
-            }
 
             try
             {
-                byte[] bytes = await s_httpClient.GetByteArrayAsync(manifestUri, cancellationToken).ConfigureAwait(false);
-                if (bytes.LongLength != manifestAsset.Size || bytes.Length > MaxReleaseManifestBytes)
-                    return null;
-
-                string actualHash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
-                if (!string.Equals(actualHash, expectedHash, StringComparison.Ordinal))
-                    return null;
-
-                var publishedAssets = release.Assets!
-                    .Where(asset => asset.Name is not null)
-                    .Select(asset => new PublishedReleaseAsset(
-                        asset.Name!,
-                        asset.BrowserDownloadUrl,
-                        asset.Size,
-                        asset.Digest))
-                    .ToList();
-                return ReleaseManifestVerifier.TryValidate(
-                    Encoding.UTF8.GetString(bytes),
+                byte[] bytes = await s_httpClient.GetByteArrayAsync(manifestUri!, cancellationToken).ConfigureAwait(false);
+                return ValidateDownloadedReleaseManifest(
+                    bytes,
+                    manifestAsset!,
+                    expectedHash!,
                     releaseTag,
                     release.Prerelease,
-                    publishedAssets,
-                    out IReadOnlyDictionary<string, ReleaseManifestAsset> assets)
-                    ? assets.Values.ToList()
-                    : null;
+                    release.Assets!);
             }
             catch (HttpRequestException)
             {
@@ -507,6 +479,65 @@ namespace VaultSync.UI.Services
             {
                 return null;
             }
+        }
+
+        internal static bool TryGetReleaseManifestAsset(
+            IReadOnlyCollection<GitHubAsset>? releaseAssets,
+            string releaseTag,
+            out GitHubAsset? manifestAsset,
+            out Uri? manifestUri,
+            out string? expectedHash)
+        {
+            manifestAsset = null;
+            manifestUri = null;
+            expectedHash = null;
+            List<GitHubAsset> matches = releaseAssets?
+                .Where(asset => string.Equals(asset.Name, ReleaseManifestVerifier.ManifestName, StringComparison.Ordinal))
+                .ToList() ?? [];
+            if (matches.Count != 1)
+                return false;
+
+            manifestAsset = matches[0];
+            string expectedUrl = $"https://github.com/ATAC-Helicopter/VaultSync/releases/download/{releaseTag}/{ReleaseManifestVerifier.ManifestName}";
+            expectedHash = TryParseSha256Digest(manifestAsset.Digest);
+            return manifestAsset.Size is > 0 and <= MaxReleaseManifestBytes &&
+                   TryGetTrustedReleaseAssetUri(manifestAsset.BrowserDownloadUrl, out manifestUri) &&
+                   manifestUri is not null &&
+                   string.Equals(manifestUri.AbsoluteUri, expectedUrl, StringComparison.Ordinal) &&
+                   expectedHash is not null;
+        }
+
+        internal static IReadOnlyCollection<ReleaseManifestAsset>? ValidateDownloadedReleaseManifest(
+            byte[] bytes,
+            GitHubAsset manifestAsset,
+            string expectedHash,
+            string releaseTag,
+            bool prerelease,
+            IReadOnlyCollection<GitHubAsset> releaseAssets)
+        {
+            if (bytes.LongLength != manifestAsset.Size || bytes.Length > MaxReleaseManifestBytes)
+                return null;
+
+            string actualHash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+            if (!string.Equals(actualHash, expectedHash, StringComparison.Ordinal))
+                return null;
+
+            List<PublishedReleaseAsset> publishedAssets = releaseAssets
+                .Where(asset => asset.Name is not null)
+                .Select(asset => new PublishedReleaseAsset(
+                    asset.Name!,
+                    asset.BrowserDownloadUrl,
+                    asset.Size,
+                    asset.Digest))
+                .ToList();
+            return ReleaseManifestVerifier.TryValidate(
+                Encoding.UTF8.GetString(bytes),
+                releaseTag,
+                prerelease,
+                publishedAssets,
+                out IReadOnlyDictionary<string, ReleaseManifestAsset> assets)
+                ? assets.Values.ToList()
+                : null;
         }
 
         internal static (string? ManifestUrl, string? ManifestSha256, long ManifestSize, Uri? ArchiveUrl, string? ArchiveName, string? ArchiveSha256, long ArchiveSize) GetPatchAssets(IReadOnlyCollection<ReleaseManifestAsset> assets)
