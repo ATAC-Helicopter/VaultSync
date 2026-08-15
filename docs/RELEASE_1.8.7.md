@@ -70,6 +70,9 @@ assumed and must be approved explicitly if the release needs one.
 - Metadata import now exports snapshot tombstones only for snapshots it actually
   deletes; snapshots retained by local backups and unknown remote-only IDs are
   no longer advertised as deleted (`BUG-18107`).
+- Canonical and platform patch manifests now use an immutable, digest-verified
+  on-disk cache, preventing routine update checks and application restarts from
+  inflating GitHub JSON asset download counts (`BUG-18108`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime

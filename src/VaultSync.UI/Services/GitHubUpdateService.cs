@@ -244,7 +244,8 @@ namespace VaultSync.UI.Services
             var client = new HttpClient
             {
                 BaseAddress = new Uri("https://api.github.com/"),
-                Timeout     = TimeSpan.FromSeconds(20)
+                Timeout     = TimeSpan.FromSeconds(20),
+                MaxResponseContentBufferSize = MaxReleaseManifestBytes
             };
             client.DefaultRequestHeaders.UserAgent.ParseAdd("VaultSync-Updater/1.0");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
@@ -462,14 +463,35 @@ namespace VaultSync.UI.Services
 
             try
             {
-                byte[] bytes = await s_httpClient.GetByteArrayAsync(manifestUri!, cancellationToken).ConfigureAwait(false);
-                return ValidateDownloadedReleaseManifest(
+                bool cacheHit = VerifiedReleaseAssetCache.Default.TryRead(
+                    manifestUri!.AbsoluteUri,
+                    expectedHash!,
+                    manifestAsset!.Size,
+                    MaxReleaseManifestBytes,
+                    out byte[] bytes);
+                if (!cacheHit)
+                {
+                    bytes = await s_httpClient.GetByteArrayAsync(manifestUri, cancellationToken).ConfigureAwait(false);
+                }
+
+                IReadOnlyCollection<ReleaseManifestAsset>? verified = ValidateDownloadedReleaseManifest(
                     bytes,
-                    manifestAsset!,
+                    manifestAsset,
                     expectedHash!,
                     releaseTag,
                     release.Prerelease,
                     release.Assets!);
+                if (!cacheHit && verified is not null)
+                {
+                    VerifiedReleaseAssetCache.Default.Write(
+                        manifestUri.AbsoluteUri,
+                        expectedHash!,
+                        manifestAsset.Size,
+                        MaxReleaseManifestBytes,
+                        bytes);
+                }
+
+                return verified;
             }
             catch (HttpRequestException)
             {
