@@ -22,6 +22,7 @@
 - [BUG-18104] Corrected the Python pytest-cache rule and removed unsupported VS Code negation rules that previously excluded intended shared configuration.
 - [BUG-18105] Prevented metadata-import previews from double-counting projects and backups that are represented by both portable metadata and legacy repository folders.
 - [BUG-18106] Normalized macOS SMB mount diagnostics to remove the complete credential-bearing share identity before masking any remaining raw or escaped password text.
+- [BUG-18107] Stopped metadata import from exporting deletion tombstones for snapshots that were preserved because they still have local backups or never existed locally.
 
 ## [1.8.6] - 10.08.2026
 ### Added

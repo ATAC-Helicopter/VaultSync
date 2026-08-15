@@ -649,7 +649,7 @@ public sealed class MetadataSyncService
 
         if (missingSnapshotExternalIds.Count > 0)
         {
-            int removedSnapshots = 0;
+            var removedSnapshotExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string? missingExternalId in missingSnapshotExternalIds)
             {
                 Snapshot? snapshot = _repo.GetSnapshotByExternalId(missingExternalId);
@@ -664,12 +664,13 @@ public sealed class MetadataSyncService
                     continue;
 
                 (int snapshots, _) = _repo.DeleteSnapshotsById(project.Name, [snapshot.Id]);
-                removedSnapshots += snapshots;
+                if (snapshots > 0)
+                    removedSnapshotExternalIds.Add(missingExternalId);
             }
 
-            if (removedSnapshots > 0 && opts.ExportMissingTombstonesOnImport)
+            if (removedSnapshotExternalIds.Count > 0 && opts.ExportMissingTombstonesOnImport)
             {
-                TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
+                TryExportMissingSnapshotTombstones(rootPath, removedSnapshotExternalIds);
             }
         }
 
