@@ -148,7 +148,9 @@ revision.
    migration or repair writer must enter through the same boundary.**
 4. Add the versioned schema and forward migration fixtures.
    **Version-2 project writer/revision columns and version-1 compatibility were
-   implemented on 2026-08-16; base revisions remain in the VS-1879 merge work.**
+   implemented on 2026-08-16. Durable per-source base revisions and field-level
+   three-way planning were implemented on 2026-08-16; guarded repository writes,
+   exported provenance, and bounded undo remain in the VS-1879 merge work.**
 5. Produce merge plans without applying them.
 6. Add explicit apply, durable resolution, and bounded undo.
    **Durable Keep local and Accept imported decisions are implemented and

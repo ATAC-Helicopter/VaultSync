@@ -5,10 +5,12 @@
 - [VS-1877] Added a durable, owner-private installation identity for cross-machine coordination without treating mutable host names or telemetry identifiers as writer identity.
 - [VS-1877] Added repository-scoped writer leases with atomic acquisition, heartbeat and expiry, read-only busy inspection, nonce-bound release, explicit stale takeover, and retained takeover evidence.
 - [VS-1877] Added per-destination repository-writer inspection and an explicit stale-takeover review that shows the owner, operation, version, heartbeat, and expiry before preserving the old lease as evidence.
+- [VS-1879] Added durable per-source merge bases and a field-level three-way metadata planner so independent cross-machine edits merge automatically while overlapping edits remain explicitly reviewable.
 ### Changed
 - [BUG-18099] Serviced the .NET 10 baseline to SDK `10.0.303`, runtime `10.0.11`, and coordinated Microsoft packages, with CI auditing real self-contained publishes and release artifacts for every supported runtime identifier.
 - [VS-1877] Protected project settings, backup history, tombstones, deferred metadata writes, and deferred flushing with repository lease ownership checks while keeping imports and previews readable when another writer is active.
 - [VS-1877] Made unavailable-destination metadata queues fail closed: queued metadata can initialize an empty destination once, while an existing destination is preserved for explicit merge review.
+- [VS-1879] Made conflict decisions preserve non-overlapping remote edits, record source and base revisions, and advance the durable merge base after either resolution.
 - [VS-1880] Consolidated metadata export orchestration, SMB mount parsing, mounted-share validation, theme color normalization, and contrast calculations behind focused shared primitives with regression coverage.
 - [VS-1880] Unified Windows Robocopy exclusions with the shared preset resolver.
 - [BUG-18103] Modernized Snapshot Explorer, metadata-import review, and updater windows around the current compact, theme-aware app layout.

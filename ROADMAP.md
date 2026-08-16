@@ -468,6 +468,11 @@ after the planned minor train is complete and use explicit beta qualification.
     another; non-overlapping changes merge, overlapping changes show old, local,
     and remote values with timestamps and writers; accepting either side is
     durable and auditable; the operation can be undone before the next write.
+  - In progress on 2026-08-16 in PR #546: durable per-source merge bases,
+    field-level three-way planning, automatic non-overlapping merges, and
+    resolution results that retain independent edits are implemented and
+    tested. Guarded repository writes, exported provenance, and bounded undo
+    remain before completion.
 - [ ] `VS-1880` `P1` Simplify and standardize shared application code without
   changing user-visible behavior.
   - Scope: consolidate repeated retry, path, serialization, status, dialog,
@@ -563,18 +568,18 @@ after the planned minor train is complete and use explicit beta qualification.
 
 ### Delivery sequence
 
-1. **12–16 August:** contracts, issue repair, threat model, metadata schema.
-2. **17–30 August:** release manifest and in-app build identity.
-3. **31 August–13 September:** platform SBOMs and artifact provenance.
-4. **14–27 September:** durable machine identity, repository lease, and
-   cross-machine three-way merge.
-5. **28 September–11 October:** evidence package, support bundle, and repository
-   documentation.
-6. **12–18 October:** public metadata consumers, UI polish, localization, and
-   release dry run.
-7. **19–25 October:** unpublished candidate, multi-machine/NAS exercises, and
-   the complete Windows, macOS, and Linux qualification matrix.
-8. **30 October:** Stable release after every P0 and release gate is complete.
+1. **12–16 August:** contracts, issue repair, release manifest, serviced runtime,
+   machine identity, writer leases, and the first three-way merge slice.
+2. **17–19 August:** finish guarded cross-machine writes, provenance, resolution
+   export, bounded undo, and two-machine safety fixtures.
+3. **20–21 August:** build identity, platform SBOM/provenance, Recovery Evidence
+   Package, and reviewed support export.
+4. **22 August:** repository and public metadata synchronization plus bounded
+   code cleanup.
+5. **23 August:** unpublished stable-candidate qualification across supported
+   platforms, upgrade paths, storage, localization, accessibility, and security.
+6. **24 August:** merge through `Dev` to `Stable`, publish, verify, and close the
+   milestone.
 
 ### Release gates
 
