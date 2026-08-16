@@ -377,13 +377,19 @@ History carry the same folder identity.
 **Status:** Active development. Release contracts were approved and implementation
 started on 2026-08-12.
 **Tagline:** *Show the proof.*
-**Target:** 2026-10-30
+**Target:** 2026-08-24
 **Working branch:** `release/1.8.7`
 **Integration target:** `Dev`
 
 The maintained implementation status and safety contracts for this release live
 in `docs/RELEASE_1.8.7.md`. That page distinguishes shipped behavior from work
 that exists only on the release branch or remains planned.
+
+Minor releases target a weekly train and must not remain open longer than two
+weeks after the preceding Stable release. Release-blocking safety and regression
+work stays in the active train; incomplete non-blocking polish moves forward to
+the next minor rather than silently extending the release. Major releases begin
+after the planned minor train is complete and use explicit beta qualification.
 
 - [ ] `VS-1871` `P1` Expose build, channel, commit, runtime, architecture,
   package, and update-source information.

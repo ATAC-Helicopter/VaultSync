@@ -1,12 +1,10 @@
 ﻿# Changelog
 ## [1.8.7] - Unreleased
-
 ### Added
 - [VS-1872] Added the versioned canonical release manifest generator and schema, with exact artifact sizes, SHA-256 digests, official download identities, strict platform-matrix validation, deterministic output, release-workflow generation, post-publish verification, and fail-closed updater consumption across Windows, macOS, and Linux artifacts.
 - [VS-1877] Added a durable, owner-private installation identity for cross-machine coordination without treating mutable host names or telemetry identifiers as writer identity.
 - [VS-1877] Added repository-scoped writer leases with atomic acquisition, heartbeat and expiry, read-only busy inspection, nonce-bound release, explicit stale takeover, and retained takeover evidence.
 - [VS-1877] Added per-destination repository-writer inspection and an explicit stale-takeover review that shows the owner, operation, version, heartbeat, and expiry before preserving the old lease as evidence.
-
 ### Changed
 - [BUG-18099] Serviced the .NET 10 baseline to SDK `10.0.303`, runtime `10.0.11`, and coordinated Microsoft packages, with CI auditing real self-contained publishes and release artifacts for every supported runtime identifier.
 - [VS-1877] Protected project settings, backup history, tombstones, deferred metadata writes, and deferred flushing with repository lease ownership checks while keeping imports and previews readable when another writer is active.
@@ -15,7 +13,6 @@
 - [VS-1880] Unified Windows Robocopy exclusions with the shared preset resolver.
 - [BUG-18103] Modernized Snapshot Explorer, metadata-import review, and updater windows around the current compact, theme-aware app layout.
 - [BUG-18104] Reworked development presets to preserve Git control files and shareable IDE configuration while excluding live Git internals and modern build, package, test, framework, and machine-local caches.
-
 ### Fixed
 - [BUG-18098] Rebuilt roadmap description synchronization around tested wrapped-title parsing, ownership-aware body preservation, repository-contained inputs, validated GitHub identifiers, and an exact write-free dry-run report.
 - [BUG-18100] Restored `Dev` as the permanent integration branch at the `1.8.6` Stable commit and disabled automatic head-branch deletion so Stable promotion cannot remove it again.
