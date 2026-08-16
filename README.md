@@ -230,6 +230,10 @@ Direct-download desktop installers are intentionally unsigned because paid platf
 
 Download only from the official `ATAC-Helicopter/VaultSync` release page and compare the asset's published SHA-256 digest before bypassing an operating-system warning. VaultSync's updater also rejects installer and patch downloads whose trusted GitHub digest or exact size is missing or mismatched.
 
+Release packages also publish SPDX 2.3 SBOMs and GitHub artifact attestations
+for the final downloadable bytes. Online and offline verification commands are
+documented in [the release guide](docs/RELEASING.md#sbom-and-provenance-verification).
+
 <details>
 <summary><strong>Windows SmartScreen instructions</strong></summary>
 

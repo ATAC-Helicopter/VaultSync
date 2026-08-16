@@ -72,6 +72,7 @@ VaultSync `1.8.5` is the Recovery Confidence update. It answers a direct questio
 
 ### Update integrity and local privacy
 - Installer downloads, patch manifests, and patch archives must match the exact size and SHA-256 digest published by GitHub before VaultSync will use them.
+- Release packages include SPDX 2.3 SBOMs and GitHub provenance/SBOM attestations for the final downloadable bytes, with documented online and offline verification.
 - Update URLs are restricted to the official VaultSync GitHub release path, and missing or inconsistent integrity metadata fails closed to the release page.
 - Patch extraction rejects traversing, colliding, linked, oversized, or non-portable paths before replacing application files.
 - On Unix-like systems, VaultSync restricts configuration, backups of configuration, and application-data roots to the current user.

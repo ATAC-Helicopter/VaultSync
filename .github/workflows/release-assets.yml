@@ -715,3 +715,146 @@ jobs:
           name: canonical-release-manifest
           if-no-files-found: error
           path: release-assets/vaultsync-release-manifest.json
+
+  supply-chain-proof:
+    name: Generate SBOMs and attest release packages
+    needs: [release-manifest]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Download direct-release artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: "*-release-assets"
+          path: release-assets
+          merge-multiple: true
+
+      - name: Download canonical release manifest
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: canonical-release-manifest
+          path: release-assets
+
+      - name: Resolve dependency graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p supply-chain/project-assets
+          for rid in win-x64 osx-arm64 osx-x64 linux-x64 linux-arm64; do
+            framework=net10.0
+            if [[ "$rid" == win-x64 ]]; then
+              framework=net10.0-windows10.0.19041.0
+            fi
+            dotnet restore src/VaultSync.UI/VaultSync.UI.csproj \
+              -p:EnableWindowsTargeting=true \
+              -p:TargetFramework="$framework" \
+              -r "$rid"
+            cp src/VaultSync.UI/obj/project.assets.json "supply-chain/project-assets/$rid.json"
+          done
+
+      - name: Generate and validate SPDX SBOMs
+        shell: bash
+        run: |
+          set -euo pipefail
+          created="$(git show -s --format=%cI "$GITHUB_SHA")"
+          python3 scripts/release_sbom.py generate \
+            --manifest release-assets/vaultsync-release-manifest.json \
+            --project-assets supply-chain/project-assets \
+            --output supply-chain/sboms \
+            --created "$created"
+          python3 scripts/release_sbom.py validate \
+            --manifest release-assets/vaultsync-release-manifest.json \
+            --sbom-root supply-chain/sboms
+          sed 's# \*# *release-assets/#' \
+            supply-chain/sboms/vaultsync-release-subjects.sha256 \
+            > supply-chain/attestation-subjects.sha256
+
+      - name: Attest release-package provenance
+        id: provenance
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-checksums: supply-chain/attestation-subjects.sha256
+
+      - name: Attest Windows installer SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/VaultSync-Setup-${{ inputs.target_version }}.exe
+          sbom-path: supply-chain/sboms/VaultSync-Setup-${{ inputs.target_version }}.exe.spdx.json
+
+      - name: Attest macOS Apple silicon SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/VaultSync-${{ inputs.target_version }}-macos-apple-silicon.dmg
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-macos-apple-silicon.dmg.spdx.json
+
+      - name: Attest macOS Intel SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/VaultSync-${{ inputs.target_version }}-macos-intel.dmg
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-macos-intel.dmg.spdx.json
+
+      - name: Attest Linux x64 archive SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/VaultSync-${{ inputs.target_version }}-linux-x64.tar.gz
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-x64.tar.gz.spdx.json
+
+      - name: Attest Linux x64 Debian SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/VaultSync-${{ inputs.target_version }}-linux-x64.deb
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-x64.deb.spdx.json
+
+      - name: Attest Linux x64 AppImage SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/VaultSync-${{ inputs.target_version }}-linux-x64.AppImage
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-x64.AppImage.spdx.json
+
+      - name: Attest Linux arm64 archive SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/VaultSync-${{ inputs.target_version }}-linux-arm64.tar.gz
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-arm64.tar.gz.spdx.json
+
+      - name: Attest Linux arm64 Debian SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/VaultSync-${{ inputs.target_version }}-linux-arm64.deb
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-arm64.deb.spdx.json
+
+      - name: Verify online and offline release-candidate provenance
+        if: ${{ inputs.release_candidate }}
+        shell: bash
+        env:
+          PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          subject="release-assets/VaultSync-Setup-$TARGET_VERSION.exe"
+          gh attestation verify "$subject" --repo "$GITHUB_REPOSITORY"
+          gh attestation trusted-root > supply-chain/trusted-root.jsonl
+          gh attestation verify "$subject" \
+            --repo "$GITHUB_REPOSITORY" \
+            --bundle "$PROVENANCE_BUNDLE" \
+            --custom-trusted-root supply-chain/trusted-root.jsonl
+
+      - name: Upload release SBOMs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-supply-chain-proof
+          if-no-files-found: error
+          path: |
+            supply-chain/sboms
+            supply-chain/trusted-root.jsonl
