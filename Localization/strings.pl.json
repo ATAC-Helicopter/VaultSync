@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Baza",
+  "Settings.Advanced.MetadataUndoNone": "Obecnie nie można cofnąć żadnej decyzji dotyczącej metadanych.",
+  "Settings.Advanced.MetadataUndoAvailable": "Ostatnią decyzję dla {0} można cofnąć do czasu następnego zapisu w repozytorium.",
+  "Settings.Advanced.MetadataUndoComplete": "Przywrócono poprzednie metadane dla {0}.",
+  "Settings.Advanced.MetadataUndoFailed": "Nie udało się cofnąć decyzji dotyczącej metadanych: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Cofnij decyzję",
   "Common.Save": "Zapisz",
   "Common.Delete": "Usuń",
   "Projects.Folder.NewName": "Nowa nazwa folderu",

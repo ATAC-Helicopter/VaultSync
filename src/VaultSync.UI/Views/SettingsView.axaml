@@ -2146,19 +2146,33 @@
                                         <Run Text="{Binding SourceMachineId}" />
                                         <Run Text=" · " />
                                         <Run Text="{Binding SourceUpdatedUtc}" />
+                                        <Run Text=" · " />
+                                        <Run Text="{Binding RevisionSummary}" />
                                       </TextBlock>
+                                      <TextBlock Text="{Binding ConflictingFields}"
+                                                 Foreground="{DynamicResource WarningTextBrush}"
+                                                 FontSize="11"
+                                                 TextWrapping="Wrap" />
+                                      <TextBlock Text="{Binding ProvenanceSummary}"
+                                                 Foreground="{DynamicResource TextSecondary}"
+                                                 FontSize="10"
+                                                 TextWrapping="Wrap" />
                                     </StackPanel>
 
-                                    <Grid ColumnDefinitions="Auto,*,*"
+                                    <Grid ColumnDefinitions="Auto,*,*,*"
                                           RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                           ColumnSpacing="12"
                                           RowSpacing="4">
                                       <TextBlock Grid.Row="0"
                                                  Grid.Column="1"
-                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsLocalLabel}"
+                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsBaseLabel}"
                                                  FontWeight="SemiBold" />
                                       <TextBlock Grid.Row="0"
                                                  Grid.Column="2"
+                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsLocalLabel}"
+                                                 FontWeight="SemiBold" />
+                                      <TextBlock Grid.Row="0"
+                                                 Grid.Column="3"
                                                  Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsImportedLabel}"
                                                  FontWeight="SemiBold" />
 
@@ -2167,9 +2181,12 @@
                                                  Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsAvatarColor}" />
                                       <TextBlock Grid.Row="1"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalAvatarColor}" />
+                                                 Text="{Binding BaseAvatarColor}" />
                                       <TextBlock Grid.Row="1"
                                                  Grid.Column="2"
+                                                 Text="{Binding LocalAvatarColor}" />
+                                      <TextBlock Grid.Row="1"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedAvatarColor}" />
 
                                       <TextBlock Grid.Row="2"
@@ -2177,9 +2194,12 @@
                                                  Text="{infra:LocalizedString Key=Projects.Stat.EncryptionPolicy}" />
                                       <TextBlock Grid.Row="2"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalEncryptionPolicy}" />
+                                                 Text="{Binding BaseEncryptionPolicy}" />
                                       <TextBlock Grid.Row="2"
                                                  Grid.Column="2"
+                                                 Text="{Binding LocalEncryptionPolicy}" />
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedEncryptionPolicy}" />
 
                                       <TextBlock Grid.Row="3"
@@ -2188,9 +2208,12 @@
 
                                       <TextBlock Grid.Row="3"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalPreferredDestinationId}" />
+                                                 Text="{Binding BasePreferredDestinationId}" />
                                       <TextBlock Grid.Row="3"
                                                  Grid.Column="2"
+                                                 Text="{Binding LocalPreferredDestinationId}" />
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedPreferredDestinationId}" />
 
                                       <TextBlock Grid.Row="4"
@@ -2199,9 +2222,12 @@
 
                                       <TextBlock Grid.Row="4"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalRestoreMode}" />
+                                                 Text="{Binding BaseRestoreMode}" />
                                       <TextBlock Grid.Row="4"
                                                  Grid.Column="2"
+                                                 Text="{Binding LocalRestoreMode}" />
+                                      <TextBlock Grid.Row="4"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedRestoreMode}" />
 
                                       <TextBlock Grid.Row="5"
@@ -2210,9 +2236,12 @@
 
                                       <TextBlock Grid.Row="5"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalVerificationPolicy}" />
+                                                 Text="{Binding BaseVerificationPolicy}" />
                                       <TextBlock Grid.Row="5"
                                                  Grid.Column="2"
+                                                 Text="{Binding LocalVerificationPolicy}" />
+                                      <TextBlock Grid.Row="5"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedVerificationPolicy}" />
 
                                       <TextBlock Grid.Row="6"
@@ -2220,9 +2249,12 @@
                                                  Text="{infra:LocalizedString Key=Backups.Section.AutoBackups}" />
                                       <TextBlock Grid.Row="6"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalAutoBackupEnabled}" />
+                                                 Text="{Binding BaseAutoBackupEnabled}" />
                                       <TextBlock Grid.Row="6"
                                                  Grid.Column="2"
+                                                 Text="{Binding LocalAutoBackupEnabled}" />
+                                      <TextBlock Grid.Row="6"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedAutoBackupEnabled}" />
 
                                       <TextBlock Grid.Row="7"
@@ -2230,10 +2262,14 @@
                                                  Text="{infra:LocalizedString Key=Projects.Tags.Label}" />
                                       <TextBlock Grid.Row="7"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalTags}"
+                                                 Text="{Binding BaseTags}"
                                                  TextWrapping="Wrap" />
                                       <TextBlock Grid.Row="7"
                                                  Grid.Column="2"
+                                                 Text="{Binding LocalTags}"
+                                                 TextWrapping="Wrap" />
+                                      <TextBlock Grid.Row="7"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedTags}"
                                                  TextWrapping="Wrap" />
                                     </Grid>
@@ -2255,6 +2291,21 @@
                               </DataTemplate>
                             </ItemsControl.ItemTemplate>
                           </ItemsControl>
+                          <Border Classes="subtle-card"
+                                  Padding="10"
+                                  IsVisible="{Binding HasUndoableProjectMetadataResolution}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                              <TextBlock Text="{Binding ProjectMetadataUndoStatus}"
+                                         Foreground="{DynamicResource TextSecondary}"
+                                         FontSize="11"
+                                         TextWrapping="Wrap"
+                                         VerticalAlignment="Center" />
+                              <Button Grid.Column="1"
+                                      Content="{infra:LocalizedString Key=Settings.Advanced.MetadataUndoAction}"
+                                      Classes="action-ghost"
+                                      Command="{Binding UndoProjectMetadataResolutionCommand}" />
+                            </Grid>
+                          </Border>
                         </StackPanel>
                       </Border>
                     </StackPanel>

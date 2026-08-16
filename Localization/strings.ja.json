@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "ベース",
+  "Settings.Advanced.MetadataUndoNone": "現在、元に戻せるメタデータの決定はありません。",
+  "Settings.Advanced.MetadataUndoAvailable": "{0} の最後の決定は、次のリポジトリ書き込みまで元に戻せます。",
+  "Settings.Advanced.MetadataUndoComplete": "{0} の以前のメタデータを復元しました。",
+  "Settings.Advanced.MetadataUndoFailed": "メタデータの決定を元に戻せませんでした: {0}",
+  "Settings.Advanced.MetadataUndoAction": "決定を元に戻す",
   "Common.Save": "保存",
   "Common.Delete": "削除",
   "Projects.Folder.NewName": "新しいフォルダー名",

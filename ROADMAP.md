@@ -472,8 +472,9 @@ after the planned minor train is complete and use explicit beta qualification.
     field-level three-way planning, automatic non-overlapping merges, and
     resolution results that retain independent edits are implemented and
     tested. Guarded repository writes and schema-version-3 base/provenance and
-    resolution export followed on 2026-08-17. Base/local/remote presentation,
-    bounded undo, and final two-machine qualification remain before completion.
+    resolution export followed on 2026-08-17, together with Base/local/remote
+    presentation and bounded undo that expires after the next portable write.
+    Final two-machine qualification remains before completion.
 - [ ] `VS-1880` `P1` Simplify and standardize shared application code without
   changing user-visible behavior.
   - Scope: consolidate repeated retry, path, serialization, status, dialog,

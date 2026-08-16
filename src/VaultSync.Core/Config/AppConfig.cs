@@ -387,6 +387,10 @@ namespace VaultSync.Core.Config
         public string ProjectName { get; set; } = string.Empty;
         public string SourceMachineId { get; set; } = string.Empty;
         public string SourceUpdatedUtc { get; set; } = string.Empty;
+        public string BaseMachineId { get; set; } = string.Empty;
+        public string BaseUpdatedUtc { get; set; } = string.Empty;
+        public string LocalMachineId { get; set; } = string.Empty;
+        public string DetectedUtc { get; set; } = string.Empty;
         public string SourceKey { get; set; } = string.Empty;
         public long SourceRevision { get; set; }
         public long BaseRevision { get; set; }
@@ -419,6 +423,9 @@ namespace VaultSync.Core.Config
         public long BaseRevision { get; set; }
         public string Decision { get; set; } = string.Empty;
         public string ResolvedUtc { get; set; } = string.Empty;
+        public bool UndoAvailable { get; set; }
+        public string UndoneUtc { get; set; } = string.Empty;
+        public string SupersededUtc { get; set; } = string.Empty;
         public ProjectMetadataConflictValues Local { get; set; } = new();
         public ProjectMetadataConflictValues Imported { get; set; } = new();
         public ProjectMetadataConflictValues Result { get; set; } = new();

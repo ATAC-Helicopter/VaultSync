@@ -95,6 +95,10 @@ public sealed class MetadataSyncService
         string SourceKey,
         string? SourceMachineId,
         long BaseRevision,
+        string BaseMachineId,
+        string BaseUpdatedUtc,
+        string LocalMachineId,
+        string DetectedUtc,
         ProjectMetadataConflictValues Base,
         ProjectMetadataConflictValues Local,
         ProjectMetadataConflictValues Incoming,
@@ -3467,15 +3471,26 @@ public sealed class MetadataSyncService
             AppConfig config = _configStore.Load();
             string sourceKey = BuildMetadataSourceKey(
                 Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            if (UpsertProjectMetadataMergeBase(
+            bool changed = false;
+            string supersededUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+            foreach (ProjectMetadataResolutionRecord resolution in (config.Advanced.ProjectMetadataResolutions ?? [])
+                         .Where(item => item.UndoAvailable &&
+                             string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+                             string.Equals(item.ProjectExternalId, write.Record.ExternalId, StringComparison.OrdinalIgnoreCase)))
+            {
+                resolution.UndoAvailable = false;
+                resolution.SupersededUtc = supersededUtc;
+                changed = true;
+            }
+
+            changed |= UpsertProjectMetadataMergeBase(
                     config,
                     sourceKey,
                     write.Record,
                     write.Record.WriterMachineId,
-                    write.Values))
-            {
+                    write.Values);
+            if (changed)
                 _configStore.Save(config);
-            }
         }
         catch (Exception ex)
         {
@@ -3871,11 +3886,27 @@ public sealed class MetadataSyncService
                 sourceKey,
                 sourceMachineId,
                 mergeBase?.Revision ?? 0,
+                mergeBase?.WriterMachineId ?? string.Empty,
+                mergeBase?.UpdatedUtc ?? string.Empty,
+                ResolveLocalMetadataWriterId(),
+                DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
                 trustedBase ?? new ProjectMetadataConflictValues(),
                 localValues,
                 incomingValues,
                 plan),
             pendingConflicts);
+    }
+
+    private string ResolveLocalMetadataWriterId()
+    {
+        try
+        {
+            return _installationIdentityProvider?.GetOrCreate() ?? "this-installation";
+        }
+        catch
+        {
+            return "this-installation";
+        }
     }
 
     private void ApplyProjectMetadataValues(
@@ -3983,6 +4014,7 @@ public sealed class MetadataSyncService
             : sourceMachineId;
         return (config.Advanced.ProjectMetadataResolutions ?? []).Any(resolution =>
             string.Equals(resolution.Decision, "keep-local", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(resolution.UndoneUtc) &&
             string.Equals(resolution.ProjectExternalId, project.ExternalId, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(resolution.SourceMachineId, normalizedSourceMachineId, StringComparison.Ordinal) &&
             string.Equals(resolution.SourceUpdatedUtc, sourceUpdatedUtc, StringComparison.Ordinal) &&
@@ -4032,6 +4064,10 @@ public sealed class MetadataSyncService
             SourceKey = context.SourceKey,
             SourceRevision = metaProject.Revision,
             BaseRevision = context.BaseRevision,
+            BaseMachineId = context.BaseMachineId,
+            BaseUpdatedUtc = context.BaseUpdatedUtc,
+            LocalMachineId = context.LocalMachineId,
+            DetectedUtc = context.DetectedUtc,
             SourceUpdatedUtc = metaProject.UpdatedUtc == default
                 ? string.Empty
                 : metaProject.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
@@ -4054,6 +4090,13 @@ public sealed class MetadataSyncService
             return true;
         }
 
+        if (string.Equals(existing.SourceKey, next.SourceKey, StringComparison.OrdinalIgnoreCase) &&
+            existing.SourceRevision == next.SourceRevision &&
+            !string.IsNullOrWhiteSpace(existing.DetectedUtc))
+        {
+            next.DetectedUtc = existing.DetectedUtc;
+        }
+
         if (ProjectMetadataConflictEquals(existing, next))
             return false;
 
@@ -4065,6 +4108,10 @@ public sealed class MetadataSyncService
         existing.SourceKey = next.SourceKey;
         existing.SourceRevision = next.SourceRevision;
         existing.BaseRevision = next.BaseRevision;
+        existing.BaseMachineId = next.BaseMachineId;
+        existing.BaseUpdatedUtc = next.BaseUpdatedUtc;
+        existing.LocalMachineId = next.LocalMachineId;
+        existing.DetectedUtc = next.DetectedUtc;
         existing.ConflictingFields = next.ConflictingFields;
         existing.Base = next.Base;
         existing.Local = next.Local;
@@ -4084,6 +4131,10 @@ public sealed class MetadataSyncService
                string.Equals(left.SourceKey, right.SourceKey, StringComparison.OrdinalIgnoreCase) &&
                left.SourceRevision == right.SourceRevision &&
                left.BaseRevision == right.BaseRevision &&
+               string.Equals(left.BaseMachineId, right.BaseMachineId, StringComparison.Ordinal) &&
+               string.Equals(left.BaseUpdatedUtc, right.BaseUpdatedUtc, StringComparison.Ordinal) &&
+               string.Equals(left.LocalMachineId, right.LocalMachineId, StringComparison.Ordinal) &&
+               string.Equals(left.DetectedUtc, right.DetectedUtc, StringComparison.Ordinal) &&
                left.ConflictingFields.SequenceEqual(right.ConflictingFields, StringComparer.Ordinal) &&
                ProjectMetadataConflictValuesEqual(left.Base, right.Base) &&
                ProjectMetadataConflictValuesEqual(left.Local, right.Local) &&

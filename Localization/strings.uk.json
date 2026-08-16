@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "База",
+  "Settings.Advanced.MetadataUndoNone": "Наразі немає рішення щодо метаданих, яке можна скасувати.",
+  "Settings.Advanced.MetadataUndoAvailable": "Останнє рішення для {0} можна скасувати до наступного запису в репозиторій.",
+  "Settings.Advanced.MetadataUndoComplete": "Попередні метадані для {0} відновлено.",
+  "Settings.Advanced.MetadataUndoFailed": "Не вдалося скасувати рішення щодо метаданих: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Скасувати рішення",
   "Common.Save": "зберегти",
   "Common.Delete": "Видалити",
   "Projects.Folder.NewName": "Нова назва папки",

@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
+  "Settings.Advanced.MetadataUndoNone": "Nessuna risoluzione dei metadati può essere annullata al momento.",
+  "Settings.Advanced.MetadataUndoAvailable": "L'ultima decisione per {0} può essere annullata fino alla prossima scrittura nel repository.",
+  "Settings.Advanced.MetadataUndoComplete": "Sono stati ripristinati i metadati precedenti per {0}.",
+  "Settings.Advanced.MetadataUndoFailed": "Impossibile annullare la decisione sui metadati: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Annulla decisione",
   "Common.Save": "Salva",
   "Common.Delete": "Elimina",
   "Projects.Folder.NewName": "Nuovo nome della cartella",

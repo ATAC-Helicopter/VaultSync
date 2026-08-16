@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
+  "Settings.Advanced.MetadataUndoNone": "Aucune résolution de métadonnées ne peut actuellement être annulée.",
+  "Settings.Advanced.MetadataUndoAvailable": "La dernière décision pour {0} peut être annulée jusqu'à la prochaine écriture dans le dépôt.",
+  "Settings.Advanced.MetadataUndoComplete": "Les métadonnées précédentes de {0} ont été restaurées.",
+  "Settings.Advanced.MetadataUndoFailed": "Échec de l'annulation de la décision de métadonnées : {0}",
+  "Settings.Advanced.MetadataUndoAction": "Annuler la décision",
   "Common.Save": "Enregistrer",
   "Common.Delete": "Supprimer",
   "Projects.Folder.NewName": "Nouveau nom de dossier",

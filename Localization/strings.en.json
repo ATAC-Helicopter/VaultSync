@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
+  "Settings.Advanced.MetadataUndoNone": "No metadata resolution is currently undoable.",
+  "Settings.Advanced.MetadataUndoAvailable": "The last decision for {0} can be undone until the next repository write.",
+  "Settings.Advanced.MetadataUndoComplete": "Restored the previous metadata for {0}.",
+  "Settings.Advanced.MetadataUndoFailed": "Undoing the metadata decision failed: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Undo decision",
   "Common.Save": "Save",
   "Common.Delete": "Delete",
   "Projects.Folder.NewName": "New folder name",

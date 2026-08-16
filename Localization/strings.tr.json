@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Temel",
+  "Settings.Advanced.MetadataUndoNone": "Şu anda geri alınabilecek bir meta veri kararı yok.",
+  "Settings.Advanced.MetadataUndoAvailable": "{0} için son karar, depoya bir sonraki yazmaya kadar geri alınabilir.",
+  "Settings.Advanced.MetadataUndoComplete": "{0} için önceki meta veriler geri yüklendi.",
+  "Settings.Advanced.MetadataUndoFailed": "Meta veri kararı geri alınamadı: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Kararı geri al",
   "Common.Save": "Kaydet",
   "Common.Delete": "Sil",
   "Projects.Folder.NewName": "Yeni klasör adı",

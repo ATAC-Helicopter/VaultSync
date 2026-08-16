@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Basis",
+  "Settings.Advanced.MetadataUndoNone": "Er kan momenteel geen metadatabeslissing ongedaan worden gemaakt.",
+  "Settings.Advanced.MetadataUndoAvailable": "De laatste beslissing voor {0} kan ongedaan worden gemaakt tot de volgende schrijfactie naar de opslagplaats.",
+  "Settings.Advanced.MetadataUndoComplete": "De vorige metadata voor {0} zijn hersteld.",
+  "Settings.Advanced.MetadataUndoFailed": "De metadatabeslissing kon niet ongedaan worden gemaakt: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Beslissing terugdraaien",
   "Common.Save": "Opslaan",
   "Common.Delete": "Verwijderen",
   "Projects.Folder.NewName": "Nieuwe mapnaam",

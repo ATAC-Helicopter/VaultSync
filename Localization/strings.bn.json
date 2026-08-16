@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "ভিত্তি",
+  "Settings.Advanced.MetadataUndoNone": "বর্তমানে কোনো মেটাডেটা সিদ্ধান্ত পূর্বাবস্থায় ফেরানো যাবে না।",
+  "Settings.Advanced.MetadataUndoAvailable": "{0}-এর শেষ সিদ্ধান্তটি পরবর্তী রিপোজিটরি লেখার আগে পর্যন্ত পূর্বাবস্থায় ফেরানো যাবে।",
+  "Settings.Advanced.MetadataUndoComplete": "{0}-এর আগের মেটাডেটা পুনরুদ্ধার করা হয়েছে।",
+  "Settings.Advanced.MetadataUndoFailed": "মেটাডেটা সিদ্ধান্ত পূর্বাবস্থায় ফেরানো ব্যর্থ হয়েছে: {0}",
+  "Settings.Advanced.MetadataUndoAction": "সিদ্ধান্ত পূর্বাবস্থায় ফেরান",
   "Common.Save": "সংরক্ষণ করুন",
   "Common.Delete": "মুছুন",
   "Projects.Folder.NewName": "নতুন ফোল্ডারের নাম",
