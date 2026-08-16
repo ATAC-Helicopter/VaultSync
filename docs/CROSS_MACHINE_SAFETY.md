@@ -150,12 +150,13 @@ revision.
    **Version-2 project writer/revision columns and version-1 compatibility were
    implemented on 2026-08-16. Durable per-source base revisions and field-level
    three-way planning were implemented on 2026-08-16. Schema-version-3 guarded
-   writes, base revisions, field provenance, and safe resolution export were
-   implemented on 2026-08-17; bounded undo remains in the VS-1879 merge work.**
+   writes, base revisions, field provenance, safe resolution export, explicit
+   Base/local/remote review, and bounded pre-next-write undo were implemented
+   on 2026-08-17.**
 5. Produce merge plans without applying them.
 6. Add explicit apply, durable resolution, and bounded undo.
-   **Durable Keep local and Accept imported decisions are implemented and
-   bounded; revision-aware undo remains in VS-1879.**
+   **Durable Keep local and Accept imported decisions plus revision-aware undo
+   until the next portable repository write are implemented.**
 7. Expose status, takeover, and conflict review in the UI.
    **Writer status and explicit stale takeover were implemented on 2026-08-16;
    complete portable-field conflict review was implemented on 2026-08-16.**

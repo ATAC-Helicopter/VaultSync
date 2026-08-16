@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Cơ sở",
+  "Settings.Advanced.MetadataUndoNone": "Hiện không có quyết định siêu dữ liệu nào có thể hoàn tác.",
+  "Settings.Advanced.MetadataUndoAvailable": "Quyết định gần nhất cho {0} có thể được hoàn tác cho đến lần ghi kho tiếp theo.",
+  "Settings.Advanced.MetadataUndoComplete": "Đã khôi phục siêu dữ liệu trước đó cho {0}.",
+  "Settings.Advanced.MetadataUndoFailed": "Không thể hoàn tác quyết định siêu dữ liệu: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Hoàn tác quyết định",
   "Common.Save": "Lưu",
   "Common.Delete": "Xóa",
   "Projects.Folder.NewName": "Tên thư mục mới",

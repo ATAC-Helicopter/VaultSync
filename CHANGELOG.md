@@ -6,6 +6,7 @@
 - [VS-1877] Added repository-scoped writer leases with atomic acquisition, heartbeat and expiry, read-only busy inspection, nonce-bound release, explicit stale takeover, and retained takeover evidence.
 - [VS-1877] Added per-destination repository-writer inspection and an explicit stale-takeover review that shows the owner, operation, version, heartbeat, and expiry before preserving the old lease as evidence.
 - [VS-1879] Added durable per-source merge bases and a field-level three-way metadata planner so independent cross-machine edits merge automatically while overlapping edits remain explicitly reviewable.
+- [VS-1879] Added a Base/local/remote conflict table with revision, writer, and timestamp context plus a durable Undo decision action that expires after the next portable repository write.
 ### Changed
 - [BUG-18099] Serviced the .NET 10 baseline to SDK `10.0.303`, runtime `10.0.11`, and coordinated Microsoft packages, with CI auditing real self-contained publishes and release artifacts for every supported runtime identifier.
 - [VS-1877] Protected project settings, backup history, tombstones, deferred metadata writes, and deferred flushing with repository lease ownership checks while keeping imports and previews readable when another writer is active.

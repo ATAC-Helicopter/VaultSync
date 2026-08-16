@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "الأساس",
+  "Settings.Advanced.MetadataUndoNone": "لا يوجد حاليًا قرار بيانات وصفية يمكن التراجع عنه.",
+  "Settings.Advanced.MetadataUndoAvailable": "يمكن التراجع عن آخر قرار لـ {0} حتى عملية الكتابة التالية إلى المستودع.",
+  "Settings.Advanced.MetadataUndoComplete": "تمت استعادة البيانات الوصفية السابقة لـ {0}.",
+  "Settings.Advanced.MetadataUndoFailed": "فشل التراجع عن قرار البيانات الوصفية: {0}",
+  "Settings.Advanced.MetadataUndoAction": "التراجع عن القرار",
   "Common.Save": "حفظ",
   "Common.Delete": "حذف",
   "Projects.Folder.NewName": "اسم المجلد الجديد",

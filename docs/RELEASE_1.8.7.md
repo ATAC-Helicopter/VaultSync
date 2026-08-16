@@ -114,6 +114,10 @@ complete and stable enough for broader qualification.
   inspected. Schema-version-3 rows carry their base revision, per-field writer,
   revision and timestamp provenance, plus the latest safe resolution evidence;
   stale writes roll back without replacing remote metadata (`VS-1879`).
+- Conflict review now presents Base/local/remote values with revision, writer,
+  and timestamp context. The latest decision can restore the previous local
+  state until the next portable repository write supersedes that undo record;
+  all six undo strings ship in every maintained locale (`VS-1879`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -122,8 +126,8 @@ branch package.
 
 ### In progress next
 
-1. Finish Base/local/remote conflict presentation and bounded undo for resolved
-   metadata merges.
+1. Complete the two-machine, disconnect, clock-skew, and NAS/SMB qualification
+   matrix for versioned metadata merging.
 2. Expose the running build and canonical release identity through the app,
    CLI, diagnostics, and support exports.
 3. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB

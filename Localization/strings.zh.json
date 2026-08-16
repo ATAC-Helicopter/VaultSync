@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "基准",
+  "Settings.Advanced.MetadataUndoNone": "当前没有可撤销的元数据决定。",
+  "Settings.Advanced.MetadataUndoAvailable": "在下次写入存储库之前，可以撤销对 {0} 的最后决定。",
+  "Settings.Advanced.MetadataUndoComplete": "已恢复 {0} 之前的元数据。",
+  "Settings.Advanced.MetadataUndoFailed": "撤销元数据决定失败：{0}",
+  "Settings.Advanced.MetadataUndoAction": "撤销决定",
   "Common.Save": "保存",
   "Common.Delete": "删除",
   "Projects.Folder.NewName": "新文件夹名称",

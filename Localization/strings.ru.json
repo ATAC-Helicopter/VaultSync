@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "База",
+  "Settings.Advanced.MetadataUndoNone": "Сейчас нет решения по метаданным, которое можно отменить.",
+  "Settings.Advanced.MetadataUndoAvailable": "Последнее решение для {0} можно отменить до следующей записи в репозиторий.",
+  "Settings.Advanced.MetadataUndoComplete": "Предыдущие метаданные для {0} восстановлены.",
+  "Settings.Advanced.MetadataUndoFailed": "Не удалось отменить решение по метаданным: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Отменить решение",
   "Common.Save": "Сохранить",
   "Common.Delete": "Удалить",
   "Projects.Folder.NewName": "Новое имя папки",

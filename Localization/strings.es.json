@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
+  "Settings.Advanced.MetadataUndoNone": "Actualmente no se puede deshacer ninguna resolución de metadatos.",
+  "Settings.Advanced.MetadataUndoAvailable": "La última decisión para {0} se puede deshacer hasta la próxima escritura en el repositorio.",
+  "Settings.Advanced.MetadataUndoComplete": "Se restauraron los metadatos anteriores de {0}.",
+  "Settings.Advanced.MetadataUndoFailed": "No se pudo deshacer la decisión de metadatos: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Deshacer decisión",
   "Common.Save": "Guardar",
   "Common.Delete": "Eliminar",
   "Projects.Folder.NewName": "Nuevo nombre de carpeta",

@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "आधार",
+  "Settings.Advanced.MetadataUndoNone": "फ़िलहाल कोई मेटाडेटा निर्णय पूर्ववत नहीं किया जा सकता।",
+  "Settings.Advanced.MetadataUndoAvailable": "{0} के अंतिम निर्णय को अगली रिपॉज़िटरी लिखाई तक पूर्ववत किया जा सकता है।",
+  "Settings.Advanced.MetadataUndoComplete": "{0} का पिछला मेटाडेटा बहाल कर दिया गया।",
+  "Settings.Advanced.MetadataUndoFailed": "मेटाडेटा निर्णय पूर्ववत नहीं हो सका: {0}",
+  "Settings.Advanced.MetadataUndoAction": "निर्णय पूर्ववत करें",
   "Common.Save": "सहेजें",
   "Common.Delete": "हटाएँ",
   "Projects.Folder.NewName": "नये फ़ोल्डर का नाम",

@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
+  "Settings.Advanced.MetadataUndoNone": "Nenhuma resolução de metadados pode ser desfeita no momento.",
+  "Settings.Advanced.MetadataUndoAvailable": "A última decisão para {0} pode ser desfeita até à próxima gravação no repositório.",
+  "Settings.Advanced.MetadataUndoComplete": "Os metadados anteriores de {0} foram restaurados.",
+  "Settings.Advanced.MetadataUndoFailed": "Falha ao desfazer a decisão de metadados: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Desfazer decisão",
   "Common.Save": "Salvar",
   "Common.Delete": "Excluir",
   "Projects.Folder.NewName": "Novo nome de pasta",

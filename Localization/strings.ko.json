@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "기준",
+  "Settings.Advanced.MetadataUndoNone": "현재 실행 취소할 수 있는 메타데이터 결정이 없습니다.",
+  "Settings.Advanced.MetadataUndoAvailable": "{0}의 마지막 결정은 다음 저장소 쓰기 전까지 실행 취소할 수 있습니다.",
+  "Settings.Advanced.MetadataUndoComplete": "{0}의 이전 메타데이터를 복원했습니다.",
+  "Settings.Advanced.MetadataUndoFailed": "메타데이터 결정을 실행 취소하지 못했습니다: {0}",
+  "Settings.Advanced.MetadataUndoAction": "결정 실행 취소",
   "Common.Save": "저장",
   "Common.Delete": "삭제",
   "Projects.Folder.NewName": "새 폴더 이름",

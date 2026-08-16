@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Dasar",
+  "Settings.Advanced.MetadataUndoNone": "Saat ini tidak ada keputusan metadata yang dapat dibatalkan.",
+  "Settings.Advanced.MetadataUndoAvailable": "Keputusan terakhir untuk {0} dapat dibatalkan hingga penulisan repositori berikutnya.",
+  "Settings.Advanced.MetadataUndoComplete": "Metadata sebelumnya untuk {0} telah dipulihkan.",
+  "Settings.Advanced.MetadataUndoFailed": "Gagal membatalkan keputusan metadata: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Batalkan keputusan",
   "Common.Save": "Simpan",
   "Common.Delete": "Hapus",
   "Projects.Folder.NewName": "Nama folder baru",

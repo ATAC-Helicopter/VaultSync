@@ -1665,6 +1665,7 @@ public sealed class MetadataSyncTests : IDisposable
             SourceRevision = 1,
             Decision = "keep-local",
             ResolvedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+            UndoAvailable = true,
             Result = savedBase.Values
         });
         AppConfigStore.Save(config);
@@ -1681,6 +1682,10 @@ public sealed class MetadataSyncTests : IDisposable
         Assert.Equal(2, secondProvenance["tags"].Revision);
         Assert.Equal(1, secondProvenance["restoreMode"].Revision);
         Assert.Contains("keep-local", secondRecord.ResolutionJson, StringComparison.Ordinal);
+        ProjectMetadataResolutionRecord supersededResolution =
+            Assert.Single(AppConfigStore.Load().Advanced.ProjectMetadataResolutions);
+        Assert.False(supersededResolution.UndoAvailable);
+        Assert.False(string.IsNullOrWhiteSpace(supersededResolution.SupersededUtc));
 
         secondRecord.SettingsJson = "{\"tags\":\"remote-three\"}";
         secondRecord.WriterMachineId = "machine-remote";

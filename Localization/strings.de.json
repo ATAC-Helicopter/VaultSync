@@ -1,4 +1,10 @@
 {
+  "Settings.Advanced.MetadataConflictsBaseLabel": "Basis",
+  "Settings.Advanced.MetadataUndoNone": "Derzeit kann keine Metadatenentscheidung rückgängig gemacht werden.",
+  "Settings.Advanced.MetadataUndoAvailable": "Die letzte Entscheidung für {0} kann bis zum nächsten Repository-Schreibvorgang rückgängig gemacht werden.",
+  "Settings.Advanced.MetadataUndoComplete": "Die vorherigen Metadaten für {0} wurden wiederhergestellt.",
+  "Settings.Advanced.MetadataUndoFailed": "Die Metadatenentscheidung konnte nicht rückgängig gemacht werden: {0}",
+  "Settings.Advanced.MetadataUndoAction": "Entscheidung rückgängig",
   "Common.Save": "Speichern",
   "Common.Delete": "Löschen",
   "Projects.Folder.NewName": "Neuer Ordnername",
