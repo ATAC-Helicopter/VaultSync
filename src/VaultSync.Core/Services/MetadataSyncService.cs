@@ -3433,6 +3433,7 @@ public sealed class MetadataSyncService
             }
 
             ProjectMetadataConflictValues values = BuildExportedProjectValues(project, config);
+            long nextRevision = checked(expectedRevision + 1);
             var record = new MetaProject
             {
                 ExternalId = projectExternalId,
@@ -3443,7 +3444,10 @@ public sealed class MetadataSyncService
                 SettingsJson = SerializeProjectSettings(values),
                 UpdatedUtc = updatedUtc,
                 WriterMachineId = machineId,
-                Revision = checked(expectedRevision + 1)
+                Revision = nextRevision,
+                BaseRevision = expectedRevision,
+                FieldProvenanceJson = BuildFieldProvenanceJson(existing, values, machineId, nextRevision, updatedUtc),
+                ResolutionJson = BuildResolutionJson(config, sourceKey, projectExternalId)
             };
             write = new GuardedProjectWrite(record, expectedRevision, values);
             return true;
@@ -3510,6 +3514,108 @@ public sealed class MetadataSyncService
         settings["tags"] = values.Tags;
         return JsonSerializer.Serialize(settings);
     }
+
+    private string BuildFieldProvenanceJson(
+        MetaProject? existing,
+        ProjectMetadataConflictValues values,
+        string writerMachineId,
+        long nextRevision,
+        DateTime updatedUtc)
+    {
+        Dictionary<string, ProjectMetadataFieldProvenance> provenance = ParseFieldProvenance(existing?.FieldProvenanceJson);
+        ProjectMetadataConflictValues? previous = existing is null
+            ? null
+            : ValuesFromParsedSettings(ParseProjectSettings(existing.SettingsJson));
+        string timestamp = updatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+        foreach (string field in ProjectMetadataFieldNames)
+        {
+            bool changed = previous is null || !ProjectMetadataFieldEquals(field, previous, values);
+            if (!changed && provenance.ContainsKey(field))
+                continue;
+
+            provenance[field] = new ProjectMetadataFieldProvenance
+            {
+                WriterMachineId = changed
+                    ? writerMachineId
+                    : existing?.WriterMachineId ?? writerMachineId,
+                Revision = changed
+                    ? nextRevision
+                    : Math.Max(0, existing?.Revision ?? nextRevision),
+                UpdatedUtc = changed
+                    ? timestamp
+                    : existing?.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) ?? timestamp
+            };
+        }
+
+        return JsonSerializer.Serialize(provenance);
+    }
+
+    private static string BuildResolutionJson(AppConfig config, string sourceKey, string projectExternalId)
+    {
+        ProjectMetadataResolutionRecord? resolution = (config.Advanced.ProjectMetadataResolutions ?? [])
+            .Where(item =>
+                string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(item.ProjectExternalId, projectExternalId, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(item => item.ResolvedUtc, StringComparer.Ordinal)
+            .FirstOrDefault();
+        return resolution is null ? string.Empty : JsonSerializer.Serialize(resolution);
+    }
+
+    private static Dictionary<string, ProjectMetadataFieldProvenance> ParseFieldProvenance(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return new Dictionary<string, ProjectMetadataFieldProvenance>(StringComparer.Ordinal);
+
+        try
+        {
+            Dictionary<string, ProjectMetadataFieldProvenance>? parsed =
+                JsonSerializer.Deserialize<Dictionary<string, ProjectMetadataFieldProvenance>>(json);
+            return parsed is null
+                ? new Dictionary<string, ProjectMetadataFieldProvenance>(StringComparer.Ordinal)
+                : new Dictionary<string, ProjectMetadataFieldProvenance>(parsed, StringComparer.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return new Dictionary<string, ProjectMetadataFieldProvenance>(StringComparer.Ordinal);
+        }
+    }
+
+    private static readonly string[] ProjectMetadataFieldNames =
+    [
+        "avatarColor",
+        "encryptionPolicy",
+        "preferredDestinationId",
+        "restoreMode",
+        "verificationPolicy",
+        "autoBackupEnabled",
+        "tags"
+    ];
+
+    private static ProjectMetadataConflictValues ValuesFromParsedSettings(ParsedProjectSettings parsed) => new()
+    {
+        AvatarColor = parsed.HasAvatarColor ? parsed.AvatarColor : string.Empty,
+        EncryptionPolicy = parsed.HasEncryptionPolicy ? parsed.EncryptionPolicy : string.Empty,
+        PreferredDestinationId = parsed.HasPreferredDestinationId ? parsed.PreferredDestinationId : string.Empty,
+        RestoreMode = parsed.HasRestoreMode ? parsed.RestoreMode : string.Empty,
+        VerificationPolicy = parsed.HasVerificationPolicy ? parsed.VerificationPolicy : string.Empty,
+        AutoBackupEnabled = parsed.HasAutoBackupEnabled ? parsed.AutoBackupEnabled : null,
+        Tags = parsed.HasTags ? parsed.Tags : string.Empty
+    };
+
+    private static bool ProjectMetadataFieldEquals(
+        string field,
+        ProjectMetadataConflictValues left,
+        ProjectMetadataConflictValues right) => field switch
+    {
+        "avatarColor" => string.Equals(left.AvatarColor, right.AvatarColor, StringComparison.OrdinalIgnoreCase),
+        "encryptionPolicy" => string.Equals(left.EncryptionPolicy, right.EncryptionPolicy, StringComparison.OrdinalIgnoreCase),
+        "preferredDestinationId" => string.Equals(left.PreferredDestinationId, right.PreferredDestinationId, StringComparison.OrdinalIgnoreCase),
+        "restoreMode" => string.Equals(left.RestoreMode, right.RestoreMode, StringComparison.OrdinalIgnoreCase),
+        "verificationPolicy" => string.Equals(left.VerificationPolicy, right.VerificationPolicy, StringComparison.OrdinalIgnoreCase),
+        "autoBackupEnabled" => left.AutoBackupEnabled == right.AutoBackupEnabled,
+        "tags" => string.Equals(left.Tags, right.Tags, StringComparison.Ordinal),
+        _ => false
+    };
 
     private readonly record struct ParsedProjectSettings(
         string AvatarColor,
@@ -3823,11 +3929,13 @@ public sealed class MetadataSyncService
         string updatedUtc = project.UpdatedUtc == default
             ? string.Empty
             : project.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+        Dictionary<string, ProjectMetadataFieldProvenance> fieldProvenance = ParseFieldProvenance(project.FieldProvenanceJson);
         if (existing is not null &&
             existing.Revision == project.Revision &&
             string.Equals(existing.WriterMachineId, writerMachineId, StringComparison.Ordinal) &&
             string.Equals(existing.UpdatedUtc, updatedUtc, StringComparison.Ordinal) &&
-            ProjectMetadataConflictValuesEqual(existing.Values, values))
+            ProjectMetadataConflictValuesEqual(existing.Values, values) &&
+            ProjectMetadataFieldProvenanceEqual(existing.FieldProvenance, fieldProvenance))
         {
             return false;
         }
@@ -3843,7 +3951,22 @@ public sealed class MetadataSyncService
         existing.WriterMachineId = writerMachineId ?? string.Empty;
         existing.UpdatedUtc = updatedUtc;
         existing.Values = values;
+        existing.FieldProvenance = fieldProvenance;
         return true;
+    }
+
+    private static bool ProjectMetadataFieldProvenanceEqual(
+        IReadOnlyDictionary<string, ProjectMetadataFieldProvenance>? left,
+        IReadOnlyDictionary<string, ProjectMetadataFieldProvenance>? right)
+    {
+        left ??= new Dictionary<string, ProjectMetadataFieldProvenance>();
+        right ??= new Dictionary<string, ProjectMetadataFieldProvenance>();
+        if (left.Count != right.Count)
+            return false;
+        return left.All(pair => right.TryGetValue(pair.Key, out ProjectMetadataFieldProvenance? value) &&
+            string.Equals(pair.Value.WriterMachineId, value.WriterMachineId, StringComparison.Ordinal) &&
+            pair.Value.Revision == value.Revision &&
+            string.Equals(pair.Value.UpdatedUtc, value.UpdatedUtc, StringComparison.Ordinal));
     }
 
     private static bool HasDurableKeepLocalResolution(

@@ -1645,12 +1645,42 @@ public sealed class MetadataSyncTests : IDisposable
         MetadataStore store = new(metaRoot);
         MetaProject firstRecord = Assert.IsType<MetaProject>(store.GetProject("project-guarded-export"));
         Assert.Equal(1, firstRecord.Revision);
+        Assert.Equal(0, firstRecord.BaseRevision);
+        Dictionary<string, ProjectMetadataFieldProvenance> firstProvenance =
+            Assert.IsType<Dictionary<string, ProjectMetadataFieldProvenance>>(
+                JsonSerializer.Deserialize<Dictionary<string, ProjectMetadataFieldProvenance>>(firstRecord.FieldProvenanceJson));
+        Assert.All(firstProvenance.Values, value =>
+        {
+            Assert.Equal("machine-local", value.WriterMachineId);
+            Assert.Equal(1, value.Revision);
+        });
+
+        AppConfig config = AppConfigStore.Load();
+        ProjectMetadataMergeBaseRecord savedBase = Assert.Single(config.Advanced.ProjectMetadataMergeBases);
+        config.Advanced.ProjectMetadataResolutions.Add(new ProjectMetadataResolutionRecord
+        {
+            SourceKey = savedBase.SourceKey,
+            ProjectExternalId = "project-guarded-export",
+            SourceMachineId = "machine-local",
+            SourceRevision = 1,
+            Decision = "keep-local",
+            ResolvedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+            Result = savedBase.Values
+        });
+        AppConfigStore.Save(config);
 
         repo.UpdateProjectTags(projectId, "local-two");
         MetadataSyncResult second = service.ExportProjectToStore(metaRoot, projectId, "1.8.7", "machine-local");
         Assert.Equal(MetadataSyncStatus.Success, second.Status);
         MetaProject secondRecord = Assert.IsType<MetaProject>(store.GetProject("project-guarded-export"));
         Assert.Equal(2, secondRecord.Revision);
+        Assert.Equal(1, secondRecord.BaseRevision);
+        Dictionary<string, ProjectMetadataFieldProvenance> secondProvenance =
+            Assert.IsType<Dictionary<string, ProjectMetadataFieldProvenance>>(
+                JsonSerializer.Deserialize<Dictionary<string, ProjectMetadataFieldProvenance>>(secondRecord.FieldProvenanceJson));
+        Assert.Equal(2, secondProvenance["tags"].Revision);
+        Assert.Equal(1, secondProvenance["restoreMode"].Revision);
+        Assert.Contains("keep-local", secondRecord.ResolutionJson, StringComparison.Ordinal);
 
         secondRecord.SettingsJson = "{\"tags\":\"remote-three\"}";
         secondRecord.WriterMachineId = "machine-remote";
@@ -2175,13 +2205,23 @@ public sealed class MetadataSyncTests : IDisposable
             SettingsJson = "{\"encryptionPolicy\":\"inherit\",\"preferredDestinationId\":\"\",\"restoreMode\":\"direct\",\"verificationPolicy\":\"always\",\"autoBackupEnabled\":true,\"tags\":\"base\"}",
             UpdatedUtc = now,
             WriterMachineId = "machine-remote",
-            Revision = 1
+            Revision = 1,
+            FieldProvenanceJson = JsonSerializer.Serialize(new Dictionary<string, ProjectMetadataFieldProvenance>
+            {
+                ["tags"] = new()
+                {
+                    WriterMachineId = "machine-remote",
+                    Revision = 1,
+                    UpdatedUtc = now.ToString("O", CultureInfo.InvariantCulture)
+                }
+            })
         };
         store.UpsertProject(remote);
 
         var service = new MetadataSyncService(repo);
         Assert.Equal(MetadataSyncStatus.Success, service.ImportFromStore(metaRoot, MetadataSyncOptions.Default).Status);
-        Assert.Single(AppConfigStore.Load().Advanced.ProjectMetadataMergeBases);
+        ProjectMetadataMergeBaseRecord importedBase = Assert.Single(AppConfigStore.Load().Advanced.ProjectMetadataMergeBases);
+        Assert.Equal("machine-remote", importedBase.FieldProvenance["tags"].WriterMachineId);
 
         repo.UpdateProjectTags(projectId, "local");
         remote.SettingsJson = "{\"encryptionPolicy\":\"inherit\",\"preferredDestinationId\":\"\",\"restoreMode\":\"sandbox\",\"verificationPolicy\":\"always\",\"autoBackupEnabled\":true,\"tags\":\"base\"}";
@@ -2857,6 +2897,23 @@ public sealed class MetadataSyncTests : IDisposable
         Assert.NotNull(backup);
         Assert.False(backup!.IsEncrypted);
         Assert.Equal(BackupCryptoDescriptor.PlainMetadataJson, backup.CryptoDescriptorJson);
+    }
+
+    [Fact]
+    public void MetadataStore_EnsureSchema_MigratesLegacyProjectsToProvenanceColumns()
+    {
+        string metaRoot = CreateTempDir();
+        string projectRoot = CreateTempDir();
+        CreateLegacyStoreWithoutEncryptionColumns(metaRoot, projectRoot, "legacy/backup");
+        var store = new MetadataStore(metaRoot);
+
+        store.EnsureSchema();
+
+        MetaProject project = Assert.IsType<MetaProject>(store.GetProject("legacy-project-1"));
+        Assert.Equal(1, project.Revision);
+        Assert.Equal(0, project.BaseRevision);
+        Assert.Equal("{}", project.FieldProvenanceJson);
+        Assert.Equal(string.Empty, project.ResolutionJson);
     }
 
     public void Dispose()

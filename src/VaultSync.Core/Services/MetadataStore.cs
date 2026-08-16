@@ -12,7 +12,7 @@ namespace VaultSync.Core.Services;
 
 public sealed class MetadataStore
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
     private const string BackupsTable = "backups";
     private const string ProjectsTable = "projects";
     private const string SnapshotsTable = "snapshots";
@@ -74,7 +74,10 @@ public sealed class MetadataStore
               settings_json TEXT NOT NULL,
               updated_utc TEXT NOT NULL,
               writer_machine_id TEXT NOT NULL DEFAULT '',
-              revision INTEGER NOT NULL DEFAULT 1
+              revision INTEGER NOT NULL DEFAULT 1,
+              base_revision INTEGER NOT NULL DEFAULT 0,
+              field_provenance_json TEXT NOT NULL DEFAULT '{}',
+              resolution_json TEXT NOT NULL DEFAULT ''
             );
 
             CREATE TABLE IF NOT EXISTS snapshots(
@@ -126,6 +129,9 @@ public sealed class MetadataStore
         EnsureColumn(c, BackupsTable, "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
         EnsureColumn(c, ProjectsTable, "writer_machine_id", "ALTER TABLE projects ADD COLUMN writer_machine_id TEXT NOT NULL DEFAULT '';");
         EnsureColumn(c, ProjectsTable, "revision", "ALTER TABLE projects ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;");
+        EnsureColumn(c, ProjectsTable, "base_revision", "ALTER TABLE projects ADD COLUMN base_revision INTEGER NOT NULL DEFAULT 0;");
+        EnsureColumn(c, ProjectsTable, "field_provenance_json", "ALTER TABLE projects ADD COLUMN field_provenance_json TEXT NOT NULL DEFAULT '{}';");
+        EnsureColumn(c, ProjectsTable, "resolution_json", "ALTER TABLE projects ADD COLUMN resolution_json TEXT NOT NULL DEFAULT '';");
         EnsureColumn(c, SnapshotsTable, "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
         EnsureColumn(c, SnapshotsTable, "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
         EnsureColumn(c, SnapshotsTable, "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
@@ -200,8 +206,8 @@ public sealed class MetadataStore
     {
         ExecuteWrite(
             """
-            INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc, writer_machine_id, revision)
-            VALUES(@ExternalId, @Name, @Preset, @RootPathHint, @CreatedUtc, @SettingsJson, @UpdatedUtc, @WriterMachineId, @Revision)
+            INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc, writer_machine_id, revision, base_revision, field_provenance_json, resolution_json)
+            VALUES(@ExternalId, @Name, @Preset, @RootPathHint, @CreatedUtc, @SettingsJson, @UpdatedUtc, @WriterMachineId, @Revision, @BaseRevision, @FieldProvenanceJson, @ResolutionJson)
             ON CONFLICT(external_id) DO UPDATE SET
               name = excluded.name,
               preset = excluded.preset,
@@ -209,6 +215,9 @@ public sealed class MetadataStore
               settings_json = excluded.settings_json,
               updated_utc = excluded.updated_utc,
               writer_machine_id = excluded.writer_machine_id,
+              base_revision = projects.revision,
+              field_provenance_json = excluded.field_provenance_json,
+              resolution_json = excluded.resolution_json,
               revision = CASE
                 WHEN excluded.revision > projects.revision THEN excluded.revision
                 ELSE projects.revision + 1
@@ -224,7 +233,10 @@ public sealed class MetadataStore
                 project.SettingsJson,
                 UpdatedUtc = ToUtcString(project.UpdatedUtc),
                 project.WriterMachineId,
-                Revision = Math.Max(1, project.Revision)
+                Revision = Math.Max(1, project.Revision),
+                BaseRevision = Math.Max(0, project.BaseRevision),
+                project.FieldProvenanceJson,
+                project.ResolutionJson
             });
     }
 
@@ -234,8 +246,8 @@ public sealed class MetadataStore
             throw new ArgumentOutOfRangeException(nameof(expectedRevision));
 
         const string sql = """
-            INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc, writer_machine_id, revision)
-            SELECT @ExternalId, @Name, @Preset, @RootPathHint, @CreatedUtc, @SettingsJson, @UpdatedUtc, @WriterMachineId, @NextRevision
+            INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc, writer_machine_id, revision, base_revision, field_provenance_json, resolution_json)
+            SELECT @ExternalId, @Name, @Preset, @RootPathHint, @CreatedUtc, @SettingsJson, @UpdatedUtc, @WriterMachineId, @NextRevision, @ExpectedRevision, @FieldProvenanceJson, @ResolutionJson
             WHERE @ExpectedRevision = 0
                OR EXISTS(
                     SELECT 1
@@ -249,7 +261,10 @@ public sealed class MetadataStore
               settings_json = excluded.settings_json,
               updated_utc = excluded.updated_utc,
               writer_machine_id = excluded.writer_machine_id,
-              revision = excluded.revision
+              revision = excluded.revision,
+              base_revision = excluded.base_revision,
+              field_provenance_json = excluded.field_provenance_json,
+              resolution_json = excluded.resolution_json
             WHERE projects.revision = @ExpectedRevision;
             """;
         var parameters = new
@@ -262,6 +277,8 @@ public sealed class MetadataStore
             project.SettingsJson,
             UpdatedUtc = ToUtcString(project.UpdatedUtc),
             project.WriterMachineId,
+            project.FieldProvenanceJson,
+            project.ResolutionJson,
             ExpectedRevision = expectedRevision,
             NextRevision = checked(expectedRevision + 1)
         };
@@ -413,6 +430,15 @@ public sealed class MetadataStore
         string revisionProjection = columns.Contains("revision")
             ? "revision as Revision"
             : "0 as Revision";
+        string baseRevisionProjection = columns.Contains("base_revision")
+            ? "base_revision as BaseRevision"
+            : "0 as BaseRevision";
+        string provenanceProjection = columns.Contains("field_provenance_json")
+            ? "field_provenance_json as FieldProvenanceJson"
+            : "'{}' as FieldProvenanceJson";
+        string resolutionProjection = columns.Contains("resolution_json")
+            ? "resolution_json as ResolutionJson"
+            : "'' as ResolutionJson";
         string sql = $"""
             SELECT
               external_id as ExternalId,
@@ -423,7 +449,10 @@ public sealed class MetadataStore
               settings_json as SettingsJson,
               updated_utc as UpdatedUtc,
               {writerProjection},
-              {revisionProjection}
+              {revisionProjection},
+              {baseRevisionProjection},
+              {provenanceProjection},
+              {resolutionProjection}
             FROM projects;
             """;
         return SafeQuery<MetaProject>(c, sql);
@@ -881,6 +910,9 @@ public sealed class MetaProject
     public DateTime UpdatedUtc { get; set; }
     public string WriterMachineId { get; set; } = string.Empty;
     public long Revision { get; set; }
+    public long BaseRevision { get; set; }
+    public string FieldProvenanceJson { get; set; } = "{}";
+    public string ResolutionJson { get; set; } = string.Empty;
 }
 
 public sealed class MetaSnapshot

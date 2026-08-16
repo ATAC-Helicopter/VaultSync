@@ -11,6 +11,7 @@
 - [VS-1877] Protected project settings, backup history, tombstones, deferred metadata writes, and deferred flushing with repository lease ownership checks while keeping imports and previews readable when another writer is active.
 - [VS-1877] Made unavailable-destination metadata queues fail closed: queued metadata can initialize an empty destination once, while an existing destination is preserved for explicit merge review.
 - [VS-1879] Made conflict decisions preserve non-overlapping remote edits, record source and base revisions, and advance the durable merge base after either resolution.
+- [VS-1879] Guarded every portable project writer with compare-and-swap revisions and upgraded project records to schema version 3 with base revision, per-field writer/timestamp provenance, and safe resolution evidence.
 - [VS-1880] Consolidated metadata export orchestration, SMB mount parsing, mounted-share validation, theme color normalization, and contrast calculations behind focused shared primitives with regression coverage.
 - [VS-1880] Unified Windows Robocopy exclusions with the shared preset resolver.
 - [BUG-18103] Modernized Snapshot Explorer, metadata-import review, and updater windows around the current compact, theme-aware app layout.

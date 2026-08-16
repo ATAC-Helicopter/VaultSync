@@ -432,6 +432,14 @@ namespace VaultSync.Core.Config
         public string WriterMachineId { get; set; } = string.Empty;
         public string UpdatedUtc { get; set; } = string.Empty;
         public ProjectMetadataConflictValues Values { get; set; } = new();
+        public Dictionary<string, ProjectMetadataFieldProvenance> FieldProvenance { get; set; } = new(StringComparer.Ordinal);
+    }
+
+    public sealed class ProjectMetadataFieldProvenance
+    {
+        public string WriterMachineId { get; set; } = string.Empty;
+        public long Revision { get; set; }
+        public string UpdatedUtc { get; set; } = string.Empty;
     }
 
     public sealed class UpdateCheckDiagnostics
