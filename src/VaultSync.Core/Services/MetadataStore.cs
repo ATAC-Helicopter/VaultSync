@@ -228,6 +228,47 @@ public sealed class MetadataStore
             });
     }
 
+    public bool TryUpsertProject(MetaProject project, long expectedRevision)
+    {
+        if (expectedRevision < 0)
+            throw new ArgumentOutOfRangeException(nameof(expectedRevision));
+
+        const string sql = """
+            INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc, writer_machine_id, revision)
+            SELECT @ExternalId, @Name, @Preset, @RootPathHint, @CreatedUtc, @SettingsJson, @UpdatedUtc, @WriterMachineId, @NextRevision
+            WHERE @ExpectedRevision = 0
+               OR EXISTS(
+                    SELECT 1
+                    FROM projects
+                    WHERE external_id = @ExternalId
+                      AND revision = @ExpectedRevision)
+            ON CONFLICT(external_id) DO UPDATE SET
+              name = excluded.name,
+              preset = excluded.preset,
+              root_path_hint = excluded.root_path_hint,
+              settings_json = excluded.settings_json,
+              updated_utc = excluded.updated_utc,
+              writer_machine_id = excluded.writer_machine_id,
+              revision = excluded.revision
+            WHERE projects.revision = @ExpectedRevision;
+            """;
+        var parameters = new
+        {
+            project.ExternalId,
+            project.Name,
+            project.Preset,
+            project.RootPathHint,
+            CreatedUtc = ToUtcString(project.CreatedUtc),
+            project.SettingsJson,
+            UpdatedUtc = ToUtcString(project.UpdatedUtc),
+            project.WriterMachineId,
+            ExpectedRevision = expectedRevision,
+            NextRevision = checked(expectedRevision + 1)
+        };
+
+        return ExecuteWriteCount(sql, parameters) == 1;
+    }
+
     public void UpsertSnapshot(MetaSnapshot snapshot)
     {
         ExecuteWrite(
@@ -350,6 +391,15 @@ public sealed class MetadataStore
         connection.Execute(sql, param);
     }
 
+    private int ExecuteWriteCount(string sql, object? param = null)
+    {
+        if (_activeWriteConnection is not null)
+            return _activeWriteConnection.Execute(sql, param, _activeWriteTransaction);
+
+        using SqliteConnection connection = Open(write: true);
+        return connection.Execute(sql, param);
+    }
+
     public IEnumerable<MetaProject> ListProjects()
     {
         using SqliteConnection? c = TryOpenRead();
@@ -402,6 +452,15 @@ public sealed class MetadataStore
             c,
             "SELECT 1 FROM projects WHERE external_id = @id LIMIT 1;",
             new { id = externalId }) == 1;
+    }
+
+    public MetaProject? GetProject(string externalId)
+    {
+        if (string.IsNullOrWhiteSpace(externalId))
+            return null;
+
+        return ListProjects().FirstOrDefault(project =>
+            string.Equals(project.ExternalId, externalId, StringComparison.OrdinalIgnoreCase));
     }
 
     public IEnumerable<MetaSnapshot> ListSnapshots()

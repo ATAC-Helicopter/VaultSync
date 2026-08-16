@@ -50,7 +50,16 @@ public sealed class MetadataSyncService
         string BackupExternalId,
         DateTime Now,
         string MachineId,
-        bool ForceBackfill);
+        bool ForceBackfill,
+        MetaProject ProjectRecord,
+        long ExpectedProjectRevision);
+
+    private sealed record GuardedProjectWrite(
+        MetaProject Record,
+        long ExpectedRevision,
+        ProjectMetadataConflictValues Values);
+
+    private sealed class MetadataRevisionConflictException(string message) : InvalidOperationException(message);
 
     private sealed record LegacyPreviewContext(
         string RootPath,
@@ -2442,6 +2451,18 @@ public sealed class MetadataSyncService
             appVersion,
             machineId,
             updateExistingAppVersion: true);
+        if (!TryPrepareGuardedProjectWrite(
+                rootPath,
+                store,
+                project,
+                projectExternalId,
+                now,
+                machineId,
+                out GuardedProjectWrite? guardedWrite,
+                out string revisionFailure))
+        {
+            return MetadataSyncResult.Failure(MetadataSyncStatus.RepositoryBusy, revisionFailure);
+        }
 
         try
         {
@@ -2450,18 +2471,13 @@ public sealed class MetadataSyncService
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                store.UpsertProject(new MetaProject
-                {
-                    ExternalId = projectExternalId,
-                    Name = project.Name,
-                    Preset = project.Preset,
-                    RootPathHint = project.RootPath,
-                    CreatedUtc = project.CreatedUtc,
-                    SettingsJson = BuildProjectSettingsJson(project),
-                    UpdatedUtc = now,
-                    WriterMachineId = machineId
-                });
+                if (!store.TryUpsertProject(guardedWrite!.Record, guardedWrite.ExpectedRevision))
+                    throw new MetadataRevisionConflictException("Project metadata changed after its revision was inspected.");
             });
+        }
+        catch (MetadataRevisionConflictException ex)
+        {
+            return MetadataSyncResult.Failure(MetadataSyncStatus.RepositoryBusy, ex.Message);
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
@@ -2478,6 +2494,9 @@ public sealed class MetadataSyncService
             string.Empty);
         Console.WriteLine($"[MetadataSync] Project export complete for project '{project.Name}' to '{storeRoot}'.");
         LogStoreCounts(store);
+
+        if (!useDeferredStore)
+            SaveSuccessfulProjectWriteBase(rootPath, guardedWrite!);
 
         if (useDeferredStore)
         {
@@ -2594,6 +2613,18 @@ public sealed class MetadataSyncService
             appVersion,
             machineId,
             updateExistingAppVersion: true);
+        if (!TryPrepareGuardedProjectWrite(
+                rootPath,
+                store,
+                project,
+                projectExternalId,
+                now,
+                machineId,
+                out GuardedProjectWrite? guardedWrite,
+                out string revisionFailure))
+        {
+            return MetadataSyncResult.Failure(MetadataSyncStatus.RepositoryBusy, revisionFailure);
+        }
 
         BackupExportCounts counts;
         try
@@ -2610,7 +2641,13 @@ public sealed class MetadataSyncService
                     backupExternalId,
                     now,
                     machineId,
-                    forceBackfill));
+                    forceBackfill,
+                    guardedWrite!.Record,
+                    guardedWrite.ExpectedRevision));
+        }
+        catch (MetadataRevisionConflictException ex)
+        {
+            return MetadataSyncResult.Failure(MetadataSyncStatus.RepositoryBusy, ex.Message);
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
@@ -2629,6 +2666,8 @@ public sealed class MetadataSyncService
             ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{storeRoot}': snapshots={counts.Snapshots}, backups={counts.Backups}."
             : $"[MetadataSync] Export complete for backup {backupId} to '{storeRoot}'.");
         LogStoreCounts(store);
+        if (!useDeferredStore)
+            SaveSuccessfulProjectWriteBase(rootPath, guardedWrite!);
         if (useDeferredStore)
         {
             return MetadataSyncResult.Failure(
@@ -2698,24 +2737,17 @@ public sealed class MetadataSyncService
                     entities.Project,
                     context.ProjectExternalId,
                     context.Now,
-                    context.MachineId);
+                    context.MachineId,
+                    context.ProjectRecord,
+                    context.ExpectedProjectRevision);
                 exportedProjects = 1;
                 exportedSnapshots = snapshots;
                 exportedBackups = backups;
                 return;
             }
 
-            store.UpsertProject(new MetaProject
-            {
-                ExternalId = context.ProjectExternalId,
-                Name = entities.Project.Name,
-                Preset = entities.Project.Preset,
-                RootPathHint = entities.Project.RootPath,
-                CreatedUtc = entities.Project.CreatedUtc,
-                SettingsJson = BuildProjectSettingsJson(entities.Project),
-                UpdatedUtc = context.Now,
-                WriterMachineId = context.MachineId
-            });
+            if (!store.TryUpsertProject(context.ProjectRecord, context.ExpectedProjectRevision))
+                throw new MetadataRevisionConflictException("Project metadata changed after its revision was inspected.");
             store.UpsertSnapshot(new MetaSnapshot
             {
                 ExternalId = context.SnapshotExternalId,
@@ -3199,24 +3231,17 @@ public sealed class MetadataSyncService
         Project project,
         string projectExternalId,
         DateTime now,
-        string machineId)
+        string machineId,
+        MetaProject projectRecord,
+        long expectedProjectRevision)
     {
         var snapshots = _repo.GetSnapshotsForProject(project.Name).ToList();
         var backups = _repo.GetBackupsForProject(project.Id).ToList();
         Console.WriteLine($"[MetadataSync] Export history for '{project.Name}': snapshots={snapshots.Count}, backups={backups.Count}.");
         var snapshotExternalIds = new Dictionary<int, string>();
 
-        store.UpsertProject(new MetaProject
-        {
-            ExternalId = projectExternalId,
-            Name = project.Name,
-            Preset = project.Preset,
-            RootPathHint = project.RootPath,
-            CreatedUtc = project.CreatedUtc,
-            SettingsJson = BuildProjectSettingsJson(project),
-            UpdatedUtc = now,
-            WriterMachineId = machineId
-        });
+        if (!store.TryUpsertProject(projectRecord, expectedProjectRevision))
+            throw new MetadataRevisionConflictException("Project metadata changed after its revision was inspected.");
 
         foreach (Snapshot? snap in snapshots)
         {
@@ -3358,35 +3383,132 @@ public sealed class MetadataSyncService
 
     private static string NewExternalId() => Guid.NewGuid().ToString("N");
 
-    private string BuildProjectSettingsJson(Project project)
+    private bool TryPrepareGuardedProjectWrite(
+        string destinationRoot,
+        MetadataStore store,
+        Project project,
+        string projectExternalId,
+        DateTime updatedUtc,
+        string machineId,
+        out GuardedProjectWrite? write,
+        out string failure)
+    {
+        write = null;
+        failure = string.Empty;
+        try
+        {
+            MetaProject? existing = store.GetProject(projectExternalId);
+            long expectedRevision;
+            AppConfig config = _configStore.Load();
+            string sourceKey = BuildMetadataSourceKey(
+                Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            ProjectMetadataMergeBaseRecord? mergeBase = (config.Advanced.ProjectMetadataMergeBases ?? [])
+                .FirstOrDefault(item =>
+                    string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(item.ProjectExternalId, projectExternalId, StringComparison.OrdinalIgnoreCase));
+
+            if (existing is null)
+            {
+                expectedRevision = 0;
+            }
+            else if (mergeBase is not null)
+            {
+                if (mergeBase.Revision <= 0 || mergeBase.Revision != existing.Revision)
+                {
+                    failure = "Project metadata changed on another machine. Import and review that revision before writing.";
+                    return false;
+                }
+
+                expectedRevision = mergeBase.Revision;
+            }
+            else if (!string.IsNullOrWhiteSpace(existing.WriterMachineId) &&
+                     string.Equals(existing.WriterMachineId, machineId, StringComparison.Ordinal))
+            {
+                expectedRevision = existing.Revision;
+            }
+            else
+            {
+                failure = "Existing project metadata has no trusted local base. Import and review it before writing.";
+                return false;
+            }
+
+            ProjectMetadataConflictValues values = BuildExportedProjectValues(project, config);
+            var record = new MetaProject
+            {
+                ExternalId = projectExternalId,
+                Name = project.Name,
+                Preset = project.Preset,
+                RootPathHint = project.RootPath,
+                CreatedUtc = project.CreatedUtc,
+                SettingsJson = SerializeProjectSettings(values),
+                UpdatedUtc = updatedUtc,
+                WriterMachineId = machineId,
+                Revision = checked(expectedRevision + 1)
+            };
+            write = new GuardedProjectWrite(record, expectedRevision, values);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Could not prepare guarded project metadata: {ex.Message}");
+            failure = "Project metadata could not be prepared safely for writing.";
+            return false;
+        }
+    }
+
+    private void SaveSuccessfulProjectWriteBase(string destinationRoot, GuardedProjectWrite write)
     {
         try
         {
-            string? color = _projectColorResolver?.Invoke(project);
-            var settings = new Dictionary<string, object?>();
-            if (!string.IsNullOrWhiteSpace(color))
+            AppConfig config = _configStore.Load();
+            string sourceKey = BuildMetadataSourceKey(
+                Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            if (UpsertProjectMetadataMergeBase(
+                    config,
+                    sourceKey,
+                    write.Record,
+                    write.Record.WriterMachineId,
+                    write.Values))
             {
-                settings["avatarColor"] = color;
+                _configStore.Save(config);
             }
-
-            settings["encryptionPolicy"] = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy);
-            settings["preferredDestinationId"] = string.IsNullOrWhiteSpace(project.PreferredDestinationId)
-                ? null
-                : project.PreferredDestinationId;
-            settings["restoreMode"] = ProjectRestoreMode.Normalize(project.RestoreMode);
-            settings["verificationPolicy"] = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
-            List<int> disabledProjects = _configStore.GetSnapshot().Backups.AutoBackupDisabledProjects ?? [];
-            settings["autoBackupEnabled"] = !disabledProjects.Contains(project.Id);
-            settings["tags"] = string.IsNullOrWhiteSpace(project.Tags)
-                ? string.Empty
-                : project.Tags.Trim();
-
-            return JsonSerializer.Serialize(settings);
         }
-        catch
+        catch (Exception ex)
         {
-            return "{}";
+            RuntimeLog.WriteVerbose($"[MetadataSync] Could not persist the successful project write base: {ex.Message}");
         }
+    }
+
+    private ProjectMetadataConflictValues BuildExportedProjectValues(Project project, AppConfig config)
+    {
+        string? color = _projectColorResolver?.Invoke(project);
+        List<int> disabledProjects = config.Backups.AutoBackupDisabledProjects ?? [];
+        return new ProjectMetadataConflictValues
+        {
+            AvatarColor = NormalizeAvatarColor(color),
+            EncryptionPolicy = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy),
+            PreferredDestinationId = project.PreferredDestinationId?.Trim() ?? string.Empty,
+            RestoreMode = ProjectRestoreMode.Normalize(project.RestoreMode),
+            VerificationPolicy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy),
+            AutoBackupEnabled = !disabledProjects.Contains(project.Id),
+            Tags = project.Tags?.Trim() ?? string.Empty
+        };
+    }
+
+    private static string SerializeProjectSettings(ProjectMetadataConflictValues values)
+    {
+        var settings = new Dictionary<string, object?>();
+        if (!string.IsNullOrWhiteSpace(values.AvatarColor))
+            settings["avatarColor"] = values.AvatarColor;
+        settings["encryptionPolicy"] = values.EncryptionPolicy;
+        settings["preferredDestinationId"] = string.IsNullOrWhiteSpace(values.PreferredDestinationId)
+            ? null
+            : values.PreferredDestinationId;
+        settings["restoreMode"] = values.RestoreMode;
+        settings["verificationPolicy"] = values.VerificationPolicy;
+        settings["autoBackupEnabled"] = values.AutoBackupEnabled;
+        settings["tags"] = values.Tags;
+        return JsonSerializer.Serialize(settings);
     }
 
     private readonly record struct ParsedProjectSettings(
