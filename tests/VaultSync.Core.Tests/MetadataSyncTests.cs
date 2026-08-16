@@ -1526,6 +1526,57 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ExportBackupToStore_RejectsUnreviewedExistingProjectRevision()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        using var configScope = new TestAppConfigScope();
+        AppConfigStore.Save(new AppConfig());
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = repo.AddProject(new Project
+        {
+            ExternalId = "project-unreviewed-export",
+            Name = "Unreviewed Export",
+            RootPath = CreateTempDir(),
+            Preset = "generic",
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            Tags = "local"
+        });
+        int snapshotId = repo.CreateSnapshot(projectId, 1, 100);
+        int backupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            100,
+            "unreviewed/backup",
+            metaRoot,
+            "Primary");
+        MetadataStore store = CreateStore(metaRoot);
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "project-unreviewed-export",
+            Name = "Remote",
+            Preset = "generic",
+            RootPathHint = "/remote",
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            SettingsJson = "{\"tags\":\"remote\"}",
+            UpdatedUtc = DateTime.UtcNow,
+            WriterMachineId = "machine-remote",
+            Revision = 4
+        });
+
+        var service = new MetadataSyncService(repo);
+        MetadataSyncResult result = service.ExportBackupToStore(metaRoot, backupId, "1.8.7", "machine-local");
+
+        Assert.Equal(MetadataSyncStatus.RepositoryBusy, result.Status);
+        Assert.Contains("no trusted local base", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(store.ListBackups());
+        MetaProject retained = Assert.IsType<MetaProject>(store.GetProject("project-unreviewed-export"));
+        Assert.Equal("machine-remote", retained.WriterMachineId);
+        Assert.Equal(4, retained.Revision);
+    }
+
+    [Fact]
     public void ExportBackupToStore_ActiveWriterBlocksMetadataMutation()
     {
         string metaRoot = CreateTempDir();
@@ -1568,6 +1619,54 @@ public sealed class MetadataSyncTests : IDisposable
         Assert.Equal(MetadataSyncStatus.RepositoryBusy, result.Status);
         Assert.False(File.Exists(new MetadataStore(metaRoot).DatabasePath));
         Assert.True(writer.IsOwner);
+    }
+
+    [Fact]
+    public void ExportProjectToStore_RejectsRevisionThatChangedAfterTheLocalBase()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        using var configScope = new TestAppConfigScope();
+        AppConfigStore.Save(new AppConfig());
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = repo.AddProject(new Project
+        {
+            ExternalId = "project-guarded-export",
+            Name = "Guarded Export",
+            RootPath = CreateTempDir(),
+            Preset = "generic",
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            Tags = "local-one"
+        });
+        var service = new MetadataSyncService(repo);
+
+        MetadataSyncResult first = service.ExportProjectToStore(metaRoot, projectId, "1.8.7", "machine-local");
+        Assert.Equal(MetadataSyncStatus.Success, first.Status);
+        MetadataStore store = new(metaRoot);
+        MetaProject firstRecord = Assert.IsType<MetaProject>(store.GetProject("project-guarded-export"));
+        Assert.Equal(1, firstRecord.Revision);
+
+        repo.UpdateProjectTags(projectId, "local-two");
+        MetadataSyncResult second = service.ExportProjectToStore(metaRoot, projectId, "1.8.7", "machine-local");
+        Assert.Equal(MetadataSyncStatus.Success, second.Status);
+        MetaProject secondRecord = Assert.IsType<MetaProject>(store.GetProject("project-guarded-export"));
+        Assert.Equal(2, secondRecord.Revision);
+
+        secondRecord.SettingsJson = "{\"tags\":\"remote-three\"}";
+        secondRecord.WriterMachineId = "machine-remote";
+        secondRecord.UpdatedUtc = DateTime.UtcNow.AddMinutes(1);
+        secondRecord.Revision = 3;
+        store.UpsertProject(secondRecord);
+
+        repo.UpdateProjectTags(projectId, "stale-local-three");
+        MetadataSyncResult stale = service.ExportProjectToStore(metaRoot, projectId, "1.8.7", "machine-local");
+
+        Assert.Equal(MetadataSyncStatus.RepositoryBusy, stale.Status);
+        Assert.Contains("another machine", stale.Message, StringComparison.OrdinalIgnoreCase);
+        MetaProject retained = Assert.IsType<MetaProject>(store.GetProject("project-guarded-export"));
+        Assert.Equal(3, retained.Revision);
+        Assert.Equal("machine-remote", retained.WriterMachineId);
+        Assert.Contains("remote-three", retained.SettingsJson, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1747,6 +1846,60 @@ public sealed class MetadataSyncTests : IDisposable
         MetaProject stored = Assert.Single(store.ListProjects());
         Assert.Equal("machine-b", stored.WriterMachineId);
         Assert.Equal(2, stored.Revision);
+    }
+
+    [Fact]
+    public void MetadataStore_TryUpsertProject_RejectsAStaleExpectedRevision()
+    {
+        MetadataStore store = CreateStore(CreateTempDir());
+        var project = new MetaProject
+        {
+            ExternalId = "project-guarded-stale",
+            Name = "Original",
+            Preset = "generic",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            SettingsJson = "{\"tags\":\"original\"}",
+            UpdatedUtc = DateTime.UtcNow,
+            WriterMachineId = "machine-a"
+        };
+
+        Assert.True(store.TryUpsertProject(project, expectedRevision: 0));
+        project.Name = "Second";
+        project.SettingsJson = "{\"tags\":\"second\"}";
+        project.WriterMachineId = "machine-b";
+        Assert.True(store.TryUpsertProject(project, expectedRevision: 1));
+
+        project.Name = "Stale overwrite";
+        project.SettingsJson = "{\"tags\":\"stale\"}";
+        project.WriterMachineId = "machine-a";
+        Assert.False(store.TryUpsertProject(project, expectedRevision: 1));
+
+        MetaProject stored = Assert.IsType<MetaProject>(store.GetProject(project.ExternalId));
+        Assert.Equal("Second", stored.Name);
+        Assert.Equal("{\"tags\":\"second\"}", stored.SettingsJson);
+        Assert.Equal("machine-b", stored.WriterMachineId);
+        Assert.Equal(2, stored.Revision);
+    }
+
+    [Fact]
+    public void MetadataStore_TryUpsertProject_DoesNotInsertWhenExpectedRevisionIsMissing()
+    {
+        MetadataStore store = CreateStore(CreateTempDir());
+        var project = new MetaProject
+        {
+            ExternalId = "project-guarded-missing",
+            Name = "Missing",
+            Preset = "generic",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow,
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow,
+            WriterMachineId = "machine-a"
+        };
+
+        Assert.False(store.TryUpsertProject(project, expectedRevision: 4));
+        Assert.Null(store.GetProject(project.ExternalId));
     }
 
     [Fact]
