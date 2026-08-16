@@ -3,7 +3,22 @@
     <!-- Self-contained releases must resolve at least this security-serviced runtime. -->
     <VaultSyncMinimumRuntimeVersion>10.0.11</VaultSyncMinimumRuntimeVersion>
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+    <!-- Release workflows override these values. Local builds must never present as official. -->
+    <VaultSyncReleaseChannel Condition="'$(VaultSyncReleaseChannel)' == ''">development</VaultSyncReleaseChannel>
+    <VaultSyncPackageKind Condition="'$(VaultSyncPackageKind)' == ''">development</VaultSyncPackageKind>
+    <VaultSyncUpdateSource Condition="'$(VaultSyncUpdateSource)' == ''">none</VaultSyncUpdateSource>
+    <VaultSyncOfficialBuild Condition="'$(VaultSyncOfficialBuild)' == ''">false</VaultSyncOfficialBuild>
+    <VaultSyncSignatureStatus Condition="'$(VaultSyncSignatureStatus)' == ''">unknown</VaultSyncSignatureStatus>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="VaultSyncReleaseChannel" Value="$(VaultSyncReleaseChannel)" />
+    <AssemblyMetadata Include="VaultSyncPackageKind" Value="$(VaultSyncPackageKind)" />
+    <AssemblyMetadata Include="VaultSyncUpdateSource" Value="$(VaultSyncUpdateSource)" />
+    <AssemblyMetadata Include="VaultSyncOfficialBuild" Value="$(VaultSyncOfficialBuild)" />
+    <AssemblyMetadata Include="VaultSyncSignatureStatus" Value="$(VaultSyncSignatureStatus)" />
+    <AssemblyMetadata Include="VaultSyncSourceCommit" Value="$(SourceRevisionId)" Condition="'$(SourceRevisionId)' != ''" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- Prevent generated build artifacts under per-project artifacts/ from being compiled as source -->

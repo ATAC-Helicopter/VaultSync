@@ -30,6 +30,7 @@ internal static class Program
         RestrictPrivateDataRoots();
         DiagnosticsLogger.Initialize();
         DiagnosticsLogger.Record($"Process start. PID={Environment.ProcessId}, Args='{string.Join(' ', args)}'.");
+        DiagnosticsLogger.Record($"Build identity: {AppBuildInformationService.Current.ToJson()}.");
         LogParentProcessInfo("startup");
         RegisterPosixSignals();
         RegisterDiagnosticHooks(args);

@@ -427,10 +427,9 @@ public sealed class RecoveryViewModel : ViewModelBase
             DrilledProjectCount,
             PassedDrillCount,
             ProtectedPointCount,
-            Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-                ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()
-                ?? "unknown",
-            BuildSourceIdentity());
+            AppBuildInformationService.Current.Version,
+            BuildSourceIdentity(),
+            AppBuildInformationService.Current);
 
     private static string BuildSourceIdentity()
     {

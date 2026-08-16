@@ -118,6 +118,12 @@ complete and stable enough for broader qualification.
   and timestamp context. The latest decision can restore the previous local
   state until the next portable repository write supersedes that undo record;
   all six undo strings ship in every maintained locale (`VS-1879`).
+- The running build now exposes one schema-versioned identity in Settings,
+  startup diagnostics, support bundles, recovery reports, and
+  `vaultsync --version --json`. Release artifacts stamp their channel, commit,
+  package, update source, official status, and honest signature state; missing
+  facts remain `unknown` and incomplete builds cannot claim official status
+  (`VS-1871`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -128,11 +134,9 @@ branch package.
 
 1. Complete the two-machine, disconnect, clock-skew, and NAS/SMB qualification
    matrix for versioned metadata merging.
-2. Expose the running build and canonical release identity through the app,
-   CLI, diagnostics, and support exports.
-3. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB
+2. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB
    behavior before enabling supported concurrent-machine workflows.
-4. Reduce codebase duplication and oversized orchestration through shared,
+3. Reduce codebase duplication and oversized orchestration through shared,
    regression-tested primitives without combining genuinely different platform
    behavior.
 

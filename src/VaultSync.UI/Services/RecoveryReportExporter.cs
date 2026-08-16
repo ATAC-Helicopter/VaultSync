@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
+using VaultSync.Core.Services;
 
 namespace VaultSync.UI.Services;
 
@@ -49,7 +50,8 @@ internal sealed record RecoveryReportSnapshot(
     int PassedDrillCount = 0,
     int ProtectedPointCount = 0,
     string AppVersion = "unknown",
-    string SourceIdentity = "local");
+    string SourceIdentity = "local",
+    BuildInformation? Build = null);
 
 internal sealed record RecoveryReportLabels(
     string Title,
@@ -101,6 +103,16 @@ internal static class RecoveryReportExporter
             .AppendLine(snapshot.GeneratedAt.ToLocalTime().ToString("F", CultureInfo.CurrentCulture));
         builder.Append("**Application:** VaultSync ").AppendLine(snapshot.AppVersion);
         builder.Append("**Source identity:** ").AppendLine(snapshot.SourceIdentity);
+        if (snapshot.Build is { } build)
+        {
+            builder.Append("**Release channel:** ").AppendLine(build.ReleaseChannel);
+            builder.Append("**Source commit:** ").AppendLine(build.SourceCommit);
+            builder.Append("**Runtime:** ").Append(build.Runtime).Append(" (").Append(build.RuntimeIdentifier).AppendLine(")");
+            builder.Append("**Architecture:** ").AppendLine(build.Architecture);
+            builder.Append("**Package:** ").Append(build.PackageKind).Append("; updates: ").AppendLine(build.UpdateSource);
+            builder.Append("**Official build:** ").AppendLine(build.OfficialBuild ? "yes" : "no");
+            builder.Append("**Signature:** ").AppendLine(build.SignatureStatus);
+        }
         builder.AppendLine();
 
         builder.Append("## ").AppendLine(labels.Overview);

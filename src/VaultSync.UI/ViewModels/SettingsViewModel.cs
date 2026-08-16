@@ -143,6 +143,7 @@ namespace VaultSync.UI
         private string _updateDiagnosticsText = string.Empty;
         private string _startupDiagnosticsText = string.Empty;
         private string _checkpointResumeDiagnosticsText = string.Empty;
+        private string _buildInformationCopyStatus = string.Empty;
         private string _retentionSimulationStatus = string.Empty;
         private string _retentionSimulationSummary = string.Empty;
         private string _retentionSimulationDetails = string.Empty;
@@ -677,6 +678,8 @@ namespace VaultSync.UI
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
             ExportSupportBundleCommand   = new RelayCommand(_ => ExportSupportBundle());
             ImportSupportBundleCommand   = new RelayCommand(_ => ImportSupportBundle());
+            CopyBuildInformationCommand = new RelayCommand(_ =>
+                _ = DetachedTask.RunAsync(CopyBuildInformationAsync, nameof(CopyBuildInformationAsync)));
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
             OpenMicrosoftStoreCommand    = new RelayCommand(_ => OpenMicrosoftStoreListing());
             _scanBackupIndexRepairPlanCommand = new RelayCommand(_ => ScanBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy);
@@ -2355,6 +2358,20 @@ namespace VaultSync.UI
             private set => SetField(ref _checkpointResumeDiagnosticsText, value);
         }
 
+        public string BuildInformationText => AppBuildInformationService.Current.ToDisplayText();
+
+        public string BuildInformationCopyStatus
+        {
+            get => _buildInformationCopyStatus;
+            private set
+            {
+                if (SetField(ref _buildInformationCopyStatus, value))
+                    OnPropertyChanged(nameof(HasBuildInformationCopyStatus));
+            }
+        }
+
+        public bool HasBuildInformationCopyStatus => !string.IsNullOrWhiteSpace(BuildInformationCopyStatus);
+
         public bool HasUpdateCheckError => !string.IsNullOrWhiteSpace(_updateCheckErrorText);
 
         public IReadOnlyList<LanguageOption> LanguageOptions => _localizationService.SupportedLanguages;
@@ -2823,6 +2840,7 @@ namespace VaultSync.UI
         public ICommand ExportLogConsoleCommand { get; }
         public ICommand ExportSupportBundleCommand { get; }
         public ICommand ImportSupportBundleCommand { get; }
+        public ICommand CopyBuildInformationCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
         public ICommand OpenMicrosoftStoreCommand { get; }
         public ICommand ScanBackupIndexRepairPlanCommand => _scanBackupIndexRepairPlanCommand!;
@@ -3800,6 +3818,14 @@ namespace VaultSync.UI
                 L(SupportBundleTitleKey, SupportBundleTitleFallback));
 
             TryOpenContainingFolder(result.ZipPath);
+        }
+
+        private async Task CopyBuildInformationAsync()
+        {
+            bool copied = await ClipboardHelper.TryCopyAsync(AppBuildInformationService.Current.ToJson(indented: true));
+            BuildInformationCopyStatus = copied
+                ? L("Settings.Advanced.BuildInformationCopied", "Build information copied.")
+                : L("Settings.Advanced.BuildInformationCopyFailed", "Could not copy build information.");
         }
 
         private static void TryOpenContainingFolder(string? artifactPath)

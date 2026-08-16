@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using VaultSync.Core.Tests.TestSupport;
+using VaultSync.Core.Services;
 using VaultSync.UI.Services;
 using Xunit;
 
@@ -104,6 +105,22 @@ public sealed class RecoveryReportExporterTests
         Assert.Contains("isolated test folder", report);
         Assert.Contains("## Report identity", report);
         Assert.Contains("SHA-256", report);
+    }
+
+    [Fact]
+    public void BuildMarkdown_IncludesCanonicalBuildIdentity()
+    {
+        BuildInformation build = new(
+            1, "VaultSync", "1.8.7", "stable", "abcdef123456", ".NET 10", "win-x64",
+            "x64", "Windows", "windows-installer", "github", true, "unsigned");
+        RecoveryReportSnapshot snapshot = CreateSnapshot() with { AppVersion = build.Version, Build = build };
+
+        string report = RecoveryReportExporter.BuildMarkdown(snapshot, CreateLabels());
+
+        Assert.Contains("**Source commit:** abcdef123456", report);
+        Assert.Contains("**Package:** windows-installer; updates: github", report);
+        Assert.Contains("**Official build:** yes", report);
+        Assert.Contains("**Signature:** unsigned", report);
     }
 
     private static RecoveryReportSnapshot CreateSnapshot() =>
