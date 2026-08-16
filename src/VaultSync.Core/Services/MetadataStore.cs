@@ -12,8 +12,9 @@ namespace VaultSync.Core.Services;
 
 public sealed class MetadataStore
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     private const string BackupsTable = "backups";
+    private const string ProjectsTable = "projects";
     private const string SnapshotsTable = "snapshots";
 
     private readonly string _dbPath;
@@ -71,7 +72,9 @@ public sealed class MetadataStore
               root_path_hint TEXT NOT NULL,
               created_utc TEXT NOT NULL,
               settings_json TEXT NOT NULL,
-              updated_utc TEXT NOT NULL
+              updated_utc TEXT NOT NULL,
+              writer_machine_id TEXT NOT NULL DEFAULT '',
+              revision INTEGER NOT NULL DEFAULT 1
             );
 
             CREATE TABLE IF NOT EXISTS snapshots(
@@ -121,6 +124,8 @@ public sealed class MetadataStore
         EnsureColumn(c, BackupsTable, "enc_flag", "ALTER TABLE backups ADD COLUMN enc_flag INTEGER NOT NULL DEFAULT 0;");
         EnsureColumn(c, BackupsTable, "kdf_params_json", "ALTER TABLE backups ADD COLUMN kdf_params_json TEXT NOT NULL DEFAULT '{}';");
         EnsureColumn(c, BackupsTable, "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
+        EnsureColumn(c, ProjectsTable, "writer_machine_id", "ALTER TABLE projects ADD COLUMN writer_machine_id TEXT NOT NULL DEFAULT '';");
+        EnsureColumn(c, ProjectsTable, "revision", "ALTER TABLE projects ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;");
         EnsureColumn(c, SnapshotsTable, "diff_added", "ALTER TABLE snapshots ADD COLUMN diff_added INTEGER NOT NULL DEFAULT 0;");
         EnsureColumn(c, SnapshotsTable, "diff_modified", "ALTER TABLE snapshots ADD COLUMN diff_modified INTEGER NOT NULL DEFAULT 0;");
         EnsureColumn(c, SnapshotsTable, "diff_deleted", "ALTER TABLE snapshots ADD COLUMN diff_deleted INTEGER NOT NULL DEFAULT 0;");
@@ -195,14 +200,19 @@ public sealed class MetadataStore
     {
         ExecuteWrite(
             """
-            INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc)
-            VALUES(@ExternalId, @Name, @Preset, @RootPathHint, @CreatedUtc, @SettingsJson, @UpdatedUtc)
+            INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc, writer_machine_id, revision)
+            VALUES(@ExternalId, @Name, @Preset, @RootPathHint, @CreatedUtc, @SettingsJson, @UpdatedUtc, @WriterMachineId, @Revision)
             ON CONFLICT(external_id) DO UPDATE SET
               name = excluded.name,
               preset = excluded.preset,
               root_path_hint = excluded.root_path_hint,
               settings_json = excluded.settings_json,
-              updated_utc = excluded.updated_utc;
+              updated_utc = excluded.updated_utc,
+              writer_machine_id = excluded.writer_machine_id,
+              revision = CASE
+                WHEN excluded.revision > projects.revision THEN excluded.revision
+                ELSE projects.revision + 1
+              END;
             """,
             new
             {
@@ -212,7 +222,9 @@ public sealed class MetadataStore
                 project.RootPathHint,
                 CreatedUtc = ToUtcString(project.CreatedUtc),
                 project.SettingsJson,
-                UpdatedUtc = ToUtcString(project.UpdatedUtc)
+                UpdatedUtc = ToUtcString(project.UpdatedUtc),
+                project.WriterMachineId,
+                Revision = Math.Max(1, project.Revision)
             });
     }
 
@@ -341,9 +353,17 @@ public sealed class MetadataStore
     public IEnumerable<MetaProject> ListProjects()
     {
         using SqliteConnection? c = TryOpenRead();
-        return SafeQuery<MetaProject>(
-            c,
-            """
+        if (c is null)
+            return Array.Empty<MetaProject>();
+
+        HashSet<string> columns = GetTableColumns(c, ProjectsTable);
+        string writerProjection = columns.Contains("writer_machine_id")
+            ? "writer_machine_id as WriterMachineId"
+            : "'' as WriterMachineId";
+        string revisionProjection = columns.Contains("revision")
+            ? "revision as Revision"
+            : "0 as Revision";
+        string sql = $"""
             SELECT
               external_id as ExternalId,
               name,
@@ -351,9 +371,12 @@ public sealed class MetadataStore
               root_path_hint as RootPathHint,
               created_utc as CreatedUtc,
               settings_json as SettingsJson,
-              updated_utc as UpdatedUtc
+              updated_utc as UpdatedUtc,
+              {writerProjection},
+              {revisionProjection}
             FROM projects;
-            """);
+            """;
+        return SafeQuery<MetaProject>(c, sql);
     }
 
     public IEnumerable<MetaProjectRef> ListProjectRefs()
@@ -797,6 +820,8 @@ public sealed class MetaProject
     public DateTime CreatedUtc { get; set; }
     public string SettingsJson { get; set; } = string.Empty;
     public DateTime UpdatedUtc { get; set; }
+    public string WriterMachineId { get; set; } = string.Empty;
+    public long Revision { get; set; }
 }
 
 public sealed class MetaSnapshot

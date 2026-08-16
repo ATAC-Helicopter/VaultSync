@@ -24,6 +24,7 @@
 - [BUG-18107] Stopped metadata import from exporting deletion tombstones for snapshots that were preserved because they still have local backups or never existed locally.
 - [BUG-18108] Stopped repeated background downloads of immutable release and platform patch manifests by persisting digest-verified cache entries across application restarts.
 - [BUG-18109] Bounded disposable logs, diagnostics, caches, patch runtimes, downloads, and temporary work, and stopped backups from writing into unmounted macOS managed-mount directories on the local system drive.
+- [BUG-18101] Made cross-machine project-setting conflicts complete and durable: encryption keys and unmatched destinations stay local, avatar/encryption/auto-backup changes join the review, rejected revisions remain resolved, project writers are recorded per row, and automatic imports cannot apply destructive tombstones without review.
 
 ## [1.8.6] - 10.08.2026
 ### Added

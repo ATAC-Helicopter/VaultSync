@@ -147,11 +147,15 @@ revision.
    **Implemented for the existing version-1 writers on 2026-08-12; every future
    migration or repair writer must enter through the same boundary.**
 4. Add the versioned schema and forward migration fixtures.
+   **Version-2 project writer/revision columns and version-1 compatibility were
+   implemented on 2026-08-16; base revisions remain in the VS-1879 merge work.**
 5. Produce merge plans without applying them.
 6. Add explicit apply, durable resolution, and bounded undo.
+   **Durable Keep local and Accept imported decisions are implemented and
+   bounded; revision-aware undo remains in VS-1879.**
 7. Expose status, takeover, and conflict review in the UI.
    **Writer status and explicit stale takeover were implemented on 2026-08-16;
-   versioned conflict review remains part of steps 4–6.**
+   complete portable-field conflict review was implemented on 2026-08-16.**
 8. Qualify local disk, SMB/NAS, disconnection, skew, crash, and mixed-version
    scenarios before enabling multi-machine writes by default.
 

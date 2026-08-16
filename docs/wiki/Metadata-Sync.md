@@ -10,7 +10,7 @@ VaultSync can export a portable metadata store to backup destinations and later 
 - Project identity: external id, name, preset, root path hint, timestamps
 - Portable project settings:
   - avatar color
-  - encryption policy and key reference
+  - encryption policy (never the machine-local key reference)
   - preferred destination id
   - restore mode
   - verification policy
@@ -36,16 +36,22 @@ VaultSync can export a portable metadata store to backup destinations and later 
 - Plaintext passwords or secret material
 - Full local app configuration
 - Full destination definitions from another machine
+- Encryption key references or credential identifiers
 
 ## Preferred destination behavior
 - Imported `preferredDestinationId` values are normalized against your current configured destinations.
 - If the imported value matches a configured destination id, alias, or path, VaultSync resolves it to the local canonical destination id.
-- If the imported value does not match a local destination, it may remain unresolved or be ignored depending on the import path.
+- If the imported value does not match a local destination, VaultSync clears the unusable remote choice rather than retaining a foreign path or identifier.
 
 ## Conflict behavior
 - Some project settings do not silently overwrite differing local values on existing projects.
-- In particular, preferred destination, restore mode, verification policy, and tags can create a metadata conflict record instead.
+- Avatar color, encryption policy, preferred destination, restore mode,
+  verification policy, auto-backup state, and tags share one conflict record.
 - Review these conflicts from `Settings > Advanced > Doctor`.
+- Keep local and Accept imported create bounded durable resolution records, so
+  an unchanged rejected revision does not reappear after restart.
+- Automatic imports never apply project, snapshot, backup, or inferred deletion
+  changes. Manual refresh lists each destructive category and requires review.
 
 ### Current 1.8.6 limitations
 
@@ -56,16 +62,11 @@ synchronized multi-writer configuration database.
   store. It does not retain a common base revision, so it cannot prove which of
   two independent edits is newer or automatically perform a true three-way
   merge.
-- The store-level writer machine is not record-level provenance. A conflict can
-  therefore identify the most recent store writer rather than the machine that
-  originally changed that specific project field.
-- `Keep local` dismisses the current conflict record but does not publish a
-  durable resolution to the destination. The same unchanged remote value can be
-  discovered again by a later import.
-- Encryption policy and key-reference metadata, auto-backup state, avatar color,
-  and tombstones do not all use the same review path as the four visible
-  conflict fields. Treat cross-machine imports as a review operation and avoid
-  editing the same project from multiple machines concurrently.
+- Version-2 project records carry a per-record writer and revision. Legacy
+  version-1 records remain readable but cannot provide trustworthy record-level
+  provenance and are handled conservatively.
+- Project fields now share one review path and durable decisions, while true
+  three-way merge still requires the planned common base revision.
 - The in-process metadata gate coordinates one running VaultSync process only.
   It is not a cross-machine writer lock.
 

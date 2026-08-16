@@ -346,6 +346,7 @@ namespace VaultSync.Core.Config
         public bool HasSeenOnboarding { get; set; } = false;
         public BackupIndexScanSummary BackupIndexLastScan { get; set; } = new();
         public List<ProjectMetadataConflictRecord> ProjectMetadataConflicts { get; set; } = [];
+        public List<ProjectMetadataResolutionRecord> ProjectMetadataResolutions { get; set; } = [];
         public UpdateCheckDiagnostics UpdateDiagnostics { get; set; } = new();
         public BackupRepairTelemetry BackupRepairTelemetry { get; set; } = new();
         public MetadataConflictTelemetry MetadataConflictTelemetry { get; set; } = new();
@@ -391,10 +392,24 @@ namespace VaultSync.Core.Config
 
     public sealed class ProjectMetadataConflictValues
     {
+        public string AvatarColor { get; set; } = string.Empty;
+        public string EncryptionPolicy { get; set; } = string.Empty;
         public string PreferredDestinationId { get; set; } = string.Empty;
         public string RestoreMode { get; set; } = string.Empty;
         public string VerificationPolicy { get; set; } = string.Empty;
+        public bool? AutoBackupEnabled { get; set; }
         public string Tags { get; set; } = string.Empty;
+    }
+
+    public sealed class ProjectMetadataResolutionRecord
+    {
+        public string ProjectExternalId { get; set; } = string.Empty;
+        public string SourceMachineId { get; set; } = string.Empty;
+        public string SourceUpdatedUtc { get; set; } = string.Empty;
+        public string Decision { get; set; } = string.Empty;
+        public string ResolvedUtc { get; set; } = string.Empty;
+        public ProjectMetadataConflictValues Local { get; set; } = new();
+        public ProjectMetadataConflictValues Imported { get; set; } = new();
     }
 
     public sealed class UpdateCheckDiagnostics

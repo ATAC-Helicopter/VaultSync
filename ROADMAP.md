@@ -501,7 +501,7 @@ after the planned minor train is complete and use explicit beta qualification.
   promotion merges from automatically deleting it.
   - Completed: `Dev` was restored at the exact `v1.8.6` Stable commit on
     2026-08-12 and automatic head-branch deletion was disabled.
-- [ ] `BUG-18101` `P0` Stop cross-machine metadata import from applying
+- [x] `BUG-18101` `P0` Stop cross-machine metadata import from applying
   unreviewed settings or repeatedly resurfacing a rejected remote edit.
   - Scope: encryption policy and key references, auto-backup state, avatar
     color, tombstones, and all existing conflict fields must follow an explicit
@@ -509,6 +509,9 @@ after the planned minor train is complete and use explicit beta qualification.
   - Acceptance: imports do not silently apply machine-local key references or
     destructive tombstones, every changed portable field appears in preview,
     writer attribution is record-specific, and resolved conflicts stay resolved.
+  - Completed on the 1.8.7 release branch on 2026-08-16 with version-2 project
+    writer/revision records, durable conflict decisions, complete portable-field
+    review, local-only key and destination handling, and destructive-import gates.
 - [x] `BUG-18102` `P0` Prevent deferred metadata replay from overwriting a
   destination that changed while it was unavailable.
   - Acceptance: deferred stores are lease-protected, flush at most once into an
