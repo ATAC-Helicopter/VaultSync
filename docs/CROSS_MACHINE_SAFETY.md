@@ -98,6 +98,13 @@ takeover. The user must explicitly confirm takeover; the old record is preserved
 as diagnostic evidence before a new lease is acquired. A former owner whose
 nonce no longer matches must abort before committing another write.
 
+Settings exposes that decision per destination. Inspection is read-only and
+shows the diagnostic host label, a short durable-identity prefix, operation,
+application version, heartbeat, and expiry. Takeover is offered only for a stale
+lease, requires a separate confirmation, remounts and rechecks the same resolved
+repository and nonce, and records the displaced lease before clearing it. The
+interface also states that clients older than 1.8.7 do not honor this protocol.
+
 Clock-skew qualification includes clients offset in both directions. Expiry
 decisions use conservative tolerance and observable record age where available;
 they never use a future timestamp as proof that takeover is safe.
@@ -143,6 +150,8 @@ revision.
 5. Produce merge plans without applying them.
 6. Add explicit apply, durable resolution, and bounded undo.
 7. Expose status, takeover, and conflict review in the UI.
+   **Writer status and explicit stale takeover were implemented on 2026-08-16;
+   versioned conflict review remains part of steps 4–6.**
 8. Qualify local disk, SMB/NAS, disconnection, skew, crash, and mixed-version
    scenarios before enabling multi-machine writes by default.
 

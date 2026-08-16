@@ -173,5 +173,43 @@ public class BackupDestinationViewModel : ViewModelBase
         set => SetField(ref _lastTestSeverity, value);
     }
 
+    private string _repositoryWriterStatus = "Not checked";
+    public string RepositoryWriterStatus
+    {
+        get => _repositoryWriterStatus;
+        set => SetField(ref _repositoryWriterStatus, value);
+    }
+
+    private string _repositoryWriterDetails = "Check before using this destination from more than one machine.";
+    public string RepositoryWriterDetails
+    {
+        get => _repositoryWriterDetails;
+        set => SetField(ref _repositoryWriterDetails, value);
+    }
+
+    private bool _isRepositoryWriterBusy;
+    public bool IsRepositoryWriterBusy
+    {
+        get => _isRepositoryWriterBusy;
+        set => SetField(ref _isRepositoryWriterBusy, value);
+    }
+
+    private bool _canReviewStaleWriter;
+    public bool CanReviewStaleWriter
+    {
+        get => _canReviewStaleWriter;
+        set => SetField(ref _canReviewStaleWriter, value);
+    }
+
+    private bool _isWriterTakeoverConfirmationVisible;
+    public bool IsWriterTakeoverConfirmationVisible
+    {
+        get => _isWriterTakeoverConfirmationVisible;
+        set => SetField(ref _isWriterTakeoverConfirmationVisible, value);
+    }
+
+    internal string InspectedRepositoryRoot { get; set; } = string.Empty;
+    internal string StaleWriterNonce { get; set; } = string.Empty;
+
     public string DisplayName => string.IsNullOrWhiteSpace(Alias) ? Path : Alias;
 }

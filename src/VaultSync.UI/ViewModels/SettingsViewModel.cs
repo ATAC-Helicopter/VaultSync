@@ -155,6 +155,9 @@ namespace VaultSync.UI
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
+        private readonly RepositoryLeaseService _repositoryLeaseService;
+        private readonly IInstallationIdentityProvider _installationIdentityProvider;
+        private readonly string _appVersion;
         private readonly RelayCommand? _addTagColorRuleCommand;
         private readonly RelayCommand? _removeTagColorRuleCommand;
         private readonly RelayCommand? _resetTagColorRuleCommand;
@@ -557,11 +560,20 @@ namespace VaultSync.UI
                 nameof(SaveStatus));
         }
 
-        public SettingsViewModel(LocalizationService localizationService, IAppConfigStore? configStore = null, IRepositoryFactory? repositoryFactory = null)
+        public SettingsViewModel(
+            LocalizationService localizationService,
+            IAppConfigStore? configStore = null,
+            IRepositoryFactory? repositoryFactory = null,
+            RepositoryLeaseService? repositoryLeaseService = null,
+            IInstallationIdentityProvider? installationIdentityProvider = null,
+            string? appVersion = null)
         {
             _localizationService = localizationService;
             _configStore = configStore ?? StaticAppConfigStore.Instance;
             _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
+            _repositoryLeaseService = repositoryLeaseService ?? new RepositoryLeaseService();
+            _installationIdentityProvider = installationIdentityProvider ?? new InstallationIdentityService();
+            _appVersion = string.IsNullOrWhiteSpace(appVersion) ? "unknown" : appVersion.Trim();
             _selectedLanguageCode = localizationService.CurrentLanguage;
             _localizationService.LanguageChanged += () =>
             {
@@ -627,6 +639,10 @@ namespace VaultSync.UI
             RemoveDestinationCommand     = new RelayCommand(p => RemoveDestination(p as BackupDestinationViewModel));
             BrowseDestinationCommand     = new RelayCommand(p => BrowseDestination(p as BackupDestinationViewModel));
             TestDestinationCommand       = new RelayCommand(p => TestDestination(p as BackupDestinationViewModel));
+            InspectRepositoryWriterCommand = new RelayCommand(p => InspectRepositoryWriter(p as BackupDestinationViewModel));
+            ReviewStaleWriterCommand = new RelayCommand(p => ReviewStaleWriter(p as BackupDestinationViewModel));
+            CancelStaleWriterTakeoverCommand = new RelayCommand(p => CancelStaleWriterTakeover(p as BackupDestinationViewModel));
+            ConfirmStaleWriterTakeoverCommand = new RelayCommand(p => ConfirmStaleWriterTakeover(p as BackupDestinationViewModel));
             AddCredentialCommand         = new RelayCommand(_ => AddCredential());
             RemoveCredentialCommand      = new RelayCommand(p => PreviewCredentialRemoval(p as NetworkCredentialViewModel));
             _addTagColorRuleCommand      = new RelayCommand(_ => AddTagColorRule());
@@ -2752,6 +2768,10 @@ namespace VaultSync.UI
     public ICommand RemoveDestinationCommand { get; }
     public ICommand BrowseDestinationCommand { get; }
     public ICommand TestDestinationCommand { get; }
+    public ICommand InspectRepositoryWriterCommand { get; }
+    public ICommand ReviewStaleWriterCommand { get; }
+    public ICommand CancelStaleWriterTakeoverCommand { get; }
+    public ICommand ConfirmStaleWriterTakeoverCommand { get; }
     public ICommand AddCredentialCommand { get; }
     public ICommand RemoveCredentialCommand { get; }
     public ICommand AddTagColorRuleCommand => _addTagColorRuleCommand!;
@@ -3175,22 +3195,7 @@ namespace VaultSync.UI
                 : cfg.Network.Credentials.FirstOrDefault(c =>
                     c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-            var destModel = new BackupDestination
-            {
-                Alias          = dest.Alias,
-                Path           = dest.Path,
-                Active         = dest.Active,
-                PreMounted     = dest.PreMounted,
-                AutoMount      = dest.AutoMount,
-                AutoUnmount    = dest.AutoUnmount,
-                IsOffsite      = dest.IsOffsite,
-                CredentialName = dest.CredentialName,
-                RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
-                RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10),
-                EnableCheckpointResume = dest.EnableCheckpointResume,
-                SoftQuotaBytes = ToQuotaBytes(dest.SoftQuotaGb),
-                QuotaWarningPercent = ClampInt(dest.QuotaWarningPercent, 50, 99, 85)
-            };
+            BackupDestination destModel = BuildDestinationModel(dest);
 
             var result = await Task.Run(() =>
             {
@@ -3254,6 +3259,23 @@ namespace VaultSync.UI
                 result.writable ? NotificationSeverity.Info : NotificationSeverity.Warning,
                 LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
         }
+
+        private static BackupDestination BuildDestinationModel(BackupDestinationViewModel destination) => new()
+        {
+            Alias = destination.Alias,
+            Path = destination.Path,
+            Active = destination.Active,
+            PreMounted = destination.PreMounted,
+            AutoMount = destination.AutoMount,
+            AutoUnmount = destination.AutoUnmount,
+            IsOffsite = destination.IsOffsite,
+            CredentialName = destination.CredentialName,
+            RetryMaxAttempts = ClampInt(destination.RetryMaxAttempts, 1, 10, 1),
+            RetryBackoffSeconds = ClampInt(destination.RetryBackoffSeconds, 1, 300, 10),
+            EnableCheckpointResume = destination.EnableCheckpointResume,
+            SoftQuotaBytes = ToQuotaBytes(destination.SoftQuotaGb),
+            QuotaWarningPercent = ClampInt(destination.QuotaWarningPercent, 50, 99, 85)
+        };
 
         private static bool TryWriteProbeFile(string effectivePath)
         {

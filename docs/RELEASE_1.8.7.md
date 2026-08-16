@@ -22,7 +22,7 @@ The release branch accumulates the qualified 1.8.7 work. `Dev` is the
 integration branch; `Stable` represents shipped releases only. A beta is not
 assumed and must be approved explicitly if the release needs one.
 
-## Status as of 2026-08-15
+## Status as of 2026-08-16
 
 ### Implemented on the release branch
 
@@ -41,13 +41,18 @@ assumed and must be approved explicitly if the release needs one.
 - The repository lease primitive is implemented and tested in a separate
   coordination database: atomic acquisition, busy/read-only inspection,
   automatic heartbeat, conservative expiry, nonce-bound release, explicit
-  stale takeover, and exceptional takeover evidence.
+  stale takeover, and exceptional takeover evidence. Settings can inspect each
+  destination's current writer, show its host, short durable identity,
+  operation, version, heartbeat, and expiry, and require an explicit two-step
+  confirmation before replacing the exact inspected stale nonce. The displaced
+  lease is retained as evidence, and the UI warns that pre-1.8.7 clients do not
+  participate in this protocol.
 - Every existing portable-metadata writer now requires lease ownership:
   project settings, backup/history exports, all tombstone paths, deferred writes,
   and deferred flushing. Import and preview remain readable while busy and
   suppress optional source writes. Deferred stores flush only into an empty
   destination; divergent destination metadata is preserved for merge review
-  instead of being overwritten. No UI takeover control is exposed yet.
+  instead of being overwritten.
 - The canonical release-manifest v1 schema, deterministic generator, artifact
   classifier, exact size/SHA-256 verification, and complete platform-matrix
   gate are implemented. Release automation generates the manifest only after
@@ -90,13 +95,12 @@ branch package.
 
 ### In progress next
 
-1. Surface repository status and an explicit stale-takeover decision in UI.
-2. Make metadata imports previewable, versioned, durable, and reversible.
-3. Expose the running build and canonical release identity through the app,
+1. Make metadata imports previewable, versioned, durable, and reversible.
+2. Expose the running build and canonical release identity through the app,
    CLI, diagnostics, and support exports.
-4. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB
+3. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB
    behavior before enabling supported concurrent-machine workflows.
-5. Reduce codebase duplication and oversized orchestration through shared,
+4. Reduce codebase duplication and oversized orchestration through shared,
    regression-tested primitives without combining genuinely different platform
    behavior.
 

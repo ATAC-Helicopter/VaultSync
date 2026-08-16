@@ -433,7 +433,7 @@ that exists only on the release branch or remains planned.
     recovery, locks and leases, release verification, and failure recovery.
   - Acceptance: documentation matches executable schemas and tests, includes a
     clean-machine recovery path, and states every known compatibility limit.
-- [ ] `VS-1877` `P0` Add source-machine identity, repository writer locking,
+- [x] `VS-1877` `P0` Add source-machine identity, repository writer locking,
   and explicit dual-boot/concurrent-writer guidance.
   - Scope: use a durable installation identity and a repository-scoped lease
     with owner, operation, nonce, heartbeat, expiry, and application version;
@@ -442,6 +442,8 @@ that exists only on the release branch or remains planned.
   - Acceptance: two 1.8.7 clients cannot write concurrently, interrupted leases
     recover predictably, NAS/SMB and clock-skew cases are covered, and the UI
     states that pre-1.8.7 clients cannot cooperate with the lease protocol.
+  - Completed on the 1.8.7 release branch on 2026-08-16 in PR #546, including
+    per-destination owner inspection and explicit nonce-bound stale takeover.
 - [ ] `VS-1878` `P1` Synchronize website, updater, changelog, Store metadata,
   badges, and public roadmap from canonical release metadata.
   - Scope: make public and in-app release consumers derive from or validate
