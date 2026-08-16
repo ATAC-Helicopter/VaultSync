@@ -421,6 +421,11 @@ after the planned minor train is complete and use explicit beta qualification.
   - Acceptance: SBOM schemas validate, provenance binds each package to the
     repository, workflow, and commit that produced it, and verification is
     exercised in the release-candidate gate.
+  - Implemented 2026-08-17: final manifest-listed packages receive validated SPDX
+    2.3 documents tied to their exact SHA-256 and RID-specific dependency graph.
+    A commit-pinned GitHub action attests final package provenance and each SBOM;
+    candidate automation exercises both API-backed and downloaded-bundle trust.
+    One release-candidate workflow run remains required before completion.
 - [ ] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
   - Scope: package a versioned JSON record, readable report, package manifest,
     checksums, build identity, recovery state, drill evidence, and repository

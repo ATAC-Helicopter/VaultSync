@@ -124,6 +124,11 @@ complete and stable enough for broader qualification.
   package, update source, official status, and honest signature state; missing
   facts remain `unknown` and incomplete builds cannot claim official status
   (`VS-1871`).
+- Every final direct package now receives a validated SPDX 2.3 SBOM tied to its
+  canonical-manifest SHA-256 and platform-specific resolved dependency graph.
+  GitHub signs provenance for the final package bytes and an SBOM attestation
+  for each package; release-candidate automation verifies one package both
+  online and from a downloaded bundle plus trusted-root snapshot (`VS-1873`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -134,15 +139,14 @@ branch package.
 
 1. Complete the two-machine, disconnect, clock-skew, and NAS/SMB qualification
    matrix for versioned metadata merging.
-2. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB
-   behavior before enabling supported concurrent-machine workflows.
+2. Run the release-candidate supply-chain job to qualify its online and offline
+   attestation checks against real final packages.
 3. Reduce codebase duplication and oversized orchestration through shared,
    regression-tested primitives without combining genuinely different platform
    behavior.
 
 ### Still planned
 
-- per-platform SBOMs and supported build provenance;
 - checksummed Recovery Evidence Packages;
 - allowlisted, reviewable support bundles;
 - synchronized public release metadata;

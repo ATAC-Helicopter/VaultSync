@@ -154,6 +154,50 @@ if (-not $expected -or $actual -cne $expected) { throw "SHA-256 verification fai
 Before using a checksum, confirm the manifest itself came from the matching tag
 on the official `ATAC-Helicopter/VaultSync` GitHub Releases page.
 
+### SBOM and provenance verification
+
+The `release-supply-chain-proof` workflow artifact contains one SPDX 2.3 JSON
+document per self-contained direct package, an exact artifact-to-SBOM index,
+and the package checksum list. Validate the complete set against the canonical
+manifest without network access:
+
+```bash
+python3 scripts/release_sbom.py validate \
+  --manifest release-assets/vaultsync-release-manifest.json \
+  --sbom-root release-supply-chain-proof/sboms
+```
+
+GitHub attestations bind the final installer, DMG, tarball, Debian package, or
+AppImage bytes—not an intermediate publish directory—to this repository,
+workflow run, triggering event, and commit. Verify a downloaded package online:
+
+```bash
+gh attestation verify VaultSync-Setup-1.8.7.exe \
+  --repo ATAC-Helicopter/VaultSync
+```
+
+For later offline verification, prepare the bundle and current public trusted
+roots while connected:
+
+```bash
+gh attestation download VaultSync-Setup-1.8.7.exe \
+  --repo ATAC-Helicopter/VaultSync
+gh attestation trusted-root > trusted_root.jsonl
+```
+
+Move the package, downloaded `sha256:*.jsonl` bundle, trusted root, and GitHub
+CLI to the offline machine, then run:
+
+```bash
+gh attestation verify VaultSync-Setup-1.8.7.exe \
+  --repo ATAC-Helicopter/VaultSync \
+  --bundle 'sha256:DIGEST.jsonl' \
+  --custom-trusted-root trusted_root.jsonl
+```
+
+Refresh trusted roots before each archival transfer when possible; an offline
+copy cannot reveal trust-root revocations that occurred after it was captured.
+
 ## 5) Release Checklist
 - Run the release gate before publishing:
   ```powershell
@@ -170,6 +214,8 @@ on the official `ATAC-Helicopter/VaultSync` GitHub Releases page.
 - release assets uploaded (installer/DMG/Linux archives/patch assets)
 - canonical release manifest generated from the final direct-download assets
   and validated against the same bytes before upload
+- one validated SPDX 2.3 SBOM per self-contained package, with final-byte
+  provenance and SBOM attestations plus candidate online/offline verification
 - every direct-download asset exposes a GitHub SHA-256 digest and the updater
   rejects missing, mismatched, or non-official integrity metadata
 - Windows SmartScreen and macOS Gatekeeper instructions remain current
