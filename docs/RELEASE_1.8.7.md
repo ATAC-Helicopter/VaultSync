@@ -105,6 +105,11 @@ complete and stable enough for broader qualification.
   preserves manually maintained issue bodies, constrains file inputs to the
   repository, validates every remote identifier, and provides an exact
   structured dry run before any Project or issue write (`BUG-18098`).
+- Cross-machine project settings now use durable per-source merge bases and a
+  field-level three-way planner. Independent local and remote edits merge
+  automatically; only overlapping fields require review. Conflict records
+  retain source/base revisions and both decisions preserve non-overlapping
+  work before advancing the durable base (`VS-1879`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -113,7 +118,8 @@ branch package.
 
 ### In progress next
 
-1. Make metadata imports previewable, versioned, durable, and reversible.
+1. Finish guarded versioned repository writes, provenance export, and bounded
+   undo for resolved metadata merges.
 2. Expose the running build and canonical release identity through the app,
    CLI, diagnostics, and support exports.
 3. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB

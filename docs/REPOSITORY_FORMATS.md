@@ -61,7 +61,8 @@ destination configured locally.
 
 The coordination database, durable installation identity, protection of all
 existing metadata writers, and version-2 per-project writer/revision fields are
-implemented on the 1.8.7 release branch. The remaining three-way merge work will
+implemented on the 1.8.7 release branch. Durable local merge bases and the
+field-level three-way planner are also implemented. The remaining merge work will
 add, with explicit migrations and fixtures:
 
 - base revision and field-level provenance beyond the current project writer,
