@@ -453,7 +453,17 @@ namespace VaultSync.Core.Config
                 VerificationPolicy = item.Values.VerificationPolicy,
                 AutoBackupEnabled = item.Values.AutoBackupEnabled,
                 Tags = item.Values.Tags
-            }
+            },
+            FieldProvenance = (item.FieldProvenance ?? new Dictionary<string, ProjectMetadataFieldProvenance>())
+                .ToDictionary(
+                    pair => pair.Key,
+                    pair => new ProjectMetadataFieldProvenance
+                    {
+                        WriterMachineId = pair.Value.WriterMachineId,
+                        Revision = pair.Value.Revision,
+                        UpdatedUtc = pair.Value.UpdatedUtc
+                    },
+                    StringComparer.Ordinal)
         };
 
         private static AppConfig? TryLoadPersistedConfigForPreservation(string path)

@@ -110,6 +110,10 @@ complete and stable enough for broader qualification.
   automatically; only overlapping fields require review. Conflict records
   retain source/base revisions and both decisions preserve non-overlapping
   work before advancing the durable base (`VS-1879`).
+- Every portable project writer now advances only the exact revision it
+  inspected. Schema-version-3 rows carry their base revision, per-field writer,
+  revision and timestamp provenance, plus the latest safe resolution evidence;
+  stale writes roll back without replacing remote metadata (`VS-1879`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -118,8 +122,8 @@ branch package.
 
 ### In progress next
 
-1. Finish guarded versioned repository writes, provenance export, and bounded
-   undo for resolved metadata merges.
+1. Finish Base/local/remote conflict presentation and bounded undo for resolved
+   metadata merges.
 2. Expose the running build and canonical release identity through the app,
    CLI, diagnostics, and support exports.
 3. Exercise two-machine, disconnect, clock-skew, and representative NAS/SMB

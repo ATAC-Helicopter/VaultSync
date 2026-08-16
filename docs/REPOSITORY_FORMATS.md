@@ -23,12 +23,13 @@ mechanism.
 
 ## Portable metadata store — Current
 
-The SQLite metadata store uses schema version `1`. Its logical tables are:
+The SQLite metadata store uses schema version `3`. Its logical tables are:
 
 - `meta_info`: schema version, creation/write timestamps, writer app version,
   and the most recent store-level writer machine value;
 - `projects`: external identity, name, preset, root-path hint, timestamps,
-  per-record writer/revision identity, and JSON-encoded project settings;
+  per-record writer/revision/base identity, field-level provenance, the latest
+  safe resolution evidence, and JSON-encoded project settings;
 - `snapshots`: external/project identities, creation time, counts, sizes, and
   diff summaries;
 - `backups`: external/project/snapshot identities, creation time, backup type
@@ -51,26 +52,23 @@ destination configured locally.
   not authoritative local paths.
 - Plaintext credentials and backup payload contents are not stored in the
   metadata database.
-- Version-2 project rows record their writer and monotonically advancing
-  revision. Version-1 rows remain readable but have no trustworthy per-record
-  writer and therefore use conservative conflict review.
+- Version-3 project rows record their writer, monotonically advancing revision,
+  exact base revision, per-field writer/revision/timestamp provenance, and safe
+  resolution evidence. Version-1 rows remain readable but have no trustworthy
+  per-record writer; version-2 rows lack a portable base and field provenance.
+  Both therefore use conservative conflict review until imported.
 - Process-local semaphores serialize one VaultSync process only and do not
   protect a repository from another machine.
 
-## Repository coordination — Planned for 1.8.7
+## Repository coordination — Implemented for 1.8.7
 
 The coordination database, durable installation identity, protection of all
-existing metadata writers, and version-2 per-project writer/revision fields are
-implemented on the 1.8.7 release branch. Durable local merge bases and the
-field-level three-way planner are also implemented. The remaining merge work will
-add, with explicit migrations and fixtures:
-
-- base revision and field-level provenance beyond the current project writer,
-  revision, and timestamp;
-- field-level portability and provenance for project settings;
-- repository-portable resolution and bounded undo records beyond the current
-  durable local resolution cache;
-- per-record linkage to the repository-scoped writer identity where required.
+existing metadata writers, durable local merge bases, and the field-level
+three-way planner are implemented on the 1.8.7 release branch. Schema version 3
+adds guarded compare-and-swap project writes, explicit base revisions,
+per-field writer/revision/timestamp provenance, and the latest safe resolution
+record. The remaining merge work is the bounded pre-next-write undo surface and
+final two-machine qualification.
 
 The separate coordination database currently records one active lease with
 owner, diagnostic host label, process, operation, nonce, application version,
