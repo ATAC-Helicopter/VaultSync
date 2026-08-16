@@ -83,9 +83,13 @@ public sealed class MetadataSyncService
     private sealed record ProjectMetadataConflictContext(
         Project Current,
         MetaProject Imported,
+        string SourceKey,
         string? SourceMachineId,
+        long BaseRevision,
+        ProjectMetadataConflictValues Base,
         ProjectMetadataConflictValues Local,
-        ProjectMetadataConflictValues Incoming);
+        ProjectMetadataConflictValues Incoming,
+        ProjectMetadataMergePlan Plan);
 
     private sealed class LegacyImportState
     {
@@ -356,6 +360,8 @@ public sealed class MetadataSyncService
             localProjects = _repo.GetAllProjects().ToList();
         }
         List<ProjectMetadataConflictRecord> pendingConflicts = config.Advanced.ProjectMetadataConflicts ??= [];
+        string sourceKey = BuildMetadataSourceKey(
+            Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         bool metadataConflictChanged = false;
 
         IReadOnlyDictionary<string, int> projectExternalMap = _repo.GetProjectExternalIdMap();
@@ -422,6 +428,7 @@ public sealed class MetadataSyncService
                     mappedProjectId,
                     config,
                     metaProject,
+                    sourceKey,
                     ResolveProjectWriterMachineId(metaProject, metaInfo),
                     parsedSettings,
                     pendingConflicts);
@@ -455,6 +462,7 @@ public sealed class MetadataSyncService
                     existingByName.Id,
                     config,
                     metaProject,
+                    sourceKey,
                     ResolveProjectWriterMachineId(metaProject, metaInfo),
                     parsedSettings,
                     pendingConflicts);
@@ -505,6 +513,12 @@ public sealed class MetadataSyncService
                 TryApplyProjectColor(metaProject.ExternalId, parsedSettings.AvatarColor);
             if (parsedSettings.HasAutoBackupEnabled)
                 metadataConflictChanged |= ApplyImportedProjectAutoBackupSetting(config, newId, parsedSettings.AutoBackupEnabled);
+            metadataConflictChanged |= UpsertProjectMetadataMergeBase(
+                config,
+                sourceKey,
+                metaProject,
+                ResolveProjectWriterMachineId(metaProject, metaInfo),
+                BuildImportedValues(project, parsedSettings, config, newId));
             projectMap[metaProject.ExternalId] = newId;
             importedProjects++;
         }
@@ -3507,6 +3521,7 @@ public sealed class MetadataSyncService
         int projectId,
         AppConfig config,
         MetaProject metaProject,
+        string sourceKey,
         string? sourceMachineId,
         ParsedProjectSettings parsedSettings,
         IList<ProjectMetadataConflictRecord> pendingConflicts)
@@ -3566,15 +3581,6 @@ public sealed class MetadataSyncService
             : currentTags;
 
         string? currentKeyRef = string.IsNullOrWhiteSpace(current.EncryptionKeyRef) ? null : current.EncryptionKeyRef;
-        if (string.Equals(nextPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(nextPreferredDestinationId, currentPreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) &&
-            nextAutoBackupEnabled == currentAutoBackupEnabled &&
-            string.Equals(nextTags, currentTags, StringComparison.Ordinal))
-        {
-            return RemoveProjectMetadataConflict(projectId, pendingConflicts);
-        }
 
         bool conflictValuesDiffer =
             !string.Equals(nextAvatarColor, currentAvatarColor, StringComparison.OrdinalIgnoreCase) ||
@@ -3606,31 +3612,116 @@ public sealed class MetadataSyncService
             Tags = nextTags
         };
 
-        if (conflictValuesDiffer && HasDurableKeepLocalResolution(config, metaProject, sourceMachineId, incomingValues))
-            return RemoveProjectMetadataConflict(projectId, pendingConflicts);
+        ProjectMetadataMergeBaseRecord? mergeBase = (config.Advanced.ProjectMetadataMergeBases ??= [])
+            .FirstOrDefault(item =>
+                string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(item.ProjectExternalId, metaProject.ExternalId, StringComparison.OrdinalIgnoreCase));
+        ProjectMetadataConflictValues? trustedBase = mergeBase is { Revision: > 0 }
+            ? mergeBase.Values
+            : null;
+        ProjectMetadataMergePlan plan = ProjectMetadataMergePlanner.Create(trustedBase, localValues, incomingValues);
 
-        if (!conflictValuesDiffer)
+        if (conflictValuesDiffer && HasDurableKeepLocalResolution(config, metaProject, sourceMachineId, incomingValues))
         {
-            if (parsedSettings.HasAvatarColor)
-                TryApplyProjectColor(metaProject.ExternalId, nextAvatarColor);
-            _repo.UpdateProjectEncryptionSettings(projectId, nextPolicy, currentKeyRef);
-            _repo.UpdateProjectPreferredDestination(projectId, nextPreferredDestinationId);
-            _repo.UpdateProjectRestoreMode(projectId, nextRestoreMode);
-            _repo.UpdateProjectVerificationPolicy(projectId, nextVerificationPolicy);
-            _repo.UpdateProjectTags(projectId, nextTags);
-            if (parsedSettings.HasAutoBackupEnabled)
-                ApplyImportedProjectAutoBackupSetting(config, projectId, nextAutoBackupEnabled);
-            return RemoveProjectMetadataConflict(projectId, pendingConflicts);
+            bool changed = RemoveProjectMetadataConflict(projectId, pendingConflicts);
+            changed |= UpsertProjectMetadataMergeBase(config, sourceKey, metaProject, sourceMachineId, incomingValues);
+            return changed;
+        }
+
+        if (!plan.HasConflicts)
+        {
+            ApplyProjectMetadataValues(config, current, metaProject.ExternalId, plan.Merged, currentKeyRef);
+            bool changed = RemoveProjectMetadataConflict(projectId, pendingConflicts);
+            changed |= UpsertProjectMetadataMergeBase(config, sourceKey, metaProject, sourceMachineId, incomingValues);
+            return changed;
         }
 
         return UpsertProjectMetadataConflict(
             new ProjectMetadataConflictContext(
                 current,
                 metaProject,
+                sourceKey,
                 sourceMachineId,
+                mergeBase?.Revision ?? 0,
+                trustedBase ?? new ProjectMetadataConflictValues(),
                 localValues,
-                incomingValues),
+                incomingValues,
+                plan),
             pendingConflicts);
+    }
+
+    private void ApplyProjectMetadataValues(
+        AppConfig config,
+        Project current,
+        string externalId,
+        ProjectMetadataConflictValues values,
+        string? currentKeyRef)
+    {
+        TryApplyProjectColor(externalId, values.AvatarColor);
+        _repo.UpdateProjectEncryptionSettings(current.Id, values.EncryptionPolicy, currentKeyRef);
+        _repo.UpdateProjectPreferredDestination(current.Id, NullIfWhiteSpace(values.PreferredDestinationId));
+        _repo.UpdateProjectRestoreMode(current.Id, NullIfWhiteSpace(values.RestoreMode));
+        _repo.UpdateProjectVerificationPolicy(current.Id, NullIfWhiteSpace(values.VerificationPolicy));
+        _repo.UpdateProjectTags(current.Id, NullIfWhiteSpace(values.Tags));
+        if (values.AutoBackupEnabled.HasValue)
+            ApplyImportedProjectAutoBackupSetting(config, current.Id, values.AutoBackupEnabled.Value);
+    }
+
+    private static string? NullIfWhiteSpace(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static ProjectMetadataConflictValues BuildImportedValues(
+        Project project,
+        ParsedProjectSettings parsed,
+        AppConfig config,
+        int projectId) => new()
+    {
+        AvatarColor = parsed.HasAvatarColor ? parsed.AvatarColor : string.Empty,
+        EncryptionPolicy = parsed.HasEncryptionPolicy ? parsed.EncryptionPolicy : project.EncryptionPolicy,
+        PreferredDestinationId = parsed.HasPreferredDestinationId ? parsed.PreferredDestinationId : project.PreferredDestinationId ?? string.Empty,
+        RestoreMode = parsed.HasRestoreMode ? parsed.RestoreMode : project.RestoreMode ?? string.Empty,
+        VerificationPolicy = parsed.HasVerificationPolicy ? parsed.VerificationPolicy : project.VerificationPolicy ?? string.Empty,
+        AutoBackupEnabled = parsed.HasAutoBackupEnabled
+            ? parsed.AutoBackupEnabled
+            : !(config.Backups.AutoBackupDisabledProjects ?? []).Contains(projectId),
+        Tags = parsed.HasTags ? parsed.Tags : project.Tags ?? string.Empty
+    };
+
+    private static bool UpsertProjectMetadataMergeBase(
+        AppConfig config,
+        string sourceKey,
+        MetaProject project,
+        string? writerMachineId,
+        ProjectMetadataConflictValues values)
+    {
+        config.Advanced.ProjectMetadataMergeBases ??= [];
+        ProjectMetadataMergeBaseRecord? existing = config.Advanced.ProjectMetadataMergeBases.FirstOrDefault(item =>
+            string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(item.ProjectExternalId, project.ExternalId, StringComparison.OrdinalIgnoreCase));
+        string updatedUtc = project.UpdatedUtc == default
+            ? string.Empty
+            : project.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+        if (existing is not null &&
+            existing.Revision == project.Revision &&
+            string.Equals(existing.WriterMachineId, writerMachineId, StringComparison.Ordinal) &&
+            string.Equals(existing.UpdatedUtc, updatedUtc, StringComparison.Ordinal) &&
+            ProjectMetadataConflictValuesEqual(existing.Values, values))
+        {
+            return false;
+        }
+
+        existing ??= new ProjectMetadataMergeBaseRecord
+        {
+            SourceKey = sourceKey,
+            ProjectExternalId = project.ExternalId
+        };
+        if (!config.Advanced.ProjectMetadataMergeBases.Contains(existing))
+            config.Advanced.ProjectMetadataMergeBases.Add(existing);
+        existing.Revision = project.Revision;
+        existing.WriterMachineId = writerMachineId ?? string.Empty;
+        existing.UpdatedUtc = updatedUtc;
+        existing.Values = values;
+        return true;
     }
 
     private static bool HasDurableKeepLocalResolution(
@@ -3693,11 +3784,18 @@ public sealed class MetadataSyncService
             ProjectExternalId = string.IsNullOrWhiteSpace(current.ExternalId) ? metaProject.ExternalId : current.ExternalId,
             ProjectName = current.Name,
             SourceMachineId = string.IsNullOrWhiteSpace(context.SourceMachineId) ? UnknownAppVersion : context.SourceMachineId,
+            SourceKey = context.SourceKey,
+            SourceRevision = metaProject.Revision,
+            BaseRevision = context.BaseRevision,
             SourceUpdatedUtc = metaProject.UpdatedUtc == default
                 ? string.Empty
                 : metaProject.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+            ConflictingFields = [.. context.Plan.ConflictingFields],
+            Base = context.Base,
             Local = context.Local,
-            Imported = context.Incoming
+            Imported = context.Incoming,
+            KeepLocalResult = context.Plan.KeepLocalResult,
+            AcceptImportedResult = context.Plan.AcceptImportedResult
         };
 
         ProjectMetadataConflictRecord? existing = pendingConflicts.FirstOrDefault(conflict =>
@@ -3719,8 +3817,15 @@ public sealed class MetadataSyncService
         existing.ProjectName = next.ProjectName;
         existing.SourceMachineId = next.SourceMachineId;
         existing.SourceUpdatedUtc = next.SourceUpdatedUtc;
+        existing.SourceKey = next.SourceKey;
+        existing.SourceRevision = next.SourceRevision;
+        existing.BaseRevision = next.BaseRevision;
+        existing.ConflictingFields = next.ConflictingFields;
+        existing.Base = next.Base;
         existing.Local = next.Local;
         existing.Imported = next.Imported;
+        existing.KeepLocalResult = next.KeepLocalResult;
+        existing.AcceptImportedResult = next.AcceptImportedResult;
         return true;
     }
 
@@ -3731,8 +3836,15 @@ public sealed class MetadataSyncService
                string.Equals(left.ProjectName, right.ProjectName, StringComparison.Ordinal) &&
                string.Equals(left.SourceMachineId, right.SourceMachineId, StringComparison.Ordinal) &&
                string.Equals(left.SourceUpdatedUtc, right.SourceUpdatedUtc, StringComparison.Ordinal) &&
+               string.Equals(left.SourceKey, right.SourceKey, StringComparison.OrdinalIgnoreCase) &&
+               left.SourceRevision == right.SourceRevision &&
+               left.BaseRevision == right.BaseRevision &&
+               left.ConflictingFields.SequenceEqual(right.ConflictingFields, StringComparer.Ordinal) &&
+               ProjectMetadataConflictValuesEqual(left.Base, right.Base) &&
                ProjectMetadataConflictValuesEqual(left.Local, right.Local) &&
-               ProjectMetadataConflictValuesEqual(left.Imported, right.Imported);
+               ProjectMetadataConflictValuesEqual(left.Imported, right.Imported) &&
+               ProjectMetadataConflictValuesEqual(left.KeepLocalResult, right.KeepLocalResult) &&
+               ProjectMetadataConflictValuesEqual(left.AcceptImportedResult, right.AcceptImportedResult);
     }
 
     private static bool ProjectMetadataConflictValuesEqual(ProjectMetadataConflictValues left, ProjectMetadataConflictValues right)

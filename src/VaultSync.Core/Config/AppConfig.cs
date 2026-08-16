@@ -347,6 +347,7 @@ namespace VaultSync.Core.Config
         public BackupIndexScanSummary BackupIndexLastScan { get; set; } = new();
         public List<ProjectMetadataConflictRecord> ProjectMetadataConflicts { get; set; } = [];
         public List<ProjectMetadataResolutionRecord> ProjectMetadataResolutions { get; set; } = [];
+        public List<ProjectMetadataMergeBaseRecord> ProjectMetadataMergeBases { get; set; } = [];
         public UpdateCheckDiagnostics UpdateDiagnostics { get; set; } = new();
         public BackupRepairTelemetry BackupRepairTelemetry { get; set; } = new();
         public MetadataConflictTelemetry MetadataConflictTelemetry { get; set; } = new();
@@ -386,8 +387,15 @@ namespace VaultSync.Core.Config
         public string ProjectName { get; set; } = string.Empty;
         public string SourceMachineId { get; set; } = string.Empty;
         public string SourceUpdatedUtc { get; set; } = string.Empty;
+        public string SourceKey { get; set; } = string.Empty;
+        public long SourceRevision { get; set; }
+        public long BaseRevision { get; set; }
+        public List<string> ConflictingFields { get; set; } = [];
+        public ProjectMetadataConflictValues Base { get; set; } = new();
         public ProjectMetadataConflictValues Local { get; set; } = new();
         public ProjectMetadataConflictValues Imported { get; set; } = new();
+        public ProjectMetadataConflictValues KeepLocalResult { get; set; } = new();
+        public ProjectMetadataConflictValues AcceptImportedResult { get; set; } = new();
     }
 
     public sealed class ProjectMetadataConflictValues
@@ -403,13 +411,27 @@ namespace VaultSync.Core.Config
 
     public sealed class ProjectMetadataResolutionRecord
     {
+        public string SourceKey { get; set; } = string.Empty;
         public string ProjectExternalId { get; set; } = string.Empty;
         public string SourceMachineId { get; set; } = string.Empty;
         public string SourceUpdatedUtc { get; set; } = string.Empty;
+        public long SourceRevision { get; set; }
+        public long BaseRevision { get; set; }
         public string Decision { get; set; } = string.Empty;
         public string ResolvedUtc { get; set; } = string.Empty;
         public ProjectMetadataConflictValues Local { get; set; } = new();
         public ProjectMetadataConflictValues Imported { get; set; } = new();
+        public ProjectMetadataConflictValues Result { get; set; } = new();
+    }
+
+    public sealed class ProjectMetadataMergeBaseRecord
+    {
+        public string SourceKey { get; set; } = string.Empty;
+        public string ProjectExternalId { get; set; } = string.Empty;
+        public long Revision { get; set; }
+        public string WriterMachineId { get; set; } = string.Empty;
+        public string UpdatedUtc { get; set; } = string.Empty;
+        public ProjectMetadataConflictValues Values { get; set; } = new();
     }
 
     public sealed class UpdateCheckDiagnostics

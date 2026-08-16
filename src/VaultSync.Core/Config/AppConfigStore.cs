@@ -340,6 +340,7 @@ namespace VaultSync.Core.Config
         {
             PreserveProjectsRoot(config);
             PreserveMetadataImportCache(config);
+            PreserveMetadataMergeBases(config);
         }
 
         private static void PreserveProjectsRoot(AppConfig config)
@@ -402,6 +403,58 @@ namespace VaultSync.Core.Config
                 })
                 .ToList();
         }
+
+        private static void PreserveMetadataMergeBases(AppConfig config)
+        {
+            config.Advanced ??= new AdvancedConfig();
+            config.Advanced.ProjectMetadataMergeBases ??= [];
+            AppConfig? persisted = TryLoadPersistedConfigForPreservation(ConfigFilePath)
+                            ?? TryLoadPersistedConfigForPreservation(ConfigBackupFilePath)
+                            ?? GetLastKnownGoodClone();
+            List<ProjectMetadataMergeBaseRecord>? persistedBases = persisted?.Advanced?.ProjectMetadataMergeBases;
+            if (persistedBases is not { Count: > 0 })
+                return;
+
+            int preserved = 0;
+            foreach (ProjectMetadataMergeBaseRecord item in persistedBases)
+            {
+                ProjectMetadataMergeBaseRecord? pending = config.Advanced.ProjectMetadataMergeBases.FirstOrDefault(candidate =>
+                    string.Equals(candidate.SourceKey, item.SourceKey, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(candidate.ProjectExternalId, item.ProjectExternalId, StringComparison.OrdinalIgnoreCase));
+                if (pending is not null && (pending.Revision > item.Revision ||
+                    (pending.Revision == item.Revision && string.CompareOrdinal(pending.UpdatedUtc, item.UpdatedUtc) >= 0)))
+                {
+                    continue;
+                }
+
+                if (pending is not null)
+                    config.Advanced.ProjectMetadataMergeBases.Remove(pending);
+                config.Advanced.ProjectMetadataMergeBases.Add(CloneMetadataMergeBase(item));
+                preserved++;
+            }
+
+            if (preserved > 0)
+                RuntimeLog.WriteVerbose($"[Config] Save preserved {preserved} newer metadata merge base(s) from durable config.");
+        }
+
+        private static ProjectMetadataMergeBaseRecord CloneMetadataMergeBase(ProjectMetadataMergeBaseRecord item) => new()
+        {
+            SourceKey = item.SourceKey,
+            ProjectExternalId = item.ProjectExternalId,
+            Revision = item.Revision,
+            WriterMachineId = item.WriterMachineId,
+            UpdatedUtc = item.UpdatedUtc,
+            Values = new ProjectMetadataConflictValues
+            {
+                AvatarColor = item.Values.AvatarColor,
+                EncryptionPolicy = item.Values.EncryptionPolicy,
+                PreferredDestinationId = item.Values.PreferredDestinationId,
+                RestoreMode = item.Values.RestoreMode,
+                VerificationPolicy = item.Values.VerificationPolicy,
+                AutoBackupEnabled = item.Values.AutoBackupEnabled,
+                Tags = item.Values.Tags
+            }
+        };
 
         private static AppConfig? TryLoadPersistedConfigForPreservation(string path)
         {
