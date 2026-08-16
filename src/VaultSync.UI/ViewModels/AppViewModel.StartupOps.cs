@@ -74,7 +74,12 @@ namespace VaultSync.UI.ViewModels
             _projectsViewModel.AutoBackupGroupPreferenceChanged += OnAutoBackupGroupPreferenceChanged;
             _projectsViewModel.ProjectRemovedFromDatabase += OnProjectRemovedFromDatabase;
             _backupsViewModel = null;
-            _settingsViewModel = new SettingsViewModel(_localizationService, _configStore, _repositoryFactory);
+            _settingsViewModel = new SettingsViewModel(
+                _localizationService,
+                _configStore,
+                _repositoryFactory,
+                installationIdentityProvider: _installationIdentityProvider,
+                appVersion: _currentVersionString);
             _scheduleViewModel = new ScheduleViewModel(
                 _settingsViewModel,
                 _localizationService,

@@ -321,6 +321,37 @@ public sealed class RepositoryLeaseServiceTests
     }
 
     [Fact]
+    public void ClockSkewTolerance_DoesNotTreatRecentExpiryOrFutureHeartbeatAsTakeoverPermission()
+    {
+        using var root = new TempDirectory();
+        var clock = new ManualTimeProvider(new DateTimeOffset(2026, 8, 16, 12, 0, 0, TimeSpan.Zero));
+        var service = new RepositoryLeaseService(clock, TimeSpan.FromMinutes(2));
+        using RepositoryLeaseHandle owner = AssertAcquired(
+            service.TryAcquire(root.Path, CreateRequest("metadata-export")));
+
+        clock.Advance(TimeSpan.FromMinutes(5).Add(TimeSpan.FromSeconds(30)));
+        Assert.Equal(RepositoryLeaseState.Active, service.Inspect(root.Path).State);
+
+        clock.Advance(TimeSpan.FromMinutes(1).Add(TimeSpan.FromSeconds(31)));
+        Assert.Equal(RepositoryLeaseState.Stale, service.Inspect(root.Path).State);
+    }
+
+    [Fact]
+    public void LostRepository_InvalidatesWriterWithoutRecreatingCoordinationState()
+    {
+        using var root = new TempDirectory();
+        var service = new RepositoryLeaseService();
+        using RepositoryLeaseHandle owner = AssertAcquired(
+            service.TryAcquire(root.Path, CreateRequest("metadata-export")));
+
+        Directory.Delete(root.Path, recursive: true);
+
+        Assert.False(owner.Renew());
+        Assert.False(owner.IsOwner);
+        Assert.False(File.Exists(RepositoryLeaseService.GetDatabasePath(root.Path)));
+    }
+
+    [Fact]
     public void InvalidRepositoryRootFailsClosedWithoutThrowing()
     {
         var service = new RepositoryLeaseService();
