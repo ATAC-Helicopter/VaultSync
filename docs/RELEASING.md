@@ -2,6 +2,19 @@
 
 This document defines the current release packaging flow.
 
+## Release cadence
+
+- Minor releases target seven days and have a fourteen-day maximum from the
+  preceding Stable release.
+- P0 safety or data-integrity work blocks the active minor. Unfinished
+  non-blocking work moves to the next minor instead of extending the train.
+- Minor releases do not require a beta. An unpublished stable candidate still
+  runs the complete release matrix before promotion.
+- Major releases begin after their planned minor train is complete and use one
+  or more explicit betas when the combined feature set is stable enough for
+  broader qualification.
+- `1.8.7` follows this policy with a Stable deadline of 2026-08-24.
+
 ## Prerequisites
 - .NET 10 SDK
 - Inno Setup (Windows installer)

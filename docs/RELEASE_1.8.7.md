@@ -11,7 +11,7 @@ release. The canonical feature scope and acceptance criteria remain in
 | Current stable | `1.8.6` (`v1.8.6`, released 2026-08-10) |
 | Active target | `1.8.7` |
 | Planning started | 2026-08-12 |
-| Stable target | 2026-10-30 |
+| Stable target | 2026-08-24 |
 | Working branch | `release/1.8.7` |
 | Integration branch | `Dev` |
 | Stable branch | `Stable` |
@@ -21,6 +21,24 @@ release. The canonical feature scope and acceptance criteria remain in
 The release branch accumulates the qualified 1.8.7 work. `Dev` is the
 integration branch; `Stable` represents shipped releases only. A beta is not
 assumed and must be approved explicitly if the release needs one.
+
+## Delivery timeline
+
+`1.8.6` shipped on 2026-08-10. The two-week minor-release ceiling therefore
+sets 2026-08-24 as the Stable deadline for `1.8.7`.
+
+| Window | Focus |
+|---|---|
+| 16–19 August | Complete versioned, durable cross-machine conflict handling. |
+| 20–21 August | Finish build identity, SBOM/provenance, evidence, and support-export contracts. |
+| 22 August | Finish repository documentation, public metadata synchronization, and bounded cleanup. |
+| 23 August | Run the unpublished stable candidate, upgrade, two-machine, NAS/SMB, localization, theme, accessibility, and security gates. |
+| 24 August | Merge through `Dev` to `Stable`, publish, verify assets, and close the milestone. |
+
+P0 safety defects cannot roll forward. Non-blocking P1 polish may move to
+`1.8.8` instead of extending this deadline. Minor releases do not require a
+beta; major releases use explicit beta rounds once their feature train is
+complete and stable enough for broader qualification.
 
 ## Status as of 2026-08-16
 
