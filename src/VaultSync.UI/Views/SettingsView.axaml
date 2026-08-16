@@ -2150,7 +2150,7 @@
                                     </StackPanel>
 
                                     <Grid ColumnDefinitions="Auto,*,*"
-                                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                           ColumnSpacing="12"
                                           RowSpacing="4">
                                       <TextBlock Grid.Row="0"
@@ -2164,45 +2164,75 @@
 
                                       <TextBlock Grid.Row="1"
                                                  Grid.Column="0"
-                                                 Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}" />
-
+                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsAvatarColor}" />
                                       <TextBlock Grid.Row="1"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalPreferredDestinationId}" />
+                                                 Text="{Binding LocalAvatarColor}" />
                                       <TextBlock Grid.Row="1"
+                                                 Grid.Column="2"
+                                                 Text="{Binding ImportedAvatarColor}" />
+
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Projects.Stat.EncryptionPolicy}" />
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="1"
+                                                 Text="{Binding LocalEncryptionPolicy}" />
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="2"
+                                                 Text="{Binding ImportedEncryptionPolicy}" />
+
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}" />
+
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="1"
+                                                 Text="{Binding LocalPreferredDestinationId}" />
+                                      <TextBlock Grid.Row="3"
                                                  Grid.Column="2"
                                                  Text="{Binding ImportedPreferredDestinationId}" />
 
-                                      <TextBlock Grid.Row="2"
+                                      <TextBlock Grid.Row="4"
                                                  Grid.Column="0"
                                                  Text="{infra:LocalizedString Key=Backups.Restore.Mode.Label}" />
 
-                                      <TextBlock Grid.Row="2"
+                                      <TextBlock Grid.Row="4"
                                                  Grid.Column="1"
                                                  Text="{Binding LocalRestoreMode}" />
-                                      <TextBlock Grid.Row="2"
+                                      <TextBlock Grid.Row="4"
                                                  Grid.Column="2"
                                                  Text="{Binding ImportedRestoreMode}" />
 
-                                      <TextBlock Grid.Row="3"
+                                      <TextBlock Grid.Row="5"
                                                  Grid.Column="0"
                                                  Text="{infra:LocalizedString Key=Backups.Verification.Policy.Label}" />
 
-                                      <TextBlock Grid.Row="3"
+                                      <TextBlock Grid.Row="5"
                                                  Grid.Column="1"
                                                  Text="{Binding LocalVerificationPolicy}" />
-                                      <TextBlock Grid.Row="3"
+                                      <TextBlock Grid.Row="5"
                                                  Grid.Column="2"
                                                  Text="{Binding ImportedVerificationPolicy}" />
 
-                                      <TextBlock Grid.Row="4"
+                                      <TextBlock Grid.Row="6"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Backups.Section.AutoBackups}" />
+                                      <TextBlock Grid.Row="6"
+                                                 Grid.Column="1"
+                                                 Text="{Binding LocalAutoBackupEnabled}" />
+                                      <TextBlock Grid.Row="6"
+                                                 Grid.Column="2"
+                                                 Text="{Binding ImportedAutoBackupEnabled}" />
+
+                                      <TextBlock Grid.Row="7"
                                                  Grid.Column="0"
                                                  Text="{infra:LocalizedString Key=Projects.Tags.Label}" />
-                                      <TextBlock Grid.Row="4"
+                                      <TextBlock Grid.Row="7"
                                                  Grid.Column="1"
                                                  Text="{Binding LocalTags}"
                                                  TextWrapping="Wrap" />
-                                      <TextBlock Grid.Row="4"
+                                      <TextBlock Grid.Row="7"
                                                  Grid.Column="2"
                                                  Text="{Binding ImportedTags}"
                                                  TextWrapping="Wrap" />

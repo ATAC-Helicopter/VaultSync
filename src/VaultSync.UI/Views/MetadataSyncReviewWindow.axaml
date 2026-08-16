@@ -98,12 +98,19 @@
                 </StackPanel>
               </Border>
               <Border Grid.Row="2" Grid.ColumnSpan="2" Padding="14,12">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.DeleteBackups}"
-                             Foreground="{DynamicResource TextSecondary}" />
-                  <TextBlock Grid.Column="1" Text="{Binding Preview.DeletedBackups}"
-                             FontWeight="SemiBold"
-                             Foreground="{DynamicResource DangerTextBrush}" />
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="{Binding Preview.DeletedProjects}" FontWeight="SemiBold" Foreground="{DynamicResource DangerTextBrush}" />
+                    <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.DeleteProjects}" Foreground="{DynamicResource TextSecondary}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="3">
+                    <TextBlock Text="{Binding Preview.DeletedSnapshots}" FontWeight="SemiBold" Foreground="{DynamicResource DangerTextBrush}" />
+                    <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.DeleteSnapshots}" Foreground="{DynamicResource TextSecondary}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Spacing="3">
+                    <TextBlock Text="{Binding Preview.DeletedBackups}" FontWeight="SemiBold" Foreground="{DynamicResource DangerTextBrush}" />
+                    <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.DeleteBackups}" Foreground="{DynamicResource TextSecondary}" />
+                  </StackPanel>
                 </Grid>
               </Border>
             </Grid>

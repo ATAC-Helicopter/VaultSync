@@ -553,7 +553,7 @@ namespace VaultSync.UI.ViewModels
                 MetadataSyncOptions options = new MetadataSyncOptions(
                     AllowCreateProjects: true,
                     MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
-                    .AsReadOnlySource();
+                    .WithoutSourceWrites();
                 MetadataSyncPreview preview = await _metadataSyncService.PreviewImportFromStoreAsync(cfg.ProjectsRoot, options);
                 string label = L("MetadataSync.Review.SourceProjectsRoot", "Projects root");
                     if (await ConfirmMetadataImportAsync(preview, label))
@@ -589,7 +589,7 @@ namespace VaultSync.UI.ViewModels
                     MetadataSyncOptions options = new MetadataSyncOptions(
                         AllowCreateProjects: true,
                         MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
-                        .AsReadOnlySource();
+                        .WithoutSourceWrites();
                     MetadataSyncPreview preview = await _metadataSyncService.PreviewImportFromStoreAsync(resolution.EffectivePath, options);
                     string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
                     string label = Lf("MetadataSync.Review.SourceDestination", "Destination: {0}", name);

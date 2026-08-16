@@ -32,7 +32,7 @@ public sealed class MetadataSyncReviewViewModel : ViewModelBase
 
     public MetadataSyncPreview Preview { get; }
     public string SourceLabel { get; }
-    public bool HasDeletes => Preview.DeletedBackups > 0;
+    public bool HasDeletes => Preview.TotalDeletes > 0;
     public bool Confirmed => _confirmed;
 
     public ICommand ConfirmCommand { get; }
@@ -43,5 +43,5 @@ public sealed class MetadataSyncReviewViewModel : ViewModelBase
     public string WarningDeletesText =>
         string.Format(
             _localization.GetString("MetadataSync.Review.WarningDeletes"),
-            Preview.DeletedBackups);
+            Preview.TotalDeletes);
 }

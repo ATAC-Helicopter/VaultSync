@@ -213,6 +213,20 @@ public sealed class MetadataSyncTests : IDisposable
             DeletedUtc = DateTime.UtcNow,
             OriginMachineId = "remote-machine"
         });
+        store.AddTombstone(new MetaTombstone
+        {
+            EntityType = "project",
+            EntityId = "local-project",
+            DeletedUtc = DateTime.UtcNow,
+            OriginMachineId = "remote-machine"
+        });
+        store.AddTombstone(new MetaTombstone
+        {
+            EntityType = "snapshot",
+            EntityId = "local-snapshot",
+            DeletedUtc = DateTime.UtcNow,
+            OriginMachineId = "remote-machine"
+        });
 
         var service = new MetadataSyncService(repo);
         MetadataSyncPreview preview = service.PreviewImportFromStore(metaRoot, MetadataSyncOptions.Default);
@@ -223,6 +237,8 @@ public sealed class MetadataSyncTests : IDisposable
         Assert.Equal(0, preview.LinkedProjects);
         Assert.Equal(1, preview.NewSnapshots);
         Assert.Equal(1, preview.NewBackups);
+        Assert.Equal(1, preview.DeletedProjects);
+        Assert.Equal(1, preview.DeletedSnapshots);
         Assert.Equal(2, preview.DeletedBackups);
         Assert.Equal(preview, cachedPreview);
         Assert.Null(repo.GetProjectByExternalId("remote-project"));
@@ -1106,6 +1122,50 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_ReadOnlySource_NeverAppliesDestructiveTombstones()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = TestRepository.AddProject(repo, "Read-only Tombstone", CreateTempDir(), "unity", DateTime.UtcNow);
+        int snapshotId = repo.CreateSnapshotFromMetadata(
+            "snapshot-readonly-tombstone",
+            projectId,
+            DateTime.UtcNow.AddHours(-1),
+            1,
+            64);
+        repo.CreateBackupFromMetadata(
+            "backup-readonly-tombstone",
+            projectId,
+            snapshotId,
+            DateTime.UtcNow,
+            "manual",
+            64,
+            "readonly/tombstone",
+            metaRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "machine-remote");
+        store.AddTombstone(new MetaTombstone
+        {
+            EntityType = "backup",
+            EntityId = "backup-readonly-tombstone",
+            DeletedUtc = DateTime.UtcNow,
+            OriginMachineId = "machine-remote"
+        });
+
+        var service = new MetadataSyncService(repo);
+        MetadataSyncResult result = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default.AsReadOnlySource());
+
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+        Assert.Equal(0, result.AppliedTombstones);
+        Assert.NotNull(repo.GetBackupByExternalId("backup-readonly-tombstone"));
+    }
+
+    [Fact]
     public void ImportFromStore_ActiveWriterAutomaticallyMakesSourceReadOnly()
     {
         string metaRoot = CreateTempDir();
@@ -1662,7 +1722,35 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
-    public void ImportFromStore_ProjectSettings_AppliesEncryptionPolicyAndKeyRef()
+    public void MetadataStore_ProjectRows_RecordWriterAndAdvanceRevision()
+    {
+        string metaRoot = CreateTempDir();
+        MetadataStore store = CreateStore(metaRoot);
+        var project = new MetaProject
+        {
+            ExternalId = "project-versioned-writer",
+            Name = "Versioned Writer",
+            Preset = "generic",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow,
+            WriterMachineId = "machine-a",
+            Revision = 1
+        };
+
+        store.UpsertProject(project);
+        project.WriterMachineId = "machine-b";
+        project.UpdatedUtc = project.UpdatedUtc.AddMinutes(1);
+        store.UpsertProject(project);
+
+        MetaProject stored = Assert.Single(store.ListProjects());
+        Assert.Equal("machine-b", stored.WriterMachineId);
+        Assert.Equal(2, stored.Revision);
+    }
+
+    [Fact]
+    public void ImportFromStore_ProjectSettings_AppliesEncryptionPolicyButNeverImportsKeyRef()
     {
         string metaRoot = CreateTempDir();
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
@@ -1688,7 +1776,7 @@ public sealed class MetadataSyncTests : IDisposable
         Project project = repo.GetProjectByName("Project Settings");
         Assert.NotNull(project);
         Assert.Equal(ProjectEncryptionPolicy.Encrypted, project!.EncryptionPolicy);
-        Assert.Equal("project-key-ref-01", project.EncryptionKeyRef);
+        Assert.Null(project.EncryptionKeyRef);
     }
 
     [Fact]
@@ -1728,7 +1816,7 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
-    public void ImportFromStore_ProjectSettings_UpdatesExistingProjectKeyRef()
+    public void ImportFromStore_ProjectSettings_PreservesExistingProjectKeyRef()
     {
         string metaRoot = CreateTempDir();
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
@@ -1766,11 +1854,11 @@ public sealed class MetadataSyncTests : IDisposable
         Project project = repo.GetProjectById(projectId);
         Assert.NotNull(project);
         Assert.Equal(ProjectEncryptionPolicy.Encrypted, project!.EncryptionPolicy);
-        Assert.Equal("remote-key-ref-new", project.EncryptionKeyRef);
+        Assert.Equal("local-key-ref-old", project.EncryptionKeyRef);
     }
 
     [Fact]
-    public void ImportFromStore_ProjectSettings_CanClearExistingProjectKeyRef()
+    public void ImportFromStore_ProjectSettings_CannotClearExistingProjectKeyRef()
     {
         string metaRoot = CreateTempDir();
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
@@ -1808,7 +1896,7 @@ public sealed class MetadataSyncTests : IDisposable
         Project project = repo.GetProjectById(projectId);
         Assert.NotNull(project);
         Assert.Equal(ProjectEncryptionPolicy.Encrypted, project!.EncryptionPolicy);
-        Assert.Null(project.EncryptionKeyRef);
+        Assert.Equal("local-key-ref", project.EncryptionKeyRef);
     }
 
     [Fact]
@@ -1847,7 +1935,7 @@ public sealed class MetadataSyncTests : IDisposable
             Preset = "unity",
             RootPathHint = projectRoot,
             CreatedUtc = now.AddDays(-2),
-            SettingsJson = "{\"preferredDestinationId\":\"dest-imported\",\"restoreMode\":\"sandbox\",\"verificationPolicy\":\"manual\",\"tags\":\"imported,remote\"}",
+            SettingsJson = "{\"encryptionPolicy\":\"plain\",\"preferredDestinationId\":\"dest-imported\",\"restoreMode\":\"sandbox\",\"verificationPolicy\":\"manual\",\"autoBackupEnabled\":false,\"tags\":\"imported,remote\"}",
             UpdatedUtc = now
         });
 
@@ -1862,19 +1950,45 @@ public sealed class MetadataSyncTests : IDisposable
         Assert.Equal(ProjectRestoreMode.Direct, project.RestoreMode);
         Assert.Equal(ProjectVerificationPolicy.Always, project.VerificationPolicy);
         Assert.Equal("local,stable", project.Tags);
+        Assert.Equal(ProjectEncryptionPolicy.Inherit, project.EncryptionPolicy);
+        Assert.DoesNotContain(projectId, AppConfigStore.Load().Backups.AutoBackupDisabledProjects);
 
         AppConfig refreshedConfig = AppConfigStore.Load();
         ProjectMetadataConflictRecord conflict = Assert.Single(refreshedConfig.Advanced.ProjectMetadataConflicts);
         Assert.Equal(projectId, conflict.ProjectId);
         Assert.Equal("machine-conflict", conflict.SourceMachineId);
         Assert.Equal("dest-local", conflict.Local.PreferredDestinationId);
-        Assert.Equal("dest-imported", conflict.Imported.PreferredDestinationId);
+        Assert.Equal(string.Empty, conflict.Imported.PreferredDestinationId);
         Assert.Equal(ProjectRestoreMode.Direct, conflict.Local.RestoreMode);
         Assert.Equal(ProjectRestoreMode.Sandbox, conflict.Imported.RestoreMode);
+        Assert.Equal(ProjectEncryptionPolicy.Inherit, conflict.Local.EncryptionPolicy);
+        Assert.Equal(ProjectEncryptionPolicy.Plain, conflict.Imported.EncryptionPolicy);
+        Assert.True(conflict.Local.AutoBackupEnabled);
+        Assert.False(conflict.Imported.AutoBackupEnabled);
+
+        refreshedConfig.Advanced.ProjectMetadataConflicts.Clear();
+        refreshedConfig.Advanced.ProjectMetadataResolutions =
+        [
+            new ProjectMetadataResolutionRecord
+            {
+                ProjectExternalId = conflict.ProjectExternalId,
+                SourceMachineId = conflict.SourceMachineId,
+                SourceUpdatedUtc = conflict.SourceUpdatedUtc,
+                Decision = "keep-local",
+                ResolvedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                Local = conflict.Local,
+                Imported = conflict.Imported
+            }
+        ];
+        AppConfigStore.Save(refreshedConfig);
+
+        MetadataSyncResult repeated = service.ImportFromStore(metaRoot, MetadataSyncOptions.Default);
+        Assert.Equal(MetadataSyncStatus.Success, repeated.Status);
+        Assert.Empty(AppConfigStore.Load().Advanced.ProjectMetadataConflicts);
     }
 
     [Fact]
-    public void ExportBackupToStore_ProjectSettings_IncludeEncryptionFields()
+    public void ExportBackupToStore_ProjectSettings_ExcludesMachineLocalEncryptionKeyRef()
     {
         string metaRoot = CreateTempDir();
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
@@ -1906,15 +2020,16 @@ public sealed class MetadataSyncTests : IDisposable
 
         var store = new MetadataStore(metaRoot);
         MetaProject metaProject = store.ListProjects().Single();
+        Assert.Equal("machine-settings", metaProject.WriterMachineId);
+        Assert.True(metaProject.Revision >= 1);
         using var doc = JsonDocument.Parse(metaProject.SettingsJson);
         Assert.True(doc.RootElement.TryGetProperty("encryptionPolicy", out JsonElement policy));
         Assert.Equal(ProjectEncryptionPolicy.Encrypted, policy.GetString());
-        Assert.True(doc.RootElement.TryGetProperty("encryptionKeyRef", out JsonElement keyRef));
-        Assert.Equal("project-key-ref-export", keyRef.GetString());
+        Assert.False(doc.RootElement.TryGetProperty("encryptionKeyRef", out _));
     }
 
     [Fact]
-    public void ExportBackupToStore_ProjectSettings_IncludeNullEncryptionKeyRefWhenUnset()
+    public void ExportBackupToStore_ProjectSettings_DoesNotEmitNullEncryptionKeyRef()
     {
         string metaRoot = CreateTempDir();
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
@@ -1948,8 +2063,7 @@ public sealed class MetadataSyncTests : IDisposable
         using var doc = JsonDocument.Parse(metaProject.SettingsJson);
         Assert.True(doc.RootElement.TryGetProperty("encryptionPolicy", out JsonElement policy));
         Assert.Equal(ProjectEncryptionPolicy.Encrypted, policy.GetString());
-        Assert.True(doc.RootElement.TryGetProperty("encryptionKeyRef", out JsonElement keyRef));
-        Assert.Equal(JsonValueKind.Null, keyRef.ValueKind);
+        Assert.False(doc.RootElement.TryGetProperty("encryptionKeyRef", out _));
     }
 
     [Fact]
@@ -2702,7 +2816,7 @@ public sealed class MetadataSyncTests : IDisposable
                 INSERT INTO meta_info(schema_version, created_utc, last_write_utc, writer_app_version, writer_machine_id)
                 VALUES($schemaVersion, $createdUtc, $lastWriteUtc, $appVersion, $machineId);
                 """;
-            cmd.Parameters.AddWithValue("$schemaVersion", MetadataStore.CurrentSchemaVersion);
+            cmd.Parameters.AddWithValue("$schemaVersion", 1);
             cmd.Parameters.AddWithValue("$createdUtc", now);
             cmd.Parameters.AddWithValue("$lastWriteUtc", now);
             cmd.Parameters.AddWithValue("$appVersion", "1.4.0");

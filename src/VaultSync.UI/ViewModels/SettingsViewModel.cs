@@ -235,12 +235,18 @@ namespace VaultSync.UI
             public required string ProjectExternalId { get; init; }
             public required string SourceMachineId { get; init; }
             public required string SourceUpdatedUtc { get; init; }
+            public required string LocalAvatarColor { get; init; }
+            public required string ImportedAvatarColor { get; init; }
+            public required string LocalEncryptionPolicy { get; init; }
+            public required string ImportedEncryptionPolicy { get; init; }
             public required string LocalPreferredDestinationId { get; init; }
             public required string ImportedPreferredDestinationId { get; init; }
             public required string LocalRestoreMode { get; init; }
             public required string ImportedRestoreMode { get; init; }
             public required string LocalVerificationPolicy { get; init; }
             public required string ImportedVerificationPolicy { get; init; }
+            public required string LocalAutoBackupEnabled { get; init; }
+            public required string ImportedAutoBackupEnabled { get; init; }
             public required string LocalTags { get; init; }
             public required string ImportedTags { get; init; }
         }
@@ -4103,12 +4109,18 @@ namespace VaultSync.UI
                     ProjectExternalId = conflict.ProjectExternalId,
                     SourceMachineId = string.IsNullOrWhiteSpace(conflict.SourceMachineId) ? "unknown" : conflict.SourceMachineId,
                     SourceUpdatedUtc = FormatConflictUtc(conflict.SourceUpdatedUtc),
+                    LocalAvatarColor = FormatConflictValue(conflict.Local?.AvatarColor),
+                    ImportedAvatarColor = FormatConflictValue(conflict.Imported?.AvatarColor),
+                    LocalEncryptionPolicy = FormatConflictValue(conflict.Local?.EncryptionPolicy),
+                    ImportedEncryptionPolicy = FormatConflictValue(conflict.Imported?.EncryptionPolicy),
                     LocalPreferredDestinationId = FormatConflictValue(conflict.Local?.PreferredDestinationId),
                     ImportedPreferredDestinationId = FormatConflictValue(conflict.Imported?.PreferredDestinationId),
                     LocalRestoreMode = FormatConflictValue(conflict.Local?.RestoreMode),
                     ImportedRestoreMode = FormatConflictValue(conflict.Imported?.RestoreMode),
                     LocalVerificationPolicy = FormatConflictValue(conflict.Local?.VerificationPolicy),
                     ImportedVerificationPolicy = FormatConflictValue(conflict.Imported?.VerificationPolicy),
+                    LocalAutoBackupEnabled = FormatConflictBoolean(conflict.Local?.AutoBackupEnabled),
+                    ImportedAutoBackupEnabled = FormatConflictBoolean(conflict.Imported?.AutoBackupEnabled),
                     LocalTags = FormatConflictValue(conflict.Local?.Tags),
                     ImportedTags = FormatConflictValue(conflict.Imported?.Tags)
                 });
@@ -4129,6 +4141,14 @@ namespace VaultSync.UI
 
         private static string FormatConflictValue(string? value)
             => string.IsNullOrWhiteSpace(value) ? "-" : value.Trim();
+
+        private string FormatConflictBoolean(bool? value)
+            => value switch
+            {
+                true => L("Common.Yes", "Yes"),
+                false => L("Common.No", "No"),
+                null => "-"
+            };
 
         private static string FormatConflictUtc(string? value)
         {
@@ -4159,11 +4179,28 @@ namespace VaultSync.UI
                 {
                     AppConfig cfg = _configStore.Load();
                     var repo = _repositoryFactory.Create(cfg);
-                    repo.UpdateProjectPreferredDestination(item.ProjectId, EmptyToNull(item.ImportedPreferredDestinationId));
-                    repo.UpdateProjectRestoreMode(item.ProjectId, EmptyToNull(item.ImportedRestoreMode));
-                    repo.UpdateProjectVerificationPolicy(item.ProjectId, EmptyToNull(item.ImportedVerificationPolicy));
-                    repo.UpdateProjectTags(item.ProjectId, EmptyToNull(item.ImportedTags));
+                    ProjectMetadataConflictRecord conflict = FindProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId)
+                        ?? throw new InvalidOperationException("The metadata conflict is no longer pending.");
+                    ProjectMetadataConflictValues imported = conflict.Imported ?? new ProjectMetadataConflictValues();
+                    Project? current = repo.GetProjectById(item.ProjectId);
+                    if (current is null)
+                        throw new InvalidOperationException("The project no longer exists.");
 
+                    repo.UpdateProjectEncryptionSettings(
+                        item.ProjectId,
+                        string.IsNullOrWhiteSpace(imported.EncryptionPolicy)
+                            ? current.EncryptionPolicy
+                            : imported.EncryptionPolicy,
+                        current.EncryptionKeyRef);
+                    repo.UpdateProjectPreferredDestination(item.ProjectId, EmptyToNull(imported.PreferredDestinationId));
+                    repo.UpdateProjectRestoreMode(item.ProjectId, EmptyToNull(imported.RestoreMode));
+                    repo.UpdateProjectVerificationPolicy(item.ProjectId, EmptyToNull(imported.VerificationPolicy));
+                    repo.UpdateProjectTags(item.ProjectId, EmptyToNull(imported.Tags));
+                    ApplyResolvedAutoBackupSetting(cfg, item.ProjectId, imported.AutoBackupEnabled);
+                    if (!string.IsNullOrWhiteSpace(imported.AvatarColor))
+                        AvatarColorProvider.SetColorForExternalId(conflict.ProjectExternalId, imported.AvatarColor);
+
+                    RecordProjectMetadataResolution(cfg, conflict, "accept-imported");
                     RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
                     UpdateMetadataConflictTelemetry(cfg, "accept-imported", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
                     _configStore.Save(cfg);
@@ -4228,6 +4265,9 @@ namespace VaultSync.UI
                 await Task.Run(() =>
                 {
                     AppConfig cfg = _configStore.Load();
+                    ProjectMetadataConflictRecord conflict = FindProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId)
+                        ?? throw new InvalidOperationException("The metadata conflict is no longer pending.");
+                    RecordProjectMetadataResolution(cfg, conflict, "keep-local");
                     RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
                     UpdateMetadataConflictTelemetry(cfg, "keep-local", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
                     _configStore.Save(cfg);
@@ -4277,14 +4317,63 @@ namespace VaultSync.UI
         private static void RemoveProjectMetadataConflictRecord(AppConfig cfg, int projectId, string projectExternalId)
         {
             cfg.Advanced.ProjectMetadataConflicts ??= [];
-            ProjectMetadataConflictRecord? existing = cfg.Advanced.ProjectMetadataConflicts.FirstOrDefault(conflict =>
-                conflict.ProjectId == projectId ||
-                (!string.IsNullOrWhiteSpace(projectExternalId) &&
-                 string.Equals(conflict.ProjectExternalId, projectExternalId, StringComparison.OrdinalIgnoreCase)));
+            ProjectMetadataConflictRecord? existing = FindProjectMetadataConflictRecord(cfg, projectId, projectExternalId);
             if (existing is not null)
             {
                 cfg.Advanced.ProjectMetadataConflicts.Remove(existing);
             }
+        }
+
+        private static ProjectMetadataConflictRecord? FindProjectMetadataConflictRecord(
+            AppConfig cfg,
+            int projectId,
+            string projectExternalId)
+            => (cfg.Advanced.ProjectMetadataConflicts ?? []).FirstOrDefault(conflict =>
+                conflict.ProjectId == projectId ||
+                (!string.IsNullOrWhiteSpace(projectExternalId) &&
+                 string.Equals(conflict.ProjectExternalId, projectExternalId, StringComparison.OrdinalIgnoreCase)));
+
+        private static void RecordProjectMetadataResolution(
+            AppConfig cfg,
+            ProjectMetadataConflictRecord conflict,
+            string decision)
+        {
+            cfg.Advanced.ProjectMetadataResolutions ??= [];
+            cfg.Advanced.ProjectMetadataResolutions.RemoveAll(existing =>
+                string.Equals(existing.ProjectExternalId, conflict.ProjectExternalId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(existing.SourceMachineId, conflict.SourceMachineId, StringComparison.Ordinal) &&
+                string.Equals(existing.SourceUpdatedUtc, conflict.SourceUpdatedUtc, StringComparison.Ordinal));
+            cfg.Advanced.ProjectMetadataResolutions.Add(new ProjectMetadataResolutionRecord
+            {
+                ProjectExternalId = conflict.ProjectExternalId,
+                SourceMachineId = conflict.SourceMachineId,
+                SourceUpdatedUtc = conflict.SourceUpdatedUtc,
+                Decision = decision,
+                ResolvedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                Local = conflict.Local ?? new ProjectMetadataConflictValues(),
+                Imported = conflict.Imported ?? new ProjectMetadataConflictValues()
+            });
+
+            const int maxResolutionRecords = 100;
+            if (cfg.Advanced.ProjectMetadataResolutions.Count > maxResolutionRecords)
+            {
+                cfg.Advanced.ProjectMetadataResolutions = cfg.Advanced.ProjectMetadataResolutions
+                    .OrderByDescending(static record => record.ResolvedUtc, StringComparer.Ordinal)
+                    .Take(maxResolutionRecords)
+                    .ToList();
+            }
+        }
+
+        private static void ApplyResolvedAutoBackupSetting(AppConfig cfg, int projectId, bool? enabled)
+        {
+            if (!enabled.HasValue)
+                return;
+
+            cfg.Backups.AutoBackupDisabledProjects ??= [];
+            if (enabled.Value)
+                cfg.Backups.AutoBackupDisabledProjects.Remove(projectId);
+            else if (!cfg.Backups.AutoBackupDisabledProjects.Contains(projectId))
+                cfg.Backups.AutoBackupDisabledProjects.Add(projectId);
         }
 
         private void PersistMetadataConflictTelemetry(string? lastAction, string? lastResolvedProject, int pendingCount)

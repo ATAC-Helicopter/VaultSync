@@ -27,8 +27,8 @@ The SQLite metadata store uses schema version `1`. Its logical tables are:
 
 - `meta_info`: schema version, creation/write timestamps, writer app version,
   and the most recent store-level writer machine value;
-- `projects`: external identity, name, preset, root-path hint, timestamps, and
-  JSON-encoded project settings;
+- `projects`: external identity, name, preset, root-path hint, timestamps,
+  per-record writer/revision identity, and JSON-encoded project settings;
 - `snapshots`: external/project identities, creation time, counts, sizes, and
   diff summaries;
 - `backups`: external/project/snapshot identities, creation time, backup type
@@ -37,12 +37,11 @@ The SQLite metadata store uses schema version `1`. Its logical tables are:
 - `tombstones`: entity type, external identity, deletion time, and origin
   machine value.
 
-`settings_json` currently includes portable-looking values such as avatar color,
-encryption policy and key reference, preferred destination, restore mode,
-verification policy, auto-backup state, and tags. Not every one of these fields
-is safe to apply automatically on another machine; the current limitation and
-single-writer guidance are documented in
-[Metadata Sync](wiki/Metadata-Sync.md#current-186-limitations).
+`settings_json` includes avatar color, encryption policy, preferred destination,
+restore mode, verification policy, auto-backup state, and tags. Encryption key
+references are deliberately excluded because they identify credentials that
+exist only on one installation. Imported destination choices resolve only to a
+destination configured locally.
 
 ### Current compatibility behavior
 
@@ -52,21 +51,24 @@ single-writer guidance are documented in
   not authoritative local paths.
 - Plaintext credentials and backup payload contents are not stored in the
   metadata database.
-- The store-wide writer value identifies the latest store writer, not the author
-  of every individual field.
+- Version-2 project rows record their writer and monotonically advancing
+  revision. Version-1 rows remain readable but have no trustworthy per-record
+  writer and therefore use conservative conflict review.
 - Process-local semaphores serialize one VaultSync process only and do not
   protect a repository from another machine.
 
 ## Repository coordination — Planned for 1.8.7
 
-The coordination database, durable installation identity, and protection of all
-existing metadata writers are implemented on the 1.8.7 release branch. The later
-portable-metadata schema revision will add, with explicit migrations and fixtures:
+The coordination database, durable installation identity, protection of all
+existing metadata writers, and version-2 per-project writer/revision fields are
+implemented on the 1.8.7 release branch. The remaining three-way merge work will
+add, with explicit migrations and fixtures:
 
-- durable installation identity distinct from host name;
-- per-record revision, base revision, writer identity, and timestamp;
+- base revision and field-level provenance beyond the current project writer,
+  revision, and timestamp;
 - field-level portability and provenance for project settings;
-- durable conflict-resolution records;
+- repository-portable resolution and bounded undo records beyond the current
+  durable local resolution cache;
 - per-record linkage to the repository-scoped writer identity where required.
 
 The separate coordination database currently records one active lease with

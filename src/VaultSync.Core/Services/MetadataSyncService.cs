@@ -74,6 +74,8 @@ public sealed class MetadataSyncService
     private sealed record PreviewTombstoneAnalysis(
         HashSet<string> BackupIds,
         HashSet<string> SnapshotIds,
+        int DeleteProjects,
+        int DeleteSnapshots,
         int DeleteBackups);
 
     private sealed record PreviewBackupAnalysis(HashSet<string> LiveSnapshotIds, int Add, int Delete);
@@ -389,6 +391,9 @@ public sealed class MetadataSyncService
 
         foreach (string? tombstonedProjectId in tombstonedProjectIds)
         {
+            if (!opts.ApplyDestructiveTombstones)
+                continue;
+
             if (!projectMap.TryGetValue(tombstonedProjectId, out int existingId))
                 continue;
 
@@ -410,7 +415,6 @@ public sealed class MetadataSyncService
                 continue;
 
             ParsedProjectSettings parsedSettings = ParseProjectSettings(metaProject.SettingsJson);
-            TryApplyProjectColor(metaProject);
 
             if (projectMap.TryGetValue(metaProject.ExternalId, out int mappedProjectId))
             {
@@ -418,7 +422,7 @@ public sealed class MetadataSyncService
                     mappedProjectId,
                     config,
                     metaProject,
-                    metaInfo?.WriterMachineId,
+                    ResolveProjectWriterMachineId(metaProject, metaInfo),
                     parsedSettings,
                     pendingConflicts);
                 continue;
@@ -451,7 +455,7 @@ public sealed class MetadataSyncService
                     existingByName.Id,
                     config,
                     metaProject,
-                    metaInfo?.WriterMachineId,
+                    ResolveProjectWriterMachineId(metaProject, metaInfo),
                     parsedSettings,
                     pendingConflicts);
                 projectMap[metaProject.ExternalId] = existingByName.Id;
@@ -478,14 +482,15 @@ public sealed class MetadataSyncService
                 EncryptionPolicy = parsedSettings.HasEncryptionPolicy
                     ? parsedSettings.EncryptionPolicy
                     : ProjectEncryptionPolicy.Inherit,
-                EncryptionKeyRef = parsedSettings.HasEncryptionKeyRef
-                    ? parsedSettings.EncryptionKeyRef
-                    : null,
+                // Encryption key references are installation-local secrets. A
+                // repository may describe the policy, but never selects a key
+                // that may not exist on this machine.
+                EncryptionKeyRef = null,
                 VerificationPolicy = parsedSettings.HasVerificationPolicy
                     ? parsedSettings.VerificationPolicy
                     : ProjectVerificationPolicy.Always,
                 PreferredDestinationId = parsedSettings.HasPreferredDestinationId
-                    ? parsedSettings.PreferredDestinationId
+                    ? NormalizeImportedPreferredDestinationId(parsedSettings.PreferredDestinationId, config.Backups.Destinations)
                     : string.Empty,
                 RestoreMode = parsedSettings.HasRestoreMode
                     ? parsedSettings.RestoreMode
@@ -496,6 +501,8 @@ public sealed class MetadataSyncService
             };
 
             int newId = _repo.AddProject(project);
+            if (parsedSettings.HasAvatarColor)
+                TryApplyProjectColor(metaProject.ExternalId, parsedSettings.AvatarColor);
             if (parsedSettings.HasAutoBackupEnabled)
                 metadataConflictChanged |= ApplyImportedProjectAutoBackupSetting(config, newId, parsedSettings.AutoBackupEnabled);
             projectMap[metaProject.ExternalId] = newId;
@@ -617,20 +624,23 @@ public sealed class MetadataSyncService
             }
         }
 
-        foreach (MetaTombstone tombstone in metaTombstones)
+        if (opts.ApplyDestructiveTombstones)
         {
-            if (string.IsNullOrWhiteSpace(tombstone.EntityId))
-                continue;
-
-            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase) &&
-                backupExternalMap.TryGetValue(tombstone.EntityId, out int existingId))
+            foreach (MetaTombstone tombstone in metaTombstones)
             {
-                _repo.DeleteBackupById(existingId);
-                appliedTombstones++;
+                if (string.IsNullOrWhiteSpace(tombstone.EntityId))
+                    continue;
+
+                if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase) &&
+                    backupExternalMap.TryGetValue(tombstone.EntityId, out int existingId))
+                {
+                    _repo.DeleteBackupById(existingId);
+                    appliedTombstones++;
+                }
             }
         }
 
-        if (missingBackupExternalIds.Count > 0)
+        if (missingBackupExternalIds.Count > 0 && opts.ApplyDestructiveTombstones)
         {
             foreach (string missingExternalId in missingBackupExternalIds)
             {
@@ -647,7 +657,7 @@ public sealed class MetadataSyncService
             }
         }
 
-        if (missingSnapshotExternalIds.Count > 0)
+        if (missingSnapshotExternalIds.Count > 0 && opts.ApplyDestructiveTombstones)
         {
             var removedSnapshotExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string? missingExternalId in missingSnapshotExternalIds)
@@ -1129,7 +1139,11 @@ public sealed class MetadataSyncService
 
         IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
         IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
-        PreviewTombstoneAnalysis tombstones = AnalyzePreviewTombstones(metaTombstones, backupExternalMap);
+        PreviewTombstoneAnalysis tombstones = AnalyzePreviewTombstones(
+            metaTombstones,
+            projectExternalMap,
+            snapshotExternalMap,
+            backupExternalMap);
         PreviewBackupAnalysis backups = AnalyzePreviewBackups(
             metaBackups,
             rootPath,
@@ -1174,7 +1188,11 @@ public sealed class MetadataSyncService
             addSnapshots,
             addBackups,
             tombstones.DeleteBackups + backups.Delete,
-            string.Empty);
+            string.Empty)
+        {
+            DeletedProjects = tombstones.DeleteProjects,
+            DeletedSnapshots = tombstones.DeleteSnapshots
+        };
 
         if (metaInfo != null)
         {
@@ -1217,25 +1235,34 @@ public sealed class MetadataSyncService
 
     private static PreviewTombstoneAnalysis AnalyzePreviewTombstones(
         IEnumerable<MetaTombstone> tombstones,
+        IReadOnlyDictionary<string, int> projectExternalMap,
+        IReadOnlyDictionary<string, int> snapshotExternalMap,
         IReadOnlyDictionary<string, int> backupExternalMap)
     {
         var backupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var snapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        int deletes = 0;
+        int deleteProjects = 0;
+        int deleteSnapshots = 0;
+        int deleteBackups = 0;
         foreach (MetaTombstone tombstone in tombstones.Where(tombstone => !string.IsNullOrWhiteSpace(tombstone.EntityId)))
         {
-            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(tombstone.EntityType, "project", StringComparison.OrdinalIgnoreCase))
+            {
+                deleteProjects += projectExternalMap.ContainsKey(tombstone.EntityId) ? 1 : 0;
+            }
+            else if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
             {
                 backupIds.Add(tombstone.EntityId);
-                deletes += backupExternalMap.ContainsKey(tombstone.EntityId) ? 1 : 0;
+                deleteBackups += backupExternalMap.ContainsKey(tombstone.EntityId) ? 1 : 0;
             }
             else if (string.Equals(tombstone.EntityType, "snapshot", StringComparison.OrdinalIgnoreCase))
             {
                 snapshotIds.Add(tombstone.EntityId);
+                deleteSnapshots += snapshotExternalMap.ContainsKey(tombstone.EntityId) ? 1 : 0;
             }
         }
 
-        return new PreviewTombstoneAnalysis(backupIds, snapshotIds, deletes);
+        return new PreviewTombstoneAnalysis(backupIds, snapshotIds, deleteProjects, deleteSnapshots, deleteBackups);
     }
 
     private static PreviewBackupAnalysis AnalyzePreviewBackups(
@@ -2204,6 +2231,7 @@ public sealed class MetadataSyncService
             };
         }
 
+        metaInfo.SchemaVersion = MetadataStore.CurrentSchemaVersion;
         metaInfo.LastWriteUtc = now;
         metaInfo.WriterMachineId = machineId;
         if (updateExistingAppVersion)
@@ -2416,7 +2444,8 @@ public sealed class MetadataSyncService
                     RootPathHint = project.RootPath,
                     CreatedUtc = project.CreatedUtc,
                     SettingsJson = BuildProjectSettingsJson(project),
-                    UpdatedUtc = now
+                    UpdatedUtc = now,
+                    WriterMachineId = machineId
                 });
             });
         }
@@ -2670,7 +2699,8 @@ public sealed class MetadataSyncService
                 RootPathHint = entities.Project.RootPath,
                 CreatedUtc = entities.Project.CreatedUtc,
                 SettingsJson = BuildProjectSettingsJson(entities.Project),
-                UpdatedUtc = context.Now
+                UpdatedUtc = context.Now,
+                WriterMachineId = context.MachineId
             });
             store.UpsertSnapshot(new MetaSnapshot
             {
@@ -3170,7 +3200,8 @@ public sealed class MetadataSyncService
             RootPathHint = project.RootPath,
             CreatedUtc = project.CreatedUtc,
             SettingsJson = BuildProjectSettingsJson(project),
-            UpdatedUtc = now
+            UpdatedUtc = now,
+            WriterMachineId = machineId
         });
 
         foreach (Snapshot? snap in snapshots)
@@ -3325,9 +3356,6 @@ public sealed class MetadataSyncService
             }
 
             settings["encryptionPolicy"] = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy);
-            settings["encryptionKeyRef"] = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
-                ? null
-                : project.EncryptionKeyRef;
             settings["preferredDestinationId"] = string.IsNullOrWhiteSpace(project.PreferredDestinationId)
                 ? null
                 : project.PreferredDestinationId;
@@ -3348,15 +3376,15 @@ public sealed class MetadataSyncService
     }
 
     private readonly record struct ParsedProjectSettings(
+        string AvatarColor,
         string EncryptionPolicy,
-        string? EncryptionKeyRef,
         string PreferredDestinationId,
         string RestoreMode,
         string VerificationPolicy,
         bool AutoBackupEnabled,
         string Tags,
+        bool HasAvatarColor,
         bool HasEncryptionPolicy,
-        bool HasEncryptionKeyRef,
         bool HasPreferredDestinationId,
         bool HasRestoreMode,
         bool HasVerificationPolicy,
@@ -3371,32 +3399,31 @@ public sealed class MetadataSyncService
         try
         {
             using var doc = JsonDocument.Parse(settingsJson);
+            string avatarColor = string.Empty;
             string policy = ProjectEncryptionPolicy.Inherit;
-            string? keyRef = null;
             string preferredDestinationId = string.Empty;
             string restoreMode = ProjectRestoreMode.Direct;
             string verificationPolicy = ProjectVerificationPolicy.Always;
             bool autoBackupEnabled = true;
             string tags = string.Empty;
             bool hasPolicy = false;
-            bool hasKeyRef = false;
             bool hasPreferredDestinationId = false;
             bool hasRestoreMode = false;
             bool hasVerificationPolicy = false;
             bool hasAutoBackupEnabled = false;
             bool hasTags = false;
+            bool hasAvatarColor = false;
+
+            if (doc.RootElement.TryGetProperty("avatarColor", out JsonElement avatarColorProp))
+            {
+                avatarColor = NormalizeAvatarColor(avatarColorProp.GetString());
+                hasAvatarColor = !string.IsNullOrWhiteSpace(avatarColor);
+            }
 
             if (doc.RootElement.TryGetProperty("encryptionPolicy", out JsonElement policyProp))
             {
                 policy = ProjectEncryptionPolicy.Normalize(policyProp.GetString());
                 hasPolicy = true;
-            }
-
-            if (doc.RootElement.TryGetProperty("encryptionKeyRef", out JsonElement keyRefProp))
-            {
-                string? rawKeyRef = keyRefProp.GetString();
-                keyRef = string.IsNullOrWhiteSpace(rawKeyRef) ? null : rawKeyRef;
-                hasKeyRef = true;
             }
 
             if (doc.RootElement.TryGetProperty("verificationPolicy", out JsonElement verificationProp))
@@ -3438,15 +3465,15 @@ public sealed class MetadataSyncService
             }
 
             return new ParsedProjectSettings(
+                avatarColor,
                 policy,
-                keyRef,
                 preferredDestinationId,
                 restoreMode,
                 verificationPolicy,
                 autoBackupEnabled,
                 tags,
+                HasAvatarColor: hasAvatarColor,
                 HasEncryptionPolicy: hasPolicy,
-                HasEncryptionKeyRef: hasKeyRef,
                 HasPreferredDestinationId: hasPreferredDestinationId,
                 HasRestoreMode: hasRestoreMode,
                 HasVerificationPolicy: hasVerificationPolicy,
@@ -3461,15 +3488,15 @@ public sealed class MetadataSyncService
 
     private static ParsedProjectSettings EmptyParsedProjectSettings() =>
         new(
+            string.Empty,
             ProjectEncryptionPolicy.Inherit,
-            null,
             string.Empty,
             ProjectRestoreMode.Direct,
             ProjectVerificationPolicy.Always,
             true,
             string.Empty,
+            HasAvatarColor: false,
             HasEncryptionPolicy: false,
-            HasEncryptionKeyRef: false,
             HasPreferredDestinationId: false,
             HasRestoreMode: false,
             HasVerificationPolicy: false,
@@ -3484,8 +3511,8 @@ public sealed class MetadataSyncService
         ParsedProjectSettings parsedSettings,
         IList<ProjectMetadataConflictRecord> pendingConflicts)
     {
-        if (!parsedSettings.HasEncryptionPolicy &&
-            !parsedSettings.HasEncryptionKeyRef &&
+        if (!parsedSettings.HasAvatarColor &&
+            !parsedSettings.HasEncryptionPolicy &&
             !parsedSettings.HasPreferredDestinationId &&
             !parsedSettings.HasRestoreMode &&
             !parsedSettings.HasVerificationPolicy &&
@@ -3499,6 +3526,10 @@ public sealed class MetadataSyncService
         if (current is null)
             return false;
 
+        string currentAvatarColor = NormalizeAvatarColor(_projectColorResolver?.Invoke(current));
+        string nextAvatarColor = parsedSettings.HasAvatarColor
+            ? parsedSettings.AvatarColor
+            : currentAvatarColor;
         string currentPolicy = ProjectEncryptionPolicy.Normalize(current.EncryptionPolicy);
         string incomingPolicy = parsedSettings.HasEncryptionPolicy
             ? ProjectEncryptionPolicy.Normalize(parsedSettings.EncryptionPolicy)
@@ -3511,9 +3542,6 @@ public sealed class MetadataSyncService
                  && !string.Equals(currentPolicy, ProjectEncryptionPolicy.Inherit, StringComparison.OrdinalIgnoreCase));
 
         string nextPolicy = applyPolicy ? incomingPolicy : currentPolicy;
-        string? nextKeyRef = parsedSettings.HasEncryptionKeyRef
-            ? parsedSettings.EncryptionKeyRef
-            : current.EncryptionKeyRef;
         string currentVerificationPolicy = ProjectVerificationPolicy.Normalize(current.VerificationPolicy);
         string nextVerificationPolicy = parsedSettings.HasVerificationPolicy
             ? ProjectVerificationPolicy.Normalize(parsedSettings.VerificationPolicy)
@@ -3521,7 +3549,7 @@ public sealed class MetadataSyncService
         List<BackupDestination> destinations = _configStore.Load().Backups.Destinations;
         string currentPreferredDestinationId = NormalizePreferredDestinationId(current.PreferredDestinationId, destinations);
         string nextPreferredDestinationId = parsedSettings.HasPreferredDestinationId
-            ? NormalizePreferredDestinationId(parsedSettings.PreferredDestinationId, destinations)
+            ? NormalizeImportedPreferredDestinationId(parsedSettings.PreferredDestinationId, destinations)
             : currentPreferredDestinationId;
         string currentRestoreMode = ProjectRestoreMode.Normalize(current.RestoreMode);
         string nextRestoreMode = parsedSettings.HasRestoreMode
@@ -3538,9 +3566,7 @@ public sealed class MetadataSyncService
             : currentTags;
 
         string? currentKeyRef = string.IsNullOrWhiteSpace(current.EncryptionKeyRef) ? null : current.EncryptionKeyRef;
-        string? normalizedNextKeyRef = string.IsNullOrWhiteSpace(nextKeyRef) ? null : nextKeyRef;
         if (string.Equals(nextPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(normalizedNextKeyRef, currentKeyRef, StringComparison.Ordinal) &&
             string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(nextPreferredDestinationId, currentPreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) &&
@@ -3550,24 +3576,50 @@ public sealed class MetadataSyncService
             return RemoveProjectMetadataConflict(projectId, pendingConflicts);
         }
 
-        _repo.UpdateProjectEncryptionSettings(projectId, nextPolicy, normalizedNextKeyRef);
-
         bool conflictValuesDiffer =
+            !string.Equals(nextAvatarColor, currentAvatarColor, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(nextPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(nextPreferredDestinationId, currentPreferredDestinationId, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) ||
+            nextAutoBackupEnabled != currentAutoBackupEnabled ||
             !string.Equals(nextTags, currentTags, StringComparison.Ordinal);
+
+        var localValues = new ProjectMetadataConflictValues
+        {
+            AvatarColor = currentAvatarColor,
+            EncryptionPolicy = currentPolicy,
+            PreferredDestinationId = currentPreferredDestinationId,
+            RestoreMode = currentRestoreMode,
+            VerificationPolicy = currentVerificationPolicy,
+            AutoBackupEnabled = currentAutoBackupEnabled,
+            Tags = currentTags
+        };
+        var incomingValues = new ProjectMetadataConflictValues
+        {
+            AvatarColor = nextAvatarColor,
+            EncryptionPolicy = nextPolicy,
+            PreferredDestinationId = nextPreferredDestinationId,
+            RestoreMode = nextRestoreMode,
+            VerificationPolicy = nextVerificationPolicy,
+            AutoBackupEnabled = nextAutoBackupEnabled,
+            Tags = nextTags
+        };
+
+        if (conflictValuesDiffer && HasDurableKeepLocalResolution(config, metaProject, sourceMachineId, incomingValues))
+            return RemoveProjectMetadataConflict(projectId, pendingConflicts);
 
         if (!conflictValuesDiffer)
         {
+            if (parsedSettings.HasAvatarColor)
+                TryApplyProjectColor(metaProject.ExternalId, nextAvatarColor);
+            _repo.UpdateProjectEncryptionSettings(projectId, nextPolicy, currentKeyRef);
             _repo.UpdateProjectPreferredDestination(projectId, nextPreferredDestinationId);
             _repo.UpdateProjectRestoreMode(projectId, nextRestoreMode);
             _repo.UpdateProjectVerificationPolicy(projectId, nextVerificationPolicy);
             _repo.UpdateProjectTags(projectId, nextTags);
             if (parsedSettings.HasAutoBackupEnabled)
-            {
                 ApplyImportedProjectAutoBackupSetting(config, projectId, nextAutoBackupEnabled);
-            }
             return RemoveProjectMetadataConflict(projectId, pendingConflicts);
         }
 
@@ -3576,21 +3628,29 @@ public sealed class MetadataSyncService
                 current,
                 metaProject,
                 sourceMachineId,
-                new ProjectMetadataConflictValues
-                {
-                    PreferredDestinationId = currentPreferredDestinationId,
-                    RestoreMode = currentRestoreMode,
-                    VerificationPolicy = currentVerificationPolicy,
-                    Tags = currentTags
-                },
-                new ProjectMetadataConflictValues
-                {
-                    PreferredDestinationId = nextPreferredDestinationId,
-                    RestoreMode = nextRestoreMode,
-                    VerificationPolicy = nextVerificationPolicy,
-                    Tags = nextTags
-                }),
+                localValues,
+                incomingValues),
             pendingConflicts);
+    }
+
+    private static bool HasDurableKeepLocalResolution(
+        AppConfig config,
+        MetaProject project,
+        string? sourceMachineId,
+        ProjectMetadataConflictValues incomingValues)
+    {
+        string sourceUpdatedUtc = project.UpdatedUtc == default
+            ? string.Empty
+            : project.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+        string normalizedSourceMachineId = string.IsNullOrWhiteSpace(sourceMachineId)
+            ? UnknownAppVersion
+            : sourceMachineId;
+        return (config.Advanced.ProjectMetadataResolutions ?? []).Any(resolution =>
+            string.Equals(resolution.Decision, "keep-local", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(resolution.ProjectExternalId, project.ExternalId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(resolution.SourceMachineId, normalizedSourceMachineId, StringComparison.Ordinal) &&
+            string.Equals(resolution.SourceUpdatedUtc, sourceUpdatedUtc, StringComparison.Ordinal) &&
+            ProjectMetadataConflictValuesEqual(resolution.Imported, incomingValues));
     }
 
     private static bool ApplyImportedProjectAutoBackupSetting(AppConfig config, int projectId, bool enabled)
@@ -3677,39 +3737,65 @@ public sealed class MetadataSyncService
 
     private static bool ProjectMetadataConflictValuesEqual(ProjectMetadataConflictValues left, ProjectMetadataConflictValues right)
     {
-        return string.Equals(left.PreferredDestinationId, right.PreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
+        return string.Equals(left.AvatarColor, right.AvatarColor, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(left.EncryptionPolicy, right.EncryptionPolicy, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(left.PreferredDestinationId, right.PreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(left.RestoreMode, right.RestoreMode, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(left.VerificationPolicy, right.VerificationPolicy, StringComparison.OrdinalIgnoreCase) &&
+               left.AutoBackupEnabled == right.AutoBackupEnabled &&
                string.Equals(left.Tags, right.Tags, StringComparison.Ordinal);
     }
+
+    private static string? ResolveProjectWriterMachineId(MetaProject project, MetaInfo? storeInfo)
+        => string.IsNullOrWhiteSpace(project.WriterMachineId)
+            ? storeInfo?.WriterMachineId
+            : project.WriterMachineId;
 
     private static string NormalizePreferredDestinationId(string? preferredDestinationId, IReadOnlyCollection<BackupDestination> destinations)
         => DestinationIdentityService.NormalizePreferredDestinationId(preferredDestinationId, destinations);
 
-    private void TryApplyProjectColor(MetaProject metaProject)
+    private static string NormalizeImportedPreferredDestinationId(
+        string? preferredDestinationId,
+        IReadOnlyCollection<BackupDestination> destinations)
     {
-        if (_projectColorApplier is null || string.IsNullOrWhiteSpace(metaProject.ExternalId))
+        string normalized = DestinationIdentityService.NormalizePreferredDestinationId(preferredDestinationId, destinations);
+        if (string.IsNullOrWhiteSpace(normalized) ||
+            string.Equals(normalized, Project.DestinationAllId, StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized;
+        }
+
+        BackupDestination? localDestination = DestinationIdentityService.FindByPreferredDestinationId(destinations, normalized);
+        return localDestination is null ? string.Empty : DestinationIdentityService.GetId(localDestination);
+    }
+
+    private void TryApplyProjectColor(string projectExternalId, string color)
+    {
+        if (_projectColorApplier is null || string.IsNullOrWhiteSpace(projectExternalId))
             return;
 
         try
         {
-            if (string.IsNullOrWhiteSpace(metaProject.SettingsJson))
-                return;
-
-            using var doc = JsonDocument.Parse(metaProject.SettingsJson);
-            if (!doc.RootElement.TryGetProperty("avatarColor", out JsonElement colorProp))
-                return;
-
-            string? color = colorProp.GetString();
             if (string.IsNullOrWhiteSpace(color))
                 return;
 
-            _projectColorApplier(metaProject.ExternalId, color);
+            _projectColorApplier(projectExternalId, color);
         }
         catch
         {
             // ignore malformed settings json
         }
+    }
+
+    private static string NormalizeAvatarColor(string? value)
+    {
+        string color = value?.Trim() ?? string.Empty;
+        if (color.Length != 7 || color[0] != '#')
+            return string.Empty;
+
+        return color.AsSpan(1).IndexOfAnyExcept("0123456789abcdefABCDEF") >= 0
+            ? string.Empty
+            : color.ToUpperInvariant();
     }
 }
 
@@ -3717,10 +3803,16 @@ public sealed record MetadataSyncOptions(
     bool AllowCreateProjects,
     bool MarkNeedsRestoreOnImport,
     bool ExportMissingTombstonesOnImport = true,
-    bool SkipUnchangedReadOnlySource = false)
+    bool SkipUnchangedReadOnlySource = false,
+    bool ApplyDestructiveTombstones = true)
 {
     public static MetadataSyncOptions Default => new(true, true);
-    public MetadataSyncOptions AsReadOnlySource() => this with { ExportMissingTombstonesOnImport = false };
+    public MetadataSyncOptions WithoutSourceWrites() => this with { ExportMissingTombstonesOnImport = false };
+    public MetadataSyncOptions AsReadOnlySource() => this with
+    {
+        ExportMissingTombstonesOnImport = false,
+        ApplyDestructiveTombstones = false
+    };
     public MetadataSyncOptions WithUnchangedSourceSkip() => this with { SkipUnchangedReadOnlySource = true };
 }
 
@@ -3753,12 +3845,16 @@ public sealed record MetadataSyncPreview(
     int DeletedBackups,
     string Message)
 {
+    public int DeletedProjects { get; init; }
+    public int DeletedSnapshots { get; init; }
+    public int TotalDeletes => DeletedProjects + DeletedSnapshots + DeletedBackups;
+
     public bool HasChanges =>
         NewProjects > 0 ||
         LinkedProjects > 0 ||
         NewSnapshots > 0 ||
         NewBackups > 0 ||
-        DeletedBackups > 0;
+        TotalDeletes > 0;
 
     public static MetadataSyncPreview Failure(MetadataSyncStatus status, string rootPath, string databasePath, string message) =>
         new(status, rootPath, databasePath, 0, 0, 0, 0, 0, message);
