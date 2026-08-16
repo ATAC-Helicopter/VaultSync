@@ -166,6 +166,7 @@ VaultSync includes curated dark and light visual presets with optional advanced 
 - Review metadata conflicts before accepting changes.
 - Receive destination quota suggestions and schedule maintenance jobs.
 - Export support bundles and inspect strict patch compatibility diagnostics.
+- Copy the exact running build identity from Settings, or print the same machine-readable record with `vaultsync --version --json`.
 - Prepare optional, fully reviewable crash-report email drafts. Nothing is uploaded or sent automatically.
 
 ### Encrypt

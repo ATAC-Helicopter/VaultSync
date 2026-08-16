@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using VaultSync.Core.Config;
@@ -43,6 +42,7 @@ public sealed class SupportBundleService
 
             string reportJson = JsonSerializer.Serialize(report, new JsonSerializerOptions
             {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = true
             });
             File.WriteAllText(Path.Combine(stagingRoot, "support-report.json"), reportJson);
@@ -83,19 +83,7 @@ public sealed class SupportBundleService
         return new
         {
             generatedUtc = timestamp,
-            app = new
-            {
-                assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown",
-                runtime = Environment.Version.ToString(),
-                os = Environment.OSVersion.ToString(),
-                processArch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
-                osArch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
-                distributionChannel = DistributionChannelService.Current.Channel.ToString(),
-                distributionDetectionSource = DistributionChannelService.Current.DetectionSource,
-                isPackaged = DistributionChannelService.Current.IsPackaged,
-                packageFamilyName = DistributionChannelService.Current.PackageFamilyName,
-                packageFullName = DistributionChannelService.Current.PackageFullName
-            },
+            app = AppBuildInformationService.Current,
             redactedConfig = BuildRedactedConfig(config),
             localMetadata,
             destinationMetadata

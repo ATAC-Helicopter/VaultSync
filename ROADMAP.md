@@ -391,7 +391,7 @@ work stays in the active train; incomplete non-blocking polish moves forward to
 the next minor rather than silently extending the release. Major releases begin
 after the planned minor train is complete and use explicit beta qualification.
 
-- [ ] `VS-1871` `P1` Expose build, channel, commit, runtime, architecture,
+- [x] `VS-1871` `P1` Expose build, channel, commit, runtime, architecture,
   package, and update-source information.
   - Scope: define one build-information contract used by the desktop About and
     diagnostics surfaces plus machine-readable CLI output; distinguish version,
@@ -400,6 +400,10 @@ after the planned minor train is complete and use explicit beta qualification.
   - Acceptance: a user or support bundle can identify the exact running build
     without inspecting filenames, and unavailable values are shown as unknown
     rather than guessed.
+  - Completed 2026-08-17: one schema-versioned record now drives Settings copy,
+    startup diagnostics, support bundles, recovery reports, and CLI JSON. Release
+    publishes stamp the source commit and distribution facts; unstamped or
+    incomplete builds cannot present themselves as official.
 - [x] `VS-1872` `P0` Publish artifact checksums and a machine-readable release
   manifest from one release source of truth.
   - Scope: generate version, channel, tag, commit, compatible predecessors,
