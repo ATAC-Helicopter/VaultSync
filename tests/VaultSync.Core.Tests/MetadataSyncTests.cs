@@ -1988,6 +1988,62 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStore_ProjectSettings_MergesIndependentChangesFromRecordedBase()
+    {
+        string metaRoot = CreateTempDir();
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        string projectRoot = CreateTempDir();
+        DateTime now = DateTime.UtcNow;
+
+        using var configScope = new TestAppConfigScope();
+        AppConfigStore.Save(new AppConfig());
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = repo.AddProject(new Project
+        {
+            ExternalId = "proj-three-way",
+            Name = "Three Way",
+            RootPath = projectRoot,
+            Preset = "generic",
+            CreatedUtc = now.AddDays(-1),
+            RestoreMode = ProjectRestoreMode.Direct,
+            VerificationPolicy = ProjectVerificationPolicy.Always,
+            Tags = "base"
+        });
+
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "machine-remote");
+        var remote = new MetaProject
+        {
+            ExternalId = "proj-three-way",
+            Name = "Three Way",
+            Preset = "generic",
+            RootPathHint = projectRoot,
+            CreatedUtc = now.AddDays(-1),
+            SettingsJson = "{\"encryptionPolicy\":\"inherit\",\"preferredDestinationId\":\"\",\"restoreMode\":\"direct\",\"verificationPolicy\":\"always\",\"autoBackupEnabled\":true,\"tags\":\"base\"}",
+            UpdatedUtc = now,
+            WriterMachineId = "machine-remote",
+            Revision = 1
+        };
+        store.UpsertProject(remote);
+
+        var service = new MetadataSyncService(repo);
+        Assert.Equal(MetadataSyncStatus.Success, service.ImportFromStore(metaRoot, MetadataSyncOptions.Default).Status);
+        Assert.Single(AppConfigStore.Load().Advanced.ProjectMetadataMergeBases);
+
+        repo.UpdateProjectTags(projectId, "local");
+        remote.SettingsJson = "{\"encryptionPolicy\":\"inherit\",\"preferredDestinationId\":\"\",\"restoreMode\":\"sandbox\",\"verificationPolicy\":\"always\",\"autoBackupEnabled\":true,\"tags\":\"base\"}";
+        remote.UpdatedUtc = now.AddMinutes(1);
+        remote.Revision = 2;
+        store.UpsertProject(remote);
+
+        Assert.Equal(MetadataSyncStatus.Success, service.ImportFromStore(metaRoot, MetadataSyncOptions.Default).Status);
+        Project merged = Assert.IsType<Project>(repo.GetProjectById(projectId));
+        Assert.Equal("local", merged.Tags);
+        Assert.Equal(ProjectRestoreMode.Sandbox, merged.RestoreMode);
+        Assert.Empty(AppConfigStore.Load().Advanced.ProjectMetadataConflicts);
+    }
+
+    [Fact]
     public void ExportBackupToStore_ProjectSettings_ExcludesMachineLocalEncryptionKeyRef()
     {
         string metaRoot = CreateTempDir();
