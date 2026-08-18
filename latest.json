@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "captured_at": "2026-08-17T03:59:31Z",
+  "captured_at": "2026-08-18T03:55:33Z",
   "repository": "ATAC-Helicopter/VaultSync",
   "releases": [
     {
@@ -117,8 +117,8 @@
           "name": "vaultsync-patch-linux-x64.json",
           "size": 54574,
           "content_type": "application/json",
-          "download_count": 77,
-          "downloads_delta": 10,
+          "download_count": 88,
+          "downloads_delta": 11,
           "created_at": "2026-08-10T11:16:39Z",
           "updated_at": "2026-08-10T11:16:39Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.6/vaultsync-patch-linux-x64.json"
@@ -183,7 +183,7 @@
           "name": "vaultsync-patch-windows.json",
           "size": 57972,
           "content_type": "application/json",
-          "download_count": 95,
+          "download_count": 102,
           "downloads_delta": 7,
           "created_at": "2026-08-10T11:32:04Z",
           "updated_at": "2026-08-10T11:32:05Z",
@@ -205,15 +205,15 @@
           "name": "VaultSync-Setup-1.8.6.exe",
           "size": 62303177,
           "content_type": "application/octet-stream",
-          "download_count": 18,
+          "download_count": 20,
           "downloads_delta": 2,
           "created_at": "2026-08-10T11:28:14Z",
           "updated_at": "2026-08-10T11:31:47Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.6/VaultSync-Setup-1.8.6.exe"
         }
       ],
-      "total_downloads": 195,
-      "downloads_delta": 19
+      "total_downloads": 215,
+      "downloads_delta": 20
     },
     {
       "id": 363877388,
@@ -5677,8 +5677,8 @@
     }
   ],
   "totals": {
-    "all_assets_downloads": 2470,
-    "all_assets_delta": 19,
+    "all_assets_downloads": 2490,
+    "all_assets_delta": 20,
     "release_count": 50,
     "asset_count": 452
   },
@@ -5686,8 +5686,8 @@
     "latest_stable": {
       "tag_name": "v1.8.6",
       "name": "VaultSync 1.8.6 — Everyday Clarity",
-      "total_downloads": 195,
-      "downloads_delta": 19,
+      "total_downloads": 215,
+      "downloads_delta": 20,
       "html_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.8.6"
     },
     "latest_prerelease": {
@@ -5744,11 +5744,24 @@
         "name": "vaultsync-patch-windows.json",
         "size": 57972,
         "content_type": "application/json",
-        "download_count": 95,
+        "download_count": 102,
         "downloads_delta": 7,
         "created_at": "2026-08-10T11:32:04Z",
         "updated_at": "2026-08-10T11:32:05Z",
         "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.6/vaultsync-patch-windows.json"
+      },
+      {
+        "release_tag": "v1.8.6",
+        "release_name": "VaultSync 1.8.6 — Everyday Clarity",
+        "id": 508663300,
+        "name": "vaultsync-patch-linux-x64.json",
+        "size": 54574,
+        "content_type": "application/json",
+        "download_count": 88,
+        "downloads_delta": 11,
+        "created_at": "2026-08-10T11:16:39Z",
+        "updated_at": "2026-08-10T11:16:39Z",
+        "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.6/vaultsync-patch-linux-x64.json"
       },
       {
         "release_tag": "v1.8.4",
@@ -5762,19 +5775,6 @@
         "created_at": "2026-07-24T18:32:17Z",
         "updated_at": "2026-07-24T18:32:18Z",
         "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.4/vaultsync-patch-windows.json"
-      },
-      {
-        "release_tag": "v1.8.6",
-        "release_name": "VaultSync 1.8.6 — Everyday Clarity",
-        "id": 508663300,
-        "name": "vaultsync-patch-linux-x64.json",
-        "size": 54574,
-        "content_type": "application/json",
-        "download_count": 77,
-        "downloads_delta": 10,
-        "created_at": "2026-08-10T11:16:39Z",
-        "updated_at": "2026-08-10T11:16:39Z",
-        "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.6/vaultsync-patch-linux-x64.json"
       },
       {
         "release_tag": "v1.4.1",
