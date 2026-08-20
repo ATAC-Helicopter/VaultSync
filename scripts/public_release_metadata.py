@@ -11,30 +11,30 @@ from datetime import date
 from pathlib import Path
 
 
-METADATA_PATH = Path("release/release-metadata.json")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+METADATA_PATH = REPO_ROOT / "release/release-metadata.json"
+PUBLIC_METADATA_NAME = "release-metadata.json"
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")
 
 
-def load_metadata(path: Path) -> dict[str, object]:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("schemaVersion") != 1:
-        raise ValueError("Unsupported public release metadata schemaVersion.")
+def resolve_within(root: Path, candidate: Path, purpose: str) -> Path:
+    safe_root = root.resolve(strict=True)
+    resolved = candidate.resolve()
+    if not resolved.is_relative_to(safe_root):
+        raise ValueError(f"{purpose} must stay inside {safe_root}.")
+    return resolved
 
-    repository = data.get("repository")
-    active = data.get("activeRelease")
-    stable = data.get("currentStable")
-    store = data.get("store")
-    platforms = data.get("platforms")
-    if not isinstance(repository, str) or not re.fullmatch(r"[\w.-]+/[\w.-]+", repository):
-        raise ValueError("repository must be an owner/name GitHub identity.")
-    if not isinstance(active, dict) or not isinstance(stable, dict) or not isinstance(store, dict):
-        raise ValueError("activeRelease, currentStable, and store objects are required.")
-    if not isinstance(platforms, list) or not platforms or not all(isinstance(item, str) and item for item in platforms):
-        raise ValueError("platforms must contain non-empty names.")
 
+def require_object(data: dict[str, object], name: str) -> dict[str, object]:
+    value = data.get(name)
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be an object.")
+    return value
+
+
+def validate_active_release(active: dict[str, object]) -> str:
     version = active.get("version")
     previous = active.get("previousVersion")
-    predecessors = active.get("compatiblePredecessors")
     if not isinstance(version, str) or not VERSION_RE.fullmatch(version):
         raise ValueError("activeRelease.version is invalid.")
     if active.get("tag") != f"v{version}":
@@ -45,20 +45,41 @@ def load_metadata(path: Path) -> dict[str, object]:
         raise ValueError("activeRelease.stage is invalid.")
     if not isinstance(previous, str) or not VERSION_RE.fullmatch(previous) or previous == version:
         raise ValueError("activeRelease.previousVersion must be a different version.")
-    if predecessors != [previous]:
+    if active.get("compatiblePredecessors") != [previous]:
         raise ValueError("compatiblePredecessors must contain the one qualified previousVersion.")
     if active.get("releaseBranch") != f"release/{version}":
         raise ValueError("releaseBranch must match release/<version>.")
     if active.get("integrationBranch") != "Dev" or active.get("stableBranch") != "Stable":
         raise ValueError("The branch contract must retain Dev integration and Stable releases.")
+    return version
 
-    target_date = active.get("targetDate")
-    released_date = stable.get("releasedDate")
+
+def validate_dates(active: dict[str, object], stable: dict[str, object]) -> None:
     try:
-        date.fromisoformat(str(target_date))
-        date.fromisoformat(str(released_date))
+        date.fromisoformat(str(active.get("targetDate")))
+        date.fromisoformat(str(stable.get("releasedDate")))
     except ValueError as error:
         raise ValueError("Release dates must use YYYY-MM-DD.") from error
+
+
+def load_metadata(path: Path, allowed_root: Path = REPO_ROOT) -> dict[str, object]:
+    safe_path = resolve_within(allowed_root, path, "Metadata path")
+    data = json.loads(safe_path.read_text(encoding="utf-8"))
+    if data.get("schemaVersion") != 1:
+        raise ValueError("Unsupported public release metadata schemaVersion.")
+
+    repository = data.get("repository")
+    active = require_object(data, "activeRelease")
+    stable = require_object(data, "currentStable")
+    store = require_object(data, "store")
+    platforms = data.get("platforms")
+    if not isinstance(repository, str) or not re.fullmatch(r"[\w.-]+/[\w.-]+", repository):
+        raise ValueError("repository must be an owner/name GitHub identity.")
+    if not isinstance(platforms, list) or not platforms or not all(isinstance(item, str) and item for item in platforms):
+        raise ValueError("platforms must contain non-empty names.")
+
+    version = validate_active_release(active)
+    validate_dates(active, stable)
     if stable.get("tag") != f"v{stable.get('version')}":
         raise ValueError("currentStable.tag must match currentStable.version.")
     if store.get("packageVersion") != f"{version}.0":
@@ -66,18 +87,22 @@ def load_metadata(path: Path) -> dict[str, object]:
     return data
 
 
-def _first_match(path: Path, pattern: str) -> str | None:
-    match = re.search(pattern, path.read_text(encoding="utf-8-sig"), re.MULTILINE)
+def repo_file(root: Path, relative: str) -> Path:
+    path = resolve_within(root, root / relative, "Repository consumer path")
+    if not path.is_file():
+        raise ValueError(f"Required repository consumer is missing: {relative}")
+    return path
+
+
+def _first_match(root: Path, relative: str, pattern: str) -> str | None:
+    match = re.search(pattern, repo_file(root, relative).read_text(encoding="utf-8-sig"), re.MULTILINE)
     return match.group(1) if match else None
 
 
-def validate_consumers(root: Path, metadata: dict[str, object]) -> list[str]:
+def validate_version_consumers(root: Path, metadata: dict[str, object], errors: list[str]) -> None:
     active = metadata["activeRelease"]
-    stable = metadata["currentStable"]
     store = metadata["store"]
     version = str(active["version"])
-    errors: list[str] = []
-
     expected = {
         "src/VaultSync.UI/VaultSync.UI.csproj": (r"<Version>([^<]+)</Version>", version),
         "src/VaultSync.CLI/VaultSync.CLI.csproj": (r"<Version>([^<]+)</Version>", version),
@@ -87,44 +112,57 @@ def validate_consumers(root: Path, metadata: dict[str, object]) -> list[str]:
         "docs/WHATS_NEW.md": (r"^## \[([^]]+)\]", version),
     }
     for relative, (pattern, wanted) in expected.items():
-        actual = _first_match(root / relative, pattern)
+        actual = _first_match(root, relative, pattern)
         if actual != wanted:
             errors.append(f"{relative}: expected {wanted!r}, found {actual!r}")
 
-    cli_text = (root / "src/VaultSync.CLI/VaultSync.CLI.csproj").read_text(encoding="utf-8-sig")
+    cli_text = repo_file(root, "src/VaultSync.CLI/VaultSync.CLI.csproj").read_text(encoding="utf-8-sig")
     for field, suffix in (("PackageVersion", ""), ("AssemblyVersion", ".0"), ("FileVersion", ".0"), ("AssemblyInformationalVersion", "")):
         expected_value = f"{version}{suffix}"
         if f"<{field}>{expected_value}</{field}>" not in cli_text:
             errors.append(f"CLI {field} must be {expected_value}.")
 
-    roadmap = (root / "ROADMAP.md").read_text(encoding="utf-8-sig")
+
+def validate_document_consumers(root: Path, metadata: dict[str, object], errors: list[str]) -> None:
+    active = metadata["activeRelease"]
+    version = str(active["version"])
+    roadmap = repo_file(root, "ROADMAP.md").read_text(encoding="utf-8-sig")
     if f"## {version} —" not in roadmap:
         errors.append(f"ROADMAP.md has no {version} release section.")
     if f"**Stable target:** {active['targetDate']}" not in roadmap:
         errors.append("ROADMAP.md stable target does not match canonical metadata.")
 
-    contract = (root / f"docs/RELEASE_{version}.md").read_text(encoding="utf-8-sig")
+    contract = repo_file(root, f"docs/RELEASE_{version}.md").read_text(encoding="utf-8-sig")
     for value in (version, str(active["targetDate"]), str(active["releaseBranch"])):
         if value not in contract:
             errors.append(f"Release contract is missing canonical value {value!r}.")
 
-    updater = (root / "docs/UPDATER.md").read_text(encoding="utf-8-sig")
+    updater = repo_file(root, "docs/UPDATER.md").read_text(encoding="utf-8-sig")
     if version not in updater or str(active["previousVersion"]) not in updater:
         errors.append("Updater documentation does not name the active and qualified predecessor versions.")
 
-    public_path = root / "release-metadata.json"
-    if not public_path.exists():
-        errors.append("release-metadata.json is missing; run the renderer.")
-    else:
-        actual_public = json.loads(public_path.read_text(encoding="utf-8"))
-        if actual_public != build_public_metadata(metadata):
-            errors.append("release-metadata.json is stale.")
 
-    index = (root / "index.html").read_text(encoding="utf-8-sig")
-    if 'id="latest-release-version"' not in index or "release-metadata.json" not in index:
+
+def validate_public_consumers(root: Path, metadata: dict[str, object], errors: list[str]) -> None:
+    stable = metadata["currentStable"]
+    public_path = repo_file(root, PUBLIC_METADATA_NAME)
+    actual_public = json.loads(public_path.read_text(encoding="utf-8"))
+    if actual_public != build_public_metadata(metadata):
+        errors.append(f"{PUBLIC_METADATA_NAME} is stale.")
+
+    index = repo_file(root, "index.html").read_text(encoding="utf-8-sig")
+    if 'id="latest-release-version"' not in index or PUBLIC_METADATA_NAME not in index:
         errors.append("The website does not consume the public release metadata fallback.")
     if str(stable["version"]) not in json.dumps(build_public_metadata(metadata)):
         errors.append("Public metadata does not expose the current stable version.")
+
+
+def validate_consumers(root: Path, metadata: dict[str, object]) -> list[str]:
+    safe_root = root.resolve(strict=True)
+    errors: list[str] = []
+    validate_version_consumers(safe_root, metadata, errors)
+    validate_document_consumers(safe_root, metadata, errors)
+    validate_public_consumers(safe_root, metadata, errors)
     return errors
 
 
@@ -156,14 +194,23 @@ def build_store_metadata(metadata: dict[str, object]) -> dict[str, object]:
     }
 
 
-def write_json(path: Path, value: dict[str, object]) -> None:
+def output_file(output_root: Path, name: str) -> Path:
+    if Path(name).name != name:
+        raise ValueError("Generated release output names cannot contain paths.")
+    path = resolve_within(output_root, output_root / name, "Generated release output")
     path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def write_json(output_root: Path, name: str, value: dict[str, object]) -> None:
+    path = output_file(output_root, name)
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def render(metadata: dict[str, object], output_root: Path) -> None:
-    write_json(output_root / "release-metadata.json", build_public_metadata(metadata))
-    write_json(output_root / "store-release-metadata.json", build_store_metadata(metadata))
+    output_root.mkdir(parents=True, exist_ok=True)
+    write_json(output_root, PUBLIC_METADATA_NAME, build_public_metadata(metadata))
+    write_json(output_root, "store-release-metadata.json", build_store_metadata(metadata))
     active = metadata["activeRelease"]
     summary = (
         f"# VaultSync {active['version']} release summary\n\n"
@@ -173,7 +220,7 @@ def render(metadata: dict[str, object], output_root: Path) -> None:
         f"- Target date: {active['targetDate']}\n"
         f"- Qualified patch predecessor: {active['previousVersion']}\n"
     )
-    (output_root / "release-summary.md").write_text(summary, encoding="utf-8")
+    output_file(output_root, "release-summary.md").write_text(summary, encoding="utf-8")
 
 
 def main() -> int:
@@ -185,18 +232,21 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        metadata = load_metadata(args.metadata)
+        repo_root = args.repo_root.resolve(strict=True)
+        metadata_path = args.metadata if args.metadata.is_absolute() else repo_root / args.metadata
+        metadata = load_metadata(metadata_path, repo_root)
         if args.command == "render":
             if args.output_root is None:
                 raise ValueError("render requires --output-root.")
-            render(metadata, args.output_root)
-            print(f"Rendered public, Store, and release-summary metadata to {args.output_root}.")
+            output_root = resolve_within(repo_root, repo_root / args.output_root, "Output root")
+            render(metadata, output_root)
+            print(f"Rendered public, Store, and release-summary metadata to {output_root}.")
         else:
-            errors = validate_consumers(args.repo_root, metadata)
+            errors = validate_consumers(repo_root, metadata)
             if errors:
                 raise ValueError("Release metadata drift:\n- " + "\n- ".join(errors))
             print("Release metadata consumers match the canonical contract.")
-    except (OSError, ValueError, json.JSONDecodeError) as error:
+    except (OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     return 0
