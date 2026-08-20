@@ -15,7 +15,12 @@ A recovery drill opens the newest recorded recovery point for a project without 
 5. Up to 5,000 files and 2 GiB of complete stored content match the expected snapshot SHA-256 and size.
 6. A read-only original-location plan identifies identical files, potential overwrites, and newer destination conflicts.
 
-The result is **Passed**, **Attention**, or **Failed** and is stored in the local VaultSync SQLite database. The Recovery page exposes the latest result and expandable evidence. The exported Markdown recovery report includes drill coverage and a per-check evidence appendix. History is bounded to the newest 20 drills per project, and each drill stores at most 100 warning/error evidence rows.
+The result is **Passed**, **Attention**, or **Failed** and is stored in the local
+VaultSync SQLite database. The Recovery page exposes the latest result and
+expandable evidence. The exported Recovery Evidence Package includes drill
+coverage and per-check evidence in both readable Markdown and versioned JSON,
+with a manifest and SHA-256 index. History is bounded to the newest 20 drills
+per project, and each drill stores at most 100 warning/error evidence rows.
 
 ![Expanded recovery drill with bounded evidence](images/Recovery_Drill.png)
 
@@ -73,4 +78,6 @@ Drill history contains local database IDs, timestamps, status, counts, and human
 - Mark exactly one destination as offsite and verify only projects with a copy there receive offsite credit.
 - Protect a recommended point and confirm the recommendation disappears and retention protection is visible in History and Backups.
 - Expand the latest proof and confirm its failure evidence is selectable.
-- Export the Recovery report and confirm it includes 3-2-1, protected-point, per-project, and proof-evidence details.
+- Export the Recovery Evidence Package, validate `SHA256SUMS`, and confirm its
+  report and JSON include 3-2-1, protected-point, per-project, and proof-evidence
+  details without raw local paths.

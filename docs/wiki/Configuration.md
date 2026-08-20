@@ -49,4 +49,6 @@ control-by-control list, see [Settings reference](Settings-Reference.md).
 - Crash report assistance: allows VaultSync to create a strictly allowlisted local report after a crash.
 - Reports are shown in full before VaultSync prepares an email draft, and nothing is sent automatically.
 - Disable the setting to prevent report creation and email preparation completely.
-- Recovery reports and proof evidence remain local unless you explicitly share an exported file.
+- Recovery evidence packages and proof evidence remain local unless you
+  explicitly share an exported ZIP. Packages redact unrestricted local paths
+  and exclude backup payloads, credentials, and encryption secrets.
