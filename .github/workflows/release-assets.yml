@@ -883,6 +883,7 @@ jobs:
         if: ${{ inputs.release_candidate }}
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
