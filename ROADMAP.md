@@ -439,20 +439,28 @@ after the planned minor train is complete and use explicit beta qualification.
     Repository identities are pseudonymous and local paths are redacted;
     validation rejects altered, missing, duplicate, traversing, unexpected, or
     unsupported content.
-- [ ] `VS-1875` `P1` Strengthen explicitly redacted support bundles.
+- [x] `VS-1875` `P1` Strengthen explicitly redacted support bundles.
   - Scope: define an allowlisted bundle schema, path pseudonymization, secret
     denylist, size limits, and a review screen that lists every included file
     and category before export.
   - Acceptance: automated fixtures containing credentials, tokens, passwords,
     user paths, and encryption material cannot leak them; users can cancel or
     remove optional sections before the archive is written.
-- [ ] `VS-1876` `P1` Document repository layouts, manifests, encryption
+  - Completed 2026-08-21: support exports use a generated-file allowlist,
+    bounded sanitized diagnostic and telemetry inputs, path and identity
+    pseudonyms, structured and configured-secret redaction, a SHA-256 manifest,
+    and an explicit review where optional sections can be removed or cancelled.
+- [x] `VS-1876` `P1` Document repository layouts, manifests, encryption
   envelopes, compatibility, and emergency recovery expectations.
   - Scope: document supported repository records and versions, portable versus
     machine-local fields, encryption descriptors, legacy behavior, manual
     recovery, locks and leases, release verification, and failure recovery.
   - Acceptance: documentation matches executable schemas and tests, includes a
     clean-machine recovery path, and states every known compatibility limit.
+  - Completed 2026-08-21: repository-format, cross-machine, metadata-sync,
+    disaster-recovery, updater, and release guidance now cover schemas 1–3,
+    portability, leases, merge/rollback, clean-machine inspection, emergency
+    restore, release integrity, provenance, and unsigned-package limitations.
 - [x] `VS-1877` `P0` Add source-machine identity, repository writer locking,
   and explicit dual-boot/concurrent-writer guidance.
   - Scope: use a durable installation identity and a repository-scoped lease
@@ -464,13 +472,19 @@ after the planned minor train is complete and use explicit beta qualification.
     states that pre-1.8.7 clients cannot cooperate with the lease protocol.
   - Completed on the 1.8.7 release branch on 2026-08-16 in PR #546, including
     per-destination owner inspection and explicit nonce-bound stale takeover.
-- [ ] `VS-1878` `P1` Synchronize website, updater, changelog, Store metadata,
+- [x] `VS-1878` `P1` Synchronize website, updater, changelog, Store metadata,
   badges, and public roadmap from canonical release metadata.
   - Scope: make public and in-app release consumers derive from or validate
     against the canonical release contract, including dry-run generation before
     publication.
   - Acceptance: CI rejects inconsistent public metadata and one unpublished
     release-candidate run produces every expected consumer without publishing.
+  - Completed 2026-08-21: a schema-versioned release contract validates the
+    desktop, CLI, installer, Store manifest, updater guidance, changelog,
+    What’s New, website fallback, release page, roadmap, tag, date, branches,
+    and qualified predecessor. A deterministic command renders public, Store,
+    and release-summary outputs without publishing; CI and release assets reject
+    drift, while the website refreshes the latest stable tag from GitHub.
 - [ ] `VS-1879` `P0` Replace two-way cross-machine settings import with a
   versioned, reviewable, and reversible merge contract.
   - Scope: persist a durable writer identity, per-record revision and base
