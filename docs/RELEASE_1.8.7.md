@@ -40,7 +40,7 @@ P0 safety defects cannot roll forward. Non-blocking P1 polish may move to
 beta; major releases use explicit beta rounds once their feature train is
 complete and stable enough for broader qualification.
 
-## Status as of 2026-08-20
+## Status as of 2026-08-21
 
 ### Implemented on the release branch
 
@@ -159,6 +159,21 @@ complete and stable enough for broader qualification.
   stages, signs, verifies, and launches the canonical bundle before retiring
   the legacy app; older versions use the full DMG. Future bundle-root patches update and verify
   `Info.plist` with the runtime payload (#560, #561).
+- Support bundles now show an exact pre-export inventory and allow optional
+  diagnostics or telemetry to be removed. Generated content is allowlisted,
+  bounded, sanitized, identity/path-pseudonymized, checksummed, and manifested;
+  configured aliases, profile names, credentials, tokens, passwords, and
+  encryption references are excluded (`VS-1875`).
+- Repository and disaster-recovery documentation now defines schemas 1–3,
+  record portability, encryption descriptors, legacy limits, clean-machine
+  identification, read-only inspection, lease takeover, interrupted-write
+  rollback, emergency restore, package checksum/SBOM/provenance verification,
+  and the limitations of unsigned direct packages (`VS-1876`).
+- One schema-versioned release contract now aligns desktop, CLI, installer,
+  Store, updater, changelog, What’s New, website, roadmap, tag, date, branch,
+  and qualified-predecessor metadata. CI rejects drift, an unpublished command
+  renders all public outputs deterministically, and the website uses checked-in
+  stable metadata with a live GitHub release refresh (`VS-1878`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -177,13 +192,9 @@ branch package.
 
 ### Still planned
 
-- allowlisted, reviewable support bundles;
-- synchronized public release metadata;
-- standardized retry, path, serialization, lifecycle, dialog, and projection
-  infrastructure plus review of every remaining duplicated block;
-- full repository and emergency-recovery documentation after schemas stabilize;
-- final localization, theme, accessibility, static-analysis, dependency, and
-  cross-platform release qualification.
+- finish the bounded shared-infrastructure and duplication review (`VS-1880`);
+- complete the real release-candidate, two-machine/NAS, upgrade, cross-platform,
+  theme, accessibility, static-analysis, and dependency qualification matrix.
 
 ## Safety contracts
 
