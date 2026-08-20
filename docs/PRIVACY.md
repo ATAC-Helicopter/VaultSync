@@ -10,7 +10,16 @@ Portable metadata under a configured destination's `.vaultsync/meta/` contains p
 
 ## Diagnostics
 
-VaultSync has no background analytics or crash-upload service. Diagnostic logs and anonymized operational event files, when created, remain on the device. Support bundles and telemetry exports are local files; VaultSync shares them only if the user deliberately attaches or uploads them through a separate application.
+VaultSync has no background analytics or crash-upload service. Diagnostic logs
+and anonymized operational event files, when created, remain on the device.
+Support bundles are generated from an allowlist, pseudonymize known paths and
+display identities, scrub configured and structured secrets, bound each input
+and the complete bundle, and provide a pre-export review where optional
+diagnostics or telemetry can be removed. These exports remain local files;
+VaultSync shares them only if the user deliberately attaches or uploads them
+through a separate application. Because no automatic redactor can understand
+every free-form string, users should still inspect the reviewed ZIP before
+sharing it.
 
 ## Crash reports
 
