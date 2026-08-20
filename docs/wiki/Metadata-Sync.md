@@ -53,10 +53,12 @@ VaultSync can export a portable metadata store to backup destinations and later 
 - Automatic imports never apply project, snapshot, backup, or inferred deletion
   changes. Manual refresh lists each destructive category and requires review.
 
-### Current 1.8.6 limitations
+### Compatibility and mixed-version limits
 
 The 1.8.6 metadata store is a portable inventory and recovery aid, not a fully
-synchronized multi-writer configuration database.
+synchronized multi-writer configuration database. VaultSync 1.8.7 adds
+schema-version-3 provenance, durable merge bases, field-level three-way merge,
+and a repository-scoped writer lease.
 
 - It compares the current local value with the latest value in the destination
   store. It does not retain a common base revision, so it cannot prove which of
@@ -70,16 +72,12 @@ synchronized multi-writer configuration database.
 - The in-process metadata gate coordinates one running VaultSync process only.
   It is not a cross-machine writer lock.
 
-VaultSync 1.8.7 tracks a versioned three-way merge contract, durable conflict
-resolution, per-record writer provenance, and a repository-scoped writer lease.
-Until that ships, use one machine as the writer for a destination and use other
-machines for recovery inspection or deliberate imports.
-
-On the active 1.8.7 development branch, cooperating metadata writers are now
-serialized by a durable repository lease. A second client can still preview and
-import read-only, but it cannot write tombstones or exports while the repository
-is busy. This protection is not considered shipped, and it cannot constrain a
-pre-1.8.7 client that does not understand the protocol.
+On the active 1.8.7 release branch, cooperating metadata writers are serialized
+by that lease. A second client can still preview and import read-only, but it
+cannot write tombstones or exports while the repository is busy. This protection
+is not shipped until 1.8.7 reaches Stable, and it can never constrain a
+pre-1.8.7 client that does not understand the protocol. Do not let 1.8.6 and
+1.8.7 write the same destination concurrently.
 
 The maintained 1.8.7 implementation status is recorded in the
 [1.8.7 release contract](../RELEASE_1.8.7.md). The current and planned on-disk
