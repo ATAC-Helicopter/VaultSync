@@ -674,8 +674,8 @@
               <div class="mini-value">NAS, local, external</div>
             </div>
             <div class="mini-card">
-              <div class="mini-label">Store release</div>
-              <div class="mini-value">Microsoft Store soon</div>
+              <div class="mini-label">Latest stable</div>
+              <div class="mini-value" id="latest-release-version">VaultSync 1.8.6</div>
             </div>
             <div class="mini-card">
               <div class="mini-label">Approach</div>
@@ -950,5 +950,29 @@
       </div>
     </div>
   </footer>
+  <script>
+    (() => {
+      const target = document.getElementById("latest-release-version");
+      if (!target) return;
+
+      const showVersion = (value) => {
+        if (typeof value === "string" && /^\d+\.\d+\.\d+$/.test(value)) {
+          target.textContent = `VaultSync ${value}`;
+        }
+      };
+
+      fetch("release-metadata.json", { cache: "no-cache" })
+        .then((response) => response.ok ? response.json() : null)
+        .then((metadata) => showVersion(metadata?.latestStable?.version))
+        .catch(() => {});
+
+      fetch("https://api.github.com/repos/ATAC-Helicopter/VaultSync/releases/latest", {
+        headers: { "Accept": "application/vnd.github+json" }
+      })
+        .then((response) => response.ok ? response.json() : null)
+        .then((release) => showVersion(release?.tag_name?.replace(/^v/, "")))
+        .catch(() => {});
+    })();
+  </script>
 </body>
 </html>

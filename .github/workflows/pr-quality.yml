@@ -70,7 +70,7 @@ jobs:
           set_flag workflows_changed "$(has_change '^(\.github/workflows/|\.github/dependabot\.yml$)' && echo true || echo false)"
           set_flag templates_changed "$(has_change '^(\.github/ISSUE_TEMPLATE/|\.github/PULL_REQUEST_TEMPLATE\.md$)' && echo true || echo false)"
           set_flag scripts_changed "$(has_change '^(scripts/|tests/scripts/)' && echo true || echo false)"
-          set_flag release_changed "$(has_change '^(CHANGELOG\.md|ROADMAP\.md|docs/WHATS_NEW\.md|docs/RELEASING\.md|docs/MICROSOFT_STORE|docs/schemas/|installer/|packaging/|src/VaultSync\.UI/VaultSync\.UI\.csproj|\.github/workflows/release-assets\.yml|scripts/release_(manifest\.py|readiness_gate\.ps1))' && echo true || echo false)"
+          set_flag release_changed "$(has_change '^(CHANGELOG\.md|ROADMAP\.md|release-metadata\.json|release/|index\.html|docs/WHATS_NEW\.md|docs/RELEASING\.md|docs/MICROSOFT_STORE|docs/schemas/|installer/|packaging/|src/VaultSync\.(UI|CLI)/.*\.csproj|\.github/workflows/release-assets\.yml|scripts/(public_release_metadata\.py|release_(manifest\.py|readiness_gate\.ps1)))' && echo true || echo false)"
           set_flag store_changed "$(has_change '^(packaging/VaultSync\.Store/|docs/MICROSOFT_STORE|src/VaultSync\.UI/VaultSync\.UI\.csproj)' && echo true || echo false)"
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -122,6 +122,9 @@ jobs:
       - name: Run local release gate
         shell: pwsh
         run: ./scripts/release_readiness_gate.ps1 -Phase PrePublish -SkipGitHubChecks
+
+      - name: Validate canonical public release metadata
+        run: python3 scripts/public_release_metadata.py check
 
   store-metadata:
     name: Microsoft Store metadata preflight

@@ -377,7 +377,7 @@ History carry the same folder identity.
 **Status:** Active development. Release contracts were approved and implementation
 started on 2026-08-12.
 **Tagline:** *Show the proof.*
-**Target:** 2026-08-24
+**Stable target:** 2026-08-24
 **Working branch:** `release/1.8.7`
 **Integration target:** `Dev`
 

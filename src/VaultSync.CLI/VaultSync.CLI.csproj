@@ -21,11 +21,11 @@
     <PackageId>vaultsync.cli</PackageId>
 
     <!-- Version info -->
-    <Version>1.8.6</Version>
-    <PackageVersion>1.8.6</PackageVersion>
-    <AssemblyVersion>1.8.6.0</AssemblyVersion>
-    <FileVersion>1.8.6.0</FileVersion>
-    <AssemblyInformationalVersion>1.8.6</AssemblyInformationalVersion>
+    <Version>1.8.7</Version>
+    <PackageVersion>1.8.7</PackageVersion>
+    <AssemblyVersion>1.8.7.0</AssemblyVersion>
+    <FileVersion>1.8.7.0</FileVersion>
+    <AssemblyInformationalVersion>1.8.7</AssemblyInformationalVersion>
     <!-- Package info -->
     <Authors>Flavio Giacchetti</Authors>
     <Company>Flavio Giacchetti</Company>
