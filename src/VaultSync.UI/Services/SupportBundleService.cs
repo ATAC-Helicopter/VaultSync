@@ -32,6 +32,7 @@ public sealed class SupportBundleService
     private const string RedactedValue = "[redacted]";
     private const string ReportFileName = "support-report.json";
     private const string ManifestFileName = "support-manifest.json";
+    private const string TelemetryExtension = ".ndjson";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -50,11 +51,8 @@ public sealed class SupportBundleService
         RegexOptions.CultureInvariant,
         TimeSpan.FromMilliseconds(100));
 
-    public static SupportBundlePreviewResult Preview(
-        IAppConfigStore? configStore = null,
-        SupportBundleExportOptions? options = null)
+    public static SupportBundlePreviewResult Preview(SupportBundleExportOptions? options = null)
     {
-        configStore ??= StaticAppConfigStore.Instance;
         options ??= new SupportBundleExportOptions();
         try
         {
@@ -140,7 +138,7 @@ public sealed class SupportBundleService
         }
     }
 
-    private static IReadOnlyList<SupportBundlePreviewItem> BuildPreviewItems(SupportBundleExportOptions options)
+    private static List<SupportBundlePreviewItem> BuildPreviewItems(SupportBundleExportOptions options)
     {
         var files = new List<SupportBundlePreviewItem>
         {
@@ -164,18 +162,18 @@ public sealed class SupportBundleService
         {
             files.AddRange(DiscoverTextFiles(
                 Telemetry.GetTelemetryDirectory(),
-                [".ndjson"],
+                [TelemetryExtension],
                 TelemetryFileLimit,
                 TelemetryFileByteLimit,
                 "Telemetry",
                 "telemetry/events",
-                ".ndjson"));
+                TelemetryExtension));
         }
 
         return files;
     }
 
-    private static IEnumerable<SupportBundlePreviewItem> DiscoverTextFiles(
+    private static SupportBundlePreviewItem[] DiscoverTextFiles(
         string root,
         IReadOnlyCollection<string> extensions,
         int countLimit,
@@ -594,12 +592,13 @@ public sealed class SupportBundleService
         CopySanitizedTextFiles(
             GetDiagnosticsDirectory(),
             stagingRoot,
-            [".log", ".txt"],
-            DiagnosticsFileLimit,
-            DiagnosticsFileByteLimit,
-            "diagnostics",
-            "diagnostic",
-            ".log",
+            new SanitizedTextFileSpec(
+                [".log", ".txt"],
+                DiagnosticsFileLimit,
+                DiagnosticsFileByteLimit,
+                "diagnostics",
+                "diagnostic",
+                ".log"),
             config);
     }
 
@@ -608,47 +607,51 @@ public sealed class SupportBundleService
         CopySanitizedTextFiles(
             Telemetry.GetTelemetryDirectory(),
             stagingRoot,
-            [".ndjson"],
-            TelemetryFileLimit,
-            TelemetryFileByteLimit,
-            "telemetry",
-            "events",
-            ".ndjson",
+            new SanitizedTextFileSpec(
+                [TelemetryExtension],
+                TelemetryFileLimit,
+                TelemetryFileByteLimit,
+                "telemetry",
+                "events",
+                TelemetryExtension),
             config);
     }
 
     private static void CopySanitizedTextFiles(
         string sourceRoot,
         string stagingRoot,
-        IReadOnlyCollection<string> extensions,
-        int countLimit,
-        long byteLimit,
-        string outputDirectory,
-        string outputPrefix,
-        string outputExtension,
+        SanitizedTextFileSpec spec,
         AppConfig config)
     {
         if (!Directory.Exists(sourceRoot))
             return;
 
-        string targetRoot = Path.Combine(stagingRoot, outputDirectory);
+        string targetRoot = Path.Combine(stagingRoot, spec.OutputDirectory);
         Directory.CreateDirectory(targetRoot);
         FileInfo[] sources = Directory.EnumerateFiles(sourceRoot, "*", SearchOption.TopDirectoryOnly)
-            .Where(path => extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            .Where(path => spec.Extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
             .Select(path => new FileInfo(path))
             .Where(file => !file.Attributes.HasFlag(FileAttributes.ReparsePoint))
             .OrderByDescending(file => file.LastWriteTimeUtc)
-            .Take(countLimit)
+            .Take(spec.CountLimit)
             .ToArray();
 
         for (int index = 0; index < sources.Length; index++)
         {
-            string content = ReadBoundedText(sources[index].FullName, byteLimit);
+            string content = ReadBoundedText(sources[index].FullName, spec.ByteLimit);
             string sanitized = SanitizeText(content, config);
-            string target = Path.Combine(targetRoot, $"{outputPrefix}-{index + 1:00}{outputExtension}");
+            string target = Path.Combine(targetRoot, $"{spec.OutputPrefix}-{index + 1:00}{spec.OutputExtension}");
             File.WriteAllText(target, sanitized, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }
     }
+
+    private sealed record SanitizedTextFileSpec(
+        IReadOnlyCollection<string> Extensions,
+        int CountLimit,
+        long ByteLimit,
+        string OutputDirectory,
+        string OutputPrefix,
+        string OutputExtension);
 
     private static string ReadBoundedText(string path, long byteLimit)
     {

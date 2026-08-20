@@ -92,7 +92,7 @@ public sealed class SupportBundleServiceTests
     public void Preview_AllowsOptionalDiagnosticSectionsToBeRemoved()
     {
         SupportBundlePreviewResult preview = SupportBundleService.Preview(
-            options: new SupportBundleExportOptions(
+            new SupportBundleExportOptions(
                 IncludeDiagnostics: false,
                 IncludeTelemetry: false));
 
