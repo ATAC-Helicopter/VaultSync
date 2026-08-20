@@ -254,13 +254,13 @@ public sealed class SupportBundleService
                     keyRef = RedactToken(config.Backups.Encryption.KeyRef),
                     config.Backups.Encryption.Algorithm,
                     config.Backups.Encryption.KdfProfile,
-                    config.Backups.Encryption.KdfParamRef,
+                    kdfParamRef = RedactToken(config.Backups.Encryption.KdfParamRef),
                     config.Backups.Encryption.AllowSessionFallback,
                     config.Backups.Encryption.OpenUnlockTimeoutMinutes
                 },
                 destinations = config.Backups.Destinations.Select(d => new
                 {
-                    d.Alias,
+                    alias = RedactToken(d.Alias),
                     pathHint = RedactPath(d.Path),
                     d.Active,
                     d.AutoMount,
@@ -390,7 +390,7 @@ public sealed class SupportBundleService
                     config.Advanced.MetadataConflictTelemetry.LastUpdatedUtc,
                     config.Advanced.MetadataConflictTelemetry.PendingConflictCount,
                     config.Advanced.MetadataConflictTelemetry.LastResolutionAction,
-                    config.Advanced.MetadataConflictTelemetry.LastResolvedProject,
+                    lastResolvedProject = RedactToken(config.Advanced.MetadataConflictTelemetry.LastResolvedProject),
                     conflicts = (config.Advanced.ProjectMetadataConflicts ?? [])
                         .Select(conflict => new
                         {
@@ -680,8 +680,10 @@ public sealed class SupportBundleService
             config.Backups.BackupRoot,
             config.Backups.Location,
             .. config.Backups.Destinations.Select(destination => destination.Path),
+            .. config.Backups.Destinations.Select(destination => destination.Alias),
             .. config.Network.Credentials.SelectMany(credential => new[]
             {
+                credential.Name,
                 credential.Password,
                 credential.Username,
                 credential.Domain,
