@@ -40,7 +40,14 @@ public sealed class NetworkMountService
         bool allowAutoMount = true)
     {
         string alias = DisplayName(dest);
-        Log($"PrepareDestination: alias='{alias}', path='{dest.Path}', preMounted={dest.PreMounted}, autoMount={dest.AutoMount}, autoUnmount={dest.AutoUnmount}");
+        if (allowAutoMount)
+        {
+            Log($"PrepareDestination: alias='{alias}', path='{dest.Path}', preMounted={dest.PreMounted}, autoMount={dest.AutoMount}, autoUnmount={dest.AutoUnmount}");
+        }
+        else
+        {
+            Log($"Passive destination probe for '{alias}'; new network mounts and credential access are disabled.");
+        }
 
         string normalizedPath = NormalizePath(dest.Path, out string? normalizeError);
         if (!string.IsNullOrWhiteSpace(normalizeError))
@@ -57,7 +64,8 @@ public sealed class NetworkMountService
         if (!dest.AutoMount)
             return PrepareAutoMountDisabledDestination(dest, alias, normalizedPath);
 
-        Log($"Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
+        if (allowAutoMount)
+            Log($"Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
         return PrepareAutoMountedDestination(dest, normalizedPath, profile, allowAutoMount);
     }
 

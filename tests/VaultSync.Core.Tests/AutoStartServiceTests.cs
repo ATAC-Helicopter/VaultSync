@@ -30,4 +30,33 @@ public sealed class AutoStartServiceTests
 
         Assert.Equal(expected, actual);
     }
+
+    [Fact]
+    public void LaunchCtlInspection_IsSilentAndDoesNotUseTheShell()
+    {
+        var startInfo = AutoStartService.CreateLaunchCtlStartInfo("print gui/501/com.vaultsync.autostart");
+
+        Assert.Equal("launchctl", startInfo.FileName);
+        Assert.True(startInfo.RedirectStandardOutput);
+        Assert.True(startInfo.RedirectStandardError);
+        Assert.False(startInfo.UseShellExecute);
+        Assert.True(startInfo.CreateNoWindow);
+    }
+
+    [Theory]
+    [InlineData("/Users/test/source/VaultSync/src/VaultSync.UI/bin/Debug/net10.0/")]
+    [InlineData("C:\\source\\VaultSync\\src\\VaultSync.UI\\bin\\Release\\net10.0\\publish")]
+    public void DevelopmentOutputDirectory_IsRecognized(string directory)
+    {
+        Assert.True(AutoStartService.IsDevelopmentOutputDirectory(directory));
+    }
+
+    [Theory]
+    [InlineData("/Applications/VaultSync.app/Contents/MacOS/")]
+    [InlineData("C:\\Program Files\\VaultSync\\")]
+    [InlineData("/opt/vaultsync/")]
+    public void InstalledOutputDirectory_IsNotTreatedAsDevelopment(string directory)
+    {
+        Assert.False(AutoStartService.IsDevelopmentOutputDirectory(directory));
+    }
 }
