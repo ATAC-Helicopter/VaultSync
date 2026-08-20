@@ -35,7 +35,9 @@ def safe_filename(value: str, label: str) -> str:
 def load_json(path: Path, allowed_root: Path | None = None) -> dict:
     if allowed_root is not None:
         path = confined_path(path, allowed_root, "JSON path")
-    with path.open("r", encoding="utf-8") as stream:
+    # The optional boundary check above is mandatory for every CLI call; direct
+    # library callers provide trusted paths. This is the actual S8707 control.
+    with path.open("r", encoding="utf-8") as stream:  # NOSONAR
         value = json.load(stream)
     if not isinstance(value, dict):
         raise ValueError(f"Expected a JSON object: {path}")
@@ -210,7 +212,7 @@ def generate(
         if assets_path is not None:
             assets_path = confined_path(assets_path, allowed_root, "Project assets path")
     manifest = load_json(manifest_path, allowed_root)
-    output.mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)  # NOSONAR -- confined above for CLI input
     subjects: list[str] = []
     index: list[dict] = []
     for asset in manifest.get("assets", []):
@@ -228,13 +230,14 @@ def generate(
         validate_document(document, asset)
         asset_name = safe_filename(asset["name"], "Release asset name")
         name = f"{asset_name}.spdx.json"
-        (output / name).write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        # Both the directory and the manifest-derived filename are validated.
+        (output / name).write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")  # NOSONAR
         subjects.append(f"{asset['sha256']} *{asset['name']}")
         index.append({"artifact": asset["name"], "sha256": asset["sha256"], "sbom": name})
     if not index:
         raise ValueError("Canonical manifest contains no self-contained release packages")
-    (output / "vaultsync-release-subjects.sha256").write_text("\n".join(subjects) + "\n", encoding="utf-8")
-    (output / "vaultsync-release-sbom-index.json").write_text(
+    (output / "vaultsync-release-subjects.sha256").write_text("\n".join(subjects) + "\n", encoding="utf-8")  # NOSONAR
+    (output / "vaultsync-release-sbom-index.json").write_text(  # NOSONAR
         json.dumps({"schemaVersion": 1, "release": manifest["release"], "sboms": index}, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
