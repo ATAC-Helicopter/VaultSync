@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Windows.Input;
 using VaultSync.UI.Infrastructure;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -18,9 +19,12 @@ namespace VaultSync.UI.ViewModels
         public string StatusText =>
             ActiveBackups.Count switch
             {
-                0 => "No active backups",
-                1 => "1 active backup",
-                _ => $"{ActiveBackups.Count} active backups"
+                0 => L("BackupWidget.Status.None", "No active backups"),
+                1 => L("BackupWidget.Status.One", "1 active backup"),
+                _ => string.Format(
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    L("BackupWidget.Status.Many", "{0} active backups"),
+                    ActiveBackups.Count)
             };
 
         public bool HasActiveBackups => ActiveBackups.Any();
@@ -60,5 +64,11 @@ namespace VaultSync.UI.ViewModels
         {
             OnPropertiesChanged(nameof(StatusText), nameof(HasActiveBackups));
         }
+
+        private static string L(string key, string fallback) =>
+            LocalizationProvider.Service?.GetString(key) is { } value &&
+            !string.Equals(value, key, StringComparison.OrdinalIgnoreCase)
+                ? value
+                : fallback;
     }
 }
