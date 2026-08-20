@@ -1,6 +1,7 @@
 ﻿# Changelog
 ## [1.8.7] - Unreleased
 ### Added
+- [VS-1874] Added portable Recovery Evidence Packages containing a versioned JSON record, readable Markdown, a manifest, and SHA-256 checksums, with deterministic semantic digests, build and pseudonymous repository identities, encrypted-point evidence, evidence freshness, redacted local paths, and validation for tampering, missing or duplicate files, unsafe paths, and unsupported schemas.
 - [VS-1871] Added one conservative build-identity record across Settings, startup diagnostics, support and recovery exports, plus `vaultsync --version --json`; version, channel, commit, runtime, architecture, package, update source, official status, and signature status now come from the same contract.
 - [VS-1873] Added per-package SPDX 2.3 SBOM generation from the canonical release manifest and RID-specific NuGet graph, pinned GitHub provenance/SBOM attestations for final package bytes, and online plus offline release-candidate verification.
 - [VS-1872] Added the versioned canonical release manifest generator and schema, with exact artifact sizes, SHA-256 digests, official download identities, strict platform-matrix validation, deterministic output, release-workflow generation, post-publish verification, and fail-closed updater consumption across Windows, macOS, and Linux artifacts.
@@ -20,6 +21,8 @@
 - [BUG-18103] Modernized Snapshot Explorer, metadata-import review, and updater windows around the current compact, theme-aware app layout.
 - [BUG-18104] Reworked development presets to preserve Git control files and shareable IDE configuration while excluding live Git internals and modern build, package, test, framework, and machine-local caches.
 ### Fixed
+- [BUG-18110] Localized recovery-confidence, evidence, repository-writer, History evidence, backup-widget, folder-picker, backup-location, verification, and restore-progress text across every maintained language, and replaced fixed-width Recovery Inspector evidence rows with translation-safe theme-aware cards.
+- [BUG-18111] Removed Recovery export fallback to the public temporary directory, limited manual cache deletion to private VaultSync application roots, retained every mounted destination cleanup across credential retries, and removed unreachable metadata, restore, and update branches reported by Sonar.
 - [BUG-18098] Rebuilt roadmap description synchronization around tested wrapped-title parsing, ownership-aware body preservation, repository-contained inputs, validated GitHub identifiers, and an exact write-free dry-run report.
 - [BUG-18100] Restored `Dev` as the permanent integration branch at the `1.8.6` Stable commit and disabled automatic head-branch deletion so Stable promotion cannot remove it again.
 - [BUG-18102] Prevented deferred metadata replay from overwriting repository metadata changed on another machine or replaying repeatedly after a successful flush.

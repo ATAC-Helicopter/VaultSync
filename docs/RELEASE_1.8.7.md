@@ -40,7 +40,7 @@ P0 safety defects cannot roll forward. Non-blocking P1 polish may move to
 beta; major releases use explicit beta rounds once their feature train is
 complete and stable enough for broader qualification.
 
-## Status as of 2026-08-16
+## Status as of 2026-08-20
 
 ### Implemented on the release branch
 
@@ -129,6 +129,25 @@ complete and stable enough for broader qualification.
   GitHub signs provenance for the final package bytes and an SBOM attestation
   for each package; release-candidate automation verifies one package both
   online and from a downloaded bundle plus trusted-root snapshot (`VS-1873`).
+- Recovery now exports a portable evidence ZIP containing canonical JSON, a
+  readable Markdown report, a versioned manifest, and a standard SHA-256 index.
+  Stable semantic digests make equivalent evidence comparable; pseudonymous
+  repository identities and redacted paths avoid exposing raw local layout.
+  Canonical confidence rows retain measured basis, state, codes, observation
+  times, and whether encrypted recovery-point evidence exists.
+  Validation rejects tampering, missing or duplicate files, unsafe paths,
+  unexpected content, and unsupported schemas (`VS-1874`).
+- Recovery confidence and evidence labels, repository-writer controls, History
+  evidence events, backup-widget status, folder pickers, backup-location
+  feedback, verification failures, and restore progress now use the localization
+  contract in every maintained language. Recovery Inspector evidence uses
+  flexible cards instead of fixed columns so longer translations remain
+  readable (`BUG-18110`).
+- Recovery exports no longer fall back to a publicly writable temporary
+  directory, manual cache clearing stays within private application roots, and
+  destination cleanup now retains every successful mount across credential
+  retries. Unreachable metadata, restore, and update branches identified by
+  Sonar were removed (`BUG-18111`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -147,7 +166,6 @@ branch package.
 
 ### Still planned
 
-- checksummed Recovery Evidence Packages;
 - allowlisted, reviewable support bundles;
 - synchronized public release metadata;
 - standardized retry, path, serialization, lifecycle, dialog, and projection

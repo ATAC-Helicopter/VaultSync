@@ -52,7 +52,15 @@ Automatic retention also preserves the newest point with a passing byte-level pr
 
 ## Export a report
 
-Select **Export report** to write a Markdown summary under `Documents/VaultSync/Exports/Recovery`. The report includes readiness, coverage, 3-2-1 status, recommendations, drill history, and bounded evidence. It remains local until you choose to share it.
+Select **Export evidence package** to write a ZIP under
+`Documents/VaultSync/Exports/Recovery`. It contains a readable Markdown report,
+a versioned JSON record, a manifest, and `SHA256SUMS`. The package includes
+readiness, coverage, 3-2-1 status, recommendations, drill history, build
+identity, pseudonymous repository identity, encryption evidence, freshness, and
+bounded evidence. Raw local
+paths are redacted and backup payloads or credentials are never included. It
+remains local until you choose to share it, and standard SHA-256 tooling can
+verify its contents without VaultSync.
 
 Technical details:
 

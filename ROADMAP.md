@@ -426,7 +426,7 @@ after the planned minor train is complete and use explicit beta qualification.
     A commit-pinned GitHub action attests final package provenance and each SBOM;
     candidate automation exercises both API-backed and downloaded-bundle trust.
     One release-candidate workflow run remains required before completion.
-- [ ] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
+- [x] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
   - Scope: package a versioned JSON record, readable report, package manifest,
     checksums, build identity, recovery state, drill evidence, and repository
     identity without backup payloads, credentials, encryption secrets, or raw
@@ -434,6 +434,11 @@ after the planned minor train is complete and use explicit beta qualification.
   - Acceptance: repeated exports of the same evidence are deterministic,
     tampering is detected, schema compatibility is explicit, and the package
     can be inspected without VaultSync.
+  - Completed 2026-08-20: Recovery exports now produce one ZIP with canonical
+    JSON, readable Markdown, a versioned manifest, and a standard SHA-256 index.
+    Repository identities are pseudonymous and local paths are redacted;
+    validation rejects altered, missing, duplicate, traversing, unexpected, or
+    unsupported content.
 - [ ] `VS-1875` `P1` Strengthen explicitly redacted support bundles.
   - Scope: define an allowlisted bundle schema, path pseudonymization, secret
     denylist, size limits, and a review screen that lists every included file

@@ -116,7 +116,9 @@ not change or delete any configuration.
   one destination that you explicitly marked as offsite.
 - Run a drill to prove linkage, reachability, readable inventory, stored bytes,
   and a read-only restore plan. A drill never writes into the live project.
-- **Export report** creates a shareable Markdown readiness report.
+- **Export evidence package** creates a portable ZIP with a readable report,
+  versioned JSON, a manifest, and checksums that can be inspected without
+  VaultSync.
 
 ## Guide
 

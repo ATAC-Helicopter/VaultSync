@@ -169,7 +169,8 @@ or macOS chrome.
 - **00:31** — A drill reads stored data without writing into the live project.
   Passing evidence covers linkage, access, inventory, bytes, and a read-only
   restore plan.
-- **00:47** — Export report saves a portable, redacted record for review.
+- **00:47** — Export evidence package saves a portable, redacted, checksummed
+  record for review.
 
 ## 09 — Guide and shared terminology
 
