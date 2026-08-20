@@ -486,7 +486,7 @@ after the planned minor train is complete and use explicit beta qualification.
     and qualified predecessor. A deterministic command renders public, Store,
     and release-summary outputs without publishing; CI and release assets reject
     drift, while the website refreshes the latest stable tag from GitHub.
-- [ ] `VS-1879` `P0` Replace two-way cross-machine settings import with a
+- [x] `VS-1879` `P0` Replace two-way cross-machine settings import with a
   versioned, reviewable, and reversible merge contract.
   - Scope: persist a durable writer identity, per-record revision and base
     revision, field-level portable-value provenance, and an explicit merge plan;
@@ -497,13 +497,15 @@ after the planned minor train is complete and use explicit beta qualification.
     another; non-overlapping changes merge, overlapping changes show old, local,
     and remote values with timestamps and writers; accepting either side is
     durable and auditable; the operation can be undone before the next write.
-  - In progress on 2026-08-16 in PR #546: durable per-source merge bases,
+  - Completed 2026-08-21 in PR #546: durable per-source merge bases,
     field-level three-way planning, automatic non-overlapping merges, and
     resolution results that retain independent edits are implemented and
     tested. Guarded repository writes and schema-version-3 base/provenance and
     resolution export followed on 2026-08-17, together with Base/local/remote
     presentation and bounded undo that expires after the next portable write.
-    Final two-machine qualification remains before completion.
+    Reviewed decisions now run through one core service, and a file-backed
+    two-installation qualification proves convergence, conflict preservation,
+    restart durability, repeat-import suppression, undo, and later convergence.
 - [x] `VS-1880` `P1` Simplify and standardize shared application code without
   changing user-visible behavior.
   - Scope: consolidate repeated retry, path, serialization, status, dialog,

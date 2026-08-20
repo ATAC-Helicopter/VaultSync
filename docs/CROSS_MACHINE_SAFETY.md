@@ -154,14 +154,20 @@ revision.
    Base/local/remote review, and bounded pre-next-write undo were implemented
    on 2026-08-17.**
 5. Produce merge plans without applying them.
+   **Implemented with preview-only three-way plans; conflicts remain local and
+   unchanged until an explicit decision is applied.**
 6. Add explicit apply, durable resolution, and bounded undo.
    **Durable Keep local and Accept imported decisions plus revision-aware undo
-   until the next portable repository write are implemented.**
+   until the next portable repository write are implemented through one shared
+   core resolution service.**
 7. Expose status, takeover, and conflict review in the UI.
    **Writer status and explicit stale takeover were implemented on 2026-08-16;
    complete portable-field conflict review was implemented on 2026-08-16.**
 8. Qualify local disk, SMB/NAS, disconnection, skew, crash, and mixed-version
    scenarios before enabling multi-machine writes by default.
+   **The deterministic two-installation workflow and fault cases are qualified
+   in the automated suite. A physical NAS/SMB smoke test remains part of release
+   qualification because CI cannot reproduce a user's mount and network stack.**
 
 ## Non-negotiable tests
 
@@ -176,3 +182,11 @@ revision.
 - Keep local, Accept remote, and undo remain durable across restart;
 - local key references and destructive tombstones never bypass preview;
 - mixed 1.8.6/1.8.7 guidance is visible and tested where the UI exposes it.
+
+`CrossMachineMetadataQualificationTests` exercises two distinct file-backed
+installation configurations and databases against one shared repository. It
+proves independent convergence, overlapping-edit review without overwrite,
+conflict survival across restart, durable Accept imported behavior, repeat
+import suppression, bounded undo, and convergence after the next export. Lease
+tests separately cover concurrent acquisition, disconnection, stale takeover,
+nonce loss, crash-like expiry, and positive and negative clock skew.
