@@ -3027,7 +3027,7 @@ namespace VaultSync.UI
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Choose projects root",
+                Title = L("Settings.Paths.ChooseProjectsRoot", "Choose projects root"),
                 AllowMultiple = false,
                 SuggestedStartLocation = startLocation
             });
@@ -3068,7 +3068,7 @@ namespace VaultSync.UI
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Choose backup location",
+                Title = L("Settings.Paths.ChooseBackupLocation", "Choose backup location"),
                 AllowMultiple = false,
                 SuggestedStartLocation = startLocation
             });
@@ -3102,7 +3102,7 @@ namespace VaultSync.UI
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Choose destination folder",
+                Title = L("Settings.Paths.ChooseDestination", "Choose destination folder"),
                 AllowMultiple = false,
                 SuggestedStartLocation = startLocation
             });
@@ -3124,9 +3124,6 @@ namespace VaultSync.UI
 
         private void ClearLocalCache()
         {
-            int removed = 0;
-            int failed = 0;
-
             CacheDeleteResult TryDeleteDir(string path)
             {
                 if (!Directory.Exists(path))
@@ -3159,44 +3156,25 @@ namespace VaultSync.UI
                 }
             }
 
-            void Count(CacheDeleteResult result)
-            {
-                switch (result)
-                {
-                    case CacheDeleteResult.Removed:
-                        removed++;
-                        break;
-                    case CacheDeleteResult.Failed:
-                        failed++;
-                        break;
-                    case CacheDeleteResult.NotFound:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(result), result, null);
-                }
-            }
-
             string localRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync");
-
-            Count(TryDeleteDir(Path.Combine(localRoot, "logs")));
-            Count(TryDeleteDir(Path.Combine(localRoot, "crash")));
-            Count(TryDeleteDir(Path.Combine(localRoot, "cache")));
-            Count(TryDeleteDir(Path.Combine(localRoot, "patches")));
-            Count(TryDeleteDir(Path.Combine(localRoot, "patch-runtime")));
-            Count(TryDeleteFile(Path.Combine(localRoot, "avatars.json")));
-            Count(TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json")));
-
             string userRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 ".vaultsync");
-            Count(TryDeleteDir(Path.Combine(userRoot, "logs")));
-
-            string tempRoot = Path.GetTempPath();
-            Count(TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import")));
-            Count(TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export")));
-            Count(TryDeleteDir(Path.Combine(tempRoot, "VaultSync")));
+            CacheDeleteResult[] results =
+            [
+                TryDeleteDir(Path.Combine(localRoot, "logs")),
+                TryDeleteDir(Path.Combine(localRoot, "crash")),
+                TryDeleteDir(Path.Combine(localRoot, "cache")),
+                TryDeleteDir(Path.Combine(localRoot, "patches")),
+                TryDeleteDir(Path.Combine(localRoot, "patch-runtime")),
+                TryDeleteFile(Path.Combine(localRoot, "avatars.json")),
+                TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json")),
+                TryDeleteDir(Path.Combine(userRoot, "logs"))
+            ];
+            int removed = results.Count(result => result == CacheDeleteResult.Removed);
+            int failed = results.Count(result => result == CacheDeleteResult.Failed);
 
             if (removed == 0 && failed == 0)
             {
@@ -3422,9 +3400,14 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                BackupLocationStatus = "Not accessible";
+                BackupLocationStatus = L("Settings.BackupLocation.NotAccessible", "Not accessible");
                 if (notifyOnError)
-                    ShowBackupLocationNotification($"Backup location not accessible: {ex.Message}", NotificationSeverity.Error);
+                    ShowBackupLocationNotification(
+                        string.Format(
+                            CultureInfo.CurrentCulture,
+                            L("Settings.BackupLocation.NotAccessibleReason", "Backup location not accessible: {0}"),
+                            ex.Message),
+                        NotificationSeverity.Error);
                 return false;
             }
         }
@@ -3434,9 +3417,11 @@ namespace VaultSync.UI
             if (TryWriteProbeFile(path))
                 return true;
 
-            BackupLocationStatus = "Not writable";
+            BackupLocationStatus = L("Settings.BackupLocation.NotWritable", "Not writable");
             if (notifyOnError)
-                ShowBackupLocationNotification("Backup location is not writable.", NotificationSeverity.Error);
+                ShowBackupLocationNotification(
+                    L("Settings.BackupLocation.NotWritableDetail", "Backup location is not writable."),
+                    NotificationSeverity.Error);
             return false;
         }
 
@@ -3450,7 +3435,7 @@ namespace VaultSync.UI
             }
             catch (Exception)
             {
-                BackupLocationStatus = "OK";
+                BackupLocationStatus = L("Common.Ok", "OK");
                 // Ignore disk space failures; path/write checks already passed.
             }
         }
@@ -3460,21 +3445,38 @@ namespace VaultSync.UI
             double freePercent = (double)drive.AvailableFreeSpace / drive.TotalSize * 100d;
             if (freePercent < MinimumFreeSpacePercent)
             {
-                BackupLocationStatus = $"Low space ({freePercent:0.#}% free)";
+                BackupLocationStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.BackupLocation.LowSpace", "Low space ({0:0.#}% free)"),
+                    freePercent);
                 ShowBackupLocationNotification(
-                    $"Free space below threshold ({freePercent:0.#}% available, threshold {MinimumFreeSpacePercent}%).",
+                    string.Format(
+                        CultureInfo.CurrentCulture,
+                        L(
+                            "Settings.BackupLocation.LowSpaceDetail",
+                            "Free space below threshold ({0:0.#}% available, threshold {1}%)."),
+                        freePercent,
+                        MinimumFreeSpacePercent),
                     NotificationSeverity.Warning);
                 return;
             }
 
-            BackupLocationStatus = "OK";
+            BackupLocationStatus = L("Common.Ok", "OK");
             if (notifyOnSuccess)
-                ShowBackupLocationNotification($"Backup location set: {path}", NotificationSeverity.Info);
+                ShowBackupLocationNotification(
+                    string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Settings.BackupLocation.Set", "Backup location set: {0}"),
+                        path),
+                    NotificationSeverity.Info);
         }
 
-        private static void ShowBackupLocationNotification(string message, NotificationSeverity severity)
+        private void ShowBackupLocationNotification(string message, NotificationSeverity severity)
         {
-            GlobalNotificationCenter.Instance.Show(message, severity, "Backup location");
+            GlobalNotificationCenter.Instance.Show(
+                message,
+                severity,
+                L("Settings.BackupLocation.Title", "Backup location"));
         }
 
         private void ForgetAllProjects()

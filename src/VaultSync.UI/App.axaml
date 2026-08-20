@@ -467,6 +467,97 @@
             <Setter Property="Background" Value="Transparent" />
         </Style>
 
+        <!-- Shared application inputs. Apply these classes to search/filter rows so
+             Fluent's platform defaults never leak into product workspaces. -->
+        <Style Selector="TextBox.app-search">
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBox.app-search:focus-visible">
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderFocusedBrush}" />
+        </Style>
+        <Style Selector="ComboBox.app-filter">
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ComboBox.app-filter:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Surface2}" />
+        </Style>
+
+        <!-- Flat, theme-aware disclosure used instead of the native Expander chrome. -->
+        <Style Selector="Expander.app-section">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <ControlTemplate TargetType="Expander">
+                    <Grid RowDefinitions="Auto,Auto">
+                        <ToggleButton x:Name="PART_Header"
+                                      Background="{DynamicResource Surface2}"
+                                      BorderBrush="{DynamicResource BorderSoft}"
+                                      BorderThickness="1"
+                                      CornerRadius="10"
+                                      Padding="12,10"
+                                      HorizontalContentAlignment="Stretch"
+                                      IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <ContentPresenter Content="{TemplateBinding Header}"
+                                                  VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1"
+                                           Classes="app-section-chevron"
+                                           Text="⌄"
+                                           FontSize="16"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"
+                                           RenderTransformOrigin="50%,50%" />
+                            </Grid>
+                        </ToggleButton>
+                        <ContentPresenter x:Name="PART_ContentHost"
+                                          Grid.Row="1"
+                                          Content="{TemplateBinding Content}"
+                                          Margin="0,10,0,0"
+                                          IsVisible="{TemplateBinding IsExpanded}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Expander.app-section ToggleButton#PART_Header">
+            <Setter Property="FocusAdorner" Value="{x:Null}" />
+        </Style>
+        <Style Selector="Expander.app-section ToggleButton#PART_Header:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderFocusedBrush}" />
+        </Style>
+        <Style Selector="Expander.app-section:expanded ToggleButton#PART_Header">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="Expander.app-section:expanded TextBlock.app-section-chevron">
+            <Setter Property="RenderTransform" Value="rotate(180deg)" />
+        </Style>
+        <Style Selector="Expander.app-section /template/ ContentPresenter#PART_ContentHost">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Expander.app-section:expanded /template/ ContentPresenter#PART_ContentHost">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
         <!-- Global ComboBox popup readability -->
         <Style Selector="ComboBox /template/ Popup Border">
             <Setter Property="CornerRadius" Value="12" />

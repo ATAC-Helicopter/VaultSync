@@ -62,7 +62,7 @@ namespace VaultSync.UI.ViewModels
             string backupRoot  = preparation.BackupRoot;
             string projectName = preparation.ProjectName;
             string cardId = $"delete-{backupId}";
-            DestinationResolution? deleteResolution = null;
+            var deleteResolutions = new List<DestinationResolution>();
 
             var deleteContext = await Task.Run(() =>
             {
@@ -164,7 +164,7 @@ namespace VaultSync.UI.ViewModels
 
                         if (resolution.IsSuccess && !string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         {
-                            deleteResolution = resolution;
+                            deleteResolutions.Add(resolution);
                             backupRoot = string.IsNullOrWhiteSpace(rootSubPath)
                                 ? resolution.EffectivePath
                                 : Path.Combine(resolution.EffectivePath, rootSubPath);
@@ -340,9 +340,9 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.IsBusy      = false;
                 BackupsViewModel.BusyMessage = string.Empty;
 
-                if (deleteResolution is not null)
+                foreach (DestinationResolution resolution in deleteResolutions)
                 {
-                    NetworkMountService.Cleanup(deleteResolution);
+                    NetworkMountService.Cleanup(resolution);
                 }
             }
         }
@@ -2539,7 +2539,10 @@ namespace VaultSync.UI.ViewModels
 
             string backupFullPath = preparation.BackupFullPath;
             BackupsViewModel.IsBusy      = true;
-            BackupsViewModel.BusyMessage = $"Restoring {preparation.ProjectName}...";
+            BackupsViewModel.BusyMessage = string.Format(
+                CultureInfo.CurrentCulture,
+                AppViewModel.L("Backups.Restore.RestoringProject", "Restoring {0}..."),
+                preparation.ProjectName);
             string restoreCardId = $"restore-{backupId}";
             BackupsViewModel.UpdateActiveBackup(
                 restoreCardId,
@@ -2666,10 +2669,6 @@ namespace VaultSync.UI.ViewModels
                     }
                 }
 
-                if (!restoreSucceeded)
-                    return;
-
-                restoreSucceeded = true;
             }
             catch (Exception ex)
             {

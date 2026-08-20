@@ -7,6 +7,7 @@ using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
+using VaultSync.UI.Services;
 
 namespace VaultSync.UI;
 
@@ -123,7 +124,9 @@ public sealed partial class SettingsViewModel
                         new RepositoryLeaseInspection(
                             RepositoryLeaseState.Invalid,
                             null,
-                            "The destination now resolves to a different repository. Check its writer again."));
+                            LS(
+                                "Settings.Destinations.Writer.RepositoryChanged",
+                                "The destination now resolves to a different repository. Check its writer again.")));
                     return;
                 }
 
@@ -165,8 +168,13 @@ public sealed partial class SettingsViewModel
                     () => _repositoryLeaseService.Inspect(resolution.EffectivePath));
                 ApplyRepositoryWriterInspection(destination, available, resolution.EffectivePath);
                 destination.RepositoryWriterDetails =
-                    "The stale writer was preserved as evidence and cleared. The next operation can write safely.";
-                SaveStatus = $"Cleared the stale repository writer for '{destination.DisplayName}'.";
+                    LS(
+                        "Settings.Destinations.Writer.ClearedDetail",
+                        "The stale writer was preserved as evidence and cleared. The next operation can write safely.");
+                SaveStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    LS("Settings.Destinations.Writer.Cleared", "Cleared the stale repository writer for '{0}'."),
+                    destination.DisplayName);
             }
             finally
             {
@@ -201,33 +209,47 @@ public sealed partial class SettingsViewModel
 
         destination.RepositoryWriterStatus = inspection.State switch
         {
-            RepositoryLeaseState.Available => "Available",
-            RepositoryLeaseState.Active => "In use",
-            RepositoryLeaseState.Stale => "Needs review",
-            RepositoryLeaseState.Invalid => "Invalid state",
-            _ => "Unavailable"
+            RepositoryLeaseState.Available => LS("Settings.Destinations.Writer.Status.Available", "Available"),
+            RepositoryLeaseState.Active => LS("Settings.Destinations.Writer.Status.Active", "In use"),
+            RepositoryLeaseState.Stale => LS("Settings.Destinations.Writer.Status.Stale", "Needs review"),
+            RepositoryLeaseState.Invalid => LS("Settings.Destinations.Writer.Status.Invalid", "Invalid state"),
+            _ => LS("Settings.Destinations.Writer.Status.Unavailable", "Unavailable")
         };
 
         if (inspection.Lease is null)
         {
             destination.RepositoryWriterDetails = inspection.State == RepositoryLeaseState.Available
-                ? "No VaultSync writer currently holds this repository."
+                ? LS(
+                    "Settings.Destinations.Writer.AvailableDetail",
+                    "No VaultSync writer currently holds this repository.")
                 : inspection.Message;
             return;
         }
 
         RepositoryLeaseSnapshot lease = inspection.Lease;
-        string owner = string.IsNullOrWhiteSpace(lease.HostLabel) ? "Unknown host" : lease.HostLabel;
+        string owner = string.IsNullOrWhiteSpace(lease.HostLabel)
+            ? LS("Settings.Destinations.Writer.UnknownHost", "Unknown host")
+            : lease.HostLabel;
         string identity = lease.InstallationId.Length > 8 ? lease.InstallationId[..8] : lease.InstallationId;
         destination.RepositoryWriterDetails = string.Format(
             CultureInfo.CurrentCulture,
-            "{0} · identity {1} · {2} · app {3} · heartbeat {4:u} · expires {5:u}",
+            LS(
+                "Settings.Destinations.Writer.LeaseDetail",
+                "{0} · identity {1} · {2} · app {3} · heartbeat {4:u} · expires {5:u}"),
             owner,
             identity,
             lease.Operation,
             lease.AppVersion,
             lease.HeartbeatUtc,
             lease.ExpiresUtc);
+    }
+
+    private static string LS(string key, string fallback)
+    {
+        string? value = LocalizationProvider.Service?.GetString(key);
+        return string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.OrdinalIgnoreCase)
+            ? fallback
+            : value;
     }
 
     private static NetworkCredentialProfile? ResolveCredential(AppConfig config, string? credentialName) =>

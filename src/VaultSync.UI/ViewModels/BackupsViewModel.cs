@@ -3658,7 +3658,12 @@ namespace VaultSync.UI.ViewModels
         public void ShowVerificationFailure(string backupId, string projectName)
         {
             VerificationFailedBackupId = backupId;
-            VerificationPopupMessage   = $"Backup verification failed for {projectName}. The backup may be incomplete or corrupted.";
+            VerificationPopupMessage = string.Format(
+                CultureInfo.CurrentCulture,
+                L(
+                    "Backups.Verification.FailedForProject",
+                    "Backup verification failed for {0}. The backup may be incomplete or corrupted."),
+                projectName);
             IsVerificationPopupOpen    = true;
         }
 

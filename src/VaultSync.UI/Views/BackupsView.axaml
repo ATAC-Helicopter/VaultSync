@@ -1784,7 +1784,8 @@
                       <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.EarlierPoint}"
                                  FontSize="10"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <ComboBox ItemsSource="{Binding Snapshots}"
+                      <ComboBox Classes="app-filter"
+                                ItemsSource="{Binding Snapshots}"
                                 SelectedItem="{Binding SelectedSnapshotA, Mode=TwoWay}"
                                 AutomationProperties.Name="{infra:LocalizedString Key=Backups.Compare.EarlierPoint}"
                                 MinWidth="180">
@@ -1801,7 +1802,8 @@
                       <TextBlock Text="{infra:LocalizedString Key=Backups.Compare.LaterPoint}"
                                  FontSize="10"
                                  Foreground="{DynamicResource TextSecondaryBrush}" />
-                      <ComboBox ItemsSource="{Binding Snapshots}"
+                      <ComboBox Classes="app-filter"
+                                ItemsSource="{Binding Snapshots}"
                                 SelectedItem="{Binding SelectedSnapshotB, Mode=TwoWay}"
                                 AutomationProperties.Name="{infra:LocalizedString Key=Backups.Compare.LaterPoint}"
                                 MinWidth="180">

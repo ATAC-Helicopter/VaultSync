@@ -1195,13 +1195,13 @@
                                 <StackPanel Spacing="9">
                                   <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                                     <StackPanel Grid.Column="0" Spacing="2">
-                                      <TextBlock Text="Repository writer"
+                                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.Title}"
                                                  FontWeight="SemiBold" />
-                                      <TextBlock Text="See which VaultSync installation can write shared history."
+                                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.Description}"
                                                  FontSize="11"
                                                  Foreground="{DynamicResource TextSecondary}"
                                                  TextWrapping="Wrap" />
-                                      <TextBlock Text="Only VaultSync 1.8.7 and newer respects this writer lock."
+                                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.CompatibilityWarning}"
                                                  FontSize="11"
                                                  Foreground="{DynamicResource WarningTextBrush}"
                                                  TextWrapping="Wrap" />
@@ -1232,7 +1232,7 @@
                                           IsEnabled="{Binding !IsRepositoryWriterBusy}"
                                           Command="{Binding DataContext.ReviewStaleWriterCommand, ElementName=Root}"
                                           CommandParameter="{Binding}">
-                                    <TextBlock Text="Review stale writer" />
+                                    <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.Review}" />
                                   </Button>
 
                                   <Border Padding="12"
@@ -1242,7 +1242,7 @@
                                           BorderThickness="1"
                                           IsVisible="{Binding IsWriterTakeoverConfirmationVisible}">
                                     <StackPanel Spacing="10">
-                                      <TextBlock Text="Only continue after confirming the other machine is no longer writing. The old lease will be retained as diagnostic evidence."
+                                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.TakeoverWarning}"
                                                  Foreground="{DynamicResource DangerTextBrush}"
                                                  TextWrapping="Wrap" />
                                       <StackPanel Orientation="Horizontal"
@@ -1256,7 +1256,7 @@
                                         <Button Classes="action-danger"
                                                 Command="{Binding DataContext.ConfirmStaleWriterTakeoverCommand, ElementName=Root}"
                                                 CommandParameter="{Binding}">
-                                          <TextBlock Text="Take over stale writer" />
+                                          <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.TakeOver}" />
                                         </Button>
                                       </StackPanel>
                                     </StackPanel>
@@ -1735,12 +1735,8 @@
                             </StackPanel>
                           </Border>
 
-                          <Expander Header="{Binding ThemeAdvancedLabel}"
-                                    Background="{DynamicResource Surface1}"
-                                    BorderBrush="{DynamicResource DividerBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="12">
+                          <Expander Classes="app-section"
+                                    Header="{Binding ThemeAdvancedLabel}">
                             <StackPanel Spacing="8"
                                         Margin="0,8,0,0">
                               <TextBlock Text="{Binding ThemeAdvancedDescription}"

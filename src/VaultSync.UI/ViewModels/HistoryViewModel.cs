@@ -700,11 +700,11 @@ public sealed class HistoryViewModel : ViewModelBase
             string projectName = ResolveProjectName(projectsById, evidence.ProjectId);
             string kind = evidence.Kind switch
             {
-                "isolated-restore" => "Test restore",
-                "recovery-proof" => "Recovery proof",
-                "protection" => "Protection",
-                "report-export" => "Evidence report",
-                _ => "Recovery evidence"
+                "isolated-restore" => L("History.Recovery.TestRestore", "Test restore"),
+                "recovery-proof" => L("History.Recovery.Proof", "Recovery proof"),
+                "protection" => L("History.Recovery.Protection", "Protection"),
+                "report-export" => L("History.Recovery.EvidencePackage", "Evidence package"),
+                _ => L("History.Recovery.Evidence", "Recovery evidence")
             };
             items.Add(new HistoryTimelineItemViewModel(new HistoryTimelineItemData
             {
@@ -714,7 +714,7 @@ public sealed class HistoryViewModel : ViewModelBase
                 CreatedUtc = evidence.CreatedUtc,
                 Title = $"{projectName} · {kind}",
                 Detail = $"{evidence.Status}: {evidence.Summary}",
-                Lane = "Recovery evidence",
+                Lane = L("History.Recovery.Evidence", "Recovery evidence"),
                 GraphLane = evidence.Kind == "isolated-restore"
                     ? HistoryTimelineLane.Restore
                     : HistoryTimelineLane.Metadata,
