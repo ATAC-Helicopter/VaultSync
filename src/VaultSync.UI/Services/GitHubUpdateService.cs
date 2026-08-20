@@ -604,41 +604,7 @@ namespace VaultSync.UI.Services
             if (assets.Count == 0)
                 return (null, null, null, 0);
 
-            ReleaseManifestAsset? asset = null;
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                asset = assets.FirstOrDefault(a =>
-                    a.Name is not null &&
-                    a.Name.Contains("setup", StringComparison.OrdinalIgnoreCase) &&
-                    a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                string architectureMarker = RuntimeInformation.OSArchitecture == Architecture.Arm64
-                    ? "macos-apple-silicon"
-                    : "macos-intel";
-                asset = assets.FirstOrDefault(a =>
-                    a.Name is not null &&
-                    a.Name.Contains(architectureMarker, StringComparison.OrdinalIgnoreCase) &&
-                    a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase));
-                asset ??= assets.FirstOrDefault(a =>
-                    a.Name is not null &&
-                    a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase));
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                bool preferDebianPackage = ShouldPreferDebianPackage();
-
-                if (preferDebianPackage)
-                {
-                    asset = FindLinuxAsset(assets, ".deb");
-                }
-
-                asset ??= FindLinuxAsset(assets, ".AppImage");
-                asset ??= FindLinuxAsset(assets, ".tar.gz");
-                asset ??= preferDebianPackage ? null : FindLinuxAsset(assets, ".deb");
-            }
+            ReleaseManifestAsset? asset = FindInstallerAssetForCurrentPlatform(assets);
 
             if (asset is null || string.IsNullOrWhiteSpace(asset.DownloadUrl))
                 return (null, null, null, 0);
@@ -646,6 +612,47 @@ namespace VaultSync.UI.Services
             return TryGetTrustedReleaseAssetUri(asset.DownloadUrl, out Uri? url)
                 ? (url, asset.Name, asset.Sha256, asset.SizeBytes)
                 : (null, null, null, 0);
+        }
+
+        private static ReleaseManifestAsset? FindInstallerAssetForCurrentPlatform(
+            IReadOnlyCollection<ReleaseManifestAsset> assets)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return assets.FirstOrDefault(a =>
+                    a.Name is not null &&
+                    a.Name.Contains("setup", StringComparison.OrdinalIgnoreCase) &&
+                    a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+            }
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return FindMacInstallerAsset(assets);
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? FindLinuxInstallerAsset(assets)
+                : null;
+        }
+
+        private static ReleaseManifestAsset? FindMacInstallerAsset(IReadOnlyCollection<ReleaseManifestAsset> assets)
+        {
+            string architectureMarker = RuntimeInformation.OSArchitecture == Architecture.Arm64
+                ? "macos-apple-silicon"
+                : "macos-intel";
+            return assets.FirstOrDefault(a =>
+                       a.Name is not null &&
+                       a.Name.Contains(architectureMarker, StringComparison.OrdinalIgnoreCase) &&
+                       a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase))
+                   ?? assets.FirstOrDefault(a =>
+                       a.Name is not null &&
+                       a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static ReleaseManifestAsset? FindLinuxInstallerAsset(IReadOnlyCollection<ReleaseManifestAsset> assets)
+        {
+            bool preferDebianPackage = ShouldPreferDebianPackage();
+            ReleaseManifestAsset? asset = preferDebianPackage ? FindLinuxAsset(assets, ".deb") : null;
+            return asset
+                   ?? FindLinuxAsset(assets, ".AppImage")
+                   ?? FindLinuxAsset(assets, ".tar.gz")
+                   ?? (preferDebianPackage ? null : FindLinuxAsset(assets, ".deb"));
         }
 
         internal static bool TryGetTrustedReleaseAssetUri(string? value, out Uri? uri)

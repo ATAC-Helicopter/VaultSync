@@ -62,7 +62,7 @@ public sealed class BuildInformationServiceTests
         Assert.False(root.TryGetProperty("SourceCommit", out _));
     }
 
-    private static Assembly BuildAssembly(string informationalVersion, params (string Key, string Value)[] metadata)
+    private static AssemblyBuilder BuildAssembly(string informationalVersion, params (string Key, string Value)[] metadata)
     {
         AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(
             new AssemblyName($"VaultSync.BuildInformation.Tests.{Guid.NewGuid():N}") { Version = new Version(1, 8, 7) },

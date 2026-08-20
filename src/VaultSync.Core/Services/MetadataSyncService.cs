@@ -2503,17 +2503,12 @@ public sealed class MetadataSyncService
         Console.WriteLine($"[MetadataSync] Project export complete for project '{project.Name}' to '{storeRoot}'.");
         LogStoreCounts(store);
 
-        if (!useDeferredStore)
-            SaveSuccessfulProjectWriteBase(rootPath, guardedWrite!);
-
-        if (useDeferredStore)
-        {
-            return MetadataSyncResult.Failure(
-                MetadataSyncStatus.WriteFailed,
-                "Project export queued: destination not writable. Will retry when available.");
-        }
-
-        return exportResult;
+        return CompleteExport(
+            rootPath,
+            guardedWrite!,
+            useDeferredStore,
+            exportResult,
+            "Project export queued: destination not writable. Will retry when available.");
     }
 
     public async Task<MetadataSyncResult> ExportBackupToStoreAsync(
@@ -2662,16 +2657,25 @@ public sealed class MetadataSyncService
             ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{storeRoot}': snapshots={counts.Snapshots}, backups={counts.Backups}."
             : $"[MetadataSync] Export complete for backup {backupId} to '{storeRoot}'.");
         LogStoreCounts(store);
-        if (!useDeferredStore)
-            SaveSuccessfulProjectWriteBase(rootPath, guardedWrite);
-        if (useDeferredStore)
-        {
-            return MetadataSyncResult.Failure(
-                MetadataSyncStatus.WriteFailed,
-                "Export queued: destination not writable. Will retry when available.");
-        }
+        return CompleteExport(
+            rootPath,
+            guardedWrite,
+            useDeferredStore,
+            exportResult,
+            "Export queued: destination not writable. Will retry when available.");
+    }
 
-        return exportResult;
+    private MetadataSyncResult CompleteExport(
+        string rootPath,
+        GuardedProjectWrite write,
+        bool useDeferredStore,
+        MetadataSyncResult success,
+        string deferredMessage)
+    {
+        if (useDeferredStore)
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, deferredMessage);
+        SaveSuccessfulProjectWriteBase(rootPath, write);
+        return success;
     }
 
     private bool TryResolveBackupExportEntities(

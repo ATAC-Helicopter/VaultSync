@@ -49,43 +49,63 @@ public sealed class NetworkMountService
         }
 
         if (dest.PreMounted)
-        {
-            Log($"Using pre-mounted path for '{alias}'.");
-            return Directory.Exists(normalizedPath)
-                ? CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using pre-mounted path '{normalizedPath}'")
-                : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is marked pre-mounted but is not accessible.");
-        }
+            return PreparePreMountedDestination(dest, alias, normalizedPath);
 
         if (!IsNetworkPath(normalizedPath))
             return PrepareLocalDestination(dest, alias, normalizedPath);
 
         if (!dest.AutoMount)
-        {
-            Log($"Auto-mount disabled for '{alias}'.");
-            if (OperatingSystem.IsMacOS() &&
-                normalizedPath.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
-            {
-                return DestinationResolution.CreateFailure(
-                    dest,
-                    "NFS destinations on macOS must use a pre-mounted local path. Mount the share first and set the destination to that mount point.");
-            }
-            return Directory.Exists(normalizedPath)
-                ? CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using reachable network path '{normalizedPath}'")
-                : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is unreachable and auto-mount is disabled.");
-        }
+            return PrepareAutoMountDisabledDestination(dest, alias, normalizedPath);
 
         Log($"Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
+        return PrepareAutoMountedDestination(dest, normalizedPath, profile, allowAutoMount);
+    }
+
+    private static DestinationResolution PreparePreMountedDestination(
+        BackupDestination destination,
+        string alias,
+        string normalizedPath)
+    {
+        Log($"Using pre-mounted path for '{alias}'.");
+        return Directory.Exists(normalizedPath)
+            ? CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using pre-mounted path '{normalizedPath}'")
+            : DestinationResolution.CreateFailure(destination, $"Destination '{alias}' is marked pre-mounted but is not accessible.");
+    }
+
+    private static DestinationResolution PrepareAutoMountDisabledDestination(
+        BackupDestination destination,
+        string alias,
+        string normalizedPath)
+    {
+        Log($"Auto-mount disabled for '{alias}'.");
+        if (OperatingSystem.IsMacOS() && normalizedPath.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
+        {
+            return DestinationResolution.CreateFailure(
+                destination,
+                "NFS destinations on macOS must use a pre-mounted local path. Mount the share first and set the destination to that mount point.");
+        }
+        return Directory.Exists(normalizedPath)
+            ? CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using reachable network path '{normalizedPath}'")
+            : DestinationResolution.CreateFailure(destination, $"Destination '{alias}' is unreachable and auto-mount is disabled.");
+    }
+
+    private DestinationResolution PrepareAutoMountedDestination(
+        BackupDestination destination,
+        string normalizedPath,
+        NetworkCredentialProfile? profile,
+        bool allowAutoMount)
+    {
 
         // Background health/maintenance work must never unlock a credential store
         // or establish a new connection. macOS gets one extra chance below to
         // reuse an already-mounted SMB share without reading the credential.
         if (!allowAutoMount && !OperatingSystem.IsMacOS())
-            return DestinationResolution.CreateFailure(dest, PassiveMountDeferredMessage);
+            return DestinationResolution.CreateFailure(destination, PassiveMountDeferredMessage);
 
         if (OperatingSystem.IsWindows())
         {
             string? password = ResolvePassword(profile);
-            return ConnectWindowsShare(dest, normalizedPath, profile, password);
+            return ConnectWindowsShare(destination, normalizedPath, profile, password);
         }
 
         if (OperatingSystem.IsMacOS())
@@ -93,14 +113,14 @@ public sealed class NetworkMountService
             if (normalizedPath.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
             {
                 return DestinationResolution.CreateFailure(
-                    dest,
+                    destination,
                     "NFS auto-mount is not supported on macOS. Pre-mount the share and use the local mount path with Auto-mount disabled.");
             }
 
-            return MountMacShare(dest, normalizedPath, profile, allowAutoMount);
+            return MountMacShare(destination, normalizedPath, profile, allowAutoMount);
         }
 
-        return DestinationResolution.CreateFailure(dest, "Auto-mount is only supported on Windows and macOS.");
+        return DestinationResolution.CreateFailure(destination, "Auto-mount is only supported on Windows and macOS.");
     }
 
     public static void Cleanup(DestinationResolution resolution)

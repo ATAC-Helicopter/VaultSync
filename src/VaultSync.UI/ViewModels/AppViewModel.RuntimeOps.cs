@@ -172,11 +172,7 @@ namespace VaultSync.UI.ViewModels
                     : LStatic("Destinations.Test.Unavailable", "Unavailable"))
                 : result.Message;
 
-            BackupsViewModel.SeverityStatus severity = result.Reachable
-                ? (result.Writable ? BackupsViewModel.SeverityStatus.Success : BackupsViewModel.SeverityStatus.Warning)
-                : result.IsDeferred
-                    ? BackupsViewModel.SeverityStatus.Warning
-                    : BackupsViewModel.SeverityStatus.Error;
+            BackupsViewModel.SeverityStatus severity = GetDestinationProbeSeverity(result);
 
             _destinationProbeSummaries[id] = new DestinationProbeSummary(
                 id,
@@ -189,6 +185,19 @@ namespace VaultSync.UI.ViewModels
                 severity);
 
             BackupsViewModel.UpdateDestinationStatus(id, message, severity, dest.Alias);
+        }
+
+        private static BackupsViewModel.SeverityStatus GetDestinationProbeSeverity(DestinationTestResult result)
+        {
+            if (result.Reachable)
+            {
+                return result.Writable
+                    ? BackupsViewModel.SeverityStatus.Success
+                    : BackupsViewModel.SeverityStatus.Warning;
+            }
+            return result.IsDeferred
+                ? BackupsViewModel.SeverityStatus.Warning
+                : BackupsViewModel.SeverityStatus.Error;
         }
 
         private static string GetMetadataImportPath(DestinationProbeSummary summary)

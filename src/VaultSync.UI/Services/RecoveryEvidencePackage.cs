@@ -142,9 +142,9 @@ internal static class RecoveryEvidencePackage
 
     private static RecoveryEvidencePackageValidationResult? ValidateArchiveStructure(
         ZipArchive archive,
-        IReadOnlyList<string> names)
+        string[] names)
     {
-        if (names.Count != names.Distinct(StringComparer.Ordinal).Count())
+        if (names.Length != names.Distinct(StringComparer.Ordinal).Count())
             return Invalid("The package contains duplicate entries.", names);
         if (names.Any(IsUnsafeEntryName))
             return Invalid("The package contains an unsafe entry path.", names);
