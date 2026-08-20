@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "बैकअप स्थान",
   "Backups.Verification.FailedForProject": "{0} के लिए बैकअप सत्यापन विफल रहा। बैकअप अधूरा या दूषित हो सकता है.",
   "Backups.Restore.RestoringProject": "{0} पुनर्स्थापित किया जा रहा है...",
-  "Destinations.Probe.MountDeferred": "माउंट नहीं है। बैकअप या स्पष्ट गंतव्य परीक्षण के लिए आवश्यकता होने पर VaultSync पहुँच मांगेगा।"
+  "Destinations.Probe.MountDeferred": "माउंट नहीं है। बैकअप या स्पष्ट गंतव्य परीक्षण के लिए आवश्यकता होने पर VaultSync पहुँच मांगेगा।",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "सहायता बंडल की समीक्षा करें",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "हर बनाई गई फ़ाइल की समीक्षा करें। पथ, क्रेडेंशियल, टोकन और रहस्य हटाए या छद्मनामित किए जाते हैं। वैकल्पिक अनुभाग हटाए जा सकते हैं।",
+  "Settings.Advanced.SupportBundle.Diagnostics": "साफ़ किए गए निदान शामिल करें",
+  "Settings.Advanced.SupportBundle.Telemetry": "अनाम स्थानीय टेलीमेट्री शामिल करें",
+  "Settings.Advanced.SupportBundle.Size": "अधिकतम असंपीड़ित आकार: {0:0.0} MB। निर्यात से पहले सामग्री साफ़ की जाती है।"
 }

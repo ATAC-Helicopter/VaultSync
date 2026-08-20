@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "موقع النسخ الاحتياطي",
   "Backups.Verification.FailedForProject": "فشل التحقق من النسخ الاحتياطي لـ {0}. قد تكون النسخة الاحتياطية غير كاملة أو معطوبة.",
   "Backups.Restore.RestoringProject": "جارٍ استعادة {0}...",
-  "Destinations.Probe.MountDeferred": "غير مُثبّت. سيطلب VaultSync الوصول عندما تحتاج نسخة احتياطية أو عملية اختبار صريحة إلى هذه الوجهة."
+  "Destinations.Probe.MountDeferred": "غير مُثبّت. سيطلب VaultSync الوصول عندما تحتاج نسخة احتياطية أو عملية اختبار صريحة إلى هذه الوجهة.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "مراجعة حزمة الدعم",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "راجع كل ملف تم إنشاؤه. تتم إزالة المسارات وبيانات الاعتماد والرموز والأسرار أو استبدالها بمعرّفات مستعارة. يمكن استبعاد الأقسام الاختيارية.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "تضمين التشخيصات المنقحة",
+  "Settings.Advanced.SupportBundle.Telemetry": "تضمين القياس عن بُعد المحلي مجهول الهوية",
+  "Settings.Advanced.SupportBundle.Size": "الحد الأقصى للحجم غير المضغوط: {0:0.0} م.ب. تتم تنقية المحتوى قبل التصدير."
 }

@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "백업 위치",
   "Backups.Verification.FailedForProject": "{0}에 대한 백업 확인에 실패했습니다. 백업이 불완전하거나 손상되었을 수 있습니다.",
   "Backups.Restore.RestoringProject": "{0} 복원 중...",
-  "Destinations.Probe.MountDeferred": "마운트되지 않았습니다. 백업 또는 명시적 대상 테스트에 필요할 때 VaultSync가 접근을 요청합니다."
+  "Destinations.Probe.MountDeferred": "마운트되지 않았습니다. 백업 또는 명시적 대상 테스트에 필요할 때 VaultSync가 접근을 요청합니다.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "지원 번들 검토",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "생성되는 모든 파일을 검토하세요. 경로, 자격 증명, 토큰 및 비밀은 제거되거나 가명 처리됩니다. 선택 항목은 제외할 수 있습니다.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "정리된 진단 포함",
+  "Settings.Advanced.SupportBundle.Telemetry": "익명화된 로컬 원격 분석 포함",
+  "Settings.Advanced.SupportBundle.Size": "최대 압축 해제 크기: {0:0.0} MB. 내보내기 전에 파일 내용을 정리합니다."
 }

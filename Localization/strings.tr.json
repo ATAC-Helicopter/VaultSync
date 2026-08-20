@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "Yedekleme konumu",
   "Backups.Verification.FailedForProject": "{0} için yedekleme doğrulaması başarısız oldu. Yedekleme eksik veya bozuk olabilir.",
   "Backups.Restore.RestoringProject": "{0} geri yükleniyor...",
-  "Destinations.Probe.MountDeferred": "Bağlı değil. Bir yedekleme veya açık hedef testi bu hedefe ihtiyaç duyduğunda VaultSync erişim isteyecek."
+  "Destinations.Probe.MountDeferred": "Bağlı değil. Bir yedekleme veya açık hedef testi bu hedefe ihtiyaç duyduğunda VaultSync erişim isteyecek.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "Destek paketini incele",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "Oluşturulan her dosyayı inceleyin. Yollar, kimlik bilgileri, belirteçler ve gizli bilgiler kaldırılır veya takma adla değiştirilir. İsteğe bağlı bölümler hariç tutulabilir.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "Temizlenmiş tanılamayı dahil et",
+  "Settings.Advanced.SupportBundle.Telemetry": "Anonimleştirilmiş yerel telemetriyi dahil et",
+  "Settings.Advanced.SupportBundle.Size": "Sıkıştırılmamış azami boyut: {0:0.0} MB. Dosya içerikleri dışa aktarmadan önce temizlenir."
 }

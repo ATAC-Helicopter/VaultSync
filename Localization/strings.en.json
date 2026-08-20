@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "Backup location",
   "Backups.Verification.FailedForProject": "Backup verification failed for {0}. The backup may be incomplete or corrupted.",
   "Backups.Restore.RestoringProject": "Restoring {0}...",
-  "Destinations.Probe.MountDeferred": "Not mounted. VaultSync will request access when a backup or explicit destination test needs this destination."
+  "Destinations.Probe.MountDeferred": "Not mounted. VaultSync will request access when a backup or explicit destination test needs this destination.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "Review support bundle",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "Review every generated file. Paths, credentials, tokens, and secrets are removed or pseudonymized. Optional sections can be excluded.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "Include sanitized diagnostics",
+  "Settings.Advanced.SupportBundle.Telemetry": "Include anonymized local telemetry",
+  "Settings.Advanced.SupportBundle.Size": "Maximum uncompressed size: {0:0.0} MB. File contents are sanitized before export."
 }

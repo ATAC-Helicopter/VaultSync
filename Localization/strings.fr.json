@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "Emplacement de sauvegarde",
   "Backups.Verification.FailedForProject": "La vérification de la sauvegarde a échoué pour {0}. La sauvegarde est peut-être incomplète ou corrompue.",
   "Backups.Restore.RestoringProject": "Restauration de {0}...",
-  "Destinations.Probe.MountDeferred": "Non monté. VaultSync demandera l’accès lorsqu’une sauvegarde ou un test explicite aura besoin de cette destination."
+  "Destinations.Probe.MountDeferred": "Non monté. VaultSync demandera l’accès lorsqu’une sauvegarde ou un test explicite aura besoin de cette destination.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "Vérifier le pack de support",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "Vérifiez chaque fichier généré. Les chemins, identifiants, jetons et secrets sont supprimés ou pseudonymisés. Les sections facultatives peuvent être exclues.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "Inclure les diagnostics nettoyés",
+  "Settings.Advanced.SupportBundle.Telemetry": "Inclure la télémétrie locale anonymisée",
+  "Settings.Advanced.SupportBundle.Size": "Taille maximale non compressée : {0:0.0} Mo. Le contenu est nettoyé avant l’export."
 }

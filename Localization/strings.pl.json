@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "Lokalizacja kopii zapasowej",
   "Backups.Verification.FailedForProject": "Weryfikacja kopii zapasowej nie powiodła się dla {0}. Kopia zapasowa może być niekompletna lub uszkodzona.",
   "Backups.Restore.RestoringProject": "Przywracam {0}...",
-  "Destinations.Probe.MountDeferred": "Nie zamontowano. VaultSync poprosi o dostęp, gdy kopia zapasowa lub jawny test miejsca docelowego będzie go wymagać."
+  "Destinations.Probe.MountDeferred": "Nie zamontowano. VaultSync poprosi o dostęp, gdy kopia zapasowa lub jawny test miejsca docelowego będzie go wymagać.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "Przejrzyj pakiet pomocy",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "Przejrzyj każdy wygenerowany plik. Ścieżki, dane logowania, tokeny i sekrety są usuwane lub pseudonimizowane. Sekcje opcjonalne można wykluczyć.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "Dołącz oczyszczoną diagnostykę",
+  "Settings.Advanced.SupportBundle.Telemetry": "Dołącz zanonimizowaną telemetrię lokalną",
+  "Settings.Advanced.SupportBundle.Size": "Maksymalny rozmiar bez kompresji: {0:0.0} MB. Zawartość jest oczyszczana przed eksportem."
 }

@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "Vị trí dự phòng",
   "Backups.Verification.FailedForProject": "Xác minh bản sao lưu cho {0} không thành công. Bản sao lưu có thể không đầy đủ hoặc bị hỏng.",
   "Backups.Restore.RestoringProject": "Đang khôi phục {0}...",
-  "Destinations.Probe.MountDeferred": "Chưa được gắn. VaultSync sẽ yêu cầu quyền truy cập khi bản sao lưu hoặc phép kiểm tra đích rõ ràng cần đến đích này."
+  "Destinations.Probe.MountDeferred": "Chưa được gắn. VaultSync sẽ yêu cầu quyền truy cập khi bản sao lưu hoặc phép kiểm tra đích rõ ràng cần đến đích này.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "Xem lại gói hỗ trợ",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "Xem lại từng tệp được tạo. Đường dẫn, thông tin đăng nhập, mã thông báo và bí mật được xóa hoặc đặt bí danh. Có thể loại trừ các phần tùy chọn.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "Bao gồm chẩn đoán đã làm sạch",
+  "Settings.Advanced.SupportBundle.Telemetry": "Bao gồm dữ liệu đo từ xa cục bộ đã ẩn danh",
+  "Settings.Advanced.SupportBundle.Size": "Kích thước tối đa chưa nén: {0:0.0} MB. Nội dung được làm sạch trước khi xuất."
 }

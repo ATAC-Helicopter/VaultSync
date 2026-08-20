@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "Backup-Speicherort",
   "Backups.Verification.FailedForProject": "Die Sicherungsüberprüfung für {0} ist fehlgeschlagen. Die Sicherung ist möglicherweise unvollständig oder beschädigt.",
   "Backups.Restore.RestoringProject": "{0} wird wiederhergestellt...",
-  "Destinations.Probe.MountDeferred": "Nicht eingebunden. VaultSync fordert den Zugriff an, wenn eine Sicherung oder ein ausdrücklicher Zieltest dieses Ziel benötigt."
+  "Destinations.Probe.MountDeferred": "Nicht eingebunden. VaultSync fordert den Zugriff an, wenn eine Sicherung oder ein ausdrücklicher Zieltest dieses Ziel benötigt.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "Supportpaket prüfen",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "Prüfen Sie jede erzeugte Datei. Pfade, Anmeldedaten, Token und Geheimnisse werden entfernt oder pseudonymisiert. Optionale Bereiche können ausgeschlossen werden.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "Bereinigte Diagnose einschließen",
+  "Settings.Advanced.SupportBundle.Telemetry": "Anonymisierte lokale Telemetrie einschließen",
+  "Settings.Advanced.SupportBundle.Size": "Maximale unkomprimierte Größe: {0:0.0} MB. Dateiinhalte werden vor dem Export bereinigt."
 }
