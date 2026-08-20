@@ -197,6 +197,7 @@ public partial class ProjectsViewModel : ViewModelBase
     public bool HasProjects => Projects.Count > 0;
     public bool HasProjectFolders => ProjectFolders.Count > 0;
     public bool HasUngroupedProjects => UngroupedProjects.Count > 0;
+    public bool ShowUngroupedSectionHeader => HasProjectFolders && HasUngroupedProjects;
     public bool ShowProjectsEmptyState => !HasProjects;
     public bool HasSelectedProject => SelectedProject is not null;
     public bool ShowSelectedProjectEmptyState => !HasSelectedProject;

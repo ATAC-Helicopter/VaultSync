@@ -34,6 +34,10 @@ public sealed class ProjectFolderViewModelTests
 
         Assert.Single(folder.Projects);
         Assert.Equal(2, folder.ProjectCount);
+        Assert.Equal(1, folder.VisibleProjectCount);
+        Assert.Equal(1, folder.HiddenProjectCount);
+        Assert.True(folder.HasHiddenProjects);
+        Assert.Equal("1 / 2", folder.VisibleProjectCountLabel);
         Assert.Equal(2, folder.RegisteredProjectCount);
         Assert.Equal(1, folder.AttentionProjectCount);
         Assert.Equal(1, folder.PausedProjectCount);
@@ -43,6 +47,16 @@ public sealed class ProjectFolderViewModelTests
         folder.IsRenaming = true;
 
         Assert.False(folder.ShowBatchActions);
+    }
+
+    [Fact]
+    public void FolderStartsCollapsedToKeepTheProjectListScannable()
+    {
+        var folder = new ProjectFolderViewModel(
+            new ProjectGroup { Id = "work", Name = "Work" },
+            "Ungrouped");
+
+        Assert.False(folder.IsExpanded);
     }
 
     [Fact]
