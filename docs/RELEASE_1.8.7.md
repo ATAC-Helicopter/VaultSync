@@ -118,6 +118,11 @@ complete and stable enough for broader qualification.
   and timestamp context. The latest decision can restore the previous local
   state until the next portable repository write supersedes that undo record;
   all six undo strings ship in every maintained locale (`VS-1879`).
+- Reviewed metadata decisions and undo now use one core workflow rather than
+  Settings-only logic. A file-backed two-installation qualification proves
+  independent convergence, overlapping-conflict preservation, restart
+  durability, repeat-import suppression, bounded undo, and convergence after
+  the next write (`VS-1879`).
 - The running build now exposes one schema-versioned identity in Settings,
   startup diagnostics, support bundles, recovery reports, and
   `vaultsync --version --json`. Release artifacts stamp their channel, commit,
@@ -187,14 +192,9 @@ Dependabot can therefore continue to report the old default-branch runtime
 until promotion; that is a branch-state difference, not an unaddressed release-
 branch package.
 
-### In progress next
-
-1. Complete the two-machine, disconnect, clock-skew, and NAS/SMB qualification
-   matrix for versioned metadata merging.
-
 ### Still planned
 
-- complete the real two-machine/NAS, upgrade, cross-platform,
+- complete the physical NAS/SMB, upgrade, cross-platform,
   theme, accessibility, static-analysis, and dependency qualification matrix.
 
 ## Safety contracts

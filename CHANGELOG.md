@@ -20,6 +20,7 @@
 - [VS-1877] Made unavailable-destination metadata queues fail closed: queued metadata can initialize an empty destination once, while an existing destination is preserved for explicit merge review.
 - [VS-1879] Made conflict decisions preserve non-overlapping remote edits, record source and base revisions, and advance the durable merge base after either resolution.
 - [VS-1879] Guarded every portable project writer with compare-and-swap revisions and upgraded project records to schema version 3 with base revision, per-field writer/timestamp provenance, and safe resolution evidence.
+- [VS-1879] Moved reviewed conflict decisions and bounded undo into a shared core workflow, with a file-backed two-installation qualification covering independent convergence, overlapping edits, restart persistence, durable resolution, repeat imports, undo, and subsequent cross-client convergence.
 - [VS-1880] Consolidated metadata export orchestration, SMB mount parsing, mounted-share validation, theme color normalization, and contrast calculations behind focused shared primitives with regression coverage.
 - [VS-1880] Unified Windows Robocopy exclusions with the shared preset resolver.
 - [VS-1876] Documented repository schemas and records, portable and machine-local fields, encryption descriptors, legacy compatibility, leases, interrupted-write rollback, clean-machine inspection, emergency restore, checksums, SBOMs, provenance, and known unsigned-package limitations against executable tests.

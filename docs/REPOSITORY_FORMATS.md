@@ -83,7 +83,9 @@ per-field writer/revision/timestamp provenance, and the latest safe resolution
 record. Conflict review exposes Base/local/remote values with revision, writer,
 and timestamp context. Resolution records retain the previous local state and
 remain undoable until the next portable repository write marks them superseded.
-Final two-machine qualification remains a release gate.
+The file-backed two-installation qualification covers convergence, conflicting
+edits, restart persistence, durable decisions, repeat imports, undo, and later
+convergence. A physical NAS/SMB smoke test remains a release-environment gate.
 
 The separate coordination database currently records one active lease with
 owner, diagnostic host label, process, operation, nonce, application version,
