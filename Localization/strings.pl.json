@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Zestaw lokalizacji kopii zapasowej: {0}",
   "Settings.BackupLocation.Title": "Lokalizacja kopii zapasowej",
   "Backups.Verification.FailedForProject": "Weryfikacja kopii zapasowej nie powiodła się dla {0}. Kopia zapasowa może być niekompletna lub uszkodzona.",
-  "Backups.Restore.RestoringProject": "Przywracam {0}..."
+  "Backups.Restore.RestoringProject": "Przywracam {0}...",
+  "Destinations.Probe.MountDeferred": "Nie zamontowano. VaultSync poprosi o dostęp, gdy kopia zapasowa lub jawny test miejsca docelowego będzie go wymagać."
 }

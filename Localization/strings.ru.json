@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Установлено местоположение резервной копии: {0}",
   "Settings.BackupLocation.Title": "Расположение резервной копии",
   "Backups.Verification.FailedForProject": "Не удалось выполнить резервную проверку для {0}. Резервная копия может быть неполной или поврежденной.",
-  "Backups.Restore.RestoringProject": "Восстановление {0}..."
+  "Backups.Restore.RestoringProject": "Восстановление {0}...",
+  "Destinations.Probe.MountDeferred": "Не подключено. VaultSync запросит доступ, когда это расположение понадобится для резервного копирования или явной проверки."
 }

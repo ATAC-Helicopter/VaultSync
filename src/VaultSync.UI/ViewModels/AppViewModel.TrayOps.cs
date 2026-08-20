@@ -366,43 +366,6 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private void CleanupUnusedCredentialSecretsOnStartup()
-        {
-            try
-            {
-                var activeKeyRefs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                AppConfig cfg = _config;
-                if (!string.IsNullOrWhiteSpace(cfg.Backups.Encryption.KeyRef))
-                    activeKeyRefs.Add(cfg.Backups.Encryption.KeyRef.Trim());
-
-                if (cfg.Network.Credentials is { Count: > 0 })
-                {
-                    foreach (NetworkCredentialProfile cred in cfg.Network.Credentials)
-                    {
-                        if (!string.IsNullOrWhiteSpace(cred.KeyRef))
-                            activeKeyRefs.Add(cred.KeyRef.Trim());
-                    }
-                }
-
-                foreach (Project project in _repo.GetAllProjects())
-                {
-                    if (!string.IsNullOrWhiteSpace(project.EncryptionKeyRef))
-                        activeKeyRefs.Add(project.EncryptionKeyRef.Trim());
-                }
-
-                int removed = _credentialVault.CleanupUnusedSecrets(activeKeyRefs, TimeSpan.FromDays(30));
-                if (removed > 0)
-                {
-                    Console.WriteLine($"[Security] Removed {removed} stale credential vault entries at startup.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[Security] Credential vault cleanup failed: {ex.Message}");
-            }
-        }
-
         private BackupFolderOpenPreparation PrepareBackupFolderOpen(int backupId)
         {
             Backup? backup = _repo.GetBackupById(backupId);

@@ -211,6 +211,32 @@ public sealed class NetworkMountServiceTests
     }
 
     [Fact]
+    public void PrepareDestination_PassiveProbeDoesNotReadCredentialOrMount()
+    {
+        int readCount = 0;
+        var service = new NetworkMountService(_ =>
+        {
+            readCount++;
+            return "secret";
+        });
+        var destination = new BackupDestination
+        {
+            Path = "smb://example.invalid/share",
+            Active = true,
+            AutoMount = true
+        };
+
+        DestinationResolution result = service.PrepareDestination(
+            destination,
+            new NetworkCredentialProfile { Name = "test", Username = "user", KeyRef = "cred-test" },
+            allowAutoMount: false);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(NetworkMountService.PassiveMountDeferredMessage, result.Message);
+        Assert.Equal(0, readCount);
+    }
+
+    [Fact]
     public void PrepareDestination_DoesNotReadCredentialForUnsupportedMacNfsAutoMount()
     {
         if (!OperatingSystem.IsMacOS())

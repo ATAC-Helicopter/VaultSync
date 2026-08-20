@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Backup location set: {0}",
   "Settings.BackupLocation.Title": "Backup location",
   "Backups.Verification.FailedForProject": "Backup verification failed for {0}. The backup may be incomplete or corrupted.",
-  "Backups.Restore.RestoringProject": "Restoring {0}..."
+  "Backups.Restore.RestoringProject": "Restoring {0}...",
+  "Destinations.Probe.MountDeferred": "Not mounted. VaultSync will request access when a backup or explicit destination test needs this destination."
 }

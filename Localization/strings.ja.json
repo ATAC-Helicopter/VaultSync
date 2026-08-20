@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "バックアップ場所セット: {0}",
   "Settings.BackupLocation.Title": "バックアップの場所",
   "Backups.Verification.FailedForProject": "{0} のバックアップ検証に失敗しました。バックアップが不完全か破損している可能性があります。",
-  "Backups.Restore.RestoringProject": "{0} を復元しています..."
+  "Backups.Restore.RestoringProject": "{0} を復元しています...",
+  "Destinations.Probe.MountDeferred": "マウントされていません。バックアップまたは明示的な保存先テストで必要になったときに VaultSync がアクセスを要求します。"
 }

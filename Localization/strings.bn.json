@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "ব্যাকআপ অবস্থান সেট: {0}",
   "Settings.BackupLocation.Title": "ব্যাকআপ অবস্থান",
   "Backups.Verification.FailedForProject": "{0} এর জন্য ব্যাকআপ যাচাইকরণ ব্যর্থ হয়েছে৷ ব্যাকআপ অসম্পূর্ণ বা দূষিত হতে পারে।",
-  "Backups.Restore.RestoringProject": "পুনরুদ্ধার করা হচ্ছে {0}..."
+  "Backups.Restore.RestoringProject": "পুনরুদ্ধার করা হচ্ছে {0}...",
+  "Destinations.Probe.MountDeferred": "মাউন্ট করা নেই। ব্যাকআপ বা স্পষ্ট গন্তব্য পরীক্ষার সময় প্রয়োজন হলে VaultSync অ্যাক্সেস চাইবে।"
 }

@@ -279,16 +279,6 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                CleanupUnusedCredentialSecretsOnStartup();
-                RecordStartupPhase("cleanup-unused-secrets-complete");
-            }
-            catch (Exception ex)
-            {
-                DiagnosticsLogger.Record($"Startup credential cleanup failed: {ex.GetType().Name} - {ex.Message}");
-            }
-
-            try
-            {
                 await Task.Run(() => AutoStartService.SetLaunchOnLogin(_config.Behavior.LaunchOnLogin)).ConfigureAwait(false);
                 RecordStartupPhase("launch-on-login-synced");
             }

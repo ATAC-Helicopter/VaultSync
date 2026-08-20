@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Đã đặt vị trí sao lưu: {0}",
   "Settings.BackupLocation.Title": "Vị trí dự phòng",
   "Backups.Verification.FailedForProject": "Xác minh bản sao lưu cho {0} không thành công. Bản sao lưu có thể không đầy đủ hoặc bị hỏng.",
-  "Backups.Restore.RestoringProject": "Đang khôi phục {0}..."
+  "Backups.Restore.RestoringProject": "Đang khôi phục {0}...",
+  "Destinations.Probe.MountDeferred": "Chưa được gắn. VaultSync sẽ yêu cầu quyền truy cập khi bản sao lưu hoặc phép kiểm tra đích rõ ràng cần đến đích này."
 }

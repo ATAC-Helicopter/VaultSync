@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "تعيين موقع النسخ الاحتياطي: {0}",
   "Settings.BackupLocation.Title": "موقع النسخ الاحتياطي",
   "Backups.Verification.FailedForProject": "فشل التحقق من النسخ الاحتياطي لـ {0}. قد تكون النسخة الاحتياطية غير كاملة أو معطوبة.",
-  "Backups.Restore.RestoringProject": "جارٍ استعادة {0}..."
+  "Backups.Restore.RestoringProject": "جارٍ استعادة {0}...",
+  "Destinations.Probe.MountDeferred": "غير مُثبّت. سيطلب VaultSync الوصول عندما تحتاج نسخة احتياطية أو عملية اختبار صريحة إلى هذه الوجهة."
 }

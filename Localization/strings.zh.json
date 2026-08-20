@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "备份位置设置：{0}",
   "Settings.BackupLocation.Title": "备份位置",
   "Backups.Verification.FailedForProject": "{0} 的备份验证失败。备份可能不完整或已损坏。",
-  "Backups.Restore.RestoringProject": "正在恢复{0}..."
+  "Backups.Restore.RestoringProject": "正在恢复{0}...",
+  "Destinations.Probe.MountDeferred": "尚未挂载。当备份或明确的目标测试需要此目标时，VaultSync 将请求访问权限。"
 }
