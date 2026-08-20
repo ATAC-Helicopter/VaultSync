@@ -184,7 +184,7 @@ jobs:
         run: dotnet restore VaultSync.sln
 
       - name: Build
-        run: dotnet build VaultSync.sln --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+        run: dotnet build VaultSync.sln --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false -m:1
 
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build -warnaserror -p:UseSharedCompilation=false
