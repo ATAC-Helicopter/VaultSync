@@ -1,6 +1,8 @@
 # Disaster recovery in VaultSync
 
-VaultSync 1.8.4 adds local, explainable disaster-recovery checks. It does not upload backup metadata, contact a hosted service, or claim that a backup is recoverable without examining it.
+VaultSync provides local, explainable disaster-recovery checks. It does not
+upload backup metadata, contact a hosted service, or claim that a backup is
+recoverable without examining it.
 
 ![Recovery readiness, coverage, recommendations, and project status](images/Recovery_Readiness.png)
 
@@ -81,3 +83,26 @@ Drill history contains local database IDs, timestamps, status, counts, and human
 - Export the Recovery Evidence Package, validate `SHA256SUMS`, and confirm its
   report and JSON include 3-2-1, protected-point, per-project, and proof-evidence
   details without raw local paths.
+
+## Emergency recovery on another machine
+
+1. Stop VaultSync writers that can reach the destination and make a byte-for-byte
+   copy of the repository, including `.vaultsync/meta/` and SQLite sidecars.
+2. Install the same or a newer VaultSync version that supports the repository
+   schema. A future/unknown schema must not be downgraded or guessed.
+3. Configure the copied destination locally; do not import another machine's
+   full application database or credential store.
+4. Preview portable metadata. Review local root-path mapping, destination
+   mapping, tombstones, conflicts, and encrypted backups before applying.
+5. Restore selected content to a new empty directory and compare it before
+   replacing working files.
+
+A machine-local password/keychain reference is intentionally absent from the
+repository, so encrypted recovery requires the user to provide or configure the
+credential on the recovery machine. A valid writer lease allows read-only
+inspection only. An expired lease is not automatic permission to overwrite it;
+use explicit stale takeover after confirming the previous writer is stopped.
+
+For raw layout, version compatibility, interrupted-write handling, and manual
+read-only inspection, see [Repository formats](REPOSITORY_FORMATS.md). For the
+lease and merge rules, see [Cross-machine safety](CROSS_MACHINE_SAFETY.md).

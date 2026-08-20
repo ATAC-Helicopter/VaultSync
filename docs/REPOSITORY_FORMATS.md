@@ -1,10 +1,9 @@
 # VaultSync Repository Formats and Recovery Boundary
 
-This document records the current on-disk contracts and the compatibility work
-planned for VaultSync 1.8.7. Sections labeled **Current** describe implemented
-1.8.6-compatible behavior. Sections labeled **Planned for 1.8.7** are design
-contracts and must not be treated as available until their implementation and
-tests land.
+This document records the on-disk contracts implemented for VaultSync 1.8.7.
+These contracts remain unreleased until 1.8.7 reaches `Stable`; the shipped
+1.8.6 client does not understand repository leases or schema-version-3 merge
+provenance.
 
 ## Storage map
 
@@ -56,9 +55,23 @@ destination configured locally.
   exact base revision, per-field writer/revision/timestamp provenance, and safe
   resolution evidence. Version-1 rows remain readable but have no trustworthy
   per-record writer; version-2 rows lack a portable base and field provenance.
-  Both therefore use conservative conflict review until imported.
+Both therefore use conservative conflict review until imported.
 - Process-local semaphores serialize one VaultSync process only and do not
   protect a repository from another machine.
+
+### Portability boundary by field
+
+| Record | Portable | Machine-local or advisory |
+|---|---|---|
+| Project | external id, name, preset, creation/update times, portable settings, revision/base/provenance/resolution | root path is a hint and must resolve locally; encryption key reference is never exported |
+| Snapshot | external/project ids, time, counts, sizes, diff summary | no source file contents or local database id |
+| Backup | external/project/snapshot ids, time, type/mode, size, relative payload path, protection flag, encryption descriptor | destination alias and source-machine name are diagnostic hints, not authority |
+| Tombstone | entity type/id, deletion time, origin installation id | deletion remains previewable and cannot authorize removal of unrelated payloads |
+
+`kdf_params_json` is a non-secret format descriptor. It may identify the
+algorithm and parameters needed to recognize encrypted backup content; it must
+not contain a password, derived key, operating-system credential reference, or
+recovery secret.
 
 ## Repository coordination — Implemented for 1.8.7
 
@@ -124,6 +137,82 @@ When VaultSync cannot open a destination normally:
 The portable metadata store is an inventory and recovery aid; backup payloads
 remain the source of recoverable bytes. A lost or corrupt metadata database must
 not be “repaired” by deleting backup payloads.
+
+### Clean-machine identification
+
+On a clean machine, treat a destination as a VaultSync repository only when its
+root contains `.vaultsync/meta/vaultsync.meta.db`. Preserve the entire
+`.vaultsync/meta/` directory, including SQLite sidecars, before inspection.
+Open the copy read-only and verify:
+
+1. `meta_info` contains exactly one supported `schema_version` (`1`, `2`, or
+   `3`; 1.8.7 writes `3`). A higher value must fail closed.
+2. Every backup has a relative `path_rel`; reject rooted paths and traversal
+   outside the copied destination.
+3. Referenced payloads exist before presenting them as usable recovery points.
+4. An encrypted record has a non-secret descriptor, but assume its key is
+   unavailable until the receiving machine supplies an authorized local
+   credential.
+5. A valid `writer.lease.db` record means inspection only. Do not edit, delete,
+   or replace it. An expired record still requires explicit takeover in
+   VaultSync and is retained as evidence.
+
+If metadata cannot be read, inventory the backup payloads from the preserved
+copy and restore to a new directory. Never restore over the only source and
+never invent repository rows merely to make the UI accept a payload.
+
+### Interrupted writes and rollback
+
+- Keep `vaultsync.meta.db`, `writer.lease.db`, and their `-wal`/`-shm` files
+  together. Removing a sidecar can discard committed or recoverable state.
+- A transaction that did not commit is rolled back by SQLite. Reopen a copied
+  repository through VaultSync; do not replay individual SQL statements.
+- If a writer disappears, wait for conservative lease expiry and use the
+  explicit stale-takeover review. Never clear a lease while the old client may
+  still be running.
+- If queued offline metadata meets a destination that already has metadata,
+  preserve both stores and use merge review. VaultSync deliberately refuses a
+  whole-database overwrite.
+- Keep local / Accept imported resolutions can be undone only until the next
+  portable write supersedes their recorded base. After that boundary, recover
+  from the preserved pre-change copy rather than forcing revisions backward.
+
+## Executable contract references
+
+The maintained behavior is exercised by:
+
+- `tests/VaultSync.Core.Tests/MetadataSyncTests.cs` — schemas 1–3, migration,
+  preview, tombstones, guarded writes, merge bases, conflict resolution, and
+  unknown-schema rejection;
+- `tests/VaultSync.Core.Tests/RepositoryLeaseServiceTests.cs` — acquisition,
+  heartbeat, read-only contention, expiry, takeover, nonce safety, and evidence;
+- `tests/VaultSync.Core.Tests/RecoveryReportExporterTests.cs` — portable,
+  redacted, checksummed recovery evidence;
+- `tests/VaultSync.Core.Tests/ReleaseManifestVerifierTests.cs` and
+  `tests/scripts/test_release_manifest.py` — release-manifest schema and exact
+  artifact verification;
+- `tests/scripts/test_release_sbom.py` — package/SBOM binding and offline
+  validation.
+
+The authoritative implementations are `MetadataStore.CurrentSchemaVersion`,
+`RepositoryLeaseService`, the release-manifest v1 JSON schema, and the evidence
+package schema. Documentation must change in the same PR as any of those
+contracts.
+
+## Official release validation on a clean machine
+
+Download a package and `vaultsync-release-manifest.json` from the matching tag
+on the official GitHub Releases page. Validate the manifest and colocated
+assets with `scripts/release_manifest.py validate`, then verify the package's
+SHA-256. When provenance is required, use `gh attestation verify`; an offline
+machine additionally needs the downloaded attestation bundle and a recently
+captured trusted-root snapshot. Exact commands and limitations are in
+[Releasing](RELEASING.md#offline-checksum-verification).
+
+Direct packages are currently unsigned and macOS builds are not notarized.
+Checksums, SBOMs, and GitHub provenance establish byte identity and workflow
+origin; they do not replace platform code signing, prove the software harmless,
+or reveal trust-root revocations that happened after an offline snapshot.
 
 ## Change discipline
 
