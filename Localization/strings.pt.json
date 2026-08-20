@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Conjunto de local de backup: {0}",
   "Settings.BackupLocation.Title": "Local de backup",
   "Backups.Verification.FailedForProject": "A verificação de backup falhou para {0}. O backup pode estar incompleto ou corrompido.",
-  "Backups.Restore.RestoringProject": "Restaurando {0}..."
+  "Backups.Restore.RestoringProject": "Restaurando {0}...",
+  "Destinations.Probe.MountDeferred": "Não montado. O VaultSync solicitará acesso quando uma cópia de segurança ou um teste explícito precisar deste destino."
 }

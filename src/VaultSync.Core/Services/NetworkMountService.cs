@@ -11,6 +11,8 @@ namespace VaultSync.Core.Services;
 public sealed class NetworkMountService
 {
     private const string SmbScheme = "smb://";
+    public const string PassiveMountDeferredMessage =
+        "Not mounted. VaultSync will request access when a backup or explicit destination test needs this destination.";
 
     private sealed record MacMountEntry(string Source, string MountPoint, string RawLine);
 
@@ -32,7 +34,10 @@ public sealed class NetworkMountService
         _passwordResolver = passwordResolver ?? throw new ArgumentNullException(nameof(passwordResolver));
     }
 
-    public DestinationResolution PrepareDestination(BackupDestination dest, NetworkCredentialProfile? profile)
+    public DestinationResolution PrepareDestination(
+        BackupDestination dest,
+        NetworkCredentialProfile? profile,
+        bool allowAutoMount = true)
     {
         string alias = DisplayName(dest);
         Log($"PrepareDestination: alias='{alias}', path='{dest.Path}', preMounted={dest.PreMounted}, autoMount={dest.AutoMount}, autoUnmount={dest.AutoUnmount}");
@@ -71,6 +76,12 @@ public sealed class NetworkMountService
 
         Log($"Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
 
+        // Background health/maintenance work must never unlock a credential store
+        // or establish a new connection. macOS gets one extra chance below to
+        // reuse an already-mounted SMB share without reading the credential.
+        if (!allowAutoMount && !OperatingSystem.IsMacOS())
+            return DestinationResolution.CreateFailure(dest, PassiveMountDeferredMessage);
+
         if (OperatingSystem.IsWindows())
         {
             string? password = ResolvePassword(profile);
@@ -86,7 +97,7 @@ public sealed class NetworkMountService
                     "NFS auto-mount is not supported on macOS. Pre-mount the share and use the local mount path with Auto-mount disabled.");
             }
 
-            return MountMacShare(dest, normalizedPath, profile);
+            return MountMacShare(dest, normalizedPath, profile, allowAutoMount);
         }
 
         return DestinationResolution.CreateFailure(dest, "Auto-mount is only supported on Windows and macOS.");
@@ -316,7 +327,8 @@ public sealed class NetworkMountService
     private DestinationResolution MountMacShare(
         BackupDestination dest,
         string normalizedPath,
-        NetworkCredentialProfile? profile)
+        NetworkCredentialProfile? profile,
+        bool allowAutoMount)
     {
         if (!TryParseShareWithSubpath(normalizedPath, out string shareHost, out string shareName, out string shareSubPath))
         {
@@ -330,6 +342,9 @@ public sealed class NetworkMountService
         {
             return CreateMacMountResolution(dest, existingMount, shareSubPath, mountedByUs: false);
         }
+
+        if (!allowAutoMount)
+            return DestinationResolution.CreateFailure(dest, PassiveMountDeferredMessage);
 
         // Only unlock the native credential when a new mount is actually needed.
         // Existing SMB mounts remain usable after login without a Keychain prompt.

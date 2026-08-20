@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "बैकअप स्थान सेट: {0}",
   "Settings.BackupLocation.Title": "बैकअप स्थान",
   "Backups.Verification.FailedForProject": "{0} के लिए बैकअप सत्यापन विफल रहा। बैकअप अधूरा या दूषित हो सकता है.",
-  "Backups.Restore.RestoringProject": "{0} पुनर्स्थापित किया जा रहा है..."
+  "Backups.Restore.RestoringProject": "{0} पुनर्स्थापित किया जा रहा है...",
+  "Destinations.Probe.MountDeferred": "माउंट नहीं है। बैकअप या स्पष्ट गंतव्य परीक्षण के लिए आवश्यकता होने पर VaultSync पहुँच मांगेगा।"
 }

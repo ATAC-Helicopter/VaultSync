@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Emplacement de sauvegarde défini : {0}",
   "Settings.BackupLocation.Title": "Emplacement de sauvegarde",
   "Backups.Verification.FailedForProject": "La vérification de la sauvegarde a échoué pour {0}. La sauvegarde est peut-être incomplète ou corrompue.",
-  "Backups.Restore.RestoringProject": "Restauration de {0}..."
+  "Backups.Restore.RestoringProject": "Restauration de {0}...",
+  "Destinations.Probe.MountDeferred": "Non monté. VaultSync demandera l’accès lorsqu’une sauvegarde ou un test explicite aura besoin de cette destination."
 }

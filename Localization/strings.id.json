@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Kumpulan lokasi pencadangan: {0}",
   "Settings.BackupLocation.Title": "Lokasi cadangan",
   "Backups.Verification.FailedForProject": "Verifikasi cadangan gagal untuk {0}. Cadangan mungkin tidak lengkap atau rusak.",
-  "Backups.Restore.RestoringProject": "Memulihkan {0}..."
+  "Backups.Restore.RestoringProject": "Memulihkan {0}...",
+  "Destinations.Probe.MountDeferred": "Belum dipasang. VaultSync akan meminta akses saat pencadangan atau pengujian tujuan eksplisit memerlukan tujuan ini."
 }

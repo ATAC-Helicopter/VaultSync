@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Ubicación de copia de seguridad establecida: {0}",
   "Settings.BackupLocation.Title": "Ubicación de la copia de seguridad",
   "Backups.Verification.FailedForProject": "La verificación de la copia de seguridad falló para {0}. La copia de seguridad puede estar incompleta o dañada.",
-  "Backups.Restore.RestoringProject": "Restaurando {0}...."
+  "Backups.Restore.RestoringProject": "Restaurando {0}....",
+  "Destinations.Probe.MountDeferred": "No montado. VaultSync solicitará acceso cuando una copia de seguridad o una prueba explícita necesite este destino."
 }

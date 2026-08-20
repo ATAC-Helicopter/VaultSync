@@ -222,7 +222,10 @@ namespace VaultSync.UI.ViewModels
                         : cfg.Network.Credentials.FirstOrDefault(c =>
                             c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-                    DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
+                    DestinationResolution resolution = _networkMountService.PrepareDestination(
+                        dest,
+                        profile,
+                        allowAutoMount: false);
                     if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         continue;
 
@@ -426,7 +429,10 @@ namespace VaultSync.UI.ViewModels
                         : cfg.Network.Credentials.FirstOrDefault(c =>
                             c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-                    DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
+                    DestinationResolution resolution = _networkMountService.PrepareDestination(
+                        dest,
+                        profile,
+                        allowAutoMount: false);
                     if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         continue;
 

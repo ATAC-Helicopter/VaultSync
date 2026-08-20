@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Sicherungsspeicherortsatz: {0}",
   "Settings.BackupLocation.Title": "Backup-Speicherort",
   "Backups.Verification.FailedForProject": "Die Sicherungsüberprüfung für {0} ist fehlgeschlagen. Die Sicherung ist möglicherweise unvollständig oder beschädigt.",
-  "Backups.Restore.RestoringProject": "{0} wird wiederhergestellt..."
+  "Backups.Restore.RestoringProject": "{0} wird wiederhergestellt...",
+  "Destinations.Probe.MountDeferred": "Nicht eingebunden. VaultSync fordert den Zugriff an, wenn eine Sicherung oder ein ausdrücklicher Zieltest dieses Ziel benötigt."
 }

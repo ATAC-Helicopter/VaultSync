@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Back-uplocatie ingesteld: {0}",
   "Settings.BackupLocation.Title": "Back-uplocatie",
   "Backups.Verification.FailedForProject": "Back-upverificatie mislukt voor {0}. De back-up is mogelijk onvolledig of beschadigd.",
-  "Backups.Restore.RestoringProject": "{0} herstellen..."
+  "Backups.Restore.RestoringProject": "{0} herstellen...",
+  "Destinations.Probe.MountDeferred": "Niet gekoppeld. VaultSync vraagt toegang wanneer een back-up of expliciete bestemmingstest deze bestemming nodig heeft."
 }

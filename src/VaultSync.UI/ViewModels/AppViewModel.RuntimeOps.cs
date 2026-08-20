@@ -130,7 +130,8 @@ namespace VaultSync.UI.ViewModels
                         continue;
                     }
 
-                    DestinationTestResult result = await Task.Run(() => TryTestDestination(dest, cfg));
+                    DestinationTestResult result = await Task.Run(() =>
+                        TryTestDestination(dest, cfg, allowAutoMount: false));
                     UpdateDestinationProbeSummary(dest, result);
 
                     if (result.Reachable && (previous is null || !previous.Reachable))
@@ -138,7 +139,7 @@ namespace VaultSync.UI.ViewModels
                         TryImportMetadataForDestination(cfg, dest, result.EffectivePath);
                     }
 
-                    if (!result.Reachable && (previous is null || previous.Reachable))
+                    if (!result.Reachable && !result.IsDeferred && (previous is null || previous.Reachable))
                     {
                         string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
                         string message = string.IsNullOrWhiteSpace(result.Message)
@@ -173,7 +174,9 @@ namespace VaultSync.UI.ViewModels
 
             BackupsViewModel.SeverityStatus severity = result.Reachable
                 ? (result.Writable ? BackupsViewModel.SeverityStatus.Success : BackupsViewModel.SeverityStatus.Warning)
-                : BackupsViewModel.SeverityStatus.Error;
+                : result.IsDeferred
+                    ? BackupsViewModel.SeverityStatus.Warning
+                    : BackupsViewModel.SeverityStatus.Error;
 
             _destinationProbeSummaries[id] = new DestinationProbeSummary(
                 id,
@@ -665,7 +668,10 @@ namespace VaultSync.UI.ViewModels
             return null;
         }
 
-        private DestinationTestResult TryTestDestination(BackupDestination dest, AppConfig cfg)
+        private DestinationTestResult TryTestDestination(
+            BackupDestination dest,
+            AppConfig cfg,
+            bool allowAutoMount = true)
         {
             if (string.IsNullOrWhiteSpace(dest.Path))
                 return new DestinationTestResult(false, false, string.Empty, LStatic("Destinations.Test.EmptyPath", "Destination path is empty."));
@@ -676,11 +682,27 @@ namespace VaultSync.UI.ViewModels
                 : cfg.Network.Credentials.FirstOrDefault(c =>
                     c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-            DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
+            DestinationResolution resolution = _networkMountService.PrepareDestination(
+                dest,
+                profile,
+                allowAutoMount);
             if (!resolution.IsSuccess)
             {
                 DiagnosticsLogger.Record($"Destination test failed: '{dest.Alias ?? dest.Path}' - {resolution.Message}");
-                return new DestinationTestResult(false, false, resolution.EffectivePath ?? string.Empty, resolution.Message);
+                bool isDeferred = string.Equals(
+                    resolution.Message,
+                    NetworkMountService.PassiveMountDeferredMessage,
+                    StringComparison.Ordinal);
+                return new DestinationTestResult(
+                    false,
+                    false,
+                    resolution.EffectivePath ?? string.Empty,
+                    isDeferred
+                        ? LStatic(
+                            "Destinations.Probe.MountDeferred",
+                            "Not mounted. VaultSync will request access when a backup or explicit destination test needs this destination.")
+                        : resolution.Message,
+                    isDeferred);
             }
 
             string testTarget = resolution.EffectivePath;
@@ -728,7 +750,12 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private sealed record DestinationTestResult(bool Reachable, bool Writable, string EffectivePath, string Message);
+        private sealed record DestinationTestResult(
+            bool Reachable,
+            bool Writable,
+            string EffectivePath,
+            string Message,
+            bool IsDeferred = false);
 
         private static bool IsLikelyWritableDirectory(string path)
         {

@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Yedekleme konumu grubu: {0}",
   "Settings.BackupLocation.Title": "Yedekleme konumu",
   "Backups.Verification.FailedForProject": "{0} için yedekleme doğrulaması başarısız oldu. Yedekleme eksik veya bozuk olabilir.",
-  "Backups.Restore.RestoringProject": "{0} geri yükleniyor..."
+  "Backups.Restore.RestoringProject": "{0} geri yükleniyor...",
+  "Destinations.Probe.MountDeferred": "Bağlı değil. Bir yedekleme veya açık hedef testi bu hedefe ihtiyaç duyduğunda VaultSync erişim isteyecek."
 }

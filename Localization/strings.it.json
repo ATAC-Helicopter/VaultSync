@@ -1907,5 +1907,6 @@
   "Settings.BackupLocation.Set": "Posizione di backup impostata: {0}",
   "Settings.BackupLocation.Title": "Posizione di backup",
   "Backups.Verification.FailedForProject": "La verifica del backup non è riuscita per {0}. Il backup potrebbe essere incompleto o danneggiato.",
-  "Backups.Restore.RestoringProject": "Ripristino di {0}..."
+  "Backups.Restore.RestoringProject": "Ripristino di {0}...",
+  "Destinations.Probe.MountDeferred": "Non montata. VaultSync richiederà l’accesso quando un backup o un test esplicito avrà bisogno di questa destinazione."
 }
