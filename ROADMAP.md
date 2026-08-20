@@ -503,7 +503,7 @@ after the planned minor train is complete and use explicit beta qualification.
     resolution export followed on 2026-08-17, together with Base/local/remote
     presentation and bounded undo that expires after the next portable write.
     Final two-machine qualification remains before completion.
-- [ ] `VS-1880` `P1` Simplify and standardize shared application code without
+- [x] `VS-1880` `P1` Simplify and standardize shared application code without
   changing user-visible behavior.
   - Scope: consolidate repeated retry, path, serialization, status, dialog,
     lifecycle, and projection logic behind focused tested primitives; decompose
@@ -515,6 +515,12 @@ after the planned minor train is complete and use explicit beta qualification.
     release over release, all remaining duplicated blocks are reviewed and
     justified or tracked, and builds remain warning-free on every supported
     platform.
+  - Completed 2026-08-21: shared metadata-export leases, mount parsing and
+    validation, preset resolution, theme calculations, retry paths, and release
+    utilities replaced repeated implementations with regression-tested
+    primitives. Sonar reports `0.0%` duplication on new code and the branch-wide
+    duplication density fell from the Stable baseline of `2.5%` to `1.9%`;
+    release builds remain warning-free.
 
 ### Confirmed defects entering 1.8.7
 

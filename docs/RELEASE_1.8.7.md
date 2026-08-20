@@ -174,6 +174,12 @@ complete and stable enough for broader qualification.
   and qualified-predecessor metadata. CI rejects drift, an unpublished command
   renders all public outputs deterministically, and the website uses checked-in
   stable metadata with a live GitHub release refresh (`VS-1878`).
+- Shared metadata-export lease orchestration, mount parsing and validation,
+  preset resolution, theme calculations, retry paths, and release utilities now
+  use focused common primitives with regression coverage. Sonar reports no
+  duplication on new code and branch-wide duplication density is `1.9%`, down
+  from `2.5%` on Stable; supported-platform builds remain warning-free
+  (`VS-1880`).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime
@@ -186,13 +192,9 @@ branch package.
    matrix for versioned metadata merging.
 2. Run the release-candidate supply-chain job to qualify its online and offline
    attestation checks against real final packages.
-3. Reduce codebase duplication and oversized orchestration through shared,
-   regression-tested primitives without combining genuinely different platform
-   behavior.
 
 ### Still planned
 
-- finish the bounded shared-infrastructure and duplication review (`VS-1880`);
 - complete the real release-candidate, two-machine/NAS, upgrade, cross-platform,
   theme, accessibility, static-analysis, and dependency qualification matrix.
 
