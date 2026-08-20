@@ -52,6 +52,13 @@ internal static class Program
             return;
         }
 
+        if (MacOsLegacyBundleMigrationService.TryMigrateAndRelaunch(AppContext.BaseDirectory))
+        {
+            DiagnosticsLogger.Record("Legacy macOS bundle migration handed control to the canonical application.");
+            DiagnosticsLogger.Shutdown();
+            return;
+        }
+
         _instanceLock = SingleInstanceLock.TryAcquire(
             "VaultSync.UI.SingleInstance",
             "VaultSync.UI.SingleInstance.lock");

@@ -154,8 +154,10 @@ complete and stable enough for broader qualification.
 - macOS launch-on-login now writes to `~/Library/LaunchAgents`, removes the
   erroneous entry under Documents, and avoids launch-time process kickstarts
   (#559). Both architecture-specific DMGs now contain a canonical
-  `/Applications/VaultSync.app` with synchronized bundle metadata. The 1.8.7
-  transition uses the full DMG; future bundle-root patches update and verify
+  `/Applications/VaultSync.app` with synchronized bundle metadata. The exact
+  1.8.6 predecessor receives a one-time architecture-aware bridge patch that
+  stages, signs, verifies, and launches the canonical bundle before retiring
+  the legacy app; older versions use the full DMG. Future bundle-root patches update and verify
   `Info.plist` with the runtime payload (#560, #561).
 
 These changes are not shipped until the release work reaches `Stable`.
