@@ -41,6 +41,8 @@ public sealed class SupportBundleServiceTests
         Assert.DoesNotContain("network-password", json, StringComparison.Ordinal);
         Assert.DoesNotContain("SecretProject", json, StringComparison.Ordinal);
         Assert.DoesNotContain("PrivateShare", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("Private NAS", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-domain", json, StringComparison.Ordinal);
         Assert.Contains("path-", json, StringComparison.Ordinal);
         Assert.Contains("[redacted]", json, StringComparison.Ordinal);
     }
@@ -68,6 +70,22 @@ public sealed class SupportBundleServiceTests
         Assert.DoesNotContain("api-token", sanitized, StringComparison.Ordinal);
         Assert.DoesNotContain("cred-alice-1234", sanitized, StringComparison.Ordinal);
         Assert.Contains("[redacted]", sanitized, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SanitizeText_RemovesConfiguredAliasesAndCredentialProfileNames()
+    {
+        var config = new AppConfig();
+        config.Backups.Destinations.Add(new BackupDestination { Alias = "Family archive" });
+        config.Network.Credentials.Add(new NetworkCredentialProfile { Name = "Home NAS login" });
+
+        string sanitized = SupportBundleService.SanitizeText(
+            "Destination Family archive uses Home NAS login.",
+            config);
+
+        Assert.DoesNotContain("Family archive", sanitized, StringComparison.Ordinal);
+        Assert.DoesNotContain("Home NAS login", sanitized, StringComparison.Ordinal);
+        Assert.Equal(2, sanitized.Split("[redacted]", StringSplitOptions.None).Length - 1);
     }
 
     [Fact]
