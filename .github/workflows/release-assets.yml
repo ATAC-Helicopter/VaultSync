@@ -490,6 +490,10 @@ jobs:
           PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
+          if [[ "$TARGET_VERSION" == "1.8.7" ]]; then
+            echo "macOS 1.8.7 uses a full-DMG transition to the canonical VaultSync.app bundle."
+            exit 0
+          fi
           mkdir -p "patches/v$TARGET_VERSION"
           previous_args=()
           while IFS= read -r base; do
@@ -497,14 +501,14 @@ jobs:
             previous_args+=( --previous "$base" )
           done <<< "$PATCH_BASE_VERSIONS"
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish" \
+            --base-dir "dist/macos/staging/arm64/VaultSync.app" \
             --out-zip "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.zip" \
             --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json" \
             --platform macos \
             "${previous_args[@]}" \
             --target "$TARGET_VERSION"
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish" \
+            --base-dir "dist/macos/staging/x64/VaultSync.app" \
             --out-zip "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.zip" \
             --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json" \
             --platform macos \
@@ -516,14 +520,31 @@ jobs:
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           set -euo pipefail
+          for arch in arm64 x64; do
+            app="dist/macos/staging/$arch/VaultSync.app"
+            [[ -f "$app/Contents/Info.plist" ]] || {
+              echo "Missing canonical app bundle for $arch" >&2
+              exit 1
+            }
+            [[ "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" == "com.vaultsync.app" ]]
+            [[ "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" == "$TARGET_VERSION" ]]
+            [[ "$(plutil -extract CFBundleVersion raw "$app/Contents/Info.plist")" == "$TARGET_VERSION" ]]
+            [[ "$(readlink "dist/macos/staging/$arch/Applications")" == "/Applications" ]]
+            codesign --verify --deep --strict "$app"
+            codesign -dv --verbose=4 "$app" 2>&1 | grep -q '^Identifier=com.vaultsync.app$'
+          done
           required=(
             dist/macos/VaultSync-*-macos-apple-silicon.dmg
             dist/macos/VaultSync-*-macos-intel.dmg
-            "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json"
-            "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.zip"
-            "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json"
-            "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.zip"
           )
+          if [[ "$TARGET_VERSION" != "1.8.7" ]]; then
+            required+=(
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json"
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.zip"
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json"
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.zip"
+            )
+          fi
           for pattern in "${required[@]}"; do
             compgen -G "$pattern" >/dev/null || {
               echo "Required release artifact was not produced: $pattern" >&2
@@ -695,6 +716,9 @@ jobs:
           optional_args=()
           if [[ "$INCLUDE_LINUX_PATCHES" == "true" ]]; then
             optional_args+=( --include-linux-patches )
+          fi
+          if [[ "$TARGET_VERSION" == "1.8.7" ]]; then
+            optional_args+=( --omit-macos-patches )
           fi
           python3 scripts/release_manifest.py generate \
             --asset-root release-assets \

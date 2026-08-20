@@ -99,10 +99,21 @@ namespace VaultSync.UI.Infrastructure
 
         private static void SetMacAutoStart(bool enable)
         {
-            string home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            string home = ResolveMacUserHome(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                Environment.GetEnvironmentVariable("HOME"));
+            if (string.IsNullOrWhiteSpace(home))
+                return;
+
             string agentDir = Path.Combine(home, "Library", "LaunchAgents");
             string plistPath = Path.Combine(agentDir, "com.vaultsync.autostart.plist");
             string? uid = GetMacUid();
+            string personal = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            string? legacyPlistPath = string.IsNullOrWhiteSpace(personal)
+                ? null
+                : Path.Combine(personal, "Library", "LaunchAgents", "com.vaultsync.autostart.plist");
+
+            RemoveLegacyMacAutoStart(legacyPlistPath, plistPath, uid);
 
             if (!enable)
             {
@@ -140,15 +151,63 @@ namespace VaultSync.UI.Infrastructure
     <key>RunAtLoad</key><true/>
   </dict>
 </plist>";
-            File.WriteAllText(plistPath, plist);
+            bool plistChanged = !File.Exists(plistPath) ||
+                !string.Equals(File.ReadAllText(plistPath), plist, StringComparison.Ordinal);
+            if (plistChanged)
+                File.WriteAllText(plistPath, plist);
+
             if (string.IsNullOrWhiteSpace(uid))
                 return;
 
-            // Ensure any previous instance is unloaded before reloading the updated plist.
-            TryLaunchCtl($"bootout gui/{uid} \"{plistPath}\"");
-            TryLaunchCtl($"bootstrap gui/{uid} \"{plistPath}\"");
             TryLaunchCtl($"enable gui/{uid}/com.vaultsync.autostart");
-            TryLaunchCtl($"kickstart -k gui/{uid}/com.vaultsync.autostart");
+            if (!plistChanged && TryLaunchCtl($"print gui/{uid}/com.vaultsync.autostart"))
+                return;
+
+            // Reload only when registration is absent or its launch command changed.
+            TryLaunchCtl($"bootout gui/{uid}/com.vaultsync.autostart");
+            TryLaunchCtl($"bootstrap gui/{uid} \"{plistPath}\"");
+        }
+
+        internal static string ResolveMacUserHome(string? userProfile, string? homeEnvironment)
+        {
+            if (!string.IsNullOrWhiteSpace(userProfile))
+                return Path.GetFullPath(userProfile);
+            if (!string.IsNullOrWhiteSpace(homeEnvironment))
+                return Path.GetFullPath(homeEnvironment);
+            return string.Empty;
+        }
+
+        private static void RemoveLegacyMacAutoStart(
+            string? legacyPlistPath,
+            string canonicalPlistPath,
+            string? uid)
+        {
+            if (string.IsNullOrWhiteSpace(legacyPlistPath) ||
+                string.Equals(
+                    Path.GetFullPath(legacyPlistPath),
+                    Path.GetFullPath(canonicalPlistPath),
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (!File.Exists(legacyPlistPath))
+                return;
+
+            if (!string.IsNullOrWhiteSpace(uid))
+                TryLaunchCtl($"bootout gui/{uid} \"{legacyPlistPath}\"");
+
+            File.Delete(legacyPlistPath);
+            DeleteDirectoryIfEmpty(Path.GetDirectoryName(legacyPlistPath));
+        }
+
+        private static void DeleteDirectoryIfEmpty(string? directory)
+        {
+            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+                return;
+
+            if (!Directory.EnumerateFileSystemEntries(directory).Any())
+                Directory.Delete(directory);
         }
 
         private static string? GetMacUid()
@@ -182,7 +241,7 @@ namespace VaultSync.UI.Infrastructure
             }
         }
 
-        private static void TryLaunchCtl(string arguments)
+        private static bool TryLaunchCtl(string arguments)
         {
             try
             {
@@ -190,16 +249,21 @@ namespace VaultSync.UI.Infrastructure
                 {
                     FileName = "launchctl",
                     Arguments = arguments,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
+                    RedirectStandardOutput = false,
+                    RedirectStandardError = false,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 });
-                proc?.WaitForExit(3000);
+                if (proc is null)
+                    return false;
+
+                proc.WaitForExit(3000);
+                return proc.HasExited && proc.ExitCode == 0;
             }
             catch
             {
                 // Swallow errors; LaunchAgent will still load on next login.
+                return false;
             }
         }
 

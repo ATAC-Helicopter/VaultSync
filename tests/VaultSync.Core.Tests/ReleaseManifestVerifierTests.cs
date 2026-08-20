@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -168,7 +169,15 @@ public sealed class ReleaseManifestVerifierTests
         if (OperatingSystem.IsWindows())
             Assert.EndsWith(".exe", installer.InstallerName, StringComparison.OrdinalIgnoreCase);
         else if (OperatingSystem.IsMacOS())
+        {
             Assert.EndsWith(".dmg", installer.InstallerName, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(
+                RuntimeInformation.OSArchitecture == Architecture.Arm64
+                    ? "macos-apple-silicon"
+                    : "macos-intel",
+                installer.InstallerName,
+                StringComparison.OrdinalIgnoreCase);
+        }
         else
             Assert.Contains(
                 s_linuxInstallerExtensions,
@@ -324,7 +333,8 @@ public sealed class ReleaseManifestVerifierTests
         }
 
         assets.Add(CreateAsset("VaultSync-1.8.7-setup.exe", 30));
-        assets.Add(CreateAsset("VaultSync-1.8.7-macos.dmg", 30));
+        assets.Add(CreateAsset("VaultSync-1.8.7-macos-apple-silicon.dmg", 30));
+        assets.Add(CreateAsset("VaultSync-1.8.7-macos-intel.dmg", 30));
         foreach (string suffix in new[] { "linux-x64", "linux-arm64" })
         {
             assets.Add(CreateAsset($"VaultSync-1.8.7-{suffix}.deb", 30));

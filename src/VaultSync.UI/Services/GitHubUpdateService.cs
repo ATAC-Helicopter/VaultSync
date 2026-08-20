@@ -615,7 +615,14 @@ namespace VaultSync.UI.Services
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
+                string architectureMarker = RuntimeInformation.OSArchitecture == Architecture.Arm64
+                    ? "macos-apple-silicon"
+                    : "macos-intel";
                 asset = assets.FirstOrDefault(a =>
+                    a.Name is not null &&
+                    a.Name.Contains(architectureMarker, StringComparison.OrdinalIgnoreCase) &&
+                    a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase));
+                asset ??= assets.FirstOrDefault(a =>
                     a.Name is not null &&
                     a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase));
             }

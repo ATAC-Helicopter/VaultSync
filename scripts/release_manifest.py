@@ -64,7 +64,12 @@ def classify_asset(name: str) -> tuple[str, str, str]:
     raise ValueError(f"Unexpected release asset: {name}")
 
 
-def expected_asset_keys(*, include_linux_patches: bool, include_store_upload: bool) -> set[tuple[str, str, str]]:
+def expected_asset_keys(
+    *,
+    include_linux_patches: bool,
+    include_store_upload: bool,
+    omit_macos_patches: bool = False,
+) -> set[tuple[str, str, str]]:
     expected = {
         ("windows", "x64", "installer"),
         ("windows", "x64", "patch-manifest"),
@@ -92,6 +97,15 @@ def expected_asset_keys(*, include_linux_patches: bool, include_store_upload: bo
         )
     if include_store_upload:
         expected.add(("windows", "x64", "store-upload"))
+    if omit_macos_patches:
+        expected.difference_update(
+            {
+                ("macos", "arm64", "patch-manifest"),
+                ("macos", "arm64", "patch-archive"),
+                ("macos", "x64", "patch-manifest"),
+                ("macos", "x64", "patch-archive"),
+            }
+        )
     return expected
 
 
@@ -126,8 +140,11 @@ def build_manifest(
     predecessors: list[str],
     include_linux_patches: bool = False,
     include_store_upload: bool = False,
+    omit_macos_patches: bool = False,
 ) -> dict[str, object]:
     validate_release_identity(version, channel, commit, repository, predecessors)
+    if omit_macos_patches and version != "1.8.7":
+        raise ValueError("macOS patch omission is allowed only for the 1.8.7 canonical-bundle transition")
     tag = f"v{version}"
     asset_entries: list[dict[str, object]] = []
     actual_keys: set[tuple[str, str, str]] = set()
@@ -152,6 +169,7 @@ def build_manifest(
     expected = expected_asset_keys(
         include_linux_patches=include_linux_patches,
         include_store_upload=include_store_upload,
+        omit_macos_patches=omit_macos_patches,
     )
     if actual_keys != expected:
         missing = sorted(expected - actual_keys)
@@ -338,6 +356,7 @@ def main() -> int:
     generate.add_argument("--previous", action="append", required=True)
     generate.add_argument("--include-linux-patches", action="store_true")
     generate.add_argument("--include-store-upload", action="store_true")
+    generate.add_argument("--omit-macos-patches", action="store_true")
     validate = subparsers.add_parser("validate")
     validate.add_argument("--manifest", type=Path, required=True)
     validate.add_argument("--asset-root", type=Path)
@@ -361,6 +380,7 @@ def main() -> int:
                 predecessors=args.previous,
                 include_linux_patches=args.include_linux_patches,
                 include_store_upload=args.include_store_upload,
+                omit_macos_patches=args.omit_macos_patches,
             )
             written_path = write_manifest(asset_root, manifest)
             print(f"Wrote {written_path} with {len(manifest['assets'])} assets.")
