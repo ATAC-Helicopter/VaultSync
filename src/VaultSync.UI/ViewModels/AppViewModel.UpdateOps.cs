@@ -460,11 +460,12 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private static bool PatchInstallRequiresInstallerFallback(string installDir)
+        private static bool PatchInstallRequiresInstallerFallback(string runtimeDirectory)
         {
             if (IsEnvFlagEnabled("VAULTSYNC_FORCE_INSTALLER_FALLBACK"))
                 return true;
 
+            string installDir = PatchInstallService.ResolveInstallRoot(runtimeDirectory);
             if (OperatingSystem.IsWindows() || CanWriteInstallDir(installDir))
                 return false;
 
