@@ -323,7 +323,7 @@ namespace VaultSync.UI.Services
 
                 releases.AddRange(pageReleases);
 
-                string? responseEtag = response?.Headers.ETag?.Tag;
+                string? responseEtag = response.Headers.ETag?.Tag;
                 if (!string.IsNullOrWhiteSpace(responseEtag))
                 {
                     lock (s_releaseCacheLock)
