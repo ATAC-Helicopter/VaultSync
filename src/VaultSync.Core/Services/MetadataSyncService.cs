@@ -63,6 +63,24 @@ public sealed class MetadataSyncService
         MetaProject ProjectRecord,
         long ExpectedProjectRevision);
 
+    private sealed class ExportStoreContext(
+        string storeRoot,
+        RepositoryLeaseHandle? deferredLease,
+        RepositoryLeaseHandle? activeLease,
+        MetadataStore? store,
+        MetadataSyncResult? failure) : IDisposable
+    {
+        public string StoreRoot { get; } = storeRoot;
+        public RepositoryLeaseHandle? ActiveLease { get; } = activeLease;
+        public MetadataStore? Store { get; } = store;
+        public MetadataSyncResult? Failure { get; } = failure;
+
+        public static ExportStoreContext Failed(string storeRoot, MetadataSyncResult failure) =>
+            new(storeRoot, null, null, null, failure);
+
+        public void Dispose() => deferredLease?.Dispose();
+    }
+
     private sealed record GuardedProjectWrite(
         MetaProject Record,
         long ExpectedRevision,
@@ -2324,6 +2342,32 @@ public sealed class MetadataSyncService
         string machineId,
         CancellationToken ct = default)
     {
+        return await ExecuteExportWithLeaseAsync(
+                rootPath,
+                appVersion,
+                machineId,
+                "project-metadata-export",
+                "Project export",
+                (destinationLease, useDeferredStore) => ExportProjectToStoreInternal(
+                    rootPath,
+                    projectId,
+                    appVersion,
+                    machineId,
+                    destinationLease,
+                    useDeferredStore),
+                ct)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<MetadataSyncResult> ExecuteExportWithLeaseAsync(
+        string rootPath,
+        string appVersion,
+        string machineId,
+        string leaseOperation,
+        string retryLabel,
+        Func<RepositoryLeaseHandle?, bool, MetadataSyncResult> export,
+        CancellationToken ct)
+    {
         SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
         await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -2334,7 +2378,7 @@ public sealed class MetadataSyncService
 
             RepositoryLeaseAcquireResult leaseResult = TryAcquireRepositoryLease(
                 rootPath,
-                "project-metadata-export",
+                leaseOperation,
                 appVersion,
                 machineId);
             bool useDeferredStore = leaseResult.Status == RepositoryLeaseAcquireStatus.Unavailable;
@@ -2343,14 +2387,8 @@ public sealed class MetadataSyncService
 
             using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
             return await ExecuteStoreWriteWithRetryAsync(
-                    () => ExportProjectToStoreInternal(
-                        rootPath,
-                        projectId,
-                        appVersion,
-                        machineId,
-                        destinationLease,
-                        useDeferredStore),
-                    "Project export",
+                    () => export(destinationLease, useDeferredStore),
+                    retryLabel,
                     ct)
                 .ConfigureAwait(false);
         }
@@ -2415,6 +2453,48 @@ public sealed class MetadataSyncService
             "Deferred metadata was preserved because destination metadata already exists or the queue could not be locked safely.");
     }
 
+    private ExportStoreContext PrepareExportStore(
+        string rootPath,
+        string appVersion,
+        string machineId,
+        RepositoryLeaseHandle? destinationLease,
+        bool useDeferredStore,
+        string deferredLeaseOperation,
+        string operationLabel)
+    {
+        MetadataSyncResult? destinationFailure = ValidateDestinationLease(
+            rootPath, appVersion, machineId, destinationLease);
+        if (destinationFailure is not null)
+            return ExportStoreContext.Failed(rootPath, destinationFailure);
+
+        string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
+        RepositoryLeaseHandle? deferredLease = useDeferredStore
+            ? TryAcquireDeferredLease(storeRoot, appVersion, machineId, deferredLeaseOperation)
+            : null;
+        RepositoryLeaseHandle? activeLease = destinationLease ?? deferredLease;
+        if (activeLease is null || !activeLease.IsOwner)
+        {
+            return new ExportStoreContext(
+                storeRoot,
+                deferredLease,
+                null,
+                null,
+                MetadataSyncResult.Failure(
+                    MetadataSyncStatus.WriteFailed,
+                    "Metadata export could not acquire its deferred writer lease."));
+        }
+
+        var store = new MetadataStore(storeRoot);
+        MetadataSyncResult? initializationFailure = TryInitializeExportStore(
+            store, activeLease, rootPath, operationLabel);
+        return new ExportStoreContext(
+            storeRoot,
+            deferredLease,
+            activeLease,
+            store,
+            initializationFailure);
+    }
+
     private MetadataSyncResult ExportProjectToStoreInternal(
         string rootPath,
         int projectId,
@@ -2429,24 +2509,20 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
         }
 
-        MetadataSyncResult? destinationFailure = ValidateDestinationLease(
-            rootPath, appVersion, machineId, destinationLease);
-        if (destinationFailure is not null)
-            return destinationFailure;
+        using ExportStoreContext context = PrepareExportStore(
+            rootPath,
+            appVersion,
+            machineId,
+            destinationLease,
+            useDeferredStore,
+            "deferred-project-metadata-export",
+            "Project export");
+        if (context.Failure is not null)
+            return context.Failure;
 
-        string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
-        using RepositoryLeaseHandle? deferredLease = useDeferredStore
-            ? TryAcquireDeferredLease(storeRoot, appVersion, machineId, "deferred-project-metadata-export")
-            : null;
-        RepositoryLeaseHandle? activeLease = destinationLease ?? deferredLease;
-        if (activeLease is null || !activeLease.IsOwner)
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Metadata export could not acquire its deferred writer lease.");
-
-        var store = new MetadataStore(storeRoot);
-        MetadataSyncResult? initializationFailure = TryInitializeExportStore(
-            store, activeLease, rootPath, "Project export");
-        if (initializationFailure is not null)
-            return initializationFailure;
+        string storeRoot = context.StoreRoot;
+        RepositoryLeaseHandle activeLease = context.ActiveLease!;
+        MetadataStore store = context.Store!;
 
         Project? project = _repo.GetProjectById(projectId);
         if (project == null)
@@ -2519,41 +2595,22 @@ public sealed class MetadataSyncService
         bool forceBackfill = false,
         CancellationToken ct = default)
     {
-        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
-        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(rootPath))
-                return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
-
-            RepositoryLeaseAcquireResult leaseResult = TryAcquireRepositoryLease(
+        return await ExecuteExportWithLeaseAsync(
                 rootPath,
-                "backup-metadata-export",
                 appVersion,
-                machineId);
-            bool useDeferredStore = leaseResult.Status == RepositoryLeaseAcquireStatus.Unavailable;
-            if (!leaseResult.Acquired && !useDeferredStore)
-                return LeaseFailure(leaseResult);
-
-            using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
-            return await ExecuteStoreWriteWithRetryAsync(
-                    () => ExportBackupToStoreInternal(
-                        rootPath,
-                        backupId,
-                        appVersion,
-                        machineId,
-                        forceBackfill,
-                        destinationLease,
-                        useDeferredStore),
-                    "Backup export",
-                    ct)
-                .ConfigureAwait(false);
-        }
-        finally
-        {
-            metadataIoGate.Release();
-        }
+                machineId,
+                "backup-metadata-export",
+                "Backup export",
+                (destinationLease, useDeferredStore) => ExportBackupToStoreInternal(
+                    rootPath,
+                    backupId,
+                    appVersion,
+                    machineId,
+                    forceBackfill,
+                    destinationLease,
+                    useDeferredStore),
+                ct)
+            .ConfigureAwait(false);
     }
 
     private MetadataSyncResult ExportBackupToStoreInternal(
@@ -2578,24 +2635,20 @@ public sealed class MetadataSyncService
         Project project = entities.Project;
         Snapshot snapshot = entities.Snapshot;
 
-        MetadataSyncResult? destinationFailure = ValidateDestinationLease(
-            rootPath, appVersion, machineId, destinationLease);
-        if (destinationFailure is not null)
-            return destinationFailure;
+        using ExportStoreContext context = PrepareExportStore(
+            rootPath,
+            appVersion,
+            machineId,
+            destinationLease,
+            useDeferredStore,
+            "deferred-backup-metadata-export",
+            "Backup export");
+        if (context.Failure is not null)
+            return context.Failure;
 
-        string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
-        using RepositoryLeaseHandle? deferredLease = useDeferredStore
-            ? TryAcquireDeferredLease(storeRoot, appVersion, machineId, "deferred-backup-metadata-export")
-            : null;
-        RepositoryLeaseHandle? activeLease = destinationLease ?? deferredLease;
-        if (activeLease is null || !activeLease.IsOwner)
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Metadata export could not acquire its deferred writer lease.");
-
-        var store = new MetadataStore(storeRoot);
-        MetadataSyncResult? initializationFailure = TryInitializeExportStore(
-            store, activeLease, rootPath, "Backup export");
-        if (initializationFailure is not null)
-            return initializationFailure;
+        string storeRoot = context.StoreRoot;
+        RepositoryLeaseHandle activeLease = context.ActiveLease!;
+        MetadataStore store = context.Store!;
 
         string projectExternalId = EnsureProjectExternalId(project);
         string snapshotExternalId = EnsureSnapshotExternalId(snapshot);
