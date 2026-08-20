@@ -148,6 +148,15 @@ complete and stable enough for broader qualification.
   destination cleanup now retains every successful mount across credential
   retries. Unreachable metadata, restore, and update branches identified by
   Sonar were removed (`BUG-18111`).
+- Passive destination health, cleanup, metadata, and history work no longer
+  unlocks macOS Keychain or mounts an SMB share. Credentials are requested only
+  by an explicit destination test or a real backup (`BUG-18112`).
+- macOS launch-on-login now writes to `~/Library/LaunchAgents`, removes the
+  erroneous entry under Documents, and avoids launch-time process kickstarts
+  (#559). Both architecture-specific DMGs now contain a canonical
+  `/Applications/VaultSync.app` with synchronized bundle metadata. The 1.8.7
+  transition uses the full DMG; future bundle-root patches update and verify
+  `Info.plist` with the runtime payload (#560, #561).
 
 These changes are not shipped until the release work reaches `Stable`.
 Dependabot can therefore continue to report the old default-branch runtime

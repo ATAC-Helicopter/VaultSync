@@ -581,6 +581,40 @@ after the planned minor train is complete and use explicit beta qualification.
     backups, and mount contents remain outside cleanup; a managed mount path
     cannot accept backup bytes unless SMB or NFS is currently mounted.
   - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18110` `P1` Complete the recovery and workflow localization pass.
+  - Acceptance: Recovery evidence, repository-writer controls, History,
+    backup-widget, picker, verification, and restore text use maintained locale
+    keys; responsive evidence cards remain readable in every theme.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18111` `P0` Close the remaining Sonar safety and stale-branch defects.
+  - Acceptance: recovery exports avoid public temporary roots, cache cleanup is
+    limited to private application storage, all retry mounts are cleaned up,
+    and unreachable analysis branches are removed.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18112` `P0` Keep passive destination work from unlocking credentials.
+  - Acceptance: startup, maintenance, metadata, cleanup, and history probes
+    reuse already-mounted destinations but never read Keychain or establish a
+    new mount; explicit tests and backups retain auto-mount behavior.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18113` `P0` Correct macOS launch-on-login placement. _(Issue #559.)_
+  - Acceptance: the LaunchAgent lives under the actual user home, the erroneous
+    Documents path is removed safely, and startup synchronization does not
+    kickstart a duplicate app process.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18114` `P0` Make macOS bundle identity and updates coherent.
+  _(Issues #560 and #561.)_
+  - Acceptance: both DMGs contain `VaultSync.app` and an Applications shortcut;
+    1.8.7 uses a full-DMG migration, future patches address the complete bundle,
+    and installed version metadata is verified before success.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18115` `P0` Clear the release-SBOM security and backup-cleanup quality gate.
+  - Scope: confine SBOM filesystem access to the approved build workspace,
+    reject path-bearing artifact/index filenames, and make backup destination
+    cleanup explicit across credential retries.
+  - Acceptance: traversal attempts fail before filesystem access, valid SBOM
+    generation and validation remain deterministic, and every retained mount
+    resolution is cleaned exactly once.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
 
 ### Delivery sequence
 

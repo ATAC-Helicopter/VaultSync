@@ -236,7 +236,7 @@ Never describe an unsigned package as signed, notarized, or publisher-verified.
 
 macOS users may need to run:
 ```bash
-xattr -dr com.apple.quarantine /Applications/VaultSync-macos-<arch>.app
+xattr -dr com.apple.quarantine /Applications/VaultSync.app
 ```
 
 Linux AppImage users may need to run:

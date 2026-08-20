@@ -16,7 +16,7 @@ VaultSync uses GitHub Releases for update discovery and supports patch assets to
 - Windows installer:
   - `VaultSyncInstaller.exe`
 - macOS bundles:
-  - architecture-specific DMGs
+  - architecture-specific DMGs, each containing the canonical `VaultSync.app`
 - Linux bundles:
   - `VaultSync-<version>-linux-x64.deb`
   - `VaultSync-<version>-linux-arm64.deb`
@@ -31,6 +31,12 @@ command under `~/.local` without requiring a distro-specific package manager.
 macOS can use architecture-specific patch names:
 - `vaultsync-patch-macos-apple-silicon.*`
 - `vaultsync-patch-macos-intel.*`
+
+VaultSync 1.8.7 is a deliberate full-DMG transition from the legacy
+architecture-named application bundles to `/Applications/VaultSync.app`; its
+release omits macOS patch assets. Later macOS patches contain and update the
+complete `.app` bundle relative to its root, then verify `Info.plist`, target
+version, and the declared executable before restart.
 
 Linux can use architecture-specific patch names:
 - `vaultsync-patch-linux-x64.*`
