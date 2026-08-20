@@ -128,7 +128,8 @@ complete and stable enough for broader qualification.
   canonical-manifest SHA-256 and platform-specific resolved dependency graph.
   GitHub signs provenance for the final package bytes and an SBOM attestation
   for each package; release-candidate automation verifies one package both
-  online and from a downloaded bundle plus trusted-root snapshot (`VS-1873`).
+  online and from a downloaded bundle plus trusted-root snapshot. Unpublished
+  candidate run `32425579729` passed this complete contract (`VS-1873`).
 - Recovery now exports a portable evidence ZIP containing canonical JSON, a
   readable Markdown report, a versioned manifest, and a standard SHA-256 index.
   Stable semantic digests make equivalent evidence comparable; pseudonymous
@@ -190,12 +191,10 @@ branch package.
 
 1. Complete the two-machine, disconnect, clock-skew, and NAS/SMB qualification
    matrix for versioned metadata merging.
-2. Run the release-candidate supply-chain job to qualify its online and offline
-   attestation checks against real final packages.
 
 ### Still planned
 
-- complete the real release-candidate, two-machine/NAS, upgrade, cross-platform,
+- complete the real two-machine/NAS, upgrade, cross-platform,
   theme, accessibility, static-analysis, and dependency qualification matrix.
 
 ## Safety contracts
