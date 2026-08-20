@@ -25,7 +25,7 @@ Important notes:
 
 Expected next steps:
 
-1. build and inspect the 1.8.6 upload package
+1. build and inspect the 1.8.7 upload package
 2. validate packaged app behavior for local folders, external drives, and network paths
 3. replace placeholder Store package assets with final submission-ready sizes if needed
 4. prepare Partner Center listing fields and restricted capability rationale

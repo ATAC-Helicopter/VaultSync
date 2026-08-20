@@ -76,9 +76,21 @@ jobs:
           target="$(printf '%s' "$target" | trim)"
           previous="$(printf '%s' "$previous" | trim)"
           target_key="$(normalize_version "$target")"
+          canonical_target="$(python3 -c 'import json; print(json.load(open("release/release-metadata.json"))["activeRelease"]["version"])')"
+          canonical_previous="$(python3 -c 'import json; print(json.load(open("release/release-metadata.json"))["activeRelease"]["previousVersion"])')"
 
           if [[ -z "$target" ]]; then
             echo "target_version is required."
+            exit 1
+          fi
+
+          if [[ "$target" != "$canonical_target" ]]; then
+            echo "target_version '$target' does not match canonical active release '$canonical_target'."
+            exit 1
+          fi
+
+          if [[ "$previous" != "$canonical_previous" ]]; then
+            echo "previous_version '$previous' does not match qualified canonical predecessor '$canonical_previous'."
             exit 1
           fi
 

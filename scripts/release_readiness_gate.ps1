@@ -241,6 +241,14 @@ Add-CheckResult -Results $results -Code "release-manifest-contract" `
     -FailMessage "Canonical release manifest generator or schema is missing." `
     -Data @{ script = "scripts/release_manifest.py"; schema = "docs/schemas/release-manifest-v1.schema.json" }
 
+$pythonCommand = if (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
+& $pythonCommand scripts/public_release_metadata.py check
+$publicMetadataMatches = ($LASTEXITCODE -eq 0)
+Add-CheckResult -Results $results -Code "public-release-metadata" -Condition $publicMetadataMatches `
+    -PassMessage "Public release consumers match the canonical release contract." `
+    -FailMessage "Public release metadata is inconsistent. Run scripts/public_release_metadata.py check for details." `
+    -Data @{ contract = "release/release-metadata.json"; script = "scripts/public_release_metadata.py" }
+
 Add-CheckResult -Results $results -Code "docs-release-checklist" -Condition ($releasingDoc -match 'release assets uploaded' -and $releasingDoc -match 'release_readiness_gate\.ps1') `
     -PassMessage "Release guide includes the release gate and asset-upload checklist." `
     -FailMessage "Release guide is missing release gate and/or asset-upload checklist coverage." `
