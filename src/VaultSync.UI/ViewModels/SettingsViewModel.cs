@@ -679,7 +679,7 @@ namespace VaultSync.UI
             ExportSupportBundleCommand   = new RelayCommand(_ => ExportSupportBundle());
             ImportSupportBundleCommand   = new RelayCommand(_ => ImportSupportBundle());
             CopyBuildInformationCommand = new RelayCommand(_ =>
-                _ = DetachedTask.RunAsync(CopyBuildInformationAsync, nameof(CopyBuildInformationAsync)));
+                DetachedTask.Run(CopyBuildInformationAsync, nameof(CopyBuildInformationAsync)));
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
             OpenMicrosoftStoreCommand    = new RelayCommand(_ => OpenMicrosoftStoreListing());
             _scanBackupIndexRepairPlanCommand = new RelayCommand(_ => ScanBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy);
@@ -2358,7 +2358,7 @@ namespace VaultSync.UI
             private set => SetField(ref _checkpointResumeDiagnosticsText, value);
         }
 
-        public string BuildInformationText => AppBuildInformationService.Current.ToDisplayText();
+        public string BuildInformationText { get; } = AppBuildInformationService.Current.ToDisplayText();
 
         public string BuildInformationCopyStatus
         {

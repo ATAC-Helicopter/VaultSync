@@ -627,9 +627,7 @@ public sealed class RecoveryViewModel : ViewModelBase
                 protection,
                 confidence,
                 data.RepositoryIdentityByProject.GetValueOrDefault(project.ProjectId) ?? "unknown",
-                RunDrillAsync,
-                RunIsolatedRestoreAsync,
-                ProtectRecommendedPointAsync));
+                new RecoveryProjectActions(RunDrillAsync, RunIsolatedRestoreAsync, ProtectRecommendedPointAsync)));
         }
 
         RefreshProjectsView();
@@ -892,6 +890,11 @@ public sealed class RecoveryViewModel : ViewModelBase
     }
 }
 
+public sealed record RecoveryProjectActions(
+    Func<int, Task>? RunDrill,
+    Func<int, Task>? RunIsolatedRestore,
+    Func<int, Task>? ProtectPoint);
+
 public sealed class RecoveryProjectViewModel
 {
     private static string L(string key, string fallback) =>
@@ -903,9 +906,7 @@ public sealed class RecoveryProjectViewModel
         ProjectProtectionAssessment? protection = null,
         ProjectRecoveryConfidence? confidence = null,
         string repositoryIdentity = "unknown",
-        Func<int, Task>? runDrill = null,
-        Func<int, Task>? runIsolatedRestore = null,
-        Func<int, Task>? protectPoint = null)
+        RecoveryProjectActions? actions = null)
     {
         ProjectName = project.ProjectName;
         RepositoryIdentity = repositoryIdentity;
@@ -953,15 +954,15 @@ public sealed class RecoveryProjectViewModel
             .ToList() ?? [];
         ConfidenceEvidence = confidence?.Evidence.ToList() ?? [];
         RunDrillCommand = new AsyncRelayCommand(
-            _ => runDrill?.Invoke(project.ProjectId) ?? Task.CompletedTask,
+            _ => actions?.RunDrill?.Invoke(project.ProjectId) ?? Task.CompletedTask,
             operationName: $"recovery-drill-{project.ProjectId}");
         RunIsolatedRestoreCommand = new AsyncRelayCommand(
-            _ => runIsolatedRestore?.Invoke(project.ProjectId) ?? Task.CompletedTask,
+            _ => actions?.RunIsolatedRestore?.Invoke(project.ProjectId) ?? Task.CompletedTask,
             operationName: $"isolated-recovery-test-{project.ProjectId}");
         ProtectRecommendationCommand = new AsyncRelayCommand(
-            _ => protection?.Recommendation is null || protectPoint is null
+            _ => protection?.Recommendation is null || actions?.ProtectPoint is null
                 ? Task.CompletedTask
-                : protectPoint(protection.Recommendation.BackupId),
+                : actions.ProtectPoint(protection.Recommendation.BackupId),
             _ => protection?.Recommendation is not null,
             operationName: $"protect-recovery-point-{project.ProjectId}");
     }

@@ -97,6 +97,42 @@ class ReleaseSbomTests(unittest.TestCase):
 
         self.assertEqual([("LinuxOnly", "2.0.0"), ("Shared", "1.0.0")], packages)
 
+    def test_generate_rejects_output_outside_approved_root(self):
+        outside = self.root.parent / "outside-sboms"
+
+        with self.assertRaisesRegex(ValueError, "SBOM output path must be inside"):
+            release_sbom.generate(
+                self.manifest_path,
+                outside,
+                None,
+                "2026-08-17T12:00:00Z",
+                self.root,
+            )
+
+    def test_generate_rejects_asset_name_with_path_components(self):
+        manifest = json.loads(self.manifest_path.read_text())
+        manifest["assets"][0]["name"] = "../escaped.json"
+        self.manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        with self.assertRaisesRegex(ValueError, "plain file name"):
+            release_sbom.generate(
+                self.manifest_path,
+                self.output,
+                None,
+                "2026-08-17T12:00:00Z",
+                self.root,
+            )
+
+    def test_validate_rejects_index_path_traversal(self):
+        release_sbom.generate(self.manifest_path, self.output, None, "2026-08-17T12:00:00Z")
+        index_path = self.output / "vaultsync-release-sbom-index.json"
+        index = json.loads(index_path.read_text())
+        index["sboms"][0]["sbom"] = "../outside.spdx.json"
+        index_path.write_text(json.dumps(index), encoding="utf-8")
+
+        with self.assertRaisesRegex(ValueError, "plain file name"):
+            release_sbom.validate(self.manifest_path, self.output, self.root)
+
 
 if __name__ == "__main__":
     unittest.main()
