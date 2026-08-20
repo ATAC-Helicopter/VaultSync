@@ -4719,9 +4719,6 @@ namespace VaultSync.UI
             }
         }
 
-        private static string? EmptyToNull(string? value)
-            => string.IsNullOrWhiteSpace(value) || string.Equals(value.Trim(), "-", StringComparison.Ordinal) ? null : value.Trim();
-
         private async Task ImportSupportBundleAsync()
         {
             IStorageProvider? storageProvider = GetStorageProvider();
