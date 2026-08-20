@@ -181,7 +181,9 @@
     </Style>
 
     <Style Selector="ListBox.folder-project-list ListBoxItem:selected /template/ Border#FolderProjectRow">
-      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="3,1,0,0" />
     </Style>
 
     <Style Selector="FlyoutPresenter.folder-flyout">
@@ -507,6 +509,11 @@
                     BorderBrush="{DynamicResource DividerBrush}"
                     BorderThickness="1"
                     Foreground="{DynamicResource TextPrimaryBrush}">
+              <ToolTip.Tip>
+                <TextBlock Text="{infra:LocalizedString Key=Projects.Folder.Help}"
+                           MaxWidth="320"
+                           TextWrapping="Wrap" />
+              </ToolTip.Tip>
               <Button.Flyout>
                 <Flyout>
                   <Border Width="340"
@@ -603,6 +610,8 @@
                       <StackPanel>
                         <ToggleButton Classes="folder-header"
                                       IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                      AutomationProperties.Name="{Binding Name}"
+                                      AutomationProperties.HelpText="{Binding ProjectCountLabel}"
                                       HorizontalAlignment="Stretch"
                                       HorizontalContentAlignment="Stretch"
                                       BorderThickness="0"
@@ -666,40 +675,15 @@
                         <Border Classes="folder-body" IsVisible="{Binding IsExpanded}">
                           <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                              <WrapPanel ItemSpacing="6" IsVisible="{Binding ShowBatchActions}">
-                                <Button Classes="folder-action primary"
-                                        Command="{Binding DataContext.SnapshotGroupCommand, ElementName=Root}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.SnapshotAction}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.SnapshotAll}" FontSize="10" FontWeight="SemiBold" />
-                                </Button>
-                                <Button Classes="folder-action"
-                                        Command="{Binding DataContext.BackupGroupCommand, ElementName=Root}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.BackupAction}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.BackupAll}" FontSize="10" FontWeight="SemiBold" />
-                                </Button>
-                              </WrapPanel>
-
-                              <Grid Grid.Column="0"
-                                    ColumnDefinitions="*,Auto,Auto"
-                                    ColumnSpacing="6"
-                                    IsVisible="{Binding IsRenaming}">
-                                <TextBox Text="{Binding EditName, Mode=TwoWay}"
-                                         Padding="{DynamicResource InputPadding}" />
-                                <Button Grid.Column="1"
-                                        Classes="folder-action primary"
-                                        Command="{Binding DataContext.SaveRenameProjectGroupCommand, ElementName=Root}"
-                                        CommandParameter="{Binding}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Common.Save}" FontSize="10" />
-                                </Button>
-                                <Button Grid.Column="2"
-                                        Classes="folder-action"
-                                        Command="{Binding DataContext.CancelRenameProjectGroupCommand, ElementName=Root}"
-                                        CommandParameter="{Binding}">
-                                  <TextBlock Text="{infra:LocalizedString Key=Common.Cancel}" FontSize="10" />
-                                </Button>
-                              </Grid>
+                              <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ContentsLabel}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <TextBlock Text="{Binding ProjectCountLabel}"
+                                           FontSize="9"
+                                           Foreground="{DynamicResource TextMutedBrush}" />
+                              </StackPanel>
 
                               <Button Grid.Column="1"
                                       Classes="folder-action icon"
@@ -707,6 +691,7 @@
                                       Height="28"
                                       Padding="0"
                                       IsVisible="{Binding !IsRenaming}"
+                                      AutomationProperties.Name="{infra:LocalizedString Key=Projects.Folder.Rename}"
                                       ToolTip.Tip="{infra:LocalizedString Key=Projects.Folder.Rename}">
                                 <Button.Flyout>
                                   <Flyout Placement="BottomEdgeAlignedRight"
@@ -747,6 +732,46 @@
                               </Button>
                             </Grid>
 
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                              <WrapPanel ItemSpacing="6" IsVisible="{Binding ShowBatchActions}">
+                                <Button Classes="folder-action primary"
+                                        Command="{Binding DataContext.SnapshotGroupCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}"
+                                        AutomationProperties.Name="{infra:LocalizedString Key=Projects.Group.SnapshotAll}"
+                                        ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.SnapshotAction}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.SnapshotAll}" FontSize="10" FontWeight="SemiBold" />
+                                </Button>
+                                <Button Classes="folder-action"
+                                        Command="{Binding DataContext.BackupGroupCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}"
+                                        AutomationProperties.Name="{infra:LocalizedString Key=Projects.Group.BackupAll}"
+                                        ToolTip.Tip="{infra:LocalizedString Key=Projects.Group.BackupAction}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Projects.Group.BackupAll}" FontSize="10" FontWeight="SemiBold" />
+                                </Button>
+                              </WrapPanel>
+
+                              <Grid Grid.Column="0"
+                                    ColumnDefinitions="*,Auto,Auto"
+                                    ColumnSpacing="6"
+                                    IsVisible="{Binding IsRenaming}">
+                                <TextBox Text="{Binding EditName, Mode=TwoWay}"
+                                         Padding="{DynamicResource InputPadding}" />
+                                <Button Grid.Column="1"
+                                        Classes="folder-action primary"
+                                        Command="{Binding DataContext.SaveRenameProjectGroupCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Common.Save}" FontSize="10" />
+                                </Button>
+                                <Button Grid.Column="2"
+                                        Classes="folder-action"
+                                        Command="{Binding DataContext.CancelRenameProjectGroupCommand, ElementName=Root}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{infra:LocalizedString Key=Common.Cancel}" FontSize="10" />
+                                </Button>
+                              </Grid>
+
+                            </Grid>
+
                             <Border IsVisible="{Binding IsDeleteConfirmationVisible}"
                                     CornerRadius="10"
                                     Background="{DynamicResource DangerSoftBrush}"
@@ -781,6 +806,7 @@
                                          ItemsSource="{Binding Projects}"
                                          SelectedItem="{Binding DataContext.SelectedProject, ElementName=Root, Mode=TwoWay}"
                                          ItemTemplate="{StaticResource FolderProjectRowTemplate}"
+                                         AutomationProperties.Name="{Binding ContentsLabel}"
                                          IsVisible="{Binding HasProjects}"
                                          Background="Transparent"
                                          BorderThickness="0"
