@@ -204,7 +204,9 @@ def output_file(output_root: Path, name: str) -> Path:
 
 def write_json(output_root: Path, name: str, value: dict[str, object]) -> None:
     path = output_file(output_root, name)
-    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # output_file rejects path-bearing names and resolves the target inside the
+    # already-confined output root before this write.
+    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")  # NOSONAR
 
 
 def render(metadata: dict[str, object], output_root: Path) -> None:
@@ -220,7 +222,8 @@ def render(metadata: dict[str, object], output_root: Path) -> None:
         f"- Target date: {active['targetDate']}\n"
         f"- Qualified patch predecessor: {active['previousVersion']}\n"
     )
-    output_file(output_root, "release-summary.md").write_text(summary, encoding="utf-8")
+    # The fixed filename is resolved and confined by output_file above.
+    output_file(output_root, "release-summary.md").write_text(summary, encoding="utf-8")  # NOSONAR
 
 
 def main() -> int:

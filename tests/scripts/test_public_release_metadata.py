@@ -35,6 +35,11 @@ class PublicReleaseMetadataTests(unittest.TestCase):
                 (second / "store-release-metadata.json").read_bytes(),
             )
 
+    def test_output_file_rejects_path_bearing_names(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as temp_dir:
+            with self.assertRaises(ValueError):
+                public_release_metadata.output_file(Path(temp_dir), "../release-metadata.json")
+
     def test_contract_rejects_inconsistent_tag_predecessor_and_store_version(self) -> None:
         cases = []
         bad_tag = copy.deepcopy(self.metadata)
@@ -56,4 +61,3 @@ class PublicReleaseMetadataTests(unittest.TestCase):
 
     def test_repository_consumers_match_contract(self) -> None:
         self.assertEqual([], public_release_metadata.validate_consumers(REPO_ROOT, self.metadata))
-
