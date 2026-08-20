@@ -93,6 +93,8 @@ public partial class ProjectsViewModel
                     },
                     L("Projects.Folder.Ungrouped", "Ungrouped"));
             folder.ReplaceProjects(members, allMembers);
+            if (!includeEmptyFolders)
+                folder.IsExpanded = true;
             rebuilt.Add(folder);
         }
 
@@ -103,7 +105,10 @@ public partial class ProjectsViewModel
         ProjectFolders.SyncWith(rebuilt);
         UngroupedProjects.SyncWith(ungroupedProjects);
 
-        OnPropertiesChanged(nameof(HasProjectFolders), nameof(HasUngroupedProjects));
+        OnPropertiesChanged(
+            nameof(HasProjectFolders),
+            nameof(HasUngroupedProjects),
+            nameof(ShowUngroupedSectionHeader));
 
         RaiseProjectGroupCommandStates();
     }
@@ -186,7 +191,10 @@ public partial class ProjectsViewModel
             UngroupedProjects.SyncWith(ungrouped);
         }
 
-        OnPropertiesChanged(nameof(HasProjectFolders), nameof(HasUngroupedProjects));
+        OnPropertiesChanged(
+            nameof(HasProjectFolders),
+            nameof(HasUngroupedProjects),
+            nameof(ShowUngroupedSectionHeader));
         RaiseProjectGroupCommandStates();
     }
 
