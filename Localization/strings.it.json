@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "Posizione di backup",
   "Backups.Verification.FailedForProject": "La verifica del backup non è riuscita per {0}. Il backup potrebbe essere incompleto o danneggiato.",
   "Backups.Restore.RestoringProject": "Ripristino di {0}...",
-  "Destinations.Probe.MountDeferred": "Non montata. VaultSync richiederà l’accesso quando un backup o un test esplicito avrà bisogno di questa destinazione."
+  "Destinations.Probe.MountDeferred": "Non montata. VaultSync richiederà l’accesso quando un backup o un test esplicito avrà bisogno di questa destinazione.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "Rivedi il pacchetto di supporto",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "Controlla ogni file generato. Percorsi, credenziali, token e segreti vengono rimossi o pseudonimizzati. Le sezioni opzionali possono essere escluse.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "Includi diagnostica ripulita",
+  "Settings.Advanced.SupportBundle.Telemetry": "Includi telemetria locale anonimizzata",
+  "Settings.Advanced.SupportBundle.Size": "Dimensione massima non compressa: {0:0.0} MB. I contenuti vengono ripuliti prima dell’esportazione."
 }

@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "Розташування резервної копії",
   "Backups.Verification.FailedForProject": "Не вдалося перевірити резервну копію для {0}. Резервна копія може бути неповною або пошкодженою.",
   "Backups.Restore.RestoringProject": "Відновлення {0}...",
-  "Destinations.Probe.MountDeferred": "Не підключено. VaultSync запросить доступ, коли це місце знадобиться для резервного копіювання або явної перевірки."
+  "Destinations.Probe.MountDeferred": "Не підключено. VaultSync запросить доступ, коли це місце знадобиться для резервного копіювання або явної перевірки.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "Перевірити пакет підтримки",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "Перевірте кожен створений файл. Шляхи, облікові дані, токени й секрети видаляються або псевдонімізуються. Необов’язкові розділи можна виключити.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "Додати очищену діагностику",
+  "Settings.Advanced.SupportBundle.Telemetry": "Додати анонімізовану локальну телеметрію",
+  "Settings.Advanced.SupportBundle.Size": "Максимальний розмір без стиснення: {0:0.0} МБ. Вміст очищається перед експортом."
 }

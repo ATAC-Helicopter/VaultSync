@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "Back-uplocatie",
   "Backups.Verification.FailedForProject": "Back-upverificatie mislukt voor {0}. De back-up is mogelijk onvolledig of beschadigd.",
   "Backups.Restore.RestoringProject": "{0} herstellen...",
-  "Destinations.Probe.MountDeferred": "Niet gekoppeld. VaultSync vraagt toegang wanneer een back-up of expliciete bestemmingstest deze bestemming nodig heeft."
+  "Destinations.Probe.MountDeferred": "Niet gekoppeld. VaultSync vraagt toegang wanneer een back-up of expliciete bestemmingstest deze bestemming nodig heeft.",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "Supportbundel controleren",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "Controleer elk gegenereerd bestand. Paden, referenties, tokens en geheimen worden verwijderd of gepseudonimiseerd. Optionele onderdelen kunnen worden uitgesloten.",
+  "Settings.Advanced.SupportBundle.Diagnostics": "Opgeschoonde diagnostiek opnemen",
+  "Settings.Advanced.SupportBundle.Telemetry": "Geanonimiseerde lokale telemetrie opnemen",
+  "Settings.Advanced.SupportBundle.Size": "Maximale ongecomprimeerde grootte: {0:0.0} MB. Inhoud wordt vóór export opgeschoond."
 }

@@ -3797,29 +3797,206 @@ namespace VaultSync.UI
 
         private void ExportSupportBundle()
         {
-            SupportBundleExportResult result = SupportBundleService.Export();
+            _ = DetachedTask.RunAsync(ExportSupportBundleAsync, nameof(ExportSupportBundleAsync));
+        }
+
+        private async Task ExportSupportBundleAsync()
+        {
+            SupportBundlePreviewResult preview = await Task.Run(() => SupportBundleService.Preview());
+            if (!preview.Success)
+            {
+                ShowSupportBundleFailure(preview.Message);
+                return;
+            }
+
+            SupportBundleExportOptions? options = await ConfirmSupportBundleExportAsync(preview);
+            if (options is null)
+                return;
+
+            SupportBundleExportResult result = await Task.Run(() => SupportBundleService.Export(options: options));
             if (!result.Success || string.IsNullOrWhiteSpace(result.ZipPath))
             {
-                SaveStatus = string.IsNullOrWhiteSpace(result.Message)
+                ShowSupportBundleFailure(result.Message);
+                return;
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                SaveStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.SupportBundleExportedTo", "Support bundle exported to {0}"),
+                    result.ZipPath);
+                GlobalNotificationCenter.Instance.Show(
+                    L("Settings.Advanced.SupportBundleReady", "Support bundle ready. You can share the zip file."),
+                    NotificationSeverity.Info,
+                    L(SupportBundleTitleKey, SupportBundleTitleFallback));
+                TryOpenContainingFolder(result.ZipPath);
+            });
+        }
+
+        private void ShowSupportBundleFailure(string? message)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                SaveStatus = string.IsNullOrWhiteSpace(message)
                     ? L("Settings.Advanced.SupportBundleFailed", "Support bundle export failed.")
-                    : result.Message;
+                    : message;
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Warning,
                     L(SupportBundleTitleKey, SupportBundleTitleFallback));
-                return;
-            }
+            });
+        }
 
-            SaveStatus = string.Format(
-                CultureInfo.CurrentCulture,
-                L("Settings.Advanced.SupportBundleExportedTo", "Support bundle exported to {0}"),
-                result.ZipPath);
-            GlobalNotificationCenter.Instance.Show(
-                L("Settings.Advanced.SupportBundleReady", "Support bundle ready. You can share the zip file."),
-                NotificationSeverity.Info,
-                L(SupportBundleTitleKey, SupportBundleTitleFallback));
+        private async Task<SupportBundleExportOptions?> ConfirmSupportBundleExportAsync(
+            SupportBundlePreviewResult initialPreview)
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var includeDiagnostics = new CheckBox
+                {
+                    Content = L("Settings.Advanced.SupportBundle.Diagnostics", "Include sanitized diagnostics"),
+                    IsChecked = true
+                };
+                var includeTelemetry = new CheckBox
+                {
+                    Content = L("Settings.Advanced.SupportBundle.Telemetry", "Include anonymized local telemetry"),
+                    IsChecked = true
+                };
+                var fileList = new TextBlock
+                {
+                    FontFamily = FontFamily.Default,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                var total = new TextBlock
+                {
+                    FontSize = 11,
+                    Foreground = Application.Current?.FindResource("TextSecondary") as IBrush,
+                    TextWrapping = TextWrapping.Wrap
+                };
 
-            TryOpenContainingFolder(result.ZipPath);
+                void RefreshPreview()
+                {
+                    var options = new SupportBundleExportOptions(
+                        IncludeDiagnostics: includeDiagnostics.IsChecked == true,
+                        IncludeTelemetry: includeTelemetry.IsChecked == true);
+                    SupportBundlePreviewResult current = options.IncludeDiagnostics && options.IncludeTelemetry
+                        ? initialPreview
+                        : SupportBundleService.Preview(options: options);
+                    fileList.Text = string.Join(
+                        Environment.NewLine,
+                        current.Files.Select(file => $"{file.RelativePath}  ·  {file.Category}"));
+                    total.Text = string.Format(
+                        CultureInfo.CurrentCulture,
+                        L(
+                            "Settings.Advanced.SupportBundle.Size",
+                            "Maximum uncompressed size: {0:0.0} MB. File contents are sanitized before export."),
+                        current.MaximumBytes / 1024d / 1024d);
+                }
+
+                includeDiagnostics.IsCheckedChanged += (_, _) => RefreshPreview();
+                includeTelemetry.IsCheckedChanged += (_, _) => RefreshPreview();
+                RefreshPreview();
+
+                var cancel = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 110
+                };
+                cancel.Classes.Add("action-ghost");
+                var export = new Button
+                {
+                    Content = L("Settings.Advanced.SupportBundleExport", "Export support bundle"),
+                    MinWidth = 170
+                };
+                export.Classes.Add("action-primary");
+
+                SupportBundleExportOptions? selected = null;
+                Window? window = null;
+                cancel.Click += (_, _) => window?.Close();
+                export.Click += (_, _) =>
+                {
+                    selected = new SupportBundleExportOptions(
+                        IncludeDiagnostics: includeDiagnostics.IsChecked == true,
+                        IncludeTelemetry: includeTelemetry.IsChecked == true);
+                    window?.Close();
+                };
+
+                var buttons = new StackPanel
+                {
+                    Orientation = Avalonia.Layout.Orientation.Horizontal,
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                    Spacing = 8,
+                    Children = { cancel, export }
+                };
+                var listCard = new Border
+                {
+                    Padding = new Thickness(12),
+                    MaxHeight = 240,
+                    Child = new ScrollViewer { Content = fileList }
+                };
+                listCard.Classes.Add("subtle-card");
+                var content = new StackPanel
+                {
+                    Spacing = 10,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = L("Settings.Advanced.SupportBundle.ReviewTitle", "Review support bundle"),
+                            FontSize = 20,
+                            FontWeight = FontWeight.SemiBold
+                        },
+                        new TextBlock
+                        {
+                            Text = L(
+                                "Settings.Advanced.SupportBundle.ReviewDescription",
+                                "Review every generated file. Paths, credentials, tokens, and secrets are removed or pseudonymized. Optional sections can be excluded."),
+                            TextWrapping = TextWrapping.Wrap
+                        },
+                        includeDiagnostics,
+                        includeTelemetry,
+                        listCard,
+                        total,
+                        buttons
+                    }
+                };
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16),
+                    Child = content
+                };
+                card.Classes.Add("card");
+                window = new Window
+                {
+                    Title = L("Settings.Advanced.SupportBundle.ReviewTitle", "Review support bundle"),
+                    Content = card,
+                    Width = 620,
+                    MinHeight = 520,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                Window? owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+                if (owner is not null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var closed = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => closed.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await closed.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                return selected;
+            });
         }
 
         private async Task CopyBuildInformationAsync()

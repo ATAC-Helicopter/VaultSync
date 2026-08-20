@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "备份位置",
   "Backups.Verification.FailedForProject": "{0} 的备份验证失败。备份可能不完整或已损坏。",
   "Backups.Restore.RestoringProject": "正在恢复{0}...",
-  "Destinations.Probe.MountDeferred": "尚未挂载。当备份或明确的目标测试需要此目标时，VaultSync 将请求访问权限。"
+  "Destinations.Probe.MountDeferred": "尚未挂载。当备份或明确的目标测试需要此目标时，VaultSync 将请求访问权限。",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "检查支持包",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "检查每个生成的文件。路径、凭据、令牌和机密会被移除或假名化。可以排除可选部分。",
+  "Settings.Advanced.SupportBundle.Diagnostics": "包含已清理的诊断信息",
+  "Settings.Advanced.SupportBundle.Telemetry": "包含匿名化的本地遥测",
+  "Settings.Advanced.SupportBundle.Size": "最大未压缩大小：{0:0.0} MB。导出前会清理文件内容。"
 }

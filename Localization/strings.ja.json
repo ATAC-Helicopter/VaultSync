@@ -1908,5 +1908,10 @@
   "Settings.BackupLocation.Title": "バックアップの場所",
   "Backups.Verification.FailedForProject": "{0} のバックアップ検証に失敗しました。バックアップが不完全か破損している可能性があります。",
   "Backups.Restore.RestoringProject": "{0} を復元しています...",
-  "Destinations.Probe.MountDeferred": "マウントされていません。バックアップまたは明示的な保存先テストで必要になったときに VaultSync がアクセスを要求します。"
+  "Destinations.Probe.MountDeferred": "マウントされていません。バックアップまたは明示的な保存先テストで必要になったときに VaultSync がアクセスを要求します。",
+  "Settings.Advanced.SupportBundle.ReviewTitle": "サポートバンドルを確認",
+  "Settings.Advanced.SupportBundle.ReviewDescription": "生成されるすべてのファイルを確認します。パス、資格情報、トークン、シークレットは削除または仮名化されます。任意のセクションは除外できます。",
+  "Settings.Advanced.SupportBundle.Diagnostics": "サニタイズ済み診断を含める",
+  "Settings.Advanced.SupportBundle.Telemetry": "匿名化されたローカルテレメトリを含める",
+  "Settings.Advanced.SupportBundle.Size": "最大非圧縮サイズ: {0:0.0} MB。内容はエクスポート前にサニタイズされます。"
 }
