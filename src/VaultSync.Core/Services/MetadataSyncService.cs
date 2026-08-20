@@ -3544,21 +3544,25 @@ public sealed class MetadataSyncService
         string timestamp = updatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
         foreach (string field in ProjectMetadataFieldNames)
         {
-            bool changed = previous is null || !ProjectMetadataFieldEquals(field, previous, values);
-            if (!changed && provenance.ContainsKey(field))
+            if (existing is null || previous is null || !ProjectMetadataFieldEquals(field, previous, values))
+            {
+                provenance[field] = new ProjectMetadataFieldProvenance
+                {
+                    WriterMachineId = writerMachineId,
+                    Revision = nextRevision,
+                    UpdatedUtc = timestamp
+                };
+                continue;
+            }
+
+            if (provenance.ContainsKey(field))
                 continue;
 
             provenance[field] = new ProjectMetadataFieldProvenance
             {
-                WriterMachineId = changed
-                    ? writerMachineId
-                    : existing?.WriterMachineId ?? writerMachineId,
-                Revision = changed
-                    ? nextRevision
-                    : Math.Max(0, existing?.Revision ?? nextRevision),
-                UpdatedUtc = changed
-                    ? timestamp
-                    : existing?.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) ?? timestamp
+                WriterMachineId = existing.WriterMachineId,
+                Revision = Math.Max(0, existing.Revision),
+                UpdatedUtc = existing.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
             };
         }
 
