@@ -12,6 +12,7 @@ internal static class MacOsLegacyBundleMigrationService
 {
     private const string CanonicalBundleName = "VaultSync.app";
     private const string CanonicalIdentifier = "com.vaultsync.app";
+    private const string ContentsDirectoryName = "Contents";
     private const string TransitionVersion = "1.8.7";
 
     internal static bool TryMigrateAndRelaunch(string runtimeDirectory)
@@ -33,21 +34,7 @@ internal static class MacOsLegacyBundleMigrationService
         try
         {
             if (Directory.Exists(canonicalBundle))
-            {
-                if (IsLinkedDirectory(canonicalBundle) ||
-                    !IsCanonicalBundle(canonicalBundle, TransitionVersion))
-                {
-                    DiagnosticsLogger.Record(
-                        $"Legacy macOS bundle migration stopped because {canonicalBundle} already exists and is not the expected target.");
-                    return false;
-                }
-
-                if (!LaunchBundle(canonicalBundle))
-                    return false;
-
-                TryMoveLegacyBundleToTrash(legacyBundle);
-                return true;
-            }
+                return TryUseExistingCanonicalBundle(legacyBundle, canonicalBundle);
 
             RunRequired("/usr/bin/ditto", legacyBundle, temporaryBundle);
             if (IsLinkedDirectory(temporaryBundle))
@@ -83,6 +70,23 @@ internal static class MacOsLegacyBundleMigrationService
         }
     }
 
+    private static bool TryUseExistingCanonicalBundle(string legacyBundle, string canonicalBundle)
+    {
+        if (IsLinkedDirectory(canonicalBundle) ||
+            !IsCanonicalBundle(canonicalBundle, TransitionVersion))
+        {
+            DiagnosticsLogger.Record(
+                $"Legacy macOS bundle migration stopped because {canonicalBundle} already exists and is not the expected target.");
+            return false;
+        }
+
+        if (!LaunchBundle(canonicalBundle))
+            return false;
+
+        TryMoveLegacyBundleToTrash(legacyBundle);
+        return true;
+    }
+
     internal static string? ResolveLegacyBundle(string runtimeDirectory)
     {
         if (string.IsNullOrWhiteSpace(runtimeDirectory))
@@ -95,7 +99,7 @@ internal static class MacOsLegacyBundleMigrationService
         DirectoryInfo? bundle = contents?.Parent;
         if (contents is null || bundle is null ||
             !string.Equals(macOs.Name, "MacOS", StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(contents.Name, "Contents", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(contents.Name, ContentsDirectoryName, StringComparison.OrdinalIgnoreCase) ||
             !IsLegacyBundleName(bundle.Name))
         {
             return null;
@@ -119,13 +123,13 @@ internal static class MacOsLegacyBundleMigrationService
 
     private static void WriteCanonicalInfoPlist(string bundle, string version)
     {
-        string plistPath = Path.Combine(bundle, "Contents", "Info.plist");
+        string plistPath = Path.Combine(bundle, ContentsDirectoryName, "Info.plist");
         var document = new XDocument(
             new XDeclaration("1.0", "UTF-8", null),
             new XDocumentType(
                 "plist",
                 "-//Apple//DTD PLIST 1.0//EN",
-                "http://www.apple.com/DTDs/PropertyList-1.0.dtd",
+                "https://www.apple.com/DTDs/PropertyList-1.0.dtd",
                 null),
             new XElement(
                 "plist",
@@ -153,7 +157,7 @@ internal static class MacOsLegacyBundleMigrationService
         if (!File.Exists(source))
             return;
 
-        string resources = Path.Combine(bundle, "Contents", "Resources");
+        string resources = Path.Combine(bundle, ContentsDirectoryName, "Resources");
         Directory.CreateDirectory(resources);
         File.Copy(source, Path.Combine(resources, "VaultSync.icns"), overwrite: true);
     }
@@ -162,7 +166,7 @@ internal static class MacOsLegacyBundleMigrationService
     {
         try
         {
-            string plistPath = Path.Combine(bundle, "Contents", "Info.plist");
+            string plistPath = Path.Combine(bundle, ContentsDirectoryName, "Info.plist");
             XDocument document = XDocument.Load(plistPath);
             XElement[] values = document.Descendants("dict").Elements().ToArray();
             string? Read(string key)
@@ -177,7 +181,7 @@ internal static class MacOsLegacyBundleMigrationService
 
             return string.Equals(Read("CFBundleIdentifier"), CanonicalIdentifier, StringComparison.Ordinal) &&
                    string.Equals(Read("CFBundleShortVersionString"), version, StringComparison.Ordinal) &&
-                   File.Exists(Path.Combine(bundle, "Contents", "MacOS", "VaultSync.UI"));
+                   File.Exists(Path.Combine(bundle, ContentsDirectoryName, "MacOS", "VaultSync.UI"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Xml.XmlException)
         {
