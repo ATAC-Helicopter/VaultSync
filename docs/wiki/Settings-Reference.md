@@ -134,7 +134,7 @@ off the master does not erase those individual choices.
 | Enable verbose logging | Adds troubleshooting detail to the live log. |
 | Save verbose logs to disk | Persists that detail locally while verbose logging is enabled. |
 | Open console / Export logs | Views recent activity or exports it for support. |
-| Export support bundle | Creates a reviewable diagnostic bundle. |
+| Export support bundle | Shows every generated file before export. Required report/manifest files stay included; optional sanitized diagnostics and anonymized telemetry can be removed or the export can be cancelled. |
 | Import support bundle | Imports supported configuration from a bundle; diagnostics are not applied as settings. |
 | Crash report assistance | Creates a strictly allowlisted local report after a crash. Nothing is sent automatically. |
 | Maintenance window | Allows selected once-per-day health jobs inside an `HH:mm` window. |
