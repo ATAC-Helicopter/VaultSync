@@ -14,11 +14,12 @@ VaultSync is distributed through two Windows channels plus the existing macOS/Li
 2. Windows Direct: run the `.exe` installer. Linux x64: use the `.AppImage` for the most app-like portable launch, or extract the `.tar.gz` and run `./install.sh` for a per-user desktop/menu install. Linux arm64: extract the `.tar.gz` and run `./install.sh`. macOS: open the architecture-appropriate `.dmg` and drag `VaultSync.app` to `/Applications`.
 3. Direct packages are intentionally unsigned. Download only from the official VaultSync GitHub release and compare its published SHA-256 digest before bypassing an operating-system warning. On macOS, right-click -> Open the first time (or run `xattr -dr com.apple.quarantine /Applications/VaultSync.app`).
 
-When upgrading to 1.8.7 from an older architecture-named bundle, install
-`/Applications/VaultSync.app`, launch it once to verify your existing settings,
-then move `VaultSync-macos-arm64.app` or `VaultSync-macos-x64.app` to Trash. User
-configuration and backup metadata live outside the application bundle and are
-not removed with the old app.
+When upgrading directly from 1.8.6, the in-app macOS update performs the
+one-time migration from the architecture-named bundle to
+`/Applications/VaultSync.app`, launches the canonical app, and moves the old
+bundle to Trash. Older or unqualified versions use the architecture-appropriate
+full DMG. User configuration and backup metadata live outside the application
+bundle and are not removed with the old app.
 4. Launch VaultSync.
 
 ## Updating

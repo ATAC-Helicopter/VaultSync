@@ -93,52 +93,18 @@ class ReleaseManifestTests(unittest.TestCase):
 
             self.assertEqual(len(names), len(manifest["assets"]))
 
-    def test_build_manifest_supports_full_dmg_macos_transition(self) -> None:
+    def test_transition_manifest_requires_both_macos_bridge_patches(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
             root = Path(tmp)
             names = [
                 name
                 for name in CORE_ASSETS
-                if not name.startswith("vaultsync-patch-macos-")
+                if name != "vaultsync-patch-macos-intel.zip"
             ]
             self.write_assets(root, names)
 
-            manifest = release_manifest.build_manifest(
-                root,
-                version="1.8.7",
-                channel="stable",
-                commit="c" * 40,
-                repository="ATAC-Helicopter/VaultSync",
-                predecessors=["1.8.6"],
-                omit_macos_patches=True,
-            )
-
-            self.assertEqual(len(names), len(manifest["assets"]))
-            self.assertFalse(
-                any(asset["packageKind"].startswith("patch-") and asset["platform"] == "macos"
-                    for asset in manifest["assets"])
-            )
-
-    def test_macos_patch_omission_is_rejected_outside_transition_release(self) -> None:
-        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
-            root = Path(tmp)
-            names = [
-                name.replace("1.8.7", "1.8.8")
-                for name in CORE_ASSETS
-                if not name.startswith("vaultsync-patch-macos-")
-            ]
-            self.write_assets(root, names)
-
-            with self.assertRaisesRegex(ValueError, "only for the 1.8.7"):
-                release_manifest.build_manifest(
-                    root,
-                    version="1.8.8",
-                    channel="stable",
-                    commit="d" * 40,
-                    repository="ATAC-Helicopter/VaultSync",
-                    predecessors=["1.8.7"],
-                    omit_macos_patches=True,
-                )
+            with self.assertRaisesRegex(ValueError, "matrix mismatch"):
+                self.build(root)
 
     def test_build_manifest_rejects_missing_and_unexpected_assets(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:

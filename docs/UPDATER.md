@@ -32,11 +32,14 @@ macOS can use architecture-specific patch names:
 - `vaultsync-patch-macos-apple-silicon.*`
 - `vaultsync-patch-macos-intel.*`
 
-VaultSync 1.8.7 is a deliberate full-DMG transition from the legacy
-architecture-named application bundles to `/Applications/VaultSync.app`; its
-release omits macOS patch assets. Later macOS patches contain and update the
-complete `.app` bundle relative to its root, then verify `Info.plist`, target
-version, and the declared executable before restart.
+VaultSync 1.8.7 includes one architecture-aware bridge patch for the exact
+1.8.6 predecessor. The 1.8.6 helper updates its legacy `Contents/MacOS`
+payload; on restart, 1.8.7 copies that complete bundle into a staged canonical
+`VaultSync.app`, writes and verifies the canonical `Info.plist`, applies the
+stable ad-hoc identity, launches the canonical app, and then moves the legacy
+architecture-named bundle to Trash. If migration cannot be completed, the
+legacy bundle is retained and the full DMG remains the recovery path. Later
+macOS patches update and verify the complete `.app` bundle relative to its root.
 
 Linux can use architecture-specific patch names:
 - `vaultsync-patch-linux-x64.*`
