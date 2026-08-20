@@ -413,7 +413,7 @@ after the planned minor train is complete and use explicit beta qualification.
   - Acceptance: changing an asset, version, or digest makes release validation
     fail, while an offline user can validate every downloaded package using the
     published manifest and documented commands.
-- [ ] `VS-1873` `P1` Generate and publish a Software Bill of Materials and
+- [x] `VS-1873` `P1` Generate and publish a Software Bill of Materials and
   build provenance where supported.
   - Scope: create an SBOM for each self-contained platform artifact, attest the
     published artifact rather than an intermediate build directory, and expose
@@ -421,11 +421,12 @@ after the planned minor train is complete and use explicit beta qualification.
   - Acceptance: SBOM schemas validate, provenance binds each package to the
     repository, workflow, and commit that produced it, and verification is
     exercised in the release-candidate gate.
-  - Implemented 2026-08-17: final manifest-listed packages receive validated SPDX
+  - Completed 2026-08-21: final manifest-listed packages receive validated SPDX
     2.3 documents tied to their exact SHA-256 and RID-specific dependency graph.
     A commit-pinned GitHub action attests final package provenance and each SBOM;
     candidate automation exercises both API-backed and downloaded-bundle trust.
-    One release-candidate workflow run remains required before completion.
+    Unpublished release-candidate run `32425579729` built every supported package
+    and passed manifest, SBOM, online-attestation, and offline-bundle verification.
 - [x] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
   - Scope: package a versioned JSON record, readable report, package manifest,
     checksums, build identity, recovery state, drill evidence, and repository
