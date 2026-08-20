@@ -349,22 +349,22 @@ public sealed class RecoveryViewModel : ViewModelBase
             return null;
 
         IsExporting = true;
-        ExportStatus = L("Recovery.Export.Working", "Preparing recovery report...");
+        ExportStatus = L("Recovery.Export.Working", "Preparing recovery evidence package...");
         try
         {
             await RefreshAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             RecoveryReportSnapshot snapshot = await Dispatcher.UIThread.InvokeAsync(BuildReportSnapshot);
             RecoveryReportLabels labels = BuildReportLabels();
             string path = await Task.Run(() =>
-                RecoveryReportExporter.ExportMarkdown(snapshot, labels, exportRoot),
+                RecoveryEvidencePackage.Export(snapshot, labels, exportRoot),
                 cancellationToken);
             await Task.Run(() => RecordReportExport(snapshot, path), cancellationToken).ConfigureAwait(false);
-            string message = LF("Recovery.Export.Success", "Recovery report exported to {0}", path);
+            string message = LF("Recovery.Export.Success", "Recovery evidence package exported to {0}", path);
             await Dispatcher.UIThread.InvokeAsync(() => ExportStatus = message);
             GlobalNotificationCenter.Instance.Show(
                 message,
                 NotificationSeverity.Info,
-                L("Recovery.Export.Title", "Recovery report"),
+                L("Recovery.Export.Title", "Recovery evidence"),
                 groupKey: "recovery-report-export");
             return path;
         }
@@ -374,13 +374,13 @@ public sealed class RecoveryViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            DiagnosticsLogger.RecordException("Recovery report export failed", ex);
-            string message = LF("Recovery.Export.FailedWithReason", "Recovery report export failed: {0}", ex.Message);
+            DiagnosticsLogger.RecordException("Recovery evidence export failed", ex);
+            string message = LF("Recovery.Export.FailedWithReason", "Recovery evidence export failed: {0}", ex.Message);
             await Dispatcher.UIThread.InvokeAsync(() => ExportStatus = message);
             GlobalNotificationCenter.Instance.Show(
                 message,
                 NotificationSeverity.Error,
-                L("Recovery.Export.Title", "Recovery report"),
+                L("Recovery.Export.Title", "Recovery evidence"),
                 groupKey: "recovery-report-export");
             return null;
         }
@@ -422,7 +422,16 @@ public sealed class RecoveryViewModel : ViewModelBase
                     check.Status.ToString(),
                     check.Detail,
                     check.EvidenceId ?? string.Empty,
-                    check.Path ?? string.Empty)).ToList())).ToList(),
+                    check.Path ?? string.Empty)).ToList(),
+                project.RepositoryIdentity,
+                project.ConfidenceEvidence.Select(item => new RecoveryReportConfidenceEvidence(
+                    item.Kind.ToString(),
+                    item.Basis.ToString(),
+                    item.Status.ToString(),
+                    item.Code,
+                    item.ObservedUtc is null
+                        ? null
+                        : new DateTimeOffset(item.ObservedUtc.Value.ToUniversalTime()))).ToList())).ToList(),
             ThreeTwoOneReadyCount,
             DrilledProjectCount,
             PassedDrillCount,
@@ -435,6 +444,14 @@ public sealed class RecoveryViewModel : ViewModelBase
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(Environment.MachineName));
         return $"machine-{Convert.ToHexString(hash)[..12].ToLowerInvariant()}";
+    }
+
+    private static string BuildRepositoryIdentity(string externalId)
+    {
+        if (string.IsNullOrWhiteSpace(externalId))
+            return "repository-unknown";
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(externalId));
+        return $"repository-{Convert.ToHexString(hash)[..16].ToLowerInvariant()}";
     }
 
     private void RecordReportExport(RecoveryReportSnapshot snapshot, string path)
@@ -456,7 +473,7 @@ public sealed class RecoveryViewModel : ViewModelBase
                 Status = "Completed",
                 EvidenceId = reportId,
                 SourceIdentity = snapshot.SourceIdentity,
-                Summary = "A redacted recovery evidence report was exported."
+                Summary = "A portable, checksummed recovery evidence package was exported."
             });
         }
     }
@@ -498,6 +515,9 @@ public sealed class RecoveryViewModel : ViewModelBase
             project => !string.IsNullOrWhiteSpace(project.GroupId) && groupNames.TryGetValue(project.GroupId, out string? groupName)
                 ? groupName
                 : L("Projects.Folder.Ungrouped", "Ungrouped"));
+        Dictionary<int, string> repositoryIdentityByProject = projects.ToDictionary(
+            project => project.Id,
+            project => BuildRepositoryIdentity(project.ExternalId));
         var backups = repo.GetAllBackups();
         var snapshots = repo.GetAllSnapshots().ToList();
         IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId =
@@ -556,7 +576,8 @@ public sealed class RecoveryViewModel : ViewModelBase
             topRecommendation,
             disasterRecovery,
             confidenceByProject,
-            groupNameByProject);
+            groupNameByProject,
+            repositoryIdentityByProject);
     }
 
     private void ApplyData(RecoveryData data)
@@ -605,6 +626,7 @@ public sealed class RecoveryViewModel : ViewModelBase
                     ?? L("Projects.Folder.Ungrouped", "Ungrouped"),
                 protection,
                 confidence,
+                data.RepositoryIdentityByProject.GetValueOrDefault(project.ProjectId) ?? "unknown",
                 RunDrillAsync,
                 RunIsolatedRestoreAsync,
                 ProtectRecommendedPointAsync));
@@ -681,7 +703,8 @@ public sealed class RecoveryViewModel : ViewModelBase
         string TopRecommendation,
         DisasterRecoverySummary DisasterRecovery,
         IReadOnlyDictionary<int, ProjectRecoveryConfidence> ConfidenceByProject,
-        IReadOnlyDictionary<int, string> GroupNameByProject);
+        IReadOnlyDictionary<int, string> GroupNameByProject,
+        IReadOnlyDictionary<int, string> RepositoryIdentityByProject);
 
     private static IReadOnlyList<RecoveryDrillCheck> DeserializeChecks(RecoveryDrillResult? drill)
     {
@@ -879,11 +902,13 @@ public sealed class RecoveryProjectViewModel
         string groupName = "",
         ProjectProtectionAssessment? protection = null,
         ProjectRecoveryConfidence? confidence = null,
+        string repositoryIdentity = "unknown",
         Func<int, Task>? runDrill = null,
         Func<int, Task>? runIsolatedRestore = null,
         Func<int, Task>? protectPoint = null)
     {
         ProjectName = project.ProjectName;
+        RepositoryIdentity = repositoryIdentity;
         GroupName = string.IsNullOrWhiteSpace(groupName)
             ? L("Projects.Folder.Ungrouped", "Ungrouped")
             : groupName;
@@ -922,10 +947,11 @@ public sealed class RecoveryProjectViewModel
         Evidence = confidence?.Evidence
             .Select(item => new RecoveryEvidenceItemViewModel(
                 BuildEvidenceLabel(item.Kind),
-                item.Status.ToString(),
-                item.Basis.ToString(),
+                BuildEvidenceStatusLabel(item.Status),
+                BuildEvidenceBasisLabel(item.Basis),
                 BuildEvidenceDetail(item.Code, item.ObservedUtc)))
             .ToList() ?? [];
+        ConfidenceEvidence = confidence?.Evidence.ToList() ?? [];
         RunDrillCommand = new AsyncRelayCommand(
             _ => runDrill?.Invoke(project.ProjectId) ?? Task.CompletedTask,
             operationName: $"recovery-drill-{project.ProjectId}");
@@ -941,6 +967,7 @@ public sealed class RecoveryProjectViewModel
     }
 
     public string ProjectName { get; }
+    public string RepositoryIdentity { get; }
     public string GroupName { get; }
     public string Label { get; }
     public int Score { get; }
@@ -961,6 +988,7 @@ public sealed class RecoveryProjectViewModel
     public string ConfidenceExplanation { get; }
     public string RecommendedAction { get; }
     public IReadOnlyList<RecoveryEvidenceItemViewModel> Evidence { get; }
+    internal IReadOnlyList<RecoveryConfidenceEvidence> ConfidenceEvidence { get; }
     public ICommand RunDrillCommand { get; }
     public ICommand RunIsolatedRestoreCommand { get; }
     public ICommand ProtectRecommendationCommand { get; }
@@ -1008,55 +1036,78 @@ public sealed class RecoveryProjectViewModel
 
     private static string BuildStateLabel(RecoveryConfidenceState state) => state switch
     {
-        RecoveryConfidenceState.FullyVerified => "Fully verified",
-        RecoveryConfidenceState.RecoverableWithWarnings => "Recoverable with warnings",
-        RecoveryConfidenceState.NoRecoveryPoint => "No recovery point",
-        RecoveryConfidenceState.DestinationUnavailable => "Destination unavailable",
-        RecoveryConfidenceState.CredentialUnavailable => "Credential not proved",
-        RecoveryConfidenceState.VerificationFailed => "Integrity verification failed",
-        RecoveryConfidenceState.VerificationPending => "Integrity not verified",
-        RecoveryConfidenceState.RestorePlanInvalid => "Restore plan blocked",
-        RecoveryConfidenceState.DrillFailed => "Recovery drill failed",
-        RecoveryConfidenceState.DrillNotRun => "Recovery drill not run",
-        RecoveryConfidenceState.DrillOverdue => "Recovery drill overdue",
-        _ => "Not measured"
+        RecoveryConfidenceState.FullyVerified => L("Recovery.Confidence.FullyVerified", "Fully verified"),
+        RecoveryConfidenceState.RecoverableWithWarnings => L("Recovery.Confidence.WithWarnings", "Recoverable with warnings"),
+        RecoveryConfidenceState.NoRecoveryPoint => L("Recovery.Confidence.NoPoint", "No recovery point"),
+        RecoveryConfidenceState.DestinationUnavailable => L("Recovery.Confidence.DestinationUnavailable", "Destination unavailable"),
+        RecoveryConfidenceState.CredentialUnavailable => L("Recovery.Confidence.CredentialUnavailable", "Credential not proved"),
+        RecoveryConfidenceState.VerificationFailed => L("Recovery.Confidence.VerificationFailed", "Integrity verification failed"),
+        RecoveryConfidenceState.VerificationPending => L("Recovery.Confidence.VerificationPending", "Integrity not verified"),
+        RecoveryConfidenceState.RestorePlanInvalid => L("Recovery.Confidence.RestorePlanInvalid", "Restore plan blocked"),
+        RecoveryConfidenceState.DrillFailed => L("Recovery.Confidence.DrillFailed", "Recovery drill failed"),
+        RecoveryConfidenceState.DrillNotRun => L("Recovery.Confidence.DrillNotRun", "Recovery drill not run"),
+        RecoveryConfidenceState.DrillOverdue => L("Recovery.Confidence.DrillOverdue", "Recovery drill overdue"),
+        _ => L("Recovery.Band.NotMeasured", "Not measured")
     };
 
     private static string BuildEvidenceExplanation(ProjectRecoveryConfidence? confidence)
     {
         if (confidence is null)
-            return "Recovery evidence has not been measured.";
+            return L("Recovery.Confidence.NotMeasuredDetail", "Recovery evidence has not been measured.");
         RecoveryConfidenceEvidence? decisive = confidence.Evidence.FirstOrDefault(item =>
             string.Equals(item.Code, confidence.DecisiveEvidenceCode, StringComparison.Ordinal));
         return decisive is null
-            ? "All required recovery evidence is current."
-            : $"Decisive evidence: {BuildEvidenceLabel(decisive.Kind)} is {decisive.Status.ToString().ToLowerInvariant()}.";
+            ? L("Recovery.Confidence.Current", "All required recovery evidence is current.")
+            : LF(
+                "Recovery.Confidence.Decisive",
+                "Decisive evidence: {0} is {1}.",
+                BuildEvidenceLabel(decisive.Kind),
+                BuildEvidenceStatusLabel(decisive.Status).ToLower(System.Globalization.CultureInfo.CurrentCulture));
     }
 
     private static string BuildActionLabel(string? code) => code switch
     {
-        "action.create-backup" => "Create the first backup",
-        "action.reconnect-destination" => "Reconnect the backup destination",
-        "action.restore-credential" or "action.check-credential" => "Check the encryption credential",
-        "action.run-verification" => "Run an integrity proof",
-        "action.review-restore-plan" => "Review the restore plan",
-        "action.run-restore-drill" => "Run the recovery drill",
-        "action.review-drill" => "Review the failed drill",
-        "action.review-limitations" or "action.review-evidence" => "Review evidence limitations",
-        "action.none" => "No action required",
-        _ => "Measure recovery evidence"
+        "action.create-backup" => L("Recovery.Action.CreateBackup", "Create the first backup"),
+        "action.reconnect-destination" => L("Recovery.Action.ReconnectDestination", "Reconnect the backup destination"),
+        "action.restore-credential" or "action.check-credential" => L("Recovery.Action.CheckCredential", "Check the encryption credential"),
+        "action.run-verification" => L("Recovery.Action.RunVerification", "Run an integrity proof"),
+        "action.review-restore-plan" => L("Recovery.Action.ReviewRestorePlan", "Review the restore plan"),
+        "action.run-restore-drill" => L("Recovery.Action.RunDrill", "Run the recovery drill"),
+        "action.review-drill" => L("Recovery.Action.ReviewDrill", "Review the failed drill"),
+        "action.review-limitations" or "action.review-evidence" => L("Recovery.Action.ReviewLimitations", "Review evidence limitations"),
+        "action.none" => L("Recovery.Action.None", "No action required"),
+        _ => L("Recovery.Action.Measure", "Measure recovery evidence")
     };
 
     private static string BuildEvidenceLabel(RecoveryEvidenceKind kind) => kind switch
     {
-        RecoveryEvidenceKind.RecoveryPoint => "Recovery point",
-        RecoveryEvidenceKind.Destination => "Destination",
-        RecoveryEvidenceKind.Credential => "Credential",
-        RecoveryEvidenceKind.IntegrityVerification => "Integrity verification",
-        RecoveryEvidenceKind.RestorePlan => "Restore plan",
-        RecoveryEvidenceKind.RestoreDrill => "Recovery drill",
-        RecoveryEvidenceKind.OffsiteCopy => "Offsite copy",
+        RecoveryEvidenceKind.RecoveryPoint => L("Recovery.Evidence.RecoveryPoint", "Recovery point"),
+        RecoveryEvidenceKind.Destination => L("Recovery.Evidence.Destination", "Destination"),
+        RecoveryEvidenceKind.Credential => L("Recovery.Evidence.Credential", "Credential"),
+        RecoveryEvidenceKind.IntegrityVerification => L("Recovery.Evidence.Integrity", "Integrity verification"),
+        RecoveryEvidenceKind.RestorePlan => L("Recovery.Evidence.RestorePlan", "Restore plan"),
+        RecoveryEvidenceKind.RestoreDrill => L("Recovery.Evidence.RestoreDrill", "Recovery drill"),
+        RecoveryEvidenceKind.OffsiteCopy => L("Recovery.Evidence.OffsiteCopy", "Offsite copy"),
         _ => kind.ToString()
+    };
+
+    private static string BuildEvidenceStatusLabel(RecoveryEvidenceStatus status) => status switch
+    {
+        RecoveryEvidenceStatus.Passed => L("Recovery.Evidence.Status.Passed", "Passed"),
+        RecoveryEvidenceStatus.Warning => L("Recovery.Evidence.Status.Warning", "Warning"),
+        RecoveryEvidenceStatus.Failed => L("Recovery.Evidence.Status.Failed", "Failed"),
+        RecoveryEvidenceStatus.Missing => L("Recovery.Evidence.Status.Missing", "Missing"),
+        RecoveryEvidenceStatus.Stale => L("Recovery.Evidence.Status.Stale", "Stale"),
+        _ => L("Recovery.Evidence.Status.Unsupported", "Unsupported")
+    };
+
+    private static string BuildEvidenceBasisLabel(RecoveryEvidenceBasis basis) => basis switch
+    {
+        RecoveryEvidenceBasis.Measured => L("Recovery.Evidence.Basis.Measured", "Measured"),
+        RecoveryEvidenceBasis.Simulated => L("Recovery.Evidence.Basis.Simulated", "Simulated"),
+        RecoveryEvidenceBasis.Inferred => L("Recovery.Evidence.Basis.Inferred", "Inferred"),
+        RecoveryEvidenceBasis.UserConfirmed => L("Recovery.Evidence.Basis.Confirmed", "Confirmed"),
+        _ => L("Recovery.Evidence.Basis.Unsupported", "Unsupported")
     };
 
     private static string BuildEvidenceDetail(string code, DateTime? observedUtc) =>

@@ -18,7 +18,9 @@ internal sealed record RecoveryReportProject(
     string Media = "",
     string Offsite = "",
     string LastDrill = "",
-    IReadOnlyList<RecoveryReportEvidence>? Evidence = null);
+    IReadOnlyList<RecoveryReportEvidence>? Evidence = null,
+    string RepositoryIdentity = "unknown",
+    IReadOnlyList<RecoveryReportConfidenceEvidence>? ConfidenceEvidence = null);
 
 internal sealed record RecoveryReportEvidence(
     string Code,
@@ -26,6 +28,13 @@ internal sealed record RecoveryReportEvidence(
     string Detail,
     string EvidenceId,
     string Path);
+
+internal sealed record RecoveryReportConfidenceEvidence(
+    string Kind,
+    string Basis,
+    string Status,
+    string Code,
+    DateTimeOffset? ObservedAtUtc);
 
 internal sealed record RecoveryReportSnapshot(
     DateTimeOffset GeneratedAt,
@@ -236,7 +245,7 @@ internal static class RecoveryReportExporter
     private static string EscapeHeading(string value) =>
         EscapeCell(value).Replace("#", "\\#", StringComparison.Ordinal);
 
-    private static string RedactEvidencePath(string value)
+    internal static string RedactEvidencePath(string value)
     {
         if (string.IsNullOrWhiteSpace(value) || !Path.IsPathFullyQualified(value))
             return value ?? string.Empty;
@@ -244,16 +253,20 @@ internal static class RecoveryReportExporter
         return $"[local path redacted]/{Path.GetFileName(value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))}";
     }
 
-    private static string GetDefaultExportDirectory()
+    internal static string GetDefaultExportDirectory()
     {
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         if (string.IsNullOrWhiteSpace(documents))
-            documents = Path.GetTempPath();
+            documents = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(documents))
+            documents = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrWhiteSpace(documents))
+            throw new InvalidOperationException("A private recovery export directory is not available.");
 
         return Path.Combine(documents, "VaultSync", "Exports", "Recovery");
     }
 
-    private static string EnsureUniquePath(string path)
+    internal static string EnsureUniquePath(string path)
     {
         if (!File.Exists(path))
             return path;
