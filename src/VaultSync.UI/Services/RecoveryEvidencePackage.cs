@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace VaultSync.UI.Services;
 
@@ -16,6 +17,10 @@ internal sealed record RecoveryEvidencePackageValidationResult(
 
 internal static class RecoveryEvidencePackage
 {
+    private const string EvidenceFileName = "recovery-evidence.json";
+    private const string ReportFileName = "recovery-report.md";
+    private const string ManifestFileName = "manifest.json";
+    private const string ChecksumsFileName = "SHA256SUMS";
     private const int SchemaVersion = 1;
     private const long MaximumEntryBytes = 16 * 1024 * 1024;
     private static readonly DateTimeOffset StableZipTimestamp =
@@ -27,10 +32,10 @@ internal static class RecoveryEvidencePackage
     };
     private static readonly string[] RequiredEntries =
     [
-        "recovery-evidence.json",
-        "recovery-report.md",
-        "manifest.json",
-        "SHA256SUMS"
+        EvidenceFileName,
+        ReportFileName,
+        ManifestFileName,
+        ChecksumsFileName
     ];
 
     public static string Export(
@@ -47,12 +52,12 @@ internal static class RecoveryEvidencePackage
         byte[] report = Encoding.UTF8.GetBytes(RecoveryReportExporter.BuildMarkdown(snapshot, labels));
         var content = new SortedDictionary<string, byte[]>(StringComparer.Ordinal)
         {
-            ["recovery-evidence.json"] = evidence,
-            ["recovery-report.md"] = report
+            [EvidenceFileName] = evidence,
+            [ReportFileName] = report
         };
         byte[] manifest = SerializeManifest(snapshot, content);
-        content["manifest.json"] = manifest;
-        content["SHA256SUMS"] = BuildChecksumFile(content);
+        content[ManifestFileName] = manifest;
+        content[ChecksumsFileName] = BuildChecksumFile(content);
 
         string path = RecoveryReportExporter.EnsureUniquePath(Path.Combine(
             root,
@@ -78,31 +83,26 @@ internal static class RecoveryEvidencePackage
         {
             using ZipArchive archive = ZipFile.OpenRead(packagePath);
             string[] names = [.. archive.Entries.Select(entry => entry.FullName)];
-            if (names.Length != names.Distinct(StringComparer.Ordinal).Count())
-                return Invalid("The package contains duplicate entries.", names);
-            if (names.Any(IsUnsafeEntryName))
-                return Invalid("The package contains an unsafe entry path.", names);
-            if (!names.Order(StringComparer.Ordinal).SequenceEqual(RequiredEntries.Order(StringComparer.Ordinal)))
-                return Invalid("The package is missing a required file or contains an unexpected file.", names);
-            if (archive.Entries.Any(entry => entry.Length > MaximumEntryBytes))
-                return Invalid("A package entry exceeds the supported size limit.", names);
+            RecoveryEvidencePackageValidationResult? structureFailure = ValidateArchiveStructure(archive, names);
+            if (structureFailure is not null)
+                return structureFailure;
 
             Dictionary<string, byte[]> files = archive.Entries.ToDictionary(
                 entry => entry.FullName,
                 ReadEntry,
                 StringComparer.Ordinal);
-            if (!HasSupportedSchema(files["recovery-evidence.json"]) ||
-                !HasSupportedSchema(files["manifest.json"]))
+            if (!HasSupportedSchema(files[EvidenceFileName]) ||
+                !HasSupportedSchema(files[ManifestFileName]))
             {
                 return Invalid("The package uses an unsupported schema version.", names);
             }
 
             EvidenceManifest? manifest = JsonSerializer.Deserialize<EvidenceManifest>(
-                files["manifest.json"], JsonOptions);
+                files[ManifestFileName], JsonOptions);
             if (manifest is null || manifest.Files is null || manifest.Files.Count != 2 ||
                 manifest.Files.Select(item => item.Path).Distinct(StringComparer.Ordinal).Count() != 2 ||
                 !manifest.Files.Select(item => item.Path).Order(StringComparer.Ordinal).SequenceEqual(
-                    new[] { "recovery-evidence.json", "recovery-report.md" }, StringComparer.Ordinal))
+                    RequiredManifestEntries, StringComparer.Ordinal))
                 return Invalid("The package manifest is invalid.", names);
             foreach (EvidenceManifestFile item in manifest.Files)
             {
@@ -116,9 +116,9 @@ internal static class RecoveryEvidencePackage
 
             string expectedSums = Encoding.UTF8.GetString(BuildChecksumFile(
                 new SortedDictionary<string, byte[]>(files
-                    .Where(pair => !string.Equals(pair.Key, "SHA256SUMS", StringComparison.Ordinal))
+                    .Where(pair => !string.Equals(pair.Key, ChecksumsFileName, StringComparison.Ordinal))
                     .ToDictionary(pair => pair.Key, pair => pair.Value), StringComparer.Ordinal)));
-            string actualSums = Encoding.UTF8.GetString(files["SHA256SUMS"]);
+            string actualSums = Encoding.UTF8.GetString(files[ChecksumsFileName]);
             if (!string.Equals(actualSums, expectedSums, StringComparison.Ordinal))
                 return Invalid("The package checksum index is invalid.", names);
 
@@ -136,6 +136,23 @@ internal static class RecoveryEvidencePackage
         {
             return Invalid($"The package contains invalid JSON: {ex.Message}", []);
         }
+    }
+
+    private static readonly string[] RequiredManifestEntries = [EvidenceFileName, ReportFileName];
+
+    private static RecoveryEvidencePackageValidationResult? ValidateArchiveStructure(
+        ZipArchive archive,
+        IReadOnlyList<string> names)
+    {
+        if (names.Count != names.Distinct(StringComparer.Ordinal).Count())
+            return Invalid("The package contains duplicate entries.", names);
+        if (names.Any(IsUnsafeEntryName))
+            return Invalid("The package contains an unsafe entry path.", names);
+        if (!names.Order(StringComparer.Ordinal).SequenceEqual(RequiredEntries.Order(StringComparer.Ordinal)))
+            return Invalid("The package is missing a required file or contains an unexpected file.", names);
+        return archive.Entries.Any(entry => entry.Length > MaximumEntryBytes)
+            ? Invalid("A package entry exceeds the supported size limit.", names)
+            : null;
     }
 
     internal static byte[] SerializeEvidence(RecoveryReportSnapshot snapshot)
@@ -240,7 +257,7 @@ internal static class RecoveryEvidencePackage
     private static bool IsUnsafeEntryName(string name) =>
         string.IsNullOrWhiteSpace(name) ||
         name.Contains('\\', StringComparison.Ordinal) ||
-        name.StartsWith("/", StringComparison.Ordinal) ||
+        name.StartsWith('/') ||
         name.Split('/').Any(part => part is "" or "." or "..");
 
     private static string Hash(byte[] bytes) =>
@@ -250,7 +267,7 @@ internal static class RecoveryEvidencePackage
         new(false, message, files);
 
     private sealed record RecoveryEvidenceDocument(
-        int SchemaVersion,
+        [property: JsonPropertyName("schemaVersion")] int DocumentSchemaVersion,
         DateTimeOffset GeneratedAtUtc,
         string AppVersion,
         string SourceIdentity,
@@ -274,7 +291,8 @@ internal static class RecoveryEvidencePackage
     private sealed record RecoveryEvidenceItem(
         string Code, string Status, string Detail, string EvidenceId, string Path);
     private sealed record EvidenceManifest(
-        int SchemaVersion, string PackageType, DateTimeOffset GeneratedAtUtc,
+        [property: JsonPropertyName("schemaVersion")] int ManifestSchemaVersion,
+        string PackageType, DateTimeOffset GeneratedAtUtc,
         IReadOnlyList<EvidenceManifestFile> Files);
     private sealed record EvidenceManifestFile(string Path, long Bytes, string Sha256);
 }

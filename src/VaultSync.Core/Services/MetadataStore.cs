@@ -242,8 +242,7 @@ public sealed class MetadataStore
 
     public bool TryUpsertProject(MetaProject project, long expectedRevision)
     {
-        if (expectedRevision < 0)
-            throw new ArgumentOutOfRangeException(nameof(expectedRevision));
+        ArgumentOutOfRangeException.ThrowIfNegative(expectedRevision);
 
         const string sql = """
             INSERT INTO projects(external_id, name, preset, root_path_hint, created_utc, settings_json, updated_utc, writer_machine_id, revision, base_revision, field_provenance_json, resolution_json)

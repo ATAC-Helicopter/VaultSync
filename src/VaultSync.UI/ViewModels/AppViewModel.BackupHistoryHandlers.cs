@@ -62,7 +62,7 @@ namespace VaultSync.UI.ViewModels
             string backupRoot  = preparation.BackupRoot;
             string projectName = preparation.ProjectName;
             string cardId = $"delete-{backupId}";
-            var deleteResolutions = new List<DestinationResolution>();
+            DestinationResolution? deleteResolution = null;
 
             var deleteContext = await Task.Run(() =>
             {
@@ -164,7 +164,11 @@ namespace VaultSync.UI.ViewModels
 
                         if (resolution.IsSuccess && !string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         {
-                            deleteResolutions.Add(resolution);
+                            if (deleteResolution is not null)
+                            {
+                                NetworkMountService.Cleanup(deleteResolution);
+                            }
+                            deleteResolution = resolution;
                             backupRoot = string.IsNullOrWhiteSpace(rootSubPath)
                                 ? resolution.EffectivePath
                                 : Path.Combine(resolution.EffectivePath, rootSubPath);
@@ -340,9 +344,9 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.IsBusy      = false;
                 BackupsViewModel.BusyMessage = string.Empty;
 
-                foreach (DestinationResolution resolution in deleteResolutions)
+                if (deleteResolution is not null)
                 {
-                    NetworkMountService.Cleanup(resolution);
+                    NetworkMountService.Cleanup(deleteResolution);
                 }
             }
         }

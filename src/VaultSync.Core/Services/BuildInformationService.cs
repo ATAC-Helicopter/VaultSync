@@ -105,7 +105,7 @@ public static class BuildInformationService
             SignatureStatus: signatureStatus);
     }
 
-    private static string Metadata(IReadOnlyDictionary<string, string> metadata, string key) =>
+    private static string Metadata(Dictionary<string, string> metadata, string key) =>
         metadata.TryGetValue(key, out string? value) ? value : string.Empty;
 
     private static string Normalize(string? value) =>

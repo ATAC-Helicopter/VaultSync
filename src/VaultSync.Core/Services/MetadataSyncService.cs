@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -22,6 +23,14 @@ public sealed class MetadataSyncService
     private const string InvalidRootPathMessage = "Root path is empty.";
     private const string VaultSyncDirectoryName = ".vaultsync";
     private const string UnknownAppVersion = "unknown";
+    private const string AvatarColorField = "avatarColor";
+    private const string EncryptionPolicyField = "encryptionPolicy";
+    private const string PreferredDestinationIdField = "preferredDestinationId";
+    private const string RestoreModeField = "restoreMode";
+    private const string VerificationPolicyField = "verificationPolicy";
+    private const string AutoBackupEnabledField = "autoBackupEnabled";
+    private const string TagsField = "tags";
+    private static readonly SearchValues<char> HexCharacters = SearchValues.Create("0123456789abcdefABCDEF");
     private static readonly TimeSpan[] StoreRetryDelays =
     [
         TimeSpan.FromMilliseconds(200),
@@ -58,6 +67,13 @@ public sealed class MetadataSyncService
         MetaProject Record,
         long ExpectedRevision,
         ProjectMetadataConflictValues Values);
+
+    private sealed record GuardedProjectWriteRequest(
+        string DestinationRoot,
+        Project Project,
+        string ProjectExternalId,
+        DateTime UpdatedUtc,
+        string MachineId);
 
     private sealed class MetadataRevisionConflictException(string message) : InvalidOperationException(message);
 
@@ -2427,18 +2443,10 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Metadata export could not acquire its deferred writer lease.");
 
         var store = new MetadataStore(storeRoot);
-        Console.WriteLine($"[MetadataSync] Project export target store: '{store.DatabasePath}'.");
-        try
-        {
-            if (!activeLease.IsOwner)
-                return LostLeaseFailure();
-            store.EnsureSchema();
-        }
-        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
-        {
-            Console.WriteLine($"[MetadataSync] Project export failed: store init error at '{rootPath}': {ex.Message}");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
-        }
+        MetadataSyncResult? initializationFailure = TryInitializeExportStore(
+            store, activeLease, rootPath, "Project export");
+        if (initializationFailure is not null)
+            return initializationFailure;
 
         Project? project = _repo.GetProjectById(projectId);
         if (project == null)
@@ -2456,12 +2464,8 @@ public sealed class MetadataSyncService
             machineId,
             updateExistingAppVersion: true);
         if (!TryPrepareGuardedProjectWrite(
-                rootPath,
                 store,
-                project,
-                projectExternalId,
-                now,
-                machineId,
+                new GuardedProjectWriteRequest(rootPath, project, projectExternalId, now, machineId),
                 out GuardedProjectWrite? guardedWrite,
                 out string revisionFailure))
         {
@@ -2593,18 +2597,10 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Metadata export could not acquire its deferred writer lease.");
 
         var store = new MetadataStore(storeRoot);
-        Console.WriteLine($"[MetadataSync] Export target store: '{store.DatabasePath}'.");
-        try
-        {
-            if (!activeLease.IsOwner)
-                return LostLeaseFailure();
-            store.EnsureSchema();
-        }
-        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
-        {
-            Console.WriteLine($"[MetadataSync] Export failed: store init error at '{rootPath}': {ex.Message}");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
-        }
+        MetadataSyncResult? initializationFailure = TryInitializeExportStore(
+            store, activeLease, rootPath, "Backup export");
+        if (initializationFailure is not null)
+            return initializationFailure;
 
         string projectExternalId = EnsureProjectExternalId(project);
         string snapshotExternalId = EnsureSnapshotExternalId(snapshot);
@@ -2618,12 +2614,8 @@ public sealed class MetadataSyncService
             machineId,
             updateExistingAppVersion: true);
         if (!TryPrepareGuardedProjectWrite(
-                rootPath,
                 store,
-                project,
-                projectExternalId,
-                now,
-                machineId,
+                new GuardedProjectWriteRequest(rootPath, project, projectExternalId, now, machineId),
                 out GuardedProjectWrite? guardedWrite,
                 out string revisionFailure))
         {
@@ -2671,7 +2663,7 @@ public sealed class MetadataSyncService
             : $"[MetadataSync] Export complete for backup {backupId} to '{storeRoot}'.");
         LogStoreCounts(store);
         if (!useDeferredStore)
-            SaveSuccessfulProjectWriteBase(rootPath, guardedWrite!);
+            SaveSuccessfulProjectWriteBase(rootPath, guardedWrite);
         if (useDeferredStore)
         {
             return MetadataSyncResult.Failure(
@@ -2717,6 +2709,27 @@ public sealed class MetadataSyncService
         return true;
     }
 
+    private static MetadataSyncResult? TryInitializeExportStore(
+        MetadataStore store,
+        RepositoryLeaseHandle activeLease,
+        string rootPath,
+        string operationLabel)
+    {
+        Console.WriteLine($"[MetadataSync] {operationLabel} target store: '{store.DatabasePath}'.");
+        try
+        {
+            if (!activeLease.IsOwner)
+                return LostLeaseFailure();
+            store.EnsureSchema();
+            return null;
+        }
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
+        {
+            Console.WriteLine($"[MetadataSync] {operationLabel} failed: store init error at '{rootPath}': {ex.Message}");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+        }
+    }
+
     private static MetadataSyncResult SuccessfulSkip(string message) =>
         new(MetadataSyncStatus.Success, 0, 0, 0, 0, message);
 
@@ -2740,7 +2753,6 @@ public sealed class MetadataSyncService
                     store,
                     entities.Project,
                     context.ProjectExternalId,
-                    context.Now,
                     context.MachineId,
                     context.ProjectRecord,
                     context.ExpectedProjectRevision);
@@ -3234,7 +3246,6 @@ public sealed class MetadataSyncService
         MetadataStore store,
         Project project,
         string projectExternalId,
-        DateTime now,
         string machineId,
         MetaProject projectRecord,
         long expectedProjectRevision)
@@ -3388,12 +3399,8 @@ public sealed class MetadataSyncService
     private static string NewExternalId() => Guid.NewGuid().ToString("N");
 
     private bool TryPrepareGuardedProjectWrite(
-        string destinationRoot,
         MetadataStore store,
-        Project project,
-        string projectExternalId,
-        DateTime updatedUtc,
-        string machineId,
+        GuardedProjectWriteRequest request,
         out GuardedProjectWrite? write,
         out string failure)
     {
@@ -3401,57 +3408,33 @@ public sealed class MetadataSyncService
         failure = string.Empty;
         try
         {
-            MetaProject? existing = store.GetProject(projectExternalId);
-            long expectedRevision;
+            MetaProject? existing = store.GetProject(request.ProjectExternalId);
             AppConfig config = _configStore.Load();
             string sourceKey = BuildMetadataSourceKey(
-                Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                Path.GetFullPath(request.DestinationRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
             ProjectMetadataMergeBaseRecord? mergeBase = (config.Advanced.ProjectMetadataMergeBases ?? [])
                 .FirstOrDefault(item =>
                     string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(item.ProjectExternalId, projectExternalId, StringComparison.OrdinalIgnoreCase));
-
-            if (existing is null)
-            {
-                expectedRevision = 0;
-            }
-            else if (mergeBase is not null)
-            {
-                if (mergeBase.Revision <= 0 || mergeBase.Revision != existing.Revision)
-                {
-                    failure = "Project metadata changed on another machine. Import and review that revision before writing.";
-                    return false;
-                }
-
-                expectedRevision = mergeBase.Revision;
-            }
-            else if (!string.IsNullOrWhiteSpace(existing.WriterMachineId) &&
-                     string.Equals(existing.WriterMachineId, machineId, StringComparison.Ordinal))
-            {
-                expectedRevision = existing.Revision;
-            }
-            else
-            {
-                failure = "Existing project metadata has no trusted local base. Import and review it before writing.";
+                    string.Equals(item.ProjectExternalId, request.ProjectExternalId, StringComparison.OrdinalIgnoreCase));
+            if (!TryResolveExpectedRevision(existing, mergeBase, request.MachineId, out long expectedRevision, out failure))
                 return false;
-            }
 
-            ProjectMetadataConflictValues values = BuildExportedProjectValues(project, config);
+            ProjectMetadataConflictValues values = BuildExportedProjectValues(request.Project, config);
             long nextRevision = checked(expectedRevision + 1);
             var record = new MetaProject
             {
-                ExternalId = projectExternalId,
-                Name = project.Name,
-                Preset = project.Preset,
-                RootPathHint = project.RootPath,
-                CreatedUtc = project.CreatedUtc,
+                ExternalId = request.ProjectExternalId,
+                Name = request.Project.Name,
+                Preset = request.Project.Preset,
+                RootPathHint = request.Project.RootPath,
+                CreatedUtc = request.Project.CreatedUtc,
                 SettingsJson = SerializeProjectSettings(values),
-                UpdatedUtc = updatedUtc,
-                WriterMachineId = machineId,
+                UpdatedUtc = request.UpdatedUtc,
+                WriterMachineId = request.MachineId,
                 Revision = nextRevision,
                 BaseRevision = expectedRevision,
-                FieldProvenanceJson = BuildFieldProvenanceJson(existing, values, machineId, nextRevision, updatedUtc),
-                ResolutionJson = BuildResolutionJson(config, sourceKey, projectExternalId)
+                FieldProvenanceJson = BuildFieldProvenanceJson(existing, values, request.MachineId, nextRevision, request.UpdatedUtc),
+                ResolutionJson = BuildResolutionJson(config, sourceKey, request.ProjectExternalId)
             };
             write = new GuardedProjectWrite(record, expectedRevision, values);
             return true;
@@ -3462,6 +3445,39 @@ public sealed class MetadataSyncService
             failure = "Project metadata could not be prepared safely for writing.";
             return false;
         }
+    }
+
+    private static bool TryResolveExpectedRevision(
+        MetaProject? existing,
+        ProjectMetadataMergeBaseRecord? mergeBase,
+        string machineId,
+        out long expectedRevision,
+        out string failure)
+    {
+        failure = string.Empty;
+        if (existing is null)
+        {
+            expectedRevision = 0;
+            return true;
+        }
+        if (mergeBase is not null)
+        {
+            expectedRevision = mergeBase.Revision;
+            if (mergeBase.Revision > 0 && mergeBase.Revision == existing.Revision)
+                return true;
+            failure = "Project metadata changed on another machine. Import and review that revision before writing.";
+            return false;
+        }
+        if (!string.IsNullOrWhiteSpace(existing.WriterMachineId) &&
+            string.Equals(existing.WriterMachineId, machineId, StringComparison.Ordinal))
+        {
+            expectedRevision = existing.Revision;
+            return true;
+        }
+
+        expectedRevision = 0;
+        failure = "Existing project metadata has no trusted local base. Import and review it before writing.";
+        return false;
     }
 
     private void SaveSuccessfulProjectWriteBase(string destinationRoot, GuardedProjectWrite write)
@@ -3518,15 +3534,15 @@ public sealed class MetadataSyncService
     {
         var settings = new Dictionary<string, object?>();
         if (!string.IsNullOrWhiteSpace(values.AvatarColor))
-            settings["avatarColor"] = values.AvatarColor;
-        settings["encryptionPolicy"] = values.EncryptionPolicy;
-        settings["preferredDestinationId"] = string.IsNullOrWhiteSpace(values.PreferredDestinationId)
+            settings[AvatarColorField] = values.AvatarColor;
+        settings[EncryptionPolicyField] = values.EncryptionPolicy;
+        settings[PreferredDestinationIdField] = string.IsNullOrWhiteSpace(values.PreferredDestinationId)
             ? null
             : values.PreferredDestinationId;
-        settings["restoreMode"] = values.RestoreMode;
-        settings["verificationPolicy"] = values.VerificationPolicy;
-        settings["autoBackupEnabled"] = values.AutoBackupEnabled;
-        settings["tags"] = values.Tags;
+        settings[RestoreModeField] = values.RestoreMode;
+        settings[VerificationPolicyField] = values.VerificationPolicy;
+        settings[AutoBackupEnabledField] = values.AutoBackupEnabled;
+        settings[TagsField] = values.Tags;
         return JsonSerializer.Serialize(settings);
     }
 
@@ -3601,13 +3617,13 @@ public sealed class MetadataSyncService
 
     private static readonly string[] ProjectMetadataFieldNames =
     [
-        "avatarColor",
-        "encryptionPolicy",
-        "preferredDestinationId",
-        "restoreMode",
-        "verificationPolicy",
-        "autoBackupEnabled",
-        "tags"
+        AvatarColorField,
+        EncryptionPolicyField,
+        PreferredDestinationIdField,
+        RestoreModeField,
+        VerificationPolicyField,
+        AutoBackupEnabledField,
+        TagsField
     ];
 
     private static ProjectMetadataConflictValues ValuesFromParsedSettings(ParsedProjectSettings parsed) => new()
@@ -3626,13 +3642,13 @@ public sealed class MetadataSyncService
         ProjectMetadataConflictValues left,
         ProjectMetadataConflictValues right) => field switch
     {
-        "avatarColor" => string.Equals(left.AvatarColor, right.AvatarColor, StringComparison.OrdinalIgnoreCase),
-        "encryptionPolicy" => string.Equals(left.EncryptionPolicy, right.EncryptionPolicy, StringComparison.OrdinalIgnoreCase),
-        "preferredDestinationId" => string.Equals(left.PreferredDestinationId, right.PreferredDestinationId, StringComparison.OrdinalIgnoreCase),
-        "restoreMode" => string.Equals(left.RestoreMode, right.RestoreMode, StringComparison.OrdinalIgnoreCase),
-        "verificationPolicy" => string.Equals(left.VerificationPolicy, right.VerificationPolicy, StringComparison.OrdinalIgnoreCase),
-        "autoBackupEnabled" => left.AutoBackupEnabled == right.AutoBackupEnabled,
-        "tags" => string.Equals(left.Tags, right.Tags, StringComparison.Ordinal),
+        AvatarColorField => string.Equals(left.AvatarColor, right.AvatarColor, StringComparison.OrdinalIgnoreCase),
+        EncryptionPolicyField => string.Equals(left.EncryptionPolicy, right.EncryptionPolicy, StringComparison.OrdinalIgnoreCase),
+        PreferredDestinationIdField => string.Equals(left.PreferredDestinationId, right.PreferredDestinationId, StringComparison.OrdinalIgnoreCase),
+        RestoreModeField => string.Equals(left.RestoreMode, right.RestoreMode, StringComparison.OrdinalIgnoreCase),
+        VerificationPolicyField => string.Equals(left.VerificationPolicy, right.VerificationPolicy, StringComparison.OrdinalIgnoreCase),
+        AutoBackupEnabledField => left.AutoBackupEnabled == right.AutoBackupEnabled,
+        TagsField => string.Equals(left.Tags, right.Tags, StringComparison.Ordinal),
         _ => false
     };
 
@@ -3675,25 +3691,25 @@ public sealed class MetadataSyncService
             bool hasTags = false;
             bool hasAvatarColor = false;
 
-            if (doc.RootElement.TryGetProperty("avatarColor", out JsonElement avatarColorProp))
+            if (doc.RootElement.TryGetProperty(AvatarColorField, out JsonElement avatarColorProp))
             {
                 avatarColor = NormalizeAvatarColor(avatarColorProp.GetString());
                 hasAvatarColor = !string.IsNullOrWhiteSpace(avatarColor);
             }
 
-            if (doc.RootElement.TryGetProperty("encryptionPolicy", out JsonElement policyProp))
+            if (doc.RootElement.TryGetProperty(EncryptionPolicyField, out JsonElement policyProp))
             {
                 policy = ProjectEncryptionPolicy.Normalize(policyProp.GetString());
                 hasPolicy = true;
             }
 
-            if (doc.RootElement.TryGetProperty("verificationPolicy", out JsonElement verificationProp))
+            if (doc.RootElement.TryGetProperty(VerificationPolicyField, out JsonElement verificationProp))
             {
                 verificationPolicy = ProjectVerificationPolicy.Normalize(verificationProp.GetString());
                 hasVerificationPolicy = true;
             }
 
-            if (doc.RootElement.TryGetProperty("preferredDestinationId", out JsonElement destinationProp))
+            if (doc.RootElement.TryGetProperty(PreferredDestinationIdField, out JsonElement destinationProp))
             {
                 preferredDestinationId = NormalizePreferredDestinationId(
                     destinationProp.GetString(),
@@ -3701,13 +3717,13 @@ public sealed class MetadataSyncService
                 hasPreferredDestinationId = true;
             }
 
-            if (doc.RootElement.TryGetProperty("restoreMode", out JsonElement restoreModeProp))
+            if (doc.RootElement.TryGetProperty(RestoreModeField, out JsonElement restoreModeProp))
             {
                 restoreMode = ProjectRestoreMode.Normalize(restoreModeProp.GetString());
                 hasRestoreMode = true;
             }
 
-            if (doc.RootElement.TryGetProperty("autoBackupEnabled", out JsonElement autoBackupEnabledProp))
+            if (doc.RootElement.TryGetProperty(AutoBackupEnabledField, out JsonElement autoBackupEnabledProp))
             {
                 autoBackupEnabled = autoBackupEnabledProp.ValueKind switch
                 {
@@ -3718,7 +3734,7 @@ public sealed class MetadataSyncService
                 hasAutoBackupEnabled = autoBackupEnabledProp.ValueKind is JsonValueKind.True or JsonValueKind.False;
             }
 
-            if (doc.RootElement.TryGetProperty("tags", out JsonElement tagsProp))
+            if (doc.RootElement.TryGetProperty(TagsField, out JsonElement tagsProp))
             {
                 string? rawTags = tagsProp.GetString();
                 tags = string.IsNullOrWhiteSpace(rawTags) ? string.Empty : rawTags.Trim();
@@ -3991,8 +4007,8 @@ public sealed class MetadataSyncService
     }
 
     private static bool ProjectMetadataFieldProvenanceEqual(
-        IReadOnlyDictionary<string, ProjectMetadataFieldProvenance>? left,
-        IReadOnlyDictionary<string, ProjectMetadataFieldProvenance>? right)
+        Dictionary<string, ProjectMetadataFieldProvenance>? left,
+        Dictionary<string, ProjectMetadataFieldProvenance>? right)
     {
         left ??= new Dictionary<string, ProjectMetadataFieldProvenance>();
         right ??= new Dictionary<string, ProjectMetadataFieldProvenance>();
@@ -4205,7 +4221,7 @@ public sealed class MetadataSyncService
         if (color.Length != 7 || color[0] != '#')
             return string.Empty;
 
-        return color.AsSpan(1).IndexOfAnyExcept("0123456789abcdefABCDEF") >= 0
+        return color.AsSpan(1).IndexOfAnyExcept(HexCharacters) >= 0
             ? string.Empty
             : color.ToUpperInvariant();
     }

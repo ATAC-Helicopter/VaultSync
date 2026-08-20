@@ -15,6 +15,11 @@ public sealed record ProjectMetadataMergePlan(
 
 public static class ProjectMetadataMergePlanner
 {
+    private sealed record MergeAssignments<T>(
+        Action<T> Merged,
+        Action<T> KeepLocal,
+        Action<T> AcceptImported);
+
     public static ProjectMetadataMergePlan Create(
         ProjectMetadataConflictValues? mergeBase,
         ProjectMetadataConflictValues local,
@@ -29,26 +34,26 @@ public static class ProjectMetadataMergePlanner
         var conflicts = new List<string>();
 
         Merge("avatarColor", mergeBase?.AvatarColor, local.AvatarColor, imported.AvatarColor,
-            StringComparer.OrdinalIgnoreCase, value => merged.AvatarColor = value,
-            value => keepLocal.AvatarColor = value, value => acceptImported.AvatarColor = value, conflicts);
+            StringComparer.OrdinalIgnoreCase, new(value => merged.AvatarColor = value,
+                value => keepLocal.AvatarColor = value, value => acceptImported.AvatarColor = value), conflicts);
         Merge("encryptionPolicy", mergeBase?.EncryptionPolicy, local.EncryptionPolicy, imported.EncryptionPolicy,
-            StringComparer.OrdinalIgnoreCase, value => merged.EncryptionPolicy = value,
-            value => keepLocal.EncryptionPolicy = value, value => acceptImported.EncryptionPolicy = value, conflicts);
+            StringComparer.OrdinalIgnoreCase, new(value => merged.EncryptionPolicy = value,
+                value => keepLocal.EncryptionPolicy = value, value => acceptImported.EncryptionPolicy = value), conflicts);
         Merge("preferredDestinationId", mergeBase?.PreferredDestinationId, local.PreferredDestinationId, imported.PreferredDestinationId,
-            StringComparer.OrdinalIgnoreCase, value => merged.PreferredDestinationId = value,
-            value => keepLocal.PreferredDestinationId = value, value => acceptImported.PreferredDestinationId = value, conflicts);
+            StringComparer.OrdinalIgnoreCase, new(value => merged.PreferredDestinationId = value,
+                value => keepLocal.PreferredDestinationId = value, value => acceptImported.PreferredDestinationId = value), conflicts);
         Merge("restoreMode", mergeBase?.RestoreMode, local.RestoreMode, imported.RestoreMode,
-            StringComparer.OrdinalIgnoreCase, value => merged.RestoreMode = value,
-            value => keepLocal.RestoreMode = value, value => acceptImported.RestoreMode = value, conflicts);
+            StringComparer.OrdinalIgnoreCase, new(value => merged.RestoreMode = value,
+                value => keepLocal.RestoreMode = value, value => acceptImported.RestoreMode = value), conflicts);
         Merge("verificationPolicy", mergeBase?.VerificationPolicy, local.VerificationPolicy, imported.VerificationPolicy,
-            StringComparer.OrdinalIgnoreCase, value => merged.VerificationPolicy = value,
-            value => keepLocal.VerificationPolicy = value, value => acceptImported.VerificationPolicy = value, conflicts);
+            StringComparer.OrdinalIgnoreCase, new(value => merged.VerificationPolicy = value,
+                value => keepLocal.VerificationPolicy = value, value => acceptImported.VerificationPolicy = value), conflicts);
         Merge("autoBackupEnabled", mergeBase?.AutoBackupEnabled, local.AutoBackupEnabled, imported.AutoBackupEnabled,
-            EqualityComparer<bool?>.Default, value => merged.AutoBackupEnabled = value,
-            value => keepLocal.AutoBackupEnabled = value, value => acceptImported.AutoBackupEnabled = value, conflicts);
+            EqualityComparer<bool?>.Default, new(value => merged.AutoBackupEnabled = value,
+                value => keepLocal.AutoBackupEnabled = value, value => acceptImported.AutoBackupEnabled = value), conflicts);
         Merge("tags", mergeBase?.Tags, local.Tags, imported.Tags,
-            StringComparer.Ordinal, value => merged.Tags = value,
-            value => keepLocal.Tags = value, value => acceptImported.Tags = value, conflicts);
+            StringComparer.Ordinal, new(value => merged.Tags = value,
+                value => keepLocal.Tags = value, value => acceptImported.Tags = value), conflicts);
 
         return new ProjectMetadataMergePlan(merged, keepLocal, acceptImported, conflicts);
     }
@@ -59,16 +64,14 @@ public static class ProjectMetadataMergePlanner
         T local,
         T imported,
         IEqualityComparer<T> comparer,
-        Action<T> setMerged,
-        Action<T> setKeepLocal,
-        Action<T> setAcceptImported,
-        ICollection<string> conflicts)
+        MergeAssignments<T> assignments,
+        List<string> conflicts)
     {
         if (comparer.Equals(local, imported))
         {
-            setMerged(local);
-            setKeepLocal(local);
-            setAcceptImported(local);
+            assignments.Merged(local);
+            assignments.KeepLocal(local);
+            assignments.AcceptImported(local);
             return;
         }
 
@@ -77,9 +80,9 @@ public static class ProjectMetadataMergePlanner
         if (baseValue is null)
         {
             conflicts.Add(field);
-            setMerged(local);
-            setKeepLocal(local);
-            setAcceptImported(imported);
+            assignments.Merged(local);
+            assignments.KeepLocal(local);
+            assignments.AcceptImported(imported);
             return;
         }
 
@@ -88,15 +91,15 @@ public static class ProjectMetadataMergePlanner
         if (localChanged && importedChanged)
         {
             conflicts.Add(field);
-            setMerged(local);
-            setKeepLocal(local);
-            setAcceptImported(imported);
+            assignments.Merged(local);
+            assignments.KeepLocal(local);
+            assignments.AcceptImported(imported);
             return;
         }
 
         T value = importedChanged ? imported : local;
-        setMerged(value);
-        setKeepLocal(value);
-        setAcceptImported(value);
+        assignments.Merged(value);
+        assignments.KeepLocal(value);
+        assignments.AcceptImported(value);
     }
 }
