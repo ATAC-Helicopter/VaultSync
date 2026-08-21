@@ -5,124 +5,122 @@
         xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
         x:Class="VaultSync.UI.Views.SnapshotExplorerView"
         x:DataType="vm:SnapshotExplorerViewModel"
-        Width="980"
-        Height="680"
-        MinWidth="780"
-        MinHeight="520"
+        Width="1180"
+        Height="760"
+        MinWidth="860"
+        MinHeight="560"
+        WindowStartupLocation="CenterOwner"
         Title="{Binding Title}">
   <Window.Styles>
     <Style Selector="#SnapshotEntryList ListBoxItem">
       <Setter Property="Padding" Value="0" />
-      <Setter Property="Margin" Value="0,0,0,4" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="MinHeight" Value="42" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="Template">
-        <ControlTemplate TargetType="ListBoxItem">
-          <Border Background="{TemplateBinding Background}"
-                  BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="1"
-                  CornerRadius="8"
-                  Padding="0">
-            <ContentPresenter Content="{TemplateBinding Content}"
-                              ContentTemplate="{TemplateBinding ContentTemplate}" />
-          </Border>
-        </ControlTemplate>
-      </Setter>
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="CornerRadius" Value="0" />
     </Style>
     <Style Selector="#SnapshotEntryList ListBoxItem:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface2}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
     </Style>
     <Style Selector="#SnapshotEntryList ListBoxItem:selected">
-      <Setter Property="Background" Value="{DynamicResource CardSelectedBrush}" />
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="3,0,0,1" />
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20" RowSpacing="12">
-    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-      <StackPanel Spacing="4">
-        <TextBlock Text="{Binding Title}"
-                   FontSize="22"
-                   FontWeight="SemiBold" />
-        <TextBlock Text="{Binding CurrentPathDisplay}"
-                   Foreground="{DynamicResource TextSecondaryBrush}"
-                   TextTrimming="CharacterEllipsis" />
-      </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-        <Button Content="{infra:LocalizedString Key=SnapshotExplorer.Action.Up}"
-                Classes="small-button"
-                Command="{Binding GoUpCommand}" />
-        <Button Content="{infra:LocalizedString Key=Common.Refresh}"
-                Classes="small-button"
-                Command="{Binding RefreshCommand}" />
-      </StackPanel>
-    </Grid>
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Background="{DynamicResource WindowBackground}">
+    <Border Grid.Row="0"
+            Background="{DynamicResource Surface1}"
+            BorderBrush="{DynamicResource BorderSoft}"
+            BorderThickness="0,0,0,1"
+            Padding="26,20">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel Spacing="5">
+          <TextBlock Text="{Binding Title}"
+                     FontSize="24"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimary}" />
+          <TextBlock Text="{Binding CurrentPathDisplay}"
+                     FontFamily="Consolas"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextSecondary}"
+                     TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Content="{infra:LocalizedString Key=SnapshotExplorer.Action.Up}"
+                  Classes="action-ghost"
+                  Command="{Binding GoUpCommand}" />
+          <Button Content="{infra:LocalizedString Key=Common.Refresh}"
+                  Classes="action-ghost"
+                  Command="{Binding RefreshCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-      <TextBox PlaceholderText="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
-               Text="{Binding SearchText, Mode=TwoWay}" />
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-        <Button Content="{infra:LocalizedString Key=SnapshotExplorer.Action.Search}"
-                Classes="small-button"
-                Command="{Binding RefreshCommand}" />
-        <Button Content="{infra:LocalizedString Key=Common.Clear}"
-                Classes="small-button"
-                Command="{Binding ClearSearchCommand}" />
-      </StackPanel>
-    </Grid>
+    <Border Grid.Row="1"
+            Background="{DynamicResource Surface0}"
+            BorderBrush="{DynamicResource BorderSoft}"
+            BorderThickness="0,0,0,1"
+            Padding="26,14">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+        <TextBox Classes="app-search"
+                 PlaceholderText="{infra:LocalizedString Key=SnapshotExplorer.Search.Watermark}"
+                 Text="{Binding SearchText, Mode=TwoWay}"
+                 />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button Content="{infra:LocalizedString Key=SnapshotExplorer.Action.Search}"
+                  Classes="action-primary"
+                  Command="{Binding RefreshCommand}" />
+          <Button Content="{infra:LocalizedString Key=Common.Clear}"
+                  Classes="action-ghost"
+                  Command="{Binding ClearSearchCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
 
-    <Grid Grid.Row="2" ColumnDefinitions="2*,3*" ColumnSpacing="14">
-      <Border Background="{DynamicResource Surface2}"
-              BorderBrush="{DynamicResource BorderBrush}"
+    <Grid Grid.Row="2" ColumnDefinitions="380,*" Margin="26,20" ColumnSpacing="18">
+      <Border Background="{DynamicResource Surface1}"
+              BorderBrush="{DynamicResource BorderSoft}"
               BorderThickness="1"
-              CornerRadius="8">
+              CornerRadius="12"
+              ClipToBounds="True">
         <Grid RowDefinitions="Auto,*">
-          <TextBlock Grid.Row="0"
-                     Margin="12,10,12,6"
-                     Text="{infra:LocalizedString Key=SnapshotExplorer.Section.Contents}"
-                     FontWeight="SemiBold" />
+          <Border Padding="16,13" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
+            <TextBlock Text="{infra:LocalizedString Key=SnapshotExplorer.Section.Contents}"
+                       FontSize="14"
+                       FontWeight="SemiBold" />
+          </Border>
           <ListBox x:Name="SnapshotEntryList"
                    Grid.Row="1"
                    SelectionMode="Single"
                    ItemsSource="{Binding Entries}"
-                   SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
+                   SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+                   Background="Transparent"
+                   BorderThickness="0">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:SnapshotExplorerEntryViewModel">
-                <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" Margin="8,6">
-                  <Border Grid.Row="0"
-                          Grid.RowSpan="2"
-                          Grid.Column="0"
-                          Width="{Binding Indent}" />
-                  <TextBlock Grid.Row="0"
-                             Grid.RowSpan="2"
-                             Grid.Column="1"
+                <Grid ColumnDefinitions="Auto,20,*,Auto" RowDefinitions="Auto,Auto" Margin="12,8">
+                  <Border Grid.RowSpan="2" Width="{Binding Indent}" />
+                  <TextBlock Grid.RowSpan="2" Grid.Column="1"
                              Text="{Binding ToggleGlyph}"
-                             Width="18"
                              VerticalAlignment="Center"
-                             Foreground="{DynamicResource TextSecondaryBrush}" />
-                  <TextBlock Grid.Row="0"
-                             Grid.Column="2"
+                             Foreground="{DynamicResource TextMuted}" />
+                  <TextBlock Grid.Column="2"
                              Text="{Binding Name}"
                              FontWeight="SemiBold"
                              TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Row="0"
-                             Grid.Column="3"
+                  <TextBlock Grid.Column="3"
                              Text="{Binding KindLabel}"
-                             Foreground="{DynamicResource TextSecondaryBrush}"
+                             FontSize="11"
+                             Foreground="{DynamicResource TextMuted}"
                              Margin="10,0,0,0" />
-                  <StackPanel Grid.Row="1"
-                              Grid.Column="2"
-                              Grid.ColumnSpan="2"
-                              Orientation="Horizontal"
-                              Spacing="10">
-                    <TextBlock Text="{Binding SizeLabel}"
-                               FontSize="11"
-                               Foreground="{DynamicResource TextMutedBrush}" />
-                    <TextBlock Text="{Binding ModifiedLabel}"
-                               FontSize="11"
-                               Foreground="{DynamicResource TextMutedBrush}" />
+                  <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{Binding SizeLabel}" FontSize="11" Foreground="{DynamicResource TextMuted}" />
+                    <TextBlock Text="{Binding ModifiedLabel}" FontSize="11" Foreground="{DynamicResource TextMuted}" />
                   </StackPanel>
                 </Grid>
               </DataTemplate>
@@ -132,47 +130,56 @@
       </Border>
 
       <Border Grid.Column="1"
-              Background="{DynamicResource Surface2}"
-              BorderBrush="{DynamicResource BorderBrush}"
+              Background="{DynamicResource Surface1}"
+              BorderBrush="{DynamicResource BorderSoft}"
               BorderThickness="1"
-              CornerRadius="8">
+              CornerRadius="12"
+              ClipToBounds="True">
         <Grid RowDefinitions="Auto,*">
-          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="12,10,12,6">
-            <TextBlock Text="{infra:LocalizedString Key=SnapshotExplorer.Section.Preview}"
-                       FontWeight="SemiBold" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-              <Button Content="{infra:LocalizedString Key=Common.Open}"
-                      Classes="small-button"
-                      Command="{Binding OpenSelectedCommand}" />
-              <Button Content="{infra:LocalizedString Key=SnapshotExplorer.Action.Preview}"
-                      Classes="small-button"
-                      Command="{Binding PreviewSelectedCommand}" />
-              <Button Content="{infra:LocalizedString Key=SnapshotExplorer.Action.Restore}"
-                      Classes="small-button"
-                      Command="{Binding RestoreSelectedCommand}" />
-            </StackPanel>
-          </Grid>
+          <Border Padding="16,10" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="{infra:LocalizedString Key=SnapshotExplorer.Section.Preview}"
+                           FontSize="14"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="{Binding PreviewFileName}"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextMuted}"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="{infra:LocalizedString Key=Common.Open}"
+                        Classes="action-ghost"
+                        Command="{Binding OpenSelectedCommand}" />
+                <Button Content="{infra:LocalizedString Key=SnapshotExplorer.Action.Preview}"
+                        Classes="action-ghost"
+                        Command="{Binding PreviewSelectedCommand}" />
+                <Button Content="{infra:LocalizedString Key=SnapshotExplorer.Action.Restore}"
+                        Classes="action-primary"
+                        Command="{Binding RestoreSelectedCommand}" />
+              </StackPanel>
+            </Grid>
+          </Border>
           <Grid Grid.Row="1">
-            <Border Margin="12"
-                    Padding="16"
-                    CornerRadius="8"
-                    Background="{DynamicResource Surface3}"
+            <Border Margin="18" Padding="18" CornerRadius="10"
+                    Background="{DynamicResource Surface2}"
                     IsVisible="{Binding IsEncryptedBackup}">
               <TextBlock Text="{Binding EncryptedBackupMessage}"
                          TextWrapping="Wrap"
-                         Foreground="{DynamicResource TextSecondaryBrush}" />
+                         Foreground="{DynamicResource TextSecondary}" />
             </Border>
-            <Border Margin="12"
-                    Padding="12"
-                    CornerRadius="6"
-                    Background="#101722"
-                    IsVisible="{Binding !IsEncryptedBackup}">
-              <ScrollViewer
-                          HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Auto">
-                <controls:CodePreviewBlock CodeText="{Binding PreviewText}"
+            <Border Margin="18"
+                    BorderBrush="{DynamicResource BorderSoft}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Background="{DynamicResource Surface0}"
+                    IsVisible="{Binding !IsEncryptedBackup}"
+                    ClipToBounds="True">
+              <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <controls:CodePreviewBlock Margin="14"
+                                           CodeText="{Binding PreviewText}"
                                            FileName="{Binding PreviewFileName}"
-                                           Foreground="#E8EEF7" />
+                                           Foreground="{DynamicResource TextPrimary}" />
               </ScrollViewer>
             </Border>
           </Grid>
@@ -180,9 +187,15 @@
       </Border>
     </Grid>
 
-    <TextBlock Grid.Row="3"
-               Text="{Binding StatusText}"
-               Foreground="{DynamicResource TextSecondaryBrush}"
-               TextWrapping="Wrap" />
+    <Border Grid.Row="3"
+            Background="{DynamicResource Surface1}"
+            BorderBrush="{DynamicResource BorderSoft}"
+            BorderThickness="0,1,0,0"
+            Padding="26,12">
+      <TextBlock Text="{Binding StatusText}"
+                 FontSize="12"
+                 Foreground="{DynamicResource TextSecondary}"
+                 TextWrapping="Wrap" />
+    </Border>
   </Grid>
 </Window>

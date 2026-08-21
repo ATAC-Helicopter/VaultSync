@@ -7,6 +7,4 @@ Media Cache Files/**
 
 # OS
 .DS_Store
-
-# Git
 .git/

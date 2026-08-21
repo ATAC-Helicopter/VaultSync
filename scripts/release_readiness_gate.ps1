@@ -46,14 +46,17 @@ function Get-FileVersionValue {
     return $match.Groups[1].Value.Trim()
 }
 
-function Get-ChangelogVersion {
+function Get-ChangelogHeader {
     $line = Get-Content CHANGELOG.md | Select-Object -First 3 | Where-Object { $_ -match '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})' } | Select-Object -First 1
     if (-not $line) {
         throw "Could not find release changelog header in CHANGELOG.md."
     }
 
     $match = [regex]::Match($line, '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})')
-    return $match.Groups[1].Value.Trim()
+    return [pscustomobject]@{
+        version = $match.Groups[1].Value.Trim()
+        status  = $match.Groups[2].Value.Trim()
+    }
 }
 
 function Get-WhatsNewVersion {
@@ -161,7 +164,13 @@ if ([string]::IsNullOrWhiteSpace($TargetMilestone)) {
 $results = New-Object System.Collections.Generic.List[object]
 $uiVersion = Get-FileVersionValue -Path "src/VaultSync.UI/VaultSync.UI.csproj" -Pattern '<Version>([^<]+)</Version>'
 $installerVersion = Get-FileVersionValue -Path "installer/VaultSyncInstaller.iss" -Pattern '#define MyAppVersion "([^"]+)"'
-$changelogVersion = Get-ChangelogVersion
+$changelogHeader = Get-ChangelogHeader
+$changelogVersion = $changelogHeader.version
+$changelogHasTargetSection = [regex]::IsMatch(
+    (Get-Content CHANGELOG.md -Raw),
+    "(?m)^## \[$([regex]::Escape($TargetVersion))\] - ")
+$changelogMatchesTarget = $changelogVersion -eq $TargetVersion -or (
+    $changelogHeader.status -eq "Unreleased" -and $changelogHasTargetSection)
 $whatsNewVersion = Get-WhatsNewVersion
 $releasingDoc = Get-Content docs/RELEASING.md -Raw
 $securityDoc = Get-Content SECURITY.md -Raw
@@ -176,10 +185,10 @@ Add-CheckResult -Results $results -Code "version-installer" -Condition ($install
     -FailMessage "Installer version '$installerVersion' does not match target '$TargetVersion'." `
     -Data @{ expected = $TargetVersion; actual = $installerVersion }
 
-Add-CheckResult -Results $results -Code "docs-changelog" -Condition ($changelogVersion -eq $TargetVersion) `
-    -PassMessage "Top changelog version is '$changelogVersion'." `
-    -FailMessage "Top changelog version '$changelogVersion' does not match target '$TargetVersion'." `
-    -Data @{ expected = $TargetVersion; actual = $changelogVersion }
+Add-CheckResult -Results $results -Code "docs-changelog" -Condition $changelogMatchesTarget `
+    -PassMessage "Changelog contains target '$TargetVersion'; top entry is '$changelogVersion' ($($changelogHeader.status))." `
+    -FailMessage "Top changelog entry '$changelogVersion' ($($changelogHeader.status)) is incompatible with target '$TargetVersion'." `
+    -Data @{ expected = $TargetVersion; actual = $changelogVersion; status = $changelogHeader.status }
 
 Add-CheckResult -Results $results -Code "docs-whats-new" -Condition ($whatsNewVersion -eq $TargetVersion) `
     -PassMessage "Top What's New version is '$whatsNewVersion'." `
@@ -225,6 +234,20 @@ Add-CheckResult -Results $results -Code "script-release-gate" -Condition (Test-P
     -PassMessage "Release readiness gate script present." `
     -FailMessage "Release readiness gate script is missing." `
     -Data @{ path = "scripts/release_readiness_gate.ps1" }
+
+Add-CheckResult -Results $results -Code "release-manifest-contract" `
+    -Condition ((Test-Path "scripts/release_manifest.py") -and (Test-Path "docs/schemas/release-manifest-v1.schema.json")) `
+    -PassMessage "Canonical release manifest generator and schema are present." `
+    -FailMessage "Canonical release manifest generator or schema is missing." `
+    -Data @{ script = "scripts/release_manifest.py"; schema = "docs/schemas/release-manifest-v1.schema.json" }
+
+$pythonCommand = if (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
+& $pythonCommand scripts/public_release_metadata.py check
+$publicMetadataMatches = ($LASTEXITCODE -eq 0)
+Add-CheckResult -Results $results -Code "public-release-metadata" -Condition $publicMetadataMatches `
+    -PassMessage "Public release consumers match the canonical release contract." `
+    -FailMessage "Public release metadata is inconsistent. Run scripts/public_release_metadata.py check for details." `
+    -Data @{ contract = "release/release-metadata.json"; script = "scripts/public_release_metadata.py" }
 
 Add-CheckResult -Results $results -Code "docs-release-checklist" -Condition ($releasingDoc -match 'release assets uploaded' -and $releasingDoc -match 'release_readiness_gate\.ps1') `
     -PassMessage "Release guide includes the release gate and asset-upload checklist." `
@@ -273,6 +296,7 @@ if ($null -eq $release) {
     $hasInstaller = [bool]($assetNames | Where-Object { $_ -like "VaultSync-Setup-*.exe" } | Select-Object -First 1)
     $hasPatchManifest = [bool]($assetNames | Where-Object { $_ -like "vaultsync-patch-*.json" } | Select-Object -First 1)
     $hasPatchArchive = [bool]($assetNames | Where-Object { $_ -like "vaultsync-patch-*.zip" } | Select-Object -First 1)
+    $hasCanonicalManifest = $assetNames -contains "vaultsync-release-manifest.json"
 
     Add-CheckResult -Results $results -Code "github-release" -Condition $true `
         -PassMessage "GitHub release '$releaseTag' found." `
@@ -297,12 +321,47 @@ if ($null -eq $release) {
         -Data @{ expectedPattern = "vaultsync-patch-*.zip"; assets = $assetNames } `
         -WarningOnFail:$warnForPublishArtifacts
 
-    if ($warnForPublishArtifacts -and (-not ($hasInstaller -and $hasPatchManifest -and $hasPatchArchive))) {
+    Add-CheckResult -Results $results -Code "asset-release-manifest" -Condition $hasCanonicalManifest `
+        -PassMessage "Canonical release manifest is present on the release." `
+        -FailMessage "Canonical release manifest is missing from the release." `
+        -Data @{ expected = "vaultsync-release-manifest.json"; assets = $assetNames } `
+        -WarningOnFail:$warnForPublishArtifacts
+
+    if ($Phase -eq "PostPublish" -and $hasCanonicalManifest) {
+        $manifestTempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("vaultsync-release-manifest-" + [guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $manifestTempRoot | Out-Null
+        try {
+            & gh release download $releaseTag --repo $Repository --pattern "vaultsync-release-manifest.json" --dir $manifestTempRoot --clobber
+            if ($LASTEXITCODE -ne 0) {
+                throw "Could not download canonical release manifest."
+            }
+
+            $githubAssetsPath = Join-Path $manifestTempRoot "github-assets.json"
+            $release.assets | ConvertTo-Json -Depth 8 | Set-Content -Path $githubAssetsPath -Encoding utf8
+            $pythonCommand = if (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
+            & $pythonCommand scripts/release_manifest.py validate-published `
+                --manifest (Join-Path $manifestTempRoot "vaultsync-release-manifest.json") `
+                --github-assets $githubAssetsPath
+            $manifestMatchesPublishedAssets = ($LASTEXITCODE -eq 0)
+        } catch {
+            $manifestMatchesPublishedAssets = $false
+        } finally {
+            Remove-Item -LiteralPath $manifestTempRoot -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        Add-CheckResult -Results $results -Code "asset-release-manifest-content" -Condition $manifestMatchesPublishedAssets `
+            -PassMessage "Published asset names, sizes, SHA-256 digests, and URLs match the canonical manifest." `
+            -FailMessage "Published assets do not exactly match the canonical release manifest." `
+            -Data @{ manifest = "vaultsync-release-manifest.json"; release = $releaseTag }
+    }
+
+    if ($warnForPublishArtifacts -and (-not ($hasInstaller -and $hasPatchManifest -and $hasPatchArchive -and $hasCanonicalManifest))) {
         $results.Add((New-Result -Code "publish-assets-next-step" -Status "warn" -Message "Release exists but assets are incomplete. Run release asset generation before final verification." -Data @{
             missing = @(
                 if (-not $hasInstaller) { "installer" }
                 if (-not $hasPatchManifest) { "patch-manifest" }
                 if (-not $hasPatchArchive) { "patch-archive" }
+                if (-not $hasCanonicalManifest) { "release-manifest" }
             )
             nextSteps = @(
                 "Trigger the release-assets GitHub Actions workflow for the target version.",

@@ -143,6 +143,7 @@ namespace VaultSync.UI
         private string _updateDiagnosticsText = string.Empty;
         private string _startupDiagnosticsText = string.Empty;
         private string _checkpointResumeDiagnosticsText = string.Empty;
+        private string _buildInformationCopyStatus = string.Empty;
         private string _retentionSimulationStatus = string.Empty;
         private string _retentionSimulationSummary = string.Empty;
         private string _retentionSimulationDetails = string.Empty;
@@ -155,6 +156,10 @@ namespace VaultSync.UI
         private readonly CredentialVault _credentialVault = CredentialVault.Instance;
         private readonly BackupEncryptionSecretService _backupEncryptionSecretService = new();
         private readonly NetworkMountService _networkMountService = new();
+        private readonly RepositoryLeaseService _repositoryLeaseService;
+        private readonly ProjectMetadataResolutionService _projectMetadataResolutionService = new();
+        private readonly IInstallationIdentityProvider _installationIdentityProvider;
+        private readonly string _appVersion;
         private readonly RelayCommand? _addTagColorRuleCommand;
         private readonly RelayCommand? _removeTagColorRuleCommand;
         private readonly RelayCommand? _resetTagColorRuleCommand;
@@ -166,12 +171,15 @@ namespace VaultSync.UI
         private readonly RelayCommand? _applyBackupIndexRepairPlanCommand;
         private readonly RelayCommand? _acceptProjectMetadataConflictCommand;
         private readonly RelayCommand? _keepLocalProjectMetadataConflictCommand;
+        private readonly RelayCommand? _undoProjectMetadataResolutionCommand;
         private readonly RelayCommand? _runRetentionSimulationCommand;
         private BackupIndexRepairPlan? _currentBackupIndexRepairPlan;
         private string _backupIndexRepairStatus = string.Empty;
         private string _backupIndexRepairSummary = string.Empty;
         private string _backupIndexRepairDetails = string.Empty;
         private string _projectMetadataConflictStatus = string.Empty;
+        private string _projectMetadataUndoStatus = string.Empty;
+        private bool _hasUndoableProjectMetadataResolution;
         private bool _isBackupIndexRepairBusy;
         private bool _showLegacyBackupLocation = true;
         private string _customThemeName = "VaultSync Midnight";
@@ -232,12 +240,28 @@ namespace VaultSync.UI
             public required string ProjectExternalId { get; init; }
             public required string SourceMachineId { get; init; }
             public required string SourceUpdatedUtc { get; init; }
+            public required string RevisionSummary { get; init; }
+            public required string ProvenanceSummary { get; init; }
+            public required string ConflictingFields { get; init; }
+            public required string BaseAvatarColor { get; init; }
+            public required string LocalAvatarColor { get; init; }
+            public required string ImportedAvatarColor { get; init; }
+            public required string BaseEncryptionPolicy { get; init; }
+            public required string LocalEncryptionPolicy { get; init; }
+            public required string ImportedEncryptionPolicy { get; init; }
+            public required string BasePreferredDestinationId { get; init; }
             public required string LocalPreferredDestinationId { get; init; }
             public required string ImportedPreferredDestinationId { get; init; }
+            public required string BaseRestoreMode { get; init; }
             public required string LocalRestoreMode { get; init; }
             public required string ImportedRestoreMode { get; init; }
+            public required string BaseVerificationPolicy { get; init; }
             public required string LocalVerificationPolicy { get; init; }
             public required string ImportedVerificationPolicy { get; init; }
+            public required string BaseAutoBackupEnabled { get; init; }
+            public required string LocalAutoBackupEnabled { get; init; }
+            public required string ImportedAutoBackupEnabled { get; init; }
+            public required string BaseTags { get; init; }
             public required string LocalTags { get; init; }
             public required string ImportedTags { get; init; }
         }
@@ -557,11 +581,20 @@ namespace VaultSync.UI
                 nameof(SaveStatus));
         }
 
-        public SettingsViewModel(LocalizationService localizationService, IAppConfigStore? configStore = null, IRepositoryFactory? repositoryFactory = null)
+        public SettingsViewModel(
+            LocalizationService localizationService,
+            IAppConfigStore? configStore = null,
+            IRepositoryFactory? repositoryFactory = null,
+            RepositoryLeaseService? repositoryLeaseService = null,
+            IInstallationIdentityProvider? installationIdentityProvider = null,
+            string? appVersion = null)
         {
             _localizationService = localizationService;
             _configStore = configStore ?? StaticAppConfigStore.Instance;
             _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
+            _repositoryLeaseService = repositoryLeaseService ?? new RepositoryLeaseService();
+            _installationIdentityProvider = installationIdentityProvider ?? new InstallationIdentityService();
+            _appVersion = string.IsNullOrWhiteSpace(appVersion) ? "unknown" : appVersion.Trim();
             _selectedLanguageCode = localizationService.CurrentLanguage;
             _localizationService.LanguageChanged += () =>
             {
@@ -627,6 +660,10 @@ namespace VaultSync.UI
             RemoveDestinationCommand     = new RelayCommand(p => RemoveDestination(p as BackupDestinationViewModel));
             BrowseDestinationCommand     = new RelayCommand(p => BrowseDestination(p as BackupDestinationViewModel));
             TestDestinationCommand       = new RelayCommand(p => TestDestination(p as BackupDestinationViewModel));
+            InspectRepositoryWriterCommand = new RelayCommand(p => InspectRepositoryWriter(p as BackupDestinationViewModel));
+            ReviewStaleWriterCommand = new RelayCommand(p => ReviewStaleWriter(p as BackupDestinationViewModel));
+            CancelStaleWriterTakeoverCommand = new RelayCommand(p => CancelStaleWriterTakeover(p as BackupDestinationViewModel));
+            ConfirmStaleWriterTakeoverCommand = new RelayCommand(p => ConfirmStaleWriterTakeover(p as BackupDestinationViewModel));
             AddCredentialCommand         = new RelayCommand(_ => AddCredential());
             RemoveCredentialCommand      = new RelayCommand(p => PreviewCredentialRemoval(p as NetworkCredentialViewModel));
             _addTagColorRuleCommand      = new RelayCommand(_ => AddTagColorRule());
@@ -642,6 +679,8 @@ namespace VaultSync.UI
             ExportLogConsoleCommand      = new RelayCommand(_ => ExportLogConsole());
             ExportSupportBundleCommand   = new RelayCommand(_ => ExportSupportBundle());
             ImportSupportBundleCommand   = new RelayCommand(_ => ImportSupportBundle());
+            CopyBuildInformationCommand = new RelayCommand(_ =>
+                DetachedTask.Run(CopyBuildInformationAsync, nameof(CopyBuildInformationAsync)));
             CheckUpdatesNowCommand       = new RelayCommand(_ => CheckUpdatesNow());
             OpenMicrosoftStoreCommand    = new RelayCommand(_ => OpenMicrosoftStoreListing());
             _scanBackupIndexRepairPlanCommand = new RelayCommand(_ => ScanBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy);
@@ -652,6 +691,9 @@ namespace VaultSync.UI
             _keepLocalProjectMetadataConflictCommand = new RelayCommand(
                 parameter => KeepLocalProjectMetadataConflict(parameter as ProjectMetadataConflictItemViewModel),
                 parameter => parameter is ProjectMetadataConflictItemViewModel && !IsBackupIndexRepairBusy);
+            _undoProjectMetadataResolutionCommand = new RelayCommand(
+                _ => UndoProjectMetadataResolution(),
+                _ => HasUndoableProjectMetadataResolution && !IsBackupIndexRepairBusy);
             _runRetentionSimulationCommand = new RelayCommand(_ => RunRetentionSimulation(), _ => !IsRetentionSimulationBusy);
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
             SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
@@ -791,6 +833,7 @@ namespace VaultSync.UI
             RefreshStartupDiagnostics(cfg.Advanced.StartupDiagnostics);
             RefreshCheckpointResumeDiagnostics(cfg.Advanced.CheckpointResumeTelemetry);
             RefreshProjectMetadataConflicts(cfg.Advanced.ProjectMetadataConflicts);
+            RefreshProjectMetadataUndo(cfg.Advanced.ProjectMetadataResolutions);
 
             // Apply theme + layout when loading config (in case Settings view is opened first)
             ApplyThemeFromSelected();
@@ -2053,6 +2096,23 @@ namespace VaultSync.UI
             private set => SetField(ref _projectMetadataConflictStatus, value);
         }
 
+        public string ProjectMetadataUndoStatus
+        {
+            get => _projectMetadataUndoStatus;
+            private set => SetField(ref _projectMetadataUndoStatus, value);
+        }
+
+        public bool HasUndoableProjectMetadataResolution
+        {
+            get => _hasUndoableProjectMetadataResolution;
+            private set
+            {
+                if (!SetField(ref _hasUndoableProjectMetadataResolution, value))
+                    return;
+                _undoProjectMetadataResolutionCommand?.RaiseCanExecuteChanged();
+            }
+        }
+
         public string RetentionSimulationStatus
         {
             get => _retentionSimulationStatus;
@@ -2298,6 +2358,20 @@ namespace VaultSync.UI
             get => _checkpointResumeDiagnosticsText;
             private set => SetField(ref _checkpointResumeDiagnosticsText, value);
         }
+
+        public string BuildInformationText { get; } = AppBuildInformationService.Current.ToDisplayText();
+
+        public string BuildInformationCopyStatus
+        {
+            get => _buildInformationCopyStatus;
+            private set
+            {
+                if (SetField(ref _buildInformationCopyStatus, value))
+                    OnPropertyChanged(nameof(HasBuildInformationCopyStatus));
+            }
+        }
+
+        public bool HasBuildInformationCopyStatus => !string.IsNullOrWhiteSpace(BuildInformationCopyStatus);
 
         public bool HasUpdateCheckError => !string.IsNullOrWhiteSpace(_updateCheckErrorText);
 
@@ -2752,6 +2826,10 @@ namespace VaultSync.UI
     public ICommand RemoveDestinationCommand { get; }
     public ICommand BrowseDestinationCommand { get; }
     public ICommand TestDestinationCommand { get; }
+    public ICommand InspectRepositoryWriterCommand { get; }
+    public ICommand ReviewStaleWriterCommand { get; }
+    public ICommand CancelStaleWriterTakeoverCommand { get; }
+    public ICommand ConfirmStaleWriterTakeoverCommand { get; }
     public ICommand AddCredentialCommand { get; }
     public ICommand RemoveCredentialCommand { get; }
     public ICommand AddTagColorRuleCommand => _addTagColorRuleCommand!;
@@ -2763,12 +2841,14 @@ namespace VaultSync.UI
         public ICommand ExportLogConsoleCommand { get; }
         public ICommand ExportSupportBundleCommand { get; }
         public ICommand ImportSupportBundleCommand { get; }
+        public ICommand CopyBuildInformationCommand { get; }
         public ICommand CheckUpdatesNowCommand { get; }
         public ICommand OpenMicrosoftStoreCommand { get; }
         public ICommand ScanBackupIndexRepairPlanCommand => _scanBackupIndexRepairPlanCommand!;
         public ICommand ApplyBackupIndexRepairPlanCommand => _applyBackupIndexRepairPlanCommand!;
         public ICommand AcceptProjectMetadataConflictCommand => _acceptProjectMetadataConflictCommand!;
         public ICommand KeepLocalProjectMetadataConflictCommand => _keepLocalProjectMetadataConflictCommand!;
+        public ICommand UndoProjectMetadataResolutionCommand => _undoProjectMetadataResolutionCommand!;
         public ICommand RunRetentionSimulationCommand => _runRetentionSimulationCommand!;
         public ICommand RefreshHistoryCommand { get; }
         public ICommand SetBackupEncryptionPasswordCommand { get; }
@@ -2948,7 +3028,7 @@ namespace VaultSync.UI
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Choose projects root",
+                Title = L("Settings.Paths.ChooseProjectsRoot", "Choose projects root"),
                 AllowMultiple = false,
                 SuggestedStartLocation = startLocation
             });
@@ -2989,7 +3069,7 @@ namespace VaultSync.UI
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Choose backup location",
+                Title = L("Settings.Paths.ChooseBackupLocation", "Choose backup location"),
                 AllowMultiple = false,
                 SuggestedStartLocation = startLocation
             });
@@ -3023,7 +3103,7 @@ namespace VaultSync.UI
 
             IReadOnlyList<IStorageFolder> folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Choose destination folder",
+                Title = L("Settings.Paths.ChooseDestination", "Choose destination folder"),
                 AllowMultiple = false,
                 SuggestedStartLocation = startLocation
             });
@@ -3045,9 +3125,6 @@ namespace VaultSync.UI
 
         private void ClearLocalCache()
         {
-            int removed = 0;
-            int failed = 0;
-
             CacheDeleteResult TryDeleteDir(string path)
             {
                 if (!Directory.Exists(path))
@@ -3080,36 +3157,25 @@ namespace VaultSync.UI
                 }
             }
 
-            void Count(CacheDeleteResult result)
-            {
-                switch (result)
-                {
-                    case CacheDeleteResult.Removed:
-                        removed++;
-                        break;
-                    case CacheDeleteResult.Failed:
-                        failed++;
-                        break;
-                    case CacheDeleteResult.NotFound:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(result), result, null);
-                }
-            }
-
             string localRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "VaultSync");
-
-            Count(TryDeleteDir(Path.Combine(localRoot, "logs")));
-            Count(TryDeleteDir(Path.Combine(localRoot, "crash")));
-            Count(TryDeleteFile(Path.Combine(localRoot, "avatars.json")));
-            Count(TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json")));
-
-            string tempRoot = Path.GetTempPath();
-            Count(TryDeleteDir(Path.Combine(tempRoot, "vaultsync-meta-import")));
-            Count(TryDeleteDir(Path.Combine(tempRoot, "vaultsync-telemetry-export")));
-            Count(TryDeleteDir(Path.Combine(tempRoot, "VaultSync")));
+            string userRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".vaultsync");
+            CacheDeleteResult[] results =
+            [
+                TryDeleteDir(Path.Combine(localRoot, "logs")),
+                TryDeleteDir(Path.Combine(localRoot, "crash")),
+                TryDeleteDir(Path.Combine(localRoot, "cache")),
+                TryDeleteDir(Path.Combine(localRoot, "patches")),
+                TryDeleteDir(Path.Combine(localRoot, "patch-runtime")),
+                TryDeleteFile(Path.Combine(localRoot, "avatars.json")),
+                TryDeleteFile(Path.Combine(localRoot, "avatar-colors.json")),
+                TryDeleteDir(Path.Combine(userRoot, "logs"))
+            ];
+            int removed = results.Count(result => result == CacheDeleteResult.Removed);
+            int failed = results.Count(result => result == CacheDeleteResult.Failed);
 
             if (removed == 0 && failed == 0)
             {
@@ -3167,22 +3233,7 @@ namespace VaultSync.UI
                 : cfg.Network.Credentials.FirstOrDefault(c =>
                     c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-            var destModel = new BackupDestination
-            {
-                Alias          = dest.Alias,
-                Path           = dest.Path,
-                Active         = dest.Active,
-                PreMounted     = dest.PreMounted,
-                AutoMount      = dest.AutoMount,
-                AutoUnmount    = dest.AutoUnmount,
-                IsOffsite      = dest.IsOffsite,
-                CredentialName = dest.CredentialName,
-                RetryMaxAttempts = ClampInt(dest.RetryMaxAttempts, 1, 10, 1),
-                RetryBackoffSeconds = ClampInt(dest.RetryBackoffSeconds, 1, 300, 10),
-                EnableCheckpointResume = dest.EnableCheckpointResume,
-                SoftQuotaBytes = ToQuotaBytes(dest.SoftQuotaGb),
-                QuotaWarningPercent = ClampInt(dest.QuotaWarningPercent, 50, 99, 85)
-            };
+            BackupDestination destModel = BuildDestinationModel(dest);
 
             var result = await Task.Run(() =>
             {
@@ -3210,7 +3261,7 @@ namespace VaultSync.UI
                 }
                 finally
                 {
-                    _networkMountService.Cleanup(resolution);
+                    NetworkMountService.Cleanup(resolution);
                 }
             });
             DestinationTested?.Invoke(destModel, result.success, result.writable, result.message);
@@ -3246,6 +3297,23 @@ namespace VaultSync.UI
                 result.writable ? NotificationSeverity.Info : NotificationSeverity.Warning,
                 LocalizationProvider.Service?.GetString("Destinations.Test.Title") ?? "Destination test");
         }
+
+        private static BackupDestination BuildDestinationModel(BackupDestinationViewModel destination) => new()
+        {
+            Alias = destination.Alias,
+            Path = destination.Path,
+            Active = destination.Active,
+            PreMounted = destination.PreMounted,
+            AutoMount = destination.AutoMount,
+            AutoUnmount = destination.AutoUnmount,
+            IsOffsite = destination.IsOffsite,
+            CredentialName = destination.CredentialName,
+            RetryMaxAttempts = ClampInt(destination.RetryMaxAttempts, 1, 10, 1),
+            RetryBackoffSeconds = ClampInt(destination.RetryBackoffSeconds, 1, 300, 10),
+            EnableCheckpointResume = destination.EnableCheckpointResume,
+            SoftQuotaBytes = ToQuotaBytes(destination.SoftQuotaGb),
+            QuotaWarningPercent = ClampInt(destination.QuotaWarningPercent, 50, 99, 85)
+        };
 
         private static bool TryWriteProbeFile(string effectivePath)
         {
@@ -3292,6 +3360,9 @@ namespace VaultSync.UI
             {
                 _scanBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
                 _applyBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
+                _acceptProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
+                _keepLocalProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
+                _undoProjectMetadataResolutionCommand?.RaiseCanExecuteChanged();
             }
 
             if (Dispatcher.UIThread.CheckAccess())
@@ -3330,9 +3401,14 @@ namespace VaultSync.UI
             }
             catch (Exception ex)
             {
-                BackupLocationStatus = "Not accessible";
+                BackupLocationStatus = L("Settings.BackupLocation.NotAccessible", "Not accessible");
                 if (notifyOnError)
-                    ShowBackupLocationNotification($"Backup location not accessible: {ex.Message}", NotificationSeverity.Error);
+                    ShowBackupLocationNotification(
+                        string.Format(
+                            CultureInfo.CurrentCulture,
+                            L("Settings.BackupLocation.NotAccessibleReason", "Backup location not accessible: {0}"),
+                            ex.Message),
+                        NotificationSeverity.Error);
                 return false;
             }
         }
@@ -3342,9 +3418,11 @@ namespace VaultSync.UI
             if (TryWriteProbeFile(path))
                 return true;
 
-            BackupLocationStatus = "Not writable";
+            BackupLocationStatus = L("Settings.BackupLocation.NotWritable", "Not writable");
             if (notifyOnError)
-                ShowBackupLocationNotification("Backup location is not writable.", NotificationSeverity.Error);
+                ShowBackupLocationNotification(
+                    L("Settings.BackupLocation.NotWritableDetail", "Backup location is not writable."),
+                    NotificationSeverity.Error);
             return false;
         }
 
@@ -3358,7 +3436,7 @@ namespace VaultSync.UI
             }
             catch (Exception)
             {
-                BackupLocationStatus = "OK";
+                BackupLocationStatus = L("Common.Ok", "OK");
                 // Ignore disk space failures; path/write checks already passed.
             }
         }
@@ -3368,21 +3446,38 @@ namespace VaultSync.UI
             double freePercent = (double)drive.AvailableFreeSpace / drive.TotalSize * 100d;
             if (freePercent < MinimumFreeSpacePercent)
             {
-                BackupLocationStatus = $"Low space ({freePercent:0.#}% free)";
+                BackupLocationStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.BackupLocation.LowSpace", "Low space ({0:0.#}% free)"),
+                    freePercent);
                 ShowBackupLocationNotification(
-                    $"Free space below threshold ({freePercent:0.#}% available, threshold {MinimumFreeSpacePercent}%).",
+                    string.Format(
+                        CultureInfo.CurrentCulture,
+                        L(
+                            "Settings.BackupLocation.LowSpaceDetail",
+                            "Free space below threshold ({0:0.#}% available, threshold {1}%)."),
+                        freePercent,
+                        MinimumFreeSpacePercent),
                     NotificationSeverity.Warning);
                 return;
             }
 
-            BackupLocationStatus = "OK";
+            BackupLocationStatus = L("Common.Ok", "OK");
             if (notifyOnSuccess)
-                ShowBackupLocationNotification($"Backup location set: {path}", NotificationSeverity.Info);
+                ShowBackupLocationNotification(
+                    string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("Settings.BackupLocation.Set", "Backup location set: {0}"),
+                        path),
+                    NotificationSeverity.Info);
         }
 
-        private static void ShowBackupLocationNotification(string message, NotificationSeverity severity)
+        private void ShowBackupLocationNotification(string message, NotificationSeverity severity)
         {
-            GlobalNotificationCenter.Instance.Show(message, severity, "Backup location");
+            GlobalNotificationCenter.Instance.Show(
+                message,
+                severity,
+                L("Settings.BackupLocation.Title", "Backup location"));
         }
 
         private void ForgetAllProjects()
@@ -3703,29 +3798,214 @@ namespace VaultSync.UI
 
         private void ExportSupportBundle()
         {
-            SupportBundleExportResult result = SupportBundleService.Export();
+            _ = DetachedTask.RunAsync(ExportSupportBundleAsync, nameof(ExportSupportBundleAsync));
+        }
+
+        private async Task ExportSupportBundleAsync()
+        {
+            SupportBundlePreviewResult preview = await Task.Run(() => SupportBundleService.Preview());
+            if (!preview.Success)
+            {
+                ShowSupportBundleFailure(preview.Message);
+                return;
+            }
+
+            SupportBundleExportOptions? options = await ConfirmSupportBundleExportAsync(preview);
+            if (options is null)
+                return;
+
+            SupportBundleExportResult result = await Task.Run(() => SupportBundleService.Export(options: options));
             if (!result.Success || string.IsNullOrWhiteSpace(result.ZipPath))
             {
-                SaveStatus = string.IsNullOrWhiteSpace(result.Message)
+                ShowSupportBundleFailure(result.Message);
+                return;
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                SaveStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.SupportBundleExportedTo", "Support bundle exported to {0}"),
+                    result.ZipPath);
+                GlobalNotificationCenter.Instance.Show(
+                    L("Settings.Advanced.SupportBundleReady", "Support bundle ready. You can share the zip file."),
+                    NotificationSeverity.Info,
+                    L(SupportBundleTitleKey, SupportBundleTitleFallback));
+                TryOpenContainingFolder(result.ZipPath);
+            });
+        }
+
+        private void ShowSupportBundleFailure(string? message)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                SaveStatus = string.IsNullOrWhiteSpace(message)
                     ? L("Settings.Advanced.SupportBundleFailed", "Support bundle export failed.")
-                    : result.Message;
+                    : message;
                 GlobalNotificationCenter.Instance.Show(
                     SaveStatus,
                     NotificationSeverity.Warning,
                     L(SupportBundleTitleKey, SupportBundleTitleFallback));
-                return;
-            }
+            });
+        }
 
-            SaveStatus = string.Format(
-                CultureInfo.CurrentCulture,
-                L("Settings.Advanced.SupportBundleExportedTo", "Support bundle exported to {0}"),
-                result.ZipPath);
-            GlobalNotificationCenter.Instance.Show(
-                L("Settings.Advanced.SupportBundleReady", "Support bundle ready. You can share the zip file."),
-                NotificationSeverity.Info,
-                L(SupportBundleTitleKey, SupportBundleTitleFallback));
+        private async Task<SupportBundleExportOptions?> ConfirmSupportBundleExportAsync(
+            SupportBundlePreviewResult initialPreview)
+        {
+            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var includeDiagnostics = new CheckBox
+                {
+                    Content = L("Settings.Advanced.SupportBundle.Diagnostics", "Include sanitized diagnostics"),
+                    IsChecked = true
+                };
+                var includeTelemetry = new CheckBox
+                {
+                    Content = L("Settings.Advanced.SupportBundle.Telemetry", "Include anonymized local telemetry"),
+                    IsChecked = true
+                };
+                var fileList = new TextBlock
+                {
+                    FontFamily = FontFamily.Default,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                var total = new TextBlock
+                {
+                    FontSize = 11,
+                    Foreground = Application.Current?.FindResource("TextSecondary") as IBrush,
+                    TextWrapping = TextWrapping.Wrap
+                };
 
-            TryOpenContainingFolder(result.ZipPath);
+                void RefreshPreview()
+                {
+                    var options = new SupportBundleExportOptions(
+                        IncludeDiagnostics: includeDiagnostics.IsChecked == true,
+                        IncludeTelemetry: includeTelemetry.IsChecked == true);
+                    SupportBundlePreviewResult current = options.IncludeDiagnostics && options.IncludeTelemetry
+                        ? initialPreview
+                        : SupportBundleService.Preview(options: options);
+                    fileList.Text = string.Join(
+                        Environment.NewLine,
+                        current.Files.Select(file => $"{file.RelativePath}  ·  {file.Category}"));
+                    total.Text = string.Format(
+                        CultureInfo.CurrentCulture,
+                        L(
+                            "Settings.Advanced.SupportBundle.Size",
+                            "Maximum uncompressed size: {0:0.0} MB. File contents are sanitized before export."),
+                        current.MaximumBytes / 1024d / 1024d);
+                }
+
+                includeDiagnostics.IsCheckedChanged += (_, _) => RefreshPreview();
+                includeTelemetry.IsCheckedChanged += (_, _) => RefreshPreview();
+                RefreshPreview();
+
+                var cancel = new Button
+                {
+                    Content = L("Common.Cancel", "Cancel"),
+                    MinWidth = 110
+                };
+                cancel.Classes.Add("action-ghost");
+                var export = new Button
+                {
+                    Content = L("Settings.Advanced.SupportBundleExport", "Export support bundle"),
+                    MinWidth = 170
+                };
+                export.Classes.Add("action-primary");
+
+                SupportBundleExportOptions? selected = null;
+                Window? window = null;
+                cancel.Click += (_, _) => window?.Close();
+                export.Click += (_, _) =>
+                {
+                    selected = new SupportBundleExportOptions(
+                        IncludeDiagnostics: includeDiagnostics.IsChecked == true,
+                        IncludeTelemetry: includeTelemetry.IsChecked == true);
+                    window?.Close();
+                };
+
+                var buttons = new StackPanel
+                {
+                    Orientation = Avalonia.Layout.Orientation.Horizontal,
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                    Spacing = 8,
+                    Children = { cancel, export }
+                };
+                var listCard = new Border
+                {
+                    Padding = new Thickness(12),
+                    MaxHeight = 240,
+                    Child = new ScrollViewer { Content = fileList }
+                };
+                listCard.Classes.Add("subtle-card");
+                var content = new StackPanel
+                {
+                    Spacing = 10,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = L("Settings.Advanced.SupportBundle.ReviewTitle", "Review support bundle"),
+                            FontSize = 20,
+                            FontWeight = FontWeight.SemiBold
+                        },
+                        new TextBlock
+                        {
+                            Text = L(
+                                "Settings.Advanced.SupportBundle.ReviewDescription",
+                                "Review every generated file. Paths, credentials, tokens, and secrets are removed or pseudonymized. Optional sections can be excluded."),
+                            TextWrapping = TextWrapping.Wrap
+                        },
+                        includeDiagnostics,
+                        includeTelemetry,
+                        listCard,
+                        total,
+                        buttons
+                    }
+                };
+                var card = new Border
+                {
+                    Padding = new Thickness(18),
+                    Margin = new Thickness(16),
+                    Child = content
+                };
+                card.Classes.Add("card");
+                window = new Window
+                {
+                    Title = L("Settings.Advanced.SupportBundle.ReviewTitle", "Review support bundle"),
+                    Content = card,
+                    Width = 620,
+                    MinHeight = 520,
+                    SizeToContent = SizeToContent.Height,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                Window? owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+                if (owner is not null)
+                {
+                    window.Icon = owner.Icon;
+                    await window.ShowDialog(owner);
+                }
+                else
+                {
+                    var closed = new TaskCompletionSource<bool>();
+                    void OnClosed(object? _, EventArgs __) => closed.TrySetResult(true);
+                    window.Closed += OnClosed;
+                    window.Show();
+                    await closed.Task;
+                    window.Closed -= OnClosed;
+                }
+
+                return selected;
+            });
+        }
+
+        private async Task CopyBuildInformationAsync()
+        {
+            bool copied = await ClipboardHelper.TryCopyAsync(AppBuildInformationService.Current.ToJson(indented: true));
+            BuildInformationCopyStatus = copied
+                ? L("Settings.Advanced.BuildInformationCopied", "Build information copied.")
+                : L("Settings.Advanced.BuildInformationCopyFailed", "Could not copy build information.");
         }
 
         private static void TryOpenContainingFolder(string? artifactPath)
@@ -4073,12 +4353,28 @@ namespace VaultSync.UI
                     ProjectExternalId = conflict.ProjectExternalId,
                     SourceMachineId = string.IsNullOrWhiteSpace(conflict.SourceMachineId) ? "unknown" : conflict.SourceMachineId,
                     SourceUpdatedUtc = FormatConflictUtc(conflict.SourceUpdatedUtc),
+                    RevisionSummary = $"r{conflict.BaseRevision} → r{conflict.SourceRevision}",
+                    ProvenanceSummary = FormatConflictProvenance(conflict),
+                    ConflictingFields = FormatConflictingFields(conflict.ConflictingFields),
+                    BaseAvatarColor = FormatConflictValue(conflict.Base?.AvatarColor),
+                    LocalAvatarColor = FormatConflictValue(conflict.Local?.AvatarColor),
+                    ImportedAvatarColor = FormatConflictValue(conflict.Imported?.AvatarColor),
+                    BaseEncryptionPolicy = FormatConflictValue(conflict.Base?.EncryptionPolicy),
+                    LocalEncryptionPolicy = FormatConflictValue(conflict.Local?.EncryptionPolicy),
+                    ImportedEncryptionPolicy = FormatConflictValue(conflict.Imported?.EncryptionPolicy),
+                    BasePreferredDestinationId = FormatConflictValue(conflict.Base?.PreferredDestinationId),
                     LocalPreferredDestinationId = FormatConflictValue(conflict.Local?.PreferredDestinationId),
                     ImportedPreferredDestinationId = FormatConflictValue(conflict.Imported?.PreferredDestinationId),
+                    BaseRestoreMode = FormatConflictValue(conflict.Base?.RestoreMode),
                     LocalRestoreMode = FormatConflictValue(conflict.Local?.RestoreMode),
                     ImportedRestoreMode = FormatConflictValue(conflict.Imported?.RestoreMode),
+                    BaseVerificationPolicy = FormatConflictValue(conflict.Base?.VerificationPolicy),
                     LocalVerificationPolicy = FormatConflictValue(conflict.Local?.VerificationPolicy),
                     ImportedVerificationPolicy = FormatConflictValue(conflict.Imported?.VerificationPolicy),
+                    BaseAutoBackupEnabled = FormatConflictBoolean(conflict.Base?.AutoBackupEnabled),
+                    LocalAutoBackupEnabled = FormatConflictBoolean(conflict.Local?.AutoBackupEnabled),
+                    ImportedAutoBackupEnabled = FormatConflictBoolean(conflict.Imported?.AutoBackupEnabled),
+                    BaseTags = FormatConflictValue(conflict.Base?.Tags),
                     LocalTags = FormatConflictValue(conflict.Local?.Tags),
                     ImportedTags = FormatConflictValue(conflict.Imported?.Tags)
                 });
@@ -4100,6 +4396,41 @@ namespace VaultSync.UI
         private static string FormatConflictValue(string? value)
             => string.IsNullOrWhiteSpace(value) ? "-" : value.Trim();
 
+        private string FormatConflictingFields(IEnumerable<string>? fields)
+            => string.Join(", ", (fields ?? [])
+                .Select(field => field switch
+                {
+                    "avatarColor" => L("Settings.Advanced.MetadataConflictsAvatarColor", "Avatar color"),
+                    "encryptionPolicy" => L("Projects.Stat.EncryptionPolicy", "Encryption policy"),
+                    "preferredDestinationId" => L("Projects.Stat.DestinationLabel", "Destination"),
+                    "restoreMode" => L("Backups.Restore.Mode.Label", "Restore mode"),
+                    "verificationPolicy" => L("Backups.Verification.Policy.Label", "Verification policy"),
+                    "autoBackupEnabled" => L("Backups.Section.AutoBackups", "Automatic backup"),
+                    "tags" => L("Projects.Tags.Label", "Tags"),
+                    _ => field
+                }));
+
+        private string FormatConflictProvenance(ProjectMetadataConflictRecord conflict)
+        {
+            string baseLabel = L("Settings.Advanced.MetadataConflictsBaseLabel", "Base");
+            string localLabel = L("Settings.Advanced.MetadataConflictsLocalLabel", "Local");
+            string remoteLabel = L("Settings.Advanced.MetadataConflictsImportedLabel", "Imported");
+            string baseWriter = string.IsNullOrWhiteSpace(conflict.BaseMachineId) ? "-" : conflict.BaseMachineId;
+            string localWriter = string.IsNullOrWhiteSpace(conflict.LocalMachineId) ? "this-installation" : conflict.LocalMachineId;
+            string remoteWriter = string.IsNullOrWhiteSpace(conflict.SourceMachineId) ? "unknown" : conflict.SourceMachineId;
+            return $"{baseLabel} r{conflict.BaseRevision}: {baseWriter} · {FormatConflictUtc(conflict.BaseUpdatedUtc)} | " +
+                   $"{localLabel}: {localWriter} · {FormatConflictUtc(conflict.DetectedUtc)} | " +
+                   $"{remoteLabel} r{conflict.SourceRevision}: {remoteWriter} · {FormatConflictUtc(conflict.SourceUpdatedUtc)}";
+        }
+
+        private string FormatConflictBoolean(bool? value)
+            => value switch
+            {
+                true => L("Common.Yes", "Yes"),
+                false => L("Common.No", "No"),
+                null => "-"
+            };
+
         private static string FormatConflictUtc(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -4108,6 +4439,79 @@ namespace VaultSync.UI
             return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset parsed)
                 ? parsed.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
                 : value;
+        }
+
+        private void RefreshProjectMetadataUndo(IEnumerable<ProjectMetadataResolutionRecord>? resolutions)
+        {
+            ProjectMetadataResolutionRecord? latest = (resolutions ?? [])
+                .Where(static resolution => resolution.UndoAvailable)
+                .OrderByDescending(static resolution => resolution.ResolvedUtc, StringComparer.Ordinal)
+                .FirstOrDefault();
+            HasUndoableProjectMetadataResolution = latest is not null;
+            ProjectMetadataUndoStatus = latest is null
+                ? L("Settings.Advanced.MetadataUndoNone", "No metadata resolution is currently undoable.")
+                : string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.MetadataUndoAvailable", "The last decision for {0} can be undone until the next repository write."),
+                    latest.ProjectExternalId);
+        }
+
+        private void UndoProjectMetadataResolution()
+            => _ = DetachedTask.RunAsync(UndoProjectMetadataResolutionAsync, nameof(UndoProjectMetadataResolutionAsync));
+
+        private async Task UndoProjectMetadataResolutionAsync()
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = true);
+            try
+            {
+                string projectName = await Task.Run(() =>
+                {
+                    AppConfig cfg = _configStore.Load();
+                    var repo = _repositoryFactory.Create(cfg);
+                    ProjectMetadataUndoResult result = _projectMetadataResolutionService.UndoLatest(
+                        repo,
+                        cfg,
+                        AvatarColorProvider.SetColorForExternalId);
+                    UpdateMetadataConflictTelemetry(cfg, "undo", result.ProjectName, cfg.Advanced.ProjectMetadataConflicts?.Count ?? 0);
+                    _configStore.Save(cfg);
+                    return result.ProjectName;
+                }).ConfigureAwait(false);
+
+                string status = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.MetadataUndoComplete", "Restored the previous metadata for {0}."),
+                    projectName);
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    LoadFromConfig();
+                    ProjectMetadataUndoStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Info,
+                        L(MetadataConflictsTitleKey, MetadataConflictsTitleFallback));
+                });
+            }
+            catch (Exception ex)
+            {
+                string status = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("Settings.Advanced.MetadataUndoFailed", "Undoing the metadata decision failed: {0}"),
+                    ex.Message);
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    ProjectMetadataUndoStatus = status;
+                    SaveStatus = status;
+                    GlobalNotificationCenter.Instance.Show(
+                        status,
+                        NotificationSeverity.Error,
+                        L(MetadataConflictsTitleKey, MetadataConflictsTitleFallback));
+                });
+            }
+            finally
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = false);
+            }
         }
 
         private void AcceptProjectMetadataConflict(ProjectMetadataConflictItemViewModel? item)
@@ -4129,13 +4533,14 @@ namespace VaultSync.UI
                 {
                     AppConfig cfg = _configStore.Load();
                     var repo = _repositoryFactory.Create(cfg);
-                    repo.UpdateProjectPreferredDestination(item.ProjectId, EmptyToNull(item.ImportedPreferredDestinationId));
-                    repo.UpdateProjectRestoreMode(item.ProjectId, EmptyToNull(item.ImportedRestoreMode));
-                    repo.UpdateProjectVerificationPolicy(item.ProjectId, EmptyToNull(item.ImportedVerificationPolicy));
-                    repo.UpdateProjectTags(item.ProjectId, EmptyToNull(item.ImportedTags));
-
-                    RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
-                    UpdateMetadataConflictTelemetry(cfg, "accept-imported", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
+                    ProjectMetadataResolutionResult result = _projectMetadataResolutionService.Resolve(
+                        repo,
+                        cfg,
+                        item.ProjectId,
+                        item.ProjectExternalId,
+                        ProjectMetadataResolutionDecision.AcceptImported,
+                        AvatarColorProvider.SetColorForExternalId);
+                    UpdateMetadataConflictTelemetry(cfg, "accept-imported", result.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
                     _configStore.Save(cfg);
                 }).ConfigureAwait(false);
 
@@ -4198,8 +4603,15 @@ namespace VaultSync.UI
                 await Task.Run(() =>
                 {
                     AppConfig cfg = _configStore.Load();
-                    RemoveProjectMetadataConflictRecord(cfg, item.ProjectId, item.ProjectExternalId);
-                    UpdateMetadataConflictTelemetry(cfg, "keep-local", item.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
+                    var repo = _repositoryFactory.Create(cfg);
+                    ProjectMetadataResolutionResult result = _projectMetadataResolutionService.Resolve(
+                        repo,
+                        cfg,
+                        item.ProjectId,
+                        item.ProjectExternalId,
+                        ProjectMetadataResolutionDecision.KeepLocal,
+                        AvatarColorProvider.SetColorForExternalId);
+                    UpdateMetadataConflictTelemetry(cfg, "keep-local", result.ProjectName, Math.Max(0, cfg.Advanced.ProjectMetadataConflicts.Count));
                     _configStore.Save(cfg);
                 }).ConfigureAwait(false);
 
@@ -4241,19 +4653,6 @@ namespace VaultSync.UI
             finally
             {
                 await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = false);
-            }
-        }
-
-        private static void RemoveProjectMetadataConflictRecord(AppConfig cfg, int projectId, string projectExternalId)
-        {
-            cfg.Advanced.ProjectMetadataConflicts ??= [];
-            ProjectMetadataConflictRecord? existing = cfg.Advanced.ProjectMetadataConflicts.FirstOrDefault(conflict =>
-                conflict.ProjectId == projectId ||
-                (!string.IsNullOrWhiteSpace(projectExternalId) &&
-                 string.Equals(conflict.ProjectExternalId, projectExternalId, StringComparison.OrdinalIgnoreCase)));
-            if (existing is not null)
-            {
-                cfg.Advanced.ProjectMetadataConflicts.Remove(existing);
             }
         }
 
@@ -4319,9 +4718,6 @@ namespace VaultSync.UI
                 DiagnosticsLogger.Record($"Backup repair telemetry persist failed: {ex.GetType().Name} - {ex.Message}");
             }
         }
-
-        private static string? EmptyToNull(string? value)
-            => string.IsNullOrWhiteSpace(value) || string.Equals(value.Trim(), "-", StringComparison.Ordinal) ? null : value.Trim();
 
         private async Task ImportSupportBundleAsync()
         {

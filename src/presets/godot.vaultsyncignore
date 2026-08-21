@@ -18,6 +18,4 @@ export_presets.cfg
 # OS
 .DS_Store
 Thumbs.db
-
-# Git
 .git/

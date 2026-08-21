@@ -22,13 +22,14 @@ elif [[ -f "$iconset/icon_512x512.png" ]]; then
   iconutil -c icns "$iconset" -o "$icns"
 fi
 
-app_name="VaultSync-macos-$arch.app"
-app_dir="$base_dist/$app_name"
+stage_dir="$base_dist/staging/$arch"
+app_name="VaultSync.app"
+app_dir="$stage_dir/$app_name"
 contents="$app_dir/Contents"
 macos_dir="$contents/MacOS"
 resources_dir="$contents/Resources"
 
-rm -rf "$app_dir"
+rm -rf "$stage_dir"
 mkdir -p "$macos_dir" "$resources_dir"
 cp -R "$publish_dir"/* "$macos_dir"/
 cp "$icns" "$resources_dir/VaultSync.icns"
@@ -60,6 +61,11 @@ cat > "$contents/Info.plist" <<EOF
 </plist>
 EOF
 
+# Keep one stable code identity even before Developer ID signing is available.
+# This is still an intentionally unsigned/ad-hoc distribution, but it avoids
+# inheriting the generic apphost identifier from the .NET launcher.
+codesign --force --deep --sign - --identifier com.vaultsync.app "$app_dir"
+
 if [[ "$arch" == "arm64" ]]; then
   dmg_name="VaultSync-${version}-macos-apple-silicon.dmg"
 else
@@ -68,6 +74,7 @@ fi
 
 dmg="$base_dist/$dmg_name"
 rm -f "$dmg"
-hdiutil create -volname "VaultSync" -srcfolder "$app_dir" -ov -format UDZO "$dmg" > /dev/null
+ln -s /Applications "$stage_dir/Applications"
+hdiutil create -volname "VaultSync" -srcfolder "$stage_dir" -ov -format UDZO "$dmg" > /dev/null
 
 echo "$dmg"

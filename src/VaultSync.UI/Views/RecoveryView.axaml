@@ -275,9 +275,11 @@
                 <Grid ColumnDefinitions="*,170"
                       ColumnSpacing="10"
                       Margin="0,8,0,0">
-                  <TextBox PlaceholderText="{infra:LocalizedString Key=Recovery.Filter.SearchWatermark}"
+                  <TextBox Classes="app-search"
+                           PlaceholderText="{infra:LocalizedString Key=Recovery.Filter.SearchWatermark}"
                            Text="{CompiledBinding ProjectSearchText, Mode=TwoWay}" />
                   <ComboBox Grid.Column="1"
+                            Classes="app-filter"
                             ItemsSource="{CompiledBinding ProjectFilters}"
                             SelectedItem="{CompiledBinding SelectedProjectFilter, Mode=TwoWay}">
                     <ComboBox.ItemTemplate>
@@ -405,8 +407,9 @@
                       </Grid>
 
                       <Expander Grid.Row="7"
+                                Classes="app-section"
                                 Header="{infra:LocalizedString Key=Recovery.Inspector.Title}">
-                        <StackPanel Spacing="8" Margin="0,8,0,0">
+                        <StackPanel Spacing="8">
                           <Border Classes="recovery-soft" Padding="10">
                             <StackPanel Spacing="3">
                               <TextBlock Text="{infra:LocalizedString Key=Recovery.Inspector.NextAction}" Classes="recovery-label" />
@@ -417,20 +420,30 @@
                           <ItemsControl ItemsSource="{CompiledBinding Evidence}">
                             <ItemsControl.ItemTemplate>
                               <DataTemplate x:DataType="vm:RecoveryEvidenceItemViewModel">
-                                <Grid ColumnDefinitions="150,90,90,*" ColumnSpacing="8" Margin="4,3">
-                                  <TextBlock Text="{CompiledBinding Label}" FontWeight="SemiBold" />
-                                  <TextBlock Grid.Column="1" Text="{CompiledBinding Status}" />
-                                  <TextBlock Grid.Column="2" Text="{CompiledBinding Basis}"
-                                             Foreground="{DynamicResource TextSecondaryBrush}" />
-                                  <TextBlock Grid.Column="3" Text="{CompiledBinding Detail}"
-                                             Foreground="{DynamicResource TextSecondaryBrush}"
-                                             TextWrapping="Wrap" />
-                                </Grid>
+                                <Border Classes="recovery-soft" Padding="10" Margin="0,3">
+                                  <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto"
+                                        ColumnSpacing="8" RowSpacing="4">
+                                    <TextBlock Text="{CompiledBinding Label}"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap" />
+                                    <Border Grid.Column="1" Classes="recovery-pill">
+                                      <TextBlock Text="{CompiledBinding Status}" FontSize="10" />
+                                    </Border>
+                                    <Border Grid.Column="2" Classes="recovery-pill">
+                                      <TextBlock Text="{CompiledBinding Basis}" FontSize="10" />
+                                    </Border>
+                                    <TextBlock Grid.Row="1" Grid.ColumnSpan="3"
+                                               Text="{CompiledBinding Detail}"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                  </Grid>
+                                </Border>
                               </DataTemplate>
                             </ItemsControl.ItemTemplate>
                           </ItemsControl>
-                          <Expander Header="{CompiledBinding LastDrillLabel}"
-                                IsVisible="{CompiledBinding HasDrillDetail}">
+                          <Expander Classes="app-section"
+                                    Header="{CompiledBinding LastDrillLabel}"
+                                    IsVisible="{CompiledBinding HasDrillDetail}">
                             <Border Classes="recovery-soft" Padding="10" Margin="0,6,0,0">
                               <SelectableTextBlock Text="{CompiledBinding DrillDetail}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"

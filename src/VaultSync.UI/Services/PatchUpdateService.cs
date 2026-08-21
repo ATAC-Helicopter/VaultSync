@@ -105,8 +105,7 @@ namespace VaultSync.UI.Services
         internal const int MaxPatchFileCount = 100_000;
         internal const long MaxPatchManifestBytes = 4L * 1024 * 1024;
         private static readonly HttpClient s_httpClient = CreateHttpClient();
-        private static readonly TimeSpan s_manifestCacheWindow = TimeSpan.FromMinutes(30);
-        private static readonly ConcurrentDictionary<string, (PatchManifest Manifest, DateTimeOffset FetchedAt)> s_manifestCache =
+        private static readonly ConcurrentDictionary<string, PatchManifest> s_manifestCache =
             new(StringComparer.OrdinalIgnoreCase);
 
         public async Task<PatchPlan?> PreparePatchAsync(
@@ -726,16 +725,26 @@ namespace VaultSync.UI.Services
             CancellationToken cancellationToken)
         {
             string cacheKey = $"{manifestUrl}|{expectedSha256}|{expectedSize}";
-            if (s_manifestCache.TryGetValue(cacheKey, out (PatchManifest Manifest, DateTimeOffset FetchedAt) cached))
-            {
-                if (DateTimeOffset.UtcNow - cached.FetchedAt < s_manifestCacheWindow)
-                {
-                    return cached.Manifest;
-                }
-            }
-
             if (expectedSize <= 0 || expectedSize > MaxPatchManifestBytes || !IsSha256(expectedSha256))
                 return null;
+
+            if (s_manifestCache.TryGetValue(cacheKey, out PatchManifest? cached))
+                return cached;
+
+            if (VerifiedReleaseAssetCache.Default.TryRead(
+                    manifestUrl,
+                    expectedSha256,
+                    expectedSize,
+                    MaxPatchManifestBytes,
+                    out byte[] cachedPayload))
+            {
+                PatchManifest? cachedManifest = JsonSerializer.Deserialize<PatchManifest>(cachedPayload);
+                if (cachedManifest is not null)
+                {
+                    s_manifestCache[cacheKey] = cachedManifest;
+                    return cachedManifest;
+                }
+            }
 
             using HttpResponseMessage response = await s_httpClient.GetAsync(
                 manifestUrl,
@@ -765,7 +774,13 @@ namespace VaultSync.UI.Services
             if (manifest is null)
                 return null;
 
-            s_manifestCache[cacheKey] = (manifest, DateTimeOffset.UtcNow);
+            VerifiedReleaseAssetCache.Default.Write(
+                manifestUrl,
+                expectedSha256,
+                expectedSize,
+                MaxPatchManifestBytes,
+                payload);
+            s_manifestCache[cacheKey] = manifest;
             return manifest;
         }
 

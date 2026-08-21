@@ -147,7 +147,8 @@ namespace VaultSync.UI.ViewModels
                         : cfg.Network.Credentials.FirstOrDefault(c =>
                             c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-                    DestinationResolution resolution = await Task.Run(() => _networkMountService.PrepareDestination(dest, profile)).ConfigureAwait(false);
+                    DestinationResolution resolution = await Task.Run(() =>
+                        _networkMountService.PrepareDestination(dest, profile, allowAutoMount: false)).ConfigureAwait(false);
                     if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         continue;
 

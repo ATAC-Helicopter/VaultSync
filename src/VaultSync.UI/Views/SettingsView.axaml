@@ -994,7 +994,7 @@
                                   CornerRadius="10"
                                   Background="{DynamicResource CardBackgroundBrush}">
                             <Grid ColumnDefinitions="Auto,*,Auto"
-                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="10"
                                   RowSpacing="8">
                               <Grid x:Name="DestinationBasicsRow"
@@ -1181,6 +1181,88 @@
                                              ToolTip.Tip="{Binding LastTestStatus}"
                                              IsVisible="{Binding LastTestStatus, Converter={StaticResource StringNotEmptyConverter}}" />
                               </StackPanel>
+
+                              <Border Grid.Column="0"
+                                      Grid.ColumnSpan="3"
+                                      Grid.Row="8"
+                                      Padding="12"
+                                      Margin="0,4,0,0"
+                                      CornerRadius="10"
+                                      Background="{DynamicResource VsCardHighlightBrush}"
+                                      BorderBrush="{DynamicResource BorderSoft}"
+                                      BorderThickness="1"
+                                      IsVisible="{Binding EnableMetadataSync}">
+                                <StackPanel Spacing="9">
+                                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <StackPanel Grid.Column="0" Spacing="2">
+                                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.Title}"
+                                                 FontWeight="SemiBold" />
+                                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.Description}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource TextSecondary}"
+                                                 TextWrapping="Wrap" />
+                                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.CompatibilityWarning}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource WarningTextBrush}"
+                                                 TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1"
+                                            Classes="stat-pill sm info"
+                                            VerticalAlignment="Center">
+                                      <TextBlock Text="{Binding RepositoryWriterStatus}" />
+                                    </Border>
+                                    <Button Grid.Column="2"
+                                            Classes="settings-ghost"
+                                            VerticalAlignment="Center"
+                                            IsEnabled="{Binding !IsRepositoryWriterBusy}"
+                                            Command="{Binding DataContext.InspectRepositoryWriterCommand, ElementName=Root}"
+                                            CommandParameter="{Binding}">
+                                      <TextBlock Text="{infra:LocalizedString Key=Common.Refresh}" />
+                                    </Button>
+                                  </Grid>
+
+                                  <TextBlock Text="{Binding RepositoryWriterDetails}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource TextSecondary}"
+                                             TextWrapping="Wrap" />
+
+                                  <Button Classes="settings-ghost"
+                                          HorizontalAlignment="Left"
+                                          IsVisible="{Binding CanReviewStaleWriter}"
+                                          IsEnabled="{Binding !IsRepositoryWriterBusy}"
+                                          Command="{Binding DataContext.ReviewStaleWriterCommand, ElementName=Root}"
+                                          CommandParameter="{Binding}">
+                                    <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.Review}" />
+                                  </Button>
+
+                                  <Border Padding="12"
+                                          CornerRadius="8"
+                                          Background="{DynamicResource DangerSoftBrush}"
+                                          BorderBrush="{DynamicResource DangerBrush}"
+                                          BorderThickness="1"
+                                          IsVisible="{Binding IsWriterTakeoverConfirmationVisible}">
+                                    <StackPanel Spacing="10">
+                                      <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.TakeoverWarning}"
+                                                 Foreground="{DynamicResource DangerTextBrush}"
+                                                 TextWrapping="Wrap" />
+                                      <StackPanel Orientation="Horizontal"
+                                                  HorizontalAlignment="Right"
+                                                  Spacing="8">
+                                        <Button Classes="action-ghost"
+                                                Command="{Binding DataContext.CancelStaleWriterTakeoverCommand, ElementName=Root}"
+                                                CommandParameter="{Binding}">
+                                          <TextBlock Text="{infra:LocalizedString Key=Common.Cancel}" />
+                                        </Button>
+                                        <Button Classes="action-danger"
+                                                Command="{Binding DataContext.ConfirmStaleWriterTakeoverCommand, ElementName=Root}"
+                                                CommandParameter="{Binding}">
+                                          <TextBlock Text="{infra:LocalizedString Key=Settings.Destinations.Writer.TakeOver}" />
+                                        </Button>
+                                      </StackPanel>
+                                    </StackPanel>
+                                  </Border>
+                                </StackPanel>
+                              </Border>
                             </Grid>
                           </Border>
                        </DataTemplate>
@@ -1653,12 +1735,8 @@
                             </StackPanel>
                           </Border>
 
-                          <Expander Header="{Binding ThemeAdvancedLabel}"
-                                    Background="{DynamicResource Surface1}"
-                                    BorderBrush="{DynamicResource DividerBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="12">
+                          <Expander Classes="app-section"
+                                    Header="{Binding ThemeAdvancedLabel}">
                             <StackPanel Spacing="8"
                                         Margin="0,8,0,0">
                               <TextBlock Text="{Binding ThemeAdvancedDescription}"
@@ -1805,6 +1883,40 @@
                              Foreground="{DynamicResource TextSecondary}"
                              FontSize="12" />
                 </StackPanel>
+
+                <Border Classes="subtle-card"
+                        Padding="12"
+                        CornerRadius="12">
+                  <Grid ColumnDefinitions="*,Auto"
+                        RowDefinitions="Auto,Auto,Auto">
+                    <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BuildInformationTitle}" FontWeight="SemiBold" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.BuildInformationDescription}"
+                                 Foreground="{DynamicResource TextSecondary}"
+                                 FontSize="11" />
+                    </StackPanel>
+                    <Button Grid.Row="0"
+                            Grid.Column="1"
+                            Content="{infra:LocalizedString Key=Settings.Advanced.BuildInformationCopy}"
+                            Classes="action-ghost"
+                            Command="{Binding CopyBuildInformationCommand}" />
+                    <TextBlock Grid.Row="1"
+                               Grid.ColumnSpan="2"
+                               Margin="0,10,0,0"
+                               Text="{Binding BuildInformationText}"
+                               FontFamily="monospace"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondary}"
+                               TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="2"
+                               Grid.ColumnSpan="2"
+                               Margin="0,6,0,0"
+                               Text="{Binding BuildInformationCopyStatus}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondary}"
+                               IsVisible="{Binding HasBuildInformationCopyStatus}" />
+                  </Grid>
+                </Border>
 
                   <Grid ColumnDefinitions="*,Auto">
                     <StackPanel Grid.Column="0" Spacing="2">
@@ -2064,64 +2176,130 @@
                                         <Run Text="{Binding SourceMachineId}" />
                                         <Run Text=" · " />
                                         <Run Text="{Binding SourceUpdatedUtc}" />
+                                        <Run Text=" · " />
+                                        <Run Text="{Binding RevisionSummary}" />
                                       </TextBlock>
+                                      <TextBlock Text="{Binding ConflictingFields}"
+                                                 Foreground="{DynamicResource WarningTextBrush}"
+                                                 FontSize="11"
+                                                 TextWrapping="Wrap" />
+                                      <TextBlock Text="{Binding ProvenanceSummary}"
+                                                 Foreground="{DynamicResource TextSecondary}"
+                                                 FontSize="10"
+                                                 TextWrapping="Wrap" />
                                     </StackPanel>
 
-                                    <Grid ColumnDefinitions="Auto,*,*"
-                                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                                    <Grid ColumnDefinitions="Auto,*,*,*"
+                                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                           ColumnSpacing="12"
                                           RowSpacing="4">
                                       <TextBlock Grid.Row="0"
                                                  Grid.Column="1"
-                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsLocalLabel}"
+                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsBaseLabel}"
                                                  FontWeight="SemiBold" />
                                       <TextBlock Grid.Row="0"
                                                  Grid.Column="2"
+                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsLocalLabel}"
+                                                 FontWeight="SemiBold" />
+                                      <TextBlock Grid.Row="0"
+                                                 Grid.Column="3"
                                                  Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsImportedLabel}"
                                                  FontWeight="SemiBold" />
 
                                       <TextBlock Grid.Row="1"
                                                  Grid.Column="0"
-                                                 Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}" />
-
+                                                 Text="{infra:LocalizedString Key=Settings.Advanced.MetadataConflictsAvatarColor}" />
                                       <TextBlock Grid.Row="1"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalPreferredDestinationId}" />
+                                                 Text="{Binding BaseAvatarColor}" />
                                       <TextBlock Grid.Row="1"
                                                  Grid.Column="2"
-                                                 Text="{Binding ImportedPreferredDestinationId}" />
+                                                 Text="{Binding LocalAvatarColor}" />
+                                      <TextBlock Grid.Row="1"
+                                                 Grid.Column="3"
+                                                 Text="{Binding ImportedAvatarColor}" />
 
                                       <TextBlock Grid.Row="2"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Projects.Stat.EncryptionPolicy}" />
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="1"
+                                                 Text="{Binding BaseEncryptionPolicy}" />
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="2"
+                                                 Text="{Binding LocalEncryptionPolicy}" />
+                                      <TextBlock Grid.Row="2"
+                                                 Grid.Column="3"
+                                                 Text="{Binding ImportedEncryptionPolicy}" />
+
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Projects.Stat.DestinationLabel}" />
+
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="1"
+                                                 Text="{Binding BasePreferredDestinationId}" />
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="2"
+                                                 Text="{Binding LocalPreferredDestinationId}" />
+                                      <TextBlock Grid.Row="3"
+                                                 Grid.Column="3"
+                                                 Text="{Binding ImportedPreferredDestinationId}" />
+
+                                      <TextBlock Grid.Row="4"
                                                  Grid.Column="0"
                                                  Text="{infra:LocalizedString Key=Backups.Restore.Mode.Label}" />
 
-                                      <TextBlock Grid.Row="2"
+                                      <TextBlock Grid.Row="4"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalRestoreMode}" />
-                                      <TextBlock Grid.Row="2"
+                                                 Text="{Binding BaseRestoreMode}" />
+                                      <TextBlock Grid.Row="4"
                                                  Grid.Column="2"
+                                                 Text="{Binding LocalRestoreMode}" />
+                                      <TextBlock Grid.Row="4"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedRestoreMode}" />
 
-                                      <TextBlock Grid.Row="3"
+                                      <TextBlock Grid.Row="5"
                                                  Grid.Column="0"
                                                  Text="{infra:LocalizedString Key=Backups.Verification.Policy.Label}" />
 
-                                      <TextBlock Grid.Row="3"
+                                      <TextBlock Grid.Row="5"
                                                  Grid.Column="1"
-                                                 Text="{Binding LocalVerificationPolicy}" />
-                                      <TextBlock Grid.Row="3"
+                                                 Text="{Binding BaseVerificationPolicy}" />
+                                      <TextBlock Grid.Row="5"
                                                  Grid.Column="2"
+                                                 Text="{Binding LocalVerificationPolicy}" />
+                                      <TextBlock Grid.Row="5"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedVerificationPolicy}" />
 
-                                      <TextBlock Grid.Row="4"
+                                      <TextBlock Grid.Row="6"
+                                                 Grid.Column="0"
+                                                 Text="{infra:LocalizedString Key=Backups.Section.AutoBackups}" />
+                                      <TextBlock Grid.Row="6"
+                                                 Grid.Column="1"
+                                                 Text="{Binding BaseAutoBackupEnabled}" />
+                                      <TextBlock Grid.Row="6"
+                                                 Grid.Column="2"
+                                                 Text="{Binding LocalAutoBackupEnabled}" />
+                                      <TextBlock Grid.Row="6"
+                                                 Grid.Column="3"
+                                                 Text="{Binding ImportedAutoBackupEnabled}" />
+
+                                      <TextBlock Grid.Row="7"
                                                  Grid.Column="0"
                                                  Text="{infra:LocalizedString Key=Projects.Tags.Label}" />
-                                      <TextBlock Grid.Row="4"
+                                      <TextBlock Grid.Row="7"
                                                  Grid.Column="1"
+                                                 Text="{Binding BaseTags}"
+                                                 TextWrapping="Wrap" />
+                                      <TextBlock Grid.Row="7"
+                                                 Grid.Column="2"
                                                  Text="{Binding LocalTags}"
                                                  TextWrapping="Wrap" />
-                                      <TextBlock Grid.Row="4"
-                                                 Grid.Column="2"
+                                      <TextBlock Grid.Row="7"
+                                                 Grid.Column="3"
                                                  Text="{Binding ImportedTags}"
                                                  TextWrapping="Wrap" />
                                     </Grid>
@@ -2143,6 +2321,21 @@
                               </DataTemplate>
                             </ItemsControl.ItemTemplate>
                           </ItemsControl>
+                          <Border Classes="subtle-card"
+                                  Padding="10"
+                                  IsVisible="{Binding HasUndoableProjectMetadataResolution}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                              <TextBlock Text="{Binding ProjectMetadataUndoStatus}"
+                                         Foreground="{DynamicResource TextSecondary}"
+                                         FontSize="11"
+                                         TextWrapping="Wrap"
+                                         VerticalAlignment="Center" />
+                              <Button Grid.Column="1"
+                                      Content="{infra:LocalizedString Key=Settings.Advanced.MetadataUndoAction}"
+                                      Classes="action-ghost"
+                                      Command="{Binding UndoProjectMetadataResolutionCommand}" />
+                            </Grid>
+                          </Border>
                         </StackPanel>
                       </Border>
                     </StackPanel>

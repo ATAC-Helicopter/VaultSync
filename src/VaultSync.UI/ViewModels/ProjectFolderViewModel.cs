@@ -13,7 +13,7 @@ public sealed class ProjectFolderViewModel : ViewModelBase
 {
     public const string UngroupedId = "";
 
-    private bool _isExpanded = true;
+    private bool _isExpanded;
     private bool _isRenaming;
     private bool _isDeleteConfirmationVisible;
     private string _editName;
@@ -76,7 +76,10 @@ public sealed class ProjectFolderViewModel : ViewModelBase
     public int HealthyProjectCount => AllProjects.Count(project => project.IsRegistered && project.Health == ProjectHealthStatus.Healthy);
     public int AttentionProjectCount => Math.Max(0, RegisteredProjectCount - HealthyProjectCount);
     public int PausedProjectCount => AllProjects.Count(project => project.IsRegistered && !project.IsAutoBackupEnabled);
+    public int VisibleProjectCount => Projects.Count;
+    public int HiddenProjectCount => Math.Max(0, ProjectCount - VisibleProjectCount);
     public bool HasProjects => Projects.Count > 0;
+    public bool HasHiddenProjects => HiddenProjectCount > 0;
     public bool CanRunBatchActions => RegisteredProjectCount > 0;
     public bool ShowBatchActions => CanRunBatchActions && !IsRenaming;
     public bool CanPauseAutoBackups => RegisteredProjectCount > PausedProjectCount;
@@ -93,20 +96,14 @@ public sealed class ProjectFolderViewModel : ViewModelBase
         }
     }
 
+    public string VisibleProjectCountLabel => string.Create(
+        CultureInfo.CurrentCulture,
+        $"{VisibleProjectCount} / {ProjectCount}");
+
     public string ContentsLabel => string.Format(
         CultureInfo.CurrentCulture,
         L("Projects.Folder.ContentsNamed", "Projects in {0}"),
         Name);
-
-    public string SnapshotAllLabel => string.Format(
-        CultureInfo.CurrentCulture,
-        L("Projects.Group.SnapshotCount", "Snapshot all {0}"),
-        ProjectCount);
-
-    public string BackupAllLabel => string.Format(
-        CultureInfo.CurrentCulture,
-        L("Projects.Group.BackupCount", "Back up all {0}"),
-        ProjectCount);
 
     public string HealthSummary
     {
@@ -165,7 +162,7 @@ public sealed class ProjectFolderViewModel : ViewModelBase
         Name = name;
         EditName = name;
         IsRenaming = false;
-        OnPropertiesChanged(nameof(Name), nameof(DeleteExplanation));
+        OnPropertiesChanged(nameof(Name), nameof(ContentsLabel), nameof(DeleteExplanation));
     }
 
     public void NotifyAggregateChanged()
@@ -176,15 +173,17 @@ public sealed class ProjectFolderViewModel : ViewModelBase
             nameof(HealthyProjectCount),
             nameof(AttentionProjectCount),
             nameof(PausedProjectCount),
+            nameof(VisibleProjectCount),
+            nameof(HiddenProjectCount),
             nameof(HasProjects),
+            nameof(HasHiddenProjects),
             nameof(CanRunBatchActions),
             nameof(ShowBatchActions),
             nameof(CanPauseAutoBackups),
             nameof(CanResumeAutoBackups),
             nameof(ProjectCountLabel),
+            nameof(VisibleProjectCountLabel),
             nameof(ContentsLabel),
-            nameof(SnapshotAllLabel),
-            nameof(BackupAllLabel),
             nameof(HealthSummary),
             nameof(Summary),
             nameof(DeleteExplanation));

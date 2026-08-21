@@ -164,6 +164,10 @@ namespace VaultSync.UI.ViewModels
 
                         if (resolution.IsSuccess && !string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         {
+                            if (deleteResolution is not null)
+                            {
+                                NetworkMountService.Cleanup(deleteResolution);
+                            }
                             deleteResolution = resolution;
                             backupRoot = string.IsNullOrWhiteSpace(rootSubPath)
                                 ? resolution.EffectivePath
@@ -342,7 +346,7 @@ namespace VaultSync.UI.ViewModels
 
                 if (deleteResolution is not null)
                 {
-                    _networkMountService.Cleanup(deleteResolution);
+                    NetworkMountService.Cleanup(deleteResolution);
                 }
             }
         }
@@ -2539,7 +2543,10 @@ namespace VaultSync.UI.ViewModels
 
             string backupFullPath = preparation.BackupFullPath;
             BackupsViewModel.IsBusy      = true;
-            BackupsViewModel.BusyMessage = $"Restoring {preparation.ProjectName}...";
+            BackupsViewModel.BusyMessage = string.Format(
+                CultureInfo.CurrentCulture,
+                AppViewModel.L("Backups.Restore.RestoringProject", "Restoring {0}..."),
+                preparation.ProjectName);
             string restoreCardId = $"restore-{backupId}";
             BackupsViewModel.UpdateActiveBackup(
                 restoreCardId,
@@ -2666,10 +2673,6 @@ namespace VaultSync.UI.ViewModels
                     }
                 }
 
-                if (!restoreSucceeded)
-                    return;
-
-                restoreSucceeded = true;
             }
             catch (Exception ex)
             {

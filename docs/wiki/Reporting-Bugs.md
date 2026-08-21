@@ -23,6 +23,11 @@ Use GitHub Issues:
 - If the issue is backup-related, include the recent backup log output.
 - If it is update-related, include update banner text, current version, target version, and any patch-preflight diagnostics.
 - Prefer exporting a support bundle from Settings > Advanced when possible.
+  Review its exact file list first; remove optional sanitized diagnostics or
+  anonymized telemetry if they are unnecessary. VaultSync pseudonymizes known
+  paths and display identities, scrubs configured and structured secrets,
+  limits file and bundle sizes, and includes a checksum manifest. It never
+  sends the ZIP automatically, so inspect it again before sharing it.
 - After a crash, VaultSync can prepare a strictly redacted local report for you to inspect and email manually. It never sends the report automatically; see [Crash reporting and user control](../CRASH_REPORTING.md) for the exact fields and privacy controls.
 
 ## Security issues

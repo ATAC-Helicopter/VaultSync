@@ -1,9 +1,23 @@
-.idea/**
+# Keep shareable project configuration while dropping per-user IDE state.
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/**
+.idea/shelf/**
+.idea/httpRequests/**
+.idea/dataSources.local.xml
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries/**
+.idea/**/shelf/**
+.idea/**/httpRequests/**
+.idea/**/dataSources.local.xml
 *.iml
 out/**
 **/out/**
 
 .DS_Store
+._*
 Thumbs.db
-
 .git/

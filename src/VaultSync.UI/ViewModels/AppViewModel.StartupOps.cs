@@ -47,13 +47,15 @@ namespace VaultSync.UI.ViewModels
 
             _backupService = new BackupService(_repo, configStore: _configStore);
             _backupService.BackupRetentionDeleted += OnBackupRetentionDeleted;
+            _installationIdentityProvider = new InstallationIdentityService();
             _metadataSyncService = new MetadataSyncService(
                 _repo,
                 _configStore,
                 projectColorResolver: project =>
                     AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId),
                 projectColorApplier: (externalId, color) =>
-                    AvatarColorProvider.SetColorForExternalId(externalId, color));
+                    AvatarColorProvider.SetColorForExternalId(externalId, color),
+                installationIdentityProvider: _installationIdentityProvider);
             _networkMountService = new NetworkMountService();
             _credentialVault = CredentialVault.Instance;
             _notificationService = new NotificationService();
@@ -72,7 +74,12 @@ namespace VaultSync.UI.ViewModels
             _projectsViewModel.AutoBackupGroupPreferenceChanged += OnAutoBackupGroupPreferenceChanged;
             _projectsViewModel.ProjectRemovedFromDatabase += OnProjectRemovedFromDatabase;
             _backupsViewModel = null;
-            _settingsViewModel = new SettingsViewModel(_localizationService, _configStore, _repositoryFactory);
+            _settingsViewModel = new SettingsViewModel(
+                _localizationService,
+                _configStore,
+                _repositoryFactory,
+                installationIdentityProvider: _installationIdentityProvider,
+                appVersion: _currentVersionString);
             _scheduleViewModel = new ScheduleViewModel(
                 _settingsViewModel,
                 _localizationService,
@@ -268,16 +275,6 @@ namespace VaultSync.UI.ViewModels
             catch (Exception ex)
             {
                 DiagnosticsLogger.Record($"Startup retention enforcement failed: {ex.GetType().Name} - {ex.Message}");
-            }
-
-            try
-            {
-                CleanupUnusedCredentialSecretsOnStartup();
-                RecordStartupPhase("cleanup-unused-secrets-complete");
-            }
-            catch (Exception ex)
-            {
-                DiagnosticsLogger.Record($"Startup credential cleanup failed: {ex.GetType().Name} - {ex.Message}");
             }
 
             try

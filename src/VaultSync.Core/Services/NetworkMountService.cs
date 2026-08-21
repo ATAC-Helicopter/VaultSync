@@ -11,6 +11,10 @@ namespace VaultSync.Core.Services;
 public sealed class NetworkMountService
 {
     private const string SmbScheme = "smb://";
+    public const string PassiveMountDeferredMessage =
+        "Not mounted. VaultSync will request access when a backup or explicit destination test needs this destination.";
+
+    private sealed record MacMountEntry(string Source, string MountPoint, string RawLine);
 
     private readonly Func<NetworkCredentialProfile?, string?> _passwordResolver;
 
@@ -30,10 +34,20 @@ public sealed class NetworkMountService
         _passwordResolver = passwordResolver ?? throw new ArgumentNullException(nameof(passwordResolver));
     }
 
-    public DestinationResolution PrepareDestination(BackupDestination dest, NetworkCredentialProfile? profile)
+    public DestinationResolution PrepareDestination(
+        BackupDestination dest,
+        NetworkCredentialProfile? profile,
+        bool allowAutoMount = true)
     {
         string alias = DisplayName(dest);
-        Log($"PrepareDestination: alias='{alias}', path='{dest.Path}', preMounted={dest.PreMounted}, autoMount={dest.AutoMount}, autoUnmount={dest.AutoUnmount}");
+        if (allowAutoMount)
+        {
+            Log($"PrepareDestination: alias='{alias}', path='{dest.Path}', preMounted={dest.PreMounted}, autoMount={dest.AutoMount}, autoUnmount={dest.AutoUnmount}");
+        }
+        else
+        {
+            Log($"Passive destination probe for '{alias}'; new network mounts and credential access are disabled.");
+        }
 
         string normalizedPath = NormalizePath(dest.Path, out string? normalizeError);
         if (!string.IsNullOrWhiteSpace(normalizeError))
@@ -42,67 +56,64 @@ public sealed class NetworkMountService
         }
 
         if (dest.PreMounted)
-        {
-            Log($"Using pre-mounted path for '{alias}'.");
-            return Directory.Exists(normalizedPath)
-                ? CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using pre-mounted path '{normalizedPath}'")
-                : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is marked pre-mounted but is not accessible.");
-        }
+            return PreparePreMountedDestination(dest, alias, normalizedPath);
 
-        bool isNetwork = IsNetworkPath(normalizedPath);
-        if (!isNetwork)
-        {
-            if (IsMacVolumesPath(normalizedPath))
-            {
-                if (IsAccessibleDirectory(normalizedPath, out string? accessError))
-                {
-                    Log($"Using macOS mounted volume path '{normalizedPath}'.");
-                    return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using mounted volume path '{normalizedPath}'");
-                }
-
-                string detail = string.IsNullOrWhiteSpace(accessError)
-                    ? "The mounted volume path is not accessible."
-                    : accessError;
-                Log($"Mounted volume path '{normalizedPath}' failed: {detail}");
-                return DestinationResolution.CreateFailure(
-                    dest,
-                    $"Cannot use destination '{alias}': {detail} Use a reachable /Volumes mount point, or configure the destination as smb://host/share for auto-mount.");
-            }
-
-            try
-            {
-                Directory.CreateDirectory(normalizedPath);
-                Log($"Using local path '{normalizedPath}'.");
-                return CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using local path '{normalizedPath}'");
-            }
-            catch (Exception ex)
-            {
-                Log($"Local path '{normalizedPath}' failed: {ex.Message}");
-                return DestinationResolution.CreateFailure(dest, $"Cannot use destination '{alias}': {ex.Message}");
-            }
-        }
+        if (!IsNetworkPath(normalizedPath))
+            return PrepareLocalDestination(dest, alias, normalizedPath);
 
         if (!dest.AutoMount)
-        {
-            Log($"Auto-mount disabled for '{alias}'.");
-            if (OperatingSystem.IsMacOS() &&
-                normalizedPath.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
-            {
-                return DestinationResolution.CreateFailure(
-                    dest,
-                    "NFS destinations on macOS must use a pre-mounted local path. Mount the share first and set the destination to that mount point.");
-            }
-            return Directory.Exists(normalizedPath)
-                ? CreateSuccessWithKeepAlive(dest, normalizedPath, mounted: false, $"Using reachable network path '{normalizedPath}'")
-                : DestinationResolution.CreateFailure(dest, $"Destination '{alias}' is unreachable and auto-mount is disabled.");
-        }
+            return PrepareAutoMountDisabledDestination(dest, alias, normalizedPath);
 
-        Log($"Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
+        if (allowAutoMount)
+            Log($"Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
+        return PrepareAutoMountedDestination(dest, normalizedPath, profile, allowAutoMount);
+    }
+
+    private static DestinationResolution PreparePreMountedDestination(
+        BackupDestination destination,
+        string alias,
+        string normalizedPath)
+    {
+        Log($"Using pre-mounted path for '{alias}'.");
+        return Directory.Exists(normalizedPath)
+            ? CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using pre-mounted path '{normalizedPath}'")
+            : DestinationResolution.CreateFailure(destination, $"Destination '{alias}' is marked pre-mounted but is not accessible.");
+    }
+
+    private static DestinationResolution PrepareAutoMountDisabledDestination(
+        BackupDestination destination,
+        string alias,
+        string normalizedPath)
+    {
+        Log($"Auto-mount disabled for '{alias}'.");
+        if (OperatingSystem.IsMacOS() && normalizedPath.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
+        {
+            return DestinationResolution.CreateFailure(
+                destination,
+                "NFS destinations on macOS must use a pre-mounted local path. Mount the share first and set the destination to that mount point.");
+        }
+        return Directory.Exists(normalizedPath)
+            ? CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using reachable network path '{normalizedPath}'")
+            : DestinationResolution.CreateFailure(destination, $"Destination '{alias}' is unreachable and auto-mount is disabled.");
+    }
+
+    private DestinationResolution PrepareAutoMountedDestination(
+        BackupDestination destination,
+        string normalizedPath,
+        NetworkCredentialProfile? profile,
+        bool allowAutoMount)
+    {
+
+        // Background health/maintenance work must never unlock a credential store
+        // or establish a new connection. macOS gets one extra chance below to
+        // reuse an already-mounted SMB share without reading the credential.
+        if (!allowAutoMount && !OperatingSystem.IsMacOS())
+            return DestinationResolution.CreateFailure(destination, PassiveMountDeferredMessage);
 
         if (OperatingSystem.IsWindows())
         {
             string? password = ResolvePassword(profile);
-            return ConnectWindowsShare(dest, normalizedPath, profile, password);
+            return ConnectWindowsShare(destination, normalizedPath, profile, password);
         }
 
         if (OperatingSystem.IsMacOS())
@@ -110,17 +121,17 @@ public sealed class NetworkMountService
             if (normalizedPath.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
             {
                 return DestinationResolution.CreateFailure(
-                    dest,
+                    destination,
                     "NFS auto-mount is not supported on macOS. Pre-mount the share and use the local mount path with Auto-mount disabled.");
             }
 
-            return MountMacShare(dest, normalizedPath, profile);
+            return MountMacShare(destination, normalizedPath, profile, allowAutoMount);
         }
 
-        return DestinationResolution.CreateFailure(dest, "Auto-mount is only supported on Windows and macOS.");
+        return DestinationResolution.CreateFailure(destination, "Auto-mount is only supported on Windows and macOS.");
     }
 
-    public void Cleanup(DestinationResolution resolution)
+    public static void Cleanup(DestinationResolution resolution)
     {
         if (!resolution.MountedByUs || !resolution.Destination.AutoUnmount)
             return;
@@ -134,6 +145,47 @@ public sealed class NetworkMountService
         {
             UnmountMac(resolution);
         }
+    }
+
+    private static DestinationResolution PrepareLocalDestination(
+        BackupDestination destination,
+        string alias,
+        string normalizedPath)
+    {
+        if (IsMacVolumesPath(normalizedPath))
+            return PrepareMacVolumeDestination(destination, alias, normalizedPath);
+
+        try
+        {
+            Directory.CreateDirectory(normalizedPath);
+            Log($"Using local path '{normalizedPath}'.");
+            return CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using local path '{normalizedPath}'");
+        }
+        catch (Exception ex)
+        {
+            Log($"Local path '{normalizedPath}' failed: {ex.Message}");
+            return DestinationResolution.CreateFailure(destination, $"Cannot use destination '{alias}': {ex.Message}");
+        }
+    }
+
+    private static DestinationResolution PrepareMacVolumeDestination(
+        BackupDestination destination,
+        string alias,
+        string normalizedPath)
+    {
+        if (IsAccessibleDirectory(normalizedPath, out string? accessError))
+        {
+            Log($"Using macOS mounted volume path '{normalizedPath}'.");
+            return CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using mounted volume path '{normalizedPath}'");
+        }
+
+        string detail = string.IsNullOrWhiteSpace(accessError)
+            ? "The mounted volume path is not accessible."
+            : accessError;
+        Log($"Mounted volume path '{normalizedPath}' failed: {detail}");
+        return DestinationResolution.CreateFailure(
+            destination,
+            $"Cannot use destination '{alias}': {detail} Use a reachable /Volumes mount point, or configure the destination as smb://host/share for auto-mount.");
     }
 
     private string? ResolvePassword(NetworkCredentialProfile? profile)
@@ -303,59 +355,24 @@ public sealed class NetworkMountService
     private DestinationResolution MountMacShare(
         BackupDestination dest,
         string normalizedPath,
-        NetworkCredentialProfile? profile)
+        NetworkCredentialProfile? profile,
+        bool allowAutoMount)
     {
-        if (!TryParseShareWithSubpath(normalizedPath, out string? shareHost, out string? shareName, out string? shareSubPath))
+        if (!TryParseShareWithSubpath(normalizedPath, out string shareHost, out string shareName, out string shareSubPath))
         {
             return DestinationResolution.CreateFailure(dest, "Destination must be an smb:// or UNC path for auto-mount.");
         }
 
-        string mountRoot = GetMacMountRoot();
-        try
-        {
-            Directory.CreateDirectory(mountRoot);
-        }
-        catch (Exception ex)
-        {
-            return DestinationResolution.CreateFailure(dest, $"Unable to create mount root '{mountRoot}': {ex.Message}");
-        }
-
-        string mountPoint = Path.Combine(mountRoot, string.IsNullOrWhiteSpace(dest.Alias) ? shareName : Slugify(dest.Alias!));
-        if (!Directory.Exists(mountPoint))
-        {
-            try
-            {
-                Directory.CreateDirectory(mountPoint);
-            }
-            catch (Exception ex)
-            {
-                string? existing = FindExistingMountPoint(shareName, mountRoot);
-                if (!string.IsNullOrWhiteSpace(existing))
-                {
-                    mountPoint = existing;
-                }
-                else
-                {
-                    return DestinationResolution.CreateFailure(dest, $"Unable to create mount point '{mountPoint}': {ex.Message}");
-                }
-            }
-        }
+        if (!TryPrepareMacMountPoint(dest, shareName, out string mountPoint, out string? mountError))
+            return DestinationResolution.CreateFailure(dest, mountError ?? "Unable to prepare the SMB mount point.");
 
         if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out string? existingMount))
         {
-            mountPoint = existingMount;
-            Log($"Share already mounted for '{DisplayName(dest)}' at '{mountPoint}'.");
-            if (!IsSmbfsMountPoint(mountPoint, out string? mountLine))
-            {
-                return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an SMB mount.");
-            }
-            if (!string.IsNullOrWhiteSpace(mountLine))
-            {
-                Log($"SMB mount detected: {mountLine}");
-            }
-            string effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
-            return CreateSuccessWithKeepAlive(dest, effectivePath, mounted: false, $"Mounted {DisplayName(dest)}");
+            return CreateMacMountResolution(dest, existingMount, shareSubPath, mountedByUs: false);
         }
+
+        if (!allowAutoMount)
+            return DestinationResolution.CreateFailure(dest, PassiveMountDeferredMessage);
 
         // Only unlock the native credential when a new mount is actually needed.
         // Existing SMB mounts remain usable after login without a Keychain prompt.
@@ -370,13 +387,68 @@ public sealed class NetworkMountService
             ? "guest"
             : profile.Username;
 
+        return RunMacMount(dest, shareHost, shareName, shareSubPath, mountPoint, password, userPart);
+    }
+
+    private static bool TryPrepareMacMountPoint(
+        BackupDestination destination,
+        string shareName,
+        out string mountPoint,
+        out string? error)
+    {
+        string mountRoot = GetMacMountRoot();
+        mountPoint = string.Empty;
+        error = null;
+        try
+        {
+            Directory.CreateDirectory(mountRoot);
+        }
+        catch (Exception ex)
+        {
+            error = $"Unable to create mount root '{mountRoot}': {ex.Message}";
+            return false;
+        }
+
+        string mountName = string.IsNullOrWhiteSpace(destination.Alias)
+            ? shareName
+            : Slugify(destination.Alias);
+        mountPoint = Path.Combine(mountRoot, mountName);
+        if (Directory.Exists(mountPoint))
+            return true;
+
+        try
+        {
+            Directory.CreateDirectory(mountPoint);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            string? existing = FindExistingMountPoint(shareName, mountRoot);
+            if (!string.IsNullOrWhiteSpace(existing))
+            {
+                mountPoint = existing;
+                return true;
+            }
+
+            error = $"Unable to create mount point '{mountPoint}': {ex.Message}";
+            return false;
+        }
+    }
+
+    private static DestinationResolution RunMacMount(
+        BackupDestination destination,
+        string shareHost,
+        string shareName,
+        string shareSubPath,
+        string mountPoint,
+        string? password,
+        string userPart)
+    {
         string passwordPart = string.IsNullOrWhiteSpace(password)
             ? string.Empty
             : ":" + Uri.EscapeDataString(password);
-
         string share = $"//{userPart}{passwordPart}@{shareHost}/{shareName}";
         string shareDisplay = $"//{userPart}@{shareHost}/{shareName}";
-
         var psi = new ProcessStartInfo
         {
             FileName               = "/sbin/mount_smbfs",
@@ -393,7 +465,7 @@ public sealed class NetworkMountService
         {
             using var proc = Process.Start(psi);
             if (proc is null)
-                return DestinationResolution.CreateFailure(dest, "Unable to start mount_smbfs.");
+                return DestinationResolution.CreateFailure(destination, "Unable to start mount_smbfs.");
 
             proc.WaitForExit(10_000);
 
@@ -401,58 +473,58 @@ public sealed class NetworkMountService
             {
                 string stderr = proc.StandardError.ReadToEnd();
                 string sanitized = SanitizeMountError(stderr, password, share, shareDisplay);
-                Log($"mount_smbfs failed for '{DisplayName(dest)}': {sanitized.Trim()}");
+                Log($"mount_smbfs failed for '{DisplayName(destination)}': {sanitized.Trim()}");
                 if (TryGetMountedSharePath(shareHost, shareName, mountPoint, out string? existingMountAfterFail))
                 {
-                    mountPoint = existingMountAfterFail;
-                    Log($"Share already mounted for '{DisplayName(dest)}' at '{mountPoint}'.");
-                    if (!IsSmbfsMountPoint(mountPoint, out string? mountLine))
-                    {
-                        return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an SMB mount.");
-                    }
-                    if (!string.IsNullOrWhiteSpace(mountLine))
-                    {
-                        Log($"SMB mount detected: {mountLine}");
-                    }
-                    string effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
-                    return CreateSuccessWithKeepAlive(dest, effectivePath, mounted: false, $"Mounted {DisplayName(dest)}");
+                    return CreateMacMountResolution(destination, existingMountAfterFail, shareSubPath, mountedByUs: false);
                 }
 
-                return DestinationResolution.CreateFailure(dest, $"Mount failed for {DisplayName(dest)}: {sanitized}".Trim());
+                return DestinationResolution.CreateFailure(destination, $"Mount failed for {DisplayName(destination)}: {sanitized}".Trim());
             }
 
-            Log($"Mounted '{DisplayName(dest)}' at '{mountPoint}'.");
-            if (!IsSmbfsMountPoint(mountPoint, out string? mountInfo))
-            {
-                return DestinationResolution.CreateFailure(dest, $"Mount point '{mountPoint}' is not an SMB mount.");
-            }
-            if (!string.IsNullOrWhiteSpace(mountInfo))
-            {
-                Log($"SMB mount detected: {mountInfo}");
-            }
-            string finalPath = AppendShareSubPath(mountPoint, shareSubPath);
-            return CreateSuccessWithKeepAlive(dest, finalPath, mounted: true, $"Mounted {DisplayName(dest)}");
+            return CreateMacMountResolution(destination, mountPoint, shareSubPath, mountedByUs: true);
         }
         catch (Exception ex)
         {
-            return DestinationResolution.CreateFailure(dest, $"Mount failed for {DisplayName(dest)}: {ex.Message}");
+            return DestinationResolution.CreateFailure(destination, $"Mount failed for {DisplayName(destination)}: {ex.Message}");
         }
     }
 
-    private static string SanitizeMountError(string stderr, string? password, string share, string shareDisplay)
+    private static DestinationResolution CreateMacMountResolution(
+        BackupDestination destination,
+        string mountPoint,
+        string shareSubPath,
+        bool mountedByUs)
+    {
+        Log($"Share mounted for '{DisplayName(destination)}' at '{mountPoint}'.");
+        if (!IsSmbfsMountPoint(mountPoint, out string? mountLine))
+            return DestinationResolution.CreateFailure(destination, $"Mount point '{mountPoint}' is not an SMB mount.");
+
+        if (!string.IsNullOrWhiteSpace(mountLine))
+            Log($"SMB mount detected: {mountLine}");
+
+        string effectivePath = AppendShareSubPath(mountPoint, shareSubPath);
+        return CreateSuccessWithKeepAlive(
+            destination,
+            effectivePath,
+            mountedByUs,
+            $"Mounted {DisplayName(destination)}");
+    }
+
+    internal static string SanitizeMountError(string stderr, string? password, string share, string shareDisplay)
     {
         string sanitized = stderr ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(share))
+        {
+            sanitized = sanitized.Replace(share, shareDisplay, StringComparison.OrdinalIgnoreCase);
+        }
 
         if (!string.IsNullOrWhiteSpace(password))
         {
             sanitized = sanitized.Replace(password, "******", StringComparison.Ordinal);
             string escaped = Uri.EscapeDataString(password);
             sanitized = sanitized.Replace(escaped, "******", StringComparison.Ordinal);
-        }
-
-        if (!string.IsNullOrWhiteSpace(share))
-        {
-            sanitized = sanitized.Replace(share, shareDisplay, StringComparison.OrdinalIgnoreCase);
         }
 
         return sanitized;
@@ -473,56 +545,27 @@ public sealed class NetworkMountService
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(share))
             return false;
 
+        if (!TryReadMacSmbMounts(out IReadOnlyList<MacMountEntry> mounts))
+            return false;
+
         try
         {
-            var psi = new ProcessStartInfo
+            foreach (MacMountEntry mount in mounts)
             {
-                FileName               = "/sbin/mount",
-                RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                UseShellExecute        = false,
-                CreateNoWindow         = true
-            };
-
-            using var proc = Process.Start(psi);
-            if (proc is null)
-                return false;
-
-            proc.WaitForExit(3_000);
-            string output = proc.StandardOutput.ReadToEnd();
-            if (string.IsNullOrWhiteSpace(output))
-                return false;
-
-            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (string line in lines)
-            {
-                if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
-                if (onIndex <= 0)
-                    continue;
-
-                string source = line.Substring(0, onIndex).Trim();
-                string rest = line.Substring(onIndex + 4);
-                string mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
-                if (string.IsNullOrWhiteSpace(mountedAt))
-                    continue;
-
                 if (!string.IsNullOrWhiteSpace(mountPoint) &&
-                    string.Equals(mountedAt, mountPoint, StringComparison.OrdinalIgnoreCase))
+                    string.Equals(mount.MountPoint, mountPoint, StringComparison.OrdinalIgnoreCase))
                 {
-                    mountedPath = mountedAt;
+                    mountedPath = mount.MountPoint;
                     return true;
                 }
 
-                if (!TryParseShare(source, out string? mountedHost, out string? mountedShare))
+                if (!TryParseShare(mount.Source, out string? mountedHost, out string? mountedShare))
                     continue;
 
                 if (string.Equals(host, mountedHost, StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(share, mountedShare, StringComparison.OrdinalIgnoreCase))
                 {
-                    mountedPath = mountedAt;
+                    mountedPath = mount.MountPoint;
                     return true;
                 }
             }
@@ -541,54 +584,20 @@ public sealed class NetworkMountService
         if (!OperatingSystem.IsMacOS() || string.IsNullOrWhiteSpace(mountPoint))
             return false;
 
+        if (!TryReadMacSmbMounts(out IReadOnlyList<MacMountEntry> mounts))
+            return false;
+
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName               = "/sbin/mount",
-                RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                UseShellExecute        = false,
-                CreateNoWindow         = true
-            };
-
-            using var proc = Process.Start(psi);
-            if (proc is null)
-                return false;
-
-            proc.WaitForExit(3_000);
-            string output = proc.StandardOutput.ReadToEnd();
-            if (string.IsNullOrWhiteSpace(output))
-                return false;
-
-            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (string line in lines)
-            {
-                if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
-                if (onIndex <= 0)
-                    continue;
-
-                string rest = line[(onIndex + 4)..];
-                string mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
-                if (string.IsNullOrWhiteSpace(mountedAt))
-                    continue;
-
-                if (string.Equals(mountedAt, mountPoint, StringComparison.OrdinalIgnoreCase))
-                {
-                    mountLine = line;
-                    return true;
-                }
-            }
+            MacMountEntry? mount = mounts.FirstOrDefault(
+                candidate => string.Equals(candidate.MountPoint, mountPoint, StringComparison.OrdinalIgnoreCase));
+            mountLine = mount?.RawLine;
+            return mount is not null;
         }
         catch
         {
             return false;
         }
-
-        return false;
     }
 
     private static string? FindExistingMountPoint(string shareName, string mountRoot)
@@ -722,52 +731,10 @@ public sealed class NetworkMountService
 
     private static bool TryParseShare(string raw, out string host, out string share)
     {
-        host  = string.Empty;
-        share = string.Empty;
-
-        try
-        {
-            if (raw.StartsWith(SmbScheme, StringComparison.OrdinalIgnoreCase))
-            {
-                raw = raw[SmbScheme.Length..];
-            }
-            else if (raw.StartsWith(@"\\"))
-            {
-                raw = raw.TrimStart('\\');
-            }
-            else if (raw.StartsWith(@"//"))
-            {
-                raw = raw.TrimStart('/');
-            }
-
-            string[] parts = raw.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= 2)
-            {
-                host  = parts[0];
-                share = parts[1];
-
-                if (host.Contains('@'))
-                {
-                    host = host.Split('@').Last();
-                }
-
-                if (host.Contains(':'))
-                {
-                    host = host.Split(':').First();
-                }
-
-                return true;
-            }
-        }
-        catch
-        {
-            return false;
-        }
-
-        return false;
+        return TryParseShareWithSubpath(raw, out host, out share, out _);
     }
 
-    private static bool TryParseShareWithSubpath(string raw, out string host, out string share, out string subPath)
+    internal static bool TryParseShareWithSubpath(string raw, out string host, out string share, out string subPath)
     {
         host = string.Empty;
         share = string.Empty;
@@ -796,12 +763,13 @@ public sealed class NetworkMountService
 
                 if (host.Contains('@'))
                 {
-                    host = host.Split('@').Last();
+                    string[] hostParts = host.Split('@');
+                    host = hostParts[^1];
                 }
 
                 if (host.Contains(':'))
                 {
-                    host = host.Split(':').First();
+                    host = host.Split(':')[0];
                 }
 
                 if (parts.Length > 2)
@@ -820,7 +788,71 @@ public sealed class NetworkMountService
         return false;
     }
 
-    private static string AppendShareSubPath(string mountPoint, string subPath)
+    private static bool TryReadMacSmbMounts(out IReadOnlyList<MacMountEntry> mounts)
+    {
+        mounts = [];
+        if (!OperatingSystem.IsMacOS())
+            return false;
+
+        try
+        {
+            ProcessStartInfo psi = CreateHiddenProcessStartInfo("/sbin/mount");
+            using var process = Process.Start(psi);
+            if (process is null)
+                return false;
+
+            process.WaitForExit(3_000);
+            string output = process.StandardOutput.ReadToEnd();
+            if (string.IsNullOrWhiteSpace(output))
+                return false;
+
+            string[] lines = output.Split(
+                '\n',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            mounts = lines
+                .Select(ParseMacSmbMount)
+                .Where(entry => entry is not null)
+                .Cast<MacMountEntry>()
+                .ToList();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static MacMountEntry? ParseMacSmbMount(string line)
+    {
+        return TryParseMacSmbMountLine(line, out string source, out string mountPoint)
+            ? new MacMountEntry(source, mountPoint, line)
+            : null;
+    }
+
+    internal static bool TryParseMacSmbMountLine(
+        string line,
+        out string source,
+        out string mountPoint)
+    {
+        source = string.Empty;
+        mountPoint = string.Empty;
+        if (string.IsNullOrWhiteSpace(line) ||
+            !line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+        if (onIndex <= 0)
+            return false;
+
+        source = line[..onIndex].Trim();
+        string rest = line[(onIndex + 4)..];
+        mountPoint = rest.Split(" (", StringSplitOptions.None)[0].Trim();
+        return !string.IsNullOrWhiteSpace(source) && !string.IsNullOrWhiteSpace(mountPoint);
+    }
+
+    internal static string AppendShareSubPath(string mountPoint, string subPath)
     {
         if (string.IsNullOrWhiteSpace(subPath))
             return mountPoint;
@@ -862,7 +894,7 @@ public sealed class NetworkMountService
     private static string DisplayName(BackupDestination dest)
     {
         if (!string.IsNullOrWhiteSpace(dest.Alias))
-            return dest.Alias!;
+            return dest.Alias;
         if (!string.IsNullOrWhiteSpace(dest.Path))
             return dest.Path;
         return "Destination";
@@ -873,7 +905,7 @@ public sealed class NetworkMountService
         RuntimeVaultLogger.Instance.Info($"[NetworkMount] {message}");
     }
 
-    private static string Slugify(string input)
+    internal static string Slugify(string input)
     {
         var sb = new StringBuilder();
         foreach (char ch in input)
@@ -917,47 +949,19 @@ public sealed class NetworkMountService
         if (string.IsNullOrWhiteSpace(path))
             return false;
 
+        if (!TryReadMacSmbMounts(out IReadOnlyList<MacMountEntry> mounts))
+            return false;
+
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName               = "/sbin/mount",
-                RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                UseShellExecute        = false,
-                CreateNoWindow         = true
-            };
-
-            using var proc = Process.Start(psi);
-            if (proc is null)
-                return false;
-
-            proc.WaitForExit(3_000);
-            string output = proc.StandardOutput.ReadToEnd();
-            if (string.IsNullOrWhiteSpace(output))
-                return false;
-
             string candidate = string.Empty;
-            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (string line in lines)
+            foreach (string mountPoint in mounts.Select(mount => mount.MountPoint))
             {
-                if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
+                if (!path.StartsWith(mountPoint, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
-                if (onIndex <= 0)
-                    continue;
-
-                string rest = line[(onIndex + 4)..];
-                string mountedAt = rest.Split(" (", StringSplitOptions.None)[0].Trim();
-                if (string.IsNullOrWhiteSpace(mountedAt))
-                    continue;
-
-                if (!path.StartsWith(mountedAt, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (mountedAt.Length > candidate.Length)
-                    candidate = mountedAt;
+                if (mountPoint.Length > candidate.Length)
+                    candidate = mountPoint;
             }
 
             if (string.IsNullOrWhiteSpace(candidate))

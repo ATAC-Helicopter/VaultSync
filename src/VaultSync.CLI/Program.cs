@@ -14,6 +14,13 @@ public static class Program
 {
     public static async Task<int> Main(string[] args)
     {
+        if (args.Length > 0 && string.Equals(args[0], "--version", StringComparison.OrdinalIgnoreCase))
+        {
+            bool json = args.Skip(1).Any(arg => string.Equals(arg, "--json", StringComparison.OrdinalIgnoreCase));
+            VaultSync.CLI.Commands.VersionCommand.Write(json);
+            return 0;
+        }
+
         // Initialize logging (implemented in Utils/Log.cs)
         Log.Init();
 

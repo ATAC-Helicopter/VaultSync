@@ -30,6 +30,7 @@ internal static class Program
         RestrictPrivateDataRoots();
         DiagnosticsLogger.Initialize();
         DiagnosticsLogger.Record($"Process start. PID={Environment.ProcessId}, Args='{string.Join(' ', args)}'.");
+        DiagnosticsLogger.Record($"Build identity: {AppBuildInformationService.Current.ToJson()}.");
         LogParentProcessInfo("startup");
         RegisterPosixSignals();
         RegisterDiagnosticHooks(args);
@@ -51,6 +52,13 @@ internal static class Program
             return;
         }
 
+        if (MacOsLegacyBundleMigrationService.TryMigrateAndRelaunch(AppContext.BaseDirectory))
+        {
+            DiagnosticsLogger.Record("Legacy macOS bundle migration handed control to the canonical application.");
+            DiagnosticsLogger.Shutdown();
+            return;
+        }
+
         _instanceLock = SingleInstanceLock.TryAcquire(
             "VaultSync.UI.SingleInstance",
             "VaultSync.UI.SingleInstance.lock");
@@ -62,6 +70,14 @@ internal static class Program
             _instanceLock = null;
             TrySignalExistingInstance(args);
             return;
+        }
+
+        StorageCleanupSummary cleanup = StorageHygieneService.RunStartupCleanup();
+        if (cleanup.FilesRemoved > 0 || cleanup.DirectoriesRemoved > 0)
+        {
+            DiagnosticsLogger.Record(
+                $"Storage hygiene reclaimed {cleanup.BytesReclaimed} bytes from " +
+                $"{cleanup.FilesRemoved} file(s) and {cleanup.DirectoriesRemoved} directory/directories.");
         }
 
         try

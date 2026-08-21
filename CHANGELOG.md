@@ -1,4 +1,50 @@
 ﻿# Changelog
+## [1.8.7] - Unreleased
+### Added
+- [VS-1874] Added portable Recovery Evidence Packages containing a versioned JSON record, readable Markdown, a manifest, and SHA-256 checksums, with deterministic semantic digests, build and pseudonymous repository identities, encrypted-point evidence, evidence freshness, redacted local paths, and validation for tampering, missing or duplicate files, unsafe paths, and unsupported schemas.
+- [VS-1871] Added one conservative build-identity record across Settings, startup diagnostics, support and recovery exports, plus `vaultsync --version --json`; version, channel, commit, runtime, architecture, package, update source, official status, and signature status now come from the same contract.
+- [VS-1873] Added per-package SPDX 2.3 SBOM generation from the canonical release manifest and RID-specific NuGet graph, pinned GitHub provenance/SBOM attestations for final package bytes, and online plus offline release-candidate verification.
+- [VS-1875] Added an allowlisted support-bundle review that names every generated file, lets users remove optional sanitized diagnostics or anonymized telemetry, pseudonymizes paths and identities, scrubs configured and structured secrets, bounds input and total size, and records SHA-256 checksums in a manifest.
+- [VS-1878] Added a schema-versioned release contract and deterministic unpublished renderer for website, Store, updater, changelog, What’s New, package, roadmap, branch, date, tag, and predecessor metadata, with CI drift rejection and live GitHub-release refresh on the website.
+- [VS-1872] Added the versioned canonical release manifest generator and schema, with exact artifact sizes, SHA-256 digests, official download identities, strict platform-matrix validation, deterministic output, release-workflow generation, post-publish verification, and fail-closed updater consumption across Windows, macOS, and Linux artifacts.
+- [VS-1877] Added a durable, owner-private installation identity for cross-machine coordination without treating mutable host names or telemetry identifiers as writer identity.
+- [VS-1877] Added repository-scoped writer leases with atomic acquisition, heartbeat and expiry, read-only busy inspection, nonce-bound release, explicit stale takeover, and retained takeover evidence.
+- [VS-1877] Added per-destination repository-writer inspection and an explicit stale-takeover review that shows the owner, operation, version, heartbeat, and expiry before preserving the old lease as evidence.
+- [VS-1879] Added durable per-source merge bases and a field-level three-way metadata planner so independent cross-machine edits merge automatically while overlapping edits remain explicitly reviewable.
+- [VS-1879] Added a Base/local/remote conflict table with revision, writer, and timestamp context plus a durable Undo decision action that expires after the next portable repository write.
+### Changed
+- [VS-1811] Rebuilt optional project folders as compact collapsed summaries with integrated batch controls, searchable member counts, and clean in-folder project rows while keeping ungrouped projects in the familiar main list.
+- [#561] Standardized both macOS downloads around one `VaultSync.app` bundle with a drag-to-Applications DMG layout and a stable `com.vaultsync.app` ad-hoc identity; architecture remains in the outer DMG filename only.
+- [BUG-18099] Serviced the .NET 10 baseline to SDK `10.0.303`, runtime `10.0.11`, and coordinated Microsoft packages, with CI auditing real self-contained publishes and release artifacts for every supported runtime identifier.
+- [VS-1877] Protected project settings, backup history, tombstones, deferred metadata writes, and deferred flushing with repository lease ownership checks while keeping imports and previews readable when another writer is active.
+- [VS-1877] Made unavailable-destination metadata queues fail closed: queued metadata can initialize an empty destination once, while an existing destination is preserved for explicit merge review.
+- [VS-1879] Made conflict decisions preserve non-overlapping remote edits, record source and base revisions, and advance the durable merge base after either resolution.
+- [VS-1879] Guarded every portable project writer with compare-and-swap revisions and upgraded project records to schema version 3 with base revision, per-field writer/timestamp provenance, and safe resolution evidence.
+- [VS-1879] Moved reviewed conflict decisions and bounded undo into a shared core workflow, with a file-backed two-installation qualification covering independent convergence, overlapping edits, restart persistence, durable resolution, repeat imports, undo, and subsequent cross-client convergence.
+- [VS-1880] Consolidated metadata export orchestration, SMB mount parsing, mounted-share validation, theme color normalization, and contrast calculations behind focused shared primitives with regression coverage.
+- [VS-1880] Unified Windows Robocopy exclusions with the shared preset resolver.
+- [VS-1876] Documented repository schemas and records, portable and machine-local fields, encryption descriptors, legacy compatibility, leases, interrupted-write rollback, clean-machine inspection, emergency restore, checksums, SBOMs, provenance, and known unsigned-package limitations against executable tests.
+- [BUG-18103] Modernized Snapshot Explorer, metadata-import review, and updater windows around the current compact, theme-aware app layout.
+- [BUG-18104] Reworked development presets to preserve Git control files and shareable IDE configuration while excluding live Git internals and modern build, package, test, framework, and machine-local caches.
+### Fixed
+- [BUG-18115] Confined release-SBOM inputs and outputs to the approved build workspace, rejected path-bearing manifest and index filenames, and corrected destination cleanup after backup deletion retries.
+- [#559] Corrected launch-on-login registration to use `~/Library/LaunchAgents`, migrates the erroneous `~/Documents/Library/LaunchAgents` entry, and no longer kickstarts a duplicate process during launch synchronization.
+- [#560] Added a one-time architecture-aware macOS bridge patch from 1.8.6: after updating the legacy payload, 1.8.7 creates and signs `/Applications/VaultSync.app`, launches it, and moves the old architecture-named bundle to Trash only after the canonical app is ready. Future patches operate on and verify the complete application bundle, including `Info.plist`.
+- [BUG-18112] Prevented passive startup, maintenance, metadata, and history destination probes from unlocking macOS Keychain or mounting SMB shares; credential access is deferred until an explicit destination test or actual backup needs it, passive probes are labeled accurately, launch-on-login inspection no longer dumps `launchctl` internals into normal output, and development launches cannot replace the installed login item with a transient build executable.
+- [BUG-18110] Localized recovery-confidence, evidence, repository-writer, History evidence, backup-widget, folder-picker, backup-location, verification, and restore-progress text across every maintained language, and replaced fixed-width Recovery Inspector evidence rows with translation-safe theme-aware cards.
+- [BUG-18111] Removed Recovery export fallback to the public temporary directory, limited manual cache deletion to private VaultSync application roots, retained every mounted destination cleanup across credential retries, and removed unreachable metadata, restore, and update branches reported by Sonar.
+- [BUG-18098] Rebuilt roadmap description synchronization around tested wrapped-title parsing, ownership-aware body preservation, repository-contained inputs, validated GitHub identifiers, and an exact write-free dry-run report.
+- [BUG-18100] Restored `Dev` as the permanent integration branch at the `1.8.6` Stable commit and disabled automatic head-branch deletion so Stable promotion cannot remove it again.
+- [BUG-18102] Prevented deferred metadata replay from overwriting repository metadata changed on another machine or replaying repeatedly after a successful flush.
+- [BUG-18102] Disabled connection pooling for the repository coordination database so disposed writer leases release their file handles predictably on Windows.
+- [BUG-18104] Corrected the Python pytest-cache rule and removed unsupported VS Code negation rules that previously excluded intended shared configuration.
+- [BUG-18105] Prevented metadata-import previews from double-counting projects and backups that are represented by both portable metadata and legacy repository folders.
+- [BUG-18106] Normalized macOS SMB mount diagnostics to remove the complete credential-bearing share identity before masking any remaining raw or escaped password text.
+- [BUG-18107] Stopped metadata import from exporting deletion tombstones for snapshots that were preserved because they still have local backups or never existed locally.
+- [BUG-18108] Stopped repeated background downloads of immutable release and platform patch manifests by persisting digest-verified cache entries across application restarts.
+- [BUG-18109] Bounded disposable logs, diagnostics, caches, patch runtimes, downloads, and temporary work, and stopped backups from writing into unmounted macOS managed-mount directories on the local system drive.
+- [BUG-18101] Made cross-machine project-setting conflicts complete and durable: encryption keys and unmatched destinations stay local, avatar/encryption/auto-backup changes join the review, rejected revisions remain resolved, project writers are recorded per row, and automatic imports cannot apply destructive tombstones without review.
+
 ## [1.8.6] - 10.08.2026
 ### Added
 - [VS-1861] Replaced first-run overlays with a compact, resumable task sequence driven by real source, destination, project, schedule, restore-point, and passed recovery-drill state.

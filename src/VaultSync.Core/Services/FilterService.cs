@@ -6,6 +6,7 @@ namespace VaultSync.Core.Services;
 
 public class FilterService
 {
+    private static readonly TimeSpan s_regexTimeout = TimeSpan.FromMilliseconds(250);
     private readonly List<string> _patterns;
     private readonly List<Regex> _compiledPatterns;
     private static readonly ConcurrentDictionary<string, CachedLines> s_linesCache = new();
@@ -224,7 +225,7 @@ public class FilterService
             .Replace(@"\*\*", ".*")
             .Replace(@"\*", "[^/]*")
             .Replace(@"\?", ".") + "$";
-        return new Regex(rx, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return new Regex(rx, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, s_regexTimeout);
     }
 
     private sealed class PresetIndex

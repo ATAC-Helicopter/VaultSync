@@ -130,7 +130,8 @@ namespace VaultSync.UI.ViewModels
                         continue;
                     }
 
-                    DestinationTestResult result = await Task.Run(() => TryTestDestination(dest, cfg));
+                    DestinationTestResult result = await Task.Run(() =>
+                        TryTestDestination(dest, cfg, allowAutoMount: false));
                     UpdateDestinationProbeSummary(dest, result);
 
                     if (result.Reachable && (previous is null || !previous.Reachable))
@@ -138,7 +139,7 @@ namespace VaultSync.UI.ViewModels
                         TryImportMetadataForDestination(cfg, dest, result.EffectivePath);
                     }
 
-                    if (!result.Reachable && (previous is null || previous.Reachable))
+                    if (!result.Reachable && !result.IsDeferred && (previous is null || previous.Reachable))
                     {
                         string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
                         string message = string.IsNullOrWhiteSpace(result.Message)
@@ -171,9 +172,7 @@ namespace VaultSync.UI.ViewModels
                     : LStatic("Destinations.Test.Unavailable", "Unavailable"))
                 : result.Message;
 
-            BackupsViewModel.SeverityStatus severity = result.Reachable
-                ? (result.Writable ? BackupsViewModel.SeverityStatus.Success : BackupsViewModel.SeverityStatus.Warning)
-                : BackupsViewModel.SeverityStatus.Error;
+            BackupsViewModel.SeverityStatus severity = GetDestinationProbeSeverity(result);
 
             _destinationProbeSummaries[id] = new DestinationProbeSummary(
                 id,
@@ -186,6 +185,19 @@ namespace VaultSync.UI.ViewModels
                 severity);
 
             BackupsViewModel.UpdateDestinationStatus(id, message, severity, dest.Alias);
+        }
+
+        private static BackupsViewModel.SeverityStatus GetDestinationProbeSeverity(DestinationTestResult result)
+        {
+            if (result.Reachable)
+            {
+                return result.Writable
+                    ? BackupsViewModel.SeverityStatus.Success
+                    : BackupsViewModel.SeverityStatus.Warning;
+            }
+            return result.IsDeferred
+                ? BackupsViewModel.SeverityStatus.Warning
+                : BackupsViewModel.SeverityStatus.Error;
         }
 
         private static string GetMetadataImportPath(DestinationProbeSummary summary)
@@ -553,7 +565,7 @@ namespace VaultSync.UI.ViewModels
                 MetadataSyncOptions options = new MetadataSyncOptions(
                     AllowCreateProjects: true,
                     MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
-                    .AsReadOnlySource();
+                    .WithoutSourceWrites();
                 MetadataSyncPreview preview = await _metadataSyncService.PreviewImportFromStoreAsync(cfg.ProjectsRoot, options);
                 string label = L("MetadataSync.Review.SourceProjectsRoot", "Projects root");
                     if (await ConfirmMetadataImportAsync(preview, label))
@@ -589,7 +601,7 @@ namespace VaultSync.UI.ViewModels
                     MetadataSyncOptions options = new MetadataSyncOptions(
                         AllowCreateProjects: true,
                         MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
-                        .AsReadOnlySource();
+                        .WithoutSourceWrites();
                     MetadataSyncPreview preview = await _metadataSyncService.PreviewImportFromStoreAsync(resolution.EffectivePath, options);
                     string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
                     string label = Lf("MetadataSync.Review.SourceDestination", "Destination: {0}", name);
@@ -607,7 +619,7 @@ namespace VaultSync.UI.ViewModels
                 }
                 finally
                 {
-                    _networkMountService.Cleanup(resolution);
+                    NetworkMountService.Cleanup(resolution);
                 }
             }
 
@@ -665,7 +677,10 @@ namespace VaultSync.UI.ViewModels
             return null;
         }
 
-        private DestinationTestResult TryTestDestination(BackupDestination dest, AppConfig cfg)
+        private DestinationTestResult TryTestDestination(
+            BackupDestination dest,
+            AppConfig cfg,
+            bool allowAutoMount = true)
         {
             if (string.IsNullOrWhiteSpace(dest.Path))
                 return new DestinationTestResult(false, false, string.Empty, LStatic("Destinations.Test.EmptyPath", "Destination path is empty."));
@@ -676,11 +691,27 @@ namespace VaultSync.UI.ViewModels
                 : cfg.Network.Credentials.FirstOrDefault(c =>
                     c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-            DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
+            DestinationResolution resolution = _networkMountService.PrepareDestination(
+                dest,
+                profile,
+                allowAutoMount);
             if (!resolution.IsSuccess)
             {
                 DiagnosticsLogger.Record($"Destination test failed: '{dest.Alias ?? dest.Path}' - {resolution.Message}");
-                return new DestinationTestResult(false, false, resolution.EffectivePath ?? string.Empty, resolution.Message);
+                bool isDeferred = string.Equals(
+                    resolution.Message,
+                    NetworkMountService.PassiveMountDeferredMessage,
+                    StringComparison.Ordinal);
+                return new DestinationTestResult(
+                    false,
+                    false,
+                    resolution.EffectivePath ?? string.Empty,
+                    isDeferred
+                        ? LStatic(
+                            "Destinations.Probe.MountDeferred",
+                            "Not mounted. VaultSync will request access when a backup or explicit destination test needs this destination.")
+                        : resolution.Message,
+                    isDeferred);
             }
 
             string testTarget = resolution.EffectivePath;
@@ -723,12 +754,17 @@ namespace VaultSync.UI.ViewModels
                     };
 
                     DestinationResolution cleanupResolution = resolution with { Destination = cleanupDest };
-                    _networkMountService.Cleanup(cleanupResolution);
+                    NetworkMountService.Cleanup(cleanupResolution);
                 }
             }
         }
 
-        private sealed record DestinationTestResult(bool Reachable, bool Writable, string EffectivePath, string Message);
+        private sealed record DestinationTestResult(
+            bool Reachable,
+            bool Writable,
+            string EffectivePath,
+            string Message,
+            bool IsDeferred = false);
 
         private static bool IsLikelyWritableDirectory(string path)
         {
@@ -1223,7 +1259,12 @@ namespace VaultSync.UI.ViewModels
                         _currentVersionString,
                         machineId,
                         forceBackfill);
-                    Console.WriteLine($"[MetadataSync] Export ({name}) result: {result.Status}.");
+                    Console.WriteLine($"[MetadataSync] Export ({name}) result: {result.Status}; message='{result.Message}'.");
+                    if (result.Status == MetadataSyncStatus.RepositoryBusy)
+                    {
+                        DiagnosticsLogger.Record(
+                            $"[MetadataSync] Repository busy for destination '{name}'; metadata write remained read-only. {result.Message}");
+                    }
                     if (forceBackfillOverride is null &&
                         dest.ForceMetadataBackfill &&
                         result.Status == MetadataSyncStatus.Success &&

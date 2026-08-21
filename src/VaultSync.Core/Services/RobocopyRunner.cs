@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -21,10 +20,6 @@ namespace VaultSync.Core.Services
     {
         public string Name => "robocopy";
         private readonly bool _isNetworkDestination;
-        private static readonly Dictionary<string, (DateTime LastWriteUtc, Dictionary<string, string> Map)> s_presetIndexCache
-            = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly object s_presetIndexLock = new();
-
         public RobocopyRunner(bool isNetworkDestination = false)
         {
             _isNetworkDestination = isNetworkDestination;
@@ -276,179 +271,55 @@ namespace VaultSync.Core.Services
             var files = new List<string>();
             var dirs  = new List<string>();
 
-            // 1) Preset file resolved using the same rules as the new preset system
-            //    (env override, app presets/, src/presets/, user ~/.vaultsync/presets).
-            if (!string.IsNullOrWhiteSpace(project.Preset))
-            {
-                string? presetPath = ResolvePresetFile(project.Preset);
-                if (!string.IsNullOrWhiteSpace(presetPath))
-                {
-                    MergeIgnoreFile(presetPath!, files, dirs);
-                }
-            }
-
-            // 2) Project-local .vaultsyncignore (always allowed to override/add rules)
-            string localIgnore = Path.Combine(project.RootPath, ".vaultsyncignore");
-            MergeIgnoreFile(localIgnore, files, dirs);
+            // Use the same resolved, normalized preset + local + reserved rules as
+            // snapshots and managed-copy backups. Platform runners must not drift.
+            FilterService filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
+            MergeIgnorePatterns(filter.RawPatterns, files, dirs);
 
             return (files, dirs);
         }
 
-        private static void MergeIgnoreFile(string path, List<string> files, List<string> dirs)
+        private static void MergeIgnorePatterns(IEnumerable<string> patterns, List<string> files, List<string> dirs)
         {
-            if (!File.Exists(path))
-                return;
-
-            foreach (string raw in File.ReadAllLines(path))
+            foreach (string raw in patterns)
             {
-                string line = raw.Trim();
-
-                // Skip comments / empty
-                if (line.Length == 0 || line.StartsWith("#"))
+                if (!TryNormalizeIgnorePattern(raw, out string pattern, out bool isDirectory))
                     continue;
 
-                // Handle ** wildcard (common in gitignore-style). Robocopy doesn't support it.
-                // If the pattern looks like "bin/**" treat it as a dir exclude "bin".
-                if (line.Contains("/**") || line.Contains("\\**"))
-                {
-                    string d = line.Replace("/**", string.Empty)
-                                .Replace("\\**", string.Empty)
-                                .TrimEnd('/');
-
-                    if (!string.IsNullOrWhiteSpace(d))
-                        dirs.Add(NormalizeRobocopyGlob(d));
-
-                    continue;
-                }
-
-                // Very simple parsing:
-                // - trailing slash => treat as directory pattern
-                // - everything else => file/glob pattern
-                // - strip leading "./"
-                if (line.StartsWith("./")) line = line.Substring(2);
-
-                if (line.EndsWith("/"))
-                {
-                    // robocopy /XD likes bare dir names or relative paths; leave as-is
-                    string d = line.TrimEnd('/');
-                    if (!string.IsNullOrWhiteSpace(d))
-                        dirs.Add(NormalizeRobocopyGlob(d));
-                }
-                else
-                {
-                    files.Add(NormalizeRobocopyGlob(line));
-                }
+                (isDirectory ? dirs : files).Add(pattern);
             }
         }
 
-        private static string? ResolvePresetFile(string presetName)
+        internal static bool TryNormalizeIgnorePattern(string raw, out string pattern, out bool isDirectory)
         {
-            if (string.IsNullOrWhiteSpace(presetName))
-                return null;
+            string line = raw.Trim();
+            pattern = string.Empty;
+            isDirectory = false;
+            if (line.Length == 0 || line.StartsWith('#'))
+                return false;
 
-            // 1) Environment override
-            string? envDir = Environment.GetEnvironmentVariable("VAULTSYNC_PRESETS_DIR");
-            if (!string.IsNullOrWhiteSpace(envDir))
+            // Robocopy's /XD is recursive already, so reduce **/bin/** to bin.
+            if (line.EndsWith("/**", StringComparison.Ordinal) ||
+                line.EndsWith("\\**", StringComparison.Ordinal))
             {
-                string? candidate = ResolvePresetFileInDirectory(envDir, presetName);
-                if (!string.IsNullOrWhiteSpace(candidate))
-                    return candidate;
-            }
-
-            // 2) App-installed presets folder: <app>/presets
-            string appDir = Path.Combine(AppContext.BaseDirectory, "presets");
-            string? appPreset = ResolvePresetFileInDirectory(appDir, presetName);
-            if (!string.IsNullOrWhiteSpace(appPreset))
-                return appPreset;
-
-            // 3) Dev tree: walk up to find src/presets
-            string dir = AppContext.BaseDirectory;
-            for (int i = 0; i < 6; i++)
-            {
-                string candidateDir = Path.Combine(dir, "src", "presets");
-                string? candidate = ResolvePresetFileInDirectory(candidateDir, presetName);
-                if (!string.IsNullOrWhiteSpace(candidate))
-                    return candidate;
-
-                string? parent = Directory.GetParent(dir)?.FullName;
-                if (parent is null)
-                    break;
-
-                dir = parent;
-            }
-
-            // 4) User presets: ~/.vaultsync/presets
-            string home       = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string userDir = Path.Combine(home, ".vaultsync", "presets");
-            string? userPreset = ResolvePresetFileInDirectory(userDir, presetName);
-            if (!string.IsNullOrWhiteSpace(userPreset))
-                return userPreset;
-
-            return null;
-        }
-
-        private static string? ResolvePresetFileInDirectory(string? directory, string presetName)
-        {
-            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
-                return null;
-
-            string direct = Path.Combine(directory, $"{presetName}.vaultsyncignore");
-            if (File.Exists(direct))
-                return direct;
-
-            string? mapped = ResolvePresetFileFromIndex(directory, presetName);
-            if (!string.IsNullOrWhiteSpace(mapped))
-                return mapped;
-
-            return null;
-        }
-
-        private static string? ResolvePresetFileFromIndex(string directory, string presetName)
-        {
-            try
-            {
-                string indexPath = Path.Combine(directory, "presets.index.json");
-                if (!File.Exists(indexPath))
-                    return null;
-
-                Dictionary<string, string> map;
-                lock (s_presetIndexLock)
+                string directory = line[..^3].TrimEnd('/', '\\');
+                if (directory.StartsWith("**/", StringComparison.Ordinal) ||
+                    directory.StartsWith("**\\", StringComparison.Ordinal))
                 {
-                    DateTime lastWrite = File.GetLastWriteTimeUtc(indexPath);
-                    if (!s_presetIndexCache.TryGetValue(indexPath, out (DateTime LastWriteUtc, Dictionary<string, string> Map) cached) || cached.LastWriteUtc != lastWrite)
-                    {
-                        string json = File.ReadAllText(indexPath);
-                        PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json);
-                        var parsed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-                        if (index?.Presets != null)
-                        {
-                            foreach (PresetInfo preset in index.Presets)
-                            {
-                                if (string.IsNullOrWhiteSpace(preset.Id) || string.IsNullOrWhiteSpace(preset.File))
-                                    continue;
-
-                                parsed[preset.Id] = preset.File;
-                            }
-                        }
-
-                        cached = (lastWrite, parsed);
-                        s_presetIndexCache[indexPath] = cached;
-                    }
-
-                    map = cached.Map;
+                    directory = directory[3..];
                 }
 
-                if (!map.TryGetValue(presetName, out string? fileName) || string.IsNullOrWhiteSpace(fileName))
-                    return null;
+                pattern = NormalizeRobocopyGlob(directory);
+                isDirectory = true;
+                return pattern.Length > 0;
+            }
 
-                string candidate = Path.Combine(directory, fileName);
-                return File.Exists(candidate) ? candidate : null;
-            }
-            catch
-            {
-                return null;
-            }
+            if (line.StartsWith("./", StringComparison.Ordinal))
+                line = line[2..];
+
+            isDirectory = line.EndsWith('/');
+            pattern = NormalizeRobocopyGlob(isDirectory ? line.TrimEnd('/') : line);
+            return pattern.Length > 0;
         }
 
         private static string NormalizeRobocopyGlob(string pattern)
@@ -539,16 +410,6 @@ namespace VaultSync.Core.Services
             return null;
         }
 
-        private sealed class PresetIndex
-        {
-            public List<PresetInfo> Presets { get; set; } = new();
-        }
-
-        private sealed class PresetInfo
-        {
-            public string Id { get; set; } = string.Empty;
-            public string File { get; set; } = string.Empty;
-        }
 
         private static string TrimLog(StringBuilder sb, int maxChars = 4000)
         {

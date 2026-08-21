@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
 using VaultSync.Core.Config;
 using VaultSync.Core.Services;
@@ -12,14 +14,70 @@ using VaultSync.Core.Services;
 namespace VaultSync.UI.Services;
 
 public sealed record SupportBundleExportResult(bool Success, string? ZipPath, string Message);
+public sealed record SupportBundleExportOptions(bool IncludeDiagnostics = true, bool IncludeTelemetry = true);
+public sealed record SupportBundlePreviewItem(string RelativePath, string Category, long MaximumBytes, bool Required);
+public sealed record SupportBundlePreviewResult(
+    bool Success,
+    IReadOnlyList<SupportBundlePreviewItem> Files,
+    long MaximumBytes,
+    string Message);
 
 public sealed class SupportBundleService
 {
+    private const int DiagnosticsFileLimit = 8;
+    private const int TelemetryFileLimit = 7;
+    private const long DiagnosticsFileByteLimit = 512 * 1024;
+    private const long TelemetryFileByteLimit = 256 * 1024;
+    private const long BundleByteLimit = 8 * 1024 * 1024;
     private const string RedactedValue = "[redacted]";
+    private const string ReportFileName = "support-report.json";
+    private const string ManifestFileName = "support-manifest.json";
+    private const string TelemetryExtension = ".ndjson";
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
+    private static readonly Regex SensitiveJsonValue = new(
+        "(?i)(\\\"(?:password|token|secret|keyRef|username|domain)\\\"\\s*:\\s*\\\")[^\\\"]*(\\\")",
+        RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(100));
+    private static readonly Regex CredentialReference = new(
+        "(?i)\\bcred-[a-z0-9_-]+\\b",
+        RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(100));
+    private static readonly Regex UriUserInfo = new(
+        "(?i)([a-z][a-z0-9+.-]*://)[^/@\\s]+@",
+        RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(100));
 
-    public static SupportBundleExportResult Export(IAppConfigStore? configStore = null)
+    public static SupportBundlePreviewResult Preview(SupportBundleExportOptions? options = null)
+    {
+        options ??= new SupportBundleExportOptions();
+        try
+        {
+            IReadOnlyList<SupportBundlePreviewItem> files = BuildPreviewItems(options);
+            long maximumBytes = files.Sum(file => file.MaximumBytes);
+            return new SupportBundlePreviewResult(
+                maximumBytes <= BundleByteLimit,
+                files,
+                maximumBytes,
+                maximumBytes <= BundleByteLimit
+                    ? "Support bundle preview ready."
+                    : "Selected support bundle sections exceed the safe size limit.");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new SupportBundlePreviewResult(false, [], 0, $"Support bundle preview failed: {ex.Message}");
+        }
+    }
+
+    public static SupportBundleExportResult Export(
+        IAppConfigStore? configStore = null,
+        SupportBundleExportOptions? options = null)
     {
         configStore ??= StaticAppConfigStore.Instance;
+        options ??= new SupportBundleExportOptions();
         DateTimeOffset timestamp = DateTimeOffset.UtcNow;
         string bundleName = $"vaultsync-support-{timestamp:yyyyMMdd-HHmmss}.zip";
         string exportRoot = Path.Combine(
@@ -41,14 +99,19 @@ public sealed class SupportBundleService
             AppConfig config = configStore.GetSnapshot();
             object report = BuildBundleReport(config, timestamp);
 
-            string reportJson = JsonSerializer.Serialize(report, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-            File.WriteAllText(Path.Combine(stagingRoot, "support-report.json"), reportJson);
+            string reportJson = JsonSerializer.Serialize(report, JsonOptions);
+            File.WriteAllText(Path.Combine(stagingRoot, ReportFileName), reportJson);
 
-            TryCopyDiagnostics(stagingRoot);
-            TryExportTelemetry(stagingRoot);
+            if (options.IncludeDiagnostics)
+                CopySanitizedDiagnostics(stagingRoot, config);
+            if (options.IncludeTelemetry)
+                CopySanitizedTelemetry(stagingRoot, config);
+
+            WriteManifest(stagingRoot, timestamp);
+            long bundleBytes = Directory.EnumerateFiles(stagingRoot, "*", SearchOption.AllDirectories)
+                .Sum(path => new FileInfo(path).Length);
+            if (bundleBytes > BundleByteLimit)
+                throw new InvalidDataException("Support bundle exceeded its safe size limit.");
 
             string zipPath = Path.Combine(exportRoot, bundleName);
             if (File.Exists(zipPath))
@@ -75,7 +138,68 @@ public sealed class SupportBundleService
         }
     }
 
-    private static object BuildBundleReport(AppConfig config, DateTimeOffset timestamp)
+    private static List<SupportBundlePreviewItem> BuildPreviewItems(SupportBundleExportOptions options)
+    {
+        var files = new List<SupportBundlePreviewItem>
+        {
+            new(ReportFileName, "Report", 512 * 1024, true),
+            new(ManifestFileName, "Manifest", 128 * 1024, true)
+        };
+
+        if (options.IncludeDiagnostics)
+        {
+            files.AddRange(DiscoverTextFiles(
+                GetDiagnosticsDirectory(),
+                [".log", ".txt"],
+                DiagnosticsFileLimit,
+                DiagnosticsFileByteLimit,
+                "Diagnostics",
+                "diagnostics/diagnostic",
+                ".log"));
+        }
+
+        if (options.IncludeTelemetry)
+        {
+            files.AddRange(DiscoverTextFiles(
+                Telemetry.GetTelemetryDirectory(),
+                [TelemetryExtension],
+                TelemetryFileLimit,
+                TelemetryFileByteLimit,
+                "Telemetry",
+                "telemetry/events",
+                TelemetryExtension));
+        }
+
+        return files;
+    }
+
+    private static SupportBundlePreviewItem[] DiscoverTextFiles(
+        string root,
+        IReadOnlyCollection<string> extensions,
+        int countLimit,
+        long byteLimit,
+        string category,
+        string outputPrefix,
+        string outputExtension)
+    {
+        if (!Directory.Exists(root))
+            return [];
+
+        return Directory.EnumerateFiles(root, "*", SearchOption.TopDirectoryOnly)
+            .Where(path => extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            .Select(path => new FileInfo(path))
+            .Where(file => !file.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            .OrderByDescending(file => file.LastWriteTimeUtc)
+            .Take(countLimit)
+            .Select((file, index) => new SupportBundlePreviewItem(
+                $"{outputPrefix}-{index + 1:00}{outputExtension}",
+                category,
+                Math.Min(file.Length, byteLimit),
+                false))
+            .ToArray();
+    }
+
+    internal static object BuildBundleReport(AppConfig config, DateTimeOffset timestamp)
     {
         object localMetadata = QueryMetadataSummary(config.DbPath);
         List<object> destinationMetadata = BuildDestinationMetadataSummary(config.Backups.Destinations);
@@ -83,26 +207,14 @@ public sealed class SupportBundleService
         return new
         {
             generatedUtc = timestamp,
-            app = new
-            {
-                assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown",
-                runtime = Environment.Version.ToString(),
-                os = Environment.OSVersion.ToString(),
-                processArch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
-                osArch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
-                distributionChannel = DistributionChannelService.Current.Channel.ToString(),
-                distributionDetectionSource = DistributionChannelService.Current.DetectionSource,
-                isPackaged = DistributionChannelService.Current.IsPackaged,
-                packageFamilyName = DistributionChannelService.Current.PackageFamilyName,
-                packageFullName = DistributionChannelService.Current.PackageFullName
-            },
+            app = AppBuildInformationService.Current,
             redactedConfig = BuildRedactedConfig(config),
             localMetadata,
             destinationMetadata
         };
     }
 
-    private static object BuildRedactedConfig(AppConfig config)
+    internal static object BuildRedactedConfig(AppConfig config)
     {
         return new
         {
@@ -140,13 +252,13 @@ public sealed class SupportBundleService
                     keyRef = RedactToken(config.Backups.Encryption.KeyRef),
                     config.Backups.Encryption.Algorithm,
                     config.Backups.Encryption.KdfProfile,
-                    config.Backups.Encryption.KdfParamRef,
+                    kdfParamRef = RedactToken(config.Backups.Encryption.KdfParamRef),
                     config.Backups.Encryption.AllowSessionFallback,
                     config.Backups.Encryption.OpenUnlockTimeoutMinutes
                 },
                 destinations = config.Backups.Destinations.Select(d => new
                 {
-                    d.Alias,
+                    alias = RedactToken(d.Alias),
                     pathHint = RedactPath(d.Path),
                     d.Active,
                     d.AutoMount,
@@ -164,7 +276,7 @@ public sealed class SupportBundleService
             {
                 credentials = config.Network.Credentials.Select(c => new
                 {
-                    c.Name,
+                    name = RedactToken(c.Name),
                     username = RedactToken(c.Username),
                     domain = RedactToken(c.Domain),
                     keyRef = RedactToken(c.KeyRef),
@@ -183,7 +295,7 @@ public sealed class SupportBundleService
                 config.Appearance.Theme,
                 config.Appearance.CompactLayout,
                 config.Appearance.ShowProjectAvatars,
-                config.Appearance.TagColors
+                tagColorRuleCount = config.Appearance.TagColors?.Count ?? 0
             },
             notifications = new
             {
@@ -212,11 +324,9 @@ public sealed class SupportBundleService
                     config.Advanced.UpdateDiagnostics.Channel,
                     config.Advanced.UpdateDiagnostics.CurrentVersion,
                     config.Advanced.UpdateDiagnostics.Decision,
-                    config.Advanced.UpdateDiagnostics.Error,
                     patchPreflight = new
                     {
                         config.Advanced.UpdateDiagnostics.PatchPreflight.StatusCode,
-                        config.Advanced.UpdateDiagnostics.PatchPreflight.Message,
                         config.Advanced.UpdateDiagnostics.PatchPreflight.CurrentVersion,
                         config.Advanced.UpdateDiagnostics.PatchPreflight.ManifestPreviousVersion,
                         manifestAllowedBaseVersions = config.Advanced.UpdateDiagnostics.PatchPreflight.ManifestAllowedBaseVersions.ToList(),
@@ -278,13 +388,13 @@ public sealed class SupportBundleService
                     config.Advanced.MetadataConflictTelemetry.LastUpdatedUtc,
                     config.Advanced.MetadataConflictTelemetry.PendingConflictCount,
                     config.Advanced.MetadataConflictTelemetry.LastResolutionAction,
-                    config.Advanced.MetadataConflictTelemetry.LastResolvedProject,
+                    lastResolvedProject = RedactToken(config.Advanced.MetadataConflictTelemetry.LastResolvedProject),
                     conflicts = (config.Advanced.ProjectMetadataConflicts ?? [])
                         .Select(conflict => new
                         {
-                            conflict.ProjectExternalId,
-                            conflict.ProjectName,
-                            conflict.SourceMachineId,
+                            projectIdentity = RedactToken(conflict.ProjectExternalId),
+                            projectName = RedactToken(conflict.ProjectName),
+                            sourceIdentity = RedactToken(conflict.SourceMachineId),
                             conflict.SourceUpdatedUtc,
                             differingFields = BuildConflictFieldList(conflict)
                         })
@@ -316,13 +426,12 @@ public sealed class SupportBundleService
                 {
                     config.Advanced.CheckpointResumeTelemetry.LastUpdatedUtc,
                     config.Advanced.CheckpointResumeTelemetry.LastStatus,
-                    config.Advanced.CheckpointResumeTelemetry.LastProjectName,
-                    config.Advanced.CheckpointResumeTelemetry.LastBackupFolder,
-                    config.Advanced.CheckpointResumeTelemetry.LastArchivePath,
+                    projectName = RedactToken(config.Advanced.CheckpointResumeTelemetry.LastProjectName),
+                    backupFolder = RedactPath(config.Advanced.CheckpointResumeTelemetry.LastBackupFolder),
+                    archivePath = RedactPath(config.Advanced.CheckpointResumeTelemetry.LastArchivePath),
                     config.Advanced.CheckpointResumeTelemetry.LastResumeOffsetBytes,
                     config.Advanced.CheckpointResumeTelemetry.LastArchiveSizeBytes,
-                    config.Advanced.CheckpointResumeTelemetry.LastSourceFingerprint,
-                    config.Advanced.CheckpointResumeTelemetry.LastMessage
+                    sourceFingerprint = RedactToken(config.Advanced.CheckpointResumeTelemetry.LastSourceFingerprint)
                 }
             },
             behavior = new
@@ -387,7 +496,7 @@ public sealed class SupportBundleService
                 latestBackupUtc
             };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return new
             {
@@ -396,7 +505,7 @@ public sealed class SupportBundleService
                 projects = 0,
                 snapshots = 0,
                 backups = 0,
-                error = ex.Message
+                error = "metadata query failed"
             };
         }
     }
@@ -415,7 +524,7 @@ public sealed class SupportBundleService
             {
                 output.Add(new
                 {
-                    alias = destination.Alias,
+                    alias = RedactToken(destination.Alias),
                     pathHint = RedactPath(root),
                     status = "missing",
                     projects = 0,
@@ -431,7 +540,7 @@ public sealed class SupportBundleService
                 c.Open();
                 output.Add(new
                 {
-                    alias = destination.Alias,
+                    alias = RedactToken(destination.Alias),
                     pathHint = RedactPath(root),
                     status = "ok",
                     projects = QueryCount(c, "projects"),
@@ -440,17 +549,17 @@ public sealed class SupportBundleService
                     latestBackupUtc = QueryScalar(c, "SELECT MAX(created_utc) FROM backups;")
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 output.Add(new
                 {
-                    alias = destination.Alias,
+                    alias = RedactToken(destination.Alias),
                     pathHint = RedactPath(root),
                     status = "error",
                     projects = 0,
                     snapshots = 0,
                     backups = 0,
-                    error = ex.Message
+                    error = "metadata query failed"
                 });
             }
         }
@@ -478,61 +587,164 @@ public sealed class SupportBundleService
         return Convert.ToString(cmd.ExecuteScalar()) ?? string.Empty;
     }
 
-    private static void TryCopyDiagnostics(string stagingRoot)
+    private static void CopySanitizedDiagnostics(string stagingRoot, AppConfig config)
     {
-        try
+        CopySanitizedTextFiles(
+            GetDiagnosticsDirectory(),
+            stagingRoot,
+            new SanitizedTextFileSpec(
+                [".log", ".txt"],
+                DiagnosticsFileLimit,
+                DiagnosticsFileByteLimit,
+                "diagnostics",
+                "diagnostic",
+                ".log"),
+            config);
+    }
+
+    private static void CopySanitizedTelemetry(string stagingRoot, AppConfig config)
+    {
+        CopySanitizedTextFiles(
+            Telemetry.GetTelemetryDirectory(),
+            stagingRoot,
+            new SanitizedTextFileSpec(
+                [TelemetryExtension],
+                TelemetryFileLimit,
+                TelemetryFileByteLimit,
+                "telemetry",
+                "events",
+                TelemetryExtension),
+            config);
+    }
+
+    private static void CopySanitizedTextFiles(
+        string sourceRoot,
+        string stagingRoot,
+        SanitizedTextFileSpec spec,
+        AppConfig config)
+    {
+        if (!Directory.Exists(sourceRoot))
+            return;
+
+        string targetRoot = Path.Combine(stagingRoot, spec.OutputDirectory);
+        Directory.CreateDirectory(targetRoot);
+        FileInfo[] sources = Directory.EnumerateFiles(sourceRoot, "*", SearchOption.TopDirectoryOnly)
+            .Where(path => spec.Extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            .Select(path => new FileInfo(path))
+            .Where(file => !file.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            .OrderByDescending(file => file.LastWriteTimeUtc)
+            .Take(spec.CountLimit)
+            .ToArray();
+
+        for (int index = 0; index < sources.Length; index++)
         {
-            string diagnosticsRoot = Path.Combine(
-                GetFolderSafe(Environment.SpecialFolder.LocalApplicationData),
-                "VaultSync",
-                "diagnostics");
+            string content = ReadBoundedText(sources[index].FullName, spec.ByteLimit);
+            string sanitized = SanitizeText(content, config);
+            string target = Path.Combine(targetRoot, $"{spec.OutputPrefix}-{index + 1:00}{spec.OutputExtension}");
+            File.WriteAllText(target, sanitized, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        }
+    }
 
-            if (!Directory.Exists(diagnosticsRoot))
-                return;
+    private sealed record SanitizedTextFileSpec(
+        IReadOnlyCollection<string> Extensions,
+        int CountLimit,
+        long ByteLimit,
+        string OutputDirectory,
+        string OutputPrefix,
+        string OutputExtension);
 
-            string outRoot = Path.Combine(stagingRoot, "diagnostics");
-            Directory.CreateDirectory(outRoot);
+    private static string ReadBoundedText(string path, long byteLimit)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        int requested = (int)Math.Min(stream.Length, byteLimit);
+        byte[] buffer = new byte[requested];
+        int read = 0;
+        while (read < requested)
+        {
+            int current = stream.Read(buffer, read, requested - read);
+            if (current == 0)
+                break;
+            read += current;
+        }
 
-            var files = Directory
-                .EnumerateFiles(diagnosticsRoot)
-                .Where(path =>
-                {
-                    string ext = Path.GetExtension(path);
-                    return ext.Equals(".log", StringComparison.OrdinalIgnoreCase)
-                        || ext.Equals(".txt", StringComparison.OrdinalIgnoreCase);
-                })
-                .Select(path => new FileInfo(path))
-                .OrderByDescending(fi => fi.LastWriteTimeUtc)
-                .Take(12)
-                .ToList();
+        string text = Encoding.UTF8.GetString(buffer, 0, read);
+        return stream.Length > byteLimit
+            ? text + Environment.NewLine + "[truncated by VaultSync support-bundle limit]"
+            : text;
+    }
 
-            foreach (FileInfo? file in files)
+    internal static string SanitizeText(string text, AppConfig config)
+    {
+        string sanitized = text ?? string.Empty;
+        IEnumerable<string?> exactValues =
+        [
+            config.ProjectsRoot,
+            config.DbPath,
+            config.Backups.BackupRoot,
+            config.Backups.Location,
+            .. config.Backups.Destinations.Select(destination => destination.Path),
+            .. config.Backups.Destinations.Select(destination => destination.Alias),
+            .. config.Network.Credentials.SelectMany(credential => new[]
             {
-                string target = Path.Combine(outRoot, file.Name);
-                File.Copy(file.FullName, target, overwrite: true);
-            }
-        }
-        catch
-        {
-            // Best effort diagnostics copy.
-        }
+                credential.Name,
+                credential.Password,
+                credential.Username,
+                credential.Domain,
+                credential.KeyRef
+            })
+        ];
+
+        foreach (string value in exactValues.Where(value => !string.IsNullOrWhiteSpace(value))!)
+            sanitized = sanitized.Replace(value, RedactedValue, StringComparison.OrdinalIgnoreCase);
+
+        sanitized = SensitiveJsonValue.Replace(sanitized, $"$1{RedactedValue}$2");
+        sanitized = CredentialReference.Replace(sanitized, "[credential-ref]");
+        return UriUserInfo.Replace(sanitized, $"$1{RedactedValue}@");
     }
 
-    private static void TryExportTelemetry(string stagingRoot)
+    private static void WriteManifest(string stagingRoot, DateTimeOffset generatedUtc)
     {
-        try
+        var entries = Directory.EnumerateFiles(stagingRoot, "*", SearchOption.AllDirectories)
+            .Where(path => !string.Equals(Path.GetFileName(path), ManifestFileName, StringComparison.Ordinal))
+            .Select(path =>
+            {
+                byte[] content = File.ReadAllBytes(path);
+                string relativePath = Path.GetRelativePath(stagingRoot, path).Replace('\\', '/');
+                return new
+                {
+                    path = relativePath,
+                    category = relativePath == ReportFileName
+                        ? "report"
+                        : relativePath.Split('/', 2)[0],
+                    sizeBytes = content.LongLength,
+                    sha256 = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant()
+                };
+            })
+            .OrderBy(entry => entry.path, StringComparer.Ordinal)
+            .ToArray();
+        object manifest = new
         {
-            string telemetryOut = Path.Combine(stagingRoot, "telemetry");
-            Directory.CreateDirectory(telemetryOut);
-            Telemetry.ExportToZip(telemetryOut);
-        }
-        catch
-        {
-            // Best effort telemetry export.
-        }
+            schemaVersion = 1,
+            generatedUtc,
+            redaction = "allowlist-v1",
+            totalSizeBytes = entries.Sum(entry => entry.sizeBytes),
+            entries
+        };
+        File.WriteAllText(
+            Path.Combine(stagingRoot, ManifestFileName),
+            JsonSerializer.Serialize(manifest, JsonOptions),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
-    private static string RedactPath(string? path)
+    private static string GetDiagnosticsDirectory()
+    {
+        return Path.Combine(
+            GetFolderSafe(Environment.SpecialFolder.LocalApplicationData),
+            "VaultSync",
+            "diagnostics");
+    }
+
+    internal static string RedactPath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
             return string.Empty;
@@ -543,11 +755,8 @@ public sealed class SupportBundleService
             if (string.IsNullOrWhiteSpace(trimmed))
                 return string.Empty;
 
-            string leaf = Path.GetFileName(trimmed);
-            if (string.IsNullOrWhiteSpace(leaf))
-                return RedactedValue;
-
-            return $"...{Path.DirectorySeparatorChar}{leaf}";
+            byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(trimmed.Replace('\\', '/')));
+            return $"path-{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
         }
         catch
         {

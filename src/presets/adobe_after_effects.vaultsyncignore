@@ -9,6 +9,4 @@ Thumbs.db
 # Caches
 Adobe After Effects*/**
 ~**
-
-# Git
 .git/

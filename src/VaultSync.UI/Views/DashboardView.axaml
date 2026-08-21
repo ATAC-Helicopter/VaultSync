@@ -462,6 +462,7 @@
                          Margin="0,0,0,2"/>
               <ComboBox x:Name="StorageSortSelector"
                         Grid.Column="1"
+                        Classes="app-filter"
                         ItemsSource="{Binding StorageSortOptions}"
                         SelectedItem="{Binding SelectedStorageSortOption}"
                         MinWidth="150"

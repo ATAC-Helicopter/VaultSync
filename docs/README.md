@@ -14,7 +14,10 @@ Use this page as the primary index for all project documentation.
 - Roadmap: [ROADMAP](../ROADMAP.md)
 - Changelog: [CHANGELOG](../CHANGELOG.md)
 - Current release highlights: [What's New](WHATS_NEW.md)
+- Active 1.8.7 development status: [1.8.7 release contract](RELEASE_1.8.7.md)
 - Release process: [Releasing](RELEASING.md)
+- Canonical direct-download manifest schema:
+  [release manifest v1](schemas/release-manifest-v1.schema.json)
 - Updater and patch assets: [Updater](UPDATER.md)
 - Microsoft Store planning and packaging notes: [Microsoft Store](MICROSOFT_STORE.md)
 - Microsoft Store submission checklist: [Store submission checklist](MICROSOFT_STORE_SUBMISSION_CHECKLIST.md)
@@ -29,6 +32,10 @@ Use this page as the primary index for all project documentation.
 - Crash reporting and user control: [Crash reporting](CRASH_REPORTING.md)
 - Disaster recovery drills and 3-2-1 advisor: [Disaster recovery](DISASTER_RECOVERY.md)
 - Native recoverability engine and ProofRestore provenance: [Recoverability engine](RECOVERABILITY_ENGINE.md)
+- Repository formats, compatibility, and emergency inspection:
+  [Repository formats](REPOSITORY_FORMATS.md)
+- Cross-machine threat model and safety contract:
+  [Cross-machine safety](CROSS_MACHINE_SAFETY.md)
 - Code of Conduct: [CODE_OF_CONDUCT](../CODE_OF_CONDUCT.md)
 - SonarQube Cloud setup: [SonarQube](SONARQUBE.md)
 

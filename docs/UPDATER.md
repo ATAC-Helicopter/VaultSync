@@ -7,6 +7,8 @@ VaultSync uses GitHub Releases for update discovery and supports patch assets to
 - Beta/Dev: prerelease-capable flow for `Dev` branch builds that use a prerelease suffix (when enabled in app settings).
 
 ## Required Release Assets
+- Canonical release manifest:
+  - `vaultsync-release-manifest.json`
 - Patch manifest:
   - `vaultsync-patch-<platform>.json`
 - Patch archive:
@@ -14,7 +16,7 @@ VaultSync uses GitHub Releases for update discovery and supports patch assets to
 - Windows installer:
   - `VaultSyncInstaller.exe`
 - macOS bundles:
-  - architecture-specific DMGs
+  - architecture-specific DMGs, each containing the canonical `VaultSync.app`
 - Linux bundles:
   - `VaultSync-<version>-linux-x64.deb`
   - `VaultSync-<version>-linux-arm64.deb`
@@ -30,12 +32,34 @@ macOS can use architecture-specific patch names:
 - `vaultsync-patch-macos-apple-silicon.*`
 - `vaultsync-patch-macos-intel.*`
 
+VaultSync 1.8.7 includes one architecture-aware bridge patch for the exact
+1.8.6 predecessor. The 1.8.6 helper updates its legacy `Contents/MacOS`
+payload; on restart, 1.8.7 copies that complete bundle into a staged canonical
+`VaultSync.app`, writes and verifies the canonical `Info.plist`, applies the
+stable ad-hoc identity, launches the canonical app, and then moves the legacy
+architecture-named bundle to Trash. If migration cannot be completed, the
+legacy bundle is retained and the full DMG remains the recovery path. Later
+macOS patches update and verify the complete `.app` bundle relative to its root.
+
 Linux can use architecture-specific patch names:
 - `vaultsync-patch-linux-x64.*`
 - `vaultsync-patch-linux-arm64.*`
 
 ## Runtime Expectations
 - Updater checks according to Settings policy.
+- A newer release is offered only after its canonical manifest is downloaded
+  from the official GitHub release, matched to the exact release tag and
+  channel, and reconciled with GitHub's complete asset list.
+- Asset selection uses the manifest's official URL, exact byte size, and
+  SHA-256. A missing manifest, unsupported schema, duplicate or unexpected
+  asset, unsafe URL, or metadata mismatch fails closed instead of presenting an
+  unverified download.
+- Canonical and platform patch manifests are immutable for a published release
+  and are cached on disk by official URL, exact size, and GitHub-published
+  SHA-256. Cache bytes are rehashed before every use; linked, truncated,
+  oversized, or tampered entries are ignored and never trusted as release
+  metadata. This keeps scheduled checks and restarts from repeatedly increasing
+  GitHub asset download counters for the same release.
 - Patch apply does not replace user config/data.
 - A failed in-process replacement restores overwritten files and removes newly created files before reporting failure.
 - Full power-loss atomicity requires a future directory-level installer transaction; until then, release qualification must exercise interrupted updates and retain full-installer recovery.
@@ -53,11 +77,16 @@ This is required because patch archives do not remove obsolete files. The automa
 
 ## Release Validation
 After publishing assets, verify:
-- manifest resolves correctly
+- canonical release manifest resolves and passes schema v1 validation
+- every GitHub asset name, URL, size, and digest matches that manifest exactly
 - patch downloads succeed
 - patch apply succeeds on target platform
 - installer fallback remains functional
 - the single base version listed in `baseVersions` was validated against that same patch payload
+
+The updater and `scripts/release_readiness_gate.ps1 -Phase PostPublish` enforce
+the same canonical release-manifest contract. Patch manifests remain a separate
+payload-level contract describing the files inside one platform patch.
 
 ## Related Docs
 - `docs/RELEASING.md`

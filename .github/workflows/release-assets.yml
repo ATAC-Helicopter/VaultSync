@@ -76,9 +76,21 @@ jobs:
           target="$(printf '%s' "$target" | trim)"
           previous="$(printf '%s' "$previous" | trim)"
           target_key="$(normalize_version "$target")"
+          canonical_target="$(python3 -c 'import json; print(json.load(open("release/release-metadata.json"))["activeRelease"]["version"])')"
+          canonical_previous="$(python3 -c 'import json; print(json.load(open("release/release-metadata.json"))["activeRelease"]["previousVersion"])')"
 
           if [[ -z "$target" ]]; then
             echo "target_version is required."
+            exit 1
+          fi
+
+          if [[ "$target" != "$canonical_target" ]]; then
+            echo "target_version '$target' does not match canonical active release '$canonical_target'."
+            exit 1
+          fi
+
+          if [[ "$previous" != "$canonical_previous" ]]; then
+            echo "previous_version '$previous' does not match qualified canonical predecessor '$canonical_previous'."
             exit 1
           fi
 
@@ -172,7 +184,7 @@ jobs:
         run: dotnet restore VaultSync.sln
 
       - name: Build
-        run: dotnet build VaultSync.sln --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+        run: dotnet build VaultSync.sln --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false -m:1
 
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build -warnaserror -p:UseSharedCompilation=false
@@ -283,6 +295,17 @@ jobs:
           -f net10.0-windows10.0.19041.0
           -r win-x64
           --self-contained true
+          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncPackageKind=windows-installer
+          -p:VaultSyncUpdateSource=github
+          -p:VaultSyncOfficialBuild=true
+          -p:VaultSyncSignatureStatus=unsigned
+          -p:SourceRevisionId=${{ github.sha }}
+
+      - name: Verify embedded runtime (win-x64)
+        run: >
+          python scripts/runtime_pack_audit.py
+          --runtimeconfig src/VaultSync.UI/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/VaultSync.UI.runtimeconfig.json
 
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
@@ -435,6 +458,12 @@ jobs:
           -f net10.0
           -r osx-arm64
           --self-contained true
+          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncPackageKind=macos-dmg
+          -p:VaultSyncUpdateSource=github
+          -p:VaultSyncOfficialBuild=true
+          -p:VaultSyncSignatureStatus=unsigned
+          -p:SourceRevisionId=${{ github.sha }}
 
       - name: Publish (osx-x64)
         run: >
@@ -443,6 +472,18 @@ jobs:
           -f net10.0
           -r osx-x64
           --self-contained true
+          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncPackageKind=macos-dmg
+          -p:VaultSyncUpdateSource=github
+          -p:VaultSyncOfficialBuild=true
+          -p:VaultSyncSignatureStatus=unsigned
+          -p:SourceRevisionId=${{ github.sha }}
+
+      - name: Verify embedded runtimes (macOS)
+        run: >
+          python3 scripts/runtime_pack_audit.py
+          --runtimeconfig src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish/VaultSync.UI.runtimeconfig.json
+          --runtimeconfig src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish/VaultSync.UI.runtimeconfig.json
 
       - name: Thin architecture-specific native libraries
         run: |
@@ -467,15 +508,26 @@ jobs:
             [[ -n "$base" ]] || continue
             previous_args+=( --previous "$base" )
           done <<< "$PATCH_BASE_VERSIONS"
+          arm64_patch_root="dist/macos/staging/arm64/VaultSync.app"
+          x64_patch_root="dist/macos/staging/x64/VaultSync.app"
+          if [[ "$TARGET_VERSION" == "1.8.7" ]]; then
+            # The installed 1.8.6 helper patches Contents/MacOS. The updated
+            # process then performs the one-time canonical bundle migration.
+            arm64_patch_root="src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish"
+            x64_patch_root="src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish"
+            mkdir -p "$arm64_patch_root/migration" "$x64_patch_root/migration"
+            cp src/VaultSync.UI/Assets/VaultSync.icns "$arm64_patch_root/migration/VaultSync.icns"
+            cp src/VaultSync.UI/Assets/VaultSync.icns "$x64_patch_root/migration/VaultSync.icns"
+          fi
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-arm64/publish" \
+            --base-dir "$arm64_patch_root" \
             --out-zip "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.zip" \
             --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json" \
             --platform macos \
             "${previous_args[@]}" \
             --target "$TARGET_VERSION"
           python3 scripts/build_patch.py \
-            --base-dir "src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish" \
+            --base-dir "$x64_patch_root" \
             --out-zip "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.zip" \
             --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json" \
             --platform macos \
@@ -487,6 +539,19 @@ jobs:
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           set -euo pipefail
+          for arch in arm64 x64; do
+            app="dist/macos/staging/$arch/VaultSync.app"
+            [[ -f "$app/Contents/Info.plist" ]] || {
+              echo "Missing canonical app bundle for $arch" >&2
+              exit 1
+            }
+            [[ "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" == "com.vaultsync.app" ]]
+            [[ "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" == "$TARGET_VERSION" ]]
+            [[ "$(plutil -extract CFBundleVersion raw "$app/Contents/Info.plist")" == "$TARGET_VERSION" ]]
+            [[ "$(readlink "dist/macos/staging/$arch/Applications")" == "/Applications" ]]
+            codesign --verify --deep --strict "$app"
+            codesign -dv --verbose=4 "$app" 2>&1 | grep -q '^Identifier=com.vaultsync.app$'
+          done
           required=(
             dist/macos/VaultSync-*-macos-apple-silicon.dmg
             dist/macos/VaultSync-*-macos-intel.dmg
@@ -501,6 +566,15 @@ jobs:
               exit 1
             }
           done
+          if [[ "$TARGET_VERSION" == "1.8.7" ]]; then
+            for manifest in \
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json" \
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json"; do
+              jq -e '.baseVersions == ["1.8.6"]' "$manifest" >/dev/null
+              jq -e 'any(.files[]; .path == "migration/VaultSync.icns")' "$manifest" >/dev/null
+              jq -e 'all(.files[]; (.path | startswith("Contents/") | not))' "$manifest" >/dev/null
+            done
+          fi
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -534,6 +608,12 @@ jobs:
           -f net10.0
           -r linux-x64
           --self-contained true
+          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncPackageKind=linux-multi-format
+          -p:VaultSyncUpdateSource=github
+          -p:VaultSyncOfficialBuild=true
+          -p:VaultSyncSignatureStatus=unsigned
+          -p:SourceRevisionId=${{ github.sha }}
 
       - name: Publish (linux-arm64)
         run: >
@@ -542,6 +622,18 @@ jobs:
           -f net10.0
           -r linux-arm64
           --self-contained true
+          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncPackageKind=linux-multi-format
+          -p:VaultSyncUpdateSource=github
+          -p:VaultSyncOfficialBuild=true
+          -p:VaultSyncSignatureStatus=unsigned
+          -p:SourceRevisionId=${{ github.sha }}
+
+      - name: Verify embedded runtimes (Linux)
+        run: >
+          python3 scripts/runtime_pack_audit.py
+          --runtimeconfig src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish/VaultSync.UI.runtimeconfig.json
+          --runtimeconfig src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish/VaultSync.UI.runtimeconfig.json
 
       - name: Build Linux archives
         env:
@@ -620,3 +712,195 @@ jobs:
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-x64.zip
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.zip
+
+  release-manifest:
+    name: Generate canonical release manifest
+    needs: [validate, windows, macos, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download direct-release artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: "*-release-assets"
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate and verify canonical manifest
+        shell: bash
+        env:
+          INCLUDE_LINUX_PATCHES: ${{ inputs.include_linux_patches }}
+          PREVIOUS_VERSION: ${{ inputs.previous_version }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          optional_args=()
+          if [[ "$INCLUDE_LINUX_PATCHES" == "true" ]]; then
+            optional_args+=( --include-linux-patches )
+          fi
+          python3 scripts/release_manifest.py generate \
+            --asset-root release-assets \
+            --output release-assets/vaultsync-release-manifest.json \
+            --version "$TARGET_VERSION" \
+            --channel "$RELEASE_CHANNEL" \
+            --commit "${{ github.sha }}" \
+            --repository "${{ github.repository }}" \
+            --previous "$PREVIOUS_VERSION" \
+            "${optional_args[@]}"
+          python3 scripts/release_manifest.py validate \
+            --manifest release-assets/vaultsync-release-manifest.json \
+            --asset-root release-assets
+
+      - name: Upload canonical release manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: canonical-release-manifest
+          if-no-files-found: error
+          path: release-assets/vaultsync-release-manifest.json
+
+  supply-chain-proof:
+    name: Generate SBOMs and attest release packages
+    needs: [release-manifest]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Download direct-release artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: "*-release-assets"
+          path: release-assets
+          merge-multiple: true
+
+      - name: Download canonical release manifest
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: canonical-release-manifest
+          path: release-assets
+
+      - name: Resolve dependency graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p supply-chain/project-assets
+          for rid in win-x64 osx-arm64 osx-x64 linux-x64 linux-arm64; do
+            framework=net10.0
+            if [[ "$rid" == win-x64 ]]; then
+              framework=net10.0-windows10.0.19041.0
+            fi
+            dotnet restore src/VaultSync.UI/VaultSync.UI.csproj \
+              -p:EnableWindowsTargeting=true \
+              -p:TargetFramework="$framework" \
+              -r "$rid"
+            cp src/VaultSync.UI/obj/project.assets.json "supply-chain/project-assets/$rid.json"
+          done
+
+      - name: Generate and validate SPDX SBOMs
+        shell: bash
+        run: |
+          set -euo pipefail
+          created="$(git show -s --format=%cI "$GITHUB_SHA")"
+          python3 scripts/release_sbom.py generate \
+            --manifest release-assets/vaultsync-release-manifest.json \
+            --project-assets supply-chain/project-assets \
+            --output supply-chain/sboms \
+            --created "$created"
+          python3 scripts/release_sbom.py validate \
+            --manifest release-assets/vaultsync-release-manifest.json \
+            --sbom-root supply-chain/sboms
+          sed 's# \*# *release-assets/#' \
+            supply-chain/sboms/vaultsync-release-subjects.sha256 \
+            > supply-chain/attestation-subjects.sha256
+
+      - name: Attest release-package provenance
+        id: provenance
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-checksums: supply-chain/attestation-subjects.sha256
+
+      - name: Attest Windows installer SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/dist/windows/VaultSync-Setup-${{ inputs.target_version }}.exe
+          sbom-path: supply-chain/sboms/VaultSync-Setup-${{ inputs.target_version }}.exe.spdx.json
+
+      - name: Attest macOS Apple silicon SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/dist/macos/VaultSync-${{ inputs.target_version }}-macos-apple-silicon.dmg
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-macos-apple-silicon.dmg.spdx.json
+
+      - name: Attest macOS Intel SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/dist/macos/VaultSync-${{ inputs.target_version }}-macos-intel.dmg
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-macos-intel.dmg.spdx.json
+
+      - name: Attest Linux x64 archive SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/dist/linux/VaultSync-${{ inputs.target_version }}-linux-x64.tar.gz
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-x64.tar.gz.spdx.json
+
+      - name: Attest Linux x64 Debian SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/dist/linux/VaultSync-${{ inputs.target_version }}-linux-x64.deb
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-x64.deb.spdx.json
+
+      - name: Attest Linux x64 AppImage SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/dist/linux/VaultSync-${{ inputs.target_version }}-linux-x64.AppImage
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-x64.AppImage.spdx.json
+
+      - name: Attest Linux arm64 archive SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/dist/linux/VaultSync-${{ inputs.target_version }}-linux-arm64.tar.gz
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-arm64.tar.gz.spdx.json
+
+      - name: Attest Linux arm64 Debian SBOM
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: release-assets/dist/linux/VaultSync-${{ inputs.target_version }}-linux-arm64.deb
+          sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-arm64.deb.spdx.json
+
+      - name: Verify online and offline release-candidate provenance
+        if: ${{ inputs.release_candidate }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          subject="release-assets/dist/windows/VaultSync-Setup-$TARGET_VERSION.exe"
+          gh attestation verify "$subject" --repo "$GITHUB_REPOSITORY"
+          gh attestation trusted-root > supply-chain/trusted-root.jsonl
+          gh attestation verify "$subject" \
+            --repo "$GITHUB_REPOSITORY" \
+            --bundle "$PROVENANCE_BUNDLE" \
+            --custom-trusted-root supply-chain/trusted-root.jsonl
+
+      - name: Upload release SBOMs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-supply-chain-proof
+          if-no-files-found: error
+          path: |
+            supply-chain/sboms
+            supply-chain/trusted-root.jsonl

@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -21,9 +22,139 @@ public sealed class MetadataSyncService
     private const string BackupEntityType = "backup";
     private const string InvalidRootPathMessage = "Root path is empty.";
     private const string VaultSyncDirectoryName = ".vaultsync";
+    private const string UnknownAppVersion = "unknown";
+    private const string AvatarColorField = "avatarColor";
+    private const string EncryptionPolicyField = "encryptionPolicy";
+    private const string PreferredDestinationIdField = "preferredDestinationId";
+    private const string RestoreModeField = "restoreMode";
+    private const string VerificationPolicyField = "verificationPolicy";
+    private const string AutoBackupEnabledField = "autoBackupEnabled";
+    private const string TagsField = "tags";
+    private static readonly SearchValues<char> HexCharacters = SearchValues.Create("0123456789abcdefABCDEF");
+    private static readonly TimeSpan[] StoreRetryDelays =
+    [
+        TimeSpan.FromMilliseconds(200),
+        TimeSpan.FromMilliseconds(500),
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(5)
+    ];
+
+    private sealed record TombstoneExportContext(
+        string RootPath,
+        string EntityType,
+        IReadOnlyCollection<string> ExternalIds,
+        string MachineId,
+        string LogLabel,
+        string AppVersion,
+        string LeaseOwnerId);
+
+    private sealed record BackupExportEntities(Backup Backup, Project Project, Snapshot Snapshot);
+
+    private sealed record BackupExportCounts(int Projects, int Snapshots, int Backups, bool Backfilled);
+
+    private sealed record BackupExportWriteContext(
+        string ProjectExternalId,
+        string SnapshotExternalId,
+        string BackupExternalId,
+        DateTime Now,
+        string MachineId,
+        bool ForceBackfill,
+        MetaProject ProjectRecord,
+        long ExpectedProjectRevision);
+
+    private sealed class ExportStoreContext(
+        string storeRoot,
+        RepositoryLeaseHandle? deferredLease,
+        RepositoryLeaseHandle? activeLease,
+        MetadataStore? store,
+        MetadataSyncResult? failure) : IDisposable
+    {
+        public string StoreRoot { get; } = storeRoot;
+        public RepositoryLeaseHandle? ActiveLease { get; } = activeLease;
+        public MetadataStore? Store { get; } = store;
+        public MetadataSyncResult? Failure { get; } = failure;
+
+        public static ExportStoreContext Failed(string storeRoot, MetadataSyncResult failure) =>
+            new(storeRoot, null, null, null, failure);
+
+        public void Dispose() => deferredLease?.Dispose();
+    }
+
+    private sealed record GuardedProjectWrite(
+        MetaProject Record,
+        long ExpectedRevision,
+        ProjectMetadataConflictValues Values);
+
+    private sealed record GuardedProjectWriteRequest(
+        string DestinationRoot,
+        Project Project,
+        string ProjectExternalId,
+        DateTime UpdatedUtc,
+        string MachineId);
+
+    private sealed class MetadataRevisionConflictException(string message) : InvalidOperationException(message);
+
+    private sealed record LegacyPreviewContext(
+        string RootPath,
+        bool AllowCreateProjects,
+        LegacyPreviewIndexes Indexes,
+        LegacyPreviewSeen Seen);
+
+    private sealed record LegacyPreviewIndexes(
+        IReadOnlySet<string> ProjectsByName,
+        IReadOnlyDictionary<string, int> SnapshotExternalMap,
+        IReadOnlyDictionary<string, int> BackupExternalMap,
+        IReadOnlySet<string> ExistingBackupPaths);
+
+    private sealed record LegacyPreviewSeen(
+        ISet<string> Projects,
+        ISet<string> Snapshots,
+        ISet<string> Backups);
+
+    private sealed record PreviewProjectCounts(int Add, int Link);
+
+    private sealed record PreviewTombstoneAnalysis(
+        HashSet<string> BackupIds,
+        HashSet<string> SnapshotIds,
+        int DeleteProjects,
+        int DeleteSnapshots,
+        int DeleteBackups);
+
+    private sealed record PreviewBackupAnalysis(HashSet<string> LiveSnapshotIds, int Add, int Delete);
+
+    private sealed record ProjectMetadataConflictContext(
+        Project Current,
+        MetaProject Imported,
+        string SourceKey,
+        string? SourceMachineId,
+        long BaseRevision,
+        string BaseMachineId,
+        string BaseUpdatedUtc,
+        string LocalMachineId,
+        string DetectedUtc,
+        ProjectMetadataConflictValues Base,
+        ProjectMetadataConflictValues Local,
+        ProjectMetadataConflictValues Incoming,
+        ProjectMetadataMergePlan Plan);
+
+    private sealed class LegacyImportState
+    {
+        public required Dictionary<string, Project> ProjectsByName { get; init; }
+        public required IReadOnlyDictionary<string, int> SnapshotExternalMap { get; init; }
+        public required IReadOnlyDictionary<string, int> BackupExternalMap { get; init; }
+        public required Dictionary<string, Backup> ExistingBackupByPath { get; init; }
+        public HashSet<int> AffectedProjectIds { get; } = [];
+        public int ImportedProjects { get; set; }
+        public int ImportedSnapshots { get; set; }
+        public int ImportedBackups { get; set; }
+        public int RepairedBackups { get; set; }
+    }
 
     private readonly SqliteRepository _repo;
     private readonly IAppConfigStore _configStore;
+    private readonly IInstallationIdentityProvider? _installationIdentityProvider;
+    private readonly RepositoryLeaseService _repositoryLeaseService;
     private readonly Func<Project, string?>? _projectColorResolver;
     private readonly Action<string, string>? _projectColorApplier;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
@@ -35,12 +166,16 @@ public sealed class MetadataSyncService
         SqliteRepository repo,
         IAppConfigStore? configStore = null,
         Func<Project, string?>? projectColorResolver = null,
-        Action<string, string>? projectColorApplier = null)
+        Action<string, string>? projectColorApplier = null,
+        IInstallationIdentityProvider? installationIdentityProvider = null,
+        RepositoryLeaseService? repositoryLeaseService = null)
     {
         _repo = repo ?? throw new ArgumentNullException(nameof(repo));
         _configStore = configStore ?? StaticAppConfigStore.Instance;
         _projectColorResolver = projectColorResolver;
         _projectColorApplier = projectColorApplier;
+        _installationIdentityProvider = installationIdentityProvider;
+        _repositoryLeaseService = repositoryLeaseService ?? new RepositoryLeaseService();
     }
 
     public MetadataSyncResult ImportFromStore(string rootPath, MetadataSyncOptions? options = null)
@@ -65,6 +200,15 @@ public sealed class MetadataSyncService
             {
                 Console.WriteLine("[MetadataSync] Import failed: root path is empty.");
                 return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
+            }
+
+            RepositoryLeaseInspection leaseInspection = _repositoryLeaseService.Inspect(rootPath);
+            if (leaseInspection.State is RepositoryLeaseState.Active or
+                RepositoryLeaseState.Stale or
+                RepositoryLeaseState.Invalid or
+                RepositoryLeaseState.Unavailable)
+            {
+                opts = opts.AsReadOnlySource();
             }
 
             var store = new MetadataStore(rootPath);
@@ -263,6 +407,8 @@ public sealed class MetadataSyncService
             localProjects = _repo.GetAllProjects().ToList();
         }
         List<ProjectMetadataConflictRecord> pendingConflicts = config.Advanced.ProjectMetadataConflicts ??= [];
+        string sourceKey = BuildMetadataSourceKey(
+            Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         bool metadataConflictChanged = false;
 
         IReadOnlyDictionary<string, int> projectExternalMap = _repo.GetProjectExternalIdMap();
@@ -298,6 +444,9 @@ public sealed class MetadataSyncService
 
         foreach (string? tombstonedProjectId in tombstonedProjectIds)
         {
+            if (!opts.ApplyDestructiveTombstones)
+                continue;
+
             if (!projectMap.TryGetValue(tombstonedProjectId, out int existingId))
                 continue;
 
@@ -319,7 +468,6 @@ public sealed class MetadataSyncService
                 continue;
 
             ParsedProjectSettings parsedSettings = ParseProjectSettings(metaProject.SettingsJson);
-            TryApplyProjectColor(metaProject);
 
             if (projectMap.TryGetValue(metaProject.ExternalId, out int mappedProjectId))
             {
@@ -327,7 +475,8 @@ public sealed class MetadataSyncService
                     mappedProjectId,
                     config,
                     metaProject,
-                    metaInfo?.WriterMachineId,
+                    sourceKey,
+                    ResolveProjectWriterMachineId(metaProject, metaInfo),
                     parsedSettings,
                     pendingConflicts);
                 continue;
@@ -360,7 +509,8 @@ public sealed class MetadataSyncService
                     existingByName.Id,
                     config,
                     metaProject,
-                    metaInfo?.WriterMachineId,
+                    sourceKey,
+                    ResolveProjectWriterMachineId(metaProject, metaInfo),
                     parsedSettings,
                     pendingConflicts);
                 projectMap[metaProject.ExternalId] = existingByName.Id;
@@ -387,14 +537,15 @@ public sealed class MetadataSyncService
                 EncryptionPolicy = parsedSettings.HasEncryptionPolicy
                     ? parsedSettings.EncryptionPolicy
                     : ProjectEncryptionPolicy.Inherit,
-                EncryptionKeyRef = parsedSettings.HasEncryptionKeyRef
-                    ? parsedSettings.EncryptionKeyRef
-                    : null,
+                // Encryption key references are installation-local secrets. A
+                // repository may describe the policy, but never selects a key
+                // that may not exist on this machine.
+                EncryptionKeyRef = null,
                 VerificationPolicy = parsedSettings.HasVerificationPolicy
                     ? parsedSettings.VerificationPolicy
                     : ProjectVerificationPolicy.Always,
                 PreferredDestinationId = parsedSettings.HasPreferredDestinationId
-                    ? parsedSettings.PreferredDestinationId
+                    ? NormalizeImportedPreferredDestinationId(parsedSettings.PreferredDestinationId, config.Backups.Destinations)
                     : string.Empty,
                 RestoreMode = parsedSettings.HasRestoreMode
                     ? parsedSettings.RestoreMode
@@ -405,8 +556,16 @@ public sealed class MetadataSyncService
             };
 
             int newId = _repo.AddProject(project);
+            if (parsedSettings.HasAvatarColor)
+                TryApplyProjectColor(metaProject.ExternalId, parsedSettings.AvatarColor);
             if (parsedSettings.HasAutoBackupEnabled)
                 metadataConflictChanged |= ApplyImportedProjectAutoBackupSetting(config, newId, parsedSettings.AutoBackupEnabled);
+            metadataConflictChanged |= UpsertProjectMetadataMergeBase(
+                config,
+                sourceKey,
+                metaProject,
+                ResolveProjectWriterMachineId(metaProject, metaInfo),
+                BuildImportedValues(project, parsedSettings, config, newId));
             projectMap[metaProject.ExternalId] = newId;
             importedProjects++;
         }
@@ -526,14 +685,15 @@ public sealed class MetadataSyncService
             }
         }
 
-        foreach (MetaTombstone tombstone in metaTombstones)
+        if (opts.ApplyDestructiveTombstones)
         {
-            if (string.IsNullOrWhiteSpace(tombstone.EntityId))
-                continue;
-
-            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
+            foreach (MetaTombstone tombstone in metaTombstones)
             {
-                if (backupExternalMap.TryGetValue(tombstone.EntityId, out int existingId))
+                if (string.IsNullOrWhiteSpace(tombstone.EntityId))
+                    continue;
+
+                if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase) &&
+                    backupExternalMap.TryGetValue(tombstone.EntityId, out int existingId))
                 {
                     _repo.DeleteBackupById(existingId);
                     appliedTombstones++;
@@ -541,7 +701,7 @@ public sealed class MetadataSyncService
             }
         }
 
-        if (missingBackupExternalIds.Count > 0)
+        if (missingBackupExternalIds.Count > 0 && opts.ApplyDestructiveTombstones)
         {
             foreach (string missingExternalId in missingBackupExternalIds)
             {
@@ -558,9 +718,9 @@ public sealed class MetadataSyncService
             }
         }
 
-        if (missingSnapshotExternalIds.Count > 0)
+        if (missingSnapshotExternalIds.Count > 0 && opts.ApplyDestructiveTombstones)
         {
-            int removedSnapshots = 0;
+            var removedSnapshotExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string? missingExternalId in missingSnapshotExternalIds)
             {
                 Snapshot? snapshot = _repo.GetSnapshotByExternalId(missingExternalId);
@@ -574,16 +734,14 @@ public sealed class MetadataSyncService
                 if (project == null)
                     continue;
 
-                (int Snapshots, int Files) = _repo.DeleteSnapshotsById(project.Name, [snapshot.Id]);
-                removedSnapshots += Snapshots;
+                (int snapshots, _) = _repo.DeleteSnapshotsById(project.Name, [snapshot.Id]);
+                if (snapshots > 0)
+                    removedSnapshotExternalIds.Add(missingExternalId);
             }
 
-            if (removedSnapshots > 0)
+            if (removedSnapshotExternalIds.Count > 0 && opts.ExportMissingTombstonesOnImport)
             {
-                if (opts.ExportMissingTombstonesOnImport)
-                {
-                    TryExportMissingSnapshotTombstones(rootPath, missingSnapshotExternalIds);
-                }
+                TryExportMissingSnapshotTombstones(rootPath, removedSnapshotExternalIds);
             }
         }
 
@@ -904,65 +1062,16 @@ public sealed class MetadataSyncService
     {
         try
         {
-            var stack = new Stack<string>();
-            stack.Push(rootPath);
+            var stack = new Stack<string>([rootPath]);
 
             while (stack.Count > 0)
             {
                 string current = stack.Pop();
+                foreach (string directory in GetTraversableDirectories(current))
+                    stack.Push(directory);
 
-                IEnumerable<string> dirs;
-                try
-                {
-                    dirs = Directory.EnumerateDirectories(current);
-                }
-                catch
-                {
-                    continue;
-                }
-
-                foreach (string dir in dirs)
-                {
-                    string name = Path.GetFileName(dir);
-                    if (string.Equals(name, VaultSyncDirectoryName, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    try
-                    {
-                        var di = new DirectoryInfo(dir);
-                        if (di.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                            continue;
-                    }
-                    catch
-                    {
-                        continue;
-                    }
-
-                    stack.Push(dir);
-                }
-
-                IEnumerable<string> files;
-                try
-                {
-                    files = Directory.EnumerateFiles(current);
-                }
-                catch
-                {
-                    continue;
-                }
-
-                foreach (string file in files)
-                {
-                    try
-                    {
-                        if (File.GetLastWriteTimeUtc(file) > importedLatestUtc)
-                            return true;
-                    }
-                    catch
-                    {
-                        continue;
-                    }
-                }
+                if (ContainsFileNewerThan(current, importedLatestUtc))
+                    return true;
             }
         }
         catch
@@ -971,6 +1080,60 @@ public sealed class MetadataSyncService
         }
 
         return false;
+    }
+
+    private static List<string> GetTraversableDirectories(string path)
+    {
+        IEnumerable<string> directories;
+        try
+        {
+            directories = Directory.EnumerateDirectories(path);
+        }
+        catch
+        {
+            return [];
+        }
+
+        return directories.Where(IsTraversableDirectory).ToList();
+    }
+
+    private static bool IsTraversableDirectory(string path)
+    {
+        if (string.Equals(Path.GetFileName(path), VaultSyncDirectoryName, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        try
+        {
+            return !new DirectoryInfo(path).Attributes.HasFlag(FileAttributes.ReparsePoint);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool ContainsFileNewerThan(string path, DateTime timestampUtc)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(path).Any(file => IsFileNewerThan(file, timestampUtc));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsFileNewerThan(string path, DateTime timestampUtc)
+    {
+        try
+        {
+            return File.GetLastWriteTimeUtc(path) > timestampUtc;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private MetadataSyncPreview PreviewImportFromStoreInternal(string rootPath, MetadataStore store, MetadataSyncOptions opts)
@@ -1003,12 +1166,6 @@ public sealed class MetadataSyncService
             return cached.Preview;
         }
 
-        int addProjects = 0;
-        int linkProjects = 0;
-        int addSnapshots = 0;
-        int addBackups = 0;
-        int deleteBackups = 0;
-
         var projectMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var localProjects = _repo.GetAllProjects().ToList();
         IReadOnlyDictionary<string, int> projectExternalMap = _repo.GetProjectExternalIdMap();
@@ -1017,17 +1174,17 @@ public sealed class MetadataSyncService
             projectMap[pair.Key] = pair.Value;
         }
 
-        IEnumerable<MetaProject> metaProjects;
-        IEnumerable<MetaSnapshot> metaSnapshots;
-        IEnumerable<MetaBackup> metaBackups;
-        IEnumerable<MetaTombstone> metaTombstones;
+        IReadOnlyList<MetaProject> metaProjects;
+        IReadOnlyList<MetaSnapshot> metaSnapshots;
+        IReadOnlyList<MetaBackup> metaBackups;
+        IReadOnlyList<MetaTombstone> metaTombstones;
 
         try
         {
-            metaProjects = store.ListProjects();
-            metaSnapshots = store.ListSnapshots();
-            metaBackups = store.ListBackups();
-            metaTombstones = store.ListTombstones();
+            metaProjects = [.. store.ListProjects()];
+            metaSnapshots = [.. store.ListSnapshots()];
+            metaBackups = [.. store.ListBackups()];
+            metaTombstones = [.. store.ListTombstones()];
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
@@ -1035,133 +1192,68 @@ public sealed class MetadataSyncService
             return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
         }
 
-        foreach (MetaProject metaProject in metaProjects)
-        {
-            if (string.IsNullOrWhiteSpace(metaProject.ExternalId))
-                continue;
-
-            if (projectMap.ContainsKey(metaProject.ExternalId))
-                continue;
-
-            Project? existingByName = localProjects.FirstOrDefault(p =>
-                string.Equals(p.Name, metaProject.Name, StringComparison.OrdinalIgnoreCase));
-
-            if (existingByName != null)
-            {
-                if (string.IsNullOrWhiteSpace(existingByName.ExternalId))
-                {
-                    linkProjects++;
-                }
-
-                projectMap[metaProject.ExternalId] = existingByName.Id;
-                continue;
-            }
-
-            if (!opts.AllowCreateProjects)
-                continue;
-
-            addProjects++;
-            projectMap[metaProject.ExternalId] = -1;
-        }
+        PreviewProjectCounts projectCounts = CountPreviewProjects(
+            metaProjects,
+            projectMap,
+            localProjects,
+            opts.AllowCreateProjects);
 
         IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
         IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
-        var existingBackupPaths = _repo
-            .GetAllProjects()
-            .SelectMany(project => _repo.GetBackupsForProject(project.Id))
-            .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.Path)))
+        PreviewTombstoneAnalysis tombstones = AnalyzePreviewTombstones(
+            metaTombstones,
+            projectExternalMap,
+            snapshotExternalMap,
+            backupExternalMap);
+        PreviewBackupAnalysis backups = AnalyzePreviewBackups(
+            metaBackups,
+            rootPath,
+            projectMap,
+            backupExternalMap,
+            tombstones.BackupIds);
+        int addSnapshots = CountPreviewSnapshots(
+            metaSnapshots,
+            projectMap,
+            snapshotExternalMap,
+            tombstones.SnapshotIds,
+            backups.LiveSnapshotIds);
+
+        HashSet<string> metadataProjectNames = metaProjects
+            .Where(project => !string.IsNullOrWhiteSpace(project.Name))
+            .Select(project => project.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> metadataBackupPaths = metaBackups
+            .Where(backup =>
+                !string.IsNullOrWhiteSpace(backup.PathRel) &&
+                !tombstones.BackupIds.Contains(backup.ExternalId) &&
+                TryResolveBackupPath(rootPath, backup.PathRel, out _))
+            .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.PathRel)))
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var tombstonedBackupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var tombstonedSnapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var liveSnapshotExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (MetaTombstone tombstone in metaTombstones)
-        {
-            if (string.IsNullOrWhiteSpace(tombstone.EntityId))
-                continue;
-
-            if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
-            {
-                tombstonedBackupIds.Add(tombstone.EntityId);
-                if (backupExternalMap.ContainsKey(tombstone.EntityId))
-                    deleteBackups++;
-            }
-            else if (string.Equals(tombstone.EntityType, "snapshot", StringComparison.OrdinalIgnoreCase))
-            {
-                tombstonedSnapshotIds.Add(tombstone.EntityId);
-            }
-        }
-
-        foreach (MetaBackup metaBackup in metaBackups)
-        {
-            if (string.IsNullOrWhiteSpace(metaBackup.ExternalId))
-                continue;
-
-            if (!string.IsNullOrWhiteSpace(metaBackup.SnapshotExternalId) &&
-                !tombstonedBackupIds.Contains(metaBackup.ExternalId))
-            {
-                liveSnapshotExternalIds.Add(metaBackup.SnapshotExternalId);
-            }
-
-            if (tombstonedBackupIds.Contains(metaBackup.ExternalId))
-                continue;
-
-            if (!TryResolveBackupPath(rootPath, metaBackup.PathRel, out _))
-            {
-                tombstonedBackupIds.Add(metaBackup.ExternalId);
-                if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
-                    deleteBackups++;
-                continue;
-            }
-
-            if (!projectMap.ContainsKey(metaBackup.ProjectExternalId))
-                continue;
-
-            if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
-                continue;
-
-            addBackups++;
-        }
-
-        foreach (MetaSnapshot metaSnapshot in metaSnapshots)
-        {
-            if (string.IsNullOrWhiteSpace(metaSnapshot.ExternalId))
-                continue;
-
-            if (!liveSnapshotExternalIds.Contains(metaSnapshot.ExternalId))
-            {
-                tombstonedSnapshotIds.Add(metaSnapshot.ExternalId);
-                continue;
-            }
-
-            if (tombstonedSnapshotIds.Contains(metaSnapshot.ExternalId))
-                continue;
-
-            if (!projectMap.ContainsKey(metaSnapshot.ProjectExternalId))
-                continue;
-
-            if (snapshotExternalMap.ContainsKey(metaSnapshot.ExternalId))
-                continue;
-
-            addSnapshots++;
-        }
-
-        MetadataSyncPreview filesystemPreview = PreviewBackupFoldersFromDestination(rootPath, opts, store.DatabasePath);
-        addProjects += filesystemPreview.NewProjects;
+        MetadataSyncPreview filesystemPreview = PreviewBackupFoldersFromDestination(
+            rootPath,
+            opts,
+            store.DatabasePath,
+            metadataProjectNames,
+            metadataBackupPaths);
+        int addProjects = projectCounts.Add + filesystemPreview.NewProjects;
         addSnapshots += filesystemPreview.NewSnapshots;
-        addBackups += filesystemPreview.NewBackups;
+        int addBackups = backups.Add + filesystemPreview.NewBackups;
 
         var preview = new MetadataSyncPreview(
             MetadataSyncStatus.Success,
             rootPath,
             store.DatabasePath,
             addProjects,
-            linkProjects,
+            projectCounts.Link,
             addSnapshots,
             addBackups,
-            deleteBackups,
-            string.Empty);
+            tombstones.DeleteBackups + backups.Delete,
+            string.Empty)
+        {
+            DeletedProjects = tombstones.DeleteProjects,
+            DeletedSnapshots = tombstones.DeleteSnapshots
+        };
 
         if (metaInfo != null)
         {
@@ -1169,6 +1261,148 @@ public sealed class MetadataSyncService
         }
 
         return preview;
+    }
+
+    private static PreviewProjectCounts CountPreviewProjects(
+        IEnumerable<MetaProject> projects,
+        Dictionary<string, int> projectMap,
+        IReadOnlyCollection<Project> localProjects,
+        bool allowCreateProjects)
+    {
+        int add = 0;
+        int link = 0;
+        foreach (MetaProject project in projects)
+        {
+            if (string.IsNullOrWhiteSpace(project.ExternalId) || projectMap.ContainsKey(project.ExternalId))
+                continue;
+
+            Project? local = localProjects.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, project.Name, StringComparison.OrdinalIgnoreCase));
+            if (local is not null)
+            {
+                if (string.IsNullOrWhiteSpace(local.ExternalId))
+                    link++;
+                projectMap[project.ExternalId] = local.Id;
+            }
+            else if (allowCreateProjects)
+            {
+                add++;
+                projectMap[project.ExternalId] = -1;
+            }
+        }
+
+        return new PreviewProjectCounts(add, link);
+    }
+
+    private static PreviewTombstoneAnalysis AnalyzePreviewTombstones(
+        IEnumerable<MetaTombstone> tombstones,
+        IReadOnlyDictionary<string, int> projectExternalMap,
+        IReadOnlyDictionary<string, int> snapshotExternalMap,
+        IReadOnlyDictionary<string, int> backupExternalMap)
+    {
+        var backupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var snapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int deleteProjects = 0;
+        int deleteSnapshots = 0;
+        int deleteBackups = 0;
+        foreach (MetaTombstone tombstone in tombstones.Where(tombstone => !string.IsNullOrWhiteSpace(tombstone.EntityId)))
+        {
+            if (string.Equals(tombstone.EntityType, "project", StringComparison.OrdinalIgnoreCase))
+            {
+                deleteProjects += projectExternalMap.ContainsKey(tombstone.EntityId) ? 1 : 0;
+            }
+            else if (string.Equals(tombstone.EntityType, BackupEntityType, StringComparison.OrdinalIgnoreCase))
+            {
+                backupIds.Add(tombstone.EntityId);
+                deleteBackups += backupExternalMap.ContainsKey(tombstone.EntityId) ? 1 : 0;
+            }
+            else if (string.Equals(tombstone.EntityType, "snapshot", StringComparison.OrdinalIgnoreCase))
+            {
+                snapshotIds.Add(tombstone.EntityId);
+                deleteSnapshots += snapshotExternalMap.ContainsKey(tombstone.EntityId) ? 1 : 0;
+            }
+        }
+
+        return new PreviewTombstoneAnalysis(backupIds, snapshotIds, deleteProjects, deleteSnapshots, deleteBackups);
+    }
+
+    private static PreviewBackupAnalysis AnalyzePreviewBackups(
+        IEnumerable<MetaBackup> backups,
+        string rootPath,
+        Dictionary<string, int> projectMap,
+        IReadOnlyDictionary<string, int> backupExternalMap,
+        HashSet<string> tombstonedBackupIds)
+    {
+        var liveSnapshotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int add = 0;
+        int delete = 0;
+        foreach (MetaBackup backup in backups)
+        {
+            (int backupAdd, int backupDelete) = AnalyzePreviewBackup(
+                backup,
+                rootPath,
+                projectMap,
+                backupExternalMap,
+                tombstonedBackupIds,
+                liveSnapshotIds);
+            add += backupAdd;
+            delete += backupDelete;
+        }
+
+        return new PreviewBackupAnalysis(liveSnapshotIds, add, delete);
+    }
+
+    private static (int Add, int Delete) AnalyzePreviewBackup(
+        MetaBackup backup,
+        string rootPath,
+        Dictionary<string, int> projectMap,
+        IReadOnlyDictionary<string, int> backupExternalMap,
+        HashSet<string> tombstonedBackupIds,
+        HashSet<string> liveSnapshotIds)
+    {
+        if (string.IsNullOrWhiteSpace(backup.ExternalId))
+            return default;
+
+        bool isTombstoned = tombstonedBackupIds.Contains(backup.ExternalId);
+        if (!string.IsNullOrWhiteSpace(backup.SnapshotExternalId) && !isTombstoned)
+            liveSnapshotIds.Add(backup.SnapshotExternalId);
+        if (isTombstoned)
+            return default;
+        if (!TryResolveBackupPath(rootPath, backup.PathRel, out _))
+        {
+            tombstonedBackupIds.Add(backup.ExternalId);
+            return (0, backupExternalMap.ContainsKey(backup.ExternalId) ? 1 : 0);
+        }
+
+        bool isNew = projectMap.ContainsKey(backup.ProjectExternalId) &&
+                     !backupExternalMap.ContainsKey(backup.ExternalId);
+        return (isNew ? 1 : 0, 0);
+    }
+
+    private static int CountPreviewSnapshots(
+        IEnumerable<MetaSnapshot> snapshots,
+        Dictionary<string, int> projectMap,
+        IReadOnlyDictionary<string, int> snapshotExternalMap,
+        HashSet<string> tombstonedSnapshotIds,
+        HashSet<string> liveSnapshotIds)
+    {
+        int add = 0;
+        foreach (MetaSnapshot snapshot in snapshots.Where(snapshot => !string.IsNullOrWhiteSpace(snapshot.ExternalId)))
+        {
+            if (!liveSnapshotIds.Contains(snapshot.ExternalId))
+            {
+                tombstonedSnapshotIds.Add(snapshot.ExternalId);
+                continue;
+            }
+            if (!tombstonedSnapshotIds.Contains(snapshot.ExternalId) &&
+                projectMap.ContainsKey(snapshot.ProjectExternalId) &&
+                !snapshotExternalMap.ContainsKey(snapshot.ExternalId))
+            {
+                add++;
+            }
+        }
+
+        return add;
     }
 
     private MetadataSyncResult ImportBackupFoldersFromDestination(string rootPath, MetadataSyncOptions opts, AppConfig config)
@@ -1184,11 +1418,6 @@ public sealed class MetadataSyncService
             return new MetadataSyncResult(MetadataSyncStatus.Success, 0, 0, 0, 0, string.Empty);
         }
 
-        int importedProjects = 0;
-        int importedSnapshots = 0;
-        int importedBackups = 0;
-        int repairedBackups = 0;
-        var affectedProjectIds = new HashSet<int>();
         var projectsByName = _repo
             .GetAllProjects()
             .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
@@ -1206,133 +1435,204 @@ public sealed class MetadataSyncService
             .GroupBy(entry => entry.Path, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().Backup, StringComparer.OrdinalIgnoreCase);
 
-        foreach (IGrouping<string, LegacyBackupFolder> projectGroup in discovered.GroupBy(folder => folder.ProjectName, StringComparer.OrdinalIgnoreCase))
+        var state = new LegacyImportState
         {
-            List<LegacyBackupFolder> importableFolders = [.. projectGroup
-                .Where(folder => !existingBackupByPath.ContainsKey(NormalizeStablePath(folder.RelativePath)))
-                .OrderBy(folder => folder.CreatedUtc)];
-            List<LegacyBackupFolder> repairableFolders = [.. projectGroup
-                .Where(folder =>
-                    existingBackupByPath.TryGetValue(NormalizeStablePath(folder.RelativePath), out Backup? backup) &&
-                    backup.IsImported &&
-                    backup.TotalBytes <= 0)
-                .OrderBy(folder => folder.CreatedUtc)];
-            if (importableFolders.Count == 0 && repairableFolders.Count == 0)
-                continue;
-
-            string projectName = projectGroup.Key;
-            string projectExternalId = BuildStableExternalId("legacy-project", rootPath, projectName);
-
-            if (!projectsByName.TryGetValue(projectName, out Project? project))
-            {
-                if (!opts.AllowCreateProjects)
-                    continue;
-
-                string projectRoot = ResolveImportedProjectRoot(null, config.ProjectsRoot, projectName, projectExternalId);
-                int projectId = _repo.AddProject(new Project
-                {
-                    ExternalId = projectExternalId,
-                    Name = projectName,
-                    RootPath = projectRoot,
-                    Preset = "generic",
-                    CreatedUtc = projectGroup.Min(folder => folder.CreatedUtc),
-                    NeedsRestore = false
-                });
-
-                project = _repo.GetProjectById(projectId);
-                if (project is null)
-                    continue;
-
-                projectsByName[projectName] = project;
-                importedProjects++;
-            }
-            else if (string.IsNullOrWhiteSpace(project.ExternalId))
-            {
-                _repo.UpdateProjectExternalId(project.Id, projectExternalId);
-                project = project with { ExternalId = projectExternalId };
-                projectsByName[projectName] = project;
-            }
-
-            foreach (LegacyBackupFolder folder in repairableFolders)
-            {
-                string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
-                if (!existingBackupByPath.TryGetValue(normalizedRelativePath, out Backup? existingBackup))
-                    continue;
-
-                long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
-                if (sizeBytes <= 0)
-                    continue;
-
-                _repo.UpdateBackupTotalBytes(existingBackup.Id, sizeBytes);
-                Snapshot? existingSnapshot = _repo.GetSnapshotById(existingBackup.SnapshotId);
-                if (existingSnapshot is not null && existingSnapshot.TotalBytes <= 0)
-                    _repo.UpdateSnapshotTotalBytes(existingSnapshot.Id, sizeBytes);
-
-                repairedBackups++;
-                affectedProjectIds.Add(existingBackup.ProjectId);
-            }
-
-            foreach (LegacyBackupFolder folder in importableFolders)
-            {
-                string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
-                string snapshotExternalId = BuildStableExternalId("legacy-snapshot", rootPath, folder.RelativePath);
-                string backupExternalId = BuildStableExternalId("legacy-backup", rootPath, folder.RelativePath);
-                long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
-
-                if (!snapshotExternalMap.TryGetValue(snapshotExternalId, out int snapshotId))
-                {
-                    snapshotId = _repo.CreateSnapshotFromMetadata(
-                        snapshotExternalId,
-                        project.Id,
-                        folder.CreatedUtc,
-                        fileCount: 0,
-                        totalBytes: sizeBytes);
-                    importedSnapshots++;
-                }
-
-                if (backupExternalMap.ContainsKey(backupExternalId))
-                    continue;
-
-                _repo.CreateBackupFromMetadata(
-                    backupExternalId,
-                    project.Id,
-                    snapshotId,
-                    folder.CreatedUtc,
-                    "manual",
-                    sizeBytes,
-                    folder.RelativePath,
-                    rootPath,
-                    string.Empty,
-                    isProtected: false,
-                    isImported: true,
-                    backupMode: BackupModes.Full);
-
-                importedBackups++;
-                affectedProjectIds.Add(project.Id);
-                existingBackupByPath[normalizedRelativePath] = _repo.GetBackupByExternalId(backupExternalId)
-                    ?? new Backup { Id = 0, ProjectId = project.Id, SnapshotId = snapshotId, Path = folder.RelativePath, TotalBytes = sizeBytes, IsImported = true };
-            }
-
-            if (opts.MarkNeedsRestoreOnImport && affectedProjectIds.Contains(project.Id))
-            {
-                _repo.UpdateProjectNeedsRestore(project.Id, true);
-            }
-        }
+            ProjectsByName = projectsByName,
+            SnapshotExternalMap = snapshotExternalMap,
+            BackupExternalMap = backupExternalMap,
+            ExistingBackupByPath = existingBackupByPath
+        };
+        foreach (IGrouping<string, LegacyBackupFolder> projectGroup in discovered.GroupBy(folder => folder.ProjectName, StringComparer.OrdinalIgnoreCase))
+            ImportLegacyProjectGroup(projectGroup, rootPath, opts, config, state);
 
         return new MetadataSyncResult(
             MetadataSyncStatus.Success,
-            importedProjects,
-            importedSnapshots,
-            importedBackups,
+            state.ImportedProjects,
+            state.ImportedSnapshots,
+            state.ImportedBackups,
             0,
             string.Empty)
         {
-            AffectedProjectIds = [.. affectedProjectIds],
-            RepairedBackups = repairedBackups
+            AffectedProjectIds = [.. state.AffectedProjectIds],
+            RepairedBackups = state.RepairedBackups
         };
     }
 
-    private MetadataSyncPreview PreviewBackupFoldersFromDestination(string rootPath, MetadataSyncOptions opts, string databasePath)
+    private void ImportLegacyProjectGroup(
+        IGrouping<string, LegacyBackupFolder> projectGroup,
+        string rootPath,
+        MetadataSyncOptions options,
+        AppConfig config,
+        LegacyImportState state)
+    {
+        List<LegacyBackupFolder> importableFolders = [.. projectGroup
+            .Where(folder => !state.ExistingBackupByPath.ContainsKey(NormalizeStablePath(folder.RelativePath)))
+            .OrderBy(folder => folder.CreatedUtc)];
+        List<LegacyBackupFolder> repairableFolders = [.. projectGroup
+            .Where(folder => IsRepairableLegacyBackup(folder, state.ExistingBackupByPath))
+            .OrderBy(folder => folder.CreatedUtc)];
+        if (importableFolders.Count == 0 && repairableFolders.Count == 0)
+            return;
+
+        Project? project = ResolveLegacyProject(projectGroup, rootPath, options, config, state);
+        if (project is null)
+            return;
+
+        RepairLegacyBackups(repairableFolders, rootPath, state);
+        ImportLegacyBackups(importableFolders, rootPath, project, state);
+        if (options.MarkNeedsRestoreOnImport && state.AffectedProjectIds.Contains(project.Id))
+            _repo.UpdateProjectNeedsRestore(project.Id, true);
+    }
+
+    private static bool IsRepairableLegacyBackup(
+        LegacyBackupFolder folder,
+        Dictionary<string, Backup> existingBackupByPath) =>
+        existingBackupByPath.TryGetValue(NormalizeStablePath(folder.RelativePath), out Backup? backup) &&
+        backup.IsImported &&
+        backup.TotalBytes <= 0;
+
+    private Project? ResolveLegacyProject(
+        IGrouping<string, LegacyBackupFolder> projectGroup,
+        string rootPath,
+        MetadataSyncOptions options,
+        AppConfig config,
+        LegacyImportState state)
+    {
+        string projectName = projectGroup.Key;
+        string externalId = BuildStableExternalId("legacy-project", rootPath, projectName);
+        if (!state.ProjectsByName.TryGetValue(projectName, out Project? project))
+            return options.AllowCreateProjects
+                ? CreateLegacyProject(projectGroup, config, externalId, state)
+                : null;
+
+        if (string.IsNullOrWhiteSpace(project.ExternalId))
+        {
+            _repo.UpdateProjectExternalId(project.Id, externalId);
+            project = project with { ExternalId = externalId };
+            state.ProjectsByName[projectName] = project;
+        }
+
+        return project;
+    }
+
+    private Project? CreateLegacyProject(
+        IGrouping<string, LegacyBackupFolder> projectGroup,
+        AppConfig config,
+        string externalId,
+        LegacyImportState state)
+    {
+        string projectRoot = ResolveImportedProjectRoot(null, config.ProjectsRoot, projectGroup.Key, externalId);
+        int projectId = _repo.AddProject(new Project
+        {
+            ExternalId = externalId,
+            Name = projectGroup.Key,
+            RootPath = projectRoot,
+            Preset = "generic",
+            CreatedUtc = projectGroup.Min(folder => folder.CreatedUtc),
+            NeedsRestore = false
+        });
+        Project? project = _repo.GetProjectById(projectId);
+        if (project is null)
+            return null;
+
+        state.ProjectsByName[projectGroup.Key] = project;
+        state.ImportedProjects++;
+        return project;
+    }
+
+    private void RepairLegacyBackups(
+        IEnumerable<LegacyBackupFolder> folders,
+        string rootPath,
+        LegacyImportState state)
+    {
+        foreach (string relativePath in folders.Select(folder => folder.RelativePath))
+        {
+            string path = NormalizeStablePath(relativePath);
+            if (!state.ExistingBackupByPath.TryGetValue(path, out Backup? backup))
+                continue;
+
+            long sizeBytes = GetLegacyBackupFolderSize(rootPath, relativePath);
+            if (sizeBytes <= 0)
+                continue;
+
+            _repo.UpdateBackupTotalBytes(backup.Id, sizeBytes);
+            Snapshot? snapshot = _repo.GetSnapshotById(backup.SnapshotId);
+            if (snapshot is not null && snapshot.TotalBytes <= 0)
+                _repo.UpdateSnapshotTotalBytes(snapshot.Id, sizeBytes);
+
+            state.RepairedBackups++;
+            state.AffectedProjectIds.Add(backup.ProjectId);
+        }
+    }
+
+    private void ImportLegacyBackups(
+        IEnumerable<LegacyBackupFolder> folders,
+        string rootPath,
+        Project project,
+        LegacyImportState state)
+    {
+        foreach (LegacyBackupFolder folder in folders)
+            ImportLegacyBackup(folder, rootPath, project, state);
+    }
+
+    private void ImportLegacyBackup(
+        LegacyBackupFolder folder,
+        string rootPath,
+        Project project,
+        LegacyImportState state)
+    {
+        string normalizedPath = NormalizeStablePath(folder.RelativePath);
+        string snapshotExternalId = BuildStableExternalId("legacy-snapshot", rootPath, folder.RelativePath);
+        string backupExternalId = BuildStableExternalId("legacy-backup", rootPath, folder.RelativePath);
+        long sizeBytes = GetLegacyBackupFolderSize(rootPath, folder.RelativePath);
+        int snapshotId = ResolveLegacySnapshot(snapshotExternalId, project.Id, folder, sizeBytes, state);
+        if (state.BackupExternalMap.ContainsKey(backupExternalId))
+            return;
+
+        _repo.CreateBackupFromMetadata(
+            backupExternalId,
+            project.Id,
+            snapshotId,
+            folder.CreatedUtc,
+            "manual",
+            sizeBytes,
+            folder.RelativePath,
+            rootPath,
+            string.Empty,
+            isProtected: false,
+            isImported: true,
+            backupMode: BackupModes.Full);
+        state.ImportedBackups++;
+        state.AffectedProjectIds.Add(project.Id);
+        state.ExistingBackupByPath[normalizedPath] = _repo.GetBackupByExternalId(backupExternalId)
+            ?? new Backup { Id = 0, ProjectId = project.Id, SnapshotId = snapshotId, Path = folder.RelativePath, TotalBytes = sizeBytes, IsImported = true };
+    }
+
+    private int ResolveLegacySnapshot(
+        string externalId,
+        int projectId,
+        LegacyBackupFolder folder,
+        long sizeBytes,
+        LegacyImportState state)
+    {
+        if (state.SnapshotExternalMap.TryGetValue(externalId, out int snapshotId))
+            return snapshotId;
+
+        state.ImportedSnapshots++;
+        return _repo.CreateSnapshotFromMetadata(
+            externalId,
+            projectId,
+            folder.CreatedUtc,
+            fileCount: 0,
+            totalBytes: sizeBytes);
+    }
+
+    private MetadataSyncPreview PreviewBackupFoldersFromDestination(
+        string rootPath,
+        MetadataSyncOptions opts,
+        string databasePath,
+        IReadOnlySet<string>? representedProjectNames = null,
+        IReadOnlySet<string>? representedBackupPaths = null)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
         {
@@ -1349,6 +1649,8 @@ public sealed class MetadataSyncService
             .GetAllProjects()
             .Select(p => p.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (representedProjectNames is not null)
+            projectsByName.UnionWith(representedProjectNames);
         IReadOnlyDictionary<string, int> snapshotExternalMap = _repo.GetSnapshotExternalIdMap();
         IReadOnlyDictionary<string, int> backupExternalMap = _repo.GetBackupExternalIdMap();
         var existingBackupPaths = _repo
@@ -1357,6 +1659,8 @@ public sealed class MetadataSyncService
             .Select(backup => NormalizeStablePath(NormalizeBackupPathRel(backup.Path)))
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (representedBackupPaths is not null)
+            existingBackupPaths.UnionWith(representedBackupPaths);
 
         int addProjects = 0;
         int addSnapshots = 0;
@@ -1364,29 +1668,18 @@ public sealed class MetadataSyncService
         var previewedProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var previewedSnapshots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var previewedBackups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var previewContext = new LegacyPreviewContext(
+            rootPath,
+            opts.AllowCreateProjects,
+            new LegacyPreviewIndexes(projectsByName, snapshotExternalMap, backupExternalMap, existingBackupPaths),
+            new LegacyPreviewSeen(previewedProjects, previewedSnapshots, previewedBackups));
 
         foreach (LegacyBackupFolder folder in discovered)
         {
-            string normalizedRelativePath = NormalizeStablePath(folder.RelativePath);
-            if (existingBackupPaths.Contains(normalizedRelativePath))
-                continue;
-
-            bool projectExists = projectsByName.Contains(folder.ProjectName);
-            if (!projectExists && !opts.AllowCreateProjects)
-                continue;
-
-            if (!projectExists && previewedProjects.Add(folder.ProjectName))
-            {
-                addProjects++;
-            }
-
-            string snapshotExternalId = BuildStableExternalId("legacy-snapshot", rootPath, folder.RelativePath);
-            if (!snapshotExternalMap.ContainsKey(snapshotExternalId) && previewedSnapshots.Add(snapshotExternalId))
-                addSnapshots++;
-
-            string backupExternalId = BuildStableExternalId("legacy-backup", rootPath, folder.RelativePath);
-            if (!backupExternalMap.ContainsKey(backupExternalId) && previewedBackups.Add(backupExternalId))
-                addBackups++;
+            (int projects, int snapshots, int backups) = CountLegacyFolderPreview(folder, previewContext);
+            addProjects += projects;
+            addSnapshots += snapshots;
+            addBackups += backups;
         }
 
         return new MetadataSyncPreview(
@@ -1401,6 +1694,25 @@ public sealed class MetadataSyncService
             string.Empty);
     }
 
+    private static (int Projects, int Snapshots, int Backups) CountLegacyFolderPreview(
+        LegacyBackupFolder folder,
+        LegacyPreviewContext context)
+    {
+        if (context.Indexes.ExistingBackupPaths.Contains(NormalizeStablePath(folder.RelativePath)))
+            return default;
+
+        bool projectExists = context.Indexes.ProjectsByName.Contains(folder.ProjectName);
+        if (!projectExists && !context.AllowCreateProjects)
+            return default;
+
+        int projects = !projectExists && context.Seen.Projects.Add(folder.ProjectName) ? 1 : 0;
+        string snapshotExternalId = BuildStableExternalId("legacy-snapshot", context.RootPath, folder.RelativePath);
+        int snapshots = !context.Indexes.SnapshotExternalMap.ContainsKey(snapshotExternalId) && context.Seen.Snapshots.Add(snapshotExternalId) ? 1 : 0;
+        string backupExternalId = BuildStableExternalId("legacy-backup", context.RootPath, folder.RelativePath);
+        int backups = !context.Indexes.BackupExternalMap.ContainsKey(backupExternalId) && context.Seen.Backups.Add(backupExternalId) ? 1 : 0;
+        return (projects, snapshots, backups);
+    }
+
     private static IReadOnlyList<LegacyBackupFolder> DiscoverLegacyBackupFolders(string rootPath)
     {
         var result = new List<LegacyBackupFolder>();
@@ -1410,8 +1722,9 @@ public sealed class MetadataSyncService
         {
             projectDirs = Directory.EnumerateDirectories(rootPath);
         }
-        catch
+        catch (Exception ex)
         {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Legacy backup root could not be enumerated: {ex.Message}");
             return result;
         }
 
@@ -1728,8 +2041,9 @@ public sealed class MetadataSyncService
             if (Directory.Exists(existingRoot))
                 return false;
         }
-        catch
+        catch (Exception ex)
         {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Existing project root could not be inspected: {ex.Message}");
         }
 
         return Directory.Exists(importedRoot);
@@ -1833,8 +2147,9 @@ public sealed class MetadataSyncService
             if (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative))
                 return false;
 
+            char[] separators = [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar];
             var firstSegment = relative
-                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Split(separators, StringSplitOptions.RemoveEmptyEntries)
                 .FirstOrDefault(segment => !string.IsNullOrWhiteSpace(segment));
 
             return firstSegment is not null &&
@@ -1850,59 +2165,86 @@ public sealed class MetadataSyncService
         }
     }
 
-    private static void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
+    private void TryExportMissingBackupTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
-        TryExportTombstones(
-            rootPath,
-            BackupEntityType,
-            missingExternalIds,
-            Environment.MachineName,
-            "Missing backup tombstone export");
+        string machineId = Environment.MachineName;
+        TryExportTombstonesCore(
+            new TombstoneExportContext(
+                rootPath,
+                BackupEntityType,
+                missingExternalIds,
+                machineId,
+                "Missing backup tombstone export",
+                UnknownAppVersion,
+                ResolveLeaseOwnerId(machineId)),
+            _repositoryLeaseService);
     }
 
-    private static void TryExportMissingSnapshotTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
+    private void TryExportMissingSnapshotTombstones(string rootPath, IReadOnlyCollection<string> missingExternalIds)
     {
-        TryExportTombstones(
-            rootPath,
-            "snapshot",
-            missingExternalIds,
-            Environment.MachineName,
-            "Missing snapshot tombstone export");
+        string machineId = Environment.MachineName;
+        TryExportTombstonesCore(
+            new TombstoneExportContext(
+                rootPath,
+                "snapshot",
+                missingExternalIds,
+                machineId,
+                "Missing snapshot tombstone export",
+                UnknownAppVersion,
+                ResolveLeaseOwnerId(machineId)),
+            _repositoryLeaseService);
     }
 
-    public static void TryExportProjectTombstone(string rootPath, string projectExternalId, string? originMachineId = null)
+    public static void TryExportProjectTombstone(
+        string rootPath,
+        string projectExternalId,
+        string? originMachineId = null,
+        string? leaseOwnerId = null)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(projectExternalId))
             return;
 
         string machineId = string.IsNullOrWhiteSpace(originMachineId) ? Environment.MachineName : originMachineId;
-        TryExportTombstones(
-            rootPath,
-            "project",
-            [projectExternalId],
-            machineId,
-            "Project tombstone export");
+        var leaseService = new RepositoryLeaseService();
+        TryExportTombstonesCore(
+            new TombstoneExportContext(
+                rootPath,
+                "project",
+                [projectExternalId],
+                machineId,
+                "Project tombstone export",
+                UnknownAppVersion,
+                leaseOwnerId ?? CreateCompatibilityInstallationId(machineId)),
+            leaseService);
     }
 
-    private static void TryExportTombstones(
-        string rootPath,
-        string entityType,
-        IReadOnlyCollection<string> externalIds,
-        string machineId,
-        string logLabel,
-        string appVersion = "unknown")
+    private static void TryExportTombstonesCore(
+        TombstoneExportContext context,
+        RepositoryLeaseService leaseService)
     {
-        if (string.IsNullOrWhiteSpace(rootPath) || externalIds.Count == 0)
+        if (string.IsNullOrWhiteSpace(context.RootPath) || context.ExternalIds.Count == 0)
             return;
 
-        var store = new MetadataStore(rootPath);
+        RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
+            context.RootPath,
+            CreateLeaseRequest(context.LeaseOwnerId, context.MachineId, context.LogLabel, context.AppVersion));
+        if (!leaseResult.Acquired)
+        {
+            Console.WriteLine($"[MetadataSync] {context.LogLabel} skipped: {leaseResult.Inspection.Message}");
+            return;
+        }
+
+        using RepositoryLeaseHandle lease = leaseResult.Handle!;
+        var store = new MetadataStore(context.RootPath);
         try
         {
+            if (!lease.IsOwner)
+                return;
             store.EnsureSchema();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] {logLabel} failed: store init error at '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] {context.LogLabel} failed: store init error at '{context.RootPath}': {ex.Message}");
             return;
         }
 
@@ -1910,21 +2252,23 @@ public sealed class MetadataSyncService
         MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
             store,
             now,
-            appVersion,
-            machineId,
+            context.AppVersion,
+            context.MachineId,
             updateExistingAppVersion: false);
 
         try
         {
+            if (!lease.IsOwner)
+                return;
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                AddTombstones(store, externalIds, entityType, now, machineId);
+                AddTombstones(store, context.ExternalIds, context.EntityType, now, context.MachineId);
             });
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] {logLabel} failed writing store '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] {context.LogLabel} failed writing store '{context.RootPath}': {ex.Message}");
         }
     }
 
@@ -1948,6 +2292,7 @@ public sealed class MetadataSyncService
             };
         }
 
+        metaInfo.SchemaVersion = MetadataStore.CurrentSchemaVersion;
         metaInfo.LastWriteUtc = now;
         metaInfo.WriterMachineId = machineId;
         if (updateExistingAppVersion)
@@ -1997,41 +2342,55 @@ public sealed class MetadataSyncService
         string machineId,
         CancellationToken ct = default)
     {
+        return await ExecuteExportWithLeaseAsync(
+                rootPath,
+                appVersion,
+                machineId,
+                "project-metadata-export",
+                "Project export",
+                (destinationLease, useDeferredStore) => ExportProjectToStoreInternal(
+                    rootPath,
+                    projectId,
+                    appVersion,
+                    machineId,
+                    destinationLease,
+                    useDeferredStore),
+                ct)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<MetadataSyncResult> ExecuteExportWithLeaseAsync(
+        string rootPath,
+        string appVersion,
+        string machineId,
+        string leaseOperation,
+        string retryLabel,
+        Func<RepositoryLeaseHandle?, bool, MetadataSyncResult> export,
+        CancellationToken ct)
+    {
         SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
         await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
-            TimeSpan[] retryDelays =
-            [
-                TimeSpan.FromMilliseconds(200),
-                TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromSeconds(2),
-                TimeSpan.FromSeconds(5)
-            ];
+            if (string.IsNullOrWhiteSpace(rootPath))
+                return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
 
-            for (int attempt = 0; attempt <= retryDelays.Length; attempt++)
-            {
-                try
-                {
-                    return ExportProjectToStoreInternal(rootPath, projectId, appVersion, machineId);
-                }
-                catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
-                {
-                    if (attempt >= retryDelays.Length)
-                    {
-                        Console.WriteLine($"[MetadataSync] Project export failed after retries: {ex.Message}");
-                        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
-                    }
+            RepositoryLeaseAcquireResult leaseResult = TryAcquireRepositoryLease(
+                rootPath,
+                leaseOperation,
+                appVersion,
+                machineId);
+            bool useDeferredStore = leaseResult.Status == RepositoryLeaseAcquireStatus.Unavailable;
+            if (!leaseResult.Acquired && !useDeferredStore)
+                return LeaseFailure(leaseResult);
 
-                    TimeSpan delay = retryDelays[attempt];
-                    Console.WriteLine($"[MetadataSync] Project export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
-                    await Task.Delay(delay, ct).ConfigureAwait(false);
-                }
-            }
-
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Project export failed after retries.");
+            using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
+            return await ExecuteStoreWriteWithRetryAsync(
+                    () => export(destinationLease, useDeferredStore),
+                    retryLabel,
+                    ct)
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -2039,7 +2398,110 @@ public sealed class MetadataSyncService
         }
     }
 
-    private MetadataSyncResult ExportProjectToStoreInternal(string rootPath, int projectId, string appVersion, string machineId)
+    private static async Task<MetadataSyncResult> ExecuteStoreWriteWithRetryAsync(
+        Func<MetadataSyncResult> write,
+        string operationLabel,
+        CancellationToken ct)
+    {
+        for (int attempt = 0; attempt <= StoreRetryDelays.Length; attempt++)
+        {
+            try
+            {
+                return write();
+            }
+            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+            {
+                if (attempt >= StoreRetryDelays.Length)
+                {
+                    Console.WriteLine($"[MetadataSync] {operationLabel} failed after retries: {ex.Message}");
+                    return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+                }
+
+                TimeSpan delay = StoreRetryDelays[attempt];
+                Console.WriteLine($"[MetadataSync] {operationLabel} store locked; retrying in {delay.TotalMilliseconds:0}ms.");
+                await Task.Delay(delay, ct).ConfigureAwait(false);
+            }
+        }
+
+        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, $"{operationLabel} failed after retries.");
+    }
+
+    private MetadataSyncResult? ValidateDestinationLease(
+        string rootPath,
+        string appVersion,
+        string machineId,
+        RepositoryLeaseHandle? destinationLease)
+    {
+        if (destinationLease is null)
+            return null;
+        if (!destinationLease.IsOwner)
+            return LostLeaseFailure();
+        if (!HasDeferredExport(rootPath))
+            return null;
+        if (TryFlushDeferredExport(
+                rootPath,
+                appVersion,
+                machineId,
+                ResolveLeaseOwnerId(machineId),
+                _repositoryLeaseService))
+        {
+            return null;
+        }
+
+        return MetadataSyncResult.Failure(
+            MetadataSyncStatus.RepositoryBusy,
+            "Deferred metadata was preserved because destination metadata already exists or the queue could not be locked safely.");
+    }
+
+    private ExportStoreContext PrepareExportStore(
+        string rootPath,
+        string appVersion,
+        string machineId,
+        RepositoryLeaseHandle? destinationLease,
+        bool useDeferredStore,
+        string deferredLeaseOperation,
+        string operationLabel)
+    {
+        MetadataSyncResult? destinationFailure = ValidateDestinationLease(
+            rootPath, appVersion, machineId, destinationLease);
+        if (destinationFailure is not null)
+            return ExportStoreContext.Failed(rootPath, destinationFailure);
+
+        string storeRoot = useDeferredStore ? GetDeferredExportRoot(rootPath) : rootPath;
+        RepositoryLeaseHandle? deferredLease = useDeferredStore
+            ? TryAcquireDeferredLease(storeRoot, appVersion, machineId, deferredLeaseOperation)
+            : null;
+        RepositoryLeaseHandle? activeLease = destinationLease ?? deferredLease;
+        if (activeLease is null || !activeLease.IsOwner)
+        {
+            return new ExportStoreContext(
+                storeRoot,
+                deferredLease,
+                null,
+                null,
+                MetadataSyncResult.Failure(
+                    MetadataSyncStatus.WriteFailed,
+                    "Metadata export could not acquire its deferred writer lease."));
+        }
+
+        var store = new MetadataStore(storeRoot);
+        MetadataSyncResult? initializationFailure = TryInitializeExportStore(
+            store, activeLease, rootPath, operationLabel);
+        return new ExportStoreContext(
+            storeRoot,
+            deferredLease,
+            activeLease,
+            store,
+            initializationFailure);
+    }
+
+    private MetadataSyncResult ExportProjectToStoreInternal(
+        string rootPath,
+        int projectId,
+        string appVersion,
+        string machineId,
+        RepositoryLeaseHandle? destinationLease,
+        bool useDeferredStore)
     {
         if (string.IsNullOrWhiteSpace(rootPath))
         {
@@ -2047,28 +2509,20 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
         }
 
-        TryFlushDeferredExport(rootPath);
+        using ExportStoreContext context = PrepareExportStore(
+            rootPath,
+            appVersion,
+            machineId,
+            destinationLease,
+            useDeferredStore,
+            "deferred-project-metadata-export",
+            "Project export");
+        if (context.Failure is not null)
+            return context.Failure;
 
-        string storeRoot = rootPath;
-        bool isDeferred = false;
-        string destMetaDir = GetMetaDir(rootPath);
-        if (!TryEnsureMetadataDirWritable(destMetaDir))
-        {
-            storeRoot = GetDeferredExportRoot(rootPath);
-            isDeferred = true;
-        }
-
-        var store = new MetadataStore(storeRoot);
-        Console.WriteLine($"[MetadataSync] Project export target store: '{store.DatabasePath}'.");
-        try
-        {
-            store.EnsureSchema();
-        }
-        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
-        {
-            Console.WriteLine($"[MetadataSync] Project export failed: store init error at '{rootPath}': {ex.Message}");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
-        }
+        string storeRoot = context.StoreRoot;
+        RepositoryLeaseHandle activeLease = context.ActiveLease!;
+        MetadataStore store = context.Store!;
 
         Project? project = _repo.GetProjectById(projectId);
         if (project == null)
@@ -2079,41 +2533,35 @@ public sealed class MetadataSyncService
 
         string projectExternalId = EnsureProjectExternalId(project);
         DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
+        MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+            store,
+            now,
+            appVersion,
+            machineId,
+            updateExistingAppVersion: true);
+        if (!TryPrepareGuardedProjectWrite(
+                store,
+                new GuardedProjectWriteRequest(rootPath, project, projectExternalId, now, machineId),
+                out GuardedProjectWrite? guardedWrite,
+                out string revisionFailure))
         {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = appVersion,
-                WriterMachineId = machineId
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterAppVersion = appVersion;
-            metaInfo.WriterMachineId = machineId;
+            return MetadataSyncResult.Failure(MetadataSyncStatus.RepositoryBusy, revisionFailure);
         }
 
         try
         {
+            if (!activeLease.IsOwner)
+                return LostLeaseFailure();
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                store.UpsertProject(new MetaProject
-                {
-                    ExternalId = projectExternalId,
-                    Name = project.Name,
-                    Preset = project.Preset,
-                    RootPathHint = project.RootPath,
-                    CreatedUtc = project.CreatedUtc,
-                    SettingsJson = BuildProjectSettingsJson(project),
-                    UpdatedUtc = now
-                });
+                if (!store.TryUpsertProject(guardedWrite!.Record, guardedWrite.ExpectedRevision))
+                    throw new MetadataRevisionConflictException("Project metadata changed after its revision was inspected.");
             });
+        }
+        catch (MetadataRevisionConflictException ex)
+        {
+            return MetadataSyncResult.Failure(MetadataSyncStatus.RepositoryBusy, ex.Message);
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
@@ -2131,17 +2579,12 @@ public sealed class MetadataSyncService
         Console.WriteLine($"[MetadataSync] Project export complete for project '{project.Name}' to '{storeRoot}'.");
         LogStoreCounts(store);
 
-        if (isDeferred)
-        {
-            if (TryFlushDeferredExport(rootPath))
-                return exportResult;
-
-            return MetadataSyncResult.Failure(
-                MetadataSyncStatus.WriteFailed,
-                "Project export queued: destination not writable. Will retry when available.");
-        }
-
-        return exportResult;
+        return CompleteExport(
+            rootPath,
+            guardedWrite!,
+            useDeferredStore,
+            exportResult,
+            "Project export queued: destination not writable. Will retry when available.");
     }
 
     public async Task<MetadataSyncResult> ExportBackupToStoreAsync(
@@ -2152,49 +2595,32 @@ public sealed class MetadataSyncService
         bool forceBackfill = false,
         CancellationToken ct = default)
     {
-        SemaphoreSlim metadataIoGate = GetMetadataIoGate(rootPath);
-        await metadataIoGate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
-            TimeSpan[] retryDelays =
-            [
-                TimeSpan.FromMilliseconds(200),
-                TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromSeconds(2),
-                TimeSpan.FromSeconds(5)
-            ];
-
-            for (int attempt = 0; attempt <= retryDelays.Length; attempt++)
-            {
-                try
-                {
-                    return ExportBackupToStoreInternal(rootPath, backupId, appVersion, machineId, forceBackfill);
-                }
-                catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
-                {
-                    if (attempt >= retryDelays.Length)
-                    {
-                        Console.WriteLine($"[MetadataSync] Export failed after retries: {ex.Message}");
-                        return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
-                    }
-
-                    TimeSpan delay = retryDelays[attempt];
-                    Console.WriteLine($"[MetadataSync] Export store locked; retrying in {delay.TotalMilliseconds:0}ms.");
-                    await Task.Delay(delay, ct).ConfigureAwait(false);
-                }
-            }
-
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, "Export failed after retries.");
-        }
-        finally
-        {
-            metadataIoGate.Release();
-        }
+        return await ExecuteExportWithLeaseAsync(
+                rootPath,
+                appVersion,
+                machineId,
+                "backup-metadata-export",
+                "Backup export",
+                (destinationLease, useDeferredStore) => ExportBackupToStoreInternal(
+                    rootPath,
+                    backupId,
+                    appVersion,
+                    machineId,
+                    forceBackfill,
+                    destinationLease,
+                    useDeferredStore),
+                ct)
+            .ConfigureAwait(false);
     }
 
-    private MetadataSyncResult ExportBackupToStoreInternal(string rootPath, int backupId, string appVersion, string machineId, bool forceBackfill)
+    private MetadataSyncResult ExportBackupToStoreInternal(
+        string rootPath,
+        int backupId,
+        string appVersion,
+        string machineId,
+        bool forceBackfill,
+        RepositoryLeaseHandle? destinationLease,
+        bool useDeferredStore)
     {
         if (string.IsNullOrWhiteSpace(rootPath))
         {
@@ -2202,148 +2628,70 @@ public sealed class MetadataSyncService
             return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidPath, InvalidRootPathMessage);
         }
 
-        Backup? backup = _repo.GetBackupById(backupId);
-        if (backup == null)
-        {
-            Console.WriteLine($"[MetadataSync] Export skipped: backup {backupId} no longer exists.");
-            return new MetadataSyncResult(
-                MetadataSyncStatus.Success,
-                0,
-                0,
-                0,
-                0,
-                "Backup no longer exists; metadata export skipped.");
-        }
+        if (!TryResolveBackupExportEntities(backupId, out BackupExportEntities? entities, out MetadataSyncResult? entityFailure))
+            return entityFailure!;
 
-        Project? project = _repo.GetProjectById(backup.ProjectId);
-        if (project == null)
-        {
-            Console.WriteLine($"[MetadataSync] Export failed: project {backup.ProjectId} not found.");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
-        }
+        Backup backup = entities!.Backup;
+        Project project = entities.Project;
+        Snapshot snapshot = entities.Snapshot;
 
-        Snapshot? snapshot = _repo.GetSnapshotById(backup.SnapshotId);
-        if (snapshot == null)
-        {
-            Console.WriteLine($"[MetadataSync] Export skipped: snapshot {backup.SnapshotId} no longer exists.");
-            return new MetadataSyncResult(
-                MetadataSyncStatus.Success,
-                0,
-                0,
-                0,
-                0,
-                "Snapshot no longer exists; metadata export skipped.");
-        }
+        using ExportStoreContext context = PrepareExportStore(
+            rootPath,
+            appVersion,
+            machineId,
+            destinationLease,
+            useDeferredStore,
+            "deferred-backup-metadata-export",
+            "Backup export");
+        if (context.Failure is not null)
+            return context.Failure;
 
-        TryFlushDeferredExport(rootPath);
-
-        string storeRoot = rootPath;
-        bool isDeferred = false;
-        string destMetaDir = GetMetaDir(rootPath);
-        if (!TryEnsureMetadataDirWritable(destMetaDir))
-        {
-            storeRoot = GetDeferredExportRoot(rootPath);
-            isDeferred = true;
-        }
-
-        var store = new MetadataStore(storeRoot);
-        Console.WriteLine($"[MetadataSync] Export target store: '{store.DatabasePath}'.");
-        try
-        {
-            store.EnsureSchema();
-        }
-        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
-        {
-            Console.WriteLine($"[MetadataSync] Export failed: store init error at '{rootPath}': {ex.Message}");
-            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
-        }
+        string storeRoot = context.StoreRoot;
+        RepositoryLeaseHandle activeLease = context.ActiveLease!;
+        MetadataStore store = context.Store!;
 
         string projectExternalId = EnsureProjectExternalId(project);
         string snapshotExternalId = EnsureSnapshotExternalId(snapshot);
         string backupExternalId = EnsureBackupExternalId(backup);
 
         DateTime now = DateTime.UtcNow;
-        MetaInfo? metaInfo = store.GetMetaInfo();
-        if (metaInfo == null)
+        MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
+            store,
+            now,
+            appVersion,
+            machineId,
+            updateExistingAppVersion: true);
+        if (!TryPrepareGuardedProjectWrite(
+                store,
+                new GuardedProjectWriteRequest(rootPath, project, projectExternalId, now, machineId),
+                out GuardedProjectWrite? guardedWrite,
+                out string revisionFailure))
         {
-            metaInfo = new MetaInfo
-            {
-                SchemaVersion = MetadataStore.CurrentSchemaVersion,
-                CreatedUtc = now,
-                LastWriteUtc = now,
-                WriterAppVersion = appVersion,
-                WriterMachineId = machineId
-            };
-        }
-        else
-        {
-            metaInfo.LastWriteUtc = now;
-            metaInfo.WriterAppVersion = appVersion;
-            metaInfo.WriterMachineId = machineId;
+            return MetadataSyncResult.Failure(MetadataSyncStatus.RepositoryBusy, revisionFailure);
         }
 
-        int exportedProjects = 0;
-        int exportedSnapshots = 0;
-        int exportedBackups = 0;
-        bool backfilled = forceBackfill || !store.HasProject(projectExternalId);
-
+        BackupExportCounts counts;
         try
         {
-            store.ExecuteWriteBatch(() =>
-            {
-                store.UpsertMetaInfo(metaInfo);
-                if (backfilled)
-                {
-                    (int snapshots, int backups) = ExportProjectHistory(store, project, projectExternalId, now, machineId);
-                    exportedProjects = 1;
-                    exportedSnapshots = snapshots;
-                    exportedBackups = backups;
-                }
-                else
-                {
-                    store.UpsertProject(new MetaProject
-                    {
-                        ExternalId = projectExternalId,
-                        Name = project.Name,
-                        Preset = project.Preset,
-                        RootPathHint = project.RootPath,
-                        CreatedUtc = project.CreatedUtc,
-                        SettingsJson = BuildProjectSettingsJson(project),
-                        UpdatedUtc = now
-                    });
-                    store.UpsertSnapshot(new MetaSnapshot
-                    {
-                        ExternalId = snapshotExternalId,
-                        ProjectExternalId = projectExternalId,
-                        CreatedUtc = snapshot.CreatedUtc,
-                        FileCount = snapshot.FileCount,
-                        TotalBytes = snapshot.TotalBytes,
-                        DiffAdded = snapshot.DiffAdded,
-                        DiffModified = snapshot.DiffModified,
-                        DiffDeleted = snapshot.DiffDeleted,
-                        DiffNetBytes = snapshot.DiffNetBytes,
-                        DiffTopPathsJson = string.IsNullOrWhiteSpace(snapshot.DiffTopPathsJson) ? "[]" : snapshot.DiffTopPathsJson
-                    });
-                    var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
-                    store.UpsertBackup(new MetaBackup
-                    {
-                        ExternalId = backupExternalId,
-                        ProjectExternalId = projectExternalId,
-                        SnapshotExternalId = snapshotExternalId,
-                        CreatedUtc = backup.CreatedUtc,
-                        Type = backup.Type,
-                        BackupMode = BackupModes.Normalize(backup.BackupMode),
-                        TotalBytes = backup.TotalBytes,
-                        PathRel = backup.Path,
-                        DestinationAlias = backup.DestinationAlias ?? string.Empty,
-                        OriginMachineName = machineId,
-                        IsProtected = backup.IsProtected,
-                        IsEncrypted = backup.IsEncrypted,
-                        KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
-                    });
-                    exportedBackups = 1;
-                }
-            });
+            if (!activeLease.IsOwner)
+                return LostLeaseFailure();
+            counts = WriteBackupExport(
+                store,
+                metaInfo,
+                entities,
+                new BackupExportWriteContext(
+                    projectExternalId,
+                    snapshotExternalId,
+                    backupExternalId,
+                    now,
+                    machineId,
+                    forceBackfill,
+                    guardedWrite!.Record,
+                    guardedWrite.ExpectedRevision));
+        }
+        catch (MetadataRevisionConflictException ex)
+        {
+            return MetadataSyncResult.Failure(MetadataSyncStatus.RepositoryBusy, ex.Message);
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
@@ -2353,31 +2701,167 @@ public sealed class MetadataSyncService
 
         var exportResult = new MetadataSyncResult(
             MetadataSyncStatus.Success,
-            exportedProjects,
-            exportedSnapshots,
-            exportedBackups,
+            counts.Projects,
+            counts.Snapshots,
+            counts.Backups,
             0,
             string.Empty);
-        Console.WriteLine(backfilled
-            ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{storeRoot}': snapshots={exportedSnapshots}, backups={exportedBackups}."
+        Console.WriteLine(counts.Backfilled
+            ? $"[MetadataSync] Export complete (backfill) for project '{project.Name}' to '{storeRoot}': snapshots={counts.Snapshots}, backups={counts.Backups}."
             : $"[MetadataSync] Export complete for backup {backupId} to '{storeRoot}'.");
         LogStoreCounts(store);
-        if (isDeferred)
-        {
-            if (TryFlushDeferredExport(rootPath))
-                return exportResult;
-
-            return MetadataSyncResult.Failure(
-                MetadataSyncStatus.WriteFailed,
-                "Export queued: destination not writable. Will retry when available.");
-        }
-
-        return exportResult;
+        return CompleteExport(
+            rootPath,
+            guardedWrite,
+            useDeferredStore,
+            exportResult,
+            "Export queued: destination not writable. Will retry when available.");
     }
 
-    public static void ExportBackupTombstoneToStore(string rootPath, string backupExternalId, string appVersion, string machineId)
+    private MetadataSyncResult CompleteExport(
+        string rootPath,
+        GuardedProjectWrite write,
+        bool useDeferredStore,
+        MetadataSyncResult success,
+        string deferredMessage)
     {
-        ExportBackupTombstoneToStoreAsync(rootPath, backupExternalId, appVersion, machineId, CancellationToken.None)
+        if (useDeferredStore)
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, deferredMessage);
+        SaveSuccessfulProjectWriteBase(rootPath, write);
+        return success;
+    }
+
+    private bool TryResolveBackupExportEntities(
+        int backupId,
+        out BackupExportEntities? entities,
+        out MetadataSyncResult? failure)
+    {
+        entities = null;
+        Backup? backup = _repo.GetBackupById(backupId);
+        if (backup is null)
+        {
+            Console.WriteLine($"[MetadataSync] Export skipped: backup {backupId} no longer exists.");
+            failure = SuccessfulSkip("Backup no longer exists; metadata export skipped.");
+            return false;
+        }
+
+        Project? project = _repo.GetProjectById(backup.ProjectId);
+        if (project is null)
+        {
+            Console.WriteLine($"[MetadataSync] Export failed: project {backup.ProjectId} not found.");
+            failure = MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Project not found.");
+            return false;
+        }
+
+        Snapshot? snapshot = _repo.GetSnapshotById(backup.SnapshotId);
+        if (snapshot is null)
+        {
+            Console.WriteLine($"[MetadataSync] Export skipped: snapshot {backup.SnapshotId} no longer exists.");
+            failure = SuccessfulSkip("Snapshot no longer exists; metadata export skipped.");
+            return false;
+        }
+
+        entities = new BackupExportEntities(backup, project, snapshot);
+        failure = null;
+        return true;
+    }
+
+    private static MetadataSyncResult? TryInitializeExportStore(
+        MetadataStore store,
+        RepositoryLeaseHandle activeLease,
+        string rootPath,
+        string operationLabel)
+    {
+        Console.WriteLine($"[MetadataSync] {operationLabel} target store: '{store.DatabasePath}'.");
+        try
+        {
+            if (!activeLease.IsOwner)
+                return LostLeaseFailure();
+            store.EnsureSchema();
+            return null;
+        }
+        catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
+        {
+            Console.WriteLine($"[MetadataSync] {operationLabel} failed: store init error at '{rootPath}': {ex.Message}");
+            return MetadataSyncResult.Failure(MetadataSyncStatus.WriteFailed, ex.Message);
+        }
+    }
+
+    private static MetadataSyncResult SuccessfulSkip(string message) =>
+        new(MetadataSyncStatus.Success, 0, 0, 0, 0, message);
+
+    private BackupExportCounts WriteBackupExport(
+        MetadataStore store,
+        MetaInfo metaInfo,
+        BackupExportEntities entities,
+        BackupExportWriteContext context)
+    {
+        int exportedProjects = 0;
+        int exportedSnapshots = 0;
+        int exportedBackups = 0;
+        bool backfilled = context.ForceBackfill || !store.HasProject(context.ProjectExternalId);
+
+        store.ExecuteWriteBatch(() =>
+        {
+            store.UpsertMetaInfo(metaInfo);
+            if (backfilled)
+            {
+                (int snapshots, int backups) = ExportProjectHistory(
+                    store,
+                    entities.Project,
+                    context.ProjectExternalId,
+                    context.MachineId,
+                    context.ProjectRecord,
+                    context.ExpectedProjectRevision);
+                exportedProjects = 1;
+                exportedSnapshots = snapshots;
+                exportedBackups = backups;
+                return;
+            }
+
+            if (!store.TryUpsertProject(context.ProjectRecord, context.ExpectedProjectRevision))
+                throw new MetadataRevisionConflictException("Project metadata changed after its revision was inspected.");
+            store.UpsertSnapshot(new MetaSnapshot
+            {
+                ExternalId = context.SnapshotExternalId,
+                ProjectExternalId = context.ProjectExternalId,
+                CreatedUtc = entities.Snapshot.CreatedUtc,
+                FileCount = entities.Snapshot.FileCount,
+                TotalBytes = entities.Snapshot.TotalBytes,
+                DiffAdded = entities.Snapshot.DiffAdded,
+                DiffModified = entities.Snapshot.DiffModified,
+                DiffDeleted = entities.Snapshot.DiffDeleted,
+                DiffNetBytes = entities.Snapshot.DiffNetBytes,
+                DiffTopPathsJson = string.IsNullOrWhiteSpace(entities.Snapshot.DiffTopPathsJson)
+                    ? "[]"
+                    : entities.Snapshot.DiffTopPathsJson
+            });
+            store.UpsertBackup(CreateMetaBackup(
+                entities.Backup,
+                context.BackupExternalId,
+                context.ProjectExternalId,
+                context.SnapshotExternalId,
+                context.MachineId));
+            exportedBackups = 1;
+        });
+
+        return new BackupExportCounts(exportedProjects, exportedSnapshots, exportedBackups, backfilled);
+    }
+
+    public static void ExportBackupTombstoneToStore(
+        string rootPath,
+        string backupExternalId,
+        string appVersion,
+        string machineId,
+        string? leaseOwnerId = null)
+    {
+        ExportBackupTombstoneToStoreAsync(
+                rootPath,
+                backupExternalId,
+                appVersion,
+                machineId,
+                leaseOwnerId,
+                CancellationToken.None)
             .GetAwaiter().GetResult();
     }
 
@@ -2386,6 +2870,7 @@ public sealed class MetadataSyncService
         string backupExternalId,
         string appVersion,
         string machineId,
+        string? leaseOwnerId = null,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(backupExternalId))
@@ -2396,32 +2881,50 @@ public sealed class MetadataSyncService
         try
         {
             await WaitForNetworkReadyAsync(rootPath, ct).ConfigureAwait(false);
-            TimeSpan[] retryDelays =
-            [
-                TimeSpan.FromMilliseconds(200),
-                TimeSpan.FromMilliseconds(500),
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromSeconds(2),
-                TimeSpan.FromSeconds(5)
-            ];
+            var leaseService = new RepositoryLeaseService();
+            string ownerId = leaseOwnerId ?? CreateCompatibilityInstallationId(machineId);
+            var context = new TombstoneExportContext(
+                rootPath,
+                BackupEntityType,
+                [backupExternalId],
+                machineId,
+                "Backup tombstone export",
+                appVersion,
+                ownerId);
+            RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
+                rootPath,
+                CreateLeaseRequest(ownerId, machineId, "backup-tombstone-export", appVersion));
+            bool useDeferredStore = leaseResult.Status == RepositoryLeaseAcquireStatus.Unavailable;
+            if (!leaseResult.Acquired && !useDeferredStore)
+            {
+                Console.WriteLine($"[MetadataSync] Tombstone export skipped: {leaseResult.Inspection.Message}");
+                return;
+            }
 
-            for (int attempt = 0; attempt <= retryDelays.Length; attempt++)
+            using RepositoryLeaseHandle? destinationLease = leaseResult.Handle;
+            for (int attempt = 0; attempt <= StoreRetryDelays.Length; attempt++)
             {
                 try
                 {
-                    ExportBackupTombstoneInternal(rootPath, backupExternalId, appVersion, machineId);
+                    ExportBackupTombstoneInternal(
+                        context,
+                        leaseService,
+                        destinationLease,
+                        useDeferredStore);
                     return;
                 }
                 catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
                 {
-                    if (attempt >= retryDelays.Length)
+                    if (attempt >= StoreRetryDelays.Length)
                     {
                         Console.WriteLine($"[MetadataSync] Tombstone export failed after retries: {ex.Message}");
-                        TryExportBackupTombstoneToDeferred(rootPath, backupExternalId, appVersion, machineId);
+                        TryExportBackupTombstoneToDeferred(
+                            context,
+                            leaseService);
                         return;
                     }
 
-                    TimeSpan delay = retryDelays[attempt];
+                    TimeSpan delay = StoreRetryDelays[attempt];
                     Console.WriteLine($"[MetadataSync] Tombstone store locked; retrying in {delay.TotalMilliseconds:0}ms.");
                     await Task.Delay(delay, ct).ConfigureAwait(false);
                 }
@@ -2456,59 +2959,89 @@ public sealed class MetadataSyncService
             : StringComparer.Ordinal;
 
     private static void TryExportBackupTombstoneToDeferred(
-        string rootPath,
-        string backupExternalId,
-        string appVersion,
-        string machineId)
+        TombstoneExportContext context,
+        RepositoryLeaseService leaseService)
     {
         try
         {
-            string deferredRoot = GetDeferredExportRoot(rootPath);
+            string deferredRoot = GetDeferredExportRoot(context.RootPath);
+            Directory.CreateDirectory(deferredRoot);
+            RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
+                deferredRoot,
+                CreateLeaseRequest(
+                    context.LeaseOwnerId,
+                    context.MachineId,
+                    "deferred-backup-tombstone-export",
+                    context.AppVersion));
+            if (!leaseResult.Acquired)
+                return;
+
+            using RepositoryLeaseHandle lease = leaseResult.Handle!;
             var store = new MetadataStore(deferredRoot);
+            if (!lease.IsOwner)
+                return;
             store.EnsureSchema();
 
             DateTime now = DateTime.UtcNow;
             MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
                 store,
                 now,
-                appVersion,
-                machineId,
+                context.AppVersion,
+                context.MachineId,
                 updateExistingAppVersion: true);
 
+            if (!lease.IsOwner)
+                return;
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                AddTombstones(store, [backupExternalId], BackupEntityType, now, machineId);
+                AddTombstones(store, context.ExternalIds, context.EntityType, now, context.MachineId);
             });
 
-            Console.WriteLine($"[MetadataSync] Tombstone export deferred locally for '{rootPath}'.");
+            Console.WriteLine($"[MetadataSync] Tombstone export deferred locally for '{context.RootPath}'.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetadataSync] Tombstone defer failed for '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] Tombstone defer failed for '{context.RootPath}': {ex.Message}");
         }
     }
 
-    private static void ExportBackupTombstoneInternal(string rootPath, string backupExternalId, string appVersion, string machineId)
+    private static void ExportBackupTombstoneInternal(
+        TombstoneExportContext context,
+        RepositoryLeaseService leaseService,
+        RepositoryLeaseHandle? destinationLease,
+        bool useDeferredStore)
     {
-        TryFlushDeferredExport(rootPath);
-        string storeRoot = rootPath;
-        bool isDeferred = false;
-        string destMetaDir = GetMetaDir(rootPath);
-        if (!TryEnsureMetadataDirWritable(destMetaDir))
-        {
-            storeRoot = GetDeferredExportRoot(rootPath);
-            isDeferred = true;
-        }
+        if (!CanWriteTombstoneDestination(context, leaseService, destinationLease))
+            return;
+
+        string storeRoot = useDeferredStore ? GetDeferredExportRoot(context.RootPath) : context.RootPath;
+        if (useDeferredStore)
+            Directory.CreateDirectory(storeRoot);
+        RepositoryLeaseAcquireResult? deferredLeaseResult = useDeferredStore
+            ? leaseService.TryAcquire(
+                storeRoot,
+                CreateLeaseRequest(
+                    context.LeaseOwnerId,
+                    context.MachineId,
+                    "deferred-backup-tombstone-export",
+                    context.AppVersion))
+            : null;
+        using RepositoryLeaseHandle? deferredLease = deferredLeaseResult?.Handle;
+        RepositoryLeaseHandle? activeLease = destinationLease ?? deferredLease;
+        if (activeLease is null || !activeLease.IsOwner)
+            return;
 
         var store = new MetadataStore(storeRoot);
         try
         {
+            if (!activeLease.IsOwner)
+                return;
             store.EnsureSchema();
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            Console.WriteLine($"[MetadataSync] Tombstone export failed: store init error at '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] Tombstone export failed: store init error at '{context.RootPath}': {ex.Message}");
             return;
         }
 
@@ -2516,32 +3049,120 @@ public sealed class MetadataSyncService
         MetaInfo metaInfo = BuildUpdatedTombstoneMetaInfo(
             store,
             now,
-            appVersion,
-            machineId,
+            context.AppVersion,
+            context.MachineId,
             updateExistingAppVersion: true);
 
         try
         {
+            if (!activeLease.IsOwner)
+                return;
             store.ExecuteWriteBatch(() =>
             {
                 store.UpsertMetaInfo(metaInfo);
-                AddTombstones(store, [backupExternalId], BackupEntityType, now, machineId);
+                AddTombstones(store, context.ExternalIds, context.EntityType, now, context.MachineId);
             });
         }
         catch (Exception ex) when (ex is not SqliteException sqliteEx || !IsCannotOpenOrLocked(sqliteEx))
         {
-            Console.WriteLine($"[MetadataSync] Tombstone export failed writing store '{rootPath}': {ex.Message}");
+            Console.WriteLine($"[MetadataSync] Tombstone export failed writing store '{context.RootPath}': {ex.Message}");
             return;
         }
 
-        if (isDeferred)
-        {
-            TryFlushDeferredExport(rootPath);
-        }
+        if (useDeferredStore)
+            Console.WriteLine($"[MetadataSync] Tombstone export queued locally for '{context.RootPath}'.");
+    }
+
+    private static bool CanWriteTombstoneDestination(
+        TombstoneExportContext context,
+        RepositoryLeaseService leaseService,
+        RepositoryLeaseHandle? destinationLease)
+    {
+        if (destinationLease is null)
+            return true;
+        if (!destinationLease.IsOwner)
+            return false;
+        return !HasDeferredExport(context.RootPath) ||
+               TryFlushDeferredExport(
+                   context.RootPath,
+                   context.AppVersion,
+                   context.MachineId,
+                   context.LeaseOwnerId,
+                   leaseService);
     }
 
     private static string GetMetaDir(string rootPath) =>
         Path.Combine(rootPath, VaultSyncDirectoryName, "meta");
+
+    private RepositoryLeaseAcquireResult TryAcquireRepositoryLease(
+        string rootPath,
+        string operation,
+        string appVersion,
+        string machineLabel) =>
+        _repositoryLeaseService.TryAcquire(
+            rootPath,
+            CreateLeaseRequest(
+                ResolveLeaseOwnerId(machineLabel),
+                machineLabel,
+                operation,
+                appVersion));
+
+    private RepositoryLeaseHandle? TryAcquireDeferredLease(
+        string deferredRoot,
+        string appVersion,
+        string machineLabel,
+        string operation)
+    {
+        try
+        {
+            Directory.CreateDirectory(deferredRoot);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+
+        RepositoryLeaseAcquireResult result = _repositoryLeaseService.TryAcquire(
+            deferredRoot,
+            CreateLeaseRequest(
+                ResolveLeaseOwnerId(machineLabel),
+                machineLabel,
+                operation,
+                appVersion));
+        return result.Handle;
+    }
+
+    private string ResolveLeaseOwnerId(string machineLabel) =>
+        _installationIdentityProvider?.GetOrCreate() ??
+        CreateCompatibilityInstallationId(machineLabel);
+
+    private static RepositoryLeaseRequest CreateLeaseRequest(
+        string installationId,
+        string machineLabel,
+        string operation,
+        string appVersion) =>
+        new(
+            installationId,
+            string.IsNullOrWhiteSpace(machineLabel) ? "Unknown host" : machineLabel.Trim(),
+            operation,
+            string.IsNullOrWhiteSpace(appVersion) ? UnknownAppVersion : appVersion.Trim());
+
+    private static string CreateCompatibilityInstallationId(string machineLabel)
+    {
+        string source = string.IsNullOrWhiteSpace(machineLabel) ? UnknownAppVersion : machineLabel.Trim();
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes($"vaultsync-lease:{source}"));
+        return new Guid(hash.AsSpan(0, 16)).ToString("N");
+    }
+
+    private static MetadataSyncResult LeaseFailure(RepositoryLeaseAcquireResult leaseResult) =>
+        MetadataSyncResult.Failure(
+            MetadataSyncStatus.RepositoryBusy,
+            leaseResult.Inspection.Message);
+
+    private static MetadataSyncResult LostLeaseFailure() =>
+        MetadataSyncResult.Failure(
+            MetadataSyncStatus.RepositoryBusy,
+            "Repository writer ownership changed before the metadata update could commit.");
 
     private static string GetDeferredExportRoot(string rootPath)
     {
@@ -2591,30 +3212,56 @@ public sealed class MetadataSyncService
         return false;
     }
 
-    private static bool TryEnsureMetadataDirWritable(string metaDir)
+    private static bool TryFlushDeferredExport(
+        string rootPath,
+        string appVersion,
+        string machineLabel,
+        string leaseOwnerId,
+        RepositoryLeaseService leaseService)
     {
+        string deferredRoot = GetDeferredExportRoot(rootPath);
+        if (!File.Exists(new MetadataStore(deferredRoot).DatabasePath))
+            return false;
+        if (File.Exists(new MetadataStore(rootPath).DatabasePath))
+            return false;
+
+        RepositoryLeaseAcquireResult leaseResult = leaseService.TryAcquire(
+            deferredRoot,
+            CreateLeaseRequest(
+                leaseOwnerId,
+                machineLabel,
+                "deferred-metadata-flush",
+                appVersion));
+        if (!leaseResult.Acquired)
+            return false;
+
+        bool copied;
+        using (RepositoryLeaseHandle lease = leaseResult.Handle!)
+        {
+            if (!lease.IsOwner)
+                return false;
+            copied = TryCopyStoreFiles(deferredRoot, rootPath);
+        }
+
+        return copied && TryRetireDeferredExport(deferredRoot);
+    }
+
+    private static bool HasDeferredExport(string rootPath) =>
+        File.Exists(new MetadataStore(GetDeferredExportRoot(rootPath)).DatabasePath);
+
+    private static bool TryRetireDeferredExport(string deferredRoot)
+    {
+        string retiredRoot = deferredRoot + ".consumed-" + Guid.NewGuid().ToString("N");
         try
         {
-            string? rootDir = Directory.GetParent(Directory.GetParent(metaDir)?.FullName ?? string.Empty)?.FullName;
-            if (string.IsNullOrWhiteSpace(rootDir) || !Directory.Exists(rootDir))
-                return false;
-
-            _ = Directory.CreateDirectory(metaDir);
-            string probe = Path.Combine(metaDir, ".write_test");
-            using var fs = new FileStream(probe, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose);
-            fs.WriteByte(0);
+            Directory.Move(deferredRoot, retiredRoot);
+            TryDeleteTempStore(retiredRoot);
             return true;
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return false;
         }
-    }
-
-    private static bool TryFlushDeferredExport(string rootPath)
-    {
-        string deferredRoot = GetDeferredExportRoot(rootPath);
-        return TryCopyStoreFiles(deferredRoot, rootPath);
     }
 
     private static bool TryCopyStoreFiles(string fromRoot, string toRoot)
@@ -2656,24 +3303,17 @@ public sealed class MetadataSyncService
         MetadataStore store,
         Project project,
         string projectExternalId,
-        DateTime now,
-        string machineId)
+        string machineId,
+        MetaProject projectRecord,
+        long expectedProjectRevision)
     {
         var snapshots = _repo.GetSnapshotsForProject(project.Name).ToList();
         var backups = _repo.GetBackupsForProject(project.Id).ToList();
         Console.WriteLine($"[MetadataSync] Export history for '{project.Name}': snapshots={snapshots.Count}, backups={backups.Count}.");
         var snapshotExternalIds = new Dictionary<int, string>();
 
-        store.UpsertProject(new MetaProject
-        {
-            ExternalId = projectExternalId,
-            Name = project.Name,
-            Preset = project.Preset,
-            RootPathHint = project.RootPath,
-            CreatedUtc = project.CreatedUtc,
-            SettingsJson = BuildProjectSettingsJson(project),
-            UpdatedUtc = now
-        });
+        if (!store.TryUpsertProject(projectRecord, expectedProjectRevision))
+            throw new MetadataRevisionConflictException("Project metadata changed after its revision was inspected.");
 
         foreach (Snapshot? snap in snapshots)
         {
@@ -2725,23 +3365,12 @@ public sealed class MetadataSyncService
             }
 
             string backupExternalId = EnsureBackupExternalId(backup);
-            var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
-            store.UpsertBackup(new MetaBackup
-            {
-                ExternalId = backupExternalId,
-                ProjectExternalId = projectExternalId,
-                SnapshotExternalId = snapshotExternalId,
-                CreatedUtc = backup.CreatedUtc,
-                Type = backup.Type,
-                BackupMode = BackupModes.Normalize(backup.BackupMode),
-                TotalBytes = backup.TotalBytes,
-                PathRel = backup.Path,
-                DestinationAlias = backup.DestinationAlias ?? string.Empty,
-                OriginMachineName = machineId,
-                IsProtected = backup.IsProtected,
-                IsEncrypted = backup.IsEncrypted,
-                KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
-            });
+            store.UpsertBackup(CreateMetaBackup(
+                backup,
+                backupExternalId,
+                projectExternalId,
+                snapshotExternalId,
+                machineId));
             exportedBackups++;
         }
 
@@ -2751,6 +3380,32 @@ public sealed class MetadataSyncService
         }
 
         return (snapshots.Count, exportedBackups);
+    }
+
+    private static MetaBackup CreateMetaBackup(
+        Backup backup,
+        string backupExternalId,
+        string projectExternalId,
+        string snapshotExternalId,
+        string machineId)
+    {
+        var descriptor = BackupCryptoDescriptor.FromMetadata(backup.IsEncrypted, backup.CryptoDescriptorJson);
+        return new MetaBackup
+        {
+            ExternalId = backupExternalId,
+            ProjectExternalId = projectExternalId,
+            SnapshotExternalId = snapshotExternalId,
+            CreatedUtc = backup.CreatedUtc,
+            Type = backup.Type,
+            BackupMode = BackupModes.Normalize(backup.BackupMode),
+            TotalBytes = backup.TotalBytes,
+            PathRel = backup.Path,
+            DestinationAlias = backup.DestinationAlias ?? string.Empty,
+            OriginMachineName = machineId,
+            IsProtected = backup.IsProtected,
+            IsEncrypted = backup.IsEncrypted,
+            KdfParamsJson = descriptor.ToMetadataJson(backup.IsEncrypted)
+        };
     }
 
     private static void LogStoreCounts(MetadataStore store)
@@ -2800,50 +3455,270 @@ public sealed class MetadataSyncService
 
     private static string NewExternalId() => Guid.NewGuid().ToString("N");
 
-    private string BuildProjectSettingsJson(Project project)
+    private bool TryPrepareGuardedProjectWrite(
+        MetadataStore store,
+        GuardedProjectWriteRequest request,
+        out GuardedProjectWrite? write,
+        out string failure)
     {
+        write = null;
+        failure = string.Empty;
         try
         {
-            string? color = _projectColorResolver?.Invoke(project);
-            var settings = new Dictionary<string, object?>();
-            if (!string.IsNullOrWhiteSpace(color))
+            MetaProject? existing = store.GetProject(request.ProjectExternalId);
+            AppConfig config = _configStore.Load();
+            string sourceKey = BuildMetadataSourceKey(
+                Path.GetFullPath(request.DestinationRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            ProjectMetadataMergeBaseRecord? mergeBase = (config.Advanced.ProjectMetadataMergeBases ?? [])
+                .FirstOrDefault(item =>
+                    string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(item.ProjectExternalId, request.ProjectExternalId, StringComparison.OrdinalIgnoreCase));
+            if (!TryResolveExpectedRevision(existing, mergeBase, request.MachineId, out long expectedRevision, out failure))
+                return false;
+
+            ProjectMetadataConflictValues values = BuildExportedProjectValues(request.Project, config);
+            long nextRevision = checked(expectedRevision + 1);
+            var record = new MetaProject
             {
-                settings["avatarColor"] = color;
-            }
-
-            settings["encryptionPolicy"] = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy);
-            settings["encryptionKeyRef"] = string.IsNullOrWhiteSpace(project.EncryptionKeyRef)
-                ? null
-                : project.EncryptionKeyRef;
-            settings["preferredDestinationId"] = string.IsNullOrWhiteSpace(project.PreferredDestinationId)
-                ? null
-                : project.PreferredDestinationId;
-            settings["restoreMode"] = ProjectRestoreMode.Normalize(project.RestoreMode);
-            settings["verificationPolicy"] = ProjectVerificationPolicy.Normalize(project.VerificationPolicy);
-            List<int> disabledProjects = _configStore.GetSnapshot().Backups.AutoBackupDisabledProjects ?? [];
-            settings["autoBackupEnabled"] = !disabledProjects.Contains(project.Id);
-            settings["tags"] = string.IsNullOrWhiteSpace(project.Tags)
-                ? string.Empty
-                : project.Tags.Trim();
-
-            return JsonSerializer.Serialize(settings);
+                ExternalId = request.ProjectExternalId,
+                Name = request.Project.Name,
+                Preset = request.Project.Preset,
+                RootPathHint = request.Project.RootPath,
+                CreatedUtc = request.Project.CreatedUtc,
+                SettingsJson = SerializeProjectSettings(values),
+                UpdatedUtc = request.UpdatedUtc,
+                WriterMachineId = request.MachineId,
+                Revision = nextRevision,
+                BaseRevision = expectedRevision,
+                FieldProvenanceJson = BuildFieldProvenanceJson(existing, values, request.MachineId, nextRevision, request.UpdatedUtc),
+                ResolutionJson = BuildResolutionJson(config, sourceKey, request.ProjectExternalId)
+            };
+            write = new GuardedProjectWrite(record, expectedRevision, values);
+            return true;
         }
-        catch
+        catch (Exception ex)
         {
-            return "{}";
+            RuntimeLog.WriteVerbose($"[MetadataSync] Could not prepare guarded project metadata: {ex.Message}");
+            failure = "Project metadata could not be prepared safely for writing.";
+            return false;
         }
     }
 
+    private static bool TryResolveExpectedRevision(
+        MetaProject? existing,
+        ProjectMetadataMergeBaseRecord? mergeBase,
+        string machineId,
+        out long expectedRevision,
+        out string failure)
+    {
+        failure = string.Empty;
+        if (existing is null)
+        {
+            expectedRevision = 0;
+            return true;
+        }
+        if (mergeBase is not null)
+        {
+            expectedRevision = mergeBase.Revision;
+            if (mergeBase.Revision > 0 && mergeBase.Revision == existing.Revision)
+                return true;
+            failure = "Project metadata changed on another machine. Import and review that revision before writing.";
+            return false;
+        }
+        if (!string.IsNullOrWhiteSpace(existing.WriterMachineId) &&
+            string.Equals(existing.WriterMachineId, machineId, StringComparison.Ordinal))
+        {
+            expectedRevision = existing.Revision;
+            return true;
+        }
+
+        expectedRevision = 0;
+        failure = "Existing project metadata has no trusted local base. Import and review it before writing.";
+        return false;
+    }
+
+    private void SaveSuccessfulProjectWriteBase(string destinationRoot, GuardedProjectWrite write)
+    {
+        try
+        {
+            AppConfig config = _configStore.Load();
+            string sourceKey = BuildMetadataSourceKey(
+                Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            bool changed = false;
+            string supersededUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+            foreach (ProjectMetadataResolutionRecord resolution in (config.Advanced.ProjectMetadataResolutions ?? [])
+                         .Where(item => item.UndoAvailable &&
+                             string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+                             string.Equals(item.ProjectExternalId, write.Record.ExternalId, StringComparison.OrdinalIgnoreCase)))
+            {
+                resolution.UndoAvailable = false;
+                resolution.SupersededUtc = supersededUtc;
+                changed = true;
+            }
+
+            changed |= UpsertProjectMetadataMergeBase(
+                    config,
+                    sourceKey,
+                    write.Record,
+                    write.Record.WriterMachineId,
+                    write.Values);
+            if (changed)
+                _configStore.Save(config);
+        }
+        catch (Exception ex)
+        {
+            RuntimeLog.WriteVerbose($"[MetadataSync] Could not persist the successful project write base: {ex.Message}");
+        }
+    }
+
+    private ProjectMetadataConflictValues BuildExportedProjectValues(Project project, AppConfig config)
+    {
+        string? color = _projectColorResolver?.Invoke(project);
+        List<int> disabledProjects = config.Backups.AutoBackupDisabledProjects ?? [];
+        return new ProjectMetadataConflictValues
+        {
+            AvatarColor = NormalizeAvatarColor(color),
+            EncryptionPolicy = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy),
+            PreferredDestinationId = project.PreferredDestinationId?.Trim() ?? string.Empty,
+            RestoreMode = ProjectRestoreMode.Normalize(project.RestoreMode),
+            VerificationPolicy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy),
+            AutoBackupEnabled = !disabledProjects.Contains(project.Id),
+            Tags = project.Tags?.Trim() ?? string.Empty
+        };
+    }
+
+    private static string SerializeProjectSettings(ProjectMetadataConflictValues values)
+    {
+        var settings = new Dictionary<string, object?>();
+        if (!string.IsNullOrWhiteSpace(values.AvatarColor))
+            settings[AvatarColorField] = values.AvatarColor;
+        settings[EncryptionPolicyField] = values.EncryptionPolicy;
+        settings[PreferredDestinationIdField] = string.IsNullOrWhiteSpace(values.PreferredDestinationId)
+            ? null
+            : values.PreferredDestinationId;
+        settings[RestoreModeField] = values.RestoreMode;
+        settings[VerificationPolicyField] = values.VerificationPolicy;
+        settings[AutoBackupEnabledField] = values.AutoBackupEnabled;
+        settings[TagsField] = values.Tags;
+        return JsonSerializer.Serialize(settings);
+    }
+
+    private string BuildFieldProvenanceJson(
+        MetaProject? existing,
+        ProjectMetadataConflictValues values,
+        string writerMachineId,
+        long nextRevision,
+        DateTime updatedUtc)
+    {
+        Dictionary<string, ProjectMetadataFieldProvenance> provenance = ParseFieldProvenance(existing?.FieldProvenanceJson);
+        ProjectMetadataConflictValues? previous = existing is null
+            ? null
+            : ValuesFromParsedSettings(ParseProjectSettings(existing.SettingsJson));
+        string timestamp = updatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+        foreach (string field in ProjectMetadataFieldNames)
+        {
+            if (existing is null || previous is null || !ProjectMetadataFieldEquals(field, previous, values))
+            {
+                provenance[field] = new ProjectMetadataFieldProvenance
+                {
+                    WriterMachineId = writerMachineId,
+                    Revision = nextRevision,
+                    UpdatedUtc = timestamp
+                };
+                continue;
+            }
+
+            if (provenance.ContainsKey(field))
+                continue;
+
+            provenance[field] = new ProjectMetadataFieldProvenance
+            {
+                WriterMachineId = existing.WriterMachineId,
+                Revision = Math.Max(0, existing.Revision),
+                UpdatedUtc = existing.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
+            };
+        }
+
+        return JsonSerializer.Serialize(provenance);
+    }
+
+    private static string BuildResolutionJson(AppConfig config, string sourceKey, string projectExternalId)
+    {
+        ProjectMetadataResolutionRecord? resolution = (config.Advanced.ProjectMetadataResolutions ?? [])
+            .Where(item =>
+                string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(item.ProjectExternalId, projectExternalId, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(item => item.ResolvedUtc, StringComparer.Ordinal)
+            .FirstOrDefault();
+        return resolution is null ? string.Empty : JsonSerializer.Serialize(resolution);
+    }
+
+    private static Dictionary<string, ProjectMetadataFieldProvenance> ParseFieldProvenance(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return new Dictionary<string, ProjectMetadataFieldProvenance>(StringComparer.Ordinal);
+
+        try
+        {
+            Dictionary<string, ProjectMetadataFieldProvenance>? parsed =
+                JsonSerializer.Deserialize<Dictionary<string, ProjectMetadataFieldProvenance>>(json);
+            return parsed is null
+                ? new Dictionary<string, ProjectMetadataFieldProvenance>(StringComparer.Ordinal)
+                : new Dictionary<string, ProjectMetadataFieldProvenance>(parsed, StringComparer.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return new Dictionary<string, ProjectMetadataFieldProvenance>(StringComparer.Ordinal);
+        }
+    }
+
+    private static readonly string[] ProjectMetadataFieldNames =
+    [
+        AvatarColorField,
+        EncryptionPolicyField,
+        PreferredDestinationIdField,
+        RestoreModeField,
+        VerificationPolicyField,
+        AutoBackupEnabledField,
+        TagsField
+    ];
+
+    private static ProjectMetadataConflictValues ValuesFromParsedSettings(ParsedProjectSettings parsed) => new()
+    {
+        AvatarColor = parsed.HasAvatarColor ? parsed.AvatarColor : string.Empty,
+        EncryptionPolicy = parsed.HasEncryptionPolicy ? parsed.EncryptionPolicy : string.Empty,
+        PreferredDestinationId = parsed.HasPreferredDestinationId ? parsed.PreferredDestinationId : string.Empty,
+        RestoreMode = parsed.HasRestoreMode ? parsed.RestoreMode : string.Empty,
+        VerificationPolicy = parsed.HasVerificationPolicy ? parsed.VerificationPolicy : string.Empty,
+        AutoBackupEnabled = parsed.HasAutoBackupEnabled ? parsed.AutoBackupEnabled : null,
+        Tags = parsed.HasTags ? parsed.Tags : string.Empty
+    };
+
+    private static bool ProjectMetadataFieldEquals(
+        string field,
+        ProjectMetadataConflictValues left,
+        ProjectMetadataConflictValues right) => field switch
+    {
+        AvatarColorField => string.Equals(left.AvatarColor, right.AvatarColor, StringComparison.OrdinalIgnoreCase),
+        EncryptionPolicyField => string.Equals(left.EncryptionPolicy, right.EncryptionPolicy, StringComparison.OrdinalIgnoreCase),
+        PreferredDestinationIdField => string.Equals(left.PreferredDestinationId, right.PreferredDestinationId, StringComparison.OrdinalIgnoreCase),
+        RestoreModeField => string.Equals(left.RestoreMode, right.RestoreMode, StringComparison.OrdinalIgnoreCase),
+        VerificationPolicyField => string.Equals(left.VerificationPolicy, right.VerificationPolicy, StringComparison.OrdinalIgnoreCase),
+        AutoBackupEnabledField => left.AutoBackupEnabled == right.AutoBackupEnabled,
+        TagsField => string.Equals(left.Tags, right.Tags, StringComparison.Ordinal),
+        _ => false
+    };
+
     private readonly record struct ParsedProjectSettings(
+        string AvatarColor,
         string EncryptionPolicy,
-        string? EncryptionKeyRef,
         string PreferredDestinationId,
         string RestoreMode,
         string VerificationPolicy,
         bool AutoBackupEnabled,
         string Tags,
+        bool HasAvatarColor,
         bool HasEncryptionPolicy,
-        bool HasEncryptionKeyRef,
         bool HasPreferredDestinationId,
         bool HasRestoreMode,
         bool HasVerificationPolicy,
@@ -2853,62 +3728,45 @@ public sealed class MetadataSyncService
     private ParsedProjectSettings ParseProjectSettings(string? settingsJson)
     {
         if (string.IsNullOrWhiteSpace(settingsJson))
-        {
-            return new ParsedProjectSettings(
-                ProjectEncryptionPolicy.Inherit,
-                null,
-                string.Empty,
-                ProjectRestoreMode.Direct,
-                ProjectVerificationPolicy.Always,
-                true,
-                string.Empty,
-                HasEncryptionPolicy: false,
-                HasEncryptionKeyRef: false,
-                HasPreferredDestinationId: false,
-                HasRestoreMode: false,
-                HasVerificationPolicy: false,
-                HasAutoBackupEnabled: false,
-                HasTags: false);
-        }
+            return EmptyParsedProjectSettings();
 
         try
         {
             using var doc = JsonDocument.Parse(settingsJson);
+            string avatarColor = string.Empty;
             string policy = ProjectEncryptionPolicy.Inherit;
-            string? keyRef = null;
             string preferredDestinationId = string.Empty;
             string restoreMode = ProjectRestoreMode.Direct;
             string verificationPolicy = ProjectVerificationPolicy.Always;
             bool autoBackupEnabled = true;
             string tags = string.Empty;
             bool hasPolicy = false;
-            bool hasKeyRef = false;
             bool hasPreferredDestinationId = false;
             bool hasRestoreMode = false;
             bool hasVerificationPolicy = false;
             bool hasAutoBackupEnabled = false;
             bool hasTags = false;
+            bool hasAvatarColor = false;
 
-            if (doc.RootElement.TryGetProperty("encryptionPolicy", out JsonElement policyProp))
+            if (doc.RootElement.TryGetProperty(AvatarColorField, out JsonElement avatarColorProp))
+            {
+                avatarColor = NormalizeAvatarColor(avatarColorProp.GetString());
+                hasAvatarColor = !string.IsNullOrWhiteSpace(avatarColor);
+            }
+
+            if (doc.RootElement.TryGetProperty(EncryptionPolicyField, out JsonElement policyProp))
             {
                 policy = ProjectEncryptionPolicy.Normalize(policyProp.GetString());
                 hasPolicy = true;
             }
 
-            if (doc.RootElement.TryGetProperty("encryptionKeyRef", out JsonElement keyRefProp))
-            {
-                string? rawKeyRef = keyRefProp.GetString();
-                keyRef = string.IsNullOrWhiteSpace(rawKeyRef) ? null : rawKeyRef;
-                hasKeyRef = true;
-            }
-
-            if (doc.RootElement.TryGetProperty("verificationPolicy", out JsonElement verificationProp))
+            if (doc.RootElement.TryGetProperty(VerificationPolicyField, out JsonElement verificationProp))
             {
                 verificationPolicy = ProjectVerificationPolicy.Normalize(verificationProp.GetString());
                 hasVerificationPolicy = true;
             }
 
-            if (doc.RootElement.TryGetProperty("preferredDestinationId", out JsonElement destinationProp))
+            if (doc.RootElement.TryGetProperty(PreferredDestinationIdField, out JsonElement destinationProp))
             {
                 preferredDestinationId = NormalizePreferredDestinationId(
                     destinationProp.GetString(),
@@ -2916,13 +3774,13 @@ public sealed class MetadataSyncService
                 hasPreferredDestinationId = true;
             }
 
-            if (doc.RootElement.TryGetProperty("restoreMode", out JsonElement restoreModeProp))
+            if (doc.RootElement.TryGetProperty(RestoreModeField, out JsonElement restoreModeProp))
             {
                 restoreMode = ProjectRestoreMode.Normalize(restoreModeProp.GetString());
                 hasRestoreMode = true;
             }
 
-            if (doc.RootElement.TryGetProperty("autoBackupEnabled", out JsonElement autoBackupEnabledProp))
+            if (doc.RootElement.TryGetProperty(AutoBackupEnabledField, out JsonElement autoBackupEnabledProp))
             {
                 autoBackupEnabled = autoBackupEnabledProp.ValueKind switch
                 {
@@ -2933,7 +3791,7 @@ public sealed class MetadataSyncService
                 hasAutoBackupEnabled = autoBackupEnabledProp.ValueKind is JsonValueKind.True or JsonValueKind.False;
             }
 
-            if (doc.RootElement.TryGetProperty("tags", out JsonElement tagsProp))
+            if (doc.RootElement.TryGetProperty(TagsField, out JsonElement tagsProp))
             {
                 string? rawTags = tagsProp.GetString();
                 tags = string.IsNullOrWhiteSpace(rawTags) ? string.Empty : rawTags.Trim();
@@ -2941,15 +3799,15 @@ public sealed class MetadataSyncService
             }
 
             return new ParsedProjectSettings(
+                avatarColor,
                 policy,
-                keyRef,
                 preferredDestinationId,
                 restoreMode,
                 verificationPolicy,
                 autoBackupEnabled,
                 tags,
+                HasAvatarColor: hasAvatarColor,
                 HasEncryptionPolicy: hasPolicy,
-                HasEncryptionKeyRef: hasKeyRef,
                 HasPreferredDestinationId: hasPreferredDestinationId,
                 HasRestoreMode: hasRestoreMode,
                 HasVerificationPolicy: hasVerificationPolicy,
@@ -2958,34 +3816,38 @@ public sealed class MetadataSyncService
         }
         catch
         {
-            return new ParsedProjectSettings(
-                ProjectEncryptionPolicy.Inherit,
-                null,
-                string.Empty,
-                ProjectRestoreMode.Direct,
-                ProjectVerificationPolicy.Always,
-                true,
-                string.Empty,
-                HasEncryptionPolicy: false,
-                HasEncryptionKeyRef: false,
-                HasPreferredDestinationId: false,
-                HasRestoreMode: false,
-                HasVerificationPolicy: false,
-                HasAutoBackupEnabled: false,
-                HasTags: false);
+            return EmptyParsedProjectSettings();
         }
     }
+
+    private static ParsedProjectSettings EmptyParsedProjectSettings() =>
+        new(
+            string.Empty,
+            ProjectEncryptionPolicy.Inherit,
+            string.Empty,
+            ProjectRestoreMode.Direct,
+            ProjectVerificationPolicy.Always,
+            true,
+            string.Empty,
+            HasAvatarColor: false,
+            HasEncryptionPolicy: false,
+            HasPreferredDestinationId: false,
+            HasRestoreMode: false,
+            HasVerificationPolicy: false,
+            HasAutoBackupEnabled: false,
+            HasTags: false);
 
     private bool ApplyImportedProjectSettings(
         int projectId,
         AppConfig config,
         MetaProject metaProject,
+        string sourceKey,
         string? sourceMachineId,
         ParsedProjectSettings parsedSettings,
         IList<ProjectMetadataConflictRecord> pendingConflicts)
     {
-        if (!parsedSettings.HasEncryptionPolicy &&
-            !parsedSettings.HasEncryptionKeyRef &&
+        if (!parsedSettings.HasAvatarColor &&
+            !parsedSettings.HasEncryptionPolicy &&
             !parsedSettings.HasPreferredDestinationId &&
             !parsedSettings.HasRestoreMode &&
             !parsedSettings.HasVerificationPolicy &&
@@ -2999,6 +3861,10 @@ public sealed class MetadataSyncService
         if (current is null)
             return false;
 
+        string currentAvatarColor = NormalizeAvatarColor(_projectColorResolver?.Invoke(current));
+        string nextAvatarColor = parsedSettings.HasAvatarColor
+            ? parsedSettings.AvatarColor
+            : currentAvatarColor;
         string currentPolicy = ProjectEncryptionPolicy.Normalize(current.EncryptionPolicy);
         string incomingPolicy = parsedSettings.HasEncryptionPolicy
             ? ProjectEncryptionPolicy.Normalize(parsedSettings.EncryptionPolicy)
@@ -3011,9 +3877,6 @@ public sealed class MetadataSyncService
                  && !string.Equals(currentPolicy, ProjectEncryptionPolicy.Inherit, StringComparison.OrdinalIgnoreCase));
 
         string nextPolicy = applyPolicy ? incomingPolicy : currentPolicy;
-        string? nextKeyRef = parsedSettings.HasEncryptionKeyRef
-            ? parsedSettings.EncryptionKeyRef
-            : current.EncryptionKeyRef;
         string currentVerificationPolicy = ProjectVerificationPolicy.Normalize(current.VerificationPolicy);
         string nextVerificationPolicy = parsedSettings.HasVerificationPolicy
             ? ProjectVerificationPolicy.Normalize(parsedSettings.VerificationPolicy)
@@ -3021,7 +3884,7 @@ public sealed class MetadataSyncService
         List<BackupDestination> destinations = _configStore.Load().Backups.Destinations;
         string currentPreferredDestinationId = NormalizePreferredDestinationId(current.PreferredDestinationId, destinations);
         string nextPreferredDestinationId = parsedSettings.HasPreferredDestinationId
-            ? NormalizePreferredDestinationId(parsedSettings.PreferredDestinationId, destinations)
+            ? NormalizeImportedPreferredDestinationId(parsedSettings.PreferredDestinationId, destinations)
             : currentPreferredDestinationId;
         string currentRestoreMode = ProjectRestoreMode.Normalize(current.RestoreMode);
         string nextRestoreMode = parsedSettings.HasRestoreMode
@@ -3038,52 +3901,201 @@ public sealed class MetadataSyncService
             : currentTags;
 
         string? currentKeyRef = string.IsNullOrWhiteSpace(current.EncryptionKeyRef) ? null : current.EncryptionKeyRef;
-        string? normalizedNextKeyRef = string.IsNullOrWhiteSpace(nextKeyRef) ? null : nextKeyRef;
-        if (string.Equals(nextPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(normalizedNextKeyRef, currentKeyRef, StringComparison.Ordinal) &&
-            string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(nextPreferredDestinationId, currentPreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) &&
-            nextAutoBackupEnabled == currentAutoBackupEnabled &&
-            string.Equals(nextTags, currentTags, StringComparison.Ordinal))
-        {
-            return RemoveProjectMetadataConflict(projectId, pendingConflicts);
-        }
-
-        _repo.UpdateProjectEncryptionSettings(projectId, nextPolicy, normalizedNextKeyRef);
 
         bool conflictValuesDiffer =
+            !string.Equals(nextAvatarColor, currentAvatarColor, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(nextPolicy, currentPolicy, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(nextPreferredDestinationId, currentPreferredDestinationId, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(nextRestoreMode, currentRestoreMode, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(nextVerificationPolicy, currentVerificationPolicy, StringComparison.OrdinalIgnoreCase) ||
+            nextAutoBackupEnabled != currentAutoBackupEnabled ||
             !string.Equals(nextTags, currentTags, StringComparison.Ordinal);
 
-        if (!conflictValuesDiffer)
+        var localValues = new ProjectMetadataConflictValues
         {
-            _repo.UpdateProjectPreferredDestination(projectId, nextPreferredDestinationId);
-            _repo.UpdateProjectRestoreMode(projectId, nextRestoreMode);
-            _repo.UpdateProjectVerificationPolicy(projectId, nextVerificationPolicy);
-            _repo.UpdateProjectTags(projectId, nextTags);
-            if (parsedSettings.HasAutoBackupEnabled)
-            {
-                ApplyImportedProjectAutoBackupSetting(config, projectId, nextAutoBackupEnabled);
-            }
-            return RemoveProjectMetadataConflict(projectId, pendingConflicts);
+            AvatarColor = currentAvatarColor,
+            EncryptionPolicy = currentPolicy,
+            PreferredDestinationId = currentPreferredDestinationId,
+            RestoreMode = currentRestoreMode,
+            VerificationPolicy = currentVerificationPolicy,
+            AutoBackupEnabled = currentAutoBackupEnabled,
+            Tags = currentTags
+        };
+        var incomingValues = new ProjectMetadataConflictValues
+        {
+            AvatarColor = nextAvatarColor,
+            EncryptionPolicy = nextPolicy,
+            PreferredDestinationId = nextPreferredDestinationId,
+            RestoreMode = nextRestoreMode,
+            VerificationPolicy = nextVerificationPolicy,
+            AutoBackupEnabled = nextAutoBackupEnabled,
+            Tags = nextTags
+        };
+
+        ProjectMetadataMergeBaseRecord? mergeBase = (config.Advanced.ProjectMetadataMergeBases ??= [])
+            .FirstOrDefault(item =>
+                string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(item.ProjectExternalId, metaProject.ExternalId, StringComparison.OrdinalIgnoreCase));
+        ProjectMetadataConflictValues? trustedBase = mergeBase is { Revision: > 0 }
+            ? mergeBase.Values
+            : null;
+        ProjectMetadataMergePlan plan = ProjectMetadataMergePlanner.Create(trustedBase, localValues, incomingValues);
+
+        if (conflictValuesDiffer && HasDurableKeepLocalResolution(config, metaProject, sourceMachineId, incomingValues))
+        {
+            bool changed = RemoveProjectMetadataConflict(projectId, pendingConflicts);
+            changed |= UpsertProjectMetadataMergeBase(config, sourceKey, metaProject, sourceMachineId, incomingValues);
+            return changed;
+        }
+
+        if (!plan.HasConflicts)
+        {
+            ApplyProjectMetadataValues(config, current, metaProject.ExternalId, plan.Merged, currentKeyRef);
+            bool changed = RemoveProjectMetadataConflict(projectId, pendingConflicts);
+            changed |= UpsertProjectMetadataMergeBase(config, sourceKey, metaProject, sourceMachineId, incomingValues);
+            return changed;
         }
 
         return UpsertProjectMetadataConflict(
-            current,
-            metaProject,
-            sourceMachineId,
-            currentPreferredDestinationId,
-            currentRestoreMode,
-            currentVerificationPolicy,
-            currentTags,
-            nextPreferredDestinationId,
-            nextRestoreMode,
-            nextVerificationPolicy,
-            nextTags,
+            new ProjectMetadataConflictContext(
+                current,
+                metaProject,
+                sourceKey,
+                sourceMachineId,
+                mergeBase?.Revision ?? 0,
+                mergeBase?.WriterMachineId ?? string.Empty,
+                mergeBase?.UpdatedUtc ?? string.Empty,
+                ResolveLocalMetadataWriterId(),
+                DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                trustedBase ?? new ProjectMetadataConflictValues(),
+                localValues,
+                incomingValues,
+                plan),
             pendingConflicts);
+    }
+
+    private string ResolveLocalMetadataWriterId()
+    {
+        try
+        {
+            return _installationIdentityProvider?.GetOrCreate() ?? "this-installation";
+        }
+        catch
+        {
+            return "this-installation";
+        }
+    }
+
+    private void ApplyProjectMetadataValues(
+        AppConfig config,
+        Project current,
+        string externalId,
+        ProjectMetadataConflictValues values,
+        string? currentKeyRef)
+    {
+        TryApplyProjectColor(externalId, values.AvatarColor);
+        _repo.UpdateProjectEncryptionSettings(current.Id, values.EncryptionPolicy, currentKeyRef);
+        _repo.UpdateProjectPreferredDestination(current.Id, NullIfWhiteSpace(values.PreferredDestinationId));
+        _repo.UpdateProjectRestoreMode(current.Id, NullIfWhiteSpace(values.RestoreMode));
+        _repo.UpdateProjectVerificationPolicy(current.Id, NullIfWhiteSpace(values.VerificationPolicy));
+        _repo.UpdateProjectTags(current.Id, NullIfWhiteSpace(values.Tags));
+        if (values.AutoBackupEnabled.HasValue)
+            ApplyImportedProjectAutoBackupSetting(config, current.Id, values.AutoBackupEnabled.Value);
+    }
+
+    private static string? NullIfWhiteSpace(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static ProjectMetadataConflictValues BuildImportedValues(
+        Project project,
+        ParsedProjectSettings parsed,
+        AppConfig config,
+        int projectId) => new()
+    {
+        AvatarColor = parsed.HasAvatarColor ? parsed.AvatarColor : string.Empty,
+        EncryptionPolicy = parsed.HasEncryptionPolicy ? parsed.EncryptionPolicy : project.EncryptionPolicy,
+        PreferredDestinationId = parsed.HasPreferredDestinationId ? parsed.PreferredDestinationId : project.PreferredDestinationId ?? string.Empty,
+        RestoreMode = parsed.HasRestoreMode ? parsed.RestoreMode : project.RestoreMode ?? string.Empty,
+        VerificationPolicy = parsed.HasVerificationPolicy ? parsed.VerificationPolicy : project.VerificationPolicy ?? string.Empty,
+        AutoBackupEnabled = parsed.HasAutoBackupEnabled
+            ? parsed.AutoBackupEnabled
+            : !(config.Backups.AutoBackupDisabledProjects ?? []).Contains(projectId),
+        Tags = parsed.HasTags ? parsed.Tags : project.Tags ?? string.Empty
+    };
+
+    private static bool UpsertProjectMetadataMergeBase(
+        AppConfig config,
+        string sourceKey,
+        MetaProject project,
+        string? writerMachineId,
+        ProjectMetadataConflictValues values)
+    {
+        config.Advanced.ProjectMetadataMergeBases ??= [];
+        ProjectMetadataMergeBaseRecord? existing = config.Advanced.ProjectMetadataMergeBases.FirstOrDefault(item =>
+            string.Equals(item.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(item.ProjectExternalId, project.ExternalId, StringComparison.OrdinalIgnoreCase));
+        string updatedUtc = project.UpdatedUtc == default
+            ? string.Empty
+            : project.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+        Dictionary<string, ProjectMetadataFieldProvenance> fieldProvenance = ParseFieldProvenance(project.FieldProvenanceJson);
+        if (existing is not null &&
+            existing.Revision == project.Revision &&
+            string.Equals(existing.WriterMachineId, writerMachineId, StringComparison.Ordinal) &&
+            string.Equals(existing.UpdatedUtc, updatedUtc, StringComparison.Ordinal) &&
+            ProjectMetadataConflictValuesEqual(existing.Values, values) &&
+            ProjectMetadataFieldProvenanceEqual(existing.FieldProvenance, fieldProvenance))
+        {
+            return false;
+        }
+
+        existing ??= new ProjectMetadataMergeBaseRecord
+        {
+            SourceKey = sourceKey,
+            ProjectExternalId = project.ExternalId
+        };
+        if (!config.Advanced.ProjectMetadataMergeBases.Contains(existing))
+            config.Advanced.ProjectMetadataMergeBases.Add(existing);
+        existing.Revision = project.Revision;
+        existing.WriterMachineId = writerMachineId ?? string.Empty;
+        existing.UpdatedUtc = updatedUtc;
+        existing.Values = values;
+        existing.FieldProvenance = fieldProvenance;
+        return true;
+    }
+
+    private static bool ProjectMetadataFieldProvenanceEqual(
+        Dictionary<string, ProjectMetadataFieldProvenance>? left,
+        Dictionary<string, ProjectMetadataFieldProvenance>? right)
+    {
+        left ??= new Dictionary<string, ProjectMetadataFieldProvenance>();
+        right ??= new Dictionary<string, ProjectMetadataFieldProvenance>();
+        if (left.Count != right.Count)
+            return false;
+        return left.All(pair => right.TryGetValue(pair.Key, out ProjectMetadataFieldProvenance? value) &&
+            string.Equals(pair.Value.WriterMachineId, value.WriterMachineId, StringComparison.Ordinal) &&
+            pair.Value.Revision == value.Revision &&
+            string.Equals(pair.Value.UpdatedUtc, value.UpdatedUtc, StringComparison.Ordinal));
+    }
+
+    private static bool HasDurableKeepLocalResolution(
+        AppConfig config,
+        MetaProject project,
+        string? sourceMachineId,
+        ProjectMetadataConflictValues incomingValues)
+    {
+        string sourceUpdatedUtc = project.UpdatedUtc == default
+            ? string.Empty
+            : project.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+        string normalizedSourceMachineId = string.IsNullOrWhiteSpace(sourceMachineId)
+            ? UnknownAppVersion
+            : sourceMachineId;
+        return (config.Advanced.ProjectMetadataResolutions ?? []).Any(resolution =>
+            string.Equals(resolution.Decision, "keep-local", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(resolution.UndoneUtc) &&
+            string.Equals(resolution.ProjectExternalId, project.ExternalId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(resolution.SourceMachineId, normalizedSourceMachineId, StringComparison.Ordinal) &&
+            string.Equals(resolution.SourceUpdatedUtc, sourceUpdatedUtc, StringComparison.Ordinal) &&
+            ProjectMetadataConflictValuesEqual(resolution.Imported, incomingValues));
     }
 
     private static bool ApplyImportedProjectAutoBackupSetting(AppConfig config, int projectId, bool enabled)
@@ -3115,42 +4127,33 @@ public sealed class MetadataSyncService
     }
 
     private static bool UpsertProjectMetadataConflict(
-        Project current,
-        MetaProject metaProject,
-        string? sourceMachineId,
-        string currentPreferredDestinationId,
-        string currentRestoreMode,
-        string currentVerificationPolicy,
-        string currentTags,
-        string importedPreferredDestinationId,
-        string importedRestoreMode,
-        string importedVerificationPolicy,
-        string importedTags,
+        ProjectMetadataConflictContext context,
         IList<ProjectMetadataConflictRecord> pendingConflicts)
     {
+        Project current = context.Current;
+        MetaProject metaProject = context.Imported;
         var next = new ProjectMetadataConflictRecord
         {
             ProjectId = current.Id,
             ProjectExternalId = string.IsNullOrWhiteSpace(current.ExternalId) ? metaProject.ExternalId : current.ExternalId,
             ProjectName = current.Name,
-            SourceMachineId = string.IsNullOrWhiteSpace(sourceMachineId) ? "unknown" : sourceMachineId,
+            SourceMachineId = string.IsNullOrWhiteSpace(context.SourceMachineId) ? UnknownAppVersion : context.SourceMachineId,
+            SourceKey = context.SourceKey,
+            SourceRevision = metaProject.Revision,
+            BaseRevision = context.BaseRevision,
+            BaseMachineId = context.BaseMachineId,
+            BaseUpdatedUtc = context.BaseUpdatedUtc,
+            LocalMachineId = context.LocalMachineId,
+            DetectedUtc = context.DetectedUtc,
             SourceUpdatedUtc = metaProject.UpdatedUtc == default
                 ? string.Empty
                 : metaProject.UpdatedUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
-            Local = new ProjectMetadataConflictValues
-            {
-                PreferredDestinationId = currentPreferredDestinationId,
-                RestoreMode = currentRestoreMode,
-                VerificationPolicy = currentVerificationPolicy,
-                Tags = currentTags
-            },
-            Imported = new ProjectMetadataConflictValues
-            {
-                PreferredDestinationId = importedPreferredDestinationId,
-                RestoreMode = importedRestoreMode,
-                VerificationPolicy = importedVerificationPolicy,
-                Tags = importedTags
-            }
+            ConflictingFields = [.. context.Plan.ConflictingFields],
+            Base = context.Base,
+            Local = context.Local,
+            Imported = context.Incoming,
+            KeepLocalResult = context.Plan.KeepLocalResult,
+            AcceptImportedResult = context.Plan.AcceptImportedResult
         };
 
         ProjectMetadataConflictRecord? existing = pendingConflicts.FirstOrDefault(conflict =>
@@ -3164,6 +4167,13 @@ public sealed class MetadataSyncService
             return true;
         }
 
+        if (string.Equals(existing.SourceKey, next.SourceKey, StringComparison.OrdinalIgnoreCase) &&
+            existing.SourceRevision == next.SourceRevision &&
+            !string.IsNullOrWhiteSpace(existing.DetectedUtc))
+        {
+            next.DetectedUtc = existing.DetectedUtc;
+        }
+
         if (ProjectMetadataConflictEquals(existing, next))
             return false;
 
@@ -3172,8 +4182,19 @@ public sealed class MetadataSyncService
         existing.ProjectName = next.ProjectName;
         existing.SourceMachineId = next.SourceMachineId;
         existing.SourceUpdatedUtc = next.SourceUpdatedUtc;
+        existing.SourceKey = next.SourceKey;
+        existing.SourceRevision = next.SourceRevision;
+        existing.BaseRevision = next.BaseRevision;
+        existing.BaseMachineId = next.BaseMachineId;
+        existing.BaseUpdatedUtc = next.BaseUpdatedUtc;
+        existing.LocalMachineId = next.LocalMachineId;
+        existing.DetectedUtc = next.DetectedUtc;
+        existing.ConflictingFields = next.ConflictingFields;
+        existing.Base = next.Base;
         existing.Local = next.Local;
         existing.Imported = next.Imported;
+        existing.KeepLocalResult = next.KeepLocalResult;
+        existing.AcceptImportedResult = next.AcceptImportedResult;
         return true;
     }
 
@@ -3184,45 +4205,82 @@ public sealed class MetadataSyncService
                string.Equals(left.ProjectName, right.ProjectName, StringComparison.Ordinal) &&
                string.Equals(left.SourceMachineId, right.SourceMachineId, StringComparison.Ordinal) &&
                string.Equals(left.SourceUpdatedUtc, right.SourceUpdatedUtc, StringComparison.Ordinal) &&
+               string.Equals(left.SourceKey, right.SourceKey, StringComparison.OrdinalIgnoreCase) &&
+               left.SourceRevision == right.SourceRevision &&
+               left.BaseRevision == right.BaseRevision &&
+               string.Equals(left.BaseMachineId, right.BaseMachineId, StringComparison.Ordinal) &&
+               string.Equals(left.BaseUpdatedUtc, right.BaseUpdatedUtc, StringComparison.Ordinal) &&
+               string.Equals(left.LocalMachineId, right.LocalMachineId, StringComparison.Ordinal) &&
+               string.Equals(left.DetectedUtc, right.DetectedUtc, StringComparison.Ordinal) &&
+               left.ConflictingFields.SequenceEqual(right.ConflictingFields, StringComparer.Ordinal) &&
+               ProjectMetadataConflictValuesEqual(left.Base, right.Base) &&
                ProjectMetadataConflictValuesEqual(left.Local, right.Local) &&
-               ProjectMetadataConflictValuesEqual(left.Imported, right.Imported);
+               ProjectMetadataConflictValuesEqual(left.Imported, right.Imported) &&
+               ProjectMetadataConflictValuesEqual(left.KeepLocalResult, right.KeepLocalResult) &&
+               ProjectMetadataConflictValuesEqual(left.AcceptImportedResult, right.AcceptImportedResult);
     }
 
     private static bool ProjectMetadataConflictValuesEqual(ProjectMetadataConflictValues left, ProjectMetadataConflictValues right)
     {
-        return string.Equals(left.PreferredDestinationId, right.PreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
+        return string.Equals(left.AvatarColor, right.AvatarColor, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(left.EncryptionPolicy, right.EncryptionPolicy, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(left.PreferredDestinationId, right.PreferredDestinationId, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(left.RestoreMode, right.RestoreMode, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(left.VerificationPolicy, right.VerificationPolicy, StringComparison.OrdinalIgnoreCase) &&
+               left.AutoBackupEnabled == right.AutoBackupEnabled &&
                string.Equals(left.Tags, right.Tags, StringComparison.Ordinal);
     }
+
+    private static string? ResolveProjectWriterMachineId(MetaProject project, MetaInfo? storeInfo)
+        => string.IsNullOrWhiteSpace(project.WriterMachineId)
+            ? storeInfo?.WriterMachineId
+            : project.WriterMachineId;
 
     private static string NormalizePreferredDestinationId(string? preferredDestinationId, IReadOnlyCollection<BackupDestination> destinations)
         => DestinationIdentityService.NormalizePreferredDestinationId(preferredDestinationId, destinations);
 
-    private void TryApplyProjectColor(MetaProject metaProject)
+    private static string NormalizeImportedPreferredDestinationId(
+        string? preferredDestinationId,
+        IReadOnlyCollection<BackupDestination> destinations)
     {
-        if (_projectColorApplier is null || string.IsNullOrWhiteSpace(metaProject.ExternalId))
+        string normalized = DestinationIdentityService.NormalizePreferredDestinationId(preferredDestinationId, destinations);
+        if (string.IsNullOrWhiteSpace(normalized) ||
+            string.Equals(normalized, Project.DestinationAllId, StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized;
+        }
+
+        BackupDestination? localDestination = DestinationIdentityService.FindByPreferredDestinationId(destinations, normalized);
+        return localDestination is null ? string.Empty : DestinationIdentityService.GetId(localDestination);
+    }
+
+    private void TryApplyProjectColor(string projectExternalId, string color)
+    {
+        if (_projectColorApplier is null || string.IsNullOrWhiteSpace(projectExternalId))
             return;
 
         try
         {
-            if (string.IsNullOrWhiteSpace(metaProject.SettingsJson))
-                return;
-
-            using var doc = JsonDocument.Parse(metaProject.SettingsJson);
-            if (!doc.RootElement.TryGetProperty("avatarColor", out JsonElement colorProp))
-                return;
-
-            string? color = colorProp.GetString();
             if (string.IsNullOrWhiteSpace(color))
                 return;
 
-            _projectColorApplier(metaProject.ExternalId, color);
+            _projectColorApplier(projectExternalId, color);
         }
         catch
         {
             // ignore malformed settings json
         }
+    }
+
+    private static string NormalizeAvatarColor(string? value)
+    {
+        string color = value?.Trim() ?? string.Empty;
+        if (color.Length != 7 || color[0] != '#')
+            return string.Empty;
+
+        return color.AsSpan(1).IndexOfAnyExcept(HexCharacters) >= 0
+            ? string.Empty
+            : color.ToUpperInvariant();
     }
 }
 
@@ -3230,10 +4288,16 @@ public sealed record MetadataSyncOptions(
     bool AllowCreateProjects,
     bool MarkNeedsRestoreOnImport,
     bool ExportMissingTombstonesOnImport = true,
-    bool SkipUnchangedReadOnlySource = false)
+    bool SkipUnchangedReadOnlySource = false,
+    bool ApplyDestructiveTombstones = true)
 {
     public static MetadataSyncOptions Default => new(true, true);
-    public MetadataSyncOptions AsReadOnlySource() => this with { ExportMissingTombstonesOnImport = false };
+    public MetadataSyncOptions WithoutSourceWrites() => this with { ExportMissingTombstonesOnImport = false };
+    public MetadataSyncOptions AsReadOnlySource() => this with
+    {
+        ExportMissingTombstonesOnImport = false,
+        ApplyDestructiveTombstones = false
+    };
     public MetadataSyncOptions WithUnchangedSourceSkip() => this with { SkipUnchangedReadOnlySource = true };
 }
 
@@ -3246,7 +4310,10 @@ public sealed record MetadataSyncResult(
     string Message)
 {
     public IReadOnlyCollection<int> AffectedProjectIds { get; init; } = [];
-    public int RepairedBackups { get; init; }
+    public int RepairedBackups
+    {
+        get; init;
+    }
 
     public static MetadataSyncResult Failure(MetadataSyncStatus status, string message) =>
         new(status, 0, 0, 0, 0, message);
@@ -3263,12 +4330,16 @@ public sealed record MetadataSyncPreview(
     int DeletedBackups,
     string Message)
 {
+    public int DeletedProjects { get; init; }
+    public int DeletedSnapshots { get; init; }
+    public int TotalDeletes => DeletedProjects + DeletedSnapshots + DeletedBackups;
+
     public bool HasChanges =>
         NewProjects > 0 ||
         LinkedProjects > 0 ||
         NewSnapshots > 0 ||
         NewBackups > 0 ||
-        DeletedBackups > 0;
+        TotalDeletes > 0;
 
     public static MetadataSyncPreview Failure(MetadataSyncStatus status, string rootPath, string databasePath, string message) =>
         new(status, rootPath, databasePath, 0, 0, 0, 0, 0, message);
@@ -3281,5 +4352,6 @@ public enum MetadataSyncStatus
     InvalidPath,
     InvalidStore,
     Incompatible,
+    RepositoryBusy,
     WriteFailed
 }

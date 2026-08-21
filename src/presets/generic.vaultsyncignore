@@ -13,6 +13,17 @@ cache/**
 .cache/**
 coverage/**
 logs/**
+log/**
+.blueprints/**
+.pytest_cache/**
+.mypy_cache/**
+.ruff_cache/**
+node_modules/**
+.next/**
+.nuxt/**
+.svelte-kit/**
+.turbo/**
+.parcel-cache/**
 
 **/bin/**
 **/obj/**
@@ -26,6 +37,17 @@ logs/**
 **/.cache/**
 **/coverage/**
 **/logs/**
+**/log/**
+**/.blueprints/**
+**/.pytest_cache/**
+**/.mypy_cache/**
+**/.ruff_cache/**
+**/node_modules/**
+**/.next/**
+**/.nuxt/**
+**/.svelte-kit/**
+**/.turbo/**
+**/.parcel-cache/**
 
 *.tmp
 *.temp
@@ -45,5 +67,6 @@ logs/**
 
 # OS
 .DS_Store
+._*
 Thumbs.db
 desktop.ini

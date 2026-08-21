@@ -5,6 +5,7 @@ using System.Runtime.Versioning;
 using System.Security;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace VaultSync.UI.Infrastructure
 {
@@ -15,6 +16,12 @@ namespace VaultSync.UI.Infrastructure
 
         public static void SetLaunchOnLogin(bool enable)
         {
+            // `dotnet run` and IDE launches use a build output as the process path.
+            // They must not replace an installed application's login registration
+            // with a transient bin/Debug or bin/Release executable.
+            if (IsDevelopmentOutputDirectory(AppContext.BaseDirectory))
+                return;
+
             try
             {
                 if (OperatingSystem.IsWindows())
@@ -34,6 +41,29 @@ namespace VaultSync.UI.Infrastructure
             {
                 DiagnosticsLogger.RecordException("Launch-on-login update failed", ex);
             }
+        }
+
+        internal static bool IsDevelopmentOutputDirectory(string? directory)
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+                return false;
+
+            string[] segments = directory.Replace('\\', '/').Split(
+                '/',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            for (int index = 0; index + 2 < segments.Length; index++)
+            {
+                if (!segments[index].Equals("bin", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                bool buildConfiguration =
+                    segments[index + 1].Equals("Debug", StringComparison.OrdinalIgnoreCase) ||
+                    segments[index + 1].Equals("Release", StringComparison.OrdinalIgnoreCase);
+                if (buildConfiguration && segments[index + 2].StartsWith("net", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 
         private static string GetExecutablePath()
@@ -99,10 +129,21 @@ namespace VaultSync.UI.Infrastructure
 
         private static void SetMacAutoStart(bool enable)
         {
-            string home = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            string home = ResolveMacUserHome(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                Environment.GetEnvironmentVariable("HOME"));
+            if (string.IsNullOrWhiteSpace(home))
+                return;
+
             string agentDir = Path.Combine(home, "Library", "LaunchAgents");
             string plistPath = Path.Combine(agentDir, "com.vaultsync.autostart.plist");
             string? uid = GetMacUid();
+            string personal = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            string? legacyPlistPath = string.IsNullOrWhiteSpace(personal)
+                ? null
+                : Path.Combine(personal, "Library", "LaunchAgents", "com.vaultsync.autostart.plist");
+
+            RemoveLegacyMacAutoStart(legacyPlistPath, plistPath, uid);
 
             if (!enable)
             {
@@ -140,15 +181,63 @@ namespace VaultSync.UI.Infrastructure
     <key>RunAtLoad</key><true/>
   </dict>
 </plist>";
-            File.WriteAllText(plistPath, plist);
+            bool plistChanged = !File.Exists(plistPath) ||
+                !string.Equals(File.ReadAllText(plistPath), plist, StringComparison.Ordinal);
+            if (plistChanged)
+                File.WriteAllText(plistPath, plist);
+
             if (string.IsNullOrWhiteSpace(uid))
                 return;
 
-            // Ensure any previous instance is unloaded before reloading the updated plist.
-            TryLaunchCtl($"bootout gui/{uid} \"{plistPath}\"");
-            TryLaunchCtl($"bootstrap gui/{uid} \"{plistPath}\"");
             TryLaunchCtl($"enable gui/{uid}/com.vaultsync.autostart");
-            TryLaunchCtl($"kickstart -k gui/{uid}/com.vaultsync.autostart");
+            if (!plistChanged && TryLaunchCtl($"print gui/{uid}/com.vaultsync.autostart"))
+                return;
+
+            // Reload only when registration is absent or its launch command changed.
+            TryLaunchCtl($"bootout gui/{uid}/com.vaultsync.autostart");
+            TryLaunchCtl($"bootstrap gui/{uid} \"{plistPath}\"");
+        }
+
+        internal static string ResolveMacUserHome(string? userProfile, string? homeEnvironment)
+        {
+            if (!string.IsNullOrWhiteSpace(userProfile))
+                return Path.GetFullPath(userProfile);
+            if (!string.IsNullOrWhiteSpace(homeEnvironment))
+                return Path.GetFullPath(homeEnvironment);
+            return string.Empty;
+        }
+
+        private static void RemoveLegacyMacAutoStart(
+            string? legacyPlistPath,
+            string canonicalPlistPath,
+            string? uid)
+        {
+            if (string.IsNullOrWhiteSpace(legacyPlistPath) ||
+                string.Equals(
+                    Path.GetFullPath(legacyPlistPath),
+                    Path.GetFullPath(canonicalPlistPath),
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (!File.Exists(legacyPlistPath))
+                return;
+
+            if (!string.IsNullOrWhiteSpace(uid))
+                TryLaunchCtl($"bootout gui/{uid} \"{legacyPlistPath}\"");
+
+            File.Delete(legacyPlistPath);
+            DeleteDirectoryIfEmpty(Path.GetDirectoryName(legacyPlistPath));
+        }
+
+        private static void DeleteDirectoryIfEmpty(string? directory)
+        {
+            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+                return;
+
+            if (!Directory.EnumerateFileSystemEntries(directory).Any())
+                Directory.Delete(directory);
         }
 
         private static string? GetMacUid()
@@ -182,25 +271,54 @@ namespace VaultSync.UI.Infrastructure
             }
         }
 
-        private static void TryLaunchCtl(string arguments)
+        private static bool TryLaunchCtl(string arguments)
         {
             try
             {
-                using var proc = Process.Start(new ProcessStartInfo
+                using var proc = Process.Start(CreateLaunchCtlStartInfo(arguments));
+                if (proc is null)
+                    return false;
+
+                // Drain both streams while launchctl runs. In particular, `launchctl print`
+                // can produce enough output to block if redirected output is only read after
+                // the process exits. Registration inspection is intentionally silent during
+                // normal application startup.
+                Task<string> stdout = proc.StandardOutput.ReadToEndAsync();
+                Task<string> stderr = proc.StandardError.ReadToEndAsync();
+                if (!proc.WaitForExit(3000))
                 {
-                    FileName = "launchctl",
-                    Arguments = arguments,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                });
-                proc?.WaitForExit(3000);
+                    try
+                    {
+                        proc.Kill(entireProcessTree: true);
+                    }
+                    catch
+                    {
+                        // Best effort: the launchctl probe will be retried on the next launch.
+                    }
+                    return false;
+                }
+
+                _ = Task.WaitAll([stdout, stderr], 1000);
+                return proc.HasExited && proc.ExitCode == 0;
             }
             catch
             {
                 // Swallow errors; LaunchAgent will still load on next login.
+                return false;
             }
+        }
+
+        internal static ProcessStartInfo CreateLaunchCtlStartInfo(string arguments)
+        {
+            return new ProcessStartInfo
+            {
+                FileName = "launchctl",
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
         }
 
         private static string XmlEscape(string value)

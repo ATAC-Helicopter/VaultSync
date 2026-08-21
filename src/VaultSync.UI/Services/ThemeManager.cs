@@ -256,7 +256,7 @@ namespace VaultSync.UI.Services
             ThemePaletteConfig palette = NormalizePalette(customTheme ?? GetDefaultCustomTheme());
             bool isLightBase = string.Equals(palette.BaseTheme, ThemeLight, StringComparison.OrdinalIgnoreCase);
             Color accentSoft = WithAlpha(palette.Accent, isLightBase ? 0.14 : 0.24);
-            Color textOnAccent = BestContrast(Color.Parse(palette.Accent));
+            Color textOnAccent = ThemeColor.BestContrast(Color.Parse(palette.Accent));
             Color textMuted = Blend(palette.TextSecondary, palette.Background, isLightBase ? 0.45 : 0.60);
             Color inputBackground = Blend(palette.SurfaceAlt, palette.Background, isLightBase ? 0.45 : 0.25);
             Color inputBorder = Blend(palette.SurfaceAlt, palette.TextSecondary, isLightBase ? 0.35 : 0.28);
@@ -303,9 +303,9 @@ namespace VaultSync.UI.Services
         private static ThemePaletteConfig NormalizePalette(ThemePaletteConfig palette)
         {
             ThemePaletteConfig defaults = GetDefaultCustomTheme();
-            string background = NormalizeHex(palette.Background, defaults.Background);
-            string surface = NormalizeHex(palette.Surface, defaults.Surface);
-            string surfaceAlt = NormalizeHex(palette.SurfaceAlt, defaults.SurfaceAlt);
+            string background = ThemeColor.NormalizeHex(palette.Background, defaults.Background);
+            string surface = ThemeColor.NormalizeHex(palette.Surface, defaults.Surface);
+            string surfaceAlt = ThemeColor.NormalizeHex(palette.SurfaceAlt, defaults.SurfaceAlt);
             return new ThemePaletteConfig
             {
                 Name = string.IsNullOrWhiteSpace(palette.Name) ? defaults.Name : palette.Name.Trim(),
@@ -316,33 +316,19 @@ namespace VaultSync.UI.Services
                 Background = background,
                 Surface = surface,
                 SurfaceAlt = surfaceAlt,
-                Accent = NormalizeHex(palette.Accent, defaults.Accent),
+                Accent = ThemeColor.NormalizeHex(palette.Accent, defaults.Accent),
                 TextPrimary = EnsureReadableText(
-                    NormalizeHex(palette.TextPrimary, defaults.TextPrimary),
+                    ThemeColor.NormalizeHex(palette.TextPrimary, defaults.TextPrimary),
                     [background, surface, surfaceAlt],
                     4.5),
                 TextSecondary = EnsureReadableText(
-                    NormalizeHex(palette.TextSecondary, defaults.TextSecondary),
+                    ThemeColor.NormalizeHex(palette.TextSecondary, defaults.TextSecondary),
                     [background, surface, surfaceAlt],
                     3.0),
-                Success = NormalizeHex(palette.Success, defaults.Success),
-                Warning = NormalizeHex(palette.Warning, defaults.Warning),
-                Danger = NormalizeHex(palette.Danger, defaults.Danger)
+                Success = ThemeColor.NormalizeHex(palette.Success, defaults.Success),
+                Warning = ThemeColor.NormalizeHex(palette.Warning, defaults.Warning),
+                Danger = ThemeColor.NormalizeHex(palette.Danger, defaults.Danger)
             };
-        }
-
-        private static string NormalizeHex(string? value, string fallback)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return fallback;
-
-            string candidate = value.Trim();
-            if (!candidate.StartsWith("#", StringComparison.Ordinal))
-                candidate = "#" + candidate;
-
-            return Color.TryParse(candidate, out Color color)
-                ? $"#{color.R:X2}{color.G:X2}{color.B:X2}"
-                : fallback;
         }
 
         private static Color Blend(string foregroundHex, string backgroundHex, double amount)
@@ -378,47 +364,15 @@ namespace VaultSync.UI.Services
         {
             Color preferred = Color.Parse(preferredHex);
             Color[] backgrounds = backgroundHexes.Select(Color.Parse).ToArray();
-            if (backgrounds.All(background => ContrastRatio(preferred, background) >= minimumRatio))
+            if (backgrounds.All(background => ThemeColor.ContrastRatio(preferred, background) >= minimumRatio))
                 return preferredHex;
 
             Color best = new[] { Colors.White, Color.Parse("#11131A") }
-                .OrderByDescending(candidate => backgrounds.Min(background => ContrastRatio(candidate, background)))
+                .OrderByDescending(candidate => backgrounds.Min(background => ThemeColor.ContrastRatio(candidate, background)))
                 .First();
             return $"#{best.R:X2}{best.G:X2}{best.B:X2}";
         }
 
-        private static Color BestContrast(Color background)
-        {
-            Color white = Colors.White;
-            Color nearBlack = Color.Parse("#11131A");
-            return ContrastRatio(white, background) >= ContrastRatio(nearBlack, background)
-                ? white
-                : nearBlack;
-        }
-
-        private static double ContrastRatio(Color first, Color second)
-        {
-            double firstLuminance = RelativeLuminance(first);
-            double secondLuminance = RelativeLuminance(second);
-            double lighter = Math.Max(firstLuminance, secondLuminance);
-            double darker = Math.Min(firstLuminance, secondLuminance);
-            return (lighter + 0.05) / (darker + 0.05);
-        }
-
-        private static double RelativeLuminance(Color color)
-        {
-            static double Linearize(byte channel)
-            {
-                double value = channel / 255d;
-                return value <= 0.04045
-                    ? value / 12.92
-                    : Math.Pow((value + 0.055) / 1.055, 2.4);
-            }
-
-            return (0.2126 * Linearize(color.R))
-                + (0.7152 * Linearize(color.G))
-                + (0.0722 * Linearize(color.B));
-        }
 
         private static void SetColorOverride(Application app, string key, string hex)
         {

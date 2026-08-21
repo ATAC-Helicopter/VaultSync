@@ -166,6 +166,7 @@ VaultSync includes curated dark and light visual presets with optional advanced 
 - Review metadata conflicts before accepting changes.
 - Receive destination quota suggestions and schedule maintenance jobs.
 - Export support bundles and inspect strict patch compatibility diagnostics.
+- Copy the exact running build identity from Settings, or print the same machine-readable record with `vaultsync --version --json`.
 - Prepare optional, fully reviewable crash-report email drafts. Nothing is uploaded or sent automatically.
 
 ### Encrypt
@@ -203,6 +204,11 @@ Included presets cover:
 - General project workflows
 
 Choose **No preset** to include everything, or configure your own exclusion rules.
+Development presets remove disposable build output, package caches, test caches,
+logs, and machine-local IDE state while preserving Git control files and shareable
+editor configuration. Live `.git` internals remain excluded until full-repository
+backup consistency and restore safeguards are available. VaultSync rules are
+exclusion-only; `!` negation rules from `.gitignore` are not supported.
 
 ---
 
@@ -224,6 +230,10 @@ Direct-download desktop installers are intentionally unsigned because paid platf
 
 Download only from the official `ATAC-Helicopter/VaultSync` release page and compare the asset's published SHA-256 digest before bypassing an operating-system warning. VaultSync's updater also rejects installer and patch downloads whose trusted GitHub digest or exact size is missing or mismatched.
 
+Release packages also publish SPDX 2.3 SBOMs and GitHub artifact attestations
+for the final downloadable bytes. Online and offline verification commands are
+documented in [the release guide](docs/RELEASING.md#sbom-and-provenance-verification).
+
 <details>
 <summary><strong>Windows SmartScreen instructions</strong></summary>
 
@@ -244,21 +254,11 @@ Only continue when the installer came from the official VaultSync repository or 
 4. Open **Applications**.
 5. Right-click VaultSync and select **Open**.
 
-If Gatekeeper still blocks the application, clear the quarantine attribute using the command for your build.
-
-#### Apple Silicon (ARM64)
+If Gatekeeper still blocks the application, clear the quarantine attribute from the canonical app bundle:
 
 ```sh
-sudo xattr -dr com.apple.quarantine "/Applications/VaultSync-macos-arm64.app"
+sudo xattr -dr com.apple.quarantine "/Applications/VaultSync.app"
 ```
-
-#### Intel (x64)
-
-```sh
-sudo xattr -dr com.apple.quarantine "/Applications/VaultSync-macos-x64.app"
-```
-
-Only run the command that matches the VaultSync build installed in your **Applications** folder.
 
 </details>
 

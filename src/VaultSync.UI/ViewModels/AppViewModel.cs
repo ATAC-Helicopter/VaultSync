@@ -120,6 +120,7 @@ namespace VaultSync.UI.ViewModels
         private readonly BackupService _backupService;
         private readonly NetworkMountService _networkMountService;
         private readonly MetadataSyncService _metadataSyncService;
+        private readonly InstallationIdentityService _installationIdentityProvider;
         private readonly CredentialVault _credentialVault;
         private readonly ProjectEncryptionEnrollmentService _projectEncryptionEnrollmentService;
         private readonly INotificationService _notificationService;

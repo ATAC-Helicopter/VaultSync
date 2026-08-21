@@ -346,6 +346,8 @@ namespace VaultSync.Core.Config
         public bool HasSeenOnboarding { get; set; } = false;
         public BackupIndexScanSummary BackupIndexLastScan { get; set; } = new();
         public List<ProjectMetadataConflictRecord> ProjectMetadataConflicts { get; set; } = [];
+        public List<ProjectMetadataResolutionRecord> ProjectMetadataResolutions { get; set; } = [];
+        public List<ProjectMetadataMergeBaseRecord> ProjectMetadataMergeBases { get; set; } = [];
         public UpdateCheckDiagnostics UpdateDiagnostics { get; set; } = new();
         public BackupRepairTelemetry BackupRepairTelemetry { get; set; } = new();
         public MetadataConflictTelemetry MetadataConflictTelemetry { get; set; } = new();
@@ -385,16 +387,66 @@ namespace VaultSync.Core.Config
         public string ProjectName { get; set; } = string.Empty;
         public string SourceMachineId { get; set; } = string.Empty;
         public string SourceUpdatedUtc { get; set; } = string.Empty;
+        public string BaseMachineId { get; set; } = string.Empty;
+        public string BaseUpdatedUtc { get; set; } = string.Empty;
+        public string LocalMachineId { get; set; } = string.Empty;
+        public string DetectedUtc { get; set; } = string.Empty;
+        public string SourceKey { get; set; } = string.Empty;
+        public long SourceRevision { get; set; }
+        public long BaseRevision { get; set; }
+        public List<string> ConflictingFields { get; set; } = [];
+        public ProjectMetadataConflictValues Base { get; set; } = new();
         public ProjectMetadataConflictValues Local { get; set; } = new();
         public ProjectMetadataConflictValues Imported { get; set; } = new();
+        public ProjectMetadataConflictValues KeepLocalResult { get; set; } = new();
+        public ProjectMetadataConflictValues AcceptImportedResult { get; set; } = new();
     }
 
     public sealed class ProjectMetadataConflictValues
     {
+        public string AvatarColor { get; set; } = string.Empty;
+        public string EncryptionPolicy { get; set; } = string.Empty;
         public string PreferredDestinationId { get; set; } = string.Empty;
         public string RestoreMode { get; set; } = string.Empty;
         public string VerificationPolicy { get; set; } = string.Empty;
+        public bool? AutoBackupEnabled { get; set; }
         public string Tags { get; set; } = string.Empty;
+    }
+
+    public sealed class ProjectMetadataResolutionRecord
+    {
+        public string SourceKey { get; set; } = string.Empty;
+        public string ProjectExternalId { get; set; } = string.Empty;
+        public string SourceMachineId { get; set; } = string.Empty;
+        public string SourceUpdatedUtc { get; set; } = string.Empty;
+        public long SourceRevision { get; set; }
+        public long BaseRevision { get; set; }
+        public string Decision { get; set; } = string.Empty;
+        public string ResolvedUtc { get; set; } = string.Empty;
+        public bool UndoAvailable { get; set; }
+        public string UndoneUtc { get; set; } = string.Empty;
+        public string SupersededUtc { get; set; } = string.Empty;
+        public ProjectMetadataConflictValues Local { get; set; } = new();
+        public ProjectMetadataConflictValues Imported { get; set; } = new();
+        public ProjectMetadataConflictValues Result { get; set; } = new();
+    }
+
+    public sealed class ProjectMetadataMergeBaseRecord
+    {
+        public string SourceKey { get; set; } = string.Empty;
+        public string ProjectExternalId { get; set; } = string.Empty;
+        public long Revision { get; set; }
+        public string WriterMachineId { get; set; } = string.Empty;
+        public string UpdatedUtc { get; set; } = string.Empty;
+        public ProjectMetadataConflictValues Values { get; set; } = new();
+        public Dictionary<string, ProjectMetadataFieldProvenance> FieldProvenance { get; set; } = new(StringComparer.Ordinal);
+    }
+
+    public sealed class ProjectMetadataFieldProvenance
+    {
+        public string WriterMachineId { get; set; } = string.Empty;
+        public long Revision { get; set; }
+        public string UpdatedUtc { get; set; } = string.Empty;
     }
 
     public sealed class UpdateCheckDiagnostics

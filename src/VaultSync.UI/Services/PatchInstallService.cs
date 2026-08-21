@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
+using System.Xml.Linq;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 
@@ -179,8 +180,9 @@ namespace VaultSync.UI.Services
                     return false;
                 }
 
-                string installDir = AppContext.BaseDirectory;
-                string helperDir = PrepareHelperDirectory(installDir);
+                string runtimeDir = AppContext.BaseDirectory;
+                string installDir = ResolveInstallRoot(runtimeDir);
+                string helperDir = PrepareHelperDirectory(runtimeDir);
                 string helperExe = Path.Combine(helperDir, Path.GetFileName(processPath));
                 if (!File.Exists(helperExe))
                 {
@@ -262,6 +264,26 @@ namespace VaultSync.UI.Services
                 return true;
 
             return GetElevationKind(installDir) != PatchElevationKind.None;
+        }
+
+        internal static string ResolveInstallRoot(string runtimeDirectory)
+        {
+            string normalized = Path.GetFullPath(runtimeDirectory);
+            if (!OperatingSystem.IsMacOS())
+                return normalized;
+
+            var macOsDirectory = new DirectoryInfo(normalized.TrimEnd(Path.DirectorySeparatorChar));
+            DirectoryInfo? contentsDirectory = macOsDirectory.Parent;
+            DirectoryInfo? bundleDirectory = contentsDirectory?.Parent;
+            if (!string.Equals(macOsDirectory.Name, "MacOS", StringComparison.Ordinal) ||
+                !string.Equals(contentsDirectory?.Name, "Contents", StringComparison.Ordinal) ||
+                bundleDirectory is null ||
+                !bundleDirectory.Name.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+            {
+                return normalized;
+            }
+
+            return bundleDirectory.FullName;
         }
 
         private static string PrepareHelperDirectory(string installDir)
@@ -368,7 +390,12 @@ namespace VaultSync.UI.Services
                     LogLine("Verifying extracted files.");
                     VerifyExtractedFiles(manifest, stagingDir);
                     LogLine("Installing updated files with rollback protection.");
-                    CopyIntoInstall(manifest, stagingDir, request.InstallDir, LogLine);
+                    CopyIntoInstall(
+                        manifest,
+                        stagingDir,
+                        request.InstallDir,
+                        LogLine,
+                        () => VerifyInstalledBundleIdentity(request.InstallDir, manifest.TargetVersion));
                 }
                 finally
                 {
@@ -422,7 +449,12 @@ namespace VaultSync.UI.Services
             }
         }
 
-        internal static void CopyIntoInstall(PatchManifest manifest, string stagingDir, string installDir, Action<string> logLine)
+        internal static void CopyIntoInstall(
+            PatchManifest manifest,
+            string stagingDir,
+            string installDir,
+            Action<string> logLine,
+            Action? validateInstalled = null)
         {
             string transactionDir = Path.Combine(GetTrustedPatchRoot(), $"patch-rollback-{Guid.NewGuid():N}");
             string backupDir = Path.Combine(transactionDir, "backup");
@@ -468,6 +500,8 @@ namespace VaultSync.UI.Services
                     operation.Applied = true;
                     logLine($"Replaced {operation.RelativePath}");
                 }
+
+                validateInstalled?.Invoke();
             }
             catch (Exception installError)
             {
@@ -491,6 +525,41 @@ namespace VaultSync.UI.Services
                     // Best effort cleanup. A failed cleanup only leaves rollback data in the trusted runtime directory.
                 }
             }
+        }
+
+        internal static void VerifyInstalledBundleIdentity(string installDir, string targetVersion)
+        {
+            if (!OperatingSystem.IsMacOS() || !installDir.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            string plistPath = Path.Combine(installDir, "Contents", "Info.plist");
+            if (!File.Exists(plistPath))
+                throw new InvalidDataException("Updated macOS bundle is missing Contents/Info.plist.");
+
+            XDocument plist = XDocument.Load(plistPath, LoadOptions.None);
+            string shortVersion = ReadPlistString(plist, "CFBundleShortVersionString");
+            string bundleVersion = ReadPlistString(plist, "CFBundleVersion");
+            string executable = ReadPlistString(plist, "CFBundleExecutable");
+            if (!string.Equals(shortVersion, targetVersion, StringComparison.Ordinal) ||
+                !string.Equals(bundleVersion, targetVersion, StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    $"Updated macOS bundle identity does not match target {targetVersion}.");
+            }
+
+            string executablePath = Path.Combine(installDir, "Contents", "MacOS", executable);
+            if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executablePath))
+                throw new InvalidDataException("Updated macOS bundle executable is missing.");
+        }
+
+        private static string ReadPlistString(XDocument plist, string key)
+        {
+            XElement? keyElement = plist.Descendants("key")
+                .FirstOrDefault(element => string.Equals(element.Value, key, StringComparison.Ordinal));
+            XElement? valueElement = keyElement?.ElementsAfterSelf().FirstOrDefault();
+            return string.Equals(valueElement?.Name.LocalName, "string", StringComparison.Ordinal)
+                ? valueElement?.Value ?? string.Empty
+                : string.Empty;
         }
 
         private static void ReplaceFromSource(string source, string target)
@@ -636,6 +705,18 @@ namespace VaultSync.UI.Services
 
         private static void RestartUpdatedApp(string installDir, Action<string> logLine)
         {
+            if (OperatingSystem.IsMacOS() && installDir.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "/usr/bin/open",
+                    UseShellExecute = false,
+                    ArgumentList = { "-n", installDir }
+                });
+                logLine($"Restarted application bundle {installDir}");
+                return;
+            }
+
             string exe = Path.Combine(installDir, "VaultSync.UI.exe");
             if (!File.Exists(exe))
             {

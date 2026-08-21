@@ -1,22 +1,28 @@
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Spectre.Console;
 using Spectre.Console.Cli;
+using VaultSync.Core.Services;
 
 namespace VaultSync.CLI.Commands
 {
-    sealed class VersionSettings : CommandSettings;
+    public sealed class VersionSettings : CommandSettings
+    {
+        [CommandOption("--json")]
+        public bool Json { get; init; }
+    }
 
-    sealed class VersionCommand : AsyncCommand<VersionSettings>
+    public sealed class VersionCommand : AsyncCommand<VersionSettings>
     {
         protected override Task<int> ExecuteAsync(CommandContext context, VersionSettings s, CancellationToken cancellationToken)
         {
-            var asm = Assembly.GetExecutingAssembly();
-            string? informational = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            string version = informational ?? asm.GetName().Version?.ToString() ?? "0.0.0";
-            AnsiConsole.MarkupLine($"VaultSync CLI v{Markup.Escape(version)}");
+            Write(s.Json);
             return Task.FromResult(0);
+        }
+
+        public static void Write(bool json)
+        {
+            BuildInformation information = BuildInformationService.Create(typeof(VersionCommand).Assembly);
+            Console.WriteLine(json ? information.ToJson(indented: true) : information.ToDisplayText());
         }
     }
 }

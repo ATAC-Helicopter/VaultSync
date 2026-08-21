@@ -1,5 +1,60 @@
 # What's New
 
+## [1.8.7]
+
+VaultSync `1.8.7` is the Trust and Portability update. It makes build and
+recovery evidence independently checkable, protects shared repository metadata
+from concurrent writers, and makes cross-machine changes explicit instead of
+silently choosing a winner.
+
+Targeted for 24 August 2026. This entry describes the active release candidate;
+it is not shipped until the release reaches Stable.
+
+### Verifiable releases and recovery evidence
+- Identify the exact running build, channel, commit, runtime, architecture,
+  package type, update source, and honest signing status from Settings,
+  diagnostics, support exports, recovery reports, or `vaultsync --version --json`.
+- Verify every direct package against one canonical release manifest containing
+  its exact size, SHA-256 digest, platform, architecture, and official URL.
+- Inspect an SPDX 2.3 SBOM for each package and verify GitHub provenance online
+  or from a downloaded offline attestation bundle.
+- Export a portable Recovery Evidence Package with readable Markdown,
+  schema-versioned JSON, a manifest, and checksums; equivalent evidence has a
+  stable semantic identity and raw local paths remain redacted.
+- Review an allowlisted support bundle before export, remove optional sanitized
+  diagnostics or anonymized telemetry, and retain only bounded, pseudonymized,
+  checksummed files with no credentials or encryption secrets.
+
+### Safer cross-machine repositories
+- Coordinate every portable-metadata writer through a repository lease with a
+  durable installation identity, heartbeat, expiry, nonce-bound release, and
+  explicit stale takeover evidence.
+- Keep preview and read-only inspection available while another 1.8.7 client
+  owns the writer lease. Clients older than 1.8.7 cannot participate and must
+  not write the same destination concurrently.
+- Merge independent portable project-setting edits automatically using durable
+  base revisions and field provenance. Overlapping edits show Base, local, and
+  imported values with writer and timestamp context.
+- Keep local and Accept imported decisions remain durable and can be undone
+  until the next portable repository write supersedes them.
+
+### Reliability, privacy, and interface consistency
+- Cache verified immutable update manifests across restarts instead of
+  redownloading JSON on every background check.
+- Bound disposable diagnostics, logs, caches, updater artifacts, and temporary
+  work, while preventing an unmounted managed network path from receiving backup
+  bytes on the local system drive.
+- Avoid passive startup Keychain prompts and SMB mounts; credentials are read
+  only for an explicit destination test or a real backup.
+- Modernize Snapshot Explorer, metadata-import review, updater, Recovery
+  Inspector, and optional project-folder controls with compact, theme-aware,
+  translation-safe layouts.
+- Standardize the canonical macOS `VaultSync.app` bundle and migrate the exact
+  1.8.6 predecessor through a one-time architecture-aware bridge patch.
+- Refresh the .NET 10 servicing baseline and resolve the release security,
+  static-analysis, path-confinement, preset, metadata-import, and cleanup issues
+  found during the 1.8.7 audit.
+
 ## [1.8.6]
 
 VaultSync `1.8.6` is the Everyday Clarity update. It makes protection timing and background work easier to understand while strengthening the release and patch path.
@@ -72,6 +127,7 @@ VaultSync `1.8.5` is the Recovery Confidence update. It answers a direct questio
 
 ### Update integrity and local privacy
 - Installer downloads, patch manifests, and patch archives must match the exact size and SHA-256 digest published by GitHub before VaultSync will use them.
+- Release packages include SPDX 2.3 SBOMs and GitHub provenance/SBOM attestations for the final downloadable bytes, with documented online and offline verification.
 - Update URLs are restricted to the official VaultSync GitHub release path, and missing or inconsistent integrity metadata fails closed to the release page.
 - Patch extraction rejects traversing, colliding, linked, oversized, or non-portable paths before replacing application files.
 - On Unix-like systems, VaultSync restricts configuration, backups of configuration, and application-data roots to the current user.
@@ -260,7 +316,9 @@ Current `1.7.5` highlights focus on making the codebase more reusable and mainta
 ### Presets and generated output
 - Development and creative presets now exclude nested generated outputs such as build, cache, import, and render folders.
 - Filter coverage now includes nested `**/bin/**`, `**/Intermediate/**`, `.import`, and render-cache style folders.
-- Source-code presets now keep useful repository metadata such as `.github` workflows and Git config files while still excluding `.git` internals and generated build outputs.
+- Source-code presets keep `.github` workflows, Git control files, and shareable
+  editor settings while excluding live `.git` internals, generated build output,
+  and machine-local caches.
 
 ## [1.7.4]
 

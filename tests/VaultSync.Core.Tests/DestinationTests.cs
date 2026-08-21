@@ -11,6 +11,102 @@ namespace VaultSync.Core.Tests;
 
 public sealed class NetworkMountServiceTests
 {
+    [Theory]
+    [InlineData("smb://server/share/folder/child", "server", "share", "folder/child")]
+    [InlineData(@"\\server\share\folder", "server", "share", "folder")]
+    [InlineData("//user@server:445/share", "server", "share", "")]
+    public void TryParseShareWithSubpath_NormalizesSupportedShareForms(
+        string raw,
+        string expectedHost,
+        string expectedShare,
+        string expectedSubPath)
+    {
+        bool parsed = NetworkMountService.TryParseShareWithSubpath(
+            raw,
+            out string host,
+            out string share,
+            out string subPath);
+
+        Assert.True(parsed);
+        Assert.Equal(expectedHost, host);
+        Assert.Equal(expectedShare, share);
+        Assert.Equal(expectedSubPath, subPath);
+    }
+
+    [Theory]
+    [InlineData("//user@server/share on /Volumes/Share (smbfs, nodev, nosuid)", "//user@server/share", "/Volumes/Share")]
+    [InlineData("//server/share on /Users/test/VaultSync mounts/work (SMBFS)", "//server/share", "/Users/test/VaultSync mounts/work")]
+    public void TryParseMacSmbMountLine_ExtractsSourceAndMountPoint(
+        string line,
+        string expectedSource,
+        string expectedMountPoint)
+    {
+        bool parsed = NetworkMountService.TryParseMacSmbMountLine(
+            line,
+            out string source,
+            out string mountPoint);
+
+        Assert.True(parsed);
+        Assert.Equal(expectedSource, source);
+        Assert.Equal(expectedMountPoint, mountPoint);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("/dev/disk3 on /Volumes/Data (apfs)")]
+    [InlineData("smbfs without mount separator")]
+    public void TryParseMacSmbMountLine_RejectsUnrelatedOrMalformedLines(string line)
+    {
+        Assert.False(NetworkMountService.TryParseMacSmbMountLine(line, out _, out _));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("server")]
+    [InlineData("smb://server")]
+    public void TryParseShareWithSubpath_RejectsIncompleteShares(string path)
+    {
+        Assert.False(NetworkMountService.TryParseShareWithSubpath(path, out _, out _, out _));
+    }
+
+    [Fact]
+    public void SanitizeMountError_RemovesRawAndEscapedCredentials()
+    {
+        const string password = "p@ss word";
+        const string share = "//user:p%40ss%20word@server/share";
+        const string display = "//user@server/share";
+        string stderr = $"failed {share}; raw={password}";
+
+        string sanitized = NetworkMountService.SanitizeMountError(stderr, password, share, display);
+
+        Assert.DoesNotContain(password, sanitized, StringComparison.Ordinal);
+        Assert.DoesNotContain(Uri.EscapeDataString(password), sanitized, StringComparison.Ordinal);
+        Assert.Contains(display, sanitized, StringComparison.Ordinal);
+        Assert.Equal("unchanged", NetworkMountService.SanitizeMountError("unchanged", null, "", ""));
+    }
+
+    [Theory]
+    [InlineData("", "share")]
+    [InlineData(" / ", "share")]
+    [InlineData("folder/child", "share/folder/child")]
+    [InlineData("\\folder\\child", "share/folder/child")]
+    public void AppendShareSubPath_NormalizesPortableSegments(string subPath, string expectedRelative)
+    {
+        string mountPoint = Path.Combine(Path.GetTempPath(), "share");
+        string expected = Path.Combine(Path.GetTempPath(), expectedRelative.Replace('/', Path.DirectorySeparatorChar));
+
+        Assert.Equal(expected, NetworkMountService.AppendShareSubPath(mountPoint, subPath));
+    }
+
+    [Theory]
+    [InlineData("Team Archive", "team-archive")]
+    [InlineData("Build_01!", "build_01")]
+    [InlineData(" !!! ", "vaultsync-share")]
+    public void Slugify_ProducesStableMountNames(string input, string expected)
+    {
+        Assert.Equal(expected, NetworkMountService.Slugify(input));
+    }
+
     [Fact]
     public void PrepareDestination_WithLocalPath_ReturnsSuccessAndEffectivePath()
     {
@@ -30,6 +126,43 @@ public sealed class NetworkMountServiceTests
         Assert.Equal(tempDir.Path, result.EffectivePath);
         Assert.False(result.MountedByUs);
         Assert.Contains("local path", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PrepareDestination_WithInvalidLocalPath_ReturnsFailure()
+    {
+        var destination = new BackupDestination
+        {
+            Alias = "Invalid local",
+            Path = "invalid\0path",
+            Active = true
+        };
+
+        DestinationResolution result = new NetworkMountService().PrepareDestination(destination, null);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Invalid local", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PrepareDestination_PreMountedPathRequiresAnExistingDirectory()
+    {
+        using var tempDir = new TempDirectory();
+        var reachable = new BackupDestination { Path = tempDir.Path, PreMounted = true, Active = true };
+        var missing = new BackupDestination
+        {
+            Alias = "Missing mount",
+            Path = Path.Combine(tempDir.Path, "missing"),
+            PreMounted = true,
+            Active = true
+        };
+        var service = new NetworkMountService();
+
+        Assert.True(service.PrepareDestination(reachable, null).IsSuccess);
+        DestinationResolution failure = service.PrepareDestination(missing, null);
+        Assert.False(failure.IsSuccess);
+        Assert.Contains("not accessible", failure.Message, StringComparison.OrdinalIgnoreCase);
+        NetworkMountService.Cleanup(failure);
     }
 
     [Fact]
@@ -74,6 +207,32 @@ public sealed class NetworkMountServiceTests
             new NetworkCredentialProfile { Name = "test", Username = "user", KeyRef = "cred-test" });
 
         Assert.False(result.IsSuccess);
+        Assert.Equal(0, readCount);
+    }
+
+    [Fact]
+    public void PrepareDestination_PassiveProbeDoesNotReadCredentialOrMount()
+    {
+        int readCount = 0;
+        var service = new NetworkMountService(_ =>
+        {
+            readCount++;
+            return "secret";
+        });
+        var destination = new BackupDestination
+        {
+            Path = "smb://example.invalid/share",
+            Active = true,
+            AutoMount = true
+        };
+
+        DestinationResolution result = service.PrepareDestination(
+            destination,
+            new NetworkCredentialProfile { Name = "test", Username = "user", KeyRef = "cred-test" },
+            allowAutoMount: false);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(NetworkMountService.PassiveMountDeferredMessage, result.Message);
         Assert.Equal(0, readCount);
     }
 

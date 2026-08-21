@@ -10,11 +10,24 @@ dist/**
 **/build/**
 **/dist/**
 pip-wheel-metadata/**
-pytest_cache/**
+.pytest_cache/**
+.mypy_cache/**
+.ruff_cache/**
+.pytype/**
+.tox/**
+.nox/**
 htmlcov/**
 **/pip-wheel-metadata/**
-**/pytest_cache/**
+**/.pytest_cache/**
+**/.mypy_cache/**
+**/.ruff_cache/**
+**/.pytype/**
+**/.tox/**
+**/.nox/**
 **/htmlcov/**
+.coverage
+.coverage.*
+coverage.xml
 
 # environments
 env/**
@@ -30,6 +43,6 @@ venv/**
 
 # OS
 .DS_Store
-
-# Git
+._*
+Thumbs.db
 .git/

@@ -21,6 +21,12 @@ VaultSync supports two Windows update models:
   - unlisted or older installs fall back to the full installer
 - Multi-base patch manifests are strict allowlists, not version ranges.
 - Patch + installer fallback applies to Direct builds only.
+- VaultSync 1.8.7 provides a one-time architecture-aware bridge patch from the
+  exact 1.8.6 predecessor to canonical `/Applications/VaultSync.app`. It stages,
+  signs, verifies, and launches the canonical bundle before moving the legacy
+  app to Trash. Older versions use the appropriate full DMG. Later patches
+  update and verify the complete app bundle,
+  including its version metadata.
 
 ## Manual update check
 - Settings > Advanced > Check for updates now.
@@ -41,7 +47,8 @@ Switch channels in Settings > Advanced.
 
 ## Installers
 - Windows: `.exe` installer (Inno Setup).
-- macOS: intentionally unsigned `.dmg` of the `.app` bundle.
+- macOS: architecture-specific, intentionally unsigned `.dmg` containing the
+  canonical `VaultSync.app` and an Applications shortcut.
 - Linux: `.AppImage`, `.deb`, or `.tar.gz` assets, depending on architecture and distribution.
 - Windows Store: packaged Microsoft Store build when published.
 

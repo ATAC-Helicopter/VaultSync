@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "presets": [
     {
       "id": "generic",
@@ -106,7 +106,7 @@
       "name": "Avalonia",
       "category": "Mobile / UI",
       "file": "avalonia.vaultsyncignore",
-      "description": "Excludes bin, obj, pdb, ide caches."
+      "description": "Excludes build output, test artefacts, caches, local tooling state, IDE junk, and live Git internals while preserving shareable repository files."
     },
 
     {
@@ -228,14 +228,14 @@
       "name": "VSCode",
       "category": "IDEs",
       "file": "vscode.vaultsyncignore",
-      "description": "Ignore .vscode workspace junk except settings and recommendations."
+      "description": "Keeps shareable editor settings and excludes only machine-local indexes, history, and workspace state."
     },
     {
       "id": "jetbrains",
       "name": "JetBrains IDEs",
       "category": "IDEs",
       "file": "jetbrains.vaultsyncignore",
-      "description": "Excludes .idea folder and IntelliJ output directories."
+      "description": "Keeps shareable project configuration while excluding per-user IDE state and generated output."
     }
   ]
 }

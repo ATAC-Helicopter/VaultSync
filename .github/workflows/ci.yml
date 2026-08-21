@@ -56,6 +56,11 @@ jobs:
       - name: Build UI generic target
         run: dotnet build src/VaultSync.UI/VaultSync.UI.csproj --framework net10.0 --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
 
+      - name: Publish and audit self-contained runtime
+        run: |
+          dotnet publish src/VaultSync.UI/VaultSync.UI.csproj --framework net10.0 --configuration Release --runtime linux-x64 --self-contained true --output "${{ runner.temp }}/runtime-audit"
+          python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/runtime-audit/VaultSync.UI.runtimeconfig.json"
+
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
 

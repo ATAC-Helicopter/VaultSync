@@ -45,6 +45,12 @@ Recovery Horizon (`1.9`) release families.
 The checkbox is the delivery state. GitHub Project status, milestone, labels,
 assignee, and dates mirror this file rather than defining a second roadmap.
 
+Before synchronizing descriptions, run
+`pwsh scripts/sync_project_descriptions.ps1 -ProjectNumber 7 -DryRun` and review
+the structured change report. The synchronizer reconstructs wrapped roadmap
+titles for matching, preserves manually maintained issue contracts, and writes
+only bodies carrying its `Synced from ROADMAP.md` ownership marker.
+
 ## Product arc
 
 | Family | Name | Product question |
@@ -315,6 +321,8 @@ warnings, and fail closed when integrity metadata is missing or inconsistent.
 **Released:** 2026-08-10
 **Tag:** `v1.8.6`
 **Release PR:** #532
+**Stable integration:** `430dc15` / PR #539
+**Published assets:** 18 qualified assets on 2026-08-10
 
 Delivery note: `1.8.6` proceeds directly to the stable release after
 qualification. It does not have a beta build or prerelease GitHub release.
@@ -366,23 +374,296 @@ History carry the same folder identity.
 
 ## 1.8.7 — Trust and Portability
 
-**Status:** Planned
+**Status:** Active development. Release contracts were approved and implementation
+started on 2026-08-12.
 **Tagline:** *Show the proof.*
+**Stable target:** 2026-08-24
+**Working branch:** `release/1.8.7`
+**Integration target:** `Dev`
 
-- [ ] `VS-1871` `P1` Expose build, channel, commit, runtime, architecture,
+The maintained implementation status and safety contracts for this release live
+in `docs/RELEASE_1.8.7.md`. That page distinguishes shipped behavior from work
+that exists only on the release branch or remains planned.
+
+Minor releases target a weekly train and must not remain open longer than two
+weeks after the preceding Stable release. Release-blocking safety and regression
+work stays in the active train; incomplete non-blocking polish moves forward to
+the next minor rather than silently extending the release. Major releases begin
+after the planned minor train is complete and use explicit beta qualification.
+
+- [x] `VS-1871` `P1` Expose build, channel, commit, runtime, architecture,
   package, and update-source information.
-- [ ] `VS-1872` `P0` Publish artifact checksums and a machine-readable release
+  - Scope: define one build-information contract used by the desktop About and
+    diagnostics surfaces plus machine-readable CLI output; distinguish version,
+    channel, commit, runtime, architecture, package kind, update source, and
+    whether the build is official without treating unsigned packages as signed.
+  - Acceptance: a user or support bundle can identify the exact running build
+    without inspecting filenames, and unavailable values are shown as unknown
+    rather than guessed.
+  - Completed 2026-08-17: one schema-versioned record now drives Settings copy,
+    startup diagnostics, support bundles, recovery reports, and CLI JSON. Release
+    publishes stamp the source commit and distribution facts; unstamped or
+    incomplete builds cannot present themselves as official.
+- [x] `VS-1872` `P0` Publish artifact checksums and a machine-readable release
   manifest from one release source of truth.
-- [ ] `VS-1873` `P1` Generate and publish a Software Bill of Materials and
+  - Scope: generate version, channel, tag, commit, compatible predecessors,
+    asset names, platform, architecture, package kind, byte size, and SHA-256
+    from the artifacts that are actually published; keep the manifest itself
+    outside its own digest set and validate every consumer against one schema.
+  - Acceptance: changing an asset, version, or digest makes release validation
+    fail, while an offline user can validate every downloaded package using the
+    published manifest and documented commands.
+- [x] `VS-1873` `P1` Generate and publish a Software Bill of Materials and
   build provenance where supported.
-- [ ] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
-- [ ] `VS-1875` `P1` Strengthen explicitly redacted support bundles.
-- [ ] `VS-1876` `P1` Document repository layouts, manifests, encryption
+  - Scope: create an SBOM for each self-contained platform artifact, attest the
+    published artifact rather than an intermediate build directory, and expose
+    online and offline verification instructions.
+  - Acceptance: SBOM schemas validate, provenance binds each package to the
+    repository, workflow, and commit that produced it, and verification is
+    exercised in the release-candidate gate.
+  - Completed 2026-08-21: final manifest-listed packages receive validated SPDX
+    2.3 documents tied to their exact SHA-256 and RID-specific dependency graph.
+    A commit-pinned GitHub action attests final package provenance and each SBOM;
+    candidate automation exercises both API-backed and downloaded-bundle trust.
+    Unpublished release-candidate run `32425579729` built every supported package
+    and passed manifest, SBOM, online-attestation, and offline-bundle verification.
+- [x] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
+  - Scope: package a versioned JSON record, readable report, package manifest,
+    checksums, build identity, recovery state, drill evidence, and repository
+    identity without backup payloads, credentials, encryption secrets, or raw
+    unrestricted local paths.
+  - Acceptance: repeated exports of the same evidence are deterministic,
+    tampering is detected, schema compatibility is explicit, and the package
+    can be inspected without VaultSync.
+  - Completed 2026-08-20: Recovery exports now produce one ZIP with canonical
+    JSON, readable Markdown, a versioned manifest, and a standard SHA-256 index.
+    Repository identities are pseudonymous and local paths are redacted;
+    validation rejects altered, missing, duplicate, traversing, unexpected, or
+    unsupported content.
+- [x] `VS-1875` `P1` Strengthen explicitly redacted support bundles.
+  - Scope: define an allowlisted bundle schema, path pseudonymization, secret
+    denylist, size limits, and a review screen that lists every included file
+    and category before export.
+  - Acceptance: automated fixtures containing credentials, tokens, passwords,
+    user paths, and encryption material cannot leak them; users can cancel or
+    remove optional sections before the archive is written.
+  - Completed 2026-08-21: support exports use a generated-file allowlist,
+    bounded sanitized diagnostic and telemetry inputs, path and identity
+    pseudonyms, structured and configured-secret redaction, a SHA-256 manifest,
+    and an explicit review where optional sections can be removed or cancelled.
+- [x] `VS-1876` `P1` Document repository layouts, manifests, encryption
   envelopes, compatibility, and emergency recovery expectations.
-- [ ] `VS-1877` `P1` Add source-machine identity, repository writer locking,
+  - Scope: document supported repository records and versions, portable versus
+    machine-local fields, encryption descriptors, legacy behavior, manual
+    recovery, locks and leases, release verification, and failure recovery.
+  - Acceptance: documentation matches executable schemas and tests, includes a
+    clean-machine recovery path, and states every known compatibility limit.
+  - Completed 2026-08-21: repository-format, cross-machine, metadata-sync,
+    disaster-recovery, updater, and release guidance now cover schemas 1–3,
+    portability, leases, merge/rollback, clean-machine inspection, emergency
+    restore, release integrity, provenance, and unsigned-package limitations.
+- [x] `VS-1877` `P0` Add source-machine identity, repository writer locking,
   and explicit dual-boot/concurrent-writer guidance.
-- [ ] `VS-1878` `P1` Synchronize website, updater, changelog, Store metadata,
+  - Scope: use a durable installation identity and a repository-scoped lease
+    with owner, operation, nonce, heartbeat, expiry, and application version;
+    allow safe read-only inspection, explicit stale takeover, and diagnostic
+    evidence without relying on process-local semaphores or machine names.
+  - Acceptance: two 1.8.7 clients cannot write concurrently, interrupted leases
+    recover predictably, NAS/SMB and clock-skew cases are covered, and the UI
+    states that pre-1.8.7 clients cannot cooperate with the lease protocol.
+  - Completed on the 1.8.7 release branch on 2026-08-16 in PR #546, including
+    per-destination owner inspection and explicit nonce-bound stale takeover.
+- [x] `VS-1878` `P1` Synchronize website, updater, changelog, Store metadata,
   badges, and public roadmap from canonical release metadata.
+  - Scope: make public and in-app release consumers derive from or validate
+    against the canonical release contract, including dry-run generation before
+    publication.
+  - Acceptance: CI rejects inconsistent public metadata and one unpublished
+    release-candidate run produces every expected consumer without publishing.
+  - Completed 2026-08-21: a schema-versioned release contract validates the
+    desktop, CLI, installer, Store manifest, updater guidance, changelog,
+    What’s New, website fallback, release page, roadmap, tag, date, branches,
+    and qualified predecessor. A deterministic command renders public, Store,
+    and release-summary outputs without publishing; CI and release assets reject
+    drift, while the website refreshes the latest stable tag from GitHub.
+- [x] `VS-1879` `P0` Replace two-way cross-machine settings import with a
+  versioned, reviewable, and reversible merge contract.
+  - Scope: persist a durable writer identity, per-record revision and base
+    revision, field-level portable-value provenance, and an explicit merge plan;
+    classify local-only fields separately, keep imports preview-only until the
+    user confirms conflicts, and make Keep local publish or remember a durable
+    resolution instead of rediscovering the same conflict.
+  - Acceptance: independent edits on two machines never silently overwrite one
+    another; non-overlapping changes merge, overlapping changes show old, local,
+    and remote values with timestamps and writers; accepting either side is
+    durable and auditable; the operation can be undone before the next write.
+  - Completed 2026-08-21 in PR #546: durable per-source merge bases,
+    field-level three-way planning, automatic non-overlapping merges, and
+    resolution results that retain independent edits are implemented and
+    tested. Guarded repository writes and schema-version-3 base/provenance and
+    resolution export followed on 2026-08-17, together with Base/local/remote
+    presentation and bounded undo that expires after the next portable write.
+    Reviewed decisions now run through one core service, and a file-backed
+    two-installation qualification proves convergence, conflict preservation,
+    restart durability, repeat-import suppression, undo, and later convergence.
+- [x] `VS-1880` `P1` Simplify and standardize shared application code without
+  changing user-visible behavior.
+  - Scope: consolidate repeated retry, path, serialization, status, dialog,
+    lifecycle, and projection logic behind focused tested primitives; decompose
+    oversized backup, metadata, Dashboard, Settings, Projects, and history
+    orchestration; remove confirmed dead code; and document the few intentional
+    platform-specific duplications that cannot safely share an implementation.
+  - Acceptance: every touched behavior retains regression coverage, no new
+    Sonar duplication is introduced, the repository duplication baseline falls
+    release over release, all remaining duplicated blocks are reviewed and
+    justified or tracked, and builds remain warning-free on every supported
+    platform.
+  - Completed 2026-08-21: shared metadata-export leases, mount parsing and
+    validation, preset resolution, theme calculations, retry paths, and release
+    utilities replaced repeated implementations with regression-tested
+    primitives. Sonar reports `0.0%` duplication on new code and the branch-wide
+    duplication density fell from the Stable baseline of `2.5%` to `1.9%`;
+    release builds remain warning-free.
+
+### Confirmed defects entering 1.8.7
+
+- [x] `BUG-18098` `P1` Preserve complete wrapped roadmap ticket titles, scope,
+  and acceptance text when synchronizing GitHub issues and Project entries.
+  - Acceptance: parser fixtures cover multiline titles and nested scope bullets,
+    and a dry run reports exact changes without rewriting valid issue contracts.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18099` `P0` Service the .NET runtime and coordinated Microsoft
+  packages to the security-fixed `10.0.11` baseline or newer validated patch.
+  - Acceptance: all current runtime-pack Dependabot alerts are closed, direct
+    and runtime-pack vulnerability audits agree, and self-contained packages on
+    every supported RID contain the qualified runtime patch.
+  - Completed: SDK `10.0.303`, runtime `10.0.11`, and coordinated Microsoft
+    packages were pinned on 2026-08-12; unused cross-RID restore declarations
+    were removed, CI audits a real self-contained publish, and release jobs
+    verify the runtime embedded in every supported RID.
+- [x] `BUG-18100` `P0` Restore the permanent `Dev` branch and prevent Stable
+  promotion merges from automatically deleting it.
+  - Completed: `Dev` was restored at the exact `v1.8.6` Stable commit on
+    2026-08-12 and automatic head-branch deletion was disabled.
+- [x] `BUG-18101` `P0` Stop cross-machine metadata import from applying
+  unreviewed settings or repeatedly resurfacing a rejected remote edit.
+  - Scope: encryption policy and key references, auto-backup state, avatar
+    color, tombstones, and all existing conflict fields must follow an explicit
+    portability and conflict policy; Keep local must be durable.
+  - Acceptance: imports do not silently apply machine-local key references or
+    destructive tombstones, every changed portable field appears in preview,
+    writer attribution is record-specific, and resolved conflicts stay resolved.
+  - Completed on the 1.8.7 release branch on 2026-08-16 with version-2 project
+    writer/revision records, durable conflict decisions, complete portable-field
+    review, local-only key and destination handling, and destructive-import gates.
+- [x] `BUG-18102` `P0` Prevent deferred metadata replay from overwriting a
+  destination that changed while it was unavailable.
+  - Acceptance: deferred stores are lease-protected, flush at most once into an
+    empty metadata destination, and remain preserved for merge review when the
+    destination already contains metadata.
+  - Completed on the 1.8.7 release branch on 2026-08-12 together with durable
+    writer protection for every existing metadata export and tombstone path.
+- [x] `BUG-18103` `P1` Modernize outdated utility windows and restore theme
+  consistency across Snapshot Explorer, metadata-import review, and updater UI.
+  - Acceptance: the utility windows use the current compact layout and dynamic
+    theme resources without regressing browsing, preview, import, or update
+    behavior.
+  - Completed on the 1.8.7 release branch on 2026-08-13 in PR #546.
+- [x] `BUG-18104` `P0` Correct stale preset exclusions and eliminate Windows
+  preset-resolution drift.
+  - Acceptance: current generated state is excluded, shared editor and Git
+    control files remain protected, live `.git` internals remain gated by
+    `VS-1801`, unsupported negation rules are absent, and every backup path uses
+    the shared preset resolver with regression coverage.
+  - Completed on the 1.8.7 release branch on 2026-08-13 in PR #546.
+- [x] `BUG-18105` `P1` Prevent metadata-import previews from double-counting
+  projects and backups represented by both metadata and legacy folders.
+  - Acceptance: a preview reports each project, snapshot, and backup once,
+    remains read-only, and repeated previews return the same result.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18106` `P1` Normalize credential-free macOS SMB mount diagnostics.
+  - Acceptance: mount errors contain neither raw nor URL-escaped passwords,
+    replace known credential-bearing share URLs with their credential-free
+    display identity, and preserve unrelated diagnostic text.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18107` `P0` Export snapshot tombstones only for snapshots actually
+  deleted during metadata import.
+  - Acceptance: snapshots retained by local backups and unknown remote snapshot
+    IDs never produce deletion tombstones; each locally deleted unreferenced
+    snapshot produces exactly one tombstone.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18108` `P1` Stop repeated immutable updater manifest downloads.
+  - Acceptance: canonical and platform patch manifests are reused across
+    application restarts only when their release URL, exact size, and trusted
+    SHA-256 identity still match; tampered and linked entries fail closed.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18109` `P0` Bound disposable local storage and reject unbacked
+  macOS managed mount paths.
+  - Acceptance: startup cleanup applies tested age and size limits only to
+    re-creatable VaultSync data; databases, configuration, credentials,
+    backups, and mount contents remain outside cleanup; a managed mount path
+    cannot accept backup bytes unless SMB or NFS is currently mounted.
+  - Completed on the 1.8.7 release branch on 2026-08-15 in PR #546.
+- [x] `BUG-18110` `P1` Complete the recovery and workflow localization pass.
+  - Acceptance: Recovery evidence, repository-writer controls, History,
+    backup-widget, picker, verification, and restore text use maintained locale
+    keys; responsive evidence cards remain readable in every theme.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18111` `P0` Close the remaining Sonar safety and stale-branch defects.
+  - Acceptance: recovery exports avoid public temporary roots, cache cleanup is
+    limited to private application storage, all retry mounts are cleaned up,
+    and unreachable analysis branches are removed.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18112` `P0` Keep passive destination work from unlocking credentials.
+  - Acceptance: startup, maintenance, metadata, cleanup, and history probes
+    reuse already-mounted destinations but never read Keychain or establish a
+    new mount; explicit tests and backups retain auto-mount behavior.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18113` `P0` Correct macOS launch-on-login placement. _(Issue #559.)_
+  - Acceptance: the LaunchAgent lives under the actual user home, the erroneous
+    Documents path is removed safely, and startup synchronization does not
+    kickstart a duplicate app process.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18114` `P0` Make macOS bundle identity and updates coherent.
+  _(Issues #560 and #561.)_
+  - Acceptance: both DMGs contain `VaultSync.app` and an Applications shortcut;
+    1.8.7 uses a full-DMG migration, future patches address the complete bundle,
+    and installed version metadata is verified before success.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+- [x] `BUG-18115` `P0` Clear the release-SBOM security and backup-cleanup quality gate.
+  - Scope: confine SBOM filesystem access to the approved build workspace,
+    reject path-bearing artifact/index filenames, and make backup destination
+    cleanup explicit across credential retries.
+  - Acceptance: traversal attempts fail before filesystem access, valid SBOM
+    generation and validation remain deterministic, and every retained mount
+    resolution is cleaned exactly once.
+  - Completed on the 1.8.7 release branch on 2026-08-20 in PR #546.
+
+### Delivery sequence
+
+1. **12–16 August:** contracts, issue repair, release manifest, serviced runtime,
+   machine identity, writer leases, and the first three-way merge slice.
+2. **17–19 August:** finish guarded cross-machine writes, provenance, resolution
+   export, bounded undo, and two-machine safety fixtures.
+3. **20–21 August:** build identity, platform SBOM/provenance, Recovery Evidence
+   Package, and reviewed support export.
+4. **22 August:** repository and public metadata synchronization plus bounded
+   code cleanup.
+5. **23 August:** unpublished stable-candidate qualification across supported
+   platforms, upgrade paths, storage, localization, accessibility, and security.
+6. **24 August:** merge through `Dev` to `Stable`, publish, verify, and close the
+   milestone.
+
+### Release gates
+
+- every published asset is represented by an exact size and SHA-256 digest;
+- platform SBOMs validate and build attestations verify online and offline;
+- two 1.8.7 clients cannot write concurrently to one repository;
+- divergent cross-machine edits are previewed and resolved without silent loss;
+- upgrades from 1.8.6 preserve local projects, repositories, and recovery data;
+- support and evidence exports pass adversarial privacy and tamper tests;
+- all maintained translations, themes, accessibility paths, SonarQube, CodeQL,
+  dependency audits, and supported-platform builds pass.
 
 Signing and notarization remain desirable trust work, but availability and cost
 must not make truthful checksums, manifests, SBOMs, or provenance optional.

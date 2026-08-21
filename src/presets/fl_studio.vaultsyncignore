@@ -4,8 +4,8 @@ Rendered/**
 **/Rendered/**
 *.fst
 *.tmp
+.git/
 *.bak
 
 .DS_Store
 Thumbs.db
-.git/

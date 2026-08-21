@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
+using VaultSync.Core.Services;
 
 namespace VaultSync.UI.Services;
 
@@ -17,7 +18,9 @@ internal sealed record RecoveryReportProject(
     string Media = "",
     string Offsite = "",
     string LastDrill = "",
-    IReadOnlyList<RecoveryReportEvidence>? Evidence = null);
+    IReadOnlyList<RecoveryReportEvidence>? Evidence = null,
+    string RepositoryIdentity = "unknown",
+    IReadOnlyList<RecoveryReportConfidenceEvidence>? ConfidenceEvidence = null);
 
 internal sealed record RecoveryReportEvidence(
     string Code,
@@ -25,6 +28,13 @@ internal sealed record RecoveryReportEvidence(
     string Detail,
     string EvidenceId,
     string Path);
+
+internal sealed record RecoveryReportConfidenceEvidence(
+    string Kind,
+    string Basis,
+    string Status,
+    string Code,
+    DateTimeOffset? ObservedAtUtc);
 
 internal sealed record RecoveryReportSnapshot(
     DateTimeOffset GeneratedAt,
@@ -49,7 +59,8 @@ internal sealed record RecoveryReportSnapshot(
     int PassedDrillCount = 0,
     int ProtectedPointCount = 0,
     string AppVersion = "unknown",
-    string SourceIdentity = "local");
+    string SourceIdentity = "local",
+    BuildInformation? Build = null);
 
 internal sealed record RecoveryReportLabels(
     string Title,
@@ -101,6 +112,16 @@ internal static class RecoveryReportExporter
             .AppendLine(snapshot.GeneratedAt.ToLocalTime().ToString("F", CultureInfo.CurrentCulture));
         builder.Append("**Application:** VaultSync ").AppendLine(snapshot.AppVersion);
         builder.Append("**Source identity:** ").AppendLine(snapshot.SourceIdentity);
+        if (snapshot.Build is { } build)
+        {
+            builder.Append("**Release channel:** ").AppendLine(build.ReleaseChannel);
+            builder.Append("**Source commit:** ").AppendLine(build.SourceCommit);
+            builder.Append("**Runtime:** ").Append(build.Runtime).Append(" (").Append(build.RuntimeIdentifier).AppendLine(")");
+            builder.Append("**Architecture:** ").AppendLine(build.Architecture);
+            builder.Append("**Package:** ").Append(build.PackageKind).Append("; updates: ").AppendLine(build.UpdateSource);
+            builder.Append("**Official build:** ").AppendLine(build.OfficialBuild ? "yes" : "no");
+            builder.Append("**Signature:** ").AppendLine(build.SignatureStatus);
+        }
         builder.AppendLine();
 
         builder.Append("## ").AppendLine(labels.Overview);
@@ -224,7 +245,7 @@ internal static class RecoveryReportExporter
     private static string EscapeHeading(string value) =>
         EscapeCell(value).Replace("#", "\\#", StringComparison.Ordinal);
 
-    private static string RedactEvidencePath(string value)
+    internal static string RedactEvidencePath(string value)
     {
         if (string.IsNullOrWhiteSpace(value) || !Path.IsPathFullyQualified(value))
             return value ?? string.Empty;
@@ -232,16 +253,20 @@ internal static class RecoveryReportExporter
         return $"[local path redacted]/{Path.GetFileName(value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))}";
     }
 
-    private static string GetDefaultExportDirectory()
+    internal static string GetDefaultExportDirectory()
     {
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         if (string.IsNullOrWhiteSpace(documents))
-            documents = Path.GetTempPath();
+            documents = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(documents))
+            documents = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrWhiteSpace(documents))
+            throw new InvalidOperationException("A private recovery export directory is not available.");
 
         return Path.Combine(documents, "VaultSync", "Exports", "Recovery");
     }
 
-    private static string EnsureUniquePath(string path)
+    internal static string EnsureUniquePath(string path)
     {
         if (!File.Exists(path))
             return path;

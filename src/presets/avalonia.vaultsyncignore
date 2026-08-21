@@ -27,9 +27,19 @@ packages/**
 .vscode/
 .vs/
 .idea/
+.blueprints/**
+log/**
+logs/**
+**/.pytest_cache/**
+**/.mypy_cache/**
+**/.ruff_cache/**
+**/node_modules/**
+**/.next/**
+**/.turbo/**
+**/.parcel-cache/**
 
 # OS
 .DS_Store
-
-# Git
+._*
+Thumbs.db
 .git/

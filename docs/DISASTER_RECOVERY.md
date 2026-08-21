@@ -1,6 +1,8 @@
 # Disaster recovery in VaultSync
 
-VaultSync 1.8.4 adds local, explainable disaster-recovery checks. It does not upload backup metadata, contact a hosted service, or claim that a backup is recoverable without examining it.
+VaultSync provides local, explainable disaster-recovery checks. It does not
+upload backup metadata, contact a hosted service, or claim that a backup is
+recoverable without examining it.
 
 ![Recovery readiness, coverage, recommendations, and project status](images/Recovery_Readiness.png)
 
@@ -15,7 +17,12 @@ A recovery drill opens the newest recorded recovery point for a project without 
 5. Up to 5,000 files and 2 GiB of complete stored content match the expected snapshot SHA-256 and size.
 6. A read-only original-location plan identifies identical files, potential overwrites, and newer destination conflicts.
 
-The result is **Passed**, **Attention**, or **Failed** and is stored in the local VaultSync SQLite database. The Recovery page exposes the latest result and expandable evidence. The exported Markdown recovery report includes drill coverage and a per-check evidence appendix. History is bounded to the newest 20 drills per project, and each drill stores at most 100 warning/error evidence rows.
+The result is **Passed**, **Attention**, or **Failed** and is stored in the local
+VaultSync SQLite database. The Recovery page exposes the latest result and
+expandable evidence. The exported Recovery Evidence Package includes drill
+coverage and per-check evidence in both readable Markdown and versioned JSON,
+with a manifest and SHA-256 index. History is bounded to the newest 20 drills
+per project, and each drill stores at most 100 warning/error evidence rows.
 
 ![Expanded recovery drill with bounded evidence](images/Recovery_Drill.png)
 
@@ -73,4 +80,29 @@ Drill history contains local database IDs, timestamps, status, counts, and human
 - Mark exactly one destination as offsite and verify only projects with a copy there receive offsite credit.
 - Protect a recommended point and confirm the recommendation disappears and retention protection is visible in History and Backups.
 - Expand the latest proof and confirm its failure evidence is selectable.
-- Export the Recovery report and confirm it includes 3-2-1, protected-point, per-project, and proof-evidence details.
+- Export the Recovery Evidence Package, validate `SHA256SUMS`, and confirm its
+  report and JSON include 3-2-1, protected-point, per-project, and proof-evidence
+  details without raw local paths.
+
+## Emergency recovery on another machine
+
+1. Stop VaultSync writers that can reach the destination and make a byte-for-byte
+   copy of the repository, including `.vaultsync/meta/` and SQLite sidecars.
+2. Install the same or a newer VaultSync version that supports the repository
+   schema. A future/unknown schema must not be downgraded or guessed.
+3. Configure the copied destination locally; do not import another machine's
+   full application database or credential store.
+4. Preview portable metadata. Review local root-path mapping, destination
+   mapping, tombstones, conflicts, and encrypted backups before applying.
+5. Restore selected content to a new empty directory and compare it before
+   replacing working files.
+
+A machine-local password/keychain reference is intentionally absent from the
+repository, so encrypted recovery requires the user to provide or configure the
+credential on the recovery machine. A valid writer lease allows read-only
+inspection only. An expired lease is not automatic permission to overwrite it;
+use explicit stale takeover after confirming the previous writer is stopped.
+
+For raw layout, version compatibility, interrupted-write handling, and manual
+read-only inspection, see [Repository formats](REPOSITORY_FORMATS.md). For the
+lease and merge rules, see [Cross-machine safety](CROSS_MACHINE_SAFETY.md).

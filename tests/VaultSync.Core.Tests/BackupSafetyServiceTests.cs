@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
@@ -275,7 +276,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
     [InlineData("python", "module/__pycache__/tool.cpython-310.pyc")]
     [InlineData("unity", "Library/metadata/cache.bin")]
     [InlineData("unreal", "Intermediate/Build/cache.bin")]
-    public void BuiltInSourcePresets_ExcludeGeneratedOutputsButKeepRepoMetadata(string preset, string generatedPath)
+    public void BuiltInSourcePresets_ExcludeGeneratedOutputsAndLiveGitInternals(string preset, string generatedPath)
     {
         var projectRoot = Path.Combine(_tempDir.Path, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(projectRoot);
@@ -284,6 +285,8 @@ public sealed class BackupSafetyServiceTests : IDisposable
         WriteProjectFile(projectRoot, ".github/workflows/ci.yml", "workflow");
         WriteProjectFile(projectRoot, ".gitignore", "bin/");
         WriteProjectFile(projectRoot, ".gitattributes", "* text=auto");
+        WriteProjectFile(projectRoot, ".git/refs/heads/local-feature", "commit");
+        WriteProjectFile(projectRoot, ".git/objects/aa/object", "object");
         WriteProjectFile(projectRoot, generatedPath, "generated");
 
         var filter = FilterService.FromPresetAndLocal(projectRoot, preset, ResolveRepoPresetsDir());
@@ -294,7 +297,87 @@ public sealed class BackupSafetyServiceTests : IDisposable
         Assert.Contains(".github/workflows/ci.yml", entries);
         Assert.Contains(".gitignore", entries);
         Assert.Contains(".gitattributes", entries);
+        Assert.DoesNotContain(".git/refs/heads/local-feature", entries);
+        Assert.DoesNotContain(".git/objects/aa/object", entries);
         Assert.DoesNotContain(entries, path => path.Equals(generatedPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("generic", ".blueprints/cache/state.json")]
+    [InlineData("generic", "tools/.pytest_cache/nodeids")]
+    [InlineData("generic", "web/.next/cache/bundle.bin")]
+    [InlineData("avalonia", "log/session.log")]
+    [InlineData("avalonia", "tools/.ruff_cache/index")]
+    [InlineData("python", ".pytest_cache/nodeids")]
+    [InlineData("python", "module/.mypy_cache/types.json")]
+    [InlineData("python", "module/.ruff_cache/index")]
+    [InlineData("node", ".next/cache/bundle.bin")]
+    [InlineData("node", "packages/app/.turbo/state.json")]
+    [InlineData("node", "packages/app/.parcel-cache/data.bin")]
+    public void BuiltInPresets_ExcludeModernGeneratedState(string preset, string generatedPath)
+    {
+        string projectRoot = Path.Combine(_tempDir.Path, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(projectRoot);
+        WriteProjectFile(projectRoot, "src/source.txt", "keep");
+        WriteProjectFile(projectRoot, generatedPath, "generated");
+
+        var scanner = new ScannerService(FilterService.FromPresetAndLocal(projectRoot, preset, ResolveRepoPresetsDir()));
+        string[] entries = scanner.Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
+
+        Assert.Contains("src/source.txt", entries);
+        Assert.DoesNotContain(entries, path => path.Equals(generatedPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void EditorPresets_KeepShareableConfigurationAndExcludeLocalState()
+    {
+        string projectRoot = Path.Combine(_tempDir.Path, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(projectRoot);
+        WriteProjectFile(projectRoot, ".vscode/settings.json", "{}");
+        WriteProjectFile(projectRoot, ".vscode/tasks.json", "{}");
+        WriteProjectFile(projectRoot, ".vscode/.browse.VC.db", "generated");
+        WriteProjectFile(projectRoot, ".idea/modules.xml", "<project />");
+        WriteProjectFile(projectRoot, ".idea/workspace.xml", "generated");
+
+        string[] vscodeEntries = new ScannerService(
+                FilterService.FromPresetAndLocal(projectRoot, "vscode", ResolveRepoPresetsDir()))
+            .Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
+        string[] jetBrainsEntries = new ScannerService(
+                FilterService.FromPresetAndLocal(projectRoot, "jetbrains", ResolveRepoPresetsDir()))
+            .Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
+
+        Assert.Contains(".vscode/settings.json", vscodeEntries);
+        Assert.Contains(".vscode/tasks.json", vscodeEntries);
+        Assert.DoesNotContain(".vscode/.browse.VC.db", vscodeEntries);
+        Assert.Contains(".idea/modules.xml", jetBrainsEntries);
+        Assert.DoesNotContain(".idea/workspace.xml", jetBrainsEntries);
+    }
+
+    [Fact]
+    public void PresetCatalog_IsCompleteAndUsesSupportedExclusionRules()
+    {
+        string presetsDir = ResolveRepoPresetsDir();
+        string indexPath = Path.Combine(presetsDir, "presets.index.json");
+        using JsonDocument index = JsonDocument.Parse(File.ReadAllText(indexPath));
+
+        Assert.Equal(2, index.RootElement.GetProperty("version").GetInt32());
+        string[] indexedFiles = index.RootElement.GetProperty("presets")
+            .EnumerateArray()
+            .Select(preset => preset.GetProperty("file").GetString()!)
+            .ToArray();
+        string[] presetFiles = Directory.GetFiles(presetsDir, "*.vaultsyncignore")
+            .Select(file => Path.GetFileName(file)!)
+            .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.Equal(indexedFiles.Length, indexedFiles.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(presetFiles, indexedFiles.OrderBy(file => file, StringComparer.OrdinalIgnoreCase).ToArray());
+
+        foreach (string presetFile in presetFiles)
+        {
+            string[] rules = File.ReadAllLines(Path.Combine(presetsDir, presetFile));
+            Assert.DoesNotContain(rules, rule => rule.TrimStart().StartsWith('!'));
+        }
     }
 
     private static void WriteProjectFile(string projectRoot, string relativePath, string contents)

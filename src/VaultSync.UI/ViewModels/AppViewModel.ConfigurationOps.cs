@@ -196,7 +196,8 @@ namespace VaultSync.UI.ViewModels
                         backup.DestinationPath,
                         backup.ExternalId,
                         _currentVersionString,
-                        machineId);
+                        machineId,
+                        _installationIdentityProvider.GetOrCreate());
                 }
                 catch (Exception ex)
                 {
@@ -221,7 +222,10 @@ namespace VaultSync.UI.ViewModels
                         : cfg.Network.Credentials.FirstOrDefault(c =>
                             c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-                    DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
+                    DestinationResolution resolution = _networkMountService.PrepareDestination(
+                        dest,
+                        profile,
+                        allowAutoMount: false);
                     if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         continue;
 
@@ -235,7 +239,7 @@ namespace VaultSync.UI.ViewModels
                         Console.WriteLine($"[BackupCleanup] Removed {removed} incomplete backup(s) under '{resolution.EffectivePath}'.");
                     }
 
-                    _networkMountService.Cleanup(resolution);
+                    NetworkMountService.Cleanup(resolution);
                 }
             }
             catch (Exception ex)
@@ -425,7 +429,10 @@ namespace VaultSync.UI.ViewModels
                         : cfg.Network.Credentials.FirstOrDefault(c =>
                             c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
 
-                    DestinationResolution resolution = _networkMountService.PrepareDestination(dest, profile);
+                    DestinationResolution resolution = _networkMountService.PrepareDestination(
+                        dest,
+                        profile,
+                        allowAutoMount: false);
                     if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         continue;
 
@@ -487,7 +494,7 @@ namespace VaultSync.UI.ViewModels
                         }
                     }
 
-                    _networkMountService.Cleanup(resolution);
+                    NetworkMountService.Cleanup(resolution);
                 }
 
                 if (added > 0)
@@ -1026,7 +1033,7 @@ namespace VaultSync.UI.ViewModels
                                 {
                                     foreach ((_, DestinationResolution resolution) in destinationResolutions)
                                     {
-                                        _networkMountService.Cleanup(resolution);
+                                        NetworkMountService.Cleanup(resolution);
                                     }
                                 }
 
@@ -1243,7 +1250,8 @@ namespace VaultSync.UI.ViewModels
                         MetadataSyncService.TryExportProjectTombstone(
                             resolution.EffectivePath,
                             externalId,
-                            Environment.MachineName);
+                            Environment.MachineName,
+                            _installationIdentityProvider.GetOrCreate());
                     }
                 }
                 catch (Exception ex)
