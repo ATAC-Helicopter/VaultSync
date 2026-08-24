@@ -50,6 +50,7 @@
 
       <ScrollViewer Grid.Row="1"
                     VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled"
                     Padding="0">
         <ItemsControl ItemsSource="{CompiledBinding Sections}"
                       Margin="28,22,28,22">

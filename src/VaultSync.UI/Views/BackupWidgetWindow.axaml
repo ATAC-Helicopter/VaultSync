@@ -95,7 +95,8 @@
               BorderThickness="1"
               CornerRadius="12"
               Padding="10">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding ActiveBackups}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>

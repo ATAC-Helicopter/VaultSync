@@ -549,7 +549,8 @@
                 Classes="history-panel"
                 Padding="18"
                 VerticalAlignment="Stretch">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="16">
               <StackPanel Spacing="9">
                 <TextBlock Text="{infra:LocalizedString Key=History.Detail.Title}"

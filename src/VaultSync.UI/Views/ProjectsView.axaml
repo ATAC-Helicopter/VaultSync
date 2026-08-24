@@ -1911,7 +1911,8 @@
                     Foreground="{DynamicResource TextPrimaryBrush}" />
 
                   <ScrollViewer Grid.Row="1"
-                                VerticalScrollBarVisibility="Auto">
+                                VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding SnapshotHistory}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
