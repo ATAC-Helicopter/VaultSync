@@ -7,7 +7,7 @@
 
 ### Fixed
 
-- [VS-1883] Prevented page and dialog content from exposing unintended horizontal scrolling while preserving vertical overflow and purpose-built file and diff panes.
+- [BUG-18116] Prevented page and dialog content from exposing unintended horizontal scrolling while preserving vertical overflow and purpose-built file and diff panes.
 
 ## [1.8.7] - 21.08.2026
 ### Added

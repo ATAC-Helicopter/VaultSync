@@ -113,6 +113,9 @@ failure handling without becoming a broad rewrite.
   desktop view-model decomposition (`P1`).
 - [`VS-1883`](../ROADMAP.md#188--chronicle-stabilization): localization and
   accessibility defects (`P1`).
+- [`BUG-18116` / #569](https://github.com/ATAC-Helicopter/VaultSync/issues/569):
+  unintended horizontal page and dialog scrolling (`P1`) — fixed on the
+  release branch and awaiting integration through #568.
 - [`VS-1884`](../ROADMAP.md#188--chronicle-stabilization): dependencies,
   packaging, updater, and compatibility (`P1`).
 

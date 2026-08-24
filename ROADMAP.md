@@ -26,6 +26,8 @@ Recovery Horizon (`1.9`) release families.
 - Product and engineering work uses `VS-xxxx`.
 - Defects use `BUG-xxxxx`.
 - Release gates may use `REL-xxxxx`.
+- Each execution item has exactly one owning identifier. A bug-labelled item
+  must never carry a `VS-xxxx` identifier, including legacy dual-ID titles.
 - The first two digits of a `VS` identifier map to the release family:
   `18xx` for `1.8` and `19xx` for `1.9`.
 - The remaining digits are allocated sequentially and are never reused.
@@ -701,6 +703,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   retention, migration, and clean-state recovery.
 - [ ] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
   narrow-layout defects.
+- [x] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling
+  while preserving purpose-built file, diff, and log panes. _(Issue #569;
+  delivered on the release branch and awaiting integration through #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
 

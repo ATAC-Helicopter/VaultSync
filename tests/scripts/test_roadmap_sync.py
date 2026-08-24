@@ -107,6 +107,53 @@ class RoadmapSyncTests(unittest.TestCase):
 
         self.assertEqual([], roadmap_sync.plan_changes(items, {"BUG-1": entry}))
 
+    def test_classification_rejects_vs_identifiers_on_bug_items(self):
+        items = [
+            {
+                "title": "BUG-18001 / VS-1801: Ambiguous defect",
+                "labels": ["bug", "roadmap"],
+                "content": {"type": "Issue"},
+            },
+            {
+                "title": "VS-1883: Qualification workstream",
+                "labels": ["kind:vs", "roadmap"],
+                "content": {"type": "Issue"},
+            },
+        ]
+
+        violations = roadmap_sync.find_classification_violations(items)
+
+        self.assertEqual(1, len(violations))
+        self.assertIn("cannot carry VS identifiers", violations[0])
+
+    def test_classification_rejects_conflicting_kind_labels(self):
+        items = [
+            {
+                "title": "VS-1883: Misclassified defect",
+                "labels": ["bug", "kind:vs"],
+                "content": {"type": "Issue"},
+            }
+        ]
+
+        violations = roadmap_sync.find_classification_violations(items)
+
+        self.assertEqual(2, len(violations))
+        self.assertTrue(any("mutually exclusive" in item for item in violations))
+
+    def test_classification_prefers_canonical_issue_title_over_stale_project_title(self):
+        items = [
+            {
+                "title": "BUG-16024 / VS-1626: stale Project title",
+                "labels": ["bug", "roadmap"],
+                "content": {
+                    "type": "Issue",
+                    "title": "BUG-16024: canonical linked issue title",
+                },
+            }
+        ]
+
+        self.assertEqual([], roadmap_sync.find_classification_violations(items))
+
     def test_input_validation_rejects_unsafe_identifiers_and_external_paths(self):
         self.assertEqual("ATAC-Helicopter", roadmap_sync.validate_owner("ATAC-Helicopter"))
         self.assertEqual("7", roadmap_sync.validate_project_number(7))
