@@ -1,8 +1,8 @@
 # Cross-Machine Metadata Safety
 
-This is the design and threat-model contract for the 1.8.7 writer lease and
-versioned metadata merge. It does not claim that planned behavior is available;
-implementation status is maintained in [the 1.8.7 release page](RELEASE_1.8.7.md).
+This is the design and threat-model contract for the writer lease and versioned
+metadata merge introduced in VaultSync 1.8.7. The behavior described here is
+shipped unless a section explicitly labels future work.
 
 ## Problem statement
 
@@ -55,10 +55,9 @@ repository.
 - Diagnostic UI may show a short prefix and the host name as a friendly label;
   the full durable identifier remains the authority.
 
-Copying an application-data directory clones its identity. Before repository
-lease rollout is complete, the implementation must detect a lease claiming the
-same identity with a different active nonce and treat it as a conflict rather
-than assuming it is the same process.
+Copying an application-data directory clones its identity. The lease layer
+detects a lease claiming the same identity with a different active nonce and
+treats it as a conflict rather than assuming it is the same process.
 
 ## Writer lease
 
@@ -87,7 +86,7 @@ only when installation id and nonce still match the on-disk record.
 
 The lease primitive, read-only inspection, automatic heartbeat, nonce-bound
 release, conservative expiry, explicit stale takeover, and takeover evidence
-were implemented on the 1.8.7 release branch on 2026-08-12. Backup/history,
+are available since VaultSync 1.8.7. Backup/history,
 project-settings, project/snapshot/backup tombstone, deferred, and deferred-flush
 writers now require lease ownership and verify their nonce again immediately
 before changing metadata. Import and preview remain readable while a writer is
@@ -140,9 +139,9 @@ revision.
 ## Safe rollout order
 
 1. Land and test durable installation identity without changing repository data.
-   **Implemented on the 1.8.7 release branch on 2026-08-12.**
+   **Available since VaultSync 1.8.7.**
 2. Add lease parsing and read-only busy diagnostics.
-   **Implemented on the 1.8.7 release branch on 2026-08-12.**
+   **Available since VaultSync 1.8.7.**
 3. Protect every metadata writer, including tombstones and repair/migration.
    **Implemented for the existing version-1 writers on 2026-08-12; every future
    migration or repair writer must enter through the same boundary.**
@@ -166,8 +165,9 @@ revision.
 8. Qualify local disk, SMB/NAS, disconnection, skew, crash, and mixed-version
    scenarios before enabling multi-machine writes by default.
    **The deterministic two-installation workflow and fault cases are qualified
-   in the automated suite. A physical NAS/SMB smoke test remains part of release
-   qualification because CI cannot reproduce a user's mount and network stack.**
+   in the automated suite. Physical NAS/SMB smoke tests remain part of each
+   release qualification because CI cannot reproduce a user's mount and network
+   stack.**
 
 ## Non-negotiable tests
 

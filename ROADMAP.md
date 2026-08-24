@@ -374,16 +374,15 @@ History carry the same folder identity.
 
 ## 1.8.7 — Trust and Portability
 
-**Status:** Active development. Release contracts were approved and implementation
-started on 2026-08-12.
+**Status:** Released on 2026-08-21 as `v1.8.7`.
 **Tagline:** *Show the proof.*
 **Stable target:** 2026-08-24
 **Working branch:** `release/1.8.7`
 **Integration target:** `Dev`
 
-The maintained implementation status and safety contracts for this release live
-in `docs/RELEASE_1.8.7.md`. That page distinguishes shipped behavior from work
-that exists only on the release branch or remains planned.
+The shipped behavior is summarized in `CHANGELOG.md` and `docs/WHATS_NEW.md`.
+Durable repository and cross-machine contracts remain in
+`docs/REPOSITORY_FORMATS.md` and `docs/CROSS_MACHINE_SAFETY.md`.
 
 Minor releases target a weekly train and must not remain open longer than two
 weeks after the preceding Stable release. Release-blocking safety and regression
@@ -424,9 +423,9 @@ after the planned minor train is complete and use explicit beta qualification.
   - Completed 2026-08-21: final manifest-listed packages receive validated SPDX
     2.3 documents tied to their exact SHA-256 and RID-specific dependency graph.
     A commit-pinned GitHub action attests final package provenance and each SBOM;
-    candidate automation exercises both API-backed and downloaded-bundle trust.
-    Unpublished release-candidate run `32425579729` built every supported package
-    and passed manifest, SBOM, online-attestation, and offline-bundle verification.
+    candidate automation exercises both API-backed and downloaded-bundle trust
+    and passed manifest, SBOM, online-attestation, and offline-bundle verification
+    for every supported package.
 - [x] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
   - Scope: package a versioned JSON record, readable report, package manifest,
     checksums, build identity, recovery state, drill evidence, and repository
@@ -672,8 +671,16 @@ must not make truthful checksums, manifests, SBOMs, or provenance optional.
 
 ## 1.8.8 — Chronicle Stabilization
 
-**Status:** Planned and required before `1.9.0`
+**Status:** Active and required before `1.9.0`
 **Tagline:** *A stable foundation for larger recovery.*
+**Planning started:** 2026-08-24
+**Stable target:** 2026-08-28
+**Maximum date:** 2026-09-04
+**Working branch:** `release/1.8.8`
+**Integration target:** `Dev`
+
+The maintained kickoff, 1.8.7 feedback snapshot, code baseline, delivery order,
+and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 
 - [ ] `VS-1823` `P0` Establish large-history and high-file-count performance
   budgets with repeatable benchmarks. _(Existing issue #382.)_

@@ -1,9 +1,8 @@
 # VaultSync Repository Formats and Recovery Boundary
 
-This document records the on-disk contracts implemented for VaultSync 1.8.7.
-These contracts remain unreleased until 1.8.7 reaches `Stable`; the shipped
-1.8.6 client does not understand repository leases or schema-version-3 merge
-provenance.
+This document records VaultSync's current on-disk contracts. Repository leases
+and schema-version-3 merge provenance were introduced in VaultSync 1.8.7;
+clients older than 1.8.7 do not understand them.
 
 ## Storage map
 
@@ -73,11 +72,11 @@ algorithm and parameters needed to recognize encrypted backup content; it must
 not contain a password, derived key, operating-system credential reference, or
 recovery secret.
 
-## Repository coordination — Implemented for 1.8.7
+## Repository coordination — Available since 1.8.7
 
 The coordination database, durable installation identity, protection of all
 existing metadata writers, durable local merge bases, and the field-level
-three-way planner are implemented on the 1.8.7 release branch. Schema version 3
+three-way planner shipped in VaultSync 1.8.7. Schema version 3
 adds guarded compare-and-swap project writes, explicit base revisions,
 per-field writer/revision/timestamp provenance, and the latest safe resolution
 record. Conflict review exposes Base/local/remote values with revision, writer,
@@ -227,6 +226,6 @@ Any repository-format change requires all of the following in one PR:
 - updated `DOCUMENTATION.md`, Metadata Sync guidance, and release notes;
 - a clean-machine recovery exercise before release.
 
-The active delivery status and acceptance gates are maintained in the
-[1.8.7 release contract](RELEASE_1.8.7.md). Identity, lease, and merge protocol
-invariants are maintained in [Cross-machine safety](CROSS_MACHINE_SAFETY.md).
+Identity, lease, and merge protocol invariants are maintained in
+[Cross-machine safety](CROSS_MACHINE_SAFETY.md). User-visible release history is
+maintained in [What's New](WHATS_NEW.md) and the [changelog](../CHANGELOG.md).
