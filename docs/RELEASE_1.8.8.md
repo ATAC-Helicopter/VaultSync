@@ -69,7 +69,9 @@ failure handling without becoming a broad rewrite.
 ## Delivery sequence
 
 1. Establish repeatable large-history and high-file-count benchmark fixtures,
-   budgets, and baseline results (`VS-1823`).
+   budgets, and baseline results (`VS-1823`). The harness and budgets are now
+   maintained in [`PERFORMANCE_BENCHMARKS.md`](PERFORMANCE_BENCHMARKS.md); the
+   supported-platform baseline reports remain release-gate evidence.
 2. Exercise cancellation, disconnection, corruption, retention, migration,
    clean-state recovery, and the exact `1.8.7` upgrade path (`VS-1882`).
 3. Extract the smallest backup, metadata, and view-model boundaries needed to

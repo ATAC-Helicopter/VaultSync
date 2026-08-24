@@ -1,6 +1,10 @@
 ﻿# Changelog
 ## [1.8.8] - Unreleased
 
+### Added
+
+- [VS-1823] Added a reproducible Release-mode benchmark harness and explicit p95 duration, allocation, and cancellation budgets for 10,000-event histories and 100,000-file snapshot comparisons.
+
 ## [1.8.7] - 21.08.2026
 ### Added
 - [VS-1874] Added portable Recovery Evidence Packages containing a versioned JSON record, readable Markdown, a manifest, and SHA-256 checksums, with deterministic semantic digests, build and pseudonymous repository identities, encrypted-point evidence, evidence freshness, redacted local paths, and validation for tampering, missing or duplicate files, unsafe paths, and unsupported schemas.
