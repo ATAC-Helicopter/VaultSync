@@ -32,6 +32,11 @@ macOS can use architecture-specific patch names:
 - `vaultsync-patch-macos-apple-silicon.*`
 - `vaultsync-patch-macos-intel.*`
 
+VaultSync 1.8.8 qualifies exactly 1.8.7 as its patch predecessor. All 1.8.7
+macOS installations already use the canonical `VaultSync.app` layout, so the
+1.8.8 patch updates and verifies the complete application bundle relative to
+that root. Earlier versions use the full installer or DMG fallback.
+
 VaultSync 1.8.7 includes one architecture-aware bridge patch for the exact
 1.8.6 predecessor. The 1.8.6 helper updates its legacy `Contents/MacOS`
 payload; on restart, 1.8.7 copies that complete bundle into a staged canonical

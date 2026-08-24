@@ -1,5 +1,7 @@
 ﻿# Changelog
-## [1.8.7] - Unreleased
+## [1.8.8] - Unreleased
+
+## [1.8.7] - 21.08.2026
 ### Added
 - [VS-1874] Added portable Recovery Evidence Packages containing a versioned JSON record, readable Markdown, a manifest, and SHA-256 checksums, with deterministic semantic digests, build and pseudonymous repository identities, encrypted-point evidence, evidence freshness, redacted local paths, and validation for tampering, missing or duplicate files, unsafe paths, and unsupported schemas.
 - [VS-1871] Added one conservative build-identity record across Settings, startup diagnostics, support and recovery exports, plus `vaultsync --version --json`; version, channel, commit, runtime, architecture, package, update source, official status, and signature status now come from the same contract.

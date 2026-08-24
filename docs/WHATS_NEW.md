@@ -1,5 +1,13 @@
 # What's New
 
+## [1.8.8]
+
+VaultSync `1.8.8` is the Chronicle Stabilization update. Work is beginning with
+measured large-history performance, interruption and corruption recovery,
+cross-platform qualification, and focused decomposition of the backup,
+metadata, and desktop workflow hotspots. This section will grow only as
+user-visible changes are implemented and verified.
+
 ## [1.8.7]
 
 VaultSync `1.8.7` is the Trust and Portability update. It makes build and
@@ -7,8 +15,7 @@ recovery evidence independently checkable, protects shared repository metadata
 from concurrent writers, and makes cross-machine changes explicit instead of
 silently choosing a winner.
 
-Targeted for 24 August 2026. This entry describes the active release candidate;
-it is not shipped until the release reaches Stable.
+Released on 21 August 2026.
 
 ### Verifiable releases and recovery evidence
 - Identify the exact running build, channel, commit, runtime, architecture,
