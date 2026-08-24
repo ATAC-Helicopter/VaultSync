@@ -101,7 +101,8 @@ failure handling without becoming a broad rewrite.
 ## Initial work queue
 
 - [`VS-1823` / #382](https://github.com/ATAC-Helicopter/VaultSync/issues/382):
-  performance budgets and release benchmarks (`P0`).
+  performance budgets and release benchmarks (`P0`) — harness, local baseline,
+  and cross-platform evidence workflow complete.
 - [`VS-1882`](../ROADMAP.md#188--chronicle-stabilization): lifecycle and
   recovery fault matrix (`P0`).
 - [`VS-1881`](../ROADMAP.md#188--chronicle-stabilization): supported-platform

@@ -682,7 +682,7 @@ must not make truthful checksums, manifests, SBOMs, or provenance optional.
 The maintained kickoff, 1.8.7 feedback snapshot, code baseline, delivery order,
 and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 
-- [ ] `VS-1823` `P0` Establish large-history and high-file-count performance
+- [x] `VS-1823` `P0` Establish large-history and high-file-count performance
   budgets with repeatable benchmarks. _(Existing issue #382.)_
 - [ ] `VS-1821` `P1` Finish backup and metadata orchestration decomposition
   needed for fault isolation. _(Existing issue #380.)_

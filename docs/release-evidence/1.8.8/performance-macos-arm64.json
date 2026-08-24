@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "recordedUtc": "2026-08-24T12:07:13.237056Z",
+  "sourceCommit": "1.0.0\u002B3131ad2bc412b36052d2074042cec2902a8bc0fb",
+  "configuration": "Release",
+  "machine": {
+    "operatingSystem": "macOS 27.0.0",
+    "architecture": "Arm64",
+    "runtime": ".NET 10.0.11",
+    "logicalProcessors": 8,
+    "serverGc": false
+  },
+  "fixture": {
+    "historyEvents": 10000,
+    "fileCount": 100000,
+    "iterations": 7
+  },
+  "measurements": [
+    {
+      "name": "snapshot-compare",
+      "p50Milliseconds": 74.4917,
+      "p95Milliseconds": 84.9495,
+      "maximumMilliseconds": 84.9495,
+      "p95AllocatedBytes": 30818584,
+      "budgetP95Milliseconds": 500,
+      "budgetP95AllocatedBytes": 67108864,
+      "passed": true
+    },
+    {
+      "name": "large-history-read",
+      "p50Milliseconds": 65.8201,
+      "p95Milliseconds": 100.5926,
+      "maximumMilliseconds": 100.5926,
+      "p95AllocatedBytes": 13388728,
+      "budgetP95Milliseconds": 500,
+      "budgetP95AllocatedBytes": 50331648,
+      "passed": true
+    },
+    {
+      "name": "snapshot-compare-cancellation",
+      "p50Milliseconds": 51.2132,
+      "p95Milliseconds": 55.0437,
+      "maximumMilliseconds": 55.0437,
+      "p95AllocatedBytes": 0,
+      "budgetP95Milliseconds": 250,
+      "budgetP95AllocatedBytes": 0,
+      "passed": true
+    }
+  ]
+}

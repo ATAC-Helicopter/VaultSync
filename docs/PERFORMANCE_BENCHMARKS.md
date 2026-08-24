@@ -28,6 +28,10 @@ p95, maximum duration, p95 allocated bytes, budgets, and pass/fail result.
 Attach that report to the release PR. Compare results only when the fixture
 sizes and machine profile match.
 
+The `Performance Benchmarks` workflow runs the same enforced profile on
+GitHub-hosted Windows, Linux, and macOS runners when the harness or Core paths
+change. Each job uploads its machine-profiled JSON report for release evidence.
+
 ## Budgets
 
 | Scenario | Default fixture | p95 duration | p95 allocation |
@@ -49,6 +53,20 @@ profile.
 - Record power mode and whether the machine was virtualized in the release PR.
 - Rerun a failed scenario once on an idle machine. Treat a repeated failure as
   a release blocker or document an explicitly reviewed budget change.
-- CI build and test jobs compile the harness through `VaultSync.sln`; timing
-  enforcement remains an explicit release-machine gate to avoid hiding runner
-  variance behind looser CI-only ceilings.
+- Treat the cross-platform workflow as a repeatable regression gate and the
+  release-machine run as the hardware-specific baseline. Keep both sets of
+  JSON evidence because hosted-runner timing does not replace a controlled
+  release-machine measurement.
+
+## 1.8.8 kickoff baseline
+
+The first controlled run used macOS 27 on Arm64, .NET 10.0.11, eight logical
+processors, workstation GC, and commit `3131ad2`. All release budgets passed.
+The complete report is stored as
+[`performance-macos-arm64.json`](release-evidence/1.8.8/performance-macos-arm64.json).
+
+| Scenario | p50 | p95 | p95 allocation |
+|---|---:|---:|---:|
+| History repository/materialization | 65.82 ms | 100.59 ms | 12.77 MiB |
+| Snapshot comparison | 74.49 ms | 84.95 ms | 29.39 MiB |
+| Snapshot-comparison cancellation | 51.21 ms | 55.04 ms | Not measured |
