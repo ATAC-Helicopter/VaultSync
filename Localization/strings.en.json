@@ -1872,7 +1872,7 @@
   "Recovery.Evidence.Basis.Unsupported": "Unsupported",
   "Settings.Destinations.Writer.Title": "Repository writer",
   "Settings.Destinations.Writer.Description": "See which VaultSync installation can write shared history.",
-  "Settings.Destinations.Writer.CompatibilityWarning": "Only VaultSync 1.8.7 and newer respects this writer lock.",
+  "Settings.Destinations.Writer.CompatibilityWarning": "Only VaultSync 1.8.7 and newer respect this writer lock.",
   "Settings.Destinations.Writer.Review": "Review stale writer",
   "Settings.Destinations.Writer.TakeoverWarning": "Only continue after confirming the other machine is no longer writing. The old lease will be retained as diagnostic evidence.",
   "Settings.Destinations.Writer.TakeOver": "Take over stale writer",
