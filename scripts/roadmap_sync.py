@@ -358,7 +358,7 @@ def _apply_draft_change(change: PlannedChange, project_id: str) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--owner", default="ATAC-Helicopter")
-    parser.add_argument("--project-number", type=int, default=1)
+    parser.add_argument("--project-number", type=int, default=7)
     parser.add_argument("--roadmap-path", default="ROADMAP.md")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--items-snapshot-path", default="")

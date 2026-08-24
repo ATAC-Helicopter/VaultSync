@@ -44,12 +44,20 @@ Recovery Horizon (`1.9`) release families.
 
 The checkbox is the delivery state. GitHub Project status, milestone, labels,
 assignee, and dates mirror this file rather than defining a second roadmap.
+Every project item requires Start and Target dates; Done items also require
+Completed on. Missing Start dates trace to issue or pull-request creation.
+Missing Target dates trace, in order, to the item's milestone due date, the
+published date of its historical release, the matching release-horizon
+milestone, or the close/merge date of completed unscheduled work. The sync
+fails closed when none of those sources provides a defensible date.
 
 Before synchronizing descriptions, run
 `pwsh scripts/sync_project_descriptions.ps1 -ProjectNumber 7 -DryRun` and review
 the structured change report. The synchronizer reconstructs wrapped roadmap
-titles for matching, preserves manually maintained issue contracts, and writes
-only bodies carrying its `Synced from ROADMAP.md` ownership marker.
+titles for matching, preserves manually maintained issue contracts, writes
+only bodies carrying its `Synced from ROADMAP.md` ownership marker, and audits
+the required project dates. A non-dry run repairs traceable missing dates and
+refuses partial updates when any date lacks a canonical source.
 
 ## Product arc
 
