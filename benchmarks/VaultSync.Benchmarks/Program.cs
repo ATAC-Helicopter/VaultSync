@@ -68,7 +68,7 @@ try
 
     if (options.Enforce && report.Measurements.Any(measurement => !measurement.Passed))
     {
-        Console.Error.WriteLine("One or more VaultSync performance budgets failed.");
+        await Console.Error.WriteLineAsync("One or more VaultSync performance budgets failed.");
         return 1;
     }
 
