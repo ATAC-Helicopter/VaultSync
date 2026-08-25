@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.Benchmarks;
 
 BenchmarkOptions options = BenchmarkOptions.Parse(args);
 string fixtureRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-benchmark-{Guid.NewGuid():N}");
@@ -100,6 +101,10 @@ static FileEntry[] CreateFiles(int count, bool modified)
 
 static SqliteRepository CreateHistoryFixture(string databasePath, int historyEvents)
 {
+    const string ExternalParameter = "$external";
+    const string CreatedParameter = "$created";
+    const string ProjectParameter = "$project";
+
     var repository = new SqliteRepository(databasePath);
     repository.EnsureSchema();
 
@@ -115,27 +120,27 @@ static SqliteRepository CreateHistoryFixture(string databasePath, int historyEve
     projectCommand.Transaction = transaction;
     projectCommand.CommandText =
         "INSERT INTO projects(external_id, name, root_path, preset, created_utc) VALUES($external, $name, $root, 'dotnet', $created); SELECT last_insert_rowid();";
-    projectCommand.Parameters.Add("$external", SqliteType.Text);
+    projectCommand.Parameters.Add(ExternalParameter, SqliteType.Text);
     projectCommand.Parameters.Add("$name", SqliteType.Text);
     projectCommand.Parameters.Add("$root", SqliteType.Text);
-    projectCommand.Parameters.Add("$created", SqliteType.Text);
+    projectCommand.Parameters.Add(CreatedParameter, SqliteType.Text);
 
     using SqliteCommand snapshotCommand = connection.CreateCommand();
     snapshotCommand.Transaction = transaction;
     snapshotCommand.CommandText =
         "INSERT INTO snapshots(external_id, project_id, created_utc, file_count, total_bytes) VALUES($external, $project, $created, 100000, 409600000); SELECT last_insert_rowid();";
-    snapshotCommand.Parameters.Add("$external", SqliteType.Text);
-    snapshotCommand.Parameters.Add("$project", SqliteType.Integer);
-    snapshotCommand.Parameters.Add("$created", SqliteType.Text);
+    snapshotCommand.Parameters.Add(ExternalParameter, SqliteType.Text);
+    snapshotCommand.Parameters.Add(ProjectParameter, SqliteType.Integer);
+    snapshotCommand.Parameters.Add(CreatedParameter, SqliteType.Text);
 
     using SqliteCommand backupCommand = connection.CreateCommand();
     backupCommand.Transaction = transaction;
     backupCommand.CommandText =
         "INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, total_bytes, path, destination_path, destination_alias, origin_machine_name) VALUES($external, $project, $snapshot, $created, 'automatic', 409600000, $path, '/benchmark', 'Benchmark', 'fixture');";
-    backupCommand.Parameters.Add("$external", SqliteType.Text);
-    backupCommand.Parameters.Add("$project", SqliteType.Integer);
+    backupCommand.Parameters.Add(ExternalParameter, SqliteType.Text);
+    backupCommand.Parameters.Add(ProjectParameter, SqliteType.Integer);
     backupCommand.Parameters.Add("$snapshot", SqliteType.Integer);
-    backupCommand.Parameters.Add("$created", SqliteType.Text);
+    backupCommand.Parameters.Add(CreatedParameter, SqliteType.Text);
     backupCommand.Parameters.Add("$path", SqliteType.Text);
 
     const int projectCount = 25;
@@ -143,25 +148,25 @@ static SqliteRepository CreateHistoryFixture(string databasePath, int historyEve
     int createdEvents = 0;
     for (int projectIndex = 0; projectIndex < projectCount && createdEvents < historyEvents; projectIndex++)
     {
-        projectCommand.Parameters["$external"].Value = $"project-{projectIndex:D2}";
+        projectCommand.Parameters[ExternalParameter].Value = $"project-{projectIndex:D2}";
         projectCommand.Parameters["$name"].Value = $"Benchmark Project {projectIndex:D2}";
         projectCommand.Parameters["$root"].Value = $"/benchmark/project-{projectIndex:D2}";
-        projectCommand.Parameters["$created"].Value = "2026-01-01 00:00:00Z";
+        projectCommand.Parameters[CreatedParameter].Value = "2026-01-01 00:00:00Z";
         long projectId = (long)(projectCommand.ExecuteScalar() ?? 0L);
 
         for (int eventIndex = 0; eventIndex < eventsPerProject && createdEvents < historyEvents; eventIndex++, createdEvents++)
         {
             DateTime createdUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMinutes(createdEvents);
             string created = createdUtc.ToString("u");
-            snapshotCommand.Parameters["$external"].Value = $"snapshot-{createdEvents:D6}";
-            snapshotCommand.Parameters["$project"].Value = projectId;
-            snapshotCommand.Parameters["$created"].Value = created;
+            snapshotCommand.Parameters[ExternalParameter].Value = $"snapshot-{createdEvents:D6}";
+            snapshotCommand.Parameters[ProjectParameter].Value = projectId;
+            snapshotCommand.Parameters[CreatedParameter].Value = created;
             long snapshotId = (long)(snapshotCommand.ExecuteScalar() ?? 0L);
 
-            backupCommand.Parameters["$external"].Value = $"backup-{createdEvents:D6}";
-            backupCommand.Parameters["$project"].Value = projectId;
+            backupCommand.Parameters[ExternalParameter].Value = $"backup-{createdEvents:D6}";
+            backupCommand.Parameters[ProjectParameter].Value = projectId;
             backupCommand.Parameters["$snapshot"].Value = snapshotId;
-            backupCommand.Parameters["$created"].Value = created;
+            backupCommand.Parameters[CreatedParameter].Value = created;
             backupCommand.Parameters["$path"].Value = $"project-{projectIndex:D2}/backup-{createdEvents:D6}.zip";
             backupCommand.ExecuteNonQuery();
         }
@@ -207,9 +212,11 @@ static BenchmarkMeasurement Measure(
     int checksum = 0;
     for (int iteration = 0; iteration < iterations; iteration++)
     {
+#pragma warning disable S1215 // Forced collections isolate per-iteration allocation measurements in this benchmark harness.
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
+#pragma warning restore S1215
         long allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
         long started = Stopwatch.GetTimestamp();
         checksum ^= action();
@@ -239,6 +246,7 @@ static async Task<BenchmarkMeasurement> MeasureCancellationAsync(
 {
     const int iterations = 5;
     var durations = new List<double>(iterations);
+    bool allIterationsObservedCancellation = true;
     for (int iteration = 0; iteration < iterations; iteration++)
     {
         using var cancellation = new CancellationTokenSource();
@@ -249,14 +257,17 @@ static async Task<BenchmarkMeasurement> MeasureCancellationAsync(
         await Task.Delay(10);
         long cancelledAt = Stopwatch.GetTimestamp();
         await cancellation.CancelAsync();
+        bool cancellationObserved = false;
         try
         {
             await compare;
         }
         catch (OperationCanceledException)
         {
+            cancellationObserved = true;
         }
 
+        allIterationsObservedCancellation &= cancellationObserved;
         durations.Add(Stopwatch.GetElapsedTime(cancelledAt).TotalMilliseconds);
     }
 
@@ -270,7 +281,7 @@ static async Task<BenchmarkMeasurement> MeasureCancellationAsync(
         0,
         maxP95Milliseconds,
         0,
-        p95 <= maxP95Milliseconds);
+        allIterationsObservedCancellation && p95 <= maxP95Milliseconds);
 }
 
 static double Percentile(IReadOnlyList<double> values, double percentile)
@@ -289,94 +300,3 @@ static string ResolveSourceCommit()
     return Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
         ?.InformationalVersion ?? "unknown";
 }
-
-internal sealed record BenchmarkOptions(
-    int HistoryEvents,
-    int FileCount,
-    int Iterations,
-    bool Enforce,
-    string? OutputPath)
-{
-    private const int DefaultHistoryEvents = 10_000;
-    private const int DefaultFileCount = 100_000;
-    private const int DefaultIterations = 7;
-
-    public static BenchmarkOptions Parse(string[] arguments)
-    {
-        int historyEvents = DefaultHistoryEvents;
-        int fileCount = DefaultFileCount;
-        int iterations = DefaultIterations;
-        bool enforce = false;
-        string? outputPath = null;
-
-        for (int index = 0; index < arguments.Length; index++)
-        {
-            string argument = arguments[index];
-            switch (argument)
-            {
-                case "--history-events":
-                    historyEvents = ReadPositiveInt(arguments, ref index, argument);
-                    break;
-                case "--file-count":
-                    fileCount = ReadPositiveInt(arguments, ref index, argument);
-                    break;
-                case "--iterations":
-                    iterations = ReadPositiveInt(arguments, ref index, argument);
-                    break;
-                case "--output":
-                    outputPath = ReadValue(arguments, ref index, argument);
-                    break;
-                case "--enforce":
-                    enforce = true;
-                    break;
-                default:
-                    throw new ArgumentException($"Unknown benchmark option '{argument}'.");
-            }
-        }
-
-        return new BenchmarkOptions(historyEvents, fileCount, iterations, enforce, outputPath);
-    }
-
-    private static int ReadPositiveInt(string[] arguments, ref int index, string option)
-    {
-        string value = ReadValue(arguments, ref index, option);
-        if (!int.TryParse(value, out int parsed) || parsed <= 0)
-            throw new ArgumentException($"{option} requires a positive integer.");
-        return parsed;
-    }
-
-    private static string ReadValue(string[] arguments, ref int index, string option)
-    {
-        if (++index >= arguments.Length || string.IsNullOrWhiteSpace(arguments[index]))
-            throw new ArgumentException($"{option} requires a value.");
-        return arguments[index];
-    }
-}
-
-internal sealed record BenchmarkReport(
-    int SchemaVersion,
-    DateTime RecordedUtc,
-    string SourceCommit,
-    string Configuration,
-    MachineProfile Machine,
-    FixtureProfile Fixture,
-    IReadOnlyList<BenchmarkMeasurement> Measurements);
-
-internal sealed record MachineProfile(
-    string OperatingSystem,
-    string Architecture,
-    string Runtime,
-    int LogicalProcessors,
-    bool ServerGc);
-
-internal sealed record FixtureProfile(int HistoryEvents, int FileCount, int Iterations);
-
-internal sealed record BenchmarkMeasurement(
-    string Name,
-    double P50Milliseconds,
-    double P95Milliseconds,
-    double MaximumMilliseconds,
-    long P95AllocatedBytes,
-    double BudgetP95Milliseconds,
-    long BudgetP95AllocatedBytes,
-    bool Passed);

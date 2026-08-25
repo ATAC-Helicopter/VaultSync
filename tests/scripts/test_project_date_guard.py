@@ -17,6 +17,134 @@ SPEC.loader.exec_module(project_date_guard)
 
 
 class ProjectDateGuardTests(unittest.TestCase):
+    def test_normalize_items_preserves_content_and_supported_field_values(self):
+        pages = [
+            {
+                "data": {
+                    "user": {
+                        "projectV2": {
+                            "items": {
+                                "nodes": [
+                                    {
+                                        "id": "PVTI_item",
+                                        "content": {"title": "Dated work"},
+                                        "fieldValues": {
+                                            "nodes": [
+                                                {
+                                                    "date": "2026-08-25",
+                                                    "field": {"name": "Start date"},
+                                                },
+                                                {
+                                                    "name": "In progress",
+                                                    "field": {"name": "Status"},
+                                                },
+                                                {
+                                                    "date": None,
+                                                    "field": {"name": "Ignored"},
+                                                },
+                                            ]
+                                        },
+                                    },
+                                    {
+                                        "id": "PVTI_draft",
+                                        "content": None,
+                                    },
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        ]
+
+        normalized = project_date_guard.normalize_items(pages)
+
+        self.assertEqual(
+            {
+                "id": "PVTI_item",
+                "content": {"title": "Dated work"},
+                "fields": {"Start date": "2026-08-25", "Status": "In progress"},
+            },
+            normalized[0],
+        )
+        self.assertEqual(
+            {"id": "PVTI_draft", "content": {}, "fields": {}},
+            normalized[1],
+        )
+
+    def test_normalize_repository_dates_uses_published_dates_and_ignores_incomplete_nodes(self):
+        response = {
+            "data": {
+                "repository": {
+                    "milestones": {
+                        "nodes": [
+                            {"title": "1.8.8", "dueOn": "2026-08-28T00:00:00Z"},
+                            {"title": "No date", "dueOn": None},
+                        ]
+                    },
+                    "releases": {
+                        "nodes": [
+                            {"tagName": "v1.8.7", "publishedAt": "2026-08-21T09:00:00Z"},
+                            {"tagName": "", "publishedAt": "2026-08-20T09:00:00Z"},
+                        ]
+                    },
+                }
+            }
+        }
+
+        milestones, releases = project_date_guard.normalize_repository_dates(response)
+
+        self.assertEqual({"1.8.8": "2026-08-28"}, milestones)
+        self.assertEqual({"1.8.7": "2026-08-21"}, releases)
+
+    @mock.patch.object(project_date_guard, "run_gh")
+    def test_load_live_state_validates_and_normalizes_every_github_response(self, run_gh):
+        run_gh.side_effect = [
+            '{"id":"PVT_project"}',
+            '{"fields":['
+            '{"name":"Start date","id":"PVTF_start"},'
+            '{"name":"Target date","id":"PVTF_target"},'
+            '{"name":"Completed on","id":"PVTF_completed"}'
+            ']}',
+            '[{"data":{"user":{"projectV2":{"items":{"nodes":['
+            '{"id":"PVTI_item","content":{"title":"Work"},"fieldValues":{"nodes":[]}}'
+            ']}}}}}]',
+            '{"data":{"repository":{'
+            '"milestones":{"nodes":[{"title":"1.8.8","dueOn":"2026-08-28T00:00:00Z"}]},'
+            '"releases":{"nodes":[{"tagName":"v1.8.7","publishedAt":"2026-08-21T00:00:00Z"}]}'
+            '}}}',
+        ]
+
+        project_id, field_ids, items, milestones, releases = (
+            project_date_guard.load_live_state("ATAC-Helicopter", 7)
+        )
+
+        self.assertEqual("PVT_project", project_id)
+        self.assertEqual(
+            {
+                "Start date": "PVTF_start",
+                "Target date": "PVTF_target",
+                "Completed on": "PVTF_completed",
+            },
+            field_ids,
+        )
+        self.assertEqual("PVTI_item", items[0]["id"])
+        self.assertEqual({"1.8.8": "2026-08-28"}, milestones)
+        self.assertEqual({"1.8.7": "2026-08-21"}, releases)
+        self.assertEqual(4, run_gh.call_count)
+
+    @mock.patch.object(project_date_guard, "run_gh")
+    def test_load_live_state_fails_closed_when_required_project_fields_are_missing(self, run_gh):
+        run_gh.side_effect = [
+            '{"id":"PVT_project"}',
+            '{"fields":[{"name":"Start date","id":"PVTF_start"}]}',
+        ]
+
+        with self.assertRaisesRegex(ValueError, "missing required date fields"):
+            project_date_guard.load_live_state("ATAC-Helicopter", 7)
+
+        self.assertEqual(2, run_gh.call_count)
+
     def test_planner_traces_creation_milestone_and_release_horizon_dates(self):
         items = [
             {
