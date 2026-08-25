@@ -3382,19 +3382,13 @@ public sealed class BackupService(
         if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
             return;
 
-        int failedFiles = 0;
-        int failedDirs = 0;
-        var failedSamples = new List<string>();
-        DeleteDirectoryContentsWithoutFollowingLinks(
-            rootPath,
-            ref failedFiles,
-            ref failedDirs,
-            failedSamples);
+        var failures = new DirectoryDeletionFailures();
+        DeleteDirectoryContentsWithoutFollowingLinks(rootPath, failures);
 
-        if (failedFiles > 0 || failedDirs > 0)
+        if (failures.Files > 0 || failures.Directories > 0)
         {
             RuntimeLog.WriteVerbose(
-                $"[BackupService] Retention fallback cleanup for '{rootPath}' had {failedFiles} file failure(s) and {failedDirs} directory failure(s). Samples: {string.Join(", ", failedSamples)}.");
+                $"[BackupService] Retention fallback cleanup for '{rootPath}' had {failures.Files} file failure(s) and {failures.Directories} directory failure(s). Samples: {string.Join(", ", failures.Samples)}.");
         }
 
         File.SetAttributes(rootPath, FileAttributes.Normal);
@@ -3403,60 +3397,77 @@ public sealed class BackupService(
 
     private static void DeleteDirectoryContentsWithoutFollowingLinks(
         string rootPath,
-        ref int failedFiles,
-        ref int failedDirs,
-        List<string> failedSamples)
+        DirectoryDeletionFailures failures)
     {
         foreach (string entry in Directory.EnumerateFileSystemEntries(rootPath))
         {
             try
             {
-                FileAttributes attributes = File.GetAttributes(entry);
-                bool isDirectory = (attributes & FileAttributes.Directory) != 0;
-                bool isLink = (attributes & FileAttributes.ReparsePoint) != 0;
-
-                if (isDirectory && !isLink)
-                {
-                    DeleteDirectoryContentsWithoutFollowingLinks(
-                        entry,
-                        ref failedFiles,
-                        ref failedDirs,
-                        failedSamples);
-                    File.SetAttributes(entry, FileAttributes.Normal);
-                    Directory.Delete(entry, recursive: false);
-                }
-                else if (isDirectory)
-                {
-                    Directory.Delete(entry, recursive: false);
-                }
-                else
-                {
-                    if (!isLink)
-                        File.SetAttributes(entry, FileAttributes.Normal);
-                    File.Delete(entry);
-                }
+                DeleteEntryWithoutFollowingLinks(entry, failures);
             }
             catch (Exception ex)
             {
-                bool isDirectory;
-                try
-                {
-                    isDirectory = (File.GetAttributes(entry) & FileAttributes.Directory) != 0;
-                }
-                catch
-                {
-                    isDirectory = Directory.Exists(entry);
-                }
-
-                if (isDirectory)
-                    failedDirs++;
-                else
-                    failedFiles++;
-
-                if (failedSamples.Count < 3)
-                    failedSamples.Add($"{Path.GetFileName(entry)} ({ex.GetType().Name})");
+                RecordDirectoryDeletionFailure(entry, ex, failures);
             }
         }
+    }
+
+    private static void DeleteEntryWithoutFollowingLinks(
+        string entry,
+        DirectoryDeletionFailures failures)
+    {
+        FileAttributes attributes = File.GetAttributes(entry);
+        bool isDirectory = (attributes & FileAttributes.Directory) != 0;
+        bool isLink = (attributes & FileAttributes.ReparsePoint) != 0;
+
+        if (isDirectory && !isLink)
+        {
+            DeleteDirectoryContentsWithoutFollowingLinks(entry, failures);
+            File.SetAttributes(entry, FileAttributes.Normal);
+            Directory.Delete(entry, recursive: false);
+            return;
+        }
+
+        if (isDirectory)
+        {
+            Directory.Delete(entry, recursive: false);
+            return;
+        }
+
+        if (!isLink)
+            File.SetAttributes(entry, FileAttributes.Normal);
+        File.Delete(entry);
+    }
+
+    private static void RecordDirectoryDeletionFailure(
+        string entry,
+        Exception exception,
+        DirectoryDeletionFailures failures)
+    {
+        bool isDirectory;
+        try
+        {
+            isDirectory = (File.GetAttributes(entry) & FileAttributes.Directory) != 0;
+        }
+        catch
+        {
+            isDirectory = Directory.Exists(entry);
+        }
+
+        if (isDirectory)
+            failures.Directories++;
+        else
+            failures.Files++;
+
+        if (failures.Samples.Count < 3)
+            failures.Samples.Add($"{Path.GetFileName(entry)} ({exception.GetType().Name})");
+    }
+
+    private sealed class DirectoryDeletionFailures
+    {
+        public int Files { get; set; }
+        public int Directories { get; set; }
+        public List<string> Samples { get; } = [];
     }
 
     private sealed class RunnerProgressState

@@ -89,36 +89,14 @@ internal static class EncryptedOpenWorkspaceManager
             {
                 try
                 {
-                    string fullPath = Path.GetFullPath(workspacePath);
-                    if (OwnedWorkspaces.ContainsKey(fullPath))
-                        continue;
-
-                    DateTime createdUtc = Directory.GetCreationTimeUtc(fullPath);
-                    DateTime modifiedUtc = Directory.GetLastWriteTimeUtc(fullPath);
-                    DateTime referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
-                    if ((utcNow - referenceUtc) < retention)
-                        continue;
-
-                    string ownerMarkerPath = Path.Combine(fullPath, OwnerMarkerFileName);
-                    bool hasOwnerMarker = File.Exists(ownerMarkerPath);
-                    int ownerPid = 0;
-                    long ownerStartUtcTicks = 0;
-                    if (hasOwnerMarker &&
-                        !TryReadOwner(fullPath, out ownerPid, out ownerStartUtcTicks))
+                    if (TryCleanupStaleWorkspace(
+                            workspacePath,
+                            utcNow,
+                            retention,
+                            isOwnerProcessActive ?? IsOwnerProcessActive))
                     {
-                        continue;
+                        removed++;
                     }
-
-                    if (hasOwnerMarker &&
-                        (isOwnerProcessActive ?? IsOwnerProcessActive)(ownerPid, ownerStartUtcTicks))
-                    {
-                        continue;
-                    }
-
-                    var directory = new DirectoryInfo(fullPath);
-                    bool isLink = (directory.Attributes & FileAttributes.ReparsePoint) != 0;
-                    directory.Delete(recursive: !isLink);
-                    removed++;
                 }
                 catch
                 {
@@ -132,6 +110,37 @@ internal static class EncryptedOpenWorkspaceManager
         }
 
         return removed;
+    }
+
+    private static bool TryCleanupStaleWorkspace(
+        string workspacePath,
+        DateTime utcNow,
+        TimeSpan retention,
+        Func<int, long, bool> isOwnerProcessActive)
+    {
+        string fullPath = Path.GetFullPath(workspacePath);
+        if (OwnedWorkspaces.ContainsKey(fullPath))
+            return false;
+
+        DateTime createdUtc = Directory.GetCreationTimeUtc(fullPath);
+        DateTime modifiedUtc = Directory.GetLastWriteTimeUtc(fullPath);
+        DateTime referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
+        if ((utcNow - referenceUtc) < retention)
+            return false;
+
+        string ownerMarkerPath = Path.Combine(fullPath, OwnerMarkerFileName);
+        bool hasOwnerMarker = File.Exists(ownerMarkerPath);
+        int ownerPid = 0;
+        long ownerStartUtcTicks = 0;
+        if (hasOwnerMarker && !TryReadOwner(fullPath, out ownerPid, out ownerStartUtcTicks))
+            return false;
+        if (hasOwnerMarker && isOwnerProcessActive(ownerPid, ownerStartUtcTicks))
+            return false;
+
+        var directory = new DirectoryInfo(fullPath);
+        bool isLink = (directory.Attributes & FileAttributes.ReparsePoint) != 0;
+        directory.Delete(recursive: !isLink);
+        return true;
     }
 
     private static string ValidateWorkspacePath(string workspacePath)
