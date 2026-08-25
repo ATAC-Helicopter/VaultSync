@@ -12,6 +12,8 @@ Use this page as the primary index for all project documentation.
 
 ## Planning and Release
 - Roadmap: [ROADMAP](../ROADMAP.md)
+- Recovery Horizon sequencing and post-1.9 decision gates:
+  [Recovery Horizon strategy](RECOVERY_HORIZON_STRATEGY.md)
 - Changelog: [CHANGELOG](../CHANGELOG.md)
 - Current release highlights: [What's New](WHATS_NEW.md)
 - Active 1.8.8 development status: [1.8.8 release contract](RELEASE_1.8.8.md)

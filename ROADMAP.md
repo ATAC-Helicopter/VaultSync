@@ -68,6 +68,7 @@ refuses partial updates when any date lacks a canonical source.
 | `1.7` | Sentinel | Can I trust the stored data? |
 | `1.8` | Chronicle | What was protected, what changed, and what can be recovered? |
 | `1.9` | Recovery Horizon | Can I recover from a disk or machine-level failure? |
+| `2.0` candidate | Resilience | What failures can my protection strategy survive? |
 
 ---
 
@@ -745,6 +746,29 @@ compatibility, and smoke tests on all supported operating systems.
 requires cloning, validation, image-to-disk recovery, and bootable recovery
 media to be ready and tested together.
 
+The maintained strategy, sequencing rationale, architecture gates, Project
+entry contract, and `1.10` versus `2.0` decision rule are in
+[`docs/RECOVERY_HORIZON_STRATEGY.md`](docs/RECOVERY_HORIZON_STRATEGY.md).
+
+## 1.9 architecture approval gate
+
+Feature implementation does not begin merely because `1.9` is the next release
+family. Before destructive disk work or public support claims begin, the
+following contracts must be reviewed together:
+
+- the imaging-engine strategy and isolation boundary;
+- the versioned image format and incomplete/corrupt-state behavior;
+- the supported platform, filesystem, partition, encryption, live-capture,
+  Secure Boot, and hardware matrix;
+- the security model for compromised sources, credentials, encryption keys,
+  recovery media, immutable storage, and provider-account loss;
+- portable recovery dependencies and the minimum independent restore path;
+- shared identities, dependencies, evidence, and failure domains required by
+  later resilience evaluation.
+
+Unsupported combinations must remain explicit. A prototype or dependency
+spike is evidence for a decision, not a stable product commitment.
+
 ## 1.9 UI migration program
 
 The 1.9 interface is a staged information-architecture migration, not a
@@ -777,12 +801,36 @@ Migration principles:
 
 ## 1.9.0 — Disk and Bootable Recovery Foundation
 
-**Status:** Planned; architecture work may begin only after the `1.8.5` design
-contracts stabilize.
+**Status:** Planned; implementation begins only after `1.8.8` qualifies and the
+1.9 architecture approval gate is complete.
 **Tagline:** *Recover when the installed system cannot.*
 
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
   workflow boundaries, navigation invariants, and legacy-shell migration map.
+- [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility
+  contract.
+  - Scope: cover source identity, partition layout, block/sparse maps,
+    integrity records, compression and encryption descriptors, incomplete and
+    resumable states, build identity, and reader/writer compatibility.
+  - Acceptance: incomplete images cannot appear valid; verification detects
+    missing or corrupt regions; readers reject unsupported versions without
+    mutation.
+- [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
+  matrix before implementation claims begin.
+  - Scope: decide build versus integration, privilege and isolation boundaries,
+    supported operating systems, filesystems, partition tables, encryption,
+    live capture, Secure Boot, recovery-media signing, drivers, and hardware.
+  - Acceptance: every supported combination has a qualification method and
+    every unsupported combination has explicit product and documentation
+    behavior.
+- [ ] `VS-1919` `P0` Define recovery identities, dependencies, failure domains,
+  and evidence provenance shared by Recovery Horizon and candidate Resilience.
+  - Scope: model devices, sites, repositories, destinations, credentials,
+    encryption-key references, recovery media, tools, recovery points,
+    verification, drills, and dependency correlation without exporting secrets.
+  - Acceptance: later readiness and scenario evaluation can distinguish
+    recorded facts, measured evidence, simulation, inference, user confirmation,
+    stale evidence, missing evidence, and unsupported checks.
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
   explicit operation states and checkpoint contracts.
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
@@ -820,7 +868,23 @@ contracts stabilize.
 - [ ] `VS-1916` `P1` Migrate Dashboard and Recovery entry points into
   goal-oriented home and recovery workspaces.
 
-## 1.9.2 — Offsite Protection
+## 1.9.2 — Portable Recovery
+
+Portable recovery moves ahead of offsite expansion because provider support is
+not a recovery path until a fresh installation can discover, inspect, unlock,
+restore, and verify supported portable data. Existing identifiers remain
+unchanged because work IDs are immutable and do not encode the patch number.
+
+- [ ] `VS-1931` `P0` Ship a standalone desktop restore utility.
+- [ ] `VS-1932` `P1` Generate an emergency recovery kit.
+- [ ] `VS-1933` `P0` Publish the supported backup and encryption format
+  specification.
+- [ ] `VS-1934` `P0` Define compatibility, migration, deprecation, and
+  emergency read-only policies.
+- [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
+  focused activity, inspection, and management workspaces.
+
+## 1.9.3 — Offsite Protection
 
 - [ ] `VS-1921` `P0` Add resumable S3-compatible object-storage destinations.
 - [ ] `VS-1922` `P1` Add Backblaze B2 and SFTP destination profiles.
@@ -832,17 +896,6 @@ contracts stabilize.
 - [ ] `VS-1927` `P1` Add multi-destination health scoring and safe,
   explainable automatic failover.
 
-## 1.9.3 — Portable Recovery
-
-- [ ] `VS-1931` `P0` Ship a standalone desktop restore utility.
-- [ ] `VS-1932` `P1` Generate an emergency recovery kit.
-- [ ] `VS-1933` `P0` Publish the supported backup and encryption format
-  specification.
-- [ ] `VS-1934` `P0` Define compatibility, migration, deprecation, and
-  emergency read-only policies.
-- [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
-  focused activity, inspection, and management workspaces.
-
 ## 1.9.4 — Unified Recovery Experience
 
 - [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
@@ -853,7 +906,7 @@ contracts stabilize.
 - [ ] `VS-1944` `P0` Qualify the complete 1.9 interface across supported
   widths, scaling, keyboard, screen-reader, theme, and interrupted-work states.
 
-## 1.9.5 — Recovery Operations
+## 1.9.5 — Continuous Recovery Assurance
 
 - [ ] `VS-1951` `P1` Schedule full verification and recovery drills.
 - [ ] `VS-1952` `P1` Add user-controlled stale, missed, offline, credential,
@@ -876,6 +929,57 @@ contracts stabilize.
 
 ---
 
+# Post-1.9 major-version decision
+
+`2.0` is a candidate product family, not a promised release. Use `1.10` for
+compatible extensions such as additional providers, filesystems, image formats,
+automation, performance, or incremental interface improvements.
+
+Use `2.0` only when VaultSync changes the authoritative unit users manage from
+backup/recovery operations to resilience outcomes and that change creates an
+intentional compatibility or migration boundary.
+
+## Candidate VaultSync 2 — Resilience
+
+**Candidate family promise:** *Know what survives.*
+
+Candidate product concepts:
+
+- Protection Plans that state the failures and recovery outcomes a user needs;
+- a Recovery Graph representing recovery-critical identities, dependencies,
+  evidence, credentials, key references, devices, destinations, and sites;
+- a user-facing Protection Map that exposes independence and single points of
+  failure without pretending correlation is known when it is not;
+- failure-scenario evaluation that distinguishes facts, measurements,
+  simulations, inferences, user confirmations, stale evidence, and unsupported
+  checks;
+- a resilience-oriented `Protect`, `Timeline`, `Recover`, `Resilience`, and
+  `Manage` information architecture;
+- recovery orchestration and explicit, policy-controlled corrective actions.
+
+### Required `2.0` approval evidence
+
+Approve and allocate `2.0` work IDs only when all of the following are true:
+
+1. Protection Plans and recovery dependencies have a reviewed persisted model.
+2. The model drives real setup, readiness, and recovery decisions rather than
+   serving only as a dashboard visualization.
+3. User validation shows outcome-based setup improves understanding or recovery
+   decisions over job-centered setup.
+4. Repository, configuration, CLI, automation, deep-link, update, and interface
+   compatibility impacts are inventoried.
+5. Required migrations, rollback behavior, emergency read-only access, and
+   repository read compatibility are specified and tested.
+6. The legacy shell is removed only after functional, localization,
+   accessibility, theme, narrow-layout, and state-preservation parity.
+7. The release has measurable success criteria, including recovery success,
+   false-ready rate, evidence freshness, and time to identify a decisive gap.
+
+Until those gates pass, Resilience ideas remain candidate backlog and must not
+receive release dates, public delivery promises, or execution IDs.
+
+---
+
 # Candidate backlog
 
 These items are not assigned to a release until their contracts are approved:
@@ -885,7 +989,13 @@ These items are not assigned to a release until their contracts are approved:
 - `VS-1971` optional shared/team vault workflows with explicit ownership,
   access, conflict, and audit contracts;
 - enterprise deployment and centralized administration;
-- universal boot media or guaranteed cross-hardware bare-metal recovery.
+- universal boot media or guaranteed cross-hardware bare-metal recovery;
+- self-healing protection under explicit user policy;
+- storage and recovery forecasting based on measured local evidence;
+- destructive-change resilience without opaque ransomware claims;
+- multi-step recovery orchestration;
+- local-first device resilience summaries;
+- historical resilience simulation with fact/inference separation.
 
 # Roadmap governance
 

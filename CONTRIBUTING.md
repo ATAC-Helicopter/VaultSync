@@ -154,9 +154,12 @@ Required workflow for changes:
    - `Owner`: `Flavio Giacchetti`
    - `Team`: `Work` (solo setup)
    - Status/date policy:
-     - `Todo`: no start/completed dates
-     - `In progress`: start date required
-     - `Done`: completed date required
+     - every item: traceable Start and Target dates are required
+     - `Todo`: no Completed on date
+     - `In progress`: Start date reflects the earliest approved planning or
+       implementation date, never the date of a later board edit
+     - `Done`: Completed on reflects the closing, merge, or release evidence
+       defined by the roadmap protocol
 
 Changelog/roadmap consistency rules:
 - Use IDs when available (`VS-xxxx`, `ISS-xxxxx`, `BUG-xxxxx`, `REL-xxxxx`).

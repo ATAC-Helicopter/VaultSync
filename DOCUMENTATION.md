@@ -33,6 +33,9 @@ Core pillars:
   artifact identity, size, SHA-256, and compatibility schema.
 - `docs/RELEASE_1.8.8.md`: active-release status, feedback intake, sequencing,
   and gates.
+- `docs/RECOVERY_HORIZON_STRATEGY.md`: maintainer planning for the 1.9
+  architecture gates, delivery order, issue preparation, and the `1.10` versus
+  `2.0` decision.
 - `docs/REPOSITORY_FORMATS.md`: repository layouts, compatibility boundaries,
   and emergency read-only recovery guidance.
 - `docs/CROSS_MACHINE_SAFETY.md`: cross-machine threat model, identity,
