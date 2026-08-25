@@ -576,13 +576,11 @@ public sealed class BackupService(
         TimeSpan ttl,
         out BackupPreflightResult result)
     {
-        if (PreflightCache.TryGetValue(cacheKey, out (DateTime TimestampUtc, BackupPreflightResult Result) cached))
+        if (PreflightCache.TryGetValue(cacheKey, out (DateTime TimestampUtc, BackupPreflightResult Result) cached) &&
+            (DateTime.UtcNow - cached.TimestampUtc) <= ttl)
         {
-            if ((DateTime.UtcNow - cached.TimestampUtc) <= ttl)
-            {
-                result = cached.Result;
-                return true;
-            }
+            result = cached.Result;
+            return true;
         }
 
         result = default!;
@@ -603,12 +601,10 @@ public sealed class BackupService(
         }
 
         string statsKey = $"{project.RootPath}|{project.Preset}";
-        if (StatsCache.TryGetValue(statsKey, out (DateTime TimestampUtc, int TotalFiles, long TotalBytes) cached))
+        if (StatsCache.TryGetValue(statsKey, out (DateTime TimestampUtc, int TotalFiles, long TotalBytes) cached) &&
+            (DateTime.UtcNow - cached.TimestampUtc) <= ttl)
         {
-            if ((DateTime.UtcNow - cached.TimestampUtc) <= ttl)
-            {
-                return (cached.TotalFiles, cached.TotalBytes);
-            }
+            return (cached.TotalFiles, cached.TotalBytes);
         }
 
         (int totalFiles, long totalBytes) computed = ComputeBackupStats(project.RootPath, project.Preset, ct);
@@ -692,45 +688,43 @@ public sealed class BackupService(
     private static int CleanupIncompleteBackupsUnderProject(string projectDir, IAppConfigStore? configStore)
     {
         int removed = 0;
+        foreach (string backupDir in SafeEnumerateDirectories(projectDir))
         {
-            foreach (string backupDir in SafeEnumerateDirectories(projectDir))
+            try
             {
-                try
-                {
-                    string markerPath = Path.Combine(backupDir, InProgressMarkerFileName);
-                    if (!File.Exists(markerPath))
-                        continue;
+                string markerPath = Path.Combine(backupDir, InProgressMarkerFileName);
+                if (!File.Exists(markerPath))
+                    continue;
 
-                    if (IsResumableArchiveBackup(backupDir))
-                    {
-                        RuntimeLog.WriteVerbose($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
-                        ArchiveResumeCheckpoint? checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
-                        string artifactFileName = string.IsNullOrWhiteSpace(checkpoint?.ArtifactFileName)
-                            ? BackupArchiveCryptoService.PlainArchiveFileName
-                            : Path.GetFileName(checkpoint.ArtifactFileName);
-                        string artifactPath = Path.Combine(backupDir, artifactFileName);
-                        PersistCheckpointResumeTelemetry(
-                            status: "cleanup-preserved",
-                            projectName: Path.GetFileName(projectDir),
-                            backupFolder: backupDir,
-                            archivePath: artifactPath,
-                            resumeOffsetBytes: File.Exists(artifactPath)
-                                ? new FileInfo(artifactPath).Length
-                                : 0,
-                            archiveSizeBytes: checkpoint?.ArchiveSizeBytes ?? 0,
-                            sourceFingerprint: checkpoint?.SourceFingerprint ?? string.Empty,
-                            message: "Preserved interrupted archive backup because checkpoint resume metadata is valid.",
-                            configStore: configStore);
-                        continue;
-                    }
-
-                    DeletePartialBackup(backupDir);
-                    removed++;
-                }
-                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+                if (IsResumableArchiveBackup(backupDir))
                 {
-                    Console.WriteLine($"[BackupService] Skipping incomplete backup cleanup for '{backupDir}': {ex.Message}");
+                    RuntimeLog.WriteVerbose($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
+                    ArchiveResumeCheckpoint? checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
+                    string artifactFileName = string.IsNullOrWhiteSpace(checkpoint?.ArtifactFileName)
+                        ? BackupArchiveCryptoService.PlainArchiveFileName
+                        : Path.GetFileName(checkpoint.ArtifactFileName);
+                    string artifactPath = Path.Combine(backupDir, artifactFileName);
+                    PersistCheckpointResumeTelemetry(
+                        status: "cleanup-preserved",
+                        projectName: Path.GetFileName(projectDir),
+                        backupFolder: backupDir,
+                        archivePath: artifactPath,
+                        resumeOffsetBytes: File.Exists(artifactPath)
+                            ? new FileInfo(artifactPath).Length
+                            : 0,
+                        archiveSizeBytes: checkpoint?.ArchiveSizeBytes ?? 0,
+                        sourceFingerprint: checkpoint?.SourceFingerprint ?? string.Empty,
+                        message: "Preserved interrupted archive backup because checkpoint resume metadata is valid.",
+                        configStore: configStore);
+                    continue;
                 }
+
+                DeletePartialBackup(backupDir);
+                removed++;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+            {
+                Console.WriteLine($"[BackupService] Skipping incomplete backup cleanup for '{backupDir}': {ex.Message}");
             }
         }
 
@@ -857,7 +851,11 @@ public sealed class BackupService(
             {
                 existingCts.Cancel();
             }
-            catch { }
+            catch (Exception ex) when (ex is ObjectDisposedException or AggregateException)
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[BackupService] Could not cancel the previous backup token for project {project.Id}: {ex.Message}");
+            }
             existingCts.Dispose();
         }
         var projectCts = new CancellationTokenSource();
@@ -1213,11 +1211,13 @@ public sealed class BackupService(
             RuntimeLog.WriteVerbose($"[BackupService] Skipping completion marker on network destination '{backupFolderUsed}'.");
         }
 
-        string completedMessage = backupIsEncrypted
-            ? "Backup completed (encrypted)."
-            : useArchiveMode
-                ? "Backup completed (archive)."
-                : "Backup completed.";
+        string completedMessage;
+        if (backupIsEncrypted)
+            completedMessage = "Backup completed (encrypted).";
+        else if (useArchiveMode)
+            completedMessage = "Backup completed (archive).";
+        else
+            completedMessage = "Backup completed.";
         progressCallback?.Invoke(100, string.Empty, completedMessage);
 
         if (_cancelMap.TryGetValue(project.Id, out CancellationTokenSource? finishedCts))
@@ -1347,12 +1347,13 @@ public sealed class BackupService(
 
         bool isNetworkDestination = IsNetworkPath(destDir);
         bool effectiveUseRsyncDelta = useRsyncDelta;
-        if (OperatingSystem.IsWindows() && isNetworkDestination && !useRsyncDelta && !useIncrementalBackups)
+        if (OperatingSystem.IsWindows() &&
+            isNetworkDestination &&
+            !useRsyncDelta &&
+            !useIncrementalBackups &&
+            (TryGetBundledRsyncPath() is not null || IsOnPath(RsyncExecutableName)))
         {
-            if (TryGetBundledRsyncPath() is not null || IsOnPath(RsyncExecutableName))
-            {
-                effectiveUseRsyncDelta = true;
-            }
+            effectiveUseRsyncDelta = true;
         }
 
         int exitCode;
