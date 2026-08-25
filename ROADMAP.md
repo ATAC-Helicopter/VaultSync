@@ -796,8 +796,11 @@ Migration principles:
 - [ ] `VS-1902` `P1` Add trusted application signing where operationally and
   financially feasible. _(Tracked by #113.)_
 - [x] `VS-1903` `P2` Add background integrity audits with alerts.
-  _(Historical issue #114 is complete; later scheduling work receives a new
-  release-specific ID.)_
+  - Scope: retain the delivered background repository-integrity audit and its
+    user-visible warning path as historical foundation work.
+  - Acceptance: issue #114 remains closed and Done; any later scheduling,
+    evidence, or recovery-assurance expansion receives a new release-specific
+    identifier rather than reopening or reusing `VS-1903`.
 
 ## 1.9.0 — Disk and Bootable Recovery Foundation
 
