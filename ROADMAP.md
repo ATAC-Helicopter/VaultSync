@@ -717,6 +717,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   snapshotted source file disappears or becomes unreadable instead of publishing
   an incomplete restore point. _(Issue #571; delivered on the release branch and
   awaiting integration through #568.)_
+- [x] `BUG-18119` `P1` Isolate decrypted-open temporary workspaces between app
+  processes so shutdown, manual lock, and stale cleanup preserve work owned by
+  another live instance. _(Issue #572; delivered on the release branch and
+  awaiting integration through #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
 

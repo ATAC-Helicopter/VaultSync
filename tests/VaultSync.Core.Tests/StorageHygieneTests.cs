@@ -111,6 +111,7 @@ public sealed class StorageHygieneTests
         string directory = Path.Combine(root, relativePath);
         Directory.CreateDirectory(directory);
         File.WriteAllBytes(Path.Combine(directory, "payload.bin"), new byte[payloadBytes]);
+        Directory.SetCreationTimeUtc(directory, lastWriteUtc);
         Directory.SetLastWriteTimeUtc(directory, lastWriteUtc);
         return directory;
     }

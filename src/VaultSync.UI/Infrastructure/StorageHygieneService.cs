@@ -29,7 +29,6 @@ internal static class StorageHygieneService
     private const long MaximumLegacyLogBytes = 10L * 1024L * 1024L;
     private static readonly string[] TemporaryDirectoryPatterns =
     [
-        "vaultsync-open-*",
         "vaultsync-rotate-*",
         "vaultsync-restore-*",
         "vaultsync_archive_*"
@@ -115,7 +114,11 @@ internal static class StorageHygieneService
 
     internal static StorageCleanupSummary PruneTemporaryData(string tempRoot, DateTime utcNow)
     {
-        StorageCleanupSummary summary = default;
+        int staleOpenWorkspaces = EncryptedOpenWorkspaceManager.CleanupStaleWorkspaces(
+            tempRoot,
+            utcNow,
+            TemporaryRetention);
+        var summary = new StorageCleanupSummary(0, staleOpenWorkspaces, 0);
         foreach (string pattern in TemporaryDirectoryPatterns)
         {
             summary = summary.Add(PruneDirectories(tempRoot, pattern, utcNow - TemporaryRetention));

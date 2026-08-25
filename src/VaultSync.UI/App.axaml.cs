@@ -1895,6 +1895,7 @@ public partial class App : Application
 
         try
         {
+            EncryptedOpenWorkspaceManager.RegisterOwnedWorkspace(stagingRoot);
             Directory.CreateDirectory(extractDir);
             if (!File.Exists(sourceArchivePath))
                 throw new FileNotFoundException("Encrypted backup archive not found.", sourceArchivePath);
@@ -1907,7 +1908,11 @@ public partial class App : Application
         {
             if (Directory.Exists(stagingRoot))
             {
-                try { Directory.Delete(stagingRoot, recursive: true); }
+                try
+                {
+                    Directory.Delete(stagingRoot, recursive: true);
+                    EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(stagingRoot);
+                }
                 catch { }
             }
             throw;
@@ -1926,26 +1931,10 @@ public partial class App : Application
     {
         try
         {
-            string tempRoot = Path.GetTempPath();
-            DateTime now = DateTime.UtcNow;
-            string[] dirs = Directory.GetDirectories(tempRoot, "vaultsync-open-*", SearchOption.TopDirectoryOnly);
-            foreach (string dir in dirs)
-            {
-                try
-                {
-                    DateTime createdUtc = Directory.GetCreationTimeUtc(dir);
-                    DateTime modifiedUtc = Directory.GetLastWriteTimeUtc(dir);
-                    DateTime referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
-                    if ((now - referenceUtc) < EncryptedOpenTempRetention)
-                        continue;
-
-                    Directory.Delete(dir, recursive: true);
-                }
-                catch
-                {
-                    // Best effort cleanup; skip locked folders.
-                }
-            }
+            EncryptedOpenWorkspaceManager.CleanupStaleWorkspaces(
+                Path.GetTempPath(),
+                DateTime.UtcNow,
+                EncryptedOpenTempRetention);
         }
         catch
         {
@@ -1957,19 +1946,7 @@ public partial class App : Application
     {
         try
         {
-            string tempRoot = Path.GetTempPath();
-            string[] dirs = Directory.GetDirectories(tempRoot, "vaultsync-open-*", SearchOption.TopDirectoryOnly);
-            foreach (string dir in dirs)
-            {
-                try
-                {
-                    Directory.Delete(dir, recursive: true);
-                }
-                catch
-                {
-                    // Best effort cleanup; skip locked folders.
-                }
-            }
+            EncryptedOpenWorkspaceManager.CleanupOwnedWorkspaces();
         }
         catch
         {
@@ -1991,6 +1968,7 @@ public partial class App : Application
                 await Task.Delay(delay).ConfigureAwait(false);
                 if (Directory.Exists(stagingRoot))
                     Directory.Delete(stagingRoot, recursive: true);
+                EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(stagingRoot);
             }
             catch
             {

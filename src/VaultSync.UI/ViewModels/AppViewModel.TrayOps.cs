@@ -493,6 +493,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
+                EncryptedOpenWorkspaceManager.RegisterOwnedWorkspace(stagingRoot);
                 Directory.CreateDirectory(extractDir);
                 progress?.Invoke(10, "Decrypting archive...", string.Empty);
 
@@ -536,6 +537,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     if (Directory.Exists(stagingRoot))
                         Directory.Delete(stagingRoot, recursive: true);
+                    EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(stagingRoot);
                 }
                 catch
                 {
@@ -550,24 +552,10 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                DateTime nowUtc = DateTime.UtcNow;
-                foreach (string dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
-                {
-                    try
-                    {
-                        DateTime createdUtc = Directory.GetCreationTimeUtc(dir);
-                        DateTime modifiedUtc = Directory.GetLastWriteTimeUtc(dir);
-                        DateTime referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
-                        if ((nowUtc - referenceUtc) < EncryptedOpenStaleRetention)
-                            continue;
-
-                        Directory.Delete(dir, recursive: true);
-                    }
-                    catch
-                    {
-                        // best effort cleanup
-                    }
-                }
+                EncryptedOpenWorkspaceManager.CleanupStaleWorkspaces(
+                    Path.GetTempPath(),
+                    DateTime.UtcNow,
+                    EncryptedOpenStaleRetention);
             }
             catch
             {
@@ -651,6 +639,7 @@ namespace VaultSync.UI.ViewModels
                     if (!Directory.Exists(stagingRoot))
                         return;
                     Directory.Delete(stagingRoot, recursive: true);
+                    EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(stagingRoot);
                     return;
                 }
                 catch
@@ -734,7 +723,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                foreach (string dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
+                foreach (string dir in EncryptedOpenWorkspaceManager.GetOwnedWorkspacePaths())
                 {
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
                     await TryDeleteEncryptedOpenStagingRootAsync(dir, cts.Token).ConfigureAwait(false);

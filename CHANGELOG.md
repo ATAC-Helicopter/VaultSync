@@ -7,6 +7,7 @@
 - [BUG-18116] Prevented page and dialog content from exposing unintended horizontal scrolling while preserving vertical overflow and purpose-built file and diff panes.
 - [BUG-18117] Prevented retention cleanup from accepting a linked backup root, traversing linked directories during fallback deletion, or changing files outside the selected backup folder.
 - [BUG-18118] Stopped archive and managed-copy backups from reporting success when a required source file disappears or becomes unreadable after the snapshot.
+- [BUG-18119] Isolated decrypted-open temporary workspaces by app process so shutdown, manual lock, and stale cleanup cannot delete files owned by another running VaultSync instance.
 
 ## [1.8.7] - 21.08.2026
 ### Added

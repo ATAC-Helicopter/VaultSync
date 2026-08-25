@@ -22,6 +22,9 @@ user-visible changes are implemented and verified.
 - Fail the backup if a required snapshotted source file disappears or becomes
   unreadable during archive compression or managed fallback copy, rather than
   publishing a successful restore point with missing content.
+- Keep each decrypted-open temporary workspace owned by the process that created
+  it, so another VaultSync instance cannot remove files being actively inspected
+  during shutdown, manual lock, or stale cleanup.
 
 ## [1.8.7]
 

@@ -125,6 +125,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18118` / #571](https://github.com/ATAC-Helicopter/VaultSync/issues/571):
   fail-closed source loss after snapshot creation (`P0`) — fixed on the release
   branch and awaiting integration through #568.
+- [`BUG-18119` / #572](https://github.com/ATAC-Helicopter/VaultSync/issues/572):
+  cross-process decrypted-workspace isolation (`P1`) — fixed on the release
+  branch and awaiting integration through #568.
 - [`VS-1884`](../ROADMAP.md#188--chronicle-stabilization): dependencies,
   packaging, updater, and compatibility (`P1`).
 
