@@ -807,6 +807,7 @@ Migration principles:
 
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
   workflow boundaries, navigation invariants, and legacy-shell migration map.
+  _(Issue #501.)_
 - [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility
   contract.
   - Scope: cover source identity, partition layout, block/sparse maps,
@@ -814,7 +815,7 @@ Migration principles:
     resumable states, build identity, and reader/writer compatibility.
   - Acceptance: incomplete images cannot appear valid; verification detects
     missing or corrupt regions; readers reject unsupported versions without
-    mutation.
+    mutation. _(Issue #574.)_
 - [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
   matrix before implementation claims begin.
   - Scope: decide build versus integration, privilege and isolation boundaries,
@@ -822,7 +823,7 @@ Migration principles:
     live capture, Secure Boot, recovery-media signing, drivers, and hardware.
   - Acceptance: every supported combination has a qualification method and
     every unsupported combination has explicit product and documentation
-    behavior.
+    behavior. _(Issue #575.)_
 - [ ] `VS-1919` `P0` Define recovery identities, dependencies, failure domains,
   and evidence provenance shared by Recovery Horizon and candidate Resilience.
   - Scope: model devices, sites, repositories, destinations, credentials,
@@ -830,7 +831,7 @@ Migration principles:
     verification, drills, and dependency correlation without exporting secrets.
   - Acceptance: later readiness and scenario evaluation can distinguish
     recorded facts, measured evidence, simulation, inference, user confirmation,
-    stale evidence, missing evidence, and unsupported checks.
+    stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
   explicit operation states and checkpoint contracts.
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
