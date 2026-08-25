@@ -191,6 +191,26 @@ public sealed class BackupArchiveCryptoServiceTests
         Assert.False(File.Exists(Path.Combine(backupFolder, BackupArchiveCryptoService.MetadataFileName + ".tmp")));
     }
 
+    [Fact]
+    public void CopyStreamWithCancellation_WhenCancelledDuringRead_PublishesNoFurtherBytes()
+    {
+        using var cts = new CancellationTokenSource();
+        using var source = new CancelOnFirstReadStream(
+            Enumerable.Range(0, 256).Select(value => (byte)value).ToArray(),
+            cts);
+        using var destination = new MemoryStream();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            BackupArchiveCryptoService.CopyStreamWithCancellation(
+                source,
+                destination,
+                bufferSize: 64,
+                cts.Token));
+
+        Assert.Equal(1, source.ReadCount);
+        Assert.Equal(0, destination.Length);
+    }
+
     private static void RewriteEnvelopeMetadata(
         string encryptedArchivePath,
         string propertyName,
@@ -239,5 +259,18 @@ public sealed class BackupArchiveCryptoServiceTests
         output.Write(metadata);
         output.Write(original, metadataOffset + metadataLength, original.Length - metadataOffset - metadataLength);
         File.WriteAllBytes(encryptedArchivePath, output.ToArray());
+    }
+
+    private sealed class CancelOnFirstReadStream(byte[] buffer, CancellationTokenSource cts) : MemoryStream(buffer)
+    {
+        public int ReadCount { get; private set; }
+
+        public override int Read(byte[] destination, int offset, int count)
+        {
+            int read = base.Read(destination, offset, count);
+            ReadCount++;
+            cts.Cancel();
+            return read;
+        }
     }
 }
