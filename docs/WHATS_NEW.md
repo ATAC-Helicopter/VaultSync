@@ -13,6 +13,9 @@ user-visible changes are implemented and verified.
   instead of continuing through the complete plaintext archive before stopping.
 - Remove incomplete archive state after cancelled plain or encrypted compression
   while preserving the previous known-good recovery point unchanged.
+- On restart, preserve only supported plain or encrypted resume checkpoints;
+  discard checkpoints with an unsupported version, wrong mode, missing source
+  identity, or untrusted artifact name.
 
 ## [1.8.7]
 

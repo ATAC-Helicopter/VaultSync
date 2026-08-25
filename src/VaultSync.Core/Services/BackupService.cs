@@ -373,15 +373,35 @@ public sealed class BackupService(
         }
 
         ArchiveResumeCheckpoint? checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
-        if (checkpoint is null)
+        if (!IsValidArchiveResumeCheckpoint(checkpoint))
         {
             return false;
         }
 
-        string artifactFileName = string.IsNullOrWhiteSpace(checkpoint.ArtifactFileName)
-            ? BackupArchiveCryptoService.PlainArchiveFileName
-            : Path.GetFileName(checkpoint.ArtifactFileName);
+        string artifactFileName = checkpoint!.ArtifactFileName;
         return File.Exists(Path.Combine(backupDir, artifactFileName));
+    }
+
+    private static bool IsValidArchiveResumeCheckpoint(ArchiveResumeCheckpoint? checkpoint)
+    {
+        if (checkpoint is null ||
+            checkpoint.Version != 1 ||
+            !string.Equals(checkpoint.Mode, "archive", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(checkpoint.SourceFingerprint) ||
+            checkpoint.ArchiveSizeBytes < 0 ||
+            checkpoint.LastUpdatedUtc == default)
+        {
+            return false;
+        }
+
+        return string.Equals(
+                   checkpoint.ArtifactFileName,
+                   BackupArchiveCryptoService.PlainArchiveFileName,
+                   StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(
+                   checkpoint.ArtifactFileName,
+                   BackupArchiveCryptoService.EncryptedArchiveFileName,
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? TryFindResumableArchiveBackupFolder(string candidateDestDir, string sourceFingerprint)

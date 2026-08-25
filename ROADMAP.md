@@ -702,7 +702,8 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 - [ ] `VS-1882` `P0` Harden interruption, cancellation, archive corruption,
   retention, migration, and clean-state recovery. _(Active: plain and encrypted
   compression interruption is qualified, and encryption observes cancellation
-  between copied chunks; remaining lifecycle boundaries are still open.)_
+  between copied chunks; restart cleanup now rejects invalid resume checkpoints;
+  remaining lifecycle boundaries are still open.)_
 - [ ] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
   narrow-layout defects.
 - [x] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling

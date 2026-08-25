@@ -82,6 +82,72 @@ public sealed class BackupCheckpointResumeTests : IDisposable
     }
 
     [Fact]
+    public void CleanupIncompleteBackups_PreservesEncryptedCheckpointedArchiveFolders()
+    {
+        string backupRoot = Path.Combine(_tempDir.Path, "encrypted-backups");
+        string resumableDir = Path.Combine(backupRoot, "project", "2026-03-13_11-00-00");
+        Directory.CreateDirectory(resumableDir);
+
+        File.WriteAllText(Path.Combine(resumableDir, ".vaultsync_inprogress"), "started");
+        File.WriteAllText(Path.Combine(resumableDir, BackupArchiveCryptoService.EncryptedArchiveFileName), "partial");
+        File.WriteAllText(
+            Path.Combine(resumableDir, ".vaultsync_resume.json"),
+            $$"""
+            {
+              "Version": 1,
+              "Mode": "archive",
+              "SourceFingerprint": "ENCRYPTED-ABC",
+              "ArchiveSizeBytes": 7,
+              "LastUpdatedUtc": "2026-03-13T11:00:00Z",
+              "ArtifactFileName": "{{BackupArchiveCryptoService.EncryptedArchiveFileName}}"
+            }
+            """,
+            Encoding.UTF8);
+
+        int removed = BackupService.CleanupIncompleteBackups(backupRoot);
+
+        Assert.Equal(0, removed);
+        Assert.True(Directory.Exists(resumableDir));
+    }
+
+    [Theory]
+    [InlineData(2, "archive", "ABC", "data.zip")]
+    [InlineData(1, "native", "ABC", "data.zip")]
+    [InlineData(1, "archive", "", "data.zip")]
+    [InlineData(1, "archive", "ABC", "untrusted.partial")]
+    public void CleanupIncompleteBackups_RemovesInvalidArchiveCheckpoints(
+        int version,
+        string mode,
+        string fingerprint,
+        string artifactFileName)
+    {
+        string backupRoot = Path.Combine(_tempDir.Path, $"invalid-{version}-{mode}-{artifactFileName}");
+        string invalidDir = Path.Combine(backupRoot, "project", "2026-03-13_12-00-00");
+        Directory.CreateDirectory(invalidDir);
+
+        File.WriteAllText(Path.Combine(invalidDir, ".vaultsync_inprogress"), "started");
+        File.WriteAllText(Path.Combine(invalidDir, artifactFileName), "partial");
+        File.WriteAllText(
+            Path.Combine(invalidDir, ".vaultsync_resume.json"),
+            $$"""
+            {
+              "Version": {{version}},
+              "Mode": "{{mode}}",
+              "SourceFingerprint": "{{fingerprint}}",
+              "ArchiveSizeBytes": 7,
+              "LastUpdatedUtc": "2026-03-13T12:00:00Z",
+              "ArtifactFileName": "{{artifactFileName}}"
+            }
+            """,
+            Encoding.UTF8);
+
+        int removed = BackupService.CleanupIncompleteBackups(backupRoot);
+
+        Assert.Equal(1, removed);
+        Assert.False(Directory.Exists(invalidDir));
+    }
+
+    [Fact]
     public void UpdateCheckpointResumeTelemetry_StoresExpectedSummary()
     {
         var cfg = new AppConfig();
