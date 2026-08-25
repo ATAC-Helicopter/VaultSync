@@ -1,12 +1,9 @@
 ﻿# Changelog
 ## [1.8.8] - Unreleased
-
 ### Added
-
 - [VS-1823] Added a reproducible Release-mode benchmark harness and explicit p95 duration, allocation, and cancellation budgets for 10,000-event histories and 100,000-file snapshot comparisons.
-
+- [VS-1882] Added deterministic plain and encrypted archive-interruption qualification that verifies cancelled compression publishes no partial backup state and leaves the previous known-good recovery point unchanged.
 ### Fixed
-
 - [BUG-18116] Prevented page and dialog content from exposing unintended horizontal scrolling while preserving vertical overflow and purpose-built file and diff panes.
 
 ## [1.8.7] - 21.08.2026
