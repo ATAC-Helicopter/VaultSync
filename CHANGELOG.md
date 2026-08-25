@@ -5,6 +5,7 @@
 - [VS-1882] Made archive encryption stop between copied chunks when cancelled, added deterministic plain and encrypted interruption qualification, and made restart cleanup discard invalid or untrusted resume checkpoints while preserving valid encrypted checkpoints and the previous known-good recovery point.
 ### Fixed
 - [BUG-18116] Prevented page and dialog content from exposing unintended horizontal scrolling while preserving vertical overflow and purpose-built file and diff panes.
+- [BUG-18117] Prevented retention cleanup from accepting a linked backup root, traversing linked directories during fallback deletion, or changing files outside the selected backup folder.
 
 ## [1.8.7] - 21.08.2026
 ### Added

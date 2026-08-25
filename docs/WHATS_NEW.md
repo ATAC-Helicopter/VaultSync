@@ -16,6 +16,9 @@ user-visible changes are implemented and verified.
 - On restart, preserve only supported plain or encrypted resume checkpoints;
   discard checkpoints with an unsupported version, wrong mode, missing source
   identity, or untrusted artifact name.
+- Keep retention cleanup inside the selected backup folder even when linked
+  files or directories are present, and refuse a backup root that is itself a
+  filesystem link without dropping its indexed restore point.
 
 ## [1.8.7]
 

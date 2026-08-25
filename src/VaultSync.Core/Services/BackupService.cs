@@ -3262,6 +3262,14 @@ public sealed class BackupService(
     {
         try
         {
+            if ((File.GetAttributes(fullPath) & FileAttributes.ReparsePoint) != 0)
+            {
+                return new RetentionDeleteAttemptResult(
+                    false,
+                    "linked-root",
+                    "Retention refused to delete a backup folder that is itself a filesystem link.");
+            }
+
             ClearAttributesRecursive(fullPath);
             DeleteKnownMarkerFiles(fullPath);
             Directory.Delete(fullPath, recursive: true);
@@ -3347,23 +3355,18 @@ public sealed class BackupService(
             // Best effort; continue with children.
         }
 
-        foreach (string file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
+        foreach (string entry in Directory.EnumerateFileSystemEntries(rootPath))
         {
             try
             {
-                File.SetAttributes(file, FileAttributes.Normal);
-            }
-            catch
-            {
-                // Best effort; delete phase will handle failures.
-            }
-        }
+                FileAttributes attributes = File.GetAttributes(entry);
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                    continue;
 
-        foreach (string dir in Directory.EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories))
-        {
-            try
-            {
-                File.SetAttributes(dir, FileAttributes.Normal);
+                if ((attributes & FileAttributes.Directory) != 0)
+                    ClearAttributesRecursive(entry);
+                else
+                    File.SetAttributes(entry, FileAttributes.Normal);
             }
             catch
             {
@@ -3372,7 +3375,7 @@ public sealed class BackupService(
         }
     }
 
-    private static void FallbackDeleteDirectory(string rootPath)
+    internal static void FallbackDeleteDirectory(string rootPath)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
             return;
@@ -3380,41 +3383,11 @@ public sealed class BackupService(
         int failedFiles = 0;
         int failedDirs = 0;
         var failedSamples = new List<string>();
-
-        foreach (string file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
-        {
-            try
-            {
-                File.SetAttributes(file, FileAttributes.Normal);
-                File.Delete(file);
-            }
-            catch (Exception ex)
-            {
-                failedFiles++;
-                if (failedSamples.Count < 3)
-                    failedSamples.Add($"{Path.GetFileName(file)} ({ex.GetType().Name})");
-            }
-        }
-
-        var allDirs = Directory
-            .EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories)
-            .OrderByDescending(path => path.Length)
-            .ToList();
-
-        foreach (string? dir in allDirs)
-        {
-            try
-            {
-                File.SetAttributes(dir, FileAttributes.Normal);
-                Directory.Delete(dir, recursive: false);
-            }
-            catch (Exception ex)
-            {
-                failedDirs++;
-                if (failedSamples.Count < 3)
-                    failedSamples.Add($"{Path.GetFileName(dir)} ({ex.GetType().Name})");
-            }
-        }
+        DeleteDirectoryContentsWithoutFollowingLinks(
+            rootPath,
+            ref failedFiles,
+            ref failedDirs,
+            failedSamples);
 
         if (failedFiles > 0 || failedDirs > 0)
         {
@@ -3424,6 +3397,64 @@ public sealed class BackupService(
 
         File.SetAttributes(rootPath, FileAttributes.Normal);
         Directory.Delete(rootPath, recursive: false);
+    }
+
+    private static void DeleteDirectoryContentsWithoutFollowingLinks(
+        string rootPath,
+        ref int failedFiles,
+        ref int failedDirs,
+        List<string> failedSamples)
+    {
+        foreach (string entry in Directory.EnumerateFileSystemEntries(rootPath))
+        {
+            try
+            {
+                FileAttributes attributes = File.GetAttributes(entry);
+                bool isDirectory = (attributes & FileAttributes.Directory) != 0;
+                bool isLink = (attributes & FileAttributes.ReparsePoint) != 0;
+
+                if (isDirectory && !isLink)
+                {
+                    DeleteDirectoryContentsWithoutFollowingLinks(
+                        entry,
+                        ref failedFiles,
+                        ref failedDirs,
+                        failedSamples);
+                    File.SetAttributes(entry, FileAttributes.Normal);
+                    Directory.Delete(entry, recursive: false);
+                }
+                else if (isDirectory)
+                {
+                    Directory.Delete(entry, recursive: false);
+                }
+                else
+                {
+                    if (!isLink)
+                        File.SetAttributes(entry, FileAttributes.Normal);
+                    File.Delete(entry);
+                }
+            }
+            catch (Exception ex)
+            {
+                bool isDirectory;
+                try
+                {
+                    isDirectory = (File.GetAttributes(entry) & FileAttributes.Directory) != 0;
+                }
+                catch
+                {
+                    isDirectory = Directory.Exists(entry);
+                }
+
+                if (isDirectory)
+                    failedDirs++;
+                else
+                    failedFiles++;
+
+                if (failedSamples.Count < 3)
+                    failedSamples.Add($"{Path.GetFileName(entry)} ({ex.GetType().Name})");
+            }
+        }
     }
 
     private sealed class RunnerProgressState

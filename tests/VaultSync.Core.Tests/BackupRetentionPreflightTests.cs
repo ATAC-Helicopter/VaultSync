@@ -252,6 +252,84 @@ public sealed class BackupRetentionPreflightTests : IDisposable
     }
 
     [Fact]
+    public void FallbackDeleteDirectory_RemovesLinksWithoutTouchingTheirTargets()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string backupFolder = Path.Combine(_tempDir.Path, "retention-fallback");
+        string nested = Path.Combine(backupFolder, "nested");
+        string outside = Path.Combine(_tempDir.Path, "outside-retention-target");
+        Directory.CreateDirectory(nested);
+        Directory.CreateDirectory(outside);
+        File.WriteAllText(Path.Combine(nested, "inside.txt"), "delete me");
+        string outsideFile = Path.Combine(outside, "keep.txt");
+        File.WriteAllText(outsideFile, "must survive");
+        Directory.CreateSymbolicLink(Path.Combine(backupFolder, "linked-outside"), outside);
+
+        BackupService.FallbackDeleteDirectory(backupFolder);
+
+        Assert.False(Directory.Exists(backupFolder));
+        Assert.True(File.Exists(outsideFile));
+        Assert.Equal("must survive", File.ReadAllText(outsideFile));
+    }
+
+    [Fact]
+    public void EnforceRetentionForProject_RefusesLinkedBackupRootAndKeepsItsIndexEntry()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        SqliteRepository repo = CreateRepository();
+        var service = new BackupService(repo);
+        int projectId = CreateProject(repo, "Linked Retention Project");
+        int oldSnapshotId = repo.CreateSnapshot(projectId, 10, 1024);
+        int newSnapshotId = repo.CreateSnapshot(projectId, 20, 2048);
+        string oldPath = "linked-retention/old";
+        string newPath = "linked-retention/new";
+
+        repo.CreateBackupFromMetadata(
+            "backup-linked-old",
+            projectId,
+            oldSnapshotId,
+            new DateTime(2026, 3, 12, 10, 0, 0, DateTimeKind.Utc),
+            "manual",
+            1024,
+            oldPath,
+            _backupRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+        repo.CreateBackupFromMetadata(
+            "backup-new",
+            projectId,
+            newSnapshotId,
+            new DateTime(2026, 3, 12, 11, 0, 0, DateTimeKind.Utc),
+            "manual",
+            2048,
+            newPath,
+            _backupRoot,
+            "Primary",
+            isProtected: false,
+            isImported: false);
+
+        string outside = Path.Combine(_tempDir.Path, "linked-retention-outside");
+        Directory.CreateDirectory(outside);
+        string outsideFile = Path.Combine(outside, "keep.txt");
+        File.WriteAllText(outsideFile, "must survive");
+        string linkedBackup = Path.Combine(_backupRoot, oldPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(linkedBackup)!);
+        Directory.CreateSymbolicLink(linkedBackup, outside);
+        Directory.CreateDirectory(Path.Combine(_backupRoot, newPath));
+
+        service.EnforceRetentionForProject(projectId, _backupRoot, maxSnapshotsToKeep: 1);
+
+        Assert.Equal(2, repo.GetBackupsForProject(projectId).Count());
+        Assert.True(Directory.Exists(linkedBackup));
+        Assert.True(File.Exists(outsideFile));
+    }
+
+    [Fact]
     public void BuildRetentionDeletionPlan_PreservesLastByteVerifiedPoint()
     {
         int projectId = 5;
