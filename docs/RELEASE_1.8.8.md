@@ -130,6 +130,9 @@ failure handling without becoming a broad rewrite.
   branch and awaiting integration through #568.
 - [`VS-1884`](../ROADMAP.md#188--chronicle-stabilization): dependencies,
   packaging, updater, and compatibility (`P1`).
+- [`VS-1885` / #573](https://github.com/ATAC-Helicopter/VaultSync/issues/573):
+  remaining release-automation static-analysis debt (`P1`) — active; the
+  aggregate quality gate passes and the five Python findings remain explicit.
 
 ## Maintainer links
 

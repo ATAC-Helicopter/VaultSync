@@ -723,6 +723,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   awaiting integration through #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
+- [ ] `VS-1885` `P1` Resolve the remaining release-automation static-analysis
+  findings without weakening fail-closed Project date and work-ID integrity.
+  _(Issue #573; active on the release branch.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
