@@ -849,7 +849,7 @@ public sealed class BackupService(
         {
             try
             {
-                existingCts.Cancel();
+                await existingCts.CancelAsync().ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is ObjectDisposedException or AggregateException)
             {
@@ -974,7 +974,7 @@ public sealed class BackupService(
         {
             try
             {
-                filesForProgress = [.. _repo.GetFilesForSnapshot(snapshotId)];
+                filesForProgress = await _repo.GetFilesForSnapshotAsync(snapshotId, linkedToken).ConfigureAwait(false);
                 if (snapshot is null)
                 {
                     totalFilesForProgress = filesForProgress.Count;
@@ -1341,7 +1341,7 @@ public sealed class BackupService(
                     }
                 }
 
-                progressCallback!(percent, currentFile, etaText);
+                progressCallback(percent, currentFile, etaText);
             };
         }
 
@@ -1427,7 +1427,7 @@ public sealed class BackupService(
         {
             if (monitorCts is not null)
             {
-                monitorCts.Cancel();
+                await monitorCts.CancelAsync().ConfigureAwait(false);
                 try
                 {
                     if (monitorTask is not null)
