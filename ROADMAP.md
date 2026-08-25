@@ -713,6 +713,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   preserve the indexed restore point when the selected backup root is unsafe or
   cannot be deleted. _(Issue #570; delivered on the release branch and awaiting
   integration through #568.)_
+- [x] `BUG-18118` `P0` Fail archive and managed-copy backups when a required
+  snapshotted source file disappears or becomes unreadable instead of publishing
+  an incomplete restore point. _(Issue #571; delivered on the release branch and
+  awaiting integration through #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
 

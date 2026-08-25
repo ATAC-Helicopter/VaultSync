@@ -1853,8 +1853,9 @@ public sealed class BackupService(
                     }
                     catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                     {
-                        Console.WriteLine($"[BackupService] Failed to add '{filePath}' to archive: {ex.Message}");
-                        continue;
+                        throw new IOException(
+                            $"Archive backup could not read required source file '{relative}'.",
+                            ex);
                     }
 
                     processedFiles++;
@@ -2845,9 +2846,9 @@ public sealed class BackupService(
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                // Log and skip the file rather than aborting the whole fallback backup.
-                Console.WriteLine($"[BackupService] Failed to copy '{filePath}' to '{targetPath}': {ex.Message}");
-                continue;
+                throw new IOException(
+                    $"Managed backup could not copy required source file '{relative}'.",
+                    ex);
             }
         }
     }

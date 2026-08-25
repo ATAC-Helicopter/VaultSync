@@ -19,6 +19,9 @@ user-visible changes are implemented and verified.
 - Keep retention cleanup inside the selected backup folder even when linked
   files or directories are present, and refuse a backup root that is itself a
   filesystem link without dropping its indexed restore point.
+- Fail the backup if a required snapshotted source file disappears or becomes
+  unreadable during archive compression or managed fallback copy, rather than
+  publishing a successful restore point with missing content.
 
 ## [1.8.7]
 

@@ -91,6 +91,56 @@ public sealed class BackupLifecycleFaultTests : IDisposable
         Assert.Empty(Directory.EnumerateFiles(projectBackupRoot, ".vaultsync_resume.json", SearchOption.AllDirectories));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SourceFileLossDuringCompression_FailsWithoutPublishingIncompleteBackup(bool encrypted)
+    {
+        string dbPath = Path.Combine(_tempDir.Path, "source-loss.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        Project project = CreateProject(repo, encrypted);
+        string secondSource = Path.Combine(project.RootPath, "second.bin");
+        await File.WriteAllBytesAsync(
+            secondSource,
+            Enumerable.Range(0, 1024 * 1024).Select(index => (byte)(index % 251)).ToArray());
+        string backupRoot = Path.Combine(_tempDir.Path, "source-loss-backups");
+        Directory.CreateDirectory(backupRoot);
+        var service = new BackupService(
+            repo,
+            CreateSecretService(),
+            new FixedConfigStore(CreateConfig(encrypted), dbPath));
+
+        bool faultInjected = false;
+        IOException error = await Assert.ThrowsAsync<IOException>(() => service.RunBackupAsync(
+            project,
+            backupRoot,
+            isAuto: false,
+            progressCallback: (_, currentFile, _) =>
+            {
+                if (faultInjected ||
+                    !string.Equals(currentFile, "Preparing archive backup...", StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                File.Delete(secondSource);
+                faultInjected = true;
+            },
+            useArchiveMode: true,
+            enableCheckpointedRetry: true));
+
+        Assert.True(faultInjected);
+        Assert.Contains("could not read required source file", error.Message, StringComparison.Ordinal);
+        Assert.Empty(repo.GetBackupsForProject(project.Id));
+
+        string projectBackupRoot = Path.Combine(
+            backupRoot,
+            BackupService.GetProjectBackupFolderName(project.Name));
+        Assert.True(Directory.Exists(projectBackupRoot));
+        Assert.Empty(Directory.GetDirectories(projectBackupRoot));
+        Assert.Empty(Directory.EnumerateFiles(projectBackupRoot, ".vaultsync_inprogress", SearchOption.AllDirectories));
+    }
+
     private Project CreateProject(SqliteRepository repo, bool encrypted)
     {
         string sourceRoot = Path.Combine(_tempDir.Path, "source");
