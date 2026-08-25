@@ -1792,7 +1792,7 @@ public sealed class BackupService(
 
                     try
                     {
-                        using (Stream entryStream = entry.Open())
+                        using (Stream entryStream = await entry.OpenAsync(ct).ConfigureAwait(false))
                         using (var input = new FileStream(
                             filePath,
                             FileMode.Open,
