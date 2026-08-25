@@ -104,7 +104,9 @@ failure handling without becoming a broad rewrite.
   performance budgets and release benchmarks (`P0`) — harness, local baseline,
   and cross-platform evidence workflow complete.
 - [`VS-1882`](../ROADMAP.md#188--chronicle-stabilization): lifecycle and
-  recovery fault matrix (`P0`).
+  recovery fault matrix (`P0`) — compression interruption is qualified for
+  plain and encrypted archives, encryption now observes cancellation between
+  copied chunks, and the remaining durable-write boundaries are in progress.
 - [`VS-1881`](../ROADMAP.md#188--chronicle-stabilization): supported-platform
   release matrix (`P0`).
 - [`VS-1821` / #380](https://github.com/ATAC-Helicopter/VaultSync/issues/380):

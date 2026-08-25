@@ -8,6 +8,12 @@ cross-platform qualification, and focused decomposition of the backup,
 metadata, and desktop workflow hotspots. This section will grow only as
 user-visible changes are implemented and verified.
 
+### Safer interrupted archives
+- Stop archive encryption between copied chunks when cancellation is requested,
+  instead of continuing through the complete plaintext archive before stopping.
+- Remove incomplete archive state after cancelled plain or encrypted compression
+  while preserving the previous known-good recovery point unchanged.
+
 ## [1.8.7]
 
 VaultSync `1.8.7` is the Trust and Portability update. It makes build and
