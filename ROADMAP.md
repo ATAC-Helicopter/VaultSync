@@ -726,6 +726,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   VaultSync-owned disposable trees without traversing linked children.
   _(Issue #577; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18121` `P1` Remove crash-abandoned verified release-cache temporary
+  writes using an exact, age-bounded filename contract.
+  _(Issue #579; delivered on the release branch and awaiting integration through
+  #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
 - [ ] `VS-1885` `P1` Resolve the remaining release-automation static-analysis

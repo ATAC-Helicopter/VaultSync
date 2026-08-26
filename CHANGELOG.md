@@ -11,6 +11,7 @@
 - [BUG-18118] Stopped archive and managed-copy backups from reporting success when a required source file disappears or becomes unreadable after the snapshot.
 - [BUG-18119] Isolated decrypted-open temporary workspaces by app process so shutdown, manual lock, and stale cleanup cannot delete files owned by another running VaultSync instance.
 - [BUG-18120] Confined startup cleanup and reclaimed-size inspection to VaultSync-owned disposable trees so linked children are removed without traversing or modifying their targets.
+- [BUG-18121] Added exact, age-bounded cleanup for crash-abandoned verified release-cache writes while preserving recent and unrelated hidden files.
 
 ## [1.8.7] - 21.08.2026
 ### Added

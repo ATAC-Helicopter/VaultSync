@@ -27,6 +27,8 @@ user-visible changes are implemented and verified.
   during shutdown, manual lock, or stale cleanup.
 - Keep abandoned-working-data cleanup inside VaultSync-owned temporary trees,
   removing linked children themselves without scanning or changing their targets.
+- Remove verified release-cache writes abandoned by a crash after one day while
+  preserving recent writes and unrelated hidden files.
 
 ### Lower temporary memory pressure
 - Reuse one bounded buffer while adding sequential files to an archive instead
