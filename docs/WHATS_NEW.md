@@ -53,6 +53,8 @@ user-visible changes are implemented and verified.
   it only after authentication succeeds.
 - Keep decrypted-workspace cleanup under an exact OS temporary child even when
   another directory shares the temporary root's text prefix.
+- Keep cancellation attached to the active backup when another run for the same
+  project replaces an older operation.
 
 ## [1.8.7]
 

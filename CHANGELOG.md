@@ -19,6 +19,7 @@
 - [BUG-18124] Limited recognized temporary telemetry exports to 30 days and 100 MB.
 - [BUG-18125] Prevented predictable encrypted-restore staging collisions.
 - [BUG-18126] Confined decrypted-workspace cleanup to exact OS temporary children.
+- [BUG-18127] Isolated cancellation ownership between overlapping backup runs.
 
 ## [1.8.7] - 21.08.2026
 ### Added

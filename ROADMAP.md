@@ -767,6 +767,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   resolving decrypted-workspace cleanup roots.
   _(Issue #585; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18127` `P0` Keep overlapping backup cancellation registrations
+  isolated so an older run cannot disable cancellation of its replacement.
+  _(Issue #588; delivered on the release branch and awaiting integration through
+  #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

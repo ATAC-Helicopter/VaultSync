@@ -23,7 +23,7 @@ public sealed class BackupService(
     BackupEncryptionSecretService? backupEncryptionSecretService = null,
     IAppConfigStore? configStore = null)
 {
-    private readonly Dictionary<int, CancellationTokenSource> _cancelMap = [];
+    private readonly BackupCancellationRegistry _cancellationRegistry = new();
     private readonly SqliteRepository _repo = repo;
     private readonly BackupEncryptionSecretService _backupEncryptionSecretService = backupEncryptionSecretService ?? new BackupEncryptionSecretService();
     private readonly IAppConfigStore _configStore = configStore ?? StaticAppConfigStore.Instance;
@@ -159,17 +159,11 @@ public sealed class BackupService(
 
     public void CancelBackup(int projectId)
     {
-        if (_cancelMap.TryGetValue(projectId, out CancellationTokenSource? cts))
+        RuntimeLog.WriteVerbose($"[BackupService] Cancel requested for projectId={projectId}.");
+        if (!_cancellationRegistry.Cancel(projectId))
         {
-            RuntimeLog.WriteVerbose($"[BackupService] Cancel requested for projectId={projectId}.");
-            try
-            {
-                cts.Cancel();
-            }
-            catch (ObjectDisposedException)
-            {
-                RuntimeLog.WriteVerbose($"[BackupService] Cancel ignored; token source already disposed for projectId={projectId}.");
-            }
+            RuntimeLog.WriteVerbose(
+                $"[BackupService] Cancel ignored; no active registration exists for projectId={projectId}.");
         }
     }
 
@@ -844,25 +838,9 @@ public sealed class BackupService(
             }
         }
 
-        // Create (or replace) a CTS for this project and link with caller token.
-        if (_cancelMap.TryGetValue(project.Id, out CancellationTokenSource? existingCts))
-        {
-            try
-            {
-                await existingCts.CancelAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is ObjectDisposedException or AggregateException)
-            {
-                RuntimeLog.WriteVerbose(
-                    $"[BackupService] Could not cancel the previous backup token for project {project.Id}: {ex.Message}");
-            }
-            existingCts.Dispose();
-        }
-        var projectCts = new CancellationTokenSource();
-        _cancelMap[project.Id] = projectCts;
-
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
-        CancellationToken linkedToken = linkedCts.Token;
+        using BackupCancellationRegistry.Registration cancellationRegistration =
+            _cancellationRegistry.Register(project.Id, ct);
+        CancellationToken linkedToken = cancellationRegistration.Token;
         await using CancellationTokenRegistration cancelLog = linkedToken.Register(() =>
             RuntimeLog.WriteVerbose($"[BackupService] Cancellation observed for project '{project.Name}' (Id={project.Id})."));
 
@@ -1220,11 +1198,6 @@ public sealed class BackupService(
             completedMessage = "Backup completed.";
         progressCallback?.Invoke(100, string.Empty, completedMessage);
 
-        if (_cancelMap.TryGetValue(project.Id, out CancellationTokenSource? finishedCts))
-        {
-            finishedCts.Dispose();
-            _cancelMap.Remove(project.Id);
-        }
         // Ensure cancelled backups never leave partial folders
         if (linkedToken.IsCancellationRequested)
         {
