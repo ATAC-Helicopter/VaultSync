@@ -1978,32 +1978,7 @@ public partial class App : Application
     }
 
     private static string? ResolveEncryptedOpenStagingRoot(string extractedDir)
-    {
-        if (string.IsNullOrWhiteSpace(extractedDir))
-            return null;
-
-        try
-        {
-            string full = Path.GetFullPath(extractedDir);
-            string tempRoot = Path.GetFullPath(Path.GetTempPath());
-            if (!full.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
-                return null;
-
-            var current = new DirectoryInfo(full);
-            while (current is not null)
-            {
-                if (current.Name.StartsWith("vaultsync-open-", StringComparison.OrdinalIgnoreCase))
-                    return current.FullName;
-                current = current.Parent;
-            }
-        }
-        catch
-        {
-            // Best effort path validation.
-        }
-
-        return null;
-    }
+        => EncryptedOpenWorkspaceManager.ResolveWorkspaceRoot(extractedDir);
 
     private static TimeSpan GetEncryptedOpenAutoCleanupDelay()
     {

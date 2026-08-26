@@ -31,6 +31,41 @@ public sealed class EncryptedOpenWorkspaceManagerTests
     }
 
     [Fact]
+    public void ResolveWorkspaceRoot_AcceptsOnlyExactDirectTempWorkspaceNames()
+    {
+        string workspace = CreateSystemTempWorkspace();
+        string child = Path.Combine(workspace, "extracted", "folder");
+        Directory.CreateDirectory(child);
+
+        try
+        {
+            Assert.Equal(
+                Path.GetFullPath(workspace),
+                EncryptedOpenWorkspaceManager.ResolveWorkspaceRoot(child));
+            Assert.Null(EncryptedOpenWorkspaceManager.ResolveWorkspaceRoot(Path.GetTempPath()));
+            Assert.Null(EncryptedOpenWorkspaceManager.ResolveWorkspaceRoot(
+                Path.Combine(Path.GetTempPath(), "vaultsync-open-not-a-guid", "extracted")));
+        }
+        finally
+        {
+            TryDelete(workspace);
+        }
+    }
+
+    [Fact]
+    public void ResolveWorkspaceRoot_RejectsSiblingDirectoryWithTempPrefix()
+    {
+        string tempRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.GetTempPath()));
+        string sibling = tempRoot + "-sibling";
+        string candidate = Path.Combine(
+            sibling,
+            $"{EncryptedOpenWorkspaceManager.WorkspacePrefix}{Guid.NewGuid():N}",
+            "extracted");
+
+        Assert.Null(EncryptedOpenWorkspaceManager.ResolveWorkspaceRoot(candidate));
+    }
+
+    [Fact]
     public void StaleCleanupPreservesWorkspaceWhileRecordedOwnerIsActive()
     {
         string root = Path.Combine(Path.GetTempPath(), $"vaultsync-owner-tests-{Guid.NewGuid():N}");

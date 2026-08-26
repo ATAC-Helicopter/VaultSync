@@ -602,32 +602,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         private static string? ResolveEncryptedOpenStagingRoot(string extractedDir)
-        {
-            if (string.IsNullOrWhiteSpace(extractedDir))
-                return null;
-
-            try
-            {
-                string full = Path.GetFullPath(extractedDir);
-                string tempRoot = Path.GetFullPath(Path.GetTempPath());
-                if (!full.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
-                    return null;
-
-                var current = new DirectoryInfo(full);
-                while (current is not null)
-                {
-                    if (current.Name.StartsWith("vaultsync-open-", StringComparison.OrdinalIgnoreCase))
-                        return current.FullName;
-                    current = current.Parent;
-                }
-            }
-            catch
-            {
-                // best effort path validation
-            }
-
-            return null;
-        }
+            => EncryptedOpenWorkspaceManager.ResolveWorkspaceRoot(extractedDir);
 
         private static async Task TryDeleteEncryptedOpenStagingRootAsync(string stagingRoot, CancellationToken ct)
         {

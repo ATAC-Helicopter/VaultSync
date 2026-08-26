@@ -36,6 +36,36 @@ internal static class EncryptedOpenWorkspaceManager
 
     internal static string[] GetOwnedWorkspacePaths() => OwnedWorkspaces.Keys.ToArray();
 
+    internal static string? ResolveWorkspaceRoot(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+
+        try
+        {
+            string tempRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.GetTempPath()));
+            string fullPath = Path.GetFullPath(path);
+            string relative = Path.GetRelativePath(tempRoot, fullPath);
+            if (relative == "." ||
+                Path.IsPathRooted(relative) ||
+                relative.Equals("..", StringComparison.Ordinal) ||
+                relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
+                relative.StartsWith($"..{Path.AltDirectorySeparatorChar}", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            int separator = relative.IndexOfAny(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string workspaceName = separator < 0 ? relative : relative[..separator];
+            string workspaceRoot = Path.Combine(tempRoot, workspaceName);
+            return ValidateWorkspacePath(workspaceRoot);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     internal static void ForgetOwnedWorkspace(string workspacePath)
     {
         if (string.IsNullOrWhiteSpace(workspacePath))
@@ -153,7 +183,8 @@ internal static class EncryptedOpenWorkspaceManager
         string? parent = Path.GetDirectoryName(fullPath);
         string name = Path.GetFileName(fullPath);
         if (!string.Equals(parent, tempRoot, StringComparison.OrdinalIgnoreCase) ||
-            !name.StartsWith(WorkspacePrefix, StringComparison.OrdinalIgnoreCase))
+            !name.StartsWith(WorkspacePrefix, StringComparison.OrdinalIgnoreCase) ||
+            !Guid.TryParseExact(name.AsSpan(WorkspacePrefix.Length), "N", out _))
         {
             throw new InvalidOperationException("Encrypted-open workspaces must be direct VaultSync temp children.");
         }
