@@ -779,8 +779,8 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   snapshot persistence succeed.
   _(Issue #590; delivered on the release branch and awaiting integration through
   #568.)_
-- [x] `BUG-18130` `P1` Run CI, CodeQL, and quality gates once per release-branch
-  change while retaining post-merge checks.
+- [x] `BUG-18130` `P1` Run bounded CI, CodeQL, and quality gates once per
+  release-branch change while retaining post-merge checks.
   _(Issue #591; delivered on the release branch and awaiting integration through
   #568.)_
 

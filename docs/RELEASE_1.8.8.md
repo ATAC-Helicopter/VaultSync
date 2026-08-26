@@ -178,8 +178,8 @@ failure handling without becoming a broad rewrite.
   cancelled snapshot scan-cache publication (`P0`) — fixed on the release
   branch and awaiting integration through #568.
 - [`BUG-18130` / #591](https://github.com/ATAC-Helicopter/VaultSync/issues/591):
-  duplicate release-branch CI, CodeQL, and quality runs (`P1`) — fixed on the
-  release branch and awaiting integration through #568.
+  duplicate or unbounded release-branch CI, CodeQL, and quality runs (`P1`) —
+  fixed on the release branch and awaiting integration through #568.
 
 ## Maintainer links
 

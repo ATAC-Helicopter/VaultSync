@@ -19,6 +19,7 @@ jobs:
   changes:
     name: Detect changed areas
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       release_changed: ${{ steps.detect.outputs.release_changed }}
       scripts_changed: ${{ steps.detect.outputs.scripts_changed }}
@@ -27,9 +28,8 @@ jobs:
       workflows_changed: ${{ steps.detect.outputs.workflows_changed }}
     steps:
       - name: Checkout
+        timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
 
       - name: Detect changed areas
         id: detect
@@ -83,8 +83,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.workflows_changed == 'true' || needs.changes.outputs.templates_changed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
+        timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Lint GitHub YAML files
@@ -99,8 +101,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.scripts_changed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
+        timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Python
@@ -116,8 +120,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.release_changed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
+        timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run local release gate
@@ -132,8 +138,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.store_changed == 'true'
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
+        timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
