@@ -155,8 +155,8 @@ failure handling without becoming a broad rewrite.
   bounded archive and support-package memory pressure (`P1`) — implemented on
   the release branch and awaiting integration through #568.
 - [`VS-1887` / #583](https://github.com/ATAC-Helicopter/VaultSync/issues/583):
-  actionable onboarding and non-blocking Guide progress (`P1`) — implemented on
-  the release branch and awaiting integration through #568.
+  actionable onboarding plus non-blocking Guide and Schedule progress (`P1`) —
+  implemented on the release branch and awaiting integration through #568.
 - [`BUG-18125` / #584](https://github.com/ATAC-Helicopter/VaultSync/issues/584):
   unpredictable authenticated restore staging (`P1`) — fixed on the release
   branch and awaiting integration through #568.

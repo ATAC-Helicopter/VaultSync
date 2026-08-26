@@ -47,6 +47,8 @@ user-visible changes are implemented and verified.
   steps instead of leaving a disabled Next action.
 - Refresh the Guide's project, backup, and recovery totals away from the UI
   thread so opening it does not pause navigation.
+- Load Schedule project coverage away from the UI thread and coalesce repeated
+  refreshes while settings are changing.
 - Stage decrypted restore output under an unpredictable one-use name and publish
   it only after authentication succeeds.
 - Keep decrypted-workspace cleanup under an exact OS temporary child even when

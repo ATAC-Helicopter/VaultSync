@@ -755,8 +755,8 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   reusing sequential copy buffers and streaming manifest hashes.
   _(Issue #578; delivered on the release branch and awaiting integration through
   #568.)_
-- [x] `VS-1887` `P1` Make guided setup actionable and move Guide progress
-  queries off the UI thread with stale-result suppression.
+- [x] `VS-1887` `P1` Make guided setup actionable and move Guide and Schedule
+  progress queries off the UI thread with stale/coalesced-result handling.
   _(Issue #583; delivered on the release branch and awaiting integration through
   #568.)_
 - [x] `BUG-18125` `P1` Prevent predictable encrypted-restore staging collisions
