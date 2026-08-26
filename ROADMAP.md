@@ -730,6 +730,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   writes using an exact, age-bounded filename contract.
   _(Issue #579; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18122` `P1` Remove abandoned installation-identity and credential-index
+  atomic writes without selecting their durable files or unrelated content.
+  _(Issue #580; delivered on the release branch and awaiting integration through
+  #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
 - [ ] `VS-1885` `P1` Resolve the remaining release-automation static-analysis

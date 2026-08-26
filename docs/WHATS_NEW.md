@@ -29,6 +29,8 @@ user-visible changes are implemented and verified.
   removing linked children themselves without scanning or changing their targets.
 - Remove verified release-cache writes abandoned by a crash after one day while
   preserving recent writes and unrelated hidden files.
+- Remove abandoned installation-identity and credential-index writes after one
+  hour without selecting durable identity, credential, or unrelated files.
 
 ### Lower temporary memory pressure
 - Reuse one bounded buffer while adding sequential files to an archive instead
