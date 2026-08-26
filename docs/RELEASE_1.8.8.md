@@ -171,6 +171,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18127` / #588](https://github.com/ATAC-Helicopter/VaultSync/issues/588):
   overlapping backup cancellation ownership (`P0`) — fixed on the release
   branch and awaiting integration through #568.
+- [`BUG-18128` / #589](https://github.com/ATAC-Helicopter/VaultSync/issues/589):
+  duplicate and unbounded Sonar release-branch analysis (`P1`) — fixed on the
+  release branch and awaiting integration through #568.
 
 ## Maintainer links
 

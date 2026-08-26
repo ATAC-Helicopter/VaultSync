@@ -3,8 +3,16 @@ name: SonarQube
 on:
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   push:
-    branches: [ "Dev", "Stable", "release/**" ]
+    # Release branches are analyzed by their required PR. Running again for the
+    # same branch push duplicates the complete build and coverage pipeline.
+    branches: [ "Dev", "Stable" ]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -19,6 +27,7 @@ jobs:
   analysis:
     name: SonarQube Cloud analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
       SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
@@ -50,6 +59,7 @@ jobs:
 
       - name: Checkout
         if: steps.config.outputs.configured == 'true'
+        timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0

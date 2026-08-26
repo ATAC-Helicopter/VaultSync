@@ -771,6 +771,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   isolated so an older run cannot disable cancellation of its replacement.
   _(Issue #588; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18128` `P1` Prevent active release branches from launching duplicate
+  or unbounded Sonar analysis runs.
+  _(Issue #589; delivered on the release branch and awaiting integration through
+  #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
