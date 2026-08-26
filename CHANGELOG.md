@@ -23,6 +23,7 @@
 - [BUG-18127] Isolated cancellation ownership between overlapping backup runs.
 - [BUG-18128] Prevented duplicate and unbounded release-branch Sonar runs.
 - [BUG-18129] Published scan-cache state only after snapshot persistence succeeds.
+- [BUG-18130] Removed duplicate release-branch CI, CodeQL, and quality runs.
 
 ## [1.8.7] - 21.08.2026
 ### Added

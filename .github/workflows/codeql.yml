@@ -14,11 +14,22 @@ name: "CodeQL Advanced"
 on:
   workflow_dispatch:
   push:
-    branches: [ "Dev", "Stable", "release/**" ]
+    # Release branches are analyzed by their required PR.
+    branches: [ "Dev", "Stable" ]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   schedule:
     - cron: '31 14 * * 4'
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
@@ -29,6 +40,7 @@ jobs:
     #   - https://gh.io/using-larger-runners (GitHub.com only)
     # Consider using larger runners or machines with greater resources for possible analysis time improvements.
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    timeout-minutes: 20
     permissions:
       # required for all workflows
       security-events: write
