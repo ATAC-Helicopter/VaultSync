@@ -42,6 +42,14 @@ user-visible changes are implemented and verified.
 - Calculate support-package manifest hashes from sequential file streams instead
   of loading each complete staged file into memory.
 
+### Smoother guided setup
+- Show progress only for real setup outcomes and let users refresh incomplete
+  steps instead of leaving a disabled Next action.
+- Refresh the Guide's project, backup, and recovery totals away from the UI
+  thread so opening it does not pause navigation.
+- Stage decrypted restore output under an unpredictable one-use name and publish
+  it only after authentication succeeds.
+
 ## [1.8.7]
 
 VaultSync `1.8.7` is the Trust and Portability update. It makes build and

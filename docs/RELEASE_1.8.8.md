@@ -149,11 +149,17 @@ failure handling without becoming a broad rewrite.
   packages; reviewed transitive and legacy packages are currently constrained
   by the supported Avalonia and Windows notification stacks.
 - [`VS-1885` / #573](https://github.com/ATAC-Helicopter/VaultSync/issues/573):
-  remaining release-automation static-analysis debt (`P1`) — active; the
-  aggregate quality gate passes and the five Python findings remain explicit.
+  release-automation static-analysis debt (`P1`) — the five Project/roadmap
+  automation findings are fixed on the release branch.
 - [`VS-1886` / #578](https://github.com/ATAC-Helicopter/VaultSync/issues/578):
   bounded archive and support-package memory pressure (`P1`) — implemented on
   the release branch and awaiting integration through #568.
+- [`VS-1887` / #583](https://github.com/ATAC-Helicopter/VaultSync/issues/583):
+  actionable onboarding and non-blocking Guide progress (`P1`) — implemented on
+  the release branch and awaiting integration through #568.
+- [`BUG-18125` / #584](https://github.com/ATAC-Helicopter/VaultSync/issues/584):
+  unpredictable authenticated restore staging (`P1`) — fixed on the release
+  branch and awaiting integration through #568.
 
 ## Maintainer links
 

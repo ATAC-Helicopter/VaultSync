@@ -1,20 +1,22 @@
 ﻿# Changelog
 ## [1.8.8] - Unreleased
 ### Added
-- [VS-1823] Added a reproducible Release-mode benchmark harness and explicit p95 duration, allocation, and cancellation budgets for 10,000-event histories and 100,000-file snapshot comparisons.
-- [VS-1882] Made archive encryption stop between copied chunks when cancelled, added deterministic plain and encrypted interruption qualification, and made restart cleanup discard invalid or untrusted resume checkpoints while preserving valid encrypted checkpoints and the previous known-good recovery point.
+- [VS-1823] Added repeatable large-history and high-file-count performance budgets.
+- [VS-1882] Added deterministic interruption and recovery qualification for plain and encrypted archives.
 ### Changed
-- [VS-1886] Reused one bounded copy buffer across sequential archive entries and streamed support-package manifest hashing so memory use no longer grows through per-file archive buffers or complete staged-file reads.
+- [VS-1886] Reduced archive and support-package memory use with buffer reuse and streaming hashes.
+- [VS-1887] Made guided setup actionable and moved Guide data loading off the UI thread.
 ### Fixed
-- [BUG-18116] Prevented page and dialog content from exposing unintended horizontal scrolling while preserving vertical overflow and purpose-built file and diff panes.
-- [BUG-18117] Prevented retention cleanup from accepting a linked backup root, traversing linked directories during fallback deletion, or changing files outside the selected backup folder.
-- [BUG-18118] Stopped archive and managed-copy backups from reporting success when a required source file disappears or becomes unreadable after the snapshot.
-- [BUG-18119] Isolated decrypted-open temporary workspaces by app process so shutdown, manual lock, and stale cleanup cannot delete files owned by another running VaultSync instance.
-- [BUG-18120] Confined startup cleanup and reclaimed-size inspection to VaultSync-owned disposable trees so linked children are removed without traversing or modifying their targets.
-- [BUG-18121] Added exact, age-bounded cleanup for crash-abandoned verified release-cache writes while preserving recent and unrelated hidden files.
-- [BUG-18122] Added exact cleanup for abandoned installation-identity and credential-index writes in the OS application-data directory without selecting durable identity, credential, or unrelated files.
-- [BUG-18123] Added exact cleanup for crash-abandoned sanitized support-bundle staging trees while keeping completed ZIP exports and unrelated directories user-owned.
-- [BUG-18124] Bounded app-created telemetry ZIPs in temporary storage to exact recognized exports from the last 30 days and a newest-first 100 MB cap.
+- [BUG-18116] Removed unintended horizontal page and dialog scrolling.
+- [BUG-18117] Confined retention cleanup across filesystem links.
+- [BUG-18118] Failed backups when required snapshotted source files become unavailable.
+- [BUG-18119] Isolated decrypted-open workspaces between app processes.
+- [BUG-18120] Prevented disposable cleanup from traversing linked children.
+- [BUG-18121] Removed abandoned verified release-cache writes safely.
+- [BUG-18122] Removed abandoned identity and credential-index writes safely.
+- [BUG-18123] Removed abandoned support-bundle staging safely.
+- [BUG-18124] Limited recognized temporary telemetry exports to 30 days and 100 MB.
+- [BUG-18125] Prevented predictable encrypted-restore staging collisions.
 
 ## [1.8.7] - 21.08.2026
 ### Added

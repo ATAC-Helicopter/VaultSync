@@ -747,12 +747,21 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   _(Issue #491; active. The 2026-08-26 audit found no vulnerable or directly
   outdated packages; reviewed transitive and legacy dependencies remain
   constrained by the supported Avalonia and Windows notification stacks.)_
-- [ ] `VS-1885` `P1` Resolve the remaining release-automation static-analysis
+- [x] `VS-1885` `P1` Resolve the remaining release-automation static-analysis
   findings without weakening fail-closed Project date and work-ID integrity.
-  _(Issue #573; active on the release branch.)_
+  _(Issue #573; delivered on the release branch and awaiting integration through
+  #568.)_
 - [x] `VS-1886` `P1` Bound archive and support-package memory pressure by
   reusing sequential copy buffers and streaming manifest hashes.
   _(Issue #578; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `VS-1887` `P1` Make guided setup actionable and move Guide progress
+  queries off the UI thread with stale-result suppression.
+  _(Issue #583; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18125` `P1` Prevent predictable encrypted-restore staging collisions
+  and preserve existing output when authentication fails.
+  _(Issue #584; delivered on the release branch and awaiting integration through
   #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
