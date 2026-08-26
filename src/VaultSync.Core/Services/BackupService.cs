@@ -1772,6 +1772,7 @@ public sealed class BackupService(
             DateTime startTime = DateTime.UtcNow;
             DateTime lastUiUpdate = startTime;
             var minUiInterval = TimeSpan.FromMilliseconds(100);
+            byte[] archiveCopyBuffer = new byte[ArchiveCopyBufferBytes];
 
             using (var fs = new FileStream(
                 localArchive,
@@ -1801,11 +1802,10 @@ public sealed class BackupService(
                             ArchiveFileStreamBufferBytes,
                             FileOptions.SequentialScan))
                         {
-                            byte[] buffer = new byte[ArchiveCopyBufferBytes];
                             int read;
-                            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+                            while ((read = await input.ReadAsync(archiveCopyBuffer.AsMemory(), ct)) > 0)
                             {
-                                await entryStream.WriteAsync(buffer.AsMemory(0, read), ct);
+                                await entryStream.WriteAsync(archiveCopyBuffer.AsMemory(0, read), ct);
                                 processedBytes += read;
 
                                 if (progressCallback is null)
