@@ -137,6 +137,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18122` / #580](https://github.com/ATAC-Helicopter/VaultSync/issues/580):
   abandoned identity and credential-index write cleanup (`P1`) — fixed on the
   release branch and awaiting integration through #568.
+- [`BUG-18123` / #581](https://github.com/ATAC-Helicopter/VaultSync/issues/581):
+  abandoned sanitized support-bundle staging cleanup (`P1`) — fixed on the
+  release branch and awaiting integration through #568.
 - [`VS-1884`](../ROADMAP.md#188--chronicle-stabilization): dependencies,
   packaging, updater, and compatibility (`P1`).
 - [`VS-1885` / #573](https://github.com/ATAC-Helicopter/VaultSync/issues/573):

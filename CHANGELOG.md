@@ -13,6 +13,7 @@
 - [BUG-18120] Confined startup cleanup and reclaimed-size inspection to VaultSync-owned disposable trees so linked children are removed without traversing or modifying their targets.
 - [BUG-18121] Added exact, age-bounded cleanup for crash-abandoned verified release-cache writes while preserving recent and unrelated hidden files.
 - [BUG-18122] Added exact cleanup for abandoned installation-identity and credential-index writes in the OS application-data directory without selecting durable identity, credential, or unrelated files.
+- [BUG-18123] Added exact cleanup for crash-abandoned sanitized support-bundle staging trees while keeping completed ZIP exports and unrelated directories user-owned.
 
 ## [1.8.7] - 21.08.2026
 ### Added

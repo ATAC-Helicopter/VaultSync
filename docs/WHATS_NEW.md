@@ -31,6 +31,8 @@ user-visible changes are implemented and verified.
   preserving recent writes and unrelated hidden files.
 - Remove abandoned installation-identity and credential-index writes after one
   hour without selecting durable identity, credential, or unrelated files.
+- Remove sanitized support-bundle staging trees abandoned for more than one day
+  while leaving completed ZIP exports and unrelated directories untouched.
 
 ### Lower temporary memory pressure
 - Reuse one bounded buffer while adding sequential files to an archive instead

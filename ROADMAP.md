@@ -734,6 +734,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   atomic writes without selecting their durable files or unrelated content.
   _(Issue #580; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18123` `P1` Remove crash-abandoned sanitized support-bundle staging
+  trees without selecting completed exports or unrelated directories.
+  _(Issue #581; delivered on the release branch and awaiting integration through
+  #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
 - [ ] `VS-1885` `P1` Resolve the remaining release-automation static-analysis
