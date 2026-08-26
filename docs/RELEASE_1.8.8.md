@@ -160,6 +160,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18125` / #584](https://github.com/ATAC-Helicopter/VaultSync/issues/584):
   unpredictable authenticated restore staging (`P1`) — fixed on the release
   branch and awaiting integration through #568.
+- [`BUG-18126` / #585](https://github.com/ATAC-Helicopter/VaultSync/issues/585):
+  decrypted-workspace cleanup root confinement (`P1`) — fixed on the release
+  branch and awaiting integration through #568.
 
 ## Maintainer links
 

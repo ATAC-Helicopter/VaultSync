@@ -763,6 +763,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   and preserve existing output when authentication fails.
   _(Issue #584; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18126` `P1` Reject OS temporary-directory prefix collisions when
+  resolving decrypted-workspace cleanup roots.
+  _(Issue #585; delivered on the release branch and awaiting integration through
+  #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

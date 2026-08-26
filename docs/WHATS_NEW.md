@@ -49,6 +49,8 @@ user-visible changes are implemented and verified.
   thread so opening it does not pause navigation.
 - Stage decrypted restore output under an unpredictable one-use name and publish
   it only after authentication succeeds.
+- Keep decrypted-workspace cleanup under an exact OS temporary child even when
+  another directory shares the temporary root's text prefix.
 
 ## [1.8.7]
 
