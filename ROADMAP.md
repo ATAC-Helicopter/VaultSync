@@ -842,6 +842,31 @@ Migration principles:
     evidence, or recovery-assurance expansion receives a new release-specific
     identifier rather than reopening or reusing `VS-1903`.
 
+## 1.9 platform modernization gate
+
+These migrations are isolated from the `1.8.8` patch so their runtime,
+packaging, activation, test-discovery, and CI effects can be qualified without
+destabilizing the maintenance release.
+
+- [ ] `VS-1928` `P1` Migrate the Windows notification backend to the Windows
+  App SDK while preserving the platform-neutral notification contract.
+  - Scope: qualify packaged and unpackaged activation, single-instance routing,
+    elevated-process fallback, install/update/uninstall behavior, and Windows
+    runtime payload isolation from macOS and Linux builds.
+  - Acceptance: supported Windows packages render and activate notifications;
+    unsupported contexts retain an understandable in-app fallback; non-Windows
+    builds and notification implementations remain unchanged; the legacy
+    CommunityToolkit notification dependency is removed. _(Issue #586.)_
+- [ ] `VS-1929` `P1` Migrate the repository test platform to xUnit v3 without
+  reducing discovery, coverage, filtering, diagnostics, or OS coverage.
+  - Scope: qualify fixture disposal, async lifetime, theory data, serialization,
+    skips, timeouts, IDE discovery, `dotnet test`, coverage, SonarQube, CodeQL,
+    and the selected VSTest or Microsoft Testing Platform contract.
+  - Acceptance: reconciled test and coverage counts pass on Windows, macOS, and
+    Linux; no xUnit v2 framework or incompatible runner remains; changed test
+    semantics have regression coverage and contributor documentation.
+    _(Issue #587.)_
+
 ## 1.9.0 — Disk and Bootable Recovery Foundation
 
 **Status:** Planned; implementation begins only after `1.8.8` qualifies and the

@@ -147,7 +147,9 @@ failure handling without becoming a broad rewrite.
   dependencies, packaging, updater, and compatibility (`P1`) — active. The
   2026-08-26 dependency audit found no vulnerable or directly outdated
   packages; reviewed transitive and legacy packages are currently constrained
-  by the supported Avalonia and Windows notification stacks.
+  by the supported Avalonia and Windows notification stacks. The Windows App
+  SDK notification migration (#586) and xUnit v3 test-platform migration (#587)
+  are isolated 1.9 work rather than unsafe patch-level package swaps.
 - [`VS-1885` / #573](https://github.com/ATAC-Helicopter/VaultSync/issues/573):
   release static-analysis debt (`P1`) — all reported Project automation,
   onboarding, and storage-hygiene findings are fixed on the release branch.

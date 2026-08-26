@@ -20,8 +20,9 @@ corrections:
 - `1.8.8` remains the existing stabilization release; it receives no duplicate
   clean-machine item and no reused identifier.
 - `VS-1885` remains release-automation static-analysis work.
-- `VS-1917` through `VS-1919` are the next available 1.9 identifiers and cover
-  architecture prerequisites that were missing from the canonical plan.
+- `VS-1917` through `VS-1919` cover architecture prerequisites that were
+  missing from the canonical plan; `VS-1928` and `VS-1929` isolate the Windows
+  notification and test-platform migrations from the 1.8 maintenance line.
 - Portable Recovery moves before Offsite Protection, but existing `VS-192x`
   and `VS-193x` identifiers are not renumbered.
 - `2.0` remains a gated candidate. A complete visual redesign by itself does
@@ -49,7 +50,9 @@ The first 1.9 work is decision-making and risk reduction:
 3. Approve the imaging-engine strategy and supported-system matrix (`VS-1918`).
 4. Define shared recovery identities, dependencies, failure domains, and
    evidence provenance (`VS-1919`).
-5. Prototype the smallest complete image and independent-recovery paths before
+5. Qualify the Windows App SDK notification migration (`VS-1928`) and xUnit v3
+   test-platform migration (`VS-1929`) independently of product features.
+6. Prototype the smallest complete image and independent-recovery paths before
    committing stable support claims.
 
 Architecture work may result in scope reduction, a technology preview, or a
