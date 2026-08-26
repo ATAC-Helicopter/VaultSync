@@ -92,6 +92,42 @@ public sealed class StorageHygieneTests
     }
 
     [Fact]
+    public void ConfigurationCleanupRemovesOnlyAbandonedAtomicIdentityAndCredentialWrites()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string staleIdentity = CreateFile(
+            root.Path,
+            $".installation.id.{Guid.NewGuid():N}.tmp",
+            7,
+            now.AddHours(-2));
+        string staleCredentials = CreateFile(
+            root.Path,
+            $".credentials.json.{Guid.NewGuid():N}.tmp",
+            9,
+            now.AddHours(-2));
+        string recentCredentials = CreateFile(
+            root.Path,
+            $".credentials.json.{Guid.NewGuid():N}.tmp",
+            5,
+            now.AddMinutes(-30));
+        string identity = CreateFile(root.Path, "installation.id", 32, now.AddYears(-1));
+        string credentials = CreateFile(root.Path, "credentials.json", 24, now.AddYears(-1));
+        string unrelated = CreateFile(root.Path, ".settings.json.not-a-guid.tmp", 11, now.AddYears(-1));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneConfigurationData(root.Path, now);
+
+        Assert.False(File.Exists(staleIdentity));
+        Assert.False(File.Exists(staleCredentials));
+        Assert.True(File.Exists(recentCredentials));
+        Assert.True(File.Exists(identity));
+        Assert.True(File.Exists(credentials));
+        Assert.True(File.Exists(unrelated));
+        Assert.Equal(2, result.FilesRemoved);
+        Assert.Equal(16, result.BytesReclaimed);
+    }
+
+    [Fact]
     public void TemporaryCleanupRemovesOnlyExpiredVaultSyncWorkingData()
     {
         using var root = new TempDirectory();

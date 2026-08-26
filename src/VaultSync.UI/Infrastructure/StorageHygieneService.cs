@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using VaultSync.Core.Services;
 
 namespace VaultSync.UI.Infrastructure;
 
@@ -44,6 +45,14 @@ internal static class StorageHygieneService
         {
             summary = summary.Add(PruneApplicationData(
                 Path.Combine(localData, "VaultSync"),
+                now));
+        }
+
+        string applicationData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!string.IsNullOrWhiteSpace(applicationData))
+        {
+            summary = summary.Add(PruneConfigurationData(
+                Path.Combine(applicationData, "VaultSync"),
                 now));
         }
 
@@ -115,6 +124,13 @@ internal static class StorageHygieneService
                     file.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase),
             utcNow - PatchWorkingRetention));
     }
+
+    internal static StorageCleanupSummary PruneConfigurationData(string root, DateTime utcNow) =>
+        PruneFiles(
+            root,
+            file => IsAtomicTemporaryFile(file, InstallationIdentityService.IdentityFileName) ||
+                    IsAtomicTemporaryFile(file, "credentials.json"),
+            utcNow - PatchWorkingRetention);
 
     internal static StorageCleanupSummary PruneTemporaryData(string tempRoot, DateTime utcNow)
     {
@@ -290,5 +306,20 @@ internal static class StorageHygieneService
                identity.Length == 64 &&
                identity.All(Uri.IsHexDigit) &&
                Guid.TryParseExact(writeId, "N", out _);
+    }
+
+    private static bool IsAtomicTemporaryFile(FileInfo file, string durableFileName)
+    {
+        string prefix = $".{durableFileName}.";
+        const string suffix = ".tmp";
+        if (!file.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            !file.Name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        int writeIdLength = file.Name.Length - prefix.Length - suffix.Length;
+        return writeIdLength == 32 &&
+               Guid.TryParseExact(file.Name.AsSpan(prefix.Length, writeIdLength), "N", out _);
     }
 }
