@@ -22,6 +22,7 @@ internal readonly record struct StorageCleanupSummary(int FilesRemoved, int Dire
 /// </summary>
 internal static class StorageHygieneService
 {
+    private const string ApplicationDirectoryName = "VaultSync";
     private static readonly TimeSpan PatchRetention = TimeSpan.FromDays(1);
     private static readonly TimeSpan PatchWorkingRetention = TimeSpan.FromHours(1);
     private static readonly TimeSpan LogRetention = TimeSpan.FromDays(14);
@@ -46,7 +47,7 @@ internal static class StorageHygieneService
         if (!string.IsNullOrWhiteSpace(localData))
         {
             summary = summary.Add(PruneApplicationData(
-                Path.Combine(localData, "VaultSync"),
+                Path.Combine(localData, ApplicationDirectoryName),
                 now));
         }
 
@@ -54,7 +55,7 @@ internal static class StorageHygieneService
         if (!string.IsNullOrWhiteSpace(applicationData))
         {
             summary = summary.Add(PruneConfigurationData(
-                Path.Combine(applicationData, "VaultSync"),
+                Path.Combine(applicationData, ApplicationDirectoryName),
                 now));
         }
 
@@ -157,11 +158,11 @@ internal static class StorageHygieneService
                     file.Extension.Equals(".txt", StringComparison.OrdinalIgnoreCase),
             utcNow - TemporaryRetention));
         summary = summary.Add(PruneFiles(
-            Path.Combine(tempRoot, "VaultSync", "updates"),
+            Path.Combine(tempRoot, ApplicationDirectoryName, "updates"),
             static _ => true,
             utcNow - TemporaryRetention));
         summary = summary.Add(PruneDirectories(
-            Path.Combine(tempRoot, "VaultSync", "recovery-tests"),
+            Path.Combine(tempRoot, ApplicationDirectoryName, "recovery-tests"),
             "*",
             utcNow - TemporaryRetention));
         summary = summary.Add(PruneFiles(
@@ -269,15 +270,9 @@ internal static class StorageHygieneService
             pending.Push(directory);
             while (pending.TryPop(out DirectoryInfo? current))
             {
-                foreach (FileInfo file in current.EnumerateFiles("*", SearchOption.TopDirectoryOnly))
-                {
-                    if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
-                        continue;
-
-                    totalBytes = file.Length > long.MaxValue - totalBytes
-                        ? long.MaxValue
-                        : totalBytes + file.Length;
-                }
+                totalBytes = AddOwnedFileSizes(
+                    totalBytes,
+                    current.EnumerateFiles("*", SearchOption.TopDirectoryOnly));
 
                 foreach (DirectoryInfo child in current.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
                 {
@@ -292,6 +287,21 @@ internal static class StorageHygieneService
         {
             return 0;
         }
+    }
+
+    private static long AddOwnedFileSizes(long totalBytes, IEnumerable<FileInfo> files)
+    {
+        foreach (FileInfo file in files)
+        {
+            if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
+                continue;
+
+            totalBytes = file.Length > long.MaxValue - totalBytes
+                ? long.MaxValue
+                : totalBytes + file.Length;
+        }
+
+        return totalBytes;
     }
 
     private static void DeleteDirectoryWithoutFollowingLinks(DirectoryInfo directory)

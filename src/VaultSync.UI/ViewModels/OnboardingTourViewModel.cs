@@ -217,7 +217,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             {
                 OnPropertiesChanged(
                     nameof(PrimaryLabel),
-                    nameof(IsPrimaryEnabled),
                     nameof(ActionText),
                     nameof(ActionHeadingText),
                     nameof(HasActionText),
@@ -225,8 +224,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             }
         }
     }
-
-    public bool IsPrimaryEnabled => true;
 
     public string PrimaryLabel
     {
@@ -566,8 +563,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             nameof(CanGoBack),
             nameof(ProgressValue),
             nameof(StatusText),
-            nameof(PrimaryLabel),
-            nameof(IsPrimaryEnabled));
+            nameof(PrimaryLabel));
     }
 
     private int CompletedStepCount() =>
