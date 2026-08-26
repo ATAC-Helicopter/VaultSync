@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using VaultSync.Core.Services;
@@ -108,6 +109,11 @@ internal static class StorageHygieneService
             Path.Combine(root, "cache", "release-assets"),
             IsReleaseAssetCacheTemporaryFile,
             utcNow - TemporaryRetention));
+        summary = summary.Add(PruneDirectories(
+            Path.Combine(root, "exports"),
+            "support-*",
+            utcNow - TemporaryRetention,
+            IsSupportBundleStagingDirectory));
         return summary;
     }
 
@@ -321,5 +327,24 @@ internal static class StorageHygieneService
         int writeIdLength = file.Name.Length - prefix.Length - suffix.Length;
         return writeIdLength == 32 &&
                Guid.TryParseExact(file.Name.AsSpan(prefix.Length, writeIdLength), "N", out _);
+    }
+
+    private static bool IsSupportBundleStagingDirectory(DirectoryInfo directory)
+    {
+        const string prefix = "support-";
+        const int timestampLength = 15;
+        if (!directory.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        ReadOnlySpan<char> remainder = directory.Name.AsSpan(prefix.Length);
+        return remainder.Length == timestampLength + 1 + 32 &&
+               remainder[timestampLength] == '-' &&
+               DateTime.TryParseExact(
+                   remainder[..timestampLength],
+                   "yyyyMMdd-HHmmss",
+                   CultureInfo.InvariantCulture,
+                   DateTimeStyles.AssumeUniversal,
+                   out _) &&
+               Guid.TryParseExact(remainder[(timestampLength + 1)..], "N", out _);
     }
 }

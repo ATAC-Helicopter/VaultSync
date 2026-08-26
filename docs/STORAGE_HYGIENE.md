@@ -16,6 +16,7 @@ credential store, or managed mount contents as cache.
 | `cache/release-assets` | Digest-verified release manifests | Files older than 180 days are removed; retained entries are capped at 10 MB. Crash-abandoned temporary writes with the exact verified-cache name are removed after one day. |
 | `patches` | Downloaded patch archives | Verified archives older than one day are removed. Incomplete downloads are already removed when a download finishes or fails. |
 | `patch-runtime` | Temporary copied updater helper and extraction directories | Helper copies older than one day and staging directories older than one hour are removed. The helper log is limited to 1 MB and 14 days. |
+| `exports/support-*` | Private sanitized support-bundle staging | Exact staging directories abandoned for more than one day are removed. Completed ZIP exports in Documents remain user-owned and are never removed automatically. |
 | OS temporary directory | Decrypted-open workspaces, restores, key rotation, archive uploads, updater downloads, recovery tests, and tool exclude files | Each operation cleans its own working data. Startup also removes abandoned VaultSync working data older than one day. Decrypted-open workspaces have a shorter in-app lock timeout. |
 | User-selected backup destinations | Backup payloads and portable metadata | Governed only by configured backup retention and protection rules; never by cache cleanup. |
 

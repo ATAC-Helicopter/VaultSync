@@ -72,6 +72,36 @@ public sealed class StorageHygieneTests
     }
 
     [Fact]
+    public void ApplicationCleanupRemovesOnlyExpiredSupportBundleStagingDirectories()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string stale = CreateDirectory(
+            root.Path,
+            $"exports/support-20260824-120000-{Guid.NewGuid():N}",
+            19,
+            now.AddDays(-2));
+        string recent = CreateDirectory(
+            root.Path,
+            $"exports/support-20260826-110000-{Guid.NewGuid():N}",
+            13,
+            now.AddHours(-2));
+        string unrelated = CreateDirectory(
+            root.Path,
+            "exports/support-manual-files",
+            17,
+            now.AddYears(-1));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneApplicationData(root.Path, now);
+
+        Assert.False(Directory.Exists(stale));
+        Assert.True(Directory.Exists(recent));
+        Assert.True(Directory.Exists(unrelated));
+        Assert.Equal(1, result.DirectoriesRemoved);
+        Assert.Equal(19, result.BytesReclaimed);
+    }
+
+    [Fact]
     public void LegacyCleanupPrunesOldLogsAndAbandonedConfigWrites()
     {
         using var root = new TempDirectory();
