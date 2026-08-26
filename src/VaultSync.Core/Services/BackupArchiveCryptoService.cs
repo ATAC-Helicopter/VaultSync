@@ -202,7 +202,7 @@ public sealed class BackupArchiveCryptoService
         if (!string.IsNullOrWhiteSpace(outputDirectory))
             Directory.CreateDirectory(outputDirectory);
 
-        string tempOutputPath = outputArchivePath + ".tmp";
+        string tempOutputPath = $"{outputArchivePath}.{Guid.NewGuid():N}.tmp";
         try
         {
             derived = Rfc2898DeriveBytes.Pbkdf2(
@@ -226,7 +226,7 @@ public sealed class BackupArchiveCryptoService
             }
 
             using (var input = new FileStream(encryptedArchivePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-            using (var output = new FileStream(tempOutputPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var output = new FileStream(tempOutputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             using (var aes = Aes.Create())
             {
                 if (aes is null)
@@ -258,9 +258,7 @@ public sealed class BackupArchiveCryptoService
                 cryptoStream.FlushFinalBlock();
             }
 
-            if (File.Exists(outputArchivePath))
-                File.Delete(outputArchivePath);
-            File.Move(tempOutputPath, outputArchivePath);
+            File.Move(tempOutputPath, outputArchivePath, overwrite: true);
         }
         catch (CryptographicException ex)
         {
