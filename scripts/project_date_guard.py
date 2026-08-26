@@ -19,7 +19,10 @@ from roadmap_sync import (
 
 
 REPOSITORY_NAME = "VaultSync"
-REQUIRED_DATE_FIELDS = ("Start date", "Target date", "Completed on")
+START_DATE_FIELD = "Start date"
+TARGET_DATE_FIELD = "Target date"
+COMPLETED_ON_FIELD = "Completed on"
+REQUIRED_DATE_FIELDS = (START_DATE_FIELD, TARGET_DATE_FIELD, COMPLETED_ON_FIELD)
 
 ITEMS_QUERY = """query($endCursor: String, $owner: String!, $projectNumber: Int!) {
   user(login: $owner) {
@@ -142,45 +145,57 @@ def plan_repairs(
     unresolved: list[UnresolvedDate] = []
 
     for item in items:
-        item_id = str(item.get("id") or "")
-        content = item.get("content") or {}
-        fields = item.get("fields") or {}
-        title = str(content.get("title") or fields.get("Title") or item_id)
-        start = _iso_date(fields.get("Start date"))
-        target = _iso_date(fields.get("Target date"))
-
-        if start is None:
-            start = _iso_date(content.get("createdAt"))
-            _record_value_or_problem(
-                repairs, unresolved, item_id, title, "Start date", start,
-                "issue or pull-request creation date",
-                "content has no creation timestamp",
-            )
-
-        if target is None:
-            target, source = _infer_target(content, fields, milestone_dates, release_dates)
-            if target is not None and start is not None and target < start:
-                target = None
-                source = "inferred target precedes the start date"
-            _record_value_or_problem(
-                repairs, unresolved, item_id, title, "Target date", target,
-                source,
-                source,
-            )
-
-        if fields.get("Status") == "Done" and not fields.get("Completed on"):
-            completed = _iso_date(
-                content.get("mergedAt")
-                or content.get("closedAt")
-                or content.get("updatedAt")
-            )
-            _record_value_or_problem(
-                repairs, unresolved, item_id, title, "Completed on", completed,
-                "merge, close, or final draft update date",
-                "completed item has no completion timestamp",
-            )
+        _plan_item_repairs(
+            item, milestone_dates, release_dates, repairs, unresolved
+        )
 
     return repairs, unresolved
+
+
+def _plan_item_repairs(
+    item: dict[str, Any],
+    milestone_dates: dict[str, str],
+    release_dates: dict[str, str],
+    repairs: list[DateRepair],
+    unresolved: list[UnresolvedDate],
+) -> None:
+    item_id = str(item.get("id") or "")
+    content = item.get("content") or {}
+    fields = item.get("fields") or {}
+    title = str(content.get("title") or fields.get("Title") or item_id)
+    start = _iso_date(fields.get(START_DATE_FIELD))
+    target = _iso_date(fields.get(TARGET_DATE_FIELD))
+
+    if start is None:
+        start = _iso_date(content.get("createdAt"))
+        _record_value_or_problem(
+            repairs, unresolved, item_id, title, START_DATE_FIELD, start,
+            "issue or pull-request creation date",
+            "content has no creation timestamp",
+        )
+
+    if target is None:
+        target, source = _infer_target(content, fields, milestone_dates, release_dates)
+        if target is not None and start is not None and target < start:
+            target = None
+            source = "inferred target precedes the start date"
+        _record_value_or_problem(
+            repairs, unresolved, item_id, title, TARGET_DATE_FIELD, target,
+            source,
+            source,
+        )
+
+    if fields.get("Status") == "Done" and not fields.get(COMPLETED_ON_FIELD):
+        completed = _iso_date(
+            content.get("mergedAt")
+            or content.get("closedAt")
+            or content.get("updatedAt")
+        )
+        _record_value_or_problem(
+            repairs, unresolved, item_id, title, COMPLETED_ON_FIELD, completed,
+            "merge, close, or final draft update date",
+            "completed item has no completion timestamp",
+        )
 
 
 def _infer_target(

@@ -196,25 +196,27 @@ def plan_changes(items: Iterable[dict[str, Any]], index: dict[str, RoadmapEntry]
 def find_classification_violations(items: Iterable[dict[str, Any]]) -> list[str]:
     violations: list[str] = []
     for item in items:
-        content = item.get("content") or {}
-        if (content.get("type") or "") not in {"Issue", "DraftIssue"}:
-            continue
-        # The Project Title field can lag after an issue rename. Classification
-        # follows the linked issue title, which is the canonical identity.
-        title = str(content.get("title") or item.get("title") or "")
-        labels = {str(label).lower() for label in item.get("labels") or []}
-        if "bug" in labels and TICKET_ID_PATTERN.search(title):
-            identifiers = TICKET_ID_PATTERN.findall(title)
-            if any(identifier.startswith("VS-") for identifier in identifiers):
-                violations.append(
-                    f"{title}: bug-labelled items cannot carry VS identifiers"
-                )
-        if "kind:vs" in labels and not title.startswith("VS-"):
-            violations.append(
-                f"{title}: kind:vs items must start with their VS identifier"
-            )
-        if "bug" in labels and "kind:vs" in labels:
-            violations.append(f"{title}: bug and kind:vs labels are mutually exclusive")
+        violations.extend(_classification_violations_for_item(item))
+    return violations
+
+
+def _classification_violations_for_item(item: dict[str, Any]) -> list[str]:
+    content = item.get("content") or {}
+    if (content.get("type") or "") not in {"Issue", "DraftIssue"}:
+        return []
+
+    # The Project Title field can lag after an issue rename. Classification
+    # follows the linked issue title, which is the canonical identity.
+    title = str(content.get("title") or item.get("title") or "")
+    labels = {str(label).lower() for label in item.get("labels") or []}
+    violations: list[str] = []
+    identifiers = TICKET_ID_PATTERN.findall(title) if "bug" in labels else []
+    if any(identifier.startswith("VS-") for identifier in identifiers):
+        violations.append(f"{title}: bug-labelled items cannot carry VS identifiers")
+    if "kind:vs" in labels and not title.startswith("VS-"):
+        violations.append(f"{title}: kind:vs items must start with their VS identifier")
+    if {"bug", "kind:vs"}.issubset(labels):
+        violations.append(f"{title}: bug and kind:vs labels are mutually exclusive")
     return violations
 
 
