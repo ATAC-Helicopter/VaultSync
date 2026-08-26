@@ -86,6 +86,34 @@ public sealed class StorageHygieneTests
         Assert.Equal(2, result.DirectoriesRemoved);
     }
 
+    [Fact]
+    public void TemporaryCleanupRemovesLinkedChildrenWithoutTouchingTheirTargets()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string staleWorkspace = Path.Combine(root.Path, "vaultsync-restore-stale");
+        string nested = Path.Combine(staleWorkspace, "nested");
+        string outside = Path.Combine(root.Path, "outside-cleanup-target");
+        Directory.CreateDirectory(nested);
+        Directory.CreateDirectory(outside);
+        File.WriteAllText(Path.Combine(nested, "owned.txt"), "remove");
+        string outsideFile = Path.Combine(outside, "keep.txt");
+        File.WriteAllText(outsideFile, "must survive");
+        Directory.CreateSymbolicLink(Path.Combine(staleWorkspace, "linked-outside"), outside);
+        Directory.SetLastWriteTimeUtc(staleWorkspace, now.AddDays(-2));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneTemporaryData(root.Path, now);
+
+        Assert.False(Directory.Exists(staleWorkspace));
+        Assert.True(File.Exists(outsideFile));
+        Assert.Equal("must survive", File.ReadAllText(outsideFile));
+        Assert.Equal(1, result.DirectoriesRemoved);
+        Assert.Equal(6, result.BytesReclaimed);
+    }
+
     [Theory]
     [InlineData(true, true, false, true)]
     [InlineData(true, true, true, false)]

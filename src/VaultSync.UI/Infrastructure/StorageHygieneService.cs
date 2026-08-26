@@ -209,8 +209,7 @@ internal static class StorageHygieneService
                 long bytes = TryGetDirectorySize(directory);
                 try
                 {
-                    bool isLink = (directory.Attributes & FileAttributes.ReparsePoint) != 0;
-                    directory.Delete(recursive: !isLink);
+                    DeleteDirectoryWithoutFollowingLinks(directory);
                     summary = summary.Add(new StorageCleanupSummary(0, 1, bytes));
                 }
                 catch
@@ -232,11 +231,51 @@ internal static class StorageHygieneService
         {
             if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
                 return 0;
-            return directory.EnumerateFiles("*", SearchOption.AllDirectories).Sum(file => file.Length);
+
+            long totalBytes = 0;
+            var pending = new Stack<DirectoryInfo>();
+            pending.Push(directory);
+            while (pending.TryPop(out DirectoryInfo? current))
+            {
+                foreach (FileInfo file in current.EnumerateFiles("*", SearchOption.TopDirectoryOnly))
+                {
+                    if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
+                        continue;
+
+                    totalBytes = file.Length > long.MaxValue - totalBytes
+                        ? long.MaxValue
+                        : totalBytes + file.Length;
+                }
+
+                foreach (DirectoryInfo child in current.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
+                {
+                    if ((child.Attributes & FileAttributes.ReparsePoint) == 0)
+                        pending.Push(child);
+                }
+            }
+
+            return totalBytes;
         }
         catch
         {
             return 0;
         }
+    }
+
+    private static void DeleteDirectoryWithoutFollowingLinks(DirectoryInfo directory)
+    {
+        if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
+        {
+            directory.Delete(recursive: false);
+            return;
+        }
+
+        foreach (FileInfo file in directory.EnumerateFiles("*", SearchOption.TopDirectoryOnly))
+            file.Delete();
+
+        foreach (DirectoryInfo child in directory.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
+            DeleteDirectoryWithoutFollowingLinks(child);
+
+        directory.Delete(recursive: false);
     }
 }

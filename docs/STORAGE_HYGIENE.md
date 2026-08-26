@@ -38,7 +38,9 @@ that the intended remote destination contains the same restore point.
 - Cleanup runs best-effort and can never block application startup.
 - Recent or active working files remain available long enough for retries.
 - Cleanup follows exact VaultSync-owned names beneath resolved per-user roots.
-- Symbolic-link directories are removed only as links and are never traversed.
+- Symbolic-link files and directories are removed only as links and are never
+  traversed while sizing or deleting disposable content, including when they
+  appear below an otherwise ordinary VaultSync working directory.
 - Size caps discard the oldest disposable files first.
 - The confirmed **Clear local cache** action removes the same cache, patch,
   legacy-log, crash-report, and temporary-data families immediately, while
