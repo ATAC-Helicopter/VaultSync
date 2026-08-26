@@ -41,6 +41,37 @@ public sealed class StorageHygieneTests
     }
 
     [Fact]
+    public void ApplicationCleanupRemovesOnlyExpiredVerifiedCacheTemporaryWrites()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string identity = new('a', 64);
+        string stale = CreateFile(
+            root.Path,
+            $"cache/release-assets/.{identity}.json.{Guid.NewGuid():N}.tmp",
+            17,
+            now.AddDays(-2));
+        string recent = CreateFile(
+            root.Path,
+            $"cache/release-assets/.{identity}.json.{Guid.NewGuid():N}.tmp",
+            11,
+            now.AddHours(-2));
+        string unrelated = CreateFile(
+            root.Path,
+            "cache/release-assets/.unrelated.json.not-a-guid.tmp",
+            13,
+            now.AddYears(-1));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneApplicationData(root.Path, now);
+
+        Assert.False(File.Exists(stale));
+        Assert.True(File.Exists(recent));
+        Assert.True(File.Exists(unrelated));
+        Assert.Equal(1, result.FilesRemoved);
+        Assert.Equal(17, result.BytesReclaimed);
+    }
+
+    [Fact]
     public void LegacyCleanupPrunesOldLogsAndAbandonedConfigWrites()
     {
         using var root = new TempDirectory();

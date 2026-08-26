@@ -95,6 +95,10 @@ internal static class StorageHygieneService
             file => file.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase),
             utcNow - ReleaseMetadataRetention,
             maximumRetainedBytes: 10L * 1024L * 1024L));
+        summary = summary.Add(PruneFiles(
+            Path.Combine(root, "cache", "release-assets"),
+            IsReleaseAssetCacheTemporaryFile,
+            utcNow - TemporaryRetention));
         return summary;
     }
 
@@ -277,5 +281,14 @@ internal static class StorageHygieneService
             DeleteDirectoryWithoutFollowingLinks(child);
 
         directory.Delete(recursive: false);
+    }
+
+    private static bool IsReleaseAssetCacheTemporaryFile(FileInfo file)
+    {
+        string[] segments = file.Name.Split('.', StringSplitOptions.None);
+        return segments is ["", var identity, "json", var writeId, "tmp"] &&
+               identity.Length == 64 &&
+               identity.All(Uri.IsHexDigit) &&
+               Guid.TryParseExact(writeId, "N", out _);
     }
 }
