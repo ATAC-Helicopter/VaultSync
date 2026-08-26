@@ -18,5 +18,9 @@ updates:
     target-branch: "Dev"
     schedule:
       interval: "weekly"
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action/*"
     labels:
       - "dependencies"

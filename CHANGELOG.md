@@ -7,6 +7,7 @@
 - [VS-1885] Cleared Sonar findings in release automation, onboarding, and storage hygiene.
 - [VS-1886] Reduced archive and support-package memory use with buffer reuse and streaming hashes.
 - [VS-1887] Made guided setup actionable and moved Guide and Schedule queries off the UI thread.
+- [VS-1884] Updated pinned artifact, attestation, and CodeQL workflow actions.
 ### Fixed
 - [BUG-18116] Removed unintended horizontal page and dialog scrolling.
 - [BUG-18117] Confined retention cleanup across filesystem links.

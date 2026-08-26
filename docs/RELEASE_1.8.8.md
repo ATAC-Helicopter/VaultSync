@@ -149,7 +149,10 @@ failure handling without becoming a broad rewrite.
   packages; reviewed transitive and legacy packages are currently constrained
   by the supported Avalonia and Windows notification stacks. The Windows App
   SDK notification migration (#586) and xUnit v3 test-platform migration (#587)
-  are isolated 1.9 work rather than unsafe patch-level package swaps.
+  are isolated 1.9 work rather than unsafe patch-level package swaps. Pinned
+  artifact download, attestation, and matched CodeQL init/analyze actions are
+  updated to their current reviewed releases, and future CodeQL action updates
+  are grouped so init/analyze cannot arrive as incompatible independent PRs.
 - [`VS-1885` / #573](https://github.com/ATAC-Helicopter/VaultSync/issues/573):
   release static-analysis debt (`P1`) — all reported Project automation,
   onboarding, and storage-hygiene findings are fixed on the release branch.
