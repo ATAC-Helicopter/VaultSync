@@ -18,6 +18,7 @@ credential store, or managed mount contents as cache.
 | `patch-runtime` | Temporary copied updater helper and extraction directories | Helper copies older than one day and staging directories older than one hour are removed. The helper log is limited to 1 MB and 14 days. |
 | `exports/support-*` | Private sanitized support-bundle staging | Exact staging directories abandoned for more than one day are removed. Completed ZIP exports in Documents remain user-owned and are never removed automatically. |
 | OS temporary directory | Decrypted-open workspaces, restores, key rotation, archive uploads, updater downloads, recovery tests, and tool exclude files | Each operation cleans its own working data. Startup also removes abandoned VaultSync working data older than one day. Decrypted-open workspaces have a shorter in-app lock timeout. |
+| OS temporary `vaultsync-telemetry-export` directory | Manually generated telemetry ZIPs | Exact telemetry exports are retained for up to 30 days and capped at 100 MB newest-first. Unrelated files are never selected. |
 | User-selected backup destinations | Backup payloads and portable metadata | Governed only by configured backup retention and protection rules; never by cache cleanup. |
 
 ## Managed network mounts on macOS

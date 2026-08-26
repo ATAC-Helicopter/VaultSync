@@ -27,6 +27,7 @@ internal static class StorageHygieneService
     private static readonly TimeSpan LogRetention = TimeSpan.FromDays(14);
     private static readonly TimeSpan ScanCacheRetention = TimeSpan.FromDays(30);
     private static readonly TimeSpan ReleaseMetadataRetention = TimeSpan.FromDays(180);
+    private static readonly TimeSpan TelemetryExportRetention = TimeSpan.FromDays(30);
     private static readonly TimeSpan TemporaryRetention = TimeSpan.FromDays(1);
     private const long MaximumLegacyLogBytes = 10L * 1024L * 1024L;
     private static readonly string[] TemporaryDirectoryPatterns =
@@ -163,6 +164,11 @@ internal static class StorageHygieneService
             Path.Combine(tempRoot, "VaultSync", "recovery-tests"),
             "*",
             utcNow - TemporaryRetention));
+        summary = summary.Add(PruneFiles(
+            Path.Combine(tempRoot, "vaultsync-telemetry-export"),
+            IsTelemetryExport,
+            utcNow - TelemetryExportRetention,
+            maximumRetainedBytes: 100L * 1024L * 1024L));
         return summary;
     }
 
@@ -346,5 +352,26 @@ internal static class StorageHygieneService
                    DateTimeStyles.AssumeUniversal,
                    out _) &&
                Guid.TryParseExact(remainder[(timestampLength + 1)..], "N", out _);
+    }
+
+    private static bool IsTelemetryExport(FileInfo file)
+    {
+        const string prefix = "telemetry_";
+        const string suffix = ".zip";
+        if (!file.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            !file.Name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        ReadOnlySpan<char> timestamp = file.Name.AsSpan(
+            prefix.Length,
+            file.Name.Length - prefix.Length - suffix.Length);
+        return DateTime.TryParseExact(
+            timestamp,
+            "yyyyMMdd_HHmmss",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out _);
     }
 }

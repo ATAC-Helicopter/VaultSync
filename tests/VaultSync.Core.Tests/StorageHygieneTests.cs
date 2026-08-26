@@ -184,6 +184,36 @@ public sealed class StorageHygieneTests
     }
 
     [Fact]
+    public void TemporaryCleanupBoundsOnlyRecognizedTelemetryExports()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string oldExport = CreateFile(
+            root.Path,
+            "vaultsync-telemetry-export/telemetry_20260701_120000.zip",
+            23,
+            now.AddDays(-31));
+        string recentExport = CreateFile(
+            root.Path,
+            "vaultsync-telemetry-export/telemetry_20260825_120000.zip",
+            17,
+            now.AddDays(-1));
+        string unrelated = CreateFile(
+            root.Path,
+            "vaultsync-telemetry-export/user-notes.zip",
+            29,
+            now.AddYears(-1));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneTemporaryData(root.Path, now);
+
+        Assert.False(File.Exists(oldExport));
+        Assert.True(File.Exists(recentExport));
+        Assert.True(File.Exists(unrelated));
+        Assert.Equal(1, result.FilesRemoved);
+        Assert.Equal(23, result.BytesReclaimed);
+    }
+
+    [Fact]
     public void TemporaryCleanupRemovesLinkedChildrenWithoutTouchingTheirTargets()
     {
         if (OperatingSystem.IsWindows())
