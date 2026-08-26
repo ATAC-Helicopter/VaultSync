@@ -722,11 +722,19 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   processes so shutdown, manual lock, and stale cleanup preserve work owned by
   another live instance. _(Issue #572; delivered on the release branch and
   awaiting integration through #568.)_
+- [x] `BUG-18120` `P0` Confine startup cleanup and reclaimed-size inspection to
+  VaultSync-owned disposable trees without traversing linked children.
+  _(Issue #577; delivered on the release branch and awaiting integration through
+  #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
 - [ ] `VS-1885` `P1` Resolve the remaining release-automation static-analysis
   findings without weakening fail-closed Project date and work-ID integrity.
   _(Issue #573; active on the release branch.)_
+- [x] `VS-1886` `P1` Bound archive and support-package memory pressure by
+  reusing sequential copy buffers and streaming manifest hashes.
+  _(Issue #578; delivered on the release branch and awaiting integration through
+  #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

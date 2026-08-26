@@ -25,6 +25,14 @@ user-visible changes are implemented and verified.
 - Keep each decrypted-open temporary workspace owned by the process that created
   it, so another VaultSync instance cannot remove files being actively inspected
   during shutdown, manual lock, or stale cleanup.
+- Keep abandoned-working-data cleanup inside VaultSync-owned temporary trees,
+  removing linked children themselves without scanning or changing their targets.
+
+### Lower temporary memory pressure
+- Reuse one bounded buffer while adding sequential files to an archive instead
+  of allocating another buffer for every source file.
+- Calculate support-package manifest hashes from sequential file streams instead
+  of loading each complete staged file into memory.
 
 ## [1.8.7]
 

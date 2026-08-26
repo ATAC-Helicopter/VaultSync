@@ -3,11 +3,14 @@
 ### Added
 - [VS-1823] Added a reproducible Release-mode benchmark harness and explicit p95 duration, allocation, and cancellation budgets for 10,000-event histories and 100,000-file snapshot comparisons.
 - [VS-1882] Made archive encryption stop between copied chunks when cancelled, added deterministic plain and encrypted interruption qualification, and made restart cleanup discard invalid or untrusted resume checkpoints while preserving valid encrypted checkpoints and the previous known-good recovery point.
+### Changed
+- [VS-1886] Reused one bounded copy buffer across sequential archive entries and streamed support-package manifest hashing so memory use no longer grows through per-file archive buffers or complete staged-file reads.
 ### Fixed
 - [BUG-18116] Prevented page and dialog content from exposing unintended horizontal scrolling while preserving vertical overflow and purpose-built file and diff panes.
 - [BUG-18117] Prevented retention cleanup from accepting a linked backup root, traversing linked directories during fallback deletion, or changing files outside the selected backup folder.
 - [BUG-18118] Stopped archive and managed-copy backups from reporting success when a required source file disappears or becomes unreadable after the snapshot.
 - [BUG-18119] Isolated decrypted-open temporary workspaces by app process so shutdown, manual lock, and stale cleanup cannot delete files owned by another running VaultSync instance.
+- [BUG-18120] Confined startup cleanup and reclaimed-size inspection to VaultSync-owned disposable trees so linked children are removed without traversing or modifying their targets.
 
 ## [1.8.7] - 21.08.2026
 ### Added

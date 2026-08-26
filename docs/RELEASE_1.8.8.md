@@ -128,11 +128,17 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18119` / #572](https://github.com/ATAC-Helicopter/VaultSync/issues/572):
   cross-process decrypted-workspace isolation (`P1`) — fixed on the release
   branch and awaiting integration through #568.
+- [`BUG-18120` / #577](https://github.com/ATAC-Helicopter/VaultSync/issues/577):
+  disposable-tree cleanup confinement across filesystem links (`P0`) — fixed on
+  the release branch and awaiting integration through #568.
 - [`VS-1884`](../ROADMAP.md#188--chronicle-stabilization): dependencies,
   packaging, updater, and compatibility (`P1`).
 - [`VS-1885` / #573](https://github.com/ATAC-Helicopter/VaultSync/issues/573):
   remaining release-automation static-analysis debt (`P1`) — active; the
   aggregate quality gate passes and the five Python findings remain explicit.
+- [`VS-1886` / #578](https://github.com/ATAC-Helicopter/VaultSync/issues/578):
+  bounded archive and support-package memory pressure (`P1`) — implemented on
+  the release branch and awaiting integration through #568.
 
 ## Maintainer links
 
