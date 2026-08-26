@@ -151,19 +151,28 @@ public class SnapshotService
 
             SnapshotChangeSet changes = BuildSnapshotChangeSet(project, currentEntries, baseline.PreviousFiles, ct);
 
+            int snapshotId = hashNow
+                ? await HashAndPersistSnapshotAsync(
+                    project,
+                    changes,
+                    baseline,
+                    fullHash,
+                    maxSnapshotsToKeep,
+                    progressCallback,
+                    ct).ConfigureAwait(false)
+                : PersistSnapshotWithoutHashing(
+                    project,
+                    changes,
+                    baseline,
+                    fullHash,
+                    maxSnapshotsToKeep,
+                    ct);
+
+            // The cache describes the durable snapshot baseline. Publishing it
+            // before hashing/persistence succeeds can make a cancelled run's
+            // directory mtimes suppress changes during the next cached scan.
             UpdateScanCache(project, filterHash, cache, forceFullScan, dirMtimeCache);
-
-            if (!hashNow)
-                return PersistSnapshotWithoutHashing(project, changes, baseline, fullHash, maxSnapshotsToKeep, ct);
-
-            return await HashAndPersistSnapshotAsync(
-                project,
-                changes,
-                baseline,
-                fullHash,
-                maxSnapshotsToKeep,
-                progressCallback,
-                ct).ConfigureAwait(false);
+            return snapshotId;
         }, ct);
     }
 

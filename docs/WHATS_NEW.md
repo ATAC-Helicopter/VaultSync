@@ -55,6 +55,8 @@ user-visible changes are implemented and verified.
   another directory shares the temporary root's text prefix.
 - Keep cancellation attached to the active backup when another run for the same
   project replaces an older operation.
+- Publish directory scan-cache state only after hashing and snapshot persistence
+  succeed, so a cancelled snapshot cannot hide changes from the next scan.
 
 ## [1.8.7]
 

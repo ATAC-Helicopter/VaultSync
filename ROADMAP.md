@@ -775,6 +775,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   or unbounded Sonar analysis runs.
   _(Issue #589; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18129` `P0` Publish directory scan-cache state only after hashing and
+  snapshot persistence succeed.
+  _(Issue #590; delivered on the release branch and awaiting integration through
+  #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

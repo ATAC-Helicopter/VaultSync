@@ -141,6 +141,54 @@ public sealed class BackupLifecycleFaultTests : IDisposable
         Assert.Empty(Directory.EnumerateFiles(projectBackupRoot, ".vaultsync_inprogress", SearchOption.AllDirectories));
     }
 
+    [Fact]
+    public async Task HashCancellation_PreservesPreviousSnapshotAndPublishesNoPartialSnapshot()
+    {
+        string dbPath = Path.Combine(_tempDir.Path, "hash-cancellation.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        Project project = CreateProject(repo, encrypted: false);
+        var baselineService = new SnapshotService(repo, new HashService());
+        string scanCachePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "VaultSync",
+            "cache",
+            "scan",
+            $"{project.Id}.json");
+
+        try
+        {
+            int baselineId = await baselineService.CreateSnapshotAsync(project, fullHash: true);
+            FileEntry[] baselineFiles = [.. repo.GetFilesForSnapshot(baselineId)];
+            byte[] baselineCache = await File.ReadAllBytesAsync(scanCachePath);
+
+            await File.WriteAllTextAsync(
+                Path.Combine(project.RootPath, "pending.txt"),
+                "must not enter a cancelled snapshot",
+                Encoding.UTF8);
+            var blockingHash = new BlockingHashService();
+            var service = new SnapshotService(repo, blockingHash);
+            using var cancellation = new CancellationTokenSource();
+
+            Task<int> createTask = service.CreateSnapshotAsync(
+                project,
+                fullHash: true,
+                maxSnapshotsToKeep: null,
+                ct: cancellation.Token);
+            await blockingHash.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await cancellation.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => createTask);
+            Snapshot remaining = Assert.Single(repo.GetSnapshotsForProject(project.Name));
+            Assert.Equal(baselineId, remaining.Id);
+            Assert.Equal(baselineFiles, repo.GetFilesForSnapshot(baselineId));
+            Assert.Equal(baselineCache, await File.ReadAllBytesAsync(scanCachePath));
+        }
+        finally
+        {
+            File.Delete(scanCachePath);
+        }
+    }
+
     private Project CreateProject(SqliteRepository repo, bool encrypted)
     {
         string sourceRoot = Path.Combine(_tempDir.Path, "source");
@@ -187,5 +235,20 @@ public sealed class BackupLifecycleFaultTests : IDisposable
         public Task SaveAsync(AppConfig value, CancellationToken ct = default) => Task.CompletedTask;
         public string GetDefaultDbPath() => dbPath;
         public string ResolveDbPath(AppConfig value = null) => dbPath;
+    }
+
+    private sealed class BlockingHashService : HashService
+    {
+        public TaskCompletionSource Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override async Task<string> Sha256Async(
+            string file,
+            CancellationToken ct = default)
+        {
+            Started.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            return string.Empty;
+        }
     }
 }

@@ -12,7 +12,7 @@ public class HashService
 
     public static string FormatSha256Lower(byte[] hash) => FormatHexLower(hash);
 
-    public async Task<string> Sha256Async(string file, CancellationToken ct = default)
+    public virtual async Task<string> Sha256Async(string file, CancellationToken ct = default)
     {
         const int Buf = 1024 * 1024;
         await using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, Buf, useAsync: true);
