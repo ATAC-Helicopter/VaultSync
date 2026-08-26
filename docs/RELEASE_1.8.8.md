@@ -149,8 +149,8 @@ failure handling without becoming a broad rewrite.
   packages; reviewed transitive and legacy packages are currently constrained
   by the supported Avalonia and Windows notification stacks.
 - [`VS-1885` / #573](https://github.com/ATAC-Helicopter/VaultSync/issues/573):
-  release-automation static-analysis debt (`P1`) — the five Project/roadmap
-  automation findings are fixed on the release branch.
+  release static-analysis debt (`P1`) — all reported Project automation,
+  onboarding, and storage-hygiene findings are fixed on the release branch.
 - [`VS-1886` / #578](https://github.com/ATAC-Helicopter/VaultSync/issues/578):
   bounded archive and support-package memory pressure (`P1`) — implemented on
   the release branch and awaiting integration through #568.

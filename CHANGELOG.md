@@ -4,6 +4,7 @@
 - [VS-1823] Added repeatable large-history and high-file-count performance budgets.
 - [VS-1882] Added deterministic interruption and recovery qualification for plain and encrypted archives.
 ### Changed
+- [VS-1885] Cleared Sonar findings in release automation, onboarding, and storage hygiene.
 - [VS-1886] Reduced archive and support-package memory use with buffer reuse and streaming hashes.
 - [VS-1887] Made guided setup actionable and moved Guide and Schedule queries off the UI thread.
 ### Fixed
