@@ -14,6 +14,7 @@
 - [BUG-18121] Added exact, age-bounded cleanup for crash-abandoned verified release-cache writes while preserving recent and unrelated hidden files.
 - [BUG-18122] Added exact cleanup for abandoned installation-identity and credential-index writes in the OS application-data directory without selecting durable identity, credential, or unrelated files.
 - [BUG-18123] Added exact cleanup for crash-abandoned sanitized support-bundle staging trees while keeping completed ZIP exports and unrelated directories user-owned.
+- [BUG-18124] Bounded app-created telemetry ZIPs in temporary storage to exact recognized exports from the last 30 days and a newest-first 100 MB cap.
 
 ## [1.8.7] - 21.08.2026
 ### Added

@@ -33,6 +33,8 @@ user-visible changes are implemented and verified.
   hour without selecting durable identity, credential, or unrelated files.
 - Remove sanitized support-bundle staging trees abandoned for more than one day
   while leaving completed ZIP exports and unrelated directories untouched.
+- Keep recognized telemetry ZIP exports in temporary storage for up to 30 days,
+  bounded to 100 MB newest-first, without selecting unrelated files.
 
 ### Lower temporary memory pressure
 - Reuse one bounded buffer while adding sequential files to an archive instead

@@ -738,6 +738,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   trees without selecting completed exports or unrelated directories.
   _(Issue #581; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18124` `P1` Bound app-created telemetry ZIP accumulation in temporary
+  storage using an exact 30-day and 100 MB retention contract.
+  _(Issue #582; delivered on the release branch and awaiting integration through
+  #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
 - [ ] `VS-1885` `P1` Resolve the remaining release-automation static-analysis
