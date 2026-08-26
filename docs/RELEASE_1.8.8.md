@@ -143,8 +143,11 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18124` / #582](https://github.com/ATAC-Helicopter/VaultSync/issues/582):
   temporary telemetry-export retention (`P1`) — fixed on the release branch and
   awaiting integration through #568.
-- [`VS-1884`](../ROADMAP.md#188--chronicle-stabilization): dependencies,
-  packaging, updater, and compatibility (`P1`).
+- [`VS-1884` / #491](https://github.com/ATAC-Helicopter/VaultSync/issues/491):
+  dependencies, packaging, updater, and compatibility (`P1`) — active. The
+  2026-08-26 dependency audit found no vulnerable or directly outdated
+  packages; reviewed transitive and legacy packages are currently constrained
+  by the supported Avalonia and Windows notification stacks.
 - [`VS-1885` / #573](https://github.com/ATAC-Helicopter/VaultSync/issues/573):
   remaining release-automation static-analysis debt (`P1`) — active; the
   aggregate quality gate passes and the five Python findings remain explicit.

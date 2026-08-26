@@ -744,6 +744,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   #568.)_
 - [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
+  _(Issue #491; active. The 2026-08-26 audit found no vulnerable or directly
+  outdated packages; reviewed transitive and legacy dependencies remain
+  constrained by the supported Avalonia and Windows notification stacks.)_
 - [ ] `VS-1885` `P1` Resolve the remaining release-automation static-analysis
   findings without weakening fail-closed Project date and work-ID integrity.
   _(Issue #573; active on the release branch.)_
