@@ -1,7 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Repositories;
 using VaultSync.UI.Infrastructure;
@@ -23,6 +26,7 @@ public sealed class GuideViewModel : ViewModelBase
     private string _recoveryRuleBody = string.Empty;
     private string _terminologyTitle = string.Empty;
     private string _terminologyDescription = string.Empty;
+    private int _refreshRevision;
 
     public GuideViewModel(
         AppViewModel app,
@@ -133,8 +137,9 @@ public sealed class GuideViewModel : ViewModelBase
         private set => SetField(ref _progressSummary, value);
     }
 
-    public void Refresh()
+    public async Task RefreshAsync()
     {
+        int revision = Interlocked.Increment(ref _refreshRevision);
         RefreshHeaderText();
         RebuildContent();
         OnPropertiesChanged(
@@ -146,6 +151,16 @@ public sealed class GuideViewModel : ViewModelBase
             nameof(RecoveryRuleBody),
             nameof(TerminologyTitle),
             nameof(TerminologyDescription));
+
+        GuideProgressSnapshot snapshot = await Task.Run(BuildProgressSnapshot).ConfigureAwait(false);
+        if (revision != Volatile.Read(ref _refreshRevision))
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(() => ApplyProgressSnapshot(revision, snapshot));
+    }
+
+    private GuideProgressSnapshot BuildProgressSnapshot()
+    {
         try
         {
             AppConfig config = _configStore.GetSnapshot();
@@ -157,17 +172,33 @@ public sealed class GuideViewModel : ViewModelBase
                 .GroupBy(drill => drill.ProjectId)
                 .Count(group => group.OrderByDescending(drill => drill.RunUtc).First().Status ==
                                 Core.Models.RecoveryDrillStatus.Passed);
-            ProgressSummary = string.Format(
-                L("Guide.Progress", "{0} project(s) · {1} backup(s) · {2} recovery proof(s) passed"),
-                projects,
-                backups,
-                passedDrills);
+            return new GuideProgressSnapshot(projects, backups, passedDrills, IsAvailable: true);
         }
         catch
         {
-            ProgressSummary = L("Guide.ProgressUnavailable", "Setup progress is temporarily unavailable.");
+            return new GuideProgressSnapshot(0, 0, 0, IsAvailable: false);
         }
     }
+
+    private void ApplyProgressSnapshot(int revision, GuideProgressSnapshot snapshot)
+    {
+        if (revision != Volatile.Read(ref _refreshRevision))
+            return;
+
+        ProgressSummary = snapshot.IsAvailable
+            ? string.Format(
+                L("Guide.Progress", "{0} project(s) · {1} backup(s) · {2} recovery proof(s) passed"),
+                snapshot.Projects,
+                snapshot.Backups,
+                snapshot.PassedDrills)
+            : L("Guide.ProgressUnavailable", "Setup progress is temporarily unavailable.");
+    }
+
+    private sealed record GuideProgressSnapshot(
+        int Projects,
+        int Backups,
+        int PassedDrills,
+        bool IsAvailable);
 
     private static string L(string key, string fallback)
     {
