@@ -264,7 +264,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
             "cache",
             "scan",
             $"{project.Id}.json");
-        File.Delete(scanCachePath);
+        DeleteFileIfExists(scanCachePath);
 
         try
         {
@@ -279,7 +279,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
         }
         finally
         {
-            File.Delete(scanCachePath);
+            DeleteFileIfExists(scanCachePath);
         }
     }
 
@@ -321,7 +321,7 @@ public sealed class BackupSafetyServiceTests : IDisposable
         }
         finally
         {
-            File.Delete(scanCachePath);
+            DeleteFileIfExists(scanCachePath);
         }
     }
 
@@ -478,6 +478,12 @@ public sealed class BackupSafetyServiceTests : IDisposable
         string fullPath = Path.Combine(projectRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         File.WriteAllText(fullPath, contents);
+    }
+
+    private static void DeleteFileIfExists(string path)
+    {
+        if (File.Exists(path))
+            File.Delete(path);
     }
 
     private static string ResolveRepoPresetsDir()
