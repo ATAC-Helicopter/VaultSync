@@ -1873,7 +1873,7 @@ public sealed class BackupService(
                         if (DateTime.UtcNow - lastProgress > stallTimeout)
                         {
                             Interlocked.Exchange(ref stalled, 1);
-                            linkedCts.Cancel();
+                            await linkedCts.CancelAsync();
                             return;
                         }
                     }
