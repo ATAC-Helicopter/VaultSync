@@ -57,6 +57,7 @@ user-visible changes are implemented and verified.
   project replaces an older operation.
 - Publish directory scan-cache state only after hashing and snapshot persistence
   succeed, so a cancelled snapshot cannot hide changes from the next scan.
+- Keep snapshot scans inside the selected project by skipping linked child paths.
 
 ## [1.8.7]
 

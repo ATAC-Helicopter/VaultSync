@@ -181,6 +181,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18130` / #591](https://github.com/ATAC-Helicopter/VaultSync/issues/591):
   duplicate or unbounded release-branch CI, CodeQL, and quality runs (`P1`) —
   fixed on the release branch and awaiting integration through #568.
+- [`BUG-18131` / #592](https://github.com/ATAC-Helicopter/VaultSync/issues/592):
+  snapshot traversal across linked source paths (`P0`) — fixed on the release
+  branch and awaiting integration through #568.
 
 ## Maintainer links
 

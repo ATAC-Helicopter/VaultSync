@@ -25,6 +25,7 @@
 - [BUG-18128] Prevented duplicate and unbounded release-branch Sonar runs.
 - [BUG-18129] Published scan-cache state only after snapshot persistence succeeds.
 - [BUG-18130] Deduplicated and bounded release-branch CI and analysis runs.
+- [BUG-18131] Prevented snapshot scans from following linked source paths.
 
 ## [1.8.7] - 21.08.2026
 ### Added

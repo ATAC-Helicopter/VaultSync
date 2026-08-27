@@ -529,6 +529,11 @@ public class SnapshotService
                 ct.ThrowIfCancellationRequested();
                 if (filter.ShouldExclude(root, sub))
                     continue;
+                if (IsLinkedPath(sub))
+                {
+                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked directory '{sub}'.");
+                    continue;
+                }
 
                 string rel = Path.GetRelativePath(root, sub).Replace('\\', '/');
                 ScanDir(sub, rel);
@@ -549,6 +554,11 @@ public class SnapshotService
                 ct.ThrowIfCancellationRequested();
                 if (filter.ShouldExclude(root, file))
                     continue;
+                if (IsLinkedPath(file))
+                {
+                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked file '{file}'.");
+                    continue;
+                }
 
                 try
                 {
@@ -566,6 +576,20 @@ public class SnapshotService
         ScanDir(root, string.Empty);
         skippedDirs = skippedDirsLocal;
         return results;
+    }
+
+    private static bool IsLinkedPath(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FileNotFoundException)
+        {
+            RuntimeLog.WriteVerbose(
+                $"[SnapshotService] Skipping path with unverifiable link status '{path}': {ex.Message}");
+            return true;
+        }
     }
 
     private static Dictionary<string, List<FileEntry>> BuildPrevByDir(IEnumerable<FileEntry> entries)

@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using VaultSync.Core.Models;
+using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.Core.Tests.TestSupport;
 using Xunit;
@@ -230,6 +232,97 @@ public sealed class BackupSafetyServiceTests : IDisposable
         string[] entries = scanner.Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
 
         Assert.Equal(["inside.txt"], entries);
+    }
+
+    [Fact]
+    public async Task SnapshotService_SkipsLinkedFilesAndDirectories()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string projectRoot = Path.Combine(_tempDir.Path, "snapshot-linked-project");
+        string outsideRoot = Path.Combine(_tempDir.Path, "snapshot-outside-project");
+        Directory.CreateDirectory(projectRoot);
+        Directory.CreateDirectory(outsideRoot);
+        File.WriteAllText(Path.Combine(projectRoot, "inside.txt"), "inside");
+        string outsideFile = Path.Combine(outsideRoot, "outside.txt");
+        File.WriteAllText(outsideFile, "outside");
+        Directory.CreateSymbolicLink(Path.Combine(projectRoot, "linked-directory"), outsideRoot);
+        File.CreateSymbolicLink(Path.Combine(projectRoot, "linked-file.txt"), outsideFile);
+
+        string dbPath = Path.Combine(_tempDir.Path, "snapshot-linked-project.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        int projectId = TestRepository.AddProject(
+            repo,
+            "Linked Snapshot Project",
+            projectRoot,
+            preset: string.Empty);
+        Project project = repo.GetProjectById(projectId)!;
+        string scanCachePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "VaultSync",
+            "cache",
+            "scan",
+            $"{project.Id}.json");
+        File.Delete(scanCachePath);
+
+        try
+        {
+            int snapshotId = await new SnapshotService(repo, new HashService()).CreateSnapshotAsync(
+                project,
+                fullHash: false,
+                hashNow: false);
+
+            Assert.Equal(
+                ["inside.txt"],
+                repo.GetFilesForSnapshot(snapshotId).Select(entry => entry.RelPath).ToArray());
+        }
+        finally
+        {
+            File.Delete(scanCachePath);
+        }
+    }
+
+    [Fact]
+    public void ScanCacheStore_RejectsPreviousLinkedTraversalPolicy()
+    {
+        var project = new Project
+        {
+            Id = Guid.NewGuid().GetHashCode() & int.MaxValue,
+            Name = "Previous Scan Policy",
+            RootPath = Path.Combine(_tempDir.Path, "previous-scan-policy"),
+            Preset = string.Empty
+        };
+        const string filterHash = "policy-test";
+        string scanCachePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "VaultSync",
+            "cache",
+            "scan",
+            $"{project.Id}.json");
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(scanCachePath)!);
+            File.WriteAllText(
+                scanCachePath,
+                JsonSerializer.Serialize(new ScanCacheState
+                {
+                    Version = 1,
+                    RootPath = project.RootPath,
+                    FilterHash = filterHash,
+                    DirectoryMtimeUtcTicks = new Dictionary<string, long>
+                    {
+                        ["linked-directory"] = DateTime.UtcNow.Ticks
+                    }
+                }));
+
+            Assert.Null(ScanCacheStore.TryLoad(project, filterHash));
+        }
+        finally
+        {
+            File.Delete(scanCachePath);
+        }
     }
 
     [Fact]

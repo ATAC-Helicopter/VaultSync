@@ -785,6 +785,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   release-branch change while retaining post-merge checks.
   _(Issue #591; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18131` `P0` Skip linked child paths during snapshot scanning and
+  invalidate caches created under the older traversal policy.
+  _(Issue #592; delivered on the release branch and awaiting integration through
+  #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
