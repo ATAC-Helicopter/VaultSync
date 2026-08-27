@@ -1021,21 +1021,23 @@ public sealed class BackupService(
             {
                 progressCallback?.Invoke(0, "Copying files...", string.Empty);
 
-                await RunNativeBackupAsync(
-                    project,
-                    backupFolder,
-                    totalBytes,
-                    totalFilesForProgress,
-                    filesForProgress,
-                    progressCallback,
-                    useRsyncDelta,
-                    useIncrementalBackups,
-                    linkDest,
-                    TransferPolicy.NormalizeBandwidthLimitMbps(
+                await RunNativeBackupAsync(new NativeBackupRequest
+                {
+                    Project = project,
+                    DestinationDirectory = backupFolder,
+                    TotalBytes = totalBytes,
+                    TotalFiles = totalFilesForProgress,
+                    FilesForProgress = filesForProgress,
+                    ProgressCallback = progressCallback,
+                    UseRsyncDelta = useRsyncDelta,
+                    UseIncrementalBackups = useIncrementalBackups,
+                    LinkDestination = linkDest,
+                    MaxBandwidthMbps = TransferPolicy.NormalizeBandwidthLimitMbps(
                         configSnapshot.Backups.EnableBandwidthLimit,
                         configSnapshot.Backups.MaxBandwidthMbps),
-                    preferRunnerProgressOnly,
-                    linkedToken);
+                    PreferRunnerProgressOnly = preferRunnerProgressOnly,
+                    CancellationToken = linkedToken
+                });
             }
         }
         catch (Exception ex)
@@ -1203,209 +1205,129 @@ public sealed class BackupService(
     /// to perform a fast backup of the project into the given destination folder.
     /// Throws if the tool is missing or returns a failure exit code.
     /// </summary>
-    private static async Task RunNativeBackupAsync(
-        Project project,
-        string destDir,
-        long totalBytes,
-        int totalFiles,
-        List<FileEntry>? filesForProgress,
-        Action<double, string, string>? progressCallback,
-        bool useRsyncDelta,
-        bool useIncrementalBackups,
-        string? linkDest,
-        int? maxBandwidthMbps,
-        bool preferRunnerProgressOnly,
-        CancellationToken ct)
+    private static async Task RunNativeBackupAsync(NativeBackupRequest request)
     {
-        ct.ThrowIfCancellationRequested();
+        request.CancellationToken.ThrowIfCancellationRequested();
 
         // Normalise destination trailing separator for the runners.
+        string destDir = request.DestinationDirectory;
         if (!destDir.EndsWith(Path.DirectorySeparatorChar))
             destDir += Path.DirectorySeparatorChar;
 
-        // Wrap the runner's raw percentage/file progress to compute ETA and speed
-        // based on the totalBytes we computed up front.
-        Action<double, string, string>? callbackForRunner;
-        CancellationTokenSource? monitorCts = null;
-        Task? monitorTask = null;
-        RunnerProgressState? runnerState = null;
-        bool useHybridMonitor = progressCallback is not null
-            && totalBytes > 0
-            && filesForProgress is not null
-            && filesForProgress.Count > 0
-            && !preferRunnerProgressOnly;
+        await using NativeBackupProgressSession progress = StartNativeBackupProgress(request, destDir);
+        bool isNetworkDestination = IsNetworkPath(destDir);
+        bool effectiveUseRsyncDelta = ShouldUseRsyncDelta(request, isNetworkDestination);
+
+        if (OperatingSystem.IsWindows())
+            await RunWindowsNativeBackupAsync(request, destDir, progress.RunnerCallback, isNetworkDestination, effectiveUseRsyncDelta);
+        else
+            await RunRsyncBackupAsync(request, destDir, progress.RunnerCallback, effectiveUseRsyncDelta);
+    }
+
+    private static bool ShouldUseRsyncDelta(NativeBackupRequest request, bool isNetworkDestination) =>
+        request.UseRsyncDelta ||
+        (OperatingSystem.IsWindows() &&
+         isNetworkDestination &&
+         !request.UseIncrementalBackups &&
+         (TryGetBundledRsyncPath() is not null || IsOnPath(RsyncExecutableName)));
+
+    private static async Task RunWindowsNativeBackupAsync(
+        NativeBackupRequest request,
+        string destDir,
+        Action<double, string, string>? progressCallback,
+        bool isNetworkDestination,
+        bool useRsyncDelta)
+    {
+        string? bundledRsync = TryGetBundledRsyncPath();
+        bool rsyncAvailable = bundledRsync is not null || IsOnPath(RsyncExecutableName);
+        if ((useRsyncDelta || request.UseIncrementalBackups) && rsyncAvailable)
+        {
+            await RunRsyncBackupAsync(request, destDir, progressCallback, useRsyncDelta, bundledRsync);
+            return;
+        }
+
+        if ((useRsyncDelta || request.UseIncrementalBackups) && !rsyncAvailable)
+            RuntimeLog.WriteVerbose("[BackupService] rsync not found on PATH; falling back to robocopy.");
+
+        int threads = isNetworkDestination
+            ? Math.Min(32, Math.Max(4, Environment.ProcessorCount))
+            : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2));
+        RuntimeLog.WriteVerbose($"[BackupService] Starting robocopy backup (threads={threads}, bw={(request.MaxBandwidthMbps is > 0 ? $"{request.MaxBandwidthMbps}Mbps" : "unlimited")}).");
+        var runner = new RobocopyRunner(isNetworkDestination);
+        int exitCode = await runner.SyncAsync(
+            request.Project,
+            destDir,
+            dryRun: false,
+            progressCallback,
+            request.MaxBandwidthMbps,
+            request.CancellationToken);
+
+        if (exitCode != 0)
+            throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}. See RobocopyRunner logs above for stdout/stderr.");
+    }
+
+    private static async Task RunRsyncBackupAsync(
+        NativeBackupRequest request,
+        string destDir,
+        Action<double, string, string>? progressCallback,
+        bool useRsyncDelta,
+        string? bundledRsync = null)
+    {
+        string source = bundledRsync is null ? "PATH" : "bundled";
+        int? bandwidthLimit = request.MaxBandwidthMbps is > 0
+            ? TransferPolicy.ToRsyncBwLimitKbps(request.MaxBandwidthMbps.Value)
+            : null;
+        string sourceDetail = OperatingSystem.IsWindows() ? $"source={source}, " : string.Empty;
+        RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup ({sourceDetail}delta={useRsyncDelta}, incremental={request.UseIncrementalBackups}, bw={(bandwidthLimit is > 0 ? $"{bandwidthLimit}KB/s" : "unlimited")}).");
+        if (OperatingSystem.IsWindows())
+            RuntimeLog.WriteVerbose($"[BackupService] Using rsync on Windows ({source}).");
+
+        var runner = new RsyncRunner(useWholeFile: !useRsyncDelta, rsyncPath: bundledRsync ?? RsyncExecutableName);
+        int exitCode = await runner.SyncAsync(
+            request.Project,
+            destDir,
+            dryRun: false,
+            progressCallback,
+            request.UseIncrementalBackups ? request.LinkDestination : null,
+            bandwidthLimit,
+            request.CancellationToken);
+
+        if (exitCode != 0)
+            throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
+    }
+
+    private static NativeBackupProgressSession StartNativeBackupProgress(
+        NativeBackupRequest request,
+        string destDir)
+    {
+        bool useHybridMonitor = request.ProgressCallback is not null
+            && request.TotalBytes > 0
+            && request.FilesForProgress is { Count: > 0 }
+            && !request.PreferRunnerProgressOnly;
 
         if (useHybridMonitor)
         {
             RuntimeLog.WriteVerbose("[BackupService] Progress monitor enabled (destination scans for progress).");
-            monitorCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            runnerState = new RunnerProgressState();
-            monitorTask = MonitorCopyProgressAsync(destDir, filesForProgress!, totalBytes, progressCallback!, runnerState, monitorCts.Token);
-            callbackForRunner = (percent, currentFile, etaText) => runnerState.Update(percent, currentFile, etaText);
-        }
-        else if (progressCallback is null || totalBytes <= 0)
-        {
-            // Nothing to decorate; just pass through whatever the runner reports.
-            callbackForRunner = progressCallback;
-        }
-        else
-        {
-            DateTime startTime = DateTime.UtcNow;
-            DateTime lastUiUpdate = startTime;
-            var minUiInterval = TimeSpan.FromMilliseconds(100);
-
-            callbackForRunner = (percent, currentFile, _) =>
-            {
-                DateTime now = DateTime.UtcNow;
-
-                // Throttle UI updates a bit to avoid spamming the UI thread when
-                // the native tool reports progress very frequently, especially
-                // when multiple backups run in parallel.
-                if (percent < 100 && (now - lastUiUpdate) < minUiInterval)
-                    return;
-
-                lastUiUpdate = now;
-
-                TimeSpan elapsed = now - startTime;
-                string etaText = string.Empty;
-
-                if (percent > 0 && percent < 100)
-                {
-                    double elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                    double doneBytes = totalBytes * (percent / 100.0);
-                    double speedBytesSec = doneBytes / elapsedSeconds;
-                    double speedMbSec = speedBytesSec / (1024 * 1024);
-
-                    double remainingFraction = (100.0 - percent) / percent;
-                    double remainingSeconds = elapsedSeconds * remainingFraction;
-                    var eta = TimeSpan.FromSeconds(remainingSeconds);
-
-                    if (totalFiles > 0)
-                    {
-                        int approxDone = (int)Math.Round(totalFiles * (percent / 100.0));
-                        etaText = $"Copying ~{approxDone}/{totalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
-                    }
-                    else
-                    {
-                        etaText = $"Copying - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
-                    }
-                }
-                else if (percent >= 100 && elapsed.TotalSeconds > 0)
-                {
-                    double elapsedSeconds = elapsed.TotalSeconds;
-                    double speedBytesSec = totalBytes / elapsedSeconds;
-                    double speedMbSec = speedBytesSec / (1024 * 1024);
-
-                    if (totalFiles > 0)
-                    {
-                        etaText = $"Copying ~{totalFiles}/{totalFiles} files - {speedMbSec:0.0} MB/s - Finalizing";
-                    }
-                    else
-                    {
-                        etaText = $"Copying - {speedMbSec:0.0} MB/s - Finalizing";
-                    }
-                }
-
-                progressCallback(percent, currentFile, etaText);
-            };
+            var monitorCts = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken);
+            var runnerState = new RunnerProgressState();
+            Task monitorTask = MonitorCopyProgressAsync(
+                destDir,
+                request.FilesForProgress!,
+                request.TotalBytes,
+                request.ProgressCallback!,
+                runnerState,
+                monitorCts.Token);
+            return new NativeBackupProgressSession(runnerState.Update, monitorCts, monitorTask);
         }
 
-        bool isNetworkDestination = IsNetworkPath(destDir);
-        bool effectiveUseRsyncDelta = useRsyncDelta;
-        if (OperatingSystem.IsWindows() &&
-            isNetworkDestination &&
-            !useRsyncDelta &&
-            !useIncrementalBackups &&
-            (TryGetBundledRsyncPath() is not null || IsOnPath(RsyncExecutableName)))
-        {
-            effectiveUseRsyncDelta = true;
-        }
+        if (request.ProgressCallback is null || request.TotalBytes <= 0)
+            return new NativeBackupProgressSession(request.ProgressCallback);
 
-        int exitCode;
-
-        try
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                string? bundledRsync = TryGetBundledRsyncPath();
-                if ((effectiveUseRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath(RsyncExecutableName)))
-                {
-                    // rsync-based backup on Windows (when installed)
-                    string source = bundledRsync is null ? "PATH" : "bundled";
-                    string rsyncPath = bundledRsync ?? RsyncExecutableName;
-                    int? rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
-                    RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
-                    RuntimeLog.WriteVerbose($"[BackupService] Using rsync on Windows ({source}).");
-                    var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta, rsyncPath: rsyncPath);
-                    exitCode = await runner.SyncAsync(
-                        project,
-                        destDir,
-                        dryRun: false,
-                        callbackForRunner,
-                        useIncrementalBackups ? linkDest : null,
-                        rsyncBwLimit,
-                        ct);
-
-                    if (exitCode != 0)
-                        throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
-                }
-                else
-                {
-                    // robocopy-based backup (multi-threaded, robust on Windows)
-                    if ((effectiveUseRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath(RsyncExecutableName))
-                        RuntimeLog.WriteVerbose("[BackupService] rsync not found on PATH; falling back to robocopy.");
-
-                    RuntimeLog.WriteVerbose($"[BackupService] Starting robocopy backup (threads={(isNetworkDestination ? Math.Min(32, Math.Max(4, Environment.ProcessorCount)) : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2)))}, bw={(maxBandwidthMbps is > 0 ? $"{maxBandwidthMbps}Mbps" : "unlimited")}).");
-                    var runner = new RobocopyRunner(isNetworkDestination);
-                    exitCode = await runner.SyncAsync(
-                        project,
-                        destDir,
-                        dryRun: false,
-                        callbackForRunner,
-                        maxBandwidthMbps,
-                        ct);
-
-                    if (exitCode != 0)
-                        throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}. See RobocopyRunner logs above for stdout/stderr.");
-                }
-            }
-            else
-            {
-                // rsync-based backup (fast, incremental on macOS/Linux)
-                int? rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
-                RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup (delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
-                var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta);
-                exitCode = await runner.SyncAsync(
-                    project,
-                    destDir,
-                    dryRun: false,
-                    callbackForRunner,
-                    useIncrementalBackups ? linkDest : null,
-                    rsyncBwLimit,
-                    ct);
-
-                if (exitCode != 0)
-                    throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
-            }
-        }
-        finally
-        {
-            if (monitorCts is not null)
-            {
-                await monitorCts.CancelAsync().ConfigureAwait(false);
-                try
-                {
-                    if (monitorTask is not null)
-                        await monitorTask;
-                }
-                catch (OperationCanceledException)
-                {
-                    // expected when stopping monitor
-                }
-                RuntimeLog.WriteVerbose("[BackupService] Progress monitor cancelled.");
-                monitorCts.Dispose();
-            }
-        }
+        var decorator = new RunnerProgressDecorator(
+            request.TotalBytes,
+            request.TotalFiles,
+            request.ProgressCallback);
+        return new NativeBackupProgressSession(decorator.Report);
     }
 
     private static bool IsNetworkPath(string path)
@@ -3454,6 +3376,115 @@ public sealed class BackupService(
         public int Files { get; set; }
         public int Directories { get; set; }
         public List<string> Samples { get; } = [];
+    }
+
+    private sealed class NativeBackupRequest
+    {
+        public required Project Project { get; init; }
+        public required string DestinationDirectory { get; init; }
+        public long TotalBytes { get; init; }
+        public int TotalFiles { get; init; }
+        public List<FileEntry>? FilesForProgress { get; init; }
+        public Action<double, string, string>? ProgressCallback { get; init; }
+        public bool UseRsyncDelta { get; init; }
+        public bool UseIncrementalBackups { get; init; }
+        public string? LinkDestination { get; init; }
+        public int? MaxBandwidthMbps { get; init; }
+        public bool PreferRunnerProgressOnly { get; init; }
+        public CancellationToken CancellationToken { get; init; }
+    }
+
+    private sealed class NativeBackupProgressSession : IAsyncDisposable
+    {
+        private readonly CancellationTokenSource? _monitorCts;
+        private readonly Task? _monitorTask;
+
+        public NativeBackupProgressSession(
+            Action<double, string, string>? runnerCallback,
+            CancellationTokenSource? monitorCts = null,
+            Task? monitorTask = null)
+        {
+            RunnerCallback = runnerCallback;
+            _monitorCts = monitorCts;
+            _monitorTask = monitorTask;
+        }
+
+        public Action<double, string, string>? RunnerCallback { get; }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_monitorCts is null)
+                return;
+
+            await _monitorCts.CancelAsync().ConfigureAwait(false);
+            try
+            {
+                if (_monitorTask is not null)
+                    await _monitorTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when the native copy completes and stops its monitor.
+            }
+
+            RuntimeLog.WriteVerbose("[BackupService] Progress monitor cancelled.");
+            _monitorCts.Dispose();
+        }
+    }
+
+    private sealed class RunnerProgressDecorator
+    {
+        private static readonly TimeSpan MinUiInterval = TimeSpan.FromMilliseconds(100);
+        private readonly long _totalBytes;
+        private readonly int _totalFiles;
+        private readonly Action<double, string, string> _progressCallback;
+        private readonly DateTime _startTime = DateTime.UtcNow;
+        private DateTime _lastUiUpdate = DateTime.UtcNow;
+
+        public RunnerProgressDecorator(
+            long totalBytes,
+            int totalFiles,
+            Action<double, string, string> progressCallback)
+        {
+            _totalBytes = totalBytes;
+            _totalFiles = totalFiles;
+            _progressCallback = progressCallback;
+        }
+
+        public void Report(double percent, string currentFile, string _)
+        {
+            DateTime now = DateTime.UtcNow;
+            if (percent < 100 && (now - _lastUiUpdate) < MinUiInterval)
+                return;
+
+            _lastUiUpdate = now;
+            TimeSpan elapsed = now - _startTime;
+            string progressText = BuildProgressText(percent, elapsed);
+            _progressCallback(percent, currentFile, progressText);
+        }
+
+        private string BuildProgressText(double percent, TimeSpan elapsed)
+        {
+            if (percent > 0 && percent < 100)
+            {
+                double elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                double speedMbSec = (_totalBytes * (percent / 100.0) / elapsedSeconds) / (1024 * 1024);
+                var eta = TimeSpan.FromSeconds(elapsedSeconds * ((100.0 - percent) / percent));
+                return _totalFiles > 0
+                    ? $"Copying ~{(int)Math.Round(_totalFiles * (percent / 100.0))}/{_totalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}"
+                    : $"Copying - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
+            }
+
+            if (percent >= 100 && elapsed.TotalSeconds > 0)
+            {
+                double speedMbSec = (_totalBytes / elapsed.TotalSeconds) / (1024 * 1024);
+                return _totalFiles > 0
+                    ? $"Copying ~{_totalFiles}/{_totalFiles} files - {speedMbSec:0.0} MB/s - Finalizing"
+                    : $"Copying - {speedMbSec:0.0} MB/s - Finalizing";
+            }
+
+            return string.Empty;
+        }
     }
 
     private sealed class RunnerProgressState
