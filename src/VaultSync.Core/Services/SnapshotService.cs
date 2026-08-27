@@ -220,6 +220,46 @@ public class SnapshotService
                 return [];
             }
         }
+
+        private static bool IsLinkedPath(string path)
+        {
+            try
+            {
+                return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FileNotFoundException)
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[SnapshotService] Skipping path with unverifiable link status '{path}': {ex.Message}");
+                return true;
+            }
+        }
+
+        private static Dictionary<string, List<FileEntry>> BuildPrevByDir(IEnumerable<FileEntry> entries)
+        {
+            var map = new Dictionary<string, List<FileEntry>>(StringComparer.Ordinal);
+            foreach (FileEntry entry in entries)
+            {
+                string rel = entry.RelPath.Replace('\\', '/');
+                string current = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? string.Empty;
+                while (true)
+                {
+                    if (!map.TryGetValue(current, out List<FileEntry>? list))
+                    {
+                        list = [];
+                        map[current] = list;
+                    }
+                    list.Add(entry);
+
+                    if (string.IsNullOrEmpty(current))
+                        break;
+
+                    int separatorIndex = current.LastIndexOf('/');
+                    current = separatorIndex >= 0 ? current[..separatorIndex] : string.Empty;
+                }
+            }
+            return map;
+        }
     }
 
     public SnapshotOutcome? LastCreatedOutcome { get; private set; }
@@ -626,47 +666,6 @@ public class SnapshotService
         List<FileEntry> results = scanner.Scan();
         skippedDirs = scanner.SkippedDirectories;
         return results;
-    }
-
-    private static bool IsLinkedPath(string path)
-    {
-        try
-        {
-            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FileNotFoundException)
-        {
-            RuntimeLog.WriteVerbose(
-                $"[SnapshotService] Skipping path with unverifiable link status '{path}': {ex.Message}");
-            return true;
-        }
-    }
-
-    private static Dictionary<string, List<FileEntry>> BuildPrevByDir(IEnumerable<FileEntry> entries)
-    {
-        var map = new Dictionary<string, List<FileEntry>>(StringComparer.Ordinal);
-        foreach (FileEntry entry in entries)
-        {
-            string rel = entry.RelPath.Replace('\\', '/');
-            string dir = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? string.Empty;
-            string current = dir;
-            while (true)
-            {
-                if (!map.TryGetValue(current, out List<FileEntry>? list))
-                {
-                    list = new List<FileEntry>();
-                    map[current] = list;
-                }
-                list.Add(entry);
-
-                if (string.IsNullOrEmpty(current))
-                    break;
-
-                int idx = current.LastIndexOf('/');
-                current = idx >= 0 ? current[..idx] : string.Empty;
-            }
-        }
-        return map;
     }
 
     private static void UpdateScanCache(
