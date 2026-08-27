@@ -21,6 +21,12 @@ public class SnapshotService
         List<SnapshotFileMetadata> CurrentMetadata,
         Dictionary<string, SnapshotFileMetadata> CurrentMetadataByRel,
         Dictionary<string, FileEntry> CurrentFilesByRel);
+    private sealed record SnapshotScanRequest(
+        Project Project,
+        FilterService Filter,
+        IEnumerable<FileEntry> PreviousEntries,
+        ScanCacheState? Cache,
+        bool ForceFullScan);
 
     private sealed class HashProgressReporter(
         int totalToHash,
@@ -73,6 +79,146 @@ public class SnapshotService
         {
             double elapsedSeconds = Math.Max(0.1, (now - _hashStart).TotalSeconds);
             return hashedBytes / elapsedSeconds;
+        }
+    }
+
+    private sealed class SnapshotDirectoryScanner(
+        SnapshotScanRequest request,
+        Dictionary<string, long> directoryMtimeCache,
+        CancellationToken cancellationToken)
+    {
+        private readonly List<FileEntry> _results = [];
+        private readonly Dictionary<string, List<FileEntry>> _previousByDirectory =
+            BuildPrevByDir(request.PreviousEntries);
+
+        public int SkippedDirectories { get; private set; }
+
+        public List<FileEntry> Scan()
+        {
+            ScanDirectory(request.Project.RootPath, string.Empty);
+            return _results;
+        }
+
+        private void ScanDirectory(string fullDirectory, string relativeDirectory)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!TryReadDirectoryMtime(fullDirectory, out long mtimeTicks))
+                return;
+
+            directoryMtimeCache[relativeDirectory] = mtimeTicks;
+            if (TryReuseDirectory(relativeDirectory, mtimeTicks))
+                return;
+
+            foreach (string childDirectory in EnumerateDirectoriesSafely(fullDirectory))
+                ScanChildDirectory(childDirectory);
+
+            AddFiles(fullDirectory);
+        }
+
+        private bool TryReuseDirectory(string relativeDirectory, long mtimeTicks)
+        {
+            if (request.ForceFullScan || request.Cache is null ||
+                !request.Cache.DirectoryMtimeUtcTicks.TryGetValue(relativeDirectory, out long cachedTicks) ||
+                cachedTicks != mtimeTicks ||
+                !_previousByDirectory.TryGetValue(relativeDirectory, out List<FileEntry>? cachedEntries))
+            {
+                return false;
+            }
+
+            _results.AddRange(cachedEntries);
+            SkippedDirectories++;
+            return true;
+        }
+
+        private void ScanChildDirectory(string childDirectory)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (request.Filter.ShouldExclude(request.Project.RootPath, childDirectory))
+                return;
+            if (IsLinkedPath(childDirectory))
+            {
+                RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked directory '{childDirectory}'.");
+                return;
+            }
+
+            string relative = Path.GetRelativePath(request.Project.RootPath, childDirectory).Replace('\\', '/');
+            ScanDirectory(childDirectory, relative);
+        }
+
+        private void AddFiles(string fullDirectory)
+        {
+            foreach (string file in EnumerateFilesSafely(fullDirectory))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (request.Filter.ShouldExclude(request.Project.RootPath, file))
+                    continue;
+                if (IsLinkedPath(file))
+                {
+                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked file '{file}'.");
+                    continue;
+                }
+
+                AddFile(file);
+            }
+        }
+
+        private void AddFile(string file)
+        {
+            try
+            {
+                var info = new FileInfo(file);
+                string relative = Path.GetRelativePath(request.Project.RootPath, file).Replace('\\', '/');
+                _results.Add(new FileEntry(relative, info.Length, info.LastWriteTimeUtc, string.Empty));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose($"[SnapshotService] Skipping inaccessible file '{file}': {ex.Message}");
+            }
+        }
+
+        private static bool TryReadDirectoryMtime(string fullDirectory, out long mtimeTicks)
+        {
+            try
+            {
+                var info = new DirectoryInfo(fullDirectory);
+                mtimeTicks = info.Exists ? info.LastWriteTimeUtc.Ticks : 0;
+                return info.Exists;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[SnapshotService] Skipping inaccessible directory '{fullDirectory}': {ex.Message}");
+                mtimeTicks = 0;
+                return false;
+            }
+        }
+
+        private static string[] EnumerateDirectoriesSafely(string fullDirectory)
+        {
+            try
+            {
+                return Directory.GetDirectories(fullDirectory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[SnapshotService] Cannot enumerate directories in '{fullDirectory}': {ex.Message}");
+                return [];
+            }
+        }
+
+        private static string[] EnumerateFilesSafely(string fullDirectory)
+        {
+            try
+            {
+                return Directory.GetFiles(fullDirectory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[SnapshotService] Cannot enumerate files in '{fullDirectory}': {ex.Message}");
+                return [];
+            }
         }
     }
 
@@ -135,12 +281,14 @@ public class SnapshotService
             bool forceFullScan = ShouldForceFullScan(cache, useScanCache, aggressiveScanCache);
 
             var dirMtimeCache = new Dictionary<string, long>(StringComparer.Ordinal);
-            List<FileEntry> currentEntries = BuildCurrentEntries(
+            var scanRequest = new SnapshotScanRequest(
                 project,
                 filter,
                 baseline.PreviousFiles.Values,
                 cache,
-                forceFullScan,
+                forceFullScan);
+            List<FileEntry> currentEntries = BuildCurrentEntries(
+                scanRequest,
                 dirMtimeCache,
                 out int skippedDirs,
                 ct);
@@ -469,112 +617,14 @@ public class SnapshotService
     }
 
     private static List<FileEntry> BuildCurrentEntries(
-        Project project,
-        FilterService filter,
-        IEnumerable<FileEntry> prevEntries,
-        ScanCacheState? cache,
-        bool forceFullScan,
+        SnapshotScanRequest request,
         Dictionary<string, long> dirMtimeCache,
         out int skippedDirs,
         CancellationToken ct)
     {
-        var results = new List<FileEntry>();
-        Dictionary<string, List<FileEntry>> prevByDir = BuildPrevByDir(prevEntries);
-        string root = project.RootPath;
-        int skippedDirsLocal = 0;
-
-        void ScanDir(string fullDir, string relDir)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            DirectoryInfo? info = null;
-            try
-            {
-                info = new DirectoryInfo(fullDir);
-                if (!info.Exists)
-                    return;
-            }
-            catch
-            {
-                return;
-            }
-
-            string dirKey = relDir;
-            long mtimeTicks = info.LastWriteTimeUtc.Ticks;
-            dirMtimeCache[dirKey] = mtimeTicks;
-
-            if (!forceFullScan &&
-                cache is not null &&
-                cache.DirectoryMtimeUtcTicks.TryGetValue(dirKey, out long cachedTicks) &&
-                cachedTicks == mtimeTicks &&
-                prevByDir.TryGetValue(dirKey, out List<FileEntry>? cachedEntries))
-            {
-                results.AddRange(cachedEntries);
-                skippedDirsLocal++;
-                return;
-            }
-
-            IEnumerable<string> dirs;
-            try
-            {
-                dirs = Directory.EnumerateDirectories(fullDir);
-            }
-            catch
-            {
-                return;
-            }
-
-            foreach (string sub in dirs)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (filter.ShouldExclude(root, sub))
-                    continue;
-                if (IsLinkedPath(sub))
-                {
-                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked directory '{sub}'.");
-                    continue;
-                }
-
-                string rel = Path.GetRelativePath(root, sub).Replace('\\', '/');
-                ScanDir(sub, rel);
-            }
-
-            IEnumerable<string> files;
-            try
-            {
-                files = Directory.EnumerateFiles(fullDir);
-            }
-            catch
-            {
-                return;
-            }
-
-            foreach (string file in files)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (filter.ShouldExclude(root, file))
-                    continue;
-                if (IsLinkedPath(file))
-                {
-                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked file '{file}'.");
-                    continue;
-                }
-
-                try
-                {
-                    var fi = new FileInfo(file);
-                    string rel = Path.GetRelativePath(root, file).Replace('\\', '/');
-                    results.Add(new FileEntry(rel, fi.Length, fi.LastWriteTimeUtc, string.Empty));
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping inaccessible file '{file}': {ex.Message}");
-                }
-            }
-        }
-
-        ScanDir(root, string.Empty);
-        skippedDirs = skippedDirsLocal;
+        var scanner = new SnapshotDirectoryScanner(request, dirMtimeCache, ct);
+        List<FileEntry> results = scanner.Scan();
+        skippedDirs = scanner.SkippedDirectories;
         return results;
     }
 
