@@ -415,12 +415,13 @@ public partial class ProjectsViewModel
                     await snapshotService.CreateSnapshotAsync(
                         existing,
                         fullHash: fullHash,
-                        hashNow: true,
-                        maxSnapshotsToKeep: maxSnapshotsToKeep,
-                        ct: CancellationToken.None,
-                        progressCallback: null,
-                        useScanCache: enableScanCache,
-                        aggressiveScanCache: aggressiveScanCache).ConfigureAwait(false);
+                        new SnapshotCreationOptions
+                        {
+                            MaxSnapshotsToKeep = maxSnapshotsToKeep,
+                            UseScanCache = enableScanCache,
+                            AggressiveScanCache = aggressiveScanCache
+                        },
+                        CancellationToken.None).ConfigureAwait(false);
                     success++;
                 }
                 catch (Exception ex)

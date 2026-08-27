@@ -5,6 +5,15 @@ using VaultSync.Core.Repositories;
 
 namespace VaultSync.Core.Services;
 
+public sealed class SnapshotCreationOptions
+{
+    public bool HashNow { get; init; } = true;
+    public int? MaxSnapshotsToKeep { get; init; }
+    public Action<double, string, string>? ProgressCallback { get; init; }
+    public bool UseScanCache { get; init; }
+    public bool AggressiveScanCache { get; init; }
+}
+
 public class SnapshotService
 {
     private readonly SqliteRepository _repo;
@@ -272,22 +281,31 @@ public class SnapshotService
     }
 
     public Task<int> CreateSnapshotAsync(Project project, bool fullHash, int? maxSnapshotsToKeep = null, CancellationToken ct = default)
-        => CreateSnapshotAsync(project, fullHash, hashNow: true, maxSnapshotsToKeep, ct, null);
+        => CreateSnapshotAsync(
+            project,
+            fullHash,
+            new SnapshotCreationOptions { MaxSnapshotsToKeep = maxSnapshotsToKeep },
+            ct);
 
     public Task<int> CreateSnapshotAsync(Project project, bool fullHash, bool hashNow, int? maxSnapshotsToKeep = null, CancellationToken ct = default)
-        => CreateSnapshotAsync(project, fullHash, hashNow, maxSnapshotsToKeep, ct, null);
+        => CreateSnapshotAsync(
+            project,
+            fullHash,
+            new SnapshotCreationOptions
+            {
+                HashNow = hashNow,
+                MaxSnapshotsToKeep = maxSnapshotsToKeep
+            },
+            ct);
 
     public async Task<int> CreateSnapshotAsync(
         Project project,
         bool fullHash,
-        bool hashNow,
-        int? maxSnapshotsToKeep,
-        CancellationToken ct,
-        Action<double, string, string>? progressCallback,
-        bool useScanCache = false,
-        bool aggressiveScanCache = false)
+        SnapshotCreationOptions options,
+        CancellationToken ct = default)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
+        ArgumentNullException.ThrowIfNull(options);
         if (string.IsNullOrWhiteSpace(project.RootPath))
             throw new InvalidOperationException("Project.RootPath is not set.");
 
@@ -317,8 +335,8 @@ public class SnapshotService
 
             // Build current file list (with optional scan cache)
             string filterHash = ComputeFilterHash(filter);
-            ScanCacheState? cache = useScanCache ? ScanCacheStore.TryLoad(project, filterHash) : null;
-            bool forceFullScan = ShouldForceFullScan(cache, useScanCache, aggressiveScanCache);
+            ScanCacheState? cache = options.UseScanCache ? ScanCacheStore.TryLoad(project, filterHash) : null;
+            bool forceFullScan = ShouldForceFullScan(cache, options.UseScanCache, options.AggressiveScanCache);
 
             var dirMtimeCache = new Dictionary<string, long>(StringComparer.Ordinal);
             var scanRequest = new SnapshotScanRequest(
@@ -333,27 +351,27 @@ public class SnapshotService
                 out int skippedDirs,
                 ct);
 
-            _logger.Info($"[SnapshotService] Scan cache used={useScanCache && cache is not null}, skippedDirs={skippedDirs}, files={currentEntries.Count}.");
+            _logger.Info($"[SnapshotService] Scan cache used={options.UseScanCache && cache is not null}, skippedDirs={skippedDirs}, files={currentEntries.Count}.");
 
             ct.ThrowIfCancellationRequested();
 
             SnapshotChangeSet changes = BuildSnapshotChangeSet(project, currentEntries, baseline.PreviousFiles, ct);
 
-            int snapshotId = hashNow
+            int snapshotId = options.HashNow
                 ? await HashAndPersistSnapshotAsync(
                     project,
                     changes,
                     baseline,
                     fullHash,
-                    maxSnapshotsToKeep,
-                    progressCallback,
+                    options.MaxSnapshotsToKeep,
+                    options.ProgressCallback,
                     ct).ConfigureAwait(false)
                 : PersistSnapshotWithoutHashing(
                     project,
                     changes,
                     baseline,
                     fullHash,
-                    maxSnapshotsToKeep,
+                    options.MaxSnapshotsToKeep,
                     ct);
 
             // The cache describes the durable snapshot baseline. Publishing it

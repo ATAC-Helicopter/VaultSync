@@ -911,12 +911,16 @@ public sealed class BackupService(
             snapshotId = await snapshotService.CreateSnapshotAsync(
                 project,
                 fullSnapshotHash,
-                hashNow: false,
-                maxSnapshotsToKeep,
-                linkedToken,
-                (percent, currentFile, etaText) => progressCallback?.Invoke(percent, currentFile, etaText),
-                useScanCache,
-                aggressiveScanCache);
+                new SnapshotCreationOptions
+                {
+                    HashNow = false,
+                    MaxSnapshotsToKeep = maxSnapshotsToKeep,
+                    ProgressCallback = (percent, currentFile, etaText) =>
+                        progressCallback?.Invoke(percent, currentFile, etaText),
+                    UseScanCache = useScanCache,
+                    AggressiveScanCache = aggressiveScanCache
+                },
+                linkedToken);
 
             SnapshotOutcome? outcome = snapshotService.LastCreatedOutcome;
             if (skipIfNoChanges &&
