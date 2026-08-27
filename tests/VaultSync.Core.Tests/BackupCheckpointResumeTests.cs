@@ -154,14 +154,17 @@ public sealed class BackupCheckpointResumeTests : IDisposable
 
         BackupService.UpdateCheckpointResumeTelemetry(
             cfg,
-            status: "resume-attempt",
-            projectName: "VaultSync",
-            backupFolder: @"C:\backups\vaultsync\2026-03-16_12-00-00",
-            archivePath: @"C:\backups\vaultsync\2026-03-16_12-00-00\backup.zip",
-            resumeOffsetBytes: 5242880,
-            archiveSizeBytes: 10485760,
-            sourceFingerprint: "ABC123",
-            message: "Resuming archive upload from a validated existing prefix.");
+            new BackupService.CheckpointResumeTelemetryUpdate
+            {
+                Status = "resume-attempt",
+                ProjectName = "VaultSync",
+                BackupFolder = @"C:\backups\vaultsync\2026-03-16_12-00-00",
+                ArchivePath = @"C:\backups\vaultsync\2026-03-16_12-00-00\backup.zip",
+                ResumeOffsetBytes = 5242880,
+                ArchiveSizeBytes = 10485760,
+                SourceFingerprint = "ABC123",
+                Message = "Resuming archive upload from a validated existing prefix."
+            });
 
         Assert.Equal("resume-attempt", cfg.Advanced.CheckpointResumeTelemetry.LastStatus);
         Assert.Equal("VaultSync", cfg.Advanced.CheckpointResumeTelemetry.LastProjectName);
