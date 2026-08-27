@@ -148,12 +148,7 @@ public sealed class BackupLifecycleFaultTests : IDisposable
         SqliteRepository repo = TestRepository.Create(dbPath);
         Project project = CreateProject(repo, encrypted: false);
         var baselineService = new SnapshotService(repo, new HashService());
-        string scanCachePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "VaultSync",
-            "cache",
-            "scan",
-            $"{project.Id}.json");
+        string scanCachePath = GetScanCachePath(project);
 
         try
         {
@@ -182,6 +177,41 @@ public sealed class BackupLifecycleFaultTests : IDisposable
             Assert.Equal(baselineId, remaining.Id);
             Assert.Equal(baselineFiles, repo.GetFilesForSnapshot(baselineId));
             Assert.Equal(baselineCache, await File.ReadAllBytesAsync(scanCachePath));
+        }
+        finally
+        {
+            File.Delete(scanCachePath);
+        }
+    }
+
+    [Fact]
+    public async Task DeferredHashCancellation_PublishesNoPartialHashes()
+    {
+        string dbPath = Path.Combine(_tempDir.Path, "deferred-hash-cancellation.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        Project project = CreateProject(repo, encrypted: false);
+        var baselineService = new SnapshotService(repo, new HashService());
+        string scanCachePath = GetScanCachePath(project);
+
+        try
+        {
+            int snapshotId = await baselineService.CreateSnapshotAsync(
+                project,
+                fullHash: true,
+                hashNow: false,
+                maxSnapshotsToKeep: null,
+                ct: CancellationToken.None);
+            Assert.All(repo.GetFilesForSnapshot(snapshotId), file => Assert.Empty(file.HashSha256));
+
+            var blockingHash = new BlockingHashService();
+            var service = new SnapshotService(repo, blockingHash);
+            using var cancellation = new CancellationTokenSource();
+            Task<int> hashTask = service.HashMissingFilesAsync(project, snapshotId, cancellation.Token);
+            await blockingHash.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await cancellation.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => hashTask);
+            Assert.All(repo.GetFilesForSnapshot(snapshotId), file => Assert.Empty(file.HashSha256));
         }
         finally
         {
@@ -220,6 +250,14 @@ public sealed class BackupLifecycleFaultTests : IDisposable
             (keyRef, _, _, _) => keyRef == "project-key-ref" ? "test-password" : null,
             (_, _, _, _) => { },
             (_, _) => { });
+
+    private static string GetScanCachePath(Project project) =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "VaultSync",
+            "cache",
+            "scan",
+            $"{project.Id}.json");
 
     public void Dispose()
     {

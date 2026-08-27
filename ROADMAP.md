@@ -696,7 +696,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 - [x] `VS-1823` `P0` Establish large-history and high-file-count performance
   budgets with repeatable benchmarks. _(Existing issue #382.)_
 - [ ] `VS-1821` `P1` Finish backup and metadata orchestration decomposition
-  needed for fault isolation. _(Existing issue #380.)_
+  needed for fault isolation. _(Active: deferred hashing now reuses the focused
+  progress boundary and awaits repository reads; remaining hotspots stay open
+  under issue #380.)_
 - [ ] `VS-1822` `P1` Finish oversized desktop view-model decomposition needed
   for fault isolation. _(Existing issue #381.)_
 - [ ] `VS-1881` `P0` Run the complete Windows, macOS, and Linux release matrix.

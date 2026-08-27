@@ -111,7 +111,8 @@ failure handling without becoming a broad rewrite.
 - [`VS-1881`](../ROADMAP.md#188--chronicle-stabilization): supported-platform
   release matrix (`P0`).
 - [`VS-1821` / #380](https://github.com/ATAC-Helicopter/VaultSync/issues/380):
-  backup and metadata decomposition (`P1`).
+  backup and metadata decomposition (`P1`) — deferred hashing now uses the
+  focused progress boundary and asynchronous repository reads.
 - [`VS-1822` / #381](https://github.com/ATAC-Helicopter/VaultSync/issues/381):
   desktop view-model decomposition (`P1`).
 - [`VS-1883`](../ROADMAP.md#188--chronicle-stabilization): localization and

@@ -751,7 +751,9 @@ public class SnapshotService
         if (string.IsNullOrWhiteSpace(project.RootPath))
             throw new InvalidOperationException("Project.RootPath is not set.");
 
-        var files = _repo.GetFilesForSnapshot(snapshotId)
+        List<FileEntry> files = (await _repo
+            .GetFilesForSnapshotAsync(snapshotId, ct)
+            .ConfigureAwait(false))
             .Where(f => string.IsNullOrWhiteSpace(f.HashSha256))
             .ToList();
 
@@ -762,52 +764,12 @@ public class SnapshotService
         long totalBytes = files.Sum(f => f.Size);
         int hashedCount = 0;
         long hashedBytes = 0;
-        DateTime hashStart = DateTime.UtcNow;
-        DateTime lastReport = hashStart;
-        var reportInterval = TimeSpan.FromMilliseconds(250);
-        object progressLock = new object();
         var updates = new ConcurrentBag<(string RelPath, string HashSha256)>();
-
-        void ReportProgress(string relPath, bool force)
-        {
-            if (progressCallback is null)
-                return;
-
-            DateTime now = DateTime.UtcNow;
-            lock (progressLock)
-            {
-                if (!force && (now - lastReport) < reportInterval)
-                    return;
-
-                lastReport = now;
-                int count = hashedCount;
-                long bytes = hashedBytes;
-                double percent = totalToHash > 0 ? count * 100d / totalToHash : 100d;
-
-                double elapsedSeconds = Math.Max(0.1, (now - hashStart).TotalSeconds);
-                double speedBytesSec = bytes / elapsedSeconds;
-                double speedMbSec = speedBytesSec / (1024d * 1024d);
-
-                string etaText;
-                if (count >= totalToHash)
-                {
-                    etaText = $"Hashing {count}/{totalToHash}";
-                }
-                else if (count > 0 && totalBytes > 0 && speedBytesSec > 0)
-                {
-                    long remainingBytes = Math.Max(0L, totalBytes - bytes);
-                    double remainingSeconds = remainingBytes / speedBytesSec;
-                    var eta = TimeSpan.FromSeconds(remainingSeconds);
-                    etaText = $"Hashing {count}/{totalToHash} - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
-                }
-                else
-                {
-                    etaText = $"Hashing {count}/{totalToHash}";
-                }
-
-                progressCallback(percent, relPath, etaText);
-            }
-        }
+        var progress = new HashProgressReporter(
+            totalToHash,
+            totalBytes,
+            progressCallback,
+            TimeSpan.FromMilliseconds(250));
 
         await Parallel.ForEachAsync(
             files,
@@ -825,9 +787,9 @@ public class SnapshotService
                     string hash = await _hash.Sha256Async(fullPath, token);
                     updates.Add((entry.RelPath, hash));
 
-                    Interlocked.Add(ref hashedBytes, entry.Size);
+                    long currentBytes = Interlocked.Add(ref hashedBytes, entry.Size);
                     int currentCount = Interlocked.Increment(ref hashedCount);
-                    ReportProgress(entry.RelPath, currentCount >= totalToHash);
+                    progress.Report(entry.RelPath, currentCount, currentBytes, currentCount >= totalToHash);
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
