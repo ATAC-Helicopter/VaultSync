@@ -1977,7 +1977,7 @@ public sealed class BackupService(
                 }
                 finally
                 {
-                    linkedCts.Cancel();
+                    await linkedCts.CancelAsync();
                     await monitor;
                 }
 
@@ -2318,7 +2318,7 @@ public sealed class BackupService(
                     if (DateTime.UtcNow - lastProgress > stallTimeout)
                     {
                         Interlocked.Exchange(ref stalled, 1);
-                        cts.Cancel();
+                        await cts.CancelAsync();
                         return;
                     }
                 }
