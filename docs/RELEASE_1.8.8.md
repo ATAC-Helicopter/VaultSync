@@ -119,8 +119,9 @@ failure handling without becoming a broad rewrite.
 - [`VS-1883`](../ROADMAP.md#188--chronicle-stabilization): localization and
   accessibility defects (`P1`).
 - [`BUG-18116` / #569](https://github.com/ATAC-Helicopter/VaultSync/issues/569):
-  unintended horizontal page and dialog scrolling (`P1`) — fixed on the
-  release branch and awaiting integration through #568.
+  unintended horizontal page and dialog scrolling (`P1`) — shared and explicit
+  scroll policies are implemented; runtime qualification remains open after an
+  implicit-control regression.
 - [`BUG-18117` / #570](https://github.com/ATAC-Helicopter/VaultSync/issues/570):
   retention deletion confinement across filesystem links (`P0`) — fixed on the
   release branch and awaiting integration through #568.

@@ -710,9 +710,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   still open.)_
 - [ ] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
   narrow-layout defects.
-- [x] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling
+- [ ] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling
   while preserving purpose-built file, diff, and log panes. _(Issue #569;
-  delivered on the release branch and awaiting integration through #568.)_
+  shared and explicit scroll policies are implemented; runtime qualification is
+  pending after an implicit-control regression.)_
 - [x] `BUG-18117` `P0` Confine retention deletion across filesystem links and
   preserve the indexed restore point when the selected backup root is unsafe or
   cannot be deleted. _(Issue #570; delivered on the release branch and awaiting
