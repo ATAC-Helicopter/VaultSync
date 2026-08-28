@@ -107,7 +107,8 @@ failure handling without becoming a broad rewrite.
   recovery fault matrix (`P0`) — compression interruption is qualified for
   plain and encrypted archives, encryption now observes cancellation between
   copied chunks, restart cleanup fails closed for invalid resume checkpoints,
-  and the remaining durable-write boundaries are in progress.
+  verification cancellation propagates, and the remaining durable-write
+  boundaries are in progress.
 - [`VS-1881`](../ROADMAP.md#188--chronicle-stabilization): supported-platform
   release matrix (`P0`).
 - [`VS-1821` / #380](https://github.com/ATAC-Helicopter/VaultSync/issues/380):
@@ -183,6 +184,9 @@ failure handling without becoming a broad rewrite.
   fixed on the release branch and awaiting integration through #568.
 - [`BUG-18131` / #592](https://github.com/ATAC-Helicopter/VaultSync/issues/592):
   snapshot traversal across linked source paths (`P0`) — fixed on the release
+  branch and awaiting integration through #568.
+- [`BUG-18132` / #593](https://github.com/ATAC-Helicopter/VaultSync/issues/593):
+  swallowed destination-verification cancellation (`P0`) — fixed on the release
   branch and awaiting integration through #568.
 
 ## Maintainer links

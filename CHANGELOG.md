@@ -26,6 +26,7 @@
 - [BUG-18129] Published scan-cache state only after snapshot persistence succeeds.
 - [BUG-18130] Deduplicated and bounded release-branch CI and analysis runs.
 - [BUG-18131] Prevented snapshot scans from following linked source paths.
+- [BUG-18132] Propagated verification cancellation instead of reporting a mismatch.
 
 ## [1.8.7] - 21.08.2026
 ### Added

@@ -75,6 +75,10 @@ public class VerifyService(SqliteRepository repo, HashService hash)
                 ? null
                 : new VerifyMismatch(file.RelPath, "hash-mismatch", Expected: file.HashSha256, Actual: actual);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return new VerifyMismatch(file.RelPath, "error: " + ex.Message, Expected: file.HashSha256, Actual: null);
