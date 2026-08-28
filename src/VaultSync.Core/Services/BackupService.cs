@@ -2540,7 +2540,7 @@ public sealed class BackupService(
         }
         finally
         {
-            cts.Cancel();
+            await cts.CancelAsync().ConfigureAwait(false);
             await Task.WhenAll(monitor, heartbeat);
         }
 
