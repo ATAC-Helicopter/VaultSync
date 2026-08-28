@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-08-27T14:07:40Z`
+Captured at: `2026-08-28T15:18:00Z`
 
 - Releases: **51**
 - Assets: **471**
-- Total asset downloads: **2664**
-- Change since previous snapshot: **+15**
+- Total asset downloads: **2673**
+- Change since previous snapshot: **+9**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.7** with **96** downloads (+15)
+- Latest stable: **VaultSync 1.8.7** with **105** downloads (+9)
 - Latest prerelease: **VaultSync 1.8.5 Beta 1** with **6** downloads (0)
 
 ## Top assets
@@ -24,7 +24,7 @@ Captured at: `2026-08-27T14:07:40Z`
 | vaultsync-patch-windows.json | `v1.8.4` | 78 | 0 |
 | vaultsync-patch-windows.json | `v1.4.1` | 67 | 0 |
 | vaultsync-patch-windows.json | `v1.3.5` | 67 | 0 |
-| vaultsync-patch-windows.json | `v1.8.7` | 55 | +8 |
+| vaultsync-patch-windows.json | `v1.8.7` | 60 | +5 |
 | vaultsync-patch-windows.json | `v1.8.0` | 55 | 0 |
 
 ## By release
@@ -33,19 +33,19 @@ Captured at: `2026-08-27T14:07:40Z`
 
 - Tag: `v1.8.7`
 - Published: `2026-08-21T11:55:38Z`
-- Total downloads: **96**
-- Delta: **+15**
+- Total downloads: **105**
+- Delta: **+9**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| vaultsync-patch-windows.json | 55 | +8 | 57975 |
-| vaultsync-patch-linux-x64.json | 23 | +1 | 54575 |
-| VaultSync-Setup-1.8.7.exe | 8 | +2 | 62391247 |
+| vaultsync-patch-windows.json | 60 | +5 | 57975 |
+| vaultsync-patch-linux-x64.json | 23 | 0 | 54575 |
+| VaultSync-Setup-1.8.7.exe | 12 | +4 | 62391247 |
 | VaultSync-1.8.7-macos-intel.dmg | 3 | 0 | 57214944 |
-| VaultSync-1.8.7-linux-x64.deb | 2 | +1 | 40920520 |
-| VaultSync-1.8.7-linux-x64.AppImage | 1 | +1 | 51832000 |
-| VaultSync-1.8.7-linux-x64.tar.gz | 1 | +1 | 51531451 |
-| VaultSync-1.8.7-macos-apple-silicon.dmg | 1 | +1 | 54309998 |
+| VaultSync-1.8.7-linux-x64.deb | 2 | 0 | 40920520 |
+| VaultSync-1.8.7-linux-x64.AppImage | 1 | 0 | 51832000 |
+| VaultSync-1.8.7-linux-x64.tar.gz | 1 | 0 | 51531451 |
+| VaultSync-1.8.7-macos-apple-silicon.dmg | 1 | 0 | 54309998 |
 | vaultsync-patch-macos-apple-silicon.json | 1 | 0 | 55977 |
 | vaultsync-patch-macos-apple-silicon.zip | 1 | 0 | 48028257 |
 | VaultSync-1.8.7-linux-arm64.deb | 0 | 0 | 38448744 |
