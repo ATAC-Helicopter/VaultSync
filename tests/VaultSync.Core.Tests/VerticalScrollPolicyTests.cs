@@ -13,6 +13,33 @@ namespace VaultSync.Core.Tests;
 public sealed class VerticalScrollPolicyTests
 {
     [Fact]
+    public void ImplicitScrollers_DefaultToVerticalOnly()
+    {
+        string appPath = FindRepositoryFile(
+            "src",
+            "VaultSync.UI",
+            "App.axaml");
+        XNamespace avalonia = "https://github.com/avaloniaui";
+        XDocument document = XDocument.Load(appPath);
+
+        XElement? defaultScrollViewerStyle = document
+            .Descendants(avalonia + "Style")
+            .SingleOrDefault(element =>
+                (string?)element.Attribute("Selector") == "ScrollViewer");
+
+        bool disablesHorizontalScrolling = defaultScrollViewerStyle?
+            .Elements(avalonia + "Setter")
+            .Any(element =>
+                (string?)element.Attribute("Property") == "HorizontalScrollBarVisibility" &&
+                (string?)element.Attribute("Value") == "Disabled") == true;
+
+        Assert.True(
+            disablesHorizontalScrolling,
+            "The shared ScrollViewer style must keep implicit control scrollers " +
+            "vertical-only. Purpose-built horizontal panes opt in locally.");
+    }
+
+    [Fact]
     public void VerticalContentScrollers_DeclareTheirHorizontalBehavior()
     {
         string viewsDirectory = FindRepositoryDirectory(
@@ -70,5 +97,23 @@ public sealed class VerticalScrollPolicyTests
 
         throw new DirectoryNotFoundException(
             $"Could not locate repository directory: {Path.Combine(relativeParts)}");
+    }
+
+    private static string FindRepositoryFile(params string[] relativeParts)
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+
+        while (directory is not null)
+        {
+            string candidate = Path.Combine(
+                [directory.FullName, .. relativeParts]);
+            if (File.Exists(candidate))
+                return candidate;
+
+            directory = directory.Parent;
+        }
+
+        throw new FileNotFoundException(
+            $"Could not locate repository file: {Path.Combine(relativeParts)}");
     }
 }
