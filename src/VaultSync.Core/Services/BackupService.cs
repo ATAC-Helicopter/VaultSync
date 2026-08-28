@@ -1331,7 +1331,8 @@ public sealed class BackupService(
             request.TotalBytes,
             request.TotalFiles,
             request.ProgressCallback);
-        return new NativeBackupProgressSession(decorator.Report);
+        return new NativeBackupProgressSession(
+            (percent, currentFile, _) => decorator.Report(percent, currentFile));
     }
 
     private static bool IsNetworkPath(string path)
@@ -3455,7 +3456,7 @@ public sealed class BackupService(
             _progressCallback = progressCallback;
         }
 
-        public void Report(double percent, string currentFile, string _)
+        public void Report(double percent, string currentFile)
         {
             DateTime now = DateTime.UtcNow;
             if (percent < 100 && (now - _lastUiUpdate) < MinUiInterval)
