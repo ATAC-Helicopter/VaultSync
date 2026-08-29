@@ -795,6 +795,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   verification instead of converting it into a completed mismatch.
   _(Issue #593; delivered on the release branch and awaiting integration through
   #568.)_
+- [ ] `BUG-18133` `P0` Make restore and sandbox-apply cancellation transactional
+  so overwritten files roll back and partial target state is not published.
+  _(Issue #594; implemented with focused tests; full qualification and integration
+  through #568 remain open.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

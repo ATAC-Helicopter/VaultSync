@@ -19,6 +19,7 @@ using VaultSync.Core.Models;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Notifications;
+using VaultSync.UI.Services;
 using VaultSync.UI.ViewModels.Notifications;
 using VaultSync.UI.Views;
 
@@ -2093,6 +2094,12 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             string applyCardId = $"sandbox-apply-{project.Id}";
+            using var applyCancellation = new CancellationTokenSource();
+            if (!_restoreCancellations.TryAdd(applyCardId, applyCancellation))
+            {
+                RuntimeLog.WriteVerbose($"[Restore] Sandbox apply already active for projectId={project.Id}.");
+                return;
+            }
             BackupsViewModel.IsBusy = true;
             BackupsViewModel.BusyMessage = AppViewModel.L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...");
             BackupsViewModel.UpdateActiveBackup(
@@ -2101,28 +2108,33 @@ namespace VaultSync.UI.ViewModels
                 0,
                 AppViewModel.L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore..."),
                 string.Empty,
-                allowCancel: false);
+                allowCancel: true);
 
             bool applySucceeded = false;
             string? cleanupError = null;
             try
             {
-                await Task.Run(() =>
-                {
-                    CopyDirectoryWithProgress(sandboxPath, targetPath, null, 0, 100, update =>
-                    {
-                        string label = string.IsNullOrWhiteSpace(update.CurrentFile)
-                            ? AppViewModel.L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...")
-                            : update.CurrentFile;
-                        BackupsViewModel.UpdateActiveBackup(
-                            applyCardId,
-                            projectName,
-                            update.Percent,
-                            label,
-                            string.Empty,
-                            allowCancel: false);
-                    });
-                }, CancellationToken.None);
+                await Task.Run(
+                    () => RestoreExecutionService.RestoreAsync(
+                        sandboxPath,
+                        targetPath,
+                        encryptionPassword: null,
+                        selectedTopLevelTargets: null,
+                        update =>
+                        {
+                            string label = string.IsNullOrWhiteSpace(update.CurrentFile)
+                                ? AppViewModel.L("Backups.Restore.Sandbox.ApplyingBusy", "Applying sandbox restore...")
+                                : update.CurrentFile;
+                            BackupsViewModel.UpdateActiveBackup(
+                                applyCardId,
+                                projectName,
+                                update.Percent,
+                                label,
+                                string.Empty,
+                                allowCancel: true);
+                        },
+                        applyCancellation.Token),
+                    applyCancellation.Token);
 
                 _repo.UpdateProjectNeedsRestore(project.Id, false);
                 applySucceeded = true;
@@ -2135,6 +2147,10 @@ namespace VaultSync.UI.ViewModels
                     }
                 }
             }
+            catch (OperationCanceledException) when (applyCancellation.IsCancellationRequested)
+            {
+                RuntimeLog.WriteVerbose($"[Restore] Sandbox apply cancelled for '{projectName}'.");
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Restore] Failed to apply sandbox restore for '{projectName}': {ex.Message}");
@@ -2144,6 +2160,7 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
+                _restoreCancellations.TryRemove(applyCardId, out _);
                 BackupsViewModel.RemoveActiveBackup(applyCardId);
                 BackupsViewModel.IsBusy = false;
                 BackupsViewModel.BusyMessage = string.Empty;
@@ -2230,7 +2247,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     string relative = SafeZipExtractor.GetSafeEntryRelativePath(entry.FullName);
                     sourceRelative.Add(relative);
-                    string topLevel = GetTopLevelSegment(relative);
+                    string topLevel = RestoreExecutionService.GetTopLevelSegment(relative);
                     if (!string.IsNullOrWhiteSpace(topLevel))
                         topLevelTargets.Add(topLevel);
                     totalFiles++;
@@ -2264,7 +2281,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     string relative = Path.GetRelativePath(preparation.BackupFullPath, sourcePath);
                     sourceRelative.Add(relative);
-                    string topLevel = GetTopLevelSegment(relative);
+                    string topLevel = RestoreExecutionService.GetTopLevelSegment(relative);
                     if (!string.IsNullOrWhiteSpace(topLevel))
                         topLevelTargets.Add(topLevel);
                     totalFiles++;
@@ -2548,13 +2565,21 @@ namespace VaultSync.UI.ViewModels
                 AppViewModel.L("Backups.Restore.RestoringProject", "Restoring {0}..."),
                 preparation.ProjectName);
             string restoreCardId = $"restore-{backupId}";
+            using var restoreCancellation = new CancellationTokenSource();
+            if (!_restoreCancellations.TryAdd(restoreCardId, restoreCancellation))
+            {
+                RuntimeLog.WriteVerbose($"[Restore] Restore already active for backupId={backupId}.");
+                BackupsViewModel.IsBusy = false;
+                BackupsViewModel.BusyMessage = string.Empty;
+                return;
+            }
             BackupsViewModel.UpdateActiveBackup(
                 restoreCardId,
                 preparation.ProjectName,
                 0,
                 AppViewModel.L("Backups.Status.Restoring", "Restoring backup..."),
                 string.Empty,
-                allowCancel: false);
+                allowCancel: true);
 
             bool restoreSucceeded = false;
             try
@@ -2599,31 +2624,35 @@ namespace VaultSync.UI.ViewModels
                     return $"{speedLabel} - {detailLabel}";
                 }
 
-                void RunRestore(string? encryptionPassword) =>
-                    RestoreDirectory(backupFullPath, projectRoot, encryptionPassword, selectedTopLevelTargets, update =>
-                    {
-                        string label = string.IsNullOrWhiteSpace(update.CurrentFile)
-                            ? AppViewModel.L("Backups.Status.Restoring", "Restoring backup...")
-                            : update.CurrentFile;
-                        string etaLabel = BuildRestoreEtaLabel(update);
-                        BackupsViewModel.UpdateActiveBackup(
-                            restoreCardId,
-                            preparation.ProjectName,
-                            update.Percent,
-                            label,
-                            etaLabel,
-                            allowCancel: false);
-                    });
+                Task RunRestoreAsync(string? encryptionPassword) => Task.Run(
+                    () => RestoreExecutionService.RestoreAsync(
+                        backupFullPath,
+                        projectRoot,
+                        encryptionPassword,
+                        selectedTopLevelTargets,
+                        update =>
+                        {
+                            string label = string.IsNullOrWhiteSpace(update.CurrentFile)
+                                ? AppViewModel.L("Backups.Status.Restoring", "Restoring backup...")
+                                : update.CurrentFile;
+                            string etaLabel = BuildRestoreEtaLabel(update);
+                            BackupsViewModel.UpdateActiveBackup(
+                                restoreCardId,
+                                preparation.ProjectName,
+                                update.Percent,
+                                label,
+                                etaLabel,
+                                allowCancel: true);
+                        },
+                        restoreCancellation.Token),
+                    restoreCancellation.Token);
 
                 if (!preparation.IsEncrypted)
                 {
-                    await Task.Run(() =>
-                    {
-                        RuntimeLog.WriteVerbose($"[Restore] Starting restore for '{preparation.ProjectName}'.");
-                        RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
-                        RunRestore(null);
-                        RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
-                    }, CancellationToken.None);
+                    RuntimeLog.WriteVerbose($"[Restore] Starting restore for '{preparation.ProjectName}'.");
+                    RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
+                    await RunRestoreAsync(null);
+                    RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
                     restoreSucceeded = true;
                 }
                 else
@@ -2656,13 +2685,10 @@ namespace VaultSync.UI.ViewModels
 
                         try
                         {
-                            await Task.Run(() =>
-                            {
-                                RuntimeLog.WriteVerbose($"[Restore] Starting restore for '{preparation.ProjectName}'.");
-                                RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
-                                RunRestore(restorePassword);
-                                RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
-                            }, CancellationToken.None);
+                            RuntimeLog.WriteVerbose($"[Restore] Starting restore for '{preparation.ProjectName}'.");
+                            RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
+                            await RunRestoreAsync(restorePassword);
+                            RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
                             restoreSucceeded = true;
                             break;
                         }
@@ -2672,7 +2698,11 @@ namespace VaultSync.UI.ViewModels
                         }
                     }
                 }
-
+            }
+            catch (OperationCanceledException) when (restoreCancellation.IsCancellationRequested)
+            {
+                RuntimeLog.WriteVerbose($"[Restore] Restore cancelled for '{preparation.ProjectName}'.");
+                BackupsViewModel.BackupCurrentFile = AppViewModel.L("Backups.Status.Cancelled", "Cancelled");
             }
             catch (Exception ex)
             {
@@ -2693,6 +2723,7 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
+                _restoreCancellations.TryRemove(restoreCardId, out _);
                 if (restoreSucceeded)
                 {
                     Project? restoredProject = _repo.GetProjectByName(preparation.ProjectName);
@@ -2779,253 +2810,6 @@ namespace VaultSync.UI.ViewModels
             }
 
             return false;
-        }
-
-        private readonly struct RestoreProgressUpdate
-        {
-            public RestoreProgressUpdate(double percent, string currentFile, long processedBytes, long totalBytes)
-            {
-                Percent = percent;
-                CurrentFile = currentFile ?? string.Empty;
-                ProcessedBytes = processedBytes;
-                TotalBytes = totalBytes;
-            }
-
-            public double Percent { get; }
-            public string CurrentFile { get; }
-            public long ProcessedBytes { get; }
-            public long TotalBytes { get; }
-        }
-
-        private static void RestoreDirectory(
-            string sourceDir,
-            string targetDir,
-            string? encryptionPassword,
-            IReadOnlyList<string>? selectedTopLevelTargets,
-            Action<RestoreProgressUpdate>? progress)
-        {
-            if (string.IsNullOrWhiteSpace(sourceDir))
-                throw new ArgumentException("Source directory is required.", nameof(sourceDir));
-
-            if (string.IsNullOrWhiteSpace(targetDir))
-                throw new ArgumentException("Target directory is required.", nameof(targetDir));
-
-            if (!Directory.Exists(sourceDir))
-                throw new DirectoryNotFoundException($"Source directory '{sourceDir}' does not exist.");
-
-            // Ensure target root exists
-            Directory.CreateDirectory(targetDir);
-
-            string archivePath = Path.Combine(sourceDir, BackupArchiveCryptoService.PlainArchiveFileName);
-            if (File.Exists(archivePath))
-            {
-                ExtractArchiveWithProgress(archivePath, targetDir, selectedTopLevelTargets, progress);
-                return;
-            }
-
-            string encryptedArchivePath = Path.Combine(sourceDir, BackupArchiveCryptoService.EncryptedArchiveFileName);
-            if (File.Exists(encryptedArchivePath))
-            {
-                if (string.IsNullOrWhiteSpace(encryptionPassword))
-                {
-                    throw new InvalidOperationException(
-                        "A password is required to restore encrypted backups.");
-                }
-
-                RestoreEncryptedArchiveWithProgress(sourceDir, targetDir, encryptionPassword, selectedTopLevelTargets, progress);
-                return;
-            }
-
-            HashSet<string>? selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
-
-            // Create all directories
-            foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
-            {
-                string relative = Path.GetRelativePath(sourceDir, dirPath);
-                if (!ShouldIncludeRelativePath(relative, selectedTopLevels))
-                    continue;
-                string target   = Path.Combine(targetDir, relative);
-                Directory.CreateDirectory(target);
-            }
-
-            // Copy all files, overwriting existing ones but not deleting extras.
-            CopyDirectoryWithProgress(sourceDir, targetDir, selectedTopLevelTargets, 0, 100, progress);
-        }
-
-        private static void ExtractArchiveWithProgress(
-            string archivePath,
-            string targetDir,
-            IReadOnlyList<string>? selectedTopLevelTargets,
-            Action<RestoreProgressUpdate>? progress)
-        {
-            using ZipArchive archive = ZipFile.OpenRead(archivePath);
-            HashSet<string>? selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
-            ZipArchiveEntry[] entries = [.. archive.Entries.Where(entry => ShouldIncludeRelativePath(entry.FullName, selectedTopLevels))];
-            int totalEntries = entries.Length;
-            int processed = 0;
-            long totalBytes = entries.Where(e => !string.IsNullOrEmpty(e.Name)).Sum(e => Math.Max(0, e.Length));
-            long processedBytes = 0;
-
-            foreach (ZipArchiveEntry? entry in entries)
-            {
-                string destinationPath = SafeZipExtractor.GetSafeEntryPath(targetDir, entry.FullName);
-                if (string.IsNullOrEmpty(entry.Name))
-                {
-                    Directory.CreateDirectory(destinationPath);
-                }
-                else
-                {
-                    string? parent = Path.GetDirectoryName(destinationPath);
-                    if (!string.IsNullOrEmpty(parent))
-                        Directory.CreateDirectory(parent);
-
-                    entry.ExtractToFile(destinationPath, overwrite: true);
-                }
-
-                processed++;
-                if (!string.IsNullOrEmpty(entry.Name))
-                    processedBytes += Math.Max(0, entry.Length);
-
-                progress?.Invoke(new RestoreProgressUpdate(
-                    totalEntries == 0 ? 100 : processed * 100d / totalEntries,
-                    entry.FullName,
-                    processedBytes,
-                    totalBytes));
-            }
-        }
-
-        private static void RestoreEncryptedArchiveWithProgress(
-            string sourceDir,
-            string targetDir,
-            string password,
-            IReadOnlyList<string>? selectedTopLevelTargets,
-            Action<RestoreProgressUpdate>? progress)
-        {
-            string stagingRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-restore-{Guid.NewGuid():N}");
-            string stagingExtracted = Path.Combine(stagingRoot, "content");
-            string stagingArchive = Path.Combine(stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName);
-
-            try
-            {
-                Directory.CreateDirectory(stagingExtracted);
-                progress?.Invoke(new RestoreProgressUpdate(5, "Decrypting backup...", 0, 0));
-
-                BackupArchiveCryptoService.DecryptArchiveToPlainZip(sourceDir, password, stagingArchive);
-                progress?.Invoke(new RestoreProgressUpdate(30, "Decrypting backup...", 0, 0));
-
-                ExtractArchiveWithProgress(stagingArchive, stagingExtracted, selectedTopLevelTargets, update =>
-                {
-                    double mapped = 30 + (update.Percent * 0.5);
-                    progress?.Invoke(new RestoreProgressUpdate(
-                        Math.Clamp(mapped, 30, 80),
-                        update.CurrentFile,
-                        update.ProcessedBytes,
-                        update.TotalBytes));
-                });
-
-                progress?.Invoke(new RestoreProgressUpdate(82, "Restoring backup...", 0, 0));
-                CopyDirectoryWithProgress(stagingExtracted, targetDir, selectedTopLevelTargets, 82, 100, progress);
-            }
-            finally
-            {
-                if (Directory.Exists(stagingRoot))
-                {
-                    try
-                    {
-                        DeleteDirectoryRobust(stagingRoot, out _);
-                    }
-                    catch
-                    {
-                        // best-effort cleanup
-                    }
-                }
-            }
-        }
-
-        private static void CopyDirectoryWithProgress(
-            string sourceDir,
-            string targetDir,
-            IReadOnlyList<string>? selectedTopLevelTargets,
-            double startPercent,
-            double endPercent,
-            Action<RestoreProgressUpdate>? progress)
-        {
-            HashSet<string>? selectedTopLevels = BuildSelectedTopLevelSet(selectedTopLevelTargets);
-            string[] files = [.. Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories).Where(filePath => ShouldIncludeRelativePath(Path.GetRelativePath(sourceDir, filePath), selectedTopLevels))];
-            int totalFiles = files.Length;
-            long totalBytes = files
-                .Select(filePath => new FileInfo(filePath))
-                .Sum(fileInfo => Math.Max(0, fileInfo.Length));
-            long processedBytes = 0;
-            int processed = 0;
-            foreach (string? filePath in files)
-            {
-                long fileLength = Math.Max(0, new FileInfo(filePath).Length);
-                string relative = Path.GetRelativePath(sourceDir, filePath);
-                if (!TryCombinePathUnderRoot(targetDir, relative, out string target, out _))
-                    continue;
-
-                string? parentDir = Path.GetDirectoryName(target);
-                if (!string.IsNullOrEmpty(parentDir))
-                    Directory.CreateDirectory(parentDir);
-
-                SafeZipExtractor.EnsureNoLinkedPathComponents(targetDir, target);
-                File.Copy(filePath, target, overwrite: true);
-                processedBytes += fileLength;
-                processed++;
-                if (progress is not null)
-                {
-                    double ratio = totalFiles == 0 ? 1d : processed / (double)totalFiles;
-                    double value = startPercent + ((endPercent - startPercent) * ratio);
-                    progress(new RestoreProgressUpdate(value, relative, processedBytes, totalBytes));
-                }
-            }
-
-            if (totalFiles == 0)
-                progress?.Invoke(new RestoreProgressUpdate(endPercent, string.Empty, 0, 0));
-        }
-
-        private static HashSet<string>? BuildSelectedTopLevelSet(IReadOnlyList<string>? selectedTopLevelTargets)
-        {
-            if (selectedTopLevelTargets is null || selectedTopLevelTargets.Count == 0)
-                return null;
-
-            var result = new HashSet<string>(StringComparer.Ordinal);
-            foreach (string value in selectedTopLevelTargets)
-            {
-                string? normalized = value?.Trim();
-                if (!string.IsNullOrWhiteSpace(normalized))
-                    result.Add(normalized);
-            }
-
-            return result.Count == 0 ? null : result;
-        }
-
-        private static bool ShouldIncludeRelativePath(string? relativePath, HashSet<string>? selectedTopLevels)
-        {
-            if (selectedTopLevels is null || selectedTopLevels.Count == 0)
-                return true;
-
-            string topLevel = GetTopLevelSegment(relativePath ?? string.Empty);
-            if (string.IsNullOrWhiteSpace(topLevel))
-                return false;
-
-            return selectedTopLevels.Contains(topLevel);
-        }
-
-        private static string GetTopLevelSegment(string relativePath)
-        {
-            if (string.IsNullOrWhiteSpace(relativePath))
-                return string.Empty;
-
-            string normalized = relativePath.Replace('\\', '/').Trim('/');
-            if (normalized.Length == 0)
-                return string.Empty;
-
-            int slashIndex = normalized.IndexOf('/');
-            return slashIndex >= 0
-                ? normalized.Substring(0, slashIndex)
-                : normalized;
         }
 
     }

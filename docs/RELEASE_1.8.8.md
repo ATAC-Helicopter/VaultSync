@@ -189,6 +189,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18132` / #593](https://github.com/ATAC-Helicopter/VaultSync/issues/593):
   swallowed destination-verification cancellation (`P0`) — fixed on the release
   branch and awaiting integration through #568.
+- [`BUG-18133` / #594](https://github.com/ATAC-Helicopter/VaultSync/issues/594):
+  interrupted restore and sandbox-apply operations now roll back live target
+  changes; full qualification and integration remain open.
 
 ## Maintainer links
 

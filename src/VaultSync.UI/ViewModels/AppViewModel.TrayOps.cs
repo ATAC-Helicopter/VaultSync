@@ -23,6 +23,21 @@ namespace VaultSync.UI.ViewModels
             if (item is null)
                 return;
 
+            if (_restoreCancellations.TryGetValue(item.ProjectId, out CancellationTokenSource? restoreCancellation))
+            {
+                restoreCancellation.Cancel();
+                BackupsViewModel.UpdateActiveBackup(
+                    item.ProjectId,
+                    item.ProjectName,
+                    item.Progress,
+                    AppViewModel.L("Backups.Status.Cancelling", "Cancelling..."),
+                    string.Empty,
+                    allowCancel: false,
+                    activityPhase: ProtectionActivityPhase.Cancelling);
+                RuntimeLog.WriteVerbose($"[Restore] Cancellation requested for '{item.ProjectName}'.");
+                return;
+            }
+
             if (!int.TryParse(item.ProjectId, out int projectId))
             {
                 return;
