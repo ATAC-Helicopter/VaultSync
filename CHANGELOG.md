@@ -28,7 +28,7 @@
 - [BUG-18131] Prevented snapshot scans from following linked source paths.
 - [BUG-18132] Propagated verification cancellation instead of reporting a mismatch.
 - [BUG-18133] Rolled back interrupted restores instead of leaving partial target changes.
-- [BUG-18134] Stopped cancelled metadata writes and rolled back interrupted exports.
+- [BUG-18134] Rolled back interrupted metadata imports and exports.
 - [BUG-18135] Preserved completed backups when cancellation arrives after commit.
 - [BUG-18136] Rejected scans cancelled while processing the final entry.
 - [BUG-18137] Rejected vanished backup data before publishing metadata.

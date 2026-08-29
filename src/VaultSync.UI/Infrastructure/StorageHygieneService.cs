@@ -35,6 +35,7 @@ internal static class StorageHygieneService
     [
         "vaultsync-rotate-*",
         "vaultsync-restore-*",
+        "vaultsync-metadata-import-*",
         "vaultsync_archive_*"
     ];
 

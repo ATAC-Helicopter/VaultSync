@@ -801,9 +801,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   _(Issue #594; implemented with focused tests; full qualification and integration
   through #568 remain open.)_
 - [ ] `BUG-18134` `P0` Observe metadata cancellation before local repository or
-  portable-store writes begin. _(Issue #598; pre-write cancellation and atomic
-  portable-export rollback are implemented with focused tests; import atomicity
-  and integration remain open.)_
+  portable-store writes begin. _(Issue #598; pre-write cancellation plus atomic
+  portable-export and recoverable schema/legacy import rollback are implemented;
+  hosted qualification and integration remain open.)_
 - [ ] `BUG-18135` `P0` Keep the backup success commit internally consistent when
   cancellation arrives from the final progress notification. _(Issue #599;
   implemented with a focused regression test and awaiting integration through

@@ -51,6 +51,84 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public async Task ImportFromStoreAsync_CancelledDuringApply_RestoresRepositoryAndConfig()
+    {
+        using var configScope = new TestAppConfigScope();
+        AppConfigStore.Save(new AppConfig());
+        string metaRoot = CreateTempDir();
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "cancelled-import-machine");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "cancelled-apply-project",
+            Name = "Cancelled Apply",
+            Preset = "generic",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow,
+            SettingsJson = "{\"autoBackupEnabled\":false}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        SqliteRepository repository = CreateRepository(Path.Combine(CreateTempDir(), "vaultsync.db"));
+        int existingId = TestRepository.AddProject(
+            repository,
+            "Existing Local Project",
+            CreateTempDir(),
+            "generic",
+            DateTime.UtcNow.AddDays(-1));
+        using var cancellation = new CancellationTokenSource();
+        var service = new MetadataSyncService(
+            repository,
+            configStore: null,
+            projectColorResolver: null,
+            projectColorApplier: null,
+            installationIdentityProvider: null,
+            repositoryLeaseService: null,
+            operationCheckpoint: checkpoint =>
+            {
+                if (checkpoint == "metadata-import-project")
+                    cancellation.Cancel();
+            });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.ImportFromStoreAsync(metaRoot, ct: cancellation.Token));
+
+        Project existing = Assert.Single(repository.GetAllProjects());
+        Assert.Equal(existingId, existing.Id);
+        Assert.Equal("Existing Local Project", existing.Name);
+        Assert.Null(repository.GetProjectByExternalId("cancelled-apply-project"));
+        Assert.Empty(AppConfigStore.Load().Backups.AutoBackupDisabledProjects);
+    }
+
+    [Fact]
+    public async Task LegacyImportAsync_CancelledDuringApply_RestoresRepository()
+    {
+        string metaRoot = CreateTempDir();
+        string backupFolder = Path.Combine(metaRoot, "Legacy Cancelled", "2026-08-29_10-00-00");
+        Directory.CreateDirectory(backupFolder);
+        File.WriteAllText(Path.Combine(backupFolder, "content.txt"), "content");
+        SqliteRepository repository = CreateRepository(Path.Combine(CreateTempDir(), "vaultsync.db"));
+        using var cancellation = new CancellationTokenSource();
+        var service = new MetadataSyncService(
+            repository,
+            configStore: null,
+            projectColorResolver: null,
+            projectColorApplier: null,
+            installationIdentityProvider: null,
+            repositoryLeaseService: null,
+            operationCheckpoint: checkpoint =>
+            {
+                if (checkpoint == "metadata-import-legacy-backup")
+                    cancellation.Cancel();
+            });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.ImportFromStoreAsync(metaRoot, ct: cancellation.Token));
+
+        Assert.Empty(repository.GetAllProjects());
+        Assert.Empty(repository.GetAllSnapshots());
+    }
+
+    [Fact]
     public async Task ExportProjectToStoreAsync_PreCancelled_DoesNotCreateMetadataStore()
     {
         string metaRoot = CreateTempDir();

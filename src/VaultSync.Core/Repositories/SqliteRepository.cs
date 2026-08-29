@@ -22,6 +22,43 @@ namespace VaultSync.Core.Repositories
         private static readonly ConcurrentDictionary<string, byte> JournalModeConfigured = new(StringComparer.OrdinalIgnoreCase);
         private readonly string _dbPath = dbPath;
 
+        internal void CreateRecoverySnapshot(string snapshotPath)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(snapshotPath);
+            string? directory = Path.GetDirectoryName(snapshotPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+            if (File.Exists(snapshotPath))
+                File.Delete(snapshotPath);
+
+            using SqliteConnection source = Open();
+            using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = snapshotPath,
+                Mode = SqliteOpenMode.ReadWriteCreate,
+                Pooling = false
+            }.ConnectionString);
+            destination.Open();
+            source.BackupDatabase(destination);
+        }
+
+        internal void RestoreRecoverySnapshot(string snapshotPath)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(snapshotPath);
+            if (!File.Exists(snapshotPath))
+                throw new FileNotFoundException("Repository recovery snapshot is missing.", snapshotPath);
+
+            using var source = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = snapshotPath,
+                Mode = SqliteOpenMode.ReadOnly,
+                Pooling = false
+            }.ConnectionString);
+            source.Open();
+            using SqliteConnection destination = Open();
+            source.BackupDatabase(destination);
+        }
+
         private SqliteConnection Open()
         {
             string? dir = Path.GetDirectoryName(_dbPath);

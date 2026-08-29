@@ -193,8 +193,9 @@ failure handling without becoming a broad rewrite.
   interrupted restore and sandbox-apply operations now roll back live target
   changes; full qualification and integration remain open.
 - [`BUG-18134` / #598](https://github.com/ATAC-Helicopter/VaultSync/issues/598):
-  cancelled metadata operations now stop before local writes, and interrupted
-  portable exports roll back; import atomicity and integration remain open.
+  cancelled metadata operations stop before local writes, portable exports use
+  transaction rollback, and interrupted schema/legacy imports restore the prior
+  SQLite repository and configuration state.
 - [`BUG-18135` / #599](https://github.com/ATAC-Helicopter/VaultSync/issues/599):
   cancellation after the durable backup commit no longer deletes completed data
   while returning success; integration remains open.
