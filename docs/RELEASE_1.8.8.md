@@ -201,6 +201,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18136` / #600](https://github.com/ATAC-Helicopter/VaultSync/issues/600):
   cancellation during the final scan entry can no longer publish a partial scan;
   plain and encrypted upload cancellation are also covered by lifecycle tests.
+- [`BUG-18137` / #601](https://github.com/ATAC-Helicopter/VaultSync/issues/601):
+  backup data is revalidated immediately before metadata publication so a
+  vanished destination artifact cannot create a dangling success row.
 
 ## Maintainer links
 

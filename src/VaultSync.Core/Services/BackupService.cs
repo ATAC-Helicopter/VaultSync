@@ -1138,6 +1138,18 @@ public sealed class BackupService(
             return new BackupRunResult(0, false, true);
         }
 
+        try
+        {
+            EnsureBackupDataReadyForCommit(backupFolderUsed, useArchiveMode, backupIsEncrypted);
+        }
+        catch
+        {
+            DeletePartialBackup(backupFolderUsed);
+            if (!string.Equals(backupFolderUsed, backupFolder, StringComparison.OrdinalIgnoreCase))
+                DeletePartialBackup(backupFolder);
+            throw;
+        }
+
         // Store relative path so if backupRoot moves, paths are still valid.
         string relativePath = Path.GetRelativePath(backupRootUsed, backupFolderUsed);
         string backupType = isAuto ? "auto" : "manual";
@@ -1209,6 +1221,37 @@ public sealed class BackupService(
         // cancellation requested by the final progress notification must not
         // invalidate or delete the already committed backup.
         return new BackupRunResult(backupId, false, false);
+    }
+
+    private static void EnsureBackupDataReadyForCommit(
+        string backupFolder,
+        bool useArchiveMode,
+        bool isEncrypted)
+    {
+        if (!Directory.Exists(backupFolder))
+        {
+            throw new IOException(
+                $"Backup destination disappeared before metadata could be committed: '{backupFolder}'.");
+        }
+
+        if (!useArchiveMode)
+            return;
+
+        string artifactName = isEncrypted
+            ? BackupArchiveCryptoService.EncryptedArchiveFileName
+            : BackupArchiveCryptoService.PlainArchiveFileName;
+        string artifactPath = Path.Combine(backupFolder, artifactName);
+        if (!File.Exists(artifactPath) || new FileInfo(artifactPath).Length <= 0)
+        {
+            throw new IOException(
+                $"Backup archive disappeared or is empty before metadata could be committed: '{artifactPath}'.");
+        }
+
+        if (isEncrypted && !File.Exists(Path.Combine(backupFolder, BackupArchiveCryptoService.MetadataFileName)))
+        {
+            throw new IOException(
+                $"Encrypted backup metadata disappeared before the backup could be committed: '{backupFolder}'.");
+        }
     }
 
     /// <summary>

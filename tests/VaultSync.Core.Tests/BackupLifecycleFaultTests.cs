@@ -234,6 +234,50 @@ public sealed class BackupLifecycleFaultTests : IDisposable
     }
 
     [Fact]
+    public async Task DestinationArchiveLossDuringUpload_DoesNotPublishBackupMetadata()
+    {
+        string dbPath = Path.Combine(_tempDir.Path, "destination-loss.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        Project project = CreateProject(repo, encrypted: false);
+        await File.WriteAllBytesAsync(
+            Path.Combine(project.RootPath, "destination-loss.bin"),
+            RandomNumberGenerator.GetBytes(4 * 1024 * 1024));
+        string backupRoot = Path.Combine(_tempDir.Path, "destination-loss-backups");
+        Directory.CreateDirectory(backupRoot);
+        var service = new BackupService(
+            repo,
+            CreateSecretService(),
+            new FixedConfigStore(CreateConfig(encrypted: false), dbPath));
+
+        bool destinationRemoved = false;
+        await Assert.ThrowsAnyAsync<IOException>(() => service.RunBackupAsync(
+            project,
+            backupRoot,
+            isAuto: false,
+            progressCallback: (percent, _, status) =>
+            {
+                if (destinationRemoved || percent < 100 || !status.Contains("Uploading archive", StringComparison.Ordinal))
+                    return;
+
+                destinationRemoved = true;
+                string projectBackupRoot = Path.Combine(
+                    backupRoot,
+                    BackupService.GetProjectBackupFolderName(project.Name));
+                string activeFolder = Assert.Single(Directory.GetDirectories(projectBackupRoot));
+                File.Delete(Path.Combine(activeFolder, BackupArchiveCryptoService.PlainArchiveFileName));
+            },
+            useArchiveMode: true,
+            archiveUploadBufferBytes: 256 * 1024,
+            preferParallelArchiveUpload: false,
+            enableCheckpointedRetry: false));
+
+        Assert.True(destinationRemoved);
+        Assert.Empty(repo.GetBackupsForProject(project.Id));
+        string projectFolder = Path.Combine(backupRoot, BackupService.GetProjectBackupFolderName(project.Name));
+        Assert.Empty(Directory.GetDirectories(projectFolder));
+    }
+
+    [Fact]
     public async Task HashCancellation_PreservesPreviousSnapshotAndPublishesNoPartialSnapshot()
     {
         string dbPath = Path.Combine(_tempDir.Path, "hash-cancellation.db");

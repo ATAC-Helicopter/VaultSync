@@ -811,6 +811,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 - [ ] `BUG-18136` `P0` Reject a partial scan when cancellation arrives while the
   final filesystem entry is processed. _(Issue #600; implemented with a focused
   regression test and awaiting integration through #568.)_
+- [ ] `BUG-18137` `P0` Revalidate backup data after upload and immediately before
+  metadata publication so destination loss cannot create a dangling success row.
+  _(Issue #601; implemented with a focused regression test and awaiting
+  integration through #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
