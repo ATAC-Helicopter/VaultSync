@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
@@ -232,6 +233,27 @@ public sealed class BackupSafetyServiceTests : IDisposable
         string[] entries = scanner.Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
 
         Assert.Equal(["inside.txt"], entries);
+    }
+
+    [Fact]
+    public async Task ScannerService_CancellationFromFinalEntry_DoesNotPublishPartialScan()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string projectRoot = Path.Combine(_tempDir.Path, "cancelled-scan-project");
+        string outsideFile = Path.Combine(_tempDir.Path, "cancelled-scan-outside.txt");
+        Directory.CreateDirectory(projectRoot);
+        File.WriteAllText(Path.Combine(projectRoot, "inside.txt"), "inside");
+        File.WriteAllText(outsideFile, "outside");
+        File.CreateSymbolicLink(Path.Combine(projectRoot, "linked-file.txt"), outsideFile);
+        using var cancellation = new CancellationTokenSource();
+        var scanner = new ScannerService(
+            new FilterService(Array.Empty<string>()),
+            new CancellingWarningLogger(cancellation));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            scanner.ScanAsync(projectRoot, cancellation.Token));
     }
 
     [Fact]
@@ -508,5 +530,16 @@ public sealed class BackupSafetyServiceTests : IDisposable
     public void Dispose()
     {
         _tempDir.Dispose();
+    }
+
+    private sealed class CancellingWarningLogger(CancellationTokenSource cancellation) : IVaultLogger
+    {
+        public void Verbose(string message) { }
+
+        public void Info(string message) { }
+
+        public void Warning(string message) => cancellation.Cancel();
+
+        public void Error(string message) { }
     }
 }

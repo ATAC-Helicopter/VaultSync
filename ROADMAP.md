@@ -707,7 +707,8 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   compression interruption is qualified, and encryption observes cancellation
   between copied chunks; restart cleanup now rejects invalid resume checkpoints;
   verification cancellation now propagates; interrupted portable-metadata exports
-  roll back atomically; remaining lifecycle boundaries are still open.)_
+  roll back atomically; scan and plain/encrypted upload cancellation are qualified;
+  remaining lifecycle boundaries are still open.)_
 - [ ] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
   narrow-layout defects.
 - [ ] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling
@@ -807,6 +808,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   cancellation arrives from the final progress notification. _(Issue #599;
   implemented with a focused regression test and awaiting integration through
   #568.)_
+- [ ] `BUG-18136` `P0` Reject a partial scan when cancellation arrives while the
+  final filesystem entry is processed. _(Issue #600; implemented with a focused
+  regression test and awaiting integration through #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

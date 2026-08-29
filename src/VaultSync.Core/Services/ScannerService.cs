@@ -75,6 +75,9 @@ public class ScannerService
                 }
             }
 
+            // Cancellation can be requested while the final filesystem entry is
+            // inspected or reported. Do not publish that partial scan as success.
+            ct.ThrowIfCancellationRequested();
             return results;
         }, ct);
     }

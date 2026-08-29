@@ -30,6 +30,7 @@
 - [BUG-18133] Rolled back interrupted restores instead of leaving partial target changes.
 - [BUG-18134] Stopped cancelled metadata writes and rolled back interrupted exports.
 - [BUG-18135] Preserved completed backups when cancellation arrives after commit.
+- [BUG-18136] Rejected scans cancelled while processing the final entry.
 
 ## [1.8.7] - 21.08.2026
 ### Added

@@ -178,6 +178,61 @@ public sealed class BackupLifecycleFaultTests : IDisposable
         Assert.False(File.Exists(Path.Combine(backupFolder, ".vaultsync_inprogress")));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UploadCancellation_PreservesPreviousBackupAndPublishesNoPartialState(bool encrypted)
+    {
+        string dbPath = Path.Combine(_tempDir.Path, $"upload-cancellation-{encrypted}.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        Project project = CreateProject(repo, encrypted);
+        string backupRoot = Path.Combine(_tempDir.Path, $"upload-cancellation-backups-{encrypted}");
+        Directory.CreateDirectory(backupRoot);
+        var service = new BackupService(
+            repo,
+            CreateSecretService(),
+            new FixedConfigStore(CreateConfig(encrypted), dbPath));
+
+        BackupService.BackupRunResult baseline = await service.RunBackupAsync(
+            project,
+            backupRoot,
+            isAuto: false,
+            useArchiveMode: true);
+        Backup knownGood = Assert.IsType<Backup>(repo.GetBackupById(baseline.BackupId));
+        string knownGoodFolder = Path.Combine(backupRoot, knownGood.Path);
+
+        await File.WriteAllBytesAsync(
+            Path.Combine(project.RootPath, "changed-upload.bin"),
+            RandomNumberGenerator.GetBytes(4 * 1024 * 1024));
+        bool cancelledDuringUpload = false;
+        BackupService.BackupRunResult interrupted = await service.RunBackupAsync(
+            project,
+            backupRoot,
+            isAuto: false,
+            progressCallback: (_, _, status) =>
+            {
+                if (cancelledDuringUpload || !status.Contains("Uploading archive", StringComparison.Ordinal))
+                    return;
+
+                cancelledDuringUpload = true;
+                service.CancelBackup(project.Id);
+            },
+            useArchiveMode: true,
+            archiveUploadBufferBytes: 256 * 1024,
+            preferParallelArchiveUpload: true,
+            enableCheckpointedRetry: true);
+
+        Assert.True(cancelledDuringUpload);
+        Assert.True(interrupted.Cancelled);
+        Assert.Equal(0, interrupted.BackupId);
+        Backup remaining = Assert.Single(repo.GetBackupsForProject(project.Id));
+        Assert.Equal(knownGood.Id, remaining.Id);
+        Assert.True(File.Exists(Path.Combine(knownGoodFolder, ".vaultsync_complete")));
+        Assert.Equal(
+            Path.GetFullPath(knownGoodFolder),
+            Path.GetFullPath(Assert.Single(Directory.GetDirectories(Path.GetDirectoryName(knownGoodFolder)!))));
+    }
+
     [Fact]
     public async Task HashCancellation_PreservesPreviousSnapshotAndPublishesNoPartialSnapshot()
     {

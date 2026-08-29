@@ -198,6 +198,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18135` / #599](https://github.com/ATAC-Helicopter/VaultSync/issues/599):
   cancellation after the durable backup commit no longer deletes completed data
   while returning success; integration remains open.
+- [`BUG-18136` / #600](https://github.com/ATAC-Helicopter/VaultSync/issues/600):
+  cancellation during the final scan entry can no longer publish a partial scan;
+  plain and encrypted upload cancellation are also covered by lifecycle tests.
 
 ## Maintainer links
 
