@@ -2465,7 +2465,8 @@ public sealed class MetadataSyncService
                 appVersion,
                 machineId,
                 ResolveLeaseOwnerId(machineId),
-                _repositoryLeaseService))
+                _repositoryLeaseService,
+                _operationCheckpoint))
         {
             return null;
         }
@@ -3264,7 +3265,8 @@ public sealed class MetadataSyncService
         string appVersion,
         string machineLabel,
         string leaseOwnerId,
-        RepositoryLeaseService leaseService)
+        RepositoryLeaseService leaseService,
+        Action<string>? operationCheckpoint = null)
     {
         string deferredRoot = GetDeferredExportRoot(rootPath);
         if (!File.Exists(new MetadataStore(deferredRoot).DatabasePath))
@@ -3290,7 +3292,27 @@ public sealed class MetadataSyncService
             copied = TryCopyStoreFiles(deferredRoot, rootPath);
         }
 
-        return copied && TryRetireDeferredExport(deferredRoot);
+        if (!copied)
+            return false;
+
+        operationCheckpoint?.Invoke("deferred-export-copied");
+        string destinationDatabase = new MetadataStore(rootPath).DatabasePath;
+        if (!Directory.Exists(rootPath) || !File.Exists(destinationDatabase))
+            return false;
+
+        try
+        {
+            if (new MetadataStore(rootPath, allowReadRecovery: true).GetMetaInfo() is null)
+                return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SqliteException or InvalidDataException)
+        {
+            RuntimeLog.WriteVerbose(
+                $"[MetadataSync] Deferred export copy could not be validated at '{rootPath}': {ex.Message}");
+            return false;
+        }
+
+        return TryRetireDeferredExport(deferredRoot);
     }
 
     private static bool HasDeferredExport(string rootPath) =>
@@ -3302,7 +3324,6 @@ public sealed class MetadataSyncService
         try
         {
             Directory.Move(deferredRoot, retiredRoot);
-            TryDeleteTempStore(retiredRoot);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

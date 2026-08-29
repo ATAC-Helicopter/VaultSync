@@ -214,6 +214,29 @@ public sealed class StorageHygieneTests
     }
 
     [Fact]
+    public void TemporaryCleanupRemovesOnlyStaleConsumedMetadataQueues()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string metadataRoot = Path.Combine(root.Path, "vaultsync-meta-export");
+        string stale = Path.Combine(metadataRoot, $"queue.consumed-{Guid.NewGuid():N}");
+        string recent = Path.Combine(metadataRoot, $"queue.consumed-{Guid.NewGuid():N}");
+        string active = Path.Combine(metadataRoot, "active-queue");
+        Directory.CreateDirectory(stale);
+        Directory.CreateDirectory(recent);
+        Directory.CreateDirectory(active);
+        File.WriteAllText(Path.Combine(stale, "vaultsync.meta.db"), "stale");
+        Directory.SetLastWriteTimeUtc(stale, now.AddDays(-2));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneTemporaryData(root.Path, now);
+
+        Assert.False(Directory.Exists(stale));
+        Assert.True(Directory.Exists(recent));
+        Assert.True(Directory.Exists(active));
+        Assert.Equal(1, result.DirectoriesRemoved);
+    }
+
+    [Fact]
     public void TemporaryCleanupRemovesLinkedChildrenWithoutTouchingTheirTargets()
     {
         if (OperatingSystem.IsWindows())

@@ -823,6 +823,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   root is unavailable or an app-managed mount is disconnected. _(Issue #603;
   implemented with a focused regression test and awaiting integration through
   #568.)_
+- [ ] `BUG-18140` `P0` Validate deferred metadata after replay and retain the
+  complete queue when the destination disappears before commit. _(Issue #604;
+  implemented with deterministic replay and cleanup tests and awaiting
+  integration through #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

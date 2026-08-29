@@ -165,6 +165,10 @@ internal static class StorageHygieneService
             Path.Combine(tempRoot, ApplicationDirectoryName, "recovery-tests"),
             "*",
             utcNow - TemporaryRetention));
+        summary = summary.Add(PruneDirectories(
+            Path.Combine(tempRoot, "vaultsync-meta-export"),
+            "*.consumed-*",
+            utcNow - TemporaryRetention));
         summary = summary.Add(PruneFiles(
             Path.Combine(tempRoot, "vaultsync-telemetry-export"),
             IsTelemetryExport,

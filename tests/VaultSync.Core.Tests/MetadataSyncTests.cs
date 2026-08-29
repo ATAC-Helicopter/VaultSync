@@ -1916,6 +1916,10 @@ public sealed class MetadataSyncTests : IDisposable
         Assert.Equal(MetadataSyncStatus.Success, flushed.Status);
         Assert.False(Directory.Exists(deferredRoot));
         Assert.Single(new MetadataStore(unavailableRoot).ListBackups());
+        string consumedQueue = Assert.Single(Directory.GetDirectories(
+            Path.GetDirectoryName(deferredRoot)!,
+            Path.GetFileName(deferredRoot) + ".consumed-*"));
+        Directory.Delete(consumedQueue, recursive: true);
     }
 
     [Fact]
@@ -1967,6 +1971,58 @@ public sealed class MetadataSyncTests : IDisposable
         Assert.True(File.Exists(new MetadataStore(deferredRoot).DatabasePath));
         MetaProject remote = Assert.Single(new MetadataStore(unavailableRoot).ListProjects());
         Assert.Equal("remote-project", remote.ExternalId);
+        Directory.Delete(deferredRoot, recursive: true);
+    }
+
+    [Fact]
+    public void ExportBackupToStore_DestinationLossDuringDeferredReplayPreservesQueue()
+    {
+        string unavailableRoot = Path.Combine(CreateTempDir(), "lost-during-replay");
+        string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");
+        SqliteRepository repo = CreateRepository(dbPath);
+        int projectId = TestRepository.AddProject(repo, "Project Lost Replay", CreateTempDir(), "unity", DateTime.UtcNow);
+        int snapshotId = repo.CreateSnapshot(projectId, 2, 500);
+        int backupId = repo.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            500,
+            "project-replay/2026-08-29_00-00-00",
+            unavailableRoot,
+            "Offline");
+        string deferredRoot = GetExpectedDeferredRoot(unavailableRoot);
+        var queueService = new MetadataSyncService(repo);
+        MetadataSyncResult queued = queueService.ExportBackupToStore(
+            unavailableRoot,
+            backupId,
+            "1.8.8",
+            "machine-local");
+        Assert.Equal(MetadataSyncStatus.WriteFailed, queued.Status);
+        Assert.True(File.Exists(new MetadataStore(deferredRoot).DatabasePath));
+
+        Directory.CreateDirectory(unavailableRoot);
+        var replayService = new MetadataSyncService(
+            repo,
+            configStore: null,
+            projectColorResolver: null,
+            projectColorApplier: null,
+            installationIdentityProvider: null,
+            repositoryLeaseService: null,
+            operationCheckpoint: checkpoint =>
+            {
+                if (checkpoint == "deferred-export-copied" && Directory.Exists(unavailableRoot))
+                    Directory.Delete(unavailableRoot, recursive: true);
+            });
+
+        MetadataSyncResult replay = replayService.ExportBackupToStore(
+            unavailableRoot,
+            backupId,
+            "1.8.8",
+            "machine-local");
+
+        Assert.Equal(MetadataSyncStatus.RepositoryBusy, replay.Status);
+        Assert.False(Directory.Exists(unavailableRoot));
+        Assert.True(File.Exists(new MetadataStore(deferredRoot).DatabasePath));
         Directory.Delete(deferredRoot, recursive: true);
     }
 
