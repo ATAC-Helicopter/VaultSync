@@ -142,6 +142,43 @@ public sealed class BackupLifecycleFaultTests : IDisposable
     }
 
     [Fact]
+    public async Task CancellationFromFinalProgress_DoesNotDeleteCommittedBackup()
+    {
+        string dbPath = Path.Combine(_tempDir.Path, "final-progress.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        Project project = CreateProject(repo, encrypted: false);
+        string backupRoot = Path.Combine(_tempDir.Path, "final-progress-backups");
+        Directory.CreateDirectory(backupRoot);
+        var service = new BackupService(
+            repo,
+            CreateSecretService(),
+            new FixedConfigStore(CreateConfig(encrypted: false), dbPath));
+
+        bool cancellationRequested = false;
+        BackupService.BackupRunResult result = await service.RunBackupAsync(
+            project,
+            backupRoot,
+            isAuto: false,
+            progressCallback: (percent, _, status) =>
+            {
+                if (cancellationRequested || percent < 100 || !status.StartsWith("Backup completed", StringComparison.Ordinal))
+                    return;
+
+                cancellationRequested = true;
+                service.CancelBackup(project.Id);
+            },
+            useArchiveMode: true);
+
+        Assert.True(cancellationRequested);
+        Assert.False(result.Cancelled);
+        Backup backup = Assert.IsType<Backup>(repo.GetBackupById(result.BackupId));
+        string backupFolder = Path.Combine(backupRoot, backup.Path);
+        Assert.True(Directory.Exists(backupFolder));
+        Assert.True(File.Exists(Path.Combine(backupFolder, ".vaultsync_complete")));
+        Assert.False(File.Exists(Path.Combine(backupFolder, ".vaultsync_inprogress")));
+    }
+
+    [Fact]
     public async Task HashCancellation_PreservesPreviousSnapshotAndPublishesNoPartialSnapshot()
     {
         string dbPath = Path.Combine(_tempDir.Path, "hash-cancellation.db");

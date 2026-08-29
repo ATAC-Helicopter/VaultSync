@@ -29,6 +29,7 @@
 - [BUG-18132] Propagated verification cancellation instead of reporting a mismatch.
 - [BUG-18133] Rolled back interrupted restores instead of leaving partial target changes.
 - [BUG-18134] Stopped cancelled metadata writes and rolled back interrupted exports.
+- [BUG-18135] Preserved completed backups when cancellation arrives after commit.
 
 ## [1.8.7] - 21.08.2026
 ### Added

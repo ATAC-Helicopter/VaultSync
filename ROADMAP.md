@@ -803,6 +803,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   portable-store writes begin. _(Issue #598; pre-write cancellation and atomic
   portable-export rollback are implemented with focused tests; import atomicity
   and integration remain open.)_
+- [ ] `BUG-18135` `P0` Keep the backup success commit internally consistent when
+  cancellation arrives from the final progress notification. _(Issue #599;
+  implemented with a focused regression test and awaiting integration through
+  #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

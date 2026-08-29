@@ -195,6 +195,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18134` / #598](https://github.com/ATAC-Helicopter/VaultSync/issues/598):
   cancelled metadata operations now stop before local writes, and interrupted
   portable exports roll back; import atomicity and integration remain open.
+- [`BUG-18135` / #599](https://github.com/ATAC-Helicopter/VaultSync/issues/599):
+  cancellation after the durable backup commit no longer deletes completed data
+  while returning success; integration remains open.
 
 ## Maintainer links
 

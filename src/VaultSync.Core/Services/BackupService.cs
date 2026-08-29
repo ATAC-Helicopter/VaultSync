@@ -1129,6 +1129,15 @@ public sealed class BackupService(
             }
         }
 
+        if (linkedToken.IsCancellationRequested)
+        {
+            RuntimeLog.WriteVerbose($"[BackupService] Backup cancelled before metadata publication for '{project.Name}'. Cleaning up.");
+            DeletePartialBackup(backupFolderUsed);
+            if (!string.Equals(backupFolderUsed, backupFolder, StringComparison.OrdinalIgnoreCase))
+                DeletePartialBackup(backupFolder);
+            return new BackupRunResult(0, false, true);
+        }
+
         // Store relative path so if backupRoot moves, paths are still valid.
         string relativePath = Path.GetRelativePath(backupRootUsed, backupFolderUsed);
         string backupType = isAuto ? "auto" : "manual";
@@ -1196,11 +1205,9 @@ public sealed class BackupService(
             completedMessage = "Backup completed.";
         progressCallback?.Invoke(100, string.Empty, completedMessage);
 
-        // Ensure cancelled backups never leave partial folders
-        if (linkedToken.IsCancellationRequested)
-        {
-            DeletePartialBackup(backupFolder);
-        }
+        // Metadata and the completion marker are the success commit point. A
+        // cancellation requested by the final progress notification must not
+        // invalidate or delete the already committed backup.
         return new BackupRunResult(backupId, false, false);
     }
 
