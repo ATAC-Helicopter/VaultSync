@@ -192,6 +192,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18133` / #594](https://github.com/ATAC-Helicopter/VaultSync/issues/594):
   interrupted restore and sandbox-apply operations now roll back live target
   changes; full qualification and integration remain open.
+- [`BUG-18134` / #598](https://github.com/ATAC-Helicopter/VaultSync/issues/598):
+  cancelled metadata operations now stop before local writes; mid-transaction
+  atomicity and integration remain open.
 
 ## Maintainer links
 

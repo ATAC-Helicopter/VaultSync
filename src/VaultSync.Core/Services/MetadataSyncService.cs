@@ -3172,6 +3172,7 @@ public sealed class MetadataSyncService
 
     private static async Task WaitForNetworkReadyAsync(string rootPath, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         if (!IsLikelyNetworkPath(rootPath))
             return;
 

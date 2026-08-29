@@ -7,6 +7,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
@@ -20,6 +22,59 @@ namespace VaultSync.Core.Tests;
 public sealed class MetadataSyncTests : IDisposable
 {
     private readonly List<TempDirectory> _tempDirs = [];
+
+    [Fact]
+    public async Task ImportFromStoreAsync_PreCancelled_DoesNotMutateRepository()
+    {
+        string metaRoot = CreateTempDir();
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "cancelled-import-machine");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "cancelled-import-project",
+            Name = "Cancelled Import",
+            Preset = "generic",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow,
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow
+        });
+        SqliteRepository repository = CreateRepository(Path.Combine(CreateTempDir(), "vaultsync.db"));
+        var service = new MetadataSyncService(repository);
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.ImportFromStoreAsync(metaRoot, ct: cancellation.Token));
+
+        Assert.Empty(repository.GetAllProjects());
+    }
+
+    [Fact]
+    public async Task ExportProjectToStoreAsync_PreCancelled_DoesNotCreateMetadataStore()
+    {
+        string metaRoot = CreateTempDir();
+        SqliteRepository repository = CreateRepository(Path.Combine(CreateTempDir(), "vaultsync.db"));
+        int projectId = TestRepository.AddProject(
+            repository,
+            "Cancelled Export",
+            CreateTempDir(),
+            "generic",
+            DateTime.UtcNow);
+        var service = new MetadataSyncService(repository);
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.ExportProjectToStoreAsync(
+                metaRoot,
+                projectId,
+                "1.8.8",
+                "cancelled-export-machine",
+                cancellation.Token));
+
+        Assert.False(File.Exists(new MetadataStore(metaRoot).DatabasePath));
+    }
 
     [Fact]
     public async System.Threading.Tasks.Task PreviewImportFromStoreAsync_WithEmptyPath_ReleasesItsPerRootGate()

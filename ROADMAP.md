@@ -799,6 +799,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   so overwritten files roll back and partial target state is not published.
   _(Issue #594; implemented with focused tests; full qualification and integration
   through #568 remain open.)_
+- [ ] `BUG-18134` `P0` Observe metadata cancellation before local repository or
+  portable-store writes begin. _(Issue #598; the entry contract is implemented
+  with focused tests; mid-transaction atomicity and integration remain open.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
