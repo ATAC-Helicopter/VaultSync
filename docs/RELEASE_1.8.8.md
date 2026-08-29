@@ -207,6 +207,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18138` / #602](https://github.com/ATAC-Helicopter/VaultSync/issues/602):
   failed restore rollback now preserves prior-file evidence at a reported,
   hygiene-managed recovery path when the destination has disappeared.
+- [`BUG-18139` / #603](https://github.com/ATAC-Helicopter/VaultSync/issues/603):
+  retention no longer treats an unavailable destination as proof that indexed
+  remote backups are gone.
 
 ## Maintainer links
 

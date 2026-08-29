@@ -3035,8 +3035,24 @@ public sealed class BackupService(
                         .Replace('/', Path.DirectorySeparatorChar)
                         .TrimStart(Path.DirectorySeparatorChar);
                 string? fullPath = string.Empty;
-                if (!string.IsNullOrWhiteSpace(baseRoot) &&
-                    !BackupSafetyService.TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
+                if (string.IsNullOrWhiteSpace(baseRoot) || !Directory.Exists(baseRoot))
+                {
+                    RuntimeLog.WriteVerbose(
+                        $"[BackupService] Retention deferred because destination root '{baseRoot}' is unavailable (backupId={backup.Id}); code=destination-unavailable.");
+                    canDeleteDbRow = false;
+                    diskDeleteSucceeded = false;
+                }
+                else if (ShouldRejectUnbackedManagedMount(
+                             OperatingSystem.IsMacOS(),
+                             IsMacManagedMountPath(baseRoot),
+                             IsNetworkMountPath(baseRoot)))
+                {
+                    RuntimeLog.WriteVerbose(
+                        $"[BackupService] Retention deferred because managed destination '{baseRoot}' is not mounted (backupId={backup.Id}); code=destination-unmounted.");
+                    canDeleteDbRow = false;
+                    diskDeleteSucceeded = false;
+                }
+                else if (!BackupSafetyService.TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
                 {
                     RuntimeLog.WriteVerbose(
                         $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}); code=out-of-root.");
@@ -3055,7 +3071,17 @@ public sealed class BackupService(
                 }
                 else
                 {
-                    RuntimeLog.WriteVerbose($"[BackupService] Retention could not find backup folder '{fullPath}' on disk (backupId={backup.Id}), continuing with DB cleanup.");
+                    if (!Directory.Exists(baseRoot))
+                    {
+                        RuntimeLog.WriteVerbose(
+                            $"[BackupService] Retention deferred because destination root '{baseRoot}' disappeared during inspection (backupId={backup.Id}); code=destination-lost.");
+                        canDeleteDbRow = false;
+                        diskDeleteSucceeded = false;
+                    }
+                    else
+                    {
+                        RuntimeLog.WriteVerbose($"[BackupService] Retention could not find backup folder '{fullPath}' on an accessible destination (backupId={backup.Id}), continuing with DB cleanup.");
+                    }
                 }
             }
             catch (Exception ex)

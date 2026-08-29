@@ -330,6 +330,42 @@ public sealed class BackupRetentionPreflightTests : IDisposable
     }
 
     [Fact]
+    public void EnforceRetentionForProject_UnavailableDestinationPreservesIndexEntries()
+    {
+        SqliteRepository repo = CreateRepository();
+        var service = new BackupService(repo);
+        int projectId = CreateProject(repo, "Unavailable Retention Project");
+        int oldestSnapshotId = repo.CreateSnapshot(projectId, 1, 100);
+        int newestSnapshotId = repo.CreateSnapshot(projectId, 1, 100);
+        string destination = Path.Combine(_tempDir.Path, "unavailable-retention-root");
+        Directory.CreateDirectory(destination);
+        int oldestBackupId = repo.CreateBackup(
+            projectId,
+            oldestSnapshotId,
+            "manual",
+            100,
+            "oldest",
+            destination,
+            "Primary");
+        int newestBackupId = repo.CreateBackup(
+            projectId,
+            newestSnapshotId,
+            "manual",
+            100,
+            "newest",
+            destination,
+            "Primary");
+        Directory.Delete(destination, recursive: true);
+
+        service.EnforceRetentionForProject(projectId, destination, maxSnapshotsToKeep: 1);
+
+        Assert.NotNull(repo.GetBackupById(oldestBackupId));
+        Assert.NotNull(repo.GetBackupById(newestBackupId));
+        Assert.NotNull(repo.GetSnapshotById(oldestSnapshotId));
+        Assert.NotNull(repo.GetSnapshotById(newestSnapshotId));
+    }
+
+    [Fact]
     public void BuildRetentionDeletionPlan_PreservesLastByteVerifiedPoint()
     {
         int projectId = 5;

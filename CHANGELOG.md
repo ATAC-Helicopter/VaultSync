@@ -33,6 +33,7 @@
 - [BUG-18136] Rejected scans cancelled while processing the final entry.
 - [BUG-18137] Rejected vanished backup data before publishing metadata.
 - [BUG-18138] Preserved rollback evidence when restore destinations disappear.
+- [BUG-18139] Kept retention metadata while backup destinations are unavailable.
 
 ## [1.8.7] - 21.08.2026
 ### Added
