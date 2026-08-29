@@ -157,6 +157,7 @@ public sealed class MetadataSyncService
     private readonly RepositoryLeaseService _repositoryLeaseService;
     private readonly Func<Project, string?>? _projectColorResolver;
     private readonly Action<string, string>? _projectColorApplier;
+    private readonly Action<string>? _operationCheckpoint;
     private readonly ConcurrentDictionary<string, (DateTime LastWriteUtc, MetadataSyncPreview Preview)> _previewCache =
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> MetadataIoGates =
@@ -169,6 +170,25 @@ public sealed class MetadataSyncService
         Action<string, string>? projectColorApplier = null,
         IInstallationIdentityProvider? installationIdentityProvider = null,
         RepositoryLeaseService? repositoryLeaseService = null)
+        : this(
+            repo,
+            configStore,
+            projectColorResolver,
+            projectColorApplier,
+            installationIdentityProvider,
+            repositoryLeaseService,
+            operationCheckpoint: null)
+    {
+    }
+
+    internal MetadataSyncService(
+        SqliteRepository repo,
+        IAppConfigStore? configStore,
+        Func<Project, string?>? projectColorResolver,
+        Action<string, string>? projectColorApplier,
+        IInstallationIdentityProvider? installationIdentityProvider,
+        RepositoryLeaseService? repositoryLeaseService,
+        Action<string>? operationCheckpoint)
     {
         _repo = repo ?? throw new ArgumentNullException(nameof(repo));
         _configStore = configStore ?? StaticAppConfigStore.Instance;
@@ -176,6 +196,7 @@ public sealed class MetadataSyncService
         _projectColorApplier = projectColorApplier;
         _installationIdentityProvider = installationIdentityProvider;
         _repositoryLeaseService = repositoryLeaseService ?? new RepositoryLeaseService();
+        _operationCheckpoint = operationCheckpoint;
     }
 
     public MetadataSyncResult ImportFromStore(string rootPath, MetadataSyncOptions? options = null)
@@ -2354,7 +2375,8 @@ public sealed class MetadataSyncService
                     appVersion,
                     machineId,
                     destinationLease,
-                    useDeferredStore),
+                    useDeferredStore,
+                    ct),
                 ct)
             .ConfigureAwait(false);
     }
@@ -2501,7 +2523,8 @@ public sealed class MetadataSyncService
         string appVersion,
         string machineId,
         RepositoryLeaseHandle? destinationLease,
-        bool useDeferredStore)
+        bool useDeferredStore,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(rootPath))
         {
@@ -2552,12 +2575,19 @@ public sealed class MetadataSyncService
         {
             if (!activeLease.IsOwner)
                 return LostLeaseFailure();
-            store.ExecuteWriteBatch(() =>
+            store.ExecuteWriteBatch(batchCt =>
             {
+                batchCt.ThrowIfCancellationRequested();
                 store.UpsertMetaInfo(metaInfo);
+                ObserveCheckpoint("project-export-meta-info");
+                batchCt.ThrowIfCancellationRequested();
                 if (!store.TryUpsertProject(guardedWrite!.Record, guardedWrite.ExpectedRevision))
                     throw new MetadataRevisionConflictException("Project metadata changed after its revision was inspected.");
-            });
+            }, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (MetadataRevisionConflictException ex)
         {
@@ -2608,7 +2638,8 @@ public sealed class MetadataSyncService
                     machineId,
                     forceBackfill,
                     destinationLease,
-                    useDeferredStore),
+                    useDeferredStore,
+                    ct),
                 ct)
             .ConfigureAwait(false);
     }
@@ -2620,7 +2651,8 @@ public sealed class MetadataSyncService
         string machineId,
         bool forceBackfill,
         RepositoryLeaseHandle? destinationLease,
-        bool useDeferredStore)
+        bool useDeferredStore,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(rootPath))
         {
@@ -2687,7 +2719,12 @@ public sealed class MetadataSyncService
                     machineId,
                     forceBackfill,
                     guardedWrite!.Record,
-                    guardedWrite.ExpectedRevision));
+                    guardedWrite.ExpectedRevision),
+                ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (MetadataRevisionConflictException ex)
         {
@@ -2794,16 +2831,20 @@ public sealed class MetadataSyncService
         MetadataStore store,
         MetaInfo metaInfo,
         BackupExportEntities entities,
-        BackupExportWriteContext context)
+        BackupExportWriteContext context,
+        CancellationToken ct)
     {
         int exportedProjects = 0;
         int exportedSnapshots = 0;
         int exportedBackups = 0;
         bool backfilled = context.ForceBackfill || !store.HasProject(context.ProjectExternalId);
 
-        store.ExecuteWriteBatch(() =>
+        store.ExecuteWriteBatch(batchCt =>
         {
+            batchCt.ThrowIfCancellationRequested();
             store.UpsertMetaInfo(metaInfo);
+            ObserveCheckpoint("backup-export-meta-info");
+            batchCt.ThrowIfCancellationRequested();
             if (backfilled)
             {
                 (int snapshots, int backups) = ExportProjectHistory(
@@ -2812,7 +2853,8 @@ public sealed class MetadataSyncService
                     context.ProjectExternalId,
                     context.MachineId,
                     context.ProjectRecord,
-                    context.ExpectedProjectRevision);
+                    context.ExpectedProjectRevision,
+                    batchCt);
                 exportedProjects = 1;
                 exportedSnapshots = snapshots;
                 exportedBackups = backups;
@@ -2821,6 +2863,8 @@ public sealed class MetadataSyncService
 
             if (!store.TryUpsertProject(context.ProjectRecord, context.ExpectedProjectRevision))
                 throw new MetadataRevisionConflictException("Project metadata changed after its revision was inspected.");
+            ObserveCheckpoint("backup-export-project");
+            batchCt.ThrowIfCancellationRequested();
             store.UpsertSnapshot(new MetaSnapshot
             {
                 ExternalId = context.SnapshotExternalId,
@@ -2836,6 +2880,8 @@ public sealed class MetadataSyncService
                     ? "[]"
                     : entities.Snapshot.DiffTopPathsJson
             });
+            ObserveCheckpoint("backup-export-snapshot");
+            batchCt.ThrowIfCancellationRequested();
             store.UpsertBackup(CreateMetaBackup(
                 entities.Backup,
                 context.BackupExternalId,
@@ -2843,7 +2889,7 @@ public sealed class MetadataSyncService
                 context.SnapshotExternalId,
                 context.MachineId));
             exportedBackups = 1;
-        });
+        }, ct);
 
         return new BackupExportCounts(exportedProjects, exportedSnapshots, exportedBackups, backfilled);
     }
@@ -3306,7 +3352,8 @@ public sealed class MetadataSyncService
         string projectExternalId,
         string machineId,
         MetaProject projectRecord,
-        long expectedProjectRevision)
+        long expectedProjectRevision,
+        CancellationToken ct)
     {
         var snapshots = _repo.GetSnapshotsForProject(project.Name).ToList();
         var backups = _repo.GetBackupsForProject(project.Id).ToList();
@@ -3315,9 +3362,11 @@ public sealed class MetadataSyncService
 
         if (!store.TryUpsertProject(projectRecord, expectedProjectRevision))
             throw new MetadataRevisionConflictException("Project metadata changed after its revision was inspected.");
+        ObserveCheckpoint("backup-export-project");
 
         foreach (Snapshot? snap in snapshots)
         {
+            ct.ThrowIfCancellationRequested();
             string snapExternal = EnsureSnapshotExternalId(snap);
             snapshotExternalIds[snap.Id] = snapExternal;
             store.UpsertSnapshot(new MetaSnapshot
@@ -3333,12 +3382,14 @@ public sealed class MetadataSyncService
                 DiffNetBytes = snap.DiffNetBytes,
                 DiffTopPathsJson = string.IsNullOrWhiteSpace(snap.DiffTopPathsJson) ? "[]" : snap.DiffTopPathsJson
             });
+            ObserveCheckpoint("backup-export-snapshot");
         }
 
         int exportedBackups = 0;
         int skippedBackups = 0;
         foreach (Backup? backup in backups)
         {
+            ct.ThrowIfCancellationRequested();
             if (!snapshotExternalIds.TryGetValue(backup.SnapshotId, out string? snapshotExternalId))
             {
                 Snapshot? snap = _repo.GetSnapshotById(backup.SnapshotId);
@@ -3372,6 +3423,7 @@ public sealed class MetadataSyncService
                 projectExternalId,
                 snapshotExternalId,
                 machineId));
+            ObserveCheckpoint("backup-export-backup");
             exportedBackups++;
         }
 
@@ -3382,6 +3434,8 @@ public sealed class MetadataSyncService
 
         return (snapshots.Count, exportedBackups);
     }
+
+    private void ObserveCheckpoint(string checkpoint) => _operationCheckpoint?.Invoke(checkpoint);
 
     private static MetaBackup CreateMetaBackup(
         Backup backup,

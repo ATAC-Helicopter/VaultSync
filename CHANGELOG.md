@@ -28,7 +28,7 @@
 - [BUG-18131] Prevented snapshot scans from following linked source paths.
 - [BUG-18132] Propagated verification cancellation instead of reporting a mismatch.
 - [BUG-18133] Rolled back interrupted restores instead of leaving partial target changes.
-- [BUG-18134] Stopped cancelled metadata operations before local writes begin.
+- [BUG-18134] Stopped cancelled metadata writes and rolled back interrupted exports.
 
 ## [1.8.7] - 21.08.2026
 ### Added

@@ -77,6 +77,126 @@ public sealed class MetadataSyncTests : IDisposable
     }
 
     [Fact]
+    public async Task ExportProjectToStoreAsync_CancelledInsideBatch_RollsBackPortableStore()
+    {
+        string metaRoot = CreateTempDir();
+        MetadataStore store = CreateStore(metaRoot);
+        DateTime originalWriteUtc = DateTime.UtcNow.AddDays(-1);
+        store.UpsertMetaInfo(new MetaInfo
+        {
+            SchemaVersion = MetadataStore.CurrentSchemaVersion,
+            CreatedUtc = originalWriteUtc,
+            LastWriteUtc = originalWriteUtc,
+            WriterAppVersion = "1.8.7",
+            WriterMachineId = "existing-machine"
+        });
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "existing-project",
+            Name = "Existing Project",
+            Preset = "generic",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = originalWriteUtc,
+            SettingsJson = "{}",
+            UpdatedUtc = originalWriteUtc,
+            WriterMachineId = "existing-machine"
+        });
+
+        SqliteRepository repository = CreateRepository(Path.Combine(CreateTempDir(), "vaultsync.db"));
+        int projectId = TestRepository.AddProject(
+            repository,
+            "Cancelled Mid-Batch Export",
+            CreateTempDir(),
+            "generic",
+            DateTime.UtcNow);
+        using var cancellation = new CancellationTokenSource();
+        var service = new MetadataSyncService(
+            repository,
+            configStore: null,
+            projectColorResolver: null,
+            projectColorApplier: null,
+            installationIdentityProvider: null,
+            repositoryLeaseService: null,
+            operationCheckpoint: checkpoint =>
+            {
+                if (checkpoint == "project-export-meta-info")
+                    cancellation.Cancel();
+            });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.ExportProjectToStoreAsync(
+                metaRoot,
+                projectId,
+                "1.8.8",
+                "cancelled-export-machine",
+                cancellation.Token));
+
+        MetaInfo metadata = Assert.IsType<MetaInfo>(store.GetMetaInfo());
+        Assert.Equal("1.8.7", metadata.WriterAppVersion);
+        Assert.Equal("existing-machine", metadata.WriterMachineId);
+        MetaProject existing = Assert.Single(store.ListProjects());
+        Assert.Equal("existing-project", existing.ExternalId);
+    }
+
+    [Fact]
+    public async Task ExportBackupToStoreAsync_CancelledDuringBackfill_RollsBackPortableStore()
+    {
+        string metaRoot = CreateTempDir();
+        MetadataStore store = CreateStore(metaRoot);
+        SeedMetaInfo(store, "existing-machine");
+        store.UpsertProject(new MetaProject
+        {
+            ExternalId = "existing-project",
+            Name = "Existing Project",
+            Preset = "generic",
+            RootPathHint = CreateTempDir(),
+            CreatedUtc = DateTime.UtcNow.AddDays(-1),
+            SettingsJson = "{}",
+            UpdatedUtc = DateTime.UtcNow.AddDays(-1)
+        });
+
+        SqliteRepository repository = CreateRepository(Path.Combine(CreateTempDir(), "vaultsync.db"));
+        int projectId = TestRepository.AddProject(repository, "Cancelled Backfill", CreateTempDir(), "generic", DateTime.UtcNow);
+        int snapshotId = repository.CreateSnapshot(projectId, 1, 64);
+        int backupId = repository.CreateBackup(
+            projectId,
+            snapshotId,
+            "manual",
+            64,
+            "cancelled-backfill/backup",
+            metaRoot,
+            "Primary");
+        using var cancellation = new CancellationTokenSource();
+        var service = new MetadataSyncService(
+            repository,
+            configStore: null,
+            projectColorResolver: null,
+            projectColorApplier: null,
+            installationIdentityProvider: null,
+            repositoryLeaseService: null,
+            operationCheckpoint: checkpoint =>
+            {
+                if (checkpoint == "backup-export-snapshot")
+                    cancellation.Cancel();
+            });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.ExportBackupToStoreAsync(
+                metaRoot,
+                backupId,
+                "1.8.8",
+                "cancelled-export-machine",
+                forceBackfill: true,
+                cancellation.Token));
+
+        MetaProject existing = Assert.Single(store.ListProjects());
+        Assert.Equal("existing-project", existing.ExternalId);
+        Assert.Empty(store.ListSnapshots());
+        Assert.Empty(store.ListBackups());
+        Assert.Equal("existing-machine", store.GetMetaInfo()?.WriterMachineId);
+    }
+
+    [Fact]
     public async System.Threading.Tasks.Task PreviewImportFromStoreAsync_WithEmptyPath_ReleasesItsPerRootGate()
     {
         string dbPath = Path.Combine(CreateTempDir(), "vaultsync.db");

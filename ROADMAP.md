@@ -706,8 +706,8 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   retention, migration, and clean-state recovery. _(Active: plain and encrypted
   compression interruption is qualified, and encryption observes cancellation
   between copied chunks; restart cleanup now rejects invalid resume checkpoints;
-  verification cancellation now propagates; remaining lifecycle boundaries are
-  still open.)_
+  verification cancellation now propagates; interrupted portable-metadata exports
+  roll back atomically; remaining lifecycle boundaries are still open.)_
 - [ ] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
   narrow-layout defects.
 - [ ] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling
@@ -800,8 +800,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   _(Issue #594; implemented with focused tests; full qualification and integration
   through #568 remain open.)_
 - [ ] `BUG-18134` `P0` Observe metadata cancellation before local repository or
-  portable-store writes begin. _(Issue #598; the entry contract is implemented
-  with focused tests; mid-transaction atomicity and integration remain open.)_
+  portable-store writes begin. _(Issue #598; pre-write cancellation and atomic
+  portable-export rollback are implemented with focused tests; import atomicity
+  and integration remain open.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

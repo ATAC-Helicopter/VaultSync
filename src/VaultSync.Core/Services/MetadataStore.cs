@@ -34,16 +34,26 @@ public sealed class MetadataStore
     public void ExecuteWriteBatch(Action writeAction)
     {
         ArgumentNullException.ThrowIfNull(writeAction);
+        ExecuteWriteBatch(
+            _ => writeAction(),
+            CancellationToken.None);
+    }
+
+    internal void ExecuteWriteBatch(Action<CancellationToken> writeAction, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(writeAction);
         if (_activeWriteConnection is not null)
             throw new InvalidOperationException("A metadata write batch is already active.");
 
+        ct.ThrowIfCancellationRequested();
         using SqliteConnection connection = Open(write: true);
         using SqliteTransaction transaction = connection.BeginTransaction(deferred: false);
         _activeWriteConnection = connection;
         _activeWriteTransaction = transaction;
         try
         {
-            writeAction();
+            writeAction(ct);
+            ct.ThrowIfCancellationRequested();
             transaction.Commit();
         }
         finally
