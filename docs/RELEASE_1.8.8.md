@@ -204,6 +204,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18137` / #601](https://github.com/ATAC-Helicopter/VaultSync/issues/601):
   backup data is revalidated immediately before metadata publication so a
   vanished destination artifact cannot create a dangling success row.
+- [`BUG-18138` / #602](https://github.com/ATAC-Helicopter/VaultSync/issues/602):
+  failed restore rollback now preserves prior-file evidence at a reported,
+  hygiene-managed recovery path when the destination has disappeared.
 
 ## Maintainer links
 

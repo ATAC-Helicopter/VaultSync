@@ -815,6 +815,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   metadata publication so destination loss cannot create a dangling success row.
   _(Issue #601; implemented with a focused regression test and awaiting
   integration through #568.)_
+- [ ] `BUG-18138` `P0` Preserve rollback evidence with an actionable location
+  when a vanished restore destination prevents automatic recovery. _(Issue #602;
+  implemented with a focused regression test and awaiting integration through
+  #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

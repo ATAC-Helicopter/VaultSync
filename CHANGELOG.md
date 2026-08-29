@@ -32,6 +32,7 @@
 - [BUG-18135] Preserved completed backups when cancellation arrives after commit.
 - [BUG-18136] Rejected scans cancelled while processing the final entry.
 - [BUG-18137] Rejected vanished backup data before publishing metadata.
+- [BUG-18138] Preserved rollback evidence when restore destinations disappear.
 
 ## [1.8.7] - 21.08.2026
 ### Added

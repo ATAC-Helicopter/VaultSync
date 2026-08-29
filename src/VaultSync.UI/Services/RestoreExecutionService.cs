@@ -16,6 +16,14 @@ internal readonly record struct RestoreProgressUpdate(
     long ProcessedBytes,
     long TotalBytes);
 
+internal sealed class RestoreRecoveryException(
+    string message,
+    string recoveryDirectory,
+    Exception innerException) : IOException(message, innerException)
+{
+    public string RecoveryDirectory { get; } = recoveryDirectory;
+}
+
 internal static class RestoreExecutionService
 {
     private const int CopyBufferBytes = 1024 * 1024;
@@ -41,6 +49,7 @@ internal static class RestoreExecutionService
             $"vaultsync-restore-{Guid.NewGuid():N}");
         string extractedRoot = Path.Combine(stagingRoot, "content");
         string rollbackRoot = Path.Combine(stagingRoot, "rollback");
+        bool preserveStaging = false;
 
         try
         {
@@ -110,9 +119,15 @@ internal static class RestoreExecutionService
                 progress,
                 cancellationToken).ConfigureAwait(false);
         }
+        catch (RestoreRecoveryException ex)
+        {
+            preserveStaging = IsUnderRoot(stagingRoot, ex.RecoveryDirectory);
+            throw;
+        }
         finally
         {
-            TryDeleteDirectory(stagingRoot);
+            if (!preserveStaging)
+                TryDeleteDirectory(stagingRoot);
         }
     }
 
@@ -250,6 +265,11 @@ internal static class RestoreExecutionService
                     processedBytes,
                     totalBytes));
                 cancellationToken.ThrowIfCancellationRequested();
+                if (!File.Exists(targetPath))
+                {
+                    throw new IOException(
+                        $"Restore target disappeared before the applied file could be committed: '{targetPath}'.");
+                }
             }
 
             if (files.Length == 0)
@@ -260,8 +280,11 @@ internal static class RestoreExecutionService
             Exception? rollbackError = RollBack(journal, createdDirectories, targetDirectory, targetRootExisted);
             if (rollbackError is not null)
             {
-                throw new IOException(
-                    "Restore failed and the previous target state could not be fully recovered.",
+                string recoveryDirectory = PreserveRollbackEvidence(rollbackDirectory);
+                throw new RestoreRecoveryException(
+                    $"Restore failed and the previous target state could not be fully recovered. " +
+                    $"Rollback files were preserved at '{recoveryDirectory}'.",
+                    recoveryDirectory,
                     new AggregateException(operationError, rollbackError));
             }
 
@@ -349,6 +372,27 @@ internal static class RestoreExecutionService
             1 => errors[0],
             _ => new AggregateException(errors)
         };
+    }
+
+    private static string PreserveRollbackEvidence(string rollbackDirectory)
+    {
+        if (!Directory.Exists(rollbackDirectory))
+            return rollbackDirectory;
+
+        string recoveryDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"vaultsync-restore-recovery-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.Move(rollbackDirectory, recoveryDirectory);
+            return recoveryDirectory;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            RuntimeLog.WriteVerbose(
+                $"[Restore] Failed to move rollback evidence to '{recoveryDirectory}': {ex.Message}");
+            return rollbackDirectory;
+        }
     }
 
     private static IEnumerable<string> EnumerateFilesWithoutLinks(string rootDirectory)

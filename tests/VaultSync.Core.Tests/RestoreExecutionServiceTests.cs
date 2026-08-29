@@ -154,6 +154,42 @@ public sealed class RestoreExecutionServiceTests
         Assert.Equal("preserve", File.ReadAllText(Path.Combine(target, "known-good.txt")));
     }
 
+    [Fact]
+    public async Task DestinationLoss_PreservesRollbackEvidenceAndDoesNotReportSuccess()
+    {
+        using var root = new TempDirectory();
+        string source = Path.Combine(root.Path, "source");
+        string target = Path.Combine(root.Path, "target");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(target);
+        File.WriteAllText(Path.Combine(source, "only.txt"), "replacement");
+        File.WriteAllText(Path.Combine(target, "only.txt"), "known-good");
+
+        RestoreRecoveryException error = await Assert.ThrowsAsync<RestoreRecoveryException>(() =>
+            RestoreExecutionService.RestoreAsync(
+                source,
+                target,
+                encryptionPassword: null,
+                selectedTopLevelTargets: null,
+                _ => Directory.Delete(target, recursive: true),
+                CancellationToken.None));
+
+        try
+        {
+            Assert.Contains("Rollback files were preserved", error.Message, StringComparison.Ordinal);
+            Assert.True(Directory.Exists(error.RecoveryDirectory));
+            Assert.Equal(
+                "known-good",
+                File.ReadAllText(Path.Combine(error.RecoveryDirectory, "only.txt")));
+            Assert.False(Directory.Exists(target));
+        }
+        finally
+        {
+            if (Directory.Exists(error.RecoveryDirectory))
+                Directory.Delete(error.RecoveryDirectory, recursive: true);
+        }
+    }
+
     private static void WriteEntry(ZipArchive archive, string path, string content)
     {
         ZipArchiveEntry entry = archive.CreateEntry(path, CompressionLevel.NoCompression);
