@@ -127,6 +127,33 @@ public sealed class RestoreExecutionServiceTests
         Assert.False(File.Exists(Path.Combine(target, "other", "skip.txt")));
     }
 
+    [Fact]
+    public async Task MissingSelectedArchiveTarget_FailsBeforeChangingLiveTarget()
+    {
+        using var root = new TempDirectory();
+        string source = Path.Combine(root.Path, "source");
+        string target = Path.Combine(root.Path, "target");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(target);
+        File.WriteAllText(Path.Combine(target, "known-good.txt"), "preserve");
+        string archivePath = Path.Combine(source, BackupArchiveCryptoService.PlainArchiveFileName);
+        using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
+            WriteEntry(archive, "present/file.txt", "content");
+
+        InvalidDataException error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            RestoreExecutionService.RestoreAsync(
+                source,
+                target,
+                encryptionPassword: null,
+                selectedTopLevelTargets: ["missing"],
+                progress: null,
+                CancellationToken.None));
+
+        Assert.Contains("missing", error.Message, StringComparison.Ordinal);
+        Assert.Equal(["known-good.txt"], Directory.GetFiles(target).Select(Path.GetFileName));
+        Assert.Equal("preserve", File.ReadAllText(Path.Combine(target, "known-good.txt")));
+    }
+
     private static void WriteEntry(ZipArchive archive, string path, string content)
     {
         ZipArchiveEntry entry = archive.CreateEntry(path, CompressionLevel.NoCompression);

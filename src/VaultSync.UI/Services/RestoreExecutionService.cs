@@ -92,6 +92,13 @@ internal static class RestoreExecutionService
                     cancellationToken).ConfigureAwait(false);
                 contentRoot = extractedRoot;
             }
+            else
+            {
+                EnsureSelectedTargetsPresent(
+                    Directory.EnumerateFileSystemEntries(sourceDirectory)
+                        .Select(Path.GetFileName),
+                    BuildSelectedTopLevelSet(selectedTopLevelTargets));
+            }
 
             await ApplyTransactionAsync(
                 contentRoot,
@@ -121,6 +128,9 @@ internal static class RestoreExecutionService
         using ZipArchive archive = ZipFile.OpenRead(archivePath);
         SafeZipExtractor.ValidateArchiveShape(archive);
         HashSet<string>? selected = BuildSelectedTopLevelSet(selectedTopLevelTargets);
+        EnsureSelectedTargetsPresent(
+            archive.Entries.Select(entry => GetTopLevelSegment(entry.FullName)),
+            selected);
         ZipArchiveEntry[] entries =
         [
             .. archive.Entries.Where(entry => ShouldInclude(entry.FullName, selected))
@@ -440,6 +450,27 @@ internal static class RestoreExecutionService
             return string.Empty;
         int separator = normalized.IndexOf('/');
         return separator >= 0 ? normalized[..separator] : normalized;
+    }
+
+    private static void EnsureSelectedTargetsPresent(
+        IEnumerable<string?> availableTargets,
+        HashSet<string>? selectedTargets)
+    {
+        if (selectedTargets is null || selectedTargets.Count == 0)
+            return;
+
+        var available = new HashSet<string>(
+            availableTargets.Where(value => !string.IsNullOrWhiteSpace(value)).OfType<string>(),
+            GetPathComparer());
+        string[] missing = selectedTargets
+            .Where(target => !available.Contains(target))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (missing.Length > 0)
+        {
+            throw new InvalidDataException(
+                $"Selected restore targets are missing from the backup: {string.Join(", ", missing)}.");
+        }
     }
 
     private static void TryDeleteDirectory(string path)
