@@ -215,6 +215,11 @@ failure handling without becoming a broad rewrite.
   deferred metadata replay validates the copied store before retiring its queue;
   consumed evidence is retained for one day and then removed safely.
 
+Exact `1.8.7` compatibility now has frozen-schema and configuration tests that
+preserve repository records, encrypted-backup descriptors, user paths, schedules,
+retention, and encryption choices. Patch eligibility accepts only `1.8.7`; the
+physical updater and complete-installer fallback remain part of #488/#491.
+
 ## Maintainer links
 
 - [Roadmap](../ROADMAP.md#188--chronicle-stabilization)

@@ -708,7 +708,8 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   between copied chunks; restart cleanup now rejects invalid resume checkpoints;
   verification cancellation now propagates; interrupted portable-metadata exports
   roll back atomically; scan and plain/encrypted upload cancellation are qualified;
-  remaining lifecycle boundaries are still open.)_
+  exact 1.8.7 repository/configuration state and clean-machine metadata recovery
+  are qualified; remaining physical lifecycle boundaries are still open.)_
 - [ ] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
   narrow-layout defects.
 - [ ] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling

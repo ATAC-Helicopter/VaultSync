@@ -207,4 +207,32 @@ public sealed class PatchManifestCompatibilityTests
         Assert.Equal("base-version-not-allowed", statusCode);
         Assert.Contains("1.6.3", message);
     }
+
+    [Theory]
+    [InlineData("1.8.7", true)]
+    [InlineData("v1.8.7+installed", true)]
+    [InlineData("1.8.6", false)]
+    [InlineData("1.8.8", false)]
+    public void ChronicleManifest_QualifiesOnlyExact187Predecessor(string installedVersion, bool expected)
+    {
+        var manifest = new PatchManifest
+        {
+            PreviousVersion = "1.8.7",
+            BaseVersions = new List<string> { "1.8.7" },
+            TargetVersion = "1.8.8"
+        };
+
+        bool eligible = PatchUpdateService.TryValidateAllowedBaseVersions(
+            manifest,
+            installedVersion,
+            out IReadOnlyList<string> allowed,
+            out string matched,
+            out string statusCode,
+            out _);
+
+        Assert.Equal(expected, eligible);
+        Assert.Equal(["1.8.7"], allowed);
+        Assert.Equal(expected ? "1.8.7" : string.Empty, matched);
+        Assert.Equal(expected ? "eligible" : "base-version-not-allowed", statusCode);
+    }
 }
