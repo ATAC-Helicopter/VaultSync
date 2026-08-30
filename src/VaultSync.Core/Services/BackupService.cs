@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -78,6 +79,38 @@ public sealed class BackupService(
         bool IsEncrypted,
         BackupCryptoDescriptor Descriptor);
 
+    private sealed class ArchiveBackupRequest
+    {
+        public required Project Project { get; init; }
+        public required string DestinationDirectory { get; init; }
+        public long TotalBytes { get; init; }
+        public int TotalFiles { get; init; }
+        public IReadOnlyList<string>? FilesForBackup { get; init; }
+        public Action<double, string, string>? ProgressCallback { get; init; }
+        public int UploadBufferBytes { get; init; }
+        public bool PreferParallelUpload { get; init; }
+        public bool EnableCheckpointedRetry { get; init; }
+        public required IAppConfigStore ConfigStore { get; init; }
+        public string? EncryptionPassword { get; init; }
+        public required BackupEncryptionConfig EncryptionConfig { get; init; }
+        public CancellationToken CancellationToken { get; init; }
+    }
+
+    private sealed class ParallelArchiveUploadRequest
+    {
+        public required string LocalArchive { get; init; }
+        public required string FinalArchivePath { get; init; }
+        public long ArchiveSize { get; init; }
+        public int BufferSize { get; init; }
+        public Action<double, string, string>? ProgressCallback { get; init; }
+        public required string BackupFolder { get; init; }
+        public required string ProjectName { get; init; }
+        public bool EnableCheckpointedRetry { get; init; }
+        public ArchiveResumeCheckpoint? ResumeCheckpoint { get; init; }
+        public required IAppConfigStore ConfigStore { get; init; }
+        public CancellationToken CancellationToken { get; init; }
+    }
+
     internal static void UpdateCheckpointResumeTelemetry(
         AppConfig config,
         CheckpointResumeTelemetryUpdate update)
@@ -113,6 +146,32 @@ public sealed class BackupService(
     }
 
     public sealed record BackupRunResult(int BackupId, bool SkippedForNoChanges, bool Cancelled);
+    public sealed class BackupRunRequest
+    {
+        public required Project Project { get; init; }
+        public required string BackupRoot { get; init; }
+        public bool IsAuto { get; init; }
+        public Action<double, string, string>? ProgressCallback { get; init; }
+        public bool UseArchiveMode { get; init; }
+        public bool FullSnapshotHash { get; init; } = true;
+        public int? MaxSnapshotsToKeep { get; init; }
+        public double? MinimumFreeSpacePercent { get; init; }
+        public string? PreferredFinalBackupRoot { get; init; }
+        public int? ReuseSnapshotId { get; init; }
+        public bool WriteMetadata { get; init; } = true;
+        public string? DestinationPath { get; init; }
+        public string? DestinationAlias { get; init; }
+        public bool SkipIfNoChanges { get; init; }
+        public bool UseRsyncDelta { get; init; }
+        public bool UseIncrementalBackups { get; init; }
+        public int? ArchiveUploadBufferBytes { get; init; }
+        public bool PreferRunnerProgressOnly { get; init; }
+        public bool PreferParallelArchiveUpload { get; init; }
+        public bool UseScanCache { get; init; }
+        public bool AggressiveScanCache { get; init; }
+        public bool EnableCheckpointedRetry { get; init; } = true;
+        public CancellationToken CancellationToken { get; init; }
+    }
     public sealed record BackupPreflightResult(
         long TotalBytes,
         int TotalFiles,
@@ -766,7 +825,11 @@ public sealed class BackupService(
     /// <exception cref="InvalidOperationException">
     /// Thrown when the project has no snapshots yet, or backupRoot is not configured.
     /// </exception>
-    public async Task<BackupRunResult> RunBackupAsync(
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Source-compatible public facade; new integrations should use BackupRunRequest.")]
+    public Task<BackupRunResult> RunBackupAsync(
         Project project,
         string backupRoot,
         bool isAuto,
@@ -789,8 +852,65 @@ public sealed class BackupService(
         bool useScanCache = false,
         bool aggressiveScanCache = false,
         bool enableCheckpointedRetry = true,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        RunBackupAsync(new BackupRunRequest
+        {
+            Project = project,
+            BackupRoot = backupRoot,
+            IsAuto = isAuto,
+            ProgressCallback = progressCallback,
+            UseArchiveMode = useArchiveMode,
+            FullSnapshotHash = fullSnapshotHash,
+            MaxSnapshotsToKeep = maxSnapshotsToKeep,
+            MinimumFreeSpacePercent = minimumFreeSpacePercent,
+            PreferredFinalBackupRoot = preferredFinalBackupRoot,
+            ReuseSnapshotId = reuseSnapshotId,
+            WriteMetadata = writeMetadata,
+            DestinationPath = destinationPath,
+            DestinationAlias = destinationAlias,
+            SkipIfNoChanges = skipIfNoChanges,
+            UseRsyncDelta = useRsyncDelta,
+            UseIncrementalBackups = useIncrementalBackups,
+            ArchiveUploadBufferBytes = archiveUploadBufferBytes,
+            PreferRunnerProgressOnly = preferRunnerProgressOnly,
+            PreferParallelArchiveUpload = preferParallelArchiveUpload,
+            UseScanCache = useScanCache,
+            AggressiveScanCache = aggressiveScanCache,
+            EnableCheckpointedRetry = enableCheckpointedRetry,
+            CancellationToken = ct
+        });
+
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "This transaction coordinator intentionally keeps backup creation, cleanup, and metadata publication in one auditable failure boundary; its sub-operations are delegated to focused helpers.")]
+    public async Task<BackupRunResult> RunBackupAsync(BackupRunRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        Project project = request.Project;
+        string backupRoot = request.BackupRoot;
+        bool isAuto = request.IsAuto;
+        Action<double, string, string>? progressCallback = request.ProgressCallback;
+        bool useArchiveMode = request.UseArchiveMode;
+        bool fullSnapshotHash = request.FullSnapshotHash;
+        int? maxSnapshotsToKeep = request.MaxSnapshotsToKeep;
+        double? minimumFreeSpacePercent = request.MinimumFreeSpacePercent;
+        string? preferredFinalBackupRoot = request.PreferredFinalBackupRoot;
+        int? reuseSnapshotId = request.ReuseSnapshotId;
+        bool writeMetadata = request.WriteMetadata;
+        string? destinationPath = request.DestinationPath;
+        string? destinationAlias = request.DestinationAlias;
+        bool skipIfNoChanges = request.SkipIfNoChanges;
+        bool useRsyncDelta = request.UseRsyncDelta;
+        bool useIncrementalBackups = request.UseIncrementalBackups;
+        int? archiveUploadBufferBytes = request.ArchiveUploadBufferBytes;
+        bool preferRunnerProgressOnly = request.PreferRunnerProgressOnly;
+        bool preferParallelArchiveUpload = request.PreferParallelArchiveUpload;
+        bool useScanCache = request.UseScanCache;
+        bool aggressiveScanCache = request.AggressiveScanCache;
+        bool enableCheckpointedRetry = request.EnableCheckpointedRetry;
+        CancellationToken ct = request.CancellationToken;
+
         ArgumentNullException.ThrowIfNull(project);
         if (string.IsNullOrWhiteSpace(project.RootPath))
             throw new InvalidOperationException("Project.RootPath is not set.");
@@ -1003,20 +1123,22 @@ public sealed class BackupService(
                 progressCallback?.Invoke(0, "Preparing archive backup...", string.Empty);
 
                 int uploadBufferBytes = NormalizeArchiveUploadBufferBytes(archiveUploadBufferBytes);
-                ArchiveBackupResult archiveResult = await RunArchiveBackupAsync(
-                    project,
-                    backupFolder,
-                    totalBytes,
-                    totalFilesForProgress,
-                    filesForBackup,
-                    progressCallback,
-                    uploadBufferBytes,
-                    preferParallelArchiveUpload,
-                    enableCheckpointedRetry,
-                    _configStore,
-                    encryptionPassword,
-                    encryptionConfig,
-                    linkedToken);
+                ArchiveBackupResult archiveResult = await RunArchiveBackupAsync(new ArchiveBackupRequest
+                {
+                    Project = project,
+                    DestinationDirectory = backupFolder,
+                    TotalBytes = totalBytes,
+                    TotalFiles = totalFilesForProgress,
+                    FilesForBackup = filesForBackup,
+                    ProgressCallback = progressCallback,
+                    UploadBufferBytes = uploadBufferBytes,
+                    PreferParallelUpload = preferParallelArchiveUpload,
+                    EnableCheckpointedRetry = enableCheckpointedRetry,
+                    ConfigStore = _configStore,
+                    EncryptionPassword = encryptionPassword,
+                    EncryptionConfig = encryptionConfig,
+                    CancellationToken = linkedToken
+                });
                 backupFolderUsed = archiveResult.BackupFolder;
                 backupIsEncrypted = archiveResult.IsEncrypted;
                 backupCryptoDescriptorJson = archiveResult.Descriptor.ToMetadataJson(backupIsEncrypted);
@@ -1413,6 +1535,10 @@ public sealed class BackupService(
         }
     }
 
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "The bounded sampling loop keeps its counters and timing state together so each observation is applied atomically; filesystem probing is already isolated from backup execution.")]
     private static async Task MonitorCopyProgressAsync(
         string destDir,
         List<FileEntry> filesForProgress,
@@ -1612,21 +1738,26 @@ public sealed class BackupService(
     private const int ArchiveCopyBufferBytes = 1024 * 1024;
     private const int ArchiveFileStreamBufferBytes = 1024 * 1024;
 
-    private static async Task<ArchiveBackupResult> RunArchiveBackupAsync(
-        Project project,
-        string destDir,
-        long totalBytes,
-        int totalFiles,
-        IReadOnlyList<string>? filesForBackup,
-        Action<double, string, string>? progressCallback,
-        int uploadBufferBytes,
-        bool preferParallelUpload,
-        bool enableCheckpointedRetry,
-        IAppConfigStore configStore,
-        string? encryptionPassword,
-        BackupEncryptionConfig encryptionConfig,
-        CancellationToken ct)
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "The archive transaction deliberately owns local artifact creation, resumable publication, cleanup, and telemetry as one failure boundary; individual crypto and upload operations are delegated.")]
+    private static async Task<ArchiveBackupResult> RunArchiveBackupAsync(ArchiveBackupRequest request)
     {
+        Project project = request.Project;
+        string destDir = request.DestinationDirectory;
+        long totalBytes = request.TotalBytes;
+        int totalFiles = request.TotalFiles;
+        IReadOnlyList<string>? filesForBackup = request.FilesForBackup;
+        Action<double, string, string>? progressCallback = request.ProgressCallback;
+        int uploadBufferBytes = request.UploadBufferBytes;
+        bool preferParallelUpload = request.PreferParallelUpload;
+        bool enableCheckpointedRetry = request.EnableCheckpointedRetry;
+        IAppConfigStore configStore = request.ConfigStore;
+        string? encryptionPassword = request.EncryptionPassword;
+        BackupEncryptionConfig encryptionConfig = request.EncryptionConfig;
+        CancellationToken ct = request.CancellationToken;
+
         string sourceDir = project.RootPath;
         var srcInfo = new DirectoryInfo(sourceDir);
         if (!srcInfo.Exists)
@@ -2118,18 +2249,20 @@ public sealed class BackupService(
                 RuntimeLog.WriteVerbose($"[BackupService] Uploading archive with parallel writer (parts={Math.Clamp(Environment.ProcessorCount / 2, 2, 4)}, buffer={bufferSize / (1024 * 1024)} MB).");
                 try
                 {
-                    await UploadArchiveParallelAsync(
-                        localArchive,
-                        finalArchivePath,
-                        zipSize,
-                        bufferSize,
-                        progressCallback,
-                        workingDestDir,
-                        project.Name,
-                        enableCheckpointedRetry,
-                        resumeCheckpoint,
-                        configStore,
-                        ct);
+                    await UploadArchiveParallelAsync(new ParallelArchiveUploadRequest
+                    {
+                        LocalArchive = localArchive,
+                        FinalArchivePath = finalArchivePath,
+                        ArchiveSize = zipSize,
+                        BufferSize = bufferSize,
+                        ProgressCallback = progressCallback,
+                        BackupFolder = workingDestDir,
+                        ProjectName = project.Name,
+                        EnableCheckpointedRetry = enableCheckpointedRetry,
+                        ResumeCheckpoint = resumeCheckpoint,
+                        ConfigStore = configStore,
+                        CancellationToken = ct
+                    });
                 }
                 catch (TimeoutException ex)
                 {
@@ -2236,19 +2369,24 @@ public sealed class BackupService(
         return CompressionLevel.Fastest;
     }
 
-    private static async Task UploadArchiveParallelAsync(
-        string localArchive,
-        string finalArchivePath,
-        long zipSize,
-        int bufferSize,
-        Action<double, string, string>? progressCallback,
-        string backupFolder,
-        string projectName,
-        bool enableCheckpointedRetry,
-        ArchiveResumeCheckpoint? resumeCheckpoint,
-        IAppConfigStore configStore,
-        CancellationToken ct)
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "Parallel chunk scheduling, shared progress, stall detection, and checkpoint publication must coordinate one upload state; extracting branches would obscure the lock and cancellation invariants.")]
+    private static async Task UploadArchiveParallelAsync(ParallelArchiveUploadRequest request)
     {
+        string localArchive = request.LocalArchive;
+        string finalArchivePath = request.FinalArchivePath;
+        long zipSize = request.ArchiveSize;
+        int bufferSize = request.BufferSize;
+        Action<double, string, string>? progressCallback = request.ProgressCallback;
+        string backupFolder = request.BackupFolder;
+        string projectName = request.ProjectName;
+        bool enableCheckpointedRetry = request.EnableCheckpointedRetry;
+        ArchiveResumeCheckpoint? resumeCheckpoint = request.ResumeCheckpoint;
+        IAppConfigStore configStore = request.ConfigStore;
+        CancellationToken ct = request.CancellationToken;
+
         if (zipSize <= 0)
             return;
 

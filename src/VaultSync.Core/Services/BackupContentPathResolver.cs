@@ -10,6 +10,14 @@ public static class BackupContentPathResolver
         ArgumentNullException.ThrowIfNull(backup);
         ArgumentNullException.ThrowIfNull(config);
 
+        List<string> roots = BuildCandidateRoots(backup, config);
+        return Path.IsPathFullyQualified(backup.Path)
+            ? ResolveQualifiedPath(backup.Path, roots)
+            : ResolveRelativePath(backup.Path, roots);
+    }
+
+    private static List<string> BuildCandidateRoots(Backup backup, AppConfig config)
+    {
         IReadOnlyList<BackupDestination> destinations = config.Backups.Destinations ?? [];
         var roots = new List<string>();
         AddRoot(roots, backup.DestinationPath);
@@ -42,24 +50,29 @@ public static class BackupContentPathResolver
                 AddRoot(roots, destination.Path);
         }
 
-        if (Path.IsPathFullyQualified(backup.Path))
-        {
-            try
-            {
-                string candidate = Path.GetFullPath(backup.Path);
-                return roots.Any(root => BackupSafetyService.IsExistingPathSafeUnderRoot(root, candidate))
-                    ? candidate
-                    : null;
-            }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-            {
-                return null;
-            }
-        }
+        return roots;
+    }
 
+    private static string? ResolveQualifiedPath(string path, IReadOnlyCollection<string> roots)
+    {
+        try
+        {
+            string candidate = Path.GetFullPath(path);
+            return roots.Any(root => BackupSafetyService.IsExistingPathSafeUnderRoot(root, candidate))
+                ? candidate
+                : null;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return null;
+        }
+    }
+
+    private static string? ResolveRelativePath(string path, IEnumerable<string> roots)
+    {
         foreach (string root in roots)
         {
-            if (BackupSafetyService.TryCombinePathUnderRoot(root, backup.Path, out string fullPath) &&
+            if (BackupSafetyService.TryCombinePathUnderRoot(root, path, out string fullPath) &&
                 BackupSafetyService.IsExistingPathSafeUnderRoot(root, fullPath))
             {
                 return fullPath;

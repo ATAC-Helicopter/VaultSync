@@ -551,7 +551,8 @@ public sealed class CredentialVaultTests
             CredentialVault.BuildSecretToolStartInfo(operation, keyRef, username, redirectInput);
         string[] args = command.ArgumentList.ToArray();
 
-        Assert.Equal("secret-tool", command.FileName);
+        Assert.True(Path.IsPathFullyQualified(command.FileName));
+        Assert.EndsWith("/secret-tool", command.FileName, StringComparison.Ordinal);
         Assert.Equal(redirectInput, command.RedirectStandardInput);
         Assert.Contains("service", args);
         Assert.Contains("vaultsync", args);
