@@ -475,20 +475,22 @@ namespace VaultSync.UI.ViewModels
                                 isEncrypted = encrypted;
                                 cryptoDescriptorJson = descriptor.ToMetadataJson(encrypted);
                             }
-                            _ = _repo.CreateBackupFromMetadata(new ImportedBackupWriteRequest(
-                                ExternalId: string.Empty,
-                                ProjectId: projectEntry.Value.Id,
-                                SnapshotId: snapshotId,
-                                CreatedUtc: createdUtc,
-                                Type: "manual",
-                                TotalBytes: sizeBytes,
-                                RelativePath: relativePath,
-                                DestinationPath: dest.Path ?? destRoot,
-                                DestinationAlias: dest.Alias ?? string.Empty,
-                                IsProtected: isProtected,
-                                IsImported: true,
-                                IsEncrypted: isEncrypted,
-                                CryptoDescriptorJson: cryptoDescriptorJson));
+                            _ = _repo.CreateBackupFromMetadata(new ImportedBackupWriteRequest
+                            {
+                                ExternalId = string.Empty,
+                                ProjectId = projectEntry.Value.Id,
+                                SnapshotId = snapshotId,
+                                CreatedUtc = createdUtc,
+                                Type = "manual",
+                                TotalBytes = sizeBytes,
+                                RelativePath = relativePath,
+                                DestinationPath = dest.Path ?? destRoot,
+                                DestinationAlias = dest.Alias ?? string.Empty,
+                                IsProtected = isProtected,
+                                IsImported = true,
+                                IsEncrypted = isEncrypted,
+                                CryptoDescriptorJson = cryptoDescriptorJson
+                            });
 
                             _ = existingKeys.Add(key);
                             added++;

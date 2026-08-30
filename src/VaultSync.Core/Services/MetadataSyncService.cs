@@ -766,22 +766,24 @@ public sealed class MetadataSyncService
                 if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
                     continue;
 
-                _repo.CreateBackupFromMetadata(new ImportedBackupWriteRequest(
-                    ExternalId: metaBackup.ExternalId,
-                    ProjectId: projectId,
-                    SnapshotId: snapshotId,
-                    CreatedUtc: metaBackup.CreatedUtc,
-                    Type: metaBackup.Type,
-                    TotalBytes: metaBackup.TotalBytes,
-                    RelativePath: normalizedPathRel,
-                    DestinationPath: rootPath,
-                    DestinationAlias: metaBackup.DestinationAlias,
-                    IsProtected: metaBackup.IsProtected,
-                    IsImported: true,
-                    BackupMode: metaBackup.BackupMode,
-                    OriginMachineName: metaBackup.OriginMachineName,
-                    IsEncrypted: metaBackup.IsEncrypted,
-                    CryptoDescriptorJson: metaBackup.KdfParamsJson));
+                _repo.CreateBackupFromMetadata(new ImportedBackupWriteRequest
+                {
+                    ExternalId = metaBackup.ExternalId,
+                    ProjectId = projectId,
+                    SnapshotId = snapshotId,
+                    CreatedUtc = metaBackup.CreatedUtc,
+                    Type = metaBackup.Type,
+                    TotalBytes = metaBackup.TotalBytes,
+                    RelativePath = normalizedPathRel,
+                    DestinationPath = rootPath,
+                    DestinationAlias = metaBackup.DestinationAlias,
+                    IsProtected = metaBackup.IsProtected,
+                    IsImported = true,
+                    BackupMode = metaBackup.BackupMode,
+                    OriginMachineName = metaBackup.OriginMachineName,
+                    IsEncrypted = metaBackup.IsEncrypted,
+                    CryptoDescriptorJson = metaBackup.KdfParamsJson
+                });
                 importedBackups++;
                 affectedProjectIds.Add(projectId);
                 ObserveCheckpoint("metadata-import-backup");
@@ -1716,18 +1718,20 @@ public sealed class MetadataSyncService
         if (state.BackupExternalMap.ContainsKey(backupExternalId))
             return;
 
-        _repo.CreateBackupFromMetadata(new ImportedBackupWriteRequest(
-            ExternalId: backupExternalId,
-            ProjectId: project.Id,
-            SnapshotId: snapshotId,
-            CreatedUtc: folder.CreatedUtc,
-            Type: "manual",
-            TotalBytes: sizeBytes,
-            RelativePath: folder.RelativePath,
-            DestinationPath: rootPath,
-            DestinationAlias: string.Empty,
-            IsProtected: false,
-            IsImported: true));
+        _repo.CreateBackupFromMetadata(new ImportedBackupWriteRequest
+        {
+            ExternalId = backupExternalId,
+            ProjectId = project.Id,
+            SnapshotId = snapshotId,
+            CreatedUtc = folder.CreatedUtc,
+            Type = "manual",
+            TotalBytes = sizeBytes,
+            RelativePath = folder.RelativePath,
+            DestinationPath = rootPath,
+            DestinationAlias = string.Empty,
+            IsProtected = false,
+            IsImported = true
+        });
         state.ImportedBackups++;
         state.AffectedProjectIds.Add(project.Id);
         state.ExistingBackupByPath[normalizedPath] = _repo.GetBackupByExternalId(backupExternalId)

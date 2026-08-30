@@ -11,35 +11,39 @@ using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Repositories
 {
-    public sealed record BackupWriteRequest(
-        int ProjectId,
-        int SnapshotId,
-        string Type,
-        long TotalBytes,
-        string RelativePath,
-        string DestinationPath,
-        string DestinationAlias,
-        string BackupMode = BackupModes.Full,
-        bool IsProtected = false,
-        bool IsEncrypted = false,
-        string? CryptoDescriptorJson = null);
+    public sealed record BackupWriteRequest
+    {
+        public int ProjectId { get; init; }
+        public int SnapshotId { get; init; }
+        public string Type { get; init; } = string.Empty;
+        public long TotalBytes { get; init; }
+        public string RelativePath { get; init; } = string.Empty;
+        public string DestinationPath { get; init; } = string.Empty;
+        public string DestinationAlias { get; init; } = string.Empty;
+        public string BackupMode { get; init; } = BackupModes.Full;
+        public bool IsProtected { get; init; }
+        public bool IsEncrypted { get; init; }
+        public string? CryptoDescriptorJson { get; init; }
+    }
 
-    public sealed record ImportedBackupWriteRequest(
-        string ExternalId,
-        int ProjectId,
-        int SnapshotId,
-        DateTime CreatedUtc,
-        string Type,
-        long TotalBytes,
-        string RelativePath,
-        string DestinationPath,
-        string DestinationAlias,
-        bool IsProtected,
-        bool IsImported,
-        string BackupMode = BackupModes.Full,
-        string OriginMachineName = "",
-        bool IsEncrypted = false,
-        string? CryptoDescriptorJson = null);
+    public sealed record ImportedBackupWriteRequest
+    {
+        public string ExternalId { get; init; } = string.Empty;
+        public int ProjectId { get; init; }
+        public int SnapshotId { get; init; }
+        public DateTime CreatedUtc { get; init; }
+        public string Type { get; init; } = string.Empty;
+        public long TotalBytes { get; init; }
+        public string RelativePath { get; init; } = string.Empty;
+        public string DestinationPath { get; init; } = string.Empty;
+        public string DestinationAlias { get; init; } = string.Empty;
+        public bool IsProtected { get; init; }
+        public bool IsImported { get; init; }
+        public string BackupMode { get; init; } = BackupModes.Full;
+        public string OriginMachineName { get; init; } = string.Empty;
+        public bool IsEncrypted { get; init; }
+        public string? CryptoDescriptorJson { get; init; }
+    }
 
     public class SqliteRepository(string dbPath)
     {
@@ -1528,18 +1532,20 @@ DELETE FROM sqlite_sequence;";
             bool isProtected = false,
             bool isEncrypted = false,
             string? cryptoDescriptorJson = null) =>
-            CreateBackup(new BackupWriteRequest(
-                projectId,
-                snapshotId,
-                type,
-                totalBytes,
-                relativePath,
-                destinationPath,
-                destinationAlias,
-                backupMode,
-                isProtected,
-                isEncrypted,
-                cryptoDescriptorJson));
+            CreateBackup(new BackupWriteRequest
+            {
+                ProjectId = projectId,
+                SnapshotId = snapshotId,
+                Type = type,
+                TotalBytes = totalBytes,
+                RelativePath = relativePath,
+                DestinationPath = destinationPath,
+                DestinationAlias = destinationAlias,
+                BackupMode = backupMode,
+                IsProtected = isProtected,
+                IsEncrypted = isEncrypted,
+                CryptoDescriptorJson = cryptoDescriptorJson
+            });
 
         public int CreateBackup(BackupWriteRequest request)
         {
@@ -1597,22 +1603,24 @@ DELETE FROM sqlite_sequence;";
             string originMachineName = "",
             bool isEncrypted = false,
             string? cryptoDescriptorJson = null) =>
-            CreateBackupFromMetadata(new ImportedBackupWriteRequest(
-                externalId,
-                projectId,
-                snapshotId,
-                createdUtc,
-                type,
-                totalBytes,
-                relativePath,
-                destinationPath,
-                destinationAlias,
-                isProtected,
-                isImported,
-                backupMode,
-                originMachineName,
-                isEncrypted,
-                cryptoDescriptorJson));
+            CreateBackupFromMetadata(new ImportedBackupWriteRequest
+            {
+                ExternalId = externalId,
+                ProjectId = projectId,
+                SnapshotId = snapshotId,
+                CreatedUtc = createdUtc,
+                Type = type,
+                TotalBytes = totalBytes,
+                RelativePath = relativePath,
+                DestinationPath = destinationPath,
+                DestinationAlias = destinationAlias,
+                IsProtected = isProtected,
+                IsImported = isImported,
+                BackupMode = backupMode,
+                OriginMachineName = originMachineName,
+                IsEncrypted = isEncrypted,
+                CryptoDescriptorJson = cryptoDescriptorJson
+            });
 
         public int CreateBackupFromMetadata(ImportedBackupWriteRequest request)
         {
