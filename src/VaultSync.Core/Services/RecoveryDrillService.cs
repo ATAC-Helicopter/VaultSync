@@ -212,7 +212,7 @@ public sealed class RecoveryDrillService
         return string.IsNullOrWhiteSpace(safe) ? "project" : safe.Trim();
     }
 
-    private async Task<RecoveryDrillResult> RunAsyncCore(
+    private static async Task<RecoveryDrillResult> RunAsyncCore(
         Project project,
         Backup backup,
         Snapshot? snapshot,

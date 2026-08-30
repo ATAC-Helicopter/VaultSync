@@ -188,7 +188,7 @@ public sealed class RecoverabilityServiceTests : IDisposable
         Assert.Equal(RecoverabilityVerdict.Unrecoverable, wrongCase.Verdict);
     }
 
-    private Task<RecoverabilityResult> Analyze(string backup, IReadOnlyCollection<FileEntry> entries) =>
+    private static Task<RecoverabilityResult> Analyze(string backup, IReadOnlyCollection<FileEntry> entries) =>
         RecoverabilityService.AnalyzeAsync(new RecoverabilityRequest(42), backup, entries);
 
     private string CreateFolderFile(string relativePath, string content)

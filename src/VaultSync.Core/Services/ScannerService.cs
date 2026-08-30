@@ -141,7 +141,7 @@ public class ScannerService
         }
         finally
         {
-            enumerator?.Dispose();
+            enumerator.Dispose();
         }
     }
 

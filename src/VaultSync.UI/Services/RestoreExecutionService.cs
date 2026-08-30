@@ -28,6 +28,18 @@ internal static class RestoreExecutionService
 {
     private const int CopyBufferBytes = 1024 * 1024;
 
+    private sealed class ApplyTransactionRequest
+    {
+        public required string SourceDirectory { get; init; }
+        public required string TargetDirectory { get; init; }
+        public required string RollbackDirectory { get; init; }
+        public IReadOnlyList<string>? SelectedTopLevelTargets { get; init; }
+        public double StartPercent { get; init; }
+        public double EndPercent { get; init; }
+        public Action<RestoreProgressUpdate>? Progress { get; init; }
+        public CancellationToken CancellationToken { get; init; }
+    }
+
     public static async Task RestoreAsync(
         string sourceDirectory,
         string targetDirectory,
@@ -109,15 +121,17 @@ internal static class RestoreExecutionService
                     BuildSelectedTopLevelSet(selectedTopLevelTargets));
             }
 
-            await ApplyTransactionAsync(
-                contentRoot,
-                targetDirectory,
-                rollbackRoot,
-                selectedTopLevelTargets,
-                File.Exists(plainArchive) || File.Exists(encryptedArchive) ? 75 : 0,
-                100,
-                progress,
-                cancellationToken).ConfigureAwait(false);
+            await ApplyTransactionAsync(new ApplyTransactionRequest
+            {
+                SourceDirectory = contentRoot,
+                TargetDirectory = targetDirectory,
+                RollbackDirectory = rollbackRoot,
+                SelectedTopLevelTargets = selectedTopLevelTargets,
+                StartPercent = File.Exists(plainArchive) || File.Exists(encryptedArchive) ? 75 : 0,
+                EndPercent = 100,
+                Progress = progress,
+                CancellationToken = cancellationToken
+            }).ConfigureAwait(false);
         }
         catch (RestoreRecoveryException ex)
         {
@@ -140,7 +154,8 @@ internal static class RestoreExecutionService
         Action<RestoreProgressUpdate>? progress,
         CancellationToken cancellationToken)
     {
-        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        using ZipArchive archive = await ZipFile.OpenReadAsync(archivePath, cancellationToken)
+            .ConfigureAwait(false);
         SafeZipExtractor.ValidateArchiveShape(archive);
         HashSet<string>? selected = BuildSelectedTopLevelSet(selectedTopLevelTargets);
         EnsureSelectedTargetsPresent(
@@ -172,7 +187,7 @@ internal static class RestoreExecutionService
                 if (!string.IsNullOrWhiteSpace(parent))
                     Directory.CreateDirectory(parent);
 
-                await using Stream source = entry.Open();
+                await using Stream source = await entry.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await using var destination = new FileStream(
                     destinationPath,
                     FileMode.CreateNew,
@@ -202,16 +217,17 @@ internal static class RestoreExecutionService
             progress?.Invoke(new RestoreProgressUpdate(endPercent, string.Empty, 0, 0));
     }
 
-    private static async Task ApplyTransactionAsync(
-        string sourceDirectory,
-        string targetDirectory,
-        string rollbackDirectory,
-        IReadOnlyList<string>? selectedTopLevelTargets,
-        double startPercent,
-        double endPercent,
-        Action<RestoreProgressUpdate>? progress,
-        CancellationToken cancellationToken)
+    private static async Task ApplyTransactionAsync(ApplyTransactionRequest request)
     {
+        string sourceDirectory = request.SourceDirectory;
+        string targetDirectory = request.TargetDirectory;
+        string rollbackDirectory = request.RollbackDirectory;
+        IReadOnlyList<string>? selectedTopLevelTargets = request.SelectedTopLevelTargets;
+        double startPercent = request.StartPercent;
+        double endPercent = request.EndPercent;
+        Action<RestoreProgressUpdate>? progress = request.Progress;
+        CancellationToken cancellationToken = request.CancellationToken;
+
         HashSet<string>? selected = BuildSelectedTopLevelSet(selectedTopLevelTargets);
         string[] files = EnumerateFilesWithoutLinks(sourceDirectory)
             .Where(path => ShouldInclude(Path.GetRelativePath(sourceDirectory, path), selected))
@@ -317,9 +333,23 @@ internal static class RestoreExecutionService
 
     private static Exception? RollBack(
         IReadOnlyList<RestoreJournalEntry> journal,
-        IEnumerable<string> createdDirectories,
+        HashSet<string> createdDirectories,
         string targetDirectory,
         bool targetRootExisted)
+    {
+        var errors = RestoreJournalEntries(journal);
+        RemoveCreatedDirectories(createdDirectories, errors);
+        RemoveTargetRootIfCreated(targetDirectory, targetRootExisted, errors);
+
+        return errors.Count switch
+        {
+            0 => null,
+            1 => errors[0],
+            _ => new AggregateException(errors)
+        };
+    }
+
+    private static List<Exception> RestoreJournalEntries(IReadOnlyList<RestoreJournalEntry> journal)
     {
         var errors = new List<Exception>();
         foreach (RestoreJournalEntry entry in journal.Reverse())
@@ -337,6 +367,13 @@ internal static class RestoreExecutionService
             }
         }
 
+        return errors;
+    }
+
+    private static void RemoveCreatedDirectories(
+        IEnumerable<string> createdDirectories,
+        ICollection<Exception> errors)
+    {
         foreach (string directory in createdDirectories.OrderByDescending(path => path.Length))
         {
             try
@@ -349,29 +386,28 @@ internal static class RestoreExecutionService
                 errors.Add(ex);
             }
         }
+    }
 
-        if (!targetRootExisted)
+    private static void RemoveTargetRootIfCreated(
+        string targetDirectory,
+        bool targetRootExisted,
+        ICollection<Exception> errors)
+    {
+        if (targetRootExisted)
+            return;
+
+        try
         {
-            try
+            if (Directory.Exists(targetDirectory) &&
+                !Directory.EnumerateFileSystemEntries(targetDirectory).Any())
             {
-                if (Directory.Exists(targetDirectory) &&
-                    !Directory.EnumerateFileSystemEntries(targetDirectory).Any())
-                {
-                    Directory.Delete(targetDirectory);
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                errors.Add(ex);
+                Directory.Delete(targetDirectory);
             }
         }
-
-        return errors.Count switch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            0 => null,
-            1 => errors[0],
-            _ => new AggregateException(errors)
-        };
+            errors.Add(ex);
+        }
     }
 
     private static string PreserveRollbackEvidence(string rollbackDirectory)
@@ -421,7 +457,7 @@ internal static class RestoreExecutionService
     private static void CreateParentDirectories(
         string rootDirectory,
         string filePath,
-        ISet<string> createdDirectories)
+        HashSet<string> createdDirectories)
     {
         string? parent = Path.GetDirectoryName(filePath);
         if (string.IsNullOrWhiteSpace(parent))

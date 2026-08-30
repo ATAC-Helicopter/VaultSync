@@ -52,6 +52,18 @@ public sealed class MetadataSyncService
 
     private sealed record BackupExportEntities(Backup Backup, Project Project, Snapshot Snapshot);
 
+    private sealed class BackupExportRequest
+    {
+        public required string RootPath { get; init; }
+        public int BackupId { get; init; }
+        public required string AppVersion { get; init; }
+        public required string MachineId { get; init; }
+        public bool ForceBackfill { get; init; }
+        public RepositoryLeaseHandle? DestinationLease { get; init; }
+        public bool UseDeferredStore { get; init; }
+        public CancellationToken CancellationToken { get; init; }
+    }
+
     private sealed record BackupExportCounts(int Projects, int Snapshots, int Backups, bool Backfilled);
 
     private sealed record BackupExportWriteContext(
@@ -2741,29 +2753,32 @@ public sealed class MetadataSyncService
                 machineId,
                 "backup-metadata-export",
                 "Backup export",
-                (destinationLease, useDeferredStore) => ExportBackupToStoreInternal(
-                    rootPath,
-                    backupId,
-                    appVersion,
-                    machineId,
-                    forceBackfill,
-                    destinationLease,
-                    useDeferredStore,
-                    ct),
+                (destinationLease, useDeferredStore) => ExportBackupToStoreInternal(new BackupExportRequest
+                {
+                    RootPath = rootPath,
+                    BackupId = backupId,
+                    AppVersion = appVersion,
+                    MachineId = machineId,
+                    ForceBackfill = forceBackfill,
+                    DestinationLease = destinationLease,
+                    UseDeferredStore = useDeferredStore,
+                    CancellationToken = ct
+                }),
                 ct)
             .ConfigureAwait(false);
     }
 
-    private MetadataSyncResult ExportBackupToStoreInternal(
-        string rootPath,
-        int backupId,
-        string appVersion,
-        string machineId,
-        bool forceBackfill,
-        RepositoryLeaseHandle? destinationLease,
-        bool useDeferredStore,
-        CancellationToken ct)
+    private MetadataSyncResult ExportBackupToStoreInternal(BackupExportRequest request)
     {
+        string rootPath = request.RootPath;
+        int backupId = request.BackupId;
+        string appVersion = request.AppVersion;
+        string machineId = request.MachineId;
+        bool forceBackfill = request.ForceBackfill;
+        RepositoryLeaseHandle? destinationLease = request.DestinationLease;
+        bool useDeferredStore = request.UseDeferredStore;
+        CancellationToken ct = request.CancellationToken;
+
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             Console.WriteLine("[MetadataSync] Export failed: root path is empty.");

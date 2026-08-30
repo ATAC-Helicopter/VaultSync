@@ -323,8 +323,8 @@ public sealed class CredentialVault
     private static bool ShouldRemoveSecret(
         string key,
         IReadOnlyDictionary<string, StoredSecret> map,
-        IReadOnlySet<string> activeSet,
-        IReadOnlySet<string> activeFamilies,
+        HashSet<string> activeSet,
+        HashSet<string> activeFamilies,
         TimeSpan staleAge,
         DateTime now,
         out StoredSecret? record)
