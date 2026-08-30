@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -95,6 +96,10 @@ public sealed class RestoreReadinessService
         return lookup;
     }
 
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "The readiness scorecard keeps its small independent deductions together so the final score and user-facing reasons remain auditable in one place.")]
     private static ProjectRestoreReadiness EvaluateProject(
         Project project,
         IReadOnlyList<Backup>? backups,
@@ -254,7 +259,7 @@ public sealed class RestoreReadinessService
                 new()
                 {
                     Alias = "Primary",
-                    Path = config.Backups.BackupLocation!,
+                    Path = config.Backups.BackupLocation,
                     Active = true,
                     PreMounted = true
                 }

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -453,6 +454,10 @@ public sealed class MetadataSyncService
         }
     }
 
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "The import transaction intentionally coordinates schema validation, conflict planning, tombstones, and revision publication under one recoverable local-state boundary; row operations are delegated to focused helpers.")]
     private MetadataSyncResult ImportFromStoreInternal(
         string rootPath,
         MetadataStore store,
@@ -4037,6 +4042,10 @@ public sealed class MetadataSyncService
             HasAutoBackupEnabled: false,
             HasTags: false);
 
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "This field-level merge applies one atomic project-settings decision with explicit per-field provenance and conflict semantics.")]
     private bool ApplyImportedProjectSettings(
         int projectId,
         AppConfig config,

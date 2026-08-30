@@ -51,7 +51,10 @@ namespace VaultSync.Core.Services
             {
                 tempExcludeFile = Path.Combine(Path.GetTempPath(), $"vaultsync_exclude_{Guid.NewGuid():N}.txt");
                 IReadOnlyList<string> patterns = filter.RawPatterns ?? Array.Empty<string>();
-                File.WriteAllLines(tempExcludeFile, patterns.Where(p => !string.IsNullOrWhiteSpace(p)));
+                await File.WriteAllLinesAsync(
+                    tempExcludeFile,
+                    patterns.Where(p => !string.IsNullOrWhiteSpace(p)),
+                    ct).ConfigureAwait(false);
             }
 
             var psi = new ProcessStartInfo
@@ -341,11 +344,8 @@ namespace VaultSync.Core.Services
                 return null;
 
             string numberSpan = line[start..(end + 1)];
-            if (double.TryParse(numberSpan, out double value))
-            {
-                if (value >= 0 && value <= 100)
-                    return value;
-            }
+            if (double.TryParse(numberSpan, out double value) && value >= 0 && value <= 100)
+                return value;
 
             return null;
         }

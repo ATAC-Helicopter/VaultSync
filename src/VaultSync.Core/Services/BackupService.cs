@@ -2852,6 +2852,10 @@ public sealed class BackupService(
         return sourcePath;
     }
 
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "Managed-copy fallback keeps per-file safety validation, byte accounting, progress, and cancellation in one auditable loop; primary backups use the focused native runner path.")]
     private static void CopyDirectoryRecursive(
         string sourceDir,
         string destDir,
