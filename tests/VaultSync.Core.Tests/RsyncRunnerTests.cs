@@ -13,6 +13,49 @@ namespace VaultSync.Core.Tests;
 public sealed class RsyncRunnerTests
 {
     [Fact]
+    public async Task SyncAsync_CancellationStopsRunningTool()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var temp = new TempDirectory();
+        string source = Path.Combine(temp.Path, "source");
+        string destination = Path.Combine(temp.Path, "destination");
+        string toolPath = Path.Combine(temp.Path, "rsync-cancellation-test-tool");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(destination);
+        File.WriteAllText(toolPath, """
+            #!/bin/sh
+            if [ "$1" = "--version" ]; then
+              echo "rsync version 3.2.7 protocol version 31"
+              exit 0
+            fi
+            sleep 10
+            exit 0
+            """);
+        File.SetUnixFileMode(
+            toolPath,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        var project = new Project
+        {
+            Id = 43,
+            Name = "Rsync cancellation test",
+            RootPath = source,
+            Preset = string.Empty
+        };
+
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            new RsyncRunner(rsyncPath: toolPath).SyncAsync(
+                project,
+                destination,
+                dryRun: true,
+                ct: cancellation.Token));
+    }
+
+    [Fact]
     public async Task SyncAsync_UsesQualifiedToolAndReportsStreamedProgress()
     {
         if (OperatingSystem.IsWindows())
