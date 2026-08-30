@@ -864,6 +864,7 @@ namespace VaultSync.UI.ViewModels
         {
             IsInstallerDownloading = true;
             PatchStatusMessage = L("Update.Installer.Downloading", "Downloading installer...");
+            string? temporaryDownloadPath = null;
 
             try
             {
@@ -879,6 +880,7 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 string tempPath = Path.Combine(downloadDir, $"{fileName}.download");
+                temporaryDownloadPath = tempPath;
                 string finalPath = Path.Combine(downloadDir, fileName);
 
                 using HttpResponseMessage response = await s_installerClient.GetAsync(installerUrl, HttpCompletionOption.ResponseHeadersRead);
@@ -941,7 +943,25 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
+                TryDeleteInstallerTemporaryDownload(temporaryDownloadPath);
                 IsInstallerDownloading = false;
+            }
+        }
+
+        internal static bool TryDeleteInstallerTemporaryDownload(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return true;
+
+            try
+            {
+                File.Delete(path);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Update] Failed to remove temporary installer download: {ex.Message}");
+                return false;
             }
         }
 

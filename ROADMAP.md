@@ -831,6 +831,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 - [ ] `BUG-18141` `P1` Keep metadata-conflict resolution and backup-index repair
   busy state independent. _(Issue #605; implemented with focused command-state
   tests and awaiting integration through #568.)_
+- [ ] `BUG-18142` `P1` Remove failed complete-installer downloads when the
+  operation exits. _(Issue #606; implemented with focused filesystem tests and
+  awaiting integration through #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
