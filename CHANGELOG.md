@@ -7,7 +7,7 @@
 - [VS-1885] Cleared Sonar findings in release automation, onboarding, and storage hygiene.
 - [VS-1886] Reduced archive and support-package memory use with buffer reuse and streaming hashes.
 - [VS-1887] Made guided setup actionable and moved Guide and Schedule queries off the UI thread.
-- [VS-1884] Qualified exact 1.8.7 state and updated pinned workflow actions.
+- [VS-1884] Qualified exact 1.8.7 state and updated pinned workflow security actions.
 - [VS-1821] Isolated snapshot creation, deferred hashing, checkpoint telemetry, and native-copy orchestration.
 ### Fixed
 - [BUG-18116] Removed unintended horizontal page and dialog scrolling.

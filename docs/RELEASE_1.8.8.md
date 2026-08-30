@@ -225,6 +225,8 @@ Exact `1.8.7` compatibility now has frozen-schema and configuration tests that
 preserve repository records, encrypted-backup descriptors, user paths, schedules,
 retention, and encryption choices. Patch eligibility accepts only `1.8.7`; the
 physical updater and complete-installer fallback remain part of #488/#491.
+CodeQL init/analyze are coordinated on `4.37.9`, and Sonar Java setup uses the
+validated `6.0.0` action pin.
 
 ## Maintainer links
 
