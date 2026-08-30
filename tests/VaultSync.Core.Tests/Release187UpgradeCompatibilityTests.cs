@@ -92,7 +92,7 @@ public sealed class Release187UpgradeCompatibilityTests
 
         Backup backup = Assert.Single(repository.GetBackupsForProject(project.Id));
         Assert.Equal("backup-187", backup.ExternalId);
-        Assert.Equal("project-187/2026-08-21_10-00-00", backup.Path);
+        Assert.Equal(Path.Combine("project-187", "2026-08-21_10-00-00"), backup.Path);
         Assert.Equal("Primary", backup.DestinationAlias);
         Assert.True(backup.IsEncrypted);
         Assert.Contains("aes-256-cbc", backup.CryptoDescriptorJson, StringComparison.Ordinal);
