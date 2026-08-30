@@ -38,6 +38,7 @@
 - [BUG-18140] Preserved deferred metadata when destinations disappear during replay.
 - [BUG-18141] Isolated metadata-conflict and backup-repair busy state.
 - [BUG-18142] Removed failed installer downloads immediately.
+- [BUG-18143] Made cancellation performance checks deterministic on small runners.
 
 ## [1.8.7] - 21.08.2026
 ### Added

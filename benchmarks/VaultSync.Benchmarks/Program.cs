@@ -250,11 +250,24 @@ static async Task<BenchmarkMeasurement> MeasureCancellationAsync(
     for (int iteration = 0; iteration < iterations; iteration++)
     {
         using var cancellation = new CancellationTokenSource();
-        Task compare = Task.Run(() => SnapshotCompareService.Compare(
-            olderFiles,
-            newerFiles,
-            cancellationToken: cancellation.Token));
-        await Task.Delay(10);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task compare = Task.Factory.StartNew(
+            () =>
+            {
+                started.TrySetResult();
+                SnapshotCompareService.Compare(
+                    olderFiles,
+                    newerFiles,
+                    cancellationToken: cancellation.Token);
+            },
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
+
+        await started.Task;
+        // A dedicated worker prevents a busy comparison from starving the timer that
+        // requests cancellation on small hosted runners.
+        await Task.Delay(5);
         long cancelledAt = Stopwatch.GetTimestamp();
         await cancellation.CancelAsync();
         bool cancellationObserved = false;

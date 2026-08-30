@@ -224,6 +224,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18142` / #606](https://github.com/ATAC-Helicopter/VaultSync/issues/606):
   failed and integrity-rejected complete-installer downloads remove their
   temporary working file immediately instead of waiting for startup cleanup.
+- [`BUG-18143` / #608](https://github.com/ATAC-Helicopter/VaultSync/issues/608):
+  cancellation performance qualification now uses a dedicated measured worker
+  so small hosted runners cannot starve the cancellation request.
 
 Exact `1.8.7` compatibility now has frozen-schema and configuration tests that
 preserve repository records, encrypted-backup descriptors, user paths, schedules,

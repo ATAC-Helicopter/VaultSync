@@ -838,6 +838,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 - [ ] `BUG-18142` `P1` Remove failed complete-installer downloads when the
   operation exits. _(Issue #606; implemented with focused filesystem tests and
   awaiting integration through #568.)_
+- [ ] `BUG-18143` `P1` Make cancellation performance qualification deterministic
+  on small hosted runners. _(Issue #608; implemented with a dedicated measured
+  worker and awaiting final hosted profiles and integration through #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
