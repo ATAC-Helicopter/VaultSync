@@ -310,7 +310,7 @@ public sealed class RecoveryDrillService
         Snapshot? snapshot,
         string contentPath,
         IReadOnlyCollection<FileEntry>? expectedFiles,
-        ICollection<RecoveryDrillCheck> checks,
+        List<RecoveryDrillCheck> checks,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -337,7 +337,7 @@ public sealed class RecoveryDrillService
     }
 
     private static void AddPayloadCheck(
-        ICollection<RecoveryDrillCheck> checks,
+        List<RecoveryDrillCheck> checks,
         string contentPath,
         SnapshotFileInventory inventory,
         int filesExamined)
@@ -369,7 +369,7 @@ public sealed class RecoveryDrillService
         string contentPath,
         IReadOnlyCollection<FileEntry>? expectedFiles,
         SnapshotFileInventory inventory,
-        ICollection<RecoveryDrillCheck> checks,
+        List<RecoveryDrillCheck> checks,
         CancellationToken cancellationToken)
     {
         if (inventory.SourceKind == SnapshotExplorerSourceKind.EncryptedArchive)
@@ -400,7 +400,7 @@ public sealed class RecoveryDrillService
     }
 
     private static void AddRecoverabilityChecks(
-        ICollection<RecoveryDrillCheck> checks,
+        List<RecoveryDrillCheck> checks,
         RecoverabilityResult proof)
     {
         RecoveryDrillCheckStatus integrityStatus = proof.Verdict switch
@@ -443,7 +443,7 @@ public sealed class RecoveryDrillService
     }
 
     private static void AddInventoryCheck(
-        ICollection<RecoveryDrillCheck> checks,
+        List<RecoveryDrillCheck> checks,
         Snapshot? snapshot,
         SnapshotFileInventory inventory,
         int filesExamined)
