@@ -91,38 +91,55 @@ public class ScannerService
         while (stack.Count > 0)
         {
             ct.ThrowIfCancellationRequested();
-            var current = stack.Pop();
+            string current = stack.Pop();
 
-            if (!string.Equals(normalizedRoot, Path.GetFullPath(current), GetPathComparison()) &&
-                (BackupSafetyService.IsReservedPath(root, current) || _filter.ShouldExclude(root, current)))
+            if (ShouldSkipDirectory(root, normalizedRoot, current))
+                continue;
+
+            foreach (string file in EnumerateEligibleFiles(current, ct))
+                yield return file;
+
+            PushEligibleDirectories(root, current, stack, ct);
+        }
+    }
+
+    private bool ShouldSkipDirectory(string root, string normalizedRoot, string current) =>
+        !string.Equals(normalizedRoot, Path.GetFullPath(current), GetPathComparison()) &&
+        (BackupSafetyService.IsReservedPath(root, current) || _filter.ShouldExclude(root, current));
+
+    private IEnumerable<string> EnumerateEligibleFiles(string directory, CancellationToken ct)
+    {
+        foreach (string file in EnumerateDirectoryEntriesSafely(directory, enumerateFiles: true))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (IsLinkedPath(file))
             {
+                _logger.Warning($"[ScannerService] Skipping linked file '{file}'.");
                 continue;
             }
 
-            foreach (string file in EnumerateDirectoryEntriesSafely(current, enumerateFiles: true))
+            yield return file;
+        }
+    }
+
+    private void PushEligibleDirectories(
+        string root,
+        string current,
+        Stack<string> stack,
+        CancellationToken ct)
+    {
+        foreach (string directory in EnumerateDirectoryEntriesSafely(current, enumerateFiles: false))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (BackupSafetyService.IsReservedPath(root, directory) || _filter.ShouldExclude(root, directory))
+                continue;
+            if (IsLinkedPath(directory))
             {
-                ct.ThrowIfCancellationRequested();
-                if (IsLinkedPath(file))
-                {
-                    _logger.Warning($"[ScannerService] Skipping linked file '{file}'.");
-                    continue;
-                }
-                yield return file;
+                _logger.Warning($"[ScannerService] Skipping linked directory '{directory}'.");
+                continue;
             }
 
-            foreach (string directory in EnumerateDirectoryEntriesSafely(current, enumerateFiles: false))
-            {
-                ct.ThrowIfCancellationRequested();
-                if (BackupSafetyService.IsReservedPath(root, directory) || _filter.ShouldExclude(root, directory))
-                    continue;
-                if (IsLinkedPath(directory))
-                {
-                    _logger.Warning($"[ScannerService] Skipping linked directory '{directory}'.");
-                    continue;
-                }
-
-                stack.Push(directory);
-            }
+            stack.Push(directory);
         }
     }
 

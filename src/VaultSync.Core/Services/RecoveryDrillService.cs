@@ -10,6 +10,7 @@ public sealed class RecoveryDrillService
 {
     private const int MaximumExaminedFiles = 5_000;
     private const int MaximumPersistedFailureEvidence = 100;
+    private sealed record PayloadAnalysisResult(int FilesExamined, bool IsLimited);
 
     public static bool HasPassedByteIntegrity(RecoveryDrillResult drill)
     {
@@ -28,7 +29,7 @@ public sealed class RecoveryDrillService
         }
     }
 
-    public async Task<RecoveryDrillResult> RunAsync(
+    public static async Task<RecoveryDrillResult> RunAsync(
         Project project,
         Backup backup,
         Snapshot? snapshot,
@@ -43,7 +44,7 @@ public sealed class RecoveryDrillService
             expectedFiles,
             cancellationToken).ConfigureAwait(false);
 
-    public async Task<RecoveryDrillResult> RunIsolatedRestoreAsync(
+    public static async Task<RecoveryDrillResult> RunIsolatedRestoreAsync(
         Project project,
         Backup backup,
         Snapshot? snapshot,
@@ -193,16 +194,13 @@ public sealed class RecoveryDrillService
 
     private static RecoveryDrillStatus ResolveStatus(IEnumerable<RecoveryDrillCheck> checks)
     {
-        bool hasAttention = false;
-        foreach (RecoveryDrillCheck check in checks)
-        {
-            if (check.Status == RecoveryDrillCheckStatus.Failed)
-                return RecoveryDrillStatus.Failed;
-            if (check.Status == RecoveryDrillCheckStatus.Attention)
-                hasAttention = true;
-        }
+        var statuses = checks.Select(check => check.Status).ToHashSet();
+        if (statuses.Contains(RecoveryDrillCheckStatus.Failed))
+            return RecoveryDrillStatus.Failed;
 
-        return hasAttention ? RecoveryDrillStatus.Attention : RecoveryDrillStatus.Passed;
+        return statuses.Contains(RecoveryDrillCheckStatus.Attention)
+            ? RecoveryDrillStatus.Attention
+            : RecoveryDrillStatus.Passed;
     }
 
     private static string SafeName(string value)
@@ -245,65 +243,19 @@ public sealed class RecoveryDrillService
                 ? "The recovery point is currently reachable."
                 : "The recovery point is not reachable at any recorded destination."));
 
-        int filesExamined = 0;
-        bool limited = false;
-        if (available)
+        PayloadAnalysisResult payload = new(0, false);
+        if (contentPath is not null)
         {
             try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                SnapshotFileInventory inventory = await Task.Run(
-                    () => SnapshotExplorerService.BuildFileInventory(
-                        contentPath!,
-                        MaximumExaminedFiles,
-                        cancellationToken),
+                payload = await AnalyzePayloadAsync(
+                    project,
+                    backup,
+                    snapshot,
+                    contentPath,
+                    expectedFiles,
+                    checks,
                     cancellationToken).ConfigureAwait(false);
-                filesExamined = inventory.Files.Count;
-                limited = inventory.IsTruncated || inventory.SourceKind == SnapshotExplorerSourceKind.EncryptedArchive;
-
-                if (inventory.SourceKind == SnapshotExplorerSourceKind.EncryptedArchive)
-                {
-                    bool descriptorReadable = BackupArchiveCryptoService.TryReadDescriptor(contentPath!, out _, out bool encrypted) && encrypted;
-                    checks.Add(new RecoveryDrillCheck(
-                        "payload",
-                        descriptorReadable ? RecoveryDrillCheckStatus.Attention : RecoveryDrillCheckStatus.Failed,
-                        descriptorReadable
-                            ? "The encrypted recovery point and its descriptor are readable; file-level checks require an unlock."
-                            : "The encrypted recovery point descriptor could not be read."));
-                }
-                else
-                {
-                    checks.Add(new RecoveryDrillCheck(
-                        "payload",
-                        RecoveryDrillCheckStatus.Passed,
-                        $"The recovery point was opened and {filesExamined:N0} file entries were examined without restoring data."));
-                }
-
-                AddInventoryCheck(checks, snapshot, inventory, filesExamined);
-                if (expectedFiles is { Count: > 0 } &&
-                    inventory.SourceKind != SnapshotExplorerSourceKind.EncryptedArchive)
-                {
-                    RecoverabilityResult proof = await RecoverabilityService.AnalyzeAsync(
-                        new RecoverabilityRequest(
-                            backup.SnapshotId,
-                            DestinationMode: RecoverabilityDestinationMode.OriginalLocation,
-                            DestinationRoot: project.RootPath),
-                        contentPath!,
-                        expectedFiles,
-                        MaximumExaminedFiles,
-                        RecoverabilityService.DefaultMaximumBytes,
-                        cancellationToken).ConfigureAwait(false);
-                    limited |= proof.IsLimited;
-                    AddRecoverabilityChecks(checks, proof);
-                }
-                else if (inventory.SourceKind != SnapshotExplorerSourceKind.EncryptedArchive)
-                {
-                    checks.Add(new RecoveryDrillCheck(
-                        "integrity",
-                        RecoveryDrillCheckStatus.Attention,
-                        "Snapshot file hashes are unavailable, so this drill cannot claim byte-level recoverability.",
-                        "expected_hashes_unavailable:request"));
-                }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
@@ -314,11 +266,7 @@ public sealed class RecoveryDrillService
             }
         }
 
-        RecoveryDrillStatus status = checks.Any(check => check.Status == RecoveryDrillCheckStatus.Failed)
-            ? RecoveryDrillStatus.Failed
-            : checks.Any(check => check.Status == RecoveryDrillCheckStatus.Attention)
-                ? RecoveryDrillStatus.Attention
-                : RecoveryDrillStatus.Passed;
+        RecoveryDrillStatus status = ResolveStatus(checks);
         int passed = checks.Count(check => check.Status == RecoveryDrillCheckStatus.Passed);
         string summary = status switch
         {
@@ -336,11 +284,106 @@ public sealed class RecoveryDrillService
             Status = status,
             ChecksPassed = passed,
             ChecksTotal = checks.Count,
-            FilesExamined = filesExamined,
-            IsLimited = limited,
+            FilesExamined = payload.FilesExamined,
+            IsLimited = payload.IsLimited,
             Summary = summary,
             ChecksJson = JsonSerializer.Serialize(checks)
         };
+    }
+
+    private static async Task<PayloadAnalysisResult> AnalyzePayloadAsync(
+        Project project,
+        Backup backup,
+        Snapshot? snapshot,
+        string contentPath,
+        IReadOnlyCollection<FileEntry>? expectedFiles,
+        ICollection<RecoveryDrillCheck> checks,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        SnapshotFileInventory inventory = await Task.Run(
+            () => SnapshotExplorerService.BuildFileInventory(
+                contentPath,
+                MaximumExaminedFiles,
+                cancellationToken),
+            cancellationToken).ConfigureAwait(false);
+        int filesExamined = inventory.Files.Count;
+        bool encrypted = inventory.SourceKind == SnapshotExplorerSourceKind.EncryptedArchive;
+        AddPayloadCheck(checks, contentPath, inventory, filesExamined);
+        AddInventoryCheck(checks, snapshot, inventory, filesExamined);
+        bool limited = inventory.IsTruncated || encrypted;
+        limited |= await AddIntegrityCheckAsync(
+            project,
+            backup,
+            contentPath,
+            expectedFiles,
+            inventory,
+            checks,
+            cancellationToken).ConfigureAwait(false);
+        return new PayloadAnalysisResult(filesExamined, limited);
+    }
+
+    private static void AddPayloadCheck(
+        ICollection<RecoveryDrillCheck> checks,
+        string contentPath,
+        SnapshotFileInventory inventory,
+        int filesExamined)
+    {
+        if (inventory.SourceKind != SnapshotExplorerSourceKind.EncryptedArchive)
+        {
+            checks.Add(new RecoveryDrillCheck(
+                "payload",
+                RecoveryDrillCheckStatus.Passed,
+                $"The recovery point was opened and {filesExamined:N0} file entries were examined without restoring data."));
+            return;
+        }
+
+        bool descriptorReadable = BackupArchiveCryptoService.TryReadDescriptor(
+            contentPath,
+            out _,
+            out bool encrypted) && encrypted;
+        checks.Add(new RecoveryDrillCheck(
+            "payload",
+            descriptorReadable ? RecoveryDrillCheckStatus.Attention : RecoveryDrillCheckStatus.Failed,
+            descriptorReadable
+                ? "The encrypted recovery point and its descriptor are readable; file-level checks require an unlock."
+                : "The encrypted recovery point descriptor could not be read."));
+    }
+
+    private static async Task<bool> AddIntegrityCheckAsync(
+        Project project,
+        Backup backup,
+        string contentPath,
+        IReadOnlyCollection<FileEntry>? expectedFiles,
+        SnapshotFileInventory inventory,
+        ICollection<RecoveryDrillCheck> checks,
+        CancellationToken cancellationToken)
+    {
+        if (inventory.SourceKind == SnapshotExplorerSourceKind.EncryptedArchive)
+            return false;
+
+        if (expectedFiles is not { Count: > 0 })
+        {
+            checks.Add(new RecoveryDrillCheck(
+                "integrity",
+                RecoveryDrillCheckStatus.Attention,
+                "Snapshot file hashes are unavailable, so this drill cannot claim byte-level recoverability.",
+                "expected_hashes_unavailable:request"));
+            return false;
+        }
+
+        RecoverabilityResult proof = await RecoverabilityService.AnalyzeAsync(
+            new RecoverabilityRequest(
+                backup.SnapshotId,
+                DestinationMode: RecoverabilityDestinationMode.OriginalLocation,
+                DestinationRoot: project.RootPath),
+            contentPath,
+            expectedFiles,
+            MaximumExaminedFiles,
+            RecoverabilityService.DefaultMaximumBytes,
+            cancellationToken).ConfigureAwait(false);
+        AddRecoverabilityChecks(checks, proof);
+        return proof.IsLimited;
     }
 
     private static void AddRecoverabilityChecks(

@@ -372,7 +372,7 @@ internal static class RestoreExecutionService
 
     private static void RemoveCreatedDirectories(
         IEnumerable<string> createdDirectories,
-        ICollection<Exception> errors)
+        List<Exception> errors)
     {
         foreach (string directory in createdDirectories.OrderByDescending(path => path.Length))
         {
@@ -391,7 +391,7 @@ internal static class RestoreExecutionService
     private static void RemoveTargetRootIfCreated(
         string targetDirectory,
         bool targetRootExisted,
-        ICollection<Exception> errors)
+        List<Exception> errors)
     {
         if (targetRootExisted)
             return;

@@ -29,7 +29,6 @@ public sealed class RecoveryViewModel : ViewModelBase
     private readonly IRepositoryFactory _repositoryFactory;
     private readonly RestoreReadinessService _readinessService = new();
     private readonly DisasterRecoveryAdvisorService _disasterRecoveryService = new();
-    private readonly RecoveryDrillService _drillService = new();
     private readonly List<RecoveryProjectViewModel> _allProjects = [];
     private readonly object _lifecycleGate = new();
     private CancellationTokenSource? _viewLifetimeCts;
@@ -815,14 +814,14 @@ public sealed class RecoveryViewModel : ViewModelBase
             ? []
             : [.. repo.GetFilesForSnapshot(snapshot.Id)];
         RecoveryDrillResult result = isolatedRestore
-            ? await _drillService.RunIsolatedRestoreAsync(
+            ? await RecoveryDrillService.RunIsolatedRestoreAsync(
                 project,
                 backup,
                 snapshot,
                 config,
                 expectedFiles,
                 cancellationToken: cancellationToken).ConfigureAwait(false)
-            : await _drillService.RunAsync(
+            : await RecoveryDrillService.RunAsync(
                 project,
                 backup,
                 snapshot,
