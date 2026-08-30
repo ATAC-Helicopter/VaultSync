@@ -35,6 +35,7 @@
 - [BUG-18138] Preserved rollback evidence when restore destinations disappear.
 - [BUG-18139] Kept retention metadata while backup destinations are unavailable.
 - [BUG-18140] Preserved deferred metadata when destinations disappear during replay.
+- [BUG-18141] Isolated metadata-conflict and backup-repair busy state.
 
 ## [1.8.7] - 21.08.2026
 ### Added

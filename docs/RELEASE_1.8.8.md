@@ -214,6 +214,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18140` / #604](https://github.com/ATAC-Helicopter/VaultSync/issues/604):
   deferred metadata replay validates the copied store before retiring its queue;
   consumed evidence is retained for one day and then removed safely.
+- [`BUG-18141` / #605](https://github.com/ATAC-Helicopter/VaultSync/issues/605):
+  metadata-conflict resolution and backup-index repair now expose independent
+  busy state so unrelated Settings commands remain available.
 
 Exact `1.8.7` compatibility now has frozen-schema and configuration tests that
 preserve repository records, encrypted-backup descriptors, user paths, schedules,

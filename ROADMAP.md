@@ -828,6 +828,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   complete queue when the destination disappears before commit. _(Issue #604;
   implemented with deterministic replay and cleanup tests and awaiting
   integration through #568.)_
+- [ ] `BUG-18141` `P1` Keep metadata-conflict resolution and backup-index repair
+  busy state independent. _(Issue #605; implemented with focused command-state
+  tests and awaiting integration through #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
