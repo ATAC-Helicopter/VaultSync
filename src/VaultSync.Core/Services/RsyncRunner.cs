@@ -235,7 +235,15 @@ namespace VaultSync.Core.Services
 
                 if (!proc.WaitForExit(2000))
                 {
-                    try { proc.Kill(entireProcessTree: true); } catch { }
+                    try
+                    {
+                        proc.Kill(entireProcessTree: true);
+                    }
+                    catch
+                    {
+                        // Capability detection is best effort. A failed timeout
+                        // cleanup must not prevent the guarded fallback path.
+                    }
                     return new RsyncCapabilities(null, false);
                 }
 

@@ -15,6 +15,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Models;
+using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
@@ -474,20 +475,20 @@ namespace VaultSync.UI.ViewModels
                                 isEncrypted = encrypted;
                                 cryptoDescriptorJson = descriptor.ToMetadataJson(encrypted);
                             }
-                            _ = _repo.CreateBackupFromMetadata(
-                                string.Empty,
-                                projectEntry.Value.Id,
-                                snapshotId,
-                                createdUtc,
-                                "manual",
-                                sizeBytes,
-                                relativePath,
-                                dest.Path ?? destRoot,
-                                dest.Alias ?? string.Empty,
-                                isProtected,
-                                isImported: true,
-                                isEncrypted: isEncrypted,
-                                cryptoDescriptorJson: cryptoDescriptorJson);
+                            _ = _repo.CreateBackupFromMetadata(new ImportedBackupWriteRequest(
+                                ExternalId: string.Empty,
+                                ProjectId: projectEntry.Value.Id,
+                                SnapshotId: snapshotId,
+                                CreatedUtc: createdUtc,
+                                Type: "manual",
+                                TotalBytes: sizeBytes,
+                                RelativePath: relativePath,
+                                DestinationPath: dest.Path ?? destRoot,
+                                DestinationAlias: dest.Alias ?? string.Empty,
+                                IsProtected: isProtected,
+                                IsImported: true,
+                                IsEncrypted: isEncrypted,
+                                CryptoDescriptorJson: cryptoDescriptorJson));
 
                             _ = existingKeys.Add(key);
                             added++;

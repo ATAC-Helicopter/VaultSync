@@ -10,7 +10,6 @@ public sealed class RecoveryDrillService
 {
     private const int MaximumExaminedFiles = 5_000;
     private const int MaximumPersistedFailureEvidence = 100;
-    private readonly RecoverabilityService _recoverabilityService = new();
 
     public static bool HasPassedByteIntegrity(RecoveryDrillResult drill)
     {
@@ -238,7 +237,7 @@ public sealed class RecoveryDrillService
                 if (expectedFiles is { Count: > 0 } &&
                     inventory.SourceKind != SnapshotExplorerSourceKind.EncryptedArchive)
                 {
-                    RecoverabilityResult proof = await _recoverabilityService.AnalyzeAsync(
+                    RecoverabilityResult proof = await RecoverabilityService.AnalyzeAsync(
                         new RecoverabilityRequest(
                             backup.SnapshotId,
                             DestinationMode: RecoverabilityDestinationMode.OriginalLocation,

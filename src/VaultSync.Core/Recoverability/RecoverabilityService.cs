@@ -8,12 +8,12 @@ namespace VaultSync.Core.Recoverability;
 /// Produces a deterministic, read-only recovery proof. This service never creates,
 /// overwrites, or deletes user files.
 /// </summary>
-public sealed class RecoverabilityService
+public static class RecoverabilityService
 {
     public const int DefaultMaximumFiles = 5_000;
     public const long DefaultMaximumBytes = 2L * 1024 * 1024 * 1024;
 
-    public async Task<RecoverabilityResult> AnalyzeAsync(
+    public static async Task<RecoverabilityResult> AnalyzeAsync(
         RecoverabilityRequest request,
         string contentRoot,
         IReadOnlyCollection<FileEntry> expectedFiles,
@@ -21,13 +21,7 @@ public sealed class RecoverabilityService
         long maximumBytes = DefaultMaximumBytes,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentException.ThrowIfNullOrWhiteSpace(contentRoot);
-        ArgumentNullException.ThrowIfNull(expectedFiles);
-        if (maximumFiles <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maximumFiles));
-        if (maximumBytes <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maximumBytes));
+        ValidateInputs(request, contentRoot, expectedFiles, maximumFiles, maximumBytes);
 
         string requestedPath = NormalizePath(request.Path, allowEmpty: true);
         List<FileEntry> matched = SelectFiles(expectedFiles, requestedPath, request.IncludeChildren);
@@ -112,6 +106,22 @@ public sealed class RecoverabilityService
 
         RecoverabilityVerdict verdict = DetermineVerdict(items);
         return CreateResult(request, requestedPath, verdict, stored.IsLimited || selectionLimited, items, evidence.All);
+    }
+
+    private static void ValidateInputs(
+        RecoverabilityRequest request,
+        string contentRoot,
+        IReadOnlyCollection<FileEntry> expectedFiles,
+        int maximumFiles,
+        long maximumBytes)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentRoot);
+        ArgumentNullException.ThrowIfNull(expectedFiles);
+        if (maximumFiles <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumFiles));
+        if (maximumBytes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumBytes));
     }
 
     private static async Task<RecoverabilityItem> EvaluateItemAsync(

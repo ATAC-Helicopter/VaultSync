@@ -85,6 +85,7 @@ public class ScannerService
     private IEnumerable<string> EnumerateFilesSafely(string root, CancellationToken ct)
     {
         var stack = new Stack<string>();
+        string normalizedRoot = Path.GetFullPath(root);
         stack.Push(root);
 
         while (stack.Count > 0)
@@ -92,24 +93,13 @@ public class ScannerService
             ct.ThrowIfCancellationRequested();
             var current = stack.Pop();
 
-            if (!string.Equals(Path.GetFullPath(root), Path.GetFullPath(current), GetPathComparison()) &&
+            if (!string.Equals(normalizedRoot, Path.GetFullPath(current), GetPathComparison()) &&
                 (BackupSafetyService.IsReservedPath(root, current) || _filter.ShouldExclude(root, current)))
             {
                 continue;
             }
 
-            IEnumerable<string> files;
-            try
-            {
-                files = Directory.EnumerateFiles(current);
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
-            {
-                _logger.Warning($"[ScannerService] Skipping directory '{current}': {ex.Message}");
-                continue;
-            }
-
-            foreach (var file in files)
+            foreach (string file in EnumerateDirectoryEntriesSafely(current, enumerateFiles: true))
             {
                 ct.ThrowIfCancellationRequested();
                 if (IsLinkedPath(file))
@@ -120,18 +110,7 @@ public class ScannerService
                 yield return file;
             }
 
-            IEnumerable<string> directories;
-            try
-            {
-                directories = Directory.EnumerateDirectories(current);
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
-            {
-                _logger.Warning($"[ScannerService] Skipping subdirectory scan for '{current}': {ex.Message}");
-                continue;
-            }
-
-            foreach (var directory in directories)
+            foreach (string directory in EnumerateDirectoryEntriesSafely(current, enumerateFiles: false))
             {
                 ct.ThrowIfCancellationRequested();
                 if (BackupSafetyService.IsReservedPath(root, directory) || _filter.ShouldExclude(root, directory))
@@ -144,6 +123,59 @@ public class ScannerService
 
                 stack.Push(directory);
             }
+        }
+    }
+
+    private IEnumerable<string> EnumerateDirectoryEntriesSafely(
+        string directory,
+        bool enumerateFiles)
+    {
+        IEnumerator<string>? enumerator = TryCreateDirectoryEnumerator(directory, enumerateFiles);
+        if (enumerator is null)
+            yield break;
+
+        try
+        {
+            while (MoveNextSafely(enumerator, directory, enumerateFiles))
+                yield return enumerator.Current;
+        }
+        finally
+        {
+            enumerator?.Dispose();
+        }
+    }
+
+    private IEnumerator<string>? TryCreateDirectoryEnumerator(string directory, bool enumerateFiles)
+    {
+        try
+        {
+            IEnumerable<string> entries = enumerateFiles
+                ? Directory.EnumerateFiles(directory)
+                : Directory.EnumerateDirectories(directory);
+            return entries.GetEnumerator();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DirectoryNotFoundException)
+        {
+            string scope = enumerateFiles ? "directory" : "subdirectory scan";
+            _logger.Warning($"[ScannerService] Skipping {scope} '{directory}': {ex.Message}");
+            return null;
+        }
+    }
+
+    private bool MoveNextSafely(
+        IEnumerator<string> enumerator,
+        string directory,
+        bool enumeratingFiles)
+    {
+        try
+        {
+            return enumerator.MoveNext();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DirectoryNotFoundException)
+        {
+            string scope = enumeratingFiles ? "directory" : "subdirectory scan";
+            _logger.Warning($"[ScannerService] Skipping {scope} '{directory}': {ex.Message}");
+            return false;
         }
     }
 

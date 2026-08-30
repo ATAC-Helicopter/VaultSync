@@ -146,7 +146,8 @@ public sealed class SnapshotExplorerService
         long maximumBytes,
         CancellationToken cancellationToken)
     {
-        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        await using ZipArchive archive = await ZipFile.OpenReadAsync(archivePath, cancellationToken)
+            .ConfigureAwait(false);
         ValidateUniqueArchiveFilePaths(archive);
         IReadOnlyDictionary<string, ZipArchiveEntry> entries = archive.Entries
             .Where(entry => !string.IsNullOrEmpty(entry.Name))
@@ -182,7 +183,7 @@ public sealed class SnapshotExplorerService
 
             try
             {
-                await using Stream stream = entry.Open();
+                await using Stream stream = await entry.OpenAsync(cancellationToken).ConfigureAwait(false);
                 byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
                 bytesRead += entry.Length;
                 observations[relative] = new StoredFileObservation(

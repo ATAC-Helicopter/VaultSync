@@ -1173,17 +1173,17 @@ public sealed class BackupService(
                 ? destinationAlias
                 : string.Empty;
 
-            backupId = _repo.CreateBackup(
-                projectId: project.Id,
-                snapshotId: snapshotId,
-                type: backupType,
-                backupMode: backupMode,
-                totalBytes: totalBytes,
-                relativePath: relativePath,
-                destinationPath: metadataRoot,
-                destinationAlias: metadataAlias,
-                isEncrypted: backupIsEncrypted,
-                cryptoDescriptorJson: backupCryptoDescriptorJson);
+            backupId = _repo.CreateBackup(new BackupWriteRequest(
+                ProjectId: project.Id,
+                SnapshotId: snapshotId,
+                Type: backupType,
+                TotalBytes: totalBytes,
+                RelativePath: relativePath,
+                DestinationPath: metadataRoot,
+                DestinationAlias: metadataAlias,
+                BackupMode: backupMode,
+                IsEncrypted: backupIsEncrypted,
+                CryptoDescriptorJson: backupCryptoDescriptorJson));
 
             RuntimeLog.WriteVerbose($"[BackupService] Backup metadata created successfully for '{project.Name}' (backupId={backupId}).");
 

@@ -11,6 +11,36 @@ using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Repositories
 {
+    public sealed record BackupWriteRequest(
+        int ProjectId,
+        int SnapshotId,
+        string Type,
+        long TotalBytes,
+        string RelativePath,
+        string DestinationPath,
+        string DestinationAlias,
+        string BackupMode = BackupModes.Full,
+        bool IsProtected = false,
+        bool IsEncrypted = false,
+        string? CryptoDescriptorJson = null);
+
+    public sealed record ImportedBackupWriteRequest(
+        string ExternalId,
+        int ProjectId,
+        int SnapshotId,
+        DateTime CreatedUtc,
+        string Type,
+        long TotalBytes,
+        string RelativePath,
+        string DestinationPath,
+        string DestinationAlias,
+        bool IsProtected,
+        bool IsImported,
+        string BackupMode = BackupModes.Full,
+        string OriginMachineName = "",
+        bool IsEncrypted = false,
+        string? CryptoDescriptorJson = null);
+
     public class SqliteRepository(string dbPath)
     {
         private const string BackupsTable = "backups";
@@ -1482,6 +1512,10 @@ DELETE FROM sqlite_sequence;";
         }
         // ---------- Backups ----------
 
+        [SuppressMessage(
+            "Major Code Smell",
+            "S107:Methods should not have too many parameters",
+            Justification = "Retained as a source-compatible facade; new callers use BackupWriteRequest.")]
         public int CreateBackup(
             int projectId,
             int snapshotId,
@@ -1493,14 +1527,29 @@ DELETE FROM sqlite_sequence;";
             string backupMode = BackupModes.Full,
             bool isProtected = false,
             bool isEncrypted = false,
-            string? cryptoDescriptorJson = null)
+            string? cryptoDescriptorJson = null) =>
+            CreateBackup(new BackupWriteRequest(
+                projectId,
+                snapshotId,
+                type,
+                totalBytes,
+                relativePath,
+                destinationPath,
+                destinationAlias,
+                backupMode,
+                isProtected,
+                isEncrypted,
+                cryptoDescriptorJson));
+
+        public int CreateBackup(BackupWriteRequest request)
         {
+            ArgumentNullException.ThrowIfNull(request);
             using SqliteConnection c = Open();
             string created = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture);
             string externalId = NewExternalId();
             string originMachineName = Environment.MachineName;
-            var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
-            string descriptorJson = descriptor.ToMetadataJson(isEncrypted);
+            var descriptor = BackupCryptoDescriptor.FromMetadata(request.IsEncrypted, request.CryptoDescriptorJson);
+            string descriptorJson = descriptor.ToMetadataJson(request.IsEncrypted);
 
             return c.ExecuteScalar<int>(
                 """
@@ -1511,23 +1560,27 @@ DELETE FROM sqlite_sequence;";
                 new
                 {
                     ExternalId     = externalId,
-                    ProjectId       = projectId,
-                    SnapshotId      = snapshotId,
+                    request.ProjectId,
+                    request.SnapshotId,
                     CreatedUtc      = created,
-                    Type            = type,
-                    BackupMode      = BackupModes.Normalize(backupMode),
-                    TotalBytes      = totalBytes,
-                    Path            = relativePath,
-                    DestinationPath = destinationPath ?? string.Empty,
-                    DestinationAlias = destinationAlias ?? string.Empty,
+                    request.Type,
+                    BackupMode      = BackupModes.Normalize(request.BackupMode),
+                    request.TotalBytes,
+                    Path            = request.RelativePath,
+                    DestinationPath = request.DestinationPath ?? string.Empty,
+                    DestinationAlias = request.DestinationAlias ?? string.Empty,
                     OriginMachineName = originMachineName,
-                    IsProtected     = isProtected ? 1 : 0,
-                    IsEncrypted     = isEncrypted ? 1 : 0,
+                    IsProtected     = request.IsProtected ? 1 : 0,
+                    IsEncrypted     = request.IsEncrypted ? 1 : 0,
                     CryptoDescriptorJson = descriptorJson,
                     IsImported      = 0
                 });
         }
 
+        [SuppressMessage(
+            "Major Code Smell",
+            "S107:Methods should not have too many parameters",
+            Justification = "Retained as a source-compatible facade; new callers use ImportedBackupWriteRequest.")]
         public int CreateBackupFromMetadata(
             string externalId,
             int projectId,
@@ -1543,13 +1596,32 @@ DELETE FROM sqlite_sequence;";
             string backupMode = BackupModes.Full,
             string originMachineName = "",
             bool isEncrypted = false,
-            string? cryptoDescriptorJson = null)
+            string? cryptoDescriptorJson = null) =>
+            CreateBackupFromMetadata(new ImportedBackupWriteRequest(
+                externalId,
+                projectId,
+                snapshotId,
+                createdUtc,
+                type,
+                totalBytes,
+                relativePath,
+                destinationPath,
+                destinationAlias,
+                isProtected,
+                isImported,
+                backupMode,
+                originMachineName,
+                isEncrypted,
+                cryptoDescriptorJson));
+
+        public int CreateBackupFromMetadata(ImportedBackupWriteRequest request)
         {
+            ArgumentNullException.ThrowIfNull(request);
             using SqliteConnection c = Open();
-            string created = createdUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
-            string idToUse = string.IsNullOrWhiteSpace(externalId) ? NewExternalId() : externalId;
-            var descriptor = BackupCryptoDescriptor.FromMetadata(isEncrypted, cryptoDescriptorJson);
-            string descriptorJson = descriptor.ToMetadataJson(isEncrypted);
+            string created = request.CreatedUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture);
+            string idToUse = string.IsNullOrWhiteSpace(request.ExternalId) ? NewExternalId() : request.ExternalId;
+            var descriptor = BackupCryptoDescriptor.FromMetadata(request.IsEncrypted, request.CryptoDescriptorJson);
+            string descriptorJson = descriptor.ToMetadataJson(request.IsEncrypted);
             return c.ExecuteScalar<int>(
                 """
                 INSERT INTO backups(external_id, project_id, snapshot_id, created_utc, type, backup_mode, total_bytes, path, destination_path, destination_alias, origin_machine_name, is_protected, is_encrypted, crypto_descriptor_json, is_imported)
@@ -1559,20 +1631,20 @@ DELETE FROM sqlite_sequence;";
                 new
                 {
                     ExternalId      = idToUse,
-                    ProjectId       = projectId,
-                    SnapshotId      = snapshotId,
+                    request.ProjectId,
+                    request.SnapshotId,
                     CreatedUtc      = created,
-                    Type            = type,
-                    BackupMode      = BackupModes.Normalize(backupMode),
-                    TotalBytes      = totalBytes,
-                    Path            = relativePath ?? string.Empty,
-                    DestinationPath = destinationPath ?? string.Empty,
-                    DestinationAlias = destinationAlias ?? string.Empty,
-                    OriginMachineName = originMachineName ?? string.Empty,
-                    IsProtected     = isProtected ? 1 : 0,
-                    IsEncrypted     = isEncrypted ? 1 : 0,
+                    request.Type,
+                    BackupMode      = BackupModes.Normalize(request.BackupMode),
+                    request.TotalBytes,
+                    Path            = request.RelativePath ?? string.Empty,
+                    DestinationPath = request.DestinationPath ?? string.Empty,
+                    DestinationAlias = request.DestinationAlias ?? string.Empty,
+                    OriginMachineName = request.OriginMachineName ?? string.Empty,
+                    IsProtected     = request.IsProtected ? 1 : 0,
+                    IsEncrypted     = request.IsEncrypted ? 1 : 0,
                     CryptoDescriptorJson = descriptorJson,
-                    IsImported      = isImported ? 1 : 0
+                    IsImported      = request.IsImported ? 1 : 0
                 });
         }
 

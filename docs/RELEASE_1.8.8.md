@@ -165,6 +165,10 @@ failure handling without becoming a broad rewrite.
 - [`VS-1887` / #583](https://github.com/ATAC-Helicopter/VaultSync/issues/583):
   actionable onboarding plus non-blocking Guide and Schedule progress (`P1`) —
   implemented on the release branch and awaiting integration through #568.
+- [`VS-1888` / #607](https://github.com/ATAC-Helicopter/VaultSync/issues/607):
+  remaining core Sonar annotations (`P1`) — async archive opening, scanner and
+  diff boundaries, recoverability analysis, repository write contracts, and
+  explicit best-effort cleanup are implemented pending final-head analysis.
 - [`BUG-18125` / #584](https://github.com/ATAC-Helicopter/VaultSync/issues/584):
   unpredictable authenticated restore staging (`P1`) — fixed on the release
   branch and awaiting integration through #568.

@@ -765,6 +765,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   progress queries off the UI thread with stale/coalesced-result handling.
   _(Issue #583; delivered on the release branch and awaiting integration through
   #568.)_
+- [ ] `VS-1888` `P1` Resolve remaining core Sonar annotations with async I/O,
+  cohesive repository writes, and focused complexity boundaries.
+  _(Issue #607; implemented and awaiting final-head analysis and integration
+  through #568.)_
 - [x] `BUG-18125` `P1` Prevent predictable encrypted-restore staging collisions
   and preserve existing output when authentication fails.
   _(Issue #584; delivered on the release branch and awaiting integration through

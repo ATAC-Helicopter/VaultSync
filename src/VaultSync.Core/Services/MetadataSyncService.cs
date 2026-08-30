@@ -20,6 +20,7 @@ namespace VaultSync.Core.Services;
 public sealed class MetadataSyncService
 {
     private const string BackupEntityType = "backup";
+    private const string MetadataImportProjectCheckpoint = "metadata-import-project";
     private const string InvalidRootPathMessage = "Root path is empty.";
     private const string VaultSyncDirectoryName = ".vaultsync";
     private const string UnknownAppVersion = "unknown";
@@ -545,7 +546,7 @@ public sealed class MetadataSyncService
             localProjects.RemoveAll(project => project.Id == existingId);
             appliedTombstones++;
             metadataConflictChanged = true;
-            ObserveCheckpoint("metadata-import-project");
+            ObserveCheckpoint(MetadataImportProjectCheckpoint);
             ct.ThrowIfCancellationRequested();
         }
 
@@ -570,7 +571,7 @@ public sealed class MetadataSyncService
                     ResolveProjectWriterMachineId(metaProject, metaInfo),
                     parsedSettings,
                     pendingConflicts);
-                ObserveCheckpoint("metadata-import-project");
+                ObserveCheckpoint(MetadataImportProjectCheckpoint);
                 ct.ThrowIfCancellationRequested();
                 continue;
             }
@@ -607,7 +608,7 @@ public sealed class MetadataSyncService
                     parsedSettings,
                     pendingConflicts);
                 projectMap[metaProject.ExternalId] = existingByName.Id;
-                ObserveCheckpoint("metadata-import-project");
+                ObserveCheckpoint(MetadataImportProjectCheckpoint);
                 ct.ThrowIfCancellationRequested();
                 continue;
             }
@@ -663,7 +664,7 @@ public sealed class MetadataSyncService
                 BuildImportedValues(project, parsedSettings, config, newId));
             projectMap[metaProject.ExternalId] = newId;
             importedProjects++;
-            ObserveCheckpoint("metadata-import-project");
+            ObserveCheckpoint(MetadataImportProjectCheckpoint);
             ct.ThrowIfCancellationRequested();
         }
 
@@ -765,22 +766,22 @@ public sealed class MetadataSyncService
                 if (backupExternalMap.ContainsKey(metaBackup.ExternalId))
                     continue;
 
-                _repo.CreateBackupFromMetadata(
-                    metaBackup.ExternalId,
-                    projectId,
-                    snapshotId,
-                    metaBackup.CreatedUtc,
-                    metaBackup.Type,
-                    metaBackup.TotalBytes,
-                    normalizedPathRel,
-                    rootPath,
-                    metaBackup.DestinationAlias,
-                    metaBackup.IsProtected,
-                    isImported: true,
-                    backupMode: metaBackup.BackupMode,
-                    originMachineName: metaBackup.OriginMachineName,
-                    isEncrypted: metaBackup.IsEncrypted,
-                    cryptoDescriptorJson: metaBackup.KdfParamsJson);
+                _repo.CreateBackupFromMetadata(new ImportedBackupWriteRequest(
+                    ExternalId: metaBackup.ExternalId,
+                    ProjectId: projectId,
+                    SnapshotId: snapshotId,
+                    CreatedUtc: metaBackup.CreatedUtc,
+                    Type: metaBackup.Type,
+                    TotalBytes: metaBackup.TotalBytes,
+                    RelativePath: normalizedPathRel,
+                    DestinationPath: rootPath,
+                    DestinationAlias: metaBackup.DestinationAlias,
+                    IsProtected: metaBackup.IsProtected,
+                    IsImported: true,
+                    BackupMode: metaBackup.BackupMode,
+                    OriginMachineName: metaBackup.OriginMachineName,
+                    IsEncrypted: metaBackup.IsEncrypted,
+                    CryptoDescriptorJson: metaBackup.KdfParamsJson));
                 importedBackups++;
                 affectedProjectIds.Add(projectId);
                 ObserveCheckpoint("metadata-import-backup");
@@ -1715,19 +1716,18 @@ public sealed class MetadataSyncService
         if (state.BackupExternalMap.ContainsKey(backupExternalId))
             return;
 
-        _repo.CreateBackupFromMetadata(
-            backupExternalId,
-            project.Id,
-            snapshotId,
-            folder.CreatedUtc,
-            "manual",
-            sizeBytes,
-            folder.RelativePath,
-            rootPath,
-            string.Empty,
-            isProtected: false,
-            isImported: true,
-            backupMode: BackupModes.Full);
+        _repo.CreateBackupFromMetadata(new ImportedBackupWriteRequest(
+            ExternalId: backupExternalId,
+            ProjectId: project.Id,
+            SnapshotId: snapshotId,
+            CreatedUtc: folder.CreatedUtc,
+            Type: "manual",
+            TotalBytes: sizeBytes,
+            RelativePath: folder.RelativePath,
+            DestinationPath: rootPath,
+            DestinationAlias: string.Empty,
+            IsProtected: false,
+            IsImported: true));
         state.ImportedBackups++;
         state.AffectedProjectIds.Add(project.Id);
         state.ExistingBackupByPath[normalizedPath] = _repo.GetBackupByExternalId(backupExternalId)
