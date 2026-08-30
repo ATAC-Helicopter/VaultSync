@@ -279,6 +279,13 @@ namespace VaultSync.Core.Config
 
         private static string GetDefaultDataDir()
         {
+            string? isolatedConfigDir = ResolveIsolatedConfigDir();
+            if (!string.IsNullOrWhiteSpace(isolatedConfigDir))
+            {
+                PrivateDataPermissions.EnsureDirectory(isolatedConfigDir);
+                return isolatedConfigDir;
+            }
+
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string dir = Path.Combine(appData, "VaultSync");
             Directory.CreateDirectory(dir);
@@ -539,9 +546,24 @@ namespace VaultSync.Core.Config
 
         private static string ResolveConfigDir()
         {
+            string? isolatedConfigDir = ResolveIsolatedConfigDir();
+            if (!string.IsNullOrWhiteSpace(isolatedConfigDir))
+                return isolatedConfigDir;
+
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync");
+        }
+
+        private static string? ResolveIsolatedConfigDir()
+        {
+            lock (ConfigPathGate)
+            {
+                if (!string.IsNullOrWhiteSpace(TestConfigDirOverride))
+                    return TestConfigDirOverride;
+            }
+
             string? overrideDir = Environment.GetEnvironmentVariable("VAULTSYNC_CONFIG_DIR");
             if (!string.IsNullOrWhiteSpace(overrideDir))
-                return overrideDir;
+                return Path.GetFullPath(overrideDir);
 
             if (IsRunningUnderTest())
             {
@@ -551,7 +573,7 @@ namespace VaultSync.Core.Config
                     Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
             }
 
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".vaultsync");
+            return null;
         }
 
         private static bool IsRunningUnderTest()

@@ -168,7 +168,7 @@ failure handling without becoming a broad rewrite.
 - [`VS-1888` / #607](https://github.com/ATAC-Helicopter/VaultSync/issues/607):
   remaining core Sonar annotations (`P1`) — async archive opening, scanner and
   diff boundaries, recoverability analysis, repository write contracts, and
-  explicit best-effort cleanup are implemented pending final-head analysis.
+  explicit best-effort cleanup are implemented; final-head Sonar and CodeQL pass.
 - [`BUG-18125` / #584](https://github.com/ATAC-Helicopter/VaultSync/issues/584):
   unpredictable authenticated restore staging (`P1`) — fixed on the release
   branch and awaiting integration through #568.
@@ -227,6 +227,10 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18143` / #608](https://github.com/ATAC-Helicopter/VaultSync/issues/608):
   cancellation performance qualification now uses a dedicated measured worker
   so small hosted runners cannot starve the cancellation request.
+- [`BUG-18144` / #609](https://github.com/ATAC-Helicopter/VaultSync/issues/609):
+  isolated recording, troubleshooting, and test profiles now keep their default
+  database inside the selected configuration directory instead of opening the
+  normal per-user database.
 
 Exact `1.8.7` compatibility now has frozen-schema and configuration tests that
 preserve repository records, encrypted-backup descriptors, user paths, schedules,

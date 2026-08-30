@@ -765,10 +765,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   progress queries off the UI thread with stale/coalesced-result handling.
   _(Issue #583; delivered on the release branch and awaiting integration through
   #568.)_
-- [ ] `VS-1888` `P1` Resolve remaining core Sonar annotations with async I/O,
+- [x] `VS-1888` `P1` Resolve remaining core Sonar annotations with async I/O,
   cohesive repository writes, and focused complexity boundaries.
-  _(Issue #607; implemented and awaiting final-head analysis and integration
-  through #568.)_
+  _(Issue #607; final-head Sonar and CodeQL are green and integration through
+  #568 remains.)_
 - [x] `BUG-18125` `P1` Prevent predictable encrypted-restore staging collisions
   and preserve existing output when authentication fails.
   _(Issue #584; delivered on the release branch and awaiting integration through
@@ -801,46 +801,49 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   verification instead of converting it into a completed mismatch.
   _(Issue #593; delivered on the release branch and awaiting integration through
   #568.)_
-- [ ] `BUG-18133` `P0` Make restore and sandbox-apply cancellation transactional
+- [x] `BUG-18133` `P0` Make restore and sandbox-apply cancellation transactional
   so overwritten files roll back and partial target state is not published.
-  _(Issue #594; implemented with focused tests; full qualification and integration
-  through #568 remain open.)_
-- [ ] `BUG-18134` `P0` Observe metadata cancellation before local repository or
+  _(Issue #594; focused tests and final hosted gates pass; integration through
+  #568 remains.)_
+- [x] `BUG-18134` `P0` Observe metadata cancellation before local repository or
   portable-store writes begin. _(Issue #598; pre-write cancellation plus atomic
   portable-export and recoverable schema/legacy import rollback are implemented;
-  hosted qualification and integration remain open.)_
-- [ ] `BUG-18135` `P0` Keep the backup success commit internally consistent when
+  final hosted gates pass and integration remains open.)_
+- [x] `BUG-18135` `P0` Keep the backup success commit internally consistent when
   cancellation arrives from the final progress notification. _(Issue #599;
   implemented with a focused regression test and awaiting integration through
   #568.)_
-- [ ] `BUG-18136` `P0` Reject a partial scan when cancellation arrives while the
+- [x] `BUG-18136` `P0` Reject a partial scan when cancellation arrives while the
   final filesystem entry is processed. _(Issue #600; implemented with a focused
   regression test and awaiting integration through #568.)_
-- [ ] `BUG-18137` `P0` Revalidate backup data after upload and immediately before
+- [x] `BUG-18137` `P0` Revalidate backup data after upload and immediately before
   metadata publication so destination loss cannot create a dangling success row.
   _(Issue #601; implemented with a focused regression test and awaiting
   integration through #568.)_
-- [ ] `BUG-18138` `P0` Preserve rollback evidence with an actionable location
+- [x] `BUG-18138` `P0` Preserve rollback evidence with an actionable location
   when a vanished restore destination prevents automatic recovery. _(Issue #602;
   implemented with a focused regression test and awaiting integration through
   #568.)_
-- [ ] `BUG-18139` `P0` Defer retention metadata deletion while the destination
+- [x] `BUG-18139` `P0` Defer retention metadata deletion while the destination
   root is unavailable or an app-managed mount is disconnected. _(Issue #603;
   implemented with a focused regression test and awaiting integration through
   #568.)_
-- [ ] `BUG-18140` `P0` Validate deferred metadata after replay and retain the
+- [x] `BUG-18140` `P0` Validate deferred metadata after replay and retain the
   complete queue when the destination disappears before commit. _(Issue #604;
   implemented with deterministic replay and cleanup tests and awaiting
   integration through #568.)_
-- [ ] `BUG-18141` `P1` Keep metadata-conflict resolution and backup-index repair
+- [x] `BUG-18141` `P1` Keep metadata-conflict resolution and backup-index repair
   busy state independent. _(Issue #605; implemented with focused command-state
   tests and awaiting integration through #568.)_
-- [ ] `BUG-18142` `P1` Remove failed complete-installer downloads when the
+- [x] `BUG-18142` `P1` Remove failed complete-installer downloads when the
   operation exits. _(Issue #606; implemented with focused filesystem tests and
   awaiting integration through #568.)_
-- [ ] `BUG-18143` `P1` Make cancellation performance qualification deterministic
+- [x] `BUG-18143` `P1` Make cancellation performance qualification deterministic
   on small hosted runners. _(Issue #608; implemented with a dedicated measured
-  worker and awaiting final hosted profiles and integration through #568.)_
+  worker; all hosted profiles pass and integration through #568 remains.)_
+- [x] `BUG-18144` `P1` Keep an explicit or test-scoped configuration directory
+  from opening the normal per-user database by default. _(Issue #609; isolated
+  macOS startup and focused tests pass; integration through #568 remains.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
