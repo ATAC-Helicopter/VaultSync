@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text.Json;
 using VaultSync.Core.Config;
@@ -29,7 +30,15 @@ public sealed class RecoveryDrillService
         }
     }
 
-    public static async Task<RecoveryDrillResult> RunAsync(
+    [SuppressMessage(
+        "Minor Code Smell",
+        "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "Preserves the established public instance API for patch-release compatibility.")]
+    [SuppressMessage(
+        "Performance",
+        "CA1822:Mark members as static",
+        Justification = "Preserves the established public instance API for patch-release compatibility.")]
+    public async Task<RecoveryDrillResult> RunAsync(
         Project project,
         Backup backup,
         Snapshot? snapshot,
@@ -44,7 +53,11 @@ public sealed class RecoveryDrillService
             expectedFiles,
             cancellationToken).ConfigureAwait(false);
 
-    public static async Task<RecoveryDrillResult> RunIsolatedRestoreAsync(
+    [SuppressMessage(
+        "Performance",
+        "CA1822:Mark members as static",
+        Justification = "Preserves the established public instance API for patch-release compatibility.")]
+    public async Task<RecoveryDrillResult> RunIsolatedRestoreAsync(
         Project project,
         Backup backup,
         Snapshot? snapshot,

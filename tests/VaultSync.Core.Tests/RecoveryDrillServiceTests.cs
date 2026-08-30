@@ -39,7 +39,7 @@ public sealed class RecoveryDrillServiceTests : IDisposable
             Expected("one.txt", "one"),
             Expected("two.txt", "two")
         ];
-        RecoveryDrillResult result = await RecoveryDrillService.RunAsync(
+        RecoveryDrillResult result = await new RecoveryDrillService().RunAsync(
             project,
             backup,
             snapshot,
@@ -69,7 +69,7 @@ public sealed class RecoveryDrillServiceTests : IDisposable
         var config = new AppConfig { Backups = new BackupsConfig { BackupRoot = backupRoot } };
         IReadOnlyCollection<FileEntry> expectedFiles = [Expected("src/app.txt", "verified content")];
 
-        RecoveryDrillResult result = await RecoveryDrillService.RunIsolatedRestoreAsync(
+        RecoveryDrillResult result = await new RecoveryDrillService().RunIsolatedRestoreAsync(
             project,
             backup,
             snapshot,
