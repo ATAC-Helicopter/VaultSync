@@ -713,12 +713,30 @@ public sealed class CredentialVault
         return psi;
     }
 
-    private static string ResolveSecretToolPath() =>
-        File.Exists(LinuxSecretToolPath)
-            ? LinuxSecretToolPath
-            : File.Exists(LinuxLocalSecretToolPath)
-                ? LinuxLocalSecretToolPath
-                : LinuxSecretToolPath;
+    private static string ResolveSecretToolPath()
+    {
+        string? path = Environment.GetEnvironmentVariable("PATH");
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            foreach (string directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                try
+                {
+                    string candidate = Path.GetFullPath(Path.Combine(directory, "secret-tool"));
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+                {
+                    // Ignore malformed PATH entries and continue with known absolute locations.
+                }
+            }
+        }
+
+        return File.Exists(LinuxLocalSecretToolPath)
+            ? LinuxLocalSecretToolPath
+            : LinuxSecretToolPath;
+    }
 
     private sealed class StoredSecret
     {
