@@ -61,73 +61,17 @@ public sealed class RecoveryDrillService
             cancellationToken).ConfigureAwait(false);
         List<RecoveryDrillCheck> checks =
             JsonSerializer.Deserialize<List<RecoveryDrillCheck>>(baseline.ChecksJson) ?? [];
-        string? contentPath = BackupContentPathResolver.Resolve(backup, config);
-        string root = string.IsNullOrWhiteSpace(testRoot)
-            ? Path.Combine(Path.GetTempPath(), "VaultSync", "recovery-tests")
-            : Path.GetFullPath(testRoot);
-        string folderName = $"{SafeName(project.Name)}-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}";
-        string target = Path.Combine(root, folderName[..Math.Min(64, folderName.Length)]);
 
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (contentPath is null)
-                throw new DirectoryNotFoundException("The recorded recovery point is unavailable.");
-            if (expectedFiles is not { Count: > 0 })
-                throw new InvalidDataException("Snapshot file metadata is unavailable.");
-
-            FileEntry[] selection = [.. expectedFiles
-                .Where(file => file.Size >= 0 && file.Size <= 16 * 1024 * 1024)
-                .OrderBy(file => file.RelPath, StringComparer.Ordinal)
-                .Take(12)];
-            if (selection.Length == 0)
-                throw new InvalidDataException("No representative files are eligible for the isolated restore.");
-
-            Directory.CreateDirectory(target);
-            SnapshotRestoreSelectionResult restored = await Task.Run(
-                () => SnapshotExplorerService.RestoreSelection(
-                    contentPath,
-                    target,
-                    selection.Select(file => file.RelPath).ToArray()),
-                cancellationToken).ConfigureAwait(false);
-            int verified = 0;
-            foreach (FileEntry file in selection)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                string restoredPath = Path.GetFullPath(Path.Combine(
-                    target,
-                    file.RelPath.Replace('/', Path.DirectorySeparatorChar)));
-                if (!BackupSafetyService.IsPathUnderRoot(target, restoredPath) ||
-                    !File.Exists(restoredPath))
-                {
-                    continue;
-                }
-
-                await using var stream = new FileStream(
-                    restoredPath,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.Read,
-                    1024 * 1024,
-                    FileOptions.Asynchronous | FileOptions.SequentialScan);
-                string hash = Convert.ToHexString(
-                    await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
-                if (!string.IsNullOrWhiteSpace(file.HashSha256) &&
-                    string.Equals(hash, file.HashSha256, StringComparison.OrdinalIgnoreCase))
-                {
-                    verified++;
-                }
-            }
-
-            bool passed = restored.FileCount == selection.Length && verified == selection.Length;
-            checks.Add(new RecoveryDrillCheck(
-                "isolated-restore",
-                passed ? RecoveryDrillCheckStatus.Passed : RecoveryDrillCheckStatus.Failed,
-                passed
-                    ? $"{verified:N0} representative file(s) were restored into a new isolated folder and reopened successfully. Original project files were not touched."
-                    : $"{restored.FileCount:N0}/{selection.Length:N0} file(s) restored and {verified:N0}/{selection.Length:N0} reopened with matching evidence.",
-                $"isolated_restore:{backup.Id}:{snapshot?.Id ?? backup.SnapshotId}",
-                target));
+            checks.Add(await RunIsolatedRestoreCheckAsync(
+                project,
+                backup,
+                snapshot,
+                config,
+                expectedFiles,
+                testRoot,
+                cancellationToken).ConfigureAwait(false));
         }
         catch (Exception ex) when (ex is IOException or
                                        UnauthorizedAccessException or
@@ -140,11 +84,7 @@ public sealed class RecoveryDrillService
                 $"The isolated restore could not be completed: {ex.Message}"));
         }
 
-        RecoveryDrillStatus status = checks.Any(check => check.Status == RecoveryDrillCheckStatus.Failed)
-            ? RecoveryDrillStatus.Failed
-            : checks.Any(check => check.Status == RecoveryDrillCheckStatus.Attention)
-                ? RecoveryDrillStatus.Attention
-                : RecoveryDrillStatus.Passed;
+        RecoveryDrillStatus status = ResolveStatus(checks);
         return baseline with
         {
             RunUtc = DateTime.UtcNow,
@@ -157,6 +97,112 @@ public sealed class RecoveryDrillService
                 : "Isolated recovery test completed with evidence that needs attention.",
             ChecksJson = JsonSerializer.Serialize(checks)
         };
+    }
+
+    private static async Task<RecoveryDrillCheck> RunIsolatedRestoreCheckAsync(
+        Project project,
+        Backup backup,
+        Snapshot? snapshot,
+        AppConfig config,
+        IReadOnlyCollection<FileEntry>? expectedFiles,
+        string? testRoot,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string? contentPath = BackupContentPathResolver.Resolve(backup, config);
+        if (contentPath is null)
+            throw new DirectoryNotFoundException("The recorded recovery point is unavailable.");
+        if (expectedFiles is not { Count: > 0 })
+            throw new InvalidDataException("Snapshot file metadata is unavailable.");
+
+        FileEntry[] selection = SelectRepresentativeFiles(expectedFiles);
+        string target = BuildIsolatedRestoreTarget(project.Name, testRoot);
+        Directory.CreateDirectory(target);
+        SnapshotRestoreSelectionResult restored = await Task.Run(
+            () => SnapshotExplorerService.RestoreSelection(
+                contentPath,
+                target,
+                selection.Select(file => file.RelPath).ToArray()),
+            cancellationToken).ConfigureAwait(false);
+        int verified = await CountVerifiedFilesAsync(selection, target, cancellationToken).ConfigureAwait(false);
+        bool passed = restored.FileCount == selection.Length && verified == selection.Length;
+
+        return new RecoveryDrillCheck(
+            "isolated-restore",
+            passed ? RecoveryDrillCheckStatus.Passed : RecoveryDrillCheckStatus.Failed,
+            passed
+                ? $"{verified:N0} representative file(s) were restored into a new isolated folder and reopened successfully. Original project files were not touched."
+                : $"{restored.FileCount:N0}/{selection.Length:N0} file(s) restored and {verified:N0}/{selection.Length:N0} reopened with matching evidence.",
+            $"isolated_restore:{backup.Id}:{snapshot?.Id ?? backup.SnapshotId}",
+            target);
+    }
+
+    private static FileEntry[] SelectRepresentativeFiles(IReadOnlyCollection<FileEntry> expectedFiles)
+    {
+        FileEntry[] selection = [.. expectedFiles
+            .Where(file => file.Size >= 0 && file.Size <= 16 * 1024 * 1024)
+            .OrderBy(file => file.RelPath, StringComparer.Ordinal)
+            .Take(12)];
+        return selection.Length > 0
+            ? selection
+            : throw new InvalidDataException("No representative files are eligible for the isolated restore.");
+    }
+
+    private static string BuildIsolatedRestoreTarget(string projectName, string? testRoot)
+    {
+        string root = string.IsNullOrWhiteSpace(testRoot)
+            ? Path.Combine(Path.GetTempPath(), "VaultSync", "recovery-tests")
+            : Path.GetFullPath(testRoot);
+        string folderName = $"{SafeName(projectName)}-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}";
+        return Path.Combine(root, folderName[..Math.Min(64, folderName.Length)]);
+    }
+
+    private static async Task<int> CountVerifiedFilesAsync(
+        IEnumerable<FileEntry> files,
+        string target,
+        CancellationToken cancellationToken)
+    {
+        int verified = 0;
+        foreach (FileEntry file in files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string restoredPath = Path.GetFullPath(Path.Combine(
+                target,
+                file.RelPath.Replace('/', Path.DirectorySeparatorChar)));
+            if (!BackupSafetyService.IsPathUnderRoot(target, restoredPath) || !File.Exists(restoredPath))
+                continue;
+
+            await using var stream = new FileStream(
+                restoredPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                1024 * 1024,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+            string hash = Convert.ToHexString(
+                await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
+            if (!string.IsNullOrWhiteSpace(file.HashSha256) &&
+                string.Equals(hash, file.HashSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                verified++;
+            }
+        }
+
+        return verified;
+    }
+
+    private static RecoveryDrillStatus ResolveStatus(IEnumerable<RecoveryDrillCheck> checks)
+    {
+        bool hasAttention = false;
+        foreach (RecoveryDrillCheck check in checks)
+        {
+            if (check.Status == RecoveryDrillCheckStatus.Failed)
+                return RecoveryDrillStatus.Failed;
+            if (check.Status == RecoveryDrillCheckStatus.Attention)
+                hasAttention = true;
+        }
+
+        return hasAttention ? RecoveryDrillStatus.Attention : RecoveryDrillStatus.Passed;
     }
 
     private static string SafeName(string value)
