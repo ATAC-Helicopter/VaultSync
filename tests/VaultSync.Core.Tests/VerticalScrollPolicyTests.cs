@@ -76,6 +76,38 @@ public sealed class VerticalScrollPolicyTests
             $"scrolling or document an intentional horizontal pane: {string.Join(", ", missingPolicies)}");
     }
 
+    [Fact]
+    public void MetadataConflictComparison_StacksRevisionsVertically()
+    {
+        string settingsPath = FindRepositoryFile(
+            "src",
+            "VaultSync.UI",
+            "Views",
+            "SettingsView.axaml");
+        XNamespace avalonia = "https://github.com/avaloniaui";
+        XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
+        XDocument document = XDocument.Load(settingsPath);
+
+        XElement comparison = document
+            .Descendants(avalonia + "StackPanel")
+            .Single(element =>
+                (string?)element.Attribute(xaml + "Name") == "MetadataConflictComparison");
+        XElement[] fields = comparison
+            .Elements(avalonia + "StackPanel")
+            .ToArray();
+
+        Assert.Equal(7, fields.Length);
+        Assert.All(fields, field =>
+        {
+            XElement grid = Assert.Single(field.Elements(avalonia + "Grid"));
+            Assert.Equal("Auto,*", (string?)grid.Attribute("ColumnDefinitions"));
+            Assert.Equal("Auto,Auto,Auto", (string?)grid.Attribute("RowDefinitions"));
+            Assert.DoesNotContain(
+                grid.DescendantsAndSelf(),
+                element => (string?)element.Attribute("ColumnDefinitions") == "Auto,*,*,*");
+        });
+    }
+
     private static int GetLineNumber(XElement element) =>
         ((IXmlLineInfo)element).HasLineInfo()
             ? ((IXmlLineInfo)element).LineNumber

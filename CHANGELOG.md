@@ -40,6 +40,7 @@
 - [BUG-18142] Removed failed installer downloads immediately.
 - [BUG-18143] Made cancellation performance checks deterministic on small runners.
 - [BUG-18144] Kept isolated profiles from opening the normal database.
+- [BUG-18145] Kept metadata-conflict reviews readable in narrow windows.
 
 ## [1.8.7] - 21.08.2026
 ### Added

@@ -844,6 +844,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 - [x] `BUG-18144` `P1` Keep an explicit or test-scoped configuration directory
   from opening the normal per-user database by default. _(Issue #609; isolated
   macOS startup and focused tests pass; integration through #568 remains.)_
+- [x] `BUG-18145` `P1` Keep metadata-conflict comparisons readable without
+  horizontal overflow in narrow windows. _(Issue #610; discovered during the
+  release matrix; stacked comparison rows, focused policy coverage, and direct
+  macOS 900×700 qualification pass; integration through #568 remains.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

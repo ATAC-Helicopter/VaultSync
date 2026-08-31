@@ -231,6 +231,10 @@ failure handling without becoming a broad rewrite.
   isolated recording, troubleshooting, and test profiles now keep their default
   database inside the selected configuration directory instead of opening the
   normal per-user database.
+- [`BUG-18145` / #610](https://github.com/ATAC-Helicopter/VaultSync/issues/610):
+  metadata-conflict review now stacks Base, Local, and Imported values vertically
+  so long values remain readable in narrow windows without introducing
+  horizontal scrolling.
 
 Exact `1.8.7` compatibility now has frozen-schema and configuration tests that
 preserve repository records, encrypted-backup descriptors, user paths, schedules,
