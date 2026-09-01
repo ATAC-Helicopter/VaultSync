@@ -39,7 +39,9 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     outputs:
-      patch_base_versions: ${{ steps.validate_inputs.outputs.patch_base_versions }}
+      patch_base_versions_windows: ${{ steps.validate_inputs.outputs.patch_base_versions_windows }}
+      patch_base_versions_macos: ${{ steps.validate_inputs.outputs.patch_base_versions_macos }}
+      patch_base_versions_linux: ${{ steps.validate_inputs.outputs.patch_base_versions_linux }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -147,11 +149,15 @@ jobs:
             fi
           fi
 
-          {
-            echo "patch_base_versions<<EOF"
-            printf '%s\n' "$previous"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          for platform in windows macos linux; do
+            candidates="$(jq -r --arg platform "$platform" '.activeRelease.patchBaseCandidates[$platform][]? // empty' release/release-metadata.json)"
+            {
+              echo "patch_base_versions_${platform}<<EOF"
+              printf '%s\n' "$previous"
+              printf '%s\n' "$candidates" | sed '/^[[:space:]]*$/d'
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          done
 
           cat <<EOF >> "$GITHUB_STEP_SUMMARY"
           ## Release asset validation
@@ -160,9 +166,13 @@ jobs:
           - Release candidate: \`$release_candidate\`
           - Project version: \`$project_version\`
           - Primary previous version: \`${previous:-"(none)"}\`
-          - Qualified patch base:
+          - Primary qualified patch base:
           EOF
           echo "  - \`$previous\`" >> "$GITHUB_STEP_SUMMARY"
+          for platform in windows macos linux; do
+            candidates="$(jq -r --arg platform "$platform" '.activeRelease.patchBaseCandidates[$platform][]? // empty' release/release-metadata.json | paste -sd ', ' -)"
+            echo "- Additional $platform overlay candidates: \`${candidates:-none}\`" >> "$GITHUB_STEP_SUMMARY"
+          done
           cat <<EOF >> "$GITHUB_STEP_SUMMARY"
           - Target version: \`$target\`
           EOF
@@ -316,7 +326,7 @@ jobs:
       - name: Build patch assets
         shell: pwsh
         env:
-          PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
+          PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions_windows }}
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           $targetVersion = $env:TARGET_VERSION
@@ -329,12 +339,24 @@ jobs:
             if ($trimmed) { $baseVersions += $trimmed }
           }
           $previousArgs = foreach ($baseVersion in $baseVersions) { "--previous"; $baseVersion }
+          $baseManifestArgs = @()
+          foreach ($baseVersion in ($baseVersions | Select-Object -Skip 1)) {
+            $manifestDir = ".patch-bases/windows"
+            New-Item -ItemType Directory -Force $manifestDir | Out-Null
+            $manifestPath = Join-Path $manifestDir "$baseVersion.json"
+            $url = "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v$baseVersion/vaultsync-patch-windows.json"
+            Invoke-WebRequest -Uri $url -OutFile $manifestPath
+            $baseManifestArgs += "--base-manifest"
+            $baseManifestArgs += "$baseVersion=$manifestPath"
+          }
           python scripts/build_patch.py `
             --base-dir "src/VaultSync.UI/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish" `
             --out-zip "$patchDir/vaultsync-patch-windows.zip" `
             --out-manifest "$patchDir/vaultsync-patch-windows.json" `
             --platform windows `
             @previousArgs `
+            @baseManifestArgs `
+            --skip-incompatible-bases `
             --target "$targetVersion"
 
       - name: Verify required Windows artifacts
@@ -499,15 +521,30 @@ jobs:
 
       - name: Build patch assets
         env:
-          PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
+          PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions_macos }}
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           mkdir -p "patches/v$TARGET_VERSION"
+          base_versions=()
           previous_args=()
           while IFS= read -r base; do
             [[ -n "$base" ]] || continue
+            base_versions+=( "$base" )
             previous_args+=( --previous "$base" )
           done <<< "$PATCH_BASE_VERSIONS"
+          arm64_base_manifest_args=()
+          x64_base_manifest_args=()
+          for base in "${base_versions[@]:1}"; do
+            mkdir -p .patch-bases/macos-apple-silicon .patch-bases/macos-intel
+            for platform in macos-apple-silicon macos-intel; do
+              path=".patch-bases/$platform/$base.json"
+              curl --fail --location --silent --show-error \
+                "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v$base/vaultsync-patch-$platform.json" \
+                --output "$path"
+            done
+            arm64_base_manifest_args+=( --base-manifest "$base=.patch-bases/macos-apple-silicon/$base.json" )
+            x64_base_manifest_args+=( --base-manifest "$base=.patch-bases/macos-intel/$base.json" )
+          done
           arm64_patch_root="dist/macos/staging/arm64/VaultSync.app"
           x64_patch_root="dist/macos/staging/x64/VaultSync.app"
           if [[ "$TARGET_VERSION" == "1.8.7" ]]; then
@@ -525,6 +562,8 @@ jobs:
             --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json" \
             --platform macos \
             "${previous_args[@]}" \
+            "${arm64_base_manifest_args[@]}" \
+            --skip-incompatible-bases \
             --target "$TARGET_VERSION"
           python3 scripts/build_patch.py \
             --base-dir "$x64_patch_root" \
@@ -532,6 +571,8 @@ jobs:
             --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json" \
             --platform macos \
             "${previous_args[@]}" \
+            "${x64_base_manifest_args[@]}" \
+            --skip-incompatible-bases \
             --target "$TARGET_VERSION"
 
       - name: Verify required macOS artifacts
@@ -645,21 +686,38 @@ jobs:
       - name: Build patch assets
         if: ${{ inputs.include_linux_patches }}
         env:
-          PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions }}
+          PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions_linux }}
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           mkdir -p "patches/v$TARGET_VERSION"
+          base_versions=()
           previous_args=()
           while IFS= read -r base; do
             [[ -n "$base" ]] || continue
+            base_versions+=( "$base" )
             previous_args+=( --previous "$base" )
           done <<< "$PATCH_BASE_VERSIONS"
+          x64_base_manifest_args=()
+          arm64_base_manifest_args=()
+          for base in "${base_versions[@]:1}"; do
+            mkdir -p .patch-bases/linux-x64 .patch-bases/linux-arm64
+            for platform in linux-x64 linux-arm64; do
+              path=".patch-bases/$platform/$base.json"
+              curl --fail --location --silent --show-error \
+                "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v$base/vaultsync-patch-$platform.json" \
+                --output "$path"
+            done
+            x64_base_manifest_args+=( --base-manifest "$base=.patch-bases/linux-x64/$base.json" )
+            arm64_base_manifest_args+=( --base-manifest "$base=.patch-bases/linux-arm64/$base.json" )
+          done
           python3 scripts/build_patch.py \
             --base-dir "src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish" \
             --out-zip "patches/v$TARGET_VERSION/vaultsync-patch-linux-x64.zip" \
             --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-linux-x64.json" \
             --platform linux \
             "${previous_args[@]}" \
+            "${x64_base_manifest_args[@]}" \
+            --skip-incompatible-bases \
             --target "$TARGET_VERSION"
           python3 scripts/build_patch.py \
             --base-dir "src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish" \
@@ -667,6 +725,8 @@ jobs:
             --out-manifest "patches/v$TARGET_VERSION/vaultsync-patch-linux-arm64.json" \
             --platform linux \
             "${previous_args[@]}" \
+            "${arm64_base_manifest_args[@]}" \
+            --skip-incompatible-bases \
             --target "$TARGET_VERSION"
 
       - name: Verify required Linux artifacts

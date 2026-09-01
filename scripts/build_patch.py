@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import argparse
 import hashlib
 import json
@@ -83,7 +85,32 @@ def write_json_file(path: Path, root: Path, data: object) -> None:
     safe_path.write_text(json.dumps(data, indent=4), encoding="utf-8")  # NOSONAR
 
 
-def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str, previous_versions: list[str], target: str) -> None:
+def load_manifest_paths(path: Path, workspace: Path) -> set[str]:
+    safe_path = ensure_child_path(path, workspace)
+    payload = json.loads(safe_path.read_text(encoding="utf-8-sig"))
+    files = payload.get("files") if isinstance(payload, dict) else None
+    if not isinstance(files, list) or not files:
+        raise ValueError(f"Reference patch manifest has no file inventory: {path}")
+
+    normalized: set[str] = set()
+    for entry in files:
+        raw_path = entry.get("path") if isinstance(entry, dict) else None
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            raise ValueError(f"Reference patch manifest has an invalid file path: {path}")
+        normalized.add(raw_path.replace("\\", "/").casefold())
+    return normalized
+
+
+def build_patch(
+    base_dir: Path,
+    out_zip: Path,
+    out_manifest: Path,
+    platform: str,
+    previous_versions: list[str],
+    target: str,
+    base_manifests: dict[str, Path] | None = None,
+    skip_incompatible_bases: bool = False,
+) -> None:
     files = []
     base_dir = base_dir.resolve()
     workspace = ensure_existing_workspace()
@@ -109,14 +136,39 @@ def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str
 
     if not normalized_previous:
         raise ValueError("At least one --previous version is required.")
-    if len(normalized_previous) > 1:
-        raise ValueError(
-            "Automated patch manifests support exactly one qualified base version. "
-            "Use a full installer for older or additional base versions."
-        )
-
     paths = [ensure_child_path(p, base_dir) for p in base_dir.rglob("*") if p.is_file()]
     paths.sort(key=lambda p: str(p.relative_to(base_dir)).lower())
+    current_paths = {
+        str(path.relative_to(base_dir)).replace("\\", "/").casefold()
+        for path in paths
+    }
+
+    qualified_previous = [normalized_previous[0]]
+    if len(normalized_previous) > 1:
+        references = {
+            version.strip().casefold(): path
+            for version, path in (base_manifests or {}).items()
+            if version.strip()
+        }
+        for additional_base in normalized_previous[1:]:
+            reference = references.get(additional_base.casefold())
+            if reference is None:
+                raise ValueError(
+                    f"Additional base {additional_base} requires a reference patch manifest."
+                )
+            obsolete_paths = load_manifest_paths(reference, workspace) - current_paths
+            if obsolete_paths:
+                sample = ", ".join(sorted(obsolete_paths)[:3])
+                message = (
+                    f"Additional base {additional_base} is not overlay-safe; "
+                    f"the target omits {len(obsolete_paths)} managed file(s): {sample}. "
+                    "Use the full installer for this base."
+                )
+                if skip_incompatible_bases:
+                    print(f"Skipping {message}")
+                    continue
+                raise ValueError(message)
+            qualified_previous.append(additional_base)
 
     safe_out_zip = ensure_output_file(out_zip, workspace, suffix=".zip")
     safe_out_manifest = ensure_output_file(out_manifest, workspace, suffix=".json")
@@ -143,7 +195,7 @@ def build_patch(base_dir: Path, out_zip: Path, out_manifest: Path, platform: str
 
     manifest = {
         "previousVersion": normalized_previous[0],
-        "baseVersions": normalized_previous,
+        "baseVersions": qualified_previous,
         "targetVersion": target,
         "archiveSha256": sha256_file(safe_out_zip, workspace),
         "archiveSize": safe_out_zip.stat().st_size,
@@ -160,8 +212,27 @@ def main() -> None:
     parser.add_argument("--out-manifest", required=True)
     parser.add_argument("--platform", choices=["windows", "macos", "linux"], required=True)
     parser.add_argument("--previous", action="append", required=True)
+    parser.add_argument(
+        "--base-manifest",
+        action="append",
+        default=[],
+        metavar="VERSION=PATH",
+        help="Reference manifest proving an additional base has no obsolete managed files.",
+    )
+    parser.add_argument(
+        "--skip-incompatible-bases",
+        action="store_true",
+        help="Omit additional bases that contain managed files absent from the target.",
+    )
     parser.add_argument("--target", required=True)
     args = parser.parse_args()
+
+    base_manifests: dict[str, Path] = {}
+    for value in args.base_manifest:
+        version, separator, raw_path = value.partition("=")
+        if not separator or not version.strip() or not raw_path.strip():
+            raise ValueError("--base-manifest must use VERSION=PATH.")
+        base_manifests[version.strip()] = resolve_workspace_path(raw_path, must_exist=True)
 
     build_patch(
         resolve_workspace_path(args.base_dir, must_exist=True, directory=True),
@@ -170,6 +241,8 @@ def main() -> None:
         args.platform,
         args.previous,
         args.target,
+        base_manifests,
+        args.skip_incompatible_bases,
     )
 
 
