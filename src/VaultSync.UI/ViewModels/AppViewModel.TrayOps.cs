@@ -73,12 +73,32 @@ namespace VaultSync.UI.ViewModels
         /// </summary>
         
         /// <summary>
-        /// Returns the list of backup-capable projects for use in the tray menu.
+        /// Lightweight registered-project snapshot used by tray menus before the
+        /// Backups or Projects pages have been opened.
         /// </summary>
-        public IReadOnlyList<ProjectBackupItem> GetProjectsForBackupTray()
+        public sealed record TrayProjectItem(int Id, string Name);
+
+        public IReadOnlyList<TrayProjectItem> GetProjectsForTray()
         {
-            return BackupsViewModel.ProjectBackups.ToList();
+            try
+            {
+                return BuildTrayProjectItems(_repo.GetAllProjects());
+            }
+            catch
+            {
+                return [];
+            }
         }
+
+        internal static IReadOnlyList<TrayProjectItem> BuildTrayProjectItems(IEnumerable<Project>? projects) =>
+            projects?
+                .Where(project => project.Id > 0 && !string.IsNullOrWhiteSpace(project.Name))
+                .GroupBy(project => project.Id)
+                .Select(group => group.First())
+                .Select(project => new TrayProjectItem(project.Id, project.Name.Trim()))
+                .OrderBy(project => project.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList()
+            ?? [];
 
         /// <summary>
         /// Triggered from the tray menu: backup a specific project by its ProjectBackupItem.Id.
@@ -98,7 +118,27 @@ namespace VaultSync.UI.ViewModels
             ProjectBackupItem? projectItem = BackupsViewModel.ProjectBackups.FirstOrDefault(p => p.Id == projectId);
             if (projectItem == null)
             {
-                return;
+                if (!int.TryParse(projectId, out int parsedProjectId))
+                    return;
+
+                Project? project;
+                try
+                {
+                    project = _repo.GetProjectById(parsedProjectId);
+                }
+                catch
+                {
+                    return;
+                }
+
+                if (project is null)
+                    return;
+
+                projectItem = new ProjectBackupItem
+                {
+                    Id = project.Id.ToString(CultureInfo.InvariantCulture),
+                    Name = project.Name
+                };
             }
 
             // When triggered from tray, navigate to the Backups page so the user
@@ -164,19 +204,6 @@ namespace VaultSync.UI.ViewModels
         }
 
         /// <summary>
-        /// Returns the list of projects used for snapshots (Projects page),
-        /// for use in the tray's Snapshot submenu.
-        /// Only returns projects that are actually added/tracked in VaultSync.
-        /// Untracked/discovered entries normally have ProjectId <= 0 and should not appear in the tray.
-        /// </summary>
-        public IReadOnlyList<ProjectItemViewModel> GetProjectsForSnapshotTray()
-        {
-            // Only expose projects that are actually registered in the backup DB.
-            return _projectsViewModel.Projects
-                .Where(p => p.IsRegistered)
-                .ToList();
-        }
-
         /// <summary>
         /// Triggered from the tray menu: create a snapshot for a specific project by name.
         /// This reuses the ProjectsViewModel.TakeSnapshotForProjectFromTrayAsync pipeline,

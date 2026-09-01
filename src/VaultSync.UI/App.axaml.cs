@@ -427,7 +427,13 @@ public partial class App : Application
         };
 
         _trayMenu = [];
-        PopulateTrayMenu(_trayMenu, desktop, policySummary: AppViewModelInstance?.GetBackupPolicyTraySummary());
+        IReadOnlyList<AppViewModel.TrayProjectItem> initialTrayProjects =
+            AppViewModelInstance?.GetProjectsForTray() ?? [];
+        PopulateTrayMenu(
+            _trayMenu,
+            desktop,
+            policySummary: AppViewModelInstance?.GetBackupPolicyTraySummary(),
+            trayProjects: initialTrayProjects);
 
         // macOS prefers the native menu; custom tray panels can fail to open.
         if (OperatingSystem.IsMacOS())
@@ -805,7 +811,8 @@ public partial class App : Application
         NativeMenu menu,
         IClassicDesktopStyleApplicationLifetime desktop,
         IReadOnlyList<AppViewModel.TrayProjectBackups>? recentBackups = null,
-        string? policySummary = null)
+        string? policySummary = null,
+        IReadOnlyList<AppViewModel.TrayProjectItem>? trayProjects = null)
     {
         if (!OperatingSystem.IsMacOS())
         {
@@ -843,10 +850,10 @@ public partial class App : Application
         NativeMenuItem destinationRootItem = BuildDestinationMenu(destinationsTitle, destinationSummaries, configuredDestinations);
 
         // ---------- Backup submenu ----------
-        NativeMenuItem backupRootItem = BuildBackupMenu(desktop);
+        NativeMenuItem backupRootItem = BuildBackupMenu(desktop, trayProjects ?? []);
 
         // ---------- Snapshot submenu ----------
-        NativeMenuItem snapshotRootItem = BuildSnapshotMenu(desktop);
+        NativeMenuItem snapshotRootItem = BuildSnapshotMenu(desktop, trayProjects ?? []);
 
         // ---------- Recent backups (keep/delete) ----------
         NativeMenuItem manageBackupsRoot = BuildRecentBackupsMenu(desktop, recentBackups);
@@ -1061,13 +1068,12 @@ public partial class App : Application
         return destinationRootItem;
     }
 
-    private static NativeMenuItem BuildBackupMenu(IClassicDesktopStyleApplicationLifetime desktop)
+    private static NativeMenuItem BuildBackupMenu(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        IReadOnlyList<AppViewModel.TrayProjectItem> backupProjects)
     {
         var backupRootItem = new NativeMenuItem(L("Tray.Backup.Title", "Backup"));
         var backupMenu = new NativeMenu();
-
-        IReadOnlyList<ProjectBackupItem> backupProjects = AppViewModelInstance?.GetProjectsForBackupTray()
-                             ?? [];
 
         if (backupProjects.Any())
         {
@@ -1080,9 +1086,9 @@ public partial class App : Application
             backupMenu.Items.Add(backupAllItem);
             backupMenu.Items.Add(new NativeMenuItemSeparator());
 
-            foreach (ProjectBackupItem project in backupProjects)
+            foreach (AppViewModel.TrayProjectItem project in backupProjects)
             {
-                string projectId = project.Id;
+                string projectId = project.Id.ToString(CultureInfo.InvariantCulture);
                 string projectName = project.Name;
 
                 var projectBackupItem = new NativeMenuItem(projectName);
@@ -1104,13 +1110,12 @@ public partial class App : Application
         return backupRootItem;
     }
 
-    private static NativeMenuItem BuildSnapshotMenu(IClassicDesktopStyleApplicationLifetime desktop)
+    private static NativeMenuItem BuildSnapshotMenu(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        IReadOnlyList<AppViewModel.TrayProjectItem> snapshotProjects)
     {
         var snapshotRootItem = new NativeMenuItem(L("Tray.Snapshot.Title", "Snapshot"));
         var snapshotMenu = new NativeMenu();
-
-        IReadOnlyList<ProjectItemViewModel> snapshotProjects = AppViewModelInstance?.GetProjectsForSnapshotTray()
-                               ?? [];
 
         if (snapshotProjects.Any())
         {
@@ -1127,7 +1132,7 @@ public partial class App : Application
             snapshotMenu.Items.Add(snapshotAllItem);
             snapshotMenu.Items.Add(new NativeMenuItemSeparator());
 
-            foreach (ProjectItemViewModel project in snapshotProjects)
+            foreach (AppViewModel.TrayProjectItem project in snapshotProjects)
             {
                 string projectName = project.Name;
 
@@ -1454,12 +1459,24 @@ public partial class App : Application
                                 ?? [];
             IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations = viewModel?.GetDestinationProbeSummaries()
                                ?? [];
+            IReadOnlyList<AppViewModel.TrayProjectItem> trayProjects = viewModel?.GetProjectsForTray()
+                               ?? [];
             string policySummary = viewModel?.GetBackupPolicyTraySummary() ?? string.Empty;
             string policySignature = viewModel?.GetBackupPolicySignatureForTray() ?? string.Empty;
-            string signatureValue = BuildTrayMenuSignature(recentBackups, destinations, policySignature, policySummary);
-            return (Recent: recentBackups, Signature: signatureValue, PolicySummary: policySummary);
+            string signatureValue = BuildTrayMenuSignature(
+                recentBackups,
+                destinations,
+                trayProjects,
+                policySignature,
+                policySummary);
+            return (
+                Recent: recentBackups,
+                Projects: trayProjects,
+                Signature: signatureValue,
+                PolicySummary: policySummary);
         });
         IReadOnlyList<AppViewModel.TrayProjectBackups> recent = trayResult.Recent;
+        IReadOnlyList<AppViewModel.TrayProjectItem> projects = trayResult.Projects;
         string signature = trayResult.Signature;
         string policySummary = trayResult.PolicySummary;
 
@@ -1481,7 +1498,7 @@ public partial class App : Application
                 if (OperatingSystem.IsMacOS())
                 {
                     targetMenu = new NativeMenu();
-                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary);
+                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary, projects);
                     _trayMenu = targetMenu;
                     _trayIcon.Menu = targetMenu;
                 }
@@ -1490,7 +1507,7 @@ public partial class App : Application
                     // Linux AppIndicator hosts can duplicate or flicker tray icons when the menu
                     // object is replaced repeatedly. Keep one native menu and mutate its items.
                     targetMenu = _trayMenu ?? new NativeMenu();
-                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary);
+                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary, projects);
                     _trayMenu = targetMenu;
                     if (_trayIcon.Menu is null)
                         _trayIcon.Menu = targetMenu;
@@ -1530,6 +1547,7 @@ public partial class App : Application
     private static string BuildTrayMenuSignature(
         IReadOnlyList<AppViewModel.TrayProjectBackups> recent,
         IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations,
+        IReadOnlyList<AppViewModel.TrayProjectItem> projects,
         string policySignature,
         string policySummary)
     {
@@ -1546,6 +1564,13 @@ public partial class App : Application
             sb.Append(dest.Id).Append('|')
               .Append(dest.Reachable).Append('|')
               .Append(dest.LastChecked.ToString("O")).Append(';');
+        }
+
+        foreach (AppViewModel.TrayProjectItem project in projects)
+        {
+            sb.Append("project=")
+              .Append(project.Id).Append('|')
+              .Append(project.Name).Append(';');
         }
 
         foreach (AppViewModel.TrayProjectBackups project in recent)
