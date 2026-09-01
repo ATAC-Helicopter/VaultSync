@@ -155,7 +155,7 @@ Released on 10 August 2026.
 
 ### Release safety
 - Patch installation restores replaced files and removes patch-created files when an ordinary installation failure interrupts replacement.
-- Automated patch manifests name one qualified predecessor; older or unlisted installations fall back to a full installer.
+- Patch manifests allow only file-inventory-qualified bases; incompatible installs fall back to the installer.
 - `1.8.6` ships directly as a stable release with no beta build; unpublished release-candidate artifacts use the release branch, and final assets use `Stable`.
 - Rendering dependencies remain aligned across supported platforms.
 - Rich-text links are limited to approved external schemes, dependency vulnerability checks are clean, and previously silent cache or deferred-backup failures now leave diagnostic evidence.

@@ -72,13 +72,19 @@ Linux can use architecture-specific patch names:
 
 ## Patch Manifest Base-Version Rules
 - Legacy manifests may declare one exact base version via `previousVersion`.
-- Current release automation emits one qualified base in `baseVersions`.
+- Current release automation always emits the primary qualified predecessor and
+  may add platform-specific older bases proven overlay-safe from their published
+  patch-manifest file inventories.
 - `baseVersions` is an exact allowlist, not a version range.
 - Patch preflight and helper apply both require the installed version to match one listed base exactly.
 - If the installed version is not listed, VaultSync must fall back to the installer.
 - Prerelease labels are part of the exact version identity, so `1.7.4-Beta.1` and `1.7.4` are treated as different bases.
 
-This is required because patch archives do not remove obsolete files. The automated release path therefore accepts exactly one explicitly tested predecessor. Older or additional base versions use the full installer.
+Patch archives do not remove obsolete files. An additional base is therefore
+eligible only when every file managed by its published patch manifest also
+exists in the target payload. The release build checks that condition per
+platform and omits incompatible candidates automatically. Omitted, unknown, or
+unlisted versions use the full installer.
 
 ## Release Validation
 After publishing assets, verify:
@@ -87,7 +93,8 @@ After publishing assets, verify:
 - patch downloads succeed
 - patch apply succeeds on target platform
 - installer fallback remains functional
-- the single base version listed in `baseVersions` was validated against that same patch payload
+- every base listed in `baseVersions` was validated against that same patch
+  payload; additional bases have no managed files absent from the target
 
 The updater and `scripts/release_readiness_gate.ps1 -Phase PostPublish` enforce
 the same canonical release-manifest contract. Patch manifests remain a separate

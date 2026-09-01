@@ -64,8 +64,10 @@ This document defines the current release packaging flow.
 ## 4) Patch/Updater Assets
 Create patch manifest and patch archives as described in `docs/UPDATER.md`.
 
-Patch automation accepts one qualified predecessor:
+Patch automation requires one primary qualified predecessor:
 - set `previous_version` to the exact version validated against the patch
+- platform-specific additional candidates come only from
+  `activeRelease.patchBaseCandidates` in `release/release-metadata.json`
 - do not use ranges or infer compatibility with older releases
 - unlisted versions must use the full installer fallback
 
@@ -101,11 +103,18 @@ The `release_candidate` switch is not used for beta builds. It exists only to
 build unpublished, stable-version candidate assets from a matching release
 branch before the final merge into `Stable`.
 
-Patch builds require one qualified predecessor through `previous_version`. This produces a manifest with:
+Patch builds require one primary qualified predecessor through
+`previous_version`. This produces a manifest with:
 - `previousVersion` for backward compatibility
-- `baseVersions` containing that same qualified predecessor
+- `baseVersions` containing that predecessor plus only the platform-specific
+  candidates whose published managed-file inventory is a subset of the target
+  payload
 
-Do not broaden the allowlist to older releases without a separate qualification mechanism and test evidence for every platform. Older or unlisted installs must fall back to the full installer.
+The workflow downloads each candidate's published platform patch manifest and
+performs the subset check while building the new payload. If the target removed
+even one candidate-managed file, that base is omitted and uses the installer.
+Do not edit the generated allowlist or use version ranges. Older and unlisted
+installs must fall back to the full installer.
 
 After all platform jobs complete, the workflow downloads the artifacts they
 actually produced and generates `vaultsync-release-manifest.json`. Its v1 schema

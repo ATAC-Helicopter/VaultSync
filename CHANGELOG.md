@@ -9,6 +9,7 @@
 - [VS-1887] Made guided setup actionable and moved Guide and Schedule queries off the UI thread.
 - [VS-1884] Qualified exact 1.8.7 state and updated pinned workflow security actions.
 - [VS-1888] Cleared remaining core Sonar annotations.
+- [VS-1889] Qualified safe multi-version Linux patch updates with installer fallback.
 - [VS-1821] Isolated snapshot creation, deferred hashing, checkpoint telemetry, and native-copy orchestration.
 ### Fixed
 - [BUG-18116] Removed unintended horizontal page and dialog scrolling.
@@ -41,6 +42,8 @@
 - [BUG-18143] Made cancellation performance checks deterministic on small runners.
 - [BUG-18144] Kept isolated profiles from opening the normal database.
 - [BUG-18145] Kept metadata-conflict reviews readable in narrow windows.
+- [BUG-18146] Loaded registered projects into tray menus before opening a page.
+- [BUG-18147] Kept Linux open until privileged update authentication succeeds.
 
 ## [1.8.7] - 21.08.2026
 ### Added

@@ -685,7 +685,7 @@ must not make truthful checksums, manifests, SBOMs, or provenance optional.
 **Status:** Active and required before `1.9.0`
 **Tagline:** *A stable foundation for larger recovery.*
 **Planning started:** 2026-08-24
-**Stable target:** 2026-08-28
+**Stable target:** 2026-09-01
 **Maximum date:** 2026-09-04
 **Working branch:** `release/1.8.8`
 **Integration target:** `Dev`
@@ -769,6 +769,11 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   cohesive repository writes, and focused complexity boundaries.
   _(Issue #607; final-head Sonar and CodeQL are green and integration through
   #568 remains.)_
+- [x] `VS-1889` `P1` Qualify multi-version patch bases per platform without
+  weakening exact-version or managed-file safety. _(Linux 1.8.2, 1.8.3, 1.8.5,
+  and 1.8.6 are candidates; the release build omits any base whose published
+  managed inventory is not a subset of the target, preserving installer
+  fallback. Issue #613; integration through #568 remains.)_
 - [x] `BUG-18125` `P1` Prevent predictable encrypted-restore staging collisions
   and preserve existing output when authentication fails.
   _(Issue #584; delivered on the release branch and awaiting integration through
@@ -848,6 +853,15 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   horizontal overflow in narrow windows. _(Issue #610; discovered during the
   release matrix; stacked comparison rows, focused policy coverage, and direct
   macOS 900×700 qualification pass; integration through #568 remains.)_
+- [x] `BUG-18146` `P1` Populate tray backup and snapshot menus from registered
+  repository projects before any project page has loaded. _(Focused projection
+  coverage and an isolated macOS startup profile confirm the project appears;
+  issue #611 and integration through #568 remain.)_
+- [x] `BUG-18147` `P0` Keep Linux running until Debian installer authentication
+  and protected patch-helper authorization actually complete. _(Cancelled or
+  failed privilege prompts now preserve the running app; successful package
+  installs close only after `apt-get` exits successfully; issue #612 and
+  integration through #568 remain.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

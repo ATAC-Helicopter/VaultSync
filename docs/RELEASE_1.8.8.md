@@ -11,12 +11,13 @@ release. The canonical scope remains in
 | Current stable | `1.8.7` (`v1.8.7`, released 2026-08-21) |
 | Active target | `1.8.8` |
 | Planning started | 2026-08-24 |
-| Stable target | 2026-08-28 |
+| Stable target | 2026-09-01 |
 | Maximum date | 2026-09-04 |
 | Working branch | `release/1.8.8` |
 | Integration branch | `Dev` |
 | Stable branch | `Stable` |
-| Qualified patch predecessor | `1.8.7` only |
+| Primary patch predecessor | `1.8.7` |
+| Additional Linux candidates | `1.8.2`, `1.8.3`, `1.8.5`, `1.8.6` when the target remains overlay-safe |
 | Tagline | *A stable foundation for larger recovery.* |
 
 The seven-day target keeps this release narrow. P0 safety and qualification
@@ -47,6 +48,14 @@ Snapshot taken on 2026-08-24, three days after publication:
 Feedback remains an open intake throughout the release. New reports should be
 triaged by reproducibility and data-safety impact, linked to the `1.8.8`
 milestone when accepted, and added to the changelog only after a fix exists.
+
+On 2026-09-01, a Linux `1.8.2` installation reproduced a failed `1.8.7`
+installer fallback: VaultSync exited as soon as `pkexec` started, before the
+password prompt had completed. `BUG-18147` changes Debian fallback to wait for
+the actual privileged install result and adds an authenticated-helper handoff
+for protected patch installs. `VS-1889` also qualifies direct Linux overlays
+from older exact bases when their published file inventories contain no file
+that the target omits; all other versions retain installer fallback.
 
 ## Code baseline
 
@@ -88,8 +97,11 @@ failure handling without becoming a broad rewrite.
   latency, memory growth, or cancellation time;
 - plain and encrypted backup/restore pass interruption, destination loss,
   corruption, retention, and clean-machine recovery exercises;
-- an unmodified `1.8.7` installation can update or fall back to the complete
+- unmodified `1.8.7` installations can update or fall back to the complete
   installer without losing projects, repositories, or recovery evidence;
+- Linux `1.8.2`, `1.8.3`, `1.8.5`, and `1.8.6` use a direct patch only when the
+  generated manifest retains them after file-inventory qualification; Linux
+  `1.8.4` and any omitted base use installer fallback without premature exit;
 - Windows, macOS, and Linux artifacts pass build, install, launch, backup,
   restore, update, and uninstall checks appropriate to each package;
 - all maintained translations, keyboard and screen-reader paths, scaling,
@@ -125,6 +137,17 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18117` / #570](https://github.com/ATAC-Helicopter/VaultSync/issues/570):
   retention deletion confinement across filesystem links (`P0`) — fixed on the
   release branch and awaiting integration through #568.
+- [`VS-1889` / #613](https://github.com/ATAC-Helicopter/VaultSync/issues/613):
+  exact multi-version patch qualification (`P1`) — implemented for
+  platform-specific overlay-safe candidates; final generated manifests remain
+  part of the non-local release matrix.
+- [`BUG-18146` / #611](https://github.com/ATAC-Helicopter/VaultSync/issues/611):
+  startup tray project discovery (`P1`) — implemented and covered
+  with an isolated profile plus focused projection tests.
+- [`BUG-18147` / #612](https://github.com/ATAC-Helicopter/VaultSync/issues/612):
+  Linux privileged updater handoff (`P0`) — implemented with
+  Debian exit-result handling and an elevated patch-helper readiness handshake;
+  physical Debian cancellation/success qualification remains in `VS-1881`.
 - [`BUG-18118` / #571](https://github.com/ATAC-Helicopter/VaultSync/issues/571):
   fail-closed source loss after snapshot creation (`P0`) — fixed on the release
   branch and awaiting integration through #568.

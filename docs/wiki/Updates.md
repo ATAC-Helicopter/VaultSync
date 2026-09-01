@@ -20,6 +20,9 @@ VaultSync supports two Windows update models:
   - the manifest must explicitly list the installed version as an allowed base version
   - unlisted or older installs fall back to the full installer
 - Multi-base patch manifests are strict allowlists, not version ranges.
+- Additional bases are included only when their published managed-file
+  inventory is a subset of the target payload. The release build checks each
+  platform independently and leaves incompatible versions on installer fallback.
 - Patch + installer fallback applies to Direct builds only.
 - VaultSync 1.8.7 provides a one-time architecture-aware bridge patch from the
   exact 1.8.6 predecessor to canonical `/Applications/VaultSync.app`. It stages,
@@ -50,6 +53,8 @@ Switch channels in Settings > Advanced.
 - macOS: architecture-specific, intentionally unsigned `.dmg` containing the
   canonical `VaultSync.app` and an Applications shortcut.
 - Linux: `.AppImage`, `.deb`, or `.tar.gz` assets, depending on architecture and distribution.
+- Debian-package installation waits for administrator authentication and the
+  package result; cancelling the password prompt keeps VaultSync open.
 - Windows Store: packaged Microsoft Store build when published.
 
 ## Safe update expectation
