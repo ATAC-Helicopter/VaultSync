@@ -148,6 +148,9 @@ failure handling without becoming a broad rewrite.
   Linux privileged updater handoff (`P0`) — implemented with
   Debian exit-result handling and an elevated patch-helper readiness handshake;
   physical Debian cancellation/success qualification remains in `VS-1881`.
+- [`BUG-18148` / #614](https://github.com/ATAC-Helicopter/VaultSync/issues/614):
+  macOS system-Python script validation (`P1`) — postponed annotations remove
+  the accidental local dependency on a separately installed Python 3.10+.
 - [`BUG-18118` / #571](https://github.com/ATAC-Helicopter/VaultSync/issues/571):
   fail-closed source loss after snapshot creation (`P0`) — fixed on the release
   branch and awaiting integration through #568.

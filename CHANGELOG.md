@@ -44,6 +44,7 @@
 - [BUG-18145] Kept metadata-conflict reviews readable in narrow windows.
 - [BUG-18146] Loaded registered projects into tray menus before opening a page.
 - [BUG-18147] Kept Linux open until privileged update authentication succeeds.
+- [BUG-18148] Kept script validation compatible with macOS system Python.
 
 ## [1.8.7] - 21.08.2026
 ### Added

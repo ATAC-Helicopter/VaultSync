@@ -862,6 +862,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   failed privilege prompts now preserve the running app; successful package
   installs close only after `apt-get` exits successfully; issue #612 and
   integration through #568 remain.)_
+- [x] `BUG-18148` `P1` Keep complete script-test discovery compatible with the
+  macOS system Python instead of requiring a separately installed newer runtime.
+  _(Issue #614; postponed annotations preserve behavior and restore the local
+  release gate.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
