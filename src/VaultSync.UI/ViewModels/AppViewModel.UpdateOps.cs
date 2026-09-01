@@ -391,7 +391,11 @@ namespace VaultSync.UI.ViewModels
 
                 PatchStatusMessage = L("Patch.Status.Installing", "Installing patch and restarting...");
 
-                if (!PatchInstallService.TryLaunchPatchInstaller(plan, archivePath, out string? error))
+                (bool launched, string? error) = await PatchInstallService.LaunchPatchInstallerAsync(
+                    plan,
+                    archivePath,
+                    CancellationToken.None);
+                if (!launched)
                 {
                     PatchStatusMessage = L("Patch.Status.InstallFailed", "Failed to start the patch installer.");
                     Debug.WriteLine($"[Patch] Failed to launch helper: {error}");
@@ -920,15 +924,27 @@ namespace VaultSync.UI.ViewModels
 
                 PatchStatusMessage = L("Update.Installer.Launching", "Launching installer...");
 
-                if (!TryLaunchInstaller(finalPath))
+                InstallerLaunchResult launchResult = await LaunchInstallerAsync(finalPath);
+                if (!launchResult.Success)
                 {
                     PatchStatusMessage = L("Update.Installer.LaunchFailed", "Installer downloaded but could not be started.");
+                    if (!string.IsNullOrWhiteSpace(launchResult.ErrorMessage))
+                    {
+                        DiagnosticsLogger.Record($"Installer launch failed: {launchResult.ErrorMessage}");
+                    }
                     ShowUpdateError(PatchStatusMessage);
                     return;
                 }
 
-                PatchStatusMessage = L("Update.Installer.Launched", "Installer launched. VaultSync will close so setup can continue.");
-                ShutdownForInstallerLaunch();
+                PatchStatusMessage = L(
+                    "Update.Installer.Launched",
+                    launchResult.Completed
+                        ? "Update installed. VaultSync will close so the new version can start cleanly."
+                        : "Installer launched. VaultSync will close so setup can continue.");
+                if (launchResult.ShouldShutdown)
+                {
+                    ShutdownForInstallerLaunch();
+                }
             }
             catch (TaskCanceledException)
             {
@@ -965,13 +981,17 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private static bool TryLaunchInstaller(string installerPath)
+        internal readonly record struct InstallerLaunchResult(
+            bool Success,
+            bool Completed,
+            bool ShouldShutdown,
+            string? ErrorMessage = null);
+
+        private static async Task<InstallerLaunchResult> LaunchInstallerAsync(string installerPath)
         {
-            if (OperatingSystem.IsLinux() &&
-                installerPath.EndsWith(".deb", StringComparison.OrdinalIgnoreCase) &&
-                TryLaunchDebianPackageInstall(installerPath))
+            if (OperatingSystem.IsLinux() && installerPath.EndsWith(".deb", StringComparison.OrdinalIgnoreCase))
             {
-                return true;
+                return await RunDebianPackageInstallAsync(installerPath).ConfigureAwait(true);
             }
 
             try
@@ -981,23 +1001,25 @@ namespace VaultSync.UI.ViewModels
                     FileName = installerPath,
                     UseShellExecute = true
                 };
-                Process.Start(psi);
-                return true;
+                Process? process = Process.Start(psi);
+                return process is null
+                    ? new InstallerLaunchResult(false, false, false, "Installer process did not start.")
+                    : new InstallerLaunchResult(true, false, true);
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return new InstallerLaunchResult(false, false, false, ex.Message);
             }
         }
 
-        private static bool TryLaunchDebianPackageInstall(string packagePath)
+        private static async Task<InstallerLaunchResult> RunDebianPackageInstallAsync(string packagePath)
         {
             try
             {
                 if (IsEnvFlagEnabled("VAULTSYNC_DEB_INSTALL_DRY_RUN"))
                 {
                     DiagnosticsLogger.Record($"Debian package auto-install dry run: {packagePath}");
-                    return true;
+                    return new InstallerLaunchResult(true, true, false);
                 }
 
                 string? pkexec = FindExecutable("pkexec");
@@ -1005,7 +1027,7 @@ namespace VaultSync.UI.ViewModels
                 if (string.IsNullOrWhiteSpace(pkexec) || string.IsNullOrWhiteSpace(aptGet))
                 {
                     DiagnosticsLogger.Record("Debian package auto-install unavailable: pkexec or apt-get not found.");
-                    return false;
+                    return new InstallerLaunchResult(false, false, false, "pkexec or apt-get was not found.");
                 }
 
                 var psi = new ProcessStartInfo
@@ -1024,17 +1046,33 @@ namespace VaultSync.UI.ViewModels
                 if (process is null)
                 {
                     DiagnosticsLogger.Record("Debian package auto-install failed: pkexec did not start.");
-                    return false;
+                    return new InstallerLaunchResult(false, false, false, "pkexec did not start.");
                 }
 
                 DiagnosticsLogger.Record($"Debian package auto-install launched via pkexec: {packagePath}");
-                return true;
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                return ClassifyDebianInstallerExitCode(process.ExitCode);
             }
             catch (Exception ex)
             {
                 DiagnosticsLogger.Record($"Debian package auto-install launch failed: {ex.GetType().Name} - {ex.Message}");
-                return false;
+                return new InstallerLaunchResult(false, false, false, ex.Message);
             }
+        }
+
+        internal static InstallerLaunchResult ClassifyDebianInstallerExitCode(int exitCode)
+        {
+            if (exitCode == 0)
+            {
+                DiagnosticsLogger.Record("Debian package installation completed successfully.");
+                return new InstallerLaunchResult(true, true, true);
+            }
+
+            string message = exitCode is 126 or 127
+                ? "Administrator authentication was cancelled or unavailable."
+                : $"Debian package installer exited with code {exitCode}.";
+            DiagnosticsLogger.Record(message);
+            return new InstallerLaunchResult(false, true, false, message);
         }
 
         private static string? FindExecutable(string name)
