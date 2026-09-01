@@ -1132,10 +1132,8 @@ public partial class App : Application
             snapshotMenu.Items.Add(snapshotAllItem);
             snapshotMenu.Items.Add(new NativeMenuItemSeparator());
 
-            foreach (AppViewModel.TrayProjectItem project in snapshotProjects)
+            foreach (string projectName in snapshotProjects.Select(project => project.Name))
             {
-                string projectName = project.Name;
-
                 var projectSnapshotItem = new NativeMenuItem(projectName);
                 projectSnapshotItem.Click += async (_, _) =>
                 {

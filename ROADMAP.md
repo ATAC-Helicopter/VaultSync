@@ -866,6 +866,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   macOS system Python instead of requiring a separately installed newer runtime.
   _(Issue #614; postponed annotations preserve behavior and restore the local
   release gate.)_
+- [x] `BUG-18149` `P0` Restore the required Sonar security rating after the
+  updater and multi-base changes. _(Issue #615; async helper writes, focused
+  patch-builder and launcher boundaries, and HTTPS-only release redirects clear
+  all eight new-code findings; hosted confirmation remains.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

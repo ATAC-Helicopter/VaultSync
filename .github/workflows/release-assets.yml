@@ -538,7 +538,7 @@ jobs:
             mkdir -p .patch-bases/macos-apple-silicon .patch-bases/macos-intel
             for platform in macos-apple-silicon macos-intel; do
               path=".patch-bases/$platform/$base.json"
-              curl --fail --location --silent --show-error \
+              curl --fail --location --proto '=https' --proto-redir '=https' --silent --show-error \
                 "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v$base/vaultsync-patch-$platform.json" \
                 --output "$path"
             done
@@ -703,7 +703,7 @@ jobs:
             mkdir -p .patch-bases/linux-x64 .patch-bases/linux-arm64
             for platform in linux-x64 linux-arm64; do
               path=".patch-bases/$platform/$base.json"
-              curl --fail --location --silent --show-error \
+              curl --fail --location --proto '=https' --proto-redir '=https' --silent --show-error \
                 "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v$base/vaultsync-patch-$platform.json" \
                 --output "$path"
             done

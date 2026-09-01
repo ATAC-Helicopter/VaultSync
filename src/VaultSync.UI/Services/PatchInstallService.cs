@@ -199,10 +199,11 @@ namespace VaultSync.UI.Services
                     File.Copy(processPath, helperExe, overwrite: true);
                 }
 
-                string manifestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.manifest.json");
+                string archiveBaseName = Path.GetFileNameWithoutExtension(archivePath);
+                string manifestPath = Path.Combine(helperDir, $"{archiveBaseName}.manifest.json");
                 string manifestJson = JsonSerializer.Serialize(plan.Manifest);
-                File.WriteAllText(manifestPath, manifestJson, Encoding.UTF8);
-                string requestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.apply-request.json");
+                await File.WriteAllTextAsync(manifestPath, manifestJson, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+                string requestPath = Path.Combine(helperDir, $"{archiveBaseName}.apply-request.json");
                 PatchElevationKind elevationKind = GetElevationKind(installDir);
                 string? handoffPath = elevationKind == PatchElevationKind.LinuxPkexec
                     ? Path.Combine(helperDir, $"handoff-{Guid.NewGuid():N}.ready")
@@ -215,42 +216,15 @@ namespace VaultSync.UI.Services
                     waitPid: Environment.ProcessId,
                     handoffPath: handoffPath);
                 byte[] requestBytes = JsonSerializer.SerializeToUtf8Bytes(request);
-                File.WriteAllBytes(requestPath, requestBytes);
+                await File.WriteAllBytesAsync(requestPath, requestBytes, cancellationToken).ConfigureAwait(false);
                 string requestHash = ComputeSha256(requestBytes);
 
-                // Windows elevation uses ShellExecute; Linux elevation runs the copied helper through pkexec.
-                var psi = new ProcessStartInfo
-                {
-                    FileName = elevationKind == PatchElevationKind.LinuxPkexec
-                        ? FindExecutable("pkexec") ?? "pkexec"
-                        : helperExe,
-                    WorkingDirectory = helperDir,
-                    UseShellExecute = elevationKind == PatchElevationKind.WindowsRunAs,
-                    Verb = elevationKind == PatchElevationKind.WindowsRunAs ? "runas" : string.Empty
-                };
-
-                if (elevationKind == PatchElevationKind.WindowsRunAs)
-                {
-                    psi.Arguments = string.Join(" ",
-                        Quote(ApplyRequestArg),
-                        Quote(requestPath),
-                        Quote(RequestHashArg + requestHash));
-                }
-                else if (elevationKind == PatchElevationKind.LinuxPkexec)
-                {
-                    EnsureUnixExecutable(helperExe);
-                    psi.ArgumentList.Add(helperExe);
-                    psi.ArgumentList.Add(ApplyRequestArg);
-                    psi.ArgumentList.Add(requestPath);
-                    psi.ArgumentList.Add(RequestHashArg + requestHash);
-                    psi.ArgumentList.Add(HeadlessArg);
-                }
-                else
-                {
-                    psi.ArgumentList.Add(ApplyRequestArg);
-                    psi.ArgumentList.Add(requestPath);
-                    psi.ArgumentList.Add(RequestHashArg + requestHash);
-                }
+                ProcessStartInfo psi = CreatePatchInstallerStartInfo(
+                    elevationKind,
+                    helperExe,
+                    helperDir,
+                    requestPath,
+                    requestHash);
 
                 var started = Process.Start(psi);
                 if (started is null)
@@ -279,6 +253,47 @@ namespace VaultSync.UI.Services
             {
                 return (false, ex.Message);
             }
+        }
+
+        private static ProcessStartInfo CreatePatchInstallerStartInfo(
+            PatchElevationKind elevationKind,
+            string helperExe,
+            string helperDir,
+            string requestPath,
+            string requestHash)
+        {
+            // Windows elevation uses ShellExecute; Linux elevation runs the copied helper through pkexec.
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = elevationKind == PatchElevationKind.LinuxPkexec
+                    ? FindExecutable("pkexec") ?? "pkexec"
+                    : helperExe,
+                WorkingDirectory = helperDir,
+                UseShellExecute = elevationKind == PatchElevationKind.WindowsRunAs,
+                Verb = elevationKind == PatchElevationKind.WindowsRunAs ? "runas" : string.Empty
+            };
+
+            if (elevationKind == PatchElevationKind.WindowsRunAs)
+            {
+                startInfo.Arguments = string.Join(" ",
+                    Quote(ApplyRequestArg),
+                    Quote(requestPath),
+                    Quote(RequestHashArg + requestHash));
+                return startInfo;
+            }
+
+            if (elevationKind == PatchElevationKind.LinuxPkexec)
+            {
+                EnsureUnixExecutable(helperExe);
+                startInfo.ArgumentList.Add(helperExe);
+            }
+
+            startInfo.ArgumentList.Add(ApplyRequestArg);
+            startInfo.ArgumentList.Add(requestPath);
+            startInfo.ArgumentList.Add(RequestHashArg + requestHash);
+            if (elevationKind == PatchElevationKind.LinuxPkexec)
+                startInfo.ArgumentList.Add(HeadlessArg);
+            return startInfo;
         }
 
         internal static async Task<bool> WaitForLinuxPatchHandoffAsync(
@@ -1057,14 +1072,12 @@ namespace VaultSync.UI.Services
             }
 
             string? handoffPath = null;
-            if (!string.IsNullOrWhiteSpace(request.HandoffPath))
+            if (!string.IsNullOrWhiteSpace(request.HandoffPath) &&
+                (!TryNormalizeFilePath(request.HandoffPath, out handoffPath, out error) ||
+                 !IsUnderTrustedPatchTempRoot(handoffPath!)))
             {
-                if (!TryNormalizeFilePath(request.HandoffPath, out handoffPath, out error) ||
-                    !IsUnderTrustedPatchTempRoot(handoffPath!))
-                {
-                    error ??= "Patch handoff path is outside the trusted patch directory.";
-                    return false;
-                }
+                error ??= "Patch handoff path is outside the trusted patch directory.";
+                return false;
             }
 
             normalized = new PatchApplyRequest(

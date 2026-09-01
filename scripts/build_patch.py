@@ -101,6 +101,75 @@ def load_manifest_paths(path: Path, workspace: Path) -> set[str]:
     return normalized
 
 
+def normalize_previous_versions(previous_versions: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for previous in previous_versions:
+        trimmed = previous.strip()
+        if trimmed and trimmed not in seen:
+            seen.add(trimmed)
+            normalized.append(trimmed)
+    if not normalized:
+        raise ValueError("At least one --previous version is required.")
+    return normalized
+
+
+def qualify_previous_versions(
+    previous_versions: list[str],
+    base_manifests: dict[str, Path] | None,
+    current_paths: set[str],
+    workspace: Path,
+    skip_incompatible_bases: bool,
+) -> list[str]:
+    qualified = [previous_versions[0]]
+    references = {
+        version.strip().casefold(): path
+        for version, path in (base_manifests or {}).items()
+        if version.strip()
+    }
+    for additional_base in previous_versions[1:]:
+        reference = references.get(additional_base.casefold())
+        if reference is None:
+            raise ValueError(
+                f"Additional base {additional_base} requires a reference patch manifest."
+            )
+        obsolete_paths = load_manifest_paths(reference, workspace) - current_paths
+        if not obsolete_paths:
+            qualified.append(additional_base)
+            continue
+
+        sample = ", ".join(sorted(obsolete_paths)[:3])
+        message = (
+            f"Additional base {additional_base} is not overlay-safe; "
+            f"the target omits {len(obsolete_paths)} managed file(s): {sample}. "
+            "Use the full installer for this base."
+        )
+        if not skip_incompatible_bases:
+            raise ValueError(message)
+        print(f"Skipping {message}")
+    return qualified
+
+
+def write_patch_archive(
+    paths: list[Path], base_dir: Path, out_zip: Path, workspace: Path, platform: str
+) -> list[dict[str, object]]:
+    files: list[dict[str, object]] = []
+    safe_out_zip = ensure_output_file(out_zip, workspace, suffix=".zip")
+    with zipfile.ZipFile(safe_out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for path in paths:
+            relative = str(path.relative_to(base_dir))
+            zf.write(path, relative.replace(os.sep, "/"))
+            manifest_path = relative.replace("/", "\\") if platform == "windows" else relative.replace("\\", "/")
+            files.append(
+                {
+                    "path": manifest_path,
+                    "sha256": sha256_file(path, base_dir),
+                    "size": path.stat().st_size,
+                }
+            )
+    return files
+
+
 def build_patch(
     base_dir: Path,
     out_zip: Path,
@@ -111,7 +180,6 @@ def build_patch(
     base_manifests: dict[str, Path] | None = None,
     skip_incompatible_bases: bool = False,
 ) -> None:
-    files = []
     base_dir = base_dir.resolve()
     workspace = ensure_existing_workspace()
     if not base_dir.is_dir():
@@ -125,17 +193,7 @@ def build_patch(
     if out_manifest.suffix.lower() != ".json":
         raise ValueError("Patch manifest output must use a .json extension.")
 
-    normalized_previous = []
-    seen_previous = set()
-    for previous in previous_versions:
-        trimmed = previous.strip()
-        if not trimmed or trimmed in seen_previous:
-            continue
-        seen_previous.add(trimmed)
-        normalized_previous.append(trimmed)
-
-    if not normalized_previous:
-        raise ValueError("At least one --previous version is required.")
+    normalized_previous = normalize_previous_versions(previous_versions)
     paths = [ensure_child_path(p, base_dir) for p in base_dir.rglob("*") if p.is_file()]
     paths.sort(key=lambda p: str(p.relative_to(base_dir)).lower())
     current_paths = {
@@ -143,55 +201,16 @@ def build_patch(
         for path in paths
     }
 
-    qualified_previous = [normalized_previous[0]]
-    if len(normalized_previous) > 1:
-        references = {
-            version.strip().casefold(): path
-            for version, path in (base_manifests or {}).items()
-            if version.strip()
-        }
-        for additional_base in normalized_previous[1:]:
-            reference = references.get(additional_base.casefold())
-            if reference is None:
-                raise ValueError(
-                    f"Additional base {additional_base} requires a reference patch manifest."
-                )
-            obsolete_paths = load_manifest_paths(reference, workspace) - current_paths
-            if obsolete_paths:
-                sample = ", ".join(sorted(obsolete_paths)[:3])
-                message = (
-                    f"Additional base {additional_base} is not overlay-safe; "
-                    f"the target omits {len(obsolete_paths)} managed file(s): {sample}. "
-                    "Use the full installer for this base."
-                )
-                if skip_incompatible_bases:
-                    print(f"Skipping {message}")
-                    continue
-                raise ValueError(message)
-            qualified_previous.append(additional_base)
-
+    qualified_previous = qualify_previous_versions(
+        normalized_previous,
+        base_manifests,
+        current_paths,
+        workspace,
+        skip_incompatible_bases,
+    )
+    files = write_patch_archive(paths, base_dir, out_zip, workspace, platform)
     safe_out_zip = ensure_output_file(out_zip, workspace, suffix=".zip")
     safe_out_manifest = ensure_output_file(out_manifest, workspace, suffix=".json")
-    with zipfile.ZipFile(safe_out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for path in paths:
-            rel = path.relative_to(base_dir)
-            rel_str = str(rel)
-            zip_path = rel_str.replace(os.sep, "/")
-            zf.write(path, zip_path)
-
-            manifest_path = rel_str
-            if platform == "windows":
-                manifest_path = manifest_path.replace("/", "\\")
-            else:
-                manifest_path = manifest_path.replace("\\", "/")
-
-            files.append(
-                {
-                    "path": manifest_path,
-                    "sha256": sha256_file(path, base_dir),
-                    "size": path.stat().st_size,
-                }
-            )
 
     manifest = {
         "previousVersion": normalized_previous[0],
