@@ -17,7 +17,7 @@ release. The canonical scope remains in
 | Integration branch | `Dev` |
 | Stable branch | `Stable` |
 | Primary patch predecessor | `1.8.7` |
-| Additional Linux candidates | `1.8.2`, `1.8.3`, `1.8.5`, `1.8.6` when the target remains overlay-safe |
+| Additional platform candidates | `1.8.2`, `1.8.3`, `1.8.5`, `1.8.6` on Windows, macOS, and Linux when the target remains overlay-safe |
 | Tagline | *A stable foundation for larger recovery.* |
 
 The seven-day target keeps this release narrow. P0 safety and qualification
@@ -279,9 +279,10 @@ failure handling without becoming a broad rewrite.
 Exact `1.8.7` compatibility now has frozen-schema and configuration tests that
 preserve repository records, encrypted-backup descriptors, user paths, schedules,
 retention, and encryption choices. Version `1.8.7` remains the primary patch
-predecessor on every platform. Linux can additionally advertise 1.8.2, 1.8.3,
-1.8.5, and 1.8.6 only when final-payload inventory validation keeps that base
-overlay-safe; 1.8.4 and every omitted base use the complete-installer fallback.
+predecessor on every platform. Windows, macOS, and Linux can additionally
+advertise 1.8.2, 1.8.3, 1.8.5, and 1.8.6 only when final-payload inventory
+validation keeps that base overlay-safe; 1.8.4 and every omitted base use the
+complete-installer fallback.
 Physical updater and fallback qualification is complete for the 1.8.8 release
 candidate.
 CodeQL init/analyze are coordinated on `4.37.9`, and Sonar Java setup uses the
