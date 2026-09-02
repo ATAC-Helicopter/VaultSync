@@ -82,9 +82,10 @@ Linux can use architecture-specific patch names:
 
 Patch archives do not remove obsolete files. An additional base is therefore
 eligible only when every file managed by its published patch manifest also
-exists in the target payload. The release build checks that condition per
-platform and omits incompatible candidates automatically. Omitted, unknown, or
-unlisted versions use the full installer.
+  exists in the target payload. The release build checks that condition per
+  platform, requires the reference manifest target to match the exact candidate,
+  rejects duplicate managed paths, and omits incompatible candidates
+  automatically. Omitted, unknown, or unlisted versions use the full installer.
 
 ## Release Validation
 After publishing assets, verify:

@@ -153,7 +153,10 @@ failure handling without becoming a broad rewrite.
   the accidental local dependency on a separately installed Python 3.10+.
 - [`BUG-18149` / #615](https://github.com/ATAC-Helicopter/VaultSync/issues/615):
   updater quality-gate regression (`P0`) — all eight reported security and
-  maintainability findings are corrected; hosted Sonar confirmation remains.
+  maintainability findings are corrected and hosted Sonar is green.
+- [`BUG-18150` / #616](https://github.com/ATAC-Helicopter/VaultSync/issues/616):
+  patch-base inventory identity (`P0`) — mismatched target versions and
+  case-colliding managed paths now fail qualification.
 - [`BUG-18118` / #571](https://github.com/ATAC-Helicopter/VaultSync/issues/571):
   fail-closed source loss after snapshot creation (`P0`) — fixed on the release
   branch and awaiting integration through #568.

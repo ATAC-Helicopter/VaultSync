@@ -869,7 +869,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 - [x] `BUG-18149` `P0` Restore the required Sonar security rating after the
   updater and multi-base changes. _(Issue #615; async helper writes, focused
   patch-builder and launcher boundaries, and HTTPS-only release redirects clear
-  all eight new-code findings; hosted confirmation remains.)_
+  all eight new-code findings and the hosted quality gate is green.)_
+- [x] `BUG-18150` `P0` Reject historical patch inventories whose target identity
+  does not match the requested base or whose managed paths collide by case.
+  _(Issue #616; focused qualification tests pass.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

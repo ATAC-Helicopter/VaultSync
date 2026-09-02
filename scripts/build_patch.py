@@ -85,9 +85,20 @@ def write_json_file(path: Path, root: Path, data: object) -> None:
     safe_path.write_text(json.dumps(data, indent=4), encoding="utf-8")  # NOSONAR
 
 
-def load_manifest_paths(path: Path, workspace: Path) -> set[str]:
+def normalize_version_identity(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return value.strip().removeprefix("v").removeprefix("V").casefold()
+
+
+def load_manifest_paths(path: Path, workspace: Path, expected_target: str) -> set[str]:
     safe_path = ensure_child_path(path, workspace)
     payload = json.loads(safe_path.read_text(encoding="utf-8-sig"))
+    actual_target = payload.get("targetVersion") if isinstance(payload, dict) else None
+    if normalize_version_identity(actual_target) != normalize_version_identity(expected_target):
+        raise ValueError(
+            f"Reference patch manifest target does not match base {expected_target}: {path}"
+        )
     files = payload.get("files") if isinstance(payload, dict) else None
     if not isinstance(files, list) or not files:
         raise ValueError(f"Reference patch manifest has no file inventory: {path}")
@@ -97,7 +108,10 @@ def load_manifest_paths(path: Path, workspace: Path) -> set[str]:
         raw_path = entry.get("path") if isinstance(entry, dict) else None
         if not isinstance(raw_path, str) or not raw_path.strip():
             raise ValueError(f"Reference patch manifest has an invalid file path: {path}")
-        normalized.add(raw_path.replace("\\", "/").casefold())
+        canonical_path = raw_path.replace("\\", "/").casefold()
+        if canonical_path in normalized:
+            raise ValueError(f"Reference patch manifest contains a duplicate file path: {raw_path}")
+        normalized.add(canonical_path)
     return normalized
 
 
@@ -133,7 +147,7 @@ def qualify_previous_versions(
             raise ValueError(
                 f"Additional base {additional_base} requires a reference patch manifest."
             )
-        obsolete_paths = load_manifest_paths(reference, workspace) - current_paths
+        obsolete_paths = load_manifest_paths(reference, workspace, additional_base) - current_paths
         if not obsolete_paths:
             qualified.append(additional_base)
             continue
@@ -200,6 +214,8 @@ def build_patch(
         str(path.relative_to(base_dir)).replace("\\", "/").casefold()
         for path in paths
     }
+    if len(current_paths) != len(paths):
+        raise ValueError("Target payload contains case-insensitive duplicate file paths.")
 
     qualified_previous = qualify_previous_versions(
         normalized_previous,

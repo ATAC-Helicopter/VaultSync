@@ -46,6 +46,7 @@
 - [BUG-18147] Kept Linux open until privileged update authentication succeeds.
 - [BUG-18148] Kept script validation compatible with macOS system Python.
 - [BUG-18149] Cleared updater security and maintainability quality-gate findings.
+- [BUG-18150] Rejected mismatched or duplicate patch-base inventories.
 
 ## [1.8.7] - 21.08.2026
 ### Added
