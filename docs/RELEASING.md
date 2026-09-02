@@ -116,6 +116,46 @@ even one candidate-managed file, that base is omitted and uses the installer.
 Do not edit the generated allowlist or use version ranges. Older and unlisted
 installs must fall back to the full installer.
 
+### Future Patch Compatibility Maintenance
+
+For every new release, update `release/release-metadata.json` before building
+assets:
+
+```json
+"previousVersion": "<latest stable>",
+"compatiblePredecessors": [
+  "<latest stable>"
+],
+"patchBaseCandidates": {
+  "windows": [],
+  "macos": [],
+  "linux": []
+}
+```
+
+Use `previousVersion` for the one primary predecessor that every direct-download
+platform must support. Add older direct-patch candidates only when a platform has
+an intentional compatibility path:
+
+```json
+"patchBaseCandidates": {
+  "windows": ["<older windows-safe version>"],
+  "macos": ["<older macos-safe version>"],
+  "linux": ["<older linux-safe version>"]
+}
+```
+
+The release-assets workflow applies the same candidate mechanism to Windows,
+macOS, and Linux. It automatically downloads each candidate's published platform
+patch manifest, rejects mismatched or duplicate inventories, and omits any base
+whose managed files are not all present in the target payload. Omitted,
+unknown, or unlisted versions use the full installer fallback.
+
+Do not add broad ranges such as `>=1.8.7`. Exact versions are the safety
+contract. Be especially conservative on macOS when a previous release used a
+different bundle layout; list only bases whose patch root matches the current
+`VaultSync.app` contract or has an explicit bridge path.
+
 After all platform jobs complete, the workflow downloads the artifacts they
 actually produced and generates `vaultsync-release-manifest.json`. Its v1 schema
 is [`docs/schemas/release-manifest-v1.schema.json`](schemas/release-manifest-v1.schema.json).
