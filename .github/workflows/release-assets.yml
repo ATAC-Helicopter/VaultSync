@@ -21,6 +21,16 @@ on:
         required: false
         type: boolean
         default: false
+      include_windows_patches:
+        description: "Build Windows patch assets. Leave off for installer-managed updates."
+        required: false
+        type: boolean
+        default: false
+      include_macos_patches:
+        description: "Build macOS patch assets. Leave off for DMG-managed updates."
+        required: false
+        type: boolean
+        default: false
       include_linux_patches:
         description: "Build Linux patch assets. Leave off when Linux installer fallback is required for protected installs."
         required: false
@@ -324,6 +334,7 @@ jobs:
         run: iscc /Odist\\windows installer\\VaultSyncInstaller.iss
 
       - name: Build patch assets
+        if: ${{ inputs.include_windows_patches }}
         shell: pwsh
         env:
           PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions_windows }}
@@ -365,9 +376,11 @@ jobs:
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           $required = @(
-            "patches/v$($env:TARGET_VERSION)/vaultsync-patch-windows.json",
-            "patches/v$($env:TARGET_VERSION)/vaultsync-patch-windows.zip"
           )
+          if ("${{ inputs.include_windows_patches }}" -eq "true") {
+            $required += "patches/v$($env:TARGET_VERSION)/vaultsync-patch-windows.json"
+            $required += "patches/v$($env:TARGET_VERSION)/vaultsync-patch-windows.zip"
+          }
           foreach ($path in $required) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
               throw "Required release artifact was not produced: $path"
@@ -520,6 +533,7 @@ jobs:
           bash scripts/build_macos_dmg.sh "$TARGET_VERSION" x64 src/VaultSync.UI/bin/Release/net10.0/osx-x64/publish
 
       - name: Build patch assets
+        if: ${{ inputs.include_macos_patches }}
         env:
           PATCH_BASE_VERSIONS: ${{ needs.validate.outputs.patch_base_versions_macos }}
           TARGET_VERSION: ${{ inputs.target_version }}
@@ -596,18 +610,22 @@ jobs:
           required=(
             dist/macos/VaultSync-*-macos-apple-silicon.dmg
             dist/macos/VaultSync-*-macos-intel.dmg
-            "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json"
-            "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.zip"
-            "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json"
-            "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.zip"
           )
+          if [[ "${{ inputs.include_macos_patches }}" == "true" ]]; then
+            required+=(
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json"
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.zip"
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json"
+              "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.zip"
+            )
+          fi
           for pattern in "${required[@]}"; do
             compgen -G "$pattern" >/dev/null || {
               echo "Required release artifact was not produced: $pattern" >&2
               exit 1
             }
           done
-          if [[ "$TARGET_VERSION" == "1.8.7" ]]; then
+          if [[ "${{ inputs.include_macos_patches }}" == "true" && "$TARGET_VERSION" == "1.8.7" ]]; then
             for manifest in \
               "patches/v$TARGET_VERSION/vaultsync-patch-macos-apple-silicon.json" \
               "patches/v$TARGET_VERSION/vaultsync-patch-macos-intel.json"; do
@@ -792,6 +810,8 @@ jobs:
         shell: bash
         env:
           INCLUDE_LINUX_PATCHES: ${{ inputs.include_linux_patches }}
+          INCLUDE_MACOS_PATCHES: ${{ inputs.include_macos_patches }}
+          INCLUDE_WINDOWS_PATCHES: ${{ inputs.include_windows_patches }}
           PREVIOUS_VERSION: ${{ inputs.previous_version }}
           RELEASE_CHANNEL: ${{ inputs.release_channel }}
           TARGET_VERSION: ${{ inputs.target_version }}
@@ -800,6 +820,12 @@ jobs:
           optional_args=()
           if [[ "$INCLUDE_LINUX_PATCHES" == "true" ]]; then
             optional_args+=( --include-linux-patches )
+          fi
+          if [[ "$INCLUDE_MACOS_PATCHES" == "true" ]]; then
+            optional_args+=( --include-macos-patches )
+          fi
+          if [[ "$INCLUDE_WINDOWS_PATCHES" == "true" ]]; then
+            optional_args+=( --include-windows-patches )
           fi
           python3 scripts/release_manifest.py generate \
             --asset-root release-assets \

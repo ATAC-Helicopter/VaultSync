@@ -17,19 +17,26 @@ spec.loader.exec_module(release_manifest)
 
 CORE_ASSETS = [
     "VaultSync-Setup-1.8.7.exe",
-    "vaultsync-patch-windows.json",
-    "vaultsync-patch-windows.zip",
     "VaultSync-1.8.7-macos-apple-silicon.dmg",
-    "vaultsync-patch-macos-apple-silicon.json",
-    "vaultsync-patch-macos-apple-silicon.zip",
     "VaultSync-1.8.7-macos-intel.dmg",
-    "vaultsync-patch-macos-intel.json",
-    "vaultsync-patch-macos-intel.zip",
     "VaultSync-1.8.7-linux-x64.tar.gz",
     "VaultSync-1.8.7-linux-x64.deb",
     "VaultSync-1.8.7-linux-x64.AppImage",
     "VaultSync-1.8.7-linux-arm64.tar.gz",
     "VaultSync-1.8.7-linux-arm64.deb",
+]
+
+PATCH_ASSETS = [
+    "vaultsync-patch-windows.json",
+    "vaultsync-patch-windows.zip",
+    "vaultsync-patch-macos-apple-silicon.json",
+    "vaultsync-patch-macos-apple-silicon.zip",
+    "vaultsync-patch-macos-intel.json",
+    "vaultsync-patch-macos-intel.zip",
+    "vaultsync-patch-linux-x64.json",
+    "vaultsync-patch-linux-x64.zip",
+    "vaultsync-patch-linux-arm64.json",
+    "vaultsync-patch-linux-arm64.zip",
 ]
 
 
@@ -68,16 +75,10 @@ class ReleaseManifestTests(unittest.TestCase):
             )
             release_manifest.validate_manifest(first, asset_root=root)
 
-    def test_build_manifest_supports_optional_linux_patches_and_store_upload(self) -> None:
+    def test_build_manifest_supports_optional_patches_and_store_upload(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
             root = Path(tmp)
-            names = CORE_ASSETS + [
-                "vaultsync-patch-linux-x64.json",
-                "vaultsync-patch-linux-x64.zip",
-                "vaultsync-patch-linux-arm64.json",
-                "vaultsync-patch-linux-arm64.zip",
-                "VaultSync-Store-1.8.7-x64.msixupload",
-            ]
+            names = CORE_ASSETS + PATCH_ASSETS + ["VaultSync-Store-1.8.7-x64.msixupload"]
             self.write_assets(root, names)
 
             manifest = release_manifest.build_manifest(
@@ -87,6 +88,8 @@ class ReleaseManifestTests(unittest.TestCase):
                 commit="b" * 40,
                 repository="ATAC-Helicopter/VaultSync",
                 predecessors=["1.8.6"],
+                include_windows_patches=True,
+                include_macos_patches=True,
                 include_linux_patches=True,
                 include_store_upload=True,
             )
@@ -104,7 +107,16 @@ class ReleaseManifestTests(unittest.TestCase):
             self.write_assets(root, names)
 
             with self.assertRaisesRegex(ValueError, "matrix mismatch"):
-                self.build(root)
+                release_manifest.build_manifest(
+                    root,
+                    version="1.8.7",
+                    channel="stable",
+                    commit="a" * 40,
+                    repository="ATAC-Helicopter/VaultSync",
+                    predecessors=["1.8.6"],
+                    include_windows_patches=True,
+                    include_macos_patches=True,
+                )
 
     def test_build_manifest_rejects_missing_and_unexpected_assets(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:

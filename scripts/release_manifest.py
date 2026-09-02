@@ -66,25 +66,37 @@ def classify_asset(name: str) -> tuple[str, str, str]:
 
 def expected_asset_keys(
     *,
+    include_windows_patches: bool,
+    include_macos_patches: bool,
     include_linux_patches: bool,
     include_store_upload: bool,
 ) -> set[tuple[str, str, str]]:
     expected = {
         ("windows", "x64", "installer"),
-        ("windows", "x64", "patch-manifest"),
-        ("windows", "x64", "patch-archive"),
         ("macos", "arm64", "disk-image"),
-        ("macos", "arm64", "patch-manifest"),
-        ("macos", "arm64", "patch-archive"),
         ("macos", "x64", "disk-image"),
-        ("macos", "x64", "patch-manifest"),
-        ("macos", "x64", "patch-archive"),
         ("linux", "x64", "archive"),
         ("linux", "x64", "debian-package"),
         ("linux", "x64", "appimage"),
         ("linux", "arm64", "archive"),
         ("linux", "arm64", "debian-package"),
     }
+    if include_windows_patches:
+        expected.update(
+            {
+                ("windows", "x64", "patch-manifest"),
+                ("windows", "x64", "patch-archive"),
+            }
+        )
+    if include_macos_patches:
+        expected.update(
+            {
+                ("macos", "arm64", "patch-manifest"),
+                ("macos", "arm64", "patch-archive"),
+                ("macos", "x64", "patch-manifest"),
+                ("macos", "x64", "patch-archive"),
+            }
+        )
     if include_linux_patches:
         expected.update(
             {
@@ -128,6 +140,8 @@ def build_manifest(
     commit: str,
     repository: str,
     predecessors: list[str],
+    include_windows_patches: bool = False,
+    include_macos_patches: bool = False,
     include_linux_patches: bool = False,
     include_store_upload: bool = False,
 ) -> dict[str, object]:
@@ -154,6 +168,8 @@ def build_manifest(
         )
 
     expected = expected_asset_keys(
+        include_windows_patches=include_windows_patches,
+        include_macos_patches=include_macos_patches,
         include_linux_patches=include_linux_patches,
         include_store_upload=include_store_upload,
     )
@@ -340,6 +356,8 @@ def main() -> int:
     generate.add_argument("--commit", required=True)
     generate.add_argument("--repository", default="ATAC-Helicopter/VaultSync")
     generate.add_argument("--previous", action="append", required=True)
+    generate.add_argument("--include-windows-patches", action="store_true")
+    generate.add_argument("--include-macos-patches", action="store_true")
     generate.add_argument("--include-linux-patches", action="store_true")
     generate.add_argument("--include-store-upload", action="store_true")
     validate = subparsers.add_parser("validate")
@@ -363,6 +381,8 @@ def main() -> int:
                 commit=args.commit,
                 repository=args.repository,
                 predecessors=args.previous,
+                include_windows_patches=args.include_windows_patches,
+                include_macos_patches=args.include_macos_patches,
                 include_linux_patches=args.include_linux_patches,
                 include_store_upload=args.include_store_upload,
             )
