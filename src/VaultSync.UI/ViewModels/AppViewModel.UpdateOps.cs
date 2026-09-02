@@ -464,13 +464,22 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private static bool PatchInstallRequiresInstallerFallback(string runtimeDirectory)
+        internal static bool PatchInstallRequiresInstallerFallback(string runtimeDirectory)
         {
             if (IsEnvFlagEnabled("VAULTSYNC_FORCE_INSTALLER_FALLBACK"))
                 return true;
 
             string installDir = PatchInstallService.ResolveInstallRoot(runtimeDirectory);
-            if (OperatingSystem.IsWindows() || CanWriteInstallDir(installDir))
+            if (CanWriteInstallDir(installDir))
+                return false;
+
+            if (OperatingSystem.IsLinux())
+            {
+                DiagnosticsLogger.Record($"Linux patch install requires installer fallback for protected install directory: {installDir}.");
+                return true;
+            }
+
+            if (OperatingSystem.IsWindows())
                 return false;
 
             return !PatchInstallService.CanLaunchProtectedPatchInstall(installDir);
