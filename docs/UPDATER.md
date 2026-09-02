@@ -102,6 +102,12 @@ Patch eligibility also depends on the install layout, not only the version.
 Package-owned installs should use installer fallback unless the elevated patch
 handoff has been re-qualified on that OS. macOS DMG update media is manual, so
 opening a DMG must not close the running app as though installation completed.
+Linux `.deb` installer fallback waits for `pkexec apt-get install` to finish;
+when it succeeds, VaultSync starts a detached relaunch helper that waits for the
+old process to exit before opening the installed `/opt/vaultsync/VaultSync.UI`
+binary or `vaultsync` launcher. Linux AppImage updates use the same deferred
+relaunch pattern because launching the downloaded AppImage while the old app is
+still alive can be consumed by the single-instance guard.
 
 ## Release Validation
 After publishing assets, verify:

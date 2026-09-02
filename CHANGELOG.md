@@ -52,6 +52,7 @@
 - [BUG-18151] Corrected stale multi-version updater guidance.
 - [BUG-18152] Forced protected Windows/Linux installs and macOS app bundles to use installer fallback instead of patch handoff.
 - [BUG-18153] Kept VaultSync open after launching macOS DMG update media because DMGs require a manual app replacement.
+- [BUG-18154] Relaunched Linux package/AppImage updates only after the old app exits, and kept VaultSync open when automatic relaunch cannot be scheduled.
 
 ## [1.8.7] - 21.08.2026
 ### Added

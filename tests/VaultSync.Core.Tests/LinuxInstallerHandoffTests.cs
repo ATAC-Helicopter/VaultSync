@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using VaultSync.Core.Tests.TestSupport;
 using VaultSync.UI.ViewModels;
@@ -16,6 +17,22 @@ public sealed class LinuxInstallerHandoffTests
         Assert.True(result.Success);
         Assert.True(result.Completed);
         Assert.True(result.ShouldShutdown);
+        Assert.False(result.RelaunchAfterShutdown);
+        Assert.Null(result.RelaunchPath);
+    }
+
+    [Fact]
+    public void SuccessfulDebianInstall_RestartsInstalledExecutableWhenKnown()
+    {
+        AppViewModel.InstallerLaunchResult result = AppViewModel.ClassifyDebianInstallerExitCode(
+            0,
+            "/opt/vaultsync/VaultSync.UI");
+
+        Assert.True(result.Success);
+        Assert.True(result.Completed);
+        Assert.True(result.ShouldShutdown);
+        Assert.True(result.RelaunchAfterShutdown);
+        Assert.Equal("/opt/vaultsync/VaultSync.UI", result.RelaunchPath);
     }
 
     [Theory]
@@ -29,7 +46,23 @@ public sealed class LinuxInstallerHandoffTests
         Assert.False(result.Success);
         Assert.True(result.Completed);
         Assert.False(result.ShouldShutdown);
+        Assert.False(result.RelaunchAfterShutdown);
         Assert.False(string.IsNullOrWhiteSpace(result.ErrorMessage));
+    }
+
+    [Fact]
+    public void DeferredRelaunch_WaitsForCurrentProcessBeforeStartingExecutable()
+    {
+        ProcessStartInfo startInfo = AppViewModel.CreateDeferredRelaunchStartInfo(
+            "/opt/vaultsync/VaultSync.UI",
+            12345);
+
+        Assert.Equal("/bin/sh", startInfo.FileName);
+        Assert.False(startInfo.UseShellExecute);
+        Assert.Equal("/opt/vaultsync", startInfo.WorkingDirectory);
+        Assert.Contains("kill -0", string.Join(" ", startInfo.ArgumentList));
+        Assert.Contains("12345", startInfo.ArgumentList);
+        Assert.Contains("/opt/vaultsync/VaultSync.UI", startInfo.ArgumentList);
     }
 
     [Fact]

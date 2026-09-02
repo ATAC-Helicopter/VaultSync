@@ -945,11 +945,23 @@ namespace VaultSync.UI.ViewModels
 
                 PatchStatusMessage = L(
                     "Update.Installer.Launched",
-                    launchResult.Completed
+                    launchResult.RelaunchAfterShutdown
+                        ? "Update ready. VaultSync will restart with the new version."
+                        : launchResult.Completed
                         ? "Update installed. VaultSync will close so the new version can start cleanly."
                         : "Installer launched. VaultSync will close so setup can continue.");
                 if (launchResult.ShouldShutdown)
                 {
+                    if (launchResult.RelaunchAfterShutdown &&
+                        !TryScheduleDeferredRelaunch(launchResult.RelaunchPath))
+                    {
+                        PatchStatusMessage = L(
+                            "Update.Installer.RelaunchFailed",
+                            "Update installed, but VaultSync could not restart automatically. Open VaultSync from your app menu.");
+                        ShowUpdateError(PatchStatusMessage);
+                        return;
+                    }
+
                     ShutdownForInstallerLaunch();
                 }
             }
@@ -992,6 +1004,8 @@ namespace VaultSync.UI.ViewModels
             bool Success,
             bool Completed,
             bool ShouldShutdown,
+            bool RelaunchAfterShutdown = false,
+            string? RelaunchPath = null,
             string? ErrorMessage = null);
 
         private static async Task<InstallerLaunchResult> LaunchInstallerAsync(string installerPath)
@@ -999,6 +1013,11 @@ namespace VaultSync.UI.ViewModels
             if (OperatingSystem.IsLinux() && installerPath.EndsWith(".deb", StringComparison.OrdinalIgnoreCase))
             {
                 return await RunDebianPackageInstallAsync(installerPath).ConfigureAwait(true);
+            }
+
+            if (OperatingSystem.IsLinux() && installerPath.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase))
+            {
+                return new InstallerLaunchResult(true, false, true, true, installerPath);
             }
 
             try
@@ -1010,12 +1029,12 @@ namespace VaultSync.UI.ViewModels
                 };
                 Process? process = Process.Start(psi);
                 return process is null
-                    ? new InstallerLaunchResult(false, false, false, "Installer process did not start.")
+                    ? new InstallerLaunchResult(false, false, false, ErrorMessage: "Installer process did not start.")
                     : new InstallerLaunchResult(true, false, InstallerMediaRequiresShutdown(installerPath));
             }
             catch (Exception ex)
             {
-                return new InstallerLaunchResult(false, false, false, ex.Message);
+                return new InstallerLaunchResult(false, false, false, ErrorMessage: ex.Message);
             }
         }
 
@@ -1038,7 +1057,7 @@ namespace VaultSync.UI.ViewModels
                 if (string.IsNullOrWhiteSpace(pkexec) || string.IsNullOrWhiteSpace(aptGet))
                 {
                     DiagnosticsLogger.Record("Debian package auto-install unavailable: pkexec or apt-get not found.");
-                    return new InstallerLaunchResult(false, false, false, "pkexec or apt-get was not found.");
+                    return new InstallerLaunchResult(false, false, false, ErrorMessage: "pkexec or apt-get was not found.");
                 }
 
                 var psi = new ProcessStartInfo
@@ -1057,33 +1076,111 @@ namespace VaultSync.UI.ViewModels
                 if (process is null)
                 {
                     DiagnosticsLogger.Record("Debian package auto-install failed: pkexec did not start.");
-                    return new InstallerLaunchResult(false, false, false, "pkexec did not start.");
+                    return new InstallerLaunchResult(false, false, false, ErrorMessage: "pkexec did not start.");
                 }
 
                 DiagnosticsLogger.Record($"Debian package auto-install launched via pkexec: {packagePath}");
                 await process.WaitForExitAsync().ConfigureAwait(false);
-                return ClassifyDebianInstallerExitCode(process.ExitCode);
+                return ClassifyDebianInstallerExitCode(process.ExitCode, ResolveLinuxInstalledExecutable(AppContext.BaseDirectory));
             }
             catch (Exception ex)
             {
                 DiagnosticsLogger.Record($"Debian package auto-install launch failed: {ex.GetType().Name} - {ex.Message}");
-                return new InstallerLaunchResult(false, false, false, ex.Message);
+                return new InstallerLaunchResult(false, false, false, ErrorMessage: ex.Message);
             }
         }
 
-        internal static InstallerLaunchResult ClassifyDebianInstallerExitCode(int exitCode)
+        internal static InstallerLaunchResult ClassifyDebianInstallerExitCode(int exitCode, string? relaunchPath = null)
         {
             if (exitCode == 0)
             {
                 DiagnosticsLogger.Record("Debian package installation completed successfully.");
-                return new InstallerLaunchResult(true, true, true);
+                return new InstallerLaunchResult(
+                    true,
+                    true,
+                    true,
+                    !string.IsNullOrWhiteSpace(relaunchPath),
+                    relaunchPath);
             }
 
             string message = exitCode is 126 or 127
                 ? "Administrator authentication was cancelled or unavailable."
                 : $"Debian package installer exited with code {exitCode}.";
             DiagnosticsLogger.Record(message);
-            return new InstallerLaunchResult(false, true, false, message);
+            return new InstallerLaunchResult(false, true, false, ErrorMessage: message);
+        }
+
+        internal static string? ResolveLinuxInstalledExecutable(string runtimeDirectory)
+        {
+            if (!OperatingSystem.IsLinux())
+                return null;
+
+            string[] candidates =
+            [
+                Path.Combine(Path.GetPathRoot(Path.GetFullPath(runtimeDirectory)) ?? "/", "opt", "vaultsync", "VaultSync.UI"),
+                "/opt/vaultsync/VaultSync.UI",
+                FindExecutable("vaultsync") ?? string.Empty
+            ];
+
+            foreach (string candidate in candidates)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate) && File.Exists(candidate))
+                    return candidate;
+            }
+
+            return null;
+        }
+
+        internal static ProcessStartInfo CreateDeferredRelaunchStartInfo(string executablePath, int currentProcessId)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "/bin/sh",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add("while kill -0 \"$1\" 2>/dev/null; do sleep 0.2; done; exec \"$2\"");
+            psi.ArgumentList.Add("vaultsync-relaunch");
+            psi.ArgumentList.Add(currentProcessId.ToString(CultureInfo.InvariantCulture));
+            psi.ArgumentList.Add(executablePath);
+            try
+            {
+                string? workingDirectory = Path.GetDirectoryName(executablePath);
+                if (!string.IsNullOrWhiteSpace(workingDirectory))
+                    psi.WorkingDirectory = workingDirectory;
+            }
+            catch
+            {
+                // Best-effort working directory only; the executable path is absolute.
+            }
+
+            return psi;
+        }
+
+        private static bool TryScheduleDeferredRelaunch(string? executablePath)
+        {
+            if (string.IsNullOrWhiteSpace(executablePath))
+                return false;
+
+            try
+            {
+                ProcessStartInfo psi = CreateDeferredRelaunchStartInfo(executablePath, Environment.ProcessId);
+                Process? process = Process.Start(psi);
+                if (process is null)
+                {
+                    DiagnosticsLogger.Record($"Deferred relaunch did not start: {executablePath}");
+                    return false;
+                }
+
+                DiagnosticsLogger.Record($"Deferred relaunch scheduled: {executablePath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Deferred relaunch failed: {ex.GetType().Name} - {ex.Message}");
+                return false;
+            }
         }
 
         private static string? FindExecutable(string name)
