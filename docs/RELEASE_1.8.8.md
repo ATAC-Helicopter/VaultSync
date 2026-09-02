@@ -160,6 +160,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18151` / #617](https://github.com/ATAC-Helicopter/VaultSync/issues/617):
   updater documentation consistency (`P1`) — public and maintainer guidance now
   matches conditional Linux multi-version qualification and installer fallback.
+- [`BUG-18152` / #618](https://github.com/ATAC-Helicopter/VaultSync/issues/618):
+  Linux compositor stability (`P0`) — the app and updater prefer native Wayland,
+  fall back automatically to X11, and avoid translucent top-level surfaces.
 - [`BUG-18118` / #571](https://github.com/ATAC-Helicopter/VaultSync/issues/571):
   fail-closed source loss after snapshot creation (`P0`) — fixed on the release
   branch and awaiting integration through #568.

@@ -4,6 +4,8 @@ VaultSync is distributed through two Windows channels plus the existing macOS/Li
 
 ## Requirements
 - macOS, Windows 10+, or a modern Linux distro.
+- Linux desktop sessions may use native Wayland or Xorg. VaultSync selects a
+  usable Wayland compositor automatically and falls back to X11 when needed.
 - A backup destination with free space (local SSD/HDD, external drive, or network share).
 
 ## Install

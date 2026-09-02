@@ -877,6 +877,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   base-version contract matches conditional Linux multi-version qualification.
   _(Issue #617; delivered on the release branch and awaiting integration through
   #568.)_
+- [x] `BUG-18152` `P0` Prefer native Wayland automatically while retaining X11
+  for Xorg and fallback, and keep Linux top-level composition opaque.
+  _(Issue #618; implemented on the release branch; physical Wayland/Xorg
+  qualification remains in #488.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
