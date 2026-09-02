@@ -470,19 +470,17 @@ namespace VaultSync.UI.ViewModels
                 return true;
 
             string installDir = PatchInstallService.ResolveInstallRoot(runtimeDirectory);
-            if (CanWriteInstallDir(installDir))
-                return false;
-
-            if (OperatingSystem.IsLinux())
+            if (OperatingSystem.IsMacOS() && installDir.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
             {
-                DiagnosticsLogger.Record($"Linux patch install requires installer fallback for protected install directory: {installDir}.");
+                DiagnosticsLogger.Record($"macOS app bundle update requires installer fallback: {installDir}.");
                 return true;
             }
 
-            if (OperatingSystem.IsWindows())
+            if (CanWriteInstallDir(installDir))
                 return false;
 
-            return !PatchInstallService.CanLaunchProtectedPatchInstall(installDir);
+            DiagnosticsLogger.Record($"Patch install requires installer fallback for protected install directory: {installDir}.");
+            return true;
         }
 
         private void NotifyPatchAvailabilityChanged()
@@ -1013,13 +1011,17 @@ namespace VaultSync.UI.ViewModels
                 Process? process = Process.Start(psi);
                 return process is null
                     ? new InstallerLaunchResult(false, false, false, "Installer process did not start.")
-                    : new InstallerLaunchResult(true, false, true);
+                    : new InstallerLaunchResult(true, false, InstallerMediaRequiresShutdown(installerPath));
             }
             catch (Exception ex)
             {
                 return new InstallerLaunchResult(false, false, false, ex.Message);
             }
         }
+
+        internal static bool InstallerMediaRequiresShutdown(string installerPath) =>
+            !(OperatingSystem.IsMacOS() &&
+              installerPath.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase));
 
         private static async Task<InstallerLaunchResult> RunDebianPackageInstallAsync(string packagePath)
         {
