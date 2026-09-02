@@ -1,6 +1,6 @@
 param(
     [string]$Owner = 'ATAC-Helicopter',
-    [int]$ProjectNumber = 1,
+    [int]$ProjectNumber = 7,
     [string]$RoadmapPath = 'ROADMAP.md',
     [switch]$DryRun,
     [string]$ItemsSnapshotPath = ''
@@ -30,4 +30,21 @@ if (-not [string]::IsNullOrWhiteSpace($ItemsSnapshotPath)) {
 & $python.Source @arguments
 if ($LASTEXITCODE -ne 0) {
     throw "Roadmap description sync failed with exit code $LASTEXITCODE."
+}
+
+if ([string]::IsNullOrWhiteSpace($ItemsSnapshotPath)) {
+    $dateGuardPath = Join-Path $PSScriptRoot 'project_date_guard.py'
+    $dateArguments = @(
+        $dateGuardPath,
+        '--owner', $Owner,
+        '--project-number', $ProjectNumber
+    )
+    if (-not $DryRun) {
+        $dateArguments += '--apply'
+    }
+
+    & $python.Source @dateArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "Project date integrity check failed with exit code $LASTEXITCODE."
+    }
 }

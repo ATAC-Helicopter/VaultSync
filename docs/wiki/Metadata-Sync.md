@@ -60,29 +60,24 @@ synchronized multi-writer configuration database. VaultSync 1.8.7 adds
 schema-version-3 provenance, durable merge bases, field-level three-way merge,
 and a repository-scoped writer lease.
 
-- It compares the current local value with the latest value in the destination
-  store. It does not retain a common base revision, so it cannot prove which of
-  two independent edits is newer or automatically perform a true three-way
-  merge.
-- Version-2 project records carry a per-record writer and revision. Legacy
-  version-1 records remain readable but cannot provide trustworthy record-level
-  provenance and are handled conservatively.
-- Project fields now share one review path and durable decisions, while true
-  three-way merge still requires the planned common base revision.
-- The in-process metadata gate coordinates one running VaultSync process only.
-  It is not a cross-machine writer lock.
+- Legacy version-1 records remain readable but have no trustworthy record-level
+  writer or common base, so they are handled conservatively.
+- Version-2 project records carry a per-record writer and revision but lack the
+  portable base and field provenance required for automatic three-way merging.
+- Version-3 project fields share one review path, durable decisions, portable
+  merge bases, and field-level provenance. Non-overlapping changes can merge;
+  overlapping edits remain reviewable.
+- The in-process metadata gate coordinates one running VaultSync process. The
+  repository lease supplies the separate cross-machine writer boundary.
 
-On the active 1.8.7 release branch, cooperating metadata writers are serialized
-by that lease. A second client can still preview and import read-only, but it
-cannot write tombstones or exports while the repository is busy. This protection
-is not shipped until 1.8.7 reaches Stable, and it can never constrain a
-pre-1.8.7 client that does not understand the protocol. Do not let 1.8.6 and
-1.8.7 write the same destination concurrently.
+Since VaultSync 1.8.7, cooperating metadata writers are serialized by that
+lease. A second client can still preview and import read-only, but it cannot
+write tombstones or exports while the repository is busy. The lease can never
+constrain a pre-1.8.7 client that does not understand the protocol. Do not let a
+pre-1.8.7 client and a newer client write the same destination concurrently.
 
-The maintained 1.8.7 implementation status is recorded in the
-[1.8.7 release contract](../RELEASE_1.8.7.md). The current and planned on-disk
-layouts, compatibility rules, and emergency inspection boundary are documented
-in [Repository formats](../REPOSITORY_FORMATS.md).
+The current on-disk layouts, compatibility rules, and emergency inspection
+boundary are documented in [Repository formats](../REPOSITORY_FORMATS.md).
 The writer and merge threat model is in
 [Cross-machine safety](../CROSS_MACHINE_SAFETY.md).
 

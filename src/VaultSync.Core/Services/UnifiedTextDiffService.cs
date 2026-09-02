@@ -165,14 +165,8 @@ public static class UnifiedTextDiffService
         while (oldIndex < older.Length || newIndex < newer.Length)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (oldIndex < older.Length && newIndex < newer.Length &&
-                string.Equals(older[oldIndex], newer[newIndex], StringComparison.Ordinal))
-            {
-                operations.Add(new DiffOperation(' ', older[oldIndex], oldIndex + 1, newIndex + 1));
-                oldIndex++;
-                newIndex++;
+            if (TryAppendMatchingLine(older, newer, operations, ref oldIndex, ref newIndex))
                 continue;
-            }
 
             (int oldSkip, int newSkip) = FindNextSynchronizationPoint(
                 older,
@@ -182,35 +176,71 @@ public static class UnifiedTextDiffService
                 synchronizationLookahead);
             if (oldSkip == 0 && newSkip == 0)
             {
-                if (oldIndex < older.Length)
-                {
-                    operations.Add(new DiffOperation('-', older[oldIndex], oldIndex + 1, newIndex + 1));
-                    oldIndex++;
-                }
-
-                if (newIndex < newer.Length)
-                {
-                    operations.Add(new DiffOperation('+', newer[newIndex], oldIndex + 1, newIndex + 1));
-                    newIndex++;
-                }
-
+                AppendNextUnmatchedLines(older, newer, operations, ref oldIndex, ref newIndex);
                 continue;
             }
 
-            for (int index = 0; index < oldSkip; index++)
-            {
-                operations.Add(new DiffOperation('-', older[oldIndex], oldIndex + 1, newIndex + 1));
-                oldIndex++;
-            }
-
-            for (int index = 0; index < newSkip; index++)
-            {
-                operations.Add(new DiffOperation('+', newer[newIndex], oldIndex + 1, newIndex + 1));
-                newIndex++;
-            }
+            AppendSkippedLines(older, operations, '-', oldSkip, ref oldIndex, ref newIndex);
+            AppendSkippedLines(newer, operations, '+', newSkip, ref newIndex, ref oldIndex);
         }
 
         return operations;
+    }
+
+    private static bool TryAppendMatchingLine(
+        string[] older,
+        string[] newer,
+        List<DiffOperation> operations,
+        ref int oldIndex,
+        ref int newIndex)
+    {
+        if (oldIndex >= older.Length || newIndex >= newer.Length ||
+            !string.Equals(older[oldIndex], newer[newIndex], StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        operations.Add(new DiffOperation(' ', older[oldIndex], oldIndex + 1, newIndex + 1));
+        oldIndex++;
+        newIndex++;
+        return true;
+    }
+
+    private static void AppendNextUnmatchedLines(
+        string[] older,
+        string[] newer,
+        List<DiffOperation> operations,
+        ref int oldIndex,
+        ref int newIndex)
+    {
+        if (oldIndex < older.Length)
+        {
+            operations.Add(new DiffOperation('-', older[oldIndex], oldIndex + 1, newIndex + 1));
+            oldIndex++;
+        }
+
+        if (newIndex < newer.Length)
+        {
+            operations.Add(new DiffOperation('+', newer[newIndex], oldIndex + 1, newIndex + 1));
+            newIndex++;
+        }
+    }
+
+    private static void AppendSkippedLines(
+        string[] lines,
+        List<DiffOperation> operations,
+        char marker,
+        int count,
+        ref int advancingIndex,
+        ref int otherIndex)
+    {
+        for (int index = 0; index < count; index++)
+        {
+            int oldPosition = marker == '-' ? advancingIndex + 1 : otherIndex + 1;
+            int newPosition = marker == '+' ? advancingIndex + 1 : otherIndex + 1;
+            operations.Add(new DiffOperation(marker, lines[advancingIndex], oldPosition, newPosition));
+            advancingIndex++;
+        }
     }
 
     private static (int OldSkip, int NewSkip) FindNextSynchronizationPoint(

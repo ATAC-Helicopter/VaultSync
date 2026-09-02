@@ -135,10 +135,11 @@ public class FilterService
         string json = File.ReadAllText(indexPath);
         PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json);
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (PresetInfo preset in index?.Presets ?? [])
+        foreach (PresetInfo preset in (index?.Presets ?? [])
+                     .Where(preset => !string.IsNullOrWhiteSpace(preset.Id) &&
+                                      !string.IsNullOrWhiteSpace(preset.File)))
         {
-            if (!string.IsNullOrWhiteSpace(preset.Id) && !string.IsNullOrWhiteSpace(preset.File))
-                map[preset.Id] = preset.File;
+            map[preset.Id] = preset.File;
         }
 
         return map;
@@ -148,12 +149,12 @@ public class FilterService
     {
         // 1) explicit argument wins
         if (!string.IsNullOrWhiteSpace(presetsDir) && Directory.Exists(presetsDir))
-            return presetsDir!;
+            return presetsDir;
 
         // 2) environment override for power users
         string? env = Environment.GetEnvironmentVariable("VAULTSYNC_PRESETS_DIR");
         if (!string.IsNullOrWhiteSpace(env) && Directory.Exists(env))
-            return env!;
+            return env;
 
         // 3) dev tree: walk up to find src/presets (current repo layout)
         string dir = AppContext.BaseDirectory;
@@ -185,15 +186,13 @@ public class FilterService
             return true;
 
         var rel = Path.GetRelativePath(root, fullPath).Replace('\\', '/');
-        foreach (var rx in _compiledPatterns)
-            if (rx.IsMatch(rel)) return true;
-        return false;
+        return _compiledPatterns.Any(rx => rx.IsMatch(rel));
     }
 
     private static IEnumerable<string> ReadLines(string file) =>
         File.ReadAllLines(file)
             .Select(l => l.Trim())
-            .Where(l => l.Length > 0 && !l.StartsWith("#"));
+            .Where(l => l.Length > 0 && !l.StartsWith('#'));
 
     private static IReadOnlyList<string> ReadLinesCached(string file)
     {

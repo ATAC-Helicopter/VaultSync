@@ -1,5 +1,56 @@
 ﻿# Changelog
-## [1.8.7] - Unreleased
+## [1.8.8] - Unreleased
+### Added
+- [VS-1823] Added repeatable large-history and high-file-count performance budgets.
+- [VS-1882] Added deterministic interruption and recovery qualification for plain and encrypted archives.
+- Added native Wayland with automatic X11 fallback and opaque Linux windows.
+### Changed
+- [VS-1885] Cleared Sonar findings in release automation, onboarding, and storage hygiene.
+- [VS-1886] Reduced archive and support-package memory use with buffer reuse and streaming hashes.
+- [VS-1887] Made guided setup actionable and moved Guide and Schedule queries off the UI thread.
+- [VS-1884] Qualified exact 1.8.7 state and updated pinned workflow security actions.
+- [VS-1888] Cleared remaining core Sonar annotations.
+- [VS-1889] Qualified safe multi-version Linux patch updates with installer fallback.
+- [VS-1821] Isolated snapshot creation, deferred hashing, checkpoint telemetry, and native-copy orchestration.
+### Fixed
+- [BUG-18116] Removed unintended horizontal page and dialog scrolling.
+- [BUG-18117] Confined retention cleanup across filesystem links.
+- [BUG-18118] Failed backups when required snapshotted source files become unavailable.
+- [BUG-18119] Isolated decrypted-open workspaces between app processes.
+- [BUG-18120] Prevented disposable cleanup from traversing linked children.
+- [BUG-18121] Removed abandoned verified release-cache writes safely.
+- [BUG-18122] Removed abandoned identity and credential-index writes safely.
+- [BUG-18123] Removed abandoned support-bundle staging safely.
+- [BUG-18124] Limited recognized temporary telemetry exports to 30 days and 100 MB.
+- [BUG-18125] Prevented predictable encrypted-restore staging collisions.
+- [BUG-18126] Confined decrypted-workspace cleanup to exact OS temporary children.
+- [BUG-18127] Isolated cancellation ownership between overlapping backup runs.
+- [BUG-18128] Prevented duplicate and unbounded release-branch Sonar runs.
+- [BUG-18129] Published scan-cache state only after snapshot persistence succeeds.
+- [BUG-18130] Deduplicated and bounded release-branch CI and analysis runs.
+- [BUG-18131] Prevented snapshot scans from following linked source paths.
+- [BUG-18132] Propagated verification cancellation instead of reporting a mismatch.
+- [BUG-18133] Rolled back interrupted restores instead of leaving partial target changes.
+- [BUG-18134] Rolled back interrupted metadata imports and exports.
+- [BUG-18135] Preserved completed backups when cancellation arrives after commit.
+- [BUG-18136] Rejected scans cancelled while processing the final entry.
+- [BUG-18137] Rejected vanished backup data before publishing metadata.
+- [BUG-18138] Preserved rollback evidence when restore destinations disappear.
+- [BUG-18139] Kept retention metadata while backup destinations are unavailable.
+- [BUG-18140] Preserved deferred metadata when destinations disappear during replay.
+- [BUG-18141] Isolated metadata-conflict and backup-repair busy state.
+- [BUG-18142] Removed failed installer downloads immediately.
+- [BUG-18143] Made cancellation performance checks deterministic on small runners.
+- [BUG-18144] Kept isolated profiles from opening the normal database.
+- [BUG-18145] Kept metadata-conflict reviews readable in narrow windows.
+- [BUG-18146] Loaded registered projects into tray menus before opening a page.
+- [BUG-18147] Kept Linux open until privileged update authentication succeeds.
+- [BUG-18148] Kept script validation compatible with macOS system Python.
+- [BUG-18149] Cleared updater security and maintainability quality-gate findings.
+- [BUG-18150] Rejected mismatched or duplicate patch-base inventories.
+- [BUG-18151] Corrected stale multi-version updater guidance.
+
+## [1.8.7] - 21.08.2026
 ### Added
 - [VS-1874] Added portable Recovery Evidence Packages containing a versioned JSON record, readable Markdown, a manifest, and SHA-256 checksums, with deterministic semantic digests, build and pseudonymous repository identities, encrypted-point evidence, evidence freshness, redacted local paths, and validation for tampering, missing or duplicate files, unsafe paths, and unsupported schemas.
 - [VS-1871] Added one conservative build-identity record across Settings, startup diagnostics, support and recovery exports, plus `vaultsync --version --json`; version, channel, commit, runtime, architecture, package, update source, official status, and signature status now come from the same contract.

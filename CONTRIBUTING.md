@@ -74,10 +74,19 @@ Examples:
 
 ## 6.0) Repository Workflow Standard (PR-first)
 - Standard workflow is **PR-first** (feature/fix branches into `Dev` via PR).
+- Merge feature, fix, and release PRs into `Dev` with a **merge commit**. Do not
+  squash or rebase them at merge time: `Dev` must retain the source commits and
+  their original identities.
+- Promote `Dev` into `Stable` with a **merge commit**. `Stable` is a shipped-
+  release spine: do not squash, rebase, or fast-forward a promotion into it.
+- Release branches use `release/<version>` and receive the same deletion,
+  force-push, review, and status-check protection as `Dev`.
 - Direct pushes are reserved for:
   - emergency maintainer hotfixes
   - metadata-only maintenance (for example: label/board sync scripts)
   - explicit owner decision
+- A Stable hotfix still goes through a hotfix branch and merge commit so the
+  Stable first-parent history remains release/hotfix merges only.
 - Even for direct pushes, keep issue/roadmap/changelog links exactly as with PRs.
 
 ## 6.1) Issue And PR Linking Rules
@@ -145,9 +154,12 @@ Required workflow for changes:
    - `Owner`: `Flavio Giacchetti`
    - `Team`: `Work` (solo setup)
    - Status/date policy:
-     - `Todo`: no start/completed dates
-     - `In progress`: start date required
-     - `Done`: completed date required
+     - every item: traceable Start and Target dates are required
+     - `Todo`: no Completed on date
+     - `In progress`: Start date reflects the earliest approved planning or
+       implementation date, never the date of a later board edit
+     - `Done`: Completed on reflects the closing, merge, or release evidence
+       defined by the roadmap protocol
 
 Changelog/roadmap consistency rules:
 - Use IDs when available (`VS-xxxx`, `ISS-xxxxx`, `BUG-xxxxx`, `REL-xxxxx`).

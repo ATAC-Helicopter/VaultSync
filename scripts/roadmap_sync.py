@@ -193,6 +193,33 @@ def plan_changes(items: Iterable[dict[str, Any]], index: dict[str, RoadmapEntry]
     return [change for change in planned if change is not None]
 
 
+def find_classification_violations(items: Iterable[dict[str, Any]]) -> list[str]:
+    violations: list[str] = []
+    for item in items:
+        violations.extend(_classification_violations_for_item(item))
+    return violations
+
+
+def _classification_violations_for_item(item: dict[str, Any]) -> list[str]:
+    content = item.get("content") or {}
+    if (content.get("type") or "") not in {"Issue", "DraftIssue"}:
+        return []
+
+    # The Project Title field can lag after an issue rename. Classification
+    # follows the linked issue title, which is the canonical identity.
+    title = str(content.get("title") or item.get("title") or "")
+    labels = {str(label).lower() for label in item.get("labels") or []}
+    violations: list[str] = []
+    identifiers = TICKET_ID_PATTERN.findall(title) if "bug" in labels else []
+    if any(identifier.startswith("VS-") for identifier in identifiers):
+        violations.append(f"{title}: bug-labelled items cannot carry VS identifiers")
+    if "kind:vs" in labels and not title.startswith("VS-"):
+        violations.append(f"{title}: kind:vs items must start with their VS identifier")
+    if {"bug", "kind:vs"}.issubset(labels):
+        violations.append(f"{title}: bug and kind:vs labels are mutually exclusive")
+    return violations
+
+
 def _plan_item_change(
     item: dict[str, Any], index: dict[str, RoadmapEntry]
 ) -> PlannedChange | None:
@@ -358,7 +385,7 @@ def _apply_draft_change(change: PlannedChange, project_id: str) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--owner", default="ATAC-Helicopter")
-    parser.add_argument("--project-number", type=int, default=1)
+    parser.add_argument("--project-number", type=int, default=7)
     parser.add_argument("--roadmap-path", default="ROADMAP.md")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--items-snapshot-path", default="")
@@ -371,6 +398,12 @@ def main() -> None:
     roadmap_text = roadmap_path.read_text(encoding="utf-8-sig")
     index = parse_roadmap(roadmap_text)
     project_id, items = load_items(args)
+    classification_violations = find_classification_violations(items)
+    if classification_violations:
+        raise SystemExit(
+            "Project work-item classification failed:\n- "
+            + "\n- ".join(classification_violations)
+        )
     changes = plan_changes(items, index)
 
     if args.dry_run:

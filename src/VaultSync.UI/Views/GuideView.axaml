@@ -4,7 +4,9 @@
     xmlns:vm="clr-namespace:VaultSync.UI.ViewModels"
     x:Class="VaultSync.UI.Views.GuideView"
     x:DataType="vm:GuideViewModel">
-  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{DynamicResource PagePadding}">
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="{DynamicResource PagePadding}">
     <StackPanel Spacing="18" MaxWidth="1040" HorizontalAlignment="Center">
       <Grid x:Name="GuideHeaderGrid" ColumnDefinitions="*,Auto" ColumnSpacing="20">
         <StackPanel Spacing="6">

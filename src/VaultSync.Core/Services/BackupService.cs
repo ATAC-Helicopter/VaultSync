@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -23,7 +24,7 @@ public sealed class BackupService(
     BackupEncryptionSecretService? backupEncryptionSecretService = null,
     IAppConfigStore? configStore = null)
 {
-    private readonly Dictionary<int, CancellationTokenSource> _cancelMap = [];
+    private readonly BackupCancellationRegistry _cancellationRegistry = new();
     private readonly SqliteRepository _repo = repo;
     private readonly BackupEncryptionSecretService _backupEncryptionSecretService = backupEncryptionSecretService ?? new BackupEncryptionSecretService();
     private readonly IAppConfigStore _configStore = configStore ?? StaticAppConfigStore.Instance;
@@ -61,60 +62,81 @@ public sealed class BackupService(
         List<int>? CompletedChunkIndexes = null,
         string ArtifactFileName = BackupArchiveCryptoService.PlainArchiveFileName);
 
+    internal sealed record CheckpointResumeTelemetryUpdate
+    {
+        public required string Status { get; init; }
+        public required string ProjectName { get; init; }
+        public required string BackupFolder { get; init; }
+        public required string ArchivePath { get; init; }
+        public long ResumeOffsetBytes { get; init; }
+        public long ArchiveSizeBytes { get; init; }
+        public required string SourceFingerprint { get; init; }
+        public required string Message { get; init; }
+    }
+
     private sealed record ArchiveBackupResult(
         string BackupFolder,
         bool IsEncrypted,
         BackupCryptoDescriptor Descriptor);
 
+    private sealed class ArchiveBackupRequest
+    {
+        public required Project Project { get; init; }
+        public required string DestinationDirectory { get; init; }
+        public long TotalBytes { get; init; }
+        public int TotalFiles { get; init; }
+        public IReadOnlyList<string>? FilesForBackup { get; init; }
+        public Action<double, string, string>? ProgressCallback { get; init; }
+        public int UploadBufferBytes { get; init; }
+        public bool PreferParallelUpload { get; init; }
+        public bool EnableCheckpointedRetry { get; init; }
+        public required IAppConfigStore ConfigStore { get; init; }
+        public string? EncryptionPassword { get; init; }
+        public required BackupEncryptionConfig EncryptionConfig { get; init; }
+        public CancellationToken CancellationToken { get; init; }
+    }
+
+    private sealed class ParallelArchiveUploadRequest
+    {
+        public required string LocalArchive { get; init; }
+        public required string FinalArchivePath { get; init; }
+        public long ArchiveSize { get; init; }
+        public int BufferSize { get; init; }
+        public Action<double, string, string>? ProgressCallback { get; init; }
+        public required string BackupFolder { get; init; }
+        public required string ProjectName { get; init; }
+        public bool EnableCheckpointedRetry { get; init; }
+        public ArchiveResumeCheckpoint? ResumeCheckpoint { get; init; }
+        public required IAppConfigStore ConfigStore { get; init; }
+        public CancellationToken CancellationToken { get; init; }
+    }
+
     internal static void UpdateCheckpointResumeTelemetry(
         AppConfig config,
-        string status,
-        string projectName,
-        string backupFolder,
-        string archivePath,
-        long resumeOffsetBytes,
-        long archiveSizeBytes,
-        string sourceFingerprint,
-        string message)
+        CheckpointResumeTelemetryUpdate update)
     {
         config.Advanced.CheckpointResumeTelemetry ??= new CheckpointResumeTelemetry();
         CheckpointResumeTelemetry telemetry = config.Advanced.CheckpointResumeTelemetry;
         telemetry.LastUpdatedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
-        telemetry.LastStatus = status;
-        telemetry.LastProjectName = projectName;
-        telemetry.LastBackupFolder = backupFolder;
-        telemetry.LastArchivePath = archivePath;
-        telemetry.LastResumeOffsetBytes = Math.Max(0, resumeOffsetBytes);
-        telemetry.LastArchiveSizeBytes = Math.Max(0, archiveSizeBytes);
-        telemetry.LastSourceFingerprint = sourceFingerprint;
-        telemetry.LastMessage = message;
+        telemetry.LastStatus = update.Status;
+        telemetry.LastProjectName = update.ProjectName;
+        telemetry.LastBackupFolder = update.BackupFolder;
+        telemetry.LastArchivePath = update.ArchivePath;
+        telemetry.LastResumeOffsetBytes = Math.Max(0, update.ResumeOffsetBytes);
+        telemetry.LastArchiveSizeBytes = Math.Max(0, update.ArchiveSizeBytes);
+        telemetry.LastSourceFingerprint = update.SourceFingerprint;
+        telemetry.LastMessage = update.Message;
     }
 
     private static void PersistCheckpointResumeTelemetry(
-        string status,
-        string projectName,
-        string backupFolder,
-        string archivePath,
-        long resumeOffsetBytes,
-        long archiveSizeBytes,
-        string sourceFingerprint,
-        string message,
+        CheckpointResumeTelemetryUpdate update,
         IAppConfigStore? configStore = null)
     {
         try
         {
             IAppConfigStore store = configStore ?? StaticAppConfigStore.Instance;
             AppConfig cfg = store.Load();
-            UpdateCheckpointResumeTelemetry(
-                cfg,
-                status,
-                projectName,
-                backupFolder,
-                archivePath,
-                resumeOffsetBytes,
-                archiveSizeBytes,
-                sourceFingerprint,
-                message);
+            UpdateCheckpointResumeTelemetry(cfg, update);
             store.Save(cfg);
         }
         catch (Exception ex)
@@ -124,6 +146,32 @@ public sealed class BackupService(
     }
 
     public sealed record BackupRunResult(int BackupId, bool SkippedForNoChanges, bool Cancelled);
+    public sealed class BackupRunRequest
+    {
+        public required Project Project { get; init; }
+        public required string BackupRoot { get; init; }
+        public bool IsAuto { get; init; }
+        public Action<double, string, string>? ProgressCallback { get; init; }
+        public bool UseArchiveMode { get; init; }
+        public bool FullSnapshotHash { get; init; } = true;
+        public int? MaxSnapshotsToKeep { get; init; }
+        public double? MinimumFreeSpacePercent { get; init; }
+        public string? PreferredFinalBackupRoot { get; init; }
+        public int? ReuseSnapshotId { get; init; }
+        public bool WriteMetadata { get; init; } = true;
+        public string? DestinationPath { get; init; }
+        public string? DestinationAlias { get; init; }
+        public bool SkipIfNoChanges { get; init; }
+        public bool UseRsyncDelta { get; init; }
+        public bool UseIncrementalBackups { get; init; }
+        public int? ArchiveUploadBufferBytes { get; init; }
+        public bool PreferRunnerProgressOnly { get; init; }
+        public bool PreferParallelArchiveUpload { get; init; }
+        public bool UseScanCache { get; init; }
+        public bool AggressiveScanCache { get; init; }
+        public bool EnableCheckpointedRetry { get; init; } = true;
+        public CancellationToken CancellationToken { get; init; }
+    }
     public sealed record BackupPreflightResult(
         long TotalBytes,
         int TotalFiles,
@@ -159,17 +207,11 @@ public sealed class BackupService(
 
     public void CancelBackup(int projectId)
     {
-        if (_cancelMap.TryGetValue(projectId, out CancellationTokenSource? cts))
+        RuntimeLog.WriteVerbose($"[BackupService] Cancel requested for projectId={projectId}.");
+        if (!_cancellationRegistry.Cancel(projectId))
         {
-            RuntimeLog.WriteVerbose($"[BackupService] Cancel requested for projectId={projectId}.");
-            try
-            {
-                cts.Cancel();
-            }
-            catch (ObjectDisposedException)
-            {
-                RuntimeLog.WriteVerbose($"[BackupService] Cancel ignored; token source already disposed for projectId={projectId}.");
-            }
+            RuntimeLog.WriteVerbose(
+                $"[BackupService] Cancel ignored; no active registration exists for projectId={projectId}.");
         }
     }
 
@@ -373,15 +415,35 @@ public sealed class BackupService(
         }
 
         ArchiveResumeCheckpoint? checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
-        if (checkpoint is null)
+        if (!IsValidArchiveResumeCheckpoint(checkpoint))
         {
             return false;
         }
 
-        string artifactFileName = string.IsNullOrWhiteSpace(checkpoint.ArtifactFileName)
-            ? BackupArchiveCryptoService.PlainArchiveFileName
-            : Path.GetFileName(checkpoint.ArtifactFileName);
+        string artifactFileName = checkpoint!.ArtifactFileName;
         return File.Exists(Path.Combine(backupDir, artifactFileName));
+    }
+
+    private static bool IsValidArchiveResumeCheckpoint(ArchiveResumeCheckpoint? checkpoint)
+    {
+        if (checkpoint is null ||
+            checkpoint.Version != 1 ||
+            !string.Equals(checkpoint.Mode, "archive", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(checkpoint.SourceFingerprint) ||
+            checkpoint.ArchiveSizeBytes < 0 ||
+            checkpoint.LastUpdatedUtc == default)
+        {
+            return false;
+        }
+
+        return string.Equals(
+                   checkpoint.ArtifactFileName,
+                   BackupArchiveCryptoService.PlainArchiveFileName,
+                   StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(
+                   checkpoint.ArtifactFileName,
+                   BackupArchiveCryptoService.EncryptedArchiveFileName,
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? TryFindResumableArchiveBackupFolder(string candidateDestDir, string sourceFingerprint)
@@ -556,13 +618,11 @@ public sealed class BackupService(
         TimeSpan ttl,
         out BackupPreflightResult result)
     {
-        if (PreflightCache.TryGetValue(cacheKey, out (DateTime TimestampUtc, BackupPreflightResult Result) cached))
+        if (PreflightCache.TryGetValue(cacheKey, out (DateTime TimestampUtc, BackupPreflightResult Result) cached) &&
+            (DateTime.UtcNow - cached.TimestampUtc) <= ttl)
         {
-            if ((DateTime.UtcNow - cached.TimestampUtc) <= ttl)
-            {
-                result = cached.Result;
-                return true;
-            }
+            result = cached.Result;
+            return true;
         }
 
         result = default!;
@@ -583,12 +643,10 @@ public sealed class BackupService(
         }
 
         string statsKey = $"{project.RootPath}|{project.Preset}";
-        if (StatsCache.TryGetValue(statsKey, out (DateTime TimestampUtc, int TotalFiles, long TotalBytes) cached))
+        if (StatsCache.TryGetValue(statsKey, out (DateTime TimestampUtc, int TotalFiles, long TotalBytes) cached) &&
+            (DateTime.UtcNow - cached.TimestampUtc) <= ttl)
         {
-            if ((DateTime.UtcNow - cached.TimestampUtc) <= ttl)
-            {
-                return (cached.TotalFiles, cached.TotalBytes);
-            }
+            return (cached.TotalFiles, cached.TotalBytes);
         }
 
         (int totalFiles, long totalBytes) computed = ComputeBackupStats(project.RootPath, project.Preset, ct);
@@ -672,45 +730,46 @@ public sealed class BackupService(
     private static int CleanupIncompleteBackupsUnderProject(string projectDir, IAppConfigStore? configStore)
     {
         int removed = 0;
+        foreach (string backupDir in SafeEnumerateDirectories(projectDir))
         {
-            foreach (string backupDir in SafeEnumerateDirectories(projectDir))
+            try
             {
-                try
-                {
-                    string markerPath = Path.Combine(backupDir, InProgressMarkerFileName);
-                    if (!File.Exists(markerPath))
-                        continue;
+                string markerPath = Path.Combine(backupDir, InProgressMarkerFileName);
+                if (!File.Exists(markerPath))
+                    continue;
 
-                    if (IsResumableArchiveBackup(backupDir))
-                    {
-                        RuntimeLog.WriteVerbose($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
-                        ArchiveResumeCheckpoint? checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
-                        string artifactFileName = string.IsNullOrWhiteSpace(checkpoint?.ArtifactFileName)
-                            ? BackupArchiveCryptoService.PlainArchiveFileName
-                            : Path.GetFileName(checkpoint.ArtifactFileName);
-                        string artifactPath = Path.Combine(backupDir, artifactFileName);
-                        PersistCheckpointResumeTelemetry(
-                            status: "cleanup-preserved",
-                            projectName: Path.GetFileName(projectDir),
-                            backupFolder: backupDir,
-                            archivePath: artifactPath,
-                            resumeOffsetBytes: File.Exists(artifactPath)
+                if (IsResumableArchiveBackup(backupDir))
+                {
+                    RuntimeLog.WriteVerbose($"[BackupService] Preserving resumable incomplete archive '{backupDir}' for checkpoint retry.");
+                    ArchiveResumeCheckpoint? checkpoint = TryReadArchiveResumeCheckpoint(backupDir);
+                    string artifactFileName = string.IsNullOrWhiteSpace(checkpoint?.ArtifactFileName)
+                        ? BackupArchiveCryptoService.PlainArchiveFileName
+                        : Path.GetFileName(checkpoint.ArtifactFileName);
+                    string artifactPath = Path.Combine(backupDir, artifactFileName);
+                    PersistCheckpointResumeTelemetry(
+                        new CheckpointResumeTelemetryUpdate
+                        {
+                            Status = "cleanup-preserved",
+                            ProjectName = Path.GetFileName(projectDir),
+                            BackupFolder = backupDir,
+                            ArchivePath = artifactPath,
+                            ResumeOffsetBytes = File.Exists(artifactPath)
                                 ? new FileInfo(artifactPath).Length
                                 : 0,
-                            archiveSizeBytes: checkpoint?.ArchiveSizeBytes ?? 0,
-                            sourceFingerprint: checkpoint?.SourceFingerprint ?? string.Empty,
-                            message: "Preserved interrupted archive backup because checkpoint resume metadata is valid.",
-                            configStore: configStore);
-                        continue;
-                    }
+                            ArchiveSizeBytes = checkpoint?.ArchiveSizeBytes ?? 0,
+                            SourceFingerprint = checkpoint?.SourceFingerprint ?? string.Empty,
+                            Message = "Preserved interrupted archive backup because checkpoint resume metadata is valid."
+                        },
+                        configStore);
+                    continue;
+                }
 
-                    DeletePartialBackup(backupDir);
-                    removed++;
-                }
-                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
-                {
-                    Console.WriteLine($"[BackupService] Skipping incomplete backup cleanup for '{backupDir}': {ex.Message}");
-                }
+                DeletePartialBackup(backupDir);
+                removed++;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+            {
+                Console.WriteLine($"[BackupService] Skipping incomplete backup cleanup for '{backupDir}': {ex.Message}");
             }
         }
 
@@ -766,7 +825,11 @@ public sealed class BackupService(
     /// <exception cref="InvalidOperationException">
     /// Thrown when the project has no snapshots yet, or backupRoot is not configured.
     /// </exception>
-    public async Task<BackupRunResult> RunBackupAsync(
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "Source-compatible public facade; new integrations should use BackupRunRequest.")]
+    public Task<BackupRunResult> RunBackupAsync(
         Project project,
         string backupRoot,
         bool isAuto,
@@ -789,8 +852,65 @@ public sealed class BackupService(
         bool useScanCache = false,
         bool aggressiveScanCache = false,
         bool enableCheckpointedRetry = true,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        RunBackupAsync(new BackupRunRequest
+        {
+            Project = project,
+            BackupRoot = backupRoot,
+            IsAuto = isAuto,
+            ProgressCallback = progressCallback,
+            UseArchiveMode = useArchiveMode,
+            FullSnapshotHash = fullSnapshotHash,
+            MaxSnapshotsToKeep = maxSnapshotsToKeep,
+            MinimumFreeSpacePercent = minimumFreeSpacePercent,
+            PreferredFinalBackupRoot = preferredFinalBackupRoot,
+            ReuseSnapshotId = reuseSnapshotId,
+            WriteMetadata = writeMetadata,
+            DestinationPath = destinationPath,
+            DestinationAlias = destinationAlias,
+            SkipIfNoChanges = skipIfNoChanges,
+            UseRsyncDelta = useRsyncDelta,
+            UseIncrementalBackups = useIncrementalBackups,
+            ArchiveUploadBufferBytes = archiveUploadBufferBytes,
+            PreferRunnerProgressOnly = preferRunnerProgressOnly,
+            PreferParallelArchiveUpload = preferParallelArchiveUpload,
+            UseScanCache = useScanCache,
+            AggressiveScanCache = aggressiveScanCache,
+            EnableCheckpointedRetry = enableCheckpointedRetry,
+            CancellationToken = ct
+        });
+
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "This transaction coordinator intentionally keeps backup creation, cleanup, and metadata publication in one auditable failure boundary; its sub-operations are delegated to focused helpers.")]
+    public async Task<BackupRunResult> RunBackupAsync(BackupRunRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        Project project = request.Project;
+        string backupRoot = request.BackupRoot;
+        bool isAuto = request.IsAuto;
+        Action<double, string, string>? progressCallback = request.ProgressCallback;
+        bool useArchiveMode = request.UseArchiveMode;
+        bool fullSnapshotHash = request.FullSnapshotHash;
+        int? maxSnapshotsToKeep = request.MaxSnapshotsToKeep;
+        double? minimumFreeSpacePercent = request.MinimumFreeSpacePercent;
+        string? preferredFinalBackupRoot = request.PreferredFinalBackupRoot;
+        int? reuseSnapshotId = request.ReuseSnapshotId;
+        bool writeMetadata = request.WriteMetadata;
+        string? destinationPath = request.DestinationPath;
+        string? destinationAlias = request.DestinationAlias;
+        bool skipIfNoChanges = request.SkipIfNoChanges;
+        bool useRsyncDelta = request.UseRsyncDelta;
+        bool useIncrementalBackups = request.UseIncrementalBackups;
+        int? archiveUploadBufferBytes = request.ArchiveUploadBufferBytes;
+        bool preferRunnerProgressOnly = request.PreferRunnerProgressOnly;
+        bool preferParallelArchiveUpload = request.PreferParallelArchiveUpload;
+        bool useScanCache = request.UseScanCache;
+        bool aggressiveScanCache = request.AggressiveScanCache;
+        bool enableCheckpointedRetry = request.EnableCheckpointedRetry;
+        CancellationToken ct = request.CancellationToken;
+
         ArgumentNullException.ThrowIfNull(project);
         if (string.IsNullOrWhiteSpace(project.RootPath))
             throw new InvalidOperationException("Project.RootPath is not set.");
@@ -830,21 +950,9 @@ public sealed class BackupService(
             }
         }
 
-        // Create (or replace) a CTS for this project and link with caller token.
-        if (_cancelMap.TryGetValue(project.Id, out CancellationTokenSource? existingCts))
-        {
-            try
-            {
-                existingCts.Cancel();
-            }
-            catch { }
-            existingCts.Dispose();
-        }
-        var projectCts = new CancellationTokenSource();
-        _cancelMap[project.Id] = projectCts;
-
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, projectCts.Token);
-        CancellationToken linkedToken = linkedCts.Token;
+        using BackupCancellationRegistry.Registration cancellationRegistration =
+            _cancellationRegistry.Register(project.Id, ct);
+        CancellationToken linkedToken = cancellationRegistration.Token;
         await using CancellationTokenRegistration cancelLog = linkedToken.Register(() =>
             RuntimeLog.WriteVerbose($"[BackupService] Cancellation observed for project '{project.Name}' (Id={project.Id})."));
 
@@ -923,12 +1031,16 @@ public sealed class BackupService(
             snapshotId = await snapshotService.CreateSnapshotAsync(
                 project,
                 fullSnapshotHash,
-                hashNow: false,
-                maxSnapshotsToKeep,
-                linkedToken,
-                (percent, currentFile, etaText) => progressCallback?.Invoke(percent, currentFile, etaText),
-                useScanCache,
-                aggressiveScanCache);
+                new SnapshotCreationOptions
+                {
+                    HashNow = false,
+                    MaxSnapshotsToKeep = maxSnapshotsToKeep,
+                    ProgressCallback = (percent, currentFile, etaText) =>
+                        progressCallback?.Invoke(percent, currentFile, etaText),
+                    UseScanCache = useScanCache,
+                    AggressiveScanCache = aggressiveScanCache
+                },
+                linkedToken);
 
             SnapshotOutcome? outcome = snapshotService.LastCreatedOutcome;
             if (skipIfNoChanges &&
@@ -956,7 +1068,7 @@ public sealed class BackupService(
         {
             try
             {
-                filesForProgress = [.. _repo.GetFilesForSnapshot(snapshotId)];
+                filesForProgress = await _repo.GetFilesForSnapshotAsync(snapshotId, linkedToken).ConfigureAwait(false);
                 if (snapshot is null)
                 {
                     totalFilesForProgress = filesForProgress.Count;
@@ -1011,20 +1123,22 @@ public sealed class BackupService(
                 progressCallback?.Invoke(0, "Preparing archive backup...", string.Empty);
 
                 int uploadBufferBytes = NormalizeArchiveUploadBufferBytes(archiveUploadBufferBytes);
-                ArchiveBackupResult archiveResult = await RunArchiveBackupAsync(
-                    project,
-                    backupFolder,
-                    totalBytes,
-                    totalFilesForProgress,
-                    filesForBackup,
-                    progressCallback,
-                    uploadBufferBytes,
-                    preferParallelArchiveUpload,
-                    enableCheckpointedRetry,
-                    _configStore,
-                    encryptionPassword,
-                    encryptionConfig,
-                    linkedToken);
+                ArchiveBackupResult archiveResult = await RunArchiveBackupAsync(new ArchiveBackupRequest
+                {
+                    Project = project,
+                    DestinationDirectory = backupFolder,
+                    TotalBytes = totalBytes,
+                    TotalFiles = totalFilesForProgress,
+                    FilesForBackup = filesForBackup,
+                    ProgressCallback = progressCallback,
+                    UploadBufferBytes = uploadBufferBytes,
+                    PreferParallelUpload = preferParallelArchiveUpload,
+                    EnableCheckpointedRetry = enableCheckpointedRetry,
+                    ConfigStore = _configStore,
+                    EncryptionPassword = encryptionPassword,
+                    EncryptionConfig = encryptionConfig,
+                    CancellationToken = linkedToken
+                });
                 backupFolderUsed = archiveResult.BackupFolder;
                 backupIsEncrypted = archiveResult.IsEncrypted;
                 backupCryptoDescriptorJson = archiveResult.Descriptor.ToMetadataJson(backupIsEncrypted);
@@ -1033,21 +1147,23 @@ public sealed class BackupService(
             {
                 progressCallback?.Invoke(0, "Copying files...", string.Empty);
 
-                await RunNativeBackupAsync(
-                    project,
-                    backupFolder,
-                    totalBytes,
-                    totalFilesForProgress,
-                    filesForProgress,
-                    progressCallback,
-                    useRsyncDelta,
-                    useIncrementalBackups,
-                    linkDest,
-                    TransferPolicy.NormalizeBandwidthLimitMbps(
+                await RunNativeBackupAsync(new NativeBackupRequest
+                {
+                    Project = project,
+                    DestinationDirectory = backupFolder,
+                    TotalBytes = totalBytes,
+                    TotalFiles = totalFilesForProgress,
+                    FilesForProgress = filesForProgress,
+                    ProgressCallback = progressCallback,
+                    UseRsyncDelta = useRsyncDelta,
+                    UseIncrementalBackups = useIncrementalBackups,
+                    LinkDestination = linkDest,
+                    MaxBandwidthMbps = TransferPolicy.NormalizeBandwidthLimitMbps(
                         configSnapshot.Backups.EnableBandwidthLimit,
                         configSnapshot.Backups.MaxBandwidthMbps),
-                    preferRunnerProgressOnly,
-                    linkedToken);
+                    PreferRunnerProgressOnly = preferRunnerProgressOnly,
+                    CancellationToken = linkedToken
+                });
             }
         }
         catch (Exception ex)
@@ -1135,6 +1251,27 @@ public sealed class BackupService(
             }
         }
 
+        if (linkedToken.IsCancellationRequested)
+        {
+            RuntimeLog.WriteVerbose($"[BackupService] Backup cancelled before metadata publication for '{project.Name}'. Cleaning up.");
+            DeletePartialBackup(backupFolderUsed);
+            if (!string.Equals(backupFolderUsed, backupFolder, StringComparison.OrdinalIgnoreCase))
+                DeletePartialBackup(backupFolder);
+            return new BackupRunResult(0, false, true);
+        }
+
+        try
+        {
+            EnsureBackupDataReadyForCommit(backupFolderUsed, useArchiveMode, backupIsEncrypted);
+        }
+        catch
+        {
+            DeletePartialBackup(backupFolderUsed);
+            if (!string.Equals(backupFolderUsed, backupFolder, StringComparison.OrdinalIgnoreCase))
+                DeletePartialBackup(backupFolder);
+            throw;
+        }
+
         // Store relative path so if backupRoot moves, paths are still valid.
         string relativePath = Path.GetRelativePath(backupRootUsed, backupFolderUsed);
         string backupType = isAuto ? "auto" : "manual";
@@ -1158,17 +1295,19 @@ public sealed class BackupService(
                 ? destinationAlias
                 : string.Empty;
 
-            backupId = _repo.CreateBackup(
-                projectId: project.Id,
-                snapshotId: snapshotId,
-                type: backupType,
-                backupMode: backupMode,
-                totalBytes: totalBytes,
-                relativePath: relativePath,
-                destinationPath: metadataRoot,
-                destinationAlias: metadataAlias,
-                isEncrypted: backupIsEncrypted,
-                cryptoDescriptorJson: backupCryptoDescriptorJson);
+            backupId = _repo.CreateBackup(new BackupWriteRequest
+            {
+                ProjectId = project.Id,
+                SnapshotId = snapshotId,
+                Type = backupType,
+                TotalBytes = totalBytes,
+                RelativePath = relativePath,
+                DestinationPath = metadataRoot,
+                DestinationAlias = metadataAlias,
+                BackupMode = backupMode,
+                IsEncrypted = backupIsEncrypted,
+                CryptoDescriptorJson = backupCryptoDescriptorJson
+            });
 
             RuntimeLog.WriteVerbose($"[BackupService] Backup metadata created successfully for '{project.Name}' (backupId={backupId}).");
 
@@ -1193,24 +1332,50 @@ public sealed class BackupService(
             RuntimeLog.WriteVerbose($"[BackupService] Skipping completion marker on network destination '{backupFolderUsed}'.");
         }
 
-        string completedMessage = backupIsEncrypted
-            ? "Backup completed (encrypted)."
-            : useArchiveMode
-                ? "Backup completed (archive)."
-                : "Backup completed.";
+        string completedMessage;
+        if (backupIsEncrypted)
+            completedMessage = "Backup completed (encrypted).";
+        else if (useArchiveMode)
+            completedMessage = "Backup completed (archive).";
+        else
+            completedMessage = "Backup completed.";
         progressCallback?.Invoke(100, string.Empty, completedMessage);
 
-        if (_cancelMap.TryGetValue(project.Id, out CancellationTokenSource? finishedCts))
-        {
-            finishedCts.Dispose();
-            _cancelMap.Remove(project.Id);
-        }
-        // Ensure cancelled backups never leave partial folders
-        if (linkedToken.IsCancellationRequested)
-        {
-            DeletePartialBackup(backupFolder);
-        }
+        // Metadata and the completion marker are the success commit point. A
+        // cancellation requested by the final progress notification must not
+        // invalidate or delete the already committed backup.
         return new BackupRunResult(backupId, false, false);
+    }
+
+    private static void EnsureBackupDataReadyForCommit(
+        string backupFolder,
+        bool useArchiveMode,
+        bool isEncrypted)
+    {
+        if (!Directory.Exists(backupFolder))
+        {
+            throw new IOException(
+                $"Backup destination disappeared before metadata could be committed: '{backupFolder}'.");
+        }
+
+        if (!useArchiveMode)
+            return;
+
+        string artifactName = isEncrypted
+            ? BackupArchiveCryptoService.EncryptedArchiveFileName
+            : BackupArchiveCryptoService.PlainArchiveFileName;
+        string artifactPath = Path.Combine(backupFolder, artifactName);
+        if (!File.Exists(artifactPath) || new FileInfo(artifactPath).Length <= 0)
+        {
+            throw new IOException(
+                $"Backup archive disappeared or is empty before metadata could be committed: '{artifactPath}'.");
+        }
+
+        if (isEncrypted && !File.Exists(Path.Combine(backupFolder, BackupArchiveCryptoService.MetadataFileName)))
+        {
+            throw new IOException(
+                $"Encrypted backup metadata disappeared before the backup could be committed: '{backupFolder}'.");
+        }
     }
 
     /// <summary>
@@ -1218,208 +1383,130 @@ public sealed class BackupService(
     /// to perform a fast backup of the project into the given destination folder.
     /// Throws if the tool is missing or returns a failure exit code.
     /// </summary>
-    private static async Task RunNativeBackupAsync(
-        Project project,
-        string destDir,
-        long totalBytes,
-        int totalFiles,
-        List<FileEntry>? filesForProgress,
-        Action<double, string, string>? progressCallback,
-        bool useRsyncDelta,
-        bool useIncrementalBackups,
-        string? linkDest,
-        int? maxBandwidthMbps,
-        bool preferRunnerProgressOnly,
-        CancellationToken ct)
+    private static async Task RunNativeBackupAsync(NativeBackupRequest request)
     {
-        ct.ThrowIfCancellationRequested();
+        request.CancellationToken.ThrowIfCancellationRequested();
 
         // Normalise destination trailing separator for the runners.
+        string destDir = request.DestinationDirectory;
         if (!destDir.EndsWith(Path.DirectorySeparatorChar))
             destDir += Path.DirectorySeparatorChar;
 
-        // Wrap the runner's raw percentage/file progress to compute ETA and speed
-        // based on the totalBytes we computed up front.
-        Action<double, string, string>? callbackForRunner;
-        CancellationTokenSource? monitorCts = null;
-        Task? monitorTask = null;
-        RunnerProgressState? runnerState = null;
-        bool useHybridMonitor = progressCallback is not null
-            && totalBytes > 0
-            && filesForProgress is not null
-            && filesForProgress.Count > 0
-            && !preferRunnerProgressOnly;
+        await using NativeBackupProgressSession progress = StartNativeBackupProgress(request, destDir);
+        bool isNetworkDestination = IsNetworkPath(destDir);
+        bool effectiveUseRsyncDelta = ShouldUseRsyncDelta(request, isNetworkDestination);
+
+        if (OperatingSystem.IsWindows())
+            await RunWindowsNativeBackupAsync(request, destDir, progress.RunnerCallback, isNetworkDestination, effectiveUseRsyncDelta);
+        else
+            await RunRsyncBackupAsync(request, destDir, progress.RunnerCallback, effectiveUseRsyncDelta);
+    }
+
+    private static bool ShouldUseRsyncDelta(NativeBackupRequest request, bool isNetworkDestination) =>
+        request.UseRsyncDelta ||
+        (OperatingSystem.IsWindows() &&
+         isNetworkDestination &&
+         !request.UseIncrementalBackups &&
+         (TryGetBundledRsyncPath() is not null || IsOnPath(RsyncExecutableName)));
+
+    private static async Task RunWindowsNativeBackupAsync(
+        NativeBackupRequest request,
+        string destDir,
+        Action<double, string, string>? progressCallback,
+        bool isNetworkDestination,
+        bool useRsyncDelta)
+    {
+        string? bundledRsync = TryGetBundledRsyncPath();
+        bool rsyncAvailable = bundledRsync is not null || IsOnPath(RsyncExecutableName);
+        if ((useRsyncDelta || request.UseIncrementalBackups) && rsyncAvailable)
+        {
+            await RunRsyncBackupAsync(request, destDir, progressCallback, useRsyncDelta, bundledRsync);
+            return;
+        }
+
+        if ((useRsyncDelta || request.UseIncrementalBackups) && !rsyncAvailable)
+            RuntimeLog.WriteVerbose("[BackupService] rsync not found on PATH; falling back to robocopy.");
+
+        int threads = isNetworkDestination
+            ? Math.Min(32, Math.Max(4, Environment.ProcessorCount))
+            : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2));
+        RuntimeLog.WriteVerbose($"[BackupService] Starting robocopy backup (threads={threads}, bw={(request.MaxBandwidthMbps is > 0 ? $"{request.MaxBandwidthMbps}Mbps" : "unlimited")}).");
+        var runner = new RobocopyRunner(isNetworkDestination);
+        int exitCode = await runner.SyncAsync(
+            request.Project,
+            destDir,
+            dryRun: false,
+            progressCallback,
+            request.MaxBandwidthMbps,
+            request.CancellationToken);
+
+        if (exitCode != 0)
+            throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}. See RobocopyRunner logs above for stdout/stderr.");
+    }
+
+    private static async Task RunRsyncBackupAsync(
+        NativeBackupRequest request,
+        string destDir,
+        Action<double, string, string>? progressCallback,
+        bool useRsyncDelta,
+        string? bundledRsync = null)
+    {
+        string source = bundledRsync is null ? "PATH" : "bundled";
+        int? bandwidthLimit = request.MaxBandwidthMbps is > 0
+            ? TransferPolicy.ToRsyncBwLimitKbps(request.MaxBandwidthMbps.Value)
+            : null;
+        string sourceDetail = OperatingSystem.IsWindows() ? $"source={source}, " : string.Empty;
+        RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup ({sourceDetail}delta={useRsyncDelta}, incremental={request.UseIncrementalBackups}, bw={(bandwidthLimit is > 0 ? $"{bandwidthLimit}KB/s" : "unlimited")}).");
+        if (OperatingSystem.IsWindows())
+            RuntimeLog.WriteVerbose($"[BackupService] Using rsync on Windows ({source}).");
+
+        var runner = new RsyncRunner(useWholeFile: !useRsyncDelta, rsyncPath: bundledRsync ?? RsyncExecutableName);
+        int exitCode = await runner.SyncAsync(
+            request.Project,
+            destDir,
+            dryRun: false,
+            progressCallback,
+            request.UseIncrementalBackups ? request.LinkDestination : null,
+            bandwidthLimit,
+            request.CancellationToken);
+
+        if (exitCode != 0)
+            throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
+    }
+
+    private static NativeBackupProgressSession StartNativeBackupProgress(
+        NativeBackupRequest request,
+        string destDir)
+    {
+        bool useHybridMonitor = request.ProgressCallback is not null
+            && request.TotalBytes > 0
+            && request.FilesForProgress is { Count: > 0 }
+            && !request.PreferRunnerProgressOnly;
 
         if (useHybridMonitor)
         {
             RuntimeLog.WriteVerbose("[BackupService] Progress monitor enabled (destination scans for progress).");
-            monitorCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            runnerState = new RunnerProgressState();
-            monitorTask = MonitorCopyProgressAsync(destDir, filesForProgress!, totalBytes, progressCallback!, runnerState, monitorCts.Token);
-            callbackForRunner = (percent, currentFile, etaText) => runnerState.Update(percent, currentFile, etaText);
-        }
-        else if (progressCallback is null || totalBytes <= 0)
-        {
-            // Nothing to decorate; just pass through whatever the runner reports.
-            callbackForRunner = progressCallback;
-        }
-        else
-        {
-            DateTime startTime = DateTime.UtcNow;
-            DateTime lastUiUpdate = startTime;
-            var minUiInterval = TimeSpan.FromMilliseconds(100);
-
-            callbackForRunner = (percent, currentFile, _) =>
-            {
-                DateTime now = DateTime.UtcNow;
-
-                // Throttle UI updates a bit to avoid spamming the UI thread when
-                // the native tool reports progress very frequently, especially
-                // when multiple backups run in parallel.
-                if (percent < 100 && (now - lastUiUpdate) < minUiInterval)
-                    return;
-
-                lastUiUpdate = now;
-
-                TimeSpan elapsed = now - startTime;
-                string etaText = string.Empty;
-
-                if (percent > 0 && percent < 100)
-                {
-                    double elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
-                    double doneBytes = totalBytes * (percent / 100.0);
-                    double speedBytesSec = doneBytes / elapsedSeconds;
-                    double speedMbSec = speedBytesSec / (1024 * 1024);
-
-                    double remainingFraction = (100.0 - percent) / percent;
-                    double remainingSeconds = elapsedSeconds * remainingFraction;
-                    var eta = TimeSpan.FromSeconds(remainingSeconds);
-
-                    if (totalFiles > 0)
-                    {
-                        int approxDone = (int)Math.Round(totalFiles * (percent / 100.0));
-                        etaText = $"Copying ~{approxDone}/{totalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
-                    }
-                    else
-                    {
-                        etaText = $"Copying - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
-                    }
-                }
-                else if (percent >= 100 && elapsed.TotalSeconds > 0)
-                {
-                    double elapsedSeconds = elapsed.TotalSeconds;
-                    double speedBytesSec = totalBytes / elapsedSeconds;
-                    double speedMbSec = speedBytesSec / (1024 * 1024);
-
-                    if (totalFiles > 0)
-                    {
-                        etaText = $"Copying ~{totalFiles}/{totalFiles} files - {speedMbSec:0.0} MB/s - Finalizing";
-                    }
-                    else
-                    {
-                        etaText = $"Copying - {speedMbSec:0.0} MB/s - Finalizing";
-                    }
-                }
-
-                progressCallback!(percent, currentFile, etaText);
-            };
+            var monitorCts = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken);
+            var runnerState = new RunnerProgressState();
+            Task monitorTask = MonitorCopyProgressAsync(
+                destDir,
+                request.FilesForProgress!,
+                request.TotalBytes,
+                request.ProgressCallback!,
+                runnerState,
+                monitorCts.Token);
+            return new NativeBackupProgressSession(runnerState.Update, monitorCts, monitorTask);
         }
 
-        bool isNetworkDestination = IsNetworkPath(destDir);
-        bool effectiveUseRsyncDelta = useRsyncDelta;
-        if (OperatingSystem.IsWindows() && isNetworkDestination && !useRsyncDelta && !useIncrementalBackups)
-        {
-            if (TryGetBundledRsyncPath() is not null || IsOnPath(RsyncExecutableName))
-            {
-                effectiveUseRsyncDelta = true;
-            }
-        }
+        if (request.ProgressCallback is null || request.TotalBytes <= 0)
+            return new NativeBackupProgressSession(request.ProgressCallback);
 
-        int exitCode;
-
-        try
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                string? bundledRsync = TryGetBundledRsyncPath();
-                if ((effectiveUseRsyncDelta || useIncrementalBackups) && (bundledRsync is not null || IsOnPath(RsyncExecutableName)))
-                {
-                    // rsync-based backup on Windows (when installed)
-                    string source = bundledRsync is null ? "PATH" : "bundled";
-                    string rsyncPath = bundledRsync ?? RsyncExecutableName;
-                    int? rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
-                    RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup (source={source}, delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
-                    RuntimeLog.WriteVerbose($"[BackupService] Using rsync on Windows ({source}).");
-                    var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta, rsyncPath: rsyncPath);
-                    exitCode = await runner.SyncAsync(
-                        project,
-                        destDir,
-                        dryRun: false,
-                        callbackForRunner,
-                        useIncrementalBackups ? linkDest : null,
-                        rsyncBwLimit,
-                        ct);
-
-                    if (exitCode != 0)
-                        throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
-                }
-                else
-                {
-                    // robocopy-based backup (multi-threaded, robust on Windows)
-                    if ((effectiveUseRsyncDelta || useIncrementalBackups) && bundledRsync is null && !IsOnPath(RsyncExecutableName))
-                        RuntimeLog.WriteVerbose("[BackupService] rsync not found on PATH; falling back to robocopy.");
-
-                    RuntimeLog.WriteVerbose($"[BackupService] Starting robocopy backup (threads={(isNetworkDestination ? Math.Min(32, Math.Max(4, Environment.ProcessorCount)) : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2)))}, bw={(maxBandwidthMbps is > 0 ? $"{maxBandwidthMbps}Mbps" : "unlimited")}).");
-                    var runner = new RobocopyRunner(isNetworkDestination);
-                    exitCode = await runner.SyncAsync(
-                        project,
-                        destDir,
-                        dryRun: false,
-                        callbackForRunner,
-                        maxBandwidthMbps,
-                        ct);
-
-                    if (exitCode != 0)
-                        throw new InvalidOperationException($"robocopy backup failed with exit code {exitCode}. See RobocopyRunner logs above for stdout/stderr.");
-                }
-            }
-            else
-            {
-                // rsync-based backup (fast, incremental on macOS/Linux)
-                int? rsyncBwLimit = maxBandwidthMbps is > 0 ? TransferPolicy.ToRsyncBwLimitKbps(maxBandwidthMbps.Value) : (int?)null;
-                RuntimeLog.WriteVerbose($"[BackupService] Starting rsync backup (delta={effectiveUseRsyncDelta}, incremental={useIncrementalBackups}, bw={(rsyncBwLimit is > 0 ? $"{rsyncBwLimit}KB/s" : "unlimited")}).");
-                var runner = new RsyncRunner(useWholeFile: !effectiveUseRsyncDelta);
-                exitCode = await runner.SyncAsync(
-                    project,
-                    destDir,
-                    dryRun: false,
-                    callbackForRunner,
-                    useIncrementalBackups ? linkDest : null,
-                    rsyncBwLimit,
-                    ct);
-
-                if (exitCode != 0)
-                    throw new InvalidOperationException($"rsync backup failed with exit code {exitCode}.");
-            }
-        }
-        finally
-        {
-            if (monitorCts is not null)
-            {
-                monitorCts.Cancel();
-                try
-                {
-                    if (monitorTask is not null)
-                        await monitorTask;
-                }
-                catch (OperationCanceledException)
-                {
-                    // expected when stopping monitor
-                }
-                RuntimeLog.WriteVerbose("[BackupService] Progress monitor cancelled.");
-                monitorCts.Dispose();
-            }
-        }
+        var decorator = new RunnerProgressDecorator(
+            request.TotalBytes,
+            request.TotalFiles,
+            request.ProgressCallback);
+        return new NativeBackupProgressSession(
+            (percent, currentFile, _) => decorator.Report(percent, currentFile));
     }
 
     private static bool IsNetworkPath(string path)
@@ -1448,6 +1535,10 @@ public sealed class BackupService(
         }
     }
 
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "The bounded sampling loop keeps its counters and timing state together so each observation is applied atomically; filesystem probing is already isolated from backup execution.")]
     private static async Task MonitorCopyProgressAsync(
         string destDir,
         List<FileEntry> filesForProgress,
@@ -1647,21 +1738,26 @@ public sealed class BackupService(
     private const int ArchiveCopyBufferBytes = 1024 * 1024;
     private const int ArchiveFileStreamBufferBytes = 1024 * 1024;
 
-    private static async Task<ArchiveBackupResult> RunArchiveBackupAsync(
-        Project project,
-        string destDir,
-        long totalBytes,
-        int totalFiles,
-        IReadOnlyList<string>? filesForBackup,
-        Action<double, string, string>? progressCallback,
-        int uploadBufferBytes,
-        bool preferParallelUpload,
-        bool enableCheckpointedRetry,
-        IAppConfigStore configStore,
-        string? encryptionPassword,
-        BackupEncryptionConfig encryptionConfig,
-        CancellationToken ct)
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "The archive transaction deliberately owns local artifact creation, resumable publication, cleanup, and telemetry as one failure boundary; individual crypto and upload operations are delegated.")]
+    private static async Task<ArchiveBackupResult> RunArchiveBackupAsync(ArchiveBackupRequest request)
     {
+        Project project = request.Project;
+        string destDir = request.DestinationDirectory;
+        long totalBytes = request.TotalBytes;
+        int totalFiles = request.TotalFiles;
+        IReadOnlyList<string>? filesForBackup = request.FilesForBackup;
+        Action<double, string, string>? progressCallback = request.ProgressCallback;
+        int uploadBufferBytes = request.UploadBufferBytes;
+        bool preferParallelUpload = request.PreferParallelUpload;
+        bool enableCheckpointedRetry = request.EnableCheckpointedRetry;
+        IAppConfigStore configStore = request.ConfigStore;
+        string? encryptionPassword = request.EncryptionPassword;
+        BackupEncryptionConfig encryptionConfig = request.EncryptionConfig;
+        CancellationToken ct = request.CancellationToken;
+
         string sourceDir = project.RootPath;
         var srcInfo = new DirectoryInfo(sourceDir);
         if (!srcInfo.Exists)
@@ -1701,17 +1797,20 @@ public sealed class BackupService(
                 DeletePartialBackup(destDir);
                 workingDestDir = resumableDir;
                 PersistCheckpointResumeTelemetry(
-                    status: "resume-discovered",
-                    projectName: project.Name,
-                    backupFolder: workingDestDir,
-                    archivePath: Path.Combine(workingDestDir, artifactFileName),
-                    resumeOffsetBytes: File.Exists(Path.Combine(workingDestDir, artifactFileName))
-                        ? new FileInfo(Path.Combine(workingDestDir, artifactFileName)).Length
-                        : 0,
-                    archiveSizeBytes: 0,
-                    sourceFingerprint: fingerprint,
-                    message: "Found interrupted archive backup with matching fingerprint and will attempt resume.",
-                    configStore: configStore);
+                    new CheckpointResumeTelemetryUpdate
+                    {
+                        Status = "resume-discovered",
+                        ProjectName = project.Name,
+                        BackupFolder = workingDestDir,
+                        ArchivePath = Path.Combine(workingDestDir, artifactFileName),
+                        ResumeOffsetBytes = File.Exists(Path.Combine(workingDestDir, artifactFileName))
+                            ? new FileInfo(Path.Combine(workingDestDir, artifactFileName)).Length
+                            : 0,
+                        ArchiveSizeBytes = 0,
+                        SourceFingerprint = fingerprint,
+                        Message = "Found interrupted archive backup with matching fingerprint and will attempt resume."
+                    },
+                    configStore);
             }
         }
 
@@ -1751,6 +1850,7 @@ public sealed class BackupService(
             DateTime startTime = DateTime.UtcNow;
             DateTime lastUiUpdate = startTime;
             var minUiInterval = TimeSpan.FromMilliseconds(100);
+            byte[] archiveCopyBuffer = new byte[ArchiveCopyBufferBytes];
 
             using (var fs = new FileStream(
                 localArchive,
@@ -1771,7 +1871,7 @@ public sealed class BackupService(
 
                     try
                     {
-                        using (Stream entryStream = entry.Open())
+                        using (Stream entryStream = await entry.OpenAsync(ct).ConfigureAwait(false))
                         using (var input = new FileStream(
                             filePath,
                             FileMode.Open,
@@ -1780,11 +1880,10 @@ public sealed class BackupService(
                             ArchiveFileStreamBufferBytes,
                             FileOptions.SequentialScan))
                         {
-                            byte[] buffer = new byte[ArchiveCopyBufferBytes];
                             int read;
-                            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+                            while ((read = await input.ReadAsync(archiveCopyBuffer.AsMemory(), ct)) > 0)
                             {
-                                await entryStream.WriteAsync(buffer.AsMemory(0, read), ct);
+                                await entryStream.WriteAsync(archiveCopyBuffer.AsMemory(0, read), ct);
                                 processedBytes += read;
 
                                 if (progressCallback is null)
@@ -1833,8 +1932,9 @@ public sealed class BackupService(
                     }
                     catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                     {
-                        Console.WriteLine($"[BackupService] Failed to add '{filePath}' to archive: {ex.Message}");
-                        continue;
+                        throw new IOException(
+                            $"Archive backup could not read required source file '{relative}'.",
+                            ex);
                     }
 
                     processedFiles++;
@@ -1961,7 +2061,7 @@ public sealed class BackupService(
                         if (DateTime.UtcNow - lastProgress > stallTimeout)
                         {
                             Interlocked.Exchange(ref stalled, 1);
-                            linkedCts.Cancel();
+                            await linkedCts.CancelAsync();
                             return;
                         }
                     }
@@ -2061,7 +2161,7 @@ public sealed class BackupService(
                 }
                 finally
                 {
-                    linkedCts.Cancel();
+                    await linkedCts.CancelAsync();
                     await monitor;
                 }
 
@@ -2097,15 +2197,18 @@ public sealed class BackupService(
                         {
                             RuntimeLog.WriteVerbose($"[BackupService] Existing archive checkpoint for '{finalArchivePath}' did not match the local archive prefix. Restarting upload from 0 bytes.");
                             PersistCheckpointResumeTelemetry(
-                                status: "resume-prefix-mismatch",
-                                projectName: project.Name,
-                                backupFolder: workingDestDir,
-                                archivePath: finalArchivePath,
-                                resumeOffsetBytes: existingLength,
-                                archiveSizeBytes: zipSize,
-                                sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                                message: "Discarded partial archive because the existing destination prefix no longer matched the rebuilt local archive.",
-                                configStore: configStore);
+                                new CheckpointResumeTelemetryUpdate
+                                {
+                                    Status = "resume-prefix-mismatch",
+                                    ProjectName = project.Name,
+                                    BackupFolder = workingDestDir,
+                                    ArchivePath = finalArchivePath,
+                                    ResumeOffsetBytes = existingLength,
+                                    ArchiveSizeBytes = zipSize,
+                                    SourceFingerprint = resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                                    Message = "Discarded partial archive because the existing destination prefix no longer matched the rebuilt local archive."
+                                },
+                                configStore);
                             using var truncate = new FileStream(finalArchivePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
                             truncate.SetLength(0);
                             existingLength = 0;
@@ -2114,15 +2217,18 @@ public sealed class BackupService(
                         if (existingLength > 0)
                         {
                             PersistCheckpointResumeTelemetry(
-                                status: "resume-attempt",
-                                projectName: project.Name,
-                                backupFolder: workingDestDir,
-                                archivePath: finalArchivePath,
-                                resumeOffsetBytes: existingLength,
-                                archiveSizeBytes: zipSize,
-                                sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                                message: "Resuming archive upload from a validated existing prefix.",
-                                configStore: configStore);
+                                new CheckpointResumeTelemetryUpdate
+                                {
+                                    Status = "resume-attempt",
+                                    ProjectName = project.Name,
+                                    BackupFolder = workingDestDir,
+                                    ArchivePath = finalArchivePath,
+                                    ResumeOffsetBytes = existingLength,
+                                    ArchiveSizeBytes = zipSize,
+                                    SourceFingerprint = resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                                    Message = "Resuming archive upload from a validated existing prefix."
+                                },
+                                configStore);
                         }
 
                         await UploadSingleAttemptAsync(existingLength);
@@ -2143,18 +2249,20 @@ public sealed class BackupService(
                 RuntimeLog.WriteVerbose($"[BackupService] Uploading archive with parallel writer (parts={Math.Clamp(Environment.ProcessorCount / 2, 2, 4)}, buffer={bufferSize / (1024 * 1024)} MB).");
                 try
                 {
-                    await UploadArchiveParallelAsync(
-                        localArchive,
-                        finalArchivePath,
-                        zipSize,
-                        bufferSize,
-                        progressCallback,
-                        workingDestDir,
-                        project.Name,
-                        enableCheckpointedRetry,
-                        resumeCheckpoint,
-                        configStore,
-                        ct);
+                    await UploadArchiveParallelAsync(new ParallelArchiveUploadRequest
+                    {
+                        LocalArchive = localArchive,
+                        FinalArchivePath = finalArchivePath,
+                        ArchiveSize = zipSize,
+                        BufferSize = bufferSize,
+                        ProgressCallback = progressCallback,
+                        BackupFolder = workingDestDir,
+                        ProjectName = project.Name,
+                        EnableCheckpointedRetry = enableCheckpointedRetry,
+                        ResumeCheckpoint = resumeCheckpoint,
+                        ConfigStore = configStore,
+                        CancellationToken = ct
+                    });
                 }
                 catch (TimeoutException ex)
                 {
@@ -2176,15 +2284,18 @@ public sealed class BackupService(
             }
             RemoveArchiveResumeCheckpoint(workingDestDir);
             PersistCheckpointResumeTelemetry(
-                status: "resume-complete",
-                projectName: project.Name,
-                backupFolder: workingDestDir,
-                archivePath: finalArchivePath,
-                resumeOffsetBytes: zipSize,
-                archiveSizeBytes: zipSize,
-                sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                message: "Archive upload completed and checkpoint metadata was cleared.",
-                configStore: configStore);
+                new CheckpointResumeTelemetryUpdate
+                {
+                    Status = "resume-complete",
+                    ProjectName = project.Name,
+                    BackupFolder = workingDestDir,
+                    ArchivePath = finalArchivePath,
+                    ResumeOffsetBytes = zipSize,
+                    ArchiveSizeBytes = zipSize,
+                    SourceFingerprint = resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                    Message = "Archive upload completed and checkpoint metadata was cleared."
+                },
+                configStore);
             RuntimeLog.WriteVerbose($"[BackupService] RunArchiveBackupAsync completed for '{project.Name}'. LocalArtifactSize={zipSize} bytes, encrypted={encryptBeforeUpload}.");
             return new ArchiveBackupResult(workingDestDir, encryptBeforeUpload, descriptor);
         }
@@ -2194,29 +2305,35 @@ public sealed class BackupService(
             {
                 RuntimeLog.WriteVerbose($"[BackupService] Preserving incomplete archive checkpoint in '{workingDestDir}' for later retry.");
                 PersistCheckpointResumeTelemetry(
-                    status: "resume-preserved-after-failure",
-                    projectName: project.Name,
-                    backupFolder: workingDestDir,
-                    archivePath: finalArchivePath,
-                    resumeOffsetBytes: new FileInfo(finalArchivePath).Length,
-                    archiveSizeBytes: resumeCheckpoint?.ArchiveSizeBytes ?? 0,
-                    sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                    message: "Preserved interrupted archive upload for a future checkpointed retry.",
-                    configStore: configStore);
+                    new CheckpointResumeTelemetryUpdate
+                    {
+                        Status = "resume-preserved-after-failure",
+                        ProjectName = project.Name,
+                        BackupFolder = workingDestDir,
+                        ArchivePath = finalArchivePath,
+                        ResumeOffsetBytes = new FileInfo(finalArchivePath).Length,
+                        ArchiveSizeBytes = resumeCheckpoint?.ArchiveSizeBytes ?? 0,
+                        SourceFingerprint = resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                        Message = "Preserved interrupted archive upload for a future checkpointed retry."
+                    },
+                    configStore);
             }
             else
             {
                 // Cleanup: remove incomplete destination folder and rethrow.
                 PersistCheckpointResumeTelemetry(
-                    status: "resume-discarded-after-failure",
-                    projectName: project.Name,
-                    backupFolder: workingDestDir,
-                    archivePath: finalArchivePath,
-                    resumeOffsetBytes: File.Exists(finalArchivePath) ? new FileInfo(finalArchivePath).Length : 0,
-                    archiveSizeBytes: resumeCheckpoint?.ArchiveSizeBytes ?? 0,
-                    sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                    message: "Discarded incomplete archive upload because checkpointed retry was not active or no resumable archive was present.",
-                    configStore: configStore);
+                    new CheckpointResumeTelemetryUpdate
+                    {
+                        Status = "resume-discarded-after-failure",
+                        ProjectName = project.Name,
+                        BackupFolder = workingDestDir,
+                        ArchivePath = finalArchivePath,
+                        ResumeOffsetBytes = File.Exists(finalArchivePath) ? new FileInfo(finalArchivePath).Length : 0,
+                        ArchiveSizeBytes = resumeCheckpoint?.ArchiveSizeBytes ?? 0,
+                        SourceFingerprint = resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                        Message = "Discarded incomplete archive upload because checkpointed retry was not active or no resumable archive was present."
+                    },
+                    configStore);
                 DeletePartialBackup(workingDestDir);
             }
 
@@ -2252,19 +2369,24 @@ public sealed class BackupService(
         return CompressionLevel.Fastest;
     }
 
-    private static async Task UploadArchiveParallelAsync(
-        string localArchive,
-        string finalArchivePath,
-        long zipSize,
-        int bufferSize,
-        Action<double, string, string>? progressCallback,
-        string backupFolder,
-        string projectName,
-        bool enableCheckpointedRetry,
-        ArchiveResumeCheckpoint? resumeCheckpoint,
-        IAppConfigStore configStore,
-        CancellationToken ct)
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "Parallel chunk scheduling, shared progress, stall detection, and checkpoint publication must coordinate one upload state; extracting branches would obscure the lock and cancellation invariants.")]
+    private static async Task UploadArchiveParallelAsync(ParallelArchiveUploadRequest request)
     {
+        string localArchive = request.LocalArchive;
+        string finalArchivePath = request.FinalArchivePath;
+        long zipSize = request.ArchiveSize;
+        int bufferSize = request.BufferSize;
+        Action<double, string, string>? progressCallback = request.ProgressCallback;
+        string backupFolder = request.BackupFolder;
+        string projectName = request.ProjectName;
+        bool enableCheckpointedRetry = request.EnableCheckpointedRetry;
+        ArchiveResumeCheckpoint? resumeCheckpoint = request.ResumeCheckpoint;
+        IAppConfigStore configStore = request.ConfigStore;
+        CancellationToken ct = request.CancellationToken;
+
         if (zipSize <= 0)
             return;
 
@@ -2340,15 +2462,18 @@ public sealed class BackupService(
             uploaded = resumableChunkIndexes.Sum(index => Math.Min(chunkSize, zipSize - (chunkSize * index)));
             lastUiBytes = uploaded;
             PersistCheckpointResumeTelemetry(
-                status: "parallel-resume-attempt",
-                projectName: projectName,
-                backupFolder: backupFolder,
-                archivePath: finalArchivePath,
-                resumeOffsetBytes: uploaded,
-                archiveSizeBytes: zipSize,
-                sourceFingerprint: resumeCheckpoint?.SourceFingerprint ?? string.Empty,
-                message: $"Resuming parallel archive upload with {resumableChunkIndexes.Count} validated chunks already present.",
-                configStore: configStore);
+                new CheckpointResumeTelemetryUpdate
+                {
+                    Status = "parallel-resume-attempt",
+                    ProjectName = projectName,
+                    BackupFolder = backupFolder,
+                    ArchivePath = finalArchivePath,
+                    ResumeOffsetBytes = uploaded,
+                    ArchiveSizeBytes = zipSize,
+                    SourceFingerprint = resumeCheckpoint?.SourceFingerprint ?? string.Empty,
+                    Message = $"Resuming parallel archive upload with {resumableChunkIndexes.Count} validated chunks already present."
+                },
+                configStore);
         }
 
         void PersistParallelCheckpoint(HashSet<int> completedIndexes)
@@ -2384,7 +2509,7 @@ public sealed class BackupService(
                     if (DateTime.UtcNow - lastProgress > stallTimeout)
                     {
                         Interlocked.Exchange(ref stalled, 1);
-                        cts.Cancel();
+                        await cts.CancelAsync();
                         return;
                     }
                 }
@@ -2605,7 +2730,7 @@ public sealed class BackupService(
         }
         finally
         {
-            cts.Cancel();
+            await cts.CancelAsync().ConfigureAwait(false);
             await Task.WhenAll(monitor, heartbeat);
         }
 
@@ -2727,6 +2852,10 @@ public sealed class BackupService(
         return sourcePath;
     }
 
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "Managed-copy fallback keeps per-file safety validation, byte accounting, progress, and cancellation in one auditable loop; primary backups use the focused native runner path.")]
     private static void CopyDirectoryRecursive(
         string sourceDir,
         string destDir,
@@ -2825,9 +2954,9 @@ public sealed class BackupService(
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                // Log and skip the file rather than aborting the whole fallback backup.
-                Console.WriteLine($"[BackupService] Failed to copy '{filePath}' to '{targetPath}': {ex.Message}");
-                continue;
+                throw new IOException(
+                    $"Managed backup could not copy required source file '{relative}'.",
+                    ex);
             }
         }
     }
@@ -3050,8 +3179,24 @@ public sealed class BackupService(
                         .Replace('/', Path.DirectorySeparatorChar)
                         .TrimStart(Path.DirectorySeparatorChar);
                 string? fullPath = string.Empty;
-                if (!string.IsNullOrWhiteSpace(baseRoot) &&
-                    !BackupSafetyService.TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
+                if (string.IsNullOrWhiteSpace(baseRoot) || !Directory.Exists(baseRoot))
+                {
+                    RuntimeLog.WriteVerbose(
+                        $"[BackupService] Retention deferred because destination root '{baseRoot}' is unavailable (backupId={backup.Id}); code=destination-unavailable.");
+                    canDeleteDbRow = false;
+                    diskDeleteSucceeded = false;
+                }
+                else if (ShouldRejectUnbackedManagedMount(
+                             OperatingSystem.IsMacOS(),
+                             IsMacManagedMountPath(baseRoot),
+                             IsNetworkMountPath(baseRoot)))
+                {
+                    RuntimeLog.WriteVerbose(
+                        $"[BackupService] Retention deferred because managed destination '{baseRoot}' is not mounted (backupId={backup.Id}); code=destination-unmounted.");
+                    canDeleteDbRow = false;
+                    diskDeleteSucceeded = false;
+                }
+                else if (!BackupSafetyService.TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
                 {
                     RuntimeLog.WriteVerbose(
                         $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}); code=out-of-root.");
@@ -3070,7 +3215,17 @@ public sealed class BackupService(
                 }
                 else
                 {
-                    RuntimeLog.WriteVerbose($"[BackupService] Retention could not find backup folder '{fullPath}' on disk (backupId={backup.Id}), continuing with DB cleanup.");
+                    if (!Directory.Exists(baseRoot))
+                    {
+                        RuntimeLog.WriteVerbose(
+                            $"[BackupService] Retention deferred because destination root '{baseRoot}' disappeared during inspection (backupId={backup.Id}); code=destination-lost.");
+                        canDeleteDbRow = false;
+                        diskDeleteSucceeded = false;
+                    }
+                    else
+                    {
+                        RuntimeLog.WriteVerbose($"[BackupService] Retention could not find backup folder '{fullPath}' on an accessible destination (backupId={backup.Id}), continuing with DB cleanup.");
+                    }
                 }
             }
             catch (Exception ex)
@@ -3242,6 +3397,14 @@ public sealed class BackupService(
     {
         try
         {
+            if ((File.GetAttributes(fullPath) & FileAttributes.ReparsePoint) != 0)
+            {
+                return new RetentionDeleteAttemptResult(
+                    false,
+                    "linked-root",
+                    "Retention refused to delete a backup folder that is itself a filesystem link.");
+            }
+
             ClearAttributesRecursive(fullPath);
             DeleteKnownMarkerFiles(fullPath);
             Directory.Delete(fullPath, recursive: true);
@@ -3327,23 +3490,18 @@ public sealed class BackupService(
             // Best effort; continue with children.
         }
 
-        foreach (string file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
+        foreach (string entry in Directory.EnumerateFileSystemEntries(rootPath))
         {
             try
             {
-                File.SetAttributes(file, FileAttributes.Normal);
-            }
-            catch
-            {
-                // Best effort; delete phase will handle failures.
-            }
-        }
+                FileAttributes attributes = File.GetAttributes(entry);
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                    continue;
 
-        foreach (string dir in Directory.EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories))
-        {
-            try
-            {
-                File.SetAttributes(dir, FileAttributes.Normal);
+                if ((attributes & FileAttributes.Directory) != 0)
+                    ClearAttributesRecursive(entry);
+                else
+                    File.SetAttributes(entry, FileAttributes.Normal);
             }
             catch
             {
@@ -3352,58 +3510,206 @@ public sealed class BackupService(
         }
     }
 
-    private static void FallbackDeleteDirectory(string rootPath)
+    internal static void FallbackDeleteDirectory(string rootPath)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
             return;
 
-        int failedFiles = 0;
-        int failedDirs = 0;
-        var failedSamples = new List<string>();
+        var failures = new DirectoryDeletionFailures();
+        DeleteDirectoryContentsWithoutFollowingLinks(rootPath, failures);
 
-        foreach (string file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
-        {
-            try
-            {
-                File.SetAttributes(file, FileAttributes.Normal);
-                File.Delete(file);
-            }
-            catch (Exception ex)
-            {
-                failedFiles++;
-                if (failedSamples.Count < 3)
-                    failedSamples.Add($"{Path.GetFileName(file)} ({ex.GetType().Name})");
-            }
-        }
-
-        var allDirs = Directory
-            .EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories)
-            .OrderByDescending(path => path.Length)
-            .ToList();
-
-        foreach (string? dir in allDirs)
-        {
-            try
-            {
-                File.SetAttributes(dir, FileAttributes.Normal);
-                Directory.Delete(dir, recursive: false);
-            }
-            catch (Exception ex)
-            {
-                failedDirs++;
-                if (failedSamples.Count < 3)
-                    failedSamples.Add($"{Path.GetFileName(dir)} ({ex.GetType().Name})");
-            }
-        }
-
-        if (failedFiles > 0 || failedDirs > 0)
+        if (failures.Files > 0 || failures.Directories > 0)
         {
             RuntimeLog.WriteVerbose(
-                $"[BackupService] Retention fallback cleanup for '{rootPath}' had {failedFiles} file failure(s) and {failedDirs} directory failure(s). Samples: {string.Join(", ", failedSamples)}.");
+                $"[BackupService] Retention fallback cleanup for '{rootPath}' had {failures.Files} file failure(s) and {failures.Directories} directory failure(s). Samples: {string.Join(", ", failures.Samples)}.");
         }
 
         File.SetAttributes(rootPath, FileAttributes.Normal);
         Directory.Delete(rootPath, recursive: false);
+    }
+
+    private static void DeleteDirectoryContentsWithoutFollowingLinks(
+        string rootPath,
+        DirectoryDeletionFailures failures)
+    {
+        foreach (string entry in Directory.EnumerateFileSystemEntries(rootPath))
+        {
+            try
+            {
+                DeleteEntryWithoutFollowingLinks(entry, failures);
+            }
+            catch (Exception ex)
+            {
+                RecordDirectoryDeletionFailure(entry, ex, failures);
+            }
+        }
+    }
+
+    private static void DeleteEntryWithoutFollowingLinks(
+        string entry,
+        DirectoryDeletionFailures failures)
+    {
+        FileAttributes attributes = File.GetAttributes(entry);
+        bool isDirectory = (attributes & FileAttributes.Directory) != 0;
+        bool isLink = (attributes & FileAttributes.ReparsePoint) != 0;
+
+        if (isDirectory && !isLink)
+        {
+            DeleteDirectoryContentsWithoutFollowingLinks(entry, failures);
+            File.SetAttributes(entry, FileAttributes.Normal);
+            Directory.Delete(entry, recursive: false);
+            return;
+        }
+
+        if (isDirectory)
+        {
+            Directory.Delete(entry, recursive: false);
+            return;
+        }
+
+        if (!isLink)
+            File.SetAttributes(entry, FileAttributes.Normal);
+        File.Delete(entry);
+    }
+
+    private static void RecordDirectoryDeletionFailure(
+        string entry,
+        Exception exception,
+        DirectoryDeletionFailures failures)
+    {
+        bool isDirectory;
+        try
+        {
+            isDirectory = (File.GetAttributes(entry) & FileAttributes.Directory) != 0;
+        }
+        catch
+        {
+            isDirectory = Directory.Exists(entry);
+        }
+
+        if (isDirectory)
+            failures.Directories++;
+        else
+            failures.Files++;
+
+        if (failures.Samples.Count < 3)
+            failures.Samples.Add($"{Path.GetFileName(entry)} ({exception.GetType().Name})");
+    }
+
+    private sealed class DirectoryDeletionFailures
+    {
+        public int Files { get; set; }
+        public int Directories { get; set; }
+        public List<string> Samples { get; } = [];
+    }
+
+    private sealed class NativeBackupRequest
+    {
+        public required Project Project { get; init; }
+        public required string DestinationDirectory { get; init; }
+        public long TotalBytes { get; init; }
+        public int TotalFiles { get; init; }
+        public List<FileEntry>? FilesForProgress { get; init; }
+        public Action<double, string, string>? ProgressCallback { get; init; }
+        public bool UseRsyncDelta { get; init; }
+        public bool UseIncrementalBackups { get; init; }
+        public string? LinkDestination { get; init; }
+        public int? MaxBandwidthMbps { get; init; }
+        public bool PreferRunnerProgressOnly { get; init; }
+        public CancellationToken CancellationToken { get; init; }
+    }
+
+    private sealed class NativeBackupProgressSession : IAsyncDisposable
+    {
+        private readonly CancellationTokenSource? _monitorCts;
+        private readonly Task? _monitorTask;
+
+        public NativeBackupProgressSession(
+            Action<double, string, string>? runnerCallback,
+            CancellationTokenSource? monitorCts = null,
+            Task? monitorTask = null)
+        {
+            RunnerCallback = runnerCallback;
+            _monitorCts = monitorCts;
+            _monitorTask = monitorTask;
+        }
+
+        public Action<double, string, string>? RunnerCallback { get; }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_monitorCts is null)
+                return;
+
+            await _monitorCts.CancelAsync().ConfigureAwait(false);
+            try
+            {
+                if (_monitorTask is not null)
+                    await _monitorTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when the native copy completes and stops its monitor.
+            }
+
+            RuntimeLog.WriteVerbose("[BackupService] Progress monitor cancelled.");
+            _monitorCts.Dispose();
+        }
+    }
+
+    private sealed class RunnerProgressDecorator
+    {
+        private static readonly TimeSpan MinUiInterval = TimeSpan.FromMilliseconds(100);
+        private readonly long _totalBytes;
+        private readonly int _totalFiles;
+        private readonly Action<double, string, string> _progressCallback;
+        private readonly DateTime _startTime = DateTime.UtcNow;
+        private DateTime _lastUiUpdate = DateTime.UtcNow;
+
+        public RunnerProgressDecorator(
+            long totalBytes,
+            int totalFiles,
+            Action<double, string, string> progressCallback)
+        {
+            _totalBytes = totalBytes;
+            _totalFiles = totalFiles;
+            _progressCallback = progressCallback;
+        }
+
+        public void Report(double percent, string currentFile)
+        {
+            DateTime now = DateTime.UtcNow;
+            if (percent < 100 && (now - _lastUiUpdate) < MinUiInterval)
+                return;
+
+            _lastUiUpdate = now;
+            TimeSpan elapsed = now - _startTime;
+            string progressText = BuildProgressText(percent, elapsed);
+            _progressCallback(percent, currentFile, progressText);
+        }
+
+        private string BuildProgressText(double percent, TimeSpan elapsed)
+        {
+            if (percent > 0 && percent < 100)
+            {
+                double elapsedSeconds = Math.Max(0.1, elapsed.TotalSeconds);
+                double speedMbSec = (_totalBytes * (percent / 100.0) / elapsedSeconds) / (1024 * 1024);
+                var eta = TimeSpan.FromSeconds(elapsedSeconds * ((100.0 - percent) / percent));
+                return _totalFiles > 0
+                    ? $"Copying ~{(int)Math.Round(_totalFiles * (percent / 100.0))}/{_totalFiles} files - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}"
+                    : $"Copying - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
+            }
+
+            if (percent >= 100 && elapsed.TotalSeconds > 0)
+            {
+                double speedMbSec = (_totalBytes / elapsed.TotalSeconds) / (1024 * 1024);
+                return _totalFiles > 0
+                    ? $"Copying ~{_totalFiles}/{_totalFiles} files - {speedMbSec:0.0} MB/s - Finalizing"
+                    : $"Copying - {speedMbSec:0.0} MB/s - Finalizing";
+            }
+
+            return string.Empty;
+        }
     }
 
     private sealed class RunnerProgressState

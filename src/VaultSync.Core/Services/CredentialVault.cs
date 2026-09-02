@@ -23,6 +23,8 @@ public sealed class CredentialVault
     private const int ErrSecItemNotFound = -25300;
     private const string SecurityFramework = "/System/Library/Frameworks/Security.framework/Security";
     private const string CoreFoundationFramework = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
+    private const string LinuxSecretToolPath = "/usr/bin/secret-tool";
+    private const string LinuxLocalSecretToolPath = "/usr/local/bin/secret-tool";
 
     private static readonly Lazy<CredentialVault> _lazy = new(() => new CredentialVault());
     private static readonly JsonSerializerOptions IndentedJsonOptions = new() { WriteIndented = true };
@@ -300,28 +302,10 @@ public sealed class CredentialVault
             int removed = 0;
             foreach (string? key in map.Keys.ToList())
             {
-                if (activeSet.Contains(key))
+                if (!ShouldRemoveSecret(key, map, activeSet, activeFamilies, staleAge, now, out StoredSecret? record))
                     continue;
 
-                if (!map.TryGetValue(key, out StoredSecret? record))
-                    continue;
-
-                // If a credential was re-created for the same logical profile/project
-                // (same "cred-<family>-<guid>" prefix), remove old unreferenced entries immediately.
-                string? family = GetKeyFamily(key);
-                bool forcePruneDuplicate = !string.IsNullOrWhiteSpace(family) && activeFamilies.Contains(family);
-
-                if (!forcePruneDuplicate)
-                {
-                    DateTime? lastSeen = record.LastAccessUtc ?? record.CreatedUtc;
-                    if (lastSeen.HasValue && now - lastSeen.Value < staleAge)
-                        continue;
-                }
-
-                bool nativeDeleted = !record.StoredInKeychain
-                    || (OperatingSystem.IsMacOS() && TryDeleteFromKeychain(key, record.Username ?? string.Empty))
-                    || (OperatingSystem.IsLinux() && TryDeleteFromSecretService(key, record.Username ?? string.Empty));
-                if (!nativeDeleted)
+                if (!TryDeleteNativeSecret(key, record!))
                     continue;
 
                 map.Remove(key);
@@ -335,6 +319,34 @@ public sealed class CredentialVault
             return removed;
         }
     }
+
+    private static bool ShouldRemoveSecret(
+        string key,
+        IReadOnlyDictionary<string, StoredSecret> map,
+        HashSet<string> activeSet,
+        HashSet<string> activeFamilies,
+        TimeSpan staleAge,
+        DateTime now,
+        out StoredSecret? record)
+    {
+        record = null;
+        if (activeSet.Contains(key) || !map.TryGetValue(key, out record))
+            return false;
+
+        // If a credential was re-created for the same logical profile/project
+        // (same "cred-<family>-<guid>" prefix), remove old unreferenced entries immediately.
+        string? family = GetKeyFamily(key);
+        if (!string.IsNullOrWhiteSpace(family) && activeFamilies.Contains(family))
+            return true;
+
+        DateTime? lastSeen = record.LastAccessUtc ?? record.CreatedUtc;
+        return !lastSeen.HasValue || now - lastSeen.Value >= staleAge;
+    }
+
+    private static bool TryDeleteNativeSecret(string key, StoredSecret record) =>
+        !record.StoredInKeychain
+        || (OperatingSystem.IsMacOS() && TryDeleteFromKeychain(key, record.Username ?? string.Empty))
+        || (OperatingSystem.IsLinux() && TryDeleteFromSecretService(key, record.Username ?? string.Empty));
 
     private static void StoreProtected(StoredSecret record, string secret, bool requireProtection)
     {
@@ -678,7 +690,7 @@ public sealed class CredentialVault
     {
         var psi = new ProcessStartInfo
         {
-            FileName               = "secret-tool",
+            FileName               = ResolveSecretToolPath(),
             RedirectStandardError  = true,
             RedirectStandardOutput = true,
             RedirectStandardInput  = redirectInput,
@@ -699,6 +711,31 @@ public sealed class CredentialVault
         psi.ArgumentList.Add("account");
         psi.ArgumentList.Add(username);
         return psi;
+    }
+
+    private static string ResolveSecretToolPath()
+    {
+        string? path = Environment.GetEnvironmentVariable("PATH");
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            foreach (string directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                try
+                {
+                    string candidate = Path.GetFullPath(Path.Combine(directory, "secret-tool"));
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+                {
+                    // Ignore malformed PATH entries and continue with known absolute locations.
+                }
+            }
+        }
+
+        return File.Exists(LinuxLocalSecretToolPath)
+            ? LinuxLocalSecretToolPath
+            : LinuxSecretToolPath;
     }
 
     private sealed class StoredSecret

@@ -112,6 +112,44 @@ public sealed class BackupArchiveCryptoServiceTests
     }
 
     [Fact]
+    public void DecryptArchiveToPlainZip_WithWrongPassword_PreservesExistingOutput()
+    {
+        using var root = new TempDirectory();
+        string backupFolder = BackupArchiveTestFactory.CreateEncryptedBackupFolder(root.Path, "test-password");
+        string restoredArchive = Path.Combine(backupFolder, "existing.zip");
+        File.WriteAllText(restoredArchive, "keep-existing-output");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            BackupArchiveCryptoService.DecryptArchiveToPlainZip(
+                backupFolder,
+                "wrong-password",
+                restoredArchive));
+
+        Assert.Equal("keep-existing-output", File.ReadAllText(restoredArchive));
+        Assert.Empty(Directory.EnumerateFiles(backupFolder, "existing.zip.*.tmp"));
+    }
+
+    [Fact]
+    public void DecryptArchiveToPlainZip_DoesNotReusePredictableTemporaryOutput()
+    {
+        using var root = new TempDirectory();
+        string backupFolder = BackupArchiveTestFactory.CreateEncryptedBackupFolder(root.Path, "test-password");
+        string restoredArchive = Path.Combine(backupFolder, "restored.zip");
+        string legacyTemporaryPath = restoredArchive + ".tmp";
+        File.WriteAllText(legacyTemporaryPath, "unrelated");
+
+        BackupArchiveCryptoService.DecryptArchiveToPlainZip(
+            backupFolder,
+            "test-password",
+            restoredArchive);
+
+        Assert.Equal("unrelated", File.ReadAllText(legacyTemporaryPath));
+        Assert.Empty(Directory.EnumerateFiles(backupFolder, "restored.zip.*.tmp"));
+        using ZipArchive archive = ZipFile.OpenRead(restoredArchive);
+        Assert.NotNull(archive.GetEntry(BackupArchiveTestFactory.DefaultEntryName));
+    }
+
+    [Fact]
     public void DecryptArchiveToPlainZip_WhenCiphertextIsTampered_FailsWithoutPlaintextOutput()
     {
         using var root = new TempDirectory();
@@ -128,6 +166,51 @@ public sealed class BackupArchiveCryptoServiceTests
         Assert.Equal(BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage, ex.Message);
         Assert.False(File.Exists(restoredArchive));
         Assert.False(File.Exists(restoredArchive + ".tmp"));
+    }
+
+    [Fact]
+    public void DecryptArchiveToPlainZip_WhenAuthenticationTagIsTampered_FailsWithoutPlaintextOutput()
+    {
+        using var root = new TempDirectory();
+        string backupFolder = BackupArchiveTestFactory.CreateEncryptedBackupFolder(root.Path, "test-password");
+        string encryptedArchive = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
+        byte[] bytes = File.ReadAllBytes(encryptedArchive);
+        bytes[^1] ^= 0x01;
+        File.WriteAllBytes(encryptedArchive, bytes);
+
+        string restoredArchive = Path.Combine(backupFolder, "tampered-tag.zip");
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            BackupArchiveCryptoService.DecryptArchiveToPlainZip(
+                backupFolder,
+                "test-password",
+                restoredArchive));
+
+        Assert.Equal(BackupArchiveCryptoService.InvalidPasswordOrCorruptedMessage, ex.Message);
+        Assert.False(File.Exists(restoredArchive));
+        Assert.Empty(Directory.EnumerateFiles(backupFolder, "tampered-tag.zip.*.tmp"));
+    }
+
+    [Fact]
+    public void DecryptArchiveToPlainZip_RejectsOversizedMetadataBeforeAllocation()
+    {
+        using var root = new TempDirectory();
+        string backupFolder = BackupArchiveTestFactory.CreateEncryptedBackupFolder(root.Path, "test-password");
+        string encryptedArchive = Path.Combine(backupFolder, BackupArchiveCryptoService.EncryptedArchiveFileName);
+        byte[] bytes = File.ReadAllBytes(encryptedArchive);
+        BinaryPrimitives.WriteInt32LittleEndian(
+            bytes.AsSpan(BackupArchiveCryptoService.EnvelopeMagic.Length, sizeof(int)),
+            BackupArchiveCryptoService.MaximumMetadataBytes + 1);
+        File.WriteAllBytes(encryptedArchive, bytes);
+
+        string restoredArchive = Path.Combine(backupFolder, "oversized-metadata.zip");
+        Assert.Throws<InvalidDataException>(() =>
+            BackupArchiveCryptoService.DecryptArchiveToPlainZip(
+                backupFolder,
+                "test-password",
+                restoredArchive));
+
+        Assert.False(File.Exists(restoredArchive));
+        Assert.Empty(Directory.EnumerateFiles(backupFolder, "oversized-metadata.zip.*.tmp"));
     }
 
     [Theory]
@@ -191,6 +274,26 @@ public sealed class BackupArchiveCryptoServiceTests
         Assert.False(File.Exists(Path.Combine(backupFolder, BackupArchiveCryptoService.MetadataFileName + ".tmp")));
     }
 
+    [Fact]
+    public void CopyStreamWithCancellation_WhenCancelledDuringRead_PublishesNoFurtherBytes()
+    {
+        using var cts = new CancellationTokenSource();
+        using var source = new CancelOnFirstReadStream(
+            Enumerable.Range(0, 256).Select(value => (byte)value).ToArray(),
+            cts);
+        using var destination = new MemoryStream();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            BackupArchiveCryptoService.CopyStreamWithCancellation(
+                source,
+                destination,
+                bufferSize: 64,
+                cts.Token));
+
+        Assert.Equal(1, source.ReadCount);
+        Assert.Equal(0, destination.Length);
+    }
+
     private static void RewriteEnvelopeMetadata(
         string encryptedArchivePath,
         string propertyName,
@@ -239,5 +342,18 @@ public sealed class BackupArchiveCryptoServiceTests
         output.Write(metadata);
         output.Write(original, metadataOffset + metadataLength, original.Length - metadataOffset - metadataLength);
         File.WriteAllBytes(encryptedArchivePath, output.ToArray());
+    }
+
+    private sealed class CancelOnFirstReadStream(byte[] buffer, CancellationTokenSource cts) : MemoryStream(buffer)
+    {
+        public int ReadCount { get; private set; }
+
+        public override int Read(byte[] destination, int offset, int count)
+        {
+            int read = base.Read(destination, offset, count);
+            ReadCount++;
+            cts.Cancel();
+            return read;
+        }
     }
 }

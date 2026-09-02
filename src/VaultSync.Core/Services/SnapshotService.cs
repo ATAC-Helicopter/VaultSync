@@ -5,6 +5,15 @@ using VaultSync.Core.Repositories;
 
 namespace VaultSync.Core.Services;
 
+public sealed class SnapshotCreationOptions
+{
+    public bool HashNow { get; init; } = true;
+    public int? MaxSnapshotsToKeep { get; init; }
+    public Action<double, string, string>? ProgressCallback { get; init; }
+    public bool UseScanCache { get; init; }
+    public bool AggressiveScanCache { get; init; }
+}
+
 public class SnapshotService
 {
     private readonly SqliteRepository _repo;
@@ -21,6 +30,12 @@ public class SnapshotService
         List<SnapshotFileMetadata> CurrentMetadata,
         Dictionary<string, SnapshotFileMetadata> CurrentMetadataByRel,
         Dictionary<string, FileEntry> CurrentFilesByRel);
+    private sealed record SnapshotScanRequest(
+        Project Project,
+        FilterService Filter,
+        IEnumerable<FileEntry> PreviousEntries,
+        ScanCacheState? Cache,
+        bool ForceFullScan);
 
     private sealed class HashProgressReporter(
         int totalToHash,
@@ -76,6 +91,186 @@ public class SnapshotService
         }
     }
 
+    private sealed class SnapshotDirectoryScanner(
+        SnapshotScanRequest request,
+        Dictionary<string, long> directoryMtimeCache,
+        CancellationToken cancellationToken)
+    {
+        private readonly List<FileEntry> _results = [];
+        private readonly Dictionary<string, List<FileEntry>> _previousByDirectory =
+            BuildPrevByDir(request.PreviousEntries);
+
+        public int SkippedDirectories { get; private set; }
+
+        public List<FileEntry> Scan()
+        {
+            ScanDirectory(request.Project.RootPath, string.Empty);
+            return _results;
+        }
+
+        private void ScanDirectory(string fullDirectory, string relativeDirectory)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!TryReadDirectoryMtime(fullDirectory, out long mtimeTicks))
+                return;
+
+            directoryMtimeCache[relativeDirectory] = mtimeTicks;
+            if (TryReuseDirectory(relativeDirectory, mtimeTicks))
+                return;
+
+            foreach (string childDirectory in EnumerateDirectoriesSafely(fullDirectory))
+                ScanChildDirectory(childDirectory);
+
+            AddFiles(fullDirectory);
+        }
+
+        private bool TryReuseDirectory(string relativeDirectory, long mtimeTicks)
+        {
+            if (request.ForceFullScan || request.Cache is null ||
+                !request.Cache.DirectoryMtimeUtcTicks.TryGetValue(relativeDirectory, out long cachedTicks) ||
+                cachedTicks != mtimeTicks ||
+                !_previousByDirectory.TryGetValue(relativeDirectory, out List<FileEntry>? cachedEntries))
+            {
+                return false;
+            }
+
+            _results.AddRange(cachedEntries);
+            SkippedDirectories++;
+            return true;
+        }
+
+        private void ScanChildDirectory(string childDirectory)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (request.Filter.ShouldExclude(request.Project.RootPath, childDirectory))
+                return;
+            if (IsLinkedPath(childDirectory))
+            {
+                RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked directory '{childDirectory}'.");
+                return;
+            }
+
+            string relative = Path.GetRelativePath(request.Project.RootPath, childDirectory).Replace('\\', '/');
+            ScanDirectory(childDirectory, relative);
+        }
+
+        private void AddFiles(string fullDirectory)
+        {
+            foreach (string file in EnumerateFilesSafely(fullDirectory))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (request.Filter.ShouldExclude(request.Project.RootPath, file))
+                    continue;
+                if (IsLinkedPath(file))
+                {
+                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked file '{file}'.");
+                    continue;
+                }
+
+                AddFile(file);
+            }
+        }
+
+        private void AddFile(string file)
+        {
+            try
+            {
+                var info = new FileInfo(file);
+                string relative = Path.GetRelativePath(request.Project.RootPath, file).Replace('\\', '/');
+                _results.Add(new FileEntry(relative, info.Length, info.LastWriteTimeUtc, string.Empty));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose($"[SnapshotService] Skipping inaccessible file '{file}': {ex.Message}");
+            }
+        }
+
+        private static bool TryReadDirectoryMtime(string fullDirectory, out long mtimeTicks)
+        {
+            try
+            {
+                var info = new DirectoryInfo(fullDirectory);
+                mtimeTicks = info.Exists ? info.LastWriteTimeUtc.Ticks : 0;
+                return info.Exists;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[SnapshotService] Skipping inaccessible directory '{fullDirectory}': {ex.Message}");
+                mtimeTicks = 0;
+                return false;
+            }
+        }
+
+        private static string[] EnumerateDirectoriesSafely(string fullDirectory)
+        {
+            try
+            {
+                return Directory.GetDirectories(fullDirectory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[SnapshotService] Cannot enumerate directories in '{fullDirectory}': {ex.Message}");
+                return [];
+            }
+        }
+
+        private static string[] EnumerateFilesSafely(string fullDirectory)
+        {
+            try
+            {
+                return Directory.GetFiles(fullDirectory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[SnapshotService] Cannot enumerate files in '{fullDirectory}': {ex.Message}");
+                return [];
+            }
+        }
+
+        private static bool IsLinkedPath(string path)
+        {
+            try
+            {
+                return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FileNotFoundException)
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[SnapshotService] Skipping path with unverifiable link status '{path}': {ex.Message}");
+                return true;
+            }
+        }
+
+        private static Dictionary<string, List<FileEntry>> BuildPrevByDir(IEnumerable<FileEntry> entries)
+        {
+            var map = new Dictionary<string, List<FileEntry>>(StringComparer.Ordinal);
+            foreach (FileEntry entry in entries)
+            {
+                string rel = entry.RelPath.Replace('\\', '/');
+                string current = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? string.Empty;
+                while (true)
+                {
+                    if (!map.TryGetValue(current, out List<FileEntry>? list))
+                    {
+                        list = [];
+                        map[current] = list;
+                    }
+                    list.Add(entry);
+
+                    if (string.IsNullOrEmpty(current))
+                        break;
+
+                    int separatorIndex = current.LastIndexOf('/');
+                    current = separatorIndex >= 0 ? current[..separatorIndex] : string.Empty;
+                }
+            }
+            return map;
+        }
+    }
+
     public SnapshotOutcome? LastCreatedOutcome { get; private set; }
 
     public SnapshotService(SqliteRepository repo, HashService hash, IVaultLogger? logger = null)
@@ -86,22 +281,31 @@ public class SnapshotService
     }
 
     public Task<int> CreateSnapshotAsync(Project project, bool fullHash, int? maxSnapshotsToKeep = null, CancellationToken ct = default)
-        => CreateSnapshotAsync(project, fullHash, hashNow: true, maxSnapshotsToKeep, ct, null);
+        => CreateSnapshotAsync(
+            project,
+            fullHash,
+            new SnapshotCreationOptions { MaxSnapshotsToKeep = maxSnapshotsToKeep },
+            ct);
 
     public Task<int> CreateSnapshotAsync(Project project, bool fullHash, bool hashNow, int? maxSnapshotsToKeep = null, CancellationToken ct = default)
-        => CreateSnapshotAsync(project, fullHash, hashNow, maxSnapshotsToKeep, ct, null);
+        => CreateSnapshotAsync(
+            project,
+            fullHash,
+            new SnapshotCreationOptions
+            {
+                HashNow = hashNow,
+                MaxSnapshotsToKeep = maxSnapshotsToKeep
+            },
+            ct);
 
     public async Task<int> CreateSnapshotAsync(
         Project project,
         bool fullHash,
-        bool hashNow,
-        int? maxSnapshotsToKeep,
-        CancellationToken ct,
-        Action<double, string, string>? progressCallback,
-        bool useScanCache = false,
-        bool aggressiveScanCache = false)
+        SnapshotCreationOptions options,
+        CancellationToken ct = default)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
+        ArgumentNullException.ThrowIfNull(options);
         if (string.IsNullOrWhiteSpace(project.RootPath))
             throw new InvalidOperationException("Project.RootPath is not set.");
 
@@ -131,39 +335,50 @@ public class SnapshotService
 
             // Build current file list (with optional scan cache)
             string filterHash = ComputeFilterHash(filter);
-            ScanCacheState? cache = useScanCache ? ScanCacheStore.TryLoad(project, filterHash) : null;
-            bool forceFullScan = ShouldForceFullScan(cache, useScanCache, aggressiveScanCache);
+            ScanCacheState? cache = options.UseScanCache ? ScanCacheStore.TryLoad(project, filterHash) : null;
+            bool forceFullScan = ShouldForceFullScan(cache, options.UseScanCache, options.AggressiveScanCache);
 
             var dirMtimeCache = new Dictionary<string, long>(StringComparer.Ordinal);
-            List<FileEntry> currentEntries = BuildCurrentEntries(
+            var scanRequest = new SnapshotScanRequest(
                 project,
                 filter,
                 baseline.PreviousFiles.Values,
                 cache,
-                forceFullScan,
+                forceFullScan);
+            List<FileEntry> currentEntries = BuildCurrentEntries(
+                scanRequest,
                 dirMtimeCache,
                 out int skippedDirs,
                 ct);
 
-            _logger.Info($"[SnapshotService] Scan cache used={useScanCache && cache is not null}, skippedDirs={skippedDirs}, files={currentEntries.Count}.");
+            _logger.Info($"[SnapshotService] Scan cache used={options.UseScanCache && cache is not null}, skippedDirs={skippedDirs}, files={currentEntries.Count}.");
 
             ct.ThrowIfCancellationRequested();
 
             SnapshotChangeSet changes = BuildSnapshotChangeSet(project, currentEntries, baseline.PreviousFiles, ct);
 
+            int snapshotId = options.HashNow
+                ? await HashAndPersistSnapshotAsync(
+                    project,
+                    changes,
+                    baseline,
+                    fullHash,
+                    options.MaxSnapshotsToKeep,
+                    options.ProgressCallback,
+                    ct).ConfigureAwait(false)
+                : PersistSnapshotWithoutHashing(
+                    project,
+                    changes,
+                    baseline,
+                    fullHash,
+                    options.MaxSnapshotsToKeep,
+                    ct);
+
+            // The cache describes the durable snapshot baseline. Publishing it
+            // before hashing/persistence succeeds can make a cancelled run's
+            // directory mtimes suppress changes during the next cached scan.
             UpdateScanCache(project, filterHash, cache, forceFullScan, dirMtimeCache);
-
-            if (!hashNow)
-                return PersistSnapshotWithoutHashing(project, changes, baseline, fullHash, maxSnapshotsToKeep, ct);
-
-            return await HashAndPersistSnapshotAsync(
-                project,
-                changes,
-                baseline,
-                fullHash,
-                maxSnapshotsToKeep,
-                progressCallback,
-                ct).ConfigureAwait(false);
+            return snapshotId;
         }, ct);
     }
 
@@ -460,130 +675,15 @@ public class SnapshotService
     }
 
     private static List<FileEntry> BuildCurrentEntries(
-        Project project,
-        FilterService filter,
-        IEnumerable<FileEntry> prevEntries,
-        ScanCacheState? cache,
-        bool forceFullScan,
+        SnapshotScanRequest request,
         Dictionary<string, long> dirMtimeCache,
         out int skippedDirs,
         CancellationToken ct)
     {
-        var results = new List<FileEntry>();
-        Dictionary<string, List<FileEntry>> prevByDir = BuildPrevByDir(prevEntries);
-        string root = project.RootPath;
-        int skippedDirsLocal = 0;
-
-        void ScanDir(string fullDir, string relDir)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            DirectoryInfo? info = null;
-            try
-            {
-                info = new DirectoryInfo(fullDir);
-                if (!info.Exists)
-                    return;
-            }
-            catch
-            {
-                return;
-            }
-
-            string dirKey = relDir;
-            long mtimeTicks = info.LastWriteTimeUtc.Ticks;
-            dirMtimeCache[dirKey] = mtimeTicks;
-
-            if (!forceFullScan &&
-                cache is not null &&
-                cache.DirectoryMtimeUtcTicks.TryGetValue(dirKey, out long cachedTicks) &&
-                cachedTicks == mtimeTicks &&
-                prevByDir.TryGetValue(dirKey, out List<FileEntry>? cachedEntries))
-            {
-                results.AddRange(cachedEntries);
-                skippedDirsLocal++;
-                return;
-            }
-
-            IEnumerable<string> dirs;
-            try
-            {
-                dirs = Directory.EnumerateDirectories(fullDir);
-            }
-            catch
-            {
-                return;
-            }
-
-            foreach (string sub in dirs)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (filter.ShouldExclude(root, sub))
-                    continue;
-
-                string rel = Path.GetRelativePath(root, sub).Replace('\\', '/');
-                ScanDir(sub, rel);
-            }
-
-            IEnumerable<string> files;
-            try
-            {
-                files = Directory.EnumerateFiles(fullDir);
-            }
-            catch
-            {
-                return;
-            }
-
-            foreach (string file in files)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (filter.ShouldExclude(root, file))
-                    continue;
-
-                try
-                {
-                    var fi = new FileInfo(file);
-                    string rel = Path.GetRelativePath(root, file).Replace('\\', '/');
-                    results.Add(new FileEntry(rel, fi.Length, fi.LastWriteTimeUtc, string.Empty));
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping inaccessible file '{file}': {ex.Message}");
-                }
-            }
-        }
-
-        ScanDir(root, string.Empty);
-        skippedDirs = skippedDirsLocal;
+        var scanner = new SnapshotDirectoryScanner(request, dirMtimeCache, ct);
+        List<FileEntry> results = scanner.Scan();
+        skippedDirs = scanner.SkippedDirectories;
         return results;
-    }
-
-    private static Dictionary<string, List<FileEntry>> BuildPrevByDir(IEnumerable<FileEntry> entries)
-    {
-        var map = new Dictionary<string, List<FileEntry>>(StringComparer.Ordinal);
-        foreach (FileEntry entry in entries)
-        {
-            string rel = entry.RelPath.Replace('\\', '/');
-            string dir = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? string.Empty;
-            string current = dir;
-            while (true)
-            {
-                if (!map.TryGetValue(current, out List<FileEntry>? list))
-                {
-                    list = new List<FileEntry>();
-                    map[current] = list;
-                }
-                list.Add(entry);
-
-                if (string.IsNullOrEmpty(current))
-                    break;
-
-                int idx = current.LastIndexOf('/');
-                current = idx >= 0 ? current[..idx] : string.Empty;
-            }
-        }
-        return map;
     }
 
     private static void UpdateScanCache(
@@ -742,7 +842,9 @@ public class SnapshotService
         if (string.IsNullOrWhiteSpace(project.RootPath))
             throw new InvalidOperationException("Project.RootPath is not set.");
 
-        var files = _repo.GetFilesForSnapshot(snapshotId)
+        List<FileEntry> files = (await _repo
+            .GetFilesForSnapshotAsync(snapshotId, ct)
+            .ConfigureAwait(false))
             .Where(f => string.IsNullOrWhiteSpace(f.HashSha256))
             .ToList();
 
@@ -753,52 +855,12 @@ public class SnapshotService
         long totalBytes = files.Sum(f => f.Size);
         int hashedCount = 0;
         long hashedBytes = 0;
-        DateTime hashStart = DateTime.UtcNow;
-        DateTime lastReport = hashStart;
-        var reportInterval = TimeSpan.FromMilliseconds(250);
-        object progressLock = new object();
         var updates = new ConcurrentBag<(string RelPath, string HashSha256)>();
-
-        void ReportProgress(string relPath, bool force)
-        {
-            if (progressCallback is null)
-                return;
-
-            DateTime now = DateTime.UtcNow;
-            lock (progressLock)
-            {
-                if (!force && (now - lastReport) < reportInterval)
-                    return;
-
-                lastReport = now;
-                int count = hashedCount;
-                long bytes = hashedBytes;
-                double percent = totalToHash > 0 ? count * 100d / totalToHash : 100d;
-
-                double elapsedSeconds = Math.Max(0.1, (now - hashStart).TotalSeconds);
-                double speedBytesSec = bytes / elapsedSeconds;
-                double speedMbSec = speedBytesSec / (1024d * 1024d);
-
-                string etaText;
-                if (count >= totalToHash)
-                {
-                    etaText = $"Hashing {count}/{totalToHash}";
-                }
-                else if (count > 0 && totalBytes > 0 && speedBytesSec > 0)
-                {
-                    long remainingBytes = Math.Max(0L, totalBytes - bytes);
-                    double remainingSeconds = remainingBytes / speedBytesSec;
-                    var eta = TimeSpan.FromSeconds(remainingSeconds);
-                    etaText = $"Hashing {count}/{totalToHash} - {speedMbSec:0.0} MB/s - ETA {eta:mm\\:ss}";
-                }
-                else
-                {
-                    etaText = $"Hashing {count}/{totalToHash}";
-                }
-
-                progressCallback(percent, relPath, etaText);
-            }
-        }
+        var progress = new HashProgressReporter(
+            totalToHash,
+            totalBytes,
+            progressCallback,
+            TimeSpan.FromMilliseconds(250));
 
         await Parallel.ForEachAsync(
             files,
@@ -816,9 +878,9 @@ public class SnapshotService
                     string hash = await _hash.Sha256Async(fullPath, token);
                     updates.Add((entry.RelPath, hash));
 
-                    Interlocked.Add(ref hashedBytes, entry.Size);
+                    long currentBytes = Interlocked.Add(ref hashedBytes, entry.Size);
                     int currentCount = Interlocked.Increment(ref hashedCount);
-                    ReportProgress(entry.RelPath, currentCount >= totalToHash);
+                    progress.Report(entry.RelPath, currentCount, currentBytes, currentCount >= totalToHash);
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {

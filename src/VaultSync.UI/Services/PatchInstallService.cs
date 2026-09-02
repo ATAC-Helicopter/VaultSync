@@ -20,13 +20,20 @@ namespace VaultSync.UI.Services
 {
     public sealed class PatchApplyRequest
     {
-        public PatchApplyRequest(string archivePath, string manifestPath, string installDir, bool restart, int? waitPid)
+        public PatchApplyRequest(
+            string archivePath,
+            string manifestPath,
+            string installDir,
+            bool restart,
+            int? waitPid,
+            string? handoffPath = null)
         {
             ArchivePath = archivePath;
             ManifestPath = manifestPath;
             InstallDir = installDir;
             Restart = restart;
             WaitPid = waitPid;
+            HandoffPath = handoffPath;
         }
 
         public string ArchivePath { get; }
@@ -34,6 +41,7 @@ namespace VaultSync.UI.Services
         public string InstallDir { get; }
         public bool Restart { get; }
         public int? WaitPid { get; }
+        public string? HandoffPath { get; }
     }
 
     public sealed class PatchApplyResult
@@ -169,15 +177,17 @@ namespace VaultSync.UI.Services
             return Task.Run(() => ApplyPatch(request, onLog, cancellationToken), cancellationToken);
         }
 
-        public static bool TryLaunchPatchInstaller(PatchPlan plan, string archivePath, out string? error)
+        public static async Task<(bool Success, string? Error)> LaunchPatchInstallerAsync(
+            PatchPlan plan,
+            string archivePath,
+            CancellationToken cancellationToken)
         {
             try
             {
                 string? processPath = Environment.ProcessPath;
                 if (string.IsNullOrWhiteSpace(processPath) || !File.Exists(processPath))
                 {
-                    error = "Cannot locate current executable.";
-                    return false;
+                    return (false, "Cannot locate current executable.");
                 }
 
                 string runtimeDir = AppContext.BaseDirectory;
@@ -189,69 +199,117 @@ namespace VaultSync.UI.Services
                     File.Copy(processPath, helperExe, overwrite: true);
                 }
 
-                string manifestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.manifest.json");
+                string archiveBaseName = Path.GetFileNameWithoutExtension(archivePath);
+                string manifestPath = Path.Combine(helperDir, $"{archiveBaseName}.manifest.json");
                 string manifestJson = JsonSerializer.Serialize(plan.Manifest);
-                File.WriteAllText(manifestPath, manifestJson, Encoding.UTF8);
-                string requestPath = Path.Combine(helperDir, $"{Path.GetFileNameWithoutExtension(archivePath)}.apply-request.json");
+                await File.WriteAllTextAsync(manifestPath, manifestJson, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+                string requestPath = Path.Combine(helperDir, $"{archiveBaseName}.apply-request.json");
                 PatchElevationKind elevationKind = GetElevationKind(installDir);
+                string? handoffPath = elevationKind == PatchElevationKind.LinuxPkexec
+                    ? Path.Combine(helperDir, $"handoff-{Guid.NewGuid():N}.ready")
+                    : null;
                 var request = new PatchApplyRequest(
                     archivePath,
                     manifestPath,
                     installDir,
                     restart: elevationKind != PatchElevationKind.LinuxPkexec,
-                    waitPid: Environment.ProcessId);
+                    waitPid: Environment.ProcessId,
+                    handoffPath: handoffPath);
                 byte[] requestBytes = JsonSerializer.SerializeToUtf8Bytes(request);
-                File.WriteAllBytes(requestPath, requestBytes);
+                await File.WriteAllBytesAsync(requestPath, requestBytes, cancellationToken).ConfigureAwait(false);
                 string requestHash = ComputeSha256(requestBytes);
 
-                // Windows elevation uses ShellExecute; Linux elevation runs the copied helper through pkexec.
-                var psi = new ProcessStartInfo
-                {
-                    FileName = elevationKind == PatchElevationKind.LinuxPkexec
-                        ? FindExecutable("pkexec") ?? "pkexec"
-                        : helperExe,
-                    WorkingDirectory = helperDir,
-                    UseShellExecute = elevationKind == PatchElevationKind.WindowsRunAs,
-                    Verb = elevationKind == PatchElevationKind.WindowsRunAs ? "runas" : string.Empty
-                };
-
-                if (elevationKind == PatchElevationKind.WindowsRunAs)
-                {
-                    psi.Arguments = string.Join(" ",
-                        Quote(ApplyRequestArg),
-                        Quote(requestPath),
-                        Quote(RequestHashArg + requestHash));
-                }
-                else if (elevationKind == PatchElevationKind.LinuxPkexec)
-                {
-                    EnsureUnixExecutable(helperExe);
-                    psi.ArgumentList.Add(helperExe);
-                    psi.ArgumentList.Add(ApplyRequestArg);
-                    psi.ArgumentList.Add(requestPath);
-                    psi.ArgumentList.Add(RequestHashArg + requestHash);
-                    psi.ArgumentList.Add(HeadlessArg);
-                }
-                else
-                {
-                    psi.ArgumentList.Add(ApplyRequestArg);
-                    psi.ArgumentList.Add(requestPath);
-                    psi.ArgumentList.Add(RequestHashArg + requestHash);
-                }
+                ProcessStartInfo psi = CreatePatchInstallerStartInfo(
+                    elevationKind,
+                    helperExe,
+                    helperDir,
+                    requestPath,
+                    requestHash);
 
                 var started = Process.Start(psi);
                 if (started is null)
                 {
-                    error = "Failed to start patch helper.";
-                    return false;
+                    return (false, "Failed to start patch helper.");
                 }
 
-                error = null;
-                return true;
+                if (handoffPath is not null)
+                {
+                    bool authenticated = await WaitForLinuxPatchHandoffAsync(
+                        started,
+                        handoffPath,
+                        cancellationToken).ConfigureAwait(false);
+                    if (!authenticated)
+                    {
+                        int? exitCode = started.HasExited ? started.ExitCode : null;
+                        return (false, exitCode.HasValue
+                            ? $"Patch authorization was cancelled or failed with code {exitCode.Value}."
+                            : "Patch authorization did not complete.");
+                    }
+                }
+
+                return (true, null);
             }
             catch (Exception ex)
             {
-                error = ex.Message;
-                return false;
+                return (false, ex.Message);
+            }
+        }
+
+        private static ProcessStartInfo CreatePatchInstallerStartInfo(
+            PatchElevationKind elevationKind,
+            string helperExe,
+            string helperDir,
+            string requestPath,
+            string requestHash)
+        {
+            // Windows elevation uses ShellExecute; Linux elevation runs the copied helper through pkexec.
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = elevationKind == PatchElevationKind.LinuxPkexec
+                    ? FindExecutable("pkexec") ?? "pkexec"
+                    : helperExe,
+                WorkingDirectory = helperDir,
+                UseShellExecute = elevationKind == PatchElevationKind.WindowsRunAs,
+                Verb = elevationKind == PatchElevationKind.WindowsRunAs ? "runas" : string.Empty
+            };
+
+            if (elevationKind == PatchElevationKind.WindowsRunAs)
+            {
+                startInfo.Arguments = string.Join(" ",
+                    Quote(ApplyRequestArg),
+                    Quote(requestPath),
+                    Quote(RequestHashArg + requestHash));
+                return startInfo;
+            }
+
+            if (elevationKind == PatchElevationKind.LinuxPkexec)
+            {
+                EnsureUnixExecutable(helperExe);
+                startInfo.ArgumentList.Add(helperExe);
+            }
+
+            startInfo.ArgumentList.Add(ApplyRequestArg);
+            startInfo.ArgumentList.Add(requestPath);
+            startInfo.ArgumentList.Add(RequestHashArg + requestHash);
+            if (elevationKind == PatchElevationKind.LinuxPkexec)
+                startInfo.ArgumentList.Add(HeadlessArg);
+            return startInfo;
+        }
+
+        internal static async Task<bool> WaitForLinuxPatchHandoffAsync(
+            Process process,
+            string handoffPath,
+            CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (File.Exists(handoffPath))
+                    return true;
+                if (process.HasExited)
+                    return false;
+
+                await Task.Delay(100, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -345,6 +403,12 @@ namespace VaultSync.UI.Services
                     throw new InvalidOperationException($"Invalid patch apply request: {normalizeError}");
 
                 request = normalizedRequest!;
+
+                if (!string.IsNullOrWhiteSpace(request.HandoffPath))
+                {
+                    File.WriteAllText(request.HandoffPath, "ready", Encoding.ASCII);
+                    LogLine("Patch helper authorization completed; parent shutdown is now safe.");
+                }
 
                 if (request.WaitPid is { } pid)
                 {
@@ -1007,12 +1071,22 @@ namespace VaultSync.UI.Services
                 return false;
             }
 
+            string? handoffPath = null;
+            if (!string.IsNullOrWhiteSpace(request.HandoffPath) &&
+                (!TryNormalizeFilePath(request.HandoffPath, out handoffPath, out error) ||
+                 !IsUnderTrustedPatchTempRoot(handoffPath!)))
+            {
+                error ??= "Patch handoff path is outside the trusted patch directory.";
+                return false;
+            }
+
             normalized = new PatchApplyRequest(
                 archivePath!,
                 manifestPath!,
                 installDir!,
                 request.Restart,
-                request.WaitPid);
+                request.WaitPid,
+                handoffPath);
             return true;
         }
 

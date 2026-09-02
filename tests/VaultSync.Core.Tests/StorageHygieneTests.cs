@@ -41,6 +41,67 @@ public sealed class StorageHygieneTests
     }
 
     [Fact]
+    public void ApplicationCleanupRemovesOnlyExpiredVerifiedCacheTemporaryWrites()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string identity = new('a', 64);
+        string stale = CreateFile(
+            root.Path,
+            $"cache/release-assets/.{identity}.json.{Guid.NewGuid():N}.tmp",
+            17,
+            now.AddDays(-2));
+        string recent = CreateFile(
+            root.Path,
+            $"cache/release-assets/.{identity}.json.{Guid.NewGuid():N}.tmp",
+            11,
+            now.AddHours(-2));
+        string unrelated = CreateFile(
+            root.Path,
+            "cache/release-assets/.unrelated.json.not-a-guid.tmp",
+            13,
+            now.AddYears(-1));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneApplicationData(root.Path, now);
+
+        Assert.False(File.Exists(stale));
+        Assert.True(File.Exists(recent));
+        Assert.True(File.Exists(unrelated));
+        Assert.Equal(1, result.FilesRemoved);
+        Assert.Equal(17, result.BytesReclaimed);
+    }
+
+    [Fact]
+    public void ApplicationCleanupRemovesOnlyExpiredSupportBundleStagingDirectories()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string stale = CreateDirectory(
+            root.Path,
+            $"exports/support-20260824-120000-{Guid.NewGuid():N}",
+            19,
+            now.AddDays(-2));
+        string recent = CreateDirectory(
+            root.Path,
+            $"exports/support-20260826-110000-{Guid.NewGuid():N}",
+            13,
+            now.AddHours(-2));
+        string unrelated = CreateDirectory(
+            root.Path,
+            "exports/support-manual-files",
+            17,
+            now.AddYears(-1));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneApplicationData(root.Path, now);
+
+        Assert.False(Directory.Exists(stale));
+        Assert.True(Directory.Exists(recent));
+        Assert.True(Directory.Exists(unrelated));
+        Assert.Equal(1, result.DirectoriesRemoved);
+        Assert.Equal(19, result.BytesReclaimed);
+    }
+
+    [Fact]
     public void LegacyCleanupPrunesOldLogsAndAbandonedConfigWrites()
     {
         using var root = new TempDirectory();
@@ -58,6 +119,42 @@ public sealed class StorageHygieneTests
         Assert.True(File.Exists(config));
         Assert.Equal(2, result.FilesRemoved);
         Assert.Equal(15, result.BytesReclaimed);
+    }
+
+    [Fact]
+    public void ConfigurationCleanupRemovesOnlyAbandonedAtomicIdentityAndCredentialWrites()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string staleIdentity = CreateFile(
+            root.Path,
+            $".installation.id.{Guid.NewGuid():N}.tmp",
+            7,
+            now.AddHours(-2));
+        string staleCredentials = CreateFile(
+            root.Path,
+            $".credentials.json.{Guid.NewGuid():N}.tmp",
+            9,
+            now.AddHours(-2));
+        string recentCredentials = CreateFile(
+            root.Path,
+            $".credentials.json.{Guid.NewGuid():N}.tmp",
+            5,
+            now.AddMinutes(-30));
+        string identity = CreateFile(root.Path, "installation.id", 32, now.AddYears(-1));
+        string credentials = CreateFile(root.Path, "credentials.json", 24, now.AddYears(-1));
+        string unrelated = CreateFile(root.Path, ".settings.json.not-a-guid.tmp", 11, now.AddYears(-1));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneConfigurationData(root.Path, now);
+
+        Assert.False(File.Exists(staleIdentity));
+        Assert.False(File.Exists(staleCredentials));
+        Assert.True(File.Exists(recentCredentials));
+        Assert.True(File.Exists(identity));
+        Assert.True(File.Exists(credentials));
+        Assert.True(File.Exists(unrelated));
+        Assert.Equal(2, result.FilesRemoved);
+        Assert.Equal(16, result.BytesReclaimed);
     }
 
     [Fact]
@@ -86,6 +183,87 @@ public sealed class StorageHygieneTests
         Assert.Equal(2, result.DirectoriesRemoved);
     }
 
+    [Fact]
+    public void TemporaryCleanupBoundsOnlyRecognizedTelemetryExports()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string oldExport = CreateFile(
+            root.Path,
+            "vaultsync-telemetry-export/telemetry_20260701_120000.zip",
+            23,
+            now.AddDays(-31));
+        string recentExport = CreateFile(
+            root.Path,
+            "vaultsync-telemetry-export/telemetry_20260825_120000.zip",
+            17,
+            now.AddDays(-1));
+        string unrelated = CreateFile(
+            root.Path,
+            "vaultsync-telemetry-export/user-notes.zip",
+            29,
+            now.AddYears(-1));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneTemporaryData(root.Path, now);
+
+        Assert.False(File.Exists(oldExport));
+        Assert.True(File.Exists(recentExport));
+        Assert.True(File.Exists(unrelated));
+        Assert.Equal(1, result.FilesRemoved);
+        Assert.Equal(23, result.BytesReclaimed);
+    }
+
+    [Fact]
+    public void TemporaryCleanupRemovesOnlyStaleConsumedMetadataQueues()
+    {
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string metadataRoot = Path.Combine(root.Path, "vaultsync-meta-export");
+        string stale = Path.Combine(metadataRoot, $"queue.consumed-{Guid.NewGuid():N}");
+        string recent = Path.Combine(metadataRoot, $"queue.consumed-{Guid.NewGuid():N}");
+        string active = Path.Combine(metadataRoot, "active-queue");
+        Directory.CreateDirectory(stale);
+        Directory.CreateDirectory(recent);
+        Directory.CreateDirectory(active);
+        File.WriteAllText(Path.Combine(stale, "vaultsync.meta.db"), "stale");
+        Directory.SetLastWriteTimeUtc(stale, now.AddDays(-2));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneTemporaryData(root.Path, now);
+
+        Assert.False(Directory.Exists(stale));
+        Assert.True(Directory.Exists(recent));
+        Assert.True(Directory.Exists(active));
+        Assert.Equal(1, result.DirectoriesRemoved);
+    }
+
+    [Fact]
+    public void TemporaryCleanupRemovesLinkedChildrenWithoutTouchingTheirTargets()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var root = new TempDirectory();
+        DateTime now = DateTime.UtcNow;
+        string staleWorkspace = Path.Combine(root.Path, "vaultsync-restore-stale");
+        string nested = Path.Combine(staleWorkspace, "nested");
+        string outside = Path.Combine(root.Path, "outside-cleanup-target");
+        Directory.CreateDirectory(nested);
+        Directory.CreateDirectory(outside);
+        File.WriteAllText(Path.Combine(nested, "owned.txt"), "remove");
+        string outsideFile = Path.Combine(outside, "keep.txt");
+        File.WriteAllText(outsideFile, "must survive");
+        Directory.CreateSymbolicLink(Path.Combine(staleWorkspace, "linked-outside"), outside);
+        Directory.SetLastWriteTimeUtc(staleWorkspace, now.AddDays(-2));
+
+        StorageCleanupSummary result = StorageHygieneService.PruneTemporaryData(root.Path, now);
+
+        Assert.False(Directory.Exists(staleWorkspace));
+        Assert.True(File.Exists(outsideFile));
+        Assert.Equal("must survive", File.ReadAllText(outsideFile));
+        Assert.Equal(1, result.DirectoriesRemoved);
+        Assert.Equal(6, result.BytesReclaimed);
+    }
+
     [Theory]
     [InlineData(true, true, false, true)]
     [InlineData(true, true, true, false)]
@@ -111,6 +289,7 @@ public sealed class StorageHygieneTests
         string directory = Path.Combine(root, relativePath);
         Directory.CreateDirectory(directory);
         File.WriteAllBytes(Path.Combine(directory, "payload.bin"), new byte[payloadBytes]);
+        Directory.SetCreationTimeUtc(directory, lastWriteUtc);
         Directory.SetLastWriteTimeUtc(directory, lastWriteUtc);
         return directory;
     }

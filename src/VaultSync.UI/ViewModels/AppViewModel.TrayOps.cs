@@ -23,6 +23,21 @@ namespace VaultSync.UI.ViewModels
             if (item is null)
                 return;
 
+            if (_restoreCancellations.TryGetValue(item.ProjectId, out CancellationTokenSource? restoreCancellation))
+            {
+                restoreCancellation.Cancel();
+                BackupsViewModel.UpdateActiveBackup(
+                    item.ProjectId,
+                    item.ProjectName,
+                    item.Progress,
+                    AppViewModel.L("Backups.Status.Cancelling", "Cancelling..."),
+                    string.Empty,
+                    allowCancel: false,
+                    activityPhase: ProtectionActivityPhase.Cancelling);
+                RuntimeLog.WriteVerbose($"[Restore] Cancellation requested for '{item.ProjectName}'.");
+                return;
+            }
+
             if (!int.TryParse(item.ProjectId, out int projectId))
             {
                 return;
@@ -58,12 +73,32 @@ namespace VaultSync.UI.ViewModels
         /// </summary>
         
         /// <summary>
-        /// Returns the list of backup-capable projects for use in the tray menu.
+        /// Lightweight registered-project snapshot used by tray menus before the
+        /// Backups or Projects pages have been opened.
         /// </summary>
-        public IReadOnlyList<ProjectBackupItem> GetProjectsForBackupTray()
+        public sealed record TrayProjectItem(int Id, string Name);
+
+        public IReadOnlyList<TrayProjectItem> GetProjectsForTray()
         {
-            return BackupsViewModel.ProjectBackups.ToList();
+            try
+            {
+                return BuildTrayProjectItems(_repo.GetAllProjects());
+            }
+            catch
+            {
+                return [];
+            }
         }
+
+        internal static IReadOnlyList<TrayProjectItem> BuildTrayProjectItems(IEnumerable<Project>? projects) =>
+            projects?
+                .Where(project => project.Id > 0 && !string.IsNullOrWhiteSpace(project.Name))
+                .GroupBy(project => project.Id)
+                .Select(group => group.First())
+                .Select(project => new TrayProjectItem(project.Id, project.Name.Trim()))
+                .OrderBy(project => project.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList()
+            ?? [];
 
         /// <summary>
         /// Triggered from the tray menu: backup a specific project by its ProjectBackupItem.Id.
@@ -83,7 +118,27 @@ namespace VaultSync.UI.ViewModels
             ProjectBackupItem? projectItem = BackupsViewModel.ProjectBackups.FirstOrDefault(p => p.Id == projectId);
             if (projectItem == null)
             {
-                return;
+                if (!int.TryParse(projectId, out int parsedProjectId))
+                    return;
+
+                Project? project;
+                try
+                {
+                    project = _repo.GetProjectById(parsedProjectId);
+                }
+                catch
+                {
+                    return;
+                }
+
+                if (project is null)
+                    return;
+
+                projectItem = new ProjectBackupItem
+                {
+                    Id = project.Id.ToString(CultureInfo.InvariantCulture),
+                    Name = project.Name
+                };
             }
 
             // When triggered from tray, navigate to the Backups page so the user
@@ -149,19 +204,6 @@ namespace VaultSync.UI.ViewModels
         }
 
         /// <summary>
-        /// Returns the list of projects used for snapshots (Projects page),
-        /// for use in the tray's Snapshot submenu.
-        /// Only returns projects that are actually added/tracked in VaultSync.
-        /// Untracked/discovered entries normally have ProjectId <= 0 and should not appear in the tray.
-        /// </summary>
-        public IReadOnlyList<ProjectItemViewModel> GetProjectsForSnapshotTray()
-        {
-            // Only expose projects that are actually registered in the backup DB.
-            return _projectsViewModel.Projects
-                .Where(p => p.IsRegistered)
-                .ToList();
-        }
-
         /// <summary>
         /// Triggered from the tray menu: create a snapshot for a specific project by name.
         /// This reuses the ProjectsViewModel.TakeSnapshotForProjectFromTrayAsync pipeline,
@@ -493,6 +535,7 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
+                EncryptedOpenWorkspaceManager.RegisterOwnedWorkspace(stagingRoot);
                 Directory.CreateDirectory(extractDir);
                 progress?.Invoke(10, "Decrypting archive...", string.Empty);
 
@@ -536,6 +579,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     if (Directory.Exists(stagingRoot))
                         Directory.Delete(stagingRoot, recursive: true);
+                    EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(stagingRoot);
                 }
                 catch
                 {
@@ -550,24 +594,10 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                DateTime nowUtc = DateTime.UtcNow;
-                foreach (string dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
-                {
-                    try
-                    {
-                        DateTime createdUtc = Directory.GetCreationTimeUtc(dir);
-                        DateTime modifiedUtc = Directory.GetLastWriteTimeUtc(dir);
-                        DateTime referenceUtc = createdUtc > modifiedUtc ? createdUtc : modifiedUtc;
-                        if ((nowUtc - referenceUtc) < EncryptedOpenStaleRetention)
-                            continue;
-
-                        Directory.Delete(dir, recursive: true);
-                    }
-                    catch
-                    {
-                        // best effort cleanup
-                    }
-                }
+                EncryptedOpenWorkspaceManager.CleanupStaleWorkspaces(
+                    Path.GetTempPath(),
+                    DateTime.UtcNow,
+                    EncryptedOpenStaleRetention);
             }
             catch
             {
@@ -614,32 +644,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         private static string? ResolveEncryptedOpenStagingRoot(string extractedDir)
-        {
-            if (string.IsNullOrWhiteSpace(extractedDir))
-                return null;
-
-            try
-            {
-                string full = Path.GetFullPath(extractedDir);
-                string tempRoot = Path.GetFullPath(Path.GetTempPath());
-                if (!full.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
-                    return null;
-
-                var current = new DirectoryInfo(full);
-                while (current is not null)
-                {
-                    if (current.Name.StartsWith("vaultsync-open-", StringComparison.OrdinalIgnoreCase))
-                        return current.FullName;
-                    current = current.Parent;
-                }
-            }
-            catch
-            {
-                // best effort path validation
-            }
-
-            return null;
-        }
+            => EncryptedOpenWorkspaceManager.ResolveWorkspaceRoot(extractedDir);
 
         private static async Task TryDeleteEncryptedOpenStagingRootAsync(string stagingRoot, CancellationToken ct)
         {
@@ -651,6 +656,7 @@ namespace VaultSync.UI.ViewModels
                     if (!Directory.Exists(stagingRoot))
                         return;
                     Directory.Delete(stagingRoot, recursive: true);
+                    EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(stagingRoot);
                     return;
                 }
                 catch
@@ -734,7 +740,7 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
-                foreach (string dir in Directory.GetDirectories(Path.GetTempPath(), "vaultsync-open-*", SearchOption.TopDirectoryOnly))
+                foreach (string dir in EncryptedOpenWorkspaceManager.GetOwnedWorkspacePaths())
                 {
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
                     await TryDeleteEncryptedOpenStagingRootAsync(dir, cts.Token).ConfigureAwait(false);

@@ -31,7 +31,9 @@
       </StackPanel>
     </Border>
 
-    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer Grid.Row="1"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
       <StackPanel Margin="28,22" Spacing="20">
         <StackPanel Spacing="10">
           <TextBlock Text="{infra:LocalizedString Key=MetadataSync.Review.SourceLabel}"

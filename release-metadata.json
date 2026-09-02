@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "repository": "ATAC-Helicopter/VaultSync",
   "latestStable": {
-    "version": "1.8.6",
-    "tag": "v1.8.6",
-    "releasedDate": "2026-08-10"
+    "version": "1.8.7",
+    "tag": "v1.8.7",
+    "releasedDate": "2026-08-21"
   },
   "nextRelease": {
-    "version": "1.8.7",
-    "targetDate": "2026-08-24",
-    "stage": "candidate"
+    "version": "1.8.8",
+    "targetDate": "2026-09-01",
+    "stage": "planned"
   },
   "platforms": [
     "Windows",

@@ -82,20 +82,89 @@ public sealed class BackupCheckpointResumeTests : IDisposable
     }
 
     [Fact]
+    public void CleanupIncompleteBackups_PreservesEncryptedCheckpointedArchiveFolders()
+    {
+        string backupRoot = Path.Combine(_tempDir.Path, "encrypted-backups");
+        string resumableDir = Path.Combine(backupRoot, "project", "2026-03-13_11-00-00");
+        Directory.CreateDirectory(resumableDir);
+
+        File.WriteAllText(Path.Combine(resumableDir, ".vaultsync_inprogress"), "started");
+        File.WriteAllText(Path.Combine(resumableDir, BackupArchiveCryptoService.EncryptedArchiveFileName), "partial");
+        File.WriteAllText(
+            Path.Combine(resumableDir, ".vaultsync_resume.json"),
+            $$"""
+            {
+              "Version": 1,
+              "Mode": "archive",
+              "SourceFingerprint": "ENCRYPTED-ABC",
+              "ArchiveSizeBytes": 7,
+              "LastUpdatedUtc": "2026-03-13T11:00:00Z",
+              "ArtifactFileName": "{{BackupArchiveCryptoService.EncryptedArchiveFileName}}"
+            }
+            """,
+            Encoding.UTF8);
+
+        int removed = BackupService.CleanupIncompleteBackups(backupRoot);
+
+        Assert.Equal(0, removed);
+        Assert.True(Directory.Exists(resumableDir));
+    }
+
+    [Theory]
+    [InlineData(2, "archive", "ABC", "data.zip")]
+    [InlineData(1, "native", "ABC", "data.zip")]
+    [InlineData(1, "archive", "", "data.zip")]
+    [InlineData(1, "archive", "ABC", "untrusted.partial")]
+    public void CleanupIncompleteBackups_RemovesInvalidArchiveCheckpoints(
+        int version,
+        string mode,
+        string fingerprint,
+        string artifactFileName)
+    {
+        string backupRoot = Path.Combine(_tempDir.Path, $"invalid-{version}-{mode}-{artifactFileName}");
+        string invalidDir = Path.Combine(backupRoot, "project", "2026-03-13_12-00-00");
+        Directory.CreateDirectory(invalidDir);
+
+        File.WriteAllText(Path.Combine(invalidDir, ".vaultsync_inprogress"), "started");
+        File.WriteAllText(Path.Combine(invalidDir, artifactFileName), "partial");
+        File.WriteAllText(
+            Path.Combine(invalidDir, ".vaultsync_resume.json"),
+            $$"""
+            {
+              "Version": {{version}},
+              "Mode": "{{mode}}",
+              "SourceFingerprint": "{{fingerprint}}",
+              "ArchiveSizeBytes": 7,
+              "LastUpdatedUtc": "2026-03-13T12:00:00Z",
+              "ArtifactFileName": "{{artifactFileName}}"
+            }
+            """,
+            Encoding.UTF8);
+
+        int removed = BackupService.CleanupIncompleteBackups(backupRoot);
+
+        Assert.Equal(1, removed);
+        Assert.False(Directory.Exists(invalidDir));
+    }
+
+    [Fact]
     public void UpdateCheckpointResumeTelemetry_StoresExpectedSummary()
     {
         var cfg = new AppConfig();
 
         BackupService.UpdateCheckpointResumeTelemetry(
             cfg,
-            status: "resume-attempt",
-            projectName: "VaultSync",
-            backupFolder: @"C:\backups\vaultsync\2026-03-16_12-00-00",
-            archivePath: @"C:\backups\vaultsync\2026-03-16_12-00-00\backup.zip",
-            resumeOffsetBytes: 5242880,
-            archiveSizeBytes: 10485760,
-            sourceFingerprint: "ABC123",
-            message: "Resuming archive upload from a validated existing prefix.");
+            new BackupService.CheckpointResumeTelemetryUpdate
+            {
+                Status = "resume-attempt",
+                ProjectName = "VaultSync",
+                BackupFolder = @"C:\backups\vaultsync\2026-03-16_12-00-00",
+                ArchivePath = @"C:\backups\vaultsync\2026-03-16_12-00-00\backup.zip",
+                ResumeOffsetBytes = 5242880,
+                ArchiveSizeBytes = 10485760,
+                SourceFingerprint = "ABC123",
+                Message = "Resuming archive upload from a validated existing prefix."
+            });
 
         Assert.Equal("resume-attempt", cfg.Advanced.CheckpointResumeTelemetry.LastStatus);
         Assert.Equal("VaultSync", cfg.Advanced.CheckpointResumeTelemetry.LastProjectName);

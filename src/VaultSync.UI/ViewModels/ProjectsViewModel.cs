@@ -2038,12 +2038,13 @@ public partial class ProjectsViewModel : ViewModelBase
         await snapshotService.CreateSnapshotAsync(
             existing,
             fullHash: config.Backups.UseFullSnapshotHash,
-            hashNow: true,
-            maxSnapshotsToKeep: config.Backups.MaxSnapshotsPerProject,
-            ct: CancellationToken.None,
-            progressCallback: null,
-            useScanCache: config.Backups.EnableScanCache,
-            aggressiveScanCache: config.Backups.AggressiveScanCache);
+            new SnapshotCreationOptions
+            {
+                MaxSnapshotsToKeep = config.Backups.MaxSnapshotsPerProject,
+                UseScanCache = config.Backups.EnableScanCache,
+                AggressiveScanCache = config.Backups.AggressiveScanCache
+            },
+            CancellationToken.None);
 
         if (SnapshotService.LastOutcome != null)
             RefreshSelectedProjectSnapshotStats(repo, existing);

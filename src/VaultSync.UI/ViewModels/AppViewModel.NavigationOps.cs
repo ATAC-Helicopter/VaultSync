@@ -207,7 +207,7 @@ namespace VaultSync.UI.ViewModels
                     CurrentView = GuideViewModel;
                     HeaderTitle = AppViewModel.L("Nav.Guide", "Guide");
                     HeaderKicker = AppViewModel.L("Main.HeaderGuide", "Setup, backup & recovery");
-                    GuideViewModel.Refresh();
+                    RunDetached(GuideViewModel.RefreshAsync, nameof(GuideViewModel.RefreshAsync));
                     break;
                 default:
                     BackupsViewModel.IsActiveView = false;

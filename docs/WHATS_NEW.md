@@ -1,5 +1,64 @@
 # What's New
 
+## [1.8.8]
+
+VaultSync `1.8.8` is the Chronicle Stabilization update. Work is beginning with
+measured large-history performance, interruption and corruption recovery,
+cross-platform qualification, and focused decomposition of the backup,
+metadata, and desktop workflow hotspots. This section will grow only as
+user-visible changes are implemented and verified.
+
+### Safer interrupted archives
+- Stop archive encryption between copied chunks when cancellation is requested,
+  instead of continuing through the complete plaintext archive before stopping.
+- Remove incomplete archive state after cancelled plain or encrypted compression
+  while preserving the previous known-good recovery point unchanged.
+- On restart, preserve only supported plain or encrypted resume checkpoints;
+  discard checkpoints with an unsupported version, wrong mode, missing source
+  identity, or untrusted artifact name.
+- Keep retention cleanup inside the selected backup folder even when linked
+  files or directories are present, and refuse a backup root that is itself a
+  filesystem link without dropping its indexed restore point.
+- Fail the backup if a required snapshotted source file disappears or becomes
+  unreadable during archive compression or managed fallback copy, rather than
+  publishing a successful restore point with missing content.
+- Keep each decrypted-open temporary workspace owned by the process that created
+  it, so another VaultSync instance cannot remove files being actively inspected
+  during shutdown, manual lock, or stale cleanup.
+- Keep abandoned-working-data cleanup inside VaultSync-owned temporary trees,
+  removing linked children themselves without scanning or changing their targets.
+- Remove verified release-cache writes abandoned by a crash after one day while
+  preserving recent writes and unrelated hidden files.
+- Remove abandoned installation-identity and credential-index writes after one
+  hour without selecting durable identity, credential, or unrelated files.
+- Remove sanitized support-bundle staging trees abandoned for more than one day
+  while leaving completed ZIP exports and unrelated directories untouched.
+- Keep recognized telemetry ZIP exports in temporary storage for up to 30 days,
+  bounded to 100 MB newest-first, without selecting unrelated files.
+
+### Lower temporary memory pressure
+- Reuse one bounded buffer while adding sequential files to an archive instead
+  of allocating another buffer for every source file.
+- Calculate support-package manifest hashes from sequential file streams instead
+  of loading each complete staged file into memory.
+
+### Smoother guided setup
+- Show progress only for real setup outcomes and let users refresh incomplete
+  steps instead of leaving a disabled Next action.
+- Refresh the Guide's project, backup, and recovery totals away from the UI
+  thread so opening it does not pause navigation.
+- Load Schedule project coverage away from the UI thread and coalesce repeated
+  refreshes while settings are changing.
+- Stage decrypted restore output under an unpredictable one-use name and publish
+  it only after authentication succeeds.
+- Keep decrypted-workspace cleanup under an exact OS temporary child even when
+  another directory shares the temporary root's text prefix.
+- Keep cancellation attached to the active backup when another run for the same
+  project replaces an older operation.
+- Publish directory scan-cache state only after hashing and snapshot persistence
+  succeed, so a cancelled snapshot cannot hide changes from the next scan.
+- Keep snapshot scans inside the selected project by skipping linked child paths.
+
 ## [1.8.7]
 
 VaultSync `1.8.7` is the Trust and Portability update. It makes build and
@@ -7,8 +66,7 @@ recovery evidence independently checkable, protects shared repository metadata
 from concurrent writers, and makes cross-machine changes explicit instead of
 silently choosing a winner.
 
-Targeted for 24 August 2026. This entry describes the active release candidate;
-it is not shipped until the release reaches Stable.
+Released on 21 August 2026.
 
 ### Verifiable releases and recovery evidence
 - Identify the exact running build, channel, commit, runtime, architecture,
@@ -97,7 +155,7 @@ Released on 10 August 2026.
 
 ### Release safety
 - Patch installation restores replaced files and removes patch-created files when an ordinary installation failure interrupts replacement.
-- Automated patch manifests name one qualified predecessor; older or unlisted installations fall back to a full installer.
+- Patch manifests allow only file-inventory-qualified bases; incompatible installs fall back to the installer.
 - `1.8.6` ships directly as a stable release with no beta build; unpublished release-candidate artifacts use the release branch, and final assets use `Stable`.
 - Rendering dependencies remain aligned across supported platforms.
 - Rich-text links are limited to approved external schemes, dependency vulnerability checks are clean, and previously silent cache or deferred-backup failures now leave diagnostic evidence.

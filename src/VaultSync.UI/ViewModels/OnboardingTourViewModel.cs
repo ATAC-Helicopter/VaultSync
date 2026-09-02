@@ -21,6 +21,7 @@ public sealed class OnboardingTourStep
     public string ActionText { get; }
     public string CompleteText { get; }
     public string RequiredView { get; }
+    public bool TracksProgress { get; }
     public Func<OnboardingSetupState, bool> IsComplete { get; }
 
     public OnboardingTourStep(
@@ -29,6 +30,7 @@ public sealed class OnboardingTourStep
         string actionText,
         string completeText,
         string requiredView,
+        bool tracksProgress,
         Func<OnboardingSetupState, bool> isComplete)
     {
         Title = title;
@@ -36,6 +38,7 @@ public sealed class OnboardingTourStep
         ActionText = actionText;
         CompleteText = completeText;
         RequiredView = requiredView;
+        TracksProgress = tracksProgress;
         IsComplete = isComplete;
     }
 }
@@ -153,6 +156,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private bool _isStepComplete;
     private OnboardingSetupState _setupState = OnboardingSetupState.Empty;
     private DateTime _lastStateRefreshUtc = DateTime.MinValue;
+    private string _lastObservedViewKey = string.Empty;
     private int _stateRefreshInFlight;
 
     public event Action? TourCompleted;
@@ -175,7 +179,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         "Onboarding.Progress",
         "{0} of {1} complete",
         CompletedStepCount(),
-        _steps.Count);
+        TrackedStepCount());
 
     public string Title => CurrentStep?.Title ?? string.Empty;
     public string Body => CurrentStep?.Body ?? string.Empty;
@@ -213,7 +217,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             {
                 OnPropertiesChanged(
                     nameof(PrimaryLabel),
-                    nameof(IsPrimaryEnabled),
                     nameof(ActionText),
                     nameof(ActionHeadingText),
                     nameof(HasActionText),
@@ -221,8 +224,6 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             }
         }
     }
-
-    public bool IsPrimaryEnabled => !IsOnRequiredView || IsStepComplete;
 
     public string PrimaryLabel
     {
@@ -240,6 +241,9 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                     _ => L("Onboarding.Go", "Go")
                 };
             }
+
+            if (!IsStepComplete)
+                return L("Common.Refresh", "Check again");
 
             return IsLastStep
                 ? L("Onboarding.Finish", "Finish")
@@ -274,7 +278,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
         _pollTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(500)
+            Interval = TimeSpan.FromSeconds(1)
         };
         _pollTimer.Tick += (_, _) => Poll();
 
@@ -285,6 +289,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     public void Start()
     {
         _index = 0;
+        _lastObservedViewKey = _app.CurrentViewKey;
         IsActive = true;
         RefreshSetupState(force: true);
         UpdateState();
@@ -335,6 +340,9 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                 _app.NavigateRecovery.Execute(null);
                 break;
         }
+
+        _lastObservedViewKey = _app.CurrentViewKey;
+        UpdateState();
     }
 
     private void GoBack()
@@ -356,6 +364,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Intro.Action", "Start with the basics. This guide will track real setup progress and keep the next step visible."),
             L("Onboarding.Setup.Intro.Done", "Ready."),
             string.Empty,
+            tracksProgress: false,
             _ => true));
 
         _steps.Add(new OnboardingTourStep(
@@ -364,6 +373,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.ProjectsRoot.Action", "Open Settings and choose your projects root folder."),
             L("Onboarding.Setup.ProjectsRoot.Done", "Projects root selected."),
             SettingsViewName,
+            tracksProgress: true,
             state => state.HasProjectsRoot));
 
         _steps.Add(new OnboardingTourStep(
@@ -372,6 +382,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Destination.Action", "Choose a backup folder. If you use advanced destinations, add one active destination with a path."),
             L("Onboarding.Setup.Destination.Done", "Backup destination ready."),
             SettingsViewName,
+            tracksProgress: true,
             state => state.HasBackupDestination));
 
         _steps.Add(new OnboardingTourStep(
@@ -380,6 +391,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Project.Action", "Open Projects, select one project candidate, and add it to VaultSync."),
             L("Onboarding.Setup.Project.Done", "First project registered."),
             ProjectsViewName,
+            tracksProgress: true,
             state => state.RegisteredProjectCount > 0));
 
         _steps.Add(new OnboardingTourStep(
@@ -388,6 +400,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Schedule.SaveHint", "Review the mode, interval, and quiet hours. Changes are saved automatically."),
             L("Onboarding.Status.Done", "Done"),
             ScheduleViewName,
+            tracksProgress: true,
             state => state.HasValidSchedule));
 
         _steps.Add(new OnboardingTourStep(
@@ -396,6 +409,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Backup.Action", "Open Backups and run a backup for the registered project."),
             L("Onboarding.Setup.Backup.Done", "First backup completed."),
             BackupsViewName,
+            tracksProgress: true,
             state => state.BackupCount > 0));
 
         _steps.Add(new OnboardingTourStep(
@@ -404,6 +418,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Done.Action", "Review this page when you want to restore files or inspect backup history."),
             L("Onboarding.Setup.Done.Done", "Onboarding complete."),
             BackupsViewName,
+            tracksProgress: false,
             state => state.BackupCount > 0));
 
         _steps.Add(new OnboardingTourStep(
@@ -412,15 +427,17 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Proof.Action", "Open Recovery and run the drill for your first project. Review any limited or failed evidence before relying on the backup."),
             L("Onboarding.Setup.Proof.Passed", "Recovery has been proved with a passed drill."),
             RecoveryViewName,
+            tracksProgress: true,
             state => state.PassedRecoveryDrillCount > 0));
     }
 
     private void RebuildChecklist()
     {
         ChecklistItems.Clear();
-        for (int i = 0; i < _steps.Count; i++)
+        int number = 1;
+        foreach (OnboardingTourStep step in _steps.Where(step => step.TracksProgress))
         {
-            ChecklistItems.Add(new OnboardingChecklistItem(i + 1, _steps[i].Title));
+            ChecklistItems.Add(new OnboardingChecklistItem(number++, step.Title));
         }
     }
 
@@ -441,14 +458,18 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         if (!IsActive)
             return;
 
+        if (!string.Equals(_lastObservedViewKey, _app.CurrentViewKey, StringComparison.Ordinal))
+        {
+            _lastObservedViewKey = _app.CurrentViewKey;
+            UpdateState();
+        }
         RefreshSetupState();
-        UpdateState();
     }
 
     private void RefreshSetupState(bool force = false)
     {
         DateTime now = DateTime.UtcNow;
-        if (!force && (now - _lastStateRefreshUtc).TotalMilliseconds < 900)
+        if (!force && (now - _lastStateRefreshUtc) < TimeSpan.FromSeconds(2))
             return;
 
         if (Interlocked.Exchange(ref _stateRefreshInFlight, 1) == 1)
@@ -462,6 +483,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                 OnboardingSetupState state = BuildSetupState();
                 Dispatcher.UIThread.Post(() =>
                 {
+                    if (state == _setupState)
+                        return;
                     _setupState = state;
                     UpdateState();
                 });
@@ -521,10 +544,12 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private void UpdateState()
     {
         IsStepComplete = CurrentStep?.IsComplete(_setupState) ?? false;
-        for (int i = 0; i < ChecklistItems.Count && i < _steps.Count; i++)
+        int checklistIndex = 0;
+        foreach (OnboardingTourStep step in _steps.Where(step => step.TracksProgress))
         {
-            ChecklistItems[i].IsCurrent = i == _index;
-            ChecklistItems[i].IsComplete = _steps[i].IsComplete(_setupState);
+            OnboardingChecklistItem item = ChecklistItems[checklistIndex++];
+            item.IsCurrent = ReferenceEquals(step, CurrentStep);
+            item.IsComplete = step.IsComplete(_setupState);
         }
 
         OnPropertiesChanged(
@@ -538,12 +563,14 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             nameof(CanGoBack),
             nameof(ProgressValue),
             nameof(StatusText),
-            nameof(PrimaryLabel),
-            nameof(IsPrimaryEnabled));
+            nameof(PrimaryLabel));
     }
 
     private int CompletedStepCount() =>
-        _steps.Count(step => step.IsComplete(_setupState));
+        _steps.Count(step => step.TracksProgress && step.IsComplete(_setupState));
+
+    private int TrackedStepCount() =>
+        _steps.Count(step => step.TracksProgress);
 
     private void Advance()
     {

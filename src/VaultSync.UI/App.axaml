@@ -684,6 +684,7 @@
 
         <Style Selector="ScrollViewer">
             <Setter Property="BringIntoViewOnFocusChange" Value="False" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
         </Style>
 
         <Style Selector="ListBoxItem">

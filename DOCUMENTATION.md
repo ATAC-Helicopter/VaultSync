@@ -31,7 +31,11 @@ Core pillars:
 - `docs/RELEASING.md`: release packaging/publishing flow.
 - `docs/schemas/release-manifest-v1.schema.json`: canonical direct-download
   artifact identity, size, SHA-256, and compatibility schema.
-- `docs/RELEASE_1.8.7.md`: active-release status, contracts, sequencing, and gates.
+- `docs/RELEASE_1.8.8.md`: active-release status, feedback intake, sequencing,
+  and gates.
+- `docs/RECOVERY_HORIZON_STRATEGY.md`: maintainer planning for the 1.9
+  architecture gates, delivery order, issue preparation, and the `1.10` versus
+  `2.0` decision.
 - `docs/REPOSITORY_FORMATS.md`: repository layouts, compatibility boundaries,
   and emergency read-only recovery guidance.
 - `docs/CROSS_MACHINE_SAFETY.md`: cross-machine threat model, identity,
@@ -137,9 +141,9 @@ For the `1.8` Chronicle release line, keep these areas aligned:
 - update, packaging, and release behavior (`docs/UPDATER.md`, `docs/MICROSOFT_STORE.md`, `docs/RELEASING.md`)
 - release highlights (`docs/WHATS_NEW.md`, `CHANGELOG.md`)
 
-## 10. Active 1.8.7 Documentation Contract
+## 10. Active 1.8.8 Documentation Contract
 
-VaultSync 1.8.7 is in development. Use `docs/RELEASE_1.8.7.md` as the status
+VaultSync 1.8.8 is in development. Use `docs/RELEASE_1.8.8.md` as the status
 page and `ROADMAP.md` as the canonical scope. Planned behavior must stay labeled
 as planned until its implementation, tests, and user documentation land.
 

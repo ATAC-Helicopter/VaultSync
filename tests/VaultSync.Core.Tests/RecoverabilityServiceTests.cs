@@ -19,7 +19,6 @@ namespace VaultSync.Core.Tests;
 public sealed class RecoverabilityServiceTests : IDisposable
 {
     private readonly TempDirectory _root = new();
-    private readonly RecoverabilityService _service = new();
 
     [Fact]
     public async Task AnalyzeAsync_VerifiesFolderBytesAndProducesStableEvidence()
@@ -96,7 +95,7 @@ public sealed class RecoverabilityServiceTests : IDisposable
     {
         string backup = CreateFolderFile("large.txt", "0123456789");
 
-        RecoverabilityResult result = await _service.AnalyzeAsync(
+        RecoverabilityResult result = await RecoverabilityService.AnalyzeAsync(
             new RecoverabilityRequest(42),
             backup,
             [Entry("large.txt", "0123456789")],
@@ -114,7 +113,7 @@ public sealed class RecoverabilityServiceTests : IDisposable
     {
         string backup = Directory.CreateDirectory(Path.Combine(_root.Path, "bounded-missing")).FullName;
 
-        RecoverabilityResult result = await _service.AnalyzeAsync(
+        RecoverabilityResult result = await RecoverabilityService.AnalyzeAsync(
             new RecoverabilityRequest(42),
             backup,
             [Entry("a-missing.txt", "a"), Entry("b-not-examined.txt", "b")],
@@ -140,7 +139,7 @@ public sealed class RecoverabilityServiceTests : IDisposable
         string conflictPath = CreateFolderFile(destination, "conflict.txt", "newer");
         File.SetLastWriteTimeUtc(conflictPath, DateTime.UtcNow.AddDays(1));
 
-        RecoverabilityResult result = await _service.AnalyzeAsync(
+        RecoverabilityResult result = await RecoverabilityService.AnalyzeAsync(
             new RecoverabilityRequest(
                 42,
                 DestinationMode: RecoverabilityDestinationMode.OriginalLocation,
@@ -176,11 +175,11 @@ public sealed class RecoverabilityServiceTests : IDisposable
         string backup = CreateFolderFile("Docs/a.txt", "a");
         CreateFolderFile(backup, "Docs-old/b.txt", "b");
 
-        RecoverabilityResult result = await _service.AnalyzeAsync(
+        RecoverabilityResult result = await RecoverabilityService.AnalyzeAsync(
             new RecoverabilityRequest(42, "Docs"),
             backup,
             [Entry("Docs/a.txt", "a"), Entry("Docs-old/b.txt", "b")]);
-        RecoverabilityResult wrongCase = await _service.AnalyzeAsync(
+        RecoverabilityResult wrongCase = await RecoverabilityService.AnalyzeAsync(
             new RecoverabilityRequest(42, "docs"),
             backup,
             [Entry("Docs/a.txt", "a")]);
@@ -189,8 +188,8 @@ public sealed class RecoverabilityServiceTests : IDisposable
         Assert.Equal(RecoverabilityVerdict.Unrecoverable, wrongCase.Verdict);
     }
 
-    private Task<RecoverabilityResult> Analyze(string backup, IReadOnlyCollection<FileEntry> entries) =>
-        _service.AnalyzeAsync(new RecoverabilityRequest(42), backup, entries);
+    private static Task<RecoverabilityResult> Analyze(string backup, IReadOnlyCollection<FileEntry> entries) =>
+        RecoverabilityService.AnalyzeAsync(new RecoverabilityRequest(42), backup, entries);
 
     private string CreateFolderFile(string relativePath, string content)
     {

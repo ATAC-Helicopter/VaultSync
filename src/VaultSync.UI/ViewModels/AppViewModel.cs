@@ -146,6 +146,7 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<string, DateTime> _metadataImportAttempts = new();
         private readonly ConcurrentDictionary<int, byte> _manualBackupInFlight = new();
         private readonly ConcurrentDictionary<int, byte> _backupCancelRequested = new();
+        private readonly ConcurrentDictionary<string, CancellationTokenSource> _restoreCancellations = new(StringComparer.Ordinal);
         private readonly ConcurrentDictionary<int, byte> _restoreAdvisoryShown = new();
         private readonly ConcurrentDictionary<int, byte> _projectRootMissingNotified = new();
         private readonly ConcurrentDictionary<int, byte> _lowDiskWarningShown = new();

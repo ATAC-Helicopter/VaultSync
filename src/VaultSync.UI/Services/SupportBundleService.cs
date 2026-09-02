@@ -708,7 +708,7 @@ public sealed class SupportBundleService
             .Where(path => !string.Equals(Path.GetFileName(path), ManifestFileName, StringComparison.Ordinal))
             .Select(path =>
             {
-                byte[] content = File.ReadAllBytes(path);
+                var file = new FileInfo(path);
                 string relativePath = Path.GetRelativePath(stagingRoot, path).Replace('\\', '/');
                 return new
                 {
@@ -716,8 +716,8 @@ public sealed class SupportBundleService
                     category = relativePath == ReportFileName
                         ? "report"
                         : relativePath.Split('/', 2)[0],
-                    sizeBytes = content.LongLength,
-                    sha256 = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant()
+                    sizeBytes = file.Length,
+                    sha256 = ComputeSha256(path)
                 };
             })
             .OrderBy(entry => entry.path, StringComparer.Ordinal)
@@ -734,6 +734,18 @@ public sealed class SupportBundleService
             Path.Combine(stagingRoot, ManifestFileName),
             JsonSerializer.Serialize(manifest, JsonOptions),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    }
+
+    private static string ComputeSha256(string path)
+    {
+        using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 81920,
+            FileOptions.SequentialScan);
+        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
     }
 
     private static string GetDiagnosticsDirectory()

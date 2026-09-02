@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using VaultSync.Core.Config;
 using VaultSync.Core.Tests.TestSupport;
 using VaultSync.UI;
@@ -10,6 +11,38 @@ namespace VaultSync.Core.Tests;
 
 public sealed class ScheduleViewModelTests
 {
+    [Fact]
+    public void ProjectCoverageProviderRunsOutsideTheCallingThread()
+    {
+        using var configScope = new TestAppConfigScope();
+        using var providerCalled = new ManualResetEventSlim();
+        int creatingThread = Environment.CurrentManagedThreadId;
+        int providerThread = creatingThread;
+        var localization = new LocalizationService();
+        var settings = new SettingsViewModel(localization);
+
+        var schedule = new ScheduleViewModel(
+            settings,
+            localization,
+            new ScheduleViewModelDependencies(
+                () => null,
+                () =>
+                {
+                    providerThread = Environment.CurrentManagedThreadId;
+                    providerCalled.Set();
+                    return [];
+                },
+                () => PowerState.Unknown,
+                () => { },
+                () => { },
+                () => { }));
+
+        schedule.QueueProjectCoverageRefresh();
+
+        Assert.True(providerCalled.Wait(TimeSpan.FromSeconds(5)));
+        Assert.NotEqual(creatingThread, providerThread);
+    }
+
     [Fact]
     public void QuickPolicyEditsUseTheSettingsSourceOfTruth()
     {

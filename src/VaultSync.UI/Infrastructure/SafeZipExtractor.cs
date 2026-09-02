@@ -42,7 +42,7 @@ internal static class SafeZipExtractor
         }
     }
 
-    private static void ValidateArchiveShape(ZipArchive archive)
+    internal static void ValidateArchiveShape(ZipArchive archive)
     {
         if (archive.Entries.Count > MaxEntryCount)
             throw new InvalidDataException("Archive contains too many entries.");

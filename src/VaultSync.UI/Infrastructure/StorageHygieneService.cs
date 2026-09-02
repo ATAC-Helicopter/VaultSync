@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using VaultSync.Core.Services;
 
 namespace VaultSync.UI.Infrastructure;
 
@@ -20,18 +22,20 @@ internal readonly record struct StorageCleanupSummary(int FilesRemoved, int Dire
 /// </summary>
 internal static class StorageHygieneService
 {
+    private const string ApplicationDirectoryName = "VaultSync";
     private static readonly TimeSpan PatchRetention = TimeSpan.FromDays(1);
     private static readonly TimeSpan PatchWorkingRetention = TimeSpan.FromHours(1);
     private static readonly TimeSpan LogRetention = TimeSpan.FromDays(14);
     private static readonly TimeSpan ScanCacheRetention = TimeSpan.FromDays(30);
     private static readonly TimeSpan ReleaseMetadataRetention = TimeSpan.FromDays(180);
+    private static readonly TimeSpan TelemetryExportRetention = TimeSpan.FromDays(30);
     private static readonly TimeSpan TemporaryRetention = TimeSpan.FromDays(1);
     private const long MaximumLegacyLogBytes = 10L * 1024L * 1024L;
     private static readonly string[] TemporaryDirectoryPatterns =
     [
-        "vaultsync-open-*",
         "vaultsync-rotate-*",
         "vaultsync-restore-*",
+        "vaultsync-metadata-import-*",
         "vaultsync_archive_*"
     ];
 
@@ -44,7 +48,15 @@ internal static class StorageHygieneService
         if (!string.IsNullOrWhiteSpace(localData))
         {
             summary = summary.Add(PruneApplicationData(
-                Path.Combine(localData, "VaultSync"),
+                Path.Combine(localData, ApplicationDirectoryName),
+                now));
+        }
+
+        string applicationData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!string.IsNullOrWhiteSpace(applicationData))
+        {
+            summary = summary.Add(PruneConfigurationData(
+                Path.Combine(applicationData, ApplicationDirectoryName),
                 now));
         }
 
@@ -96,6 +108,15 @@ internal static class StorageHygieneService
             file => file.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase),
             utcNow - ReleaseMetadataRetention,
             maximumRetainedBytes: 10L * 1024L * 1024L));
+        summary = summary.Add(PruneFiles(
+            Path.Combine(root, "cache", "release-assets"),
+            IsReleaseAssetCacheTemporaryFile,
+            utcNow - TemporaryRetention));
+        summary = summary.Add(PruneDirectories(
+            Path.Combine(root, "exports"),
+            "support-*",
+            utcNow - TemporaryRetention,
+            IsSupportBundleStagingDirectory));
         return summary;
     }
 
@@ -113,9 +134,20 @@ internal static class StorageHygieneService
             utcNow - PatchWorkingRetention));
     }
 
+    internal static StorageCleanupSummary PruneConfigurationData(string root, DateTime utcNow) =>
+        PruneFiles(
+            root,
+            file => IsAtomicTemporaryFile(file, InstallationIdentityService.IdentityFileName) ||
+                    IsAtomicTemporaryFile(file, "credentials.json"),
+            utcNow - PatchWorkingRetention);
+
     internal static StorageCleanupSummary PruneTemporaryData(string tempRoot, DateTime utcNow)
     {
-        StorageCleanupSummary summary = default;
+        int staleOpenWorkspaces = EncryptedOpenWorkspaceManager.CleanupStaleWorkspaces(
+            tempRoot,
+            utcNow,
+            TemporaryRetention);
+        var summary = new StorageCleanupSummary(0, staleOpenWorkspaces, 0);
         foreach (string pattern in TemporaryDirectoryPatterns)
         {
             summary = summary.Add(PruneDirectories(tempRoot, pattern, utcNow - TemporaryRetention));
@@ -127,13 +159,22 @@ internal static class StorageHygieneService
                     file.Extension.Equals(".txt", StringComparison.OrdinalIgnoreCase),
             utcNow - TemporaryRetention));
         summary = summary.Add(PruneFiles(
-            Path.Combine(tempRoot, "VaultSync", "updates"),
+            Path.Combine(tempRoot, ApplicationDirectoryName, "updates"),
             static _ => true,
             utcNow - TemporaryRetention));
         summary = summary.Add(PruneDirectories(
-            Path.Combine(tempRoot, "VaultSync", "recovery-tests"),
+            Path.Combine(tempRoot, ApplicationDirectoryName, "recovery-tests"),
             "*",
             utcNow - TemporaryRetention));
+        summary = summary.Add(PruneDirectories(
+            Path.Combine(tempRoot, "vaultsync-meta-export"),
+            "*.consumed-*",
+            utcNow - TemporaryRetention));
+        summary = summary.Add(PruneFiles(
+            Path.Combine(tempRoot, "vaultsync-telemetry-export"),
+            IsTelemetryExport,
+            utcNow - TelemetryExportRetention,
+            maximumRetainedBytes: 100L * 1024L * 1024L));
         return summary;
     }
 
@@ -206,8 +247,7 @@ internal static class StorageHygieneService
                 long bytes = TryGetDirectorySize(directory);
                 try
                 {
-                    bool isLink = (directory.Attributes & FileAttributes.ReparsePoint) != 0;
-                    directory.Delete(recursive: !isLink);
+                    DeleteDirectoryWithoutFollowingLinks(directory);
                     summary = summary.Add(new StorageCleanupSummary(0, 1, bytes));
                 }
                 catch
@@ -229,11 +269,124 @@ internal static class StorageHygieneService
         {
             if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
                 return 0;
-            return directory.EnumerateFiles("*", SearchOption.AllDirectories).Sum(file => file.Length);
+
+            long totalBytes = 0;
+            var pending = new Stack<DirectoryInfo>();
+            pending.Push(directory);
+            while (pending.TryPop(out DirectoryInfo? current))
+            {
+                totalBytes = AddOwnedFileSizes(
+                    totalBytes,
+                    current.EnumerateFiles("*", SearchOption.TopDirectoryOnly));
+
+                foreach (DirectoryInfo child in current.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
+                {
+                    if ((child.Attributes & FileAttributes.ReparsePoint) == 0)
+                        pending.Push(child);
+                }
+            }
+
+            return totalBytes;
         }
         catch
         {
             return 0;
         }
+    }
+
+    private static long AddOwnedFileSizes(long totalBytes, IEnumerable<FileInfo> files)
+    {
+        foreach (FileInfo file in files)
+        {
+            if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
+                continue;
+
+            totalBytes = file.Length > long.MaxValue - totalBytes
+                ? long.MaxValue
+                : totalBytes + file.Length;
+        }
+
+        return totalBytes;
+    }
+
+    private static void DeleteDirectoryWithoutFollowingLinks(DirectoryInfo directory)
+    {
+        if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
+        {
+            directory.Delete(recursive: false);
+            return;
+        }
+
+        foreach (FileInfo file in directory.EnumerateFiles("*", SearchOption.TopDirectoryOnly))
+            file.Delete();
+
+        foreach (DirectoryInfo child in directory.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
+            DeleteDirectoryWithoutFollowingLinks(child);
+
+        directory.Delete(recursive: false);
+    }
+
+    private static bool IsReleaseAssetCacheTemporaryFile(FileInfo file)
+    {
+        string[] segments = file.Name.Split('.', StringSplitOptions.None);
+        return segments is ["", var identity, "json", var writeId, "tmp"] &&
+               identity.Length == 64 &&
+               identity.All(Uri.IsHexDigit) &&
+               Guid.TryParseExact(writeId, "N", out _);
+    }
+
+    private static bool IsAtomicTemporaryFile(FileInfo file, string durableFileName)
+    {
+        string prefix = $".{durableFileName}.";
+        const string suffix = ".tmp";
+        if (!file.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            !file.Name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        int writeIdLength = file.Name.Length - prefix.Length - suffix.Length;
+        return writeIdLength == 32 &&
+               Guid.TryParseExact(file.Name.AsSpan(prefix.Length, writeIdLength), "N", out _);
+    }
+
+    private static bool IsSupportBundleStagingDirectory(DirectoryInfo directory)
+    {
+        const string prefix = "support-";
+        const int timestampLength = 15;
+        if (!directory.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        ReadOnlySpan<char> remainder = directory.Name.AsSpan(prefix.Length);
+        return remainder.Length == timestampLength + 1 + 32 &&
+               remainder[timestampLength] == '-' &&
+               DateTime.TryParseExact(
+                   remainder[..timestampLength],
+                   "yyyyMMdd-HHmmss",
+                   CultureInfo.InvariantCulture,
+                   DateTimeStyles.AssumeUniversal,
+                   out _) &&
+               Guid.TryParseExact(remainder[(timestampLength + 1)..], "N", out _);
+    }
+
+    private static bool IsTelemetryExport(FileInfo file)
+    {
+        const string prefix = "telemetry_";
+        const string suffix = ".zip";
+        if (!file.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            !file.Name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        ReadOnlySpan<char> timestamp = file.Name.AsSpan(
+            prefix.Length,
+            file.Name.Length - prefix.Length - suffix.Length);
+        return DateTime.TryParseExact(
+            timestamp,
+            "yyyyMMdd_HHmmss",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out _);
     }
 }

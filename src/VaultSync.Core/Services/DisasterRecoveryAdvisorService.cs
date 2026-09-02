@@ -79,29 +79,57 @@ public sealed partial class DisasterRecoveryAdvisorService
     {
         foreach (Backup backup in backups)
         {
-            bool isProtected = metadataBySnapshotId.TryGetValue(backup.SnapshotId, out SnapshotHistoryMetadata? metadata) && metadata.IsProtected;
-            if (isProtected || !snapshotsById.TryGetValue(backup.SnapshotId, out Snapshot? snapshot))
-                continue;
-
-            string marker = $"{project.Tags} {metadata?.Label} {metadata?.Tags}";
-            if (ReleaseMarkerRegex().IsMatch(marker))
-                return new(project.Id, snapshot.Id, backup.Id, ProtectionRecommendationKind.ReleaseMarker, "This recovery point is labeled like a release or delivery milestone.");
-
-            double deletionRatio = snapshot.FileCount <= 0 ? 0 : snapshot.DiffDeleted / (double)snapshot.FileCount;
-            if (snapshot.DiffDeleted >= 10 && deletionRatio >= 0.10)
-                return new(project.Id, snapshot.Id, backup.Id, ProtectionRecommendationKind.LargeDeletion, $"This point follows a large deletion ({snapshot.DiffDeleted:N0} files).");
-
-            int changed = snapshot.DiffAdded + snapshot.DiffModified + snapshot.DiffDeleted;
-            double churnRatio = snapshot.FileCount <= 0 ? 0 : changed / (double)snapshot.FileCount;
-            if (changed >= 100 || churnRatio >= 0.25)
-                return new(project.Id, snapshot.Id, backup.Id, ProtectionRecommendationKind.SignificantChange, $"This point captures a significant change ({changed:N0} files).");
+            ProtectionRecommendation? recommendation = BuildSnapshotRecommendation(
+                project,
+                backup,
+                snapshotsById,
+                metadataBySnapshotId);
+            if (recommendation is not null)
+                return recommendation;
         }
 
         Backup? latest = backups.FirstOrDefault();
-        if (latest is null || metadataBySnapshotId.Values.Any(metadata => metadata.IsProtected && backups.Any(backup => backup.SnapshotId == metadata.SnapshotId)))
+        if (latest is null || HasProtectedBackup(backups, metadataBySnapshotId))
             return null;
 
         return new(project.Id, latest.SnapshotId, latest.Id, ProtectionRecommendationKind.Baseline, "Protect a recent baseline before cleanup or other risky work.");
+    }
+
+    private static ProtectionRecommendation? BuildSnapshotRecommendation(
+        Project project,
+        Backup backup,
+        IReadOnlyDictionary<int, Snapshot> snapshotsById,
+        IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId)
+    {
+        metadataBySnapshotId.TryGetValue(backup.SnapshotId, out SnapshotHistoryMetadata? metadata);
+        if (metadata?.IsProtected == true ||
+            !snapshotsById.TryGetValue(backup.SnapshotId, out Snapshot? snapshot))
+        {
+            return null;
+        }
+
+        string marker = $"{project.Tags} {metadata?.Label} {metadata?.Tags}";
+        if (ReleaseMarkerRegex().IsMatch(marker))
+            return new(project.Id, snapshot.Id, backup.Id, ProtectionRecommendationKind.ReleaseMarker, "This recovery point is labeled like a release or delivery milestone.");
+
+        double deletionRatio = snapshot.FileCount <= 0 ? 0 : snapshot.DiffDeleted / (double)snapshot.FileCount;
+        if (snapshot.DiffDeleted >= 10 && deletionRatio >= 0.10)
+            return new(project.Id, snapshot.Id, backup.Id, ProtectionRecommendationKind.LargeDeletion, $"This point follows a large deletion ({snapshot.DiffDeleted:N0} files).");
+
+        int changed = snapshot.DiffAdded + snapshot.DiffModified + snapshot.DiffDeleted;
+        double churnRatio = snapshot.FileCount <= 0 ? 0 : changed / (double)snapshot.FileCount;
+        return changed >= 100 || churnRatio >= 0.25
+            ? new(project.Id, snapshot.Id, backup.Id, ProtectionRecommendationKind.SignificantChange, $"This point captures a significant change ({changed:N0} files).")
+            : null;
+    }
+
+    private static bool HasProtectedBackup(
+        IReadOnlyList<Backup> backups,
+        IReadOnlyDictionary<int, SnapshotHistoryMetadata> metadataBySnapshotId)
+    {
+        var backupSnapshotIds = backups.Select(backup => backup.SnapshotId).ToHashSet();
+        return metadataBySnapshotId.Values.Any(metadata =>
+            metadata.IsProtected && backupSnapshotIds.Contains(metadata.SnapshotId));
     }
 
     private static string GetDestinationIdentity(Backup backup) =>

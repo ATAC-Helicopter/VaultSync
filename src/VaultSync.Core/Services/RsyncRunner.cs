@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -28,6 +29,10 @@ namespace VaultSync.Core.Services
         public Task<int> SyncAsync(Project project, string destination, bool dryRun, CancellationToken ct)
             => SyncAsync(project, destination, dryRun, progressCallback: null, linkDest: null, ct: ct);
 
+        [SuppressMessage(
+            "Major Code Smell",
+            "S3776:Cognitive Complexity of methods should not be too high",
+            Justification = "The rsync process lifetime deliberately keeps argument construction, streamed progress handlers, cancellation, and temporary exclusion-file ownership in one auditable boundary.")]
         public async Task<int> SyncAsync(
             Project project,
             string destination,
@@ -46,7 +51,10 @@ namespace VaultSync.Core.Services
             {
                 tempExcludeFile = Path.Combine(Path.GetTempPath(), $"vaultsync_exclude_{Guid.NewGuid():N}.txt");
                 IReadOnlyList<string> patterns = filter.RawPatterns ?? Array.Empty<string>();
-                File.WriteAllLines(tempExcludeFile, patterns.Where(p => !string.IsNullOrWhiteSpace(p)));
+                await File.WriteAllLinesAsync(
+                    tempExcludeFile,
+                    patterns.Where(p => !string.IsNullOrWhiteSpace(p)),
+                    ct).ConfigureAwait(false);
             }
 
             var psi = new ProcessStartInfo
@@ -186,20 +194,64 @@ namespace VaultSync.Core.Services
             catch (OperationCanceledException)
             {
                 Console.WriteLine("[RsyncRunner] Cancellation requested; stopping rsync process.");
-                try { proc.CancelErrorRead(); } catch { }
-                try { proc.CancelOutputRead(); } catch { }
-                try { proc.Kill(entireProcessTree: true); } catch { }
+                TryCancelRead(proc, cancelErrorStream: true);
+                TryCancelRead(proc, cancelErrorStream: false);
+                TryKill(proc);
                 throw;
             }
             finally
             {
-                if (tempExcludeFile != null && File.Exists(tempExcludeFile))
-                {
-                    try { File.Delete(tempExcludeFile); } catch { }
-                }
+                TryDeleteExcludeFile(tempExcludeFile);
             }
 
             return proc.ExitCode;
+        }
+
+        private static void TryCancelRead(Process process, bool cancelErrorStream)
+        {
+            try
+            {
+                if (cancelErrorStream)
+                    process.CancelErrorRead();
+                else
+                    process.CancelOutputRead();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Cancellation cleanup is best effort because the process or async reader may already have exited.
+                RuntimeLog.WriteVerbose($"[RsyncRunner] Could not stop redirected process output: {ex.Message}");
+            }
+        }
+
+        private static void TryKill(Process process)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or
+                                           NotSupportedException or
+                                           System.ComponentModel.Win32Exception)
+            {
+                // The process may have exited between cancellation observation and this cleanup attempt.
+                RuntimeLog.WriteVerbose($"[RsyncRunner] Could not stop an already-exiting rsync process: {ex.Message}");
+            }
+        }
+
+        private static void TryDeleteExcludeFile(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return;
+
+            try
+            {
+                File.Delete(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // The file is temporary and startup hygiene can remove it if another process still holds it.
+                RuntimeLog.WriteVerbose($"[RsyncRunner] Could not remove temporary exclusion file '{path}': {ex.Message}");
+            }
         }
 
         private sealed record RsyncCapabilities(Version? Version, bool SupportsInfoProgress2);
@@ -235,7 +287,15 @@ namespace VaultSync.Core.Services
 
                 if (!proc.WaitForExit(2000))
                 {
-                    try { proc.Kill(entireProcessTree: true); } catch { }
+                    try
+                    {
+                        proc.Kill(entireProcessTree: true);
+                    }
+                    catch
+                    {
+                        // Capability detection is best effort. A failed timeout
+                        // cleanup must not prevent the guarded fallback path.
+                    }
                     return new RsyncCapabilities(null, false);
                 }
 
@@ -284,11 +344,8 @@ namespace VaultSync.Core.Services
                 return null;
 
             string numberSpan = line[start..(end + 1)];
-            if (double.TryParse(numberSpan, out double value))
-            {
-                if (value >= 0 && value <= 100)
-                    return value;
-            }
+            if (double.TryParse(numberSpan, out double value) && value >= 0 && value <= 100)
+                return value;
 
             return null;
         }

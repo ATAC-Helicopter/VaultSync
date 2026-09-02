@@ -1,0 +1,60 @@
+name: Performance Benchmarks
+
+on:
+  pull_request:
+    branches: [ "Dev", "release/**" ]
+    paths:
+      - "benchmarks/**"
+      - "src/VaultSync.Core/**"
+      - ".github/workflows/performance-benchmarks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-profile:
+    name: ${{ matrix.name }} release profile
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+          - name: Linux
+            os: ubuntu-latest
+          - name: macOS
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run enforced release profile
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP "performance-${{ runner.os }}.json"
+          dotnet run `
+            --project benchmarks/VaultSync.Benchmarks/VaultSync.Benchmarks.csproj `
+            --configuration Release `
+            -- `
+            --enforce `
+            --output $output
+
+      - name: Upload benchmark evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: performance-${{ runner.os }}
+          path: ${{ runner.temp }}/performance-${{ runner.os }}.json
+          if-no-files-found: error
+          retention-days: 30

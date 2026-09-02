@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -43,15 +44,7 @@ public sealed class RestoreReadinessService
         int risk = results.Count(result => result.State == RestoreReadinessState.Risk);
         int unavailable = results.Count(result => result.State == RestoreReadinessState.Unavailable);
 
-        string headline = ready == results.Count && results.Count > 0
-            ? "Restore ready across all tracked projects"
-            : unavailable > 0
-                ? $"{unavailable} project(s) are not currently restore-ready"
-                : risk > 0
-                    ? $"{risk} project(s) need restore-readiness attention"
-                    : attention > 0
-                        ? $"{attention} project(s) should be reviewed"
-                        : "No tracked projects yet";
+        string headline = BuildHeadline(results.Count, ready, attention, risk, unavailable);
 
         string detail = string.Format(
             CultureInfo.InvariantCulture,
@@ -74,6 +67,20 @@ public sealed class RestoreReadinessService
         };
     }
 
+    private static string BuildHeadline(int projectCount, int ready, int attention, int risk, int unavailable)
+    {
+        if (projectCount > 0 && ready == projectCount)
+            return "Restore ready across all tracked projects";
+        if (unavailable > 0)
+            return $"{unavailable} project(s) are not currently restore-ready";
+        if (risk > 0)
+            return $"{risk} project(s) need restore-readiness attention";
+        if (attention > 0)
+            return $"{attention} project(s) should be reviewed";
+
+        return "No tracked projects yet";
+    }
+
     public static IReadOnlyDictionary<string, bool> BuildDestinationReachabilityLookup(AppConfig config)
     {
         var lookup = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
@@ -89,6 +96,10 @@ public sealed class RestoreReadinessService
         return lookup;
     }
 
+    [SuppressMessage(
+        "Major Code Smell",
+        "S3776:Cognitive Complexity of methods should not be too high",
+        Justification = "The readiness scorecard keeps its small independent deductions together so the final score and user-facing reasons remain auditable in one place.")]
     private static ProjectRestoreReadiness EvaluateProject(
         Project project,
         IReadOnlyList<Backup>? backups,
@@ -248,7 +259,7 @@ public sealed class RestoreReadinessService
                 new()
                 {
                     Alias = "Primary",
-                    Path = config.Backups.BackupLocation!,
+                    Path = config.Backups.BackupLocation,
                     Active = true,
                     PreMounted = true
                 }

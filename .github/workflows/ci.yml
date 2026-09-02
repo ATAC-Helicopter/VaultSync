@@ -3,8 +3,16 @@ name: CI
 on:
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   push:
-    branches: [ "Dev", "Stable", "release/**" ]
+    # Release branches are validated by their required PR. Keep post-merge
+    # validation on the integration and stable branches.
+    branches: [ "Dev", "Stable" ]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   workflow_dispatch:
 
 permissions:

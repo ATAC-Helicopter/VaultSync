@@ -26,6 +26,8 @@ Recovery Horizon (`1.9`) release families.
 - Product and engineering work uses `VS-xxxx`.
 - Defects use `BUG-xxxxx`.
 - Release gates may use `REL-xxxxx`.
+- Each execution item has exactly one owning identifier. A bug-labelled item
+  must never carry a `VS-xxxx` identifier, including legacy dual-ID titles.
 - The first two digits of a `VS` identifier map to the release family:
   `18xx` for `1.8` and `19xx` for `1.9`.
 - The remaining digits are allocated sequentially and are never reused.
@@ -44,12 +46,20 @@ Recovery Horizon (`1.9`) release families.
 
 The checkbox is the delivery state. GitHub Project status, milestone, labels,
 assignee, and dates mirror this file rather than defining a second roadmap.
+Every project item requires Start and Target dates; Done items also require
+Completed on. Missing Start dates trace to issue or pull-request creation.
+Missing Target dates trace, in order, to the item's milestone due date, the
+published date of its historical release, the matching release-horizon
+milestone, or the close/merge date of completed unscheduled work. The sync
+fails closed when none of those sources provides a defensible date.
 
 Before synchronizing descriptions, run
 `pwsh scripts/sync_project_descriptions.ps1 -ProjectNumber 7 -DryRun` and review
 the structured change report. The synchronizer reconstructs wrapped roadmap
-titles for matching, preserves manually maintained issue contracts, and writes
-only bodies carrying its `Synced from ROADMAP.md` ownership marker.
+titles for matching, preserves manually maintained issue contracts, writes
+only bodies carrying its `Synced from ROADMAP.md` ownership marker, and audits
+the required project dates. A non-dry run repairs traceable missing dates and
+refuses partial updates when any date lacks a canonical source.
 
 ## Product arc
 
@@ -58,6 +68,7 @@ only bodies carrying its `Synced from ROADMAP.md` ownership marker.
 | `1.7` | Sentinel | Can I trust the stored data? |
 | `1.8` | Chronicle | What was protected, what changed, and what can be recovered? |
 | `1.9` | Recovery Horizon | Can I recover from a disk or machine-level failure? |
+| `2.0` candidate | Resilience | What failures can my protection strategy survive? |
 
 ---
 
@@ -374,16 +385,15 @@ History carry the same folder identity.
 
 ## 1.8.7 — Trust and Portability
 
-**Status:** Active development. Release contracts were approved and implementation
-started on 2026-08-12.
+**Status:** Released on 2026-08-21 as `v1.8.7`.
 **Tagline:** *Show the proof.*
 **Stable target:** 2026-08-24
 **Working branch:** `release/1.8.7`
 **Integration target:** `Dev`
 
-The maintained implementation status and safety contracts for this release live
-in `docs/RELEASE_1.8.7.md`. That page distinguishes shipped behavior from work
-that exists only on the release branch or remains planned.
+The shipped behavior is summarized in `CHANGELOG.md` and `docs/WHATS_NEW.md`.
+Durable repository and cross-machine contracts remain in
+`docs/REPOSITORY_FORMATS.md` and `docs/CROSS_MACHINE_SAFETY.md`.
 
 Minor releases target a weekly train and must not remain open longer than two
 weeks after the preceding Stable release. Release-blocking safety and regression
@@ -424,9 +434,9 @@ after the planned minor train is complete and use explicit beta qualification.
   - Completed 2026-08-21: final manifest-listed packages receive validated SPDX
     2.3 documents tied to their exact SHA-256 and RID-specific dependency graph.
     A commit-pinned GitHub action attests final package provenance and each SBOM;
-    candidate automation exercises both API-backed and downloaded-bundle trust.
-    Unpublished release-candidate run `32425579729` built every supported package
-    and passed manifest, SBOM, online-attestation, and offline-bundle verification.
+    candidate automation exercises both API-backed and downloaded-bundle trust
+    and passed manifest, SBOM, online-attestation, and offline-bundle verification
+    for every supported package.
 - [x] `VS-1874` `P1` Export a portable, checksummed Recovery Evidence Package.
   - Scope: package a versioned JSON record, readable report, package manifest,
     checksums, build identity, recovery state, drill evidence, and repository
@@ -672,22 +682,206 @@ must not make truthful checksums, manifests, SBOMs, or provenance optional.
 
 ## 1.8.8 — Chronicle Stabilization
 
-**Status:** Planned and required before `1.9.0`
+**Status:** Active and required before `1.9.0`
 **Tagline:** *A stable foundation for larger recovery.*
+**Planning started:** 2026-08-24
+**Stable target:** 2026-09-01
+**Maximum date:** 2026-09-04
+**Working branch:** `release/1.8.8`
+**Integration target:** `Dev`
 
-- [ ] `VS-1823` `P0` Establish large-history and high-file-count performance
+The maintained kickoff, 1.8.7 feedback snapshot, code baseline, delivery order,
+and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
+
+- [x] `VS-1823` `P0` Establish large-history and high-file-count performance
   budgets with repeatable benchmarks. _(Existing issue #382.)_
-- [ ] `VS-1821` `P1` Finish backup and metadata orchestration decomposition
-  needed for fault isolation. _(Existing issue #380.)_
-- [ ] `VS-1822` `P1` Finish oversized desktop view-model decomposition needed
-  for fault isolation. _(Existing issue #381.)_
-- [ ] `VS-1881` `P0` Run the complete Windows, macOS, and Linux release matrix.
-- [ ] `VS-1882` `P0` Harden interruption, cancellation, archive corruption,
-  retention, migration, and clean-state recovery.
-- [ ] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
+- [x] `VS-1821` `P1` Finish backup and metadata orchestration decomposition
+  needed for fault isolation. _(Active: snapshot creation, deferred-hash progress,
+  checkpoint telemetry, and native-copy execution now use focused boundaries;
+  release scope completed for issue #380.)_
+- [x] `VS-1822` `P1` Finish oversized desktop view-model decomposition needed
+  for fault isolation. _(Issue #381; release-scope boundaries and qualification
+  are complete.)_
+- [x] `VS-1881` `P0` Run the complete Windows, macOS, and Linux release matrix.
+- [x] `VS-1882` `P0` Harden interruption, cancellation, archive corruption,
+  retention, migration, and clean-state recovery. _(Active: plain and encrypted
+  compression interruption is qualified, and encryption observes cancellation
+  between copied chunks; restart cleanup now rejects invalid resume checkpoints;
+  verification cancellation now propagates; interrupted portable-metadata exports
+  roll back atomically; scan and plain/encrypted upload cancellation are qualified;
+  exact 1.8.7 repository/configuration state, clean-machine metadata recovery,
+  and final release-scope lifecycle boundaries are qualified.)_
+- [x] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
   narrow-layout defects.
-- [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
+- [x] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling
+  while preserving purpose-built file, diff, and log panes. _(Issue #569;
+  shared and explicit scroll policies are implemented and runtime qualification
+  is complete.)_
+- [x] `BUG-18117` `P0` Confine retention deletion across filesystem links and
+  preserve the indexed restore point when the selected backup root is unsafe or
+  cannot be deleted. _(Issue #570; delivered on the release branch and awaiting
+  integration through #568.)_
+- [x] `BUG-18118` `P0` Fail archive and managed-copy backups when a required
+  snapshotted source file disappears or becomes unreadable instead of publishing
+  an incomplete restore point. _(Issue #571; delivered on the release branch and
+  awaiting integration through #568.)_
+- [x] `BUG-18119` `P1` Isolate decrypted-open temporary workspaces between app
+  processes so shutdown, manual lock, and stale cleanup preserve work owned by
+  another live instance. _(Issue #572; delivered on the release branch and
+  awaiting integration through #568.)_
+- [x] `BUG-18120` `P0` Confine startup cleanup and reclaimed-size inspection to
+  VaultSync-owned disposable trees without traversing linked children.
+  _(Issue #577; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18121` `P1` Remove crash-abandoned verified release-cache temporary
+  writes using an exact, age-bounded filename contract.
+  _(Issue #579; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18122` `P1` Remove abandoned installation-identity and credential-index
+  atomic writes without selecting their durable files or unrelated content.
+  _(Issue #580; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18123` `P1` Remove crash-abandoned sanitized support-bundle staging
+  trees without selecting completed exports or unrelated directories.
+  _(Issue #581; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18124` `P1` Bound app-created telemetry ZIP accumulation in temporary
+  storage using an exact 30-day and 100 MB retention contract.
+  _(Issue #582; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
+  _(Issue #491; complete. The 2026-08-26 audit found no vulnerable or directly
+  outdated packages; reviewed transitive and legacy dependencies remain
+  constrained by the supported Avalonia and Windows notification stacks.)_
+- [x] `VS-1885` `P1` Resolve the remaining release-automation static-analysis
+  findings without weakening fail-closed Project date and work-ID integrity.
+  _(Issue #573; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `VS-1886` `P1` Bound archive and support-package memory pressure by
+  reusing sequential copy buffers and streaming manifest hashes.
+  _(Issue #578; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `VS-1887` `P1` Make guided setup actionable and move Guide and Schedule
+  progress queries off the UI thread with stale/coalesced-result handling.
+  _(Issue #583; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `VS-1888` `P1` Resolve remaining core Sonar annotations with async I/O,
+  cohesive repository writes, and focused complexity boundaries.
+  _(Issue #607; final-head Sonar and CodeQL are green and integration through
+  #568 remains.)_
+- [x] `VS-1889` `P1` Qualify multi-version patch bases per platform without
+  weakening exact-version or managed-file safety. _(Linux 1.8.2, 1.8.3, 1.8.5,
+  and 1.8.6 are candidates; the release build omits any base whose published
+  managed inventory is not a subset of the target, preserving installer
+  fallback. Issue #613; integration through #568 remains.)_
+- [x] `BUG-18125` `P1` Prevent predictable encrypted-restore staging collisions
+  and preserve existing output when authentication fails.
+  _(Issue #584; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18126` `P1` Reject OS temporary-directory prefix collisions when
+  resolving decrypted-workspace cleanup roots.
+  _(Issue #585; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18127` `P0` Keep overlapping backup cancellation registrations
+  isolated so an older run cannot disable cancellation of its replacement.
+  _(Issue #588; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18128` `P1` Prevent active release branches from launching duplicate
+  or unbounded Sonar analysis runs.
+  _(Issue #589; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18129` `P0` Publish directory scan-cache state only after hashing and
+  snapshot persistence succeed.
+  _(Issue #590; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18130` `P1` Run bounded CI, CodeQL, and quality gates once per
+  release-branch change while retaining post-merge checks.
+  _(Issue #591; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18131` `P0` Skip linked child paths during snapshot scanning and
+  invalidate caches created under the older traversal policy.
+  _(Issue #592; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18132` `P0` Propagate cancellation raised during destination-file
+  verification instead of converting it into a completed mismatch.
+  _(Issue #593; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18133` `P0` Make restore and sandbox-apply cancellation transactional
+  so overwritten files roll back and partial target state is not published.
+  _(Issue #594; focused tests and final hosted gates pass; integration through
+  #568 remains.)_
+- [x] `BUG-18134` `P0` Observe metadata cancellation before local repository or
+  portable-store writes begin. _(Issue #598; pre-write cancellation plus atomic
+  portable-export and recoverable schema/legacy import rollback are implemented;
+  final hosted gates pass and integration remains open.)_
+- [x] `BUG-18135` `P0` Keep the backup success commit internally consistent when
+  cancellation arrives from the final progress notification. _(Issue #599;
+  implemented with a focused regression test and awaiting integration through
+  #568.)_
+- [x] `BUG-18136` `P0` Reject a partial scan when cancellation arrives while the
+  final filesystem entry is processed. _(Issue #600; implemented with a focused
+  regression test and awaiting integration through #568.)_
+- [x] `BUG-18137` `P0` Revalidate backup data after upload and immediately before
+  metadata publication so destination loss cannot create a dangling success row.
+  _(Issue #601; implemented with a focused regression test and awaiting
+  integration through #568.)_
+- [x] `BUG-18138` `P0` Preserve rollback evidence with an actionable location
+  when a vanished restore destination prevents automatic recovery. _(Issue #602;
+  implemented with a focused regression test and awaiting integration through
+  #568.)_
+- [x] `BUG-18139` `P0` Defer retention metadata deletion while the destination
+  root is unavailable or an app-managed mount is disconnected. _(Issue #603;
+  implemented with a focused regression test and awaiting integration through
+  #568.)_
+- [x] `BUG-18140` `P0` Validate deferred metadata after replay and retain the
+  complete queue when the destination disappears before commit. _(Issue #604;
+  implemented with deterministic replay and cleanup tests and awaiting
+  integration through #568.)_
+- [x] `BUG-18141` `P1` Keep metadata-conflict resolution and backup-index repair
+  busy state independent. _(Issue #605; implemented with focused command-state
+  tests and awaiting integration through #568.)_
+- [x] `BUG-18142` `P1` Remove failed complete-installer downloads when the
+  operation exits. _(Issue #606; implemented with focused filesystem tests and
+  awaiting integration through #568.)_
+- [x] `BUG-18143` `P1` Make cancellation performance qualification deterministic
+  on small hosted runners. _(Issue #608; implemented with a dedicated measured
+  worker; all hosted profiles pass and integration through #568 remains.)_
+- [x] `BUG-18144` `P1` Keep an explicit or test-scoped configuration directory
+  from opening the normal per-user database by default. _(Issue #609; isolated
+  macOS startup and focused tests pass; integration through #568 remains.)_
+- [x] `BUG-18145` `P1` Keep metadata-conflict comparisons readable without
+  horizontal overflow in narrow windows. _(Issue #610; discovered during the
+  release matrix; stacked comparison rows, focused policy coverage, and direct
+  macOS 900×700 qualification pass; integration through #568 remains.)_
+- [x] `BUG-18146` `P1` Populate tray backup and snapshot menus from registered
+  repository projects before any project page has loaded. _(Focused projection
+  coverage and an isolated macOS startup profile confirm the project appears;
+  issue #611 and integration through #568 remain.)_
+- [x] `BUG-18147` `P0` Keep Linux running until Debian installer authentication
+  and protected patch-helper authorization actually complete. _(Cancelled or
+  failed privilege prompts now preserve the running app; successful package
+  installs close only after `apt-get` exits successfully; issue #612 and
+  integration through #568 remain.)_
+- [x] `BUG-18148` `P1` Keep complete script-test discovery compatible with the
+  macOS system Python instead of requiring a separately installed newer runtime.
+  _(Issue #614; postponed annotations preserve behavior and restore the local
+  release gate.)_
+- [x] `BUG-18149` `P0` Restore the required Sonar security rating after the
+  updater and multi-base changes. _(Issue #615; async helper writes, focused
+  patch-builder and launcher boundaries, and HTTPS-only release redirects clear
+  all eight new-code findings and the hosted quality gate is green.)_
+- [x] `BUG-18150` `P0` Reject historical patch inventories whose target identity
+  does not match the requested base or whose managed paths collide by case.
+  _(Issue #616; focused qualification tests pass.)_
+- [x] `BUG-18151` `P1` Correct stale updater guidance so the documented 1.8.8
+  base-version contract matches conditional Linux multi-version qualification.
+  _(Issue #617; delivered on the release branch and awaiting integration through
+  #568.)_
+- [x] `BUG-18152` `P0` Prefer native Wayland automatically while retaining X11
+  for Xorg and fallback, and keep Linux top-level composition opaque.
+  _(Issue #618; implemented and verified on the release branch with native
+  Wayland protocol traffic in a live Wayland session.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption
@@ -706,6 +900,29 @@ compatibility, and smoke tests on all supported operating systems.
 `1.9.0` will not ship disk cloning as an isolated feature. The stable release
 requires cloning, validation, image-to-disk recovery, and bootable recovery
 media to be ready and tested together.
+
+The maintained strategy, sequencing rationale, architecture gates, Project
+entry contract, and `1.10` versus `2.0` decision rule are in
+[`docs/RECOVERY_HORIZON_STRATEGY.md`](docs/RECOVERY_HORIZON_STRATEGY.md).
+
+## 1.9 architecture approval gate
+
+Feature implementation does not begin merely because `1.9` is the next release
+family. Before destructive disk work or public support claims begin, the
+following contracts must be reviewed together:
+
+- the imaging-engine strategy and isolation boundary;
+- the versioned image format and incomplete/corrupt-state behavior;
+- the supported platform, filesystem, partition, encryption, live-capture,
+  Secure Boot, and hardware matrix;
+- the security model for compromised sources, credentials, encryption keys,
+  recovery media, immutable storage, and provider-account loss;
+- portable recovery dependencies and the minimum independent restore path;
+- shared identities, dependencies, evidence, and failure domains required by
+  later resilience evaluation.
+
+Unsupported combinations must remain explicit. A prototype or dependency
+spike is evidence for a decision, not a stable product commitment.
 
 ## 1.9 UI migration program
 
@@ -734,17 +951,70 @@ Migration principles:
 - [ ] `VS-1902` `P1` Add trusted application signing where operationally and
   financially feasible. _(Tracked by #113.)_
 - [x] `VS-1903` `P2` Add background integrity audits with alerts.
-  _(Historical issue #114 is complete; later scheduling work receives a new
-  release-specific ID.)_
+  - Scope: retain the delivered background repository-integrity audit and its
+    user-visible warning path as historical foundation work.
+  - Acceptance: issue #114 remains closed and Done; any later scheduling,
+    evidence, or recovery-assurance expansion receives a new release-specific
+    identifier rather than reopening or reusing `VS-1903`.
+
+## 1.9 platform modernization gate
+
+These migrations are isolated from the `1.8.8` patch so their runtime,
+packaging, activation, test-discovery, and CI effects can be qualified without
+destabilizing the maintenance release.
+
+- [ ] `VS-1928` `P1` Migrate the Windows notification backend to the Windows
+  App SDK while preserving the platform-neutral notification contract.
+  - Scope: qualify packaged and unpackaged activation, single-instance routing,
+    elevated-process fallback, install/update/uninstall behavior, and Windows
+    runtime payload isolation from macOS and Linux builds.
+  - Acceptance: supported Windows packages render and activate notifications;
+    unsupported contexts retain an understandable in-app fallback; non-Windows
+    builds and notification implementations remain unchanged; the legacy
+    CommunityToolkit notification dependency is removed. _(Issue #586.)_
+- [ ] `VS-1929` `P1` Migrate the repository test platform to xUnit v3 without
+  reducing discovery, coverage, filtering, diagnostics, or OS coverage.
+  - Scope: qualify fixture disposal, async lifetime, theory data, serialization,
+    skips, timeouts, IDE discovery, `dotnet test`, coverage, SonarQube, CodeQL,
+    and the selected VSTest or Microsoft Testing Platform contract.
+  - Acceptance: reconciled test and coverage counts pass on Windows, macOS, and
+    Linux; no xUnit v2 framework or incompatible runner remains; changed test
+    semantics have regression coverage and contributor documentation.
+    _(Issue #587.)_
 
 ## 1.9.0 — Disk and Bootable Recovery Foundation
 
-**Status:** Planned; architecture work may begin only after the `1.8.5` design
-contracts stabilize.
+**Status:** Planned; implementation begins only after `1.8.8` qualifies and the
+1.9 architecture approval gate is complete.
 **Tagline:** *Recover when the installed system cannot.*
 
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
   workflow boundaries, navigation invariants, and legacy-shell migration map.
+  _(Issue #501.)_
+- [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility
+  contract.
+  - Scope: cover source identity, partition layout, block/sparse maps,
+    integrity records, compression and encryption descriptors, incomplete and
+    resumable states, build identity, and reader/writer compatibility.
+  - Acceptance: incomplete images cannot appear valid; verification detects
+    missing or corrupt regions; readers reject unsupported versions without
+    mutation. _(Issue #574.)_
+- [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
+  matrix before implementation claims begin.
+  - Scope: decide build versus integration, privilege and isolation boundaries,
+    supported operating systems, filesystems, partition tables, encryption,
+    live capture, Secure Boot, recovery-media signing, drivers, and hardware.
+  - Acceptance: every supported combination has a qualification method and
+    every unsupported combination has explicit product and documentation
+    behavior. _(Issue #575.)_
+- [ ] `VS-1919` `P0` Define recovery identities, dependencies, failure domains,
+  and evidence provenance shared by Recovery Horizon and candidate Resilience.
+  - Scope: model devices, sites, repositories, destinations, credentials,
+    encryption-key references, recovery media, tools, recovery points,
+    verification, drills, and dependency correlation without exporting secrets.
+  - Acceptance: later readiness and scenario evaluation can distinguish
+    recorded facts, measured evidence, simulation, inference, user confirmation,
+    stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
   explicit operation states and checkpoint contracts.
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
@@ -782,7 +1052,23 @@ contracts stabilize.
 - [ ] `VS-1916` `P1` Migrate Dashboard and Recovery entry points into
   goal-oriented home and recovery workspaces.
 
-## 1.9.2 — Offsite Protection
+## 1.9.2 — Portable Recovery
+
+Portable recovery moves ahead of offsite expansion because provider support is
+not a recovery path until a fresh installation can discover, inspect, unlock,
+restore, and verify supported portable data. Existing identifiers remain
+unchanged because work IDs are immutable and do not encode the patch number.
+
+- [ ] `VS-1931` `P0` Ship a standalone desktop restore utility.
+- [ ] `VS-1932` `P1` Generate an emergency recovery kit.
+- [ ] `VS-1933` `P0` Publish the supported backup and encryption format
+  specification.
+- [ ] `VS-1934` `P0` Define compatibility, migration, deprecation, and
+  emergency read-only policies.
+- [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
+  focused activity, inspection, and management workspaces.
+
+## 1.9.3 — Offsite Protection
 
 - [ ] `VS-1921` `P0` Add resumable S3-compatible object-storage destinations.
 - [ ] `VS-1922` `P1` Add Backblaze B2 and SFTP destination profiles.
@@ -794,17 +1080,6 @@ contracts stabilize.
 - [ ] `VS-1927` `P1` Add multi-destination health scoring and safe,
   explainable automatic failover.
 
-## 1.9.3 — Portable Recovery
-
-- [ ] `VS-1931` `P0` Ship a standalone desktop restore utility.
-- [ ] `VS-1932` `P1` Generate an emergency recovery kit.
-- [ ] `VS-1933` `P0` Publish the supported backup and encryption format
-  specification.
-- [ ] `VS-1934` `P0` Define compatibility, migration, deprecation, and
-  emergency read-only policies.
-- [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
-  focused activity, inspection, and management workspaces.
-
 ## 1.9.4 — Unified Recovery Experience
 
 - [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
@@ -815,7 +1090,7 @@ contracts stabilize.
 - [ ] `VS-1944` `P0` Qualify the complete 1.9 interface across supported
   widths, scaling, keyboard, screen-reader, theme, and interrupted-work states.
 
-## 1.9.5 — Recovery Operations
+## 1.9.5 — Continuous Recovery Assurance
 
 - [ ] `VS-1951` `P1` Schedule full verification and recovery drills.
 - [ ] `VS-1952` `P1` Add user-controlled stale, missed, offline, credential,
@@ -838,6 +1113,57 @@ contracts stabilize.
 
 ---
 
+# Post-1.9 major-version decision
+
+`2.0` is a candidate product family, not a promised release. Use `1.10` for
+compatible extensions such as additional providers, filesystems, image formats,
+automation, performance, or incremental interface improvements.
+
+Use `2.0` only when VaultSync changes the authoritative unit users manage from
+backup/recovery operations to resilience outcomes and that change creates an
+intentional compatibility or migration boundary.
+
+## Candidate VaultSync 2 — Resilience
+
+**Candidate family promise:** *Know what survives.*
+
+Candidate product concepts:
+
+- Protection Plans that state the failures and recovery outcomes a user needs;
+- a Recovery Graph representing recovery-critical identities, dependencies,
+  evidence, credentials, key references, devices, destinations, and sites;
+- a user-facing Protection Map that exposes independence and single points of
+  failure without pretending correlation is known when it is not;
+- failure-scenario evaluation that distinguishes facts, measurements,
+  simulations, inferences, user confirmations, stale evidence, and unsupported
+  checks;
+- a resilience-oriented `Protect`, `Timeline`, `Recover`, `Resilience`, and
+  `Manage` information architecture;
+- recovery orchestration and explicit, policy-controlled corrective actions.
+
+### Required `2.0` approval evidence
+
+Approve and allocate `2.0` work IDs only when all of the following are true:
+
+1. Protection Plans and recovery dependencies have a reviewed persisted model.
+2. The model drives real setup, readiness, and recovery decisions rather than
+   serving only as a dashboard visualization.
+3. User validation shows outcome-based setup improves understanding or recovery
+   decisions over job-centered setup.
+4. Repository, configuration, CLI, automation, deep-link, update, and interface
+   compatibility impacts are inventoried.
+5. Required migrations, rollback behavior, emergency read-only access, and
+   repository read compatibility are specified and tested.
+6. The legacy shell is removed only after functional, localization,
+   accessibility, theme, narrow-layout, and state-preservation parity.
+7. The release has measurable success criteria, including recovery success,
+   false-ready rate, evidence freshness, and time to identify a decisive gap.
+
+Until those gates pass, Resilience ideas remain candidate backlog and must not
+receive release dates, public delivery promises, or execution IDs.
+
+---
+
 # Candidate backlog
 
 These items are not assigned to a release until their contracts are approved:
@@ -847,7 +1173,13 @@ These items are not assigned to a release until their contracts are approved:
 - `VS-1971` optional shared/team vault workflows with explicit ownership,
   access, conflict, and audit contracts;
 - enterprise deployment and centralized administration;
-- universal boot media or guaranteed cross-hardware bare-metal recovery.
+- universal boot media or guaranteed cross-hardware bare-metal recovery;
+- self-healing protection under explicit user policy;
+- storage and recovery forecasting based on measured local evidence;
+- destructive-change resilience without opaque ransomware claims;
+- multi-step recovery orchestration;
+- local-first device resilience summaries;
+- historical resilience simulation with fact/inference separation.
 
 # Roadmap governance
 

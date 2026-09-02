@@ -71,7 +71,7 @@ class BuildPatchTests(unittest.TestCase):
             base_dir.mkdir()
             (base_dir / "VaultSync.UI").write_bytes(b"binary")
 
-            with self.assertRaisesRegex(ValueError, "exactly one qualified base version"):
+            with self.assertRaisesRegex(ValueError, "requires a reference patch manifest"):
                 build_patch.build_patch(
                     base_dir,
                     root / "patch.zip",
@@ -83,6 +83,134 @@ class BuildPatchTests(unittest.TestCase):
 
             self.assertFalse((root / "patch.zip").exists())
             self.assertFalse((root / "patch.json").exists())
+
+    def test_build_patch_allows_overlay_safe_additional_base(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            root = Path(tmp)
+            base_dir = root / "publish"
+            base_dir.mkdir()
+            (base_dir / "VaultSync.UI").write_bytes(b"new")
+            (base_dir / "shared.dll").write_bytes(b"shared")
+            reference = root / "base.json"
+            reference.write_text(
+                json.dumps({"targetVersion": "1.8.2", "files": [{"path": "VaultSync.UI"}, {"path": "shared.dll"}]}),
+                encoding="utf-8",
+            )
+
+            out_manifest = root / "patch.json"
+            build_patch.build_patch(
+                base_dir,
+                root / "patch.zip",
+                out_manifest,
+                "linux",
+                ["1.8.7", "1.8.2"],
+                "1.8.8",
+                {"1.8.2": reference},
+            )
+
+            manifest = json.loads(out_manifest.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["baseVersions"], ["1.8.7", "1.8.2"])
+
+    def test_build_patch_rejects_additional_base_with_obsolete_file(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            root = Path(tmp)
+            base_dir = root / "publish"
+            base_dir.mkdir()
+            (base_dir / "VaultSync.UI").write_bytes(b"new")
+            reference = root / "base.json"
+            reference.write_text(
+                json.dumps({"targetVersion": "1.8.4", "files": [{"path": "VaultSync.UI"}, {"path": "obsolete.dll"}]}),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "not overlay-safe"):
+                build_patch.build_patch(
+                    base_dir,
+                    root / "patch.zip",
+                    root / "patch.json",
+                    "linux",
+                    ["1.8.7", "1.8.4"],
+                    "1.8.8",
+                    {"1.8.4": reference},
+                )
+
+    def test_build_patch_omits_incompatible_optional_base(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            root = Path(tmp)
+            base_dir = root / "publish"
+            base_dir.mkdir()
+            (base_dir / "VaultSync.UI").write_bytes(b"new")
+            reference = root / "base.json"
+            reference.write_text(
+                json.dumps({"targetVersion": "1.8.4", "files": [{"path": "VaultSync.UI"}, {"path": "obsolete.dll"}]}),
+                encoding="utf-8",
+            )
+            out_manifest = root / "patch.json"
+
+            build_patch.build_patch(
+                base_dir,
+                root / "patch.zip",
+                out_manifest,
+                "linux",
+                ["1.8.7", "1.8.4"],
+                "1.8.8",
+                {"1.8.4": reference},
+                skip_incompatible_bases=True,
+            )
+
+            manifest = json.loads(out_manifest.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["baseVersions"], ["1.8.7"])
+
+    def test_build_patch_rejects_reference_manifest_for_different_target(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            root = Path(tmp)
+            base_dir = root / "publish"
+            base_dir.mkdir()
+            (base_dir / "VaultSync.UI").write_bytes(b"new")
+            reference = root / "base.json"
+            reference.write_text(
+                json.dumps({"targetVersion": "1.8.3", "files": [{"path": "VaultSync.UI"}]}),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "target does not match base"):
+                build_patch.build_patch(
+                    base_dir,
+                    root / "patch.zip",
+                    root / "patch.json",
+                    "linux",
+                    ["1.8.7", "1.8.2"],
+                    "1.8.8",
+                    {"1.8.2": reference},
+                )
+
+    def test_build_patch_rejects_duplicate_reference_paths(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            root = Path(tmp)
+            base_dir = root / "publish"
+            base_dir.mkdir()
+            (base_dir / "VaultSync.UI").write_bytes(b"new")
+            reference = root / "base.json"
+            reference.write_text(
+                json.dumps(
+                    {
+                        "targetVersion": "1.8.2",
+                        "files": [{"path": "VaultSync.UI"}, {"path": "vaultsync.ui"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "duplicate file path"):
+                build_patch.build_patch(
+                    base_dir,
+                    root / "patch.zip",
+                    root / "patch.json",
+                    "linux",
+                    ["1.8.7", "1.8.2"],
+                    "1.8.8",
+                    {"1.8.2": reference},
+                )
 
     def test_build_patch_rejects_symlink_outside_base(self) -> None:
         if os.name == "nt":

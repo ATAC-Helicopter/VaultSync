@@ -47,20 +47,8 @@ synthetic names and paths.
 2. Put a few small, obviously synthetic files in `Client Portal`, including
    two text files that can produce a readable comparison. Do not copy a real
    project.
-3. Before the first launch, create
-   `$recording_root/config/appsettings.json` with an explicit database path:
-
-   ```json
-   {
-     "DbPath": "/absolute/path/to/vaultsync-video/config/vaultsync.db"
-   }
-   ```
-
-   Replace the example with the absolute path inside this recording root. This
-   is required because the platform default database directory is independent
-   of `VAULTSYNC_CONFIG_DIR`.
-
-4. Start VaultSync with the isolated config directory:
+3. Start VaultSync with the isolated config directory. A fresh profile keeps
+   both `appsettings.json` and its default `vaultsync.db` inside this directory:
 
    ```bash
    VAULTSYNC_CONFIG_DIR="$recording_root/config" \
@@ -72,9 +60,9 @@ synthetic names and paths.
    Verify that `DbPath`, `ProjectsRoot`, and every destination path point
    inside `recording_root`.
 
-5. Complete a rehearsal setup and create at least two restore points. Modify
+4. Complete a rehearsal setup and create at least two restore points. Modify
    one synthetic text file between them so Compare has meaningful content.
-6. Configure:
+5. Configure:
 
    - project: `Client Portal`;
    - destinations: `Local SSD` and `Offsite NAS`;
@@ -83,7 +71,7 @@ synthetic names and paths.
    - no saved network username or password;
    - no real email, machine name, notification text, or mounted share path.
 
-7. Quit VaultSync and archive the prepared recording root so every failed take
+6. Quit VaultSync and archive the prepared recording root so every failed take
    can restart from the same state. Keep this archive outside Git.
 
 ## 3. Prepare the desktop

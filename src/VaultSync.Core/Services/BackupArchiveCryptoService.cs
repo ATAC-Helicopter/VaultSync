@@ -34,6 +34,7 @@ public sealed class BackupArchiveCryptoService
     private const int EncryptionKeyLengthBytes = 32;
     private const int HmacKeyLengthBytes = 32;
     private const int HmacLengthBytes = 32;
+    private const int CryptoCopyBufferBytes = 1024 * 1024;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -201,7 +202,7 @@ public sealed class BackupArchiveCryptoService
         if (!string.IsNullOrWhiteSpace(outputDirectory))
             Directory.CreateDirectory(outputDirectory);
 
-        string tempOutputPath = outputArchivePath + ".tmp";
+        string tempOutputPath = $"{outputArchivePath}.{Guid.NewGuid():N}.tmp";
         try
         {
             derived = Rfc2898DeriveBytes.Pbkdf2(
@@ -225,7 +226,7 @@ public sealed class BackupArchiveCryptoService
             }
 
             using (var input = new FileStream(encryptedArchivePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-            using (var output = new FileStream(tempOutputPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var output = new FileStream(tempOutputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             using (var aes = Aes.Create())
             {
                 if (aes is null)
@@ -257,9 +258,7 @@ public sealed class BackupArchiveCryptoService
                 cryptoStream.FlushFinalBlock();
             }
 
-            if (File.Exists(outputArchivePath))
-                File.Delete(outputArchivePath);
-            File.Move(tempOutputPath, outputArchivePath);
+            File.Move(tempOutputPath, outputArchivePath, overwrite: true);
         }
         catch (CryptographicException ex)
         {
@@ -369,7 +368,7 @@ public sealed class BackupArchiveCryptoService
 
                 using ICryptoTransform encryptor = aes.CreateEncryptor();
                 using var cryptoStream = new CryptoStream(output, encryptor, CryptoStreamMode.Write, leaveOpen: true);
-                source.CopyTo(cryptoStream);
+                CopyStreamWithCancellation(source, cryptoStream, CryptoCopyBufferBytes, ct);
                 cryptoStream.FlushFinalBlock();
             }
 
@@ -385,6 +384,29 @@ public sealed class BackupArchiveCryptoService
             CryptographicOperations.ZeroMemory(encryptionKey);
             CryptographicOperations.ZeroMemory(hmacKey);
             CryptographicOperations.ZeroMemory(derived);
+        }
+    }
+
+    internal static void CopyStreamWithCancellation(
+        Stream source,
+        Stream destination,
+        int bufferSize,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bufferSize);
+
+        byte[] buffer = new byte[bufferSize];
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            int read = source.Read(buffer, 0, buffer.Length);
+            if (read <= 0)
+                return;
+
+            ct.ThrowIfCancellationRequested();
+            destination.Write(buffer, 0, read);
         }
     }
 

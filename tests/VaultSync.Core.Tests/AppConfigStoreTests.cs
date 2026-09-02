@@ -10,6 +10,17 @@ namespace VaultSync.Core.Tests;
 public sealed class AppConfigStoreTests
 {
     [Fact]
+    public void Load_MissingScopedConfigKeepsDefaultDatabaseInsideScope()
+    {
+        using var scope = new TestAppConfigScope();
+
+        AppConfig config = AppConfigStore.Load();
+
+        Assert.Equal(Path.Combine(scope.ConfigDirectory, "vaultsync.db"), config.DbPath);
+        Assert.True(File.Exists(Path.Combine(scope.ConfigDirectory, "appsettings.json")));
+    }
+
+    [Fact]
     public void UseDirectoryForTests_IsolatesConfigPersistence()
     {
         using var scope = new TestAppConfigScope();

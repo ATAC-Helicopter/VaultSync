@@ -181,6 +181,7 @@ namespace VaultSync.UI
         private string _projectMetadataUndoStatus = string.Empty;
         private bool _hasUndoableProjectMetadataResolution;
         private bool _isBackupIndexRepairBusy;
+        private bool _isMetadataConflictBusy;
         private bool _showLegacyBackupLocation = true;
         private string _customThemeName = "VaultSync Midnight";
         private string _customThemeBase = ThemeDark;
@@ -687,13 +688,13 @@ namespace VaultSync.UI
             _applyBackupIndexRepairPlanCommand = new RelayCommand(_ => ApplyBackupIndexRepairPlan(), _ => !IsBackupIndexRepairBusy && HasBackupIndexRepairActions);
             _acceptProjectMetadataConflictCommand = new RelayCommand(
                 parameter => AcceptProjectMetadataConflict(parameter as ProjectMetadataConflictItemViewModel),
-                parameter => parameter is ProjectMetadataConflictItemViewModel && !IsBackupIndexRepairBusy);
+                parameter => parameter is ProjectMetadataConflictItemViewModel && !IsMetadataConflictBusy);
             _keepLocalProjectMetadataConflictCommand = new RelayCommand(
                 parameter => KeepLocalProjectMetadataConflict(parameter as ProjectMetadataConflictItemViewModel),
-                parameter => parameter is ProjectMetadataConflictItemViewModel && !IsBackupIndexRepairBusy);
+                parameter => parameter is ProjectMetadataConflictItemViewModel && !IsMetadataConflictBusy);
             _undoProjectMetadataResolutionCommand = new RelayCommand(
                 _ => UndoProjectMetadataResolution(),
-                _ => HasUndoableProjectMetadataResolution && !IsBackupIndexRepairBusy);
+                _ => HasUndoableProjectMetadataResolution && !IsMetadataConflictBusy);
             _runRetentionSimulationCommand = new RelayCommand(_ => RunRetentionSimulation(), _ => !IsRetentionSimulationBusy);
             RefreshHistoryCommand        = new RelayCommand(_ => RefreshHistoryRequested?.Invoke());
             SetBackupEncryptionPasswordCommand = new RelayCommand(_ => SetBackupEncryptionPassword());
@@ -2143,6 +2144,18 @@ namespace VaultSync.UI
             }
         }
 
+        public bool IsMetadataConflictBusy
+        {
+            get => _isMetadataConflictBusy;
+            private set
+            {
+                if (!SetField(ref _isMetadataConflictBusy, value))
+                    return;
+
+                RaiseMetadataConflictCommandStateChanged();
+            }
+        }
+
         public bool IsRetentionSimulationBusy
         {
             get => _isRetentionSimulationBusy;
@@ -3360,6 +3373,21 @@ namespace VaultSync.UI
             {
                 _scanBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
                 _applyBackupIndexRepairPlanCommand?.RaiseCanExecuteChanged();
+            }
+
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                Raise();
+                return;
+            }
+
+            Dispatcher.UIThread.Post(Raise);
+        }
+
+        private void RaiseMetadataConflictCommandStateChanged()
+        {
+            void Raise()
+            {
                 _acceptProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
                 _keepLocalProjectMetadataConflictCommand?.RaiseCanExecuteChanged();
                 _undoProjectMetadataResolutionCommand?.RaiseCanExecuteChanged();
@@ -4461,7 +4489,7 @@ namespace VaultSync.UI
 
         private async Task UndoProjectMetadataResolutionAsync()
         {
-            await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = true);
+            await Dispatcher.UIThread.InvokeAsync(() => IsMetadataConflictBusy = true);
             try
             {
                 string projectName = await Task.Run(() =>
@@ -4510,7 +4538,7 @@ namespace VaultSync.UI
             }
             finally
             {
-                await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = false);
+                await Dispatcher.UIThread.InvokeAsync(() => IsMetadataConflictBusy = false);
             }
         }
 
@@ -4524,7 +4552,7 @@ namespace VaultSync.UI
 
         private async Task AcceptProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
         {
-            await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = true);
+            await Dispatcher.UIThread.InvokeAsync(() => IsMetadataConflictBusy = true);
             DiagnosticsLogger.Record($"Doctor action started: metadata-conflict accept. ProjectId={item.ProjectId}; ExternalId={item.ProjectExternalId}.");
 
             try
@@ -4581,7 +4609,7 @@ namespace VaultSync.UI
             }
             finally
             {
-                await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = false);
+                await Dispatcher.UIThread.InvokeAsync(() => IsMetadataConflictBusy = false);
             }
         }
 
@@ -4595,7 +4623,7 @@ namespace VaultSync.UI
 
         private async Task KeepLocalProjectMetadataConflictAsync(ProjectMetadataConflictItemViewModel item)
         {
-            await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = true);
+            await Dispatcher.UIThread.InvokeAsync(() => IsMetadataConflictBusy = true);
             DiagnosticsLogger.Record($"Doctor action started: metadata-conflict keep-local. ProjectId={item.ProjectId}; ExternalId={item.ProjectExternalId}.");
 
             try
@@ -4652,7 +4680,7 @@ namespace VaultSync.UI
             }
             finally
             {
-                await Dispatcher.UIThread.InvokeAsync(() => IsBackupIndexRepairBusy = false);
+                await Dispatcher.UIThread.InvokeAsync(() => IsMetadataConflictBusy = false);
             }
         }
 

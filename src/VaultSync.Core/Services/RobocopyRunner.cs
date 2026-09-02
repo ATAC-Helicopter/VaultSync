@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -32,6 +33,10 @@ namespace VaultSync.Core.Services
         /// <summary>
         /// Runs robocopy to mirror project.RootPath into destination, optionally reporting progress.
         /// </summary>
+        [SuppressMessage(
+            "Major Code Smell",
+            "S3776:Cognitive Complexity of methods should not be too high",
+            Justification = "The robocopy process lifetime keeps Windows argument policy, streamed progress, diagnostics, cancellation, and exit-code interpretation in one auditable boundary.")]
         public async Task<int> SyncAsync(
             Project project,
             string destination,
@@ -54,7 +59,7 @@ namespace VaultSync.Core.Services
 
             var psi = new ProcessStartInfo
             {
-                FileName               = "robocopy",
+                FileName               = ResolveRobocopyPath(),
                 UseShellExecute        = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError  = true,
@@ -401,13 +406,22 @@ namespace VaultSync.Core.Services
                 return null;
 
             string numberSpan = line[start..(end + 1)];
-            if (double.TryParse(numberSpan, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
+            if (double.TryParse(numberSpan, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value) &&
+                value >= 0 && value <= 100)
             {
-                if (value >= 0 && value <= 100)
-                    return value;
+                return value;
             }
 
             return null;
+        }
+
+        private static string ResolveRobocopyPath()
+        {
+            string systemDirectory = Environment.GetFolderPath(Environment.SpecialFolder.System);
+            if (string.IsNullOrWhiteSpace(systemDirectory))
+                throw new InvalidOperationException("The Windows system directory could not be resolved.");
+
+            return Path.GetFullPath(Path.Combine(systemDirectory, "Robocopy.exe"));
         }
 
 

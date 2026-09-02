@@ -48,6 +48,7 @@ public partial class MainWindow : Window
         if (OperatingSystem.IsLinux())
         {
             Classes.Add("linux-performance");
+            TransparencyLevelHint = [WindowTransparencyLevel.None];
         }
 
         _appVm = App.AppViewModelInstance ?? new AppViewModel();
@@ -58,6 +59,8 @@ public partial class MainWindow : Window
         Opened += (_, _) =>
         {
             IsForeground = true;
+            DiagnosticsLogger.Record(
+                $"MainWindow opened. PlatformHandle='{TryGetPlatformHandle()?.HandleDescriptor ?? "unknown"}'.");
             if (!_macFullscreenDisabled)
             {
                 _macFullscreenDisabled = TryDisableMacFullscreen();

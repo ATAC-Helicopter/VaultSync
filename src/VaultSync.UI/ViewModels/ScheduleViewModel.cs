@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Windows.Input;
 using Avalonia.Threading;
 using VaultSync.Core.Services;
@@ -79,6 +80,8 @@ public sealed class ScheduleViewModel : ViewModelBase
     private readonly Func<IReadOnlyList<ScheduleProjectSnapshot>> _projectSnapshotProvider;
     private readonly Func<PowerState> _powerStateProvider;
     private BackupScheduleProjection _projection;
+    private int _coverageRefreshInFlight;
+    private int _coverageRefreshRequested;
 
     public ScheduleViewModel(
         SettingsViewModel settings,
@@ -291,7 +294,7 @@ public sealed class ScheduleViewModel : ViewModelBase
             now,
             timerDue);
 
-        RebuildProjectCoverage();
+        QueueProjectCoverageRefresh();
         RebuildUpcomingRuns(now, timerDue);
         UpdateReadiness(now);
 
@@ -321,18 +324,44 @@ public sealed class ScheduleViewModel : ViewModelBase
             nameof(RunBehaviorSummary));
     }
 
-    private void RebuildProjectCoverage()
+    internal void QueueProjectCoverageRefresh()
     {
-        IReadOnlyList<ScheduleProjectSnapshot> projects;
+        Interlocked.Exchange(ref _coverageRefreshRequested, 1);
+        if (Interlocked.CompareExchange(ref _coverageRefreshInFlight, 1, 0) != 0)
+            return;
+
+        DetachedTask.Run(RefreshProjectCoverageWorker, nameof(RefreshProjectCoverageWorker));
+    }
+
+    private void RefreshProjectCoverageWorker()
+    {
         try
         {
-            projects = _projectSnapshotProvider() ?? [];
-        }
-        catch
-        {
-            projects = [];
-        }
+            while (Interlocked.Exchange(ref _coverageRefreshRequested, 0) == 1)
+            {
+                IReadOnlyList<ScheduleProjectSnapshot> projects;
+                try
+                {
+                    projects = _projectSnapshotProvider() ?? [];
+                }
+                catch
+                {
+                    projects = [];
+                }
 
+                Dispatcher.UIThread.Post(() => ApplyProjectCoverage(projects));
+            }
+        }
+        finally
+        {
+            Volatile.Write(ref _coverageRefreshInFlight, 0);
+            if (Volatile.Read(ref _coverageRefreshRequested) == 1)
+                QueueProjectCoverageRefresh();
+        }
+    }
+
+    private void ApplyProjectCoverage(IReadOnlyList<ScheduleProjectSnapshot> projects)
+    {
         var coverage = new List<ScheduleProjectRowViewModel>(projects.Count);
         string previousGroup = string.Empty;
         foreach (ScheduleProjectSnapshot project in projects
@@ -370,6 +399,19 @@ public sealed class ScheduleViewModel : ViewModelBase
                 "Last automatic backup: {0}",
                 last.ToLocalTime().ToString("g", CultureInfo.CurrentCulture))
             : L("Schedule.LastRun.None", "No automatic backup recorded");
+
+        UpdateReadiness(DateTimeOffset.Now);
+        OnPropertiesChanged(
+            nameof(HasProjects),
+            nameof(RegisteredProjectCount),
+            nameof(IncludedProjectCount),
+            nameof(PausedProjectCount),
+            nameof(CoverageValue),
+            nameof(CoverageSummary),
+            nameof(LastAutomaticBackupText),
+            nameof(ReadinessTitle),
+            nameof(ReadinessDetail),
+            nameof(RunBehaviorSummary));
     }
 
     private static string ResolveGroupName(string? groupName) =>

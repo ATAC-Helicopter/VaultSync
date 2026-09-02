@@ -5,7 +5,9 @@ namespace VaultSync.Core.Services;
 
 public sealed class ScanCacheState
 {
-    public int Version { get; set; } = 1;
+    public const int CurrentVersion = 2;
+
+    public int Version { get; set; } = CurrentVersion;
     public string RootPath { get; set; } = string.Empty;
     public string FilterHash { get; set; } = string.Empty;
     public int RunsSinceFullScan { get; set; } = 0;
@@ -33,7 +35,7 @@ public static class ScanCacheStore
             if (cache is null)
                 return null;
 
-            if (cache.Version != 1)
+            if (cache.Version != ScanCacheState.CurrentVersion)
                 return null;
 
             if (!string.Equals(cache.RootPath, project.RootPath, StringComparison.OrdinalIgnoreCase))

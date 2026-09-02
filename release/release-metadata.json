@@ -2,24 +2,34 @@
   "schemaVersion": 1,
   "repository": "ATAC-Helicopter/VaultSync",
   "activeRelease": {
-    "version": "1.8.7",
+    "version": "1.8.8",
     "channel": "stable",
-    "stage": "candidate",
-    "tag": "v1.8.7",
-    "targetDate": "2026-08-24",
-    "previousVersion": "1.8.6",
+    "stage": "planned",
+    "tag": "v1.8.8",
+    "targetDate": "2026-09-01",
+    "previousVersion": "1.8.7",
     "compatiblePredecessors": [
-      "1.8.6"
+      "1.8.7"
     ],
-    "tagline": "Show the proof.",
-    "releaseBranch": "release/1.8.7",
+    "patchBaseCandidates": {
+      "windows": [],
+      "macos": [],
+      "linux": [
+        "1.8.2",
+        "1.8.3",
+        "1.8.5",
+        "1.8.6"
+      ]
+    },
+    "tagline": "A stable foundation for larger recovery.",
+    "releaseBranch": "release/1.8.8",
     "integrationBranch": "Dev",
     "stableBranch": "Stable"
   },
   "currentStable": {
-    "version": "1.8.6",
-    "tag": "v1.8.6",
-    "releasedDate": "2026-08-10"
+    "version": "1.8.7",
+    "tag": "v1.8.7",
+    "releasedDate": "2026-08-21"
   },
   "platforms": [
     "Windows",
@@ -28,7 +38,7 @@
   ],
   "store": {
     "status": "planned",
-    "packageVersion": "1.8.7.0",
+    "packageVersion": "1.8.8.0",
     "storeId": "9N9HRX4JCLCP"
   }
 }

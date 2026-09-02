@@ -61,6 +61,19 @@ public sealed class ThemeManagerTests
         Assert.All(glassPresets, preset => Assert.Equal("Glass", preset.Palette.Clone().VisualStyle));
     }
 
+    [Theory]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, false)]
+    public void WindowTransparency_IsDisabledForLinuxCompositors(
+        bool useGlass,
+        bool isLinux,
+        bool expected)
+    {
+        Assert.Equal(expected, ThemeManager.ShouldEnableWindowTransparency(useGlass, isLinux));
+    }
+
     [Fact]
     public void NormalizeCustomTheme_CorrectsUnreadableTextAcrossEverySurface()
     {
