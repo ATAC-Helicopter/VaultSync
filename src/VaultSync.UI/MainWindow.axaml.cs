@@ -59,6 +59,8 @@ public partial class MainWindow : Window
         Opened += (_, _) =>
         {
             IsForeground = true;
+            DiagnosticsLogger.Record(
+                $"MainWindow opened. PlatformHandle='{TryGetPlatformHandle()?.HandleDescriptor ?? "unknown"}'.");
             if (!_macFullscreenDisabled)
             {
                 _macFullscreenDisabled = TryDisableMacFullscreen();
