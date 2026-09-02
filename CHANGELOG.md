@@ -3,14 +3,15 @@
 ### Added
 - [VS-1823] Added repeatable large-history and high-file-count performance budgets.
 - [VS-1882] Added deterministic interruption and recovery qualification for plain and encrypted archives.
-- Added native Wayland with automatic X11 fallback and opaque Linux windows.
+- [VS-1890] Added native Wayland with automatic X11 fallback and opaque Linux windows.
 ### Changed
 - [VS-1885] Cleared Sonar findings in release automation, onboarding, and storage hygiene.
 - [VS-1886] Reduced archive and support-package memory use with buffer reuse and streaming hashes.
 - [VS-1887] Made guided setup actionable and moved Guide and Schedule queries off the UI thread.
 - [VS-1884] Qualified exact 1.8.7 state and updated pinned workflow security actions.
 - [VS-1888] Cleared remaining core Sonar annotations.
-- [VS-1889] Qualified safe multi-version Linux patch updates with installer fallback.
+- [VS-1889] Qualified safe multi-version patch updates with installer fallback across Windows, macOS, and Linux.
+- [VS-1891] Made platform patch assets opt in for installer-only release builds.
 - [VS-1821] Isolated snapshot creation, deferred hashing, checkpoint telemetry, and native-copy orchestration.
 ### Fixed
 - [BUG-18116] Removed unintended horizontal page and dialog scrolling.
@@ -49,8 +50,8 @@
 - [BUG-18149] Cleared updater security and maintainability quality-gate findings.
 - [BUG-18150] Rejected mismatched or duplicate patch-base inventories.
 - [BUG-18151] Corrected stale multi-version updater guidance.
-- Forced protected Windows/Linux installs and macOS app bundles to use installer fallback instead of patch handoff.
-- Kept VaultSync open after launching macOS DMG update media because DMGs require a manual app replacement.
+- [BUG-18152] Forced protected Windows/Linux installs and macOS app bundles to use installer fallback instead of patch handoff.
+- [BUG-18153] Kept VaultSync open after launching macOS DMG update media because DMGs require a manual app replacement.
 
 ## [1.8.7] - 21.08.2026
 ### Added
