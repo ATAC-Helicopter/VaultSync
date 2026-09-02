@@ -119,35 +119,36 @@ failure handling without becoming a broad rewrite.
   recovery fault matrix (`P0`) — compression interruption is qualified for
   plain and encrypted archives, encryption now observes cancellation between
   copied chunks, restart cleanup fails closed for invalid resume checkpoints,
-  verification cancellation propagates, and the remaining durable-write
-  boundaries are in progress.
+  verification cancellation propagates, and the release-scope durable-write
+  boundaries are complete.
 - [`VS-1881`](../ROADMAP.md#188--chronicle-stabilization): supported-platform
-  release matrix (`P0`).
+  release matrix (`P0`) — complete for the 1.8.8 release candidate.
 - [`VS-1821` / #380](https://github.com/ATAC-Helicopter/VaultSync/issues/380):
   backup and metadata decomposition (`P1`) — snapshot creation, deferred hashing,
-  checkpoint telemetry, and native-copy execution now use focused boundaries.
+  checkpoint telemetry, and native-copy execution now use focused boundaries;
+  release scope is complete.
 - [`VS-1822` / #381](https://github.com/ATAC-Helicopter/VaultSync/issues/381):
-  desktop view-model decomposition (`P1`).
+  desktop view-model decomposition (`P1`) — release-scope fault boundaries and
+  qualification are complete.
 - [`VS-1883`](../ROADMAP.md#188--chronicle-stabilization): localization and
-  accessibility defects (`P1`).
+  accessibility defects (`P1`) — complete for the 1.8.8 release candidate.
 - [`BUG-18116` / #569](https://github.com/ATAC-Helicopter/VaultSync/issues/569):
   unintended horizontal page and dialog scrolling (`P1`) — shared and explicit
-  scroll policies are implemented; runtime qualification remains open after an
-  implicit-control regression.
+  scroll policies are implemented and runtime qualification is complete.
 - [`BUG-18117` / #570](https://github.com/ATAC-Helicopter/VaultSync/issues/570):
   retention deletion confinement across filesystem links (`P0`) — fixed on the
   release branch and awaiting integration through #568.
 - [`VS-1889` / #613](https://github.com/ATAC-Helicopter/VaultSync/issues/613):
   exact multi-version patch qualification (`P1`) — implemented for
-  platform-specific overlay-safe candidates; final generated manifests remain
-  part of the non-local release matrix.
+  platform-specific overlay-safe candidates and verified through current-head
+  release checks.
 - [`BUG-18146` / #611](https://github.com/ATAC-Helicopter/VaultSync/issues/611):
   startup tray project discovery (`P1`) — implemented and covered
   with an isolated profile plus focused projection tests.
 - [`BUG-18147` / #612](https://github.com/ATAC-Helicopter/VaultSync/issues/612):
   Linux privileged updater handoff (`P0`) — implemented with
   Debian exit-result handling and an elevated patch-helper readiness handshake;
-  physical Debian cancellation/success qualification remains in `VS-1881`.
+  release-scope Linux qualification is complete.
 - [`BUG-18148` / #614](https://github.com/ATAC-Helicopter/VaultSync/issues/614):
   macOS system-Python script validation (`P1`) — postponed annotations remove
   the accidental local dependency on a separately installed Python 3.10+.
@@ -162,7 +163,8 @@ failure handling without becoming a broad rewrite.
   matches conditional Linux multi-version qualification and installer fallback.
 - [`BUG-18152` / #618](https://github.com/ATAC-Helicopter/VaultSync/issues/618):
   Linux compositor stability (`P0`) — the app and updater prefer native Wayland,
-  fall back automatically to X11, and avoid translucent top-level surfaces.
+  fall back automatically to X11, avoid translucent top-level surfaces, and were
+  verified in a live Wayland session with protocol traffic.
 - [`BUG-18118` / #571](https://github.com/ATAC-Helicopter/VaultSync/issues/571):
   fail-closed source loss after snapshot creation (`P0`) — fixed on the release
   branch and awaiting integration through #568.
@@ -185,7 +187,7 @@ failure handling without becoming a broad rewrite.
   temporary telemetry-export retention (`P1`) — fixed on the release branch and
   awaiting integration through #568.
 - [`VS-1884` / #491](https://github.com/ATAC-Helicopter/VaultSync/issues/491):
-  dependencies, packaging, updater, and compatibility (`P1`) — active. The
+  dependencies, packaging, updater, and compatibility (`P1`) — complete. The
   2026-08-26 dependency audit found no vulnerable or directly outdated
   packages; reviewed transitive and legacy packages are currently constrained
   by the supported Avalonia and Windows notification stacks. The Windows App
@@ -233,14 +235,14 @@ failure handling without becoming a broad rewrite.
   branch and awaiting integration through #568.
 - [`BUG-18133` / #594](https://github.com/ATAC-Helicopter/VaultSync/issues/594):
   interrupted restore and sandbox-apply operations now roll back live target
-  changes; full qualification and integration remain open.
+  changes; full release-scope qualification is complete.
 - [`BUG-18134` / #598](https://github.com/ATAC-Helicopter/VaultSync/issues/598):
   cancelled metadata operations stop before local writes, portable exports use
   transaction rollback, and interrupted schema/legacy imports restore the prior
   SQLite repository and configuration state.
 - [`BUG-18135` / #599](https://github.com/ATAC-Helicopter/VaultSync/issues/599):
   cancellation after the durable backup commit no longer deletes completed data
-  while returning success; integration remains open.
+  while returning success.
 - [`BUG-18136` / #600](https://github.com/ATAC-Helicopter/VaultSync/issues/600):
   cancellation during the final scan entry can no longer publish a partial scan;
   plain and encrypted upload cancellation are also covered by lifecycle tests.
@@ -280,7 +282,8 @@ retention, and encryption choices. Version `1.8.7` remains the primary patch
 predecessor on every platform. Linux can additionally advertise 1.8.2, 1.8.3,
 1.8.5, and 1.8.6 only when final-payload inventory validation keeps that base
 overlay-safe; 1.8.4 and every omitted base use the complete-installer fallback.
-Physical updater and fallback qualification remain part of #488/#491.
+Physical updater and fallback qualification is complete for the 1.8.8 release
+candidate.
 CodeQL init/analyze are coordinated on `4.37.9`, and Sonar Java setup uses the
 validated `6.0.0` action pin.
 

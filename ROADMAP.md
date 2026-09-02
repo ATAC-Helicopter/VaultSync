@@ -695,27 +695,28 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 
 - [x] `VS-1823` `P0` Establish large-history and high-file-count performance
   budgets with repeatable benchmarks. _(Existing issue #382.)_
-- [ ] `VS-1821` `P1` Finish backup and metadata orchestration decomposition
+- [x] `VS-1821` `P1` Finish backup and metadata orchestration decomposition
   needed for fault isolation. _(Active: snapshot creation, deferred-hash progress,
   checkpoint telemetry, and native-copy execution now use focused boundaries;
-  remaining hotspots stay open under issue #380.)_
-- [ ] `VS-1822` `P1` Finish oversized desktop view-model decomposition needed
-  for fault isolation. _(Existing issue #381.)_
-- [ ] `VS-1881` `P0` Run the complete Windows, macOS, and Linux release matrix.
-- [ ] `VS-1882` `P0` Harden interruption, cancellation, archive corruption,
+  release scope completed for issue #380.)_
+- [x] `VS-1822` `P1` Finish oversized desktop view-model decomposition needed
+  for fault isolation. _(Issue #381; release-scope boundaries and qualification
+  are complete.)_
+- [x] `VS-1881` `P0` Run the complete Windows, macOS, and Linux release matrix.
+- [x] `VS-1882` `P0` Harden interruption, cancellation, archive corruption,
   retention, migration, and clean-state recovery. _(Active: plain and encrypted
   compression interruption is qualified, and encryption observes cancellation
   between copied chunks; restart cleanup now rejects invalid resume checkpoints;
   verification cancellation now propagates; interrupted portable-metadata exports
   roll back atomically; scan and plain/encrypted upload cancellation are qualified;
-  exact 1.8.7 repository/configuration state and clean-machine metadata recovery
-  are qualified; remaining physical lifecycle boundaries are still open.)_
-- [ ] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
+  exact 1.8.7 repository/configuration state, clean-machine metadata recovery,
+  and final release-scope lifecycle boundaries are qualified.)_
+- [x] `VS-1883` `P1` Close localization, accessibility, scaling, contrast, and
   narrow-layout defects.
-- [ ] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling
+- [x] `BUG-18116` `P1` Prevent unintended horizontal page and dialog scrolling
   while preserving purpose-built file, diff, and log panes. _(Issue #569;
-  shared and explicit scroll policies are implemented; runtime qualification is
-  pending after an implicit-control regression.)_
+  shared and explicit scroll policies are implemented and runtime qualification
+  is complete.)_
 - [x] `BUG-18117` `P0` Confine retention deletion across filesystem links and
   preserve the indexed restore point when the selected backup root is unsafe or
   cannot be deleted. _(Issue #570; delivered on the release branch and awaiting
@@ -748,9 +749,9 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   storage using an exact 30-day and 100 MB retention contract.
   _(Issue #582; delivered on the release branch and awaiting integration through
   #568.)_
-- [ ] `VS-1884` `P1` Service supported dependencies, installers, updater, and
+- [x] `VS-1884` `P1` Service supported dependencies, installers, updater, and
   prior-version compatibility.
-  _(Issue #491; active. The 2026-08-26 audit found no vulnerable or directly
+  _(Issue #491; complete. The 2026-08-26 audit found no vulnerable or directly
   outdated packages; reviewed transitive and legacy dependencies remain
   constrained by the supported Avalonia and Windows notification stacks.)_
 - [x] `VS-1885` `P1` Resolve the remaining release-automation static-analysis
@@ -879,8 +880,8 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
   #568.)_
 - [x] `BUG-18152` `P0` Prefer native Wayland automatically while retaining X11
   for Xorg and fallback, and keep Linux top-level composition opaque.
-  _(Issue #618; implemented on the release branch; physical Wayland/Xorg
-  qualification remains in #488.)_
+  _(Issue #618; implemented and verified on the release branch with native
+  Wayland protocol traffic in a live Wayland session.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

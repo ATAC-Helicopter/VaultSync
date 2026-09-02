@@ -3,6 +3,7 @@
 ### Added
 - [VS-1823] Added repeatable large-history and high-file-count performance budgets.
 - [VS-1882] Added deterministic interruption and recovery qualification for plain and encrypted archives.
+- Added native Wayland with automatic X11 fallback and opaque Linux windows.
 ### Changed
 - [VS-1885] Cleared Sonar findings in release automation, onboarding, and storage hygiene.
 - [VS-1886] Reduced archive and support-package memory use with buffer reuse and streaming hashes.
@@ -48,7 +49,6 @@
 - [BUG-18149] Cleared updater security and maintainability quality-gate findings.
 - [BUG-18150] Rejected mismatched or duplicate patch-base inventories.
 - [BUG-18151] Corrected stale multi-version updater guidance.
-- [BUG-18152] Added native Wayland with automatic X11 fallback and opaque Linux windows.
 
 ## [1.8.7] - 21.08.2026
 ### Added
