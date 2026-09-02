@@ -392,7 +392,11 @@ namespace VaultSync.UI.Services
                 return;
             }
 
-            mainWindow.TransparencyLevelHint = useGlass
+            // Transparent top-level surfaces can flicker or briefly disappear
+            // across Linux compositors and XWayland. Keep the Linux shell opaque;
+            // palette styling still preserves the selected visual theme.
+            bool enableTransparency = ShouldEnableWindowTransparency(useGlass, OperatingSystem.IsLinux());
+            mainWindow.TransparencyLevelHint = enableTransparency
                 ?
                 [
                     WindowTransparencyLevel.AcrylicBlur,
@@ -402,6 +406,9 @@ namespace VaultSync.UI.Services
                 ]
                 : [WindowTransparencyLevel.None];
         }
+
+        internal static bool ShouldEnableWindowTransparency(bool useGlass, bool isLinux)
+            => useGlass && !isLinux;
 
         private static void ApplyVisualStyleOverrides(
             Application app,

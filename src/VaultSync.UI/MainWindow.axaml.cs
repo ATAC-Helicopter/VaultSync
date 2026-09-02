@@ -48,6 +48,7 @@ public partial class MainWindow : Window
         if (OperatingSystem.IsLinux())
         {
             Classes.Add("linux-performance");
+            TransparencyLevelHint = [WindowTransparencyLevel.None];
         }
 
         _appVm = App.AppViewModelInstance ?? new AppViewModel();
