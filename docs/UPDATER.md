@@ -95,6 +95,11 @@ Maintainers should update `previousVersion`, `compatiblePredecessors`, and the
 per-platform `patchBaseCandidates` in `release/release-metadata.json` for each
 new release; see `docs/RELEASING.md` for the future-release maintenance recipe.
 
+Patch eligibility also depends on the install layout, not only the version.
+Package-owned installs should use installer fallback unless the elevated patch
+handoff has been re-qualified on that OS. macOS DMG update media is manual, so
+opening a DMG must not close the running app as though installation completed.
+
 ## Release Validation
 After publishing assets, verify:
 - canonical release manifest resolves and passes schema v1 validation

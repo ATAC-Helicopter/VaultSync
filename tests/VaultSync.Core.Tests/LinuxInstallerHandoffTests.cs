@@ -71,4 +71,21 @@ public sealed class LinuxInstallerHandoffTests
 
         Assert.False(AppViewModel.PatchInstallRequiresInstallerFallback(runtimeDirectory));
     }
+
+    [Fact]
+    public void MacOsDiskImageInstaller_DoesNotCloseRunningApplication()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return;
+
+        Assert.False(AppViewModel.InstallerMediaRequiresShutdown("/tmp/VaultSync-1.8.8-macos-apple-silicon.dmg"));
+    }
+
+    [Theory]
+    [InlineData("/tmp/VaultSync-1.8.8-windows-x64-setup.exe")]
+    [InlineData("/tmp/VaultSync-1.8.8-linux-x64.AppImage")]
+    public void NonDiskImageInstaller_ClosesRunningApplication(string installerPath)
+    {
+        Assert.True(AppViewModel.InstallerMediaRequiresShutdown(installerPath));
+    }
 }

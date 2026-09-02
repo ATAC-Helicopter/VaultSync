@@ -98,6 +98,7 @@ Optional prerelease example (only after an explicit release decision):
 - `previous_version = 1.8.7`
 - `target_version = <next-version>-Beta.1`
 - `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
+- Omit patch assets for package-managed Windows, macOS, or Linux releases unless the exact package/install layout has been update-tested on that OS.
 
 The `release_candidate` switch is not used for beta builds. It exists only to
 build unpublished, stable-version candidate assets from a matching release
@@ -115,6 +116,13 @@ performs the subset check while building the new payload. If the target removed
 even one candidate-managed file, that base is omitted and uses the installer.
 Do not edit the generated allowlist or use version ranges. Older and unlisted
 installs must fall back to the full installer.
+
+Patch assets are only safe for installs whose application directory can be
+updated in place by the running user, or for an OS-specific elevated patch path
+that has been re-qualified for that release. Package-owned installs such as
+Windows Program Files, macOS `.app` bundles, and Linux `/opt/vaultsync` installs
+must use the full installer fallback unless the release notes and tests
+explicitly say otherwise.
 
 ### Future Patch Compatibility Maintenance
 

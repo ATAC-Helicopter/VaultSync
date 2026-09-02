@@ -49,7 +49,8 @@
 - [BUG-18149] Cleared updater security and maintainability quality-gate findings.
 - [BUG-18150] Rejected mismatched or duplicate patch-base inventories.
 - [BUG-18151] Corrected stale multi-version updater guidance.
-- Forced protected Linux installs to use the installer fallback instead of the elevated patch helper.
+- Forced protected Windows/Linux installs and macOS app bundles to use installer fallback instead of patch handoff.
+- Kept VaultSync open after launching macOS DMG update media because DMGs require a manual app replacement.
 
 ## [1.8.7] - 21.08.2026
 ### Added
