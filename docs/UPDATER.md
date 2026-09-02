@@ -32,10 +32,15 @@ macOS can use architecture-specific patch names:
 - `vaultsync-patch-macos-apple-silicon.*`
 - `vaultsync-patch-macos-intel.*`
 
-VaultSync 1.8.8 qualifies exactly 1.8.7 as its patch predecessor. All 1.8.7
-macOS installations already use the canonical `VaultSync.app` layout, so the
-1.8.8 patch updates and verifies the complete application bundle relative to
-that root. Earlier versions use the full installer or DMG fallback.
+VaultSync 1.8.8 uses 1.8.7 as its primary patch predecessor on every direct-
+download platform. Linux additionally considers 1.8.2, 1.8.3, 1.8.5, and
+1.8.6, but includes each base only when its published managed-file inventory
+is overlay-safe for the final target payload. Linux 1.8.4 is incompatible, and
+every omitted or unlisted base uses the full installer fallback.
+
+All 1.8.7 macOS installations already use the canonical `VaultSync.app`
+layout, so the 1.8.8 patch updates and verifies the complete application bundle
+relative to that root. Earlier macOS versions use the full DMG fallback.
 
 VaultSync 1.8.7 includes one architecture-aware bridge patch for the exact
 1.8.6 predecessor. The 1.8.6 helper updates its legacy `Contents/MacOS`

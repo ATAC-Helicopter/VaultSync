@@ -157,6 +157,9 @@ failure handling without becoming a broad rewrite.
 - [`BUG-18150` / #616](https://github.com/ATAC-Helicopter/VaultSync/issues/616):
   patch-base inventory identity (`P0`) — mismatched target versions and
   case-colliding managed paths now fail qualification.
+- [`BUG-18151` / #617](https://github.com/ATAC-Helicopter/VaultSync/issues/617):
+  updater documentation consistency (`P1`) — public and maintainer guidance now
+  matches conditional Linux multi-version qualification and installer fallback.
 - [`BUG-18118` / #571](https://github.com/ATAC-Helicopter/VaultSync/issues/571):
   fail-closed source loss after snapshot creation (`P0`) — fixed on the release
   branch and awaiting integration through #568.
@@ -270,8 +273,11 @@ failure handling without becoming a broad rewrite.
 
 Exact `1.8.7` compatibility now has frozen-schema and configuration tests that
 preserve repository records, encrypted-backup descriptors, user paths, schedules,
-retention, and encryption choices. Patch eligibility accepts only `1.8.7`; the
-physical updater and complete-installer fallback remain part of #488/#491.
+retention, and encryption choices. Version `1.8.7` remains the primary patch
+predecessor on every platform. Linux can additionally advertise 1.8.2, 1.8.3,
+1.8.5, and 1.8.6 only when final-payload inventory validation keeps that base
+overlay-safe; 1.8.4 and every omitted base use the complete-installer fallback.
+Physical updater and fallback qualification remain part of #488/#491.
 CodeQL init/analyze are coordinated on `4.37.9`, and Sonar Java setup uses the
 validated `6.0.0` action pin.
 

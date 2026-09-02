@@ -873,6 +873,10 @@ and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
 - [x] `BUG-18150` `P0` Reject historical patch inventories whose target identity
   does not match the requested base or whose managed paths collide by case.
   _(Issue #616; focused qualification tests pass.)_
+- [x] `BUG-18151` `P1` Correct stale updater guidance so the documented 1.8.8
+  base-version contract matches conditional Linux multi-version qualification.
+  _(Issue #617; delivered on the release branch and awaiting integration through
+  #568.)_
 
 The mandatory exit matrix includes plain and encrypted backup/restore,
 clean-machine recovery, interruption, destination disconnection, corruption

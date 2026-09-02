@@ -47,6 +47,7 @@
 - [BUG-18148] Kept script validation compatible with macOS system Python.
 - [BUG-18149] Cleared updater security and maintainability quality-gate findings.
 - [BUG-18150] Rejected mismatched or duplicate patch-base inventories.
+- [BUG-18151] Corrected stale multi-version updater guidance.
 
 ## [1.8.7] - 21.08.2026
 ### Added
