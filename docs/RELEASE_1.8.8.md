@@ -56,6 +56,12 @@ the actual privileged install result and adds an authenticated-helper handoff
 for protected patch installs. `VS-1889` also qualifies direct Linux overlays
 from older exact bases when their published file inventories contain no file
 that the target omits; all other versions retain installer fallback.
+On 2026-09-02, direct installer-only testing found that a successful Linux
+package/AppImage update could still leave the app closed because the updater
+either shut down without scheduling the installed app, or launched an AppImage
+before the old single-instance process exited. `BUG-18154` defers those Linux
+relaunches until after the old process exits and keeps VaultSync open when the
+automatic relaunch cannot be scheduled.
 
 ## Code baseline
 

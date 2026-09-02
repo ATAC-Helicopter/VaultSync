@@ -54,7 +54,12 @@ Switch channels in Settings > Advanced.
   canonical `VaultSync.app` and an Applications shortcut.
 - Linux: `.AppImage`, `.deb`, or `.tar.gz` assets, depending on architecture and distribution.
 - Debian-package installation waits for administrator authentication and the
-  package result; cancelling the password prompt keeps VaultSync open.
+  package result; cancelling the password prompt keeps VaultSync open. After a
+  successful package install, VaultSync schedules the installed app to start
+  only after the old process exits, so the single-instance guard cannot swallow
+  the relaunch.
+- AppImage updates are launched through the same deferred handoff instead of
+  starting the downloaded AppImage while the old app instance is still running.
 - Windows Store: packaged Microsoft Store build when published.
 
 ## Safe update expectation
