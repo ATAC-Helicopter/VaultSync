@@ -36,7 +36,7 @@
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Controls.ColorPicker" />
     <PackageReference Include="Avalonia.Desktop" />
-    <PackageReference Include="Avalonia.Wayland" />
+    <PackageReference Include="Avalonia.Wayland" Condition="'$(TargetFramework)' == 'net10.0'" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="SkiaSharp" />

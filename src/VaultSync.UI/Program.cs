@@ -436,7 +436,9 @@ internal static class Program
         // Avalonia.Desktop configures X11 on Linux. Prefer the native Wayland
         // backend when a usable compositor is present, while retaining X11 for
         // Xorg sessions and as an automatic fallback when Wayland is unavailable.
+#if !WINDOWS
         builder = builder.UseWaylandWithFallback();
+#endif
 
         DiagnosticsLogger.Record(
             "Avalonia platform options: " +
@@ -460,9 +462,14 @@ internal static class Program
     }
 
     private static AppBuilder BuildUpdaterApp()
-        => AppBuilder.Configure<UpdaterApp>()
-            .UsePlatformDetect()
-            .UseWaylandWithFallback()
+    {
+        AppBuilder builder = AppBuilder.Configure<UpdaterApp>()
+            .UsePlatformDetect();
+#if !WINDOWS
+        builder = builder.UseWaylandWithFallback();
+#endif
+        return builder
             .LogToTrace(LogEventLevel.Warning);
+    }
 
 }
