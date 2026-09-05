@@ -25,7 +25,8 @@ internal static class ObservableCollectionExtensions
             }
             else if (targetIndex < collection.Count)
             {
-                collection[targetIndex] = item;
+                // Inserting before a surviving item must not destroy its control/state.
+                collection.Insert(targetIndex, item);
             }
             else
             {

@@ -598,6 +598,20 @@ namespace VaultSync.UI.ViewModels
         public int RemainingSnapshotCount => Math.Max(0, TotalSnapshotCount - VisibleSnapshotCount);
         public bool HasMoreSnapshots => RemainingSnapshotCount > 0;
 
+        internal void UpdateFrom(SnapshotProjectGroup incoming)
+        {
+            ProjectName = incoming.ProjectName;
+            ProjectTagsDisplay = incoming.ProjectTagsDisplay;
+            Summary = incoming.Summary;
+            TotalSizeFormatted = incoming.TotalSizeFormatted;
+            LatestBackupDisplay = incoming.LatestBackupDisplay;
+            AccentBrush = incoming.AccentBrush;
+            ProjectTagChips.SyncWith(incoming.ProjectTagChips);
+            SetSnapshots(incoming._allSnapshots, Math.Max(DefaultPageSize, VisibleSnapshotCount));
+            OnPropertiesChanged(nameof(ProjectName), nameof(ProjectTagsDisplay), nameof(HasProjectTags),
+                nameof(Summary), nameof(TotalSizeFormatted), nameof(LatestBackupDisplay), nameof(AccentBrush));
+        }
+
         internal void SetSnapshots(IEnumerable<BackupSnapshotItem> snapshots, int initialCount = DefaultPageSize)
         {
             ArgumentNullException.ThrowIfNull(snapshots);
@@ -605,8 +619,8 @@ namespace VaultSync.UI.ViewModels
 
             _allSnapshots.Clear();
             _allSnapshots.AddRange(snapshots);
-            Snapshots.Clear();
-            AppendSnapshots(initialCount);
+            Snapshots.SyncWith(_allSnapshots.Take(initialCount).ToList());
+            AppendSnapshots(0);
         }
 
         public void LoadMoreSnapshots(int pageSize = DefaultPageSize)
