@@ -1862,7 +1862,7 @@
                                 Padding="0"
                                 Margin="{DynamicResource ListItemMarginTight}">
                         <Expander Classes="backup-group"
-                                  IsExpanded="{Binding IsExpanded}"
+                                  IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
                                   HorizontalAlignment="Stretch">
                           <Expander.Header>
                             <Grid ColumnDefinitions="6,*,Auto"

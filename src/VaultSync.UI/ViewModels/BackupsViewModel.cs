@@ -3291,9 +3291,24 @@ namespace VaultSync.UI.ViewModels
                 BuildSnapshotGroups(filtered, projectLookup, preferredExpandedProjectId, currentProjectIdFilter, groupText));
         }
 
-        private void ReplaceSnapshotGroups(IReadOnlyList<SnapshotProjectGroup> groups)
+        internal void ReplaceSnapshotGroups(IReadOnlyList<SnapshotProjectGroup> groups)
         {
-            SnapshotGroups.SyncWith(groups);
+            var existing = SnapshotGroups.ToDictionary(group => group.ProjectId ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase);
+            var reconciled = new List<SnapshotProjectGroup>(groups.Count);
+            foreach (var incoming in groups)
+            {
+                if (existing.TryGetValue(incoming.ProjectId ?? string.Empty, out var current))
+                {
+                    current.UpdateFrom(incoming);
+                    reconciled.Add(current);
+                }
+                else
+                {
+                    reconciled.Add(incoming);
+                }
+            }
+            SnapshotGroups.SyncWith(reconciled);
         }
 
         private List<SnapshotProjectGroup> BuildSnapshotGroups(
@@ -4391,7 +4406,7 @@ namespace VaultSync.UI.ViewModels
             if (!dataChanged && !autoChanged)
                 return;
 
-            ProjectBackups.Clear();
+            var refreshedProjects = new List<ProjectBackupItem>();
             _projectLookupById.Clear();
             _allSnapshots.Clear();
 
@@ -4495,9 +4510,10 @@ namespace VaultSync.UI.ViewModels
                 UpdateProjectEncryptionDisplay(projectItem, config);
                 UpdateProjectRestoreModeDisplay(projectItem);
                 UpdateProjectVerificationPolicyDisplay(projectItem);
-                ProjectBackups.Add(projectItem);
+                refreshedProjects.Add(projectItem);
                 _projectLookupById[projectItem.Id] = projectItem;
             }
+            ProjectBackups.SyncWith(refreshedProjects);
             UpdateRestoreReadinessSummary(config, projectList, backupList);
             SortProjectBackups();
 

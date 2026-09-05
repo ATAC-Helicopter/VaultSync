@@ -257,7 +257,10 @@ namespace VaultSync.UI.Services
             bool isLightBase = string.Equals(palette.BaseTheme, ThemeLight, StringComparison.OrdinalIgnoreCase);
             Color accentSoft = WithAlpha(palette.Accent, isLightBase ? 0.14 : 0.24);
             Color textOnAccent = ThemeColor.BestContrast(Color.Parse(palette.Accent));
-            Color textMuted = Blend(palette.TextSecondary, palette.Background, isLightBase ? 0.45 : 0.60);
+            string textMuted = EnsureReadableText(
+                palette.TextSecondary,
+                [palette.Background, palette.Surface, palette.SurfaceAlt],
+                4.5);
             Color inputBackground = Blend(palette.SurfaceAlt, palette.Background, isLightBase ? 0.45 : 0.25);
             Color inputBorder = Blend(palette.SurfaceAlt, palette.TextSecondary, isLightBase ? 0.35 : 0.28);
             Color divider = Blend(palette.SurfaceAlt, palette.TextSecondary, isLightBase ? 0.25 : 0.18);

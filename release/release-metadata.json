@@ -2,44 +2,47 @@
   "schemaVersion": 1,
   "repository": "ATAC-Helicopter/VaultSync",
   "activeRelease": {
-    "version": "1.8.8",
+    "version": "1.8.9",
     "channel": "stable",
     "stage": "planned",
-    "tag": "v1.8.8",
-    "targetDate": "2026-09-01",
-    "previousVersion": "1.8.7",
+    "tag": "v1.8.9",
+    "targetDate": "2026-09-09",
+    "previousVersion": "1.8.8",
     "compatiblePredecessors": [
-      "1.8.7"
+      "1.8.8"
     ],
     "patchBaseCandidates": {
       "windows": [
         "1.8.2",
         "1.8.3",
         "1.8.5",
-        "1.8.6"
+        "1.8.6",
+        "1.8.7"
       ],
       "macos": [
         "1.8.2",
         "1.8.3",
         "1.8.5",
-        "1.8.6"
+        "1.8.6",
+        "1.8.7"
       ],
       "linux": [
         "1.8.2",
         "1.8.3",
         "1.8.5",
-        "1.8.6"
+        "1.8.6",
+        "1.8.7"
       ]
     },
-    "tagline": "A stable foundation for larger recovery.",
-    "releaseBranch": "release/1.8.8",
+    "tagline": "Keep your place. Work with clarity.",
+    "releaseBranch": "release/1.8.9",
     "integrationBranch": "Dev",
     "stableBranch": "Stable"
   },
   "currentStable": {
-    "version": "1.8.7",
-    "tag": "v1.8.7",
-    "releasedDate": "2026-08-21"
+    "version": "1.8.8",
+    "tag": "v1.8.8",
+    "releasedDate": "2026-09-02"
   },
   "platforms": [
     "Windows",
@@ -48,7 +51,7 @@
   ],
   "store": {
     "status": "planned",
-    "packageVersion": "1.8.8.0",
+    "packageVersion": "1.8.9.0",
     "storeId": "9N9HRX4JCLCP"
   }
 }

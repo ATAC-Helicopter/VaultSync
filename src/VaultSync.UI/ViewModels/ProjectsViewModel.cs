@@ -813,7 +813,6 @@ public partial class ProjectsViewModel : ViewModelBase
                 return BuildProjectItems(config, discovered);
             });
 
-            Projects.Clear();
             _allProjects.Clear();
             _allProjects.AddRange(projectItems);
 
@@ -822,7 +821,7 @@ public partial class ProjectsViewModel : ViewModelBase
 
             if (SelectedProject != null && !Projects.Contains(SelectedProject))
             {
-                SelectedProject = Projects.Count > 0 ? Projects[0] : null;
+                SelectedProject = Projects.FirstOrDefault();
             }
             else if (SelectedProject == null && Projects.Count > 0)
             {
@@ -1243,8 +1242,12 @@ public partial class ProjectsViewModel : ViewModelBase
 
     private void ApplyFilterAndSort(bool autoSelectIfNone = true)
     {
+        var selectedProjectId = SelectedProject?.ProjectId;
         var newList = SortProjectItems(GetFilteredProjects()).ToList();
         SyncProjectsCollection(newList);
+        var retainedSelection = newList.FirstOrDefault(project => project.ProjectId == selectedProjectId);
+        if (retainedSelection is not null)
+            SelectedProject = retainedSelection;
         RestoreProjectSelection(autoSelectIfNone);
 
         OnPropertiesChanged(
