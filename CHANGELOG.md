@@ -1,5 +1,18 @@
 ﻿# Changelog
-## [1.8.8] - Unreleased
+## [1.8.9] - Unreleased
+### Maintenance
+- [VS-1893] Prepare release identity, tracking, documentation, and packaging for 1.8.9.
+### Fixed
+- [BUG-18155] Preserve backup project expansion and loaded history depth during refreshes.
+- [BUG-18156] Keep surviving collection items when inserting rows across shared UI lists.
+- [BUG-18156] Remove full list resets during Projects and backup project-summary refreshes.
+- [BUG-18157] Retain the selected project by ID when refreshed project models are rebuilt.
+### Changed
+- [VS-1892] Center icon-and-label stacks inside shared status pills and backup tags.
+- [VS-1892] Improve muted text contrast, light-theme status colors, and dark-theme accent labels.
+- [VS-1892] Keep custom-theme muted text readable against the configured surfaces.
+
+## [1.8.8] - 02.09.2026
 ### Added
 - [VS-1823] Added repeatable large-history and high-file-count performance budgets.
 - [VS-1882] Added deterministic interruption and recovery qualification for plain and encrypted archives.

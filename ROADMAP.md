@@ -682,7 +682,7 @@ must not make truthful checksums, manifests, SBOMs, or provenance optional.
 
 ## 1.8.8 — Chronicle Stabilization
 
-**Status:** Active and required before `1.9.0`
+**Status:** Released on 2026-09-02 (`v1.8.8`)
 **Tagline:** *A stable foundation for larger recovery.*
 **Planning started:** 2026-08-24
 **Stable target:** 2026-09-01
@@ -690,8 +690,9 @@ must not make truthful checksums, manifests, SBOMs, or provenance optional.
 **Working branch:** `release/1.8.8`
 **Integration target:** `Dev`
 
-The maintained kickoff, 1.8.7 feedback snapshot, code baseline, delivery order,
-and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
+The completed scope is retained below. Release highlights are in
+[the changelog](CHANGELOG.md) and [What's New](docs/WHATS_NEW.md#188).
+The obsolete kickoff document has been retired.
 
 - [x] `VS-1823` `P0` Establish large-history and high-file-count performance
   budgets with repeatable benchmarks. _(Existing issue #382.)_
@@ -890,6 +891,49 @@ compatibility, and smoke tests on all supported operating systems.
 
 ---
 
+## 1.8.9 — Bug fixes and everyday polish
+
+**Status:** Active; implementation and qualification in progress
+**Tagline:** *Keep your place. Work with clarity.*
+**Current stable:** 1.8.8, released 2026-09-02
+**Planning started:** 2026-09-05
+**Stable target:** 2026-09-09
+**Maximum date:** 2026-09-16
+**Working branch:** `release/1.8.9`
+**Integration target:** `Dev`
+**Primary patch predecessor:** `1.8.8`, qualification pending
+
+The [release contract](docs/RELEASE_1.8.9.md) records implementation evidence
+and outstanding gates. Existing backup formats remain unchanged. Larger
+recovery features stay in the 1.9 family. Unchecked items include local work
+that has not yet been integrated and qualified.
+
+- [ ] `BUG-18155` `P1` Preserve backup group expansion and loaded history during refreshes.
+  [Issue #628](https://github.com/ATAC-Helicopter/VaultSync/issues/628).
+  Backup actions rebuild project groups and reset their expansion and pagination. Reconcile groups by project ID, retain loaded row depth, update summaries in place, and explicitly bind expansion two-way. Regression tests pass locally. Desktop deletion, cancellation, background completion, scroll and focus checks remain part of VS-1894; changes are not yet integrated.
+
+- [ ] `BUG-18156` `P1` Preserve surviving UI rows during collection refreshes.
+  [Issue #629](https://github.com/ATAC-Helicopter/VaultSync/issues/629).
+  The shared collection helper replaces a surviving item when inserting a row before it. Insert without replacing survivors and remove full collection resets from Projects and backup project summaries. Verify insertion, reorder, removal, and empty-list transitions without Reset notifications. Local regression tests pass; integration and desktop checks remain pending.
+
+- [ ] `BUG-18157` `P1` Retain selected project identity after refreshed models are rebuilt.
+  [Issue #630](https://github.com/ATAC-Helicopter/VaultSync/issues/630).
+  Refreshing project models can select the first project instead of the previously selected project. Resolve selection by project ID before fallback selection. Validate refresh with a non-first selected project and removal of the selected project. Local implementation and suite pass; desktop qualification and integration remain pending.
+
+- [ ] `VS-1892` `P1` Polish shared pill alignment and theme readability.
+  [Issue #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631).
+  Center icon-and-label stacks in shared status pills and backup tags. Improve muted text and semantic colors in light and dark themes and check custom-theme muted text against all configured surfaces. Local application build and theme tests pass. Qualify compact density, translated labels, scaling, and screenshots in VS-1894 before completion.
+
+- [ ] `VS-1893` `P1` Prepare 1.8.9 release identity and repository tracking.
+  [Issue #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632).
+  Advance UI, CLI, installer, Store manifest, canonical and public metadata to 1.8.9. Record the published 1.8.8 stable date, target the exact 1.8.8 predecessor, retire the obsolete 1.8.8 working contract, preserve historical evidence, and align roadmap, changelog, What's New, milestone, Project fields, and release documentation. Use release/1.8.9 into Dev, then Stable via merge commits. Validate metadata consumers and release scripts; do not publish or claim qualification during kickoff.
+
+- [ ] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
+  [Issue #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633).
+  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Qualify exact 1.8.8 upgrades, installer fallback, backup/restore smoke tests, Store packaging when enabled, static analysis and dependencies, and final artifacts. Platform patch assets remain opt-in after exact payload and handoff qualification. Record evidence before promotion; local model tests do not close this gate.
+
+---
+
 # VaultSync 1.9 — Recovery Horizon
 
 ## Family promise
@@ -984,7 +1028,7 @@ destabilizing the maintenance release.
 
 ## 1.9.0 — Disk and Bootable Recovery Foundation
 
-**Status:** Planned; implementation begins only after `1.8.8` qualifies and the
+**Status:** Planned; implementation begins only after the shipped `1.8.8` qualification is recorded and the
 1.9 architecture approval gate is complete.
 **Tagline:** *Recover when the installed system cannot.*
 

@@ -1,12 +1,25 @@
 # What's New
 
+## [1.8.9]
+
+VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
+
+### Keep your place
+- Preserve expanded backup project groups and loaded history pages during refreshes.
+- Retain surviving rows when lists change and keep the selected project after refresh.
+
+### Clearer controls
+- Center icon-and-label stacks inside shared pills and backup tags.
+- Improve muted text, light-theme status colors, and dark-theme accent labels.
+- Check custom-theme muted text against the configured background surfaces.
+
+Desktop scroll/focus checks, screenshot updates, and platform release qualification
+are still pending; see the [release contract](RELEASE_1.8.9.md).
+
 ## [1.8.8]
 
-VaultSync `1.8.8` is the Chronicle Stabilization update. Work is beginning with
-measured large-history performance, interruption and corruption recovery,
-cross-platform qualification, and focused decomposition of the backup,
-metadata, and desktop workflow hotspots. This section will grow only as
-user-visible changes are implemented and verified.
+VaultSync `1.8.8` shipped on September 2, 2026 with Chronicle stabilization,
+interruption recovery, updater fixes, and cross-platform qualification.
 
 ### Safer interrupted archives
 - Stop archive encryption between copied chunks when cancellation is requested,

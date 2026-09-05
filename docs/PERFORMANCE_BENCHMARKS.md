@@ -19,7 +19,7 @@ Use a Release build on an otherwise idle machine:
 dotnet run --project benchmarks/VaultSync.Benchmarks/VaultSync.Benchmarks.csproj \
   --configuration Release -- \
   --enforce \
-  --output artifacts/benchmarks/1.8.8.json
+  --output artifacts/benchmarks/1.8.9.json
 ```
 
 The JSON report records the UTC time, source identity, operating system,
@@ -58,12 +58,12 @@ profile.
   JSON evidence because hosted-runner timing does not replace a controlled
   release-machine measurement.
 
-## 1.8.8 kickoff baseline
+## Historical Chronicle baseline (1.8.8)
 
 The first controlled run used macOS 27 on Arm64, .NET 10.0.11, eight logical
 processors, workstation GC, and commit `3131ad2`. All release budgets passed.
 The complete report is stored as
-[`performance-macos-arm64.json`](release-evidence/1.8.8/performance-macos-arm64.json).
+[`chronicle-macos-arm64.json`](release-evidence/baselines/chronicle-macos-arm64.json).
 
 | Scenario | p50 | p95 | p95 allocation |
 |---|---:|---:|---:|
