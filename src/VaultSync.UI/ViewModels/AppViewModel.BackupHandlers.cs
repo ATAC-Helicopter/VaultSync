@@ -135,7 +135,9 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            BackupProjectPreparation preparation = await Task.Run(() => CreateManualBackupPreparation(projectId));
+            BackupProjectPreparation preparation = await Task.Run(
+                () => CreateManualBackupPreparation(projectId),
+                CancellationToken.None);
 
             if (preparation.Destinations.Count == 0)
             {

@@ -115,7 +115,7 @@ internal static class DiagnosticsLogger
             {
                 writerCts.Cancel();
                 WriterSignal.Set();
-                _writerTask?.Wait(TimeSpan.FromSeconds(1));
+                _writerTask?.Wait(TimeSpan.FromSeconds(1), CancellationToken.None);
             }
             catch
             {
@@ -369,8 +369,9 @@ internal static class DiagnosticsLogger
         if (Interlocked.Exchange(ref _writerStarted, 1) == 1)
             return;
 
-        _writerCts = new CancellationTokenSource();
-        _writerTask = Task.Run(() => WriterLoop(_writerCts.Token));
+        var writerCts = new CancellationTokenSource();
+        _writerCts = writerCts;
+        _writerTask = Task.Run(() => WriterLoop(writerCts.Token), writerCts.Token);
     }
 
     private static void WriterLoop(CancellationToken token)
@@ -510,7 +511,7 @@ internal static class DiagnosticsLogger
         if (Interlocked.Exchange(ref _dumpInFlight, 1) == 1)
             return;
 
-        _ = Task.Run(() => CollectDump(reason));
+        _ = Task.Run(() => CollectDump(reason), CancellationToken.None);
     }
 
     private static void CollectDump(string reason)
