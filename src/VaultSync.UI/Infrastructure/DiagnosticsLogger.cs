@@ -624,15 +624,15 @@ internal static class DiagnosticsLogger
         {
             try
             {
-                foreach (string candidate in EnumerateExecutableCandidates(
-                             dir,
-                             fileName,
-                             isWindows,
-                             windowsExtensions))
-                {
-                    if (File.Exists(candidate))
-                        return candidate;
-                }
+                string? match = EnumerateExecutableCandidates(
+                        dir,
+                        fileName,
+                        isWindows,
+                        windowsExtensions)
+                    .Where(File.Exists)
+                    .FirstOrDefault();
+                if (match is not null)
+                    return match;
             }
             catch
             {

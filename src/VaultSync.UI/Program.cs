@@ -273,7 +273,7 @@ internal static class Program
             if (read <= 0)
                 break;
 
-            ms.Write(buffer, 0, read);
+            await ms.WriteAsync(buffer.AsMemory(0, read), token);
             if (ms.Length > MaxActivationPayloadBytes)
                 return ActivatePayload;
 
