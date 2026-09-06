@@ -187,44 +187,48 @@ namespace VaultSync.UI.Services
             Application? app = Application.Current;
             if (app == null) return;
 
-            app.Resources["CardPadding"]         = compact ? new Thickness(10)    : new Thickness(16);
-            app.Resources["CardMargin"]          = compact ? new Thickness(4)     : new Thickness(8);
-            app.Resources["CardCornerRadius"]    = compact ? new CornerRadius(12) : new CornerRadius(18);
-            app.Resources["NavButtonPadding"]    = compact ? new Thickness(9, 6)  : new Thickness(12, 10);
-            app.Resources["NavButtonMargin"]     = compact ? new Thickness(0, 3, 0, 0) : new Thickness(0, 6, 0, 0);
-            app.Resources["MetricFontSize"]      = compact ? 26d : 36d;
-            app.Resources["MetricMargin"]        = compact ? new Thickness(0, 3, 0, 1) : new Thickness(0, 6, 0, 2);
-            app.Resources["MetricHintMargin"]    = compact ? new Thickness(0, 0, 0, 0) : new Thickness(0, 2, 0, 0);
-            app.Resources["SectionTitleFontSize"]= compact ? 13d : 16d;
-            app.Resources["PagePadding"]         = compact ? new Thickness(16, 12) : new Thickness(32, 24);
-            app.Resources["PageStackMargin"]     = compact ? new Thickness(14) : new Thickness(24);
-            app.Resources["SectionMarginBottom"] = compact ? new Thickness(0, 0, 0, 6) : new Thickness(0, 0, 0, 12);
-            app.Resources["ListItemMargin"]      = compact ? new Thickness(0, 3, 0, 0) : new Thickness(0, 8, 0, 0);
-            app.Resources["ListItemMarginTight"] = compact ? new Thickness(0, 1, 0, 1) : new Thickness(0, 3, 0, 3);
-            app.Resources["ListItemPadding"]     = compact ? new Thickness(10) : new Thickness(16);
-            app.Resources["CardPaddingLarge"]    = compact ? new Thickness(16) : new Thickness(24);
-            app.Resources["CardPaddingMedium"]   = compact ? new Thickness(12) : new Thickness(16);
-            app.Resources["CardPaddingSmall"]    = compact ? new Thickness(8)  : new Thickness(12);
-            app.Resources["InputPadding"]        = compact ? new Thickness(8, 5) : new Thickness(10, 8);
-            app.Resources["ButtonTightPadding"]  = compact ? new Thickness(7, 4) : new Thickness(10, 6);
-            app.Resources["ButtonPillPadding"]   = compact ? new Thickness(7, 3) : new Thickness(10, 4);
-            app.Resources["SmallButtonPadding"]  = compact ? new Thickness(6, 3) : new Thickness(8, 4);
-            app.Resources["SmallPillPadding"]    = compact ? new Thickness(7, 3) : new Thickness(10, 4);
-            app.Resources["StatPillPadding"]     = compact ? new Thickness(6, 1) : new Thickness(8, 2);
-            app.Resources["BackupTagPadding"]    = compact ? new Thickness(5, 1) : new Thickness(6, 2);
-            app.Resources["BackupTagMargin"]     = compact ? new Thickness(3, 0, 0, 0) : new Thickness(4, 0, 0, 0);
-            app.Resources["SummaryStatPadding"]  = compact ? new Thickness(6, 5) : new Thickness(10, 8);
-            app.Resources["ChartItemMargin"]     = compact ? new Thickness(3, 0) : new Thickness(6, 0);
-            app.Resources["ChartLabelMargin"]    = compact ? new Thickness(6, 2, 6, 0) : new Thickness(10, 4, 10, 0);
-            app.Resources["PageRowSpacing"]      = compact ? 10d : 16d;
-            app.Resources["ListRowSpacing"]      = compact ? 2d : 4d;
-            app.Resources["ProjectIconSize"]     = compact ? 22d : 28d;
-            app.Resources["ProjectIconRadius"]   = compact ? 11d : 14d;
-            app.Resources["ProjectIconMargin"]   = compact ? new Thickness(0, 0, 6, 0) : new Thickness(0, 0, 8, 0);
-            app.Resources["PageTitleFontSize"]   = compact ? 19d : 22d;
-            app.Resources["PageSubtitleFontSize"]= compact ? 11d : 12d;
-            app.Resources["SectionHeaderFontSize"]= compact ? 12d : 14d;
+            SetLayoutResource(app, "CardPadding", compact, new Thickness(10), new Thickness(16));
+            SetLayoutResource(app, "CardMargin", compact, new Thickness(4), new Thickness(8));
+            SetLayoutResource(app, "CardCornerRadius", compact, new CornerRadius(12), new CornerRadius(18));
+            SetLayoutResource(app, "NavButtonPadding", compact, new Thickness(9, 6), new Thickness(12, 10));
+            SetLayoutResource(app, "NavButtonMargin", compact, new Thickness(0, 3, 0, 0), new Thickness(0, 6, 0, 0));
+            SetLayoutResource(app, "MetricFontSize", compact, 26d, 36d);
+            SetLayoutResource(app, "MetricMargin", compact, new Thickness(0, 3, 0, 1), new Thickness(0, 6, 0, 2));
+            SetLayoutResource(app, "MetricHintMargin", compact, new Thickness(0), new Thickness(0, 2, 0, 0));
+            SetLayoutResource(app, "SectionTitleFontSize", compact, 13d, 16d);
+            SetLayoutResource(app, "PagePadding", compact, new Thickness(16, 12), new Thickness(32, 24));
+            SetLayoutResource(app, "PageStackMargin", compact, new Thickness(14), new Thickness(24));
+            SetLayoutResource(app, "SectionMarginBottom", compact, new Thickness(0, 0, 0, 6), new Thickness(0, 0, 0, 12));
+            SetLayoutResource(app, "ListItemMargin", compact, new Thickness(0, 3, 0, 0), new Thickness(0, 8, 0, 0));
+            SetLayoutResource(app, "ListItemMarginTight", compact, new Thickness(0, 1, 0, 1), new Thickness(0, 3, 0, 3));
+            SetLayoutResource(app, "ListItemPadding", compact, new Thickness(10), new Thickness(16));
+            SetLayoutResource(app, "CardPaddingLarge", compact, new Thickness(16), new Thickness(24));
+            SetLayoutResource(app, "CardPaddingMedium", compact, new Thickness(12), new Thickness(16));
+            SetLayoutResource(app, "CardPaddingSmall", compact, new Thickness(8), new Thickness(12));
+            SetLayoutResource(app, "InputPadding", compact, new Thickness(8, 5), new Thickness(10, 8));
+            SetLayoutResource(app, "ButtonTightPadding", compact, new Thickness(7, 4), new Thickness(10, 6));
+            SetLayoutResource(app, "ButtonPillPadding", compact, new Thickness(7, 3), new Thickness(10, 4));
+            SetLayoutResource(app, "SmallButtonPadding", compact, new Thickness(6, 3), new Thickness(8, 4));
+            SetLayoutResource(app, "SmallPillPadding", compact, new Thickness(7, 3), new Thickness(10, 4));
+            SetLayoutResource(app, "StatPillPadding", compact, new Thickness(6, 1), new Thickness(8, 2));
+            SetLayoutResource(app, "BackupTagPadding", compact, new Thickness(5, 1), new Thickness(6, 2));
+            SetLayoutResource(app, "BackupTagMargin", compact, new Thickness(3, 0, 0, 0), new Thickness(4, 0, 0, 0));
+            SetLayoutResource(app, "SummaryStatPadding", compact, new Thickness(6, 5), new Thickness(10, 8));
+            SetLayoutResource(app, "ChartItemMargin", compact, new Thickness(3, 0), new Thickness(6, 0));
+            SetLayoutResource(app, "ChartLabelMargin", compact, new Thickness(6, 2, 6, 0), new Thickness(10, 4, 10, 0));
+            SetLayoutResource(app, "PageRowSpacing", compact, 10d, 16d);
+            SetLayoutResource(app, "ListRowSpacing", compact, 2d, 4d);
+            SetLayoutResource(app, "ProjectIconSize", compact, 22d, 28d);
+            SetLayoutResource(app, "ProjectIconRadius", compact, 11d, 14d);
+            SetLayoutResource(app, "ProjectIconMargin", compact, new Thickness(0, 0, 6, 0), new Thickness(0, 0, 8, 0));
+            SetLayoutResource(app, "PageTitleFontSize", compact, 19d, 22d);
+            SetLayoutResource(app, "PageSubtitleFontSize", compact, 11d, 12d);
+            SetLayoutResource(app, "SectionHeaderFontSize", compact, 12d, 14d);
         }
+
+        private static void SetLayoutResource<T>(Application app, string key, bool compact, T compactValue, T standardValue)
+            where T : notnull
+            => app.Resources[key] = compact ? compactValue : standardValue;
 
         private static void ApplyThemeVariant(Application app, string themeName, ThemePaletteConfig? customTheme)
         {
@@ -434,32 +438,36 @@ namespace VaultSync.UI.Services
             Color surface = Color.Parse(palette.Surface);
             Color surfaceAlt = Color.Parse(palette.SurfaceAlt);
             Color accent = Color.Parse(palette.Accent);
-            Color whiteReflection = WithAlpha(Colors.White, isLightBase ? 0.72 : 0.18);
-            Color softReflection = WithAlpha(Colors.White, isLightBase ? 0.36 : 0.10);
-            Color glassEdge = isLightBase
-                ? Color.FromArgb(0xB8, 0xFF, 0xFF, 0xFF)
-                : Color.FromArgb(0x54, 0xD9, 0xEE, 0xFF);
-            Color glassEdgeSoft = isLightBase
-                ? Color.FromArgb(0x72, 0x9B, 0xB0, 0xC5)
-                : Color.FromArgb(0x38, 0xA8, 0xD8, 0xFA);
+            Color whiteReflection = WithAlpha(Colors.White, ChooseOpacity(isLightBase, 0.72, 0.18));
+            Color softReflection = WithAlpha(Colors.White, ChooseOpacity(isLightBase, 0.36, 0.10));
+            Color glassEdge = ChooseColor(
+                isLightBase,
+                Color.FromArgb(0xB8, 0xFF, 0xFF, 0xFF),
+                Color.FromArgb(0x54, 0xD9, 0xEE, 0xFF));
+            Color glassEdgeSoft = ChooseColor(
+                isLightBase,
+                Color.FromArgb(0x72, 0x9B, 0xB0, 0xC5),
+                Color.FromArgb(0x38, 0xA8, 0xD8, 0xFA));
 
             IBrush backdrop = BackdropGradient(background, surfaceAlt, accent, isLightBase);
             IBrush navigationGlass = GlassGradient(
                 whiteReflection,
-                WithAlpha(surface, isLightBase ? 0.78 : 0.68),
-                WithAlpha(Blend(accent, background, isLightBase ? 0.05 : 0.12), isLightBase ? 0.72 : 0.58));
+                WithAlpha(surface, ChooseOpacity(isLightBase, 0.78, 0.68)),
+                WithAlpha(
+                    Blend(accent, background, ChooseOpacity(isLightBase, 0.05, 0.12)),
+                    ChooseOpacity(isLightBase, 0.72, 0.58)));
             IBrush toolbarGlass = GlassGradient(
                 softReflection,
-                WithAlpha(surface, isLightBase ? 0.82 : 0.72),
-                WithAlpha(background, isLightBase ? 0.74 : 0.62));
+                WithAlpha(surface, ChooseOpacity(isLightBase, 0.82, 0.72)),
+                WithAlpha(background, ChooseOpacity(isLightBase, 0.74, 0.62)));
             IBrush floatingGlass = GlassGradient(
                 whiteReflection,
-                WithAlpha(surface, isLightBase ? 0.90 : 0.82),
-                WithAlpha(surfaceAlt, isLightBase ? 0.82 : 0.72));
+                WithAlpha(surface, ChooseOpacity(isLightBase, 0.90, 0.82)),
+                WithAlpha(surfaceAlt, ChooseOpacity(isLightBase, 0.82, 0.72)));
             IBrush contentSurface = new SolidColorBrush(
-                WithAlpha(surface, isLightBase ? 0.96 : 0.94));
+                WithAlpha(surface, ChooseOpacity(isLightBase, 0.96, 0.94)));
             IBrush contentRaised = new SolidColorBrush(
-                WithAlpha(surfaceAlt, isLightBase ? 0.96 : 0.92));
+                WithAlpha(surfaceAlt, ChooseOpacity(isLightBase, 0.96, 0.92)));
 
             app.Resources["WindowBackground"] = backdrop;
             app.Resources["VsBackgroundBrush"] = app.Resources["WindowBackground"];
@@ -468,8 +476,8 @@ namespace VaultSync.UI.Services
             app.Resources["GlassFloatingBrush"] = floatingGlass;
             app.Resources["GlassControlBrush"] = GlassGradient(
                 softReflection,
-                WithAlpha(surfaceAlt, isLightBase ? 0.84 : 0.74),
-                WithAlpha(surface, isLightBase ? 0.78 : 0.66));
+                WithAlpha(surfaceAlt, ChooseOpacity(isLightBase, 0.84, 0.74)),
+                WithAlpha(surface, ChooseOpacity(isLightBase, 0.78, 0.66)));
             app.Resources["GlassRimBrush"] = new SolidColorBrush(glassEdge);
             app.Resources["GlassRimSoftBrush"] = new SolidColorBrush(glassEdgeSoft);
             app.Resources["GlassReflectionBrush"] = new SolidColorBrush(softReflection);
@@ -481,8 +489,8 @@ namespace VaultSync.UI.Services
                 RadiusY = new RelativeScalar(0.5, RelativeUnit.Relative),
                 GradientStops =
                 {
-                    new GradientStop(WithAlpha(accent, isLightBase ? 0.14 : 0.20), 0),
-                    new GradientStop(WithAlpha(accent, isLightBase ? 0.05 : 0.07), 0.46),
+                    new GradientStop(WithAlpha(accent, ChooseOpacity(isLightBase, 0.14, 0.20)), 0),
+                    new GradientStop(WithAlpha(accent, ChooseOpacity(isLightBase, 0.05, 0.07)), 0.46),
                     new GradientStop(WithAlpha(accent, 0), 1)
                 }
             };
@@ -495,19 +503,28 @@ namespace VaultSync.UI.Services
             app.Resources["Surface1"] = contentSurface;
             app.Resources["Surface2"] = contentRaised;
             app.Resources["Surface3"] = new SolidColorBrush(
-                WithAlpha(surfaceAlt, isLightBase ? 0.98 : 0.95));
+                WithAlpha(surfaceAlt, ChooseOpacity(isLightBase, 0.98, 0.95)));
             app.Resources["ItemBg"] = new SolidColorBrush(
-                WithAlpha(surface, isLightBase ? 0.92 : 0.88));
+                WithAlpha(surface, ChooseOpacity(isLightBase, 0.92, 0.88)));
             app.Resources["CardSelectedBrush"] = GlassGradient(
-                WithAlpha(accent, isLightBase ? 0.20 : 0.28),
-                WithAlpha(surfaceAlt, isLightBase ? 0.94 : 0.86),
-                WithAlpha(surface, isLightBase ? 0.90 : 0.78));
+                WithAlpha(accent, ChooseOpacity(isLightBase, 0.20, 0.28)),
+                WithAlpha(surfaceAlt, ChooseOpacity(isLightBase, 0.94, 0.86)),
+                WithAlpha(surface, ChooseOpacity(isLightBase, 0.90, 0.78)));
             app.Resources["BorderSoft"] = new SolidColorBrush(glassEdgeSoft);
             app.Resources["DividerBrush"] = new SolidColorBrush(
-                isLightBase ? Color.FromArgb(0x84, 0x8D, 0xA2, 0xB8) : Color.FromArgb(0x5C, 0x9D, 0xC2, 0xDE));
+                ChooseColor(
+                    isLightBase,
+                    Color.FromArgb(0x84, 0x8D, 0xA2, 0xB8),
+                    Color.FromArgb(0x5C, 0x9D, 0xC2, 0xDE)));
             app.Resources["InputBackgroundBrush"] = new SolidColorBrush(
-                WithAlpha(surface, isLightBase ? 0.94 : 0.88));
+                WithAlpha(surface, ChooseOpacity(isLightBase, 0.94, 0.88)));
         }
+
+        private static double ChooseOpacity(bool isLightBase, double lightValue, double darkValue)
+            => isLightBase ? lightValue : darkValue;
+
+        private static Color ChooseColor(bool isLightBase, Color lightValue, Color darkValue)
+            => isLightBase ? lightValue : darkValue;
 
         private static LinearGradientBrush GlassGradient(Color reflection, Color body, Color depth)
         {
