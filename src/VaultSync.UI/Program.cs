@@ -19,6 +19,7 @@ namespace VaultSync.UI;
 internal static class Program
 {
     private const int MaxActivationPayloadBytes = 8192;
+    private const string ActivatePayload = "activate";
     private static SingleInstanceLock? _instanceLock;
     private static CancellationTokenSource? _activationListenerCts;
     private const string InstancePipeName = "VaultSync.UI.SingleInstancePipe";
@@ -235,7 +236,7 @@ internal static class Program
                 string payload = await ReadPipePayloadAsync(server, token);
                 string payloadKind = payload.StartsWith("open-vse|", StringComparison.Ordinal)
                     ? "open-vse"
-                    : "activate";
+                    : ActivatePayload;
                 DiagnosticsLogger.Record($"Received activation signal. PayloadKind='{payloadKind}'.");
                 App.ActivateFromSignal(payload);
             }
@@ -259,7 +260,7 @@ internal static class Program
             return $"open-vse|{encodedPath}";
         }
 
-        return "activate";
+        return ActivatePayload;
     }
 
     private static async Task<string> ReadPipePayloadAsync(PipeStream server, CancellationToken token)
@@ -274,14 +275,14 @@ internal static class Program
 
             ms.Write(buffer, 0, read);
             if (ms.Length > MaxActivationPayloadBytes)
-                return "activate";
+                return ActivatePayload;
 
             if (read < buffer.Length)
                 break;
         }
 
         if (ms.Length == 0)
-            return "activate";
+            return ActivatePayload;
 
         return Encoding.UTF8.GetString(ms.ToArray());
     }

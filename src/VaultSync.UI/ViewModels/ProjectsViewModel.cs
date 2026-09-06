@@ -597,7 +597,7 @@ public partial class ProjectsViewModel : ViewModelBase
         _applyPresetRecommendationCommand = new RelayCommand(_ => ApplyPresetRecommendation(), _ =>
             SelectedProject is { RecommendedPreset.Length: > 0 });
         _togglePresetEditorCommand = new RelayCommand(_ => TogglePresetEditor(), _ => HasPresetEditorTarget);
-        _reloadPresetEditorCommand = new RelayCommand(_ => _ = ReloadPresetEditorAsync(), _ => HasPresetEditorTarget);
+        _reloadPresetEditorCommand = new RelayCommand(async _ => await ReloadPresetEditorAsync(), _ => HasPresetEditorTarget);
         _savePresetEditorCommand = new RelayCommand(_ => SavePresetEditor(), _ => HasPresetEditorTarget);
         _previewPresetEditorCommand = new RelayCommand(_ => PreviewPresetEditor(), _ => HasPresetEditorTarget);
         _clonePresetEditorCommand = new RelayCommand(_ => ClonePresetEditor(), _ => HasPresetEditorTarget);
@@ -995,7 +995,7 @@ public partial class ProjectsViewModel : ViewModelBase
         return vm;
     }
 
-    private ProjectStats ResolveProjectStats(DiscoveredProject source, ProjectBuildContext context, out Project? existingProject)
+    private static ProjectStats ResolveProjectStats(DiscoveredProject source, ProjectBuildContext context, out Project? existingProject)
     {
         existingProject = null;
         var stats = new ProjectStats(source.LastSnapshotTime, source.LastSnapshotSizeBytes);
@@ -1776,13 +1776,9 @@ public partial class ProjectsViewModel : ViewModelBase
     private PresetRecommendation? DetectPresetRecommendation(string projectPath)
     {
         var probe = new ProjectPathProbe(projectPath);
-        foreach (var rule in GetPresetRecommendationRules())
-        {
-            if (rule.Matches(probe))
-                return BuildPresetRecommendation(rule);
-        }
-
-        return null;
+        PresetRecommendationRule? match = GetPresetRecommendationRules()
+            .FirstOrDefault(rule => rule.Matches(probe));
+        return match is null ? null : BuildPresetRecommendation(match);
     }
 
     private PresetRecommendation? BuildPresetRecommendation(PresetRecommendationRule rule)
@@ -3815,19 +3811,21 @@ public class ProjectItemViewModel : ViewModelBase
 
     // ---- Convenience / formatted properties ----
 
-    public string LastSnapshotSummary =>
-        LastSnapshot == default
-            ? (IsRegistered
-                ? L("Projects.LastSnapshot.None", "No snapshots yet")
-                : L("Projects.Health.NotAdded", "Not added"))
-            : LastSnapshot.ToString("g", CultureInfo.CurrentCulture);
+    public string LastSnapshotSummary => LastSnapshot == default
+        ? GetMissingSnapshotLabel("Projects.LastSnapshot.None")
+        : LastSnapshot.ToString("g", CultureInfo.CurrentCulture);
 
-    public string LastSnapshotShort =>
-        LastSnapshot == default
-            ? (IsRegistered
-                ? L("Projects.LastSnapshot.NoneShort", "No snapshots yet")
-                : L("Projects.Health.NotAdded", "Not added"))
-            : LastSnapshot.ToString("ddd - HH:mm", CultureInfo.CurrentCulture);
+    public string LastSnapshotShort => LastSnapshot == default
+        ? GetMissingSnapshotLabel("Projects.LastSnapshot.NoneShort")
+        : LastSnapshot.ToString("ddd - HH:mm", CultureInfo.CurrentCulture);
+
+    private string GetMissingSnapshotLabel(string registeredKey)
+    {
+        if (IsRegistered)
+            return L(registeredKey, "No snapshots yet");
+
+        return L("Projects.Health.NotAdded", "Not added");
+    }
 
     public string DaysSinceLastSnapshotDisplay
     {
