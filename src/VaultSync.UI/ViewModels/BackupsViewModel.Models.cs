@@ -101,6 +101,100 @@ namespace VaultSync.UI.ViewModels
         private const string MarkupIcon = "M5 3 L1 8 L5 13 M11 3 L15 8 L11 13";
         private const string OtherFileIcon = "M3 1 H10 L14 5 V15 H3 Z M10 1 V5 H14";
 
+        private static readonly IReadOnlyDictionary<string, (string Label, DiffPreviewFileType Kind)> ExtensionTypes =
+            new Dictionary<string, (string Label, DiffPreviewFileType Kind)>(StringComparer.OrdinalIgnoreCase)
+            {
+                [".cs"] = ("C#", DiffPreviewFileType.Code),
+                [".fs"] = ("F#", DiffPreviewFileType.Code),
+                [".fsx"] = ("F#", DiffPreviewFileType.Code),
+                [".vb"] = ("VB", DiffPreviewFileType.Code),
+                [".js"] = ("JS", DiffPreviewFileType.Code),
+                [".mjs"] = ("JS", DiffPreviewFileType.Code),
+                [".cjs"] = ("JS", DiffPreviewFileType.Code),
+                [".ts"] = ("TS", DiffPreviewFileType.Code),
+                [".tsx"] = ("TS", DiffPreviewFileType.Code),
+                [".jsx"] = ("JSX", DiffPreviewFileType.Code),
+                [".py"] = ("PY", DiffPreviewFileType.Code),
+                [".rs"] = ("RS", DiffPreviewFileType.Code),
+                [".go"] = ("GO", DiffPreviewFileType.Code),
+                [".java"] = ("JV", DiffPreviewFileType.Code),
+                [".kt"] = ("KT", DiffPreviewFileType.Code),
+                [".kts"] = ("KT", DiffPreviewFileType.Code),
+                [".swift"] = ("SW", DiffPreviewFileType.Code),
+                [".c"] = ("C", DiffPreviewFileType.Code),
+                [".h"] = ("C", DiffPreviewFileType.Code),
+                [".cc"] = ("C++", DiffPreviewFileType.Code),
+                [".cpp"] = ("C++", DiffPreviewFileType.Code),
+                [".cxx"] = ("C++", DiffPreviewFileType.Code),
+                [".hpp"] = ("C++", DiffPreviewFileType.Code),
+                [".sh"] = ("$", DiffPreviewFileType.Code),
+                [".bash"] = ("$", DiffPreviewFileType.Code),
+                [".zsh"] = ("$", DiffPreviewFileType.Code),
+                [".ps1"] = ("$", DiffPreviewFileType.Code),
+                [".html"] = ("<>", DiffPreviewFileType.Markup),
+                [".htm"] = ("<>", DiffPreviewFileType.Markup),
+                [".xml"] = ("XML", DiffPreviewFileType.Markup),
+                [".xaml"] = ("XML", DiffPreviewFileType.Markup),
+                [".axaml"] = ("XML", DiffPreviewFileType.Markup),
+                [".svg"] = ("XML", DiffPreviewFileType.Markup),
+                [".csproj"] = ("XML", DiffPreviewFileType.Markup),
+                [".props"] = ("XML", DiffPreviewFileType.Markup),
+                [".targets"] = ("XML", DiffPreviewFileType.Markup),
+                [".css"] = ("CSS", DiffPreviewFileType.Markup),
+                [".scss"] = ("CSS", DiffPreviewFileType.Markup),
+                [".sass"] = ("CSS", DiffPreviewFileType.Markup),
+                [".less"] = ("CSS", DiffPreviewFileType.Markup),
+                [".json"] = ("{}", DiffPreviewFileType.Data),
+                [".jsonc"] = ("{}", DiffPreviewFileType.Data),
+                [".yml"] = ("YML", DiffPreviewFileType.Data),
+                [".yaml"] = ("YML", DiffPreviewFileType.Data),
+                [".toml"] = ("TML", DiffPreviewFileType.Data),
+                [".ini"] = ("CFG", DiffPreviewFileType.Data),
+                [".config"] = ("CFG", DiffPreviewFileType.Data),
+                [".conf"] = ("CFG", DiffPreviewFileType.Data),
+                [".env"] = ("CFG", DiffPreviewFileType.Data),
+                [".sql"] = ("DB", DiffPreviewFileType.Data),
+                [".db"] = ("DB", DiffPreviewFileType.Data),
+                [".sqlite"] = ("DB", DiffPreviewFileType.Data),
+                [".sqlite3"] = ("DB", DiffPreviewFileType.Data),
+                [".png"] = ("IMG", DiffPreviewFileType.Image),
+                [".jpg"] = ("IMG", DiffPreviewFileType.Image),
+                [".jpeg"] = ("IMG", DiffPreviewFileType.Image),
+                [".gif"] = ("IMG", DiffPreviewFileType.Image),
+                [".webp"] = ("IMG", DiffPreviewFileType.Image),
+                [".bmp"] = ("IMG", DiffPreviewFileType.Image),
+                [".ico"] = ("IMG", DiffPreviewFileType.Image),
+                [".tif"] = ("IMG", DiffPreviewFileType.Image),
+                [".tiff"] = ("IMG", DiffPreviewFileType.Image),
+                [".md"] = ("MD", DiffPreviewFileType.Document),
+                [".mdx"] = ("MD", DiffPreviewFileType.Document),
+                [".txt"] = ("TXT", DiffPreviewFileType.Document),
+                [".log"] = ("TXT", DiffPreviewFileType.Document),
+                [".csv"] = ("TXT", DiffPreviewFileType.Document),
+                [".tsv"] = ("TXT", DiffPreviewFileType.Document),
+                [".zip"] = ("ZIP", DiffPreviewFileType.Archive),
+                [".7z"] = ("ZIP", DiffPreviewFileType.Archive),
+                [".rar"] = ("ZIP", DiffPreviewFileType.Archive),
+                [".tar"] = ("ZIP", DiffPreviewFileType.Archive),
+                [".gz"] = ("ZIP", DiffPreviewFileType.Archive),
+                [".bz2"] = ("ZIP", DiffPreviewFileType.Archive),
+                [".xz"] = ("ZIP", DiffPreviewFileType.Archive),
+                [".sln"] = ("VS", DiffPreviewFileType.Code),
+                [".slnx"] = ("VS", DiffPreviewFileType.Code)
+            };
+
+        private static readonly IReadOnlyDictionary<string, (string Label, DiffPreviewFileType Kind)> ExtensionlessTypes =
+            new Dictionary<string, (string Label, DiffPreviewFileType Kind)>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["dockerfile"] = ("DKR", DiffPreviewFileType.Code),
+                ["makefile"] = ("MK", DiffPreviewFileType.Code),
+                [".gitignore"] = ("CFG", DiffPreviewFileType.Data),
+                [".gitattributes"] = ("CFG", DiffPreviewFileType.Data),
+                [".editorconfig"] = ("CFG", DiffPreviewFileType.Data),
+                ["license"] = ("TXT", DiffPreviewFileType.Document),
+                ["readme"] = ("TXT", DiffPreviewFileType.Document)
+            };
+
         private bool _isExpanded;
 
         private DiffPreviewTreeNode(
@@ -170,38 +264,46 @@ namespace VaultSync.UI.ViewModels
                 if (parts.Length == 0)
                     continue;
 
-                ObservableCollection<DiffPreviewTreeNode>? children = null;
                 DiffPreviewTreeNode? parent = null;
                 string folderPath = string.Empty;
                 for (int index = 0; index < parts.Length - 1; index++)
                 {
                     folderPath = folderPath.Length == 0 ? parts[index] : $"{folderPath}/{parts[index]}";
-                    if (!folders.TryGetValue(folderPath, out DiffPreviewTreeNode? folder))
-                    {
-                        folder = new DiffPreviewTreeNode(parts[index], folderPath, parent, null)
-                        {
-                            IsExpanded = expandAll || parent is null
-                        };
-                        if (children is null)
-                            roots.Add(folder);
-                        else
-                            children.Add(folder);
-                        folders.Add(folderPath, folder);
-                    }
-
-                    parent = folder;
-                    children = folder.Children;
+                    parent = GetOrCreateFolder(roots, folders, parts[index], folderPath, parent, expandAll);
                 }
 
                 var fileNode = new DiffPreviewTreeNode(parts[^1], normalizedPath, parent, file);
-                if (children is null)
+                if (parent is null)
                     roots.Add(fileNode);
                 else
-                    children.Add(fileNode);
+                    parent.Children.Add(fileNode);
             }
 
             SortNodes(roots);
             return roots;
+        }
+
+        private static DiffPreviewTreeNode GetOrCreateFolder(
+            ICollection<DiffPreviewTreeNode> roots,
+            IDictionary<string, DiffPreviewTreeNode> folders,
+            string name,
+            string path,
+            DiffPreviewTreeNode? parent,
+            bool expandAll)
+        {
+            if (folders.TryGetValue(path, out DiffPreviewTreeNode? existing))
+                return existing;
+
+            var folder = new DiffPreviewTreeNode(name, path, parent, null)
+            {
+                IsExpanded = expandAll || parent is null
+            };
+            if (parent is null)
+                roots.Add(folder);
+            else
+                parent.Children.Add(folder);
+            folders.Add(path, folder);
+            return folder;
         }
 
         private static void SortNodes(IList<DiffPreviewTreeNode> nodes)
@@ -221,55 +323,14 @@ namespace VaultSync.UI.ViewModels
 
         private static (string Label, DiffPreviewFileType Kind) DescribeFileType(string fileName)
         {
-            string lowerName = fileName.ToLowerInvariant();
-            string extension = System.IO.Path.GetExtension(fileName).ToLowerInvariant();
-            if (extension.Length == 0)
-            {
-                return lowerName switch
-                {
-                    "dockerfile" => ("DKR", DiffPreviewFileType.Code),
-                    "makefile" => ("MK", DiffPreviewFileType.Code),
-                    ".gitignore" or ".gitattributes" or ".editorconfig" => ("CFG", DiffPreviewFileType.Data),
-                    "license" or "readme" => ("TXT", DiffPreviewFileType.Document),
-                    _ => ("•", DiffPreviewFileType.Other)
-                };
-            }
-
-            return extension switch
-            {
-                ".cs" => ("C#", DiffPreviewFileType.Code),
-                ".fs" or ".fsx" => ("F#", DiffPreviewFileType.Code),
-                ".vb" => ("VB", DiffPreviewFileType.Code),
-                ".js" or ".mjs" or ".cjs" => ("JS", DiffPreviewFileType.Code),
-                ".ts" or ".tsx" => ("TS", DiffPreviewFileType.Code),
-                ".jsx" => ("JSX", DiffPreviewFileType.Code),
-                ".py" => ("PY", DiffPreviewFileType.Code),
-                ".rs" => ("RS", DiffPreviewFileType.Code),
-                ".go" => ("GO", DiffPreviewFileType.Code),
-                ".java" => ("JV", DiffPreviewFileType.Code),
-                ".kt" or ".kts" => ("KT", DiffPreviewFileType.Code),
-                ".swift" => ("SW", DiffPreviewFileType.Code),
-                ".c" or ".h" => ("C", DiffPreviewFileType.Code),
-                ".cc" or ".cpp" or ".cxx" or ".hpp" => ("C++", DiffPreviewFileType.Code),
-                ".sh" or ".bash" or ".zsh" or ".ps1" => ("$", DiffPreviewFileType.Code),
-                ".html" or ".htm" => ("<>", DiffPreviewFileType.Markup),
-                ".xml" or ".xaml" or ".axaml" or ".svg" or ".csproj" or ".props" or ".targets" =>
-                    ("XML", DiffPreviewFileType.Markup),
-                ".css" or ".scss" or ".sass" or ".less" => ("CSS", DiffPreviewFileType.Markup),
-                ".json" or ".jsonc" => ("{}", DiffPreviewFileType.Data),
-                ".yml" or ".yaml" => ("YML", DiffPreviewFileType.Data),
-                ".toml" => ("TML", DiffPreviewFileType.Data),
-                ".ini" or ".config" or ".conf" or ".env" => ("CFG", DiffPreviewFileType.Data),
-                ".sql" or ".db" or ".sqlite" or ".sqlite3" => ("DB", DiffPreviewFileType.Data),
-                ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" or ".bmp" or ".ico" or ".tif" or ".tiff" =>
-                    ("IMG", DiffPreviewFileType.Image),
-                ".md" or ".mdx" => ("MD", DiffPreviewFileType.Document),
-                ".txt" or ".log" or ".csv" or ".tsv" => ("TXT", DiffPreviewFileType.Document),
-                ".zip" or ".7z" or ".rar" or ".tar" or ".gz" or ".bz2" or ".xz" =>
-                    ("ZIP", DiffPreviewFileType.Archive),
-                ".sln" or ".slnx" => ("VS", DiffPreviewFileType.Code),
-                _ => ("•", DiffPreviewFileType.Other)
-            };
+            string extension = System.IO.Path.GetExtension(fileName);
+            IReadOnlyDictionary<string, (string Label, DiffPreviewFileType Kind)> types = extension.Length == 0
+                ? ExtensionlessTypes
+                : ExtensionTypes;
+            string key = extension.Length == 0 ? fileName : extension;
+            return types.TryGetValue(key, out (string Label, DiffPreviewFileType Kind) type)
+                ? type
+                : ("•", DiffPreviewFileType.Other);
         }
     }
 
