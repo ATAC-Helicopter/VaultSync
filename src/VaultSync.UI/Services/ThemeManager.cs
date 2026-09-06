@@ -17,6 +17,7 @@ namespace VaultSync.UI.Services
         private const string ThemeCustom = "Custom";
         private const string VisualStyleGlass = "Glass";
         private const string VisualStyleSolid = "Solid";
+        private const string CardBackgroundBrushKey = "CardBackgroundBrush";
 
         private sealed record ThemePresetDefinition(string Id, string Description, ThemePaletteConfig Palette);
 
@@ -356,6 +357,11 @@ namespace VaultSync.UI.Services
             return Color.FromArgb((byte)Math.Round(Math.Clamp(opacity, 0d, 1d) * 255d), color.R, color.G, color.B);
         }
 
+        private static Color WithAlpha(Color color, double opacity)
+        {
+            return Color.FromArgb((byte)Math.Round(Math.Clamp(opacity, 0d, 1d) * 255d), color.R, color.G, color.B);
+        }
+
         private static bool IsDark(string hex)
         {
             var color = Color.Parse(hex);
@@ -480,9 +486,9 @@ namespace VaultSync.UI.Services
                     new GradientStop(WithAlpha(accent, 0), 1)
                 }
             };
-            app.Resources["CardBackgroundBrush"] = contentSurface;
-            app.Resources["VsCardBrush"] = app.Resources["CardBackgroundBrush"];
-            app.Resources["SurfaceCardBrush"] = app.Resources["CardBackgroundBrush"];
+            app.Resources[CardBackgroundBrushKey] = contentSurface;
+            app.Resources["VsCardBrush"] = app.Resources[CardBackgroundBrushKey];
+            app.Resources["SurfaceCardBrush"] = app.Resources[CardBackgroundBrushKey];
             app.Resources["CardRaisedBackgroundBrush"] = contentRaised;
             app.Resources["VsCardHighlightBrush"] = app.Resources["CardRaisedBackgroundBrush"];
             app.Resources["Surface0"] = toolbarGlass;
@@ -540,11 +546,6 @@ namespace VaultSync.UI.Services
             };
         }
 
-        private static Color WithAlpha(Color color, double opacity)
-        {
-            return Color.FromArgb((byte)Math.Round(Math.Clamp(opacity, 0d, 1d) * 255d), color.R, color.G, color.B);
-        }
-
         private static readonly string[] PaletteResourceKeys =
         {
             "VsBackgroundColor",
@@ -583,7 +584,7 @@ namespace VaultSync.UI.Services
             "GlassRimSoftBrush",
             "GlassReflectionBrush",
             "GlassAmbientGlowBrush",
-            "CardBackgroundBrush",
+            CardBackgroundBrushKey,
             "VsCardBrush",
             "SurfaceCardBrush",
             "CardRaisedBackgroundBrush",

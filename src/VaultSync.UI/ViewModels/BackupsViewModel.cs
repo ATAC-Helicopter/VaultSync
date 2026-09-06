@@ -44,6 +44,7 @@ namespace VaultSync.UI.ViewModels
         private const string ManualBackupType = "Manual";
         private const string NoBackupsKey = "Backups.Summary.NoBackups";
         private const string NoBackupsFallback = "No backups yet";
+        private const string LastBackupSizeKey = "Backups.Summary.LastBackupSize";
         private const string PlainPolicyKey = "Projects.EncryptionPolicy.Plain";
         private const string PlainFallback = "Plain";
         private const string TimestampMinuteFormat = "yyyy-MM-dd HH:mm";
@@ -501,7 +502,7 @@ namespace VaultSync.UI.ViewModels
             L(NoBackupsKey, NoBackupsFallback);
         public string LastBackupRelative { get; private set; } = "-";
         public string LastBackupSecondaryLine { get; private set; } =
-            L("Backups.Summary.LastBackupSize", "Size -");
+            L(LastBackupSizeKey, "Size -");
         public string LastBackupSizeValueFormatted { get; private set; } = "0 B";
         public string LastBackupProjectName { get; private set; } = "-";
         public string LastBackupTypeDisplay { get; private set; } = "-";
@@ -2527,7 +2528,7 @@ namespace VaultSync.UI.ViewModels
             TotalSnapshotsSecondaryLine = Lf("Backups.Summary.YesterdayAverage", "{0} yesterday - avg {1}", 0, "0 B");
             SnapshotActivitySummary = L("Backups.Summary.NoActivity", "No backups in the last 7 days");
             LastBackupDisplay = L(NoBackupsKey, NoBackupsFallback);
-            LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
+            LastBackupSecondaryLine = L(LastBackupSizeKey, "Size -");
             LastBackupSizeValueFormatted = "0 B";
             TotalStoredLocalLine = Lf("Backups.Summary.LocalTotal", "Local total: {0}", "0 B");
             TotalStoredLocalValueFormatted = "0 B";
@@ -3794,7 +3795,7 @@ namespace VaultSync.UI.ViewModels
                 LastBackupDisplay  = last.Timestamp.ToString(TimestampMinuteFormat);
                 LastBackupRelative = FormatRelative(now - last.Timestamp);
                 LastBackupSecondaryLine = Lf(
-                    "Backups.Summary.LastBackupSize",
+                    LastBackupSizeKey,
                     "Size {0}",
                     BackupSnapshotItem.FormatSize(last.SizeBytes));
                 LastBackupSizeValueFormatted = BackupSnapshotItem.FormatSize(last.SizeBytes);
@@ -3842,7 +3843,7 @@ namespace VaultSync.UI.ViewModels
             {
                 LastBackupDisplay  = L(NoBackupsKey, NoBackupsFallback);
                 LastBackupRelative = "-";
-                LastBackupSecondaryLine = L("Backups.Summary.LastBackupSize", "Size -");
+                LastBackupSecondaryLine = L(LastBackupSizeKey, "Size -");
                 LastBackupSizeValueFormatted = "0 B";
                 LastBackupProjectName = "-";
                 LastBackupTypeDisplay = "-";
