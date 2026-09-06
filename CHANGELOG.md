@@ -4,9 +4,9 @@
 - [VS-1893] Prepare release identity, tracking, documentation, and packaging for 1.8.9.
 ### Fixed
 - [BUG-18155] Preserve backup project expansion and loaded history depth during refreshes.
-- [BUG-18156] Keep surviving collection items when inserting rows across shared UI lists.
-- [BUG-18156] Remove full list resets during Projects and backup project-summary refreshes.
-- [BUG-18157] Retain the selected project by ID when refreshed project models are rebuilt.
+- [BUG-18156] Preserve surviving rows and avoid full resets across shared UI lists.
+- [BUG-18157] Keep the selected backup project open while deletion refreshes its summary.
+- [BUG-18158] Keep Linux updater handoff qualification portable on Windows CI.
 ### Changed
 - [VS-1892] Center icon-and-label stacks inside shared status pills and backup tags.
 - [VS-1892] Improve muted text contrast, light-theme status colors, and dark-theme accent labels.

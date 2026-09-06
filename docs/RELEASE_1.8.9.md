@@ -38,6 +38,8 @@ backup format or introduce the larger 1.9 recovery features.
 | Shared collection reconciliation replaced an existing item when inserting before it. | Insert the new item and retain surviving items, avoiding destructive replacement notifications across all callers. |
 | Projects and backup project summaries cleared their bound lists during reload. | Reconcile refreshed lists without a collection Reset. |
 | Rebuilt project models could send selection back to the first project. | Match the previous selected project by ID before applying fallback selection. |
+| Backup deletion replaced the selected project-summary object before selection restoration. | Reconcile project rows by ID and update the selected row in place so the first project never takes over. |
+| The Linux updater handoff test expected Unix separators on Windows CI. | Build the expected working directory with the host path API while retaining Linux command assertions. |
 | Icon-and-label pill stacks could stretch independently of centered text. | Center stack containers inside shared status pills and backup tags. |
 | Muted text and light-theme semantic colors were too faint. | Increase muted-text contrast, darken light-theme success/warning/error colors, and use dark labels on the dark theme's blue accent. |
 | Custom-theme muted text was blended toward its background. | Apply the existing readable-text contrast check against all three configured surfaces. |
@@ -52,11 +54,12 @@ to the new page extent.
 
 ## Automated validation
 
-- Full .NET suite: **847 passed, 0 failed, 0 skipped** on Linux, including the
+- Full .NET suite: **849 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
-  preservation after deletion, summary updates, and removal of an empty group.
+  preservation after deletion, selected project-row identity and aggregate
+  updates, empty-selection continuity, summary updates, and removal of an empty group.
 - Existing backup comparison, paging, and theme tests pass.
 - Release preparation: **74 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
@@ -93,6 +96,7 @@ qualification remain pending.
 | [`BUG-18155` / #628](https://github.com/ATAC-Helicopter/VaultSync/issues/628) | Preserve backup group expansion and loaded history during refreshes | In progress |
 | [`BUG-18156` / #629](https://github.com/ATAC-Helicopter/VaultSync/issues/629) | Preserve surviving UI rows during collection refreshes | In progress |
 | [`BUG-18157` / #630](https://github.com/ATAC-Helicopter/VaultSync/issues/630) | Retain selected project identity after refreshed models are rebuilt | In progress |
+| [`BUG-18158` / #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635) | Keep Linux updater handoff qualification portable on Windows CI | In progress |
 | [`VS-1892` / #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631) | Polish shared pill alignment and theme readability | In progress |
 | [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | In progress |
 | [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Todo |

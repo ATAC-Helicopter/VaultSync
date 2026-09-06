@@ -918,7 +918,11 @@ that has not yet been integrated and qualified.
 
 - [ ] `BUG-18157` `P1` Retain selected project identity after refreshed models are rebuilt.
   [Issue #630](https://github.com/ATAC-Helicopter/VaultSync/issues/630).
-  Refreshing project models can select the first project instead of the previously selected project. Resolve selection by project ID before fallback selection. Validate refresh with a non-first selected project and removal of the selected project. Local implementation and suite pass; desktop qualification and integration remain pending.
+  Backup deletion rebuilt every project-summary row, allowing the list control to lose the selected object and open the first project before selection was restored. Reconcile rows by project ID, update the surviving selected row in place, and preserve a deliberately empty selection. Regression coverage verifies identity, aggregates, and no Reset notification; desktop qualification and integration remain pending.
+
+- [ ] `BUG-18158` `P1` Keep Linux updater handoff qualification portable on Windows CI.
+  [Issue #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635).
+  The Linux deferred-relaunch test asserted a Unix directory string even when the helper was exercised by the Windows runner, where `Path` correctly normalized it with Windows separators. Derive the expectation through the runtime path API so the cross-platform release gate tests behavior instead of host-specific text. The full 849-test suite passes locally; hosted validation and integration remain pending.
 
 - [ ] `VS-1892` `P1` Polish shared pill alignment and theme readability.
   [Issue #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631).

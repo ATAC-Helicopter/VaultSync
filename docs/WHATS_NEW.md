@@ -6,7 +6,7 @@ VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
 
 ### Keep your place
 - Preserve expanded backup project groups and loaded history pages during refreshes.
-- Retain surviving rows when lists change and keep the selected project after refresh.
+- Retain surviving rows and keep the selected project open after backup deletion.
 
 ### Clearer controls
 - Center icon-and-label stacks inside shared pills and backup tags.
