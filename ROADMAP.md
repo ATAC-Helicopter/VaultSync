@@ -940,6 +940,10 @@ that has not yet been integrated and qualified.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
   Update Avalonia to 12.1.2 and keep every directly pinned SkiaSharp 4.151.2 and HarfBuzzSharp 14.2.1.102 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Hosted Windows, Linux, macOS, CodeQL, Sonar, YAML, and script gates pass; integration remains pending.
 
+- [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
+  [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
+  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, and consolidate repeated UI keys and adjacent overloads. The zero-warning build, 857 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
+
 ---
 
 # VaultSync 1.9 — Recovery Horizon

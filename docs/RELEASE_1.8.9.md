@@ -41,6 +41,7 @@ backup format or introduce the larger 1.9 recovery features.
 | Backup deletion replaced the selected project-summary object before selection restoration. | Reconcile project rows by ID and update the selected row in place so the first project never takes over. |
 | The Linux updater handoff test expected Unix separators on Windows CI. | Build the expected working directory with the host path API while retaining Linux command assertions. |
 | Dependabot proposed only part of the directly pinned rendering family. | Update Avalonia, SkiaSharp, and HarfBuzzSharp coherently and gate central package changes with an alignment test. |
+| Desktop analysis retained cancellation, complexity, repeated-key, and overload-order findings. | Make task ownership explicit and simplify the flagged UI helpers without changing behavior. |
 | Icon-and-label pill stacks could stretch independently of centered text. | Center stack containers inside shared status pills and backup tags. |
 | Muted text and light-theme semantic colors were too faint. | Increase muted-text contrast, darken light-theme success/warning/error colors, and use dark labels on the dark theme's blue accent. |
 | Custom-theme muted text was blended toward its background. | Apply the existing readable-text contrast check against all three configured surfaces. |
@@ -55,7 +56,7 @@ to the new page extent.
 
 ## Automated validation
 
-- Full .NET suite: **849 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **857 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
@@ -104,6 +105,7 @@ qualification remain pending.
 | [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | In progress |
 | [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Todo |
 | [`VS-1895` / #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636) | Service Avalonia and coordinated rendering dependencies | In progress |
+| [`VS-1896` / #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637) | Clear remaining desktop Sonar maintainability findings | In progress |
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
 In-progress work is implemented locally or under preparation; it is not marked
