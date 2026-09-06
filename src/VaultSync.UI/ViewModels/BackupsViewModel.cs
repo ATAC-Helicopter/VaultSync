@@ -1371,7 +1371,9 @@ namespace VaultSync.UI.ViewModels
 
             try
             {
-                string path = await Task.Run(() => WriteSnapshotSummaryExport(snapshot, format));
+                string path = await Task.Run(
+                    () => WriteSnapshotSummaryExport(snapshot, format),
+                    CancellationToken.None);
                 if (string.IsNullOrWhiteSpace(path))
                 {
                     ShowNotification(
@@ -1445,8 +1447,12 @@ namespace VaultSync.UI.ViewModels
                 "Backups.Compare.LoadingInventory",
                 "Loading changed files from the previous restore point.");
             IsSnapshotCompareBusy = true;
-            _snapshotCompareCts?.Cancel();
-            _snapshotCompareCts?.Dispose();
+            CancellationTokenSource? previousCompare = _snapshotCompareCts;
+            if (previousCompare is not null)
+            {
+                await previousCompare.CancelAsync();
+                previousCompare.Dispose();
+            }
             var compareCts = new CancellationTokenSource();
             _snapshotCompareCts = compareCts;
             await CompareSelectedSnapshotsAsync(
@@ -1578,46 +1584,19 @@ namespace VaultSync.UI.ViewModels
             CancellationTokenSource compareCts,
             bool preserveStoredSummaryWhenInventoryMissing = false)
         {
-            bool pointAIsNewer = CompareRestorePointOrder(pointA, pointB) > 0;
-            BackupSnapshotItem newer = pointAIsNewer ? pointA : pointB;
-            BackupSnapshotItem older = ReferenceEquals(newer, pointA) ? pointB : pointA;
+            (BackupSnapshotItem older, BackupSnapshotItem newer) = OrderRestorePoints(pointA, pointB);
             try
             {
-                SnapshotCompareResult result = await _compareSnapshotsAsync(
-                    older.SnapshotId,
-                    newer.SnapshotId,
-                    compareCts.Token)
+                (SnapshotCompareResult result, bool inventoryAvailable) = await BuildSnapshotComparisonAsync(
+                        older,
+                        newer,
+                        preserveStoredSummaryWhenInventoryMissing,
+                        compareCts.Token)
                     .ConfigureAwait(false);
-                bool storedSummaryMatches = StoredDiffSummaryMatches(newer, result);
-                bool inventoryAvailable = result.Unchanged + result.ChangedCount > 0 ||
-                                          (preserveStoredSummaryWhenInventoryMissing && storedSummaryMatches);
-                bool shouldRecoverInventory = result.Unchanged + result.ChangedCount == 0 ||
-                                              (preserveStoredSummaryWhenInventoryMissing && !storedSummaryMatches);
-                bool comparedReachableContents = false;
-                if (shouldRecoverInventory)
-                {
-                    (result, inventoryAvailable) = await CompareReachableBackupContentsAsync(
-                            older,
-                            newer,
-                            result,
-                            compareCts.Token)
-                        .ConfigureAwait(false);
-                    comparedReachableContents = inventoryAvailable;
-                }
-
-                if (!comparedReachableContents && result.Modified > 0)
-                {
-                    result = await IgnoreReachableTextEquivalentModificationsAsync(
-                            older,
-                            newer,
-                            result,
-                            compareCts.Token)
-                        .ConfigureAwait(false);
-                }
 
                 await _invokeOnUiAsync(() =>
                 {
-                    if (compareCts.IsCancellationRequested || !ReferenceEquals(_snapshotCompareCts, compareCts))
+                    if (!IsCurrentSnapshotComparison(compareCts))
                         return;
                     ApplySnapshotComparisonResult(
                         older,
@@ -1637,23 +1616,9 @@ namespace VaultSync.UI.ViewModels
                     $"Snapshot file compare failed: older={older.SnapshotId}, newer={newer.SnapshotId}, error={ex.GetType().Name} - {ex.Message}");
                 await _invokeOnUiAsync(() =>
                 {
-                    if (compareCts.IsCancellationRequested || !ReferenceEquals(_snapshotCompareCts, compareCts))
+                    if (!IsCurrentSnapshotComparison(compareCts))
                         return;
-                    DiffPreviewTitle = L("Backups.Compare.FailedTitle", "Comparison unavailable");
-                    DiffPreviewText = Lf(
-                        "Backups.Compare.FailedMessage",
-                        "VaultSync could not compare these restore points: {0}",
-                        ex.Message);
-                    _allDiffPreviewFiles.Clear();
-                    DiffPreviewFiles.Clear();
-                    ResetDiffPreviewTree();
-                    SelectedDiffPreviewFile = null;
-                    DiffFileContentStatus = DiffPreviewTitle;
-                    DiffFileContentText = DiffPreviewText;
-                    DiffPreviewEmptyTitle = DiffPreviewTitle;
-                    DiffPreviewEmptyMessage = DiffPreviewText;
-                    NotifyDiffPreviewFileAvailabilityChanged();
-                    IsDiffPreviewOpen = true;
+                    ApplySnapshotCompareFailure(ex.Message);
                 });
             }
             finally
@@ -1667,6 +1632,76 @@ namespace VaultSync.UI.ViewModels
                     compareCts.Dispose();
                 });
             }
+        }
+
+        private static (BackupSnapshotItem Older, BackupSnapshotItem Newer) OrderRestorePoints(
+            BackupSnapshotItem pointA,
+            BackupSnapshotItem pointB)
+            => CompareRestorePointOrder(pointA, pointB) > 0
+                ? (pointB, pointA)
+                : (pointA, pointB);
+
+        private async Task<(SnapshotCompareResult Result, bool InventoryAvailable)> BuildSnapshotComparisonAsync(
+            BackupSnapshotItem older,
+            BackupSnapshotItem newer,
+            bool preserveStoredSummaryWhenInventoryMissing,
+            CancellationToken cancellationToken)
+        {
+            SnapshotCompareResult result = await _compareSnapshotsAsync(
+                    older.SnapshotId,
+                    newer.SnapshotId,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            bool storedSummaryMatches = StoredDiffSummaryMatches(newer, result);
+            bool inventoryAvailable = result.Unchanged + result.ChangedCount > 0 ||
+                                      (preserveStoredSummaryWhenInventoryMissing && storedSummaryMatches);
+            bool shouldRecoverInventory = result.Unchanged + result.ChangedCount == 0 ||
+                                          (preserveStoredSummaryWhenInventoryMissing && !storedSummaryMatches);
+            bool comparedReachableContents = false;
+            if (shouldRecoverInventory)
+            {
+                (result, inventoryAvailable) = await CompareReachableBackupContentsAsync(
+                        older,
+                        newer,
+                        result,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                comparedReachableContents = inventoryAvailable;
+            }
+
+            if (!comparedReachableContents && result.Modified > 0)
+            {
+                result = await IgnoreReachableTextEquivalentModificationsAsync(
+                        older,
+                        newer,
+                        result,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            return (result, inventoryAvailable);
+        }
+
+        private bool IsCurrentSnapshotComparison(CancellationTokenSource compareCts)
+            => !compareCts.IsCancellationRequested && ReferenceEquals(_snapshotCompareCts, compareCts);
+
+        private void ApplySnapshotCompareFailure(string message)
+        {
+            DiffPreviewTitle = L("Backups.Compare.FailedTitle", "Comparison unavailable");
+            DiffPreviewText = Lf(
+                "Backups.Compare.FailedMessage",
+                "VaultSync could not compare these restore points: {0}",
+                message);
+            _allDiffPreviewFiles.Clear();
+            DiffPreviewFiles.Clear();
+            ResetDiffPreviewTree();
+            SelectedDiffPreviewFile = null;
+            DiffFileContentStatus = DiffPreviewTitle;
+            DiffFileContentText = DiffPreviewText;
+            DiffPreviewEmptyTitle = DiffPreviewTitle;
+            DiffPreviewEmptyMessage = DiffPreviewText;
+            NotifyDiffPreviewFileAvailabilityChanged();
+            IsDiffPreviewOpen = true;
         }
 
         private async Task<(SnapshotCompareResult Result, bool InventoryAvailable)> CompareReachableBackupContentsAsync(
@@ -2362,28 +2397,36 @@ namespace VaultSync.UI.ViewModels
                 .FirstOrDefault();
             if (selectPointB)
             {
-                if (candidate is not null && candidate.Timestamp < selected.Timestamp)
-                {
-                    SelectedSnapshotB = selected;
-                    SelectedSnapshotA = candidate;
-                }
-                else
-                {
-                    SelectedSnapshotB = candidate;
-                }
+                SelectDefaultPointB(selected, candidate);
             }
             else
             {
-                if (candidate is not null && candidate.Timestamp > selected.Timestamp)
-                {
-                    SelectedSnapshotA = selected;
-                    SelectedSnapshotB = candidate;
-                }
-                else
-                {
-                    SelectedSnapshotA = candidate;
-                }
+                SelectDefaultPointA(selected, candidate);
             }
+        }
+
+        private void SelectDefaultPointB(BackupSnapshotItem selected, BackupSnapshotItem? candidate)
+        {
+            if (candidate is not null && candidate.Timestamp < selected.Timestamp)
+            {
+                SelectedSnapshotB = selected;
+                SelectedSnapshotA = candidate;
+                return;
+            }
+
+            SelectedSnapshotB = candidate;
+        }
+
+        private void SelectDefaultPointA(BackupSnapshotItem selected, BackupSnapshotItem? candidate)
+        {
+            if (candidate is not null && candidate.Timestamp > selected.Timestamp)
+            {
+                SelectedSnapshotA = selected;
+                SelectedSnapshotB = candidate;
+                return;
+            }
+
+            SelectedSnapshotA = candidate;
         }
 
         private SnapshotSummaryExportPayload BuildSnapshotSummaryExportPayload(BackupSnapshotItem snapshot)
