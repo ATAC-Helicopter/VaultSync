@@ -4513,7 +4513,7 @@ namespace VaultSync.UI.ViewModels
                 refreshedProjects.Add(projectItem);
                 _projectLookupById[projectItem.Id] = projectItem;
             }
-            ProjectBackups.SyncWith(refreshedProjects);
+            ReplaceProjectBackups(refreshedProjects);
             UpdateRestoreReadinessSummary(config, projectList, backupList);
             SortProjectBackups();
 
@@ -4606,6 +4606,40 @@ namespace VaultSync.UI.ViewModels
             _lastProjectSignature = projectSignature;
             _lastBackupSignature = backupSignature;
             _lastAutoBackupSignature = autoSignature;
+        }
+
+        internal void ReplaceProjectBackups(IReadOnlyList<ProjectBackupItem> incomingProjects)
+        {
+            string? selectedId = SelectedProject?.Id;
+            var existingById = ProjectBackups
+                .Where(project => !string.IsNullOrWhiteSpace(project.Id))
+                .GroupBy(project => project.Id, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+            var reconciled = new List<ProjectBackupItem>(incomingProjects.Count);
+
+            foreach (ProjectBackupItem incoming in incomingProjects)
+            {
+                if (existingById.TryGetValue(incoming.Id, out ProjectBackupItem? current))
+                {
+                    current.UpdateFrom(incoming);
+                    reconciled.Add(current);
+                }
+                else
+                {
+                    reconciled.Add(incoming);
+                }
+            }
+
+            ProjectBackups.SyncWith(reconciled);
+            _projectLookupById.Clear();
+            foreach (ProjectBackupItem project in ProjectBackups)
+                _projectLookupById[project.Id] = project;
+
+            if (!string.IsNullOrWhiteSpace(selectedId))
+            {
+                SelectedProject = ProjectBackups.FirstOrDefault(project =>
+                    string.Equals(project.Id, selectedId, StringComparison.OrdinalIgnoreCase));
+            }
         }
 
         private void RefreshDestinationQuotaPlans(AppConfig config, IEnumerable<Backup> backups)

@@ -85,4 +85,45 @@ public sealed class RefreshContinuityTests
         Assert.Same(survivor, Assert.Single(vm.SnapshotGroups));
         Assert.True(survivor.IsExpanded);
     }
+
+    [Fact]
+    public void BackupProjectRefreshKeepsSelectedRowInstance()
+    {
+        var vm = new BackupsViewModel();
+        var first = new ProjectBackupItem { Id = "first", Name = "First", SnapshotCount = 3 };
+        var selected = new ProjectBackupItem { Id = "selected", Name = "Selected", SnapshotCount = 2 };
+        vm.ProjectBackups.Add(first);
+        vm.ProjectBackups.Add(selected);
+        vm.SelectedProject = selected;
+        vm.ProjectBackups.CollectionChanged += (_, args) =>
+            Assert.NotEqual(NotifyCollectionChangedAction.Reset, args.Action);
+
+        vm.ReplaceProjectBackups(new[]
+        {
+            new ProjectBackupItem { Id = "first", Name = "First", SnapshotCount = 3 },
+            new ProjectBackupItem { Id = "selected", Name = "Selected", SnapshotCount = 1 }
+        });
+
+        Assert.Same(selected, vm.SelectedProject);
+        Assert.Same(selected, vm.ProjectBackups[1]);
+        Assert.Equal(1, selected.SnapshotCount);
+    }
+
+    [Fact]
+    public void BackupProjectRefreshDoesNotSelectFirstRowWhenNothingWasSelected()
+    {
+        var vm = new BackupsViewModel();
+        var first = new ProjectBackupItem { Id = "first", Name = "First" };
+        vm.ProjectBackups.Add(first);
+
+        vm.ReplaceProjectBackups(new[]
+        {
+            new ProjectBackupItem { Id = "first", Name = "First renamed" },
+            new ProjectBackupItem { Id = "second", Name = "Second" }
+        });
+
+        Assert.Null(vm.SelectedProject);
+        Assert.Same(first, vm.ProjectBackups[0]);
+        Assert.Equal("First renamed", first.Name);
+    }
 }

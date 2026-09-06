@@ -708,6 +708,50 @@ namespace VaultSync.UI.ViewModels
         {
             get; set;
         }
+
+        internal void UpdateFrom(ProjectBackupItem incoming)
+        {
+            ArgumentNullException.ThrowIfNull(incoming);
+
+            Id = incoming.Id;
+            Name = incoming.Name;
+            FolderName = incoming.FolderName;
+            ExternalId = incoming.ExternalId;
+            ProjectTagsCsv = incoming.ProjectTagsCsv;
+            LastBackupTime = incoming.LastBackupTime;
+            SnapshotCount = incoming.SnapshotCount;
+            TotalSizeBytes = incoming.TotalSizeBytes;
+            StorageDeltaBytes = incoming.StorageDeltaBytes;
+            RestoreReadinessLabel = incoming.RestoreReadinessLabel;
+            RestoreReadinessReason = incoming.RestoreReadinessReason;
+            RestoreReadinessBrush = incoming.RestoreReadinessBrush;
+
+            // Refresh backing state without firing user-change callbacks.
+            _autoBackupEnabled = incoming._autoBackupEnabled;
+            AutoBackupChanged = incoming.AutoBackupChanged;
+            PreferredDestinationChanged = incoming.PreferredDestinationChanged;
+            EncryptionPolicyChanged = incoming.EncryptionPolicyChanged;
+            RestoreModeChanged = incoming.RestoreModeChanged;
+            VerificationPolicyChanged = incoming.VerificationPolicyChanged;
+            PreferredDestinationId = incoming.PreferredDestinationId;
+            SetPreferredDestinationOption(incoming.PreferredDestinationOption);
+            PreferredDestinationDisplay = incoming.PreferredDestinationDisplay;
+            EncryptionPolicy = incoming.EncryptionPolicy;
+            EncryptionKeyRef = incoming.EncryptionKeyRef;
+            SetEncryptionPolicyOption(incoming.EncryptionPolicyOption);
+            RestoreMode = incoming.RestoreMode;
+            SetRestoreModeOption(incoming.RestoreModeOption);
+            VerificationPolicy = incoming.VerificationPolicy;
+            SetVerificationPolicyOption(incoming.VerificationPolicyOption);
+            EffectiveEncryptionDisplay = incoming.EffectiveEncryptionDisplay;
+            HasEncryptionSecret = incoming.HasEncryptionSecret;
+            EncryptionSecretStatus = incoming.EncryptionSecretStatus;
+
+            AvatarInitials = incoming.AvatarInitials;
+            AvatarColor = incoming.AvatarColor;
+            AvatarImagePath = incoming.AvatarImagePath;
+            OnPropertyChanged(string.Empty);
+        }
         private string _restoreReadinessLabel = string.Empty;
         public string RestoreReadinessLabel
         {
