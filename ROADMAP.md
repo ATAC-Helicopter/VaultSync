@@ -922,7 +922,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `BUG-18158` `P1` Keep Linux updater handoff qualification portable on Windows CI.
   [Issue #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635).
-  The Linux deferred-relaunch test asserted a Unix directory string even when the helper was exercised by the Windows runner, where `Path` correctly normalized it with Windows separators. Derive the expectation through the runtime path API so the cross-platform release gate tests behavior instead of host-specific text. The full 849-test suite passes locally; hosted validation and integration remain pending.
+  The Linux deferred-relaunch test asserted a Unix directory string even when the helper was exercised by the Windows runner, where `Path` correctly normalized it with Windows separators. Derive the expectation through the runtime path API so the cross-platform release gate tests behavior instead of host-specific text. The full 849-test suite and hosted Windows check pass; integration remains pending.
 
 - [ ] `VS-1892` `P1` Polish shared pill alignment and theme readability.
   [Issue #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631).
@@ -938,7 +938,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1895` `P1` Service Avalonia and coordinated rendering dependencies.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
-  Update Avalonia to 12.1.2 and keep every directly pinned SkiaSharp 4.151.2 and HarfBuzzSharp 14.2.1.102 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Cross-platform hosted validation and integration remain pending.
+  Update Avalonia to 12.1.2 and keep every directly pinned SkiaSharp 4.151.2 and HarfBuzzSharp 14.2.1.102 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Hosted Windows, Linux, macOS, CodeQL, Sonar, YAML, and script gates pass; integration remains pending.
 
 ---
 

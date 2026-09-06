@@ -64,6 +64,8 @@ to the new page extent.
 - Existing backup comparison, paging, and theme tests pass.
 - Release preparation: **77 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
+- Hosted Windows, Linux, and macOS build/test jobs pass at the current head;
+  CodeQL, SonarQube, YAML, Store metadata, and dependency submission are green.
 
 ## Desktop qualification still required
 
