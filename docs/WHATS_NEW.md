@@ -12,6 +12,7 @@ VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
 - Center icon-and-label stacks inside shared pills and backup tags.
 - Improve muted text, light-theme status colors, and dark-theme accent labels.
 - Check custom-theme muted text against the configured background surfaces.
+- Service the desktop rendering stack with coordinated cross-platform packages.
 
 Desktop scroll/focus checks, screenshot updates, and platform release qualification
 are still pending; see the [release contract](RELEASE_1.8.9.md).

@@ -8,6 +8,7 @@
 - [BUG-18157] Keep the selected backup project open while deletion refreshes its summary.
 - [BUG-18158] Keep Linux updater handoff qualification portable on Windows CI.
 ### Changed
+- [VS-1895] Service Avalonia and coordinated SkiaSharp/HarfBuzzSharp packages.
 - [VS-1892] Center icon-and-label stacks inside shared status pills and backup tags.
 - [VS-1892] Improve muted text contrast, light-theme status colors, and dark-theme accent labels.
 - [VS-1892] Keep custom-theme muted text readable against the configured surfaces.

@@ -936,6 +936,10 @@ that has not yet been integrated and qualified.
   [Issue #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633).
   Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Qualify exact 1.8.8 upgrades, installer fallback, backup/restore smoke tests, Store packaging when enabled, static analysis and dependencies, and final artifacts. Platform patch assets remain opt-in after exact payload and handoff qualification. Record evidence before promotion; local model tests do not close this gate.
 
+- [ ] `VS-1895` `P1` Service Avalonia and coordinated rendering dependencies.
+  [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
+  Update Avalonia to 12.1.2 and keep every directly pinned SkiaSharp 4.151.2 and HarfBuzzSharp 14.2.1.102 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Cross-platform hosted validation and integration remain pending.
+
 ---
 
 # VaultSync 1.9 — Recovery Horizon
