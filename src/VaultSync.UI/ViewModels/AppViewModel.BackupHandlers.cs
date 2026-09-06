@@ -75,6 +75,10 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S3776:Cognitive Complexity of methods should not be too high",
+            Justification = "This UI transaction coordinator keeps manual-backup state, destination cleanup, telemetry, and final UI teardown in one auditable failure boundary; the backup engine operations are delegated to focused services.")]
         private async Task OnBackupProjectRequestedAsync(ProjectBackupItem? item)
         {
             bool trayRun = _trayInitiatedBackup;
@@ -373,7 +377,8 @@ namespace VaultSync.UI.ViewModels
                                         preferParallelArchiveUpload: preferParallelUpload,
                                         useScanCache: _settingsViewModel.EnableScanCache,
                                         aggressiveScanCache: _settingsViewModel.AggressiveScanCache,
-                                        enableCheckpointedRetry: dest.EnableCheckpointResume
+                                        enableCheckpointedRetry: dest.EnableCheckpointResume,
+                                        ct: CancellationToken.None
                                     );
                                     sw.Stop();
 
@@ -391,7 +396,7 @@ namespace VaultSync.UI.ViewModels
                                     }
 
                                     return (Result: result, sw.Elapsed);
-                                });
+                                }, CancellationToken.None);
 
                                 if (Result.SkippedForNoChanges)
                                 {
@@ -532,7 +537,7 @@ namespace VaultSync.UI.ViewModels
                 }
 
                 // --- After backup: optional verification / post-hash ---
-                AppConfig cfgAfter = await Task.Run(_configStore.Load);
+                AppConfig cfgAfter = await Task.Run(_configStore.Load, CancellationToken.None);
                 if (metadataRoot is not null)
                 {
                     Backup? latest = metadataBackupId.HasValue
