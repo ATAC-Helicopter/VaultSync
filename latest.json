@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "captured_at": "2026-09-06T07:51:34Z",
+  "captured_at": "2026-09-07T08:13:40Z",
   "repository": "ATAC-Helicopter/VaultSync",
   "releases": [
     {
@@ -106,14 +106,14 @@
           "name": "VaultSync-Setup-1.8.8.exe",
           "size": 62425999,
           "content_type": "application/x-msdownload",
-          "download_count": 9,
+          "download_count": 11,
           "downloads_delta": 2,
           "created_at": "2026-09-02T19:35:25Z",
           "updated_at": "2026-09-02T19:35:45Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.8/VaultSync-Setup-1.8.8.exe"
         }
       ],
-      "total_downloads": 18,
+      "total_downloads": 20,
       "downloads_delta": 2
     },
     {
@@ -329,15 +329,15 @@
           "name": "VaultSync-Setup-1.8.7.exe",
           "size": 62391247,
           "content_type": "application/octet-stream",
-          "download_count": 19,
-          "downloads_delta": 0,
+          "download_count": 21,
+          "downloads_delta": 2,
           "created_at": "2026-08-21T11:50:48Z",
           "updated_at": "2026-08-21T11:51:55Z",
           "browser_download_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/download/v1.8.7/VaultSync-Setup-1.8.7.exe"
         }
       ],
-      "total_downloads": 167,
-      "downloads_delta": 0
+      "total_downloads": 169,
+      "downloads_delta": 2
     },
     {
       "id": 367847637,
@@ -6013,8 +6013,8 @@
     }
   ],
   "totals": {
-    "all_assets_downloads": 2786,
-    "all_assets_delta": 2,
+    "all_assets_downloads": 2790,
+    "all_assets_delta": 4,
     "release_count": 52,
     "asset_count": 480
   },
@@ -6022,7 +6022,7 @@
     "latest_stable": {
       "tag_name": "v1.8.8",
       "name": "VaultSync 1.8.8 — Stability",
-      "total_downloads": 18,
+      "total_downloads": 20,
       "downloads_delta": 2,
       "html_url": "https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.8.8"
     },
