@@ -938,11 +938,19 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1895` `P1` Service Avalonia and coordinated rendering dependencies.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
-  Update Avalonia to 12.1.2 and keep every directly pinned SkiaSharp 4.151.2 and HarfBuzzSharp 14.2.1.102 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Hosted Windows, Linux, macOS, CodeQL, Sonar, YAML, and script gates pass; integration remains pending.
+  Update Avalonia to 12.1.2, service Microsoft runtime libraries to 10.0.12, and keep every directly pinned SkiaSharp 4.152.0 and HarfBuzzSharp 14.2.1.200 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Local restore and the zero-warning build pass; hosted platform checks and integration remain pending.
 
 - [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
   [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
   Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, and document the manual-backup coordinator's intentional transaction boundary. The zero-warning build, 857 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
+
+- [ ] `BUG-18159` `P0` Prevent page-width bindings from restoring horizontal overflow.
+  [Issue #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638).
+  Dashboard, Backups, and Settings sized inner content to the outer ScrollViewer viewport and then added page padding, making the desired width exceed the window. Let content measure from the padded available width and reject viewport-width bindings in top-level page scrollers. Local policy tests pass; narrow-window and scaling qualification remains in VS-1894.
+
+- [ ] `VS-1897` `P0` Audit and renew 1.8.9 safety, usability, and repository health.
+  [Issue #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639).
+  Audit correctness, security and edge cases, stale code, UI responsiveness and page purpose, quality-of-life behavior, dependency health, generated-file retention, documentation/localization consistency, and repository hygiene. Fix release-safe findings in focused commits and track architectural or platform-dependent work explicitly. No discovered P0/P1 issue may remain untracked; final full-suite, hosted, desktop, and integration evidence remains pending.
 
 ---
 

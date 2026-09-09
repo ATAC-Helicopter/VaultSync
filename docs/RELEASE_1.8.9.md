@@ -26,9 +26,11 @@ changelog and roadmap; its superseded working contract has been removed.
 
 ## Scope
 
-This patch prioritizes UI continuity,
-confirmed workflow fixes, and modest visual improvements. It does not change the
-backup format or introduce the larger 1.9 recovery features.
+This patch is a broad stabilization and renewal release: fix known and discovered
+bugs, harden safety and edge cases, retire maintainability debt, smooth core
+workflows, apply practical quality-of-life improvements, and keep every primary
+page purposeful and usable without horizontal page scrolling. It does not change
+the backup format or introduce the larger 1.9 recovery features.
 
 ## Review findings and changes
 
@@ -42,6 +44,8 @@ backup format or introduce the larger 1.9 recovery features.
 | The Linux updater handoff test expected Unix separators on Windows CI. | Build the expected working directory with the host path API while retaining Linux command assertions. |
 | Dependabot proposed only part of the directly pinned rendering family. | Update Avalonia, SkiaSharp, and HarfBuzzSharp coherently and gate central package changes with an alignment test. |
 | Desktop analysis retained cancellation, complexity, repeated-key, and overload-order findings. | Make task ownership explicit and simplify the flagged UI helpers without changing behavior. |
+| Padded page content forced its minimum width to the outer viewport width. | Measure Dashboard, Backups, and Settings from the padded available width and enforce the rule with a UI policy test. |
+| Maintained runtime and rendering packages received coordinated patch releases. | Service Microsoft libraries to 10.0.12, SkiaSharp to 4.152.0, and HarfBuzzSharp to 14.2.1.200 as complete package families. |
 | Icon-and-label pill stacks could stretch independently of centered text. | Center stack containers inside shared status pills and backup tags. |
 | Muted text and light-theme semantic colors were too faint. | Increase muted-text contrast, darken light-theme success/warning/error colors, and use dark labels on the dark theme's blue accent. |
 | Custom-theme muted text was blended toward its background. | Apply the existing readable-text contrast check against all three configured surfaces. |
@@ -54,9 +58,26 @@ their instances and expansion state. Removing content above the viewport can
 still move content naturally, and deleting the final group can clamp scrolling
 to the new page extent.
 
+## Page-purpose audit
+
+| Page | Primary user purpose |
+| --- | --- |
+| Dashboard | See protection state and the next action needing attention. |
+| Projects | Choose what is protected and manage project-specific rules. |
+| Backups | Run protection, inspect restore points, and act on destinations. |
+| Schedule | Understand and control when automatic protection runs. |
+| History | Audit events and curate recovery-relevant snapshot metadata. |
+| Recovery | Prove recoverability through readiness, verification, and drills. |
+| Guide | Complete setup and learn the shortest path through core workflows. |
+| Settings | Configure global behavior, integrations, appearance, and diagnostics. |
+
+No primary page is retained as a placeholder or duplicate destination. At the
+default 1200-pixel window, navigation labels now remain visible; the compact
+icon rail is reserved for windows below 1100 pixels.
+
 ## Automated validation
 
-- Full .NET suite: **857 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **863 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
@@ -106,6 +127,8 @@ qualification remain pending.
 | [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Todo |
 | [`VS-1895` / #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636) | Service Avalonia and coordinated rendering dependencies | In progress |
 | [`VS-1896` / #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637) | Clear remaining desktop Sonar maintainability findings | In progress |
+| [`BUG-18159` / #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638) | Prevent page-width bindings from restoring horizontal overflow | In progress |
+| [`VS-1897` / #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639) | Audit and renew 1.8.9 safety, usability, and repository health | In progress |
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
 In-progress work is implemented locally or under preparation; it is not marked

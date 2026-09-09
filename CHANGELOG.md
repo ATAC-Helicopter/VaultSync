@@ -1,6 +1,7 @@
 ﻿# Changelog
 ## [1.8.9] - Unreleased
 ### Maintenance
+- [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
 - [VS-1896] Clear remaining desktop static-analysis maintainability findings.
 - [VS-1893] Prepare release identity, tracking, documentation, and packaging for 1.8.9.
 ### Fixed
@@ -8,8 +9,10 @@
 - [BUG-18156] Preserve surviving rows and avoid full resets across shared UI lists.
 - [BUG-18157] Keep the selected backup project open while deletion refreshes its summary.
 - [BUG-18158] Keep Linux updater handoff qualification portable on Windows CI.
+- [BUG-18159] Prevent padded pages from requesting extra width and overflowing horizontally.
 ### Changed
 - [VS-1895] Service Avalonia and coordinated SkiaSharp/HarfBuzzSharp packages.
+- [VS-1897] Keep labeled navigation at the default window size and clarify the Projects purpose.
 - [VS-1892] Center icon-and-label stacks inside shared status pills and backup tags.
 - [VS-1892] Improve muted text contrast, light-theme status colors, and dark-theme accent labels.
 - [VS-1892] Keep custom-theme muted text readable against the configured surfaces.
