@@ -390,56 +390,56 @@ namespace VaultSync.UI.ViewModels
 
             foreach (string line in lines)
             {
-                if (line.StartsWith("--- ", StringComparison.Ordinal) ||
-                    line.StartsWith("+++ ", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (line.StartsWith("@@", StringComparison.Ordinal))
-                {
-                    TryReadHunkStarts(line, out oldLine, out newLine);
-                    result.Add(new DiffPreviewLineItem(string.Empty, string.Empty, string.Empty, line, '@'));
-                    continue;
-                }
-
-                char marker = line.Length == 0 ? ' ' : line[0];
-                string content = line.Length == 0 ? string.Empty : line[1..];
-                if (marker == '+')
-                {
-                    result.Add(new DiffPreviewLineItem(
-                        string.Empty,
-                        newLine.ToString(CultureInfo.InvariantCulture),
-                        "+",
-                        content,
-                        marker));
-                    newLine++;
-                    continue;
-                }
-
-                if (marker == '-')
-                {
-                    result.Add(new DiffPreviewLineItem(
-                        oldLine.ToString(CultureInfo.InvariantCulture),
-                        string.Empty,
-                        "-",
-                        content,
-                        marker));
-                    oldLine++;
-                    continue;
-                }
-
-                result.Add(new DiffPreviewLineItem(
-                    oldLine.ToString(CultureInfo.InvariantCulture),
-                    newLine.ToString(CultureInfo.InvariantCulture),
-                    string.Empty,
-                    marker == ' ' ? content : line,
-                    ' '));
-                oldLine++;
-                newLine++;
+                DiffPreviewLineItem? item = ParseUnifiedLine(line, ref oldLine, ref newLine);
+                if (item is not null)
+                    result.Add(item);
             }
 
             return result;
+        }
+
+        private static DiffPreviewLineItem? ParseUnifiedLine(string line, ref int oldLine, ref int newLine)
+        {
+            if (line.StartsWith("--- ", StringComparison.Ordinal) ||
+                line.StartsWith("+++ ", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            if (line.StartsWith("@@", StringComparison.Ordinal))
+            {
+                TryReadHunkStarts(line, out oldLine, out newLine);
+                return new DiffPreviewLineItem(string.Empty, string.Empty, string.Empty, line, '@');
+            }
+
+            char marker = line.Length == 0 ? ' ' : line[0];
+            string content = line.Length == 0 ? string.Empty : line[1..];
+            if (marker == '+')
+            {
+                return new DiffPreviewLineItem(
+                    string.Empty,
+                    (newLine++).ToString(CultureInfo.InvariantCulture),
+                    "+",
+                    content,
+                    marker);
+            }
+
+            if (marker == '-')
+            {
+                return new DiffPreviewLineItem(
+                    (oldLine++).ToString(CultureInfo.InvariantCulture),
+                    string.Empty,
+                    "-",
+                    content,
+                    marker);
+            }
+
+            return new DiffPreviewLineItem(
+                (oldLine++).ToString(CultureInfo.InvariantCulture),
+                (newLine++).ToString(CultureInfo.InvariantCulture),
+                string.Empty,
+                marker == ' ' ? content : line,
+                ' ');
         }
 
         private static void TryReadHunkStarts(string header, out int oldLine, out int newLine)
