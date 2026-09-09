@@ -952,6 +952,10 @@ that has not yet been integrated and qualified.
   [Issue #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639).
   Audit correctness, security and edge cases, stale code, UI responsiveness and page purpose, quality-of-life behavior, dependency health, generated-file retention, documentation/localization consistency, and repository hygiene. The first wave removes obsolete placeholder/reflection navigation, keeps labeled navigation at the default window size, clarifies Projects, and records every page's purpose. Fix release-safe findings in focused commits and track architectural or platform-dependent work explicitly. No discovered P0/P1 issue may remain untracked; final hosted, desktop, and integration evidence remains pending.
 
+- [ ] `BUG-18160` `P0` Reclaim abandoned metadata read-copy workspaces.
+  [Issue #640](https://github.com/ATAC-Helicopter/VaultSync/issues/640).
+  Failed or interrupted read-only metadata preview copies could remain under the operating-system temporary root indefinitely. Remove partially created copies immediately, and make startup hygiene prune only stale GUID-owned read-copy directories while preserving recent and unrelated data. Regression coverage passes locally; integration remains pending.
+
 ---
 
 # VaultSync 1.9 — Recovery Horizon

@@ -2007,21 +2007,24 @@ public sealed class MetadataSyncService
     private static bool TryCopyStoreForRead(string databasePath, out string tempRoot)
     {
         tempRoot = string.Empty;
+        string? workingRoot = null;
         try
         {
-            string root = Path.Combine(Path.GetTempPath(), "vaultsync-meta-import", Guid.NewGuid().ToString("N"));
-            string tempDir = Path.Combine(root, VaultSyncDirectoryName, "meta");
+            workingRoot = Path.Combine(Path.GetTempPath(), "vaultsync-meta-import", Guid.NewGuid().ToString("N"));
+            string tempDir = Path.Combine(workingRoot, VaultSyncDirectoryName, "meta");
             Directory.CreateDirectory(tempDir);
             string destPath = Path.Combine(tempDir, Path.GetFileName(databasePath));
             File.Copy(databasePath, destPath, overwrite: true);
             TryCopySidecar(databasePath, destPath, "-wal");
             TryCopySidecar(databasePath, destPath, "-shm");
             TryCopySidecar(databasePath, destPath, "-journal");
-            tempRoot = root;
+            tempRoot = workingRoot;
             return true;
         }
         catch
         {
+            if (workingRoot is not null)
+                TryDeleteTempStore(workingRoot);
             tempRoot = string.Empty;
             return false;
         }
