@@ -124,7 +124,6 @@
     <!-- Allow the form to stretch across the viewport while capping width for readability. -->
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
-          MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
           RowDefinitions="Auto,Auto"
           RowSpacing="{DynamicResource PageRowSpacing}"
           Margin="0,0,0,40">

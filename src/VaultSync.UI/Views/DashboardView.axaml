@@ -14,7 +14,6 @@
                 Padding="{DynamicResource PagePadding}">
     <Grid MaxWidth="2200"
           HorizontalAlignment="Stretch"
-          MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
           RowDefinitions="Auto,Auto,Auto,Auto,Auto"
           RowSpacing="{DynamicResource PageRowSpacing}">
 

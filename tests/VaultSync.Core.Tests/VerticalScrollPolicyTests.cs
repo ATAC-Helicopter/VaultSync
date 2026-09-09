@@ -77,6 +77,36 @@ public sealed class VerticalScrollPolicyTests
     }
 
     [Fact]
+    public void PageContent_DoesNotAddViewportWidthInsidePaddedScrollers()
+    {
+        string viewsDirectory = FindRepositoryDirectory(
+            "src",
+            "VaultSync.UI",
+            "Views");
+        var offenders = new List<string>();
+
+        foreach (string path in Directory.EnumerateFiles(
+                     viewsDirectory,
+                     "*View.axaml",
+                     SearchOption.TopDirectoryOnly))
+        {
+            string markup = File.ReadAllText(path);
+            if (markup.Contains(
+                    "Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}",
+                    StringComparison.Ordinal))
+            {
+                offenders.Add(Path.GetFileName(path));
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            "Page content must use the ScrollViewer's available width. Binding a child " +
+            "MinWidth to the outer viewport adds padding to the desired size and reintroduces " +
+            $"horizontal overflow: {string.Join(", ", offenders)}");
+    }
+
+    [Fact]
     public void MetadataConflictComparison_StacksRevisionsVertically()
     {
         string settingsPath = FindRepositoryFile(

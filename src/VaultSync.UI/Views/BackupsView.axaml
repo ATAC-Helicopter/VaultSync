@@ -365,8 +365,7 @@
                   BringIntoViewOnFocusChange="False">
       <!-- Stretch to the full available width with a soft cap for readability. -->
       <Grid MaxWidth="2200"
-            HorizontalAlignment="Stretch"
-            MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+            HorizontalAlignment="Stretch">
         <StackPanel Margin="{DynamicResource PageStackMargin}"
                     Spacing="{DynamicResource PageRowSpacing}"
                     HorizontalAlignment="Stretch">
