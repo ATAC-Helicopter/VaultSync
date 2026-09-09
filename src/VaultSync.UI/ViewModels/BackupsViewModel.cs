@@ -2462,7 +2462,10 @@ namespace VaultSync.UI.ViewModels
         {
             string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             if (string.IsNullOrWhiteSpace(documents))
-                documents = Path.GetTempPath();
+                documents = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            if (string.IsNullOrWhiteSpace(documents))
+                throw new InvalidOperationException("A private export directory is unavailable.");
 
             return Path.Combine(documents, "VaultSync", "Exports", "SnapshotDiff");
         }
@@ -2641,7 +2644,7 @@ namespace VaultSync.UI.ViewModels
 
             SelectedProjectSortOption = ProjectSortOptions.FirstOrDefault(o =>
                                            string.Equals(o.Id, _projectSortMode, StringComparison.OrdinalIgnoreCase))
-                                       ?? ProjectSortOptions.FirstOrDefault();
+                                       ?? ProjectSortOptions.First();
 
             OnPropertyChanged(nameof(ProjectSortOptions));
         }
@@ -2757,6 +2760,10 @@ namespace VaultSync.UI.ViewModels
         /// changes safe and avoid UI-thread violations when progress is raised from
         /// background threads.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S107:Methods should not have too many parameters",
+            Justification = "Source-compatible UI progress facade used across backup, restore, verification, and tray workflows; values are immediately grouped into PendingBackupUpdate and new integrations should use activity-specific wrappers.")]
         public void UpdateActiveBackup(
             string projectId,
             string projectName,
@@ -2949,7 +2956,17 @@ namespace VaultSync.UI.ViewModels
             ShowDestinationToggles = allowToggle;
 
             var activeIds = list.Select(DestinationStatusItem.GetId).ToHashSet();
+            RemoveInactiveDestinationStatuses(activeIds);
 
+            foreach (BackupDestination dest in list)
+                UpsertDestinationStatus(dest, allowToggle);
+
+            RebuildActiveDestinationStatuses();
+            OnPropertyChanged(nameof(HasDestinationStatuses));
+        }
+
+        private void RemoveInactiveDestinationStatuses(IReadOnlySet<string> activeIds)
+        {
             for (int i = DestinationStatuses.Count - 1; i >= 0; i--)
             {
                 if (!activeIds.Contains(DestinationStatuses[i].Id))
@@ -2958,40 +2975,37 @@ namespace VaultSync.UI.ViewModels
                     DestinationStatuses.RemoveAt(i);
                 }
             }
+        }
 
-            foreach (BackupDestination? dest in list)
+        private void UpsertDestinationStatus(BackupDestination dest, bool allowToggle)
+        {
+            string id = DestinationStatusItem.GetId(dest);
+            DestinationStatusItem? existing = DestinationStatuses.FirstOrDefault(x => x.Id == id);
+            if (existing is not null)
             {
-                string id = DestinationStatusItem.GetId(dest);
-                DestinationStatusItem? existing = DestinationStatuses.FirstOrDefault(x => x.Id == id);
-                if (existing == null)
-                {
-                    DestinationStatus status = dest.Active ? DestinationStatus.Pending : DestinationStatus.Inactive;
-                    SeverityStatus severity = SeverityStatus.None;
-                    var item = new DestinationStatusItem
-                    {
-                        Id = DestinationStatusItem.GetId(dest),
-                        Alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path,
-                        Path = dest.Path,
-                        Status = status,
-                        Severity = severity,
-                        DotBrush = GetDestinationDotBrush(status, severity),
-                        LastCheckedUtc = null,
-                        IsActive = dest.Active,
-                        IsConfigurable = allowToggle
-                    };
-                    ApplyDestinationQuotaPlan(item);
-                    item.PropertyChanged += OnDestinationItemPropertyChanged;
-                    DestinationStatuses.Add(item);
-                }
-                else
-                {
-                    existing.IsActive = dest.Active;
-                    existing.IsConfigurable = allowToggle;
-                    existing.Alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
-                }
+                existing.IsActive = dest.Active;
+                existing.IsConfigurable = allowToggle;
+                existing.Alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path;
+                return;
             }
-            RebuildActiveDestinationStatuses();
-            OnPropertyChanged(nameof(HasDestinationStatuses));
+
+            DestinationStatus status = dest.Active ? DestinationStatus.Pending : DestinationStatus.Inactive;
+            SeverityStatus severity = SeverityStatus.None;
+            var item = new DestinationStatusItem
+            {
+                Id = id,
+                Alias = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias ?? dest.Path,
+                Path = dest.Path,
+                Status = status,
+                Severity = severity,
+                DotBrush = GetDestinationDotBrush(status, severity),
+                LastCheckedUtc = null,
+                IsActive = dest.Active,
+                IsConfigurable = allowToggle
+            };
+            ApplyDestinationQuotaPlan(item);
+            item.PropertyChanged += OnDestinationItemPropertyChanged;
+            DestinationStatuses.Add(item);
         }
 
         private void OnDestinationItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -2999,21 +3013,18 @@ namespace VaultSync.UI.ViewModels
             if (sender is not DestinationStatusItem item)
                 return;
 
-            if (e.PropertyName == nameof(DestinationStatusItem.IsActive))
+            if (e.PropertyName == nameof(DestinationStatusItem.IsActive) && item.IsConfigurable)
             {
-                if (item.IsConfigurable)
+                DestinationStatus newStatus = item.IsActive ? DestinationStatus.Pending : DestinationStatus.Inactive;
+                if (item.Status != newStatus)
                 {
-                    DestinationStatus newStatus = item.IsActive ? DestinationStatus.Pending : DestinationStatus.Inactive;
-                    if (item.Status != newStatus)
-                    {
-                        item.Status = newStatus;
-                        item.Severity = SeverityStatus.None;
-                        item.DotBrush = GetDestinationDotBrush(newStatus, SeverityStatus.None);
-                    }
-
-                    DestinationActiveChanged?.Invoke(item, item.IsActive);
-                    RebuildActiveDestinationStatuses();
+                    item.Status = newStatus;
+                    item.Severity = SeverityStatus.None;
+                    item.DotBrush = GetDestinationDotBrush(newStatus, SeverityStatus.None);
                 }
+
+                DestinationActiveChanged?.Invoke(item, item.IsActive);
+                RebuildActiveDestinationStatuses();
             }
         }
 
@@ -3260,14 +3271,16 @@ namespace VaultSync.UI.ViewModels
                     L("Backups.Section.SnapshotCount.Singular", "{0} backup"),
                     L("Backups.Section.SnapshotCount.Plural", "{0} backups"));
 
-                SnapshotViewRefreshResult result = await Task.Run(() => BuildSnapshotViewRefreshResult(
-                    source,
-                    projectLookup,
-                    filterState,
-                    revision,
-                    preferredExpandedProjectId,
-                    currentProjectIdFilter,
-                    groupText)).ConfigureAwait(false);
+                SnapshotViewRefreshResult result = await Task.Run(
+                    () => BuildSnapshotViewRefreshResult(
+                        source,
+                        projectLookup,
+                        filterState,
+                        revision,
+                        preferredExpandedProjectId,
+                        currentProjectIdFilter,
+                        groupText),
+                    CancellationToken.None).ConfigureAwait(false);
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
@@ -3305,24 +3318,7 @@ namespace VaultSync.UI.ViewModels
 
             foreach (BackupSnapshotItem snapshot in source)
             {
-                if (filterState.TypeFilter == "Auto" && !string.Equals(snapshot.Type, "Auto", StringComparison.OrdinalIgnoreCase))
-                    continue;
-                if (filterState.TypeFilter == ManualBackupType && !string.Equals(snapshot.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (filterState.OnlyManual && !string.Equals(snapshot.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (filterState.OnlyErrors && !string.Equals(snapshot.Status, "Failed", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (!string.IsNullOrWhiteSpace(filterState.ProjectId) &&
-                    !string.Equals(snapshot.ProjectId, filterState.ProjectId, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(snapshot.Id) && !seenIds.Add(snapshot.Id))
+                if (!MatchesSnapshotFilter(snapshot, filterState) || IsDuplicateSnapshot(snapshot, seenIds))
                     continue;
 
                 filtered.Add(snapshot);
@@ -3334,6 +3330,26 @@ namespace VaultSync.UI.ViewModels
                 filtered,
                 BuildSnapshotGroups(filtered, projectLookup, preferredExpandedProjectId, currentProjectIdFilter, groupText));
         }
+
+        private static bool MatchesSnapshotFilter(BackupSnapshotItem snapshot, SnapshotFilterState filterState)
+        {
+            bool typeMatches = filterState.TypeFilter switch
+            {
+                "Auto" => string.Equals(snapshot.Type, "Auto", StringComparison.OrdinalIgnoreCase),
+                ManualBackupType => string.Equals(snapshot.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase),
+                _ => true
+            };
+            bool manualMatches = !filterState.OnlyManual ||
+                                 string.Equals(snapshot.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase);
+            bool errorMatches = !filterState.OnlyErrors ||
+                                string.Equals(snapshot.Status, "Failed", StringComparison.OrdinalIgnoreCase);
+            bool projectMatches = string.IsNullOrWhiteSpace(filterState.ProjectId) ||
+                                  string.Equals(snapshot.ProjectId, filterState.ProjectId, StringComparison.OrdinalIgnoreCase);
+            return typeMatches && manualMatches && errorMatches && projectMatches;
+        }
+
+        private static bool IsDuplicateSnapshot(BackupSnapshotItem snapshot, ISet<string> seenIds)
+            => !string.IsNullOrWhiteSpace(snapshot.Id) && !seenIds.Add(snapshot.Id);
 
         internal void ReplaceSnapshotGroups(IReadOnlyList<SnapshotProjectGroup> groups)
         {
@@ -3368,22 +3384,14 @@ namespace VaultSync.UI.ViewModels
             IOrderedEnumerable<IGrouping<string, BackupSnapshotItem>> grouped = filtered
                 .GroupBy(s => s.ProjectId ?? string.Empty)
                 .OrderByDescending(g => g.Max(s => s.Timestamp))
-                .ThenBy(g =>
-                {
-                    if (!string.IsNullOrWhiteSpace(g.Key) && projectLookup.TryGetValue(g.Key, out ProjectBackupItem? nameSource))
-                        return nameSource.Name;
-                    return "zzzz_" + g.Key;
-                });
+                .ThenBy(g => GetSnapshotGroupSortName(g.Key, projectLookup));
 
-            DateTime latestOverall = filtered
-                .OrderByDescending(s => s.Timestamp)
-                .FirstOrDefault()
-                ?.Timestamp ?? DateTime.MinValue;
+            DateTime latestOverall = filtered.Max(s => s.Timestamp);
             var groups = new List<SnapshotProjectGroup>();
 
-            foreach (IGrouping<string, BackupSnapshotItem>? g in grouped)
+            foreach (IGrouping<string, BackupSnapshotItem> g in grouped)
             {
-                string key = g.Key ?? string.Empty;
+                string key = g.Key;
 
                 var ordered = g
                     .GroupBy(s => s.Id)
@@ -3391,64 +3399,95 @@ namespace VaultSync.UI.ViewModels
                     .OrderByDescending(s => s.Timestamp)
                     .ToList();
                 long totalBytes = ordered.Sum(s => s.SizeBytes);
-                DateTime latest = ordered.FirstOrDefault()?.Timestamp ?? DateTime.MinValue;
-
-                string projectName;
-                if (string.IsNullOrWhiteSpace(key))
-                {
-                    projectName = groupText.GlobalProjectName;
-                }
-                else if (!projectLookup.TryGetValue(key, out ProjectBackupItem? nameSource))
-                {
-                    projectName = groupText.UnknownProjectName;
-                }
-                else
-                {
-                    projectName = nameSource.Name;
-                }
+                DateTime latest = ordered.First().Timestamp;
 
                 string summaryFormat = ordered.Count == 1
                     ? groupText.SingleSnapshotFormat
                     : groupText.MultipleSnapshotsFormat;
 
-                ImmutableSolidColorBrush accentBrush = GetAccentBrush(DefaultAccentColor);
-                if (!string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out ProjectBackupItem? colorSource))
-                {
-                    accentBrush = GetAccentBrush(colorSource.AvatarColor);
-                }
-
-                bool isExpanded = !string.IsNullOrWhiteSpace(preferredExpandedProjectId)
-                    ? string.Equals(preferredExpandedProjectId, key, StringComparison.OrdinalIgnoreCase)
-                    : !string.IsNullOrWhiteSpace(currentProjectIdFilter)
-                        ? string.Equals(currentProjectIdFilter, key, StringComparison.OrdinalIgnoreCase)
-                        : latest == latestOverall;
-
                 var groupVm = new SnapshotProjectGroup
                 {
                     ProjectId = key,
-                    ProjectName = projectName,
-                    ProjectTagsDisplay = !string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out ProjectBackupItem? tagSource)
-                        ? tagSource.ProjectTagsDisplay
-                        : string.Empty,
+                    ProjectName = ResolveSnapshotGroupName(key, projectLookup, groupText),
+                    ProjectTagsDisplay = ResolveSnapshotGroupTags(key, projectLookup),
                     Summary = string.Format(CultureInfo.CurrentCulture, summaryFormat, ordered.Count),
                     TotalSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes),
                     LatestBackupDisplay = latest == DateTime.MinValue ? "-" : latest.ToString(TimestampMinuteFormat),
-                    AccentBrush = accentBrush,
-                    IsExpanded = isExpanded
+                    AccentBrush = ResolveSnapshotGroupAccent(key, projectLookup),
+                    IsExpanded = ShouldExpandSnapshotGroup(
+                        key,
+                        latest,
+                        latestOverall,
+                        preferredExpandedProjectId,
+                        currentProjectIdFilter)
                 };
 
-                if (!string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out ProjectBackupItem? chipSource))
-                {
-                    foreach (ProjectTagChip chip in chipSource.ProjectTagChips)
-                        groupVm.ProjectTagChips.Add(chip);
-                }
-
+                PopulateSnapshotGroupTags(groupVm, key, projectLookup);
                 groupVm.SetSnapshots(ordered);
-
                 groups.Add(groupVm);
             }
 
             return groups;
+        }
+
+        private static string GetSnapshotGroupSortName(
+            string key,
+            IReadOnlyDictionary<string, ProjectBackupItem> projectLookup)
+            => !string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out ProjectBackupItem? project)
+                ? project.Name
+                : "zzzz_" + key;
+
+        private static string ResolveSnapshotGroupName(
+            string key,
+            IReadOnlyDictionary<string, ProjectBackupItem> projectLookup,
+            SnapshotGroupText groupText)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                return groupText.GlobalProjectName;
+
+            return projectLookup.TryGetValue(key, out ProjectBackupItem? project)
+                ? project.Name
+                : groupText.UnknownProjectName;
+        }
+
+        private static string ResolveSnapshotGroupTags(
+            string key,
+            IReadOnlyDictionary<string, ProjectBackupItem> projectLookup)
+            => !string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out ProjectBackupItem? project)
+                ? project.ProjectTagsDisplay
+                : string.Empty;
+
+        private static ImmutableSolidColorBrush ResolveSnapshotGroupAccent(
+            string key,
+            IReadOnlyDictionary<string, ProjectBackupItem> projectLookup)
+            => !string.IsNullOrWhiteSpace(key) && projectLookup.TryGetValue(key, out ProjectBackupItem? project)
+                ? GetAccentBrush(project.AvatarColor)
+                : GetAccentBrush(DefaultAccentColor);
+
+        private static bool ShouldExpandSnapshotGroup(
+            string key,
+            DateTime latest,
+            DateTime latestOverall,
+            string? preferredExpandedProjectId,
+            string? currentProjectIdFilter)
+        {
+            if (!string.IsNullOrWhiteSpace(preferredExpandedProjectId))
+                return string.Equals(preferredExpandedProjectId, key, StringComparison.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(currentProjectIdFilter))
+                return string.Equals(currentProjectIdFilter, key, StringComparison.OrdinalIgnoreCase);
+            return latest == latestOverall;
+        }
+
+        private static void PopulateSnapshotGroupTags(
+            SnapshotProjectGroup group,
+            string key,
+            IReadOnlyDictionary<string, ProjectBackupItem> projectLookup)
+        {
+            if (string.IsNullOrWhiteSpace(key) || !projectLookup.TryGetValue(key, out ProjectBackupItem? project))
+                return;
+
+            foreach (ProjectTagChip chip in project.ProjectTagChips)
+                group.ProjectTagChips.Add(chip);
         }
 
         private static ImmutableSolidColorBrush GetAccentBrush(string? hexColor)
