@@ -1133,7 +1133,6 @@ namespace VaultSync.UI.ViewModels
                                 allowCancel: false,
                                 policyText: activePolicyText,
                                 activityPhase: ProtectionActivityPhase.Cancelled);
-                            return;
                         }
                         catch (Exception ex)
                         {

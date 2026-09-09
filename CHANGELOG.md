@@ -11,6 +11,7 @@
 - [BUG-18158] Keep Linux updater handoff qualification portable on Windows CI.
 - [BUG-18159] Prevent padded pages from requesting extra width and overflowing horizontally.
 ### Changed
+- [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
 - [VS-1895] Service Avalonia and coordinated SkiaSharp/HarfBuzzSharp packages.
 - [VS-1897] Keep labeled navigation at the default window size and clarify the Projects purpose.
 - [VS-1897] Remove obsolete placeholder navigation and reflection paths from the live shell.

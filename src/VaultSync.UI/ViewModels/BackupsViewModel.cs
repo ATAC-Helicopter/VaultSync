@@ -364,6 +364,8 @@ namespace VaultSync.UI.ViewModels
             string SingleSnapshotFormat,
             string MultipleSnapshotsFormat);
 
+        private sealed record BackupDiskHealthPresentation(string Text, IBrush Brush);
+
         // Currently selected project in the per-project list
         private ProjectBackupItem? _selectedProject;
         public ProjectBackupItem? SelectedProject
@@ -2644,7 +2646,7 @@ namespace VaultSync.UI.ViewModels
 
             SelectedProjectSortOption = ProjectSortOptions.FirstOrDefault(o =>
                                            string.Equals(o.Id, _projectSortMode, StringComparison.OrdinalIgnoreCase))
-                                       ?? ProjectSortOptions.First();
+                                       ?? ProjectSortOptions[0];
 
             OnPropertyChanged(nameof(ProjectSortOptions));
         }
@@ -3399,7 +3401,7 @@ namespace VaultSync.UI.ViewModels
                     .OrderByDescending(s => s.Timestamp)
                     .ToList();
                 long totalBytes = ordered.Sum(s => s.SizeBytes);
-                DateTime latest = ordered.First().Timestamp;
+                DateTime latest = ordered[0].Timestamp;
 
                 string summaryFormat = ordered.Count == 1
                     ? groupText.SingleSnapshotFormat
@@ -3504,7 +3506,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch
             {
-                return AccentBrushCache.GetOrAdd(DefaultAccentColor, _ => new ImmutableSolidColorBrush(Color.Parse(DefaultAccentColor)));
+                return AccentBrushCache.GetOrAdd(DefaultAccentColor, color => new ImmutableSolidColorBrush(Color.Parse(color)));
             }
         }
 
@@ -3531,98 +3533,99 @@ namespace VaultSync.UI.ViewModels
             if (Interlocked.Exchange(ref _diskUsageInFlight, 1) == 1)
                 return;
 
-            _ = Task.Run(() =>
+            double previousUsedPercent = BackupDiskUsedPercent;
+            _ = Task.Run(
+                () => RefreshBackupDiskUsageCore(includeHealthProbe, previousUsedPercent),
+                CancellationToken.None);
+        }
+
+        private void RefreshBackupDiskUsageCore(bool includeHealthProbe, double previousUsedPercent)
+        {
+            try
             {
-                try
+                AppConfig config = _configStore.GetSnapshot();
+                (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string _, DashboardViewModel.BackupDiskUsageStatus status) =
+                    DashboardViewModel.ComputeBackupDiskUsageDetailed(config);
+                string driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
+                bool shouldProbeHealth = ShouldProbeBackupHealth(includeHealthProbe);
+                BackupDiskHealthPresentation? health = shouldProbeHealth
+                    ? GetBackupDiskHealthPresentation(config.Backups.BackupRoot, driveLabel)
+                    : null;
+
+                double displayUsedPercent = usedPercent;
+                bool displayBelowThreshold = isBelowThreshold;
+                if (status != DashboardViewModel.BackupDiskUsageStatus.Ok && previousUsedPercent > 0)
                 {
-                    AppConfig config = _configStore.GetSnapshot();
-                    (double usedPercent, string freeText, string thresholdText, bool isBelowThreshold, string _, DashboardViewModel.BackupDiskUsageStatus status) =
-                        DashboardViewModel.ComputeBackupDiskUsageDetailed(config);
-                    string driveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", FormatDriveLabel(config.Backups.BackupRoot));
-
-                    string? healthText = null;
-                    IBrush? healthBrush = null;
-
-                    bool shouldProbeHealth = includeHealthProbe;
-                    if (includeHealthProbe)
-                    {
-                        lock (_healthProbeGate)
-                        {
-                            DateTime now = DateTime.UtcNow;
-                            if (now - _lastHealthProbeUtc < HealthProbeCooldown)
-                            {
-                                shouldProbeHealth = false;
-                            }
-                            else
-                            {
-                                _lastHealthProbeUtc = now;
-                            }
-                        }
-                    }
-                    if (shouldProbeHealth && DateTime.UtcNow - AppViewModel.AppStartUtc < TimeSpan.FromSeconds(20))
-                    {
-                        shouldProbeHealth = false;
-                    }
-
-                    if (shouldProbeHealth)
-                    {
-                        var healthService = new DriveHealthService();
-                        string backupPath = config.Backups.BackupRoot ?? string.Empty;
-                        DriveHealthResult health = healthService.CheckPath(backupPath);
-
-                        string fallbackMessage = string.IsNullOrWhiteSpace(health.Message)
-                            ? L("Backups.Health.NotAvailable", "not available")
-                            : health.Message!;
-                        (healthText, healthBrush) = health.Status switch
-                        {
-                            DriveHealthStatus.Healthy => (Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", driveLabel, health.Message ?? fallbackMessage), HealthOkBrush),
-                            DriveHealthStatus.Warning => (Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthWarningBrush),
-                            DriveHealthStatus.Failing => (Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", driveLabel, health.Message ?? fallbackMessage), HealthFailingBrush),
-                            _ => (Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, fallbackMessage), HealthUnknownBrush)
-                        };
-                    }
-
-                    double displayUsedPercent = usedPercent;
-                    bool displayBelowThreshold = isBelowThreshold;
-                    if (status != DashboardViewModel.BackupDiskUsageStatus.Ok && BackupDiskUsedPercent > 0)
-                    {
-                        displayUsedPercent = BackupDiskUsedPercent;
-                        displayBelowThreshold = false;
-                    }
-
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        UpdateBackupDiskUsage(displayUsedPercent, freeText, thresholdText, displayBelowThreshold);
-                        BackupDiskDriveLabel = driveLabel;
-                        if (shouldProbeHealth && healthText is not null && healthBrush is not null)
-                        {
-                            BackupDiskHealthText = healthText;
-                            BackupDiskHealthBrush = healthBrush;
-                        }
-                    });
+                    displayUsedPercent = previousUsedPercent;
+                    displayBelowThreshold = false;
                 }
-                catch (Exception ex)
+
+                Dispatcher.UIThread.Post(() =>
                 {
-                    Console.WriteLine($"[Backups] Disk usage refresh failed: {ex.Message}");
-                    Dispatcher.UIThread.Post(() =>
+                    UpdateBackupDiskUsage(displayUsedPercent, freeText, thresholdText, displayBelowThreshold);
+                    BackupDiskDriveLabel = driveLabel;
+                    if (health is not null)
                     {
-                        UpdateBackupDiskUsage(
-                            0d,
-                            L("Dashboard.Storage.UsageUnavailable", "Backup storage usage unavailable"),
-                            string.Empty,
-                            false);
+                        BackupDiskHealthText = health.Text;
+                        BackupDiskHealthBrush = health.Brush;
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Backups] Disk usage refresh failed: {ex.Message}");
+                Dispatcher.UIThread.Post(SetBackupDiskUsageUnavailable);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _diskUsageInFlight, 0);
+            }
+        }
 
-                        string driveUnknown = L("DriveHealth.UnknownDrive", "drive");
-                        BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", driveUnknown);
-                        BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, L("Backups.Health.NotAvailable", "not available"));
-                        BackupDiskHealthBrush = HealthUnknownBrush;
-                    });
-                }
-                finally
-                {
-                    Interlocked.Exchange(ref _diskUsageInFlight, 0);
-                }
-            });
+        private bool ShouldProbeBackupHealth(bool requested)
+        {
+            if (!requested || DateTime.UtcNow - AppViewModel.AppStartUtc < TimeSpan.FromSeconds(20))
+                return false;
+
+            lock (_healthProbeGate)
+            {
+                DateTime now = DateTime.UtcNow;
+                if (now - _lastHealthProbeUtc < HealthProbeCooldown)
+                    return false;
+
+                _lastHealthProbeUtc = now;
+                return true;
+            }
+        }
+
+        private static BackupDiskHealthPresentation GetBackupDiskHealthPresentation(string? backupRoot, string driveLabel)
+        {
+            DriveHealthResult health = new DriveHealthService().CheckPath(backupRoot ?? string.Empty);
+            string message = string.IsNullOrWhiteSpace(health.Message)
+                ? L("Backups.Health.NotAvailable", "not available")
+                : health.Message;
+
+            return health.Status switch
+            {
+                DriveHealthStatus.Healthy => new(Lf("Backups.Health.Status.Healthy", "Health ({0}): OK ({1})", driveLabel, message), HealthOkBrush),
+                DriveHealthStatus.Warning => new(Lf("Backups.Health.Status.Warning", "Health warning ({0}): {1}", driveLabel, message), HealthWarningBrush),
+                DriveHealthStatus.Failing => new(Lf("Backups.Health.Status.Failing", "Health failing ({0}): {1}", driveLabel, message), HealthFailingBrush),
+                _ => new(Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", driveLabel, message), HealthUnknownBrush)
+            };
+        }
+
+        private void SetBackupDiskUsageUnavailable()
+        {
+            UpdateBackupDiskUsage(
+                0d,
+                L("Dashboard.Storage.UsageUnavailable", "Backup storage usage unavailable"),
+                string.Empty,
+                false);
+
+            string driveUnknown = L("DriveHealth.UnknownDrive", "drive");
+            BackupDiskDriveLabel = Lf("Backups.Health.DriveLabel", "Drive: {0}", driveUnknown);
+            BackupDiskHealthText = Lf("Backups.Health.Status.Unavailable", "Health ({0}): {1}", BackupDiskDriveLabel, L("Backups.Health.NotAvailable", "not available"));
+            BackupDiskHealthBrush = HealthUnknownBrush;
         }
 
         private static string FormatDriveLabel(string? path)
@@ -3654,15 +3657,13 @@ namespace VaultSync.UI.ViewModels
             }
 
             // UNC/SMB paths: include the share (and optional subpath) for clarity.
-            if (path.StartsWith("\\\\") || path.StartsWith("//") || path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
+            if ((path.StartsWith("\\\\") || path.StartsWith("//") || path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase)) &&
+                TryParseShareWithSubpath(path, out string? host, out string? share, out string? subPath))
             {
-                if (TryParseShareWithSubpath(path, out string? host, out string? share, out string? subPath))
-                {
-                    if (!string.IsNullOrWhiteSpace(subPath))
-                        return $"\\\\{host}\\{share}\\{subPath.Replace('/', '\\')}";
+                if (!string.IsNullOrWhiteSpace(subPath))
+                    return $"\\\\{host}\\{share}\\{subPath.Replace('/', '\\')}";
 
-                    return $"\\\\{host}\\{share}";
-                }
+                return $"\\\\{host}\\{share}";
             }
 
             return path;
@@ -3678,45 +3679,63 @@ namespace VaultSync.UI.ViewModels
                 return false;
 
             if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!Uri.TryCreate(path, UriKind.Absolute, out Uri? uri))
-                    return false;
-
-                host = uri.Host;
-                string[] segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-                if (segments.Length == 0)
-                    return false;
-
-                share = segments[0];
-                if (segments.Length > 1)
-                    subPath = string.Join('/', segments.Skip(1));
-
-                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
-            }
+                return TryParseSmbShare(path, out host, out share, out subPath);
 
             if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
-            {
-                string trimmed = path.TrimStart('\\', '/').Replace('\\', '/');
-                string[] parts = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length < 2)
-                    return false;
-
-                host = parts[0];
-                share = parts[1];
-
-                if (host.Contains('@'))
-                    host = host.Split('@').Last();
-                if (host.Contains(':'))
-                    host = host.Split(':').Last();
-
-                if (parts.Length > 2)
-                    subPath = string.Join('/', parts.Skip(2));
-
-                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
-            }
+                return TryParseUncShare(path, out host, out share, out subPath);
 
             return false;
+        }
+
+        private static bool TryParseSmbShare(string path, out string host, out string share, out string subPath)
+        {
+            host = string.Empty;
+            share = string.Empty;
+            subPath = string.Empty;
+            if (!Uri.TryCreate(path, UriKind.Absolute, out Uri? uri))
+                return false;
+
+            host = uri.Host;
+            string[] segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0)
+                return false;
+
+            share = segments[0];
+            if (segments.Length > 1)
+                subPath = string.Join('/', segments.Skip(1));
+
+            return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
+        }
+
+        private static bool TryParseUncShare(string path, out string host, out string share, out string subPath)
+        {
+            host = string.Empty;
+            share = string.Empty;
+            subPath = string.Empty;
+            string[] parts = path.TrimStart('\\', '/').Replace('\\', '/')
+                .Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2)
+                return false;
+
+            host = parts[0];
+            share = parts[1];
+
+            if (host.Contains('@'))
+            {
+                string[] userParts = host.Split('@');
+                host = userParts[^1];
+            }
+            if (host.Contains(':'))
+            {
+                string[] portParts = host.Split(':');
+                host = portParts[0];
+            }
+
+            if (parts.Length > 2)
+                subPath = string.Join('/', parts.Skip(2));
+
+            return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
         }
 
         // ---------- Summary computation ----------
