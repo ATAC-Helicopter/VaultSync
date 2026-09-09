@@ -629,8 +629,7 @@ internal static class DiagnosticsLogger
                         fileName,
                         isWindows,
                         windowsExtensions)
-                    .Where(File.Exists)
-                    .FirstOrDefault();
+                    .FirstOrDefault(File.Exists);
                 if (match is not null)
                     return match;
             }
