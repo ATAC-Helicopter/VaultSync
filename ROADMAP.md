@@ -942,7 +942,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
   [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
-  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, and document the manual-backup coordinator's intentional transaction boundary. The zero-warning build, 857 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
+  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 863 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
 
 - [ ] `BUG-18159` `P0` Prevent page-width bindings from restoring horizontal overflow.
   [Issue #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638).
@@ -950,7 +950,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1897` `P0` Audit and renew 1.8.9 safety, usability, and repository health.
   [Issue #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639).
-  Audit correctness, security and edge cases, stale code, UI responsiveness and page purpose, quality-of-life behavior, dependency health, generated-file retention, documentation/localization consistency, and repository hygiene. Fix release-safe findings in focused commits and track architectural or platform-dependent work explicitly. No discovered P0/P1 issue may remain untracked; final full-suite, hosted, desktop, and integration evidence remains pending.
+  Audit correctness, security and edge cases, stale code, UI responsiveness and page purpose, quality-of-life behavior, dependency health, generated-file retention, documentation/localization consistency, and repository hygiene. The first wave removes obsolete placeholder/reflection navigation, keeps labeled navigation at the default window size, clarifies Projects, and records every page's purpose. Fix release-safe findings in focused commits and track architectural or platform-dependent work explicitly. No discovered P0/P1 issue may remain untracked; final hosted, desktop, and integration evidence remains pending.
 
 ---
 
