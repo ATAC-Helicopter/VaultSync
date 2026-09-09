@@ -28,7 +28,7 @@ public partial class MainWindow : Window
     private bool _ignoreNextPointerPress;
     private bool _isSidebarCollapsed;
     private bool _sidebarAutoCollapsed;
-    private const double SidebarAutoCollapseWidth = 1450;
+    private const double SidebarAutoCollapseWidth = 1100;
 
     /// <summary>
     /// Indicates whether the main window is currently active (in the foreground).
@@ -134,7 +134,7 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveSidebar(bool force = false)
     {
-        bool shouldAutoCollapse = Bounds.Width < SidebarAutoCollapseWidth;
+        bool shouldAutoCollapse = ShouldAutoCollapseSidebar(Bounds.Width);
         if (!force && shouldAutoCollapse == _sidebarAutoCollapsed)
             return;
 
@@ -149,6 +149,9 @@ public partial class MainWindow : Window
         if (_isSidebarCollapsed)
             SetSidebarCollapsed(false);
     }
+
+    internal static bool ShouldAutoCollapseSidebar(double width) =>
+        width < SidebarAutoCollapseWidth;
 
     private void SetSidebarCollapsed(bool collapsed)
     {
