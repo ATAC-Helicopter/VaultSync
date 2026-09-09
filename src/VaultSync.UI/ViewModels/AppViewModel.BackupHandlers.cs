@@ -1052,7 +1052,8 @@ namespace VaultSync.UI.ViewModels
                                 preferParallelArchiveUpload: preferParallelUpload,
                                 useScanCache: _settingsViewModel.EnableScanCache,
                                 aggressiveScanCache: _settingsViewModel.AggressiveScanCache,
-                                enableCheckpointedRetry: primaryDest.EnableCheckpointResume
+                                enableCheckpointedRetry: primaryDest.EnableCheckpointResume,
+                                ct: CancellationToken.None
                             );
                             sw.Stop();
 
@@ -1148,7 +1149,7 @@ namespace VaultSync.UI.ViewModels
                         {
                             _backupCancelRequested.TryRemove(projectId, out _);
                         }
-                    }));
+                    }, CancellationToken.None));
 
                     await Task.WhenAll(tasks);
 

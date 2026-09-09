@@ -366,6 +366,28 @@ namespace VaultSync.UI.ViewModels
 
         private sealed record BackupDiskHealthPresentation(string Text, IBrush Brush);
 
+        private sealed record SnapshotActivitySeries(
+            IReadOnlyDictionary<DateTime, int> AutoByDate,
+            IReadOnlyDictionary<DateTime, int> ManualByDate,
+            IReadOnlyDictionary<DateTime, int> ImportedByDate,
+            IReadOnlyDictionary<DateTime, long> BytesByDate,
+            int MaxTotal,
+            long MaxBytes);
+
+        private readonly record struct SnapshotActivityCounts(
+            int Auto,
+            int Manual,
+            int Imported,
+            long Bytes)
+        {
+            public int Total => Auto + Manual + Imported;
+        }
+
+        private readonly record struct ProjectBackupStats(
+            int Count,
+            long TotalBytes,
+            DateTime? LastBackupTime);
+
         // Currently selected project in the per-project list
         private ProjectBackupItem? _selectedProject;
         public ProjectBackupItem? SelectedProject
@@ -3842,36 +3864,45 @@ namespace VaultSync.UI.ViewModels
 
         private void RecalculateSummary()
         {
-            DateTime now       = DateTime.Now;
+            DateTime now = DateTime.Now;
             DateTime weekStart = now.Date.AddDays(-6);
 
+            UpdateSnapshotCounts(now, weekStart);
+            UpdateSnapshotActivitySummary();
+            UpdateLastBackupSummary(now);
+            UpdateStorageSummary();
+            RebuildTopStorageConsumers();
+            RebuildBackupHealthCenter(now);
+            RebuildSnapshotActivity(now);
+            NotifySummaryPropertiesChanged();
+        }
+
+        private void UpdateSnapshotCounts(DateTime now, DateTime weekStart)
+        {
             TotalSnapshots = _allSnapshots.Count;
             HasAnyBackups = TotalSnapshots > 0;
-
             SnapshotsToday = _allSnapshots.Count(s => s.Timestamp.Date == now.Date);
             SnapshotsYesterday = _allSnapshots.Count(s => s.Timestamp.Date == now.Date.AddDays(-1));
-            SnapshotsThisWeek = _allSnapshots.Count(s =>
-                s.Timestamp.Date >= weekStart);
-
+            SnapshotsThisWeek = _allSnapshots.Count(s => s.Timestamp.Date >= weekStart);
             AutoSnapshotsThisWeek = _allSnapshots.Count(s =>
                 s.Timestamp.Date >= weekStart &&
                 string.Equals(s.Type, "Auto", StringComparison.OrdinalIgnoreCase));
-
             ManualSnapshotsThisWeek = _allSnapshots.Count(s =>
                 s.Timestamp.Date >= weekStart &&
                 string.Equals(s.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase));
             ImportedSnapshotsThisWeek = _allSnapshots.Count(s =>
                 s.Timestamp.Date >= weekStart &&
                 s.IsImported);
-
             OnPropertyChanged(nameof(HasAnyBackups));
-
             SnapshotsSummaryLine = Lf(
                 "Backups.Summary.TodayWeek",
                 "{0} backups today - {1} this week",
                 SnapshotsToday,
                 SnapshotsThisWeek);
+        }
 
+        private void UpdateSnapshotActivitySummary()
+        {
             if (SnapshotsThisWeek == 0)
             {
                 SnapshotActivitySummary = L("Backups.Summary.NoActivity", "No backups in the last 7 days");
@@ -3886,63 +3917,13 @@ namespace VaultSync.UI.ViewModels
                     ManualSnapshotsThisWeek,
                     ImportedSnapshotsThisWeek);
             }
+        }
 
-            if (_allSnapshots.Count > 0)
+        private void UpdateLastBackupSummary(DateTime now)
+        {
+            if (_allSnapshots.Count == 0)
             {
-                BackupSnapshotItem last = _allSnapshots
-                    .OrderByDescending(s => s.Timestamp)
-                    .First();
-
-                LastBackupDisplay  = last.Timestamp.ToString(TimestampMinuteFormat);
-                LastBackupRelative = FormatRelative(now - last.Timestamp);
-                LastBackupSecondaryLine = Lf(
-                    LastBackupSizeKey,
-                    "Size {0}",
-                    BackupSnapshotItem.FormatSize(last.SizeBytes));
-                LastBackupSizeValueFormatted = BackupSnapshotItem.FormatSize(last.SizeBytes);
-                string lastProjectName = ResolveProjectNameFromSnapshot(last);
-                LastBackupProjectName = string.IsNullOrWhiteSpace(lastProjectName)
-                    ? L("Backups.Summary.UnknownProject", UnknownProjectFallback)
-                    : lastProjectName;
-                LastBackupTypeDisplay = !string.IsNullOrWhiteSpace(last.TypeLabel)
-                    ? last.TypeLabel
-                    : last.Type;
-                LastBackupDestinationDisplay = string.IsNullOrWhiteSpace(last.DestinationDisplay)
-                    ? L("Backups.Summary.UnknownDestination", "Unknown")
-                    : last.DestinationDisplay;
-                if (last.IsImported)
-                {
-                    LastBackupSecurityDisplay = last.IsEncrypted
-                        ? L("Backups.Summary.ImportedEncrypted", "Imported - Encrypted")
-                        : L("Backups.Summary.ImportedPlain", "Imported - Plain");
-                }
-                else
-                {
-                    LastBackupSecurityDisplay = last.IsEncrypted
-                        ? L("Backups.Summary.LocalEncrypted", "Local - Encrypted")
-                        : L("Backups.Summary.LocalPlain", "Local - Plain");
-                }
-                double ageHours = Math.Max(0, (now - last.Timestamp).TotalHours);
-                double freshness = Math.Clamp(100d - (ageHours / 72d * 100d), 0d, 100d);
-                LastBackupFreshnessPercent = freshness;
-                string freshnessStateLabel = freshness >= 80
-                    ? L("Backups.Summary.Freshness.Good", "Fresh")
-                    : freshness >= 40
-                        ? L("Backups.Summary.Freshness.Moderate", "Aging")
-                        : L("Backups.Summary.Freshness.Stale", "Stale");
-                LastBackupFreshnessLabel = Lf("Backups.Summary.Freshness.WithAge", "{0} - {1}",
-                    freshnessStateLabel,
-                    LastBackupRelative);
-                LastBackupFreshnessTooltip = L("Backups.Summary.Freshness.Tooltip", "Good: <24h | Moderate: 24-72h | Stale: >72h");
-                LastBackupFreshnessBrush = freshness >= 80
-                    ? FreshnessGoodBrush
-                    : freshness >= 40
-                        ? FreshnessModerateBrush
-                        : FreshnessStaleBrush;
-            }
-            else
-            {
-                LastBackupDisplay  = L(NoBackupsKey, NoBackupsFallback);
+                LastBackupDisplay = L(NoBackupsKey, NoBackupsFallback);
                 LastBackupRelative = "-";
                 LastBackupSecondaryLine = L(LastBackupSizeKey, "Size -");
                 LastBackupSizeValueFormatted = "0 B";
@@ -3954,8 +3935,71 @@ namespace VaultSync.UI.ViewModels
                 LastBackupFreshnessLabel = L(NoBackupsKey, NoBackupsFallback);
                 LastBackupFreshnessTooltip = L(NoBackupsKey, NoBackupsFallback);
                 LastBackupFreshnessBrush = FreshnessUnknownBrush;
+                return;
             }
 
+            BackupSnapshotItem last = _allSnapshots.OrderByDescending(s => s.Timestamp).ToList()[0];
+            LastBackupDisplay = last.Timestamp.ToString(TimestampMinuteFormat);
+            LastBackupRelative = FormatRelative(now - last.Timestamp);
+            LastBackupSecondaryLine = Lf(
+                LastBackupSizeKey,
+                "Size {0}",
+                BackupSnapshotItem.FormatSize(last.SizeBytes));
+            LastBackupSizeValueFormatted = BackupSnapshotItem.FormatSize(last.SizeBytes);
+            string lastProjectName = ResolveProjectNameFromSnapshot(last);
+            LastBackupProjectName = string.IsNullOrWhiteSpace(lastProjectName)
+                ? L("Backups.Summary.UnknownProject", UnknownProjectFallback)
+                : lastProjectName;
+            LastBackupTypeDisplay = !string.IsNullOrWhiteSpace(last.TypeLabel) ? last.TypeLabel : last.Type;
+            LastBackupDestinationDisplay = string.IsNullOrWhiteSpace(last.DestinationDisplay)
+                ? L("Backups.Summary.UnknownDestination", "Unknown")
+                : last.DestinationDisplay;
+            LastBackupSecurityDisplay = GetLastBackupSecurityDisplay(last);
+
+            double ageHours = Math.Max(0, (now - last.Timestamp).TotalHours);
+            double freshness = Math.Clamp(100d - (ageHours / 72d * 100d), 0d, 100d);
+            LastBackupFreshnessPercent = freshness;
+            LastBackupFreshnessLabel = Lf(
+                "Backups.Summary.Freshness.WithAge",
+                "{0} - {1}",
+                GetFreshnessStateLabel(freshness),
+                LastBackupRelative);
+            LastBackupFreshnessTooltip = L("Backups.Summary.Freshness.Tooltip", "Good: <24h | Moderate: 24-72h | Stale: >72h");
+            LastBackupFreshnessBrush = GetFreshnessBrush(freshness);
+        }
+
+        private static string GetLastBackupSecurityDisplay(BackupSnapshotItem last)
+        {
+            if (last.IsImported)
+            {
+                return last.IsEncrypted
+                    ? L("Backups.Summary.ImportedEncrypted", "Imported - Encrypted")
+                    : L("Backups.Summary.ImportedPlain", "Imported - Plain");
+            }
+
+            return last.IsEncrypted
+                ? L("Backups.Summary.LocalEncrypted", "Local - Encrypted")
+                : L("Backups.Summary.LocalPlain", "Local - Plain");
+        }
+
+        private static string GetFreshnessStateLabel(double freshness)
+        {
+            if (freshness >= 80)
+                return L("Backups.Summary.Freshness.Good", "Fresh");
+            return freshness >= 40
+                ? L("Backups.Summary.Freshness.Moderate", "Aging")
+                : L("Backups.Summary.Freshness.Stale", "Stale");
+        }
+
+        private static IBrush GetFreshnessBrush(double freshness)
+        {
+            if (freshness >= 80)
+                return FreshnessGoodBrush;
+            return freshness >= 40 ? FreshnessModerateBrush : FreshnessStaleBrush;
+        }
+
+        private void UpdateStorageSummary()
+        {
             long totalBytes = _allSnapshots.Sum(s => s.SizeBytes);
             TotalBackupSizeFormatted = BackupSnapshotItem.FormatSize(totalBytes);
             string avgSize = _allSnapshots.Count > 0
@@ -4010,12 +4054,10 @@ namespace VaultSync.UI.ViewModels
                 StorageLocalPercent = safeLocal * 100d / totalStorage;
                 StorageImportedPercent = safeImported * 100d / totalStorage;
             }
+        }
 
-            RebuildTopStorageConsumers();
-            RebuildBackupHealthCenter(now);
-            RebuildSnapshotActivity(now);
-
-            // Notify UI that summary properties changed
+        private void NotifySummaryPropertiesChanged()
+        {
             OnPropertiesChanged(
                 nameof(TotalSnapshots),
                 nameof(SnapshotsThisWeek),
@@ -4123,7 +4165,7 @@ namespace VaultSync.UI.ViewModels
                 .ToDictionary(project => project.Id, project => project.Name, StringComparer.OrdinalIgnoreCase);
 
             var totalsByProject = _allSnapshots
-                .GroupBy(snapshot => string.IsNullOrWhiteSpace(snapshot.ProjectId) ? "__unknown__" : snapshot.ProjectId!)
+                .GroupBy(snapshot => string.IsNullOrWhiteSpace(snapshot.ProjectId) ? "__unknown__" : snapshot.ProjectId)
                 .Select(group => new
                 {
                     ProjectId = group.Key,
@@ -4163,15 +4205,15 @@ namespace VaultSync.UI.ViewModels
             int stale = 0;
             int noBackup = 0;
 
-            foreach (ProjectBackupItem project in ProjectBackups)
+            foreach (DateTime? lastBackupTime in ProjectBackups.Select(project => project.LastBackupTime))
             {
-                if (!project.LastBackupTime.HasValue)
+                if (!lastBackupTime.HasValue)
                 {
                     noBackup++;
                     continue;
                 }
 
-                TimeSpan age = now - project.LastBackupTime.Value;
+                TimeSpan age = now - lastBackupTime.Value;
                 if (age.TotalHours < 24)
                     healthy++;
                 else if (age.TotalHours <= 72)
@@ -4361,107 +4403,117 @@ namespace VaultSync.UI.ViewModels
         {
             SnapshotActivity.Clear();
 
-            // Last 7 days, oldest -> newest
             DateTime[] days = [.. Enumerable.Range(0, 7).Select(offset => now.Date.AddDays(-6 + offset))];
-
-            var autoByDate = _allSnapshots
-                .Where(s => string.Equals(s.Type, "Auto", StringComparison.OrdinalIgnoreCase))
-                .GroupBy(s => s.Timestamp.Date)
-                .ToDictionary(g => g.Key, g => g.Count());
-            var manualByDate = _allSnapshots
-                .Where(s => string.Equals(s.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase))
-                .GroupBy(s => s.Timestamp.Date)
-                .ToDictionary(g => g.Key, g => g.Count());
-            var importedByDate = _allSnapshots
-                .Where(s => s.IsImported)
-                .GroupBy(s => s.Timestamp.Date)
-                .ToDictionary(g => g.Key, g => g.Count());
+            Dictionary<DateTime, int> autoByDate = CountSnapshotsByDate(s =>
+                string.Equals(s.Type, "Auto", StringComparison.OrdinalIgnoreCase));
+            Dictionary<DateTime, int> manualByDate = CountSnapshotsByDate(s =>
+                string.Equals(s.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase));
+            Dictionary<DateTime, int> importedByDate = CountSnapshotsByDate(s => s.IsImported);
             var bytesByDate = _allSnapshots
                 .GroupBy(s => s.Timestamp.Date)
                 .ToDictionary(g => g.Key, g => g.Sum(x => x.SizeBytes));
 
-            var totals = days
-                .Select(d =>
-                {
-                    autoByDate.TryGetValue(d, out int autoCount);
-                    manualByDate.TryGetValue(d, out int manualCount);
-                    importedByDate.TryGetValue(d, out int importedCount);
-                    return autoCount + manualCount + importedCount;
-                })
-                .ToList();
-
-            int maxTotal = totals.DefaultIfEmpty(0).Max();
-            if (maxTotal == 0)
-                maxTotal = 1; // avoid divide-by-zero
-
-            double chartHeight = maxTotal <= 2 ? 150d : (maxTotal <= 4 ? 172d : 192d);
-            // Keep the activity chart proportionate on wide windowed layouts.
+            int maxTotal = Math.Max(1, days.Max(day =>
+                GetCount(autoByDate, day) + GetCount(manualByDate, day) + GetCount(importedByDate, day)));
+            double chartHeight = GetSnapshotActivityChartHeight(maxTotal);
             double widthBoost = ShowActivityPanel
                 ? Math.Clamp((_lastSummaryViewportWidth - 1380d) * 0.05d, 0d, 52d)
                 : 0d;
             chartHeight += widthBoost;
-            const double barBase = 12;
-            double barRange = chartHeight - 36;
             SnapshotActivityChartHeight = chartHeight;
 
-            long maxBytes = bytesByDate.Values.DefaultIfEmpty(0L).Max();
-            if (maxBytes == 0)
-                maxBytes = 1;
-
+            long maxBytes = Math.Max(1, bytesByDate.Values.DefaultIfEmpty(0L).Max());
+            var series = new SnapshotActivitySeries(
+                autoByDate,
+                manualByDate,
+                importedByDate,
+                bytesByDate,
+                maxTotal,
+                maxBytes);
             foreach (DateTime day in days)
             {
-                autoByDate.TryGetValue(day, out int autoCount);
-                manualByDate.TryGetValue(day, out int manualCount);
-                importedByDate.TryGetValue(day, out int importedCount);
-                bytesByDate.TryGetValue(day, out long totalBytes);
-
-                int totalCount = autoCount + manualCount + importedCount;
-                double normalized = totalBytes > 0
-                    ? totalBytes / (double)maxBytes
-                    : totalCount / (double)maxTotal;
-                double totalHeight = totalCount == 0 ? 0 : barBase + normalized * barRange;
-
-                double autoHeight = 0d;
-                double manualHeight = 0d;
-                double importedHeight = 0d;
-                if (totalCount > 0)
-                {
-                    autoHeight = autoCount == 0 ? 0 : Math.Max(5, totalHeight * autoCount / totalCount);
-                    manualHeight = manualCount == 0 ? 0 : Math.Max(5, totalHeight * manualCount / totalCount);
-                    importedHeight = importedCount == 0 ? 0 : Math.Max(5, totalHeight * importedCount / totalCount);
-
-                    double combined = autoHeight + manualHeight + importedHeight;
-                    if (combined > totalHeight && combined > 0)
-                    {
-                        double scale = totalHeight / combined;
-                        autoHeight *= scale;
-                        manualHeight *= scale;
-                        importedHeight *= scale;
-                    }
-                }
-
-                string dayLabel = day.ToString("ddd");
-                string tooltip = totalCount == 0
-                    ? Lf("Backups.Activity.TooltipNone", "{0}: No backups", dayLabel)
-                    : Lf("Backups.Activity.Tooltip", "{0}: {1} backups - {2}", dayLabel, totalCount, BackupSnapshotItem.FormatSize(totalBytes));
-
-                SnapshotActivity.Add(new SnapshotActivityPoint
-                {
-                    DayLabel     = dayLabel,
-                    ShowLabel    = true,
-                    AutoCount    = autoCount,
-                    ManualCount  = manualCount,
-                    ImportedCount = importedCount,
-                    TotalBytes   = totalBytes,
-                    AutoHeight   = autoHeight,
-                    ManualHeight = manualHeight,
-                    ImportedHeight = importedHeight,
-                    TooltipText  = tooltip
-                });
+                SnapshotActivity.Add(BuildSnapshotActivityPoint(day, series, chartHeight));
             }
 
             OnPropertyChanged(nameof(SnapshotActivityChartHeight));
         }
+
+        private Dictionary<DateTime, int> CountSnapshotsByDate(Func<BackupSnapshotItem, bool> predicate) =>
+            _allSnapshots
+                .Where(predicate)
+                .GroupBy(snapshot => snapshot.Timestamp.Date)
+                .ToDictionary(group => group.Key, group => group.Count());
+
+        private static int GetCount(IReadOnlyDictionary<DateTime, int> counts, DateTime day) =>
+            counts.TryGetValue(day, out int count) ? count : 0;
+
+        private static double GetSnapshotActivityChartHeight(int maxTotal)
+        {
+            if (maxTotal <= 2)
+                return 150d;
+            return maxTotal <= 4 ? 172d : 192d;
+        }
+
+        private static SnapshotActivityPoint BuildSnapshotActivityPoint(
+            DateTime day,
+            SnapshotActivitySeries series,
+            double chartHeight)
+        {
+            series.BytesByDate.TryGetValue(day, out long totalBytes);
+            var counts = new SnapshotActivityCounts(
+                GetCount(series.AutoByDate, day),
+                GetCount(series.ManualByDate, day),
+                GetCount(series.ImportedByDate, day),
+                totalBytes);
+            (double autoHeight, double manualHeight, double importedHeight) = CalculateActivityHeights(
+                counts,
+                series,
+                chartHeight);
+
+            string dayLabel = day.ToString("ddd");
+            string tooltip = counts.Total == 0
+                ? Lf("Backups.Activity.TooltipNone", "{0}: No backups", dayLabel)
+                : Lf("Backups.Activity.Tooltip", "{0}: {1} backups - {2}", dayLabel, counts.Total, BackupSnapshotItem.FormatSize(counts.Bytes));
+            return new SnapshotActivityPoint
+            {
+                DayLabel = dayLabel,
+                ShowLabel = true,
+                AutoCount = counts.Auto,
+                ManualCount = counts.Manual,
+                ImportedCount = counts.Imported,
+                TotalBytes = counts.Bytes,
+                AutoHeight = autoHeight,
+                ManualHeight = manualHeight,
+                ImportedHeight = importedHeight,
+                TooltipText = tooltip
+            };
+        }
+
+        private static (double Auto, double Manual, double Imported) CalculateActivityHeights(
+            SnapshotActivityCounts counts,
+            SnapshotActivitySeries series,
+            double chartHeight)
+        {
+            if (counts.Total == 0)
+                return (0d, 0d, 0d);
+
+            double normalized = counts.Bytes > 0
+                ? counts.Bytes / (double)series.MaxBytes
+                : counts.Total / (double)series.MaxTotal;
+            double totalHeight = 12d + normalized * (chartHeight - 36d);
+            double autoHeight = GetActivitySegmentHeight(counts.Auto, counts.Total, totalHeight);
+            double manualHeight = GetActivitySegmentHeight(counts.Manual, counts.Total, totalHeight);
+            double importedHeight = GetActivitySegmentHeight(counts.Imported, counts.Total, totalHeight);
+            double combined = autoHeight + manualHeight + importedHeight;
+            if (combined <= totalHeight)
+                return (autoHeight, manualHeight, importedHeight);
+
+            double scale = totalHeight / combined;
+            return (autoHeight * scale, manualHeight * scale, importedHeight * scale);
+        }
+
+        private static double GetActivitySegmentHeight(int count, int totalCount, double totalHeight) =>
+            count == 0 ? 0d : Math.Max(5d, totalHeight * count / totalCount);
 
         /// <summary>
         /// Populates this view model from real projects and backups loaded from the core layer.
@@ -4480,16 +4532,8 @@ namespace VaultSync.UI.ViewModels
             RefreshVerificationPolicyOptions();
             RefreshDestinationOptions(config);
 
-            var projectList = projects.ToList();
-            var dedupBackups = new Dictionary<int, Backup>();
-            foreach (Backup backup in backups)
-            {
-                if (!dedupBackups.ContainsKey(backup.Id))
-                {
-                    dedupBackups[backup.Id] = backup;
-                }
-            }
-            var backupList = dedupBackups.Values.ToList();
+            List<Project> projectList = projects.ToList();
+            List<Backup> backupList = DeduplicateBackups(backups);
             RefreshDestinationQuotaPlans(config, backupList);
             Dictionary<int, Snapshot> snapshotById = LoadSnapshotLookup(config, backupList);
             int projectSignature = ComputeProjectSignature(projectList);
@@ -4512,106 +4556,29 @@ namespace VaultSync.UI.ViewModels
             _projectLookupById.Clear();
             _allSnapshots.Clear();
 
-            // Map per-project aggregates in a single pass.
-            var projectStats = new Dictionary<int, (int Count, long TotalBytes, DateTime? LastBackupTime)>();
-            foreach (Backup? backup in backupList)
-            {
-                if (!projectStats.TryGetValue(backup.ProjectId, out (int Count, long TotalBytes, DateTime? LastBackupTime) stats))
-                    stats = (0, 0L, null);
-
-                stats.Count++;
-                stats.TotalBytes += backup.TotalBytes;
-                if (!stats.LastBackupTime.HasValue || backup.CreatedUtc > stats.LastBackupTime.Value)
-                    stats.LastBackupTime = backup.CreatedUtc;
-
-                projectStats[backup.ProjectId] = stats;
-            }
-
-            // Compute per-project delta vs previous backup (latest - previous).
-            var projectDeltaById = new Dictionary<int, long?>();
-            foreach (IGrouping<int, Backup> group in backupList.GroupBy(b => b.ProjectId))
-            {
-                var ordered = group
-                    .OrderByDescending(b => b.CreatedUtc)
-                    .ThenByDescending(b => b.Id)
-                    .ToList();
-
-                Backup? latest = ordered.FirstOrDefault();
-                Backup? previous = latest is null
-                    ? null
-                    : ordered.Skip(1).FirstOrDefault(candidate => IsComparableBackupDelta(latest, candidate));
-
-                if (latest is not null && previous is not null)
-                {
-                    projectDeltaById[group.Key] = latest.TotalBytes - previous.TotalBytes;
-                }
-                else
-                {
-                    projectDeltaById[group.Key] = null;
-                }
-            }
+            Dictionary<int, ProjectBackupStats> projectStats = BuildProjectBackupStats(backupList);
+            Dictionary<int, long?> projectDeltaById = BuildProjectBackupDeltas(backupList);
 
             var orderedProjects = projectList
                 .OrderByDescending(project =>
-                    projectStats.TryGetValue(project.Id, out (int Count, long TotalBytes, DateTime? LastBackupTime) stats)
+                    projectStats.TryGetValue(project.Id, out ProjectBackupStats stats)
                         ? stats.LastBackupTime ?? DateTime.MinValue
                         : DateTime.MinValue)
                 .ThenBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            var projectGroupNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            try
-            {
-                SqliteRepository groupRepository = _repositoryFactory.Create(config);
-                groupRepository.EnsureSchema();
-                projectGroupNames = groupRepository.GetProjectGroups()
-                    .ToDictionary(group => group.Id, group => group.Name, StringComparer.OrdinalIgnoreCase);
-            }
-            catch (Exception ex)
-            {
-                DiagnosticsLogger.Record($"Backup project folders unavailable: {ex.GetType().Name} - {ex.Message}");
-            }
+            Dictionary<string, string> projectGroupNames = LoadProjectGroupNames(config);
 
             foreach (Project? project in orderedProjects)
             {
-                projectStats.TryGetValue(project.Id, out (int Count, long TotalBytes, DateTime? LastBackupTime) stats);
-
-                string projectName = string.IsNullOrWhiteSpace(project.Name)
-                    ? L(UnknownProjectGroupKey, UnknownProjectFallback)
-                    : project.Name.Trim();
-
-                var projectItem = new ProjectBackupItem
-                {
-                    Id                = project.Id.ToString(),
-                    Name              = projectName,
-                    FolderName        = !string.IsNullOrWhiteSpace(project.GroupId) &&
-                                        projectGroupNames.TryGetValue(project.GroupId, out string? groupName)
-                        ? groupName
-                        : L("Projects.Folder.Ungrouped", "Ungrouped"),
-                    ExternalId        = project.ExternalId ?? string.Empty,
-                    ProjectTagsCsv    = project.Tags ?? string.Empty,
-                    LastBackupTime    = stats.LastBackupTime,
-                    SnapshotCount     = stats.Count,
-                    TotalSizeBytes    = stats.TotalBytes,
-                    AutoBackupEnabled = autoBackupDisabledProjects is null || !autoBackupDisabledProjects.Contains(project.Id),
-                    AutoBackupChanged = OnAutoBackupChanged,
-                    PreferredDestinationId = project.PreferredDestinationId ?? string.Empty,
-                    PreferredDestinationChanged = OnPreferredDestinationChanged,
-                    EncryptionPolicy = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy),
-                    EncryptionKeyRef = project.EncryptionKeyRef ?? string.Empty,
-                    EncryptionPolicyChanged = OnProjectEncryptionPolicyChanged,
-                    RestoreMode = ProjectRestoreMode.Normalize(project.RestoreMode),
-                    RestoreModeChanged = OnProjectRestoreModeChanged,
-                    VerificationPolicy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy),
-                    VerificationPolicyChanged = OnProjectVerificationPolicyChanged,
-                    StorageDeltaBytes = projectDeltaById.TryGetValue(project.Id, out long? deltaBytes)
-                        ? deltaBytes
-                        : null
-                };
-                projectItem.SetAvatarFromNameAndStore(projectName, project.RootPath, project.ExternalId);
-                UpdateProjectDestinationDisplay(projectItem, config);
-                UpdateProjectEncryptionDisplay(projectItem, config);
-                UpdateProjectRestoreModeDisplay(projectItem);
-                UpdateProjectVerificationPolicyDisplay(projectItem);
+                projectStats.TryGetValue(project.Id, out ProjectBackupStats stats);
+                projectDeltaById.TryGetValue(project.Id, out long? deltaBytes);
+                ProjectBackupItem projectItem = BuildProjectBackupItem(
+                    project,
+                    stats,
+                    deltaBytes,
+                    projectGroupNames,
+                    autoBackupDisabledProjects,
+                    config);
                 refreshedProjects.Add(projectItem);
                 _projectLookupById[projectItem.Id] = projectItem;
             }
@@ -4626,75 +4593,7 @@ namespace VaultSync.UI.ViewModels
             {
                 projectLookup.TryGetValue(backup.ProjectId, out Project? project);
                 snapshotById.TryGetValue(backup.SnapshotId, out Snapshot? snapshotInfo);
-                (string diffTopPathsDisplay, bool hasDiffTopPaths) = BuildSnapshotDiffTopPathsDisplay(snapshotInfo);
-
-                string destinationDisplay = string.IsNullOrWhiteSpace(backup.DestinationAlias)
-                    ? backup.DestinationPath
-                    : backup.DestinationAlias;
-
-                bool isAutoSnapshot = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase);
-                string backupMode = BackupModes.Normalize(backup.BackupMode);
-                bool isIncremental = string.Equals(backupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase);
-                string importedLabel = L("Backups.Snapshot.Type.Imported", "Imported");
-            if (backup.IsImported && !string.IsNullOrWhiteSpace(backup.OriginMachineName))
-            {
-                importedLabel = $"{importedLabel} \u00b7 {backup.OriginMachineName}";
-            }
-            var uiItem = new BackupSnapshotItem
-            {
-                Id        = backup.Id.ToString(),
-                SnapshotId = backup.SnapshotId,
-                Timestamp = backup.CreatedUtc.ToLocalTime(),
-                SizeBytes = backup.TotalBytes,
-                Type      = isAutoSnapshot ? "Auto" : ManualBackupType,
-                IsImported = backup.IsImported,
-                IsEncrypted = backup.IsEncrypted,
-                OriginMachineName = backup.OriginMachineName,
-                ImportedLabel = importedLabel,
-                EncryptionLabel = backup.IsEncrypted
-                    ? L(EncryptedPolicyKey, EncryptedFallback)
-                    : L(PlainPolicyKey, PlainFallback),
-                TypeLabel = isIncremental
-                        ? L("Backups.Snapshot.Type.Incremental", "Incremental")
-                        : L("Backups.Snapshot.Type.Full", "Full"),
-                ModeChipLabel = Lf("Backups.Snapshot.ModeChip", "Mode: {0}",
-                    isIncremental
-                        ? L("Backups.Snapshot.Type.Incremental", "Incremental")
-                        : L("Backups.Snapshot.Type.Full", "Full")),
-                EncryptionChipLabel = Lf("Backups.Snapshot.EncryptionChip", "Encryption: {0}",
-                    backup.IsEncrypted
-                        ? L(EncryptedPolicyKey, EncryptedFallback)
-                        : L(PlainPolicyKey, PlainFallback)),
-                RetentionDefaultLabel = backup.IsImported
-                    ? L("Backups.Retention.Outcome.Imported", "Retention: imported history entry")
-                    : L("Backups.Retention.Outcome.Eligible", "Retention: eligible for pruning"),
-                RetentionProtectedLabel = L("Backups.Retention.Outcome.Protected", "Retention: kept (protected)"),
-                    Status    = "Completed",
-                    Label     = isAutoSnapshot
-                        ? L("Backups.Snapshot.Label.Auto", "Scheduled backup")
-                        : L("Backups.Snapshot.Label.Manual", "On-demand backup"),
-                    ProjectId = project?.Id.ToString(),
-                    IsProtected = backup.IsProtected,
-                    DestinationDisplay = destinationDisplay,
-                    BackupRelativePath = backup.Path,
-                    DestinationRootPath = backup.DestinationPath,
-                    DestinationAlias = backup.DestinationAlias,
-                    DiffAdded = snapshotInfo?.DiffAdded ?? 0,
-                    DiffModified = snapshotInfo?.DiffModified ?? 0,
-                    DiffDeleted = snapshotInfo?.DiffDeleted ?? 0,
-                    DiffNetBytes = snapshotInfo?.DiffNetBytes ?? 0,
-                    DiffTopPathsJson = snapshotInfo?.DiffTopPathsJson ?? "[]",
-                    DiffSummaryDisplay = BuildSnapshotDiffSummaryDisplay(snapshotInfo),
-                    DiffTopPathsDisplay = diffTopPathsDisplay,
-                    HasDiffTopPaths = hasDiffTopPaths,
-                    CanOpenDiffDetails = (snapshotInfo?.DiffAdded ?? 0) > 0
-                        || (snapshotInfo?.DiffModified ?? 0) > 0
-                        || (snapshotInfo?.DiffDeleted ?? 0) > 0
-                        || (snapshotInfo?.DiffNetBytes ?? 0) != 0
-                        || hasDiffTopPaths
-                };
-
-                _allSnapshots.Add(uiItem);
+                _allSnapshots.Add(BuildBackupSnapshotItem(backup, project, snapshotInfo));
             }
 
             Interlocked.Increment(ref _snapshotRevision);
@@ -4709,6 +4608,185 @@ namespace VaultSync.UI.ViewModels
             _lastBackupSignature = backupSignature;
             _lastAutoBackupSignature = autoSignature;
         }
+
+        private static BackupSnapshotItem BuildBackupSnapshotItem(
+            Backup backup,
+            Project? project,
+            Snapshot? snapshotInfo)
+        {
+            (string diffTopPathsDisplay, bool hasDiffTopPaths) = BuildSnapshotDiffTopPathsDisplay(snapshotInfo);
+            string destinationDisplay = string.IsNullOrWhiteSpace(backup.DestinationAlias)
+                ? backup.DestinationPath
+                : backup.DestinationAlias;
+            bool isAutoSnapshot = string.Equals(backup.Type, "auto", StringComparison.OrdinalIgnoreCase);
+            bool isIncremental = string.Equals(
+                BackupModes.Normalize(backup.BackupMode),
+                BackupModes.Incremental,
+                StringComparison.OrdinalIgnoreCase);
+            string modeLabel = isIncremental
+                ? L("Backups.Snapshot.Type.Incremental", "Incremental")
+                : L("Backups.Snapshot.Type.Full", "Full");
+            string encryptionLabel = backup.IsEncrypted
+                ? L(EncryptedPolicyKey, EncryptedFallback)
+                : L(PlainPolicyKey, PlainFallback);
+            string importedLabel = L("Backups.Snapshot.Type.Imported", "Imported");
+            if (backup.IsImported && !string.IsNullOrWhiteSpace(backup.OriginMachineName))
+                importedLabel = $"{importedLabel} \u00b7 {backup.OriginMachineName}";
+
+            return new BackupSnapshotItem
+            {
+                Id = backup.Id.ToString(),
+                SnapshotId = backup.SnapshotId,
+                Timestamp = backup.CreatedUtc.ToLocalTime(),
+                SizeBytes = backup.TotalBytes,
+                Type = isAutoSnapshot ? "Auto" : ManualBackupType,
+                IsImported = backup.IsImported,
+                IsEncrypted = backup.IsEncrypted,
+                OriginMachineName = backup.OriginMachineName,
+                ImportedLabel = importedLabel,
+                EncryptionLabel = encryptionLabel,
+                TypeLabel = modeLabel,
+                ModeChipLabel = Lf("Backups.Snapshot.ModeChip", "Mode: {0}", modeLabel),
+                EncryptionChipLabel = Lf("Backups.Snapshot.EncryptionChip", "Encryption: {0}", encryptionLabel),
+                RetentionDefaultLabel = backup.IsImported
+                    ? L("Backups.Retention.Outcome.Imported", "Retention: imported history entry")
+                    : L("Backups.Retention.Outcome.Eligible", "Retention: eligible for pruning"),
+                RetentionProtectedLabel = L("Backups.Retention.Outcome.Protected", "Retention: kept (protected)"),
+                Status = "Completed",
+                Label = isAutoSnapshot
+                    ? L("Backups.Snapshot.Label.Auto", "Scheduled backup")
+                    : L("Backups.Snapshot.Label.Manual", "On-demand backup"),
+                ProjectId = project?.Id.ToString(),
+                IsProtected = backup.IsProtected,
+                DestinationDisplay = destinationDisplay,
+                BackupRelativePath = backup.Path,
+                DestinationRootPath = backup.DestinationPath,
+                DestinationAlias = backup.DestinationAlias,
+                DiffAdded = snapshotInfo?.DiffAdded ?? 0,
+                DiffModified = snapshotInfo?.DiffModified ?? 0,
+                DiffDeleted = snapshotInfo?.DiffDeleted ?? 0,
+                DiffNetBytes = snapshotInfo?.DiffNetBytes ?? 0,
+                DiffTopPathsJson = snapshotInfo?.DiffTopPathsJson ?? "[]",
+                DiffSummaryDisplay = BuildSnapshotDiffSummaryDisplay(snapshotInfo),
+                DiffTopPathsDisplay = diffTopPathsDisplay,
+                HasDiffTopPaths = hasDiffTopPaths,
+                CanOpenDiffDetails = HasSnapshotDiffDetails(snapshotInfo, hasDiffTopPaths)
+            };
+        }
+
+        private static bool HasSnapshotDiffDetails(Snapshot? snapshotInfo, bool hasDiffTopPaths) =>
+            (snapshotInfo?.DiffAdded ?? 0) > 0 ||
+            (snapshotInfo?.DiffModified ?? 0) > 0 ||
+            (snapshotInfo?.DiffDeleted ?? 0) > 0 ||
+            (snapshotInfo?.DiffNetBytes ?? 0) != 0 ||
+            hasDiffTopPaths;
+
+        private static List<Backup> DeduplicateBackups(IEnumerable<Backup> backups)
+        {
+            var uniqueById = new Dictionary<int, Backup>();
+            foreach (Backup backup in backups)
+                uniqueById.TryAdd(backup.Id, backup);
+            return [.. uniqueById.Values];
+        }
+
+        private static Dictionary<int, ProjectBackupStats> BuildProjectBackupStats(IEnumerable<Backup> backups)
+        {
+            var result = new Dictionary<int, ProjectBackupStats>();
+            foreach (Backup backup in backups)
+            {
+                result.TryGetValue(backup.ProjectId, out ProjectBackupStats current);
+                DateTime latest = !current.LastBackupTime.HasValue || backup.CreatedUtc > current.LastBackupTime.Value
+                    ? backup.CreatedUtc
+                    : current.LastBackupTime.Value;
+                result[backup.ProjectId] = new ProjectBackupStats(
+                    current.Count + 1,
+                    current.TotalBytes + backup.TotalBytes,
+                    latest);
+            }
+            return result;
+        }
+
+        private static Dictionary<int, long?> BuildProjectBackupDeltas(IEnumerable<Backup> backups)
+        {
+            var result = new Dictionary<int, long?>();
+            foreach (IGrouping<int, Backup> group in backups.GroupBy(backup => backup.ProjectId))
+            {
+                List<Backup> ordered = group
+                    .OrderByDescending(backup => backup.CreatedUtc)
+                    .ThenByDescending(backup => backup.Id)
+                    .ToList();
+                Backup latest = ordered[0];
+                Backup? previous = ordered.Skip(1)
+                    .FirstOrDefault(candidate => IsComparableBackupDelta(latest, candidate));
+                result[group.Key] = previous is null ? null : latest.TotalBytes - previous.TotalBytes;
+            }
+            return result;
+        }
+
+        private Dictionary<string, string> LoadProjectGroupNames(AppConfig config)
+        {
+            try
+            {
+                SqliteRepository groupRepository = _repositoryFactory.Create(config);
+                groupRepository.EnsureSchema();
+                return groupRepository.GetProjectGroups()
+                    .ToDictionary(group => group.Id, group => group.Name, StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsLogger.Record($"Backup project folders unavailable: {ex.GetType().Name} - {ex.Message}");
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        private ProjectBackupItem BuildProjectBackupItem(
+            Project project,
+            ProjectBackupStats stats,
+            long? storageDeltaBytes,
+            IReadOnlyDictionary<string, string> projectGroupNames,
+            ISet<int>? autoBackupDisabledProjects,
+            AppConfig config)
+        {
+            string projectName = string.IsNullOrWhiteSpace(project.Name)
+                ? L(UnknownProjectGroupKey, UnknownProjectFallback)
+                : project.Name.Trim();
+            var item = new ProjectBackupItem
+            {
+                Id = project.Id.ToString(),
+                Name = projectName,
+                FolderName = ResolveProjectGroupName(project.GroupId, projectGroupNames),
+                ExternalId = project.ExternalId ?? string.Empty,
+                ProjectTagsCsv = project.Tags ?? string.Empty,
+                LastBackupTime = stats.LastBackupTime,
+                SnapshotCount = stats.Count,
+                TotalSizeBytes = stats.TotalBytes,
+                AutoBackupEnabled = autoBackupDisabledProjects is null || !autoBackupDisabledProjects.Contains(project.Id),
+                AutoBackupChanged = OnAutoBackupChanged,
+                PreferredDestinationId = project.PreferredDestinationId ?? string.Empty,
+                PreferredDestinationChanged = OnPreferredDestinationChanged,
+                EncryptionPolicy = ProjectEncryptionPolicy.Normalize(project.EncryptionPolicy),
+                EncryptionKeyRef = project.EncryptionKeyRef ?? string.Empty,
+                EncryptionPolicyChanged = OnProjectEncryptionPolicyChanged,
+                RestoreMode = ProjectRestoreMode.Normalize(project.RestoreMode),
+                RestoreModeChanged = OnProjectRestoreModeChanged,
+                VerificationPolicy = ProjectVerificationPolicy.Normalize(project.VerificationPolicy),
+                VerificationPolicyChanged = OnProjectVerificationPolicyChanged,
+                StorageDeltaBytes = storageDeltaBytes
+            };
+            item.SetAvatarFromNameAndStore(projectName, project.RootPath, project.ExternalId);
+            UpdateProjectDestinationDisplay(item, config);
+            UpdateProjectEncryptionDisplay(item, config);
+            UpdateProjectRestoreModeDisplay(item);
+            UpdateProjectVerificationPolicyDisplay(item);
+            return item;
+        }
+
+        private static string ResolveProjectGroupName(
+            string? groupId,
+            IReadOnlyDictionary<string, string> projectGroupNames) =>
+            !string.IsNullOrWhiteSpace(groupId) && projectGroupNames.TryGetValue(groupId, out string? groupName)
+                ? groupName
+                : L("Projects.Folder.Ungrouped", "Ungrouped");
 
         internal void ReplaceProjectBackups(IReadOnlyList<ProjectBackupItem> incomingProjects)
         {
