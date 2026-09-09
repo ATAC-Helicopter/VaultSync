@@ -6,9 +6,9 @@
   <ItemGroup>
     <!-- Core storage and platform APIs -->
     <PackageVersion Include="Dapper" Version="2.1.79" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
-    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.11" />
+    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
 
     <!-- CLI -->
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
@@ -24,22 +24,22 @@
     <PackageVersion Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.1.0-dev-798" />
 
     <!-- Text and rendering native assets -->
-    <PackageVersion Include="SkiaSharp" Version="4.151.2" />
-    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="4.151.2" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.151.2" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="4.151.2" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.151.2" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.151.2" />
-    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.102" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.102" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.102" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="14.2.1.102" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.102" />
+    <PackageVersion Include="SkiaSharp" Version="4.152.0" />
+    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="4.152.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.152.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="4.152.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.152.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.152.0" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.200" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.200" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.200" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="14.2.1.200" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.200" />
 
     <!-- Windows-only UI integrations -->
     <PackageVersion Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />
     <!-- Overrides the toolkit's vulnerable legacy transitive version. -->
-    <PackageVersion Include="System.Drawing.Common" Version="10.0.11" />
+    <PackageVersion Include="System.Drawing.Common" Version="10.0.12" />
     <!-- Tests -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
