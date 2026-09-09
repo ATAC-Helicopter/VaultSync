@@ -748,6 +748,10 @@ namespace VaultSync.UI.ViewModels
             AppViewModel.RunDetached(OnCreateBackupForAllProjectsRequestedAsync, nameof(OnCreateBackupForAllProjectsRequestedAsync));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Major Code Smell",
+            "S3776:Cognitive Complexity of methods should not be too high",
+            Justification = "This UI transaction coordinator keeps multi-project backup state, aggregate progress, cleanup, telemetry, and final UI teardown in one auditable failure boundary; per-project backup work is delegated to the backup service.")]
         private async Task OnCreateBackupForAllProjectsRequestedAsync()
         {
             bool trayRun = _trayInitiatedBackup;
@@ -770,7 +774,9 @@ namespace VaultSync.UI.ViewModels
             }
 
 
-            BackupAllPreparationResult preparation = await Task.Run(() => PrepareBackupAll());
+            BackupAllPreparationResult preparation = await Task.Run(
+                PrepareBackupAll,
+                CancellationToken.None);
 
             if (!preparation.IsReady)
             {
@@ -804,7 +810,7 @@ namespace VaultSync.UI.ViewModels
             {
                 await Task.Run(async () =>
                 {
-                    var projects = _repo.GetAllProjects().ToList();
+                    List<Project> projects = await _repo.GetAllProjectsAsync(CancellationToken.None);
                     var results = new ConcurrentBag<(string name, string root, bool success)>();
 
                     if (projects.Count == 0)
@@ -870,7 +876,7 @@ namespace VaultSync.UI.ViewModels
                         }
 
                         BackupDestination primaryDest = selection.Destinations[0];
-                        DestinationResolution preparedPrimary = PrepareDestination(primaryDest, cfg);
+                        DestinationResolution preparedPrimary = await PrepareDestinationAsync(primaryDest, cfg);
                         if (!preparedPrimary.IsSuccess || string.IsNullOrWhiteSpace(preparedPrimary.EffectivePath))
                         {
                             string message = preparedPrimary.Message;
@@ -891,7 +897,6 @@ namespace VaultSync.UI.ViewModels
                                     policyText: activePolicyText);
                             });
                             UpdateAggregateProgress(message, string.Empty);
-                            return;
                         }
 
                         string backupRoot = preparedPrimary.EffectivePath;
@@ -1154,17 +1159,17 @@ namespace VaultSync.UI.ViewModels
                         .WithCount("failed", results.Count(r => !r.success))
                         .WithFlag(TelemetryUseArchiveMode, useArchiveMode)
                         .WithNumber(TelemetryDurationSeconds, (DateTime.UtcNow - start).TotalSeconds));
-                });
+                }, CancellationToken.None);
 
                 // First reload history so the new backups appear.
                 ReloadBackupsVmData();
                 await DashboardViewModel.RefreshAsync();
 
                 // --- After all backups: optional verification / post-hash ---
-                AppConfig cfgAfterAll = await Task.Run(_configStore.Load);
+                AppConfig cfgAfterAll = await Task.Run(_configStore.Load, CancellationToken.None);
                 List<BackupDestination> allDestinations = AppViewModel.GetAllDestinations(cfgAfterAll);
                 List<Backup> allLatest = _repo.GetLatestBackupsPerProject();
-                var projectsById = _repo.GetAllProjects()
+                var projectsById = (await _repo.GetAllProjectsAsync(CancellationToken.None))
                     .GroupBy(p => p.Id)
                     .ToDictionary(g => g.Key, g => g.First());
 
@@ -1301,14 +1306,13 @@ namespace VaultSync.UI.ViewModels
                 {
                     throughput = cfg.Backups.LastBackupThroughputMbSec;
                 }
-                BackupService.BackupPreflightResult preflight = await Task.Run(
-                        () => _backupService.PreflightBackupAsync(
-                            project,
-                            backupRoot,
-                            throughputMbSec: throughput,
-                            useArchiveMode: useArchiveMode,
-                            cacheTtl: TimeSpan.FromSeconds(45),
-                            ct: CancellationToken.None))
+                BackupService.BackupPreflightResult preflight = await _backupService.PreflightBackupAsync(
+                        project,
+                        backupRoot,
+                        throughputMbSec: throughput,
+                        useArchiveMode: useArchiveMode,
+                        cacheTtl: TimeSpan.FromSeconds(45),
+                        ct: CancellationToken.None)
                     .ConfigureAwait(false);
 
                 string sizeLabel = BackupSnapshotItem.FormatSize(preflight.TotalBytes);
