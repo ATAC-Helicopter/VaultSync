@@ -10,6 +10,7 @@ VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
 - Restore CLI snapshots from their recorded backup data instead of the live source.
 - Reject unsafe backup and preset paths before they can affect user data.
 - Keep CLI paths literal and backup scans inside the selected source tree.
+- Interpret CLI prune cutoffs consistently on every system locale.
 
 ### Clearer controls
 - Center icon-and-label stacks inside shared pills and backup tags.

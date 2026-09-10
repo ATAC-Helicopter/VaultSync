@@ -17,8 +17,10 @@
 - [BUG-18164] Confine CLI preset reads to their user or bundled preset root.
 - [BUG-18165] Preserve literal tildes while expanding leading CLI home paths.
 - [BUG-18166] Keep backup preflight enumeration out of linked source trees.
+- [BUG-18167] Make destructive CLI prune dates exact and locale-independent.
 ### Changed
 - [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
+- [VS-1896] Consolidate repeated desktop labels and transient console capture state.
 - [VS-1895] Service Avalonia and coordinated SkiaSharp/HarfBuzzSharp packages.
 - [VS-1897] Keep labeled navigation at the default window size and clarify the Projects purpose.
 - [VS-1897] Remove obsolete placeholder navigation and reflection paths from the live shell.

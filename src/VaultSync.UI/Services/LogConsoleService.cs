@@ -131,8 +131,6 @@ namespace VaultSync.UI.Services
         private readonly StringBuilder _fileBuffer = new();
         private int _uiCaptureEnabled;
         private bool _captureInstalled;
-        private TextWriter? _originalOut;
-        private TextWriter? _originalErr;
         private int _flushScheduled;
         private int _flushDelayed;
         private DateTime _lastFlushUtc = DateTime.MinValue;
@@ -241,11 +239,10 @@ namespace VaultSync.UI.Services
             if (_captureInstalled)
                 return;
 
-            _originalOut = Console.Out;
-            _originalErr = Console.Error;
-
-            Console.SetOut(new LogTextWriter(this, _originalOut, "stdout"));
-            Console.SetError(new LogTextWriter(this, _originalErr, "stderr"));
+            TextWriter originalOut = Console.Out;
+            TextWriter originalErr = Console.Error;
+            Console.SetOut(new LogTextWriter(this, originalOut, "stdout"));
+            Console.SetError(new LogTextWriter(this, originalErr, "stderr"));
             Trace.Listeners.Add(new LogTraceListener(this));
 
             _captureInstalled = true;

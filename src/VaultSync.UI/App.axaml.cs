@@ -32,6 +32,9 @@ namespace VaultSync.UI;
 
 public partial class App : Application
 {
+    private const string TelemetrySourceCode = "source";
+    private const string OpenEncryptedTitleKey = "Backups.OpenEncrypted.Title";
+    private const string OpenEncryptedTitleFallback = "Open encrypted backup";
     private static readonly IAppConfigStore ConfigStore = StaticAppConfigStore.Instance;
 
     // Optional test hook is environment-driven; do not force onboarding in normal builds.
@@ -1290,13 +1293,13 @@ public partial class App : Application
                     DiagnosticsLogger.RecordException("Global unhandled exception", ex, includeStack: true);
                     Telemetry.Log("app_crash", b => b
                         .WithException(ex)
-                        .WithCode("source", "unhandled"));
+                        .WithCode(TelemetrySourceCode, "unhandled"));
                 }
                 else
                 {
                     DiagnosticsLogger.Record("Global unhandled exception: non-Exception object.");
                     Telemetry.Log("app_crash", b => b
-                        .WithCode("source", "unhandled")
+                        .WithCode(TelemetrySourceCode, "unhandled")
                         .WithCode("detail", "non_exception"));
                 }
             };
@@ -1311,7 +1314,7 @@ public partial class App : Application
                     DiagnosticsLogger.RecordException("Global unobserved task exception", e.Exception, includeStack: true);
                     Telemetry.Log("app_crash", b => b
                         .WithException(e.Exception)
-                        .WithCode("source", "unobserved_task"));
+                        .WithCode(TelemetrySourceCode, "unobserved_task"));
                 }
                 catch
                 {
@@ -1346,7 +1349,7 @@ public partial class App : Application
                 StopUiWatchdog();
                 _instance?.DestroyTrayIcon();
                 CleanupAllEncryptedOpenTempFolders();
-                Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
+                Telemetry.Log("app_exit", b => b.WithCode(TelemetrySourceCode, "desktop_exit"));
                 DiagnosticsLogger.Shutdown();
             };
 
@@ -1362,7 +1365,7 @@ public partial class App : Application
                 DiagnosticsLogger.Record($"ProcessExit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
                 StopUiWatchdog();
                 CleanupAllEncryptedOpenTempFolders();
-                Telemetry.Log("app_exit", b => b.WithCode("source", "process_exit"));
+                Telemetry.Log("app_exit", b => b.WithCode(TelemetrySourceCode, "process_exit"));
                 DiagnosticsLogger.Shutdown();
             };
         }
@@ -1681,7 +1684,7 @@ public partial class App : Application
         {
             await ShowInfoDialogAsync(
                 desktop,
-                L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                 Lf("Backups.OpenEncrypted.MissingFile", "The selected encrypted backup was not found: {0}", archivePath))
                 .ConfigureAwait(false);
             return;
@@ -1697,7 +1700,7 @@ public partial class App : Application
             {
                 await ShowInfoDialogAsync(
                     desktop,
-                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                     L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."))
                     .ConfigureAwait(false);
                 continue;
@@ -1714,7 +1717,7 @@ public partial class App : Application
             {
                 await ShowInfoDialogAsync(
                     desktop,
-                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                     L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted."))
                     .ConfigureAwait(false);
             }
@@ -1722,7 +1725,7 @@ public partial class App : Application
             {
                 await ShowInfoDialogAsync(
                     desktop,
-                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                     ex.Message)
                     .ConfigureAwait(false);
                 return;
@@ -1822,7 +1825,7 @@ public partial class App : Application
 
             window = new Window
             {
-                Title = L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                Title = L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                 Content = card,
                 CanResize = false,
                 Width = 540,

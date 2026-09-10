@@ -34,6 +34,8 @@ namespace VaultSync.UI.Services
     public sealed class DriveHealthService : IDriveHealthService
     {
         private const string SmartCtlCommand = "smartctl";
+        private const string NetworkPathMessageKey = "DriveHealth.Unknown.NetworkPath";
+        private const string NetworkPathMessage = "Network path; drive health not available";
 
         public DriveHealthResult CheckPath(string path)
         {
@@ -51,7 +53,7 @@ namespace VaultSync.UI.Services
                 if (root.StartsWith(@"\\") || root.StartsWith("//"))
                 {
                     return Unknown(
-                        L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                        L(NetworkPathMessageKey, NetworkPathMessage),
                         driveId: root,
                         path: full);
                 }
@@ -85,7 +87,7 @@ namespace VaultSync.UI.Services
                 if (driveInfo.DriveType == DriveType.Network)
                 {
                     return Unknown(
-                        L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                        L(NetworkPathMessageKey, NetworkPathMessage),
                         driveId: root,
                         path: fullPath);
                 }
@@ -183,7 +185,7 @@ namespace VaultSync.UI.Services
             if (IsNetworkDevice(device))
             {
                 return Unknown(
-                    L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                    L(NetworkPathMessageKey, NetworkPathMessage),
                     driveId: device,
                     path: fullPath);
             }
@@ -229,7 +231,7 @@ namespace VaultSync.UI.Services
             if (IsNetworkDevice(device))
             {
                 return Unknown(
-                    L("DriveHealth.Unknown.NetworkPath", "Network path; drive health not available"),
+                    L(NetworkPathMessageKey, NetworkPathMessage),
                     driveId: device,
                     path: fullPath);
             }

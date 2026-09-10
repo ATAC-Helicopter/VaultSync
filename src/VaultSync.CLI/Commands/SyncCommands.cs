@@ -227,28 +227,28 @@ namespace VaultSync.CLI.Commands
         {
             var copies = new List<RestoreCopy>(selection.Files.Count);
             var targets = new HashSet<string>(GetPathComparer());
-            foreach (FileEntry file in selection.Files)
+            foreach (string relativePath in selection.Files.Select(static file => file.RelPath))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!BackupSafetyService.TryResolveExistingFileUnderRoot(
                         selection.SourceRoot,
-                        file.RelPath,
+                        relativePath,
                         out string sourcePath))
                 {
                     throw new InvalidDataException(
-                        $"Backup {selection.Backup.Id} is missing or contains an unsafe file path: '{file.RelPath}'.");
+                        $"Backup {selection.Backup.Id} is missing or contains an unsafe file path: '{relativePath}'.");
                 }
                 if (!BackupSafetyService.TryResolvePathForWriteUnderRoot(
                         destination,
-                        file.RelPath,
+                        relativePath,
                         out string targetPath) ||
                     !targets.Add(targetPath))
                 {
                     throw new InvalidDataException(
-                        $"Snapshot {selection.Snapshot.Id} contains an unsafe or duplicate target path: '{file.RelPath}'.");
+                        $"Snapshot {selection.Snapshot.Id} contains an unsafe or duplicate target path: '{relativePath}'.");
                 }
 
-                copies.Add(new RestoreCopy(file.RelPath.Replace('\\', '/'), sourcePath, targetPath));
+                copies.Add(new RestoreCopy(relativePath.Replace('\\', '/'), sourcePath, targetPath));
             }
 
             return copies;

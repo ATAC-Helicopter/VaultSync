@@ -57,6 +57,7 @@ the backup format or introduce the larger 1.9 recovery features.
 | CLI preset names and index entries could resolve outside their intended roots. | Treat identifiers as names and apply containment and link checks to every preset read. |
 | CLI path arguments replaced every tilde, including literal characters inside valid names. | Expand only a leading home marker through one shared path helper. |
 | Backup preflight recursively enumerated linked directories before rejecting yielded files. | Walk regular source directories explicitly and never descend into filesystem links. |
+| The destructive CLI prune cutoff used the machine culture despite documenting an ISO date. | Require exact invariant `yyyy-MM-dd` input and use the parsed UTC date for execution. |
 
 The shared collection fix applies to existing callers in Backups, Projects,
 Dashboard, History, Schedule, Recovery, project folders, and the tray panel.
@@ -85,7 +86,7 @@ icon rail is reserved for windows below 1100 pixels.
 
 ## Automated validation
 
-- Full .NET suite: **880 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **883 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
@@ -145,6 +146,7 @@ qualification remain pending.
 | [`BUG-18164` / #644](https://github.com/ATAC-Helicopter/VaultSync/issues/644) | Confine CLI preset reads to preset roots | In progress |
 | [`BUG-18165` / #645](https://github.com/ATAC-Helicopter/VaultSync/issues/645) | Expand only leading home markers in CLI paths | In progress |
 | [`BUG-18166` / #646](https://github.com/ATAC-Helicopter/VaultSync/issues/646) | Skip linked directories during backup preflight enumeration | In progress |
+| [`BUG-18167` / #647](https://github.com/ATAC-Helicopter/VaultSync/issues/647) | Parse CLI prune dates invariantly | In progress |
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
 In-progress work is implemented locally or under preparation; it is not marked

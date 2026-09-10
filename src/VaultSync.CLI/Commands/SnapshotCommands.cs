@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -271,10 +272,18 @@ namespace VaultSync.CLI.Commands
                 return ValidationResult.Error("Use either --keep-last or --before, not both.");
             if (KeepLast is int n && n < 0)
                 return ValidationResult.Error("--keep-last must be >= 0.");
-            if (!string.IsNullOrWhiteSpace(Before) && !DateTime.TryParse(Before, out _))
+            if (!string.IsNullOrWhiteSpace(Before) && !TryParseBeforeDate(Before, out _))
                 return ValidationResult.Error("--before must be a date like 2025-11-08");
             return ValidationResult.Success();
         }
+
+        internal static bool TryParseBeforeDate(string value, out DateTime result) =>
+            DateTime.TryParseExact(
+                value,
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out result);
     }
 
     sealed class PruneCommand : AsyncCommand<PruneSettings>
@@ -316,9 +325,14 @@ namespace VaultSync.CLI.Commands
         {
             IEnumerable<int> toDelete = settings.KeepLast is int keep
                 ? snapshots.Skip(keep).Select(x => x.Id)
-                : snapshots.Where(x => x.CreatedUtc < DateTime.Parse(settings.Before!).ToUniversalTime().Date).Select(x => x.Id);
+                : snapshots.Where(x => x.CreatedUtc < ParseBeforeDate(settings.Before!)).Select(x => x.Id);
             return [.. toDelete.Distinct().Order()];
         }
+
+        private static DateTime ParseBeforeDate(string value) =>
+            PruneSettings.TryParseBeforeDate(value, out DateTime result)
+                ? result.Date
+                : throw new InvalidOperationException("The validated prune date is invalid.");
 
         private static void WritePruneJson(string projectName, int totalSnapshots, IReadOnlyList<int> planned, bool dryRun)
         {
