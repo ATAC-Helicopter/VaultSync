@@ -11,6 +11,7 @@
 - [BUG-18158] Keep Linux updater handoff qualification portable on Windows CI.
 - [BUG-18159] Prevent padded pages from requesting extra width and overflowing horizontally.
 - [BUG-18160] Remove abandoned metadata read copies without touching unrelated temporary data.
+- [BUG-18161] Prevent cancelled update checks from disposing or resetting their replacements.
 ### Changed
 - [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
 - [VS-1895] Service Avalonia and coordinated SkiaSharp/HarfBuzzSharp packages.

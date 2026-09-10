@@ -51,6 +51,7 @@ the backup format or introduce the larger 1.9 recovery features.
 | Custom-theme muted text was blended toward its background. | Apply the existing readable-text contrast check against all three configured surfaces. |
 | Interrupted metadata preview copies had no startup cleanup path. | Delete failed copies immediately and prune only stale GUID-owned read-copy workspaces. |
 | Backups still rebuilt an unbound activity chart on summary refreshes and window resizes. | Remove the obsolete chart state, computation, and resize handler from the live page. |
+| A cancelled update check could dispose a newer check's cancellation source and restore logging early. | Give each check explicit source ownership and let only the current owner restore shared state. |
 
 The shared collection fix applies to existing callers in Backups, Projects,
 Dashboard, History, Schedule, Recovery, project folders, and the tray panel.
@@ -79,7 +80,7 @@ icon rail is reserved for windows below 1100 pixels.
 
 ## Automated validation
 
-- Full .NET suite: **863 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **865 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
@@ -132,6 +133,7 @@ qualification remain pending.
 | [`BUG-18159` / #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638) | Prevent page-width bindings from restoring horizontal overflow | In progress |
 | [`VS-1897` / #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639) | Audit and renew 1.8.9 safety, usability, and repository health | In progress |
 | [`BUG-18160` / #640](https://github.com/ATAC-Helicopter/VaultSync/issues/640) | Reclaim abandoned metadata read-copy workspaces | In progress |
+| [`BUG-18161` / #641](https://github.com/ATAC-Helicopter/VaultSync/issues/641) | Isolate overlapping updater cancellation ownership | In progress |
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
 In-progress work is implemented locally or under preparation; it is not marked
