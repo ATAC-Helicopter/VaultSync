@@ -3119,14 +3119,10 @@ public sealed class BackupService(
 
         Project? project = _repo.GetAllProjects().FirstOrDefault(p => p.Id == projectId);
         string? projectName = project?.Name;
-        var snapshotRefs = new Dictionary<int, int>();
-        foreach (Backup backup in backups)
-        {
-            if (snapshotRefs.TryGetValue(backup.SnapshotId, out int count))
-                snapshotRefs[backup.SnapshotId] = count + 1;
-            else
-                snapshotRefs[backup.SnapshotId] = 1;
-        }
+        Dictionary<int, int> snapshotRefs = backups
+            .Select(static backup => backup.SnapshotId)
+            .GroupBy(static snapshotId => snapshotId)
+            .ToDictionary(static group => group.Key, static group => group.Count());
 
         var byteVerifiedBackupIds = _repo.GetRecoveryDrills()
             .Where(drill => drill.ProjectId == projectId)
@@ -3152,6 +3148,23 @@ public sealed class BackupService(
             .Where(static decision => decision.Selected)
             .Select(static decision => decision.BackupId)
             .ToHashSet();
+        ExecuteRetentionPlan(
+            projectName,
+            backupRoot,
+            candidates,
+            plannedCandidateIds,
+            snapshotRefs,
+            deleteQuota);
+    }
+
+    private void ExecuteRetentionPlan(
+        string? projectName,
+        string backupRoot,
+        IReadOnlyList<Backup> candidates,
+        IReadOnlySet<int> plannedCandidateIds,
+        Dictionary<int, int> snapshotRefs,
+        int deleteQuota)
+    {
         var attempted = new HashSet<int>();
         int deleted = 0;
 
@@ -3163,100 +3176,100 @@ public sealed class BackupService(
                 break;
 
             attempted.Add(backup.Id);
-
-            bool canDeleteDbRow = true;
-            bool diskDeleteSucceeded = true;
-
-            try
-            {
-                string baseRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
-                    ? backup.DestinationPath
-                    : backupRoot;
-                string relativePath = string.IsNullOrWhiteSpace(backup.Path)
-                    ? string.Empty
-                    : backup.Path
-                        .Replace('\\', Path.DirectorySeparatorChar)
-                        .Replace('/', Path.DirectorySeparatorChar)
-                        .TrimStart(Path.DirectorySeparatorChar);
-                string? fullPath = string.Empty;
-                if (string.IsNullOrWhiteSpace(baseRoot) || !Directory.Exists(baseRoot))
-                {
-                    RuntimeLog.WriteVerbose(
-                        $"[BackupService] Retention deferred because destination root '{baseRoot}' is unavailable (backupId={backup.Id}); code=destination-unavailable.");
-                    canDeleteDbRow = false;
-                    diskDeleteSucceeded = false;
-                }
-                else if (ShouldRejectUnbackedManagedMount(
-                             OperatingSystem.IsMacOS(),
-                             IsMacManagedMountPath(baseRoot),
-                             IsNetworkMountPath(baseRoot)))
-                {
-                    RuntimeLog.WriteVerbose(
-                        $"[BackupService] Retention deferred because managed destination '{baseRoot}' is not mounted (backupId={backup.Id}); code=destination-unmounted.");
-                    canDeleteDbRow = false;
-                    diskDeleteSucceeded = false;
-                }
-                else if (!BackupSafetyService.TryCombinePathUnderRoot(baseRoot, relativePath, out fullPath))
-                {
-                    RuntimeLog.WriteVerbose(
-                        $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}); code=out-of-root.");
-                    canDeleteDbRow = false;
-                    diskDeleteSucceeded = false;
-                }
-                else if (!string.IsNullOrWhiteSpace(fullPath) && Directory.Exists(fullPath))
-                {
-                    RuntimeLog.WriteVerbose($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
-                    RetentionDeleteAttemptResult deleteResult = TryDeleteBackupFolder(fullPath, backup.Id);
-                    diskDeleteSucceeded = deleteResult.Success;
-                    if (!diskDeleteSucceeded)
-                    {
-                        RuntimeLog.WriteVerbose($"[BackupService] Retention delete failed for backupId={backup.Id}; code={deleteResult.Code}; trying next eligible unprotected candidate.");
-                    }
-                }
-                else
-                {
-                    if (!Directory.Exists(baseRoot))
-                    {
-                        RuntimeLog.WriteVerbose(
-                            $"[BackupService] Retention deferred because destination root '{baseRoot}' disappeared during inspection (backupId={backup.Id}); code=destination-lost.");
-                        canDeleteDbRow = false;
-                        diskDeleteSucceeded = false;
-                    }
-                    else
-                    {
-                        RuntimeLog.WriteVerbose($"[BackupService] Retention could not find backup folder '{fullPath}' on an accessible destination (backupId={backup.Id}), continuing with DB cleanup.");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[BackupService] Failed to delete old backup (backupId={backup.Id}): {ex}");
-                canDeleteDbRow = false;
-                diskDeleteSucceeded = false;
-            }
-
-            // If we failed to remove this candidate from disk, do NOT drop its DB row;
-            // move to the next oldest unprotected candidate.
-            if (!diskDeleteSucceeded || !canDeleteDbRow)
-            {
+            if (!TryRemoveRetentionBackupData(backup, backupRoot))
                 continue;
-            }
 
             BackupRetentionDeleted?.Invoke(backup);
             _repo.DeleteBackupById(backup.Id);
-            if (projectName != null &&
-                snapshotRefs.TryGetValue(backup.SnapshotId, out int remaining) &&
-                remaining <= 1)
+            UpdateSnapshotReferences(projectName, backup.SnapshotId, snapshotRefs);
+            deleted++;
+        }
+    }
+
+    private static bool TryRemoveRetentionBackupData(Backup backup, string fallbackRoot)
+    {
+        try
+        {
+            string baseRoot = !string.IsNullOrWhiteSpace(backup.DestinationPath)
+                ? backup.DestinationPath
+                : fallbackRoot;
+            if (string.IsNullOrWhiteSpace(baseRoot) || !Directory.Exists(baseRoot))
             {
-                _repo.DeleteSnapshotsById(projectName, new[] { backup.SnapshotId });
-                snapshotRefs.Remove(backup.SnapshotId);
+                RuntimeLog.WriteVerbose(
+                    $"[BackupService] Retention deferred because destination root '{baseRoot}' is unavailable (backupId={backup.Id}); code=destination-unavailable.");
+                return false;
             }
-            else if (snapshotRefs.TryGetValue(backup.SnapshotId, out int count) && count > 1)
+            if (ShouldRejectUnbackedManagedMount(
+                    OperatingSystem.IsMacOS(),
+                    IsMacManagedMountPath(baseRoot),
+                    IsNetworkMountPath(baseRoot)))
             {
-                snapshotRefs[backup.SnapshotId] = count - 1;
+                RuntimeLog.WriteVerbose(
+                    $"[BackupService] Retention deferred because managed destination '{baseRoot}' is not mounted (backupId={backup.Id}); code=destination-unmounted.");
+                return false;
             }
 
-            deleted++;
+            if (string.IsNullOrWhiteSpace(backup.Path))
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[BackupService] Retention skipped an empty backup path (backupId={backup.Id}); code=empty-path.");
+                return false;
+            }
+
+            string relativePath = backup.Path
+                .Replace('\\', Path.DirectorySeparatorChar)
+                .Replace('/', Path.DirectorySeparatorChar)
+                .TrimStart(Path.DirectorySeparatorChar);
+            if (!BackupSafetyService.TryCombinePathUnderRoot(baseRoot, relativePath, out string fullPath))
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[BackupService] Retention skipped out-of-root backup path '{backup.Path}' (backupId={backup.Id}); code=out-of-root.");
+                return false;
+            }
+            if (Directory.Exists(fullPath))
+            {
+                RuntimeLog.WriteVerbose($"[BackupService] Retention deleting old backup folder '{fullPath}' (backupId={backup.Id}).");
+                RetentionDeleteAttemptResult result = TryDeleteBackupFolder(fullPath, backup.Id);
+                if (!result.Success)
+                {
+                    RuntimeLog.WriteVerbose(
+                        $"[BackupService] Retention delete failed for backupId={backup.Id}; code={result.Code}; trying next eligible unprotected candidate.");
+                }
+                return result.Success;
+            }
+            if (!Directory.Exists(baseRoot))
+            {
+                RuntimeLog.WriteVerbose(
+                    $"[BackupService] Retention deferred because destination root '{baseRoot}' disappeared during inspection (backupId={backup.Id}); code=destination-lost.");
+                return false;
+            }
+
+            RuntimeLog.WriteVerbose(
+                $"[BackupService] Retention could not find backup folder '{fullPath}' on an accessible destination (backupId={backup.Id}), continuing with DB cleanup.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BackupService] Failed to delete old backup (backupId={backup.Id}): {ex}");
+            return false;
+        }
+    }
+
+    private void UpdateSnapshotReferences(
+        string? projectName,
+        int snapshotId,
+        Dictionary<int, int> snapshotRefs)
+    {
+        if (projectName != null &&
+            snapshotRefs.TryGetValue(snapshotId, out int remaining) &&
+            remaining <= 1)
+        {
+            _repo.DeleteSnapshotsById(projectName, [snapshotId]);
+            snapshotRefs.Remove(snapshotId);
+        }
+        else if (snapshotRefs.TryGetValue(snapshotId, out int count) && count > 1)
+        {
+            snapshotRefs[snapshotId] = count - 1;
         }
     }
 
@@ -3336,23 +3349,15 @@ public sealed class BackupService(
 
             bool isValidRestorePoint = IsMetadataValidRestorePoint(projectId, candidate, snapshotsById);
             bool isByteVerified = byteVerifiedBackupIds?.Contains(candidate.Id) == true;
-            if (isValidRestorePoint && remainingValidRestorePoints <= 1)
+            BackupRetentionCandidateDecision? preservation = BuildRetentionPreservationDecision(
+                candidate,
+                isValidRestorePoint,
+                remainingValidRestorePoints,
+                isByteVerified,
+                remainingByteVerifiedPoints);
+            if (preservation is not null)
             {
-                decisions.Add(new BackupRetentionCandidateDecision(
-                    candidate.Id,
-                    false,
-                    "preserve-last-restorable-point",
-                    "Deleting this backup would remove the last metadata-valid restore point for the project."));
-                continue;
-            }
-
-            if (isByteVerified && remainingByteVerifiedPoints <= 1)
-            {
-                decisions.Add(new BackupRetentionCandidateDecision(
-                    candidate.Id,
-                    false,
-                    "preserve-last-byte-verified-point",
-                    "Deleting this backup would remove the last recovery point that passed a byte-level recovery proof."));
+                decisions.Add(preservation);
                 continue;
             }
 
@@ -3369,6 +3374,33 @@ public sealed class BackupService(
         }
 
         return decisions;
+    }
+
+    private static BackupRetentionCandidateDecision? BuildRetentionPreservationDecision(
+        Backup candidate,
+        bool isValidRestorePoint,
+        int remainingValidRestorePoints,
+        bool isByteVerified,
+        int remainingByteVerifiedPoints)
+    {
+        if (isValidRestorePoint && remainingValidRestorePoints <= 1)
+        {
+            return new BackupRetentionCandidateDecision(
+                candidate.Id,
+                false,
+                "preserve-last-restorable-point",
+                "Deleting this backup would remove the last metadata-valid restore point for the project.");
+        }
+        if (isByteVerified && remainingByteVerifiedPoints <= 1)
+        {
+            return new BackupRetentionCandidateDecision(
+                candidate.Id,
+                false,
+                "preserve-last-byte-verified-point",
+                "Deleting this backup would remove the last recovery point that passed a byte-level recovery proof.");
+        }
+
+        return null;
     }
 
     private static int CountValidRestorePoints(
@@ -3393,7 +3425,7 @@ public sealed class BackupService(
         return snapshot.ProjectId == projectId;
     }
 
-    private RetentionDeleteAttemptResult TryDeleteBackupFolder(string fullPath, int backupId)
+    private static RetentionDeleteAttemptResult TryDeleteBackupFolder(string fullPath, int backupId)
     {
         try
         {
@@ -3968,46 +4000,10 @@ public sealed class BackupService(
         {
             string baseDir = AppContext.BaseDirectory;
             if (OperatingSystem.IsWindows())
-            {
-                string direct = Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, RsyncWindowsExecutableName);
-                if (File.Exists(direct))
-                    return direct;
-
-                string bin = Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "bin", RsyncWindowsExecutableName);
-                return File.Exists(bin) ? bin : null;
-            }
+                return TryGetBundledWindowsRsyncPath(baseDir);
 
             if (OperatingSystem.IsMacOS())
-            {
-                var candidates = new List<string>();
-                Architecture arch = RuntimeInformation.OSArchitecture;
-                if (arch == Architecture.Arm64)
-                {
-                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
-                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "arm64", RsyncExecutableName));
-                }
-                else if (arch == Architecture.X64)
-                {
-                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "x64", "bin", RsyncExecutableName));
-                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "x64", RsyncExecutableName));
-                }
-                else
-                {
-                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
-                    candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "x64", "bin", RsyncExecutableName));
-                }
-
-                candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, RsyncExecutableName));
-                candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "bin", RsyncExecutableName));
-
-                foreach (string candidate in candidates)
-                {
-                    if (File.Exists(candidate))
-                        return candidate;
-                }
-
-                return null;
-            }
+                return TryGetBundledMacRsyncPath(baseDir);
         }
         catch
         {
@@ -4015,6 +4011,37 @@ public sealed class BackupService(
         }
 
         return null;
+    }
+
+    private static string? TryGetBundledWindowsRsyncPath(string baseDirectory)
+    {
+        string direct = Path.Combine(baseDirectory, ToolsDirectoryName, RsyncExecutableName, RsyncWindowsExecutableName);
+        if (File.Exists(direct))
+            return direct;
+
+        string bin = Path.Combine(baseDirectory, ToolsDirectoryName, RsyncExecutableName, "bin", RsyncWindowsExecutableName);
+        return File.Exists(bin) ? bin : null;
+    }
+
+    private static string? TryGetBundledMacRsyncPath(string baseDirectory)
+    {
+        var candidates = new List<string>();
+        Architecture architecture = RuntimeInformation.OSArchitecture;
+        if (architecture is Architecture.Arm64 or Architecture.X64)
+        {
+            string architectureName = architecture == Architecture.Arm64 ? "arm64" : "x64";
+            candidates.Add(Path.Combine(baseDirectory, ToolsDirectoryName, RsyncExecutableName, architectureName, "bin", RsyncExecutableName));
+            candidates.Add(Path.Combine(baseDirectory, ToolsDirectoryName, RsyncExecutableName, architectureName, RsyncExecutableName));
+        }
+        else
+        {
+            candidates.Add(Path.Combine(baseDirectory, ToolsDirectoryName, RsyncExecutableName, "arm64", "bin", RsyncExecutableName));
+            candidates.Add(Path.Combine(baseDirectory, ToolsDirectoryName, RsyncExecutableName, "x64", "bin", RsyncExecutableName));
+        }
+
+        candidates.Add(Path.Combine(baseDirectory, ToolsDirectoryName, RsyncExecutableName, RsyncExecutableName));
+        candidates.Add(Path.Combine(baseDirectory, ToolsDirectoryName, RsyncExecutableName, "bin", RsyncExecutableName));
+        return candidates.FirstOrDefault(File.Exists);
     }
 
     private static string? TryGetPreviousBackupFolder(string projectBackupRoot, string currentBackupFolder)

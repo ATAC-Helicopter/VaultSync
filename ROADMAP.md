@@ -942,7 +942,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
   [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
-  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 868 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
+  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 875 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
 
 - [ ] `BUG-18159` `P0` Prevent page-width bindings from restoring horizontal overflow.
   [Issue #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638).
@@ -963,6 +963,14 @@ that has not yet been integrated and qualified.
 - [ ] `BUG-18162` `P0` Restore CLI snapshots from recorded backup data safely.
   [Issue #642](https://github.com/ATAC-Helicopter/VaultSync/issues/642).
   The CLI restore command selected snapshot metadata but copied the current live project tree, and its clean traversal could cross linked paths. Resolve an actual recorded backup, preflight every source and destination before mutation, reject unavailable or unsupported archive/encrypted sources explicitly, and keep cleanup outside project and backup trees. Regression coverage proves restored bytes come from the backup; integration remains pending.
+
+- [ ] `BUG-18163` `P0` Reject empty backup payload paths before cleanup.
+  [Issue #643](https://github.com/ATAC-Helicopter/VaultSync/issues/643).
+  A malformed or legacy backup row with an empty payload identity could resolve to the complete destination root, allowing restore to read the wrong content or retention to target the root. Reject empty paths in shared backup resolution and retention before any filesystem change. Local regression coverage passes; integration remains pending.
+
+- [ ] `BUG-18164` `P0` Confine CLI preset reads to preset roots.
+  [Issue #644](https://github.com/ATAC-Helicopter/VaultSync/issues/644).
+  CLI preset names and bundled-index entries could be interpreted as paths outside their intended directories. Accept only names from users and resolve every preset file through shared containment and filesystem-link checks. Cross-platform traversal and contained-file tests pass locally; integration remains pending.
 
 ---
 

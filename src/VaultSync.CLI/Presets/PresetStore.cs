@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using VaultSync.Core.Services;
 
 namespace VaultSync.CLI.Presets
 {
@@ -115,43 +116,19 @@ namespace VaultSync.CLI.Presets
 
         public static string Load(string name)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Preset name cannot be empty.", nameof(name));
+            ValidatePresetName(name);
 
             // 1) User override in ~/.vaultsync/presets
             string userDir = UserPresetsDir();
             Directory.CreateDirectory(userDir);
-            string userPath = Path.Combine(userDir, $"{name}.vaultsyncignore");
-            if (File.Exists(userPath))
-                return File.ReadAllText(userPath);
+            string userRelativePath = $"{name}.vaultsyncignore";
+            if (TryReadPreset(userDir, userRelativePath, out string userContent))
+                return userContent;
 
             // 2) Built-in presets
             string builtInDir = BuiltInPresetsDir();
-            if (Directory.Exists(builtInDir))
-            {
-                PresetIndex? index = LoadIndex(builtInDir);
-
-                // Try index first
-                if (index?.Presets != null && index.Presets.Count > 0)
-                {
-                    PresetInfo? preset = index.Presets
-                        .FirstOrDefault(p =>
-                            string.Equals(p.Id, name, StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(Path.GetFileNameWithoutExtension(p.File), name, StringComparison.OrdinalIgnoreCase));
-
-                    if (preset != null)
-                    {
-                        string presetPath = Path.Combine(builtInDir, preset.File);
-                        if (File.Exists(presetPath))
-                            return File.ReadAllText(presetPath);
-                    }
-                }
-
-                // Fallback: direct file name match without index
-                string fallbackPath = Path.Combine(builtInDir, $"{name}.vaultsyncignore");
-                if (File.Exists(fallbackPath))
-                    return File.ReadAllText(fallbackPath);
-            }
+            if (TryReadBuiltInPreset(builtInDir, name, out string builtInContent))
+                return builtInContent;
 
             // 3) Not found anywhere
             string builtInAvailable = Directory.Exists(BuiltInPresetsDir())
@@ -159,8 +136,49 @@ namespace VaultSync.CLI.Presets
                     ListNames().OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
                 : "none";
 
-            throw new Exception(
-                $"Preset '{name}' not found. Create '{userPath}' or choose one of: {builtInAvailable}");
+            string userPath = Path.Combine(userDir, userRelativePath);
+            throw new FileNotFoundException(
+                $"Preset '{name}' not found. Create '{userPath}' or choose one of: {builtInAvailable}",
+                userPath);
+        }
+
+        private static bool TryReadBuiltInPreset(string directory, string name, out string content)
+        {
+            content = string.Empty;
+            if (!Directory.Exists(directory))
+                return false;
+
+            PresetInfo? preset = LoadIndex(directory)?.Presets.FirstOrDefault(item =>
+                string.Equals(item.Id, name, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(Path.GetFileNameWithoutExtension(item.File), name, StringComparison.OrdinalIgnoreCase));
+            if (preset is not null && TryReadPreset(directory, preset.File, out content))
+                return true;
+
+            return TryReadPreset(directory, $"{name}.vaultsyncignore", out content);
+        }
+
+        internal static bool TryReadPreset(string directory, string relativePath, out string content)
+        {
+            content = string.Empty;
+            if (!BackupSafetyService.TryResolveExistingFileUnderRoot(directory, relativePath, out string path))
+                return false;
+
+            content = File.ReadAllText(path);
+            return true;
+        }
+
+        private static void ValidatePresetName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Preset name cannot be empty.", nameof(name));
+            if (!string.Equals(name, Path.GetFileName(name), StringComparison.Ordinal) ||
+                name.Contains('/') ||
+                name.Contains('\\') ||
+                name is "." or ".." ||
+                name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                throw new ArgumentException("Preset name must be a file name without path components.", nameof(name));
+            }
         }
     }
 }

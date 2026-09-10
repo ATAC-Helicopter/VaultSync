@@ -32,7 +32,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
             var dest = s.Destination.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
             var svc = new SyncService();
@@ -78,7 +78,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
             var src = s.From.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
             var svc = new VerifyService(repo, new HashService());

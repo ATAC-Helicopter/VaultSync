@@ -53,6 +53,8 @@ the backup format or introduce the larger 1.9 recovery features.
 | Backups still rebuilt an unbound activity chart on summary refreshes and window resizes. | Remove the obsolete chart state, computation, and resize handler from the live page. |
 | A cancelled update check could dispose a newer check's cancellation source and restore logging early. | Give each check explicit source ownership and let only the current owner restore shared state. |
 | CLI restore read snapshot metadata but copied the current live project and could clean through linked paths. | Resolve the recorded folder backup, preflight all paths, and confine cleanup before changing the target. |
+| An empty backup payload path could resolve to a complete destination root during restore or retention. | Reject empty payload identities before resolution or cleanup and preserve their metadata for review. |
+| CLI preset names and index entries could resolve outside their intended roots. | Treat identifiers as names and apply containment and link checks to every preset read. |
 
 The shared collection fix applies to existing callers in Backups, Projects,
 Dashboard, History, Schedule, Recovery, project folders, and the tray panel.
@@ -81,7 +83,7 @@ icon rail is reserved for windows below 1100 pixels.
 
 ## Automated validation
 
-- Full .NET suite: **868 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **875 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
@@ -137,6 +139,8 @@ qualification remain pending.
 | [`BUG-18160` / #640](https://github.com/ATAC-Helicopter/VaultSync/issues/640) | Reclaim abandoned metadata read-copy workspaces | In progress |
 | [`BUG-18161` / #641](https://github.com/ATAC-Helicopter/VaultSync/issues/641) | Isolate overlapping updater cancellation ownership | In progress |
 | [`BUG-18162` / #642](https://github.com/ATAC-Helicopter/VaultSync/issues/642) | Restore CLI snapshots from recorded backup data safely | In progress |
+| [`BUG-18163` / #643](https://github.com/ATAC-Helicopter/VaultSync/issues/643) | Reject empty backup payload paths before cleanup | In progress |
+| [`BUG-18164` / #644](https://github.com/ATAC-Helicopter/VaultSync/issues/644) | Confine CLI preset reads to preset roots | In progress |
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
 In-progress work is implemented locally or under preparation; it is not marked

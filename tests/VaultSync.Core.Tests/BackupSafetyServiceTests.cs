@@ -176,6 +176,17 @@ public sealed class BackupSafetyServiceTests : IDisposable
     }
 
     [Fact]
+    public void BackupContentPathResolver_RejectsEmptyBackupPath()
+    {
+        string root = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "empty-backup-root")).FullName;
+        var backup = new Backup { DestinationPath = root, Path = string.Empty };
+
+        var resolved = BackupContentPathResolver.Resolve(backup, new VaultSync.Core.Config.AppConfig());
+
+        Assert.Null(resolved);
+    }
+
+    [Fact]
     public void TryResolveExistingFileUnderRoot_RejectsLinkedPathComponents()
     {
         if (OperatingSystem.IsWindows())

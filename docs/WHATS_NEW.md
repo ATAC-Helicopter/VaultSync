@@ -8,6 +8,7 @@ VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
 - Preserve expanded backup project groups and loaded history pages during refreshes.
 - Retain surviving rows and keep the selected project open after backup deletion.
 - Restore CLI snapshots from their recorded backup data instead of the live source.
+- Reject unsafe backup and preset paths before they can affect user data.
 
 ### Clearer controls
 - Center icon-and-label stacks inside shared pills and backup tags.
