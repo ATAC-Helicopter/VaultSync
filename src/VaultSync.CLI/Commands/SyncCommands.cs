@@ -33,7 +33,7 @@ namespace VaultSync.CLI.Commands
             repo.EnsureSchema();
 
             var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
-            var dest = s.Destination.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            var dest = ConfigHelper.ExpandUserPath(s.Destination);
 
             var svc = new SyncService();
 
@@ -79,7 +79,7 @@ namespace VaultSync.CLI.Commands
             repo.EnsureSchema();
 
             var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
-            var src = s.From.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            var src = ConfigHelper.ExpandUserPath(s.From);
 
             var svc = new VerifyService(repo, new HashService());
 
@@ -159,7 +159,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(ConfigHelper.ResolveDb(s.Db));
             repo.EnsureSchema();
             RestoreSelection selection = ResolveSelection(repo, s);
-            string destination = Path.GetFullPath(ExpandUserPath(s.Destination));
+            string destination = Path.GetFullPath(ConfigHelper.ExpandUserPath(s.Destination));
             EnsureDestinationIsSafe(selection, destination, s.Clean);
             IReadOnlyList<RestoreCopy> copies = BuildCopyPlan(selection, destination, cancellationToken);
             (IReadOnlyList<string> existingFiles, IReadOnlyList<string> existingDirectories) =
@@ -435,16 +435,6 @@ namespace VaultSync.CLI.Commands
             string mode = settings.DryRun ? "[yellow]Dry restore complete[/]" : "[green]Restore complete[/]";
             AnsiConsole.MarkupLine(
                 $"{mode} - copied: {copied}, deleted: {deleted}, deleted-dirs: {deletedDirectories} ({took.TotalSeconds:F1}s).");
-        }
-
-        private static string ExpandUserPath(string path)
-        {
-            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (path == "~")
-                return home;
-            return path.StartsWith($"~{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                ? Path.Combine(home, path[2..])
-                : path;
         }
 
         private static StringComparer GetPathComparer() =>

@@ -47,7 +47,7 @@ namespace VaultSync.CLI.Config
             LegacyCliConfig? legacy = TryLoadLegacy();
             if (legacy is not null && !string.IsNullOrWhiteSpace(legacy.Database))
             {
-                string expanded = ExpandHome(legacy.Database);
+                string expanded = ExpandUserPath(legacy.Database);
                 if (string.IsNullOrWhiteSpace(cfg.DbPath))
                 {
                     cfg.DbPath = expanded;
@@ -62,17 +62,17 @@ namespace VaultSync.CLI.Config
         {
             // 1. Explicit override wins.
             if (!string.IsNullOrWhiteSpace(overridePath))
-                return ExpandHome(overridePath);
+                return ExpandUserPath(overridePath);
 
             // 2. Shared AppConfig.DbPath (ensures a single DB location for CLI + UI).
             AppConfig cfg = ConfigStore.Load();
             if (!string.IsNullOrWhiteSpace(cfg.DbPath))
-                return ExpandHome(cfg.DbPath);
+                return ExpandUserPath(cfg.DbPath);
 
             // 3. Legacy CLI config fallback.
             LegacyCliConfig? legacy = TryLoadLegacy();
             if (legacy is not null && !string.IsNullOrWhiteSpace(legacy.Database))
-                return ExpandHome(legacy.Database);
+                return ExpandUserPath(legacy.Database);
 
             // 4. Safe default from shared store.
             return GetDefaultDbPath();
@@ -80,10 +80,19 @@ namespace VaultSync.CLI.Config
 
         public static string GetDefaultDbPath() => ConfigStore.GetDefaultDbPath();
 
-        private static string ExpandHome(string path)
+        public static string ExpandUserPath(string path)
         {
+            ArgumentNullException.ThrowIfNull(path);
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            return path.Replace("~", home);
+            if (path == "~")
+                return home;
+            if (path.Length < 2 || path[0] != '~' || path[1] is not ('/' or '\\'))
+                return path;
+
+            string relative = path[2..]
+                .Replace('\\', Path.DirectorySeparatorChar)
+                .Replace('/', Path.DirectorySeparatorChar);
+            return Path.Combine(home, relative);
         }
 
         private static LegacyCliConfig? TryLoadLegacy()

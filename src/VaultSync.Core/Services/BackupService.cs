@@ -2824,7 +2824,7 @@ public sealed class BackupService(
     private static string[] BuildFilteredFileList(string sourceDir, FilterService filter, CancellationToken ct)
     {
         var files = new List<string>();
-        foreach (string filePath in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+        foreach (string filePath in EnumerateRegularFilesWithoutLinks(sourceDir, ct))
         {
             ct.ThrowIfCancellationRequested();
 
@@ -2839,6 +2839,31 @@ public sealed class BackupService(
         }
 
         return [.. files];
+    }
+
+    internal static IEnumerable<string> EnumerateRegularFilesWithoutLinks(
+        string root,
+        CancellationToken cancellationToken)
+    {
+        var pending = new Stack<string>();
+        pending.Push(root);
+        while (pending.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string directory = pending.Pop();
+            foreach (string file in Directory.EnumerateFiles(directory))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) == 0)
+                    yield return file;
+            }
+            foreach (string child in Directory.EnumerateDirectories(directory))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) == 0)
+                    pending.Push(child);
+            }
+        }
     }
 
     internal static string ResolveSnapshotSourceFile(string sourceRoot, string relativePath)

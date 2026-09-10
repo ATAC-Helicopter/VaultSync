@@ -942,7 +942,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
   [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
-  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 875 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
+  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 880 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
 
 - [ ] `BUG-18159` `P0` Prevent page-width bindings from restoring horizontal overflow.
   [Issue #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638).
@@ -971,6 +971,14 @@ that has not yet been integrated and qualified.
 - [ ] `BUG-18164` `P0` Confine CLI preset reads to preset roots.
   [Issue #644](https://github.com/ATAC-Helicopter/VaultSync/issues/644).
   CLI preset names and bundled-index entries could be interpreted as paths outside their intended directories. Accept only names from users and resolve every preset file through shared containment and filesystem-link checks. Cross-platform traversal and contained-file tests pass locally; integration remains pending.
+
+- [ ] `BUG-18165` `P0` Expand only leading home markers in CLI paths.
+  [Issue #645](https://github.com/ATAC-Helicopter/VaultSync/issues/645).
+  CLI commands replaced every tilde in a path, silently changing valid names such as `folder~copy`, and duplicated the behavior across commands. Expand only a leading home segment through one shared helper and persist resolved database paths. Cross-platform separator and literal-tilde coverage passes locally; integration remains pending.
+
+- [ ] `BUG-18166` `P0` Skip linked directories during backup preflight enumeration.
+  [Issue #646](https://github.com/ATAC-Helicopter/VaultSync/issues/646).
+  Backup size and file-list preflight used recursive enumeration before per-file containment checks, allowing linked directories to be traversed before their files were rejected. Walk the tree explicitly, skip linked files and directories, and check cancellation between entries. Local build and existing linked-source tests pass; integration remains pending.
 
 ---
 

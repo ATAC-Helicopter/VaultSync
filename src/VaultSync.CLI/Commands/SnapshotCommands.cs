@@ -30,7 +30,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             var svc = new SnapshotService(repo, new HashService());
 
@@ -78,7 +78,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             IEnumerable<Core.Models.Snapshot> snaps = repo.GetSnapshotsForProject(proj.Name);
             if (s.Limit is int lim && lim > 0) snaps = snaps.Take(lim);
@@ -131,10 +131,10 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
-            if (snaps.Count < 1) throw new Exception("No snapshots exist for this project");
+            if (snaps.Count < 1) throw new InvalidOperationException("No snapshots exist for this project.");
 
             DiffSelection selection = ResolveDiffSelection(snaps, s);
 
@@ -163,13 +163,13 @@ namespace VaultSync.CLI.Commands
             {
                 int idx = snaps.ToList().FindIndex(x => x.Id == settings.A.Value);
                 if (idx < 0 || idx + 1 >= snaps.Count)
-                    throw new Exception("Cannot infer the other snapshot; provide both A and B.");
+                    throw new InvalidOperationException("Cannot infer the other snapshot; provide both A and B.");
 
                 return new DiffSelection(settings.A.Value, snaps[idx + 1].Id);
             }
 
             if (snaps.Count < 2)
-                throw new Exception("Need at least two snapshots to diff");
+                throw new InvalidOperationException("Need at least two snapshots to diff.");
 
             return new DiffSelection(snaps[0].Id, snaps[1].Id);
         }
@@ -285,7 +285,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
             if (snaps.Count == 0)

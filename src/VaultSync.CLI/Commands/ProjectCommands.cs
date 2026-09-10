@@ -31,7 +31,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            string fullPath = Path.GetFullPath(s.PathArg.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
+            string fullPath = Path.GetFullPath(ConfigHelper.ExpandUserPath(s.PathArg));
             if (!Directory.Exists(fullPath))
                 throw new DirectoryNotFoundException(fullPath);
 
@@ -105,7 +105,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            string full = Path.GetFullPath(s.NewPath.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
+            string full = Path.GetFullPath(ConfigHelper.ExpandUserPath(s.NewPath));
             if (!Directory.Exists(full)) throw new DirectoryNotFoundException(full);
 
             if (!repo.UpdateProjectPath(s.Name, full, out string? oldPath))

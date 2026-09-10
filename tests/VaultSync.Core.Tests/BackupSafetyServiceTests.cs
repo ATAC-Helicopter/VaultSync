@@ -275,6 +275,28 @@ public sealed class BackupSafetyServiceTests : IDisposable
     }
 
     [Fact]
+    public void BackupPreflightEnumeration_SkipsLinkedFilesAndDirectories()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string projectRoot = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "preflight-linked-project")).FullName;
+        string outsideRoot = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "preflight-outside-project")).FullName;
+        File.WriteAllText(Path.Combine(projectRoot, "inside.txt"), "inside");
+        string outsideFile = Path.Combine(outsideRoot, "outside.txt");
+        File.WriteAllText(outsideFile, "outside");
+        Directory.CreateSymbolicLink(Path.Combine(projectRoot, "linked-directory"), outsideRoot);
+        File.CreateSymbolicLink(Path.Combine(projectRoot, "linked-file.txt"), outsideFile);
+
+        string[] entries = BackupService
+            .EnumerateRegularFilesWithoutLinks(projectRoot, CancellationToken.None)
+            .Select(path => Path.GetRelativePath(projectRoot, path))
+            .ToArray();
+
+        Assert.Equal(["inside.txt"], entries);
+    }
+
+    [Fact]
     public async Task ScannerService_CancellationFromFinalEntry_DoesNotPublishPartialScan()
     {
         if (OperatingSystem.IsWindows())
