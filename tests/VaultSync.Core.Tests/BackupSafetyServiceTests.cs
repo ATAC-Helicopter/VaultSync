@@ -148,6 +148,34 @@ public sealed class BackupSafetyServiceTests : IDisposable
     }
 
     [Fact]
+    public void IsSameOrChildPath_DoesNotTreatSiblingPrefixAsAChild()
+    {
+        string parent = Path.Combine(_tempDir.Path, "project");
+        string sibling = Path.Combine(_tempDir.Path, "project-copy");
+
+        Assert.True(BackupSafetyService.IsSameOrChildPath(parent, parent));
+        Assert.False(BackupSafetyService.IsSameOrChildPath(parent, sibling));
+    }
+
+    [Fact]
+    public void TryResolvePathForWriteUnderRoot_RejectsLinkedParent()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string root = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "write-root")).FullName;
+        string outside = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "write-outside")).FullName;
+        Directory.CreateSymbolicLink(Path.Combine(root, "linked"), outside);
+
+        bool resolved = BackupSafetyService.TryResolvePathForWriteUnderRoot(
+            root,
+            "linked/new.txt",
+            out _);
+
+        Assert.False(resolved);
+    }
+
+    [Fact]
     public void TryResolveExistingFileUnderRoot_RejectsLinkedPathComponents()
     {
         if (OperatingSystem.IsWindows())

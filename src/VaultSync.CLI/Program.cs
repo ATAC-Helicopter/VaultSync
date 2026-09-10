@@ -41,7 +41,7 @@ public static class Program
                     .WithDescription("Alias of set-path: update a project's root path");
 
                 cfg.AddCommand<VaultSync.CLI.Commands.RestoreCommand>("restore")
-                    .WithDescription("Restore a snapshot (latest by default) into a destination folder");
+                    .WithDescription("Restore a recorded folder backup (latest by default) into a destination folder");
 
                 cfg.AddCommand<VaultSync.CLI.Commands.HistoryCommand>("history")
                     .WithDescription("Show snapshot history for a project");

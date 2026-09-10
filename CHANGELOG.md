@@ -12,6 +12,7 @@
 - [BUG-18159] Prevent padded pages from requesting extra width and overflowing horizontally.
 - [BUG-18160] Remove abandoned metadata read copies without touching unrelated temporary data.
 - [BUG-18161] Prevent cancelled update checks from disposing or resetting their replacements.
+- [BUG-18162] Restore CLI snapshots from recorded backup data with confined cleanup.
 ### Changed
 - [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
 - [VS-1895] Service Avalonia and coordinated SkiaSharp/HarfBuzzSharp packages.

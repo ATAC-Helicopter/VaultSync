@@ -942,7 +942,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
   [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
-  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 865 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
+  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 868 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
 
 - [ ] `BUG-18159` `P0` Prevent page-width bindings from restoring horizontal overflow.
   [Issue #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638).
@@ -959,6 +959,10 @@ that has not yet been integrated and qualified.
 - [ ] `BUG-18161` `P0` Isolate overlapping updater cancellation ownership.
   [Issue #641](https://github.com/ATAC-Helicopter/VaultSync/issues/641).
   A cancelled update check could finish after its replacement started, dispose the replacement's shared cancellation source, and restore macOS log capture too early. Capture each run's source and token, dispose only the owned source, and restore shared logging state only when the completing run still owns the active slot. Local build and regression suites pass; hosted and integration verification remain pending.
+
+- [ ] `BUG-18162` `P0` Restore CLI snapshots from recorded backup data safely.
+  [Issue #642](https://github.com/ATAC-Helicopter/VaultSync/issues/642).
+  The CLI restore command selected snapshot metadata but copied the current live project tree, and its clean traversal could cross linked paths. Resolve an actual recorded backup, preflight every source and destination before mutation, reject unavailable or unsupported archive/encrypted sources explicitly, and keep cleanup outside project and backup trees. Regression coverage proves restored bytes come from the backup; integration remains pending.
 
 ---
 
