@@ -950,7 +950,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1897` `P0` Audit and renew 1.8.9 safety, usability, and repository health.
   [Issue #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639).
-  Audit correctness, security and edge cases, stale code, UI responsiveness and page purpose, quality-of-life behavior, dependency health, generated-file retention, documentation/localization consistency, and repository hygiene. The first wave removes obsolete placeholder/reflection navigation, keeps labeled navigation at the default window size, clarifies Projects, and records every page's purpose. Fix release-safe findings in focused commits and track architectural or platform-dependent work explicitly. No discovered P0/P1 issue may remain untracked; final hosted, desktop, and integration evidence remains pending.
+  Audit correctness, security and edge cases, stale code, UI responsiveness and page purpose, quality-of-life behavior, dependency health, generated-file retention, documentation/localization consistency, and repository hygiene. The first waves remove obsolete placeholder/reflection navigation and an unbound backup activity-chart resize pipeline, keep labeled navigation at the default window size, clarify Projects, and record every page's purpose. Fix release-safe findings in focused commits and track architectural or platform-dependent work explicitly. No discovered P0/P1 issue may remain untracked; final hosted, desktop, and integration evidence remains pending.
 
 - [ ] `BUG-18160` `P0` Reclaim abandoned metadata read-copy workspaces.
   [Issue #640](https://github.com/ATAC-Helicopter/VaultSync/issues/640).

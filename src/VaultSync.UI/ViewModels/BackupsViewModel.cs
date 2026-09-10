@@ -125,15 +125,6 @@ namespace VaultSync.UI.ViewModels
         private int _lastAutoBackupSignature;
         private int _lastFilterRevision = -1;
         private SnapshotFilterState _lastFilterState = SnapshotFilterState.Empty;
-        private bool _showSummaryCharts = true;
-        private bool _showActivityPanel = true;
-        private GridLength _activityColumnWidth = new GridLength(360);
-        private double _summaryColumnSpacing = 12;
-        private double _lastSummaryViewportWidth = 1400;
-        private GridLength _mainAreaLeftColumnWidth = new GridLength(3, GridUnitType.Star);
-        private GridLength _mainAreaRightColumnWidth = new GridLength(2, GridUnitType.Star);
-        private int _mainAreaRightPanelColumn = 1;
-        private int _mainAreaRightPanelRow = 0;
 
         private sealed record PendingBackupUpdate(
             string ProjectId,
@@ -366,23 +357,6 @@ namespace VaultSync.UI.ViewModels
 
         private sealed record BackupDiskHealthPresentation(string Text, IBrush Brush);
 
-        private sealed record SnapshotActivitySeries(
-            IReadOnlyDictionary<DateTime, int> AutoByDate,
-            IReadOnlyDictionary<DateTime, int> ManualByDate,
-            IReadOnlyDictionary<DateTime, int> ImportedByDate,
-            IReadOnlyDictionary<DateTime, long> BytesByDate,
-            int MaxTotal,
-            long MaxBytes);
-
-        private readonly record struct SnapshotActivityCounts(
-            int Auto,
-            int Manual,
-            int Imported,
-            long Bytes)
-        {
-            public int Total => Auto + Manual + Imported;
-        }
-
         private readonly record struct ProjectBackupStats(
             int Count,
             long TotalBytes,
@@ -403,11 +377,6 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        // Weekly mini-chart data
-        public ObservableCollection<SnapshotActivityPoint> SnapshotActivity { get; } =
-            [];
-        public double SnapshotActivityChartHeight { get; private set; } = 160;
-
         // Summary properties (bound in the top cards)
         public int TotalSnapshots { get; private set; }
         public bool HasAnyBackups { get; private set; }
@@ -425,102 +394,6 @@ namespace VaultSync.UI.ViewModels
             Lf("Backups.Summary.YesterdayAverage", "{0} yesterday - avg {1}", 0, "0 B");
         public string SnapshotActivitySummary { get; private set; } =
             L("Backups.Summary.NoActivity", "No backups in the last 7 days");
-
-        public bool ShowSummaryCharts
-        {
-            get => _showSummaryCharts;
-            private set
-            {
-                if (SetProperty(ref _showSummaryCharts, value))
-                {
-                    OnPropertyChanged(nameof(ShowSummaryCharts));
-                }
-            }
-        }
-
-        public bool ShowActivityPanel
-        {
-            get => _showActivityPanel;
-            private set
-            {
-                if (SetProperty(ref _showActivityPanel, value))
-                {
-                    OnPropertyChanged(nameof(ShowActivityPanel));
-                }
-            }
-        }
-
-        public GridLength ActivityColumnWidth
-        {
-            get => _activityColumnWidth;
-            private set
-            {
-                if (SetProperty(ref _activityColumnWidth, value))
-                {
-                    OnPropertyChanged(nameof(ActivityColumnWidth));
-                }
-            }
-        }
-
-        public double SummaryColumnSpacing
-        {
-            get => _summaryColumnSpacing;
-            private set
-            {
-                if (SetProperty(ref _summaryColumnSpacing, value))
-                {
-                    OnPropertyChanged(nameof(SummaryColumnSpacing));
-                }
-            }
-        }
-
-        public GridLength MainAreaLeftColumnWidth
-        {
-            get => _mainAreaLeftColumnWidth;
-            private set
-            {
-                if (SetProperty(ref _mainAreaLeftColumnWidth, value))
-                {
-                    OnPropertyChanged(nameof(MainAreaLeftColumnWidth));
-                }
-            }
-        }
-
-        public GridLength MainAreaRightColumnWidth
-        {
-            get => _mainAreaRightColumnWidth;
-            private set
-            {
-                if (SetProperty(ref _mainAreaRightColumnWidth, value))
-                {
-                    OnPropertyChanged(nameof(MainAreaRightColumnWidth));
-                }
-            }
-        }
-
-        public int MainAreaRightPanelColumn
-        {
-            get => _mainAreaRightPanelColumn;
-            private set
-            {
-                if (SetProperty(ref _mainAreaRightPanelColumn, value))
-                {
-                    OnPropertyChanged(nameof(MainAreaRightPanelColumn));
-                }
-            }
-        }
-
-        public int MainAreaRightPanelRow
-        {
-            get => _mainAreaRightPanelRow;
-            private set
-            {
-                if (SetProperty(ref _mainAreaRightPanelRow, value))
-                {
-                    OnPropertyChanged(nameof(MainAreaRightPanelRow));
-                }
-            }
-        }
 
         public string LastBackupDisplay { get; private set; } =
             L(NoBackupsKey, NoBackupsFallback);
@@ -3873,7 +3746,6 @@ namespace VaultSync.UI.ViewModels
             UpdateStorageSummary();
             RebuildTopStorageConsumers();
             RebuildBackupHealthCenter(now);
-            RebuildSnapshotActivity(now);
             NotifySummaryPropertiesChanged();
         }
 
@@ -4114,34 +3986,6 @@ namespace VaultSync.UI.ViewModels
                 nameof(RestoreReadinessUnavailablePercent),
                 nameof(RestoreReadinessHeadline),
                 nameof(RestoreReadinessDetail));
-        }
-
-        public void UpdateSummaryLayout(double width)
-        {
-            const double chartThreshold = 1180;
-            const double activityThreshold = 1460;
-
-            bool showCharts = width >= chartThreshold;
-            bool showActivity = width >= activityThreshold;
-
-            ShowSummaryCharts = showCharts;
-            ShowActivityPanel = showActivity;
-            ActivityColumnWidth = showActivity
-                ? new GridLength(1, GridUnitType.Star)
-                : new GridLength(0);
-            SummaryColumnSpacing = showActivity ? 14 : 0;
-
-            // Keep both main panels visible at all viewport sizes and keep equal split.
-            MainAreaLeftColumnWidth = new GridLength(1, GridUnitType.Star);
-            MainAreaRightColumnWidth = new GridLength(1, GridUnitType.Star);
-            MainAreaRightPanelColumn = 1;
-            MainAreaRightPanelRow = 0;
-
-            if (Math.Abs(_lastSummaryViewportWidth - width) > 8)
-            {
-                _lastSummaryViewportWidth = width;
-                RebuildSnapshotActivity(DateTime.Now);
-            }
         }
 
         private static string FormatRelative(TimeSpan span)
@@ -4396,124 +4240,6 @@ namespace VaultSync.UI.ViewModels
                 ? string.Empty
                 : value.Trim();
         }
-
-        // ---------- Weekly activity mini-chart ----------
-
-        private void RebuildSnapshotActivity(DateTime now)
-        {
-            SnapshotActivity.Clear();
-
-            DateTime[] days = [.. Enumerable.Range(0, 7).Select(offset => now.Date.AddDays(-6 + offset))];
-            Dictionary<DateTime, int> autoByDate = CountSnapshotsByDate(s =>
-                string.Equals(s.Type, "Auto", StringComparison.OrdinalIgnoreCase));
-            Dictionary<DateTime, int> manualByDate = CountSnapshotsByDate(s =>
-                string.Equals(s.Type, ManualBackupType, StringComparison.OrdinalIgnoreCase));
-            Dictionary<DateTime, int> importedByDate = CountSnapshotsByDate(s => s.IsImported);
-            var bytesByDate = _allSnapshots
-                .GroupBy(s => s.Timestamp.Date)
-                .ToDictionary(g => g.Key, g => g.Sum(x => x.SizeBytes));
-
-            int maxTotal = Math.Max(1, days.Max(day =>
-                GetCount(autoByDate, day) + GetCount(manualByDate, day) + GetCount(importedByDate, day)));
-            double chartHeight = GetSnapshotActivityChartHeight(maxTotal);
-            double widthBoost = ShowActivityPanel
-                ? Math.Clamp((_lastSummaryViewportWidth - 1380d) * 0.05d, 0d, 52d)
-                : 0d;
-            chartHeight += widthBoost;
-            SnapshotActivityChartHeight = chartHeight;
-
-            long maxBytes = Math.Max(1, bytesByDate.Values.DefaultIfEmpty(0L).Max());
-            var series = new SnapshotActivitySeries(
-                autoByDate,
-                manualByDate,
-                importedByDate,
-                bytesByDate,
-                maxTotal,
-                maxBytes);
-            foreach (DateTime day in days)
-            {
-                SnapshotActivity.Add(BuildSnapshotActivityPoint(day, series, chartHeight));
-            }
-
-            OnPropertyChanged(nameof(SnapshotActivityChartHeight));
-        }
-
-        private Dictionary<DateTime, int> CountSnapshotsByDate(Func<BackupSnapshotItem, bool> predicate) =>
-            _allSnapshots
-                .Where(predicate)
-                .GroupBy(snapshot => snapshot.Timestamp.Date)
-                .ToDictionary(group => group.Key, group => group.Count());
-
-        private static int GetCount(IReadOnlyDictionary<DateTime, int> counts, DateTime day) =>
-            counts.TryGetValue(day, out int count) ? count : 0;
-
-        private static double GetSnapshotActivityChartHeight(int maxTotal)
-        {
-            if (maxTotal <= 2)
-                return 150d;
-            return maxTotal <= 4 ? 172d : 192d;
-        }
-
-        private static SnapshotActivityPoint BuildSnapshotActivityPoint(
-            DateTime day,
-            SnapshotActivitySeries series,
-            double chartHeight)
-        {
-            series.BytesByDate.TryGetValue(day, out long totalBytes);
-            var counts = new SnapshotActivityCounts(
-                GetCount(series.AutoByDate, day),
-                GetCount(series.ManualByDate, day),
-                GetCount(series.ImportedByDate, day),
-                totalBytes);
-            (double autoHeight, double manualHeight, double importedHeight) = CalculateActivityHeights(
-                counts,
-                series,
-                chartHeight);
-
-            string dayLabel = day.ToString("ddd");
-            string tooltip = counts.Total == 0
-                ? Lf("Backups.Activity.TooltipNone", "{0}: No backups", dayLabel)
-                : Lf("Backups.Activity.Tooltip", "{0}: {1} backups - {2}", dayLabel, counts.Total, BackupSnapshotItem.FormatSize(counts.Bytes));
-            return new SnapshotActivityPoint
-            {
-                DayLabel = dayLabel,
-                ShowLabel = true,
-                AutoCount = counts.Auto,
-                ManualCount = counts.Manual,
-                ImportedCount = counts.Imported,
-                TotalBytes = counts.Bytes,
-                AutoHeight = autoHeight,
-                ManualHeight = manualHeight,
-                ImportedHeight = importedHeight,
-                TooltipText = tooltip
-            };
-        }
-
-        private static (double Auto, double Manual, double Imported) CalculateActivityHeights(
-            SnapshotActivityCounts counts,
-            SnapshotActivitySeries series,
-            double chartHeight)
-        {
-            if (counts.Total == 0)
-                return (0d, 0d, 0d);
-
-            double normalized = counts.Bytes > 0
-                ? counts.Bytes / (double)series.MaxBytes
-                : counts.Total / (double)series.MaxTotal;
-            double totalHeight = 12d + normalized * (chartHeight - 36d);
-            double autoHeight = GetActivitySegmentHeight(counts.Auto, counts.Total, totalHeight);
-            double manualHeight = GetActivitySegmentHeight(counts.Manual, counts.Total, totalHeight);
-            double importedHeight = GetActivitySegmentHeight(counts.Imported, counts.Total, totalHeight);
-            double combined = autoHeight + manualHeight + importedHeight;
-            if (combined <= totalHeight)
-                return (autoHeight, manualHeight, importedHeight);
-
-            double scale = totalHeight / combined;
-            return (autoHeight * scale, manualHeight * scale, importedHeight * scale);
-        }
-
-        private static double GetActivitySegmentHeight(int count, int totalCount, double totalHeight) =>
-            count == 0 ? 0d : Math.Max(5d, totalHeight * count / totalCount);
 
         /// <summary>
         /// Populates this view model from real projects and backups loaded from the core layer.
