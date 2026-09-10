@@ -4275,7 +4275,7 @@ namespace VaultSync.UI.ViewModels
                 return;
             }
 
-            if (!dataChanged && !autoChanged)
+            if (!dataChanged)
                 return;
 
             var refreshedProjects = new List<ProjectBackupItem>();

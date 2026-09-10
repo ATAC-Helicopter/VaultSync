@@ -91,7 +91,7 @@ namespace VaultSync.UI.ViewModels
 
         private Task<DestinationResolution> PrepareDestinationAsync(BackupDestination dest, AppConfig cfg)
         {
-            return Task.Run(() => PrepareDestination(dest, cfg));
+            return Task.Run(() => PrepareDestination(dest, cfg), CancellationToken.None);
         }
 
         private async Task<DestinationResolution> PrepareDestinationForAutoBackupAsync(BackupDestination dest, AppConfig cfg)
@@ -103,10 +103,12 @@ namespace VaultSync.UI.ViewModels
             string display = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias!;
             DiagnosticsLogger.Record($"[AutoBackup] Destination '{display}' unavailable on first prepare; probing wake path before retry. Message='{first.Message}'");
 
-            DestinationTestResult probe = await Task.Run(() => TryTestDestination(dest, cfg)).ConfigureAwait(false);
+            DestinationTestResult probe = await Task.Run(
+                () => TryTestDestination(dest, cfg),
+                CancellationToken.None).ConfigureAwait(false);
             UpdateDestinationProbeSummary(dest, probe);
 
-            await Task.Delay(AutoBackupDestinationWakeDelay).ConfigureAwait(false);
+            await Task.Delay(AutoBackupDestinationWakeDelay, CancellationToken.None).ConfigureAwait(false);
 
             DestinationResolution second = await PrepareDestinationAsync(dest, cfg).ConfigureAwait(false);
             DiagnosticsLogger.Record(
@@ -126,7 +128,9 @@ namespace VaultSync.UI.ViewModels
                 try
                 {
                     DiagnosticsLogger.Record($"[AutoBackup] Warm-up probe start: '{display}'.");
-                    DestinationTestResult result = await Task.Run(() => TryTestDestination(dest, cfg)).ConfigureAwait(false);
+                    DestinationTestResult result = await Task.Run(
+                        () => TryTestDestination(dest, cfg),
+                        CancellationToken.None).ConfigureAwait(false);
                     UpdateDestinationProbeSummary(dest, result);
                     if (!result.Reachable)
                     {
@@ -144,7 +148,7 @@ namespace VaultSync.UI.ViewModels
             if (anyUnreachable)
             {
                 DiagnosticsLogger.Record($"[AutoBackup] Waiting {AutoBackupDestinationWakeDelay.TotalSeconds:0}s before retrying warmed destinations.");
-                await Task.Delay(AutoBackupDestinationWakeDelay).ConfigureAwait(false);
+                await Task.Delay(AutoBackupDestinationWakeDelay, CancellationToken.None).ConfigureAwait(false);
             }
         }
 
