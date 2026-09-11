@@ -43,7 +43,7 @@ the backup format or introduce the larger 1.9 recovery features.
 | Backup deletion replaced the selected project-summary object before selection restoration. | Reconcile project rows by ID and update the selected row in place so the first project never takes over. |
 | The Linux updater handoff test expected Unix separators on Windows CI. | Build the expected working directory with the host path API while retaining Linux command assertions. |
 | Dependabot proposed only part of the directly pinned rendering family. | Update Avalonia, SkiaSharp, and HarfBuzzSharp coherently and gate central package changes with an alignment test. |
-| Desktop analysis retained cancellation, complexity, repeated-key, and overload-order findings. | Make task ownership explicit and simplify the flagged UI helpers without changing behavior. |
+| Desktop analysis retained cancellation, complexity, command-path, and version-ordering findings. | Make task ownership explicit, use absolute OS notification commands, and simplify the flagged helpers without changing behavior. |
 | Padded page content forced its minimum width to the outer viewport width. | Measure Dashboard, Backups, and Settings from the padded available width and enforce the rule with a UI policy test. |
 | Maintained runtime and rendering packages received coordinated patch releases. | Service Microsoft libraries to 10.0.12, SkiaSharp to 4.152.0, and HarfBuzzSharp to 14.2.1.200 as complete package families. |
 | Icon-and-label pill stacks could stretch independently of centered text. | Center stack containers inside shared status pills and backup tags. |
@@ -90,18 +90,20 @@ icon rail is reserved for windows below 1100 pixels.
 
 ## Automated validation
 
-- Full .NET suite: **885 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **899 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
   preservation after deletion, selected project-row identity and aggregate
   updates, empty-selection continuity, summary updates, removal of an empty group,
-  and restoring CLI data from the recorded backup rather than the live source.
+  restoring CLI data from the recorded backup rather than the live source, and
+  stable/prerelease version-ordering boundaries.
 - Existing backup comparison, paging, and theme tests pass.
 - Release preparation: **77 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
-- Hosted Windows, Linux, and macOS build/test jobs pass at the current head;
-  CodeQL, SonarQube, YAML, Store metadata, and dependency submission are green.
+- Hosted Windows, Linux, and macOS build/test jobs pass; CodeQL, YAML, Store
+  metadata, and dependency submission pass, and the Sonar quality gate remains
+  a promotion requirement.
 
 ## Desktop qualification still required
 

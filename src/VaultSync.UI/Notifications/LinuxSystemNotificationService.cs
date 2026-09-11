@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels.Notifications;
 
@@ -74,11 +75,9 @@ namespace VaultSync.UI.Notifications
                     $"/bin/{executableName}"
                 ];
 
-                foreach (string candidate in candidates)
-                {
-                    if (System.IO.File.Exists(candidate))
-                        return candidate;
-                }
+                string? installedCandidate = candidates.FirstOrDefault(System.IO.File.Exists);
+                if (installedCandidate is not null)
+                    return installedCandidate;
 
                 var psi = new ProcessStartInfo
                 {

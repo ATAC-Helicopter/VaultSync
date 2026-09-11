@@ -712,30 +712,41 @@ public partial class App : Application
         for (int i = lineStart; i < lines.Length; i++)
         {
             string line = lines[i].TrimEnd();
-            if (stopAtNextVersion && line.StartsWith("## [", StringComparison.Ordinal))
+            if (IsNextVersionHeader(line, stopAtNextVersion))
                 break;
 
-            if (line.StartsWith("### ", StringComparison.Ordinal))
+            if (TryParseSectionTitle(line, out string title))
             {
-                string title = line[4..].Trim();
                 currentSection = new WhatsNewSection(title);
                 sections.Add(currentSection);
                 continue;
             }
 
-            if (currentSection is null)
-                continue;
-
-            string trimmed = line.Trim();
-            if (trimmed.StartsWith('-'))
-            {
-                string item = trimmed.TrimStart('-').Trim();
-                if (!string.IsNullOrWhiteSpace(item))
-                    currentSection.Items.Add(item);
-            }
+            if (currentSection is not null && TryParseBulletItem(line, out string item))
+                currentSection.Items.Add(item);
         }
 
         return sections;
+    }
+
+    private static bool IsNextVersionHeader(string line, bool stopAtNextVersion) =>
+        stopAtNextVersion && line.StartsWith("## [", StringComparison.Ordinal);
+
+    private static bool TryParseSectionTitle(string line, out string title)
+    {
+        title = line.StartsWith("### ", StringComparison.Ordinal)
+            ? line[4..].Trim()
+            : string.Empty;
+        return title.Length > 0;
+    }
+
+    private static bool TryParseBulletItem(string line, out string item)
+    {
+        string trimmed = line.Trim();
+        item = trimmed.StartsWith('-')
+            ? trimmed.TrimStart('-').Trim()
+            : string.Empty;
+        return item.Length > 0;
     }
 
     private void DestroyTrayIcon()
