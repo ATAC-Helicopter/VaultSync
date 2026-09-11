@@ -31,6 +31,7 @@
 - [VS-1897] Stop rebuilding an obsolete hidden backup activity chart during refresh and resize.
 - [VS-1897] Remove the obsolete untracked-destination scanner and its dormant state.
 - [VS-1896] Clear desktop analysis findings in startup, version ordering, and OS notifications.
+- [VS-1896] Simplify updater, power, logging, and encryption-enrollment paths.
 - [VS-1892] Center icon-and-label stacks inside shared status pills and backup tags.
 - [VS-1892] Improve muted text contrast, light-theme status colors, and dark-theme accent labels.
 - [VS-1892] Keep custom-theme muted text readable against the configured surfaces.

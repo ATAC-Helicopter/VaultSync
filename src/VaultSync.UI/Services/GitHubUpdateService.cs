@@ -259,7 +259,7 @@ namespace VaultSync.UI.Services
         {
             var client = new HttpClient
             {
-                BaseAddress = new Uri("https://api.github.com/"),
+                BaseAddress = new UriBuilder(Uri.UriSchemeHttps, "api.github.com").Uri,
                 Timeout     = TimeSpan.FromSeconds(20),
                 MaxResponseContentBufferSize = MaxReleaseManifestBytes
             };

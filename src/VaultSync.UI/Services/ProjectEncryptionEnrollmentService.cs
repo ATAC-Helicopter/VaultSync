@@ -30,28 +30,31 @@ public sealed class ProjectEncryptionEnrollmentService
     public ProjectEncryptionEnrollmentService(
         SqliteRepository repo,
         CredentialVault credentialVault,
-        Func<Window?> getOwner,
-        Func<int, Task> exportMetadataForProjectSettingsChangeAsync,
-        Func<Task> refreshProjectsAsync,
-        Func<Task> refreshBackupsAsync,
-        Action<string, NotificationSeverity> showNotification,
-        Action<string> log)
+        ProjectEncryptionEnrollmentActions actions)
     {
         _repo = repo;
         _credentialVault = credentialVault;
-        _getOwner = getOwner;
-        _exportMetadataForProjectSettingsChangeAsync = exportMetadataForProjectSettingsChangeAsync;
-        _refreshProjectsAsync = refreshProjectsAsync;
-        _refreshBackupsAsync = refreshBackupsAsync;
-        _showNotification = showNotification;
-        _log = log;
+        _getOwner = actions.GetOwner;
+        _exportMetadataForProjectSettingsChangeAsync = actions.ExportMetadataForProjectSettingsChangeAsync;
+        _refreshProjectsAsync = actions.RefreshProjectsAsync;
+        _refreshBackupsAsync = actions.RefreshBackupsAsync;
+        _showNotification = actions.ShowNotification;
+        _log = actions.Log;
     }
+
+    public sealed record ProjectEncryptionEnrollmentActions(
+        Func<Window?> GetOwner,
+        Func<int, Task> ExportMetadataForProjectSettingsChangeAsync,
+        Func<Task> RefreshProjectsAsync,
+        Func<Task> RefreshBackupsAsync,
+        Action<string, NotificationSeverity> ShowNotification,
+        Action<string> Log);
 
     public async Task StartProjectSelectionEnrollmentAsync()
     {
         try
         {
-            var projects = _repo.GetAllProjects()
+            var projects = (await _repo.GetAllProjectsAsync())
                 .Where(p => p.Id > 0)
                 .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();

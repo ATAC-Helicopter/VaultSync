@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace VaultSync.UI.Services
@@ -107,56 +108,12 @@ namespace VaultSync.UI.Services
                 if (!Directory.Exists(root))
                     return PowerState.Unknown;
 
-                string[] entries = Directory.GetDirectories(root);
-                bool anyAcOnline = false;
-                bool anyBatteryDischarging = false;
-
-                foreach (string dir in entries)
-                {
-                    string typePath = Path.Combine(dir, "type");
-                    if (!File.Exists(typePath))
-                        continue;
-
-                    string type = File.ReadAllText(typePath).Trim();
-                    if (string.Equals(type, "Mains", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(type, "AC", StringComparison.OrdinalIgnoreCase))
-                    {
-                        string onlinePath = Path.Combine(dir, "online");
-                        if (File.Exists(onlinePath))
-                        {
-                            string online = File.ReadAllText(onlinePath).Trim();
-                            if (online == "1")
-                                anyAcOnline = true;
-                        }
-                        continue;
-                    }
-
-                    if (string.Equals(type, "Battery", StringComparison.OrdinalIgnoreCase))
-                    {
-                        string scopePath = Path.Combine(dir, "scope");
-                        if (File.Exists(scopePath))
-                        {
-                            string scope = File.ReadAllText(scopePath).Trim();
-                            if (scope.Equals("Device", StringComparison.OrdinalIgnoreCase))
-                                continue;
-                        }
-
-                        string statusPath = Path.Combine(dir, "status");
-                        if (File.Exists(statusPath))
-                        {
-                            string status = File.ReadAllText(statusPath).Trim();
-                            if (status.Equals("Discharging", StringComparison.OrdinalIgnoreCase))
-                            {
-                                anyBatteryDischarging = true;
-                            }
-                        }
-                    }
-                }
-
-                if (anyAcOnline)
+                LinuxSupplyState[] supplies = Directory.GetDirectories(root)
+                    .Select(ReadLinuxSupplyState)
+                    .ToArray();
+                if (supplies.Contains(LinuxSupplyState.AcOnline))
                     return PowerState.PluggedIn;
-
-                if (anyBatteryDischarging)
+                if (supplies.Contains(LinuxSupplyState.BatteryDischarging))
                     return PowerState.OnBattery;
             }
             catch
@@ -165,6 +122,42 @@ namespace VaultSync.UI.Services
             }
 
             return PowerState.Unknown;
+        }
+
+        private static LinuxSupplyState ReadLinuxSupplyState(string directory)
+        {
+            string? type = TryReadPowerSupplyValue(directory, "type");
+            if (string.Equals(type, "Mains", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(type, "AC", StringComparison.OrdinalIgnoreCase))
+            {
+                return TryReadPowerSupplyValue(directory, "online") == "1"
+                    ? LinuxSupplyState.AcOnline
+                    : LinuxSupplyState.Unknown;
+            }
+
+            if (!string.Equals(type, "Battery", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(TryReadPowerSupplyValue(directory, "scope"), "Device", StringComparison.OrdinalIgnoreCase))
+                return LinuxSupplyState.Unknown;
+
+            return string.Equals(
+                TryReadPowerSupplyValue(directory, "status"),
+                "Discharging",
+                StringComparison.OrdinalIgnoreCase)
+                ? LinuxSupplyState.BatteryDischarging
+                : LinuxSupplyState.Unknown;
+        }
+
+        private static string? TryReadPowerSupplyValue(string directory, string name)
+        {
+            string path = Path.Combine(directory, name);
+            return File.Exists(path) ? File.ReadAllText(path).Trim() : null;
+        }
+
+        private enum LinuxSupplyState
+        {
+            Unknown,
+            AcOnline,
+            BatteryDischarging
         }
 
         // Windows API
