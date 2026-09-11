@@ -98,40 +98,41 @@ public sealed class TrayPanelService : IDisposable
         return new TrayPanelViewModel(
             header,
             LocalizationProvider.Service?.GetString("Tray.Tooltip") ?? "VaultSync - snapshots and backups",
-            openApp: () =>
+            new TrayPanelViewModel.TrayPanelActions(
+            OpenApp: () =>
             {
                 BringMainWindowToFront();
                 Hide();
             },
-            backupAll: () =>
+            BackupAll: () =>
             {
                 appVm.RequestBackupAllFromTray();
                 Hide();
             },
-            snapshotAll: () =>
+            SnapshotAll: () =>
             {
                 _ = appVm.TakeSnapshotAllFromTrayAsync();
                 Hide();
             },
-            openBackups: () =>
+            OpenBackups: () =>
             {
                 BringMainWindowToFront();
                 appVm.NavigateBackups?.Execute(null);
                 Hide();
             },
-            openSettings: () =>
+            OpenSettings: () =>
             {
                 BringMainWindowToFront();
                 appVm.NavigateSettings?.Execute(null);
                 Hide();
             },
-            quit: () =>
+            Quit: () =>
             {
                 DiagnosticsLogger.RecordWithStack("TrayPanelService quit requested.");
                 App.MarkShuttingDown();
                 _desktop.Shutdown();
             },
-            close: Hide);
+            Close: Hide));
     }
 
     private void UpdateViewModel(AppViewModel appVm)
@@ -146,46 +147,52 @@ public sealed class TrayPanelService : IDisposable
     private static void LoadDestinations(TrayPanelViewModel viewModel, AppViewModel appVm)
     {
         IReadOnlyList<AppViewModel.DestinationProbeSummary> summaries = appVm.GetDestinationProbeSummaries();
-        var items = new List<TrayPanelViewModel.TrayDestinationItem>();
-
-        if (summaries.Count > 0)
-        {
-            foreach (AppViewModel.DestinationProbeSummary summary in summaries)
-            {
-                string name = string.IsNullOrWhiteSpace(summary.Alias) ? summary.Path : summary.Alias;
-                items.Add(new TrayPanelViewModel.TrayDestinationItem(name, summary.Path, summary.Reachable));
-            }
-        }
-        else
-        {
-            AppConfig cfg = appVm.GetConfigSnapshot();
-            var configured = new List<BackupDestination>();
-            if (cfg.Backups.UseAdvancedDestinations && cfg.Backups.Destinations is { Count: > 0 })
-            {
-                configured = [.. cfg.Backups.Destinations.Where(d => d.Active)];
-            }
-            else if (!string.IsNullOrWhiteSpace(cfg.Backups.BackupLocation))
-            {
-                configured.Add(new BackupDestination
-                {
-                    Alias       = "Primary",
-                    Path        = cfg.Backups.BackupLocation,
-                    Active      = true,
-                    PreMounted  = true,
-                    AutoMount   = false,
-                    AutoUnmount = false
-                });
-            }
-
-            foreach (BackupDestination dest in configured)
-            {
-                string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path ?? string.Empty : dest.Alias;
-                items.Add(new TrayPanelViewModel.TrayDestinationItem(name, dest.Path ?? string.Empty, true));
-            }
-        }
+        List<TrayPanelViewModel.TrayDestinationItem> items = summaries.Count > 0
+            ? [.. summaries.Select(ToTrayDestinationItem)]
+            : BuildConfiguredDestinationItems(appVm.GetConfigSnapshot());
 
         string summaryText = BuildDestinationSummary(items, appVm.GetBackupPolicyTraySummary());
         viewModel.LoadDestinations(items, summaryText);
+    }
+
+    private static TrayPanelViewModel.TrayDestinationItem ToTrayDestinationItem(
+        AppViewModel.DestinationProbeSummary summary)
+    {
+        string name = string.IsNullOrWhiteSpace(summary.Alias) ? summary.Path : summary.Alias;
+        return new TrayPanelViewModel.TrayDestinationItem(name, summary.Path, summary.Reachable);
+    }
+
+    private static List<TrayPanelViewModel.TrayDestinationItem> BuildConfiguredDestinationItems(AppConfig config)
+    {
+        IEnumerable<BackupDestination> destinations = config.Backups.UseAdvancedDestinations &&
+                                                       config.Backups.Destinations is { Count: > 0 }
+            ? config.Backups.Destinations.Where(destination => destination.Active)
+            : BuildPrimaryDestination(config.Backups.BackupLocation);
+        return [.. destinations.Select(destination =>
+        {
+            string path = destination.Path ?? string.Empty;
+            string name = string.IsNullOrWhiteSpace(destination.Alias) ? path : destination.Alias;
+            return new TrayPanelViewModel.TrayDestinationItem(name, path, true);
+        })];
+    }
+
+    private static IEnumerable<BackupDestination> BuildPrimaryDestination(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return [];
+
+        return
+        [
+            new BackupDestination
+            {
+                Alias = "Primary",
+                Path = path,
+                Active = true,
+                PreMounted = true,
+                AutoMount = false,
+                AutoUnmount = false
+            }
+        ];
     }
 
     private static string BuildDestinationSummary(

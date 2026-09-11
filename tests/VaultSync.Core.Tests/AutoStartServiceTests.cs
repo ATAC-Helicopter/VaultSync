@@ -36,7 +36,7 @@ public sealed class AutoStartServiceTests
     {
         var startInfo = AutoStartService.CreateLaunchCtlStartInfo("print gui/501/com.vaultsync.autostart");
 
-        Assert.Equal("launchctl", startInfo.FileName);
+        Assert.Equal("/bin/launchctl", startInfo.FileName);
         Assert.True(startInfo.RedirectStandardOutput);
         Assert.True(startInfo.RedirectStandardError);
         Assert.False(startInfo.UseShellExecute);

@@ -867,7 +867,7 @@ public partial class App : Application
         NativeMenuItem openItem = BuildOpenTrayItem(desktop);
 
         // ---------- Storage health ----------
-        NativeMenuItem? healthItem = BuildDriveHealthItem(desktop);
+        NativeMenuItem? healthItem = BuildDriveHealthItem();
 
         // ---------- Destinations submenu ----------
         NativeMenuItem destinationRootItem = BuildDestinationMenu(destinationsTitle, destinationSummaries, configuredDestinations);
@@ -1398,7 +1398,7 @@ public partial class App : Application
         }
     }
 
-    private static NativeMenuItem? BuildDriveHealthItem(IClassicDesktopStyleApplicationLifetime desktop)
+    private static NativeMenuItem? BuildDriveHealthItem()
     {
         try
         {
