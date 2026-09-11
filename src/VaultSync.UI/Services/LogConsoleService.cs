@@ -201,9 +201,8 @@ namespace VaultSync.UI.Services
         {
             int value = enabled ? 1 : 0;
             Interlocked.Exchange(ref _uiCaptureEnabled, value);
-            _maxFlushBatch = enabled
-                ? (OperatingSystem.IsMacOS() ? 20 : 50)
-                : 200;
+            int enabledBatchSize = OperatingSystem.IsMacOS() ? 20 : 50;
+            _maxFlushBatch = enabled ? enabledBatchSize : 200;
             ApplyMaxLines();
 
             if (enabled && loadSnapshot)
@@ -223,9 +222,7 @@ namespace VaultSync.UI.Services
             }
             else if (!enabled)
             {
-                while (_pending.TryDequeue(out _))
-                {
-                }
+                _pending.Clear();
 
                 Interlocked.Exchange(ref _pendingCount, 0);
                 Interlocked.Exchange(ref _flushScheduled, 0);

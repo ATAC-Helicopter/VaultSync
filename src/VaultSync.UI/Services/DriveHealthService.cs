@@ -81,88 +81,91 @@ namespace VaultSync.UI.Services
 
         private static DriveHealthResult CheckWindows(string root, string fullPath)
         {
+            if (IsWindowsNetworkDrive(root))
+                return Unknown(L(NetworkPathMessageKey, NetworkPathMessage), driveId: root, path: fullPath);
+
+            if (TryGetWindowsSmartResult(root, fullPath, out DriveHealthResult? smartResult) &&
+                smartResult is not null)
+                return smartResult;
+
+            return CheckWindowsDriveReadiness(root, fullPath);
+        }
+
+        private static bool IsWindowsNetworkDrive(string root)
+        {
             try
             {
-                var driveInfo = new DriveInfo(root);
-                if (driveInfo.DriveType == DriveType.Network)
-                {
-                    return Unknown(
-                        L(NetworkPathMessageKey, NetworkPathMessage),
-                        driveId: root,
-                        path: fullPath);
-                }
+                return new DriveInfo(root).DriveType == DriveType.Network;
             }
             catch
             {
-                // If DriveInfo fails, continue with best-effort checks below.
+                return false;
             }
+        }
 
-            // Try WMIC SMART status; if unavailable, fall back to basic readiness.
+        private static bool TryGetWindowsSmartResult(
+            string root,
+            string fullPath,
+            out DriveHealthResult? result)
+        {
+            result = null;
             string output = RunProcess("wmic", "diskdrive get Status,DeviceID", 4000);
-            if (!string.IsNullOrWhiteSpace(output))
+            if (string.IsNullOrWhiteSpace(output))
+                return false;
+
+            bool sawOk = false;
+            foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
-                // If any drive reports a non-OK status, flag warning/failing.
-                string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                bool sawOk = false;
-                foreach (string line in lines)
+                string trimmed = line.Trim();
+                if (string.IsNullOrWhiteSpace(trimmed) ||
+                    trimmed.StartsWith("Status", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (trimmed.StartsWith("OK", StringComparison.OrdinalIgnoreCase))
                 {
-                    string trimmed = line.Trim();
-                    if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("Status", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    // WMIC typically outputs: "OK    \\.\PHYSICALDRIVE0"
-                    if (trimmed.StartsWith("OK", StringComparison.OrdinalIgnoreCase))
-                    {
-                        sawOk = true;
-                        continue;
-                    }
-
-                    // Only treat explicit FAIL/Pred Fail as failing; otherwise return unknown to avoid false alarms.
-                    if (trimmed.Contains("Fail", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return new DriveHealthResult(
-                            DriveHealthStatus.Failing,
-                            L("DriveHealth.Failing.SmartFailingDrive", "SMART reports this drive is failing."),
-                            DriveId: trimmed,
-                            Path: fullPath);
-                    }
-                    // Otherwise, let later checks decide (drive ready).
+                    sawOk = true;
+                    continue;
                 }
+                if (!trimmed.Contains("Fail", StringComparison.OrdinalIgnoreCase))
+                    continue;
 
-                if (sawOk)
-                {
-                    return new DriveHealthResult(
-                        DriveHealthStatus.Healthy,
-                        L("DriveHealth.Healthy.SmartOk", "SMART reports OK."),
-                        DriveId: root,
-                        Path: fullPath);
-                }
+                result = new DriveHealthResult(
+                    DriveHealthStatus.Failing,
+                    L("DriveHealth.Failing.SmartFailingDrive", "SMART reports this drive is failing."),
+                    DriveId: trimmed,
+                    Path: fullPath);
+                return true;
             }
 
-            // Basic check: ensure the volume is ready.
+            if (!sawOk)
+                return false;
+
+            result = new DriveHealthResult(
+                DriveHealthStatus.Healthy,
+                L("DriveHealth.Healthy.SmartOk", "SMART reports OK."),
+                DriveId: root,
+                Path: fullPath);
+            return true;
+        }
+
+        private static DriveHealthResult CheckWindowsDriveReadiness(string root, string fullPath)
+        {
             try
             {
-                var driveInfo = new DriveInfo(root);
-                if (!driveInfo.IsReady)
-                {
+                if (!new DriveInfo(root).IsReady)
                     return new DriveHealthResult(
                         DriveHealthStatus.Warning,
                         L("DriveHealth.Warning.DriveNotReady", "Drive is not ready."),
                         DriveId: root,
                         Path: fullPath);
-                }
             }
             catch
             {
-                // If SMART isn't available but the drive exists, consider health unknown-but-usable to avoid noisy UI.
                 if (System.IO.Directory.Exists(root))
-                {
                     return new DriveHealthResult(
                         DriveHealthStatus.Healthy,
                         L("DriveHealth.Healthy.SmartNotAvailableReachable", "SMART not available; drive is reachable."),
                         DriveId: root,
                         Path: fullPath);
-                }
 
                 return Unknown(L("DriveHealth.Unknown.CouldNotReadDriveInfo", "Could not read drive info"), driveId: root, path: fullPath);
             }
