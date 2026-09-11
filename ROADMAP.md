@@ -942,7 +942,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
   [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
-  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 884 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
+  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 885 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
 
 - [ ] `BUG-18159` `P0` Prevent page-width bindings from restoring horizontal overflow.
   [Issue #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638).
@@ -987,6 +987,10 @@ that has not yet been integrated and qualified.
 - [ ] `BUG-18168` `P0` Preserve backed snapshots during CLI prune.
   [Issue #648](https://github.com/ATAC-Helicopter/VaultSync/issues/648).
   Snapshot deletion cascades its backup metadata row, but the CLI prune planner previously included snapshots still referenced by stored backups or protected in History. Build one protected-ID set first and apply count/date rules only to eligible snapshots. Mixed-plan regression coverage passes locally; integration remains pending.
+
+- [ ] `BUG-18169` `P0` Verify recorded backup bytes before CLI restore.
+  [Issue #649](https://github.com/ATAC-Helicopter/VaultSync/issues/649).
+  Folder restore resolved safe recorded paths but did not confirm that their bytes still matched snapshot metadata. Preflight every file size and every available SHA-256 before any cleanup or target write, while retaining size checks for legacy unhashed snapshots. Tamper regression coverage passes locally; integration remains pending.
 
 ---
 

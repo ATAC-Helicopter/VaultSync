@@ -1,9 +1,12 @@
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using VaultSync.CLI;
+using VaultSync.CLI.Commands;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
+using VaultSync.Core.Services;
 using VaultSync.Core.Tests.TestSupport;
 using Xunit;
 
@@ -45,5 +48,21 @@ public sealed class CliRestoreCommandTests
 
         Assert.Equal(0, exitCode);
         Assert.Equal("recorded-backup-state", File.ReadAllText(Path.Combine(destination, "state.txt")));
+    }
+
+    [Fact]
+    public async Task RestoreRejectsTamperedBackupBeforeWritingDestination()
+    {
+        using var root = new TempDirectory();
+        string source = Path.Combine(root.Path, "tampered.txt");
+        File.WriteAllText(source, "tampered");
+        string expectedHash = Convert.ToHexString(SHA256.HashData("expected"u8.ToArray()));
+        var expected = new FileEntry("tampered.txt", new FileInfo(source).Length, DateTime.UtcNow, expectedHash);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => RestoreCommand.VerifyBackupFileAsync(
+            source,
+            expected,
+            new HashService(),
+            default));
     }
 }

@@ -19,6 +19,7 @@
 - [BUG-18166] Keep backup preflight enumeration out of linked source trees.
 - [BUG-18167] Make destructive CLI prune dates exact and locale-independent.
 - [BUG-18168] Preserve backed and protected snapshots during CLI pruning.
+- [BUG-18169] Verify recorded backup bytes before CLI restore changes its target.
 ### Changed
 - [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
 - [VS-1896] Consolidate repeated desktop labels and transient console capture state.

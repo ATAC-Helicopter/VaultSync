@@ -154,14 +154,17 @@ namespace VaultSync.CLI.Commands
 
         private sealed record RestoreCopy(string RelativePath, string SourcePath, string TargetPath);
 
-        protected override Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
+        protected override async Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
         {
             var repo = new SqliteRepository(ConfigHelper.ResolveDb(s.Db));
             repo.EnsureSchema();
             RestoreSelection selection = ResolveSelection(repo, s);
             string destination = Path.GetFullPath(ConfigHelper.ExpandUserPath(s.Destination));
             EnsureDestinationIsSafe(selection, destination, s.Clean);
-            IReadOnlyList<RestoreCopy> copies = BuildCopyPlan(selection, destination, cancellationToken);
+            IReadOnlyList<RestoreCopy> copies = await BuildCopyPlanAsync(
+                selection,
+                destination,
+                cancellationToken).ConfigureAwait(false);
             (IReadOnlyList<string> existingFiles, IReadOnlyList<string> existingDirectories) =
                 InspectDestination(destination, s.Clean, cancellationToken);
             var started = DateTime.UtcNow;
@@ -171,7 +174,7 @@ namespace VaultSync.CLI.Commands
             TimeSpan took = DateTime.UtcNow - started;
 
             WriteRestoreResult(s, selection, destination, copied, deleted, deletedDirectories, took);
-            return Task.FromResult(0);
+            return 0;
         }
 
         private static RestoreSelection ResolveSelection(SqliteRepository repo, RestoreSettings settings)
@@ -220,16 +223,18 @@ namespace VaultSync.CLI.Commands
                 throw new InvalidOperationException("Refusing to --clean the project root or one of its children.");
         }
 
-        private static IReadOnlyList<RestoreCopy> BuildCopyPlan(
+        private static async Task<IReadOnlyList<RestoreCopy>> BuildCopyPlanAsync(
             RestoreSelection selection,
             string destination,
             CancellationToken cancellationToken)
         {
             var copies = new List<RestoreCopy>(selection.Files.Count);
             var targets = new HashSet<string>(GetPathComparer());
-            foreach (string relativePath in selection.Files.Select(static file => file.RelPath))
+            var hashService = new HashService();
+            foreach (FileEntry file in selection.Files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                string relativePath = file.RelPath;
                 if (!BackupSafetyService.TryResolveExistingFileUnderRoot(
                         selection.SourceRoot,
                         relativePath,
@@ -248,10 +253,39 @@ namespace VaultSync.CLI.Commands
                         $"Snapshot {selection.Snapshot.Id} contains an unsafe or duplicate target path: '{relativePath}'.");
                 }
 
+                await VerifyBackupFileAsync(
+                    sourcePath,
+                    file,
+                    hashService,
+                    cancellationToken).ConfigureAwait(false);
+
                 copies.Add(new RestoreCopy(relativePath.Replace('\\', '/'), sourcePath, targetPath));
             }
 
             return copies;
+        }
+
+        internal static async Task VerifyBackupFileAsync(
+            string sourcePath,
+            FileEntry expected,
+            HashService hashService,
+            CancellationToken cancellationToken)
+        {
+            long actualSize = new FileInfo(sourcePath).Length;
+            if (actualSize != expected.Size)
+            {
+                throw new InvalidDataException(
+                    $"Backup file '{expected.RelPath}' has size {actualSize}, expected {expected.Size}.");
+            }
+            if (string.IsNullOrWhiteSpace(expected.HashSha256))
+                return;
+
+            string actualHash = await hashService.Sha256Async(sourcePath, cancellationToken).ConfigureAwait(false);
+            if (!string.Equals(actualHash, expected.HashSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    $"Backup file '{expected.RelPath}' failed SHA-256 verification.");
+            }
         }
 
         private static (IReadOnlyList<string> Files, IReadOnlyList<string> Directories) InspectDestination(
