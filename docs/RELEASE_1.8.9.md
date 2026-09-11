@@ -62,6 +62,8 @@ the backup format or introduce the larger 1.9 recovery features.
 | The destructive CLI prune cutoff used the machine culture despite documenting an ISO date. | Require exact invariant `yyyy-MM-dd` input and use the parsed UTC date for execution. |
 | CLI snapshot pruning could cascade away backup records while leaving their payload folders orphaned. | Exclude backup-referenced and History-protected snapshots before applying count or date pruning. |
 | CLI folder restore trusted present backup files without checking their recorded size or hash. | Verify the complete source plan against snapshot metadata before cleanup or target writes. |
+| A tray data-shaping exception left the refresh gate permanently occupied. | Release the gate after background failures so future tray updates can recover. |
+| Unix single-instance locks could fall back to an environment-selected temporary directory. | Store coordination locks only in the private per-user application-data tree. |
 
 The shared collection fix applies to existing callers in Backups, Projects,
 Dashboard, History, Schedule, Recovery, project folders, and the tray panel.
@@ -90,14 +92,15 @@ icon rail is reserved for windows below 1100 pixels.
 
 ## Automated validation
 
-- Full .NET suite: **899 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **902 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
   preservation after deletion, selected project-row identity and aggregate
   updates, empty-selection continuity, summary updates, removal of an empty group,
   restoring CLI data from the recorded backup rather than the live source, and
-  stable/prerelease version-ordering boundaries.
+  stable/prerelease version-ordering boundaries, private default instance-lock
+  placement, and tray refresh-gate release.
 - Existing backup comparison, paging, and theme tests pass.
 - Release preparation: **77 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
@@ -155,6 +158,10 @@ qualification remain pending.
 | [`BUG-18167` / #647](https://github.com/ATAC-Helicopter/VaultSync/issues/647) | Parse CLI prune dates invariantly | In progress |
 | [`BUG-18168` / #648](https://github.com/ATAC-Helicopter/VaultSync/issues/648) | Preserve backed snapshots during CLI prune | In progress |
 | [`BUG-18169` / #649](https://github.com/ATAC-Helicopter/VaultSync/issues/649) | Verify recorded backup bytes before CLI restore | In progress |
+| [`BUG-18170` / #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650) | Recover tray refresh after background failures | In progress |
+| [`BUG-18171` / #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651) | Keep Unix instance locks in private app data | In progress |
+| [`BUG-18170` / #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650) | Recover tray refresh after background failures | In progress |
+| [`BUG-18171` / #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651) | Keep Unix instance locks in private app data | In progress |
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
 In-progress work is implemented locally or under preparation; it is not marked

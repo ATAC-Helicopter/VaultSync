@@ -1003,7 +1003,7 @@ namespace VaultSync.UI
                 : BackupLocationPath;
             string? nextBackupRoot = ResolveBackupRootForSave(fallbackRoot, cfg.Backups.BackupRoot ?? cfg.Backups.Location);
             List<BackupDestination> nextDestinations = preserveExistingDestinations
-                ? [.. cfg.Backups.Destinations!]
+                ? [.. cfg.Backups.Destinations]
                 : [.. destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,

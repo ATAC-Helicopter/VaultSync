@@ -131,13 +131,12 @@ internal static class SafeZipExtractor
             hasDrivePrefix)
             throw new InvalidDataException($"Archive entry '{entryFullName}' is absolute.");
 
-        foreach (string component in normalized.Split(
-                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                     StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (!IsPortablePathSegment(component))
-                throw new InvalidDataException($"Archive entry '{entryFullName}' contains an unsafe path segment.");
-        }
+        string? unsafeComponent = normalized.Split(
+                [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(component => !IsPortablePathSegment(component));
+        if (unsafeComponent is not null)
+            throw new InvalidDataException($"Archive entry '{entryFullName}' contains an unsafe path segment.");
 
         string root = NormalizeRoot(Path.Combine(Path.GetTempPath(), "vaultsync-archive-root"));
         string candidate = Path.GetFullPath(Path.Combine(root, normalized));

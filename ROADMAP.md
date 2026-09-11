@@ -942,7 +942,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
   [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
-  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 885 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
+  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 902 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
 
 - [ ] `BUG-18159` `P0` Prevent page-width bindings from restoring horizontal overflow.
   [Issue #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638).
@@ -991,6 +991,22 @@ that has not yet been integrated and qualified.
 - [ ] `BUG-18169` `P0` Verify recorded backup bytes before CLI restore.
   [Issue #649](https://github.com/ATAC-Helicopter/VaultSync/issues/649).
   Folder restore resolved safe recorded paths but did not confirm that their bytes still matched snapshot metadata. Preflight every file size and every available SHA-256 before any cleanup or target write, while retaining size checks for legacy unhashed snapshots. Tamper regression coverage passes locally; integration remains pending.
+
+- [ ] `BUG-18170` `P0` Recover tray refresh after background failures.
+  [Issue #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650).
+  A tray data-shaping exception occurred before the UI callback that normally released refresh ownership, leaving every later update queued behind a permanently occupied gate. Release ownership after background failures, retain retry throttling and request coalescing, and simplify tray menu construction. The release build and full local suite pass; hosted and integration verification remain pending.
+
+- [ ] `BUG-18171` `P0` Keep Unix instance locks in private app data.
+  [Issue #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651).
+  Linux and macOS single-instance coordination could use an environment-selected temporary directory. Resolve the default lock beneath absolute per-user application data and fail closed when no private root is available, while retaining explicit test-directory injection. Default-path and cross-process lock tests pass locally; integration remains pending.
+
+- [ ] `BUG-18170` `P0` Recover tray refresh after background failures.
+  [Issue #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650).
+  A tray data-shaping exception occurred before the UI callback and left the in-flight gate occupied indefinitely. Release refresh ownership on both background and UI failures, retain coalescing and throttling, and allow later tray updates to recover. The zero-warning build and full local suite pass; hosted and integration verification remain pending.
+
+- [ ] `BUG-18171` `P0` Keep Unix instance locks in private app data.
+  [Issue #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651).
+  Linux and macOS coordination could fall back to an environment-selected temporary directory. Use only the absolute per-user application-data tree for default locks, fail closed without it, and retain explicit directory injection for isolated lock tests. Placement and cross-process tests pass locally; integration remains pending.
 
 ---
 

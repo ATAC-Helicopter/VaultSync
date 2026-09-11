@@ -13,6 +13,8 @@ VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
 - Interpret CLI prune cutoffs consistently on every system locale.
 - Keep stored-backup and protected History snapshots out of CLI pruning.
 - Verify recorded folder-backup bytes before a CLI restore changes its target.
+- Recover future tray refreshes after a transient background data failure.
+- Keep Unix single-instance coordination out of shared temporary directories.
 
 ### Clearer controls
 - Center icon-and-label stacks inside shared pills and backup tags.

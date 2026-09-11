@@ -1055,40 +1055,43 @@ public partial class App : Application
         var destinationMenu = new NativeMenu();
 
         if (destinationSummaries.Any())
-        {
-            foreach (AppViewModel.DestinationProbeSummary dest in destinationSummaries)
-            {
-                string status = dest.Reachable
-                    ? L("Tray.Destinations.Ready", "Ready")
-                    : L("Tray.Destinations.Unreachable", "Unreachable");
-                string text = string.IsNullOrWhiteSpace(dest.Alias)
-                    ? $"{dest.Path} - {status}"
-                    : $"{dest.Alias} - {status}";
-
-                var detail = new NativeMenuItem(text) { IsEnabled = false };
-                destinationMenu.Items.Add(detail);
-            }
-        }
+            AddDestinationProbeItems(destinationMenu, destinationSummaries);
+        else if (configuredDestinations.Any())
+            AddConfiguredDestinationItems(destinationMenu, configuredDestinations);
         else
-        {
-            if (configuredDestinations.Any())
-            {
-                foreach (BackupDestination dest in configuredDestinations)
-                {
-                    string label = string.IsNullOrWhiteSpace(dest.Alias)
-                        ? dest.Path ?? string.Empty
-                        : dest.Alias;
-                    destinationMenu.Items.Add(new NativeMenuItem(label) { IsEnabled = false });
-                }
-            }
-            else
-            {
-                destinationMenu.Items.Add(new NativeMenuItem(L("Tray.Destinations.None", "No destinations configured")) { IsEnabled = false });
-            }
-        }
+            destinationMenu.Items.Add(new NativeMenuItem(L("Tray.Destinations.None", "No destinations configured")) { IsEnabled = false });
 
         destinationRootItem.Menu = destinationMenu;
         return destinationRootItem;
+    }
+
+    private static void AddDestinationProbeItems(
+        NativeMenu menu,
+        IEnumerable<AppViewModel.DestinationProbeSummary> destinations)
+    {
+        foreach (AppViewModel.DestinationProbeSummary destination in destinations)
+        {
+            string status = destination.Reachable
+                ? L("Tray.Destinations.Ready", "Ready")
+                : L("Tray.Destinations.Unreachable", "Unreachable");
+            string text = string.IsNullOrWhiteSpace(destination.Alias)
+                ? $"{destination.Path} - {status}"
+                : $"{destination.Alias} - {status}";
+            menu.Items.Add(new NativeMenuItem(text) { IsEnabled = false });
+        }
+    }
+
+    private static void AddConfiguredDestinationItems(
+        NativeMenu menu,
+        IEnumerable<BackupDestination> destinations)
+    {
+        foreach (BackupDestination destination in destinations)
+        {
+            string label = string.IsNullOrWhiteSpace(destination.Alias)
+                ? destination.Path ?? string.Empty
+                : destination.Alias;
+            menu.Items.Add(new NativeMenuItem(label) { IsEnabled = false });
+        }
     }
 
     private static NativeMenuItem BuildBackupMenu(
@@ -1427,7 +1430,7 @@ public partial class App : Application
             statusMenu.Items.Add(new NativeMenuItemSeparator());
 
             var recheck = new NativeMenuItem(L("Tray.Health.Recheck", "Recheck now"));
-            recheck.Click += async (_, _) => await RecheckDriveHealthAsync(desktop);
+            recheck.Click += async (_, _) => await RecheckDriveHealthAsync();
             statusMenu.Items.Add(recheck);
 
             healthMenu.Menu = statusMenu;
@@ -1446,25 +1449,13 @@ public partial class App : Application
 
     public async Task RefreshTrayMenuAsync()
     {
-        if (_trayIcon is null)
-            return;
-
-        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        if (_trayIcon is null ||
+            ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
         DateTime now = DateTime.UtcNow;
-        TimeSpan minRefreshInterval = OperatingSystem.IsMacOS()
-            ? TimeSpan.FromSeconds(2)
-            : TimeSpan.FromSeconds(1);
-        if (now - _lastTrayMenuRefreshUtc < minRefreshInterval)
+        if (ShouldSkipTrayMenuRefresh(now))
             return;
-        if (OperatingSystem.IsMacOS() && now < _trayMenuSuppressUntilUtc)
-            return;
-        if (_trayMenuRefreshFailureCount >= 3 &&
-            now - _lastTrayMenuRefreshFailureUtc < TimeSpan.FromSeconds(10))
-        {
-            return;
-        }
 
         if (Interlocked.Exchange(ref _trayMenuRefreshInFlight, 1) == 1)
         {
@@ -1473,96 +1464,115 @@ public partial class App : Application
         }
 
         _lastTrayMenuRefreshUtc = now;
-        var trayResult = await Task.Run(() =>
+        try
         {
-            AppViewModel? viewModel = AppViewModelInstance;
-            IReadOnlyList<AppViewModel.TrayProjectBackups> recentBackups = viewModel?.GetRecentBackupsForTray(MaxRecentBackupsPerProject)
-                                ?? [];
-            IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations = viewModel?.GetDestinationProbeSummaries()
-                               ?? [];
-            IReadOnlyList<AppViewModel.TrayProjectItem> trayProjects = viewModel?.GetProjectsForTray()
-                               ?? [];
-            string policySummary = viewModel?.GetBackupPolicyTraySummary() ?? string.Empty;
-            string policySignature = viewModel?.GetBackupPolicySignatureForTray() ?? string.Empty;
-            string signatureValue = BuildTrayMenuSignature(
-                recentBackups,
-                destinations,
-                trayProjects,
-                policySignature,
-                policySummary);
-            return (
-                Recent: recentBackups,
-                Projects: trayProjects,
-                Signature: signatureValue,
-                PolicySummary: policySummary);
-        });
-        IReadOnlyList<AppViewModel.TrayProjectBackups> recent = trayResult.Recent;
-        IReadOnlyList<AppViewModel.TrayProjectItem> projects = trayResult.Projects;
-        string signature = trayResult.Signature;
-        string policySummary = trayResult.PolicySummary;
-
-        Dispatcher.UIThread.Post(() =>
+            var trayResult = await Task.Run(BuildTrayMenuData);
+            Dispatcher.UIThread.Post(() => ApplyTrayMenuRefresh(desktop, trayResult));
+        }
+        catch (Exception ex)
         {
-            try
-            {
-                if (_trayIcon is null || IsShuttingDown)
-                {
-                    return;
-                }
+            RecordTrayMenuRefreshFailure(ex);
+            CompleteTrayMenuRefresh();
+        }
+    }
 
-                if (_trayMenuSignature == signature && _trayMenu is not null)
-                {
-                    return;
-                }
+    private bool ShouldSkipTrayMenuRefresh(DateTime now)
+    {
+        return now - _lastTrayMenuRefreshUtc < GetTrayMenuRefreshInterval() ||
+               OperatingSystem.IsMacOS() && now < _trayMenuSuppressUntilUtc ||
+               _trayMenuRefreshFailureCount >= 3 &&
+               now - _lastTrayMenuRefreshFailureUtc < TimeSpan.FromSeconds(10);
+    }
 
-                NativeMenu targetMenu;
-                if (OperatingSystem.IsMacOS())
-                {
-                    targetMenu = new NativeMenu();
-                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary, projects);
-                    _trayMenu = targetMenu;
-                    _trayIcon.Menu = targetMenu;
-                }
-                else
-                {
-                    // Linux AppIndicator hosts can duplicate or flicker tray icons when the menu
-                    // object is replaced repeatedly. Keep one native menu and mutate its items.
-                    targetMenu = _trayMenu ?? new NativeMenu();
-                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary, projects);
-                    _trayMenu = targetMenu;
-                    if (_trayIcon.Menu is null)
-                        _trayIcon.Menu = targetMenu;
-                }
-                _trayMenuSignature = signature;
+    private static TimeSpan GetTrayMenuRefreshInterval() =>
+        OperatingSystem.IsMacOS() ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(1);
 
-                _trayMenuRefreshFailureCount = 0;
-            }
-            catch (Exception ex)
-            {
-                // Best-effort: avoid crashing the app if tray menu rebuild fails.
-                if (OperatingSystem.IsMacOS() &&
-                    ex.Message.Contains("menu being updated does not match", StringComparison.OrdinalIgnoreCase))
-                {
-                    _trayMenuSuppressUntilUtc = DateTime.UtcNow.AddSeconds(10);
-                }
+    private static (IReadOnlyList<AppViewModel.TrayProjectBackups> Recent,
+        IReadOnlyList<AppViewModel.TrayProjectItem> Projects,
+        string Signature,
+        string PolicySummary) BuildTrayMenuData()
+    {
+        AppViewModel? viewModel = AppViewModelInstance;
+        IReadOnlyList<AppViewModel.TrayProjectBackups> recent =
+            viewModel?.GetRecentBackupsForTray(MaxRecentBackupsPerProject) ?? [];
+        IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations =
+            viewModel?.GetDestinationProbeSummaries() ?? [];
+        IReadOnlyList<AppViewModel.TrayProjectItem> projects = viewModel?.GetProjectsForTray() ?? [];
+        string policySummary = viewModel?.GetBackupPolicyTraySummary() ?? string.Empty;
+        string policySignature = viewModel?.GetBackupPolicySignatureForTray() ?? string.Empty;
+        string signature = BuildTrayMenuSignature(
+            recent,
+            destinations,
+            projects,
+            policySignature,
+            policySummary);
+        return (recent, projects, signature, policySummary);
+    }
 
-                Console.WriteLine($"[Tray] Failed to refresh tray menu: {ex.Message}");
-                _trayMenuRefreshFailureCount++;
-                _lastTrayMenuRefreshFailureUtc = DateTime.UtcNow;
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _trayMenuRefreshInFlight, 0);
-                if (!IsShuttingDown && Interlocked.Exchange(ref _trayMenuRefreshQueued, 0) == 1)
-                {
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(200).ConfigureAwait(false);
-                        await RefreshTrayMenuAsync().ConfigureAwait(false);
-                    });
-                }
-            }
+    private void ApplyTrayMenuRefresh(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        (IReadOnlyList<AppViewModel.TrayProjectBackups> Recent,
+            IReadOnlyList<AppViewModel.TrayProjectItem> Projects,
+            string Signature,
+            string PolicySummary) result)
+    {
+        try
+        {
+            if (_trayIcon is null || IsShuttingDown ||
+                _trayMenuSignature == result.Signature && _trayMenu is not null)
+                return;
+
+            NativeMenu targetMenu = OperatingSystem.IsMacOS()
+                ? new NativeMenu()
+                : _trayMenu ?? new NativeMenu();
+            PopulateTrayMenu(targetMenu, desktop, result.Recent, result.PolicySummary, result.Projects);
+            _trayMenu = targetMenu;
+            if (OperatingSystem.IsMacOS() || _trayIcon.Menu is null)
+                _trayIcon.Menu = targetMenu;
+
+            _trayMenuSignature = result.Signature;
+            _trayMenuRefreshFailureCount = 0;
+        }
+        catch (Exception ex)
+        {
+            RecordTrayMenuRefreshFailure(ex);
+        }
+        finally
+        {
+            CompleteTrayMenuRefresh();
+        }
+    }
+
+    private void RecordTrayMenuRefreshFailure(Exception ex)
+    {
+        if (OperatingSystem.IsMacOS() &&
+            ex.Message.Contains("menu being updated does not match", StringComparison.OrdinalIgnoreCase))
+            _trayMenuSuppressUntilUtc = DateTime.UtcNow.AddSeconds(10);
+
+        Console.WriteLine($"[Tray] Failed to refresh tray menu: {ex.Message}");
+        _trayMenuRefreshFailureCount++;
+        _lastTrayMenuRefreshFailureUtc = DateTime.UtcNow;
+    }
+
+    private void CompleteTrayMenuRefresh()
+    {
+        bool refreshQueued = ReleaseTrayMenuRefreshGate(
+            ref _trayMenuRefreshInFlight,
+            ref _trayMenuRefreshQueued);
+        if (IsShuttingDown || !refreshQueued)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(GetTrayMenuRefreshInterval()).ConfigureAwait(false);
+            await RefreshTrayMenuAsync().ConfigureAwait(false);
         });
+    }
+
+    internal static bool ReleaseTrayMenuRefreshGate(ref int inFlight, ref int queued)
+    {
+        Interlocked.Exchange(ref inFlight, 0);
+        return Interlocked.Exchange(ref queued, 0) == 1;
     }
 
     private static string BuildTrayMenuSignature(
@@ -1952,24 +1962,36 @@ public partial class App : Application
         }
         catch
         {
-            if (Directory.Exists(stagingRoot))
-            {
-                try
-                {
-                    Directory.Delete(stagingRoot, recursive: true);
-                    EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(stagingRoot);
-                }
-                catch { }
-            }
+            TryDeleteEncryptedOpenWorkspace(stagingRoot);
             throw;
         }
         finally
         {
             if (!string.IsNullOrWhiteSpace(copiedSourceRoot) && Directory.Exists(copiedSourceRoot))
-            {
-                try { Directory.Delete(copiedSourceRoot, recursive: true); }
-                catch { }
-            }
+                TryDeleteTemporaryDirectory(copiedSourceRoot, "encrypted archive source copy");
+        }
+    }
+
+    private static void TryDeleteEncryptedOpenWorkspace(string path)
+    {
+        if (TryDeleteTemporaryDirectory(path, "encrypted-open workspace"))
+            EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(path);
+    }
+
+    private static bool TryDeleteTemporaryDirectory(string path, string description)
+    {
+        if (!Directory.Exists(path))
+            return true;
+
+        try
+        {
+            Directory.Delete(path, recursive: true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.RecordException($"Failed to remove {description}", ex, includeStack: false);
+            return false;
         }
     }
 
@@ -2156,7 +2178,7 @@ public partial class App : Application
         };
     }
 
-    private static async Task RecheckDriveHealthAsync(IClassicDesktopStyleApplicationLifetime? desktop)
+    private static async Task RecheckDriveHealthAsync()
     {
         try
         {
