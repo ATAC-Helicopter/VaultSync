@@ -303,7 +303,15 @@ namespace VaultSync.CLI.Commands
                 return Task.FromResult(0);
             }
 
-            List<int> planned = PlanPrune(snaps, s);
+            HashSet<int> protectedSnapshotIds = repo.GetBackupsForProject(proj.Id)
+                .Select(static backup => backup.SnapshotId)
+                .ToHashSet();
+            IReadOnlyDictionary<int, Core.Models.SnapshotHistoryMetadata> metadata =
+                repo.GetSnapshotHistoryMetadataBySnapshotIds(snaps.Select(static snapshot => snapshot.Id));
+            protectedSnapshotIds.UnionWith(metadata
+                .Where(static entry => entry.Value.IsProtected)
+                .Select(static entry => entry.Key));
+            List<int> planned = PlanPrune(snaps, s, protectedSnapshotIds);
 
             if (s.Json)
             {
@@ -321,11 +329,19 @@ namespace VaultSync.CLI.Commands
             return Task.FromResult(0);
         }
 
-        private static List<int> PlanPrune(IReadOnlyList<Core.Models.Snapshot> snapshots, PruneSettings settings)
+        internal static List<int> PlanPrune(
+            IReadOnlyList<Core.Models.Snapshot> snapshots,
+            PruneSettings settings,
+            IReadOnlySet<int> protectedSnapshotIds)
         {
+            List<Core.Models.Snapshot> eligible = snapshots
+                .Where(snapshot => !protectedSnapshotIds.Contains(snapshot.Id))
+                .ToList();
             IEnumerable<int> toDelete = settings.KeepLast is int keep
-                ? snapshots.Skip(keep).Select(x => x.Id)
-                : snapshots.Where(x => x.CreatedUtc < ParseBeforeDate(settings.Before!)).Select(x => x.Id);
+                ? eligible.Skip(keep).Select(static snapshot => snapshot.Id)
+                : eligible
+                    .Where(snapshot => snapshot.CreatedUtc < ParseBeforeDate(settings.Before!))
+                    .Select(static snapshot => snapshot.Id);
             return [.. toDelete.Distinct().Order()];
         }
 

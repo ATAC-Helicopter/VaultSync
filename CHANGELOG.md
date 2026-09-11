@@ -18,6 +18,7 @@
 - [BUG-18165] Preserve literal tildes while expanding leading CLI home paths.
 - [BUG-18166] Keep backup preflight enumeration out of linked source trees.
 - [BUG-18167] Make destructive CLI prune dates exact and locale-independent.
+- [BUG-18168] Preserve backed and protected snapshots during CLI pruning.
 ### Changed
 - [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
 - [VS-1896] Consolidate repeated desktop labels and transient console capture state.
