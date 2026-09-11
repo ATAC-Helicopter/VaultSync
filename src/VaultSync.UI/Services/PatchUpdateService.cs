@@ -71,9 +71,7 @@ namespace VaultSync.UI.Services
             string message,
             PatchPlan? plan,
             PatchManifest? manifest,
-            bool hasManifest,
-            bool hasArchive,
-            bool hasInstaller)
+            PatchAssetAvailability availability)
         {
             Eligible = eligible;
             RequiresInstaller = requiresInstaller;
@@ -81,9 +79,9 @@ namespace VaultSync.UI.Services
             Message = message;
             Plan = plan;
             Manifest = manifest;
-            HasManifest = hasManifest;
-            HasArchive = hasArchive;
-            HasInstaller = hasInstaller;
+            HasManifest = availability.HasManifest;
+            HasArchive = availability.HasArchive;
+            HasInstaller = availability.HasInstaller;
         }
 
         public bool Eligible { get; }
@@ -97,6 +95,8 @@ namespace VaultSync.UI.Services
         public bool HasInstaller { get; }
     }
 
+    public sealed record PatchAssetAvailability(bool HasManifest, bool HasArchive, bool HasInstaller);
+
     public sealed class PatchUpdateService
     {
         private const string InvalidBaseAllowlistStatus = "manifest-invalid-base-allowlist";
@@ -108,7 +108,7 @@ namespace VaultSync.UI.Services
         private static readonly ConcurrentDictionary<string, PatchManifest> s_manifestCache =
             new(StringComparer.OrdinalIgnoreCase);
 
-        public async Task<PatchPlan?> PreparePatchAsync(
+        public static async Task<PatchPlan?> PreparePatchAsync(
             UpdateCheckResult updateResult,
             string currentVersion,
             CancellationToken cancellationToken)
@@ -125,6 +125,7 @@ namespace VaultSync.UI.Services
             bool hasManifest = !string.IsNullOrWhiteSpace(updateResult.PatchManifestUrl);
             bool hasArchive = updateResult.PatchArchiveUrl is not null;
             bool hasInstaller = updateResult.HasInstaller;
+            var availability = new PatchAssetAvailability(hasManifest, hasArchive, hasInstaller);
 
             if (!hasManifest || !hasArchive)
             {
@@ -135,9 +136,7 @@ namespace VaultSync.UI.Services
                     message: "Patch assets are incomplete for this release.",
                     plan: null,
                     manifest: null,
-                    hasManifest: hasManifest,
-                    hasArchive: hasArchive,
-                    hasInstaller: hasInstaller);
+                    availability: availability);
             }
 
             if (!updateResult.HasVerifiedPatch)
@@ -149,9 +148,7 @@ namespace VaultSync.UI.Services
                     message: "Patch assets are missing trusted GitHub digest metadata.",
                     plan: null,
                     manifest: null,
-                    hasManifest: hasManifest,
-                    hasArchive: hasArchive,
-                    hasInstaller: hasInstaller);
+                    availability: availability);
             }
 
             PatchManifest? manifest;
@@ -180,9 +177,7 @@ namespace VaultSync.UI.Services
                     message: "Patch manifest could not be downloaded.",
                     plan: null,
                     manifest: null,
-                    hasManifest: hasManifest,
-                    hasArchive: hasArchive,
-                    hasInstaller: hasInstaller);
+                    availability: availability);
             }
 
             if (!TryValidateAllowedBaseVersions(manifest, currentVersion, out _, out string? matchedBaseVersion, out string? baseVersionStatusCode, out string? baseVersionMessage))
@@ -194,9 +189,7 @@ namespace VaultSync.UI.Services
                     message: baseVersionMessage,
                     plan: null,
                     manifest: manifest,
-                    hasManifest: hasManifest,
-                    hasArchive: hasArchive,
-                    hasInstaller: hasInstaller);
+                    availability: availability);
             }
 
             if (!VersionsMatch(manifest.TargetVersion, updateResult.TagName))
@@ -208,9 +201,7 @@ namespace VaultSync.UI.Services
                     message: "Patch manifest target version does not match the selected release.",
                     plan: null,
                     manifest: manifest,
-                    hasManifest: hasManifest,
-                    hasArchive: hasArchive,
-                    hasInstaller: hasInstaller);
+                    availability: availability);
             }
 
             if (manifest.Files is null || manifest.Files.Count == 0)
@@ -222,9 +213,7 @@ namespace VaultSync.UI.Services
                     message: "Patch manifest does not contain any file entries.",
                     plan: null,
                     manifest: manifest,
-                    hasManifest: hasManifest,
-                    hasArchive: hasArchive,
-                    hasInstaller: hasInstaller);
+                    availability: availability);
             }
 
             if (!TryValidatePatchManifest(manifest, out string? manifestStatusCode, out string? manifestMessage))
@@ -236,9 +225,7 @@ namespace VaultSync.UI.Services
                     message: manifestMessage,
                     plan: null,
                     manifest: manifest,
-                    hasManifest: hasManifest,
-                    hasArchive: hasArchive,
-                    hasInstaller: hasInstaller);
+                    availability: availability);
             }
 
             if (manifest.ArchiveSize != updateResult.PatchArchiveSize ||
@@ -254,9 +241,7 @@ namespace VaultSync.UI.Services
                     message: "Patch archive metadata does not match trusted GitHub release metadata.",
                     plan: null,
                     manifest: manifest,
-                    hasManifest: hasManifest,
-                    hasArchive: hasArchive,
-                    hasInstaller: hasInstaller);
+                    availability: availability);
             }
 
             string archiveName = string.IsNullOrWhiteSpace(updateResult.PatchArchiveName)
@@ -271,9 +256,7 @@ namespace VaultSync.UI.Services
                     message: "Patch archive name is not a safe ZIP file name.",
                     plan: null,
                     manifest: manifest,
-                    hasManifest: hasManifest,
-                    hasArchive: hasArchive,
-                    hasInstaller: hasInstaller);
+                    availability: availability);
             }
 
             var plan = new PatchPlan(manifest, updateResult.PatchArchiveUrl!, archiveName);
@@ -285,9 +268,7 @@ namespace VaultSync.UI.Services
                 message: $"Patch chain is compatible with base {matchedBaseVersion}.",
                 plan: plan,
                 manifest: manifest,
-                hasManifest: hasManifest,
-                hasArchive: hasArchive,
-                hasInstaller: hasInstaller);
+                availability: availability);
         }
 
         public static async Task<string?> DownloadPatchArchiveAsync(
@@ -485,40 +466,48 @@ namespace VaultSync.UI.Services
             long extractedBytes = 0;
             foreach (PatchFileEntry file in manifest.Files)
             {
-                string normalizedPath = file.RelativePath
-                    .Replace('\\', '/')
-                    .Normalize(NormalizationForm.FormC);
-                if (!IsSafePatchRelativePath(normalizedPath) || !paths.Add(normalizedPath))
-                {
-                    message = $"Patch manifest contains an unsafe or duplicate file path: '{file.RelativePath}'.";
+                if (!TryValidatePatchFile(file, paths, ref extractedBytes, out message))
                     return false;
-                }
-
-                if (file.Size < 0 || !IsSha256(file.Sha256))
-                {
-                    message = $"Patch manifest contains invalid size or SHA-256 metadata for '{file.RelativePath}'.";
-                    return false;
-                }
-
-                try
-                {
-                    extractedBytes = checked(extractedBytes + file.Size);
-                }
-                catch (OverflowException)
-                {
-                    message = "Patch manifest extracted size overflows the supported range.";
-                    return false;
-                }
-
-                if (extractedBytes > MaxExtractedPatchBytes)
-                {
-                    message = "Patch manifest extracted size exceeds the supported limit.";
-                    return false;
-                }
             }
 
             statusCode = "eligible";
             return true;
+        }
+
+        private static bool TryValidatePatchFile(
+            PatchFileEntry file,
+            HashSet<string> paths,
+            ref long extractedBytes,
+            out string message)
+        {
+            string normalizedPath = file.RelativePath
+                .Replace('\\', '/')
+                .Normalize(NormalizationForm.FormC);
+            if (!IsSafePatchRelativePath(normalizedPath) || !paths.Add(normalizedPath))
+            {
+                message = $"Patch manifest contains an unsafe or duplicate file path: '{file.RelativePath}'.";
+                return false;
+            }
+            if (file.Size < 0 || !IsSha256(file.Sha256))
+            {
+                message = $"Patch manifest contains invalid size or SHA-256 metadata for '{file.RelativePath}'.";
+                return false;
+            }
+
+            try
+            {
+                extractedBytes = checked(extractedBytes + file.Size);
+            }
+            catch (OverflowException)
+            {
+                message = "Patch manifest extracted size overflows the supported range.";
+                return false;
+            }
+
+            message = extractedBytes > MaxExtractedPatchBytes
+                ? "Patch manifest extracted size exceeds the supported limit."
+                : string.Empty;
+            return message.Length == 0;
         }
 
         internal static bool TryGetSafeArchiveName(string? archiveName, out string safeArchiveName)

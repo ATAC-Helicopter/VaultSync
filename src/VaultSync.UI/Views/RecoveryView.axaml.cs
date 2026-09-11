@@ -39,6 +39,13 @@ public partial class RecoveryView : UserControl
             return;
 
         bool compactHeader = width < CompactHeaderWidth;
+        UpdateHeaderLayout(compactHeader);
+        UpdateKpiLayout(width < SingleColumnKpiWidth);
+        UpdateContentLayout(width < StackedContentWidth);
+    }
+
+    private void UpdateHeaderLayout(bool compactHeader)
+    {
         RecoveryHeaderGrid.ColumnDefinitions = new ColumnDefinitions(compactHeader ? "*" : "*,Auto");
         RecoveryHeaderGrid.RowDefinitions = new RowDefinitions(compactHeader ? "Auto,Auto" : "Auto");
         Grid.SetColumn(RecoveryHeaderActions, compactHeader ? 0 : 1);
@@ -48,7 +55,10 @@ public partial class RecoveryView : UserControl
             ? Avalonia.Layout.HorizontalAlignment.Left
             : Avalonia.Layout.HorizontalAlignment.Right;
 
-        bool singleColumnKpis = width < SingleColumnKpiWidth;
+    }
+
+    private void UpdateKpiLayout(bool singleColumnKpis)
+    {
         RecoveryKpiGrid.ColumnDefinitions = new ColumnDefinitions(singleColumnKpis ? "*" : "1.3*,*,*,*");
         RecoveryKpiGrid.RowDefinitions = new RowDefinitions(singleColumnKpis ? "Auto,Auto,Auto,Auto" : "Auto");
         RecoveryKpiGrid.ColumnSpacing = singleColumnKpis ? 0 : 12;
@@ -58,7 +68,10 @@ public partial class RecoveryView : UserControl
         PositionKpi(RecoveryAttentionCard, 2, singleColumnKpis);
         PositionKpi(RecoveryRiskCard, 3, singleColumnKpis);
 
-        bool stackContent = width < StackedContentWidth;
+    }
+
+    private void UpdateContentLayout(bool stackContent)
+    {
         RecoveryContentGrid.ColumnDefinitions = new ColumnDefinitions(stackContent ? "*" : "360,*");
         RecoveryContentGrid.RowDefinitions = new RowDefinitions(stackContent ? "Auto,Auto" : "Auto");
         RecoveryContentGrid.ColumnSpacing = stackContent ? 0 : 16;

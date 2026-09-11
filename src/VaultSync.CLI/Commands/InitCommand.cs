@@ -19,10 +19,9 @@ namespace VaultSync.CLI.Commands
     {
         protected override Task<int> ExecuteAsync(CommandContext context, InitSettings s, CancellationToken cancellationToken)
         {
-            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string targetDb = string.IsNullOrWhiteSpace(s.Db)
                 ? ConfigHelper.GetDefaultDbPath()
-                : s.Db.Replace("~", home);
+                : ConfigHelper.ExpandUserPath(s.Db);
 
             AppConfig cfg = ConfigHelper.Load();
             cfg.DbPath = targetDb;

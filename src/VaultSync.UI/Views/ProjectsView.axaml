@@ -498,10 +498,16 @@
 
           <!-- Title + sort -->
           <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" VerticalAlignment="Center">
-            <TextBlock Text="{infra:LocalizedString Key=Projects.Page.Title}"
-                       FontSize="{DynamicResource PageTitleFontSize}"
-                       FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextPrimaryBrush}" />
+            <StackPanel Spacing="3">
+              <TextBlock Text="{infra:LocalizedString Key=Projects.Page.Title}"
+                         FontSize="{DynamicResource PageTitleFontSize}"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock Text="{infra:LocalizedString Key=Shell.Header.ProjectsKicker}"
+                         FontSize="{DynamicResource PageSubtitleFontSize}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
             <Button Grid.Column="1"
                     Padding="11,7"
                     CornerRadius="10"

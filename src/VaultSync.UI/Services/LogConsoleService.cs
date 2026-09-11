@@ -131,8 +131,6 @@ namespace VaultSync.UI.Services
         private readonly StringBuilder _fileBuffer = new();
         private int _uiCaptureEnabled;
         private bool _captureInstalled;
-        private TextWriter? _originalOut;
-        private TextWriter? _originalErr;
         private int _flushScheduled;
         private int _flushDelayed;
         private DateTime _lastFlushUtc = DateTime.MinValue;
@@ -203,9 +201,8 @@ namespace VaultSync.UI.Services
         {
             int value = enabled ? 1 : 0;
             Interlocked.Exchange(ref _uiCaptureEnabled, value);
-            _maxFlushBatch = enabled
-                ? (OperatingSystem.IsMacOS() ? 20 : 50)
-                : 200;
+            int enabledBatchSize = OperatingSystem.IsMacOS() ? 20 : 50;
+            _maxFlushBatch = enabled ? enabledBatchSize : 200;
             ApplyMaxLines();
 
             if (enabled && loadSnapshot)
@@ -225,9 +222,7 @@ namespace VaultSync.UI.Services
             }
             else if (!enabled)
             {
-                while (_pending.TryDequeue(out _))
-                {
-                }
+                _pending.Clear();
 
                 Interlocked.Exchange(ref _pendingCount, 0);
                 Interlocked.Exchange(ref _flushScheduled, 0);
@@ -241,11 +236,10 @@ namespace VaultSync.UI.Services
             if (_captureInstalled)
                 return;
 
-            _originalOut = Console.Out;
-            _originalErr = Console.Error;
-
-            Console.SetOut(new LogTextWriter(this, _originalOut, "stdout"));
-            Console.SetError(new LogTextWriter(this, _originalErr, "stderr"));
+            TextWriter originalOut = Console.Out;
+            TextWriter originalErr = Console.Error;
+            Console.SetOut(new LogTextWriter(this, originalOut, "stdout"));
+            Console.SetError(new LogTextWriter(this, originalErr, "stderr"));
             Trace.Listeners.Add(new LogTraceListener(this));
 
             _captureInstalled = true;
@@ -343,46 +337,44 @@ namespace VaultSync.UI.Services
 
         private void AppendCore(string message, string source)
         {
-            foreach (string line in message.Replace("\r", string.Empty).Split('\n'))
+            IEnumerable<string> capturedLines = message.Replace("\r", string.Empty)
+                .Split('\n')
+                .Where(line => !string.IsNullOrWhiteSpace(line) &&
+                               (source != "trace" || !IsNoisyTrace(line)));
+            foreach (string line in capturedLines)
             {
-                if (string.IsNullOrWhiteSpace(line))
-                    continue;
-
-                if (source == "trace" && IsNoisyTrace(line))
-                    continue;
-
                 var entry = new LogLine(DateTimeOffset.Now, source, line);
-                lock (_snapshotGate)
-                {
-                    _snapshotLines.Add(entry);
-                    if (_snapshotLines.Count > MaxLines)
-                    {
-                        int toRemove = _snapshotLines.Count - MaxLines;
-                        _snapshotLines.RemoveRange(0, toRemove);
-                    }
-                }
-
-                if (Interlocked.CompareExchange(ref _uiCaptureEnabled, 0, 0) == 1)
-                {
-                    if (OperatingSystem.IsMacOS())
-                    {
-                        int queued = Interlocked.Increment(ref _pendingCount);
-                        if (queued > 200)
-                        {
-                            Interlocked.Decrement(ref _pendingCount);
-                            continue;
-                        }
-                    }
-
-                    _pending.Enqueue(entry);
-                    ScheduleFlush();
-                }
-
+                AppendSnapshot(entry);
+                QueueForUi(entry);
                 if (SaveToFile)
-                {
                     AppendToFile(entry);
-                }
             }
+        }
+
+        private void AppendSnapshot(LogLine entry)
+        {
+            lock (_snapshotGate)
+            {
+                _snapshotLines.Add(entry);
+                int toRemove = _snapshotLines.Count - MaxLines;
+                if (toRemove > 0)
+                    _snapshotLines.RemoveRange(0, toRemove);
+            }
+        }
+
+        private void QueueForUi(LogLine entry)
+        {
+            if (Interlocked.CompareExchange(ref _uiCaptureEnabled, 0, 0) != 1)
+                return;
+
+            if (OperatingSystem.IsMacOS() && Interlocked.Increment(ref _pendingCount) > 200)
+            {
+                Interlocked.Decrement(ref _pendingCount);
+                return;
+            }
+
+            _pending.Enqueue(entry);
+            ScheduleFlush();
         }
 
         private void OnDiagnosticsRecorded(string line)

@@ -116,7 +116,7 @@ public static class AvatarColorProvider
         var used = new HashSet<string>(_cache.Values.Where(v => !string.IsNullOrWhiteSpace(v)), StringComparer.OrdinalIgnoreCase);
         string? free = Palette.FirstOrDefault(c => !used.Contains(c));
         if (!string.IsNullOrWhiteSpace(free))
-            return free!;
+            return free;
 
         // If all colors are taken, generate a distinct hue and avoid collisions.
         string seed = $"{name ?? string.Empty}|{projectPath ?? string.Empty}";

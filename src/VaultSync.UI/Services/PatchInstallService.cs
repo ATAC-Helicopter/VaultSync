@@ -402,7 +402,7 @@ namespace VaultSync.UI.Services
                 if (!TryNormalizeRequest(request, out PatchApplyRequest? normalizedRequest, out string? normalizeError))
                     throw new InvalidOperationException($"Invalid patch apply request: {normalizeError}");
 
-                request = normalizedRequest!;
+                request = normalizedRequest;
 
                 if (!string.IsNullOrWhiteSpace(request.HandoffPath))
                 {
@@ -530,10 +530,10 @@ namespace VaultSync.UI.Services
 
             try
             {
-                foreach (PatchFileEntry file in manifest.Files)
+                foreach (string relativePath in manifest.Files.Select(file => file.RelativePath))
                 {
-                    string source = CombineUnderRoot(stagingDir, file.RelativePath, "manifest source path");
-                    string target = CombineUnderRoot(installDir, file.RelativePath, "manifest target path");
+                    string source = CombineUnderRoot(stagingDir, relativePath, "manifest source path");
+                    string target = CombineUnderRoot(installDir, relativePath, "manifest target path");
                     SafeZipExtractor.EnsureNoLinkedPathComponents(stagingDir, source);
                     SafeZipExtractor.EnsureNoLinkedPathComponents(installDir, target);
 
@@ -541,7 +541,7 @@ namespace VaultSync.UI.Services
                     string? backup = null;
                     if (targetExisted)
                     {
-                        backup = CombineUnderRoot(backupDir, file.RelativePath, "rollback backup path");
+                        backup = CombineUnderRoot(backupDir, relativePath, "rollback backup path");
                         string? backupParent = Path.GetDirectoryName(backup);
                         if (!string.IsNullOrWhiteSpace(backupParent))
                             Directory.CreateDirectory(backupParent);
@@ -549,7 +549,7 @@ namespace VaultSync.UI.Services
                         File.Copy(target, backup, overwrite: false);
                     }
 
-                    operations.Add(new PatchInstallOperation(file.RelativePath, source, target, backup, targetExisted));
+                    operations.Add(new PatchInstallOperation(relativePath, source, target, backup, targetExisted));
                 }
 
                 foreach (PatchInstallOperation operation in operations)

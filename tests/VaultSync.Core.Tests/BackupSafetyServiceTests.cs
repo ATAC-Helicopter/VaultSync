@@ -148,6 +148,45 @@ public sealed class BackupSafetyServiceTests : IDisposable
     }
 
     [Fact]
+    public void IsSameOrChildPath_DoesNotTreatSiblingPrefixAsAChild()
+    {
+        string parent = Path.Combine(_tempDir.Path, "project");
+        string sibling = Path.Combine(_tempDir.Path, "project-copy");
+
+        Assert.True(BackupSafetyService.IsSameOrChildPath(parent, parent));
+        Assert.False(BackupSafetyService.IsSameOrChildPath(parent, sibling));
+    }
+
+    [Fact]
+    public void TryResolvePathForWriteUnderRoot_RejectsLinkedParent()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string root = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "write-root")).FullName;
+        string outside = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "write-outside")).FullName;
+        Directory.CreateSymbolicLink(Path.Combine(root, "linked"), outside);
+
+        bool resolved = BackupSafetyService.TryResolvePathForWriteUnderRoot(
+            root,
+            "linked/new.txt",
+            out _);
+
+        Assert.False(resolved);
+    }
+
+    [Fact]
+    public void BackupContentPathResolver_RejectsEmptyBackupPath()
+    {
+        string root = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "empty-backup-root")).FullName;
+        var backup = new Backup { DestinationPath = root, Path = string.Empty };
+
+        var resolved = BackupContentPathResolver.Resolve(backup, new VaultSync.Core.Config.AppConfig());
+
+        Assert.Null(resolved);
+    }
+
+    [Fact]
     public void TryResolveExistingFileUnderRoot_RejectsLinkedPathComponents()
     {
         if (OperatingSystem.IsWindows())
@@ -231,6 +270,28 @@ public sealed class BackupSafetyServiceTests : IDisposable
 
         var scanner = new ScannerService(new FilterService(Array.Empty<string>()));
         string[] entries = scanner.Scan(projectRoot).Select(entry => entry.RelPath).ToArray();
+
+        Assert.Equal(["inside.txt"], entries);
+    }
+
+    [Fact]
+    public void BackupPreflightEnumeration_SkipsLinkedFilesAndDirectories()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string projectRoot = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "preflight-linked-project")).FullName;
+        string outsideRoot = Directory.CreateDirectory(Path.Combine(_tempDir.Path, "preflight-outside-project")).FullName;
+        File.WriteAllText(Path.Combine(projectRoot, "inside.txt"), "inside");
+        string outsideFile = Path.Combine(outsideRoot, "outside.txt");
+        File.WriteAllText(outsideFile, "outside");
+        Directory.CreateSymbolicLink(Path.Combine(projectRoot, "linked-directory"), outsideRoot);
+        File.CreateSymbolicLink(Path.Combine(projectRoot, "linked-file.txt"), outsideFile);
+
+        string[] entries = BackupService
+            .EnumerateRegularFilesWithoutLinks(projectRoot, CancellationToken.None)
+            .Select(path => Path.GetRelativePath(projectRoot, path))
+            .ToArray();
 
         Assert.Equal(["inside.txt"], entries);
     }

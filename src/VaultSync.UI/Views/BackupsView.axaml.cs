@@ -15,7 +15,6 @@ namespace VaultSync.UI.Views
         public BackupsView()
         {
             AvaloniaXamlLoader.Load(this);
-            SizeChanged += (_, _) => UpdateSummaryLayout();
             DataContextChanged += OnDataContextChanged;
             AttachedToVisualTree += (_, _) => OnDataContextChanged(this, EventArgs.Empty);
             DetachedFromVisualTree += (_, _) => DetachViewModel();
@@ -29,7 +28,6 @@ namespace VaultSync.UI.Views
             _viewModel = DataContext as BackupsViewModel;
             if (_viewModel is not null)
                 _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-            UpdateSummaryLayout();
         }
 
         private void DetachViewModel()
@@ -52,16 +50,5 @@ namespace VaultSync.UI.Views
             }, DispatcherPriority.Loaded);
         }
 
-        private void UpdateSummaryLayout()
-        {
-            if (DataContext is not BackupsViewModel vm)
-                return;
-
-            double width = Bounds.Width > 0 ? Bounds.Width : Width;
-            if (width <= 0)
-                return;
-
-            vm.UpdateSummaryLayout(width);
-        }
     }
 }

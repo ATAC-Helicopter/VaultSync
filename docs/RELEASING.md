@@ -13,14 +13,14 @@ This document defines the current release packaging flow.
 - Major releases begin after their planned minor train is complete and use one
   or more explicit betas when the combined feature set is stable enough for
   broader qualification.
-- `1.8.8` targets Stable on 2026-08-28 and has a maximum date of 2026-09-04.
+- `1.8.9` targets Stable on 2026-09-09 and has a maximum date of 2026-09-16.
 
 ## Prerequisites
 - .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The current stable release is `1.8.7`.
-- The active development target is `1.8.8` on `release/1.8.8`, integrating
+- The current stable release is `1.8.8`.
+- The active development target is `1.8.9` on `release/1.8.9`, integrating
   through `Dev` and promoted to `Stable` only after its release gates pass.
 - Do not create a beta or prerelease implicitly. A prerelease requires an
   explicit release decision, a version suffix, and the beta workflow inputs.
@@ -50,8 +50,8 @@ This document defines the current release packaging flow.
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.8.8 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.8.8 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.8.9 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.8.9 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz`, `.deb`, and `linux-x64` `.AppImage` artifacts.
    The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a
@@ -74,15 +74,15 @@ Patch automation requires one primary qualified predecessor:
 Stable example:
 - branch: `Stable`
 - release channel: `stable`
-- `previous_version = 1.8.7`
-- `target_version = 1.8.8`
+- `previous_version = 1.8.8`
+- `target_version = 1.8.9`
 
 Pre-merge release candidate example:
-- branch: `release/1.8.8`
+- branch: `release/1.8.9`
 - release channel: `stable`
 - `release_candidate = true`
-- `previous_version = 1.8.7`
-- `target_version = 1.8.8`
+- `previous_version = 1.8.8`
+- `target_version = 1.8.9`
 - candidate artifacts remain GitHub Actions artifacts; do not attach them to a
   non-prerelease GitHub Release until the release PR is approved and merged
   into `Stable`
@@ -95,7 +95,7 @@ Optional prerelease example (only after an explicit release decision):
 - branch: `Dev` after the beta changes are merged there
 - release channel: `beta`
 - `release_candidate = false`
-- `previous_version = 1.8.7`
+- `previous_version = 1.8.8`
 - `target_version = <next-version>-Beta.1`
 - `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
 - Omit patch assets for package-managed Windows, macOS, or Linux releases unless the exact package/install layout has been update-tested on that OS.
@@ -193,7 +193,7 @@ local bytes without trusting the package filename supplied by a different
 source (`sha256sum -c -` is the equivalent final command on Linux):
 
 ```bash
-asset="VaultSync-1.8.8-linux-x64.tar.gz"
+asset="VaultSync-1.8.9-linux-x64.tar.gz"
 expected="$(jq -er --arg name "$asset" '.assets[] | select(.name == $name) | .sha256' vaultsync-release-manifest.json)"
 printf '%s  %s\n' "$expected" "$asset" | shasum -a 256 -c -
 ```
@@ -201,7 +201,7 @@ printf '%s  %s\n' "$expected" "$asset" | shasum -a 256 -c -
 On Windows PowerShell:
 
 ```powershell
-$asset = "VaultSync-Setup-1.8.8.exe"
+$asset = "VaultSync-Setup-1.8.9.exe"
 $manifest = Get-Content .\vaultsync-release-manifest.json -Raw | ConvertFrom-Json
 $expected = ($manifest.assets | Where-Object name -eq $asset).sha256
 $actual = (Get-FileHash ".\$asset" -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -229,7 +229,7 @@ AppImage bytes—not an intermediate publish directory—to this repository,
 workflow run, triggering event, and commit. Verify a downloaded package online:
 
 ```bash
-gh attestation verify VaultSync-Setup-1.8.8.exe \
+gh attestation verify VaultSync-Setup-1.8.9.exe \
   --repo ATAC-Helicopter/VaultSync
 ```
 
@@ -237,7 +237,7 @@ For later offline verification, prepare the bundle and current public trusted
 roots while connected:
 
 ```bash
-gh attestation download VaultSync-Setup-1.8.8.exe \
+gh attestation download VaultSync-Setup-1.8.9.exe \
   --repo ATAC-Helicopter/VaultSync
 gh attestation trusted-root > trusted_root.jsonl
 ```
@@ -246,7 +246,7 @@ Move the package, downloaded `sha256:*.jsonl` bundle, trusted root, and GitHub
 CLI to the offline machine, then run:
 
 ```bash
-gh attestation verify VaultSync-Setup-1.8.8.exe \
+gh attestation verify VaultSync-Setup-1.8.9.exe \
   --repo ATAC-Helicopter/VaultSync \
   --bundle 'sha256:DIGEST.jsonl' \
   --custom-trusted-root trusted_root.jsonl
@@ -258,11 +258,11 @@ copy cannot reveal trust-root revocations that occurred after it was captured.
 ## 5) Release Checklist
 - Run the release gate before publishing:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.8 -ReleaseTrack 1.8.x -TargetMilestone 1.8.8
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.9 -ReleaseTrack 1.8.x -TargetMilestone 1.8.9
   ```
 - Run the release gate again after GitHub Actions uploads assets:
   ```powershell
-  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.8 -ReleaseTrack 1.8.x -TargetMilestone 1.8.8 -Phase PostPublish
+  powershell -ExecutionPolicy Bypass -File scripts/release_readiness_gate.ps1 -TargetVersion 1.8.9 -ReleaseTrack 1.8.x -TargetMilestone 1.8.9 -Phase PostPublish
   ```
 - `CHANGELOG.md` updated
 - `docs/WHATS_NEW.md` updated

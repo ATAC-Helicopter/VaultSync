@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -115,7 +116,7 @@ internal static class DiagnosticsLogger
             {
                 writerCts.Cancel();
                 WriterSignal.Set();
-                _writerTask?.Wait(TimeSpan.FromSeconds(1));
+                _writerTask?.Wait(TimeSpan.FromSeconds(1), CancellationToken.None);
             }
             catch
             {
@@ -335,7 +336,8 @@ internal static class DiagnosticsLogger
 
     private static void StartHeartbeat()
     {
-        if (string.IsNullOrWhiteSpace(_heartbeatPath))
+        string? heartbeatPath = _heartbeatPath;
+        if (string.IsNullOrWhiteSpace(heartbeatPath))
             return;
 
         _heartbeatTimer = new Timer(_ =>
@@ -345,7 +347,7 @@ internal static class DiagnosticsLogger
                 string line = $"pid={Environment.ProcessId} utc={DateTimeOffset.UtcNow:O}";
                 lock (FileGate)
                 {
-                    File.WriteAllText(_heartbeatPath!, line);
+                    File.WriteAllText(heartbeatPath, line);
                 }
             }
             catch
@@ -369,8 +371,9 @@ internal static class DiagnosticsLogger
         if (Interlocked.Exchange(ref _writerStarted, 1) == 1)
             return;
 
-        _writerCts = new CancellationTokenSource();
-        _writerTask = Task.Run(() => WriterLoop(_writerCts.Token));
+        var writerCts = new CancellationTokenSource();
+        _writerCts = writerCts;
+        _writerTask = Task.Run(() => WriterLoop(writerCts.Token), writerCts.Token);
     }
 
     private static void WriterLoop(CancellationToken token)
@@ -510,7 +513,7 @@ internal static class DiagnosticsLogger
         if (Interlocked.Exchange(ref _dumpInFlight, 1) == 1)
             return;
 
-        _ = Task.Run(() => CollectDump(reason));
+        _ = Task.Run(() => CollectDump(reason), CancellationToken.None);
     }
 
     private static void CollectDump(string reason)
@@ -612,7 +615,6 @@ internal static class DiagnosticsLogger
 
         string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
         bool isWindows = OperatingSystem.IsWindows();
-        bool hasExtension = Path.HasExtension(fileName);
         string[] windowsExtensions = isWindows
             ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT;.COM")
                 .Split(';', StringSplitOptions.RemoveEmptyEntries)
@@ -622,19 +624,14 @@ internal static class DiagnosticsLogger
         {
             try
             {
-                string candidate = Path.Combine(dir, fileName);
-                if (File.Exists(candidate))
-                    return candidate;
-
-                if (!hasExtension && isWindows)
-                {
-                    foreach (string ext in windowsExtensions)
-                    {
-                        candidate = Path.Combine(dir, fileName + ext.ToLowerInvariant());
-                        if (File.Exists(candidate))
-                            return candidate;
-                    }
-                }
+                string? match = EnumerateExecutableCandidates(
+                        dir,
+                        fileName,
+                        isWindows,
+                        windowsExtensions)
+                    .FirstOrDefault(File.Exists);
+                if (match is not null)
+                    return match;
             }
             catch
             {
@@ -643,6 +640,20 @@ internal static class DiagnosticsLogger
         }
 
         return string.Empty;
+    }
+
+    private static IEnumerable<string> EnumerateExecutableCandidates(
+        string directory,
+        string fileName,
+        bool isWindows,
+        IEnumerable<string> windowsExtensions)
+    {
+        yield return Path.Combine(directory, fileName);
+        if (!isWindows || Path.HasExtension(fileName))
+            yield break;
+
+        foreach (string extension in windowsExtensions)
+            yield return Path.Combine(directory, fileName + extension.ToLowerInvariant());
     }
 
     private static void TryCollectSample(string reason)

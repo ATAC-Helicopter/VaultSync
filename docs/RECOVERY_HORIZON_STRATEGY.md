@@ -17,7 +17,7 @@ VaultSync keeps the following product progression:
 The proposal supplied on 2026-08-25 is accepted as strategic input with these
 corrections:
 
-- `1.8.8` remains the existing stabilization release; it receives no duplicate
+- `1.8.8` is the shipped stabilization release; it receives no duplicate
   clean-machine item and no reused identifier.
 - `VS-1885` remains release-automation static-analysis work.
 - `VS-1917` through `VS-1919` cover architecture prerequisites that were
@@ -32,7 +32,7 @@ corrections:
 
 ### 1.8.8 — qualify Chronicle
 
-Finish the active release contract. Clean-machine recovery remains part of
+Shipped on 2026-09-02. Clean-machine recovery was qualified as part of
 `VS-1882`; repository compatibility fixtures, scale envelopes, and architecture
 documentation are evidence within the existing `VS-1823`, `VS-1882`,
 `VS-1883`, and `VS-1884` gates unless a discovered defect requires a new
@@ -40,6 +40,12 @@ documentation are evidence within the existing `VS-1823`, `VS-1882`,
 
 No disk imaging, provider integration, Protection Plan, or Recovery Graph
 implementation enters `1.8.8`.
+
+### 1.8.9 — bug fixes and everyday polish
+
+The active maintenance patch preserves UI state, improves theme readability,
+and closes confirmed workflow regressions. See the
+[1.8.9 release contract](RELEASE_1.8.9.md). No disk-recovery features enter this patch.
 
 ### 1.9 architecture approval
 

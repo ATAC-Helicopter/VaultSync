@@ -175,7 +175,9 @@ namespace VaultSync.UI.ViewModels
             }
             _lastUpdateCheckUtc = now;
 
-            _updateCheckCts = new CancellationTokenSource();
+            var updateCheckCts = new CancellationTokenSource();
+            CancellationToken updateCheckToken = updateCheckCts.Token;
+            _updateCheckCts = updateCheckCts;
             Console.WriteLine($"[Update] Starting update check (channel={CurrentUpdateChannel}).");
             if (OperatingSystem.IsMacOS())
             {
@@ -190,7 +192,9 @@ namespace VaultSync.UI.ViewModels
                     _updateCheckLogServiceSuppressed = true;
                 }
             }
-            _ = Task.Run(() => RunUpdateCheckAsync(_updateCheckCts.Token));
+            _ = Task.Run(
+                () => RunUpdateCheckAsync(updateCheckToken, updateCheckCts),
+                CancellationToken.None);
         }
 
         private void ConfigureUpdateCheckTimer()
@@ -491,7 +495,9 @@ namespace VaultSync.UI.ViewModels
             _installPatchCommand.RaiseCanExecuteChanged();
         }
 
-        private async Task RunUpdateCheckAsync(CancellationToken cancellationToken)
+        private async Task RunUpdateCheckAsync(
+            CancellationToken cancellationToken,
+            CancellationTokenSource owner)
         {
             using var timing = RuntimeTiming.Measure("Update check run");
             try
@@ -591,20 +597,31 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
-                _updateCheckCts?.Dispose();
-                _updateCheckCts = null;
-                if (_updateCheckLogCaptureSuppressed == 1)
-                {
-                    _updateCheckLogCaptureSuppressed = 0;
-                    Dispatcher.UIThread.Post(() =>
-                        _logConsoleService.SetUiCaptureEnabled(true, loadSnapshot: false));
-                }
-                if (_updateCheckLogServiceSuppressed)
-                {
-                    _updateCheckLogServiceSuppressed = false;
-                    _logConsoleService.Enabled = _updateCheckPrevLogEnabled;
-                    _logConsoleService.SaveToFile = _updateCheckPrevSaveToFile;
-                }
+                bool ownsSharedState = TryReleaseUpdateCheckOwnership(ref _updateCheckCts, owner);
+                owner.Dispose();
+                if (ownsSharedState)
+                    RestoreUpdateCheckLogCapture();
+            }
+        }
+
+        internal static bool TryReleaseUpdateCheckOwnership(
+            ref CancellationTokenSource? active,
+            CancellationTokenSource owner) =>
+            ReferenceEquals(Interlocked.CompareExchange(ref active, null, owner), owner);
+
+        private void RestoreUpdateCheckLogCapture()
+        {
+            if (_updateCheckLogCaptureSuppressed == 1)
+            {
+                _updateCheckLogCaptureSuppressed = 0;
+                Dispatcher.UIThread.Post(() =>
+                    _logConsoleService.SetUiCaptureEnabled(true, loadSnapshot: false));
+            }
+            if (_updateCheckLogServiceSuppressed)
+            {
+                _updateCheckLogServiceSuppressed = false;
+                _logConsoleService.Enabled = _updateCheckPrevLogEnabled;
+                _logConsoleService.SaveToFile = _updateCheckPrevSaveToFile;
             }
         }
 
@@ -730,12 +747,18 @@ namespace VaultSync.UI.ViewModels
 
         private void CancelUpdateCheck()
         {
-            if (_updateCheckCts is null)
+            CancellationTokenSource? current = Volatile.Read(ref _updateCheckCts);
+            if (current is null)
                 return;
 
-            _updateCheckCts.Cancel();
-            _updateCheckCts.Dispose();
-            _updateCheckCts = null;
+            try
+            {
+                current.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The owned run completed between the volatile read and cancellation.
+            }
         }
 
         private void CancelUpdateRetry()

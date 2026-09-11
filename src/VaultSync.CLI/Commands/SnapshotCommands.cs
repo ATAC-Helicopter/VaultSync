@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -30,7 +31,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             var svc = new SnapshotService(repo, new HashService());
 
@@ -78,7 +79,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             IEnumerable<Core.Models.Snapshot> snaps = repo.GetSnapshotsForProject(proj.Name);
             if (s.Limit is int lim && lim > 0) snaps = snaps.Take(lim);
@@ -131,10 +132,10 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
-            if (snaps.Count < 1) throw new Exception("No snapshots exist for this project");
+            if (snaps.Count < 1) throw new InvalidOperationException("No snapshots exist for this project.");
 
             DiffSelection selection = ResolveDiffSelection(snaps, s);
 
@@ -163,13 +164,13 @@ namespace VaultSync.CLI.Commands
             {
                 int idx = snaps.ToList().FindIndex(x => x.Id == settings.A.Value);
                 if (idx < 0 || idx + 1 >= snaps.Count)
-                    throw new Exception("Cannot infer the other snapshot; provide both A and B.");
+                    throw new InvalidOperationException("Cannot infer the other snapshot; provide both A and B.");
 
                 return new DiffSelection(settings.A.Value, snaps[idx + 1].Id);
             }
 
             if (snaps.Count < 2)
-                throw new Exception("Need at least two snapshots to diff");
+                throw new InvalidOperationException("Need at least two snapshots to diff.");
 
             return new DiffSelection(snaps[0].Id, snaps[1].Id);
         }
@@ -271,10 +272,18 @@ namespace VaultSync.CLI.Commands
                 return ValidationResult.Error("Use either --keep-last or --before, not both.");
             if (KeepLast is int n && n < 0)
                 return ValidationResult.Error("--keep-last must be >= 0.");
-            if (!string.IsNullOrWhiteSpace(Before) && !DateTime.TryParse(Before, out _))
+            if (!string.IsNullOrWhiteSpace(Before) && !TryParseBeforeDate(Before, out _))
                 return ValidationResult.Error("--before must be a date like 2025-11-08");
             return ValidationResult.Success();
         }
+
+        internal static bool TryParseBeforeDate(string value, out DateTime result) =>
+            DateTime.TryParseExact(
+                value,
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out result);
     }
 
     sealed class PruneCommand : AsyncCommand<PruneSettings>
@@ -285,7 +294,7 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
             if (snaps.Count == 0)
@@ -294,7 +303,15 @@ namespace VaultSync.CLI.Commands
                 return Task.FromResult(0);
             }
 
-            List<int> planned = PlanPrune(snaps, s);
+            HashSet<int> protectedSnapshotIds = repo.GetBackupsForProject(proj.Id)
+                .Select(static backup => backup.SnapshotId)
+                .ToHashSet();
+            IReadOnlyDictionary<int, Core.Models.SnapshotHistoryMetadata> metadata =
+                repo.GetSnapshotHistoryMetadataBySnapshotIds(snaps.Select(static snapshot => snapshot.Id));
+            protectedSnapshotIds.UnionWith(metadata
+                .Where(static entry => entry.Value.IsProtected)
+                .Select(static entry => entry.Key));
+            List<int> planned = PlanPrune(snaps, s, protectedSnapshotIds);
 
             if (s.Json)
             {
@@ -312,13 +329,26 @@ namespace VaultSync.CLI.Commands
             return Task.FromResult(0);
         }
 
-        private static List<int> PlanPrune(IReadOnlyList<Core.Models.Snapshot> snapshots, PruneSettings settings)
+        internal static List<int> PlanPrune(
+            IReadOnlyList<Core.Models.Snapshot> snapshots,
+            PruneSettings settings,
+            IReadOnlySet<int> protectedSnapshotIds)
         {
+            List<Core.Models.Snapshot> eligible = snapshots
+                .Where(snapshot => !protectedSnapshotIds.Contains(snapshot.Id))
+                .ToList();
             IEnumerable<int> toDelete = settings.KeepLast is int keep
-                ? snapshots.Skip(keep).Select(x => x.Id)
-                : snapshots.Where(x => x.CreatedUtc < DateTime.Parse(settings.Before!).ToUniversalTime().Date).Select(x => x.Id);
+                ? eligible.Skip(keep).Select(static snapshot => snapshot.Id)
+                : eligible
+                    .Where(snapshot => snapshot.CreatedUtc < ParseBeforeDate(settings.Before!))
+                    .Select(static snapshot => snapshot.Id);
             return [.. toDelete.Distinct().Order()];
         }
+
+        private static DateTime ParseBeforeDate(string value) =>
+            PruneSettings.TryParseBeforeDate(value, out DateTime result)
+                ? result.Date
+                : throw new InvalidOperationException("The validated prune date is invalid.");
 
         private static void WritePruneJson(string projectName, int totalSnapshots, IReadOnlyList<int> planned, bool dryRun)
         {

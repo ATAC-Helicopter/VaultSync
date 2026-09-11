@@ -11,6 +11,7 @@ using VaultSync.UI.Views;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -32,6 +33,9 @@ namespace VaultSync.UI;
 
 public partial class App : Application
 {
+    private const string TelemetrySourceCode = "source";
+    private const string OpenEncryptedTitleKey = "Backups.OpenEncrypted.Title";
+    private const string OpenEncryptedTitleFallback = "Open encrypted backup";
     private static readonly IAppConfigStore ConfigStore = StaticAppConfigStore.Instance;
 
     // Optional test hook is environment-driven; do not force onboarding in normal builds.
@@ -129,119 +133,7 @@ public partial class App : Application
     {
         SetCurrentInstance(this);
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            CrashHandler.RegisterAvalonia();
-            WireGlobalExceptionHandlers();
-            WireLifecycleBreadcrumbs(desktop);
-            InitializeLocalizationProviderEarly();
-            var appViewModel = new AppViewModel();
-            SetAppViewModelInstance(appViewModel);
-            DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={appViewModel.CurrentVersionDisplay}");
-
-            if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out object? fontResource))
-            {
-                _defaultFontFamily = fontResource as FontFamily;
-            }
-            ApplyLanguageFontOverrides();
-            if (LocalizationProvider.Service is { } locService)
-            {
-                locService.LanguageChanged += () =>
-                {
-                    RefreshCachedDriveHealthLabel();
-                    if (_trayIcon is not null)
-                    {
-                        _trayIcon.ToolTipText = L("Tray.Tooltip", "VaultSync - snapshots & backups");
-                    }
-                    ApplyLanguageFontOverrides();
-                    RefreshTrayMenu();
-                };
-            }
-
-        var mainWindow = new MainWindow
-        {
-            DataContext = AppViewModelInstance,
-            WindowState = WindowState.Maximized,
-            Icon = LoadAppWindowIcon()
-        };
-            desktop.MainWindow = mainWindow;
-            ApplyArabicFontOverridesToWindow(desktop.MainWindow, IsArabicActive());
-            if (desktop.Windows is INotifyCollectionChanged windowsChanged)
-            {
-                windowsChanged.CollectionChanged += (_, e) =>
-                {
-                    if (e.NewItems is null)
-                        return;
-                    foreach (object? item in e.NewItems)
-                    {
-                        if (item is Window newWindow)
-                        {
-                            ApplyArabicFontOverridesToWindow(newWindow, IsArabicActive());
-                        }
-                    }
-                };
-            }
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (!TryShowOnboarding(desktop))
-                {
-                    TryShowWhatsNew(desktop);
-                }
-            });
-            _ = Task.Run(CleanupStaleEncryptedOpenTempFolders);
-            _ = HandleInitialActivationArgsAsync(desktop);
-
-            // Small always-on-top widget that lights up for tray-started backups.
-            var backupWidgetService = new BackupWidgetService(
-                desktop,
-                appViewModel.BackupsViewModel,
-                () => BringMainWindowToFront(desktop));
-            appViewModel.AttachBackupWidgetService(backupWidgetService);
-            appViewModel.TrayMenuRefreshRequested += () =>
-            {
-                RefreshTrayMenu();
-                _trayPanelService?.Refresh();
-            };
-            appViewModel.SettingsViewModel.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(SettingsViewModel.ShowTrayIcon))
-                {
-                    UpdateTrayIconVisibility(desktop, appViewModel.SettingsViewModel.ShowTrayIcon);
-                }
-            };
-
-            // Wire a platform-aware system notification service; fall back to stub if unavailable.
-            GlobalNotificationCenter.Instance.SystemNotificationService =
-                CreateSystemNotificationService() ?? new StubSystemNotificationService();
-            GlobalNotificationCenter.Instance.ShouldShowSystemNotification = _ =>
-            {
-                AppConfig cfg = ConfigStore.GetSnapshot();
-                if (!cfg.Notifications.UseOsNotifications)
-                    return false;
-                if (!cfg.Notifications.OnBackupSuccess &&
-                    !cfg.Notifications.OnBackupFailure &&
-                    !cfg.Notifications.OnSnapshotSuccess &&
-                    !cfg.Notifications.OnSnapshotFailure &&
-                    !cfg.Notifications.OnLowDisk)
-                {
-                    return false;
-                }
-
-                if (cfg.Notifications.OnlyWhenInactive && MainWindow.IsForeground)
-                    return false;
-
-                return true;
-            };
-
-            // Read behavior config and, if enabled, create a tray/menu-bar icon.
-            AppConfig config = ConfigStore.GetSnapshot();
-            if (config.Behavior?.ShowTrayIcon is true)
-            {
-                CreateTrayIcon(desktop);
-            }
-
-            StartUiWatchdog();
-        }
+            InitializeDesktopApplication(desktop);
 
         // Apply theme from stored config on startup
         ApplyThemeFromConfig();
@@ -249,6 +141,118 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    private void InitializeDesktopApplication(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        CrashHandler.RegisterAvalonia();
+        WireGlobalExceptionHandlers();
+        WireLifecycleBreadcrumbs(desktop);
+        InitializeLocalizationProviderEarly();
+        var appViewModel = new AppViewModel();
+        SetAppViewModelInstance(appViewModel);
+        DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={appViewModel.CurrentVersionDisplay}");
+        ConfigureLanguageChanges();
+        ConfigureMainWindow(desktop);
+        ScheduleStartupWork(desktop);
+        ConfigureBackupWidget(desktop, appViewModel);
+        ConfigureSystemNotifications();
+        if (ConfigStore.GetSnapshot().Behavior?.ShowTrayIcon is true)
+            CreateTrayIcon(desktop);
+        StartUiWatchdog();
+    }
+
+    private void ConfigureLanguageChanges()
+    {
+        if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out object? fontResource))
+            _defaultFontFamily = fontResource as FontFamily;
+        ApplyLanguageFontOverrides();
+        if (LocalizationProvider.Service is not { } localizationService)
+            return;
+
+        localizationService.LanguageChanged += () =>
+        {
+            RefreshCachedDriveHealthLabel();
+            if (_trayIcon is not null)
+                _trayIcon.ToolTipText = L("Tray.Tooltip", "VaultSync - snapshots & backups");
+            ApplyLanguageFontOverrides();
+            RefreshTrayMenu();
+        };
+    }
+
+    private void ConfigureMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        desktop.MainWindow = new MainWindow
+        {
+            DataContext = AppViewModelInstance,
+            WindowState = WindowState.Maximized,
+            Icon = LoadAppWindowIcon()
+        };
+        ApplyArabicFontOverridesToWindow(desktop.MainWindow, IsArabicActive());
+        if (desktop.Windows is INotifyCollectionChanged windowsChanged)
+            windowsChanged.CollectionChanged += (_, e) => ApplyLanguageToNewWindows(e);
+    }
+
+    private void ApplyLanguageToNewWindows(NotifyCollectionChangedEventArgs args)
+    {
+        if (args.NewItems is null)
+            return;
+        foreach (Window window in args.NewItems.OfType<Window>())
+            ApplyArabicFontOverridesToWindow(window, IsArabicActive());
+    }
+
+    private void ScheduleStartupWork(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!TryShowOnboarding(desktop))
+                TryShowWhatsNew(desktop);
+        });
+        _ = Task.Run(CleanupStaleEncryptedOpenTempFolders, CancellationToken.None);
+        _ = HandleInitialActivationArgsAsync(desktop);
+    }
+
+    private void ConfigureBackupWidget(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        AppViewModel appViewModel)
+    {
+        var backupWidgetService = new BackupWidgetService(
+            desktop,
+            appViewModel.BackupsViewModel,
+            () => BringMainWindowToFront(desktop));
+        appViewModel.AttachBackupWidgetService(backupWidgetService);
+        appViewModel.TrayMenuRefreshRequested += () =>
+        {
+            RefreshTrayMenu();
+            _trayPanelService?.Refresh();
+        };
+        appViewModel.SettingsViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SettingsViewModel.ShowTrayIcon))
+                UpdateTrayIconVisibility(desktop, appViewModel.SettingsViewModel.ShowTrayIcon);
+        };
+    }
+
+    private static void ConfigureSystemNotifications()
+    {
+        GlobalNotificationCenter.Instance.SystemNotificationService =
+            CreateSystemNotificationService() ?? new StubSystemNotificationService();
+        GlobalNotificationCenter.Instance.ShouldShowSystemNotification = _ => ShouldShowSystemNotification();
+    }
+
+    private static bool ShouldShowSystemNotification()
+    {
+        AppConfig cfg = ConfigStore.GetSnapshot();
+        if (!cfg.Notifications.UseOsNotifications)
+            return false;
+        bool hasEnabledEvent = cfg.Notifications.OnBackupSuccess ||
+                               cfg.Notifications.OnBackupFailure ||
+                               cfg.Notifications.OnSnapshotSuccess ||
+                               cfg.Notifications.OnSnapshotFailure ||
+                               cfg.Notifications.OnLowDisk;
+        return hasEnabledEvent &&
+               (!cfg.Notifications.OnlyWhenInactive || !MainWindow.IsForeground);
+    }
+
+    [SuppressMessage("Design", "S1075:URIs should not be hardcoded", Justification = "Avalonia embedded-resource identities are compile-time application assets, not configurable external locations.")]
     private static WindowIcon? LoadAppWindowIcon()
     {
         try
@@ -401,6 +405,7 @@ public partial class App : Application
         }
     }
 
+    [SuppressMessage("Design", "S1075:URIs should not be hardcoded", Justification = "Avalonia embedded-resource identities are compile-time application assets, not configurable external locations.")]
     private void CreateTrayIcon(IClassicDesktopStyleApplicationLifetime desktop)
     {
         // Avoid creating multiple tray icons.
@@ -657,7 +662,6 @@ public partial class App : Application
 
     private static List<WhatsNewSection> LoadWhatsNewSections(string currentVersion)
     {
-        var sections = new List<WhatsNewSection>();
         string baseDir = AppContext.BaseDirectory;
         string[] candidates =
         [
@@ -667,26 +671,34 @@ public partial class App : Application
             Path.Combine(baseDir, "..", "CHANGELOG.md"),
             Path.Combine(baseDir, "..", "..", "CHANGELOG.md")
         ];
+        string? content = TryReadFirstExistingFile(candidates);
+        return string.IsNullOrWhiteSpace(content)
+            ? []
+            : ParseWhatsNewSections(content, currentVersion);
+    }
 
-        string? content = null;
+    private static string? TryReadFirstExistingFile(IEnumerable<string> candidates)
+    {
         foreach (string? path in candidates)
         {
             if (!File.Exists(path))
                 continue;
             try
             {
-                content = File.ReadAllText(path);
-                break;
+                return File.ReadAllText(path);
             }
             catch
             {
-                content = null;
+                // Continue to the next packaged or development fallback.
             }
         }
 
-        if (string.IsNullOrWhiteSpace(content))
-            return sections;
+        return null;
+    }
 
+    private static List<WhatsNewSection> ParseWhatsNewSections(string content, string currentVersion)
+    {
+        var sections = new List<WhatsNewSection>();
         string[] lines = content.Split(["\r\n", "\n"], StringSplitOptions.None);
         bool hasWhatsNewHeader = Array.Exists(lines, line => line.StartsWith('#') && line.Contains("What's New", StringComparison.OrdinalIgnoreCase));
         string headerPrefix = $"## [{currentVersion}]";
@@ -700,30 +712,41 @@ public partial class App : Application
         for (int i = lineStart; i < lines.Length; i++)
         {
             string line = lines[i].TrimEnd();
-            if (stopAtNextVersion && line.StartsWith("## [", StringComparison.Ordinal))
+            if (IsNextVersionHeader(line, stopAtNextVersion))
                 break;
 
-            if (line.StartsWith("### ", StringComparison.Ordinal))
+            if (TryParseSectionTitle(line, out string title))
             {
-                string title = line[4..].Trim();
                 currentSection = new WhatsNewSection(title);
                 sections.Add(currentSection);
                 continue;
             }
 
-            if (currentSection is null)
-                continue;
-
-            string trimmed = line.Trim();
-            if (trimmed.StartsWith('-'))
-            {
-                string item = trimmed.TrimStart('-').Trim();
-                if (!string.IsNullOrWhiteSpace(item))
-                    currentSection.Items.Add(item);
-            }
+            if (currentSection is not null && TryParseBulletItem(line, out string item))
+                currentSection.Items.Add(item);
         }
 
         return sections;
+    }
+
+    private static bool IsNextVersionHeader(string line, bool stopAtNextVersion) =>
+        stopAtNextVersion && line.StartsWith("## [", StringComparison.Ordinal);
+
+    private static bool TryParseSectionTitle(string line, out string title)
+    {
+        title = line.StartsWith("### ", StringComparison.Ordinal)
+            ? line[4..].Trim()
+            : string.Empty;
+        return title.Length > 0;
+    }
+
+    private static bool TryParseBulletItem(string line, out string item)
+    {
+        string trimmed = line.Trim();
+        item = trimmed.StartsWith('-')
+            ? trimmed.TrimStart('-').Trim()
+            : string.Empty;
+        return item.Length > 0;
     }
 
     private void DestroyTrayIcon()
@@ -844,7 +867,7 @@ public partial class App : Application
         NativeMenuItem openItem = BuildOpenTrayItem(desktop);
 
         // ---------- Storage health ----------
-        NativeMenuItem? healthItem = BuildDriveHealthItem(desktop);
+        NativeMenuItem? healthItem = BuildDriveHealthItem();
 
         // ---------- Destinations submenu ----------
         NativeMenuItem destinationRootItem = BuildDestinationMenu(destinationsTitle, destinationSummaries, configuredDestinations);
@@ -1032,40 +1055,43 @@ public partial class App : Application
         var destinationMenu = new NativeMenu();
 
         if (destinationSummaries.Any())
-        {
-            foreach (AppViewModel.DestinationProbeSummary dest in destinationSummaries)
-            {
-                string status = dest.Reachable
-                    ? L("Tray.Destinations.Ready", "Ready")
-                    : L("Tray.Destinations.Unreachable", "Unreachable");
-                string text = string.IsNullOrWhiteSpace(dest.Alias)
-                    ? $"{dest.Path} - {status}"
-                    : $"{dest.Alias} - {status}";
-
-                var detail = new NativeMenuItem(text) { IsEnabled = false };
-                destinationMenu.Items.Add(detail);
-            }
-        }
+            AddDestinationProbeItems(destinationMenu, destinationSummaries);
+        else if (configuredDestinations.Any())
+            AddConfiguredDestinationItems(destinationMenu, configuredDestinations);
         else
-        {
-            if (configuredDestinations.Any())
-            {
-                foreach (BackupDestination dest in configuredDestinations)
-                {
-                    string label = string.IsNullOrWhiteSpace(dest.Alias)
-                        ? dest.Path ?? string.Empty
-                        : dest.Alias;
-                    destinationMenu.Items.Add(new NativeMenuItem(label) { IsEnabled = false });
-                }
-            }
-            else
-            {
-                destinationMenu.Items.Add(new NativeMenuItem(L("Tray.Destinations.None", "No destinations configured")) { IsEnabled = false });
-            }
-        }
+            destinationMenu.Items.Add(new NativeMenuItem(L("Tray.Destinations.None", "No destinations configured")) { IsEnabled = false });
 
         destinationRootItem.Menu = destinationMenu;
         return destinationRootItem;
+    }
+
+    private static void AddDestinationProbeItems(
+        NativeMenu menu,
+        IEnumerable<AppViewModel.DestinationProbeSummary> destinations)
+    {
+        foreach (AppViewModel.DestinationProbeSummary destination in destinations)
+        {
+            string status = destination.Reachable
+                ? L("Tray.Destinations.Ready", "Ready")
+                : L("Tray.Destinations.Unreachable", "Unreachable");
+            string text = string.IsNullOrWhiteSpace(destination.Alias)
+                ? $"{destination.Path} - {status}"
+                : $"{destination.Alias} - {status}";
+            menu.Items.Add(new NativeMenuItem(text) { IsEnabled = false });
+        }
+    }
+
+    private static void AddConfiguredDestinationItems(
+        NativeMenu menu,
+        IEnumerable<BackupDestination> destinations)
+    {
+        foreach (BackupDestination destination in destinations)
+        {
+            string label = string.IsNullOrWhiteSpace(destination.Alias)
+                ? destination.Path ?? string.Empty
+                : destination.Alias;
+            menu.Items.Add(new NativeMenuItem(label) { IsEnabled = false });
+        }
     }
 
     private static NativeMenuItem BuildBackupMenu(
@@ -1290,13 +1316,13 @@ public partial class App : Application
                     DiagnosticsLogger.RecordException("Global unhandled exception", ex, includeStack: true);
                     Telemetry.Log("app_crash", b => b
                         .WithException(ex)
-                        .WithCode("source", "unhandled"));
+                        .WithCode(TelemetrySourceCode, "unhandled"));
                 }
                 else
                 {
                     DiagnosticsLogger.Record("Global unhandled exception: non-Exception object.");
                     Telemetry.Log("app_crash", b => b
-                        .WithCode("source", "unhandled")
+                        .WithCode(TelemetrySourceCode, "unhandled")
                         .WithCode("detail", "non_exception"));
                 }
             };
@@ -1311,7 +1337,7 @@ public partial class App : Application
                     DiagnosticsLogger.RecordException("Global unobserved task exception", e.Exception, includeStack: true);
                     Telemetry.Log("app_crash", b => b
                         .WithException(e.Exception)
-                        .WithCode("source", "unobserved_task"));
+                        .WithCode(TelemetrySourceCode, "unobserved_task"));
                 }
                 catch
                 {
@@ -1346,7 +1372,7 @@ public partial class App : Application
                 StopUiWatchdog();
                 _instance?.DestroyTrayIcon();
                 CleanupAllEncryptedOpenTempFolders();
-                Telemetry.Log("app_exit", b => b.WithCode("source", "desktop_exit"));
+                Telemetry.Log("app_exit", b => b.WithCode(TelemetrySourceCode, "desktop_exit"));
                 DiagnosticsLogger.Shutdown();
             };
 
@@ -1362,7 +1388,7 @@ public partial class App : Application
                 DiagnosticsLogger.Record($"ProcessExit event. IsShuttingDown={IsShuttingDown}, IsCrashing={IsCrashing}.");
                 StopUiWatchdog();
                 CleanupAllEncryptedOpenTempFolders();
-                Telemetry.Log("app_exit", b => b.WithCode("source", "process_exit"));
+                Telemetry.Log("app_exit", b => b.WithCode(TelemetrySourceCode, "process_exit"));
                 DiagnosticsLogger.Shutdown();
             };
         }
@@ -1372,7 +1398,7 @@ public partial class App : Application
         }
     }
 
-    private static NativeMenuItem? BuildDriveHealthItem(IClassicDesktopStyleApplicationLifetime desktop)
+    private static NativeMenuItem? BuildDriveHealthItem()
     {
         try
         {
@@ -1404,7 +1430,7 @@ public partial class App : Application
             statusMenu.Items.Add(new NativeMenuItemSeparator());
 
             var recheck = new NativeMenuItem(L("Tray.Health.Recheck", "Recheck now"));
-            recheck.Click += async (_, _) => await RecheckDriveHealthAsync(desktop);
+            recheck.Click += async (_, _) => await RecheckDriveHealthAsync();
             statusMenu.Items.Add(recheck);
 
             healthMenu.Menu = statusMenu;
@@ -1423,25 +1449,13 @@ public partial class App : Application
 
     public async Task RefreshTrayMenuAsync()
     {
-        if (_trayIcon is null)
-            return;
-
-        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        if (_trayIcon is null ||
+            ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
         DateTime now = DateTime.UtcNow;
-        TimeSpan minRefreshInterval = OperatingSystem.IsMacOS()
-            ? TimeSpan.FromSeconds(2)
-            : TimeSpan.FromSeconds(1);
-        if (now - _lastTrayMenuRefreshUtc < minRefreshInterval)
+        if (ShouldSkipTrayMenuRefresh(now))
             return;
-        if (OperatingSystem.IsMacOS() && now < _trayMenuSuppressUntilUtc)
-            return;
-        if (_trayMenuRefreshFailureCount >= 3 &&
-            now - _lastTrayMenuRefreshFailureUtc < TimeSpan.FromSeconds(10))
-        {
-            return;
-        }
 
         if (Interlocked.Exchange(ref _trayMenuRefreshInFlight, 1) == 1)
         {
@@ -1450,96 +1464,115 @@ public partial class App : Application
         }
 
         _lastTrayMenuRefreshUtc = now;
-        var trayResult = await Task.Run(() =>
+        try
         {
-            AppViewModel? viewModel = AppViewModelInstance;
-            IReadOnlyList<AppViewModel.TrayProjectBackups> recentBackups = viewModel?.GetRecentBackupsForTray(MaxRecentBackupsPerProject)
-                                ?? [];
-            IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations = viewModel?.GetDestinationProbeSummaries()
-                               ?? [];
-            IReadOnlyList<AppViewModel.TrayProjectItem> trayProjects = viewModel?.GetProjectsForTray()
-                               ?? [];
-            string policySummary = viewModel?.GetBackupPolicyTraySummary() ?? string.Empty;
-            string policySignature = viewModel?.GetBackupPolicySignatureForTray() ?? string.Empty;
-            string signatureValue = BuildTrayMenuSignature(
-                recentBackups,
-                destinations,
-                trayProjects,
-                policySignature,
-                policySummary);
-            return (
-                Recent: recentBackups,
-                Projects: trayProjects,
-                Signature: signatureValue,
-                PolicySummary: policySummary);
-        });
-        IReadOnlyList<AppViewModel.TrayProjectBackups> recent = trayResult.Recent;
-        IReadOnlyList<AppViewModel.TrayProjectItem> projects = trayResult.Projects;
-        string signature = trayResult.Signature;
-        string policySummary = trayResult.PolicySummary;
-
-        Dispatcher.UIThread.Post(() =>
+            var trayResult = await Task.Run(BuildTrayMenuData);
+            Dispatcher.UIThread.Post(() => ApplyTrayMenuRefresh(desktop, trayResult));
+        }
+        catch (Exception ex)
         {
-            try
-            {
-                if (_trayIcon is null || IsShuttingDown)
-                {
-                    return;
-                }
+            RecordTrayMenuRefreshFailure(ex);
+            CompleteTrayMenuRefresh();
+        }
+    }
 
-                if (_trayMenuSignature == signature && _trayMenu is not null)
-                {
-                    return;
-                }
+    private bool ShouldSkipTrayMenuRefresh(DateTime now)
+    {
+        return now - _lastTrayMenuRefreshUtc < GetTrayMenuRefreshInterval() ||
+               OperatingSystem.IsMacOS() && now < _trayMenuSuppressUntilUtc ||
+               _trayMenuRefreshFailureCount >= 3 &&
+               now - _lastTrayMenuRefreshFailureUtc < TimeSpan.FromSeconds(10);
+    }
 
-                NativeMenu targetMenu;
-                if (OperatingSystem.IsMacOS())
-                {
-                    targetMenu = new NativeMenu();
-                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary, projects);
-                    _trayMenu = targetMenu;
-                    _trayIcon.Menu = targetMenu;
-                }
-                else
-                {
-                    // Linux AppIndicator hosts can duplicate or flicker tray icons when the menu
-                    // object is replaced repeatedly. Keep one native menu and mutate its items.
-                    targetMenu = _trayMenu ?? new NativeMenu();
-                    PopulateTrayMenu(targetMenu, desktop, recent, policySummary, projects);
-                    _trayMenu = targetMenu;
-                    if (_trayIcon.Menu is null)
-                        _trayIcon.Menu = targetMenu;
-                }
-                _trayMenuSignature = signature;
+    private static TimeSpan GetTrayMenuRefreshInterval() =>
+        OperatingSystem.IsMacOS() ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(1);
 
-                _trayMenuRefreshFailureCount = 0;
-            }
-            catch (Exception ex)
-            {
-                // Best-effort: avoid crashing the app if tray menu rebuild fails.
-                if (OperatingSystem.IsMacOS() &&
-                    ex.Message.Contains("menu being updated does not match", StringComparison.OrdinalIgnoreCase))
-                {
-                    _trayMenuSuppressUntilUtc = DateTime.UtcNow.AddSeconds(10);
-                }
+    private static (IReadOnlyList<AppViewModel.TrayProjectBackups> Recent,
+        IReadOnlyList<AppViewModel.TrayProjectItem> Projects,
+        string Signature,
+        string PolicySummary) BuildTrayMenuData()
+    {
+        AppViewModel? viewModel = AppViewModelInstance;
+        IReadOnlyList<AppViewModel.TrayProjectBackups> recent =
+            viewModel?.GetRecentBackupsForTray(MaxRecentBackupsPerProject) ?? [];
+        IReadOnlyList<AppViewModel.DestinationProbeSummary> destinations =
+            viewModel?.GetDestinationProbeSummaries() ?? [];
+        IReadOnlyList<AppViewModel.TrayProjectItem> projects = viewModel?.GetProjectsForTray() ?? [];
+        string policySummary = viewModel?.GetBackupPolicyTraySummary() ?? string.Empty;
+        string policySignature = viewModel?.GetBackupPolicySignatureForTray() ?? string.Empty;
+        string signature = BuildTrayMenuSignature(
+            recent,
+            destinations,
+            projects,
+            policySignature,
+            policySummary);
+        return (recent, projects, signature, policySummary);
+    }
 
-                Console.WriteLine($"[Tray] Failed to refresh tray menu: {ex.Message}");
-                _trayMenuRefreshFailureCount++;
-                _lastTrayMenuRefreshFailureUtc = DateTime.UtcNow;
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _trayMenuRefreshInFlight, 0);
-                if (!IsShuttingDown && Interlocked.Exchange(ref _trayMenuRefreshQueued, 0) == 1)
-                {
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(200).ConfigureAwait(false);
-                        await RefreshTrayMenuAsync().ConfigureAwait(false);
-                    });
-                }
-            }
+    private void ApplyTrayMenuRefresh(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        (IReadOnlyList<AppViewModel.TrayProjectBackups> Recent,
+            IReadOnlyList<AppViewModel.TrayProjectItem> Projects,
+            string Signature,
+            string PolicySummary) result)
+    {
+        try
+        {
+            if (_trayIcon is null || IsShuttingDown ||
+                _trayMenuSignature == result.Signature && _trayMenu is not null)
+                return;
+
+            NativeMenu targetMenu = OperatingSystem.IsMacOS()
+                ? new NativeMenu()
+                : _trayMenu ?? new NativeMenu();
+            PopulateTrayMenu(targetMenu, desktop, result.Recent, result.PolicySummary, result.Projects);
+            _trayMenu = targetMenu;
+            if (OperatingSystem.IsMacOS() || _trayIcon.Menu is null)
+                _trayIcon.Menu = targetMenu;
+
+            _trayMenuSignature = result.Signature;
+            _trayMenuRefreshFailureCount = 0;
+        }
+        catch (Exception ex)
+        {
+            RecordTrayMenuRefreshFailure(ex);
+        }
+        finally
+        {
+            CompleteTrayMenuRefresh();
+        }
+    }
+
+    private void RecordTrayMenuRefreshFailure(Exception ex)
+    {
+        if (OperatingSystem.IsMacOS() &&
+            ex.Message.Contains("menu being updated does not match", StringComparison.OrdinalIgnoreCase))
+            _trayMenuSuppressUntilUtc = DateTime.UtcNow.AddSeconds(10);
+
+        Console.WriteLine($"[Tray] Failed to refresh tray menu: {ex.Message}");
+        _trayMenuRefreshFailureCount++;
+        _lastTrayMenuRefreshFailureUtc = DateTime.UtcNow;
+    }
+
+    private void CompleteTrayMenuRefresh()
+    {
+        bool refreshQueued = ReleaseTrayMenuRefreshGate(
+            ref _trayMenuRefreshInFlight,
+            ref _trayMenuRefreshQueued);
+        if (IsShuttingDown || !refreshQueued)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(GetTrayMenuRefreshInterval()).ConfigureAwait(false);
+            await RefreshTrayMenuAsync().ConfigureAwait(false);
         });
+    }
+
+    internal static bool ReleaseTrayMenuRefreshGate(ref int inFlight, ref int queued)
+    {
+        Interlocked.Exchange(ref inFlight, 0);
+        return Interlocked.Exchange(ref queued, 0) == 1;
     }
 
     private static string BuildTrayMenuSignature(
@@ -1681,7 +1714,7 @@ public partial class App : Application
         {
             await ShowInfoDialogAsync(
                 desktop,
-                L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                 Lf("Backups.OpenEncrypted.MissingFile", "The selected encrypted backup was not found: {0}", archivePath))
                 .ConfigureAwait(false);
             return;
@@ -1697,7 +1730,7 @@ public partial class App : Application
             {
                 await ShowInfoDialogAsync(
                     desktop,
-                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                     L("Backups.Restore.EncryptedPasswordRequired", "A password is required to restore encrypted backups."))
                     .ConfigureAwait(false);
                 continue;
@@ -1714,7 +1747,7 @@ public partial class App : Application
             {
                 await ShowInfoDialogAsync(
                     desktop,
-                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                     L("Backups.Status.RestoreWrongPassword", "Restore failed: invalid password or encrypted backup is corrupted."))
                     .ConfigureAwait(false);
             }
@@ -1722,7 +1755,7 @@ public partial class App : Application
             {
                 await ShowInfoDialogAsync(
                     desktop,
-                    L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                    L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                     ex.Message)
                     .ConfigureAwait(false);
                 return;
@@ -1822,7 +1855,7 @@ public partial class App : Application
 
             window = new Window
             {
-                Title = L("Backups.OpenEncrypted.Title", "Open encrypted backup"),
+                Title = L(OpenEncryptedTitleKey, OpenEncryptedTitleFallback),
                 Content = card,
                 CanResize = false,
                 Width = 540,
@@ -1929,24 +1962,36 @@ public partial class App : Application
         }
         catch
         {
-            if (Directory.Exists(stagingRoot))
-            {
-                try
-                {
-                    Directory.Delete(stagingRoot, recursive: true);
-                    EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(stagingRoot);
-                }
-                catch { }
-            }
+            TryDeleteEncryptedOpenWorkspace(stagingRoot);
             throw;
         }
         finally
         {
             if (!string.IsNullOrWhiteSpace(copiedSourceRoot) && Directory.Exists(copiedSourceRoot))
-            {
-                try { Directory.Delete(copiedSourceRoot, recursive: true); }
-                catch { }
-            }
+                TryDeleteTemporaryDirectory(copiedSourceRoot, "encrypted archive source copy");
+        }
+    }
+
+    private static void TryDeleteEncryptedOpenWorkspace(string path)
+    {
+        if (TryDeleteTemporaryDirectory(path, "encrypted-open workspace"))
+            EncryptedOpenWorkspaceManager.ForgetOwnedWorkspace(path);
+    }
+
+    private static bool TryDeleteTemporaryDirectory(string path, string description)
+    {
+        if (!Directory.Exists(path))
+            return true;
+
+        try
+        {
+            Directory.Delete(path, recursive: true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsLogger.RecordException($"Failed to remove {description}", ex, includeStack: false);
+            return false;
         }
     }
 
@@ -2133,7 +2178,7 @@ public partial class App : Application
         };
     }
 
-    private static async Task RecheckDriveHealthAsync(IClassicDesktopStyleApplicationLifetime? desktop)
+    private static async Task RecheckDriveHealthAsync()
     {
         try
         {

@@ -1003,7 +1003,7 @@ namespace VaultSync.UI
                 : BackupLocationPath;
             string? nextBackupRoot = ResolveBackupRootForSave(fallbackRoot, cfg.Backups.BackupRoot ?? cfg.Backups.Location);
             List<BackupDestination> nextDestinations = preserveExistingDestinations
-                ? [.. cfg.Backups.Destinations!]
+                ? [.. cfg.Backups.Destinations]
                 : [.. destinationSnapshot.Select(d => new BackupDestination
             {
                 Alias          = d.Alias,
@@ -1560,14 +1560,12 @@ namespace VaultSync.UI
 
         public void RebindDestinationCredentials()
         {
-            foreach (BackupDestinationViewModel dest in Destinations)
+            foreach (BackupDestinationViewModel dest in Destinations.Where(
+                         destination => !string.IsNullOrWhiteSpace(destination.CredentialName)))
             {
-                if (!string.IsNullOrWhiteSpace(dest.CredentialName))
-                {
-                    NetworkCredentialViewModel? match = CredentialProfiles.FirstOrDefault(c =>
-                        c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
-                    dest.SelectedCredential = match;
-                }
+                NetworkCredentialViewModel? match = CredentialProfiles.FirstOrDefault(c =>
+                    c.Name.Equals(dest.CredentialName, StringComparison.OrdinalIgnoreCase));
+                dest.SelectedCredential = match;
             }
         }
 
@@ -2727,18 +2725,12 @@ namespace VaultSync.UI
                 candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, RsyncExecutableName));
                 candidates.Add(Path.Combine(baseDir, ToolsDirectoryName, RsyncExecutableName, "bin", RsyncExecutableName));
 
-                foreach (string candidate in candidates)
-                {
-                    if (File.Exists(candidate))
-                        return candidate;
-                }
+                return candidates.FirstOrDefault(File.Exists);
             }
             catch
             {
                 return null;
             }
-
-            return null;
         }
 
         private static Version? TryGetRsyncVersion(string rsyncPath)

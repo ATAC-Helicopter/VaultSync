@@ -28,7 +28,16 @@ public sealed class SnapshotExplorerEntryViewModel : ViewModelBase
     public bool IsFolder => Entry.Kind == SnapshotExplorerEntryKind.Folder;
     public bool CanPreview => Entry.CanPreview;
     public double Indent => Depth * 18d;
-    public string ToggleGlyph => IsFolder ? (IsExpanded ? "▾" : "▸") : " ";
+    public string ToggleGlyph
+    {
+        get
+        {
+            if (!IsFolder)
+                return " ";
+
+            return IsExpanded ? "▾" : "▸";
+        }
+    }
     public bool IsExpanded
     {
         get => _isExpanded;
@@ -169,7 +178,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         private set => SetField(ref _isEncryptedBackup, value);
     }
 
-    public string EncryptedBackupMessage => L(
+    public static string EncryptedBackupMessage => L(
         "SnapshotExplorer.Encrypted.Message",
         "This backup is encrypted. Snapshot Explorer can identify it, but encrypted archive browsing is not part of 1.8.2. Use the normal restore flow to recover files from encrypted backups.");
 
@@ -350,9 +359,10 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
             if (requestVersion != _previewRequestVersion || SelectedEntry?.Path != selectedPath)
                 return;
 
-            PreviewText = preview.Success
-                ? preview.Text + (preview.Truncated ? Environment.NewLine + Environment.NewLine + L("SnapshotExplorer.Preview.Truncated", "[Preview truncated]") : string.Empty)
-                : preview.Error;
+            string truncatedSuffix = preview.Truncated
+                ? Environment.NewLine + Environment.NewLine + L("SnapshotExplorer.Preview.Truncated", "[Preview truncated]")
+                : string.Empty;
+            PreviewText = preview.Success ? preview.Text + truncatedSuffix : preview.Error;
             StatusText = preview.Success
                 ? L("SnapshotExplorer.Status.PreviewReady", "Preview loaded.")
                 : preview.Error;

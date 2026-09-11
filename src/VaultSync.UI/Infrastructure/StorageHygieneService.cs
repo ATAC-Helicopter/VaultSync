@@ -167,6 +167,11 @@ internal static class StorageHygieneService
             "*",
             utcNow - TemporaryRetention));
         summary = summary.Add(PruneDirectories(
+            Path.Combine(tempRoot, "vaultsync-meta-import"),
+            "*",
+            utcNow - TemporaryRetention,
+            directory => Guid.TryParseExact(directory.Name, "N", out _)));
+        summary = summary.Add(PruneDirectories(
             Path.Combine(tempRoot, "vaultsync-meta-export"),
             "*.consumed-*",
             utcNow - TemporaryRetention));

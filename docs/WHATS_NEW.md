@@ -1,12 +1,34 @@
 # What's New
 
+## [1.8.9]
+
+VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
+
+### Keep your place
+- Preserve expanded backup project groups and loaded history pages during refreshes.
+- Retain surviving rows and keep the selected project open after backup deletion.
+- Restore CLI snapshots from their recorded backup data instead of the live source.
+- Reject unsafe backup and preset paths before they can affect user data.
+- Keep CLI paths literal and backup scans inside the selected source tree.
+- Interpret CLI prune cutoffs consistently on every system locale.
+- Keep stored-backup and protected History snapshots out of CLI pruning.
+- Verify recorded folder-backup bytes before a CLI restore changes its target.
+- Recover future tray refreshes after a transient background data failure.
+- Keep Unix single-instance coordination out of shared temporary directories.
+
+### Clearer controls
+- Center icon-and-label stacks inside shared pills and backup tags.
+- Improve muted text, light-theme status colors, and dark-theme accent labels.
+- Check custom-theme muted text against the configured background surfaces.
+- Service the desktop rendering stack with coordinated cross-platform packages.
+
+Desktop scroll/focus checks, screenshot updates, and platform release qualification
+are still pending; see the [release contract](RELEASE_1.8.9.md).
+
 ## [1.8.8]
 
-VaultSync `1.8.8` is the Chronicle Stabilization update. Work is beginning with
-measured large-history performance, interruption and corruption recovery,
-cross-platform qualification, and focused decomposition of the backup,
-metadata, and desktop workflow hotspots. This section will grow only as
-user-visible changes are implemented and verified.
+VaultSync `1.8.8` shipped on September 2, 2026 with Chronicle stabilization,
+interruption recovery, updater fixes, and cross-platform qualification.
 
 ### Safer interrupted archives
 - Stop archive encryption between copied chunks when cancellation is requested,

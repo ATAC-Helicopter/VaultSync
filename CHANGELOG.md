@@ -1,5 +1,42 @@
 ﻿# Changelog
-## [1.8.8] - Unreleased
+## [1.8.9] - Unreleased
+### Maintenance
+- [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
+- [VS-1896] Clear remaining desktop static-analysis maintainability findings.
+- [VS-1893] Prepare release identity, tracking, documentation, and packaging for 1.8.9.
+### Fixed
+- [BUG-18155] Preserve backup project expansion and loaded history depth during refreshes.
+- [BUG-18156] Preserve surviving rows and avoid full resets across shared UI lists.
+- [BUG-18157] Keep the selected backup project open while deletion refreshes its summary.
+- [BUG-18158] Keep Linux updater handoff qualification portable on Windows CI.
+- [BUG-18159] Prevent padded pages from requesting extra width and overflowing horizontally.
+- [BUG-18160] Remove abandoned metadata read copies without touching unrelated temporary data.
+- [BUG-18161] Prevent cancelled update checks from disposing or resetting their replacements.
+- [BUG-18162] Restore CLI snapshots from recorded backup data with confined cleanup.
+- [BUG-18163] Reject empty backup paths before restore or retention cleanup.
+- [BUG-18164] Confine CLI preset reads to their user or bundled preset root.
+- [BUG-18165] Preserve literal tildes while expanding leading CLI home paths.
+- [BUG-18166] Keep backup preflight enumeration out of linked source trees.
+- [BUG-18167] Make destructive CLI prune dates exact and locale-independent.
+- [BUG-18168] Preserve backed and protected snapshots during CLI pruning.
+- [BUG-18169] Verify recorded backup bytes before CLI restore changes its target.
+- [BUG-18170] Let tray refreshes recover after background data-shaping failures.
+- [BUG-18171] Keep Unix single-instance locks in private application data.
+### Changed
+- [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
+- [VS-1896] Consolidate repeated desktop labels and transient console capture state.
+- [VS-1895] Service Avalonia and coordinated SkiaSharp/HarfBuzzSharp packages.
+- [VS-1897] Keep labeled navigation at the default window size and clarify the Projects purpose.
+- [VS-1897] Remove obsolete placeholder navigation and reflection paths from the live shell.
+- [VS-1897] Stop rebuilding an obsolete hidden backup activity chart during refresh and resize.
+- [VS-1897] Remove the obsolete untracked-destination scanner and its dormant state.
+- [VS-1896] Clear desktop analysis findings in startup, version ordering, and OS notifications.
+- [VS-1896] Simplify updater, power, logging, and encryption-enrollment paths.
+- [VS-1892] Center icon-and-label stacks inside shared status pills and backup tags.
+- [VS-1892] Improve muted text contrast, light-theme status colors, and dark-theme accent labels.
+- [VS-1892] Keep custom-theme muted text readable against the configured surfaces.
+
+## [1.8.8] - 02.09.2026
 ### Added
 - [VS-1823] Added repeatable large-history and high-file-count performance budgets.
 - [VS-1882] Added deterministic interruption and recovery qualification for plain and encrypted archives.

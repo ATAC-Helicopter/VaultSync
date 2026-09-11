@@ -19,40 +19,27 @@ namespace VaultSync.UI.Services
     public sealed class UpdateCheckResult
     {
         public UpdateCheckResult(
-            string tagName,
-            string releaseName,
-            string releaseNotes,
-            Uri releaseUrl,
-            DateTime publishedAt,
-            string? patchManifestUrl,
-            string? patchManifestSha256,
-            long patchManifestSize,
-            Uri? patchArchiveUrl,
-            string? patchArchiveName,
-            string? patchArchiveSha256,
-            long patchArchiveSize,
-            Uri? installerUrl,
-            string? installerName,
-            string? installerSha256,
-            long installerSize,
+            UpdateReleaseDetails release,
+            PatchUpdateDetails patch,
+            InstallerUpdateDetails installer,
             UpdateCheckDiagnostics diagnostics)
         {
-            TagName          = tagName;
-            ReleaseName      = releaseName;
-            ReleaseNotes     = releaseNotes;
-            ReleaseUrl       = releaseUrl;
-            PublishedAt      = publishedAt;
-            PatchManifestUrl = patchManifestUrl;
-            PatchManifestSha256 = patchManifestSha256;
-            PatchManifestSize = patchManifestSize;
-            PatchArchiveUrl  = patchArchiveUrl;
-            PatchArchiveName = patchArchiveName;
-            PatchArchiveSha256 = patchArchiveSha256;
-            PatchArchiveSize = patchArchiveSize;
-            InstallerUrl     = installerUrl;
-            InstallerName    = installerName;
-            InstallerSha256  = installerSha256;
-            InstallerSize    = installerSize;
+            TagName = release.TagName;
+            ReleaseName = release.ReleaseName;
+            ReleaseNotes = release.ReleaseNotes;
+            ReleaseUrl = release.ReleaseUrl;
+            PublishedAt = release.PublishedAt;
+            PatchManifestUrl = patch.ManifestUrl;
+            PatchManifestSha256 = patch.ManifestSha256;
+            PatchManifestSize = patch.ManifestSize;
+            PatchArchiveUrl = patch.ArchiveUrl;
+            PatchArchiveName = patch.ArchiveName;
+            PatchArchiveSha256 = patch.ArchiveSha256;
+            PatchArchiveSize = patch.ArchiveSize;
+            InstallerUrl = installer.Url;
+            InstallerName = installer.Name;
+            InstallerSha256 = installer.Sha256;
+            InstallerSize = installer.Size;
             Diagnostics      = diagnostics;
         }
 
@@ -87,6 +74,28 @@ namespace VaultSync.UI.Services
             value is { Length: 64 } && value.All(Uri.IsHexDigit);
         public UpdateCheckDiagnostics Diagnostics { get; }
     }
+
+    public sealed record UpdateReleaseDetails(
+        string TagName,
+        string ReleaseName,
+        string ReleaseNotes,
+        Uri ReleaseUrl,
+        DateTime PublishedAt);
+
+    public sealed record PatchUpdateDetails(
+        string? ManifestUrl,
+        string? ManifestSha256,
+        long ManifestSize,
+        Uri? ArchiveUrl,
+        string? ArchiveName,
+        string? ArchiveSha256,
+        long ArchiveSize);
+
+    public sealed record InstallerUpdateDetails(
+        Uri? Url,
+        string? Name,
+        string? Sha256,
+        long Size);
 
     public sealed class UpdateCheckEvaluation
     {
@@ -186,9 +195,7 @@ namespace VaultSync.UI.Services
             }
 
             if (!Uri.TryCreate(candidate.HtmlUrl, UriKind.Absolute, out Uri? releaseUri))
-            {
-                releaseUri = new Uri("https://github.com/ATAC-Helicopter/VaultSync/releases");
-            }
+                releaseUri = BuildReleasesPageUri();
 
             string releaseName = string.IsNullOrWhiteSpace(candidate.Name) ? releaseTag : candidate.Name;
             string releaseNotes = candidate.Body ?? string.Empty;
@@ -214,25 +221,34 @@ namespace VaultSync.UI.Services
 
             return new UpdateCheckEvaluation(
                 new UpdateCheckResult(
-                releaseTag,
-                releaseName,
-                releaseNotes,
-                releaseUri,
-                publishedAt,
-                manifestUrl,
-                manifestSha256,
-                manifestSize,
-                archiveUrl,
-                archiveName,
-                archiveSha256,
-                archiveSize,
-                installerUrl,
-                installerName,
-                installerSha256,
-                installerSize,
-                diagnostics),
+                    new UpdateReleaseDetails(
+                        releaseTag,
+                        releaseName,
+                        releaseNotes,
+                        releaseUri,
+                        publishedAt),
+                    new PatchUpdateDetails(
+                        manifestUrl,
+                        manifestSha256,
+                        manifestSize,
+                        archiveUrl,
+                        archiveName,
+                        archiveSha256,
+                        archiveSize),
+                    new InstallerUpdateDetails(
+                        installerUrl,
+                        installerName,
+                        installerSha256,
+                        installerSize),
+                    diagnostics),
                 diagnostics);
         }
+
+        private static Uri BuildReleasesPageUri() => new UriBuilder(
+            Uri.UriSchemeHttps,
+            "github.com",
+            -1,
+            "/ATAC-Helicopter/VaultSync/releases").Uri;
 
         private static bool IsReleaseNewer(string releaseTag, string currentVersion)
         {
@@ -243,7 +259,7 @@ namespace VaultSync.UI.Services
         {
             var client = new HttpClient
             {
-                BaseAddress = new Uri("https://api.github.com/"),
+                BaseAddress = new UriBuilder(Uri.UriSchemeHttps, "api.github.com").Uri,
                 Timeout     = TimeSpan.FromSeconds(20),
                 MaxResponseContentBufferSize = MaxReleaseManifestBytes
             };

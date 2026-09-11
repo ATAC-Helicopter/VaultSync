@@ -682,7 +682,7 @@ must not make truthful checksums, manifests, SBOMs, or provenance optional.
 
 ## 1.8.8 — Chronicle Stabilization
 
-**Status:** Active and required before `1.9.0`
+**Status:** Released on 2026-09-02 (`v1.8.8`)
 **Tagline:** *A stable foundation for larger recovery.*
 **Planning started:** 2026-08-24
 **Stable target:** 2026-09-01
@@ -690,8 +690,9 @@ must not make truthful checksums, manifests, SBOMs, or provenance optional.
 **Working branch:** `release/1.8.8`
 **Integration target:** `Dev`
 
-The maintained kickoff, 1.8.7 feedback snapshot, code baseline, delivery order,
-and qualification gates are in [`docs/RELEASE_1.8.8.md`](docs/RELEASE_1.8.8.md).
+The completed scope is retained below. Release highlights are in
+[the changelog](CHANGELOG.md) and [What's New](docs/WHATS_NEW.md#188).
+The obsolete kickoff document has been retired.
 
 - [x] `VS-1823` `P0` Establish large-history and high-file-count performance
   budgets with repeatable benchmarks. _(Existing issue #382.)_
@@ -890,6 +891,125 @@ compatibility, and smoke tests on all supported operating systems.
 
 ---
 
+## 1.8.9 — Bug fixes and everyday polish
+
+**Status:** Active; implementation and qualification in progress
+**Tagline:** *Keep your place. Work with clarity.*
+**Current stable:** 1.8.8, released 2026-09-02
+**Planning started:** 2026-09-05
+**Stable target:** 2026-09-09
+**Maximum date:** 2026-09-16
+**Working branch:** `release/1.8.9`
+**Integration target:** `Dev`
+**Primary patch predecessor:** `1.8.8`, qualification pending
+
+The [release contract](docs/RELEASE_1.8.9.md) records implementation evidence
+and outstanding gates. Existing backup formats remain unchanged. Larger
+recovery features stay in the 1.9 family. Unchecked items include local work
+that has not yet been integrated and qualified.
+
+- [ ] `BUG-18155` `P1` Preserve backup group expansion and loaded history during refreshes.
+  [Issue #628](https://github.com/ATAC-Helicopter/VaultSync/issues/628).
+  Backup actions rebuild project groups and reset their expansion and pagination. Reconcile groups by project ID, retain loaded row depth, update summaries in place, and explicitly bind expansion two-way. Regression tests pass locally. Desktop deletion, cancellation, background completion, scroll and focus checks remain part of VS-1894; changes are not yet integrated.
+
+- [ ] `BUG-18156` `P1` Preserve surviving UI rows during collection refreshes.
+  [Issue #629](https://github.com/ATAC-Helicopter/VaultSync/issues/629).
+  The shared collection helper replaces a surviving item when inserting a row before it. Insert without replacing survivors and remove full collection resets from Projects and backup project summaries. Verify insertion, reorder, removal, and empty-list transitions without Reset notifications. Local regression tests pass; integration and desktop checks remain pending.
+
+- [ ] `BUG-18157` `P1` Retain selected project identity after refreshed models are rebuilt.
+  [Issue #630](https://github.com/ATAC-Helicopter/VaultSync/issues/630).
+  Backup deletion rebuilt every project-summary row, allowing the list control to lose the selected object and open the first project before selection was restored. Reconcile rows by project ID, update the surviving selected row in place, and preserve a deliberately empty selection. Regression coverage verifies identity, aggregates, and no Reset notification; desktop qualification and integration remain pending.
+
+- [ ] `BUG-18158` `P1` Keep Linux updater handoff qualification portable on Windows CI.
+  [Issue #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635).
+  The Linux deferred-relaunch test asserted a Unix directory string even when the helper was exercised by the Windows runner, where `Path` correctly normalized it with Windows separators. Derive the expectation through the runtime path API so the cross-platform release gate tests behavior instead of host-specific text. The full 849-test suite and hosted Windows check pass; integration remains pending.
+
+- [ ] `VS-1892` `P1` Polish shared pill alignment and theme readability.
+  [Issue #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631).
+  Center icon-and-label stacks in shared status pills and backup tags. Improve muted text and semantic colors in light and dark themes and check custom-theme muted text against all configured surfaces. Local application build and theme tests pass. Qualify compact density, translated labels, scaling, and screenshots in VS-1894 before completion.
+
+- [ ] `VS-1893` `P1` Prepare 1.8.9 release identity and repository tracking.
+  [Issue #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632).
+  Advance UI, CLI, installer, Store manifest, canonical and public metadata to 1.8.9. Record the published 1.8.8 stable date, target the exact 1.8.8 predecessor, retire the obsolete 1.8.8 working contract, preserve historical evidence, and align roadmap, changelog, What's New, milestone, Project fields, and release documentation. Use release/1.8.9 into Dev, then Stable via merge commits. Validate metadata consumers and release scripts; do not publish or claim qualification during kickoff.
+
+- [ ] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
+  [Issue #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633).
+  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Qualify exact 1.8.8 upgrades, installer fallback, backup/restore smoke tests, Store packaging when enabled, static analysis and dependencies, and final artifacts. Platform patch assets remain opt-in after exact payload and handoff qualification. Record evidence before promotion; local model tests do not close this gate.
+
+- [ ] `VS-1895` `P1` Service Avalonia and coordinated rendering dependencies.
+  [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
+  Update Avalonia to 12.1.2, service Microsoft runtime libraries to 10.0.12, and keep every directly pinned SkiaSharp 4.152.0 and HarfBuzzSharp 14.2.1.200 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Local restore and the zero-warning build pass; hosted platform checks and integration remain pending.
+
+- [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
+  [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
+  Make background-task cancellation ownership explicit, capture listener tokens without nullable-field races, split backup-diff tree construction and file classification into focused helpers, consolidate repeated UI keys, simplify project lookup, snapshot labels, summary and activity shaping, backup-row loading, comparison flow, runtime I/O, executable discovery, compact layout, and glass themes, modernize backup-all async repository and destination calls, and document the manual and multi-project coordinator transaction boundaries. The zero-warning build, 902 .NET tests, and 77 script tests pass locally; final-head Sonar and integration remain pending.
+
+- [ ] `BUG-18159` `P0` Prevent page-width bindings from restoring horizontal overflow.
+  [Issue #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638).
+  Dashboard, Backups, and Settings sized inner content to the outer ScrollViewer viewport and then added page padding, making the desired width exceed the window. Let content measure from the padded available width and reject viewport-width bindings in top-level page scrollers. Local policy tests pass; narrow-window and scaling qualification remains in VS-1894.
+
+- [ ] `VS-1897` `P0` Audit and renew 1.8.9 safety, usability, and repository health.
+  [Issue #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639).
+  Audit correctness, security and edge cases, stale code, UI responsiveness and page purpose, quality-of-life behavior, dependency health, generated-file retention, documentation/localization consistency, and repository hygiene. The first waves remove obsolete placeholder/reflection navigation, an unbound backup activity-chart resize pipeline, and a disconnected automatic destination-import scanner with its dormant coordination state; keep labeled navigation at the default window size, clarify Projects, and record every page's purpose. Fix release-safe findings in focused commits and track architectural or platform-dependent work explicitly. No discovered P0/P1 issue may remain untracked; final hosted, desktop, and integration evidence remains pending.
+
+- [ ] `BUG-18160` `P0` Reclaim abandoned metadata read-copy workspaces.
+  [Issue #640](https://github.com/ATAC-Helicopter/VaultSync/issues/640).
+  Failed or interrupted read-only metadata preview copies could remain under the operating-system temporary root indefinitely. Remove partially created copies immediately, and make startup hygiene prune only stale GUID-owned read-copy directories while preserving recent and unrelated data. Regression coverage passes locally; integration remains pending.
+
+- [ ] `BUG-18161` `P0` Isolate overlapping updater cancellation ownership.
+  [Issue #641](https://github.com/ATAC-Helicopter/VaultSync/issues/641).
+  A cancelled update check could finish after its replacement started, dispose the replacement's shared cancellation source, and restore macOS log capture too early. Capture each run's source and token, dispose only the owned source, and restore shared logging state only when the completing run still owns the active slot. Local build and regression suites pass; hosted and integration verification remain pending.
+
+- [ ] `BUG-18162` `P0` Restore CLI snapshots from recorded backup data safely.
+  [Issue #642](https://github.com/ATAC-Helicopter/VaultSync/issues/642).
+  The CLI restore command selected snapshot metadata but copied the current live project tree, and its clean traversal could cross linked paths. Resolve an actual recorded backup, preflight every source and destination before mutation, reject unavailable or unsupported archive/encrypted sources explicitly, and keep cleanup outside project and backup trees. Regression coverage proves restored bytes come from the backup; integration remains pending.
+
+- [ ] `BUG-18163` `P0` Reject empty backup payload paths before cleanup.
+  [Issue #643](https://github.com/ATAC-Helicopter/VaultSync/issues/643).
+  A malformed or legacy backup row with an empty payload identity could resolve to the complete destination root, allowing restore to read the wrong content or retention to target the root. Reject empty paths in shared backup resolution and retention before any filesystem change. Local regression coverage passes; integration remains pending.
+
+- [ ] `BUG-18164` `P0` Confine CLI preset reads to preset roots.
+  [Issue #644](https://github.com/ATAC-Helicopter/VaultSync/issues/644).
+  CLI preset names and bundled-index entries could be interpreted as paths outside their intended directories. Accept only names from users and resolve every preset file through shared containment and filesystem-link checks. Cross-platform traversal and contained-file tests pass locally; integration remains pending.
+
+- [ ] `BUG-18165` `P0` Expand only leading home markers in CLI paths.
+  [Issue #645](https://github.com/ATAC-Helicopter/VaultSync/issues/645).
+  CLI commands replaced every tilde in a path, silently changing valid names such as `folder~copy`, and duplicated the behavior across commands. Expand only a leading home segment through one shared helper and persist resolved database paths. Cross-platform separator and literal-tilde coverage passes locally; integration remains pending.
+
+- [ ] `BUG-18166` `P0` Skip linked directories during backup preflight enumeration.
+  [Issue #646](https://github.com/ATAC-Helicopter/VaultSync/issues/646).
+  Backup size and file-list preflight used recursive enumeration before per-file containment checks, allowing linked directories to be traversed before their files were rejected. Walk the tree explicitly, skip linked files and directories, and check cancellation between entries. Local build and existing linked-source tests pass; integration remains pending.
+
+- [ ] `BUG-18167` `P0` Parse CLI prune dates invariantly.
+  [Issue #647](https://github.com/ATAC-Helicopter/VaultSync/issues/647).
+  The destructive `--before` cutoff documented an ISO date but used the machine culture for validation and execution. Require exact invariant `yyyy-MM-dd` input and carry the parsed UTC date into the prune plan. Valid, ambiguous, and impossible-date regression cases pass locally; integration remains pending.
+
+- [ ] `BUG-18168` `P0` Preserve backed snapshots during CLI prune.
+  [Issue #648](https://github.com/ATAC-Helicopter/VaultSync/issues/648).
+  Snapshot deletion cascades its backup metadata row, but the CLI prune planner previously included snapshots still referenced by stored backups or protected in History. Build one protected-ID set first and apply count/date rules only to eligible snapshots. Mixed-plan regression coverage passes locally; integration remains pending.
+
+- [ ] `BUG-18169` `P0` Verify recorded backup bytes before CLI restore.
+  [Issue #649](https://github.com/ATAC-Helicopter/VaultSync/issues/649).
+  Folder restore resolved safe recorded paths but did not confirm that their bytes still matched snapshot metadata. Preflight every file size and every available SHA-256 before any cleanup or target write, while retaining size checks for legacy unhashed snapshots. Tamper regression coverage passes locally; integration remains pending.
+
+- [ ] `BUG-18170` `P0` Recover tray refresh after background failures.
+  [Issue #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650).
+  A tray data-shaping exception occurred before the UI callback that normally released refresh ownership, leaving every later update queued behind a permanently occupied gate. Release ownership after background failures, retain retry throttling and request coalescing, and simplify tray menu construction. The release build and full local suite pass; hosted and integration verification remain pending.
+
+- [ ] `BUG-18171` `P0` Keep Unix instance locks in private app data.
+  [Issue #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651).
+  Linux and macOS single-instance coordination could use an environment-selected temporary directory. Resolve the default lock beneath absolute per-user application data and fail closed when no private root is available, while retaining explicit test-directory injection. Default-path and cross-process lock tests pass locally; integration remains pending.
+
+- [ ] `BUG-18170` `P0` Recover tray refresh after background failures.
+  [Issue #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650).
+  A tray data-shaping exception occurred before the UI callback and left the in-flight gate occupied indefinitely. Release refresh ownership on both background and UI failures, retain coalescing and throttling, and allow later tray updates to recover. The zero-warning build and full local suite pass; hosted and integration verification remain pending.
+
+- [ ] `BUG-18171` `P0` Keep Unix instance locks in private app data.
+  [Issue #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651).
+  Linux and macOS coordination could fall back to an environment-selected temporary directory. Use only the absolute per-user application-data tree for default locks, fail closed without it, and retain explicit directory injection for isolated lock tests. Placement and cross-process tests pass locally; integration remains pending.
+
+---
+
 # VaultSync 1.9 — Recovery Horizon
 
 ## Family promise
@@ -984,7 +1104,7 @@ destabilizing the maintenance release.
 
 ## 1.9.0 — Disk and Bootable Recovery Foundation
 
-**Status:** Planned; implementation begins only after `1.8.8` qualifies and the
+**Status:** Planned; implementation begins only after the shipped `1.8.8` qualification is recorded and the
 1.9 architecture approval gate is complete.
 **Tagline:** *Recover when the installed system cannot.*
 
