@@ -26,6 +26,8 @@
 - [VS-1897] Keep labeled navigation at the default window size and clarify the Projects purpose.
 - [VS-1897] Remove obsolete placeholder navigation and reflection paths from the live shell.
 - [VS-1897] Stop rebuilding an obsolete hidden backup activity chart during refresh and resize.
+- [VS-1897] Remove the obsolete untracked-destination scanner and its dormant state.
+- [VS-1896] Split startup, responsive layout, and What's New parsing into focused helpers.
 - [VS-1892] Center icon-and-label stacks inside shared status pills and backup tags.
 - [VS-1892] Improve muted text contrast, light-theme status colors, and dark-theme accent labels.
 - [VS-1892] Keep custom-theme muted text readable against the configured surfaces.

@@ -11,6 +11,7 @@ using VaultSync.UI.Views;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -132,119 +133,7 @@ public partial class App : Application
     {
         SetCurrentInstance(this);
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            CrashHandler.RegisterAvalonia();
-            WireGlobalExceptionHandlers();
-            WireLifecycleBreadcrumbs(desktop);
-            InitializeLocalizationProviderEarly();
-            var appViewModel = new AppViewModel();
-            SetAppViewModelInstance(appViewModel);
-            DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={appViewModel.CurrentVersionDisplay}");
-
-            if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out object? fontResource))
-            {
-                _defaultFontFamily = fontResource as FontFamily;
-            }
-            ApplyLanguageFontOverrides();
-            if (LocalizationProvider.Service is { } locService)
-            {
-                locService.LanguageChanged += () =>
-                {
-                    RefreshCachedDriveHealthLabel();
-                    if (_trayIcon is not null)
-                    {
-                        _trayIcon.ToolTipText = L("Tray.Tooltip", "VaultSync - snapshots & backups");
-                    }
-                    ApplyLanguageFontOverrides();
-                    RefreshTrayMenu();
-                };
-            }
-
-        var mainWindow = new MainWindow
-        {
-            DataContext = AppViewModelInstance,
-            WindowState = WindowState.Maximized,
-            Icon = LoadAppWindowIcon()
-        };
-            desktop.MainWindow = mainWindow;
-            ApplyArabicFontOverridesToWindow(desktop.MainWindow, IsArabicActive());
-            if (desktop.Windows is INotifyCollectionChanged windowsChanged)
-            {
-                windowsChanged.CollectionChanged += (_, e) =>
-                {
-                    if (e.NewItems is null)
-                        return;
-                    foreach (object? item in e.NewItems)
-                    {
-                        if (item is Window newWindow)
-                        {
-                            ApplyArabicFontOverridesToWindow(newWindow, IsArabicActive());
-                        }
-                    }
-                };
-            }
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (!TryShowOnboarding(desktop))
-                {
-                    TryShowWhatsNew(desktop);
-                }
-            });
-            _ = Task.Run(CleanupStaleEncryptedOpenTempFolders);
-            _ = HandleInitialActivationArgsAsync(desktop);
-
-            // Small always-on-top widget that lights up for tray-started backups.
-            var backupWidgetService = new BackupWidgetService(
-                desktop,
-                appViewModel.BackupsViewModel,
-                () => BringMainWindowToFront(desktop));
-            appViewModel.AttachBackupWidgetService(backupWidgetService);
-            appViewModel.TrayMenuRefreshRequested += () =>
-            {
-                RefreshTrayMenu();
-                _trayPanelService?.Refresh();
-            };
-            appViewModel.SettingsViewModel.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(SettingsViewModel.ShowTrayIcon))
-                {
-                    UpdateTrayIconVisibility(desktop, appViewModel.SettingsViewModel.ShowTrayIcon);
-                }
-            };
-
-            // Wire a platform-aware system notification service; fall back to stub if unavailable.
-            GlobalNotificationCenter.Instance.SystemNotificationService =
-                CreateSystemNotificationService() ?? new StubSystemNotificationService();
-            GlobalNotificationCenter.Instance.ShouldShowSystemNotification = _ =>
-            {
-                AppConfig cfg = ConfigStore.GetSnapshot();
-                if (!cfg.Notifications.UseOsNotifications)
-                    return false;
-                if (!cfg.Notifications.OnBackupSuccess &&
-                    !cfg.Notifications.OnBackupFailure &&
-                    !cfg.Notifications.OnSnapshotSuccess &&
-                    !cfg.Notifications.OnSnapshotFailure &&
-                    !cfg.Notifications.OnLowDisk)
-                {
-                    return false;
-                }
-
-                if (cfg.Notifications.OnlyWhenInactive && MainWindow.IsForeground)
-                    return false;
-
-                return true;
-            };
-
-            // Read behavior config and, if enabled, create a tray/menu-bar icon.
-            AppConfig config = ConfigStore.GetSnapshot();
-            if (config.Behavior?.ShowTrayIcon is true)
-            {
-                CreateTrayIcon(desktop);
-            }
-
-            StartUiWatchdog();
-        }
+            InitializeDesktopApplication(desktop);
 
         // Apply theme from stored config on startup
         ApplyThemeFromConfig();
@@ -252,6 +141,118 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    private void InitializeDesktopApplication(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        CrashHandler.RegisterAvalonia();
+        WireGlobalExceptionHandlers();
+        WireLifecycleBreadcrumbs(desktop);
+        InitializeLocalizationProviderEarly();
+        var appViewModel = new AppViewModel();
+        SetAppViewModelInstance(appViewModel);
+        DiagnosticsLogger.Record($"App initialization completed. OS={Environment.OSVersion}, 64bit={Environment.Is64BitProcess}, App={appViewModel.CurrentVersionDisplay}");
+        ConfigureLanguageChanges();
+        ConfigureMainWindow(desktop);
+        ScheduleStartupWork(desktop);
+        ConfigureBackupWidget(desktop, appViewModel);
+        ConfigureSystemNotifications();
+        if (ConfigStore.GetSnapshot().Behavior?.ShowTrayIcon is true)
+            CreateTrayIcon(desktop);
+        StartUiWatchdog();
+    }
+
+    private void ConfigureLanguageChanges()
+    {
+        if (_defaultFontFamily is null && Resources.TryGetResource("AppFontFamily", ThemeVariant.Default, out object? fontResource))
+            _defaultFontFamily = fontResource as FontFamily;
+        ApplyLanguageFontOverrides();
+        if (LocalizationProvider.Service is not { } localizationService)
+            return;
+
+        localizationService.LanguageChanged += () =>
+        {
+            RefreshCachedDriveHealthLabel();
+            if (_trayIcon is not null)
+                _trayIcon.ToolTipText = L("Tray.Tooltip", "VaultSync - snapshots & backups");
+            ApplyLanguageFontOverrides();
+            RefreshTrayMenu();
+        };
+    }
+
+    private void ConfigureMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        desktop.MainWindow = new MainWindow
+        {
+            DataContext = AppViewModelInstance,
+            WindowState = WindowState.Maximized,
+            Icon = LoadAppWindowIcon()
+        };
+        ApplyArabicFontOverridesToWindow(desktop.MainWindow, IsArabicActive());
+        if (desktop.Windows is INotifyCollectionChanged windowsChanged)
+            windowsChanged.CollectionChanged += (_, e) => ApplyLanguageToNewWindows(e);
+    }
+
+    private void ApplyLanguageToNewWindows(NotifyCollectionChangedEventArgs args)
+    {
+        if (args.NewItems is null)
+            return;
+        foreach (Window window in args.NewItems.OfType<Window>())
+            ApplyArabicFontOverridesToWindow(window, IsArabicActive());
+    }
+
+    private void ScheduleStartupWork(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!TryShowOnboarding(desktop))
+                TryShowWhatsNew(desktop);
+        });
+        _ = Task.Run(CleanupStaleEncryptedOpenTempFolders, CancellationToken.None);
+        _ = HandleInitialActivationArgsAsync(desktop);
+    }
+
+    private void ConfigureBackupWidget(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        AppViewModel appViewModel)
+    {
+        var backupWidgetService = new BackupWidgetService(
+            desktop,
+            appViewModel.BackupsViewModel,
+            () => BringMainWindowToFront(desktop));
+        appViewModel.AttachBackupWidgetService(backupWidgetService);
+        appViewModel.TrayMenuRefreshRequested += () =>
+        {
+            RefreshTrayMenu();
+            _trayPanelService?.Refresh();
+        };
+        appViewModel.SettingsViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SettingsViewModel.ShowTrayIcon))
+                UpdateTrayIconVisibility(desktop, appViewModel.SettingsViewModel.ShowTrayIcon);
+        };
+    }
+
+    private static void ConfigureSystemNotifications()
+    {
+        GlobalNotificationCenter.Instance.SystemNotificationService =
+            CreateSystemNotificationService() ?? new StubSystemNotificationService();
+        GlobalNotificationCenter.Instance.ShouldShowSystemNotification = _ => ShouldShowSystemNotification();
+    }
+
+    private static bool ShouldShowSystemNotification()
+    {
+        AppConfig cfg = ConfigStore.GetSnapshot();
+        if (!cfg.Notifications.UseOsNotifications)
+            return false;
+        bool hasEnabledEvent = cfg.Notifications.OnBackupSuccess ||
+                               cfg.Notifications.OnBackupFailure ||
+                               cfg.Notifications.OnSnapshotSuccess ||
+                               cfg.Notifications.OnSnapshotFailure ||
+                               cfg.Notifications.OnLowDisk;
+        return hasEnabledEvent &&
+               (!cfg.Notifications.OnlyWhenInactive || !MainWindow.IsForeground);
+    }
+
+    [SuppressMessage("Design", "S1075:URIs should not be hardcoded", Justification = "Avalonia embedded-resource identities are compile-time application assets, not configurable external locations.")]
     private static WindowIcon? LoadAppWindowIcon()
     {
         try
@@ -404,6 +405,7 @@ public partial class App : Application
         }
     }
 
+    [SuppressMessage("Design", "S1075:URIs should not be hardcoded", Justification = "Avalonia embedded-resource identities are compile-time application assets, not configurable external locations.")]
     private void CreateTrayIcon(IClassicDesktopStyleApplicationLifetime desktop)
     {
         // Avoid creating multiple tray icons.
@@ -660,7 +662,6 @@ public partial class App : Application
 
     private static List<WhatsNewSection> LoadWhatsNewSections(string currentVersion)
     {
-        var sections = new List<WhatsNewSection>();
         string baseDir = AppContext.BaseDirectory;
         string[] candidates =
         [
@@ -670,26 +671,34 @@ public partial class App : Application
             Path.Combine(baseDir, "..", "CHANGELOG.md"),
             Path.Combine(baseDir, "..", "..", "CHANGELOG.md")
         ];
+        string? content = TryReadFirstExistingFile(candidates);
+        return string.IsNullOrWhiteSpace(content)
+            ? []
+            : ParseWhatsNewSections(content, currentVersion);
+    }
 
-        string? content = null;
+    private static string? TryReadFirstExistingFile(IEnumerable<string> candidates)
+    {
         foreach (string? path in candidates)
         {
             if (!File.Exists(path))
                 continue;
             try
             {
-                content = File.ReadAllText(path);
-                break;
+                return File.ReadAllText(path);
             }
             catch
             {
-                content = null;
+                // Continue to the next packaged or development fallback.
             }
         }
 
-        if (string.IsNullOrWhiteSpace(content))
-            return sections;
+        return null;
+    }
 
+    private static List<WhatsNewSection> ParseWhatsNewSections(string content, string currentVersion)
+    {
+        var sections = new List<WhatsNewSection>();
         string[] lines = content.Split(["\r\n", "\n"], StringSplitOptions.None);
         bool hasWhatsNewHeader = Array.Exists(lines, line => line.StartsWith('#') && line.Contains("What's New", StringComparison.OrdinalIgnoreCase));
         string headerPrefix = $"## [{currentVersion}]";

@@ -134,14 +134,11 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<string, Lazy<Task<int?>>> _archiveUploadBufferTuneTasks = new(StringComparer.OrdinalIgnoreCase);
         private static readonly TimeSpan DestinationProbeMinInterval = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan DestinationProbeFailureBackoff = TimeSpan.FromMinutes(15);
-        private static readonly TimeSpan DestinationScanInterval = TimeSpan.FromMinutes(10);
         private const string BackupProtectionMarkerFileName = ".vaultsync_keep";
         private const int DefaultEncryptedOpenTimeoutMinutes = 10;
         private static readonly TimeSpan EncryptedOpenStaleRetention = TimeSpan.FromMinutes(30);
         private static readonly ConcurrentDictionary<string, CancellationTokenSource> _encryptedOpenCleanup = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<int, EncryptedOpenUnlockSession> _encryptedOpenSessions = new();
-        private DateTime _lastDestinationScanUtc = DateTime.MinValue;
-        private int _destinationScanInFlight;
         private int _destinationOverviewRefreshInFlight;
         private readonly ConcurrentDictionary<string, DateTime> _metadataImportAttempts = new();
         private readonly ConcurrentDictionary<int, byte> _manualBackupInFlight = new();

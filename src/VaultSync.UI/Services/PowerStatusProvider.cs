@@ -49,7 +49,7 @@ namespace VaultSync.UI.Services
 
         private static PowerState GetWindowsState()
         {
-            if (!GetSystemPowerStatus(out SYSTEM_POWER_STATUS status))
+            if (!GetSystemPowerStatus(out SystemPowerStatus status))
                 return PowerState.Unknown;
 
             return status.ACLineStatus switch
@@ -169,7 +169,7 @@ namespace VaultSync.UI.Services
 
         // Windows API
         [StructLayout(LayoutKind.Sequential)]
-        private struct SYSTEM_POWER_STATUS
+        private struct SystemPowerStatus
         {
             public byte ACLineStatus;
             public byte BatteryFlag;
@@ -181,6 +181,6 @@ namespace VaultSync.UI.Services
 
         [DllImport("kernel32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS lpSystemPowerStatus);
+        private static extern bool GetSystemPowerStatus(out SystemPowerStatus lpSystemPowerStatus);
     }
 }

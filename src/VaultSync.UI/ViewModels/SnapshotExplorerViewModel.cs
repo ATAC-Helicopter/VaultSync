@@ -169,7 +169,7 @@ public sealed class SnapshotExplorerViewModel : ViewModelBase
         private set => SetField(ref _isEncryptedBackup, value);
     }
 
-    public string EncryptedBackupMessage => L(
+    public static string EncryptedBackupMessage => L(
         "SnapshotExplorer.Encrypted.Message",
         "This backup is encrypted. Snapshot Explorer can identify it, but encrypted archive browsing is not part of 1.8.2. Use the normal restore flow to recover files from encrypted backups.");
 

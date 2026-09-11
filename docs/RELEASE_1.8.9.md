@@ -51,6 +51,8 @@ the backup format or introduce the larger 1.9 recovery features.
 | Custom-theme muted text was blended toward its background. | Apply the existing readable-text contrast check against all three configured surfaces. |
 | Interrupted metadata preview copies had no startup cleanup path. | Delete failed copies immediately and prune only stale GUID-owned read-copy workspaces. |
 | Backups still rebuilt an unbound activity chart on summary refreshes and window resizes. | Remove the obsolete chart state, computation, and resize handler from the live page. |
+| A disconnected destination-scanning pipeline retained automatic-import code and idle coordination state. | Remove the unreachable scanner and its private helper chain instead of preserving a second import path. |
+| Startup, responsive History/Recovery layout, and What's New parsing retained dense control flow. | Split the flows around lifecycle, layout region, file discovery, and parsing responsibilities. |
 | A cancelled update check could dispose a newer check's cancellation source and restore logging early. | Give each check explicit source ownership and let only the current owner restore shared state. |
 | CLI restore read snapshot metadata but copied the current live project and could clean through linked paths. | Resolve the recorded folder backup, preflight all paths, and confine cleanup before changing the target. |
 | An empty backup payload path could resolve to a complete destination root during restore or retention. | Reject empty payload identities before resolution or cleanup and preserve their metadata for review. |
