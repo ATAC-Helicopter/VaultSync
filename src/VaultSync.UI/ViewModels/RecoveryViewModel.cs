@@ -813,7 +813,7 @@ public sealed class RecoveryViewModel : ViewModelBase
         Snapshot? snapshot = repo.GetSnapshotsByIds([backup.SnapshotId]).FirstOrDefault();
         IReadOnlyCollection<FileEntry> expectedFiles = snapshot is null
             ? []
-            : [.. repo.GetFilesForSnapshot(snapshot.Id)];
+            : await repo.GetFilesForSnapshotAsync(snapshot.Id, cancellationToken).ConfigureAwait(false);
         RecoveryDrillResult result = isolatedRestore
             ? await _drillService.RunIsolatedRestoreAsync(
                 project,

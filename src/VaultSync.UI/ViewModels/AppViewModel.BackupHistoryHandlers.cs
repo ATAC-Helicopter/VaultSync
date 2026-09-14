@@ -167,7 +167,7 @@ namespace VaultSync.UI.ViewModels
                         {
                             if (deleteResolution is not null)
                             {
-                                NetworkMountService.Cleanup(deleteResolution);
+                                CleanupDeleteResolution(deleteResolution);
                             }
                             deleteResolution = resolution;
                             backupRoot = string.IsNullOrWhiteSpace(rootSubPath)
@@ -345,10 +345,7 @@ namespace VaultSync.UI.ViewModels
                 BackupsViewModel.IsBusy      = false;
                 BackupsViewModel.BusyMessage = string.Empty;
 
-                if (deleteResolution is not null)
-                {
-                    NetworkMountService.Cleanup(deleteResolution);
-                }
+                CleanupDeleteResolution(deleteResolution);
             }
         }
 
@@ -361,6 +358,12 @@ namespace VaultSync.UI.ViewModels
                 return;
 
             OpenBackupFolder(backupId);
+        }
+
+        private static void CleanupDeleteResolution(DestinationResolution? resolution)
+        {
+            if (resolution is not null)
+                NetworkMountService.Cleanup(resolution);
         }
 
         private void OnExploreBackupRequested(BackupSnapshotItem? snapshot)
@@ -540,7 +543,7 @@ namespace VaultSync.UI.ViewModels
                 if (confirmed && dontShowAgain.IsChecked == true)
                 {
                     cfg.Behavior.ConfirmDeleteBackup = false;
-                    _configStore.Save(cfg);
+                    await _configStore.SaveAsync(cfg);
                     if (_settingsViewModel is not null)
                     {
                         _settingsViewModel.ConfirmDeleteBackups = false;
@@ -842,6 +845,7 @@ namespace VaultSync.UI.ViewModels
                     }
                     catch
                     {
+                        // File size is optional progress metadata; deletion still proceeds.
                     }
                 }
             }

@@ -735,7 +735,9 @@ public partial class ProjectsViewModel : ViewModelBase
 
     private void ShowNotification(string message, NotificationSeverity severity = NotificationSeverity.Info)
     {
-        Notification.Show(message, severity);
+        Notification.Show(new NotificationRequest(
+            message, severity, title: null, duration: TimeSpan.FromSeconds(9),
+            actionLabel: null, actionCommand: null));
     }
 
     private void NotifySnapshotOutcome(string message, bool success)

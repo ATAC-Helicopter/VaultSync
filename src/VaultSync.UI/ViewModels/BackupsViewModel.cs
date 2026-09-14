@@ -23,6 +23,7 @@ using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.ViewModels.Notifications;
 using VaultSync.UI.Services;
+using VaultSync.UI.Notifications;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -3653,7 +3654,9 @@ namespace VaultSync.UI.ViewModels
                 _         => NotificationSeverity.Info
             };
 
-            Notification.Show(message, sev, actionLabel: actionLabel, actionCommand: actionCommand);
+            Notification.Show(new NotificationRequest(
+                message, sev, title: null, duration: TimeSpan.FromSeconds(9),
+                actionLabel: actionLabel, actionCommand: actionCommand));
         }
 
         private void OnAutoBackupChanged(ProjectBackupItem item)

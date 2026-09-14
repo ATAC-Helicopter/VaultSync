@@ -2083,12 +2083,12 @@ namespace VaultSync.UI.ViewModels
                 return string.Empty;
             }
 
-            if (maxLength < 4 || value!.Length <= maxLength)
+            if (maxLength < 4 || value.Length <= maxLength)
             {
-                return value!;
+                return value;
             }
 
-            return value!.Substring(0, maxLength - 3) + "...";
+            return value.Substring(0, maxLength - 3) + "...";
         }
 
         private static string L(string key, string fallback)

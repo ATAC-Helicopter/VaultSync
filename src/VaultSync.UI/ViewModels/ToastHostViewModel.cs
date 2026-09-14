@@ -26,15 +26,7 @@ namespace VaultSync.UI.ViewModels.Notifications
                 NotificationState? existing = Toasts.FirstOrDefault(toast => toast.Matches(request));
                 if (existing is not null)
                 {
-                    existing.Show(
-                        request.Message,
-                        request.Severity,
-                        request.Title,
-                        request.Duration,
-                        request.ActionLabel,
-                        request.ActionCommand,
-                        request.GroupKey,
-                        incrementRepeat: true);
+                    existing.Show(request, incrementRepeat: true);
 
                     MoveToFront(existing);
                     return;
@@ -42,14 +34,7 @@ namespace VaultSync.UI.ViewModels.Notifications
 
                 var toast = new NotificationState();
                 toast.Closed += OnToastClosed;
-                toast.Show(
-                    request.Message,
-                    request.Severity,
-                    request.Title,
-                    request.Duration,
-                    request.ActionLabel,
-                    request.ActionCommand,
-                    request.GroupKey);
+                toast.Show(request);
 
                 Toasts.Add(toast);
                 TrimToastStack();
