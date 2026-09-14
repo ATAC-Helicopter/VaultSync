@@ -1806,258 +1806,277 @@ namespace VaultSync.UI.ViewModels
         {
             return await Dispatcher.UIThread.InvokeAsync(async () =>
             {
-                var title = new TextBlock
+                RestoreConfirmationDialog dialog = BuildRestoreConfirmationDialog(preparation, preview);
+                await ShowOwnedDialogAsync(dialog.Window ?? throw new InvalidOperationException("Restore dialog was not initialized."));
+
+                string selectedMode = (dialog.RestoreMode.SelectedItem as RestoreModeOption)?.Id
+                    ?? preparation.RestoreMode;
+                IReadOnlyList<string> selectedTargets = GetSelectedRestoreTargets(dialog);
+                if (dialog.Confirmed && dialog.ShowTargetSelector && selectedTargets.Count == 0)
                 {
-                    Text = AppViewModel.L("Backups.Restore.ConfirmTitle", "Restore backup?"),
-                    FontSize = 18,
-                    FontWeight = FontWeight.SemiBold
-                };
-
-                string targetLabel = string.Format(
-                    CultureInfo.CurrentCulture,
-                    AppViewModel.L("Backups.Restore.ConfirmPrompt", "Restore '{0}' into:\n{1}"),
-                    preparation.ProjectName,
-                    preparation.ProjectRoot);
-
-                var question = new TextBlock
-                {
-                    Text = targetLabel,
-                    TextWrapping = TextWrapping.Wrap
-                };
-
-                var guidanceHeader = new TextBlock
-                {
-                    Text = AppViewModel.L("Backups.Restore.GuidanceHeader", "What happens next"),
-                    FontWeight = FontWeight.SemiBold
-                };
-
-                string backupTypeLabel = GetBackupTypeLabel(preparation);
-                string restoreModeLabel = string.Equals(preparation.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase)
-                    ? AppViewModel.L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)")
-                    : AppViewModel.L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)");
-
-                string[] guidanceLines = new[]
-                {
-                    Lf("Backups.Restore.GuidanceType", "Type: {0}", backupTypeLabel),
-                    Lf("Backups.Restore.GuidanceMode", "Mode: {0}", restoreModeLabel),
-                    AppViewModel.L("Backups.Restore.GuidanceOverwrite", "Files with matching paths are overwritten by restored files."),
-                    AppViewModel.L("Backups.Restore.GuidanceKeepExtra", "Files that exist only in the current project folder are kept."),
-                    preparation.IsEncrypted
-                        ? AppViewModel.L("Backups.Restore.GuidanceEncrypted", "If needed, VaultSync will ask for the encryption password before restore starts.")
-                        : AppViewModel.L("Backups.Restore.GuidancePlain", "No encryption password is required for this backup.")
-                };
-
-                var guidancePanel = new StackPanel { Spacing = 4 };
-                foreach (string? line in guidanceLines)
-                {
-                    var row = new TextBlock
-                    {
-                        Text = "• " + line,
-                        TextWrapping = TextWrapping.Wrap
-                    };
-                    if (GetBrush(TextSecondaryBrushKey) is { } secondary)
-                        row.Foreground = secondary;
-                    guidancePanel.Children.Add(row);
-                }
-
-                var previewHeader = new TextBlock
-                {
-                    Text = AppViewModel.L("Backups.Restore.Preview.Header", "Restore preview"),
-                    FontWeight = FontWeight.SemiBold
-                };
-                var previewPanel = new StackPanel { Spacing = 4 };
-                if (!preview.IsAvailable)
-                {
-                    var unavailable = new TextBlock
-                    {
-                        Text = "• " + (string.IsNullOrWhiteSpace(preview.UnavailableReason)
-                            ? AppViewModel.L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup.")
-                            : preview.UnavailableReason),
-                        TextWrapping = TextWrapping.Wrap
-                    };
-                    if (GetBrush(TextSecondaryBrushKey) is { } unavailableSecondary)
-                        unavailable.Foreground = unavailableSecondary;
-                    previewPanel.Children.Add(unavailable);
-                }
-                else
-                {
-                    string[] previewLines = new[]
-                    {
-                        Lf("Backups.Restore.Preview.TotalFiles", "Files in backup: {0}", preview.TotalFiles.ToString(CultureInfo.CurrentCulture)),
-                        Lf("Backups.Restore.Preview.NewFiles", "New files to add: {0}", preview.NewFiles.ToString(CultureInfo.CurrentCulture)),
-                        Lf("Backups.Restore.Preview.OverwriteFiles", "Files that will overwrite existing project files: {0}", preview.OverwriteFiles.ToString(CultureInfo.CurrentCulture)),
-                        Lf("Backups.Restore.Preview.ConflictFiles", "Potential conflicts (project appears newer/different): {0}", preview.ConflictFiles.ToString(CultureInfo.CurrentCulture)),
-                        Lf("Backups.Restore.Preview.ExtraFilesKept", "Existing project-only files that will be kept: {0}", preview.ExtraFilesKept.ToString(CultureInfo.CurrentCulture)),
-                        Lf("Backups.Restore.Preview.TotalBytes", "Total restore data: {0}", BackupSnapshotItem.FormatSize(preview.TotalBytes))
-                    };
-                    foreach (string? line in previewLines)
-                    {
-                        var row = new TextBlock
-                        {
-                            Text = "• " + line,
-                            TextWrapping = TextWrapping.Wrap
-                        };
-                        if (GetBrush(TextSecondaryBrushKey) is { } previewSecondary)
-                            row.Foreground = previewSecondary;
-                        previewPanel.Children.Add(row);
-                    }
-                }
-
-                var restoreModeOptions = new List<RestoreModeOption>
-                {
-                    new(ProjectRestoreMode.Direct, AppViewModel.L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)")),
-                    new(ProjectRestoreMode.Sandbox, AppViewModel.L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)"))
-                };
-                var restoreModeCombo = new ComboBox
-                {
-                    ItemsSource = restoreModeOptions,
-                    SelectedItem = restoreModeOptions.FirstOrDefault(o =>
-                        string.Equals(o.Id, preparation.RestoreMode, StringComparison.OrdinalIgnoreCase))
-                        ?? restoreModeOptions[0],
-                    ItemTemplate = new FuncDataTemplate<RestoreModeOption>(
-                        (option, _) => new TextBlock
-                        {
-                            Text = option?.Label ?? string.Empty,
-                            TextWrapping = TextWrapping.NoWrap
-                        },
-                        supportsRecycling: true),
-                    MinWidth = 360
-                };
-                var restoreModeSelector = new StackPanel { Spacing = 5 };
-                restoreModeSelector.Children.Add(new TextBlock
-                {
-                    Text = AppViewModel.L("Backups.Restore.Mode.Label", "Restore mode"),
-                    FontWeight = FontWeight.SemiBold
-                });
-                restoreModeSelector.Children.Add(restoreModeCombo);
-
-                var targetSelector = new StackPanel { Spacing = 5 };
-                var targetSelections = new List<CheckBox>();
-                IReadOnlyList<string> targetOptions = preview.TopLevelTargets;
-                bool showTargetSelector = preview.IsAvailable && targetOptions.Count > 1;
-                if (showTargetSelector)
-                {
-                    targetSelector.Children.Add(new TextBlock
-                    {
-                        Text = AppViewModel.L("Backups.Restore.Selection.Header", "Restore targets"),
-                        FontWeight = FontWeight.SemiBold
-                    });
-                    targetSelector.Children.Add(new TextBlock
-                    {
-                        Text = AppViewModel.L("Backups.Restore.Selection.Description", "Choose which top-level folders/files to restore."),
-                        TextWrapping = TextWrapping.Wrap,
-                        Foreground = GetBrush(TextSecondaryBrushKey)
-                    });
-
-                    foreach (string option in targetOptions)
-                    {
-                        var cb = new CheckBox
-                        {
-                            Content = option,
-                            IsChecked = true
-                        };
-                        targetSelections.Add(cb);
-                        targetSelector.Children.Add(cb);
-                    }
-                }
-
-                var buttonRow = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Spacing = 10
-                };
-
-                var cancelButton = new Button
-                {
-                    Content = AppViewModel.L(CommonCancelKey, CommonCancelFallback),
-                    MinWidth = 120,
-                    IsCancel = true
-                };
-                cancelButton.Classes.Add(ActionGhostClass);
-
-                var restoreButton = new Button
-                {
-                    Content = AppViewModel.L("Backups.Section.Restore", "Restore"),
-                    MinWidth = 140,
-                    IsDefault = true
-                };
-                restoreButton.Classes.Add(ActionPrimaryClass);
-
-                Window? window = null;
-                bool confirmed = false;
-                cancelButton.Click += (_, _) => window?.Close();
-                restoreButton.Click += (_, _) =>
-                {
-                    confirmed = true;
-                    window?.Close();
-                };
-
-                buttonRow.Children.Add(cancelButton);
-                buttonRow.Children.Add(restoreButton);
-
-                var content = new StackPanel { Spacing = 12 };
-                content.Children.Add(title);
-                content.Children.Add(question);
-                content.Children.Add(guidanceHeader);
-                content.Children.Add(guidancePanel);
-                content.Children.Add(previewHeader);
-                content.Children.Add(previewPanel);
-                if (showTargetSelector)
-                    content.Children.Add(targetSelector);
-                content.Children.Add(restoreModeSelector);
-                content.Children.Add(buttonRow);
-
-                var card = new Border
-                {
-                    Padding = new Thickness(18),
-                    Margin = new Thickness(16)
-                };
-                card.Classes.Add("card");
-                card.Child = content;
-
-                window = new Window
-                {
-                    Title = AppViewModel.L("Backups.Restore.ConfirmTitle", "Restore backup?"),
-                    Content = card,
-                    CanResize = false,
-                    Width = 620,
-                    SizeToContent = SizeToContent.Height,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                };
-
-                Window? owner = GetMainWindow();
-                if (owner != null)
-                {
-                    window.Icon = owner.Icon;
-                    await window.ShowDialog(owner);
-                }
-                else
-                {
-                    var tcs = new TaskCompletionSource<bool>();
-                    void OnClosed(object? _, EventArgs __) => tcs.TrySetResult(true);
-                    window.Closed += OnClosed;
-                    window.Show();
-                    await tcs.Task;
-                    window.Closed -= OnClosed;
-                }
-
-                string selectedMode = (restoreModeCombo.SelectedItem as RestoreModeOption)?.Id ?? preparation.RestoreMode;
-                IReadOnlyList<string> selectedTargets = showTargetSelector
-                    ? targetSelections.Where(cb => cb.IsChecked == true)
-                        .Select(cb => cb.Content?.ToString() ?? string.Empty)
-                        .Where(v => !string.IsNullOrWhiteSpace(v))
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToList()
-                    : [.. targetOptions];
-
-                if (confirmed && showTargetSelector && selectedTargets.Count == 0)
                     return (false, ProjectRestoreMode.Normalize(selectedMode), Array.Empty<string>());
+                }
 
-                return (confirmed, ProjectRestoreMode.Normalize(selectedMode), selectedTargets);
+                return (dialog.Confirmed, ProjectRestoreMode.Normalize(selectedMode), selectedTargets);
             });
         }
 
+        private RestoreConfirmationDialog BuildRestoreConfirmationDialog(
+            RestoreBackupPreparation preparation,
+            RestoreExecutionPreview preview)
+        {
+            var dialog = new RestoreConfirmationDialog();
+            var content = new StackPanel { Spacing = 12 };
+            content.Children.Add(new TextBlock
+            {
+                Text = AppViewModel.L("Backups.Restore.ConfirmTitle", "Restore backup?"),
+                FontSize = 18,
+                FontWeight = FontWeight.SemiBold
+            });
+            content.Children.Add(new TextBlock
+            {
+                Text = string.Format(
+                    CultureInfo.CurrentCulture,
+                    AppViewModel.L("Backups.Restore.ConfirmPrompt", "Restore '{0}' into:\n{1}"),
+                    preparation.ProjectName,
+                    preparation.ProjectRoot),
+                TextWrapping = TextWrapping.Wrap
+            });
+            content.Children.Add(CreateSectionHeader(
+                AppViewModel.L("Backups.Restore.GuidanceHeader", "What happens next")));
+            content.Children.Add(BuildRestoreGuidancePanel(preparation));
+            content.Children.Add(CreateSectionHeader(
+                AppViewModel.L("Backups.Restore.Preview.Header", "Restore preview")));
+            content.Children.Add(BuildRestorePreviewPanel(preview));
+            AddRestoreTargetSelector(content, dialog, preview);
+            AddRestoreModeSelector(content, dialog, preparation);
+            content.Children.Add(BuildRestoreConfirmationButtons(dialog));
+
+            var card = new Border
+            {
+                Padding = new Thickness(18),
+                Margin = new Thickness(16),
+                Child = content
+            };
+            card.Classes.Add("card");
+            dialog.Window = new Window
+            {
+                Title = AppViewModel.L("Backups.Restore.ConfirmTitle", "Restore backup?"),
+                Content = card,
+                CanResize = false,
+                Width = 620,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            return dialog;
+        }
+
+        private static TextBlock CreateSectionHeader(string text) =>
+            new()
+            {
+                Text = text,
+                FontWeight = FontWeight.SemiBold
+            };
+
+        private StackPanel BuildRestoreGuidancePanel(RestoreBackupPreparation preparation)
+        {
+            string restoreModeLabel = string.Equals(
+                preparation.RestoreMode,
+                ProjectRestoreMode.Sandbox,
+                StringComparison.OrdinalIgnoreCase)
+                ? AppViewModel.L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)")
+                : AppViewModel.L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)");
+            string encryptionGuidance = preparation.IsEncrypted
+                ? AppViewModel.L("Backups.Restore.GuidanceEncrypted", "If needed, VaultSync will ask for the encryption password before restore starts.")
+                : AppViewModel.L("Backups.Restore.GuidancePlain", "No encryption password is required for this backup.");
+            string[] lines =
+            [
+                Lf("Backups.Restore.GuidanceType", "Type: {0}", GetBackupTypeLabel(preparation)),
+                Lf("Backups.Restore.GuidanceMode", "Mode: {0}", restoreModeLabel),
+                AppViewModel.L("Backups.Restore.GuidanceOverwrite", "Files with matching paths are overwritten by restored files."),
+                AppViewModel.L("Backups.Restore.GuidanceKeepExtra", "Files that exist only in the current project folder are kept."),
+                encryptionGuidance
+            ];
+            return BuildBulletPanel(lines);
+        }
+
+        private StackPanel BuildRestorePreviewPanel(RestoreExecutionPreview preview)
+        {
+            if (!preview.IsAvailable)
+            {
+                string message = string.IsNullOrWhiteSpace(preview.UnavailableReason)
+                    ? AppViewModel.L("Backups.Restore.Preview.Unavailable", "Preview is unavailable for this backup.")
+                    : preview.UnavailableReason;
+                return BuildBulletPanel([message]);
+            }
+
+            string[] lines =
+            [
+                Lf("Backups.Restore.Preview.TotalFiles", "Files in backup: {0}", preview.TotalFiles.ToString(CultureInfo.CurrentCulture)),
+                Lf("Backups.Restore.Preview.NewFiles", "New files to add: {0}", preview.NewFiles.ToString(CultureInfo.CurrentCulture)),
+                Lf("Backups.Restore.Preview.OverwriteFiles", "Files that will overwrite existing project files: {0}", preview.OverwriteFiles.ToString(CultureInfo.CurrentCulture)),
+                Lf("Backups.Restore.Preview.ConflictFiles", "Potential conflicts (project appears newer/different): {0}", preview.ConflictFiles.ToString(CultureInfo.CurrentCulture)),
+                Lf("Backups.Restore.Preview.ExtraFilesKept", "Existing project-only files that will be kept: {0}", preview.ExtraFilesKept.ToString(CultureInfo.CurrentCulture)),
+                Lf("Backups.Restore.Preview.TotalBytes", "Total restore data: {0}", BackupSnapshotItem.FormatSize(preview.TotalBytes))
+            ];
+            return BuildBulletPanel(lines);
+        }
+
+        private static StackPanel BuildBulletPanel(IEnumerable<string> lines)
+        {
+            var panel = new StackPanel { Spacing = 4 };
+            foreach (string line in lines)
+            {
+                var row = new TextBlock
+                {
+                    Text = "• " + line,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                if (GetBrush(TextSecondaryBrushKey) is { } secondary)
+                    row.Foreground = secondary;
+                panel.Children.Add(row);
+            }
+
+            return panel;
+        }
+
+        private static void AddRestoreModeSelector(
+            StackPanel content,
+            RestoreConfirmationDialog dialog,
+            RestoreBackupPreparation preparation)
+        {
+            var options = new List<RestoreModeOption>
+            {
+                new(ProjectRestoreMode.Direct, AppViewModel.L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)")),
+                new(ProjectRestoreMode.Sandbox, AppViewModel.L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)"))
+            };
+            dialog.RestoreMode = new ComboBox
+            {
+                ItemsSource = options,
+                SelectedItem = options.FirstOrDefault(option =>
+                    string.Equals(option.Id, preparation.RestoreMode, StringComparison.OrdinalIgnoreCase))
+                    ?? options[0],
+                ItemTemplate = new FuncDataTemplate<RestoreModeOption>(
+                    (option, _) => new TextBlock
+                    {
+                        Text = option?.Label ?? string.Empty,
+                        TextWrapping = TextWrapping.NoWrap
+                    },
+                    supportsRecycling: true),
+                MinWidth = 360
+            };
+
+            var selector = new StackPanel { Spacing = 5 };
+            selector.Children.Add(CreateSectionHeader(
+                AppViewModel.L("Backups.Restore.Mode.Label", "Restore mode")));
+            selector.Children.Add(dialog.RestoreMode);
+            content.Children.Add(selector);
+        }
+
+        private static void AddRestoreTargetSelector(
+            StackPanel content,
+            RestoreConfirmationDialog dialog,
+            RestoreExecutionPreview preview)
+        {
+            dialog.TargetOptions = preview.TopLevelTargets;
+            dialog.ShowTargetSelector = preview.IsAvailable && dialog.TargetOptions.Count > 1;
+            if (!dialog.ShowTargetSelector)
+                return;
+
+            var selector = new StackPanel { Spacing = 5 };
+            selector.Children.Add(CreateSectionHeader(
+                AppViewModel.L("Backups.Restore.Selection.Header", "Restore targets")));
+            selector.Children.Add(new TextBlock
+            {
+                Text = AppViewModel.L("Backups.Restore.Selection.Description", "Choose which top-level folders/files to restore."),
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = GetBrush(TextSecondaryBrushKey)
+            });
+            foreach (string option in dialog.TargetOptions)
+            {
+                var checkBox = new CheckBox { Content = option, IsChecked = true };
+                dialog.TargetSelections.Add(checkBox);
+                selector.Children.Add(checkBox);
+            }
+
+            content.Children.Add(selector);
+        }
+
+        private static StackPanel BuildRestoreConfirmationButtons(RestoreConfirmationDialog dialog)
+        {
+            var cancel = new Button
+            {
+                Content = AppViewModel.L(CommonCancelKey, CommonCancelFallback),
+                MinWidth = 120,
+                IsCancel = true
+            };
+            cancel.Classes.Add(ActionGhostClass);
+            cancel.Click += (_, _) => dialog.Window?.Close();
+
+            var restore = new Button
+            {
+                Content = AppViewModel.L("Backups.Section.Restore", "Restore"),
+                MinWidth = 140,
+                IsDefault = true
+            };
+            restore.Classes.Add(ActionPrimaryClass);
+            restore.Click += (_, _) =>
+            {
+                dialog.Confirmed = true;
+                dialog.Window?.Close();
+            };
+
+            var buttons = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Spacing = 10
+            };
+            buttons.Children.Add(cancel);
+            buttons.Children.Add(restore);
+            return buttons;
+        }
+
+        private static IReadOnlyList<string> GetSelectedRestoreTargets(RestoreConfirmationDialog dialog)
+        {
+            if (!dialog.ShowTargetSelector)
+                return [.. dialog.TargetOptions];
+
+            return dialog.TargetSelections
+                .Where(checkBox => checkBox.IsChecked == true)
+                .Select(checkBox => checkBox.Content?.ToString() ?? string.Empty)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static async Task ShowOwnedDialogAsync(Window window)
+        {
+            Window? owner = GetMainWindow();
+            if (owner is not null)
+            {
+                window.Icon = owner.Icon;
+                await window.ShowDialog(owner);
+                return;
+            }
+
+            var completion = new TaskCompletionSource<bool>();
+            void OnClosed(object? _, EventArgs __) => completion.TrySetResult(true);
+            window.Closed += OnClosed;
+            window.Show();
+            await completion.Task;
+            window.Closed -= OnClosed;
+        }
+
+        private sealed class RestoreConfirmationDialog
+        {
+            public Window? Window { get; set; }
+            public ComboBox RestoreMode { get; set; } = new();
+            public IReadOnlyList<string> TargetOptions { get; set; } = [];
+            public List<CheckBox> TargetSelections { get; } = [];
+            public bool ShowTargetSelector { get; set; }
+            public bool Confirmed { get; set; }
+        }
         private static string GetBackupTypeLabel(RestoreBackupPreparation preparation)
         {
             if (preparation.IsImported)
