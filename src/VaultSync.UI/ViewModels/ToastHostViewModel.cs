@@ -75,7 +75,7 @@ namespace VaultSync.UI.ViewModels.Notifications
         {
             while (Toasts.Count > MaxVisibleToasts)
             {
-                NotificationState? candidate = Toasts
+                NotificationState candidate = Toasts
                     .OrderBy(toast => toast.Severity switch
                     {
                         NotificationSeverity.Error => 2,
@@ -83,10 +83,7 @@ namespace VaultSync.UI.ViewModels.Notifications
                         _ => 0
                     })
                     .ThenBy(toast => toast.UpdatedUtc)
-                    .FirstOrDefault();
-
-                if (candidate is null)
-                    break;
+                    .First();
 
                 candidate.Closed -= OnToastClosed;
                 Toasts.Remove(candidate);

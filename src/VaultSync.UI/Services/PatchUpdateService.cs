@@ -97,7 +97,7 @@ namespace VaultSync.UI.Services
 
     public sealed record PatchAssetAvailability(bool HasManifest, bool HasArchive, bool HasInstaller);
 
-    public sealed class PatchUpdateService
+    public static class PatchUpdateService
     {
         private const string InvalidBaseAllowlistStatus = "manifest-invalid-base-allowlist";
         internal const long MaxPatchArchiveBytes = 4L * 1024 * 1024 * 1024;

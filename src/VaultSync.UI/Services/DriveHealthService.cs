@@ -438,11 +438,9 @@ namespace VaultSync.UI.Services
                     "/bin/smartctl"
                 ];
 
-            foreach (string? candidate in candidates)
-            {
-                if (File.Exists(candidate))
-                    return candidate;
-            }
+            string? systemCandidate = Array.Find(candidates, File.Exists);
+            if (systemCandidate is not null)
+                return systemCandidate;
 
             string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
             foreach (string dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
@@ -471,9 +469,7 @@ namespace VaultSync.UI.Services
                 return File.Exists(fileName) ? fileName : string.Empty;
 
             string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            bool isWindows = OperatingSystem.IsWindows();
-            bool hasExtension = Path.HasExtension(fileName);
-            string[] windowsExtensions = isWindows
+            string[] windowsExtensions = OperatingSystem.IsWindows() && !Path.HasExtension(fileName)
                 ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT;.COM")
                     .Split(';', StringSplitOptions.RemoveEmptyEntries)
                 : [];
@@ -486,14 +482,11 @@ namespace VaultSync.UI.Services
                     if (File.Exists(candidate))
                         return candidate;
 
-                    if (!hasExtension && isWindows)
+                    foreach (string ext in windowsExtensions)
                     {
-                        foreach (string ext in windowsExtensions)
-                        {
-                            candidate = Path.Combine(dir, fileName + ext.ToLowerInvariant());
-                            if (File.Exists(candidate))
-                                return candidate;
-                        }
+                        candidate = Path.Combine(dir, fileName + ext.ToLowerInvariant());
+                        if (File.Exists(candidate))
+                            return candidate;
                     }
                 }
                 catch

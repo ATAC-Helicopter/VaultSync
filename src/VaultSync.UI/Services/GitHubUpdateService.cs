@@ -278,99 +278,100 @@ namespace VaultSync.UI.Services
 
         private static async Task<List<GitHubRelease>> FetchReleasesAsync(CancellationToken cancellationToken)
         {
-            var releases = new List<GitHubRelease>();
-            bool useCache = false;
+            List<GitHubRelease>? cachedReleases = GetFreshCachedReleases();
+            if (cachedReleases is not null)
+                return cachedReleases;
 
-            lock (s_releaseCacheLock)
-            {
-                if (s_releaseCache is { Count: > 0 } &&
-                    s_releaseCacheTimestamp.HasValue &&
-                    (DateTimeOffset.UtcNow - s_releaseCacheTimestamp.Value) <= s_releaseCacheTtl)
-                {
-                    return [.. s_releaseCache];
-                }
-            }
+            var releases = new List<GitHubRelease>();
 
             for (int page = 1; page <= MaxReleasePages; page++)
             {
                 string endpoint = $"{ReleasesEndpointBase}?per_page={ReleasesPerPage}&page={page}";
-                List<GitHubRelease>? pageReleases = null;
-                HttpResponseMessage? response = null;
+                ReleasePageResult result = await FetchReleasePageAsync(endpoint, cancellationToken).ConfigureAwait(false);
+                if (result.UseCache)
+                    return GetCachedReleases();
 
-                try
-                {
-                    using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
-                    string? cachedEtag;
-                    lock (s_releaseCacheLock)
-                    {
-                        cachedEtag = s_releaseEtag;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(cachedEtag))
-                    {
-                        request.Headers.IfNoneMatch.ParseAdd(cachedEtag);
-                    }
-
-                    response = await s_httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                    if (response.StatusCode == HttpStatusCode.NotModified)
-                    {
-                        useCache = true;
-                        break;
-                    }
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        break;
-                    }
-
-                    pageReleases = await response.Content
-                        .ReadFromJsonAsync<List<GitHubRelease>>(cancellationToken: cancellationToken)
-                        .ConfigureAwait(false);
-                }
-                catch
-                {
+                if (result.Releases is not { Count: > 0 })
                     break;
-                }
 
-                if (pageReleases is not { Count: > 0 })
-                {
-                    break;
-                }
-
-                releases.AddRange(pageReleases);
-
-                string? responseEtag = response.Headers.ETag?.Tag;
-                if (!string.IsNullOrWhiteSpace(responseEtag))
-                {
-                    lock (s_releaseCacheLock)
-                    {
-                        s_releaseEtag = responseEtag;
-                        s_releaseCache = [.. releases];
-                        s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
-                    }
-                }
-
-            }
-
-            if (useCache)
-            {
-                lock (s_releaseCacheLock)
-                {
-                    return s_releaseCache ?? [];
-                }
+                releases.AddRange(result.Releases);
+                UpdateReleaseCache(releases, result.ETag);
             }
 
             if (releases.Count > 0)
-            {
-                lock (s_releaseCacheLock)
-                {
-                    s_releaseCache = [.. releases];
-                    s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
-                }
-            }
+                UpdateReleaseCache(releases, etag: null);
 
             return releases;
         }
+
+        private static List<GitHubRelease>? GetFreshCachedReleases()
+        {
+            lock (s_releaseCacheLock)
+            {
+                bool isFresh = s_releaseCache is { Count: > 0 } &&
+                    s_releaseCacheTimestamp.HasValue &&
+                    DateTimeOffset.UtcNow - s_releaseCacheTimestamp.Value <= s_releaseCacheTtl;
+                return isFresh ? [.. s_releaseCache!] : null;
+            }
+        }
+
+        private static List<GitHubRelease> GetCachedReleases()
+        {
+            lock (s_releaseCacheLock)
+            {
+                return s_releaseCache is null ? [] : [.. s_releaseCache];
+            }
+        }
+
+        private static async Task<ReleasePageResult> FetchReleasePageAsync(
+            string endpoint,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+                string? cachedEtag;
+                lock (s_releaseCacheLock)
+                {
+                    cachedEtag = s_releaseEtag;
+                }
+
+                if (!string.IsNullOrWhiteSpace(cachedEtag))
+                    request.Headers.IfNoneMatch.ParseAdd(cachedEtag);
+
+                using HttpResponseMessage response = await s_httpClient
+                    .SendAsync(request, cancellationToken)
+                    .ConfigureAwait(false);
+                if (response.StatusCode == HttpStatusCode.NotModified)
+                    return new ReleasePageResult(null, null, UseCache: true);
+
+                if (!response.IsSuccessStatusCode)
+                    return new ReleasePageResult(null, null, UseCache: false);
+
+                List<GitHubRelease>? releases = await response.Content
+                    .ReadFromJsonAsync<List<GitHubRelease>>(cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+                return new ReleasePageResult(releases, response.Headers.ETag?.Tag, UseCache: false);
+            }
+            catch
+            {
+                return new ReleasePageResult(null, null, UseCache: false);
+            }
+        }
+
+        private static void UpdateReleaseCache(List<GitHubRelease> releases, string? etag)
+        {
+            lock (s_releaseCacheLock)
+            {
+                if (!string.IsNullOrWhiteSpace(etag))
+                    s_releaseEtag = etag;
+
+                s_releaseCache = [.. releases];
+                s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
+            }
+        }
+
+        private sealed record ReleasePageResult(List<GitHubRelease>? Releases, string? ETag, bool UseCache);
 
         private static GitHubRelease? SelectStableCandidate(List<GitHubRelease> releases)
         {

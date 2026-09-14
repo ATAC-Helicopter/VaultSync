@@ -985,11 +985,9 @@ namespace VaultSync.UI.Services
                 Path.Combine("/usr/sbin", name)
             ];
 
-            foreach (string candidate in candidates)
-            {
-                if (File.Exists(candidate))
-                    return candidate;
-            }
+            string? systemCandidate = candidates.FirstOrDefault(File.Exists);
+            if (systemCandidate is not null)
+                return systemCandidate;
 
             string? path = Environment.GetEnvironmentVariable("PATH");
             if (string.IsNullOrWhiteSpace(path))
