@@ -193,7 +193,7 @@ namespace VaultSync.UI.ViewModels
                 }
             }
             _ = Task.Run(
-                () => RunUpdateCheckAsync(updateCheckToken, updateCheckCts),
+                () => RunUpdateCheckAsync(updateCheckCts, updateCheckToken),
                 CancellationToken.None);
         }
 
@@ -496,8 +496,8 @@ namespace VaultSync.UI.ViewModels
         }
 
         private async Task RunUpdateCheckAsync(
-            CancellationToken cancellationToken,
-            CancellationTokenSource owner)
+            CancellationTokenSource owner,
+            CancellationToken cancellationToken)
         {
             using var timing = RuntimeTiming.Measure("Update check run");
             try

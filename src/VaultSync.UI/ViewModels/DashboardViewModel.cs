@@ -924,7 +924,7 @@ namespace VaultSync.UI.ViewModels
                 : string.Format(L("Dashboard.Hint.ActiveProjects.Many", "{0} active projects"), activeProjectCount);
         }
 
-        private void BuildBackupUsageFallbackIfNeeded(IReadOnlyList<(Project project, long bytes)> storageSlices)
+        private void BuildBackupUsageFallbackIfNeeded(List<(Project project, long bytes)> storageSlices)
         {
             bool onlyOtherSegment = BackupUsageSegments.Count == 1 &&
                 BackupUsageSegments[0].Name.StartsWith(
@@ -1383,7 +1383,7 @@ namespace VaultSync.UI.ViewModels
         }
 
         private static BackupUsageSegment BuildRemainingUsageSegment(
-            IReadOnlyList<(Project project, long bytes)> projects,
+            List<(Project project, long bytes)> projects,
             long totalBytes)
         {
             long bytes = projects.Sum(project => project.bytes);
@@ -2088,7 +2088,7 @@ namespace VaultSync.UI.ViewModels
                 return value;
             }
 
-            return value.Substring(0, maxLength - 3) + "...";
+            return string.Concat(value.AsSpan(0, maxLength - 3), "...");
         }
 
         private static string L(string key, string fallback)

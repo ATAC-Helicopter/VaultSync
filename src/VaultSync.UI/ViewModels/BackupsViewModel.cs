@@ -2863,7 +2863,7 @@ namespace VaultSync.UI.ViewModels
             OnPropertyChanged(nameof(HasDestinationStatuses));
         }
 
-        private void RemoveInactiveDestinationStatuses(IReadOnlySet<string> activeIds)
+        private void RemoveInactiveDestinationStatuses(HashSet<string> activeIds)
         {
             for (int i = DestinationStatuses.Count - 1; i >= 0; i--)
             {
@@ -3246,7 +3246,7 @@ namespace VaultSync.UI.ViewModels
             return typeMatches && manualMatches && errorMatches && projectMatches;
         }
 
-        private static bool IsDuplicateSnapshot(BackupSnapshotItem snapshot, ISet<string> seenIds)
+        private static bool IsDuplicateSnapshot(BackupSnapshotItem snapshot, HashSet<string> seenIds)
             => !string.IsNullOrWhiteSpace(snapshot.Id) && !seenIds.Add(snapshot.Id);
 
         internal void ReplaceSnapshotGroups(IReadOnlyList<SnapshotProjectGroup> groups)

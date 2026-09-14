@@ -284,8 +284,8 @@ namespace VaultSync.UI.ViewModels
         }
 
         private static DiffPreviewTreeNode GetOrCreateFolder(
-            ICollection<DiffPreviewTreeNode> roots,
-            IDictionary<string, DiffPreviewTreeNode> folders,
+            List<DiffPreviewTreeNode> roots,
+            Dictionary<string, DiffPreviewTreeNode> folders,
             string name,
             string path,
             DiffPreviewTreeNode? parent,

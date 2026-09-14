@@ -1004,14 +1004,14 @@ public partial class App : Application
     {
         string destinationsTitle = L("Tray.Destinations.Title", "Destinations");
         string destinationsStatus = string.Empty;
-        if (destinationSummaries.Any())
+        if (destinationSummaries.Count > 0)
         {
             int reachableCount = destinationSummaries.Count(d => d.Reachable);
             destinationsStatus = reachableCount == destinationSummaries.Count
                 ? L("Tray.Destinations.Ready", "Ready")
                 : L("Tray.Destinations.Unreachable", "Unreachable");
         }
-        else if (configuredDestinations.Any())
+        else if (configuredDestinations.Count > 0)
         {
             destinationsStatus = L("Tray.Destinations.Ready", "Ready");
         }

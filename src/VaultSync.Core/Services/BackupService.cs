@@ -3186,7 +3186,7 @@ public sealed class BackupService(
         string? projectName,
         string backupRoot,
         IReadOnlyList<Backup> candidates,
-        IReadOnlySet<int> plannedCandidateIds,
+        HashSet<int> plannedCandidateIds,
         Dictionary<int, int> snapshotRefs,
         int deleteQuota)
     {

@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -172,6 +173,10 @@ namespace VaultSync.UI.Services
             public int BatteryFullLifeTime;
         }
 
+        [SuppressMessage(
+            "Interoperability",
+            "SYSLIB1054:Use LibraryImportAttribute instead of DllImportAttribute",
+            Justification = "LibraryImport requires enabling unsafe code for the entire UI assembly for one stable Windows API.")]
         [DllImport("kernel32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetSystemPowerStatus(out SystemPowerStatus lpSystemPowerStatus);

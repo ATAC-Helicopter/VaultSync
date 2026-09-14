@@ -10,6 +10,8 @@ namespace VaultSync.Core.Tests;
 
 public sealed class RefreshContinuityTests
 {
+    private static readonly string[] ReorderedItems = ["c", "a"];
+
     [Fact]
     public void InsertionDoesNotReplaceSurvivingItems()
     {
@@ -23,8 +25,8 @@ public sealed class RefreshContinuityTests
         items.SyncWith(new[] { added, first, second });
 
         Assert.Equal(new[] { added, first, second }, items);
-        Assert.Single(events);
-        Assert.Equal(NotifyCollectionChangedAction.Add, events[0].Action);
+        NotifyCollectionChangedEventArgs change = Assert.Single(events);
+        Assert.Equal(NotifyCollectionChangedAction.Add, change.Action);
     }
 
     [Fact]
@@ -34,8 +36,8 @@ public sealed class RefreshContinuityTests
         items.CollectionChanged += (_, args) =>
             Assert.NotEqual(NotifyCollectionChangedAction.Reset, args.Action);
 
-        items.SyncWith(new[] { "c", "a" });
-        Assert.Equal(new[] { "c", "a" }, items);
+        items.SyncWith(ReorderedItems);
+        Assert.Equal(ReorderedItems, items);
         items.SyncWith(System.Array.Empty<string>());
         Assert.Empty(items);
     }
