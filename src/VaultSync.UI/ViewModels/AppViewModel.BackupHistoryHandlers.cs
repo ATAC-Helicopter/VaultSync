@@ -46,309 +46,402 @@ namespace VaultSync.UI.ViewModels
 
         private async Task OnDeleteBackupRequestedAsync(BackupSnapshotItem? snapshot)
         {
-            if (snapshot is null)
+            DeleteBackupOperation? operation = await PrepareDeleteBackupOperationAsync(snapshot);
+            if (operation is null)
                 return;
 
-            if (!int.TryParse(snapshot.Id, out int backupId))
+            if (!await ConfirmDeleteBackupAsync(operation.ProjectName, operation.Timestamp))
                 return;
+
+            BeginDeleteBackupOperation(operation);
+            try
+            {
+                await ExecuteDeleteWithRetriesAsync(operation);
+                await ReportDeleteBackupResultAsync(operation);
+            }
+            finally
+            {
+                FinishDeleteBackupOperation(operation);
+            }
+        }
+
+        private async Task<DeleteBackupOperation?> PrepareDeleteBackupOperationAsync(BackupSnapshotItem? snapshot)
+        {
+            if (snapshot is null || !int.TryParse(snapshot.Id, out int backupId))
+                return null;
 
             DeleteBackupPreparation preparation = await Task.Run(
                 () => PrepareDeleteBackup(backupId),
                 CancellationToken.None);
             if (!preparation.IsReady || preparation.Backup is null)
-                return;
-            Backup backup      = preparation.Backup;
-            int snapshotId  = preparation.SnapshotId;
-            int projectId   = preparation.ProjectId;
-            string backupRoot  = preparation.BackupRoot;
-            string projectName = preparation.ProjectName;
-            string cardId = $"delete-{backupId}";
-            DestinationResolution? deleteResolution = null;
+                return null;
 
-            var deleteContext = await Task.Run(() =>
+            Backup backup = preparation.Backup;
+            var destinationContext = await Task.Run(() =>
             {
-                AppConfig cfg = _configStore.GetSnapshot();
-                List<BackupDestination> destinations = AppViewModel.GetAllDestinations(cfg);
-                BackupDestination? matchedDestination = FindDestinationForBackup(backup, destinations, backupRoot);
-                bool hasCredentialProfile = HasCredentialProfile(cfg, matchedDestination);
-                return (cfg, matchedDestination, hasCredentialProfile);
+                AppConfig config = _configStore.GetSnapshot();
+                List<BackupDestination> destinations = AppViewModel.GetAllDestinations(config);
+                BackupDestination? destination = FindDestinationForBackup(
+                    backup, destinations, preparation.BackupRoot);
+                return (config, destination, HasCredentialProfile(config, destination));
             }, CancellationToken.None);
-            AppConfig cfg = deleteContext.cfg;
-            BackupDestination? matchedDestination = deleteContext.matchedDestination;
-            bool hasCredentialProfile = deleteContext.hasCredentialProfile;
 
-            bool confirm = await ConfirmDeleteBackupAsync(projectName, snapshot.Timestamp);
-            if (!confirm)
+            return new DeleteBackupOperation
             {
+                BackupId = backupId,
+                SnapshotId = preparation.SnapshotId,
+                ProjectId = preparation.ProjectId,
+                Backup = backup,
+                BackupRoot = preparation.BackupRoot,
+                ProjectName = preparation.ProjectName,
+                Timestamp = snapshot.Timestamp,
+                ProjectCardId = snapshot.ProjectId ?? string.Empty,
+                CardId = $"delete-{backupId}",
+                Config = destinationContext.config,
+                Destination = destinationContext.destination,
+                HasCredentialProfile = destinationContext.Item3,
+                DestinationLabel = (string.IsNullOrWhiteSpace(backup.DestinationAlias)
+                    ? backup.DestinationPath
+                    : backup.DestinationAlias) ?? string.Empty,
+                SizeLabel = BackupSnapshotItem.FormatSize(backup.TotalBytes),
+                TargetLabel = string.IsNullOrWhiteSpace(backup.Path)
+                    ? L("Backups.Delete.TargetUnknown", "backup folder")
+                    : backup.Path
+            };
+        }
+
+        private void BeginDeleteBackupOperation(DeleteBackupOperation operation)
+        {
+            BackupsViewModel.PinExpandedProject(operation.ProjectCardId);
+            BackupsViewModel.ShowTransientOperation(
+                operation.CardId,
+                operation.ProjectName,
+                L("Backups.Delete.StageResolving", "Resolving backup destination..."),
+                Lf(
+                    "Backups.Delete.DetailQueued",
+                    "Queued delete: {0} from {1}",
+                    operation.SizeLabel,
+                    operation.TargetLabel),
+                operation.DestinationLabel);
+            BackupsViewModel.IsBusy = true;
+            BackupsViewModel.BusyMessage = AppViewModel.L(
+                "Backups.Status.Deleting",
+                "Deleting backup files...");
+        }
+
+        private async Task ExecuteDeleteWithRetriesAsync(DeleteBackupOperation operation)
+        {
+            await TryDeleteBackupAsync(operation, forceCredentials: false);
+            if (operation.Succeeded || !operation.PermissionDenied || operation.Destination is null)
+                return;
+
+            if (operation.HasCredentialProfile)
+            {
+                if (await ConfirmDeleteWithCredentialsAsync())
+                {
+                    operation.ResetFailure();
+                    await TryDeleteBackupAsync(operation, forceCredentials: true);
+                }
+
                 return;
             }
 
-            BackupsViewModel.PinExpandedProject(snapshot.ProjectId);
-
-            var destinationLabel = string.IsNullOrWhiteSpace(backup.DestinationAlias)
-                ? backup.DestinationPath
-                : backup.DestinationAlias;
-            var deleteSizeLabel = BackupSnapshotItem.FormatSize(backup.TotalBytes);
-            var deleteTargetLabel = string.IsNullOrWhiteSpace(backup.Path)
-                ? L("Backups.Delete.TargetUnknown", "backup folder")
-                : backup.Path;
-
-            BackupsViewModel.ShowTransientOperation(
-                cardId,
-                projectName,
-                L("Backups.Delete.StageResolving", "Resolving backup destination..."),
-                Lf("Backups.Delete.DetailQueued", "Queued delete: {0} from {1}", deleteSizeLabel, deleteTargetLabel),
-                destinationLabel);
-
-            BackupsViewModel.IsBusy      = true;
-            BackupsViewModel.BusyMessage = AppViewModel.L("Backups.Status.Deleting", AppViewModel.L("Backups.Status.Deleting", "Deleting backup files..."));
-
-            bool deleteSucceeded = false;
-            string deleteError = string.Empty;
-            bool permissionDenied = false;
-            NetworkCredentialProfile? tempProfile = null;
-
-            try
+            (bool Confirmed, string Username, string Password) retry =
+                await ConfirmDeleteWithTemporaryCredentialsAsync();
+            if (!retry.Confirmed)
             {
-                async Task TryDeleteAsync(bool forceCredentials, NetworkCredentialProfile? overrideProfile = null)
-                {
-                    if (matchedDestination is not null)
-                    {
-                        BackupDestination destToUse = matchedDestination;
-                        string rootSubPath = string.Empty;
-                        if (forceCredentials)
-                        {
-                            string? pathToUse = matchedDestination.Path;
-                            if (OperatingSystem.IsWindows() && TryResolveUncPath(pathToUse, out string? uncPath))
-                            {
-                                pathToUse = uncPath;
-                            }
-                            if (OperatingSystem.IsWindows() && TrySplitUncPath(pathToUse, out string? uncRoot, out string? uncSubPath))
-                            {
-                                pathToUse = uncRoot;
-                                rootSubPath = uncSubPath;
-                            }
-
-                            destToUse = new BackupDestination
-                            {
-                                Path = pathToUse ?? string.Empty,
-                                CredentialName = matchedDestination.CredentialName,
-                                Active = true,
-                                AutoMount = true,
-                                AutoUnmount = true,
-                                PreMounted = false,
-                                Alias = matchedDestination.Alias,
-                                EnableMetadataSync = matchedDestination.EnableMetadataSync,
-                                AutoImportMetadata = matchedDestination.AutoImportMetadata,
-                                ForceMetadataBackfill = matchedDestination.ForceMetadataBackfill,
-                                ArchiveUploadBufferBytes = matchedDestination.ArchiveUploadBufferBytes
-                            };
-                        }
-
-                        NetworkCredentialProfile? profile = overrideProfile;
-                        if (profile is null)
-                        {
-                            profile = string.IsNullOrWhiteSpace(destToUse.CredentialName)
-                                ? null
-                                : cfg.Network.Credentials.FirstOrDefault(c =>
-                                    c.Name.Equals(destToUse.CredentialName, StringComparison.OrdinalIgnoreCase));
-                        }
-
-                        DestinationResolution resolution = _networkMountService.PrepareDestination(destToUse, profile);
-                        if (!resolution.IsSuccess)
-                        {
-                            deleteError = resolution.Message;
-                            deleteSucceeded = false;
-                            permissionDenied = IsMountPermissionFailure(resolution.Message);
-                            return;
-                        }
-
-                        if (resolution.IsSuccess && !string.IsNullOrWhiteSpace(resolution.EffectivePath))
-                        {
-                            if (deleteResolution is not null)
-                            {
-                                CleanupDeleteResolution(deleteResolution);
-                            }
-                            deleteResolution = resolution;
-                            backupRoot = string.IsNullOrWhiteSpace(rootSubPath)
-                                ? resolution.EffectivePath
-                                : Path.Combine(resolution.EffectivePath, rootSubPath);
-                        }
-                    }
-
-                    BackupsViewModel.UpdateActiveBackup(
-                        cardId,
-                        projectName,
-                        0,
-                        L("Backups.Delete.StageResolving", "Resolving backup destination..."),
-                        Lf("Backups.Delete.DetailTarget", "{0} at {1}", deleteSizeLabel, deleteTargetLabel),
-                        allowCancel: false,
-                        destinationLabel: destinationLabel);
-
-                    var relativePath = backup.Path ?? string.Empty;
-                    if (!TryCombinePathUnderRoot(backupRoot, relativePath, out var fullPath, out var combineError))
-                    {
-                        deleteError = combineError ?? AppViewModel.L("Backups.Delete.Error", "Delete failed");
-                        deleteSucceeded = false;
-                        return;
-                    }
-
-                    await Task.Run(() =>
-                    {
-                        try
-                        {
-                            if (Directory.Exists(fullPath))
-                            {
-                                deleteSucceeded = DeleteDirectoryRobust(
-                                    fullPath,
-                                    out var deleteFailure,
-                                    out var deletePermissionDenied,
-                                    progress =>
-                                    {
-                                        BackupsViewModel.UpdateActiveBackup(
-                                            cardId,
-                                            projectName,
-                                            progress.Percent,
-                                            progress.CurrentPath,
-                                            progress.Detail,
-                                            allowCancel: false,
-                                            destinationLabel: destinationLabel);
-                                    });
-                                if (!deleteSucceeded && string.IsNullOrWhiteSpace(deleteError))
-                                    deleteError = deleteFailure ?? AppViewModel.L("Backups.Delete.Error", "Delete failed");
-                                if (deletePermissionDenied)
-                                    permissionDenied = true;
-                            }
-                            else if (File.Exists(fullPath))
-                            {
-                                var fileInfo = new FileInfo(fullPath);
-                                BackupsViewModel.UpdateActiveBackup(
-                                    cardId,
-                                    projectName,
-                                    10,
-                                    fileInfo.Name,
-                                    Lf("Backups.Delete.DetailFile", "Deleting file: {0}", BackupSnapshotItem.FormatSize(fileInfo.Length)),
-                                    allowCancel: false,
-                                    destinationLabel: destinationLabel);
-                                File.Delete(fullPath);
-                                deleteSucceeded = !File.Exists(fullPath);
-                            }
-                            else
-                            {
-                                deleteSucceeded = true;
-                            }
-                        }
-                        catch (UnauthorizedAccessException ex)
-                        {
-                            deleteError = ex.Message;
-                            deleteSucceeded = false;
-                            permissionDenied = true;
-                        }
-                        catch (IOException ex)
-                        {
-                            deleteError = ex.Message;
-                            deleteSucceeded = false;
-                            permissionDenied = IsAccessDenied(ex);
-                        }
-                        catch (Exception ex)
-                        {
-                            deleteError = ex.Message;
-                            deleteSucceeded = false;
-                        }
-                        finally
-                        {
-                            if (deleteSucceeded)
-                            {
-                                _repo.DeleteBackupById(backupId);
-                                TryDeleteSnapshotIfOrphan(projectId, snapshotId);
-                            }
-                        }
-                    }, CancellationToken.None);
-                }
-
-                await TryDeleteAsync(forceCredentials: false);
-
-                if (!deleteSucceeded && permissionDenied && matchedDestination is not null && hasCredentialProfile)
-                {
-                    bool retry = await ConfirmDeleteWithCredentialsAsync();
-                    if (retry)
-                    {
-                        permissionDenied = false;
-                        deleteError = string.Empty;
-                        await TryDeleteAsync(forceCredentials: true);
-                    }
-                }
-
-                if (!deleteSucceeded && permissionDenied && matchedDestination is not null && !hasCredentialProfile)
-                {
-                    (bool Confirmed, string Username, string Password) retry = await ConfirmDeleteWithTemporaryCredentialsAsync();
-                    if (retry.Confirmed)
-                    {
-                        tempProfile = new NetworkCredentialProfile
-                        {
-                            Name = "DeleteOnce",
-                            Username = retry.Username,
-                            Password = retry.Password,
-                            UseKeychain = false,
-                            KeyRef = string.Empty
-                        };
-                        permissionDenied = false;
-                        deleteError = string.Empty;
-                        await TryDeleteAsync(forceCredentials: true, overrideProfile: tempProfile);
-                    }
-                    else
-                    {
-                        string title = AppViewModel.L(CredentialsRequiredTitleKey, CredentialsRequiredTitleFallback);
-                        string msg = AppViewModel.L("Backups.Delete.ForceCredentialsMissing",
-                            "Assign a credential profile to this destination in Settings. If your usual user cannot delete backups, the NAS root/admin user may be required.");
-                        BackupsViewModel.ShowNotification(msg, ErrorNotificationType);
-                        if (!IsOnBackupsPage)
-                        {
-                            GlobalNotificationCenter.Instance.Show(msg, NotificationSeverity.Error, title);
-                        }
-                    }
-                }
-
-                if (deleteSucceeded)
-                {
-                    ReloadBackupsVmData();
-                    await DashboardViewModel.RefreshAsync();
-                }
-                else
-                {
-                    string title = AppViewModel.L("Backups.Delete.FailedTitle", "Backup delete failed");
-                    string msg = Lf("Backups.Delete.FailedMessage", "Could not delete backup '{0}'.", projectName);
-                    if (permissionDenied)
-                    {
-                        msg = $"{msg} " + AppViewModel.L(
-                            "Backups.Delete.PermissionHint",
-                            "VaultSync could not remove one or more protected files on the destination. Verify destination permissions/credentials and retry.");
-                    }
-                    if (!string.IsNullOrWhiteSpace(deleteError))
-                    {
-                        msg = $"{msg} {deleteError}";
-                    }
-
-                    BackupsViewModel.ShowNotification(msg, ErrorNotificationType);
-                    if (!IsOnBackupsPage)
-                    {
-                        GlobalNotificationCenter.Instance.Show(msg, NotificationSeverity.Error, title);
-                    }
-                }
+                NotifyMissingDeleteCredentials();
+                return;
             }
-            finally
-            {
-                string finalLabel = deleteSucceeded
-                    ? AppViewModel.L("Backups.Status.Deleted", "Deleted")
-                    : AppViewModel.L("Backups.Status.FailedSuffix", "Failed");
-                BackupsViewModel.CompleteTransientOperation(cardId, finalLabel);
-                BackupsViewModel.IsBusy      = false;
-                BackupsViewModel.BusyMessage = string.Empty;
 
-                CleanupDeleteResolution(deleteResolution);
+            var profile = new NetworkCredentialProfile
+            {
+                Name = "DeleteOnce",
+                Username = retry.Username,
+                Password = retry.Password,
+                UseKeychain = false,
+                KeyRef = string.Empty
+            };
+            operation.ResetFailure();
+            await TryDeleteBackupAsync(operation, forceCredentials: true, profile);
+        }
+
+        private async Task TryDeleteBackupAsync(
+            DeleteBackupOperation operation,
+            bool forceCredentials,
+            NetworkCredentialProfile? overrideProfile = null)
+        {
+            if (!TryResolveDeleteDestination(operation, forceCredentials, overrideProfile))
+                return;
+
+            BackupsViewModel.UpdateActiveBackup(
+                operation.CardId,
+                operation.ProjectName,
+                0,
+                L("Backups.Delete.StageResolving", "Resolving backup destination..."),
+                Lf(
+                    "Backups.Delete.DetailTarget",
+                    "{0} at {1}",
+                    operation.SizeLabel,
+                    operation.TargetLabel),
+                allowCancel: false,
+                destinationLabel: operation.DestinationLabel);
+
+            string relativePath = operation.Backup.Path ?? string.Empty;
+            if (!TryCombinePathUnderRoot(
+                    operation.BackupRoot,
+                    relativePath,
+                    out string fullPath,
+                    out string? combineError))
+            {
+                operation.Error = combineError ?? AppViewModel.L(
+                    "Backups.Delete.Error", "Delete failed");
+                return;
+            }
+
+            DeletePathResult result = await Task.Run(
+                () => DeleteBackupPath(operation, fullPath),
+                CancellationToken.None);
+            operation.Succeeded = result.Succeeded;
+            operation.Error = result.Error;
+            operation.PermissionDenied = result.PermissionDenied;
+            if (operation.Succeeded)
+            {
+                _repo.DeleteBackupById(operation.BackupId);
+                TryDeleteSnapshotIfOrphan(operation.ProjectId, operation.SnapshotId);
             }
         }
 
+        private bool TryResolveDeleteDestination(
+            DeleteBackupOperation operation,
+            bool forceCredentials,
+            NetworkCredentialProfile? overrideProfile)
+        {
+            if (operation.Destination is null)
+                return true;
+
+            BackupDestination destination = operation.Destination;
+            string rootSubPath = string.Empty;
+            if (forceCredentials)
+                destination = BuildCredentialDeleteDestination(operation.Destination, out rootSubPath);
+
+            NetworkCredentialProfile? profile = overrideProfile ?? FindDeleteCredential(
+                operation.Config, destination);
+            DestinationResolution resolution = _networkMountService.PrepareDestination(
+                destination, profile);
+            if (!resolution.IsSuccess)
+            {
+                operation.Error = resolution.Message;
+                operation.PermissionDenied = IsMountPermissionFailure(resolution.Message);
+                return false;
+            }
+
+            string? effectivePath = resolution.EffectivePath;
+            if (string.IsNullOrWhiteSpace(effectivePath))
+                return true;
+
+            CleanupDeleteResolution(operation.Resolution);
+            operation.Resolution = resolution;
+            operation.BackupRoot = string.IsNullOrWhiteSpace(rootSubPath)
+                ? effectivePath
+                : Path.Combine(effectivePath, rootSubPath);
+            return true;
+        }
+
+        private static BackupDestination BuildCredentialDeleteDestination(
+            BackupDestination destination,
+            out string rootSubPath)
+        {
+            string path = destination.Path ?? string.Empty;
+            rootSubPath = string.Empty;
+            if (OperatingSystem.IsWindows() && TryResolveUncPath(path, out string? uncPath))
+                path = uncPath ?? path;
+            if (OperatingSystem.IsWindows() &&
+                TrySplitUncPath(path, out string? uncRoot, out string? uncSubPath))
+            {
+                path = uncRoot ?? path;
+                rootSubPath = uncSubPath ?? string.Empty;
+            }
+
+            return new BackupDestination
+            {
+                Path = path,
+                CredentialName = destination.CredentialName,
+                Active = true,
+                AutoMount = true,
+                AutoUnmount = true,
+                PreMounted = false,
+                Alias = destination.Alias,
+                EnableMetadataSync = destination.EnableMetadataSync,
+                AutoImportMetadata = destination.AutoImportMetadata,
+                ForceMetadataBackfill = destination.ForceMetadataBackfill,
+                ArchiveUploadBufferBytes = destination.ArchiveUploadBufferBytes
+            };
+        }
+
+        private static NetworkCredentialProfile? FindDeleteCredential(
+            AppConfig config,
+            BackupDestination destination)
+        {
+            if (string.IsNullOrWhiteSpace(destination.CredentialName))
+                return null;
+
+            return config.Network.Credentials.FirstOrDefault(credential =>
+                credential.Name.Equals(
+                    destination.CredentialName,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        private DeletePathResult DeleteBackupPath(DeleteBackupOperation operation, string fullPath)
+        {
+            try
+            {
+                if (Directory.Exists(fullPath))
+                {
+                    bool succeeded = DeleteDirectoryRobust(
+                        fullPath,
+                        out string? error,
+                        out bool permissionDenied,
+                        progress => UpdateDeleteProgress(operation, progress));
+                    return new DeletePathResult(succeeded, error, permissionDenied);
+                }
+
+                if (File.Exists(fullPath))
+                {
+                    var fileInfo = new FileInfo(fullPath);
+                    BackupsViewModel.UpdateActiveBackup(
+                        operation.CardId,
+                        operation.ProjectName,
+                        10,
+                        fileInfo.Name,
+                        Lf(
+                            "Backups.Delete.DetailFile",
+                            "Deleting file: {0}",
+                            BackupSnapshotItem.FormatSize(fileInfo.Length)),
+                        allowCancel: false,
+                        destinationLabel: operation.DestinationLabel);
+                    File.Delete(fullPath);
+                    return new DeletePathResult(!File.Exists(fullPath), null, false);
+                }
+
+                return new DeletePathResult(true, null, false);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return new DeletePathResult(false, ex.Message, true);
+            }
+            catch (IOException ex)
+            {
+                return new DeletePathResult(false, ex.Message, IsAccessDenied(ex));
+            }
+            catch (Exception ex)
+            {
+                return new DeletePathResult(false, ex.Message, false);
+            }
+        }
+
+        private void UpdateDeleteProgress(
+            DeleteBackupOperation operation,
+            DeleteDirectoryProgress progress)
+        {
+            BackupsViewModel.UpdateActiveBackup(
+                operation.CardId,
+                operation.ProjectName,
+                progress.Percent,
+                progress.CurrentPath,
+                progress.Detail,
+                allowCancel: false,
+                destinationLabel: operation.DestinationLabel);
+        }
+
+        private async Task ReportDeleteBackupResultAsync(DeleteBackupOperation operation)
+        {
+            if (operation.Succeeded)
+            {
+                ReloadBackupsVmData();
+                await DashboardViewModel.RefreshAsync();
+                return;
+            }
+
+            string title = AppViewModel.L(
+                "Backups.Delete.FailedTitle", "Backup delete failed");
+            string message = Lf(
+                "Backups.Delete.FailedMessage",
+                "Could not delete backup '{0}'.",
+                operation.ProjectName);
+            if (operation.PermissionDenied)
+            {
+                message += " " + AppViewModel.L(
+                    "Backups.Delete.PermissionHint",
+                    "VaultSync could not remove one or more protected files on the destination. Verify destination permissions/credentials and retry.");
+            }
+            if (!string.IsNullOrWhiteSpace(operation.Error))
+                message += " " + operation.Error;
+
+            BackupsViewModel.ShowNotification(message, ErrorNotificationType);
+            if (!IsOnBackupsPage)
+                GlobalNotificationCenter.Instance.Show(
+                    message, NotificationSeverity.Error, title);
+        }
+
+        private void NotifyMissingDeleteCredentials()
+        {
+            string title = AppViewModel.L(
+                CredentialsRequiredTitleKey, CredentialsRequiredTitleFallback);
+            string message = AppViewModel.L(
+                "Backups.Delete.ForceCredentialsMissing",
+                "Assign a credential profile to this destination in Settings. If your usual user cannot delete backups, the NAS root/admin user may be required.");
+            BackupsViewModel.ShowNotification(message, ErrorNotificationType);
+            if (!IsOnBackupsPage)
+                GlobalNotificationCenter.Instance.Show(
+                    message, NotificationSeverity.Error, title);
+        }
+
+        private void FinishDeleteBackupOperation(DeleteBackupOperation operation)
+        {
+            string finalLabel = operation.Succeeded
+                ? AppViewModel.L("Backups.Status.Deleted", "Deleted")
+                : AppViewModel.L("Backups.Status.FailedSuffix", "Failed");
+            BackupsViewModel.CompleteTransientOperation(operation.CardId, finalLabel);
+            BackupsViewModel.IsBusy = false;
+            BackupsViewModel.BusyMessage = string.Empty;
+            CleanupDeleteResolution(operation.Resolution);
+        }
+
+        private sealed record DeletePathResult(
+            bool Succeeded,
+            string? Error,
+            bool PermissionDenied);
+
+        private sealed class DeleteBackupOperation
+        {
+            public required Backup Backup { get; init; }
+            public required AppConfig Config { get; init; }
+            public required string BackupRoot { get; set; }
+            public required string ProjectName { get; init; }
+            public required DateTime Timestamp { get; init; }
+            public required string ProjectCardId { get; init; }
+            public required string CardId { get; init; }
+            public required string DestinationLabel { get; init; }
+            public required string SizeLabel { get; init; }
+            public required string TargetLabel { get; init; }
+            public BackupDestination? Destination { get; init; }
+            public DestinationResolution? Resolution { get; set; }
+            public int BackupId { get; init; }
+            public int SnapshotId { get; init; }
+            public int ProjectId { get; init; }
+            public bool HasCredentialProfile { get; init; }
+            public bool Succeeded { get; set; }
+            public bool PermissionDenied { get; set; }
+            public string? Error { get; set; }
+
+            public void ResetFailure()
+            {
+                Succeeded = false;
+                PermissionDenied = false;
+                Error = null;
+            }
+        }
         private void OnOpenBackupFolderRequested(BackupSnapshotItem? snapshot)
         {
             if (snapshot is null)
