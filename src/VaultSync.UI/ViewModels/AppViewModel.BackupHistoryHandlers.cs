@@ -99,7 +99,7 @@ namespace VaultSync.UI.ViewModels
                 CardId = $"delete-{backupId}",
                 Config = destinationContext.config,
                 Destination = destinationContext.destination,
-                HasCredentialProfile = destinationContext.Item3,
+                UsesCredentialProfile = destinationContext.Item3,
                 DestinationLabel = (string.IsNullOrWhiteSpace(backup.DestinationAlias)
                     ? backup.DestinationPath
                     : backup.DestinationAlias) ?? string.Empty,
@@ -135,7 +135,7 @@ namespace VaultSync.UI.ViewModels
             if (operation.Succeeded || !operation.PermissionDenied || operation.Destination is null)
                 return;
 
-            if (operation.HasCredentialProfile)
+            if (operation.UsesCredentialProfile)
             {
                 if (await ConfirmDeleteWithCredentialsAsync())
                 {
@@ -430,7 +430,7 @@ namespace VaultSync.UI.ViewModels
             public int BackupId { get; init; }
             public int SnapshotId { get; init; }
             public int ProjectId { get; init; }
-            public bool HasCredentialProfile { get; init; }
+            public bool UsesCredentialProfile { get; init; }
             public bool Succeeded { get; set; }
             public bool PermissionDenied { get; set; }
             public string? Error { get; set; }
@@ -2037,7 +2037,7 @@ namespace VaultSync.UI.ViewModels
             return buttons;
         }
 
-        private static IReadOnlyList<string> GetSelectedRestoreTargets(RestoreConfirmationDialog dialog)
+        private static List<string> GetSelectedRestoreTargets(RestoreConfirmationDialog dialog)
         {
             if (!dialog.ShowTargetSelector)
                 return [.. dialog.TargetOptions];
