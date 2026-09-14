@@ -1811,13 +1811,13 @@ namespace VaultSync.UI.ViewModels
 
                 string selectedMode = (dialog.RestoreMode.SelectedItem as RestoreModeOption)?.Id
                     ?? preparation.RestoreMode;
-                IReadOnlyList<string> selectedTargets = GetSelectedRestoreTargets(dialog);
+                List<string> selectedTargets = GetSelectedRestoreTargets(dialog);
                 if (dialog.Confirmed && dialog.ShowTargetSelector && selectedTargets.Count == 0)
                 {
-                    return (false, ProjectRestoreMode.Normalize(selectedMode), Array.Empty<string>());
+                    return (false, ProjectRestoreMode.Normalize(selectedMode), (IReadOnlyList<string>)Array.Empty<string>());
                 }
 
-                return (dialog.Confirmed, ProjectRestoreMode.Normalize(selectedMode), selectedTargets);
+                return (dialog.Confirmed, ProjectRestoreMode.Normalize(selectedMode), (IReadOnlyList<string>)selectedTargets);
             });
         }
 
