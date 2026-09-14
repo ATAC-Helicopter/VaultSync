@@ -1204,15 +1204,11 @@ namespace VaultSync.UI.ViewModels
                 if (bytes <= 0) continue;
 
                 string colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
-                SKColor color = SKColors.DodgerBlue;
-                if (!SKColor.TryParse(colorHex, out color))
-                {
-                    color = SKColors.DodgerBlue;
-                }
+                SKColor color = SKColor.TryParse(colorHex, out SKColor parsedColor)
+                    ? parsedColor
+                    : SKColors.DodgerBlue;
                 string projectName = project.Name;
                 string displayProjectName = TrimForTooltip(projectName, 28);
-                long sliceBytes = bytes;
-
                 series.Add(new PieSeries<double>
                 {
                     Values      = new[] { (double)bytes },
@@ -1288,258 +1284,156 @@ namespace VaultSync.UI.ViewModels
             using var timing = RuntimeTiming.Measure("Dashboard backup usage bar rebuild");
             try
             {
-                // Default to empty segments if backup root is not configured.
-                string? backupRoot = config.Backups.BackupLocation;
-        if (string.IsNullOrWhiteSpace(backupRoot))
+                if (!TryLoadBackupDiskUsage(config, perProject, out BackupDiskUsage usage))
+                    return;
+
+                List<BackupUsageSegment> segments = BuildDiskUsageSegments(perProject, usage);
+                if (segments.Count == 0 && perProject.Any(project => project.bytes > 0))
+                {
+                    BuildBackupUsageBarFromVaultSync(perProject, usage.VaultSyncBytes);
+                    return;
+                }
+
+                ApplyBackupUsageSegments(segments);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Dashboard] Backup usage bar failed: {ex.Message}");
+                ClearBackupUsage();
+            }
+        }
+
+        private bool TryLoadBackupDiskUsage(
+            AppConfig config,
+            IReadOnlyList<(Project project, long bytes)> perProject,
+            out BackupDiskUsage usage)
+        {
+            usage = default;
+            string? backupRoot = config.Backups.BackupLocation;
+            if (string.IsNullOrWhiteSpace(backupRoot))
+            {
+                ClearBackupUsage();
+                return false;
+            }
+
+            long vaultSyncBytes = Math.Max(0L, perProject.Sum(project => project.bytes));
+            if (OperatingSystem.IsMacOS() && IsNetworkPath(backupRoot))
+            {
+                if (!TryResolveMountedSharePath(backupRoot, out backupRoot))
+                {
+                    BuildBackupUsageBarFromVaultSync(perProject, vaultSyncBytes);
+                    return false;
+                }
+            }
+            else
+            {
+                backupRoot = Path.GetFullPath(backupRoot);
+            }
+
+            if (!TryGetDiskSpace(backupRoot, out long totalBytes, out long freeBytes) || totalBytes <= 0)
+            {
+                BuildBackupUsageBarFromVaultSync(perProject, vaultSyncBytes);
+                return false;
+            }
+
+            usage = new BackupDiskUsage(totalBytes, Math.Max(0L, totalBytes - freeBytes), vaultSyncBytes);
+            return true;
+        }
+
+        private static List<BackupUsageSegment> BuildDiskUsageSegments(
+            IReadOnlyList<(Project project, long bytes)> perProject,
+            BackupDiskUsage usage)
+        {
+            var segments = new List<BackupUsageSegment>();
+            long otherBytes = Math.Max(0L, usage.UsedBytes - usage.VaultSyncBytes);
+            if (otherBytes > 0)
+            {
+                segments.Add(new BackupUsageSegment(
+                    L(OtherStorageLocalizationKey, OtherStorageFallback),
+                    FormatBytes(otherBytes),
+                    otherBytes * 100d / usage.TotalBytes,
+                    new ImmutableSolidColorBrush(Color.Parse("#8E8E93")),
+                    Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", L(OtherStorageLocalizationKey, OtherStorageFallback), FormatBytes(otherBytes))));
+            }
+
+            const int maxProjectSegments = 5;
+            List<(Project project, long bytes)> orderedProjects = [.. perProject
+                .Where(project => project.bytes > 0)
+                .OrderByDescending(project => project.bytes)];
+            foreach ((Project project, long bytes) in orderedProjects.Take(maxProjectSegments))
+                segments.Add(BuildProjectUsageSegment(project, bytes, usage.TotalBytes));
+
+            List<(Project project, long bytes)> remaining = [.. orderedProjects.Skip(maxProjectSegments)];
+            if (remaining.Count > 0)
+                segments.Add(BuildRemainingUsageSegment(remaining, usage.TotalBytes));
+
+            return segments;
+        }
+
+        private static BackupUsageSegment BuildProjectUsageSegment(Project project, long bytes, long totalBytes)
+        {
+            double percent = Math.Max(0.0001d, bytes * 100d / totalBytes);
+            Color color = Color.Parse(AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId));
+            return new BackupUsageSegment(
+                TrimForTooltip(project.Name, 26),
+                FormatBytes(bytes),
+                percent,
+                new ImmutableSolidColorBrush(color),
+                Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", project.Name, FormatBytes(bytes)));
+        }
+
+        private static BackupUsageSegment BuildRemainingUsageSegment(
+            IReadOnlyList<(Project project, long bytes)> projects,
+            long totalBytes)
+        {
+            long bytes = projects.Sum(project => project.bytes);
+            return new BackupUsageSegment(
+                Lf("Dashboard.Storage.MoreProjects", "+ {0} more", projects.Count),
+                FormatBytes(bytes),
+                Math.Max(0.0001d, bytes * 100d / totalBytes),
+                new ImmutableSolidColorBrush(Color.Parse("#5B6480")),
+                Lf("Dashboard.Storage.MoreProjectsTooltip", "{0} additional projects: {1}", projects.Count, FormatBytes(bytes)));
+        }
+
+        private void ApplyBackupUsageSegments(List<BackupUsageSegment> segments)
+        {
+            BackupUsageSegments = segments;
+            BackupTopConsumers = BuildTopConsumerList(segments);
+            BackupUsageSeries = [.. segments
+                .Where(segment => segment.SizeBytes > 0 && segment.Brush is ISolidColorBrush)
+                .Select(BuildBackupUsageSeries)];
+            BackupUsageXAxes = [new Axis { IsVisible = false, MinLimit = 0, MaxLimit = 100 }];
+            BackupUsageYAxes = [new Axis { IsVisible = false }];
+            NotifyBackupUsageChanged();
+        }
+
+        private static ISeries BuildBackupUsageSeries(BackupUsageSegment segment)
+        {
+            var solid = (ISolidColorBrush)segment.Brush;
+            var color = new SKColor(solid.Color.R, solid.Color.G, solid.Color.B, solid.Color.A);
+            return new StackedRowSeries<double>
+            {
+                Values = [segment.SizeBytes],
+                Stroke = null,
+                Fill = new SolidColorPaint(color),
+                MaxBarWidth = 20,
+                IsHoverable = false,
+                DataLabelsPaint = null,
+                StackGroup = 0
+            };
+        }
+
+        private void ClearBackupUsage()
         {
             BackupUsageSegments = [];
             BackupTopConsumers = [];
-            BackupUsageSeries   = [];
-            BackupUsageXAxes    = [];
-            BackupUsageYAxes    = [];
-
-            OnPropertyChanged(nameof(BackupUsageSegments));
-            OnPropertyChanged(nameof(BackupTopConsumers));
-            OnPropertyChanged(nameof(HasBackupTopConsumers));
-            OnPropertyChanged(nameof(BackupUsageSeries));
-            OnPropertyChanged(nameof(BackupUsageXAxes));
-            OnPropertyChanged(nameof(BackupUsageYAxes));
-            return;
-        }
-
-                long vaultSyncBytes = perProject.Sum(p => p.bytes);
-
-        if (OperatingSystem.IsMacOS() && IsNetworkPath(backupRoot))
-        {
-            if (!TryResolveMountedSharePath(backupRoot, out string? mountedRoot))
-            {
-                BuildBackupUsageBarFromVaultSync(perProject, vaultSyncBytes);
-                return;
-            }
-
-            backupRoot = mountedRoot;
-        }
-        else
-        {
-            backupRoot = Path.GetFullPath(backupRoot);
-        }
-
-        if (!TryGetDiskSpace(backupRoot, out long totalBytes, out long freeBytes) || totalBytes <= 0)
-        {
-            BuildBackupUsageBarFromVaultSync(perProject, vaultSyncBytes);
-            return;
-        }
-
-                long usedBytes  = Math.Max(0L, totalBytes - freeBytes);
-
-        if (totalBytes <= 0)
-        {
-            BackupUsageSegments = [];
-            BackupUsageSeries   = [];
-            BackupUsageXAxes    = [];
-            BackupUsageYAxes    = [];
-
-            OnPropertyChanged(nameof(BackupUsageSegments));
-            OnPropertyChanged(nameof(BackupUsageSeries));
-            OnPropertyChanged(nameof(BackupUsageXAxes));
-            OnPropertyChanged(nameof(BackupUsageYAxes));
-            return;
-        }
-
-        // Sum of the latest snapshot sizes per project (VaultSync usage approximation).
-        if (vaultSyncBytes < 0) vaultSyncBytes = 0;
-
-                // Percentages of the total backup disk.
-                double usedPercentTotal = usedBytes        * 100d / totalBytes;
-                double vaultSyncPercent = vaultSyncBytes   * 100d / totalBytes;
-                double otherPercent     = Math.Max(0d, usedPercentTotal - vaultSyncPercent);
-
-        var segments = new List<BackupUsageSegment>();
-        const int maxProjectSegments = 5;
-
-                // 1) Other segment (non-VaultSync usage on the backup drive).
-                // This is both in the legend and in the overlay bar.
-                long otherBytes = Math.Max(0L, usedBytes - vaultSyncBytes);
-        if (otherPercent > 0)
-        {
-            segments.Add(new BackupUsageSegment(
-                L(OtherStorageLocalizationKey, OtherStorageFallback),
-                FormatBytes(otherBytes),
-                otherPercent,
-                new ImmutableSolidColorBrush(Color.Parse("#8E8E93")),
-                Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", L(OtherStorageLocalizationKey, OtherStorageFallback), FormatBytes(otherBytes))));
-        }
-
-                // 2) One segment per project for its latest snapshot size, as percent of total disk.
-                int addedProjectSegments = 0;
-            var orderedProjects = perProject
-                .Where(p => p.bytes > 0)
-                .OrderByDescending(p => p.bytes)
-                .ToList();
-
-            var visibleProjects = orderedProjects.Take(maxProjectSegments).ToList();
-            var remainingProjects = orderedProjects.Skip(maxProjectSegments).ToList();
-
-            foreach ((Project project, long bytes) in visibleProjects)
-            {
-                        double projectPercent = bytes * 100d / totalBytes;
-                // Keep legend/segment presence stable even when disk is huge and
-                // floating-point math yields near-zero percentages.
-                if (projectPercent <= 0)
-                {
-                    projectPercent = 0.0001d;
-                }
-
-                        string colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
-                var color = Color.Parse(colorHex);
-                        string displayName = TrimForTooltip(project.Name, 26);
-
-                segments.Add(new BackupUsageSegment(
-                    displayName,
-                    FormatBytes(bytes),
-                    projectPercent,
-                    new ImmutableSolidColorBrush(color),
-                    Lf("Dashboard.Storage.SegmentTooltip", "{0}: {1}", project.Name, FormatBytes(bytes))));
-                addedProjectSegments++;
-            }
-
-            if (remainingProjects.Count > 0)
-            {
-                        long remainingBytes = remainingProjects.Sum(x => x.bytes);
-                        double remainingPercent = remainingBytes * 100d / totalBytes;
-                if (remainingPercent <= 0)
-                    remainingPercent = 0.0001d;
-
-                segments.Add(new BackupUsageSegment(
-                    Lf("Dashboard.Storage.MoreProjects", "+ {0} more", remainingProjects.Count),
-                    FormatBytes(remainingBytes),
-                    remainingPercent,
-                    new ImmutableSolidColorBrush(Color.Parse("#5B6480")),
-                    Lf("Dashboard.Storage.MoreProjectsTooltip", "{0} additional projects: {1}", remainingProjects.Count, FormatBytes(remainingBytes))));
-                addedProjectSegments += remainingProjects.Count;
-            }
-
-        // Guard: if disk-based projection collapses to only "Other" while we do have
-        // project bytes, switch to VaultSync-relative fallback so the breakdown is visible.
-        if (addedProjectSegments == 0 && perProject.Any(p => p.bytes > 0))
-        {
-            BuildBackupUsageBarFromVaultSync(perProject, vaultSyncBytes);
-            return;
-        }
-
-        BackupUsageSegments = segments;
-        BackupTopConsumers = BuildTopConsumerList(segments);
-        OnPropertyChanged(nameof(HasBackupUsageSegments));
-        OnPropertyChanged(nameof(HasBackupTopConsumers));
-
-        // Build stacked RowSeries for the colored bar (Other + VaultSync projects).
-        if (segments.Count == 0)
-        {
             BackupUsageSeries = [];
-            BackupUsageXAxes  = new[]
-            {
-                new Axis
-                {
-                    IsVisible = false,
-                    MinLimit  = 0,
-                    MaxLimit  = 100
-                }
-            };
-            BackupUsageYAxes  = new[]
-            {
-                new Axis
-                {
-                    IsVisible = false
-                }
-            };
-
+            BackupUsageXAxes = [];
+            BackupUsageYAxes = [];
             NotifyBackupUsageChanged();
-            return;
         }
 
-                double totalShown = segments.Sum(s => s.SizeBytes);
-        if (totalShown <= 0)
-        {
-            BackupUsageSeries = [];
-            BackupUsageXAxes  = new[]
-            {
-                new Axis
-                {
-                    IsVisible = false,
-                    MinLimit  = 0,
-                    MaxLimit  = 100
-                }
-            };
-            BackupUsageYAxes  = new[]
-            {
-                new Axis
-                {
-                    IsVisible = false
-                }
-            };
-
-            NotifyBackupUsageChanged();
-            return;
-        }
-
-        var series = new List<ISeries>();
-        foreach (BackupUsageSegment seg in segments)
-        {
-            if (seg.SizeBytes <= 0)
-                continue;
-
-            if (seg.Brush is not ISolidColorBrush solid)
-                continue;
-
-            var skColor = new SKColor(solid.Color.R, solid.Color.G, solid.Color.B, solid.Color.A);
-
-            series.Add(new StackedRowSeries<double>
-            {
-                Values        = new[] { seg.SizeBytes },
-                Stroke        = null,
-                Fill          = new SolidColorPaint(skColor),
-                MaxBarWidth   = 20,
-                IsHoverable   = false,
-                DataLabelsPaint = null,
-                StackGroup    = 0
-            });
-        }
-
-        BackupUsageSeries = [.. series];
-
-        BackupUsageXAxes = new[]
-        {
-            new Axis
-            {
-                IsVisible = false,
-                MinLimit  = 0,
-                MaxLimit  = 100
-            }
-        };
-
-        BackupUsageYAxes = new[]
-        {
-            new Axis
-            {
-                IsVisible = false
-            }
-        };
-
-        NotifyBackupUsageChanged();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Dashboard] Backup usage bar failed: {ex.Message}");
-
-        BackupUsageSegments = [];
-        BackupTopConsumers = [];
-        BackupUsageSeries   = [];
-        BackupUsageXAxes    = [];
-        BackupUsageYAxes    = [];
-
-        NotifyBackupUsageChanged();
-    }
-}
+        private readonly record struct BackupDiskUsage(long TotalBytes, long UsedBytes, long VaultSyncBytes);
 
         private void BuildBackupUsageBarFromVaultSync(IReadOnlyList<(Project project, long bytes)> perProject, long vaultSyncBytes)
         {
@@ -1924,45 +1818,50 @@ namespace VaultSync.UI.ViewModels
                 return false;
 
             if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!Uri.TryCreate(path, UriKind.Absolute, out Uri? uri))
-                    return false;
+                return TryParseSmbShare(path, out host, out share, out subPath);
 
-                host = uri.Host;
-                string[] segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-                if (segments.Length == 0)
-                    return false;
+            return IsNetworkPath(path) && TryParseUncShare(path, out host, out share, out subPath);
+        }
 
-                share = segments[0];
-                if (segments.Length > 1)
-                    subPath = string.Join('/', segments.Skip(1));
+        private static bool TryParseSmbShare(string path, out string host, out string share, out string subPath)
+        {
+            host = string.Empty;
+            share = string.Empty;
+            subPath = string.Empty;
+            if (!Uri.TryCreate(path, UriKind.Absolute, out Uri? uri))
+                return false;
 
-                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
-            }
+            string[] segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0)
+                return false;
 
-            if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
-            {
-                string trimmed = path.TrimStart('\\', '/').Replace('\\', FormatSeparator);
-                string[] parts = trimmed.Split(FormatSeparator, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length < 2)
-                    return false;
+            host = uri.Host;
+            share = segments[0];
+            subPath = segments.Length > 1 ? string.Join('/', segments.Skip(1)) : string.Empty;
+            return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
+        }
 
-                host = parts[0];
-                share = parts[1];
+        private static bool TryParseUncShare(string path, out string host, out string share, out string subPath)
+        {
+            host = string.Empty;
+            share = string.Empty;
+            subPath = string.Empty;
+            string[] parts = path.TrimStart('\\', '/')
+                .Replace('\\', FormatSeparator)
+                .Split(FormatSeparator, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2)
+                return false;
 
-                if (host.Contains('@'))
-                    host = host.Split('@').Last();
-                if (host.Contains(':'))
-                    host = host.Split(':').Last();
+            host = NormalizeShareHost(parts[0]);
+            share = parts[1];
+            subPath = parts.Length > 2 ? string.Join('/', parts.Skip(2)) : string.Empty;
+            return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
+        }
 
-                if (parts.Length > 2)
-                    subPath = string.Join('/', parts.Skip(2));
-
-                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
-            }
-
-            return false;
+        private static string NormalizeShareHost(string host)
+        {
+            int separatorIndex = Math.Max(host.LastIndexOf('@'), host.LastIndexOf(':'));
+            return separatorIndex >= 0 ? host[(separatorIndex + 1)..] : host;
         }
 
         private static string AppendShareSubPath(string mountPoint, string subPath)
@@ -1984,51 +1883,7 @@ namespace VaultSync.UI.ViewModels
 
         private static bool TryParseShare(string path, out string host, out string share)
         {
-            host  = string.Empty;
-            share = string.Empty;
-
-            if (string.IsNullOrWhiteSpace(path))
-                return false;
-
-            if (path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!Uri.TryCreate(path, UriKind.Absolute, out Uri? uri))
-                    return false;
-
-                host = uri.Host;
-                string[] segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-                if (segments.Length == 0)
-                    return false;
-
-                share = segments[0];
-                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
-            }
-
-            if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith(@"//", StringComparison.OrdinalIgnoreCase))
-            {
-                string trimmed = path.TrimStart('\\', '/').Replace('\\', '/');
-                string[] parts = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length < 2)
-                    return false;
-
-                host  = parts[0];
-                share = parts[1];
-
-                if (host.Contains('@'))
-                {
-                    host = host.Split('@').Last();
-                }
-
-                if (host.Contains(':'))
-                {
-                    host = host.Split(':').Last();
-                }
-
-                return !string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(share);
-            }
-
-            return false;
+            return TryParseShareWithSubpath(path, out host, out share, out _);
         }
 
         private static string TryGetMountedSharePath(string host, string share)
@@ -2059,27 +1914,8 @@ namespace VaultSync.UI.ViewModels
                 string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 foreach (string line in lines)
                 {
-                    if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
-                    if (onIndex <= 0)
-                        continue;
-
-                    string source = line.Substring(0, onIndex).Trim();
-                    string rest = line.Substring(onIndex + 4);
-                    string mountPoint = rest.Split(" (", StringSplitOptions.None)[0].Trim();
-                    if (string.IsNullOrWhiteSpace(mountPoint))
-                        continue;
-
-                    if (!TryParseShare(source, out string? mountedHost, out string? mountedShare))
-                        continue;
-
-                    if (string.Equals(host, mountedHost, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(share, mountedShare, StringComparison.OrdinalIgnoreCase))
-                    {
+                    if (TryMatchMountedShare(line, host, share, out string mountPoint))
                         return mountPoint;
-                    }
                 }
             }
             catch
@@ -2088,6 +1924,32 @@ namespace VaultSync.UI.ViewModels
             }
 
             return string.Empty;
+        }
+
+        private static bool TryMatchMountedShare(
+            string line,
+            string host,
+            string share,
+            out string mountPoint)
+        {
+            mountPoint = string.Empty;
+            if (!line.Contains("smbfs", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            int onIndex = line.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+            if (onIndex <= 0)
+                return false;
+
+            string source = line[..onIndex].Trim();
+            mountPoint = line[(onIndex + 4)..].Split(" (", StringSplitOptions.None)[0].Trim();
+            if (string.IsNullOrWhiteSpace(mountPoint) ||
+                !TryParseShare(source, out string? mountedHost, out string? mountedShare))
+            {
+                return false;
+            }
+
+            return string.Equals(host, mountedHost, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(share, mountedShare, StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool TryFindMountByName(string share, string rootPath, out string mountedPath)

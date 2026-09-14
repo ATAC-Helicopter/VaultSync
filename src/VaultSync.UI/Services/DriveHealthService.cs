@@ -476,23 +476,35 @@ namespace VaultSync.UI.Services
 
             foreach (string dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
             {
-                try
+                string candidate = ResolveExecutableInDirectory(dir, fileName, windowsExtensions);
+                if (!string.IsNullOrEmpty(candidate))
+                    return candidate;
+            }
+
+            return string.Empty;
+        }
+
+        private static string ResolveExecutableInDirectory(
+            string directory,
+            string fileName,
+            IReadOnlyList<string> extensions)
+        {
+            try
+            {
+                string candidate = Path.Combine(directory, fileName);
+                if (File.Exists(candidate))
+                    return candidate;
+
+                foreach (string extension in extensions)
                 {
-                    string candidate = Path.Combine(dir, fileName);
+                    candidate = Path.Combine(directory, fileName + extension.ToLowerInvariant());
                     if (File.Exists(candidate))
                         return candidate;
-
-                    foreach (string ext in windowsExtensions)
-                    {
-                        candidate = Path.Combine(dir, fileName + ext.ToLowerInvariant());
-                        if (File.Exists(candidate))
-                            return candidate;
-                    }
                 }
-                catch
-                {
-                    // Ignore malformed PATH entries.
-                }
+            }
+            catch
+            {
+                // Ignore malformed PATH entries.
             }
 
             return string.Empty;
