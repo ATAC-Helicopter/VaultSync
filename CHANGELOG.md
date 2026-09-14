@@ -2,7 +2,7 @@
 ## [1.8.9] - Unreleased
 ### Maintenance
 - [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
-- [VS-1896] Clear remaining desktop static-analysis maintainability findings.
+- [VS-1896] Clear static-analysis findings and restore the Sonar coverage gate.
 - [VS-1893] Prepare release identity, tracking, documentation, and packaging for 1.8.9.
 ### Fixed
 - [BUG-18155] Preserve backup project expansion and loaded history depth during refreshes.

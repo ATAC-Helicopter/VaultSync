@@ -92,21 +92,22 @@ icon rail is reserved for windows below 1100 pixels.
 
 ## Automated validation
 
-- Full .NET suite: **902 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **908 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
   preservation after deletion, selected project-row identity and aggregate
   updates, empty-selection continuity, summary updates, removal of an empty group,
   restoring CLI data from the recorded backup rather than the live source, and
-  stable/prerelease version-ordering boundaries, private default instance-lock
-  placement, and tray refresh-gate release.
+  stable/prerelease version-ordering boundaries, protected snapshot pruning,
+  preset-index fallbacks, private default instance-lock placement, and tray
+  refresh-gate release.
 - Existing backup comparison, paging, and theme tests pass.
 - Release preparation: **77 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
 - Hosted Windows, Linux, and macOS build/test jobs pass; CodeQL, YAML, Store
-  metadata, and dependency submission pass, and the Sonar quality gate remains
-  a promotion requirement.
+  metadata, and dependency submission pass. The Sonar quality gate passes with
+  **81.0% new-code coverage**; integration remains a promotion requirement.
 
 ## Desktop qualification still required
 
