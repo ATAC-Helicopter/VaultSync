@@ -543,7 +543,7 @@ namespace VaultSync.UI.ViewModels
                 if (confirmed && dontShowAgain.IsChecked == true)
                 {
                     cfg.Behavior.ConfirmDeleteBackup = false;
-                    await _configStore.SaveAsync(cfg);
+                    await _configStore.SaveAsync(cfg, CancellationToken.None);
                     if (_settingsViewModel is not null)
                     {
                         _settingsViewModel.ConfirmDeleteBackups = false;
@@ -820,138 +820,155 @@ namespace VaultSync.UI.ViewModels
             out bool permissionDenied,
             Action<DeleteDirectoryProgress>? progress = null)
         {
-            error = null;
-            permissionDenied = false;
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            {
+                error = null;
+                permissionDenied = false;
                 return true;
+            }
 
-            List<string> files;
-            List<string> directories;
-            long totalBytes = 0;
+            var state = new DeleteAttemptState();
+            DeleteTree? tree = ScanDeleteTree(path, state, progress);
+            if (tree is null)
+                return CompleteDeleteAttempt(state, out error, out permissionDenied);
 
+            progress?.Invoke(DeleteDirectoryProgress.Preparing(path, tree.Files.Count, tree.TotalBytes));
+            ClearReadOnlyAttributes(tree.Files, state);
+            ClearReadOnlyAttributes(tree.Directories, state);
+            DeleteTreeFiles(tree, state, progress);
+            progress?.Invoke(DeleteDirectoryProgress.Cleaning(
+                path, state.DeletedFiles, tree.Files.Count, state.DeletedBytes, tree.TotalBytes));
+            DeleteTreeDirectories(tree.Directories, state);
+            state.Succeeded = DeleteRootDirectory(path, state);
+            return CompleteDeleteAttempt(state, out error, out permissionDenied);
+        }
+
+        private static DeleteTree? ScanDeleteTree(
+            string path,
+            DeleteAttemptState state,
+            Action<DeleteDirectoryProgress>? progress)
+        {
             try
             {
                 progress?.Invoke(DeleteDirectoryProgress.Scanning(path));
-                files = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).ToList();
-                directories = Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories)
+                List<string> files = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).ToList();
+                List<string> directories = Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories)
                     .OrderByDescending(d => d.Length)
                     .ToList();
-
-                foreach (var file in files)
-                {
-                    try
-                    {
-                        totalBytes += new FileInfo(file).Length;
-                    }
-                    catch
-                    {
-                        // File size is optional progress metadata; deletion still proceeds.
-                    }
-                }
+                long totalBytes = files.Sum(GetOptionalFileLength);
+                return new DeleteTree(files, directories, totalBytes);
             }
             catch (UnauthorizedAccessException ex)
             {
-                permissionDenied = true;
-                error = ex.Message;
-                return false;
+                state.PermissionDenied = true;
+                state.Error = ex.Message;
             }
             catch (Exception ex)
             {
-                error = ex.Message;
-                return false;
+                state.Error = ex.Message;
             }
 
-            progress?.Invoke(DeleteDirectoryProgress.Preparing(path, files.Count, totalBytes));
+            return null;
+        }
 
-            // Clear read-only attributes on files and dirs before deletion.
-            foreach (var file in files)
+        private static long GetOptionalFileLength(string path)
+        {
+            try
+            {
+                return new FileInfo(path).Length;
+            }
+            catch
+            {
+                // File size is optional progress metadata; deletion still proceeds.
+                return 0;
+            }
+        }
+
+        private static void ClearReadOnlyAttributes(IEnumerable<string> paths, DeleteAttemptState state)
+        {
+            foreach (string itemPath in paths)
             {
                 try
                 {
-                    FileAttributes attrs = File.GetAttributes(file);
+                    FileAttributes attrs = File.GetAttributes(itemPath);
                     if ((attrs & FileAttributes.ReadOnly) != 0)
-                        File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
+                        File.SetAttributes(itemPath, attrs & ~FileAttributes.ReadOnly);
                 }
-                catch (UnauthorizedAccessException) { permissionDenied = true; }
+                catch (UnauthorizedAccessException)
+                {
+                    state.PermissionDenied = true;
+                }
                 catch
                 {
-                    // ignore individual failures; deletion will surface issues later
+                    // Best effort; the delete stage records actionable failures.
                 }
             }
+        }
 
-            foreach (var dir in directories)
+        private static void DeleteTreeFiles(
+            DeleteTree tree,
+            DeleteAttemptState state,
+            Action<DeleteDirectoryProgress>? progress)
+        {
+            DateTime lastProgressUtc = DateTime.MinValue;
+            foreach (string file in tree.Files)
             {
                 try
                 {
-                    FileAttributes attrs = File.GetAttributes(dir);
-                    if ((attrs & FileAttributes.ReadOnly) != 0)
-                        File.SetAttributes(dir, attrs & ~FileAttributes.ReadOnly);
-                }
-                catch (UnauthorizedAccessException) { permissionDenied = true; }
-                catch
-                {
-                }
-            }
-
-            var deletedFiles = 0;
-            long deletedBytes = 0;
-            var lastProgressUtc = DateTime.MinValue;
-
-            foreach (var file in files)
-            {
-                var fileBytes = 0L;
-                try
-                {
-                    fileBytes = new FileInfo(file).Length;
+                    long fileBytes = GetOptionalFileLength(file);
                     File.SetAttributes(file, FileAttributes.Normal);
                     File.Delete(file);
-                    deletedFiles++;
-                    deletedBytes += fileBytes;
+                    state.DeletedFiles++;
+                    state.DeletedBytes += fileBytes;
 
-                    var now = DateTime.UtcNow;
+                    DateTime now = DateTime.UtcNow;
                     if (progress is not null &&
-                        (deletedFiles == files.Count || now - lastProgressUtc >= TimeSpan.FromMilliseconds(200)))
+                        (state.DeletedFiles == tree.Files.Count || now - lastProgressUtc >= TimeSpan.FromMilliseconds(200)))
                     {
                         lastProgressUtc = now;
                         progress(DeleteDirectoryProgress.Deleting(
                             file,
-                            deletedFiles,
-                            files.Count,
-                            deletedBytes,
-                            totalBytes));
+                            state.DeletedFiles,
+                            tree.Files.Count,
+                            state.DeletedBytes,
+                            tree.TotalBytes));
                     }
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    permissionDenied = true;
-                    error = ex.Message;
+                    state.PermissionDenied = true;
+                    state.Error = ex.Message;
                 }
                 catch (Exception ex)
                 {
-                    error = ex.Message;
+                    state.Error = ex.Message;
                 }
             }
+        }
 
-            progress?.Invoke(DeleteDirectoryProgress.Cleaning(path, deletedFiles, files.Count, deletedBytes, totalBytes));
-
-            foreach (var dir in directories)
+        private static void DeleteTreeDirectories(IEnumerable<string> directories, DeleteAttemptState state)
+        {
+            foreach (string directory in directories)
             {
                 try
                 {
-                    if (Directory.Exists(dir))
-                        Directory.Delete(dir, recursive: false);
+                    if (Directory.Exists(directory))
+                        Directory.Delete(directory, recursive: false);
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    permissionDenied = true;
-                    error = ex.Message;
+                    state.PermissionDenied = true;
+                    state.Error = ex.Message;
                 }
                 catch (Exception ex)
                 {
-                    error = ex.Message;
+                    state.Error = ex.Message;
                 }
             }
+        }
 
+        private static bool DeleteRootDirectory(string path, DeleteAttemptState state)
+        {
             try
             {
                 if (Directory.Exists(path))
@@ -961,26 +978,47 @@ namespace VaultSync.UI.ViewModels
             }
             catch (UnauthorizedAccessException ex)
             {
-                permissionDenied = true;
-                if (TryDeleteDirectoryManually(path, ref permissionDenied, out string? manualError))
+                state.PermissionDenied = true;
+                if (TryDeleteDirectoryManually(path, state, out string? manualError))
                     return true;
 
-                error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
+                state.Error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
                 return false;
             }
             catch (IOException ex)
             {
-                if (TryDeleteDirectoryManually(path, ref permissionDenied, out string? manualError))
+                if (TryDeleteDirectoryManually(path, state, out string? manualError))
                     return true;
 
-                error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
+                state.Error = string.IsNullOrWhiteSpace(manualError) ? ex.Message : manualError;
                 return false;
             }
             catch (Exception ex)
             {
-                error = ex.Message;
+                state.Error = ex.Message;
                 return false;
             }
+        }
+
+        private static bool CompleteDeleteAttempt(
+            DeleteAttemptState state,
+            out string? error,
+            out bool permissionDenied)
+        {
+            error = state.Error;
+            permissionDenied = state.PermissionDenied;
+            return state.Succeeded;
+        }
+
+        private sealed record DeleteTree(List<string> Files, List<string> Directories, long TotalBytes);
+
+        private sealed class DeleteAttemptState
+        {
+            public string? Error { get; set; }
+            public bool PermissionDenied { get; set; }
+            public bool Succeeded { get; set; }
+            public int DeletedFiles { get; set; }
+            public long DeletedBytes { get; set; }
         }
 
         private sealed record DeleteDirectoryProgress(
@@ -1055,7 +1093,7 @@ namespace VaultSync.UI.ViewModels
                         BackupSnapshotItem.FormatSize(totalBytes)));
         }
 
-        private static bool TryDeleteDirectoryManually(string path, ref bool permissionDenied, out string? error)
+        private static bool TryDeleteDirectoryManually(string path, DeleteAttemptState state, out string? error)
         {
             error = null;
             if (!Directory.Exists(path))
@@ -1064,52 +1102,11 @@ namespace VaultSync.UI.ViewModels
             try
             {
                 foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-                {
-                    try
-                    {
-                        File.SetAttributes(file, FileAttributes.Normal);
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        permissionDenied = true;
-                    }
-                    catch
-                    {
-                        // best effort
-                    }
-
-                    try
-                    {
-                        File.Delete(file);
-                    }
-                    catch (UnauthorizedAccessException ex)
-                    {
-                        permissionDenied = true;
-                        error = ex.Message;
-                    }
-                    catch (Exception ex)
-                    {
-                        error = ex.Message;
-                    }
-                }
+                    TryDeleteFileManually(file, state, ref error);
 
                 foreach (string? dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories)
                                              .OrderByDescending(d => d.Length))
-                {
-                    try
-                    {
-                        Directory.Delete(dir, recursive: false);
-                    }
-                    catch (UnauthorizedAccessException ex)
-                    {
-                        permissionDenied = true;
-                        error = ex.Message;
-                    }
-                    catch (Exception ex)
-                    {
-                        error = ex.Message;
-                    }
-                }
+                    TryDeleteEmptyDirectory(dir, state, ref error);
 
                 if (Directory.Exists(path))
                     Directory.Delete(path, recursive: false);
@@ -1118,7 +1115,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch (UnauthorizedAccessException ex)
             {
-                permissionDenied = true;
+                state.PermissionDenied = true;
                 error = ex.Message;
                 return false;
             }
@@ -1126,6 +1123,53 @@ namespace VaultSync.UI.ViewModels
             {
                 error = ex.Message;
                 return false;
+            }
+        }
+
+        private static void TryDeleteFileManually(string path, DeleteAttemptState state, ref string? error)
+        {
+            try
+            {
+                File.SetAttributes(path, FileAttributes.Normal);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                state.PermissionDenied = true;
+            }
+            catch
+            {
+                // Best effort; File.Delete below records actionable failures.
+            }
+
+            try
+            {
+                File.Delete(path);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                state.PermissionDenied = true;
+                error = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+            }
+        }
+
+        private static void TryDeleteEmptyDirectory(string path, DeleteAttemptState state, ref string? error)
+        {
+            try
+            {
+                Directory.Delete(path, recursive: false);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                state.PermissionDenied = true;
+                error = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
             }
         }
 
@@ -1308,7 +1352,7 @@ namespace VaultSync.UI.ViewModels
             BackupDestination? prefixMatch = destinations.FirstOrDefault(d =>
                 !string.IsNullOrWhiteSpace(d.Path) &&
                 !string.IsNullOrWhiteSpace(backupRoot) &&
-                backupRoot.StartsWith(d.Path!, StringComparison.OrdinalIgnoreCase));
+                backupRoot.StartsWith(d.Path, StringComparison.OrdinalIgnoreCase));
             if (prefixMatch is not null)
                 return prefixMatch;
 
@@ -1694,11 +1738,7 @@ namespace VaultSync.UI.ViewModels
                     FontWeight = FontWeight.SemiBold
                 };
 
-                string backupTypeLabel = preparation.IsImported
-                    ? AppViewModel.L("Backups.Snapshot.Type.Imported", "Imported")
-                    : string.Equals(preparation.BackupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase)
-                        ? AppViewModel.L("Backups.Snapshot.Type.Incremental", "Incremental")
-                        : AppViewModel.L("Backups.Snapshot.Type.Full", "Full");
+                string backupTypeLabel = GetBackupTypeLabel(preparation);
                 string restoreModeLabel = string.Equals(preparation.RestoreMode, ProjectRestoreMode.Sandbox, StringComparison.OrdinalIgnoreCase)
                     ? AppViewModel.L("Backups.Restore.Mode.Sandbox", "Sandbox (restore to preview folder)")
                     : AppViewModel.L("Backups.Restore.Mode.Direct", "Direct (overwrite project path)");
@@ -1925,6 +1965,16 @@ namespace VaultSync.UI.ViewModels
             });
         }
 
+        private static string GetBackupTypeLabel(RestoreBackupPreparation preparation)
+        {
+            if (preparation.IsImported)
+                return AppViewModel.L("Backups.Snapshot.Type.Imported", "Imported");
+
+            return string.Equals(preparation.BackupMode, BackupModes.Incremental, StringComparison.OrdinalIgnoreCase)
+                ? AppViewModel.L("Backups.Snapshot.Type.Incremental", "Incremental")
+                : AppViewModel.L("Backups.Snapshot.Type.Full", "Full");
+        }
+
         private enum SandboxPostRestoreAction
         {
             Keep,
@@ -2143,12 +2193,9 @@ namespace VaultSync.UI.ViewModels
                 _repo.UpdateProjectNeedsRestore(project.Id, false);
                 applySucceeded = true;
 
-                if (deleteAfterApply)
+                if (deleteAfterApply && !DeleteDirectoryRobust(sandboxPath, out cleanupError))
                 {
-                    if (!DeleteDirectoryRobust(sandboxPath, out cleanupError))
-                    {
-                        cleanupError ??= AppViewModel.L("Backups.Restore.Sandbox.CleanupFailed", "Sandbox cleanup failed.");
-                    }
+                    cleanupError ??= AppViewModel.L("Backups.Restore.Sandbox.CleanupFailed", "Sandbox cleanup failed.");
                 }
             }
             catch (OperationCanceledException) when (applyCancellation.IsCancellationRequested)
