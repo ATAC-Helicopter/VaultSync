@@ -151,6 +151,27 @@ public sealed class BackupsCompareQualityOfLifeTests
         Assert.NotEqual(image.FileTypeIconData, readme.FileTypeIconData);
     }
 
+    [Theory]
+    [InlineData("Dockerfile", "DKR", DiffPreviewFileType.Code)]
+    [InlineData("SCRIPT.ZSH", "$", DiffPreviewFileType.Code)]
+    [InlineData("project.csproj", "XML", DiffPreviewFileType.Markup)]
+    [InlineData("settings.yaml", "YML", DiffPreviewFileType.Data)]
+    [InlineData("archive.tar", "ZIP", DiffPreviewFileType.Archive)]
+    [InlineData("database.sqlite3", "DB", DiffPreviewFileType.Data)]
+    [InlineData("photo.WEBP", "IMG", DiffPreviewFileType.Image)]
+    [InlineData("unknown.bin", "•", DiffPreviewFileType.Other)]
+    public void FileTypeLookupPreservesAliasesAndCase(
+        string fileName,
+        string expectedLabel,
+        DiffPreviewFileType expectedType)
+    {
+        DiffPreviewTreeNode node = Assert.Single(
+            DiffPreviewTreeNode.Build([DiffFile(fileName)], expandAll: false));
+
+        Assert.Equal(expectedLabel, node.FileTypeLabel);
+        Assert.Equal(expectedType, node.FileTypeKind);
+    }
+
     [Fact]
     public void TreeSelectionAndSearchStayAlignedWithFlatFileNavigation()
     {

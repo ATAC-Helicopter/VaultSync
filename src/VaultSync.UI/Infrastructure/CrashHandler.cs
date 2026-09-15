@@ -156,6 +156,36 @@ internal static class CrashHandler
             return;
         }
 
+        bool assistanceEnabled = IsCrashReportAssistanceEnabled();
+        StackPanel content = BuildCrashContent(crash, assistanceEnabled, out TextBox? reportPreview, out TextBlock? reportStatus);
+        Window window = CreateCrashWindow(desktop, assistanceEnabled && crash is not null);
+        AddCrashActions(content, desktop, window, crash, reportPreview, reportStatus);
+        window.Content = BuildCrashWindowRoot(CreateCrashHeader(desktop, window), content);
+        window.Closed += (_, _) => ShutdownAfterCrash();
+
+        if (desktop.MainWindow is not null)
+            _ = window.ShowDialog(desktop.MainWindow);
+        else
+            window.Show();
+    }
+
+    private static StackPanel BuildCrashContent(
+        CrashArtifact? crash,
+        bool assistanceEnabled,
+        out TextBox? reportPreview,
+        out TextBlock? reportStatus)
+    {
+        var content = new StackPanel { Spacing = 16 };
+        content.Children.Add(CreateCrashHero());
+        reportPreview = null;
+        reportStatus = null;
+        if (crash is not null)
+            AddCrashReportDetails(content, crash, assistanceEnabled, out reportPreview, out reportStatus);
+        return content;
+    }
+
+    private static Grid CreateCrashHero()
+    {
         var title = new TextBlock
         {
             Text = L("Crash.Title", "VaultSync crashed"),
@@ -170,15 +200,7 @@ internal static class CrashHandler
             TextWrapping = TextWrapping.Wrap
         };
         if (GetBrush("TextSecondary") is { } messageBrush)
-        {
             message.Foreground = messageBrush;
-        }
-
-
-        var content = new StackPanel
-        {
-            Spacing = 16
-        };
 
         var heroIcon = new Border
         {
@@ -203,164 +225,144 @@ internal static class CrashHandler
         hero.Children.Add(heroIcon);
         hero.Children.Add(heroText);
         Grid.SetColumn(heroText, 1);
-        content.Children.Add(hero);
+        return hero;
+    }
 
-        string? logPath = crash?.Path;
-        TextBox? reportPreview = null;
-        TextBlock? reportStatus = null;
-        bool assistanceEnabled = IsCrashReportAssistanceEnabled();
-        if (crash is not null)
+    private static void AddCrashReportDetails(
+        StackPanel content,
+        CrashArtifact crash,
+        bool assistanceEnabled,
+        out TextBox? reportPreview,
+        out TextBlock? reportStatus)
+    {
+        content.Children.Add(new TextBlock
         {
-            content.Children.Add(new TextBlock
-            {
-                Text = assistanceEnabled
-                    ? L("Crash.PrivacySummary", "Review the complete redacted report below. Nothing is sent until you press Send in your email app.")
-                    : L("Crash.AssistanceDisabled", "Crash report assistance is disabled. The redacted report remains only on this device."),
-                TextWrapping = TextWrapping.Wrap,
-                FontWeight = FontWeight.Medium
-            });
+            Text = assistanceEnabled
+                ? L("Crash.PrivacySummary", "Review the complete redacted report below. Nothing is sent until you press Send in your email app.")
+                : L("Crash.AssistanceDisabled", "Crash report assistance is disabled. The redacted report remains only on this device."),
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = FontWeight.Medium
+        });
+        reportPreview = null;
+        reportStatus = null;
+        if (!assistanceEnabled)
+            return;
 
-            if (assistanceEnabled)
-            {
-                var identityPanel = new WrapPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    ItemSpacing = 8,
-                    LineSpacing = 8
-                };
-                identityPanel.Children.Add(CreateReportChip(crash.Document.OperatingSystemFamily));
-                identityPanel.Children.Add(CreateReportChip(crash.Document.CrashCategory));
-                identityPanel.Children.Add(CreateReportChip(crash.Document.CrashReason));
-
-                var identityContent = new StackPanel { Spacing = 8 };
-                identityContent.Children.Add(new TextBlock
-                {
-                    Text = crash.Document.ReportId,
-                    FontSize = 13,
-                    FontWeight = FontWeight.SemiBold,
-                    TextWrapping = TextWrapping.Wrap
-                });
-                identityContent.Children.Add(identityPanel);
-                var identityCard = new Border
-                {
-                    Padding = new Thickness(14, 12),
-                    CornerRadius = new CornerRadius(12),
-                    Background = GetBrush("Surface2"),
-                    BorderBrush = GetBrush("BorderSoft"),
-                    BorderThickness = new Thickness(1),
-                    Child = identityContent
-                };
-                content.Children.Add(identityCard);
-
-                string attachmentName = Path.GetFileName(logPath) ?? "vaultsync-crash-report.txt";
-                var attachmentTitle = new TextBlock
-                {
-                    Text = attachmentName,
-                    FontSize = 13,
-                    FontWeight = FontWeight.SemiBold,
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                var attachmentBadge = new Border
-                {
-                    Padding = new Thickness(8, 4),
-                    CornerRadius = new CornerRadius(8),
-                    Background = GetBrush("AccentSoftBrush"),
-                    Child = new TextBlock
-                    {
-                        Text = "TXT",
-                        FontSize = 11,
-                        FontWeight = FontWeight.Bold,
-                        Foreground = GetBrush("AccentBrush")
-                    }
-                };
-                var attachmentHeader = new Grid
-                {
-                    ColumnDefinitions = new ColumnDefinitions("Auto,*"),
-                    ColumnSpacing = 10
-                };
-                attachmentHeader.Children.Add(attachmentBadge);
-                attachmentHeader.Children.Add(attachmentTitle);
-                Grid.SetColumn(attachmentTitle, 1);
-                content.Children.Add(attachmentHeader);
-
-                reportPreview = new TextBox
-                {
-                    Text = crash.Document.Content,
-                    IsReadOnly = true,
-                    AcceptsReturn = true,
-                    TextWrapping = TextWrapping.NoWrap,
-                    FontFamily = new FontFamily("Menlo, Consolas, monospace"),
-                    FontSize = 12.5,
-                    CaretIndex = 0,
-                    MinWidth = 560,
-                    MinHeight = 220,
-                    MaxHeight = 290,
-                    Background = GetBrush("InputBackgroundBrush"),
-                    BorderBrush = GetBrush("InputBorderBrush")
-                };
-                ScrollViewer.SetHorizontalScrollBarVisibility(
-                    reportPreview,
-                    Avalonia.Controls.Primitives.ScrollBarVisibility.Auto);
-                ScrollViewer.SetVerticalScrollBarVisibility(
-                    reportPreview,
-                    Avalonia.Controls.Primitives.ScrollBarVisibility.Auto);
-                content.Children.Add(reportPreview);
-
-                reportStatus = new TextBlock
-                {
-                    Text = L("Crash.PreviewHint", "VaultSync locks the report ID, OS family, crash category, and crash reason. Add any optional context in the email draft."),
-                    TextWrapping = TextWrapping.Wrap,
-                    FontSize = 12
-                };
-                if (GetBrush("TextSecondary") is { } statusBrush)
-                    reportStatus.Foreground = statusBrush;
-                content.Children.Add(new Border
-                {
-                    Padding = new Thickness(12, 9),
-                    CornerRadius = new CornerRadius(10),
-                    Background = GetBrush("Surface2"),
-                    Child = reportStatus
-                });
-            }
-        }
-
-        var buttonRow = new WrapPanel
+        var identityPanel = new WrapPanel
         {
-            HorizontalAlignment = HorizontalAlignment.Right,
             Orientation = Orientation.Horizontal,
             ItemSpacing = 8,
             LineSpacing = 8
         };
+        identityPanel.Children.Add(CreateReportChip(crash.Document.OperatingSystemFamily));
+        identityPanel.Children.Add(CreateReportChip(crash.Document.CrashCategory));
+        identityPanel.Children.Add(CreateReportChip(crash.Document.CrashReason));
 
+        var identityContent = new StackPanel { Spacing = 8 };
+        identityContent.Children.Add(new TextBlock
+        {
+            Text = crash.Document.ReportId,
+            FontSize = 13,
+            FontWeight = FontWeight.SemiBold,
+            TextWrapping = TextWrapping.Wrap
+        });
+        identityContent.Children.Add(identityPanel);
+        content.Children.Add(new Border
+        {
+            Padding = new Thickness(14, 12),
+            CornerRadius = new CornerRadius(12),
+            Background = GetBrush("Surface2"),
+            BorderBrush = GetBrush("BorderSoft"),
+            BorderThickness = new Thickness(1),
+            Child = identityContent
+        });
+
+        string attachmentName = Path.GetFileName(crash.Path) ?? "vaultsync-crash-report.txt";
+        var attachmentTitle = new TextBlock
+        {
+            Text = attachmentName,
+            FontSize = 13,
+            FontWeight = FontWeight.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var attachmentBadge = new Border
+        {
+            Padding = new Thickness(8, 4),
+            CornerRadius = new CornerRadius(8),
+            Background = GetBrush("AccentSoftBrush"),
+            Child = new TextBlock
+            {
+                Text = "TXT",
+                FontSize = 11,
+                FontWeight = FontWeight.Bold,
+                Foreground = GetBrush("AccentBrush")
+            }
+        };
+        var attachmentHeader = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+            ColumnSpacing = 10
+        };
+        attachmentHeader.Children.Add(attachmentBadge);
+        attachmentHeader.Children.Add(attachmentTitle);
+        Grid.SetColumn(attachmentTitle, 1);
+        content.Children.Add(attachmentHeader);
+
+        reportPreview = new TextBox
+        {
+            Text = crash.Document.Content,
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.NoWrap,
+            FontFamily = new FontFamily("Menlo, Consolas, monospace"),
+            FontSize = 12.5,
+            CaretIndex = 0,
+            MinWidth = 560,
+            MinHeight = 220,
+            MaxHeight = 290,
+            Background = GetBrush("InputBackgroundBrush"),
+            BorderBrush = GetBrush("InputBorderBrush")
+        };
+        ScrollViewer.SetHorizontalScrollBarVisibility(reportPreview, Avalonia.Controls.Primitives.ScrollBarVisibility.Auto);
+        ScrollViewer.SetVerticalScrollBarVisibility(reportPreview, Avalonia.Controls.Primitives.ScrollBarVisibility.Auto);
+        content.Children.Add(reportPreview);
+
+        reportStatus = new TextBlock
+        {
+            Text = L("Crash.PreviewHint", "VaultSync locks the report ID, OS family, crash category, and crash reason. Add any optional context in the email draft."),
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12
+        };
+        if (GetBrush("TextSecondary") is { } statusBrush)
+            reportStatus.Foreground = statusBrush;
+        content.Children.Add(new Border
+        {
+            Padding = new Thickness(12, 9),
+            CornerRadius = new CornerRadius(10),
+            Background = GetBrush("Surface2"),
+            Child = reportStatus
+        });
+    }
+
+    private static Border CreateCrashHeader(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        Window window)
+    {
         var headerTitle = new TextBlock
         {
             Text = L("Crash.HeaderTitle", "VaultSync"),
-            FontWeight = FontWeight.SemiBold
+            FontWeight = FontWeight.SemiBold,
+            Foreground = GetBrush("TextPrimary")
         };
-        if (GetBrush("TextPrimary") is { } headerBrush)
-        {
-            headerTitle.Foreground = headerBrush;
-        }
-
         var headerSubTitle = new TextBlock
         {
             Text = L("Crash.HeaderSubtitle", "Crash report"),
-            FontSize = 12
+            FontSize = 12,
+            Foreground = GetBrush("TextSecondary")
         };
-        if (GetBrush("TextSecondary") is { } headerSubBrush)
-        {
-            headerSubTitle.Foreground = headerSubBrush;
-        }
-
-        var headerText = new StackPanel
-        {
-            Spacing = 2
-        };
+        var headerText = new StackPanel { Spacing = 2 };
         headerText.Children.Add(headerTitle);
         headerText.Children.Add(headerSubTitle);
-
-        Window? window = null;
-
         var headerClose = new Button
         {
             Content = "×",
@@ -370,11 +372,7 @@ internal static class CrashHandler
             HorizontalAlignment = HorizontalAlignment.Right
         };
         headerClose.Classes.Add("action-ghost");
-        headerClose.Click += (_, _) =>
-        {
-            desktop.Shutdown(1);
-        };
-
+        headerClose.Click += (_, _) => desktop.Shutdown(1);
         var headerGrid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
@@ -383,180 +381,149 @@ internal static class CrashHandler
         headerGrid.Children.Add(headerText);
         headerGrid.Children.Add(headerClose);
         Grid.SetColumn(headerClose, 1);
-
         var header = new Border
         {
             Padding = new Thickness(16, 12),
-            BorderThickness = new Thickness(0, 0, 0, 1)
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Background = GetBrush("Surface2"),
+            BorderBrush = GetBrush("BorderSoft"),
+            Child = headerGrid
         };
-        if (GetBrush("Surface2") is { } headerBackground)
-        {
-            header.Background = headerBackground;
-        }
-        if (GetBrush("BorderSoft") is { } headerBorder)
-        {
-            header.BorderBrush = headerBorder;
-        }
-        header.Child = headerGrid;
-
         header.PointerPressed += (_, e) =>
         {
             if (e.GetCurrentPoint(header).Properties.IsLeftButtonPressed)
-            {
-                window?.BeginMoveDrag(e);
-            }
+                window.BeginMoveDrag(e);
         };
+        return header;
+    }
 
+    private static Grid BuildCrashWindowRoot(Border header, StackPanel content)
+    {
         var card = new Border
         {
-            Padding = new Thickness(24),
-            Margin = new Thickness(20)
+            Padding = new Thickness(24), Margin = new Thickness(20), Child = content
         };
         card.Classes.Add("card");
-        card.Child = content;
-
-        var root = new Grid
-        {
-            RowDefinitions = new RowDefinitions("Auto,*")
-        };
+        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*") };
         root.Children.Add(header);
         root.Children.Add(card);
         Grid.SetRow(card, 1);
+        return root;
+    }
 
-        window = new Window
+    private static Window CreateCrashWindow(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        bool showReport)
+    {
+        return new Window
         {
             Title = L("Crash.Title", "VaultSync crashed"),
-            Content = root,
             CanResize = true,
             Width = 900,
-            Height = assistanceEnabled && crash is not null ? 760 : 440,
+            Height = showReport ? 760 : 440,
             MinWidth = 700,
             MinHeight = 400,
             WindowDecorations = WindowDecorations.None,
             ExtendClientAreaToDecorationsHint = true,
-            WindowStartupLocation = desktop.MainWindow != null
+            WindowStartupLocation = desktop.MainWindow is not null
                 ? WindowStartupLocation.CenterOwner
-                : WindowStartupLocation.CenterScreen
+                : WindowStartupLocation.CenterScreen,
+            Background = GetBrush("WindowBackground"),
+            Icon = desktop.MainWindow?.Icon
         };
-        if (GetBrush("WindowBackground") is { } backgroundBrush)
+    }
+
+    private static void AddCrashActions(
+        StackPanel content,
+        IClassicDesktopStyleApplicationLifetime desktop,
+        Window window,
+        CrashArtifact? crash,
+        TextBox? reportPreview,
+        TextBlock? reportStatus)
+    {
+        var buttonRow = new WrapPanel
         {
-            window.Background = backgroundBrush;
-        }
-        window.Icon = desktop.MainWindow?.Icon;
-
-        if (crash is not null && reportPreview is not null)
-        {
-            var copyButton = new Button
-            {
-                Content = L("Crash.CopyReport", "Copy report")
-            };
-            copyButton.Click += async (_, _) =>
-            {
-                await TryCopyToClipboardAsync(
-                    TopLevel.GetTopLevel(window),
-                    reportPreview.Text ?? string.Empty);
-            };
-
-            var openFolderButton = new Button
-            {
-                Content = L("Crash.OpenFolder", "Open report folder")
-            };
-            openFolderButton.Click += (_, _) =>
-            {
-                logPath = ShareableCrashReport.Save(crash.Document);
-                OpenLogFolder(logPath);
-            };
-
-            var deleteButton = new Button
-            {
-                Content = L("Crash.DeleteReport", "Delete report")
-            };
-            deleteButton.Click += (_, _) =>
-            {
-                if (ShareableCrashReport.DeleteSavedReport(logPath))
-                    reportStatus!.Text = L("Crash.ReportDeleted", "The saved report was deleted. Nothing was sent.");
-            };
-
-            var prepareEmailButton = new Button
-            {
-                Content = L("Crash.PrepareEmail", "Prepare email"),
-                MinWidth = 120
-            };
-            prepareEmailButton.Classes.Add("action-primary");
-            prepareEmailButton.Click += async (_, _) =>
-            {
-                prepareEmailButton.IsEnabled = false;
-                try
-                {
-                    logPath = ShareableCrashReport.Save(crash.Document);
-                    bool prepared = await CrashReportEmailDraft.PrepareAsync(crash.Document, logPath);
-                    if (prepared)
-                    {
-                        reportStatus!.Text = L(
-                            "Crash.EmailPrepared",
-                            "An email draft opened with the redacted report attached. Review it, add optional context, then press Send yourself.");
-                    }
-                    else
-                    {
-                        OpenLogFolder(logPath);
-                        reportStatus!.Text = L(
-                            "Crash.EmailPrepareFailed",
-                            "VaultSync could not create an email draft with an attachment. The report folder is open so you can attach it manually.");
-                    }
-                }
-                catch
-                {
-                    if (logPath is not null)
-                        OpenLogFolder(logPath);
-                    reportStatus!.Text = L(
-                        "Crash.EmailPrepareFailed",
-                        "VaultSync could not create an email draft with an attachment. The report folder is open so you can attach it manually.");
-                }
-                finally
-                {
-                    prepareEmailButton.IsEnabled = true;
-                }
-            };
-
-            buttonRow.Children.Add(openFolderButton);
-            buttonRow.Children.Add(copyButton);
-            buttonRow.Children.Add(deleteButton);
-            buttonRow.Children.Add(prepareEmailButton);
-        }
-
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Orientation = Orientation.Horizontal,
+            ItemSpacing = 8,
+            LineSpacing = 8
+        };
+        if (crash is not null && reportPreview is not null && reportStatus is not null)
+            AddCrashReportActions(buttonRow, window, crash, reportPreview, reportStatus);
         var closeButton = new Button
         {
             Content = L("Crash.Close", "Close"),
             MinWidth = 90
         };
-        closeButton.Click += (_, _) =>
-        {
-            desktop.Shutdown(1);
-        };
+        closeButton.Click += (_, _) => desktop.Shutdown(1);
         buttonRow.Children.Add(closeButton);
-
         content.Children.Add(buttonRow);
+    }
 
-        window.Closed += (_, _) =>
+    private static void AddCrashReportActions(
+        WrapPanel buttonRow,
+        Window window,
+        CrashArtifact crash,
+        TextBox reportPreview,
+        TextBlock reportStatus)
+    {
+        string? logPath = crash.Path;
+        var copyButton = new Button { Content = L("Crash.CopyReport", "Copy report") };
+        copyButton.Click += async (_, _) => await TryCopyToClipboardAsync(
+            TopLevel.GetTopLevel(window), reportPreview.Text ?? string.Empty);
+        var openFolderButton = new Button { Content = L("Crash.OpenFolder", "Open report folder") };
+        openFolderButton.Click += (_, _) =>
         {
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
+            logPath = ShareableCrashReport.Save(crash.Document);
+            OpenLogFolder(logPath);
+        };
+        var deleteButton = new Button { Content = L("Crash.DeleteReport", "Delete report") };
+        deleteButton.Click += (_, _) =>
+        {
+            if (ShareableCrashReport.DeleteSavedReport(logPath))
+                reportStatus.Text = L("Crash.ReportDeleted", "The saved report was deleted. Nothing was sent.");
+        };
+        var prepareEmailButton = new Button
+        {
+            Content = L("Crash.PrepareEmail", "Prepare email"), MinWidth = 120
+        };
+        prepareEmailButton.Classes.Add("action-primary");
+        prepareEmailButton.Click += async (_, _) =>
+        {
+            prepareEmailButton.IsEnabled = false;
+            try
             {
-                lifetime.Shutdown(1);
+                logPath = ShareableCrashReport.Save(crash.Document);
+                bool prepared = await CrashReportEmailDraft.PrepareAsync(crash.Document, logPath);
+                reportStatus.Text = prepared
+                    ? L("Crash.EmailPrepared", "An email draft opened with the redacted report attached. Review it, add optional context, then press Send yourself.")
+                    : L("Crash.EmailPrepareFailed", "VaultSync could not create an email draft with an attachment. The report folder is open so you can attach it manually.");
+                if (!prepared)
+                    OpenLogFolder(logPath);
             }
-            else
+            catch
             {
-                Environment.Exit(1);
+                if (logPath is not null)
+                    OpenLogFolder(logPath);
+                reportStatus.Text = L("Crash.EmailPrepareFailed", "VaultSync could not create an email draft with an attachment. The report folder is open so you can attach it manually.");
+            }
+            finally
+            {
+                prepareEmailButton.IsEnabled = true;
             }
         };
+        buttonRow.Children.Add(openFolderButton);
+        buttonRow.Children.Add(copyButton);
+        buttonRow.Children.Add(deleteButton);
+        buttonRow.Children.Add(prepareEmailButton);
+    }
 
-        if (desktop.MainWindow != null)
-        {
-            _ = window.ShowDialog(desktop.MainWindow);
-        }
+    private static void ShutdownAfterCrash()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
+            lifetime.Shutdown(1);
         else
-        {
-            window.Show();
-        }
+            Environment.Exit(1);
     }
 
     private static async Task TryCopyToClipboardAsync(TopLevel? topLevel, string text)

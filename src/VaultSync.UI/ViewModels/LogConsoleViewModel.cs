@@ -73,10 +73,10 @@ namespace VaultSync.UI.ViewModels
             get => _selectedLine;
             set
             {
-                if (SetField(ref _selectedLine, value))
+                if (SetField(ref _selectedLine, value) &&
+                    CopySelectedLineCommand is RelayCommand copyCommand)
                 {
-                    if (CopySelectedLineCommand is RelayCommand copyCommand)
-                        copyCommand.RaiseCanExecuteChanged();
+                    copyCommand.RaiseCanExecuteChanged();
                 }
             }
         }

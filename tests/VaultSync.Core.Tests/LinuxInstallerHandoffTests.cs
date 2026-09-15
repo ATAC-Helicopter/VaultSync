@@ -59,7 +59,7 @@ public sealed class LinuxInstallerHandoffTests
 
         Assert.Equal("/bin/sh", startInfo.FileName);
         Assert.False(startInfo.UseShellExecute);
-        Assert.Equal("/opt/vaultsync", startInfo.WorkingDirectory);
+        Assert.Equal(Path.GetDirectoryName("/opt/vaultsync/VaultSync.UI"), startInfo.WorkingDirectory);
         Assert.Contains("kill -0", string.Join(" ", startInfo.ArgumentList));
         Assert.Contains("12345", startInfo.ArgumentList);
         Assert.Contains("/opt/vaultsync/VaultSync.UI", startInfo.ArgumentList);

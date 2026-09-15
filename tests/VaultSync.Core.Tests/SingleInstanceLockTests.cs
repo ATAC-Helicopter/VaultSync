@@ -46,6 +46,19 @@ public sealed class SingleInstanceLockTests : IDisposable
         Assert.Equal(0, TryAcquireWithPython(lockPath));
     }
 
+    [Fact]
+    public void DefaultFileLockDirectory_UsesPrivateApplicationData()
+    {
+        string localData = Path.GetFullPath(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+        string lockDirectory = SingleInstanceLock.ResolveFileLockDirectory();
+
+        Assert.True(Path.IsPathFullyQualified(lockDirectory));
+        Assert.Equal(
+            Path.Combine(localData, "VaultSync", "runtime"),
+            Path.GetFullPath(lockDirectory));
+    }
+
     private static int TryAcquireWithPython(string lockPath)
     {
         const string script =

@@ -49,17 +49,7 @@ public class BackupDestinationViewModel : ViewModelBase
     public string CredentialName
     {
         get => _credentialName;
-        set
-        {
-            if (SetField(ref _credentialName, value))
-            {
-                // Keep SelectedCredential in sync when only the name changes.
-                if (SelectedCredential is null || !string.Equals(SelectedCredential.Name, value, StringComparison.OrdinalIgnoreCase))
-                {
-                    // Selection will be resolved via SettingsViewModel handler.
-                }
-            }
-        }
+        set => SetField(ref _credentialName, value);
     }
 
     // Used by the Settings UI ComboBox. When the Settings page is unloaded,

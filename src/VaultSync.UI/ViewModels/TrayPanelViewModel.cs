@@ -48,28 +48,31 @@ public sealed class TrayPanelViewModel : ViewModelBase
     public TrayPanelViewModel(
         string headerTitle,
         string headerSubtitle,
-        Action openApp,
-        Action backupAll,
-        Action snapshotAll,
-        Action openBackups,
-        Action openSettings,
-        Action quit,
-        Action close)
+        TrayPanelActions actions)
     {
         HeaderTitle = headerTitle;
         HeaderSubtitle = headerSubtitle;
 
-        OpenAppCommand = new RelayCommand(_ => openApp?.Invoke());
-        BackupAllCommand = new RelayCommand(_ => backupAll?.Invoke());
-        SnapshotAllCommand = new RelayCommand(_ => snapshotAll?.Invoke());
-        OpenBackupsCommand = new RelayCommand(_ => openBackups?.Invoke());
-        OpenSettingsCommand = new RelayCommand(_ => openSettings?.Invoke());
-        QuitCommand = new RelayCommand(_ => quit?.Invoke());
-        CloseCommand = new RelayCommand(_ => close?.Invoke());
+        OpenAppCommand = new RelayCommand(_ => actions.OpenApp());
+        BackupAllCommand = new RelayCommand(_ => actions.BackupAll());
+        SnapshotAllCommand = new RelayCommand(_ => actions.SnapshotAll());
+        OpenBackupsCommand = new RelayCommand(_ => actions.OpenBackups());
+        OpenSettingsCommand = new RelayCommand(_ => actions.OpenSettings());
+        QuitCommand = new RelayCommand(_ => actions.Quit());
+        CloseCommand = new RelayCommand(_ => actions.Close());
 
         Destinations.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasDestinations));
         RecentBackups.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentBackups));
     }
+
+    public sealed record TrayPanelActions(
+        Action OpenApp,
+        Action BackupAll,
+        Action SnapshotAll,
+        Action OpenBackups,
+        Action OpenSettings,
+        Action Quit,
+        Action Close);
 
     public void LoadDestinations(IEnumerable<TrayDestinationItem> items, string summary)
     {

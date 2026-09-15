@@ -17,6 +17,7 @@ namespace VaultSync.UI.Notifications
 
         public void ShowSystemNotification(NotificationRequest request)
         {
+#if WINDOWS
             string title = string.IsNullOrWhiteSpace(request.Title)
                 ? "VaultSync"
                 : request.Title;
@@ -25,7 +26,6 @@ namespace VaultSync.UI.Notifications
                 ? string.Empty
                 : request.Message;
 
-#if WINDOWS
             try
             {
                 // Build the toast content using CommunityToolkit

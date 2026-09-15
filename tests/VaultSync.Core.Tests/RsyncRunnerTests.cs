@@ -74,6 +74,12 @@ public sealed class RsyncRunnerTests
               echo "rsync version 3.2.7 protocol version 31"
               exit 0
             fi
+            for arg in "$@"; do
+              if [ "$arg" = "--no-compress" ]; then
+                echo "unsupported redundant option" >&2
+                exit 64
+              fi
+            done
             echo "folder/file.txt"
             echo "100%"
             exit 0

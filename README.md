@@ -366,7 +366,7 @@ vaultsync verify Demo ~/Backups/Demo --full
 | `vaultsync history <name>` | Show snapshot history |
 | `vaultsync diff <name>` | Compare snapshots |
 | `vaultsync prune <name>` | Remove old snapshots |
-| `vaultsync restore <name> <dest>` | Restore a previous snapshot |
+| `vaultsync restore <name> <dest>` | Restore a recorded folder backup; use the desktop app for archives or encryption |
 | `vaultsync doctor` | Check the local environment |
 
 ### Watch mode

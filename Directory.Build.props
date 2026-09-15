@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- Self-contained releases must resolve at least this security-serviced runtime. -->
-    <VaultSyncMinimumRuntimeVersion>10.0.11</VaultSyncMinimumRuntimeVersion>
+    <VaultSyncMinimumRuntimeVersion>10.0.12</VaultSyncMinimumRuntimeVersion>
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
     <!-- Release workflows override these values. Local builds must never present as official. -->
     <VaultSyncReleaseChannel Condition="'$(VaultSyncReleaseChannel)' == ''">development</VaultSyncReleaseChannel>

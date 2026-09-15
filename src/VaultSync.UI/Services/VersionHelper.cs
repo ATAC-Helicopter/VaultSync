@@ -54,78 +54,78 @@ namespace VaultSync.UI.Services
             string leftNormalized = NormalizeIdentity(left);
             string rightNormalized = NormalizeIdentity(right);
 
-            if (string.IsNullOrWhiteSpace(leftNormalized) && string.IsNullOrWhiteSpace(rightNormalized))
-                return 0;
-            if (string.IsNullOrWhiteSpace(leftNormalized))
-                return -1;
-            if (string.IsNullOrWhiteSpace(rightNormalized))
-                return 1;
+            int? emptyComparison = CompareEmptyIdentities(leftNormalized, rightNormalized);
+            if (emptyComparison.HasValue)
+                return emptyComparison.Value;
 
             Version? leftVersion = TryParse(leftNormalized);
             Version? rightVersion = TryParse(rightNormalized);
+            if (leftVersion is null || rightVersion is null)
+                return string.Compare(leftNormalized, rightNormalized, StringComparison.OrdinalIgnoreCase);
 
-            if (leftVersion is not null && rightVersion is not null)
-            {
-                int versionCompare = leftVersion.CompareTo(rightVersion);
-                if (versionCompare != 0)
-                    return versionCompare;
+            int versionComparison = leftVersion.CompareTo(rightVersion);
+            return versionComparison != 0
+                ? versionComparison
+                : ComparePrereleaseIdentities(leftNormalized, rightNormalized);
+        }
 
-                string leftPrerelease = GetPrereleaseLabel(leftNormalized);
-                string rightPrerelease = GetPrereleaseLabel(rightNormalized);
-                bool leftIsPrerelease = !string.IsNullOrWhiteSpace(leftPrerelease);
-                bool rightIsPrerelease = !string.IsNullOrWhiteSpace(rightPrerelease);
+        private static int? CompareEmptyIdentities(string left, string right)
+        {
+            bool leftIsEmpty = string.IsNullOrWhiteSpace(left);
+            bool rightIsEmpty = string.IsNullOrWhiteSpace(right);
+            if (!leftIsEmpty && !rightIsEmpty)
+                return null;
+            if (leftIsEmpty == rightIsEmpty)
+                return 0;
 
-                if (leftIsPrerelease && !rightIsPrerelease)
-                    return -1;
-                if (!leftIsPrerelease && rightIsPrerelease)
-                    return 1;
-                if (!leftIsPrerelease && !rightIsPrerelease)
-                    return 0;
+            return leftIsEmpty ? -1 : 1;
+        }
 
-                return ComparePrereleaseLabels(leftPrerelease, rightPrerelease);
-            }
+        private static int ComparePrereleaseIdentities(string left, string right)
+        {
+            string leftPrerelease = GetPrereleaseLabel(left);
+            string rightPrerelease = GetPrereleaseLabel(right);
+            bool leftIsPrerelease = !string.IsNullOrWhiteSpace(leftPrerelease);
+            bool rightIsPrerelease = !string.IsNullOrWhiteSpace(rightPrerelease);
 
-            return string.Compare(leftNormalized, rightNormalized, StringComparison.OrdinalIgnoreCase);
+            if (leftIsPrerelease != rightIsPrerelease)
+                return leftIsPrerelease ? -1 : 1;
+
+            return leftIsPrerelease
+                ? ComparePrereleaseLabels(leftPrerelease, rightPrerelease)
+                : 0;
         }
 
         private static int ComparePrereleaseLabels(string left, string right)
         {
             string[] leftParts = left.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             string[] rightParts = right.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            int count = Math.Max(leftParts.Length, rightParts.Length);
+            int sharedCount = Math.Min(leftParts.Length, rightParts.Length);
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < sharedCount; i++)
             {
-                if (i >= leftParts.Length)
-                    return -1;
-                if (i >= rightParts.Length)
-                    return 1;
-
                 string leftPart = leftParts[i];
                 string rightPart = rightParts[i];
                 bool leftIsNumber = int.TryParse(leftPart, out int leftNumber);
                 bool rightIsNumber = int.TryParse(rightPart, out int rightNumber);
 
-                if (leftIsNumber && rightIsNumber)
+                int partComparison;
+                if (leftIsNumber != rightIsNumber)
                 {
-                    int numericCompare = leftNumber.CompareTo(rightNumber);
-                    if (numericCompare != 0)
-                        return numericCompare;
-
-                    continue;
+                    partComparison = leftIsNumber ? -1 : 1;
+                }
+                else
+                {
+                    partComparison = leftIsNumber
+                        ? leftNumber.CompareTo(rightNumber)
+                        : string.Compare(leftPart, rightPart, StringComparison.OrdinalIgnoreCase);
                 }
 
-                if (leftIsNumber && !rightIsNumber)
-                    return -1;
-                if (!leftIsNumber && rightIsNumber)
-                    return 1;
-
-                int textCompare = string.Compare(leftPart, rightPart, StringComparison.OrdinalIgnoreCase);
-                if (textCompare != 0)
-                    return textCompare;
+                if (partComparison != 0)
+                    return partComparison;
             }
 
-            return 0;
+            return leftParts.Length.CompareTo(rightParts.Length);
         }
     }
 }

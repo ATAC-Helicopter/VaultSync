@@ -169,6 +169,21 @@ public sealed class StorageHygieneTests
         string oldInstaller = CreateFile(root.Path, "VaultSync/updates/old-installer", 10, now.AddDays(-2));
         string recentInstaller = CreateFile(root.Path, "VaultSync/updates/recent-installer", 10, now.AddHours(-2));
         string oldRecovery = CreateDirectory(root.Path, "VaultSync/recovery-tests/old", 14, now.AddDays(-2));
+        string oldMetadataCopy = CreateDirectory(
+            root.Path,
+            $"vaultsync-meta-import/{Guid.NewGuid():N}",
+            16,
+            now.AddDays(-2));
+        string recentMetadataCopy = CreateDirectory(
+            root.Path,
+            $"vaultsync-meta-import/{Guid.NewGuid():N}",
+            18,
+            now.AddHours(-2));
+        string unrelatedMetadataFolder = CreateDirectory(
+            root.Path,
+            "vaultsync-meta-import/user-files",
+            20,
+            now.AddYears(-1));
 
         StorageCleanupSummary result = StorageHygieneService.PruneTemporaryData(root.Path, now);
 
@@ -179,8 +194,11 @@ public sealed class StorageHygieneTests
         Assert.False(File.Exists(oldInstaller));
         Assert.True(File.Exists(recentInstaller));
         Assert.False(Directory.Exists(oldRecovery));
+        Assert.False(Directory.Exists(oldMetadataCopy));
+        Assert.True(Directory.Exists(recentMetadataCopy));
+        Assert.True(Directory.Exists(unrelatedMetadataFolder));
         Assert.Equal(2, result.FilesRemoved);
-        Assert.Equal(2, result.DirectoriesRemoved);
+        Assert.Equal(3, result.DirectoriesRemoved);
     }
 
     [Fact]
