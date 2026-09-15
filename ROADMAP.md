@@ -1000,6 +1000,10 @@ that has not yet been integrated and qualified.
   [Issue #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651).
   Linux and macOS single-instance coordination could use an environment-selected temporary directory. Resolve the default lock beneath absolute per-user application data and fail closed when no private root is available, while retaining explicit test-directory injection. Default-path and cross-process lock tests pass locally; integration remains pending.
 
+- [ ] `BUG-18172` `P0` Support the macOS system rsync in CLI and direct sync.
+  [Issue #656](https://github.com/ATAC-Helicopter/VaultSync/issues/656).
+  VaultSync passed the redundant `--no-compress` option to every rsync invocation, but the OpenBSD-derived system rsync shipped by macOS rejects that option and aborted real transfers. Leave compression disabled by default without passing the incompatible switch, retain every other safety and transfer argument, and guard the invocation contract with a rejecting test tool. The real isolated macOS CLI self-test now completes snapshot, system-rsync transfer, and full verification; hosted and integration verification remain pending.
+
 ---
 
 # VaultSync 1.9 — Recovery Horizon

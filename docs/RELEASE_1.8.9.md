@@ -65,6 +65,7 @@ the backup format or introduce the larger 1.9 recovery features.
 | CLI folder restore trusted present backup files without checking their recorded size or hash. | Verify the complete source plan against snapshot metadata before cleanup or target writes. |
 | A tray data-shaping exception left the refresh gate permanently occupied. | Release the gate after background failures so future tray updates can recover. |
 | Unix single-instance locks could fall back to an environment-selected temporary directory. | Store coordination locks only in the private per-user application-data tree. |
+| CLI and direct sync always passed a redundant option rejected by the system rsync shipped with macOS. | Leave compression disabled by default without passing the unsupported option. |
 
 The shared collection fix applies to existing callers in Backups, Projects,
 Dashboard, History, Schedule, Recovery, project folders, and the tray panel.
@@ -104,6 +105,8 @@ icon rail is reserved for windows below 1100 pixels.
   preset-index fallbacks, private default instance-lock placement, and tray
   refresh-gate release.
 - Existing backup comparison, paging, and theme tests pass.
+- The isolated CLI end-to-end smoke test completes snapshot creation, real
+  macOS system-rsync transfer, and full-byte verification.
 - Release preparation: **77 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
 - Hosted Windows, Linux, and macOS build/test jobs pass; CodeQL, YAML, Store
@@ -162,6 +165,7 @@ qualification remain pending.
 | [`BUG-18169` / #649](https://github.com/ATAC-Helicopter/VaultSync/issues/649) | Verify recorded backup bytes before CLI restore | In progress |
 | [`BUG-18170` / #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650) | Recover tray refresh after background failures | In progress |
 | [`BUG-18171` / #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651) | Keep Unix instance locks in private app data | In progress |
+| [`BUG-18172` / #656](https://github.com/ATAC-Helicopter/VaultSync/issues/656) | Support the macOS system rsync in CLI and direct sync | In progress |
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
 In-progress work is implemented locally or under preparation; it is not marked

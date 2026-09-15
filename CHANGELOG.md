@@ -22,6 +22,7 @@
 - [BUG-18169] Verify recorded backup bytes before CLI restore changes its target.
 - [BUG-18170] Let tray refreshes recover after background data-shaping failures.
 - [BUG-18171] Keep Unix single-instance locks in private application data.
+- [BUG-18172] Support the system rsync shipped with macOS.
 ### Changed
 - [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
 - [VS-1896] Consolidate repeated desktop labels and transient console capture state.

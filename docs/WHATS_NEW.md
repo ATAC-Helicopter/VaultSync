@@ -15,6 +15,7 @@ VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
 - Verify recorded folder-backup bytes before a CLI restore changes its target.
 - Recover future tray refreshes after a transient background data failure.
 - Keep Unix single-instance coordination out of shared temporary directories.
+- Keep CLI and direct sync compatible with the system rsync shipped by macOS.
 
 ### Clearer controls
 - Center icon-and-label stacks inside shared pills and backup tags.
