@@ -9,18 +9,25 @@ namespace VaultSync.UI
 {
     public partial class SettingsView : UserControl
     {
+        private const double StackedContentWidth = 800;
         private ScrollViewer? _scrollViewer;
         private double _pendingScrollOffset;
         private bool _restoreScrollPending;
         private int _restoreScrollAttempts;
         private DispatcherTimer? _restoreScrollTimer;
 
+        internal readonly record struct ResponsiveLayout(bool StackContent);
+
         public SettingsView()
         {
             InitializeComponent();
             AttachedToVisualTree += OnAttachedToVisualTree;
             DetachedFromVisualTree += OnDetachedFromVisualTree;
+            SizeChanged += (_, _) => UpdateResponsiveLayout();
         }
+
+        internal static ResponsiveLayout GetResponsiveLayout(double width) =>
+            new(StackContent: width < StackedContentWidth);
 
         private void InitializeComponent()
         {
@@ -29,6 +36,7 @@ namespace VaultSync.UI
 
         private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
         {
+            UpdateResponsiveLayout();
             _scrollViewer = this.FindControl<ScrollViewer>("SettingsScrollViewer");
             if (_scrollViewer != null)
             {
@@ -41,6 +49,28 @@ namespace VaultSync.UI
                 localization.LanguageChanging += CaptureScrollOffset;
                 localization.LanguageChanged += OnLanguageChanged;
             }
+        }
+
+        private void UpdateResponsiveLayout()
+        {
+            double width = Bounds.Width > 0 ? Bounds.Width : Width;
+            if (width <= 0)
+                return;
+
+            Grid? contentGrid = this.FindControl<Grid>("SettingsContentGrid");
+            Control? leftColumn = this.FindControl<Control>("SettingsLeftColumn");
+            Control? rightColumn = this.FindControl<Control>("SettingsRightColumn");
+            if (contentGrid is null || leftColumn is null || rightColumn is null)
+                return;
+
+            bool stacked = GetResponsiveLayout(width).StackContent;
+            contentGrid.ColumnDefinitions = new ColumnDefinitions(stacked ? "*" : "1.35*,0.85*");
+            contentGrid.RowDefinitions = new RowDefinitions(stacked ? "Auto,Auto" : "Auto");
+            Grid.SetColumn(rightColumn, stacked ? 0 : 1);
+            Grid.SetRow(rightColumn, stacked ? 1 : 0);
+            rightColumn.Margin = stacked
+                ? new Thickness(0, 16, 0, 28)
+                : new Thickness(0, 0, 0, 28);
         }
 
         private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

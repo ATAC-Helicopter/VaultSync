@@ -403,11 +403,15 @@
 
 
         <!-- SUMMARY -->
-        <Grid ColumnDefinitions="*,*,*"
-                ColumnSpacing="16">
+        <Grid x:Name="SummaryGrid"
+              ColumnDefinitions="*,*,*"
+              RowDefinitions="Auto"
+              ColumnSpacing="16"
+              RowSpacing="16">
 
             <!-- Total snapshots -->
-            <Border Classes="card"
+            <Border x:Name="TotalSnapshotsSummaryCard"
+                    Classes="card"
                     Padding="{DynamicResource CardPaddingMedium}"
                     VerticalAlignment="Top">
               <StackPanel Spacing="10">
@@ -539,7 +543,8 @@
             </Border>
 
             <!-- Last backup -->
-            <Border Classes="card"
+            <Border x:Name="LastBackupSummaryCard"
+                    Classes="card"
                     Padding="{DynamicResource CardPaddingMedium}"
                     Grid.Column="1"
                     VerticalAlignment="Top">
@@ -708,7 +713,8 @@
             </Border>
 
             <!-- Total backup size -->
-            <Border Classes="card"
+            <Border x:Name="StoredBackupSummaryCard"
+                    Classes="card"
                     Padding="16"
                     Grid.Column="2"
                     VerticalAlignment="Top">

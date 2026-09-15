@@ -143,7 +143,8 @@
         </Border>
 
         <!-- Content -->
-        <Grid Grid.Row="1"
+        <Grid x:Name="SettingsContentGrid"
+              Grid.Row="1"
               ColumnDefinitions="1.35*,0.85*"
               RowDefinitions="Auto"
               ColumnSpacing="{DynamicResource PageRowSpacing}"
@@ -151,7 +152,8 @@
               Margin="0,0,0,28">
 
           <!-- LEFT COLUMN -->
-          <StackPanel Grid.Column="0"
+          <StackPanel x:Name="SettingsLeftColumn"
+                      Grid.Column="0"
                       Spacing="{DynamicResource PageRowSpacing}">
 
             <!-- General -->
@@ -1356,7 +1358,8 @@
           </StackPanel>
 
           <!-- RIGHT COLUMN -->
-          <StackPanel Grid.Column="1"
+          <StackPanel x:Name="SettingsRightColumn"
+                      Grid.Column="1"
                       Spacing="{DynamicResource PageRowSpacing}"
                       Margin="0,0,0,28">
 
