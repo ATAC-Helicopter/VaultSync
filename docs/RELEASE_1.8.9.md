@@ -95,7 +95,7 @@ icon rail is reserved for windows below 1100 pixels.
 
 ## Automated validation
 
-- Full .NET suite: **908 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **917 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
