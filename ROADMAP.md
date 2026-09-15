@@ -910,7 +910,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `BUG-18155` `P1` Preserve backup group expansion and loaded history during refreshes.
   [Issue #628](https://github.com/ATAC-Helicopter/VaultSync/issues/628).
-  Backup actions rebuild project groups and reset their expansion and pagination. Reconcile groups by project ID, retain loaded row depth, update summaries in place, and explicitly bind expansion two-way. Regression tests pass locally. Desktop deletion, cancellation, background completion, scroll and focus checks remain part of VS-1894; changes are not yet integrated.
+  Backup actions rebuild project groups and reset their expansion and pagination. Reconcile groups by project ID, retain loaded row depth, update summaries in place, and explicitly bind expansion two-way. Regression tests pass locally. A populated macOS walkthrough preserves the exact viewport, non-first expanded group, and loaded depth after deleting its newest backup; cancellation, background completion, remaining platform, and keyboard-focus checks stay in VS-1894. Changes are not yet integrated.
 
 - [ ] `BUG-18156` `P1` Preserve surviving UI rows during collection refreshes.
   [Issue #629](https://github.com/ATAC-Helicopter/VaultSync/issues/629).

@@ -112,6 +112,11 @@ icon rail is reserved for windows below 1100 pixels.
   Projects, Backups, Schedule, History, Recovery, Guide, and Settings remain
   vertically navigable without a page-level horizontal scrollbar. Backups and
   Settings compact cards remain readable without the observed overlap.
+- A disposable populated macOS profile with three projects and 75 backups
+  confirms that loading Alpha from 20 to 25 rows, expanding non-first project
+  Beta, and deleting Beta's newest backup preserves the exact history viewport
+  offset (9069), keeps Beta expanded, leaves Alpha's loaded depth intact, and
+  updates the database, destination folder, and Beta total from 25 to 24.
 - Release preparation: **77 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
 - Hosted Windows, Linux, and macOS build/test jobs pass; CodeQL, YAML, Store
@@ -138,11 +143,12 @@ or text alignment on each desktop platform. Before release:
    after visual verification. Existing screenshots were not replaced with
    unverified renders in this pass.
 
-Empty-profile macOS narrow-window verification is recorded. Populated backup
-deletion/focus continuity, theme and scaling coverage, Windows verification,
-and a live Linux Wayland/Xorg walkthrough are not yet recorded. These are
-outstanding qualification steps, not completed test claims. Version stamping
-is prepared; publication and final artifact qualification remain pending.
+Empty-profile macOS narrow-window verification and populated newest-backup
+deletion continuity are recorded. Cancellation, last-item/group deletion,
+keyboard-focus, theme and scaling coverage, Windows verification, and a live
+Linux Wayland/Xorg walkthrough are not yet recorded. These are outstanding
+qualification steps, not completed test claims. Version stamping is prepared;
+publication and final artifact qualification remain pending.
 
 ## Tracked work
 
