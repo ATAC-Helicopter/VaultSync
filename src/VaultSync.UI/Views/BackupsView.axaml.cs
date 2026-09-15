@@ -29,12 +29,14 @@ namespace VaultSync.UI.Views
             OnDataContextChanged(this, EventArgs.Empty);
         }
 
-        internal static ResponsiveLayout GetResponsiveLayout(double width) =>
-            new(width < SingleSummaryColumnWidth
-                ? 1
-                : width < ThreeSummaryColumnWidth
-                    ? 2
-                    : 3);
+        internal static ResponsiveLayout GetResponsiveLayout(double width)
+        {
+            if (width < SingleSummaryColumnWidth)
+                return new ResponsiveLayout(1);
+            if (width < ThreeSummaryColumnWidth)
+                return new ResponsiveLayout(2);
+            return new ResponsiveLayout(3);
+        }
 
         private void UpdateResponsiveLayout()
         {
