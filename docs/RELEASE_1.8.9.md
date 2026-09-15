@@ -122,6 +122,18 @@ icon rail is reserved for windows below 1100 pixels.
 - Hosted Windows, Linux, and macOS build/test jobs pass; CodeQL, YAML, Store
   metadata, and dependency submission pass. The Sonar quality gate passes with
   **81.0% new-code coverage**; integration remains a promotion requirement.
+- Updater qualification on the exact release head passes **113 focused .NET
+  tests** and **19 patch-builder/release-manifest tests**. The hosted Windows
+  and Linux jobs each pass all **917 tests**, including platform asset selection,
+  verified download metadata, multi-base eligibility, transactional rollback,
+  protected-install fallback, temporary-download cleanup, and the Linux rule
+  that cancellation or failed administrator authentication must keep VaultSync
+  running.
+- The live `v1.8.8` canonical manifest matches all **9 published GitHub assets**.
+  That release contains no patch archive or patch manifest, so it correctly
+  exercises installer fallback only. A real `1.8.8 -> 1.8.9` patch/install
+  walkthrough remains blocked on the final candidate assets and is not claimed
+  by these model tests.
 
 ## Desktop qualification still required
 
@@ -148,7 +160,8 @@ deletion continuity are recorded. Cancellation, last-item/group deletion,
 keyboard-focus, theme and scaling coverage, Windows verification, and a live
 Linux Wayland/Xorg walkthrough are not yet recorded. These are outstanding
 qualification steps, not completed test claims. Version stamping is prepared;
-publication and final artifact qualification remain pending.
+publication, exact `1.8.8 -> 1.8.9` updater execution, and final artifact
+qualification remain pending.
 
 ## Tracked work
 

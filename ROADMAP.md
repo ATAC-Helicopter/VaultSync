@@ -922,7 +922,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `BUG-18158` `P1` Keep Linux updater handoff qualification portable on Windows CI.
   [Issue #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635).
-  The Linux deferred-relaunch test asserted a Unix directory string even when the helper was exercised by the Windows runner, where `Path` correctly normalized it with Windows separators. Derive the expectation through the runtime path API so the cross-platform release gate tests behavior instead of host-specific text. The full 849-test suite and hosted Windows check pass; integration remains pending.
+  The Linux deferred-relaunch test asserted a Unix directory string even when the helper was exercised by the Windows runner, where `Path` correctly normalized it with Windows separators. Derive the expectation through the runtime path API so the cross-platform release gate tests behavior instead of host-specific text. On the exact release head, 113 focused updater tests pass locally and all 917 tests pass on both hosted Windows and Linux; integration remains pending.
 
 - [ ] `VS-1892` `P1` Polish shared pill alignment and theme readability.
   [Issue #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631).
@@ -934,7 +934,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
   [Issue #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633).
-  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Qualify exact 1.8.8 upgrades, installer fallback, backup/restore smoke tests, Store packaging when enabled, static analysis and dependencies, and final artifacts. Platform patch assets remain opt-in after exact payload and handoff qualification. Record evidence before promotion; local model tests do not close this gate.
+  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Qualify exact 1.8.8 upgrades, installer fallback, backup/restore smoke tests, Store packaging when enabled, static analysis and dependencies, and final artifacts. The exact release head passes 113 focused updater tests locally plus the full 917-test Windows/Linux matrix, and the live v1.8.8 manifest matches all 9 published assets; because v1.8.8 has no patch assets, actual 1.8.8-to-1.8.9 execution still requires final candidate artifacts. Platform patch assets remain opt-in after exact payload and handoff qualification. Record evidence before promotion; model tests do not close this gate.
 
 - [ ] `VS-1895` `P1` Service coordinated runtime, rendering, and validation dependencies.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
