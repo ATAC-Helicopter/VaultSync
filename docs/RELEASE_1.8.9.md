@@ -46,7 +46,7 @@ the backup format or introduce the larger 1.9 recovery features.
 | Desktop analysis retained cancellation, complexity, command-path, and version-ordering findings. | Make task ownership explicit, use absolute OS notification commands, and simplify the flagged helpers without changing behavior. |
 | Padded page content forced its minimum width to the outer viewport width. | Measure Dashboard, Backups, and Settings from the padded available width and enforce the rule with a UI policy test. |
 | Maintained runtime and rendering packages received coordinated patch releases. | Service Microsoft libraries to 10.0.12, SkiaSharp to 4.152.0, and HarfBuzzSharp to 14.2.1.200 as complete package families. |
-| Maintained validation tooling received compatible updates. | Update Microsoft.NET.Test.Sdk to 18.10.0, CodeQL Action to 4.38.0, and setup-java to 6.0.1 while retaining xUnit v2. |
+| Maintained runtime and validation tooling received compatible updates. | Update Dapper to 2.1.86, Microsoft.NET.Test.Sdk to 18.10.0, xUnit analyzers to 2.1.0, CodeQL Action to 4.38.0, and setup-java to 6.0.1 while retaining xUnit v2. |
 | Icon-and-label pill stacks could stretch independently of centered text. | Center stack containers inside shared status pills and backup tags. |
 | Muted text and light-theme semantic colors were too faint. | Increase muted-text contrast, darken light-theme success/warning/error colors, and use dark labels on the dark theme's blue accent. |
 | Custom-theme muted text was blended toward its background. | Apply the existing readable-text contrast check against all three configured surfaces. |

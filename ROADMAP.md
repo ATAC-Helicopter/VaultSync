@@ -938,7 +938,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1895` `P1` Service coordinated runtime, rendering, and validation dependencies.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
-  Update Avalonia to 12.1.2, service Microsoft runtime libraries to 10.0.12, and keep every directly pinned SkiaSharp 4.152.0 and HarfBuzzSharp 14.2.1.200 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Refresh Microsoft.NET.Test.Sdk to 18.10.0 and pin CodeQL Action 4.38.0 plus setup-java 6.0.1. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Local restore, 908 tests, and the zero-warning build pass; hosted platform checks and integration remain pending.
+  Update Avalonia to 12.1.2, Dapper to 2.1.86, Microsoft runtime libraries to 10.0.12, and keep every directly pinned SkiaSharp 4.152.0 and HarfBuzzSharp 14.2.1.200 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Refresh Microsoft.NET.Test.Sdk to 18.10.0 and xUnit analyzers to 2.1.0, and pin CodeQL Action 4.38.0 plus setup-java 6.0.1. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Local restore, 908 tests, and the zero-warning build pass; hosted platform checks and integration remain pending.
 
 - [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
   [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
