@@ -1004,6 +1004,10 @@ that has not yet been integrated and qualified.
   [Issue #656](https://github.com/ATAC-Helicopter/VaultSync/issues/656).
   VaultSync passed the redundant `--no-compress` option to every rsync invocation, but the OpenBSD-derived system rsync shipped by macOS rejects that option and aborted real transfers. Leave compression disabled by default without passing the incompatible switch, retain every other safety and transfer argument, and guard the invocation contract with a rejecting test tool. The real isolated macOS CLI self-test now completes snapshot, system-rsync transfer, and full verification; hosted and integration verification remain pending.
 
+- [ ] `BUG-18173` `P0` Reflow dense Backups and Settings cards at compact widths.
+  [Issue #657](https://github.com/ATAC-Helicopter/VaultSync/issues/657).
+  The Backups summary forced three columns at 900×700, overlapping labels, values, and progress rows even after page-level horizontal scrolling was removed; Settings also kept two unnecessarily narrow columns at 700×700. Reflow Backups to three, two, or one columns from available content width, span its final summary card across the two-column row, and stack Settings content at compact widths. Breakpoint tests, the zero-warning build, and live macOS 900×700 and 700×700 walkthroughs pass without horizontal scrolling or observed overlap; hosted and integration verification remain pending.
+
 ---
 
 # VaultSync 1.9 — Recovery Horizon

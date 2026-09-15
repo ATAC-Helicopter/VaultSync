@@ -66,6 +66,7 @@ the backup format or introduce the larger 1.9 recovery features.
 | A tray data-shaping exception left the refresh gate permanently occupied. | Release the gate after background failures so future tray updates can recover. |
 | Unix single-instance locks could fall back to an environment-selected temporary directory. | Store coordination locks only in the private per-user application-data tree. |
 | CLI and direct sync always passed a redundant option rejected by the system rsync shipped with macOS. | Leave compression disabled by default without passing the unsupported option. |
+| Backups forced three summary columns and Settings retained two content columns after the window became too narrow for readable cards. | Reflow Backups through three-, two-, and one-column summaries and stack Settings at compact content widths. |
 
 The shared collection fix applies to existing callers in Backups, Projects,
 Dashboard, History, Schedule, Recovery, project folders, and the tray panel.
@@ -107,6 +108,10 @@ icon rail is reserved for windows below 1100 pixels.
 - Existing backup comparison, paging, and theme tests pass.
 - The isolated CLI end-to-end smoke test completes snapshot creation, real
   macOS system-rsync transfer, and full-byte verification.
+- Live macOS walkthroughs at 900×700 and 700×700 confirm that Dashboard,
+  Projects, Backups, Schedule, History, Recovery, Guide, and Settings remain
+  vertically navigable without a page-level horizontal scrollbar. Backups and
+  Settings compact cards remain readable without the observed overlap.
 - Release preparation: **77 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
 - Hosted Windows, Linux, and macOS build/test jobs pass; CodeQL, YAML, Store
@@ -133,10 +138,11 @@ or text alignment on each desktop platform. Before release:
    after visual verification. Existing screenshots were not replaced with
    unverified renders in this pass.
 
-Windows/macOS desktop verification and a live Linux scroll/focus walkthrough
-are not yet recorded. These are outstanding qualification steps, not completed
-test claims. Version stamping is prepared; publication and final artifact
-qualification remain pending.
+Empty-profile macOS narrow-window verification is recorded. Populated backup
+deletion/focus continuity, theme and scaling coverage, Windows verification,
+and a live Linux Wayland/Xorg walkthrough are not yet recorded. These are
+outstanding qualification steps, not completed test claims. Version stamping
+is prepared; publication and final artifact qualification remain pending.
 
 ## Tracked work
 
@@ -166,6 +172,7 @@ qualification remain pending.
 | [`BUG-18170` / #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650) | Recover tray refresh after background failures | In progress |
 | [`BUG-18171` / #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651) | Keep Unix instance locks in private app data | In progress |
 | [`BUG-18172` / #656](https://github.com/ATAC-Helicopter/VaultSync/issues/656) | Support the macOS system rsync in CLI and direct sync | In progress |
+| [`BUG-18173` / #657](https://github.com/ATAC-Helicopter/VaultSync/issues/657) | Reflow dense Backups and Settings cards at compact widths | In progress |
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
 In-progress work is implemented locally or under preparation; it is not marked

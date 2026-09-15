@@ -18,6 +18,7 @@ VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
 - Keep CLI and direct sync compatible with the system rsync shipped by macOS.
 
 ### Clearer controls
+- Reflow Backups summaries and Settings sections before compact windows squeeze their contents.
 - Center icon-and-label stacks inside shared pills and backup tags.
 - Improve muted text, light-theme status colors, and dark-theme accent labels.
 - Check custom-theme muted text against the configured background surfaces.
