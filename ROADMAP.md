@@ -936,9 +936,9 @@ that has not yet been integrated and qualified.
   [Issue #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633).
   Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Qualify exact 1.8.8 upgrades, installer fallback, backup/restore smoke tests, Store packaging when enabled, static analysis and dependencies, and final artifacts. Platform patch assets remain opt-in after exact payload and handoff qualification. Record evidence before promotion; local model tests do not close this gate.
 
-- [ ] `VS-1895` `P1` Service Avalonia and coordinated rendering dependencies.
+- [ ] `VS-1895` `P1` Service coordinated runtime, rendering, and validation dependencies.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
-  Update Avalonia to 12.1.2, service Microsoft runtime libraries to 10.0.12, and keep every directly pinned SkiaSharp 4.152.0 and HarfBuzzSharp 14.2.1.200 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Local restore and the zero-warning build pass; hosted platform checks and integration remain pending.
+  Update Avalonia to 12.1.2, service Microsoft runtime libraries to 10.0.12, and keep every directly pinned SkiaSharp 4.152.0 and HarfBuzzSharp 14.2.1.200 managed/native package aligned across Windows, macOS, Linux, and WebAssembly. Refresh Microsoft.NET.Test.Sdk to 18.10.0 and pin CodeQL Action 4.38.0 plus setup-java 6.0.1. Run package-family checks whenever central versions change so partial Dependabot updates fail before merge. Local restore, 908 tests, and the zero-warning build pass; hosted platform checks and integration remain pending.
 
 - [ ] `VS-1896` `P1` Clear remaining desktop Sonar maintainability findings.
   [Issue #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637).
@@ -999,14 +999,6 @@ that has not yet been integrated and qualified.
 - [ ] `BUG-18171` `P0` Keep Unix instance locks in private app data.
   [Issue #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651).
   Linux and macOS single-instance coordination could use an environment-selected temporary directory. Resolve the default lock beneath absolute per-user application data and fail closed when no private root is available, while retaining explicit test-directory injection. Default-path and cross-process lock tests pass locally; integration remains pending.
-
-- [ ] `BUG-18170` `P0` Recover tray refresh after background failures.
-  [Issue #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650).
-  A tray data-shaping exception occurred before the UI callback and left the in-flight gate occupied indefinitely. Release refresh ownership on both background and UI failures, retain coalescing and throttling, and allow later tray updates to recover. The zero-warning build and full local suite pass; hosted and integration verification remain pending.
-
-- [ ] `BUG-18171` `P0` Keep Unix instance locks in private app data.
-  [Issue #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651).
-  Linux and macOS coordination could fall back to an environment-selected temporary directory. Use only the absolute per-user application-data tree for default locks, fail closed without it, and retain explicit directory injection for isolated lock tests. Placement and cross-process tests pass locally; integration remains pending.
 
 ---
 

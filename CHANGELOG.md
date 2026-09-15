@@ -25,7 +25,7 @@
 ### Changed
 - [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
 - [VS-1896] Consolidate repeated desktop labels and transient console capture state.
-- [VS-1895] Service Avalonia and coordinated SkiaSharp/HarfBuzzSharp packages.
+- [VS-1895] Refresh coordinated rendering, test-platform, and analysis dependencies.
 - [VS-1897] Keep labeled navigation at the default window size and clarify the Projects purpose.
 - [VS-1897] Remove obsolete placeholder navigation and reflection paths from the live shell.
 - [VS-1897] Stop rebuilding an obsolete hidden backup activity chart during refresh and resize.

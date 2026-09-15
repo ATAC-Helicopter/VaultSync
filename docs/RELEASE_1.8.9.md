@@ -46,6 +46,7 @@ the backup format or introduce the larger 1.9 recovery features.
 | Desktop analysis retained cancellation, complexity, command-path, and version-ordering findings. | Make task ownership explicit, use absolute OS notification commands, and simplify the flagged helpers without changing behavior. |
 | Padded page content forced its minimum width to the outer viewport width. | Measure Dashboard, Backups, and Settings from the padded available width and enforce the rule with a UI policy test. |
 | Maintained runtime and rendering packages received coordinated patch releases. | Service Microsoft libraries to 10.0.12, SkiaSharp to 4.152.0, and HarfBuzzSharp to 14.2.1.200 as complete package families. |
+| Maintained validation tooling received compatible updates. | Update Microsoft.NET.Test.Sdk to 18.10.0, CodeQL Action to 4.38.0, and setup-java to 6.0.1 while retaining xUnit v2. |
 | Icon-and-label pill stacks could stretch independently of centered text. | Center stack containers inside shared status pills and backup tags. |
 | Muted text and light-theme semantic colors were too faint. | Increase muted-text contrast, darken light-theme success/warning/error colors, and use dark labels on the dark theme's blue accent. |
 | Custom-theme muted text was blended toward its background. | Apply the existing readable-text contrast check against all three configured surfaces. |
@@ -145,7 +146,7 @@ qualification remain pending.
 | [`VS-1892` / #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631) | Polish shared pill alignment and theme readability | In progress |
 | [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | In progress |
 | [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Todo |
-| [`VS-1895` / #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636) | Service Avalonia and coordinated rendering dependencies | In progress |
+| [`VS-1895` / #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636) | Service coordinated runtime, rendering, and validation dependencies | In progress |
 | [`VS-1896` / #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637) | Clear remaining desktop Sonar maintainability findings | In progress |
 | [`BUG-18159` / #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638) | Prevent page-width bindings from restoring horizontal overflow | In progress |
 | [`VS-1897` / #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639) | Audit and renew 1.8.9 safety, usability, and repository health | In progress |
@@ -159,8 +160,6 @@ qualification remain pending.
 | [`BUG-18167` / #647](https://github.com/ATAC-Helicopter/VaultSync/issues/647) | Parse CLI prune dates invariantly | In progress |
 | [`BUG-18168` / #648](https://github.com/ATAC-Helicopter/VaultSync/issues/648) | Preserve backed snapshots during CLI prune | In progress |
 | [`BUG-18169` / #649](https://github.com/ATAC-Helicopter/VaultSync/issues/649) | Verify recorded backup bytes before CLI restore | In progress |
-| [`BUG-18170` / #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650) | Recover tray refresh after background failures | In progress |
-| [`BUG-18171` / #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651) | Keep Unix instance locks in private app data | In progress |
 | [`BUG-18170` / #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650) | Recover tray refresh after background failures | In progress |
 | [`BUG-18171` / #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651) | Keep Unix instance locks in private app data | In progress |
 
