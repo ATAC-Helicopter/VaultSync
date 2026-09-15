@@ -145,7 +145,7 @@ qualification remain pending.
 | [`BUG-18158` / #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635) | Keep Linux updater handoff qualification portable on Windows CI | In progress |
 | [`VS-1892` / #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631) | Polish shared pill alignment and theme readability | In progress |
 | [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | In progress |
-| [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Todo |
+| [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | In progress |
 | [`VS-1895` / #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636) | Service coordinated runtime, rendering, and validation dependencies | In progress |
 | [`VS-1896` / #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637) | Clear remaining desktop Sonar maintainability findings | In progress |
 | [`BUG-18159` / #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638) | Prevent page-width bindings from restoring horizontal overflow | In progress |
