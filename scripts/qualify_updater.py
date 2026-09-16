@@ -170,6 +170,7 @@ def qualify(args):
         env = dict(os.environ, VAULTSYNC_CONFIG_DIR=str(root / "profile"),
                    XDG_CONFIG_HOME=str(root / "xdg-config"), XDG_DATA_HOME=str(root / "xdg-data"),
                    VAULTSYNC_QUALIFICATION_LOG=str(args.evidence.resolve() / "helper-output.log"))
+        env.pop("GH_TOKEN", None)
         (root / "xdg-config").mkdir()
         (root / "xdg-data").mkdir()
         profile = root / "profile"

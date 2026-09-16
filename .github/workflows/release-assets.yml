@@ -1140,6 +1140,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/release_manifest.py validate --manifest release-assets/vaultsync-release-manifest.json --asset-root release-assets
+          store_upload="$(find release-assets/dist/store -maxdepth 1 -type f \( -name '*.msixupload' -o -name '*.appxupload' \))"
+          python3 scripts/verify_store_upload.py "$store_upload" --version "$TARGET_VERSION" --source-manifest packaging/VaultSync.Store/Package.appxmanifest
           python3 - <<'PY'
           import json, os
           from pathlib import Path
@@ -1181,3 +1183,16 @@ jobs:
             gh release upload "$tag" "${assets[@]}"
           fi
           gh release view "$tag" --json isDraft,assets | jq -e '.isDraft == true and (.assets | length) == 20'
+          gh api "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > uploaded-assets.json
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          expected = {path.name: path for path in Path('release-assets').rglob('*') if path.is_file()}
+          uploaded = json.loads(Path('uploaded-assets.json').read_text())
+          assert len(uploaded) == len(expected) and {asset['name'] for asset in uploaded} == set(expected)
+          for asset in uploaded:
+              path = expected[asset['name']]
+              with path.open('rb') as stream:
+                  digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+              assert asset['size'] == path.stat().st_size and asset.get('digest') == 'sha256:' + digest, 'Uploaded asset differs'
+          PY
