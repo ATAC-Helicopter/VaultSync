@@ -275,16 +275,20 @@ def qualify(args):
     print(json.dumps(evidence, indent=2))
 
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--assets", type=Path, required=True)
     parser.add_argument("--previous", required=True)
     parser.add_argument("--target", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
-    options = parser.parse_args()
+    options = parser.parse_args(argv)
     try:
         qualify(options)
     except Exception as error:
         options.evidence.mkdir(parents=True, exist_ok=True)
         (options.evidence / "failure.json").write_text(json.dumps({"error": str(error)}, indent=2) + "\n")
         raise
+
+
+if __name__ == "__main__":
+    main()

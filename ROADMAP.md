@@ -909,9 +909,14 @@ recovery features stay in the 1.9 family. Checked implementation items are integ
 and [promotion #660](https://github.com/ATAC-Helicopter/VaultSync/pull/660).
 The owner [approved a documented maintainer exception](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168)
 for required review and missing interactive/Store-runtime checks; those checks
-remain incomplete in VS-1894. Stable commit `adafac380df41a29552929fbd451ddd36c9d9139`
-is the fresh release-asset build source; pre-Stable draft attachments must not be promoted.
+remain incomplete in VS-1894. The initial Stable build at `adafac380df41a29552929fbd451ddd36c9d9139`
+is superseded by the BUG-18176 safety fix. Rebuild every final asset from the
+subsequent Stable merge; the canonical manifest records its exact source commit.
 Checked items represent integrated implementation, not public release or every manual check.
+
+- [ ] `BUG-18176` `P0` Preserve user files during CLI doctor write probes.
+  [Issue #664](https://github.com/ATAC-Helicopter/VaultSync/issues/664).
+  Replace fixed probe filenames with unique, exclusively created, stream-owned temporary files. Drain both redirected sync-tool output streams concurrently to prevent help-output hangs. The isolated regression reproduced existing-file deletion before the fix; all five new CLI cases pass afterward. Local suites pass 924 .NET and 100 script tests. Resolve the Stable cancellation finding and exercise release-tool CLI paths without resetting Sonar's existing coverage baseline. Hosted checks, Stable integration, and a fresh native asset qualification remain required.
 
 - [x] `BUG-18155` `P1` Preserve backup group expansion and loaded history during refreshes.
   [Issue #628](https://github.com/ATAC-Helicopter/VaultSync/issues/628).

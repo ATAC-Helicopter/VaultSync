@@ -1,11 +1,13 @@
 # VaultSync 1.8.9 — Bug fixes and everyday polish
 
 Status: unreleased; implementation integrated into Stable through #634 and #660.
-Native candidate upgrades qualified; final release assets must be freshly built
-from Stable commit `adafac380df41a29552929fbd451ddd36c9d9139` in
-[run 35075261085](https://github.com/ATAC-Helicopter/VaultSync/actions/runs/35075261085).
-Check that run's native qualification and the uploaded canonical manifest before
-promoting any draft assets. Pre-Stable qualification attachments must be replaced.
+Native upgrades qualified in the initial Stable build, but its source
+`adafac380df41a29552929fbd451ddd36c9d9139` and
+[run 35075261085](https://github.com/ATAC-Helicopter/VaultSync/actions/runs/35075261085)
+are superseded by the BUG-18176 safety fix. Rebuild every final asset from the
+subsequent Stable merge and verify its native qualification and uploaded
+canonical manifest, which records the exact source commit. Neither the initial
+Stable assets nor pre-Stable draft attachments may be promoted as final.
 
 The owner [explicitly approved a documented maintainer exception](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168)
 for missing review approval and interactive Windows/Linux/Store-runtime results.
@@ -208,6 +210,7 @@ native executable upgrades and draft upload integrity passed.
 | [`BUG-18158` / #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635) | Keep Linux updater handoff qualification portable on Windows CI | Integrated into Stable |
 | [`BUG-18174` / #658](https://github.com/ATAC-Helicopter/VaultSync/issues/658) | Bind Store upload packages to release metadata and provenance | Integrated into Stable |
 | [`BUG-18175` / #659](https://github.com/ATAC-Helicopter/VaultSync/issues/659) | Keep the app open for manually installed Linux update archives | Integrated into Stable |
+| [`BUG-18176` / #664](https://github.com/ATAC-Helicopter/VaultSync/issues/664) | Preserve user files during CLI diagnostics and drain tool output safely | Local tests pass; integration and fresh asset qualification pending |
 | [`VS-1892` / #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631) | Polish shared pill alignment and theme readability | Integrated into Stable |
 | [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | Integrated into Stable |
 | [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Deferred checks open |

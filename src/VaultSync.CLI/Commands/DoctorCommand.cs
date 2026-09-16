@@ -53,7 +53,7 @@ namespace VaultSync.CLI.Commands
         private static async Task<bool> CheckRobocopyAsync(DoctorReporter reporter, CancellationToken cancellationToken)
         {
             using System.Diagnostics.Process proc = StartProcess("robocopy", "/?");
-            await proc.WaitForExitAsync(cancellationToken);
+            await ReadProcessOutputAsync(proc, cancellationToken);
             return proc.ExitCode <= 16
                 ? reporter.Pass("robocopy found (Windows sync runner)")
                 : reporter.Fail("robocopy returned unexpected exit");
@@ -62,11 +62,20 @@ namespace VaultSync.CLI.Commands
         private static async Task<bool> CheckRsyncAsync(DoctorReporter reporter, CancellationToken cancellationToken)
         {
             using System.Diagnostics.Process proc = StartProcess("rsync", "--version");
-            string txt = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
-            await proc.WaitForExitAsync(cancellationToken);
+            string txt = await ReadProcessOutputAsync(proc, cancellationToken);
             return proc.ExitCode == 0 && txt.Contains("rsync", StringComparison.OrdinalIgnoreCase)
                 ? reporter.Pass("rsync found (Unix sync runner)")
                 : reporter.Fail("rsync not available or returned non-zero");
+        }
+
+        private static async Task<string> ReadProcessOutputAsync(
+            System.Diagnostics.Process process,
+            CancellationToken cancellationToken)
+        {
+            Task<string> output = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            await Task.WhenAll(output, process.StandardError.ReadToEndAsync(cancellationToken),
+                process.WaitForExitAsync(cancellationToken));
+            return await output;
         }
 
         private static System.Diagnostics.Process StartProcess(string fileName, string argument)
@@ -151,9 +160,10 @@ namespace VaultSync.CLI.Commands
         private static async Task WriteProbeAsync(string directory, CancellationToken cancellationToken)
         {
             Directory.CreateDirectory(directory);
-            string testFile = Path.Combine(directory, ".vaultsync_write_test");
-            await File.WriteAllTextAsync(testFile, "ok", cancellationToken);
-            File.Delete(testFile);
+            string testFile = Path.Combine(directory, $".vaultsync_write_test_{Guid.NewGuid():N}");
+            await using var stream = new FileStream(testFile, FileMode.CreateNew, FileAccess.Write,
+                FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+            await stream.WriteAsync("ok"u8.ToArray(), cancellationToken);
         }
 
         private sealed class DoctorReporter(bool quiet)

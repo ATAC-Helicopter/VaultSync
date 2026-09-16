@@ -19,6 +19,24 @@ spec.loader.exec_module(qualify_updater)
 
 
 class UpdaterQualificationTests(unittest.TestCase):
+    def test_cli_passes_explicit_asset_identity_to_qualification(self):
+        with mock.patch.object(qualify_updater, "qualify") as qualify:
+            qualify_updater.main(["--assets", "assets", "--previous", "1.8.8",
+                                  "--target", "1.8.9", "--evidence", "evidence"])
+            args = qualify.call_args.args[0]
+            self.assertEqual("1.8.8", args.previous)
+            self.assertEqual("1.8.9", args.target)
+            self.assertEqual(Path("assets"), args.assets)
+
+    def test_cli_preserves_failure_evidence_and_nonzero_exit(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "evidence"
+            with mock.patch.object(qualify_updater, "qualify", side_effect=RuntimeError("qualification failed")):
+                with self.assertRaisesRegex(RuntimeError, "qualification failed"):
+                    qualify_updater.main(["--assets", "assets", "--previous", "1.8.8",
+                                          "--target", "1.8.9", "--evidence", str(evidence)])
+            self.assertEqual({"error": "qualification failed"}, json.loads((evidence / "failure.json").read_text()))
+
     def test_prepare_linux_base_extracts_verified_archive(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

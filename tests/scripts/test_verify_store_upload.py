@@ -3,6 +3,7 @@ import io
 import json
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 from pathlib import Path
 
@@ -14,6 +15,12 @@ SPEC.loader.exec_module(MODULE)
 
 
 class StoreUploadTests(unittest.TestCase):
+    def test_cli_inspects_actual_upload_and_reports_identity(self):
+        with tempfile.TemporaryDirectory() as directory, mock.patch("builtins.print") as output:
+            MODULE.main([str(self.package(directory)), "--version", "1.8.9", "--source-manifest",
+                         str(ROOT / "packaging/VaultSync.Store/Package.appxmanifest")])
+            self.assertEqual("1.8.9.0", json.loads(output.call_args.args[0])["identity"]["Version"])
+
     def package(self, directory, version="1.8.9.0", executable=True):
         nested = io.BytesIO()
         manifest = f'''<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10">
