@@ -791,6 +791,42 @@ jobs:
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.zip
 
+  updater-qualification:
+    name: Executable updater qualification (${{ matrix.os }})
+    needs: [windows, macos, linux]
+    if: ${{ inputs.include_windows_patches && inputs.include_macos_patches && inputs.include_linux_patches }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - name: Download candidate packages and patches
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: '*-release-assets'
+          merge-multiple: true
+          path: updater-assets
+      - name: Exercise released updater and candidate installer
+        run: >
+          python scripts/qualify_updater.py --assets updater-assets
+          --previous ${{ inputs.previous_version }} --target ${{ inputs.target_version }}
+          --evidence updater-evidence
+      - name: Preserve updater qualification evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: updater-qualification-${{ matrix.os }}
+          path: updater-evidence
+          if-no-files-found: warn
+
   release-manifest:
     name: Generate canonical release manifest
     needs: [validate, windows, macos, linux]
