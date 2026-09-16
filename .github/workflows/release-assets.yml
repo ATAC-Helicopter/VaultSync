@@ -1145,9 +1145,30 @@ jobs:
           assert len(manifest['assets']) == 19, 'Full platform/patch/Store matrix is required'
           PY
           tag="v$TARGET_VERSION"
-          gh release view "$tag" --json isDraft,assets | jq -e '.isDraft == true and (.assets | length) == 0'
+          gh release view "$tag" --json isDraft,databaseId > draft-release.json
+          jq -e '.isDraft == true' draft-release.json
+          release_id="$(jq -r '.databaseId' draft-release.json)"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > draft-assets.json
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path('release-assets')
+          expected = {path.name: path for path in root.rglob('*') if path.is_file()}
+          existing = json.loads(Path('draft-assets.json').read_text())
+          names = set()
+          for asset in existing:
+              name = asset['name']
+              assert name in expected and name not in names, 'Unexpected existing draft asset'
+              path = expected[name]
+              digest = hashlib.file_digest(path.open('rb'), 'sha256').hexdigest()
+              assert asset['size'] == path.stat().st_size and asset.get('digest') == 'sha256:' + digest, 'Draft asset differs; refusing overwrite'
+              names.add(name)
+          Path('missing-assets.txt').write_text(''.join(str(path) + '\n' for name, path in sorted(expected.items()) if name not in names))
+          PY
           source_sha="$(jq -r '.release.commit' release-assets/vaultsync-release-manifest.json)"
           gh release edit "$tag" --draft --target "$source_sha"
-          mapfile -t assets < <(find release-assets -type f | sort)
-          gh release upload "$tag" "${assets[@]}"
+          mapfile -t assets < missing-assets.txt
+          if [[ ${#assets[@]} -gt 0 ]]; then
+            gh release upload "$tag" "${assets[@]}"
+          fi
           gh release view "$tag" --json isDraft,assets | jq -e '.isDraft == true and (.assets | length) == 20'
