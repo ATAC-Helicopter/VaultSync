@@ -43,10 +43,14 @@ def verify(upload, version, source_manifest):
                         "includedFrameworks": options["includedFrameworks"]}
 
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("upload", type=Path)
     parser.add_argument("--version", required=True)
     parser.add_argument("--source-manifest", type=Path, required=True)
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
     print(json.dumps(verify(arguments.upload, arguments.version, arguments.source_manifest), indent=2))
+
+
+if __name__ == "__main__":
+    main()
