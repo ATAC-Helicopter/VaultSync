@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "Failed to download the installer. Open the release page instead.",
   "Update.Installer.Downloading": "Downloading installer...",
   "Update.Installer.Launched": "Installer launched. VaultSync will close so setup can continue.",
+  "Update.Installer.Manual": "Update files opened. Complete the installation, then restart VaultSync.",
   "Update.Installer.LaunchFailed": "Installer downloaded but could not be started.",
   "Update.Installer.Launching": "Launching installer...",
   "Update.Installer.Timeout": "Installer download timed out. Check your connection or open the release page.",

@@ -131,24 +131,16 @@ namespace VaultSync.UI.ViewModels.Notifications
         /// <summary>
         /// Show a notification. Duration is optional (defaults to ~4s auto-hide).
         /// </summary>
-        public void Show(
-            string message,
-            NotificationSeverity severity = NotificationSeverity.Info,
-            string? title = null,
-            TimeSpan? duration = null,
-            string? actionLabel = null,
-            ICommand? actionCommand = null,
-            string? groupKey = null,
-            bool incrementRepeat = false)
+        public void Show(NotificationRequest request, bool incrementRepeat = false)
         {
             RunOnUiThread(() =>
             {
-                Message = message;
-                Title = title ?? string.Empty;
-                Severity = severity;
-                ActionLabel = actionLabel ?? string.Empty;
-                ActionCommand = actionCommand;
-                GroupKey = groupKey ?? string.Empty;
+                Message = request.Message;
+                Title = request.Title ?? string.Empty;
+                Severity = request.Severity;
+                ActionLabel = request.ActionLabel ?? string.Empty;
+                ActionCommand = request.ActionCommand;
+                GroupKey = request.GroupKey ?? string.Empty;
                 if (!incrementRepeat || !IsVisible)
                 {
                     RepeatCount = 1;
@@ -161,7 +153,7 @@ namespace VaultSync.UI.ViewModels.Notifications
 
                 UpdatedUtc = DateTimeOffset.UtcNow;
                 IsVisible = true;
-                StartAutoDismiss(duration ?? TimeSpan.FromSeconds(9));
+                StartAutoDismiss(request.Duration);
             });
         }
 
@@ -198,7 +190,7 @@ namespace VaultSync.UI.ViewModels.Notifications
         {
             var previous = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
             CancelAndDispose(previous);
-            var local = _cts!;
+            var local = _cts;
 
             try
             {

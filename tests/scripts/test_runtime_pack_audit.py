@@ -21,7 +21,7 @@ spec.loader.exec_module(runtime_pack_audit)
 
 
 class RuntimePackAuditTests(unittest.TestCase):
-    def write_repo(self, root: Path, minimum: str = "10.0.11") -> None:
+    def write_repo(self, root: Path, minimum: str = "10.0.12") -> None:
         (root / "Directory.Build.props").write_text(
             "<Project><PropertyGroup>"
             f"<VaultSyncMinimumRuntimeVersion>{minimum}</VaultSyncMinimumRuntimeVersion>"
@@ -55,13 +55,13 @@ class RuntimePackAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "app.runtimeconfig.json"
             self.write_runtimeconfig(path, "10.0.12")
-            self.assertEqual([], runtime_pack_audit.audit_runtimeconfig(path, "10.0.11"))
+            self.assertEqual([], runtime_pack_audit.audit_runtimeconfig(path, "10.0.12"))
 
     def test_audit_runtimeconfig_rejects_an_old_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "app.runtimeconfig.json"
             self.write_runtimeconfig(path, "10.0.8")
-            errors = runtime_pack_audit.audit_runtimeconfig(path, "10.0.11")
+            errors = runtime_pack_audit.audit_runtimeconfig(path, "10.0.12")
             self.assertEqual(1, len(errors))
             self.assertIn("embeds Microsoft.NETCore.App 10.0.8", errors[0])
 
@@ -69,7 +69,7 @@ class RuntimePackAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "app.runtimeconfig.json"
             self.write_runtimeconfig(path, None)
-            errors = runtime_pack_audit.audit_runtimeconfig(path, "10.0.11")
+            errors = runtime_pack_audit.audit_runtimeconfig(path, "10.0.12")
             self.assertEqual(1, len(errors))
             self.assertIn("metadata is missing", errors[0])
 
@@ -77,7 +77,7 @@ class RuntimePackAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=REPO_ROOT) as repo_tmp:
             with tempfile.TemporaryDirectory() as outside_tmp:
                 path = Path(outside_tmp) / "app.runtimeconfig.json"
-                self.write_runtimeconfig(path, "10.0.11")
+                self.write_runtimeconfig(path, "10.0.12")
                 with patch.object(runtime_pack_audit.tempfile, "gettempdir", return_value=repo_tmp):
                     with self.assertRaisesRegex(ValueError, "must stay inside"):
                         runtime_pack_audit.resolve_runtimeconfig(path, Path(repo_tmp))
@@ -86,7 +86,7 @@ class RuntimePackAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             path = root / "metadata.json"
-            self.write_runtimeconfig(path, "10.0.11")
+            self.write_runtimeconfig(path, "10.0.12")
             with self.assertRaisesRegex(ValueError, r"\.runtimeconfig\.json"):
                 runtime_pack_audit.resolve_runtimeconfig(path, root)
 
@@ -95,7 +95,7 @@ class RuntimePackAuditTests(unittest.TestCase):
             root = Path(tmp)
             config = root / "app.runtimeconfig.json"
             self.write_repo(root)
-            self.write_runtimeconfig(config, "10.0.11")
+            self.write_runtimeconfig(config, "10.0.12")
             output = StringIO()
             with patch.object(runtime_pack_audit, "REPOSITORY_ROOT", root), patch.object(
                 sys, "argv", ["runtime_pack_audit.py", "--runtimeconfig", str(config)]
@@ -114,7 +114,7 @@ class RuntimePackAuditTests(unittest.TestCase):
                 sys, "argv", ["runtime_pack_audit.py", "--runtimeconfig", str(config)]
             ), redirect_stderr(output):
                 self.assertEqual(1, runtime_pack_audit.main())
-            self.assertIn("require >= 10.0.11", output.getvalue())
+            self.assertIn("require >= 10.0.12", output.getvalue())
 
 
 if __name__ == "__main__":

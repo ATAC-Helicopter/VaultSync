@@ -8,6 +8,7 @@ updates:
     groups:
       rendering-stack:
         patterns:
+          - "Avalonia*"
           - "SkiaSharp*"
           - "HarfBuzzSharp*"
     labels:

@@ -19,40 +19,27 @@ namespace VaultSync.UI.Services
     public sealed class UpdateCheckResult
     {
         public UpdateCheckResult(
-            string tagName,
-            string releaseName,
-            string releaseNotes,
-            Uri releaseUrl,
-            DateTime publishedAt,
-            string? patchManifestUrl,
-            string? patchManifestSha256,
-            long patchManifestSize,
-            Uri? patchArchiveUrl,
-            string? patchArchiveName,
-            string? patchArchiveSha256,
-            long patchArchiveSize,
-            Uri? installerUrl,
-            string? installerName,
-            string? installerSha256,
-            long installerSize,
+            UpdateReleaseDetails release,
+            PatchUpdateDetails patch,
+            InstallerUpdateDetails installer,
             UpdateCheckDiagnostics diagnostics)
         {
-            TagName          = tagName;
-            ReleaseName      = releaseName;
-            ReleaseNotes     = releaseNotes;
-            ReleaseUrl       = releaseUrl;
-            PublishedAt      = publishedAt;
-            PatchManifestUrl = patchManifestUrl;
-            PatchManifestSha256 = patchManifestSha256;
-            PatchManifestSize = patchManifestSize;
-            PatchArchiveUrl  = patchArchiveUrl;
-            PatchArchiveName = patchArchiveName;
-            PatchArchiveSha256 = patchArchiveSha256;
-            PatchArchiveSize = patchArchiveSize;
-            InstallerUrl     = installerUrl;
-            InstallerName    = installerName;
-            InstallerSha256  = installerSha256;
-            InstallerSize    = installerSize;
+            TagName = release.TagName;
+            ReleaseName = release.ReleaseName;
+            ReleaseNotes = release.ReleaseNotes;
+            ReleaseUrl = release.ReleaseUrl;
+            PublishedAt = release.PublishedAt;
+            PatchManifestUrl = patch.ManifestUrl;
+            PatchManifestSha256 = patch.ManifestSha256;
+            PatchManifestSize = patch.ManifestSize;
+            PatchArchiveUrl = patch.ArchiveUrl;
+            PatchArchiveName = patch.ArchiveName;
+            PatchArchiveSha256 = patch.ArchiveSha256;
+            PatchArchiveSize = patch.ArchiveSize;
+            InstallerUrl = installer.Url;
+            InstallerName = installer.Name;
+            InstallerSha256 = installer.Sha256;
+            InstallerSize = installer.Size;
             Diagnostics      = diagnostics;
         }
 
@@ -87,6 +74,28 @@ namespace VaultSync.UI.Services
             value is { Length: 64 } && value.All(Uri.IsHexDigit);
         public UpdateCheckDiagnostics Diagnostics { get; }
     }
+
+    public sealed record UpdateReleaseDetails(
+        string TagName,
+        string ReleaseName,
+        string ReleaseNotes,
+        Uri ReleaseUrl,
+        DateTime PublishedAt);
+
+    public sealed record PatchUpdateDetails(
+        string? ManifestUrl,
+        string? ManifestSha256,
+        long ManifestSize,
+        Uri? ArchiveUrl,
+        string? ArchiveName,
+        string? ArchiveSha256,
+        long ArchiveSize);
+
+    public sealed record InstallerUpdateDetails(
+        Uri? Url,
+        string? Name,
+        string? Sha256,
+        long Size);
 
     public sealed class UpdateCheckEvaluation
     {
@@ -186,9 +195,7 @@ namespace VaultSync.UI.Services
             }
 
             if (!Uri.TryCreate(candidate.HtmlUrl, UriKind.Absolute, out Uri? releaseUri))
-            {
-                releaseUri = new Uri("https://github.com/ATAC-Helicopter/VaultSync/releases");
-            }
+                releaseUri = BuildReleasesPageUri();
 
             string releaseName = string.IsNullOrWhiteSpace(candidate.Name) ? releaseTag : candidate.Name;
             string releaseNotes = candidate.Body ?? string.Empty;
@@ -214,25 +221,34 @@ namespace VaultSync.UI.Services
 
             return new UpdateCheckEvaluation(
                 new UpdateCheckResult(
-                releaseTag,
-                releaseName,
-                releaseNotes,
-                releaseUri,
-                publishedAt,
-                manifestUrl,
-                manifestSha256,
-                manifestSize,
-                archiveUrl,
-                archiveName,
-                archiveSha256,
-                archiveSize,
-                installerUrl,
-                installerName,
-                installerSha256,
-                installerSize,
-                diagnostics),
+                    new UpdateReleaseDetails(
+                        releaseTag,
+                        releaseName,
+                        releaseNotes,
+                        releaseUri,
+                        publishedAt),
+                    new PatchUpdateDetails(
+                        manifestUrl,
+                        manifestSha256,
+                        manifestSize,
+                        archiveUrl,
+                        archiveName,
+                        archiveSha256,
+                        archiveSize),
+                    new InstallerUpdateDetails(
+                        installerUrl,
+                        installerName,
+                        installerSha256,
+                        installerSize),
+                    diagnostics),
                 diagnostics);
         }
+
+        private static Uri BuildReleasesPageUri() => new UriBuilder(
+            Uri.UriSchemeHttps,
+            "github.com",
+            -1,
+            "/ATAC-Helicopter/VaultSync/releases").Uri;
 
         private static bool IsReleaseNewer(string releaseTag, string currentVersion)
         {
@@ -243,7 +259,7 @@ namespace VaultSync.UI.Services
         {
             var client = new HttpClient
             {
-                BaseAddress = new Uri("https://api.github.com/"),
+                BaseAddress = new UriBuilder(Uri.UriSchemeHttps, "api.github.com").Uri,
                 Timeout     = TimeSpan.FromSeconds(20),
                 MaxResponseContentBufferSize = MaxReleaseManifestBytes
             };
@@ -262,99 +278,100 @@ namespace VaultSync.UI.Services
 
         private static async Task<List<GitHubRelease>> FetchReleasesAsync(CancellationToken cancellationToken)
         {
-            var releases = new List<GitHubRelease>();
-            bool useCache = false;
+            List<GitHubRelease>? cachedReleases = GetFreshCachedReleases();
+            if (cachedReleases is not null)
+                return cachedReleases;
 
-            lock (s_releaseCacheLock)
-            {
-                if (s_releaseCache is { Count: > 0 } &&
-                    s_releaseCacheTimestamp.HasValue &&
-                    (DateTimeOffset.UtcNow - s_releaseCacheTimestamp.Value) <= s_releaseCacheTtl)
-                {
-                    return [.. s_releaseCache];
-                }
-            }
+            var releases = new List<GitHubRelease>();
 
             for (int page = 1; page <= MaxReleasePages; page++)
             {
                 string endpoint = $"{ReleasesEndpointBase}?per_page={ReleasesPerPage}&page={page}";
-                List<GitHubRelease>? pageReleases = null;
-                HttpResponseMessage? response = null;
+                ReleasePageResult result = await FetchReleasePageAsync(endpoint, cancellationToken).ConfigureAwait(false);
+                if (result.UseCache)
+                    return GetCachedReleases();
 
-                try
-                {
-                    using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
-                    string? cachedEtag;
-                    lock (s_releaseCacheLock)
-                    {
-                        cachedEtag = s_releaseEtag;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(cachedEtag))
-                    {
-                        request.Headers.IfNoneMatch.ParseAdd(cachedEtag);
-                    }
-
-                    response = await s_httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                    if (response.StatusCode == HttpStatusCode.NotModified)
-                    {
-                        useCache = true;
-                        break;
-                    }
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        break;
-                    }
-
-                    pageReleases = await response.Content
-                        .ReadFromJsonAsync<List<GitHubRelease>>(cancellationToken: cancellationToken)
-                        .ConfigureAwait(false);
-                }
-                catch
-                {
+                if (result.Releases is not { Count: > 0 })
                     break;
-                }
 
-                if (pageReleases is not { Count: > 0 })
-                {
-                    break;
-                }
-
-                releases.AddRange(pageReleases);
-
-                string? responseEtag = response.Headers.ETag?.Tag;
-                if (!string.IsNullOrWhiteSpace(responseEtag))
-                {
-                    lock (s_releaseCacheLock)
-                    {
-                        s_releaseEtag = responseEtag;
-                        s_releaseCache = [.. releases];
-                        s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
-                    }
-                }
-
-            }
-
-            if (useCache)
-            {
-                lock (s_releaseCacheLock)
-                {
-                    return s_releaseCache ?? [];
-                }
+                releases.AddRange(result.Releases);
+                UpdateReleaseCache(releases, result.ETag);
             }
 
             if (releases.Count > 0)
-            {
-                lock (s_releaseCacheLock)
-                {
-                    s_releaseCache = [.. releases];
-                    s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
-                }
-            }
+                UpdateReleaseCache(releases, etag: null);
 
             return releases;
         }
+
+        private static List<GitHubRelease>? GetFreshCachedReleases()
+        {
+            lock (s_releaseCacheLock)
+            {
+                bool isFresh = s_releaseCache is { Count: > 0 } &&
+                    s_releaseCacheTimestamp.HasValue &&
+                    DateTimeOffset.UtcNow - s_releaseCacheTimestamp.Value <= s_releaseCacheTtl;
+                return isFresh ? [.. s_releaseCache!] : null;
+            }
+        }
+
+        private static List<GitHubRelease> GetCachedReleases()
+        {
+            lock (s_releaseCacheLock)
+            {
+                return s_releaseCache is null ? [] : [.. s_releaseCache];
+            }
+        }
+
+        private static async Task<ReleasePageResult> FetchReleasePageAsync(
+            string endpoint,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+                string? cachedEtag;
+                lock (s_releaseCacheLock)
+                {
+                    cachedEtag = s_releaseEtag;
+                }
+
+                if (!string.IsNullOrWhiteSpace(cachedEtag))
+                    request.Headers.IfNoneMatch.ParseAdd(cachedEtag);
+
+                using HttpResponseMessage response = await s_httpClient
+                    .SendAsync(request, cancellationToken)
+                    .ConfigureAwait(false);
+                if (response.StatusCode == HttpStatusCode.NotModified)
+                    return new ReleasePageResult(null, null, UseCache: true);
+
+                if (!response.IsSuccessStatusCode)
+                    return new ReleasePageResult(null, null, UseCache: false);
+
+                List<GitHubRelease>? releases = await response.Content
+                    .ReadFromJsonAsync<List<GitHubRelease>>(cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+                return new ReleasePageResult(releases, response.Headers.ETag?.Tag, UseCache: false);
+            }
+            catch
+            {
+                return new ReleasePageResult(null, null, UseCache: false);
+            }
+        }
+
+        private static void UpdateReleaseCache(List<GitHubRelease> releases, string? etag)
+        {
+            lock (s_releaseCacheLock)
+            {
+                if (!string.IsNullOrWhiteSpace(etag))
+                    s_releaseEtag = etag;
+
+                s_releaseCache = [.. releases];
+                s_releaseCacheTimestamp = DateTimeOffset.UtcNow;
+            }
+        }
+
+        private sealed record ReleasePageResult(List<GitHubRelease>? Releases, string? ETag, bool UseCache);
 
         private static GitHubRelease? SelectStableCandidate(List<GitHubRelease> releases)
         {

@@ -33,7 +33,7 @@ namespace VaultSync.UI.Notifications
 
                 var psi = new ProcessStartInfo
                 {
-                    FileName = "osascript",
+                    FileName = "/usr/bin/osascript",
                     UseShellExecute = false,
                     RedirectStandardOutput = false,
                     RedirectStandardError = false,

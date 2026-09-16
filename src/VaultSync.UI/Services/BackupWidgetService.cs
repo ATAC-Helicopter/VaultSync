@@ -138,13 +138,10 @@ namespace VaultSync.UI.Services
             if (_disposed)
                 return;
 
-            if (e.PropertyName == nameof(BackupsViewModel.IsBusy))
-            {
-                if (!_backupsViewModel.IsBusy && _backupsViewModel.ActiveBackups.Count == 0)
-                {
-                    Hide();
-                }
-            }
+            if (e.PropertyName == nameof(BackupsViewModel.IsBusy) &&
+                !_backupsViewModel.IsBusy &&
+                _backupsViewModel.ActiveBackups.Count == 0)
+                Hide();
         }
 
         private void PositionWindow(Window? window)

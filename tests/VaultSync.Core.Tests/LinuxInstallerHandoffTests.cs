@@ -59,7 +59,7 @@ public sealed class LinuxInstallerHandoffTests
 
         Assert.Equal("/bin/sh", startInfo.FileName);
         Assert.False(startInfo.UseShellExecute);
-        Assert.Equal("/opt/vaultsync", startInfo.WorkingDirectory);
+        Assert.Equal(Path.GetDirectoryName("/opt/vaultsync/VaultSync.UI"), startInfo.WorkingDirectory);
         Assert.Contains("kill -0", string.Join(" ", startInfo.ArgumentList));
         Assert.Contains("12345", startInfo.ArgumentList);
         Assert.Contains("/opt/vaultsync/VaultSync.UI", startInfo.ArgumentList);
@@ -112,6 +112,15 @@ public sealed class LinuxInstallerHandoffTests
             return;
 
         Assert.False(AppViewModel.InstallerMediaRequiresShutdown("/tmp/VaultSync-1.8.8-macos-apple-silicon.dmg"));
+    }
+
+    [Theory]
+    [InlineData("/tmp/VaultSync-1.8.9-linux-arm64.tar.gz")]
+    [InlineData("/tmp/VaultSync-1.8.9-linux-x64.TAR.GZ")]
+    public void LinuxArchiveMedia_DoesNotCloseRunningApplication(string installerPath)
+    {
+        if (OperatingSystem.IsLinux())
+            Assert.False(AppViewModel.InstallerMediaRequiresShutdown(installerPath));
     }
 
     [Theory]

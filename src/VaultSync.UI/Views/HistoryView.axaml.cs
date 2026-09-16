@@ -31,13 +31,23 @@ public partial class HistoryView : UserControl
             return;
 
         bool compactHeader = width < CompactHeaderWidth;
+        UpdateHeaderLayout(compactHeader);
+        UpdateFilterLayout(width < CompactFiltersWidth);
+        UpdateContentLayout(width < StackedContentWidth);
+    }
+
+    private void UpdateHeaderLayout(bool compactHeader)
+    {
         HistoryHeaderGrid.ColumnDefinitions = new ColumnDefinitions(compactHeader ? "*" : "*,Auto");
         HistoryHeaderGrid.RowDefinitions = new RowDefinitions(compactHeader ? "Auto,Auto" : "Auto");
         Grid.SetColumn(HistoryHeaderBadges, compactHeader ? 0 : 1);
         Grid.SetRow(HistoryHeaderBadges, compactHeader ? 1 : 0);
         HistoryHeaderBadges.Margin = compactHeader ? new Thickness(0, 10, 0, 0) : default;
 
-        bool compactFilters = width < CompactFiltersWidth;
+    }
+
+    private void UpdateFilterLayout(bool compactFilters)
+    {
         HistoryFilterGrid.ColumnDefinitions = new ColumnDefinitions(compactFilters ? "*" : "*,Auto");
         HistoryFilterGrid.RowDefinitions = new RowDefinitions(compactFilters ? "Auto,Auto" : "Auto");
         Grid.SetColumn(HistoryFilterActions, compactFilters ? 0 : 1);
@@ -47,7 +57,10 @@ public partial class HistoryView : UserControl
             ? Avalonia.Layout.HorizontalAlignment.Left
             : Avalonia.Layout.HorizontalAlignment.Right;
 
-        bool stackContent = width < StackedContentWidth;
+    }
+
+    private void UpdateContentLayout(bool stackContent)
+    {
         HistoryContentGrid.ColumnDefinitions = new ColumnDefinitions(stackContent ? "*" : "*,360");
         HistoryContentGrid.RowDefinitions = new RowDefinitions(stackContent ? "1.15*,*" : "*");
         HistoryContentGrid.ColumnSpacing = stackContent ? 0 : 22;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -125,11 +126,8 @@ namespace VaultSync.UI.Services
 
         private void WarmCache()
         {
-            foreach (LanguageOption option in _languageOptions)
-            {
-                if (!LoadLanguage(option.Code))
-                    Console.WriteLine($"[Localization] Failed to load language: {option.Code}");
-            }
+            foreach (LanguageOption option in _languageOptions.Where(option => !LoadLanguage(option.Code)))
+                Console.WriteLine($"[Localization] Failed to load language: {option.Code}");
         }
 
         private static string? ReadTextWithFallback(string path)

@@ -13,12 +13,12 @@
       <!-- Text -->
       <Color x:Key="VsTextPrimaryColor">#FFFFFF</Color>
       <Color x:Key="VsTextSecondaryColor">#B3B8C7</Color>
-      <Color x:Key="VsTextMutedColor">#8086A0</Color>
+      <Color x:Key="VsTextMutedColor">#949BB3</Color>
 
       <!-- Accents -->
       <Color x:Key="VsAccentColor">#4F8DFF</Color>
       <Color x:Key="VsAccentSoftColor">#334F8DFF</Color>
-      <Color x:Key="VsTextOnAccentColor">#FFFFFF</Color>
+      <Color x:Key="VsTextOnAccentColor">#11131A</Color>
 
       <!-- Status / semantic (BRIGHTER) -->
       <Color x:Key="VsSuccessColor">#4FF2B6</Color>
@@ -48,7 +48,7 @@
       <!-- Text -->
       <Color x:Key="VsTextPrimaryColor">#11131A</Color>
       <Color x:Key="VsTextSecondaryColor">#5C6275</Color>
-      <Color x:Key="VsTextMutedColor">#8C92A8</Color>
+      <Color x:Key="VsTextMutedColor">#626A80</Color>
 
       <!-- Accents -->
       <Color x:Key="VsAccentColor">#2663FF</Color>
@@ -56,9 +56,9 @@
       <Color x:Key="VsTextOnAccentColor">#FFFFFF</Color>
 
       <!-- Status / semantic (BRIGHTER) -->
-      <Color x:Key="VsSuccessColor">#32DFA0</Color>
-      <Color x:Key="VsWarningColor">#FFBF5F</Color>
-      <Color x:Key="VsDangerColor">#FF6A6A</Color>
+      <Color x:Key="VsSuccessColor">#087F5B</Color>
+      <Color x:Key="VsWarningColor">#996000</Color>
+      <Color x:Key="VsDangerColor">#C22D40</Color>
       <Color x:Key="VsSuccessSoftColor">#2432DFA0</Color>
       <Color x:Key="VsWarningSoftColor">#24FFBF5F</Color>
       <Color x:Key="VsDangerSoftColor">#24FF6A6A</Color>

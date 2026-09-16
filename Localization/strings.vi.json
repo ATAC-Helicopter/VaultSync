@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "Không thể tải xuống trình cài đặt. Thay vào đó, hãy mở trang phát hành.",
   "Update.Installer.Downloading": "Đang tải xuống trình cài đặt...",
   "Update.Installer.Launched": "Trình cài đặt đã ra mắt. VaultSync sẽ đóng để có thể tiếp tục thiết lập.",
+  "Update.Installer.Manual": "Đã mở các tệp cập nhật. Hoàn tất cài đặt, rồi khởi động lại VaultSync.",
   "Update.Installer.LaunchFailed": "Trình cài đặt đã tải xuống nhưng không thể khởi động được.",
   "Update.Installer.Launching": "Khởi chạy trình cài đặt...",
   "Update.Installer.Timeout": "Quá trình tải xuống trình cài đặt đã hết thời gian chờ. Kiểm tra kết nối của bạn hoặc mở trang phát hành.",

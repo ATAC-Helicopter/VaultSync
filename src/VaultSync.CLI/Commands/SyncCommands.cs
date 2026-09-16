@@ -32,8 +32,8 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
-            var dest = s.Destination.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
+            var dest = ConfigHelper.ExpandUserPath(s.Destination);
 
             var svc = new SyncService();
 
@@ -78,8 +78,8 @@ namespace VaultSync.CLI.Commands
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
-            var src = s.From.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
+            var src = ConfigHelper.ExpandUserPath(s.From);
 
             var svc = new VerifyService(repo, new HashService());
 
@@ -145,145 +145,341 @@ namespace VaultSync.CLI.Commands
 
     sealed class RestoreCommand : AsyncCommand<RestoreSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
+        private sealed record RestoreSelection(
+            Project Project,
+            Snapshot Snapshot,
+            Backup Backup,
+            string SourceRoot,
+            IReadOnlyList<FileEntry> Files);
+
+        private sealed record RestoreCopy(string RelativePath, string SourcePath, string TargetPath);
+
+        protected override async Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
         {
-            var db = ConfigHelper.ResolveDb(s.Db);
-            var repo = new SqliteRepository(db);
+            var repo = new SqliteRepository(ConfigHelper.ResolveDb(s.Db));
             repo.EnsureSchema();
-
-            var proj = repo.GetProjectByName(s.Name) ?? throw new Exception($"Project '{s.Name}' not found");
-
-            int snapshotId;
-            DateTime snapshotCreatedUtc;
-
-            if (s.Snapshot is int explicitId)
-            {
-                snapshotId = explicitId;
-                var found = repo.GetSnapshotsForProject(proj.Name).FirstOrDefault(x => x.Id == snapshotId)
-                    ?? throw new Exception($"Snapshot {snapshotId} not found for project '{proj.Name}'");
-                snapshotCreatedUtc = found.CreatedUtc;
-            }
-            else
-            {
-                var latest = repo.GetSnapshotsForProject(proj.Name).FirstOrDefault()
-                    ?? throw new Exception("No snapshots exist for this project");
-                snapshotId = latest.Id;
-                snapshotCreatedUtc = latest.CreatedUtc;
-            }
-
-            var snapFiles = repo.GetFilesForSnapshot(snapshotId).ToList();
-            if (snapFiles.Count == 0) throw new Exception($"Snapshot {snapshotId} has no files");
-
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var destRoot = s.Destination.Replace("~", home);
+            RestoreSelection selection = ResolveSelection(repo, s);
+            string destination = Path.GetFullPath(ConfigHelper.ExpandUserPath(s.Destination));
+            EnsureDestinationIsSafe(selection, destination, s.Clean);
+            IReadOnlyList<RestoreCopy> copies = await BuildCopyPlanAsync(
+                selection,
+                destination,
+                cancellationToken).ConfigureAwait(false);
+            (IReadOnlyList<string> existingFiles, IReadOnlyList<string> existingDirectories) =
+                InspectDestination(destination, s.Clean, cancellationToken);
             var started = DateTime.UtcNow;
+            int copied = CopyBackupFiles(copies, destination, s, cancellationToken);
+            int deleted = DeleteExtraFiles(existingFiles, copies, destination, s, cancellationToken);
+            int deletedDirectories = DeleteEmptyDirectories(existingDirectories, destination, s);
+            TimeSpan took = DateTime.UtcNow - started;
 
-            var projRootFull = Path.GetFullPath(proj.RootPath);
-            var destRootFull = Path.GetFullPath(destRoot);
-            if (s.Clean && destRootFull.StartsWith(projRootFull, StringComparison.OrdinalIgnoreCase))
-                throw new Exception("Refusing to --clean a destination that is inside the project root.");
+            WriteRestoreResult(s, selection, destination, copied, deleted, deletedDirectories, took);
+            return 0;
+        }
 
-            Directory.CreateDirectory(destRootFull);
+        private static RestoreSelection ResolveSelection(SqliteRepository repo, RestoreSettings settings)
+        {
+            Project project = repo.GetProjectByName(settings.Name)
+                ?? throw new InvalidOperationException($"Project '{settings.Name}' not found.");
+            List<Backup> backups = [.. repo.GetBackupsForProject(project.Id)];
+            Backup backup = settings.Snapshot is int requestedSnapshot
+                ? backups.FirstOrDefault(item => item.SnapshotId == requestedSnapshot)
+                    ?? throw new InvalidOperationException(
+                        $"Snapshot {requestedSnapshot} has no recorded backup for project '{project.Name}'.")
+                : backups.FirstOrDefault()
+                    ?? throw new InvalidOperationException($"Project '{project.Name}' has no recorded backups.");
+            Snapshot snapshot = repo.GetSnapshotsForProject(project.Name)
+                .FirstOrDefault(item => item.Id == backup.SnapshotId)
+                ?? throw new InvalidDataException(
+                    $"Backup {backup.Id} references missing snapshot {backup.SnapshotId}.");
+            List<FileEntry> files = [.. repo.GetFilesForSnapshot(snapshot.Id)];
+            if (files.Count == 0)
+                throw new InvalidDataException($"Snapshot {snapshot.Id} has no files.");
 
-            var targetRelSet = new HashSet<string>(snapFiles.Select(f => f.RelPath), StringComparer.OrdinalIgnoreCase);
+            string sourceRoot = BackupContentPathResolver.Resolve(backup, ConfigHelper.Load())
+                ?? throw new DirectoryNotFoundException(
+                    $"The stored data for backup {backup.Id} is unavailable at its recorded destination.");
+            if (backup.IsEncrypted ||
+                File.Exists(Path.Combine(sourceRoot, BackupArchiveCryptoService.EncryptedArchiveFileName)) ||
+                File.Exists(Path.Combine(sourceRoot, BackupArchiveCryptoService.PlainArchiveFileName)))
+            {
+                throw new NotSupportedException(
+                    "CLI restore currently supports folder backups only. Use the desktop app to restore archive or encrypted backups.");
+            }
+
+            return new RestoreSelection(project, snapshot, backup, sourceRoot, files);
+        }
+
+        private static void EnsureDestinationIsSafe(
+            RestoreSelection selection,
+            string destination,
+            bool clean)
+        {
+            if (BackupSafetyService.IsSameOrChildPath(selection.SourceRoot, destination))
+                throw new InvalidOperationException("Refusing to restore into the selected backup data.");
+            if (clean && BackupSafetyService.IsSameOrChildPath(destination, selection.SourceRoot))
+                throw new InvalidOperationException("Refusing to --clean a destination containing the selected backup data.");
+            if (clean && BackupSafetyService.IsSameOrChildPath(selection.Project.RootPath, destination))
+                throw new InvalidOperationException("Refusing to --clean the project root or one of its children.");
+        }
+
+        private static async Task<IReadOnlyList<RestoreCopy>> BuildCopyPlanAsync(
+            RestoreSelection selection,
+            string destination,
+            CancellationToken cancellationToken)
+        {
+            var copies = new List<RestoreCopy>(selection.Files.Count);
+            var targets = new HashSet<string>(GetPathComparer());
+            var hashService = new HashService();
+            foreach (FileEntry file in selection.Files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string relativePath = file.RelPath;
+                if (!BackupSafetyService.TryResolveExistingFileUnderRoot(
+                        selection.SourceRoot,
+                        relativePath,
+                        out string sourcePath))
+                {
+                    throw new InvalidDataException(
+                        $"Backup {selection.Backup.Id} is missing or contains an unsafe file path: '{relativePath}'.");
+                }
+                if (!BackupSafetyService.TryResolvePathForWriteUnderRoot(
+                        destination,
+                        relativePath,
+                        out string targetPath) ||
+                    !targets.Add(targetPath))
+                {
+                    throw new InvalidDataException(
+                        $"Snapshot {selection.Snapshot.Id} contains an unsafe or duplicate target path: '{relativePath}'.");
+                }
+
+                await VerifyBackupFileAsync(
+                    sourcePath,
+                    file,
+                    hashService,
+                    cancellationToken).ConfigureAwait(false);
+
+                copies.Add(new RestoreCopy(relativePath.Replace('\\', '/'), sourcePath, targetPath));
+            }
+
+            return copies;
+        }
+
+        internal static async Task VerifyBackupFileAsync(
+            string sourcePath,
+            FileEntry expected,
+            HashService hashService,
+            CancellationToken cancellationToken)
+        {
+            long actualSize = new FileInfo(sourcePath).Length;
+            if (actualSize != expected.Size)
+            {
+                throw new InvalidDataException(
+                    $"Backup file '{expected.RelPath}' has size {actualSize}, expected {expected.Size}.");
+            }
+            if (string.IsNullOrWhiteSpace(expected.HashSha256))
+                return;
+
+            string actualHash = await hashService.Sha256Async(sourcePath, cancellationToken).ConfigureAwait(false);
+            if (!string.Equals(actualHash, expected.HashSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    $"Backup file '{expected.RelPath}' failed SHA-256 verification.");
+            }
+        }
+
+        private static (IReadOnlyList<string> Files, IReadOnlyList<string> Directories) InspectDestination(
+            string destination,
+            bool clean,
+            CancellationToken cancellationToken)
+        {
+            if (!clean || !Directory.Exists(destination))
+                return ([], []);
+
+            var files = new List<string>();
+            var directories = new List<string>();
+            var pending = new Stack<string>();
+            pending.Push(destination);
+            while (pending.Count > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string current = pending.Pop();
+                foreach (string entry in Directory.EnumerateFileSystemEntries(current))
+                {
+                    FileAttributes attributes = File.GetAttributes(entry);
+                    if ((attributes & FileAttributes.ReparsePoint) != 0)
+                        throw new InvalidDataException($"Refusing to --clean a destination containing a linked path: '{entry}'.");
+                    if ((attributes & FileAttributes.Directory) != 0)
+                    {
+                        directories.Add(entry);
+                        pending.Push(entry);
+                    }
+                    else
+                    {
+                        files.Add(entry);
+                    }
+                }
+            }
+
+            return (files, directories);
+        }
+
+        private static int DeleteExtraFiles(
+            IReadOnlyList<string> existingFiles,
+            IReadOnlyList<RestoreCopy> copies,
+            string destination,
+            RestoreSettings settings,
+            CancellationToken cancellationToken)
+        {
+            var retained = copies.Select(copy => copy.TargetPath).ToHashSet(GetPathComparer());
+            int deleted = 0;
+            foreach (string file in existingFiles.Where(file => !retained.Contains(file)))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string relative = Path.GetRelativePath(destination, file).Replace('\\', '/');
+                if (!settings.Quiet && !settings.Json)
+                    AnsiConsole.MarkupLine($"[red]- delete[/] {Markup.Escape(relative)}");
+                if (!settings.DryRun)
+                    File.Delete(file);
+                deleted++;
+            }
+
+            return deleted;
+        }
+
+        private static int CopyBackupFiles(
+            IReadOnlyList<RestoreCopy> copies,
+            string destination,
+            RestoreSettings settings,
+            CancellationToken cancellationToken)
+        {
+            if (!settings.DryRun)
+                Directory.CreateDirectory(destination);
+            foreach (RestoreCopy copy in copies)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!settings.Quiet && !settings.Json)
+                    AnsiConsole.MarkupLine($"[green]+ write[/] {Markup.Escape(copy.RelativePath)}");
+                if (settings.DryRun)
+                    continue;
+
+                if (!BackupSafetyService.TryResolvePathForWriteUnderRoot(
+                        destination,
+                        copy.RelativePath,
+                        out string checkedTarget) ||
+                    !string.Equals(checkedTarget, copy.TargetPath, GetPathComparison()))
+                {
+                    throw new IOException($"Restore target became unsafe before writing '{copy.RelativePath}'.");
+                }
+                Directory.CreateDirectory(Path.GetDirectoryName(copy.TargetPath)!);
+                CopyFileAtomically(copy.SourcePath, copy.TargetPath);
+            }
+
+            return copies.Count;
+        }
+
+        private static void CopyFileAtomically(string sourcePath, string targetPath)
+        {
+            string temporaryPath = $"{targetPath}.{Guid.NewGuid():N}.vaultsync-restore.tmp";
+            try
+            {
+                File.Copy(sourcePath, temporaryPath, overwrite: false);
+                File.Move(temporaryPath, targetPath, overwrite: true);
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(temporaryPath);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    RuntimeLog.WriteVerbose(
+                        $"[CLI Restore] Failed to remove temporary file '{temporaryPath}': {ex.Message}");
+                }
+            }
+        }
+
+        private static int DeleteEmptyDirectories(
+            IReadOnlyList<string> directories,
+            string destination,
+            RestoreSettings settings)
+        {
+            if (!settings.Clean || settings.KeepEmptyDirs)
+                return 0;
 
             int deleted = 0;
-            if (s.Clean)
+            foreach (string directory in directories.OrderByDescending(path => path.Length))
             {
-                List<string> existing = Directory.Exists(destRootFull)
-                    ? [.. Directory.EnumerateFiles(destRootFull, "*", SearchOption.AllDirectories)]
-                    : [];
-
-                foreach (var full in existing)
-                {
-                    var rel = Path.GetRelativePath(destRootFull, full).Replace('\\', '/');
-                    if (!targetRelSet.Contains(rel))
-                    {
-                        if (!s.Quiet && !s.Json) AnsiConsole.MarkupLine($"[red]- delete[/] {Markup.Escape(rel)}");
-                        if (!s.DryRun) File.Delete(full);
-                        deleted++;
-                    }
-                }
-            }
-
-            int copied = 0, skippedMissing = 0;
-            foreach (var f in snapFiles)
-            {
-                var srcFull = Path.Combine(proj.RootPath, f.RelPath);
-                var dstFull = Path.Combine(destRootFull, f.RelPath);
-
-                if (!File.Exists(srcFull))
-                {
-                    skippedMissing++;
-                    if (!s.Quiet && !s.Json) AnsiConsole.MarkupLine($"[yellow]! missing source[/] {Markup.Escape(f.RelPath)}");
+                if (Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any())
                     continue;
-                }
-
-                Directory.CreateDirectory(Path.GetDirectoryName(dstFull)!);
-                if (!s.Quiet && !s.Json) AnsiConsole.MarkupLine($"[green]+ write[/] {Markup.Escape(f.RelPath)}");
-                if (!s.DryRun) File.Copy(srcFull, dstFull, overwrite: true);
-                copied++;
-            }
-
-            int deletedDirs = 0;
-            if (s.Clean && !s.KeepEmptyDirs)
-            {
-                var allDirs = Directory.EnumerateDirectories(destRootFull, "*", SearchOption.AllDirectories)
-                                       .OrderByDescending(d => d.Length);
-                foreach (var dir in allDirs)
+                if (!settings.DryRun)
+                    Directory.Delete(directory);
+                deleted++;
+                if (!settings.Quiet && !settings.Json)
                 {
-                    if (!Directory.EnumerateFileSystemEntries(dir).Any())
-                    {
-                        if (!s.DryRun) Directory.Delete(dir);
-                        deletedDirs++;
-                        if (!s.Quiet && !s.Json)
-                            AnsiConsole.MarkupLine($"[red]- rmdir[/] {Markup.Escape(Path.GetRelativePath(destRootFull, dir).Replace('\\','/'))}");
-                    }
+                    string relative = Path.GetRelativePath(destination, directory).Replace('\\', '/');
+                    AnsiConsole.MarkupLine($"[red]- rmdir[/] {Markup.Escape(relative)}");
                 }
             }
 
-            var took = DateTime.UtcNow - started;
-
-            if (s.Json)
-            {
-                var payload = new
-                {
-                    project = proj.Name,
-                    snapshotId,
-                    snapshotCreatedUtc = snapshotCreatedUtc.ToString("u"),
-                    destination = destRootFull,
-                    dryRun = s.DryRun,
-                    clean = s.Clean,
-                    keepEmptyDirs = s.KeepEmptyDirs,
-                    deleted,
-                    deletedDirs,
-                    copied,
-                    missingFromSource = skippedMissing,
-                    tookSeconds = Math.Round(took.TotalSeconds, 3),
-                    exitCode = skippedMissing > 0 ? 1 : 0
-                };
-                Console.WriteLine(JsonSerializer.Serialize(payload, CommandJsonOptions.Indented));
-            }
-            else if (!s.Quiet)
-            {
-                var hdr = s.DryRun ? "[yellow]Dry restore[/]" : "Restore";
-                AnsiConsole.MarkupLine($"{hdr}: [bold]{Markup.Escape(proj.Name)}[/] snapshot [bold]{snapshotId}[/] ([grey]{snapshotCreatedUtc:u}[/]) -> [blue]{Markup.Escape(destRootFull)}[/]");
-                if (s.Clean && s.DryRun) AnsiConsole.MarkupLine("[grey]Note[/]: --clean will remove extra files (shown only).");
-                if (s.Clean && !s.DryRun)
-                {
-                    var note = s.KeepEmptyDirs ? "[grey]Cleaning destination (files only; preserving empty dirs)...[/]"
-                                               : "[grey]Cleaning destination (files + empty dirs)...[/]";
-                    AnsiConsole.MarkupLine(note);
-                }
-
-                var mode = s.DryRun ? "[yellow]Dry restore complete[/]" : "[green]Restore complete[/]";
-                AnsiConsole.MarkupLine($"{mode} - copied: {copied}, deleted: {deleted}, deleted-dirs: {deletedDirs}, missing-from-source: {skippedMissing} ({took.TotalSeconds:F1}s).");
-                if (skippedMissing > 0)
-                    AnsiConsole.MarkupLine("[yellow]Note[/]: Some files listed in the snapshot were not present in the current project folder; they were skipped.");
-            }
-
-            return Task.FromResult(skippedMissing > 0 ? 1 : 0);
+            return deleted;
         }
+
+        private static void WriteRestoreResult(
+            RestoreSettings settings,
+            RestoreSelection selection,
+            string destination,
+            int copied,
+            int deleted,
+            int deletedDirectories,
+            TimeSpan took)
+        {
+            if (settings.Json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    project = selection.Project.Name,
+                    snapshotId = selection.Snapshot.Id,
+                    snapshotCreatedUtc = selection.Snapshot.CreatedUtc.ToString("u"),
+                    backupId = selection.Backup.Id,
+                    destination,
+                    dryRun = settings.DryRun,
+                    clean = settings.Clean,
+                    keepEmptyDirs = settings.KeepEmptyDirs,
+                    deleted,
+                    deletedDirs = deletedDirectories,
+                    copied,
+                    missingFromSource = 0,
+                    tookSeconds = Math.Round(took.TotalSeconds, 3),
+                    exitCode = 0
+                }, CommandJsonOptions.Indented));
+                return;
+            }
+            if (settings.Quiet)
+                return;
+
+            string heading = settings.DryRun ? "[yellow]Dry restore[/]" : "Restore";
+            AnsiConsole.MarkupLine(
+                $"{heading}: [bold]{Markup.Escape(selection.Project.Name)}[/] backup [bold]{selection.Backup.Id}[/], " +
+                $"snapshot [bold]{selection.Snapshot.Id}[/] ([grey]{selection.Snapshot.CreatedUtc:u}[/]) -> " +
+                $"[blue]{Markup.Escape(destination)}[/]");
+            if (settings.Clean && settings.DryRun)
+                AnsiConsole.MarkupLine("[grey]Note[/]: --clean would remove the extra files shown above.");
+            string mode = settings.DryRun ? "[yellow]Dry restore complete[/]" : "[green]Restore complete[/]";
+            AnsiConsole.MarkupLine(
+                $"{mode} - copied: {copied}, deleted: {deleted}, deleted-dirs: {deletedDirectories} ({took.TotalSeconds:F1}s).");
+        }
+
+        private static StringComparer GetPathComparer() =>
+            OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+
+        private static StringComparison GetPathComparison() =>
+            OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
     }
 
     sealed class SelfTestSettings : CommandSettings

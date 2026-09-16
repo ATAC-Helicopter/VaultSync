@@ -43,13 +43,12 @@ namespace VaultSync.CLI.Commands
     {
         protected override Task<int> ExecuteAsync(CommandContext context, ConfigSetDbSettings s, CancellationToken cancellationToken)
         {
-            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string expanded = s.DbPath.Replace("~", home);
+            string expanded = System.IO.Path.GetFullPath(ConfigHelper.ExpandUserPath(s.DbPath));
             string dir = System.IO.Path.GetDirectoryName(expanded)!;
             System.IO.Directory.CreateDirectory(dir);
 
             Core.Config.AppConfig cfg = ConfigHelper.Load();
-            cfg.DbPath = s.DbPath;
+            cfg.DbPath = expanded;
             ConfigHelper.Save(cfg);
 
             AnsiConsole.MarkupLine($"[green]Updated[/] config: database -> {Markup.Escape(s.DbPath)}");
@@ -57,4 +56,3 @@ namespace VaultSync.CLI.Commands
         }
     }
 }
-

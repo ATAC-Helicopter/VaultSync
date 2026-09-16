@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "Не вдалося завантажити інсталятор. Відкрийте сторінку релізу замість цього.",
   "Update.Installer.Downloading": "Завантаження інсталятора...",
   "Update.Installer.Launched": "Запущено інсталятор. VaultSync закриється, тож налаштування можна продовжити.",
+  "Update.Installer.Manual": "Відкрито файли оновлення. Завершіть встановлення та перезапустіть VaultSync.",
   "Update.Installer.LaunchFailed": "Інсталятор завантажився, але не вдалося запустити.",
   "Update.Installer.Launching": "Запускаю інсталятор...",
   "Update.Installer.Timeout": "Завантаження інсталятора закінчилося. Перевірте своє з'єднання або відкрийте сторінку релізу.",

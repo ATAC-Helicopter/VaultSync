@@ -138,7 +138,7 @@ namespace VaultSync.CLI.Commands
         {
             try
             {
-                string dest = rawDestination.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+                string dest = ConfigHelper.ExpandUserPath(rawDestination);
                 await WriteProbeAsync(dest, cancellationToken);
                 return reporter.Pass($"Destination writable: {dest}");
             }

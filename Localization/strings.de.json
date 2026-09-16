@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "Installer-Download fehlgeschlagen. Öffne stattdessen die Release-Seite.",
   "Update.Installer.Downloading": "Installer wird heruntergeladen...",
   "Update.Installer.Launched": "Installer gestartet. Schließe VaultSync, wenn du dazu aufgefordert wirst.",
+  "Update.Installer.Manual": "Update-Dateien geöffnet. Schließe die Installation ab und starte VaultSync neu.",
   "Update.Installer.LaunchFailed": "Installer heruntergeladen, konnte aber nicht gestartet werden.",
   "Update.Installer.Launching": "Installer wird gestartet...",
   "Update.Installer.Timeout": "Zeitüberschreitung beim Installer-Download. Prüfen Sie Ihre Verbindung oder öffnen Sie die Release-Seite.",

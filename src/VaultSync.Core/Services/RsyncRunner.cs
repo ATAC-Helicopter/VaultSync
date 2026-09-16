@@ -80,7 +80,6 @@ namespace VaultSync.Core.Services
             psi.ArgumentList.Add("-a");
             psi.ArgumentList.Add("--delete");
             psi.ArgumentList.Add("--human-readable");
-            psi.ArgumentList.Add("--no-compress");
             if (_useWholeFile)
                 psi.ArgumentList.Add("--whole-file");
 

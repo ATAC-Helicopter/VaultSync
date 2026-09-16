@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "インストーラーのダウンロードに失敗しました。代わりにリリースページを開いてみてください。",
   "Update.Installer.Downloading": "インストーラーをダウンロード中...",
   "Update.Installer.Launched": "インストーラーが起動しました。VaultSyncは閉じるので、セットアップは続行できます。",
+  "Update.Installer.Manual": "更新ファイルを開きました。インストールを完了してから、VaultSyncを再起動してください。",
   "Update.Installer.LaunchFailed": "インストーラーはダウンロードしましたが起動できませんでした。",
   "Update.Installer.Launching": "インストーラーを起動中...",
   "Update.Installer.Timeout": "インストーラーのダウンロードがタイムアウトしています。接続を確認するか、リリースページを開く。",

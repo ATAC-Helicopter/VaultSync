@@ -168,6 +168,66 @@ public static class BackupSafetyService
         }
     }
 
+    public static bool IsSameOrChildPath(string parentPath, string candidatePath)
+    {
+        if (string.IsNullOrWhiteSpace(parentPath) || string.IsNullOrWhiteSpace(candidatePath))
+            return false;
+
+        try
+        {
+            string parent = TrimTrailingSeparatorsPreservingRoot(Path.GetFullPath(parentPath));
+            string candidate = TrimTrailingSeparatorsPreservingRoot(Path.GetFullPath(candidatePath));
+            var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+            if (string.Equals(parent, candidate, comparison))
+                return true;
+
+            string parentPrefix = Path.EndsInDirectorySeparator(parent)
+                ? parent
+                : parent + Path.DirectorySeparatorChar;
+            return candidate.StartsWith(parentPrefix, comparison);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static bool TryResolvePathForWriteUnderRoot(
+        string root,
+        string? relativePath,
+        out string fullPath)
+    {
+        fullPath = string.Empty;
+        if (!TryCombinePathUnderRoot(root, relativePath, out string candidate))
+            return false;
+
+        try
+        {
+            string normalizedRoot = TrimTrailingSeparatorsPreservingRoot(Path.GetFullPath(root));
+            string relative = Path.GetRelativePath(normalizedRoot, candidate);
+            string current = normalizedRoot;
+            foreach (string component in relative.Split(
+                         [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                         StringSplitOptions.RemoveEmptyEntries))
+            {
+                current = Path.Combine(current, component);
+                if (!File.Exists(current) && !Directory.Exists(current))
+                    break;
+                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                    return false;
+            }
+
+            fullPath = candidate;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public static bool TryResolveExistingFileUnderRoot(string root, string? relativePath, out string fullPath)
     {
         fullPath = string.Empty;
@@ -228,15 +288,6 @@ public static class BackupSafetyService
         string root = Path.GetPathRoot(path) ?? string.Empty;
         string trimmed = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         return trimmed.Length == 0 || trimmed.Length < root.Length ? root : trimmed;
-    }
-
-    private static bool IsSameOrChildPath(string parent, string child)
-    {
-        var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-
-        return child.StartsWith(parent, comparison);
     }
 
     private static string GetVaultSyncHomeDirectory()

@@ -16,7 +16,7 @@ internal static class SystemFileLauncher
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "explorer.exe",
+                FileName = ResolveExecutablePath("explorer.exe"),
                 UseShellExecute = false
             };
             psi.ArgumentList.Add(fullPath);
@@ -26,13 +26,13 @@ internal static class SystemFileLauncher
 
         if (OperatingSystem.IsMacOS())
         {
-            StartWithSingleArgument("open", fullPath);
+            StartWithSingleArgument(ResolveExecutablePath("open"), fullPath);
             return;
         }
 
         if (OperatingSystem.IsLinux())
         {
-            StartWithSingleArgument("xdg-open", fullPath);
+            StartWithSingleArgument(ResolveExecutablePath("xdg-open"), fullPath);
             return;
         }
 
@@ -67,6 +67,27 @@ internal static class SystemFileLauncher
         };
         psi.ArgumentList.Add(argument);
         Process.Start(psi);
+    }
+
+    private static string ResolveExecutablePath(string executableName)
+    {
+        string? pathValue = Environment.GetEnvironmentVariable("PATH");
+        foreach (string directory in (pathValue ?? string.Empty)
+                     .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            try
+            {
+                string candidate = Path.GetFullPath(Path.Combine(directory, executableName));
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                // Ignore malformed PATH entries and continue to the next absolute candidate.
+            }
+        }
+
+        throw new FileNotFoundException($"Required system launcher '{executableName}' was not found on PATH.");
     }
 
     internal static bool IsAllowedExternalScheme(string scheme) =>

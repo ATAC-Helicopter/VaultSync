@@ -122,27 +122,13 @@ internal sealed class SingleInstanceLock : IDisposable
         }
     }
 
-    private static string ResolveFileLockDirectory()
+    internal static string ResolveFileLockDirectory()
     {
-        if (OperatingSystem.IsLinux())
-        {
-            string? runtimeDirectory = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
-            if (!string.IsNullOrWhiteSpace(runtimeDirectory) && Path.IsPathFullyQualified(runtimeDirectory))
-                return Path.Combine(runtimeDirectory, "vaultsync");
-        }
+        string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localData) || !Path.IsPathFullyQualified(localData))
+            throw new InvalidOperationException("A private per-user application-data directory is required for the instance lock.");
 
-        string? tempDirectory = Environment.GetEnvironmentVariable("TMPDIR");
-        if (OperatingSystem.IsMacOS() &&
-            !string.IsNullOrWhiteSpace(tempDirectory) &&
-            Path.IsPathFullyQualified(tempDirectory))
-        {
-            return Path.Combine(tempDirectory, "vaultsync");
-        }
-
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "VaultSync",
-            "runtime");
+        return Path.Combine(localData, "VaultSync", "runtime");
     }
 
     public void Dispose()
