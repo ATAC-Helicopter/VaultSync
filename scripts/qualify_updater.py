@@ -4,6 +4,7 @@ This is an executable integration test, not a replacement for interactive
 UAC/polkit qualification. It must never install packages on a developer host.
 """
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -47,9 +48,12 @@ def snapshot(root):
 
 def download_base(version, name, destination):
     headers = {"User-Agent": "VaultSync-updater-qualification"}
+    api_headers = dict(headers)
+    if os.environ.get("GH_TOKEN"):
+        api_headers["Authorization"] = "Bearer " + os.environ["GH_TOKEN"]
     request = urllib.request.Request(
         f"https://api.github.com/repos/{REPOSITORY}/releases/tags/v{version}",
-        headers=headers)
+        headers=api_headers)
     with urllib.request.urlopen(request, timeout=60) as response:
         release = json.load(response)
     asset = next(asset for asset in release["assets"] if asset["name"] == name)
@@ -111,7 +115,27 @@ def apply(helper, archive, manifest, install, env, wait_pid=None):
             "--headless-patch"]
     if wait_pid is not None:
         args.append(f"--waitpid={wait_pid}")
+    log_path = env.get("VAULTSYNC_QUALIFICATION_LOG")
+    if log_path:
+        with Path(log_path).open("ab") as output:
+            return subprocess.Popen(args, env=env, stdout=output, stderr=output)
     return subprocess.Popen(args, env=env)
+
+
+@contextlib.contextmanager
+def qualification_workspace(evidence):
+    with tempfile.TemporaryDirectory(prefix="vaultsync-updater-", dir=os.environ["RUNNER_TEMP"]) as temporary:
+        root = Path(temporary)
+        try:
+            yield root
+        finally:
+            logs = list(root.rglob("patch-helper.log"))
+            if os.environ.get("LOCALAPPDATA"):
+                logs.append(Path(os.environ["LOCALAPPDATA"]) / "VaultSync/patch-runtime/patch-helper.log")
+            logs.append(Path.home() / "Library/Application Support/VaultSync/patch-runtime/patch-helper.log")
+            for index, log in enumerate(logs):
+                if log.is_file():
+                    shutil.copyfile(log, evidence / f"patch-helper-{index}.log")
 
 
 def qualify(args):
@@ -132,8 +156,7 @@ def qualify(args):
     args.evidence.mkdir(parents=True, exist_ok=True)
     evidence = {"platform": system, "previous": args.previous, "target": args.target,
                 "archiveSha256": sha256(archive), "checks": []}
-    with tempfile.TemporaryDirectory(prefix="vaultsync-updater-", dir=os.environ["RUNNER_TEMP"]) as temporary:
-        root = Path(temporary)
+    with qualification_workspace(args.evidence) as root:
         base = prepare_base(root, args.previous, system, suffix)
         helper_root = root / "helper"
         shutil.copytree(base, helper_root, symlinks=True)
@@ -145,7 +168,10 @@ def qualify(args):
             install = renamed
         helper = executable(helper_root, system)
         env = dict(os.environ, VAULTSYNC_CONFIG_DIR=str(root / "profile"),
-                   XDG_CONFIG_HOME=str(root / "xdg-config"), XDG_DATA_HOME=str(root / "xdg-data"))
+                   XDG_CONFIG_HOME=str(root / "xdg-config"), XDG_DATA_HOME=str(root / "xdg-data"),
+                   VAULTSYNC_QUALIFICATION_LOG=str(args.evidence.resolve() / "helper-output.log"))
+        (root / "xdg-config").mkdir()
+        (root / "xdg-data").mkdir()
         profile = root / "profile"
         profile.mkdir()
         sentinel = profile / "qualification-sentinel.txt"
@@ -172,7 +198,7 @@ def qualify(args):
             process = apply(helper, archive, manifest_path, install, env, parent.pid)
             time.sleep(2)
             if process.poll() is not None or snapshot(install) != before:
-                raise RuntimeError("Helper did not wait for parent shutdown")
+                raise RuntimeError(f"Helper did not wait for parent shutdown (exit={process.poll()}); see helper logs")
             parent.terminate()
             parent.wait(timeout=10)
             if process.wait(timeout=180) != 0:
