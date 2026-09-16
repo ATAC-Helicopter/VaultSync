@@ -41,6 +41,11 @@ on:
         required: false
         type: boolean
         default: false
+      prepare_draft_from_run:
+        description: "Assemble the existing unpublished draft from a successful qualified asset run; skips rebuilding."
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -222,6 +227,7 @@ jobs:
           }
 
   windows:
+    if: ${{ !inputs.prepare_draft_from_run }}
     needs: [validate, quality-gate]
     runs-on: windows-latest
     steps:
@@ -481,6 +487,7 @@ jobs:
             dist/store/VaultSync-Store-*-x64.appxupload
 
   macos:
+    if: ${{ !inputs.prepare_draft_from_run }}
     needs: [validate, quality-gate]
     runs-on: macos-latest
     steps:
@@ -655,6 +662,7 @@ jobs:
             patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.zip
 
   linux:
+    if: ${{ !inputs.prepare_draft_from_run }}
     needs: [validate, quality-gate]
     runs-on: ubuntu-latest
     steps:
@@ -1068,3 +1076,78 @@ jobs:
           path: |
             supply-chain/sboms
             supply-chain/trusted-root.jsonl
+
+  prepare-draft:
+    name: Assemble verified unpublished draft
+    needs: [validate, quality-gate]
+    if: ${{ inputs.prepare_draft_from_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Validate qualified source run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET_RUN: ${{ inputs.prepare_draft_from_run }}
+        run: |
+          set -euo pipefail
+          [[ "$ASSET_RUN" =~ ^[0-9]+$ ]] || { echo 'Asset run must be a numeric run ID'; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ASSET_RUN" > source-run.json
+          jq -e '.conclusion == "success" and .path == ".github/workflows/release-assets.yml"' source-run.json
+          source_sha="$(jq -r '.head_sha' source-run.json)"
+          git diff --exit-code "$source_sha" HEAD -- src installer packaging Directory.Build.props Directory.Packages.props global.json scripts/build_patch.py scripts/build_linux_release.sh scripts/build_macos_dmg.sh scripts/thin_macos_native_libraries.sh
+      - name: Download qualified direct packages and patches
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prepare_draft_from_run }}
+          pattern: '*-release-assets'
+          merge-multiple: true
+          path: release-assets
+      - name: Download qualified Store upload
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prepare_draft_from_run }}
+          name: windows-store-upload
+          path: release-assets/dist/store
+      - name: Download qualified canonical manifest
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prepare_draft_from_run }}
+          name: canonical-release-manifest
+          path: release-assets
+      - name: Verify assets and upload only to the existing draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release_manifest.py validate --manifest release-assets/vaultsync-release-manifest.json --asset-root release-assets
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path('release-assets')
+          manifest = json.loads((root / 'vaultsync-release-manifest.json').read_text())
+          source = json.loads(Path('source-run.json').read_text())
+          assert manifest['release']['version'] == os.environ['TARGET_VERSION']
+          assert manifest['release']['commit'] == source['head_sha']
+          expected = {asset['name'] for asset in manifest['assets']} | {'vaultsync-release-manifest.json'}
+          files = [path.name for path in root.rglob('*') if path.is_file()]
+          assert len(files) == len(expected) and set(files) == expected, 'Unexpected or duplicated draft asset'
+          assert len(manifest['assets']) == 19, 'Full platform/patch/Store matrix is required'
+          PY
+          tag="v$TARGET_VERSION"
+          gh release view "$tag" --json isDraft,assets | jq -e '.isDraft == true and (.assets | length) == 0'
+          source_sha="$(jq -r '.release.commit' release-assets/vaultsync-release-manifest.json)"
+          gh release edit "$tag" --draft --target "$source_sha"
+          mapfile -t assets < <(find release-assets -type f | sort)
+          gh release upload "$tag" "${assets[@]}"
+          gh release view "$tag" --json isDraft,assets | jq -e '.isDraft == true and (.assets | length) == 20'
