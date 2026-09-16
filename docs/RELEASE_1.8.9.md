@@ -1,8 +1,9 @@
 # VaultSync 1.8.9 — Bug fixes and everyday polish
 
-Status: unreleased; all candidate packages built, native upgrades qualified, and
-20 verified assets staged in an unpublished draft. Desktop and Store-runtime
-promotion gates remain open.
+Status: unreleased; native candidate upgrades qualified. The 20 assets currently
+attached to the unpublished draft are pre-Stable qualification assets, not final
+release assets. Rebuild every asset from Stable after merge-commit promotion.
+Desktop and Store-runtime promotion gates remain open.
 
 ## Release identity
 
@@ -119,7 +120,7 @@ icon rail is reserved for windows below 1100 pixels.
   Beta, and deleting Beta's newest backup preserves the exact history viewport
   offset (9069), keeps Beta expanded, leaves Alpha's loaded depth intact, and
   updates the database, destination folder, and Beta total from 25 to 24.
-- Release preparation: **96 Python script tests passed**; canonical/public
+- Release preparation: **97 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
 - Hosted Windows, Linux, and macOS build/test jobs, CodeQL, YAML, Store
   metadata, and dependency submission are tracked on
@@ -157,8 +158,10 @@ icon rail is reserved for windows below 1100 pixels.
   passed source-commit identity, unchanged application/package sources, Store
   archive inspection, and exact name/size/SHA-256 reconciliation of all **20
   uploaded files**. The draft targets the qualified build commit and remains
-  unpublished. SBOMs and test logs stay linked in Actions; the Store upload has
-  not been submitted or certified.
+  unpublished. These pre-Stable assets must not be promoted: final packages,
+  patches, Store upload, canonical manifest, and supply-chain proof must be
+  regenerated from the Stable promotion commit. SBOMs and test logs stay linked
+  in Actions; the Store upload has not been submitted or certified.
 
 ## Desktop qualification still required
 

@@ -4,6 +4,7 @@
 - [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
 - [VS-1896] Clear static-analysis findings and restore the Sonar coverage gate.
 - [VS-1893] Prepare release identity, tracking, documentation, and packaging for 1.8.9.
+- [VS-1893] Require final release assets to come from the Stable promotion build.
 ### Fixed
 - [BUG-18155] Preserve backup project expansion and loaded history depth during refreshes.
 - [BUG-18156] Preserve surviving rows and avoid full resets across shared UI lists.

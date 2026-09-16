@@ -83,10 +83,10 @@ Pre-merge release candidate example:
 - `release_candidate = true`
 - `previous_version = 1.8.8`
 - `target_version = 1.8.9`
-- candidate artifacts remain GitHub Actions artifacts by default. An explicit
-  maintainer request may stage verified assets in an unpublished draft; do not
-  publish that draft or promote its tag until the release PR is approved and
-  merged into `Stable` and the remaining release gate is complete.
+- candidate artifacts remain GitHub Actions qualification artifacts only.
+  Final release and draft assets must be freshly generated from `Stable` after
+  the release PR merges into `Dev` without squashing and the `Dev` promotion
+  merges into `Stable` with a merge commit. Do not reuse candidate binaries.
 
 This mode builds the exact stable-version binaries from the release branch
 without merging the release PR. The workflow rejects a candidate build unless
@@ -117,10 +117,12 @@ installer upgrades also run on disposable runners. Interactive UAC/polkit,
 Wayland/Xorg and packaged Store behavior remain separate qualification
 requirements.
 
-After a full asset run succeeds, an explicitly requested existing draft can be
+After a full `Stable` asset run succeeds, an explicitly requested existing draft can be
 staged without rebuilding by dispatching the same workflow with
 `prepare_draft_from_run=<successful run ID>` and the matching candidate/version
-inputs. This mode rejects changed application/package sources, a failed source
+inputs, with `release_candidate=false` and dispatch from `Stable`. This mode
+rejects release-branch source runs, commits outside Stable ancestry, changed
+application/package sources, a failed source
 run, a mismatched manifest commit, missing or extra files, or a published release.
 Before dispatch, a maintainer must set the unpublished draft's target to the
 qualified build commit; the job checks it and does not elevate `GITHUB_TOKEN`
