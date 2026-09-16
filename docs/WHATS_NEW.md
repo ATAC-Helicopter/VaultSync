@@ -19,6 +19,7 @@ and restart steps.
 - Recover future tray refreshes after a transient background data failure.
 - Keep Unix single-instance coordination out of shared temporary directories.
 - Keep CLI and direct sync compatible with the system rsync shipped by macOS.
+- Preserve existing files during CLI diagnostics and avoid sync-tool output hangs.
 
 ### Clearer controls
 - Reflow Backups summaries and Settings sections before compact windows squeeze their contents.
