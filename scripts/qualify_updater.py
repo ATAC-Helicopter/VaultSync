@@ -152,10 +152,11 @@ def candidate_payload(args, system):
         raise ValueError("Candidate patch identity or primary predecessor mismatch")
     if archive.stat().st_size != manifest["archiveSize"] or sha256(archive) != manifest["archiveSha256"].lower():
         raise ValueError("Candidate patch archive failed integrity verification")
-    return assets, suffix, manifest_path, archive, manifest
+    return suffix, manifest_path, archive, manifest
 
 
-def reject_invalid_patches(root, helper, archive, manifest_path, manifest, install, env, evidence, before):
+def reject_invalid_patches(root, helper, candidate, install, env, evidence, before):
+    archive, manifest_path, manifest = candidate
     corrupt = root / "corrupt.zip"
     shutil.copyfile(archive, corrupt)
     with corrupt.open("r+b") as stream:
@@ -210,7 +211,8 @@ def smoke_startup(install, system, env):
             launched.wait(timeout=30)
 
 
-def qualify_installer(args, root, base, assets, system, suffix, manifest, evidence):
+def qualify_installer(args, root, base, system, suffix, manifest, evidence):
+    assets = args.assets.resolve()
     if system == "Windows":
         candidate = next(assets.rglob(f"VaultSync-Setup-{args.target}.exe"))
         install_windows(candidate, base, args.evidence / "candidate-install.log")
@@ -231,7 +233,7 @@ def qualify(args):
     if os.environ.get("GITHUB_ACTIONS") != "true":
         raise RuntimeError("Executable qualification requires a disposable GitHub Actions host")
     system = platform.system()
-    assets, suffix, manifest_path, archive, manifest = candidate_payload(args, system)
+    suffix, manifest_path, archive, manifest = candidate_payload(args, system)
     args.evidence.mkdir(parents=True, exist_ok=True)
     evidence = {"platform": system, "previous": args.previous, "target": args.target,
                 "archiveSha256": sha256(archive), "checks": []}
@@ -257,7 +259,7 @@ def qualify(args):
         sentinel = profile / "qualification-sentinel.txt"
         sentinel.write_text("user data must survive")
         before = snapshot(install)
-        reject_invalid_patches(root, helper, archive, manifest_path, manifest, install, env, evidence, before)
+        reject_invalid_patches(root, helper, (archive, manifest_path, manifest), install, env, evidence, before)
         apply_after_parent_exit(helper, archive, manifest_path, install, env, before)
         verify_payload(install, manifest)
         evidence["checks"].append("released helper waited for parent and installed every verified file")
@@ -266,7 +268,7 @@ def qualify(args):
         if sentinel.read_text() != "user data must survive":
             raise RuntimeError("Update changed user data sentinel")
         evidence["checks"].append("external user data preserved")
-        qualify_installer(args, root, base, assets, system, suffix, manifest, evidence)
+        qualify_installer(args, root, base, system, suffix, manifest, evidence)
         for log in root.rglob(HELPER_LOG):
             shutil.copyfile(log, args.evidence / HELPER_LOG)
     (args.evidence / "updater-qualification.json").write_text(json.dumps(evidence, indent=2) + "\n")
