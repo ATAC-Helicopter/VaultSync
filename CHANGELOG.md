@@ -24,6 +24,8 @@
 - [BUG-18171] Keep Unix single-instance locks in private application data.
 - [BUG-18172] Support the system rsync shipped with macOS.
 - [BUG-18173] Reflow dense Backups and Settings cards at compact widths.
+- [BUG-18174] Include Store uploads in verified release manifests and provenance.
+- [BUG-18175] Keep VaultSync open while manual Linux update archives are installed.
 ### Changed
 - [VS-1896] Simplify backup health refreshes and avoid startup probe cooldown loss.
 - [VS-1896] Consolidate repeated desktop labels and transient console capture state.

@@ -4,6 +4,9 @@
 
 VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
 
+Manual Linux update archives now keep VaultSync open and explain installation
+and restart steps.
+
 ### Keep your place
 - Preserve expanded backup project groups and loaded history pages during refreshes.
 - Retain surviving rows and keep the selected project open after backup deletion.
@@ -24,9 +27,11 @@ VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
 - Check custom-theme muted text against the configured background surfaces.
 - Service the desktop rendering stack with coordinated cross-platform packages.
 - Refresh the supported test SDK and pinned analysis actions.
+- Bind Store upload packages to the same verified release manifest and provenance.
 
-Desktop scroll/focus checks, screenshot updates, and platform release qualification
-are still pending; see the [release contract](RELEASE_1.8.9.md).
+Native patch and installer upgrades have passed. Remaining desktop scroll/focus
+checks, screenshot updates, and Store-runtime qualification are tracked in the
+[release contract](RELEASE_1.8.9.md).
 
 ## [1.8.8]
 

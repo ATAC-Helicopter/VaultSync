@@ -83,9 +83,10 @@ Pre-merge release candidate example:
 - `release_candidate = true`
 - `previous_version = 1.8.8`
 - `target_version = 1.8.9`
-- candidate artifacts remain GitHub Actions artifacts; do not attach them to a
-  non-prerelease GitHub Release until the release PR is approved and merged
-  into `Stable`
+- candidate artifacts remain GitHub Actions artifacts by default. An explicit
+  maintainer request may stage verified assets in an unpublished draft; do not
+  publish that draft or promote its tag until the release PR is approved and
+  merged into `Stable` and the remaining release gate is complete.
 
 This mode builds the exact stable-version binaries from the release branch
 without merging the release PR. The workflow rejects a candidate build unless
@@ -103,6 +104,31 @@ Optional prerelease example (only after an explicit release decision):
 The `release_candidate` switch is not used for beta builds. It exists only to
 build unpublished, stable-version candidate assets from a matching release
 branch before the final merge into `Stable`.
+
+### Executable candidate qualification and draft staging
+
+When all three platform patch options are enabled, the asset workflow exercises
+the released predecessor helper on native Windows x64, Linux x64/ARM64, and
+macOS Apple Silicon/Intel hosts.
+It verifies rejection of corrupt archives and unlisted bases without mutation,
+waiting for parent-process exit, every installed file hash, preservation of an
+external user-data sentinel, and startup of the updated app. Windows and Debian
+installer upgrades also run on disposable runners. Interactive UAC/polkit,
+Wayland/Xorg and packaged Store behavior remain separate qualification
+requirements.
+
+After a full asset run succeeds, an explicitly requested existing draft can be
+staged without rebuilding by dispatching the same workflow with
+`prepare_draft_from_run=<successful run ID>` and the matching candidate/version
+inputs. This mode rejects changed application/package sources, a failed source
+run, a mismatched manifest commit, missing or extra files, or a published release.
+Before dispatch, a maintainer must set the unpublished draft's target to the
+qualified build commit; the job checks it and does not elevate `GITHUB_TOKEN`
+permissions to retarget workflow-changing commits.
+It validates the complete platform/patch/Store matrix, retains the original build
+commit, and resumes only byte-identical draft uploads without overwriting them.
+SBOMs, attestations, and qualification evidence remain linked Actions artifacts;
+do not attach unexpected files outside the canonical release-manifest contract.
 
 Patch builds require one primary qualified predecessor through
 `previous_version`. This produces a manifest with:

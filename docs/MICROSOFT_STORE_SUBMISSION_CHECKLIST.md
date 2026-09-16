@@ -13,9 +13,10 @@ Reference:
 - Disabled GitHub self-update for Store builds.
 - Added `Open Microsoft Store` action and Store-managed update messaging.
 - Added Microsoft Store upload package generation to `.github/workflows/release-assets.yml` behind the `include_store_upload` option.
+- Built the 1.8.9 x64 upload in [candidate run 35071592180](https://github.com/ATAC-Helicopter/VaultSync/actions/runs/35071592180), included it in the canonical manifest, and generated its SBOM/provenance.
+- Inspected the upload archive: reserved Name/Publisher, version `1.8.9.0`, x64 architecture, resolved packaged executable, and self-contained Microsoft.NETCore.App `10.0.12` passed. This is package-shape validation, not packaged runtime validation or Store certification.
 
 ## Needs code / packaging validation
-- Build the 1.8.9 Store upload package in GitHub Actions with `include_store_upload` enabled and verify the artifact shape (`.msixupload` or equivalent upload package).
 - Install the packaged build and validate:
   - local folder backup
   - local restore

@@ -901,7 +901,7 @@ compatibility, and smoke tests on all supported operating systems.
 **Maximum date:** 2026-09-16
 **Working branch:** `release/1.8.9`
 **Integration target:** `Dev`
-**Primary patch predecessor:** `1.8.8`, qualification pending
+**Primary patch predecessor:** `1.8.8`, native executable upgrade matrix passed; interactive walkthrough pending
 
 The [release contract](docs/RELEASE_1.8.9.md) records implementation evidence
 and outstanding gates. Existing backup formats remain unchanged. Larger
@@ -934,7 +934,7 @@ that has not yet been integrated and qualified.
 
 - [ ] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
   [Issue #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633).
-  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Qualify exact 1.8.8 upgrades, installer fallback, backup/restore smoke tests, Store packaging when enabled, static analysis and dependencies, and final artifacts. The exact release head passes 113 focused updater tests locally plus the full 917-test Windows/Linux matrix, and the live v1.8.8 manifest matches all 9 published assets; because v1.8.8 has no patch assets, actual 1.8.8-to-1.8.9 execution still requires final candidate artifacts. Platform patch assets remain opt-in after exact payload and handoff qualification. Record evidence before promotion; model tests do not close this gate.
+  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Candidate run 35071592180 passes the real released 1.8.8 helper upgrade on Windows x64, Linux x64/ARM64, and macOS Apple Silicon/Intel; Windows installer and both Debian upgrades pass. All platform, patch, and Store packages pass canonical verification and supply-chain proof. The full .NET suite has 919 tests and the script suite has 96 tests. Public draft discovery, interactive UAC/polkit, Wayland/Xorg, packaged Store runtime, and remaining rendered desktop checks are not proven by these tests. Record draft-upload integrity and remaining evidence before promotion; keep this P0 gate open.
 
 - [ ] `VS-1895` `P1` Service coordinated runtime, rendering, and validation dependencies.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
@@ -1007,6 +1007,15 @@ that has not yet been integrated and qualified.
 - [ ] `BUG-18173` `P0` Reflow dense Backups and Settings cards at compact widths.
   [Issue #657](https://github.com/ATAC-Helicopter/VaultSync/issues/657).
   The Backups summary forced three columns at 900×700, overlapping labels, values, and progress rows even after page-level horizontal scrolling was removed; Settings also kept two unnecessarily narrow columns at 700×700. Reflow Backups to three, two, or one columns from available content width, span its final summary card across the two-column row, and stack Settings content at compact widths. Breakpoint tests, the zero-warning build, and live macOS 900×700 and 700×700 walkthroughs pass without horizontal scrolling or observed overlap; hosted and integration verification remain pending.
+
+- [ ] `BUG-18174` `P0` Include Store uploads in the canonical release contract.
+  [Issue #658](https://github.com/ATAC-Helicopter/VaultSync/issues/658).
+  Store packages were built separately but omitted from the canonical asset list, which would make strict updater reconciliation reject a release containing the upload. Include enabled Store uploads in canonical generation, verification, SBOMs, and provenance; embed explicit official Store distribution and source-commit metadata. Candidate run 35071592180 passed packaging, canonical verification, SBOMs, provenance, and all five native updater jobs. Draft staging run 35072851550 verified all 20 uploaded files and Store identity/runtime; integration remains pending.
+
+- [ ] `BUG-18175` `P0` Keep VaultSync open for manual archive update media.
+
+  _(Issue #659; implemented on the release branch, integration pending.)_
+  Linux tar.gz fallback opens installation files rather than running an installer, but the generic handoff closed VaultSync immediately. Keep the app running for manual Linux archives and macOS disk images, explain the remaining installation/restart steps in all 19 localization files, and retain shutdown for executable installers. Regression tests and all five native candidate updater jobs pass; interactive permission walkthrough and integration remain pending.
 
 ---
 

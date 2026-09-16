@@ -1,6 +1,8 @@
 # VaultSync 1.8.9 — Bug fixes and everyday polish
 
-Status: unreleased; active implementation and qualification.
+Status: unreleased; all candidate packages built, native upgrades qualified, and
+20 verified assets staged in an unpublished draft. Desktop and Store-runtime
+promotion gates remain open.
 
 ## Release identity
 
@@ -13,9 +15,9 @@ Status: unreleased; active implementation and qualification.
 | Maximum date | 2026-09-16 |
 | Working branch | `release/1.8.9` |
 | Integration / promotion | `Dev`, then `Stable` through merge commits |
-| Primary patch predecessor | Exact `1.8.8`; new-release qualification pending |
+| Primary patch predecessor | Exact `1.8.8`; native executable upgrade matrix passed |
 | Additional patch candidates | `1.8.2`, `1.8.3`, `1.8.5`, `1.8.6`, `1.8.7` per platform, only if final inventory qualification accepts them |
-| Store package version | `1.8.9.0`; upload qualification pending |
+| Store package version | `1.8.9.0`; archive identity/runtime verified, packaged behavior pending |
 | Tagline | *Keep your place. Work with clarity.* |
 
 The seven-day target and fourteen-day ceiling run from the September 2 Stable
@@ -95,7 +97,7 @@ icon rail is reserved for windows below 1100 pixels.
 
 ## Automated validation
 
-- Full .NET suite: **917 passed, 0 failed, 0 skipped** on macOS, including the
+- Full .NET suite: **919 passed, 0 failed, 0 skipped** on macOS, including the
   Avalonia application build.
 - New regression coverage: insertion without replacing survivors, reorder and
   removal without Reset, expanded and collapsed group refreshes, loaded-page
@@ -117,23 +119,46 @@ icon rail is reserved for windows below 1100 pixels.
   Beta, and deleting Beta's newest backup preserves the exact history viewport
   offset (9069), keeps Beta expanded, leaves Alpha's loaded depth intact, and
   updates the database, destination folder, and Beta total from 25 to 24.
-- Release preparation: **77 Python script tests passed**; canonical/public
+- Release preparation: **96 Python script tests passed**; canonical/public
   metadata consumer validation and `git diff --check` passed.
-- Hosted Windows, Linux, and macOS build/test jobs pass; CodeQL, YAML, Store
-  metadata, and dependency submission pass. The Sonar quality gate passes with
-  **81.0% new-code coverage**; integration remains a promotion requirement.
-- Updater qualification on the exact release head passes **113 focused .NET
+- Hosted Windows, Linux, and macOS build/test jobs, CodeQL, YAML, Store
+  metadata, and dependency submission are tracked on
+  [PR #634](https://github.com/ATAC-Helicopter/VaultSync/pull/634). Final-head
+  Sonar analysis must pass after qualification-tooling changes; integration
+  remains a promotion requirement.
+- Updater qualification on the exact release head passes **115 focused .NET
   tests** and **19 patch-builder/release-manifest tests**. The hosted Windows
-  and Linux jobs each pass all **917 tests**, including platform asset selection,
+  and Linux jobs each pass all **919 tests**, including platform asset selection,
   verified download metadata, multi-base eligibility, transactional rollback,
   protected-install fallback, temporary-download cleanup, and the Linux rule
   that cancellation or failed administrator authentication must keep VaultSync
   running.
 - The live `v1.8.8` canonical manifest matches all **9 published GitHub assets**.
   That release contains no patch archive or patch manifest, so it correctly
-  exercises installer fallback only. A real `1.8.8 -> 1.8.9` patch/install
-  walkthrough remains blocked on the final candidate assets and is not claimed
-  by these model tests.
+  exercises installer fallback only when discovering that published release.
+- [Candidate run 35071592180](https://github.com/ATAC-Helicopter/VaultSync/actions/runs/35071592180)
+  built source `038f45db1c64caa941d25d14d3a0d6e7135cb4f0` and passed real
+  `1.8.8 -> 1.8.9` patch application using the released 1.8.8 executable helper
+  on Windows x64, Linux x64/ARM64, and macOS Apple Silicon/Intel. Each host
+  rejected corrupt archives and unlisted bases without mutation, waited for
+  parent exit, verified every installed file, preserved an external user-data
+  sentinel, and started the updated application. Windows unattended installer
+  upgrades and both Linux Debian package upgrades also passed.
+- All eight direct packages, five patch archives and their five manifests, and
+  one Store upload passed canonical verification. Nine package SBOMs and
+  provenance attestations were generated; online/offline installer provenance
+  verification passed. Evidence remains in that Actions run, not as extra
+  release assets outside the canonical contract.
+- This execution invokes the real released helper with candidate files; it is
+  not an interactive Settings-to-update walkthrough. The public updater cannot
+  discover an unpublished draft. Interactive permission prompts and Store
+  packaged runtime/certification remain separate gates.
+- [Draft staging run 35072851550](https://github.com/ATAC-Helicopter/VaultSync/actions/runs/35072851550)
+  passed source-commit identity, unchanged application/package sources, Store
+  archive inspection, and exact name/size/SHA-256 reconciliation of all **20
+  uploaded files**. The draft targets the qualified build commit and remains
+  unpublished. SBOMs and test logs stay linked in Actions; the Store upload has
+  not been submitted or certified.
 
 ## Desktop qualification still required
 
@@ -160,8 +185,8 @@ deletion continuity are recorded. Cancellation, last-item/group deletion,
 keyboard-focus, theme and scaling coverage, Windows verification, and a live
 Linux Wayland/Xorg walkthrough are not yet recorded. These are outstanding
 qualification steps, not completed test claims. Version stamping is prepared;
-publication, exact `1.8.8 -> 1.8.9` updater execution, and final artifact
-qualification remain pending.
+publication and interactive updater/Store runtime qualification remain pending;
+native executable upgrades and draft upload integrity passed.
 
 ## Tracked work
 
@@ -171,6 +196,8 @@ qualification remain pending.
 | [`BUG-18156` / #629](https://github.com/ATAC-Helicopter/VaultSync/issues/629) | Preserve surviving UI rows during collection refreshes | In progress |
 | [`BUG-18157` / #630](https://github.com/ATAC-Helicopter/VaultSync/issues/630) | Retain selected project identity after refreshed models are rebuilt | In progress |
 | [`BUG-18158` / #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635) | Keep Linux updater handoff qualification portable on Windows CI | In progress |
+| [`BUG-18174` / #658](https://github.com/ATAC-Helicopter/VaultSync/issues/658) | Bind Store upload packages to release metadata and provenance | In progress |
+| [`BUG-18175` / #659](https://github.com/ATAC-Helicopter/VaultSync/issues/659) | Keep the app open for manually installed Linux update archives | In progress |
 | [`VS-1892` / #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631) | Polish shared pill alignment and theme readability | In progress |
 | [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | In progress |
 | [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | In progress |
