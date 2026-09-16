@@ -9,6 +9,8 @@ public static class BackupContentPathResolver
     {
         ArgumentNullException.ThrowIfNull(backup);
         ArgumentNullException.ThrowIfNull(config);
+        if (string.IsNullOrWhiteSpace(backup.Path))
+            return null;
 
         List<string> roots = BuildCandidateRoots(backup, config);
         return Path.IsPathFullyQualified(backup.Path)

@@ -63,7 +63,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     BackupsViewModel.RemoveActiveBackup(operationId);
                 }
-            });
+            }, CancellationToken.None);
         }
 
         private void RecordBackupThroughput(int backupId, TimeSpan elapsed, bool useArchiveMode)
@@ -116,7 +116,7 @@ namespace VaultSync.UI.ViewModels
                     {
                         Console.WriteLine($"[Backup] Failed to persist throughput: {ex.Message}");
                     }
-                });
+                }, CancellationToken.None);
             }
             catch
             {
@@ -145,7 +145,7 @@ namespace VaultSync.UI.ViewModels
 
                     var verifyService = new VerifyService(_repo, new HashService());
                     string folder = Path.Combine(backupRoot, latest.Path ?? string.Empty);
-                    _ = await verifyService.VerifyAsync(project, folder, 100, full: true);
+                    _ = await verifyService.VerifyAsync(project, folder, 100, full: true, CancellationToken.None);
                     Console.WriteLine($"[Backup] Verification complete: project='{project.Name}', backupId={latest.Id}");
                 }
                 catch (Exception vex)
@@ -192,7 +192,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     BackupsViewModel.RemoveActiveBackup(operationId);
                 }
-            });
+            }, CancellationToken.None);
         }
 
         private void TryDeleteSnapshotIfOrphan(int projectId, int snapshotId)
@@ -240,7 +240,7 @@ namespace VaultSync.UI.ViewModels
             {
                 bool block = ShouldBlockForDriveHealth(projectPath, backupPath, out string? msg, out NotificationSeverity sev);
                 return new DriveHealthDecision(block, msg, sev);
-            });
+            }, CancellationToken.None);
         }
 
         private bool ShouldBlockForDriveHealth(string projectPath, string backupPath, out string message, out NotificationSeverity severity)

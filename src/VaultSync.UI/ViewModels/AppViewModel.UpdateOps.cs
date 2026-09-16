@@ -175,7 +175,9 @@ namespace VaultSync.UI.ViewModels
             }
             _lastUpdateCheckUtc = now;
 
-            _updateCheckCts = new CancellationTokenSource();
+            var updateCheckCts = new CancellationTokenSource();
+            CancellationToken updateCheckToken = updateCheckCts.Token;
+            _updateCheckCts = updateCheckCts;
             Console.WriteLine($"[Update] Starting update check (channel={CurrentUpdateChannel}).");
             if (OperatingSystem.IsMacOS())
             {
@@ -190,7 +192,9 @@ namespace VaultSync.UI.ViewModels
                     _updateCheckLogServiceSuppressed = true;
                 }
             }
-            _ = Task.Run(() => RunUpdateCheckAsync(_updateCheckCts.Token));
+            _ = Task.Run(
+                () => RunUpdateCheckAsync(updateCheckCts, updateCheckToken),
+                CancellationToken.None);
         }
 
         private void ConfigureUpdateCheckTimer()
@@ -491,7 +495,9 @@ namespace VaultSync.UI.ViewModels
             _installPatchCommand.RaiseCanExecuteChanged();
         }
 
-        private async Task RunUpdateCheckAsync(CancellationToken cancellationToken)
+        private async Task RunUpdateCheckAsync(
+            CancellationTokenSource owner,
+            CancellationToken cancellationToken)
         {
             using var timing = RuntimeTiming.Measure("Update check run");
             try
@@ -591,20 +597,31 @@ namespace VaultSync.UI.ViewModels
             }
             finally
             {
-                _updateCheckCts?.Dispose();
-                _updateCheckCts = null;
-                if (_updateCheckLogCaptureSuppressed == 1)
-                {
-                    _updateCheckLogCaptureSuppressed = 0;
-                    Dispatcher.UIThread.Post(() =>
-                        _logConsoleService.SetUiCaptureEnabled(true, loadSnapshot: false));
-                }
-                if (_updateCheckLogServiceSuppressed)
-                {
-                    _updateCheckLogServiceSuppressed = false;
-                    _logConsoleService.Enabled = _updateCheckPrevLogEnabled;
-                    _logConsoleService.SaveToFile = _updateCheckPrevSaveToFile;
-                }
+                bool ownsSharedState = TryReleaseUpdateCheckOwnership(ref _updateCheckCts, owner);
+                owner.Dispose();
+                if (ownsSharedState)
+                    RestoreUpdateCheckLogCapture();
+            }
+        }
+
+        internal static bool TryReleaseUpdateCheckOwnership(
+            ref CancellationTokenSource? active,
+            CancellationTokenSource owner) =>
+            ReferenceEquals(Interlocked.CompareExchange(ref active, null, owner), owner);
+
+        private void RestoreUpdateCheckLogCapture()
+        {
+            if (_updateCheckLogCaptureSuppressed == 1)
+            {
+                _updateCheckLogCaptureSuppressed = 0;
+                Dispatcher.UIThread.Post(() =>
+                    _logConsoleService.SetUiCaptureEnabled(true, loadSnapshot: false));
+            }
+            if (_updateCheckLogServiceSuppressed)
+            {
+                _updateCheckLogServiceSuppressed = false;
+                _logConsoleService.Enabled = _updateCheckPrevLogEnabled;
+                _logConsoleService.SaveToFile = _updateCheckPrevSaveToFile;
             }
         }
 
@@ -730,12 +747,18 @@ namespace VaultSync.UI.ViewModels
 
         private void CancelUpdateCheck()
         {
-            if (_updateCheckCts is null)
+            CancellationTokenSource? current = Volatile.Read(ref _updateCheckCts);
+            if (current is null)
                 return;
 
-            _updateCheckCts.Cancel();
-            _updateCheckCts.Dispose();
-            _updateCheckCts = null;
+            try
+            {
+                current.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The owned run completed between the volatile read and cancellation.
+            }
         }
 
         private void CancelUpdateRetry()
@@ -943,13 +966,22 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                PatchStatusMessage = L(
-                    "Update.Installer.Launched",
-                    launchResult.RelaunchAfterShutdown
-                        ? "Update ready. VaultSync will restart with the new version."
-                        : launchResult.Completed
-                        ? "Update installed. VaultSync will close so the new version can start cleanly."
-                        : "Installer launched. VaultSync will close so setup can continue.");
+                if (!launchResult.ShouldShutdown)
+                {
+                    PatchStatusMessage = L("Update.Installer.Manual",
+                        "Update files opened. Complete the installation, then restart VaultSync.");
+                }
+                else
+                {
+                    string completionMessage;
+                    if (launchResult.RelaunchAfterShutdown)
+                        completionMessage = "Update ready. VaultSync will restart with the new version.";
+                    else if (launchResult.Completed)
+                        completionMessage = "Update installed. VaultSync will close so the new version can start cleanly.";
+                    else
+                        completionMessage = "Installer launched. VaultSync will close so setup can continue.";
+                    PatchStatusMessage = L("Update.Installer.Launched", completionMessage);
+                }
                 if (launchResult.ShouldShutdown)
                 {
                     if (launchResult.RelaunchAfterShutdown &&
@@ -1038,9 +1070,14 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        internal static bool InstallerMediaRequiresShutdown(string installerPath) =>
-            !(OperatingSystem.IsMacOS() &&
-              installerPath.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase));
+        internal static bool InstallerMediaRequiresShutdown(string installerPath)
+        {
+            if (OperatingSystem.IsMacOS() && installerPath.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (OperatingSystem.IsLinux() && installerPath.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+                return false;
+            return true;
+        }
 
         private static async Task<InstallerLaunchResult> RunDebianPackageInstallAsync(string packagePath)
         {

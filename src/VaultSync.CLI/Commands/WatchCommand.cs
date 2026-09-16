@@ -212,7 +212,7 @@ namespace VaultSync.CLI.Commands
             WatchSettings settings,
             CancellationToken token)
         {
-            string dest = settings.Destination!.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            string dest = ConfigHelper.ExpandUserPath(settings.Destination!);
             var syncSvc = new SyncService();
             int code = await syncSvc.SyncAsync(plan.Project, dest, settings.DryRun, token);
             if (code != 0)

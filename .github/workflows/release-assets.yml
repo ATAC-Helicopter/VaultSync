@@ -41,6 +41,11 @@ on:
         required: false
         type: boolean
         default: false
+      prepare_draft_from_run:
+        description: "Assemble the existing unpublished draft from a successful qualified asset run; skips rebuilding."
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -64,6 +69,7 @@ jobs:
           PREVIOUS_VERSION: ${{ inputs.previous_version }}
           TARGET_VERSION: ${{ inputs.target_version }}
           RELEASE_CANDIDATE: ${{ inputs.release_candidate }}
+          ASSEMBLE_DRAFT: ${{ inputs.prepare_draft_from_run }}
         run: |
           set -euo pipefail
 
@@ -71,7 +77,14 @@ jobs:
           previous="$PREVIOUS_VERSION"
           target="$TARGET_VERSION"
           release_candidate="$RELEASE_CANDIDATE"
-          branch="${{ github.ref_name }}"
+          branch="$GITHUB_REF_NAME"
+
+          if [[ -n "$ASSEMBLE_DRAFT" ]]; then
+            if [[ "$channel" != "stable" || "$release_candidate" == "true" || "$branch" != "Stable" ]]; then
+              echo 'Final draft assets must be generated from Stable, not a release-branch candidate.' >&2
+              exit 1
+            fi
+          fi
 
           trim() {
             sed 's/\r//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
@@ -222,6 +235,7 @@ jobs:
           }
 
   windows:
+    if: ${{ !inputs.prepare_draft_from_run }}
     needs: [validate, quality-gate]
     runs-on: windows-latest
     steps:
@@ -440,6 +454,12 @@ jobs:
             /p:UapAppxPackageBuildMode=StoreUpload `
             /p:AppxBundle=Never `
             /p:AppxPackageSigningEnabled=false `
+            /p:VaultSyncReleaseChannel=stable `
+            /p:VaultSyncPackageKind=microsoft-store-msix `
+            /p:VaultSyncUpdateSource=microsoft-store `
+            /p:VaultSyncOfficialBuild=true `
+            /p:VaultSyncSignatureStatus=unsigned `
+            /p:SourceRevisionId=${{ github.sha }} `
             /p:AppxPackageDir="$storeDir\\"
 
           $upload = Get-ChildItem -Path "packaging/VaultSync.Store", "dist/store" -Recurse -Include *.msixupload,*.appxupload |
@@ -471,10 +491,11 @@ jobs:
           name: windows-store-upload
           if-no-files-found: error
           path: |
-            dist/store/*.msixupload
-            dist/store/*.appxupload
+            dist/store/VaultSync-Store-*-x64.msixupload
+            dist/store/VaultSync-Store-*-x64.appxupload
 
   macos:
+    if: ${{ !inputs.prepare_draft_from_run }}
     needs: [validate, quality-gate]
     runs-on: macos-latest
     steps:
@@ -649,6 +670,7 @@ jobs:
             patches/v${{ inputs.target_version }}/vaultsync-patch-macos-intel.zip
 
   linux:
+    if: ${{ !inputs.prepare_draft_from_run }}
     needs: [validate, quality-gate]
     runs-on: ubuntu-latest
     steps:
@@ -791,6 +813,54 @@ jobs:
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.json
             patches/v${{ inputs.target_version }}/vaultsync-patch-linux-arm64.zip
 
+  updater-qualification:
+    name: Executable updater qualification (${{ matrix.os }})
+    needs: [windows, macos, linux]
+    if: ${{ inputs.include_windows_patches && inputs.include_macos_patches && inputs.include_linux_patches }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - name: Download candidate packages and patches
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: '*-release-assets'
+          merge-multiple: true
+          path: updater-assets
+      - name: Ensure virtual X11 is available for Linux startup smoke tests
+        if: runner.os == 'Linux'
+        run: |
+          if ! command -v xvfb-run >/dev/null; then
+            sudo -n apt-get update
+            sudo -n apt-get install -y xvfb
+          fi
+      - name: Exercise released updater and candidate installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_VERSION: ${{ inputs.previous_version }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: >
+          python scripts/qualify_updater.py --assets updater-assets
+          --previous "$PREVIOUS_VERSION" --target "$TARGET_VERSION"
+          --evidence updater-evidence
+      - name: Preserve updater qualification evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: updater-qualification-${{ matrix.os }}
+          path: updater-evidence
+          if-no-files-found: warn
+
   release-manifest:
     name: Generate canonical release manifest
     needs: [validate, windows, macos, linux]
@@ -806,12 +876,20 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Download Store upload for the canonical asset contract
+        if: ${{ inputs.include_store_upload }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows-store-upload
+          path: release-assets/dist/store
+
       - name: Generate and verify canonical manifest
         shell: bash
         env:
           INCLUDE_LINUX_PATCHES: ${{ inputs.include_linux_patches }}
           INCLUDE_MACOS_PATCHES: ${{ inputs.include_macos_patches }}
           INCLUDE_WINDOWS_PATCHES: ${{ inputs.include_windows_patches }}
+          INCLUDE_STORE_UPLOAD: ${{ inputs.include_store_upload }}
           PREVIOUS_VERSION: ${{ inputs.previous_version }}
           RELEASE_CHANNEL: ${{ inputs.release_channel }}
           TARGET_VERSION: ${{ inputs.target_version }}
@@ -826,6 +904,9 @@ jobs:
           fi
           if [[ "$INCLUDE_WINDOWS_PATCHES" == "true" ]]; then
             optional_args+=( --include-windows-patches )
+          fi
+          if [[ "$INCLUDE_STORE_UPLOAD" == "true" ]]; then
+            optional_args+=( --include-store-upload )
           fi
           python3 scripts/release_manifest.py generate \
             --asset-root release-assets \
@@ -877,6 +958,13 @@ jobs:
           name: canonical-release-manifest
           path: release-assets
 
+      - name: Download Store upload for supply-chain proof
+        if: ${{ inputs.include_store_upload }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows-store-upload
+          path: release-assets/dist/store
+
       - name: Resolve dependency graph
         shell: bash
         run: |
@@ -922,6 +1010,24 @@ jobs:
         with:
           subject-path: release-assets/dist/windows/VaultSync-Setup-${{ inputs.target_version }}.exe
           sbom-path: supply-chain/sboms/VaultSync-Setup-${{ inputs.target_version }}.exe.spdx.json
+
+      - name: Resolve Microsoft Store proof paths
+        if: ${{ inputs.include_store_upload }}
+        id: store-proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t packages < <(find release-assets/dist/store -maxdepth 1 -type f \( -name '*.msixupload' -o -name '*.appxupload' \))
+          [[ ${#packages[@]} == 1 ]] || { echo 'Expected exactly one Store upload package'; exit 1; }
+          echo "package=${packages[0]}" >> "$GITHUB_OUTPUT"
+          echo "sbom=supply-chain/sboms/$(basename "${packages[0]}").spdx.json" >> "$GITHUB_OUTPUT"
+
+      - name: Attest Microsoft Store upload SBOM
+        if: ${{ inputs.include_store_upload }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.store-proof.outputs.package }}
+          sbom-path: ${{ steps.store-proof.outputs.sbom }}
 
       - name: Attest macOS Apple silicon SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
@@ -990,3 +1096,119 @@ jobs:
           path: |
             supply-chain/sboms
             supply-chain/trusted-root.jsonl
+
+  prepare-draft:
+    name: Assemble verified unpublished draft
+    needs: [validate, quality-gate]
+    if: ${{ inputs.prepare_draft_from_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Validate qualified source run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET_RUN: ${{ inputs.prepare_draft_from_run }}
+        run: |
+          set -euo pipefail
+          [[ "$ASSET_RUN" =~ ^[0-9]+$ ]] || { echo 'Asset run must be a numeric run ID'; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ASSET_RUN" > source-run.json
+          jq -e '.conclusion == "success" and .head_branch == "Stable" and .path == ".github/workflows/release-assets.yml"' source-run.json
+          source_sha="$(jq -r '.head_sha' source-run.json)"
+          git merge-base --is-ancestor "$source_sha" origin/Stable
+          git diff --exit-code "$source_sha" HEAD -- src installer packaging Directory.Build.props Directory.Packages.props global.json scripts/build_patch.py scripts/build_linux_release.sh scripts/build_macos_dmg.sh scripts/thin_macos_native_libraries.sh
+      - name: Download qualified direct packages and patches
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prepare_draft_from_run }}
+          pattern: '*-release-assets'
+          merge-multiple: true
+          path: release-assets
+      - name: Download qualified Store upload
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prepare_draft_from_run }}
+          name: windows-store-upload
+          path: release-assets/dist/store
+      - name: Download qualified canonical manifest
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prepare_draft_from_run }}
+          name: canonical-release-manifest
+          path: release-assets
+      - name: Verify assets and upload only to the existing draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release_manifest.py validate --manifest release-assets/vaultsync-release-manifest.json --asset-root release-assets
+          store_upload="$(find release-assets/dist/store -maxdepth 1 -type f \( -name '*.msixupload' -o -name '*.appxupload' \))"
+          python3 scripts/verify_store_upload.py "$store_upload" --version "$TARGET_VERSION" --source-manifest packaging/VaultSync.Store/Package.appxmanifest
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path('release-assets')
+          manifest = json.loads((root / 'vaultsync-release-manifest.json').read_text())
+          source = json.loads(Path('source-run.json').read_text())
+          assert manifest['release']['version'] == os.environ['TARGET_VERSION']
+          assert manifest['release']['commit'] == source['head_sha']
+          expected = {asset['name'] for asset in manifest['assets']} | {'vaultsync-release-manifest.json'}
+          files = [path.name for path in root.rglob('*') if path.is_file()]
+          assert len(files) == len(expected) and set(files) == expected, 'Unexpected or duplicated draft asset'
+          assert len(manifest['assets']) == 19, 'Full platform/patch/Store matrix is required'
+          PY
+          tag="v$TARGET_VERSION"
+          gh release view "$tag" --json isDraft,databaseId > draft-release.json
+          jq -e '.isDraft == true' draft-release.json
+          release_id="$(jq -r '.databaseId' draft-release.json)"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > draft-assets.json
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path('release-assets')
+          expected = {path.name: path for path in root.rglob('*') if path.is_file()}
+          existing = json.loads(Path('draft-assets.json').read_text())
+          names = set()
+          for asset in existing:
+              name = asset['name']
+              assert name in expected and name not in names, 'Unexpected existing draft asset'
+              path = expected[name]
+              digest = hashlib.file_digest(path.open('rb'), 'sha256').hexdigest()
+              assert asset['size'] == path.stat().st_size and asset.get('digest') == 'sha256:' + digest, 'Draft asset differs; refusing overwrite'
+              names.add(name)
+          Path('missing-assets.txt').write_text(''.join(str(path) + '\n' for name, path in sorted(expected.items()) if name not in names))
+          PY
+          source_sha="$(jq -r '.release.commit' release-assets/vaultsync-release-manifest.json)"
+          # A maintainer stages the draft target separately. GITHUB_TOKEN
+          # cannot retarget releases at commits that modify workflows.
+          gh release view "$tag" --json isDraft,targetCommitish \
+            --jq '.' > draft-target.json
+          jq -e --arg sha "$source_sha" '.isDraft == true and .targetCommitish == $sha' draft-target.json
+          mapfile -t assets < missing-assets.txt
+          if [[ ${#assets[@]} -gt 0 ]]; then
+            gh release upload "$tag" "${assets[@]}"
+          fi
+          gh release view "$tag" --json isDraft,assets | jq -e '.isDraft == true and (.assets | length) == 20'
+          gh api "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > uploaded-assets.json
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          expected = {path.name: path for path in Path('release-assets').rglob('*') if path.is_file()}
+          uploaded = json.loads(Path('uploaded-assets.json').read_text())
+          assert len(uploaded) == len(expected) and {asset['name'] for asset in uploaded} == set(expected)
+          for asset in uploaded:
+              path = expected[asset['name']]
+              with path.open('rb') as stream:
+                  digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+              assert asset['size'] == path.stat().st_size and asset.get('digest') == 'sha256:' + digest, 'Uploaded asset differs'
+          PY

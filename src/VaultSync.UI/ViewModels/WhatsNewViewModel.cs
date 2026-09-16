@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using VaultSync.UI.Infrastructure;
 using VaultSync.UI.Services;
@@ -31,11 +32,8 @@ public sealed class WhatsNewViewModel : ViewModelBase
             return;
 
         var section = new WhatsNewSection(title);
-        foreach (string item in items)
-        {
-            if (!string.IsNullOrWhiteSpace(item))
-                section.Items.Add(item.Trim());
-        }
+        foreach (string item in items.Where(item => !string.IsNullOrWhiteSpace(item)))
+            section.Items.Add(item.Trim());
         if (section.Items.Count > 0)
             Sections.Add(section);
     }

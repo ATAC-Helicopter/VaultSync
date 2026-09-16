@@ -115,12 +115,13 @@ namespace VaultSync.UI.ViewModels
             _projectEncryptionEnrollmentService = new ProjectEncryptionEnrollmentService(
                 _repo,
                 _credentialVault,
-                GetMainWindow,
-                ExportMetadataForProjectSettingsChangeAsync,
-                () => _projectsViewModel.RefreshAsync(),
-                () => ReloadBackupsVmDataAsync(force: true),
-                ShowBackupSkipNotification,
-                message => Console.WriteLine(message));
+                new ProjectEncryptionEnrollmentService.ProjectEncryptionEnrollmentActions(
+                    GetOwner: GetMainWindow,
+                    ExportMetadataForProjectSettingsChangeAsync: ExportMetadataForProjectSettingsChangeAsync,
+                    RefreshProjectsAsync: () => _projectsViewModel.RefreshAsync(),
+                    RefreshBackupsAsync: () => ReloadBackupsVmDataAsync(force: true),
+                    ShowNotification: ShowBackupSkipNotification,
+                    Log: message => Console.WriteLine(message)));
 
             _logConsoleService = new LogConsoleService();
             LogConsoleProvider.Initialize(_logConsoleService);

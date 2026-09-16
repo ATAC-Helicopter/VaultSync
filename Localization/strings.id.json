@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "Gagal mengunduh penginstal. Buka halaman rilis sebagai gantinya.",
   "Update.Installer.Downloading": "Mengunduh penginstal...",
   "Update.Installer.Launched": "Penginstal diluncurkan. VaultSync akan ditutup sehingga penyiapan dapat dilanjutkan.",
+  "Update.Installer.Manual": "File pembaruan dibuka. Selesaikan instalasi, lalu mulai ulang VaultSync.",
   "Update.Installer.LaunchFailed": "Penginstal diunduh tetapi tidak dapat dimulai.",
   "Update.Installer.Launching": "Meluncurkan penginstal...",
   "Update.Installer.Timeout": "Waktu unduhan penginstal habis. Periksa koneksi Anda atau buka halaman rilis.",

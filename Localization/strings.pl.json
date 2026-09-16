@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "Nie udało się pobrać instalatora. Zamiast tego otwórz stronę z wydaniem.",
   "Update.Installer.Downloading": "Pobieram instalator...",
   "Update.Installer.Launched": "Instalator uruchomiony. VaultSync się zamknie, więc konfiguracja będzie mogła być kontynuowana.",
+  "Update.Installer.Manual": "Otwarto pliki aktualizacji. Dokończ instalację, a następnie uruchom ponownie VaultSync.",
   "Update.Installer.LaunchFailed": "Instalator pobrany, ale nie dało się go uruchomić.",
   "Update.Installer.Launching": "Uruchamiam instalator...",
   "Update.Installer.Timeout": "Pobranie instalatora wygasło. Sprawdź swoje połączenie lub otwórz stronę z wydawnictwem.",

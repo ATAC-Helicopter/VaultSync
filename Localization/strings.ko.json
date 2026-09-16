@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "설치 프로그램 다운로드 실패. 대신 릴리스 페이지를 열어보세요.",
   "Update.Installer.Downloading": "설치 프로그램 다운로드 중...",
   "Update.Installer.Launched": "설치 프로그램이 실행되었습니다. VaultSync가 종료되면 설정이 계속될 수 있습니다.",
+  "Update.Installer.Manual": "업데이트 파일을 열었습니다. 설치를 완료한 후 VaultSync를 다시 시작하세요.",
   "Update.Installer.LaunchFailed": "설치 프로그램은 다운로드되었지만 실행할 수 없습니다.",
   "Update.Installer.Launching": "설치 프로그램 실행...",
   "Update.Installer.Timeout": "설치 프로그램 다운로드가 시간 초과되었습니다. 연결 상태를 확인하거나 릴리스 페이지를 열어보세요.",

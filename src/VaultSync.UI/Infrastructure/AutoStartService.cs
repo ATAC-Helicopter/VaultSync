@@ -249,7 +249,7 @@ namespace VaultSync.UI.Infrastructure
                 {
                     using var id = Process.Start(new ProcessStartInfo
                     {
-                        FileName = "id",
+                        FileName = "/usr/bin/id",
                         Arguments = "-u",
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
@@ -312,7 +312,7 @@ namespace VaultSync.UI.Infrastructure
         {
             return new ProcessStartInfo
             {
-                FileName = "launchctl",
+                FileName = "/bin/launchctl",
                 Arguments = arguments,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,

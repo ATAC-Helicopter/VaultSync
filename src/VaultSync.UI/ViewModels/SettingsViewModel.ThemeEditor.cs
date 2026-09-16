@@ -15,6 +15,7 @@ namespace VaultSync.UI
 {
     public sealed partial class SettingsViewModel
     {
+        private const string GlassVisualStyle = "Glass";
         private const string ThemeSlotAccent = "Accent";
         private const string ThemeSlotBackground = "Background";
         private const string ThemeSlotDanger = "Danger";
@@ -96,7 +97,7 @@ namespace VaultSync.UI
             public required IBrush PreviewBackground { get; init; }
             public required IBrush PreviewSurface { get; init; }
             public required IBrush PreviewAccent { get; init; }
-            public bool UsesGlass => string.Equals(Palette.VisualStyle, "Glass", StringComparison.OrdinalIgnoreCase);
+            public bool UsesGlass => string.Equals(Palette.VisualStyle, GlassVisualStyle, StringComparison.OrdinalIgnoreCase);
         }
 
         public sealed class ThemePaletteSwatchViewModel : ViewModelBase
@@ -287,8 +288,8 @@ namespace VaultSync.UI
             _customThemeBase = string.Equals(theme.BaseTheme, "Light", StringComparison.OrdinalIgnoreCase)
                 ? ThemeBaseLightLabel
                 : ThemeBaseDarkLabel;
-            _customThemeVisualStyle = string.Equals(theme.VisualStyle, "Glass", StringComparison.OrdinalIgnoreCase)
-                ? "Glass"
+            _customThemeVisualStyle = string.Equals(theme.VisualStyle, GlassVisualStyle, StringComparison.OrdinalIgnoreCase)
+                ? GlassVisualStyle
                 : "Solid";
 
             SetThemeSlotHex(ThemeSlotBackground, theme.Background);
@@ -367,7 +368,7 @@ namespace VaultSync.UI
         private static IBrush CreatePresetBackground(ThemePaletteConfig palette)
         {
             Color background = Color.Parse(palette.Background);
-            if (!string.Equals(palette.VisualStyle, "Glass", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(palette.VisualStyle, GlassVisualStyle, StringComparison.OrdinalIgnoreCase))
                 return new SolidColorBrush(background);
 
             return new LinearGradientBrush
@@ -386,7 +387,7 @@ namespace VaultSync.UI
         private static IBrush CreatePresetSurface(ThemePaletteConfig palette)
         {
             Color surface = Color.Parse(palette.Surface);
-            if (!string.Equals(palette.VisualStyle, "Glass", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(palette.VisualStyle, GlassVisualStyle, StringComparison.OrdinalIgnoreCase))
                 return new SolidColorBrush(surface);
 
             return new LinearGradientBrush

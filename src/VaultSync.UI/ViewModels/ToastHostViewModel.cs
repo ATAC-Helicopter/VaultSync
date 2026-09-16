@@ -26,15 +26,7 @@ namespace VaultSync.UI.ViewModels.Notifications
                 NotificationState? existing = Toasts.FirstOrDefault(toast => toast.Matches(request));
                 if (existing is not null)
                 {
-                    existing.Show(
-                        request.Message,
-                        request.Severity,
-                        request.Title,
-                        request.Duration,
-                        request.ActionLabel,
-                        request.ActionCommand,
-                        request.GroupKey,
-                        incrementRepeat: true);
+                    existing.Show(request, incrementRepeat: true);
 
                     MoveToFront(existing);
                     return;
@@ -42,14 +34,7 @@ namespace VaultSync.UI.ViewModels.Notifications
 
                 var toast = new NotificationState();
                 toast.Closed += OnToastClosed;
-                toast.Show(
-                    request.Message,
-                    request.Severity,
-                    request.Title,
-                    request.Duration,
-                    request.ActionLabel,
-                    request.ActionCommand,
-                    request.GroupKey);
+                toast.Show(request);
 
                 Toasts.Add(toast);
                 TrimToastStack();
@@ -75,7 +60,7 @@ namespace VaultSync.UI.ViewModels.Notifications
         {
             while (Toasts.Count > MaxVisibleToasts)
             {
-                NotificationState? candidate = Toasts
+                NotificationState candidate = Toasts
                     .OrderBy(toast => toast.Severity switch
                     {
                         NotificationSeverity.Error => 2,
@@ -83,10 +68,7 @@ namespace VaultSync.UI.ViewModels.Notifications
                         _ => 0
                     })
                     .ThenBy(toast => toast.UpdatedUtc)
-                    .FirstOrDefault();
-
-                if (candidate is null)
-                    break;
+                    .First();
 
                 candidate.Closed -= OnToastClosed;
                 Toasts.Remove(candidate);
