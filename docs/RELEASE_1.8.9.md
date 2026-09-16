@@ -45,6 +45,13 @@ page purposeful and usable without horizontal page scrolling. It does not change
 the backup format or introduce the larger 1.9 recovery features.
 
 ## Review findings and changes
+Final safety follow-up [#665](https://github.com/ATAC-Helicopter/VaultSync/pull/665)
+preserves pre-existing doctor probe-named files and drains both sync-tool output
+streams. It passes all hosted platform/CodeQL checks, 924 .NET tests, 100 script
+tests, and the PR Sonar gate at 82.4% new-code coverage. The earlier 919/97
+counts below describe historical qualification; the final suites contain 924/100.
+Stable's existing branch baseline must also pass after final promotion; no
+coverage-baseline reset or failed automated check is covered by the exception.
 
 | Finding | Change |
 | --- | --- |
@@ -210,7 +217,7 @@ native executable upgrades and draft upload integrity passed.
 | [`BUG-18158` / #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635) | Keep Linux updater handoff qualification portable on Windows CI | Integrated into Stable |
 | [`BUG-18174` / #658](https://github.com/ATAC-Helicopter/VaultSync/issues/658) | Bind Store upload packages to release metadata and provenance | Integrated into Stable |
 | [`BUG-18175` / #659](https://github.com/ATAC-Helicopter/VaultSync/issues/659) | Keep the app open for manually installed Linux update archives | Integrated into Stable |
-| [`BUG-18176` / #664](https://github.com/ATAC-Helicopter/VaultSync/issues/664) | Preserve user files during CLI diagnostics and drain tool output safely | Local tests pass; integration and fresh asset qualification pending |
+| [`BUG-18176` / #664](https://github.com/ATAC-Helicopter/VaultSync/issues/664) | Preserve user files during CLI diagnostics and drain tool output safely | Implemented through #665; final asset evidence tracked in VS-1894 |
 | [`VS-1892` / #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631) | Polish shared pill alignment and theme readability | Integrated into Stable |
 | [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | Integrated into Stable |
 | [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Deferred checks open |
