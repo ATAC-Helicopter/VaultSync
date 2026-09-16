@@ -118,7 +118,8 @@ def qualify(args):
     if os.environ.get("GITHUB_ACTIONS") != "true":
         raise RuntimeError("Executable qualification requires a disposable GitHub Actions host")
     system = platform.system()
-    suffix = {"Windows": "windows", "Linux": "linux-x64", "Darwin":
+    suffix = {"Windows": "windows", "Linux":
+              "linux-arm64" if platform.machine() in ("aarch64", "arm64") else "linux-x64", "Darwin":
               "macos-apple-silicon" if platform.machine() == "arm64" else "macos-intel"}[system]
     assets = args.assets.resolve()
     manifest_path = next(assets.rglob(f"vaultsync-patch-{suffix}.json"))
@@ -209,8 +210,8 @@ def qualify(args):
             evidence["checks"].append("candidate installer upgraded released Windows installation")
         elif system == "Linux":
             base_deb = root / "base.deb"
-            download_base(args.previous, f"VaultSync-{args.previous}-linux-x64.deb", base_deb)
-            candidate = next(assets.rglob(f"VaultSync-{args.target}-linux-x64.deb"))
+            download_base(args.previous, f"VaultSync-{args.previous}-{suffix}.deb", base_deb)
+            candidate = next(assets.rglob(f"VaultSync-{args.target}-{suffix}.deb"))
             for package in (base_deb, candidate):
                 subprocess.run(["sudo", "-n", "apt-get", "install", "--reinstall", "-y", str(package)],
                                check=True, timeout=180)

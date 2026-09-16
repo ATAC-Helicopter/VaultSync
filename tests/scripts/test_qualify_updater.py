@@ -120,7 +120,8 @@ class UpdaterQualificationTests(unittest.TestCase):
                     stack.enter_context(mock.patch.dict(os.environ,
                         {"GITHUB_ACTIONS": "true", "RUNNER_TEMP": temporary}))
                     stack.enter_context(mock.patch.object(qualify_updater.platform, "system", return_value=system))
-                    stack.enter_context(mock.patch.object(qualify_updater.platform, "machine", return_value="arm64"))
+                    stack.enter_context(mock.patch.object(qualify_updater.platform, "machine",
+                                                          return_value="arm64" if system == "Darwin" else "x86_64"))
                     stack.enter_context(mock.patch.object(qualify_updater, "prepare_base", side_effect=prepare_base))
                     stack.enter_context(mock.patch.object(qualify_updater, "download_base"))
                     stack.enter_context(mock.patch.object(qualify_updater, "snapshot", return_value={}))
