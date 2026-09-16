@@ -199,7 +199,8 @@ namespace VaultSync.UI.ViewModels
                     CurrentView = RecoveryViewModel;
                     HeaderTitle = AppViewModel.L("Nav.Recovery", "Recovery");
                     HeaderKicker = AppViewModel.L("Main.HeaderRecovery", "Readiness & coverage");
-                    _ = RecoveryViewModel.RefreshAsync();
+                    // Page refresh is independent of update-check cancellation.
+                    _ = RecoveryViewModel.RefreshAsync(cancellationToken: CancellationToken.None);
                     break;
                 case "Guide":
                     BackupsViewModel.IsActiveView = false;
