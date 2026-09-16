@@ -836,6 +836,7 @@ jobs:
             sudo -n apt-get install -y xvfb
           fi
       - name: Exercise released updater and candidate installer
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIOUS_VERSION: ${{ inputs.previous_version }}

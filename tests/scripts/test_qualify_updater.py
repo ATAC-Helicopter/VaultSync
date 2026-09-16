@@ -32,7 +32,7 @@ class UpdaterQualificationTests(unittest.TestCase):
                 self.assertEqual("data", filter)
                 (destination / "VaultSync.UI").write_bytes(archive.extractfile("VaultSync.UI").read())
             with mock.patch.object(qualify_updater, "download_base", side_effect=download), \
-                    mock.patch.object(tarfile.TarFile, "extractall", autospec=True, side_effect=extract):
+                    mock.patch.object(tarfile.TarFile, "extractall", new=extract):
                 installed = qualify_updater.prepare_base(root, "1.8.8", "Linux", "linux-x64")
             self.assertEqual(b"released executable", (installed / "VaultSync.UI").read_bytes())
 
