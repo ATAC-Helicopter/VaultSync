@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "Не удалось загрузить установщик. Откройте страницу релиза.",
   "Update.Installer.Downloading": "Загрузка установщика...",
   "Update.Installer.Launched": "Установщик запущен. Закройте VaultSync, если будет предложено.",
+  "Update.Installer.Manual": "Открыты файлы обновления. Завершите установку и перезапустите VaultSync.",
   "Update.Installer.LaunchFailed": "Установщик загружен, но не удалось его запустить.",
   "Update.Installer.Launching": "Запуск установщика...",
   "Update.Installer.Timeout": "Истекло время загрузки установщика.",

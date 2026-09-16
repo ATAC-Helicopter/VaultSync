@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "Het is niet gelukt om de installer te downloaden. Open in plaats daarvan de releasepagina.",
   "Update.Installer.Downloading": "Installer downloaden...",
   "Update.Installer.Launched": "Installer gelanceerd. VaultSync sluit dan zodat de installatie verder kan.",
+  "Update.Installer.Manual": "Updatebestanden geopend. Voltooi de installatie en start VaultSync opnieuw.",
   "Update.Installer.LaunchFailed": "De installer is gedownload maar kon niet worden gestart.",
   "Update.Installer.Launching": "Installer starten...",
   "Update.Installer.Timeout": "Installer download is verlopen. Controleer je verbinding of open de releasepagina.",

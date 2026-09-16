@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "इंस्टॉलर डाउनलोड विफल रहा। इसके बजाय रिलीज़ पेज खोलें।",
   "Update.Installer.Downloading": "इंस्टॉलर डाउनलोड हो रहा है...",
   "Update.Installer.Launched": "इंस्टॉलर शुरू हो गया। अनुरोध होने पर VaultSync बंद करें।",
+  "Update.Installer.Manual": "अपडेट की फ़ाइलें खुल गई हैं। स्थापना पूरी करें, फिर VaultSync को पुनः शुरू करें।",
   "Update.Installer.LaunchFailed": "इंस्टॉलर डाउनलोड हो गया, लेकिन शुरू नहीं हो सका।",
   "Update.Installer.Launching": "इंस्टॉलर शुरू हो रहा है...",
   "Update.Installer.Timeout": "इंस्टॉलर डाउनलोड समय समाप्त।",

@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "فشل في تنزيل برنامج التثبيت. افتح صفحة الإصدار بدلاً من ذلك.",
   "Update.Installer.Downloading": "جارٍ تنزيل المثبت...",
   "Update.Installer.Launched": "تم إطلاق برنامج التثبيت. أغلق VaultSync إذا طُلب منك ذلك.",
+  "Update.Installer.Manual": "تم فتح ملفات التحديث. أكمل التثبيت، ثم أعد تشغيل VaultSync.",
   "Update.Installer.LaunchFailed": "تم تنزيل برنامج التثبيت ولكن تعذر بدء تشغيله.",
   "Update.Installer.Launching": "إطلاق المثبت...",
   "Update.Installer.Timeout": "انتهت مهلة تنزيل المُثبت. تحقق من الاتصال أو افتح صفحة الإصدار.",

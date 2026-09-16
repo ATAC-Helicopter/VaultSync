@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "无法下载安装程序。请打开发布页面。",
   "Update.Installer.Downloading": "正在下载安装程序...",
   "Update.Installer.Launched": "安装程序已启动。如有提示，请关闭 VaultSync。",
+  "Update.Installer.Manual": "已打开更新文件。请完成安装，然后重新启动 VaultSync。",
   "Update.Installer.LaunchFailed": "安装程序已下载，但无法启动。",
   "Update.Installer.Launching": "正在启动安装程序...",
   "Update.Installer.Timeout": "安装程序下载超时。",

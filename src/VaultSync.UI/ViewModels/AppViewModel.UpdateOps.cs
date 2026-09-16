@@ -966,13 +966,22 @@ namespace VaultSync.UI.ViewModels
                     return;
                 }
 
-                PatchStatusMessage = L(
-                    "Update.Installer.Launched",
-                    launchResult.RelaunchAfterShutdown
-                        ? "Update ready. VaultSync will restart with the new version."
-                        : launchResult.Completed
-                        ? "Update installed. VaultSync will close so the new version can start cleanly."
-                        : "Installer launched. VaultSync will close so setup can continue.");
+                if (!launchResult.ShouldShutdown)
+                {
+                    PatchStatusMessage = L("Update.Installer.Manual",
+                        "Update files opened. Complete the installation, then restart VaultSync.");
+                }
+                else
+                {
+                    string completionMessage;
+                    if (launchResult.RelaunchAfterShutdown)
+                        completionMessage = "Update ready. VaultSync will restart with the new version.";
+                    else if (launchResult.Completed)
+                        completionMessage = "Update installed. VaultSync will close so the new version can start cleanly.";
+                    else
+                        completionMessage = "Installer launched. VaultSync will close so setup can continue.";
+                    PatchStatusMessage = L("Update.Installer.Launched", completionMessage);
+                }
                 if (launchResult.ShouldShutdown)
                 {
                     if (launchResult.RelaunchAfterShutdown &&
@@ -1061,9 +1070,14 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        internal static bool InstallerMediaRequiresShutdown(string installerPath) =>
-            !(OperatingSystem.IsMacOS() &&
-              installerPath.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase));
+        internal static bool InstallerMediaRequiresShutdown(string installerPath)
+        {
+            if (OperatingSystem.IsMacOS() && installerPath.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (OperatingSystem.IsLinux() && installerPath.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+                return false;
+            return true;
+        }
 
         private static async Task<InstallerLaunchResult> RunDebianPackageInstallAsync(string packagePath)
         {

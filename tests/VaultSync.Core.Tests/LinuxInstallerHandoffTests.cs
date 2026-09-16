@@ -115,6 +115,15 @@ public sealed class LinuxInstallerHandoffTests
     }
 
     [Theory]
+    [InlineData("/tmp/VaultSync-1.8.9-linux-arm64.tar.gz")]
+    [InlineData("/tmp/VaultSync-1.8.9-linux-x64.TAR.GZ")]
+    public void LinuxArchiveMedia_DoesNotCloseRunningApplication(string installerPath)
+    {
+        if (OperatingSystem.IsLinux())
+            Assert.False(AppViewModel.InstallerMediaRequiresShutdown(installerPath));
+    }
+
+    [Theory]
     [InlineData("/tmp/VaultSync-1.8.8-windows-x64-setup.exe")]
     [InlineData("/tmp/VaultSync-1.8.8-linux-x64.AppImage")]
     public void NonDiskImageInstaller_ClosesRunningApplication(string installerPath)

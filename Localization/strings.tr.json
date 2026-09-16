@@ -1499,6 +1499,7 @@
   "Update.Installer.DownloadFailed": "Kurulum programını indiremedim. Bunun yerine çıkış sayfasını açın.",
   "Update.Installer.Downloading": "Kurulum programı indiriyorum...",
   "Update.Installer.Launched": "Kurulumcu başlatıldı. VaultSync kapanıyor, böylece kurulum devam edebiliyor.",
+  "Update.Installer.Manual": "Güncelleme dosyaları açıldı. Kurulumu tamamlayın, ardından VaultSync’i yeniden başlatın.",
   "Update.Installer.LaunchFailed": "Kurulumcu indirildi ama başlatılamadı.",
   "Update.Installer.Launching": "Kurulum başlatılıyor...",
   "Update.Installer.Timeout": "Kurulum indirme süresi doldu. Bağlantınızı kontrol edin veya yayın sayfasını açın.",
