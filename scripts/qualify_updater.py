@@ -36,7 +36,7 @@ def verify_payload(root, manifest):
         path = (root / entry["path"]).resolve()
         if not path.is_relative_to(root):
             raise ValueError("Payload path escapes installation")
-        if path.stat().st_size != entry["size"] or sha256(path) != entry["sha256"]:
+        if path.stat().st_size != entry["size"] or sha256(path) != entry["sha256"].lower():
             raise ValueError(f"Installed payload mismatch: {entry['path']}")
 
 
@@ -126,7 +126,7 @@ def qualify(args):
     manifest = json.loads(manifest_path.read_text())
     if manifest["targetVersion"] != args.target or args.previous not in manifest["baseVersions"]:
         raise ValueError("Candidate patch identity or primary predecessor mismatch")
-    if archive.stat().st_size != manifest["archiveSize"] or sha256(archive) != manifest["archiveSha256"]:
+    if archive.stat().st_size != manifest["archiveSize"] or sha256(archive) != manifest["archiveSha256"].lower():
         raise ValueError("Candidate patch archive failed integrity verification")
     args.evidence.mkdir(parents=True, exist_ok=True)
     evidence = {"platform": system, "previous": args.previous, "target": args.target,

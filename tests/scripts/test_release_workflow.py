@@ -12,6 +12,8 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("optional_args+=( --include-store-upload )", manifest)
         self.assertIn("name: windows-store-upload", proof)
         self.assertIn("Attest Microsoft Store upload SBOM", proof)
+        self.assertIn("dist/store/VaultSync-Store-*-x64.msixupload", workflow)
+        self.assertNotIn("dist/store/*.msixupload", workflow)
 
     def test_store_build_embeds_its_own_distribution_identity(self):
         workflow = (Path(__file__).resolve().parents[2] /

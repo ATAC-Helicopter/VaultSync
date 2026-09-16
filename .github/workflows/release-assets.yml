@@ -477,8 +477,8 @@ jobs:
           name: windows-store-upload
           if-no-files-found: error
           path: |
-            dist/store/*.msixupload
-            dist/store/*.appxupload
+            dist/store/VaultSync-Store-*-x64.msixupload
+            dist/store/VaultSync-Store-*-x64.appxupload
 
   macos:
     needs: [validate, quality-gate]

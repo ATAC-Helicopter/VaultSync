@@ -29,7 +29,7 @@ class UpdaterQualificationTests(unittest.TestCase):
             payload = root / "app.dll"
             payload.write_bytes(b"application")
             manifest = {"files": [{"path": "app.dll", "size": payload.stat().st_size,
-                                    "sha256": qualify_updater.sha256(payload)}]}
+                                    "sha256": qualify_updater.sha256(payload).upper()}]}
             qualify_updater.verify_payload(root, manifest)
             payload.write_bytes(b"tampered")
             with self.assertRaisesRegex(ValueError, "mismatch"):
@@ -96,7 +96,7 @@ class UpdaterQualificationTests(unittest.TestCase):
                 (assets / f"vaultsync-patch-{suffix}.zip").write_bytes(payload)
                 manifest = {"targetVersion": "1.8.9", "baseVersions": ["1.8.8"],
                             "archiveSize": len(payload), "files": [],
-                            "archiveSha256": hashlib.sha256(payload).hexdigest()}
+                            "archiveSha256": hashlib.sha256(payload).hexdigest().upper()}
                 (assets / f"vaultsync-patch-{suffix}.json").write_text(json.dumps(manifest))
                 (assets / "VaultSync-Setup-1.8.9.exe").touch()
                 (assets / "VaultSync-1.8.9-linux-x64.deb").touch()
