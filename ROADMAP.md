@@ -912,11 +912,11 @@ for required review and missing interactive/Store-runtime checks; those checks
 remain incomplete in VS-1894. The initial Stable build at `adafac380df41a29552929fbd451ddd36c9d9139`
 is superseded by the BUG-18176 safety fix. Rebuild every final asset from the
 subsequent Stable merge; the canonical manifest records its exact source commit.
-Checked items represent integrated implementation, not public release or every manual check.
+Checked items represent implementation integrated into Dev or Stable, not public release or every manual check. Final source and asset qualification evidence stays in VS-1894 and the canonical manifest.
 
-- [ ] `BUG-18176` `P0` Preserve user files during CLI doctor write probes.
+- [x] `BUG-18176` `P0` Preserve user files during CLI doctor write probes.
   [Issue #664](https://github.com/ATAC-Helicopter/VaultSync/issues/664).
-  Replace fixed probe filenames with unique, exclusively created, stream-owned temporary files. Drain both redirected sync-tool output streams concurrently to prevent help-output hangs. The isolated regression reproduced existing-file deletion before the fix; all five new CLI cases pass afterward. Local suites pass 924 .NET and 100 script tests. Resolve the Stable cancellation finding and exercise release-tool CLI paths without resetting Sonar's existing coverage baseline. Hosted checks, Stable integration, and a fresh native asset qualification remain required.
+  Replace fixed probe filenames with unique, exclusively created, stream-owned temporary files. Drain both redirected sync-tool output streams concurrently to prevent help-output hangs. The isolated regression reproduced existing-file deletion before the fix; all five new CLI cases pass afterward. Local suites pass 924 .NET and 100 script tests; hosted Windows, Linux, macOS, CodeQL and Sonar checks pass on #665, integrated into Dev with all three source commits preserved. Sonar PR coverage is 82.4%; the existing branch baseline remains unchanged. Final Stable build and native asset evidence is tracked in VS-1894 and the canonical manifest.
 
 - [x] `BUG-18155` `P1` Preserve backup group expansion and loaded history during refreshes.
   [Issue #628](https://github.com/ATAC-Helicopter/VaultSync/issues/628).
