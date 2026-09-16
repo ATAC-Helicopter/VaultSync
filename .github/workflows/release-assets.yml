@@ -838,9 +838,11 @@ jobs:
       - name: Exercise released updater and candidate installer
         env:
           GH_TOKEN: ${{ github.token }}
+          PREVIOUS_VERSION: ${{ inputs.previous_version }}
+          TARGET_VERSION: ${{ inputs.target_version }}
         run: >
           python scripts/qualify_updater.py --assets updater-assets
-          --previous ${{ inputs.previous_version }} --target ${{ inputs.target_version }}
+          --previous "$PREVIOUS_VERSION" --target "$TARGET_VERSION"
           --evidence updater-evidence
       - name: Preserve updater qualification evidence
         if: always()
@@ -1177,7 +1179,11 @@ jobs:
           Path('missing-assets.txt').write_text(''.join(str(path) + '\n' for name, path in sorted(expected.items()) if name not in names))
           PY
           source_sha="$(jq -r '.release.commit' release-assets/vaultsync-release-manifest.json)"
-          gh release edit "$tag" --draft --target "$source_sha"
+          # A maintainer stages the draft target separately. GITHUB_TOKEN
+          # cannot retarget releases at commits that modify workflows.
+          gh release view "$tag" --json isDraft,targetCommitish \
+            --jq '.' > draft-target.json
+          jq -e --arg sha "$source_sha" '.isDraft == true and .targetCommitish == $sha' draft-target.json
           mapfile -t assets < missing-assets.txt
           if [[ ${#assets[@]} -gt 0 ]]; then
             gh release upload "$tag" "${assets[@]}"

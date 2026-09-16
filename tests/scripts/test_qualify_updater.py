@@ -6,6 +6,7 @@ import io
 import json
 import os
 import tempfile
+import tarfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -18,6 +19,68 @@ spec.loader.exec_module(qualify_updater)
 
 
 class UpdaterQualificationTests(unittest.TestCase):
+    def test_prepare_linux_base_extracts_verified_archive(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            def download(version, name, destination):
+                with tarfile.open(destination, "w:gz") as archive:
+                    data = b"released executable"
+                    entry = tarfile.TarInfo("VaultSync.UI")
+                    entry.size = len(data)
+                    archive.addfile(entry, io.BytesIO(data))
+            def extract(archive, destination, *, filter):
+                self.assertEqual("data", filter)
+                (destination / "VaultSync.UI").write_bytes(archive.extractfile("VaultSync.UI").read())
+            with mock.patch.object(qualify_updater, "download_base", side_effect=download), \
+                    mock.patch.object(tarfile.TarFile, "extractall", autospec=True, side_effect=extract):
+                installed = qualify_updater.prepare_base(root, "1.8.8", "Linux", "linux-x64")
+            self.assertEqual(b"released executable", (installed / "VaultSync.UI").read_bytes())
+
+    def test_prepare_windows_base_invokes_unattended_installer(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with mock.patch.object(qualify_updater, "download_base"), \
+                    mock.patch.object(qualify_updater, "install_windows") as install:
+                installed = qualify_updater.prepare_base(Path(temporary), "1.8.8", "Windows", "windows")
+                self.assertTrue(installed.is_dir())
+                self.assertEqual(installed, install.call_args.args[1])
+
+    def test_prepare_macos_base_detaches_even_after_copy_failure(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with mock.patch.object(qualify_updater, "download_base"), \
+                    mock.patch.object(qualify_updater.subprocess, "run") as run, \
+                    mock.patch.object(qualify_updater.shutil, "copytree", side_effect=OSError("copy failed")):
+                with self.assertRaisesRegex(OSError, "copy failed"):
+                    qualify_updater.prepare_base(Path(temporary), "1.8.8", "Darwin", "macos-intel")
+                self.assertEqual("detach", run.call_args.args[0][1])
+
+    def test_prepare_macos_base_returns_canonical_bundle(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with mock.patch.object(qualify_updater, "download_base"), \
+                    mock.patch.object(qualify_updater.subprocess, "run"), \
+                    mock.patch.object(qualify_updater.shutil, "copytree"):
+                installed = qualify_updater.prepare_base(Path(temporary), "1.8.8", "Darwin", "macos-intel")
+                self.assertEqual("VaultSync.app", installed.name)
+
+    def test_logged_helper_does_not_inherit_api_token(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            env = {"VAULTSYNC_QUALIFICATION_LOG": str(Path(temporary) / "helper.log")}
+            with mock.patch.object(qualify_updater.subprocess, "Popen") as popen:
+                qualify_updater.apply(Path("helper"), Path("patch"), Path("manifest"), Path("install"), env)
+                self.assertEqual(env, popen.call_args.kwargs["env"])
+                self.assertNotIn("GH_TOKEN", popen.call_args.kwargs["env"])
+
+    def test_workspace_preserves_failure_logs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "evidence"
+            evidence.mkdir()
+            with mock.patch.dict(os.environ, {"RUNNER_TEMP": temporary}), \
+                    mock.patch.object(qualify_updater.Path, "home", return_value=Path(temporary)):
+                with self.assertRaisesRegex(RuntimeError, "failed"):
+                    with qualify_updater.qualification_workspace(evidence) as root:
+                        (root / "patch-helper.log").write_text("failure detail")
+                        raise RuntimeError("failed")
+            self.assertEqual("failure detail", (evidence / "patch-helper-0.log").read_text())
+
     def test_refuses_to_install_on_developer_host(self):
         with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}):
             with self.assertRaisesRegex(RuntimeError, "disposable"):

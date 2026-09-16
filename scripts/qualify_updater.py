@@ -21,6 +21,8 @@ from pathlib import Path
 
 
 REPOSITORY = "ATAC-Helicopter/VaultSync"
+APP_BUNDLE = "VaultSync.app"
+HELPER_LOG = "patch-helper.log"
 
 
 def sha256(path):
@@ -97,10 +99,10 @@ def prepare_base(root, version, system, suffix):
         subprocess.run(["hdiutil", "attach", str(package), "-readonly", "-nobrowse",
                         "-mountpoint", str(mount)], check=True, timeout=120)
         try:
-            shutil.copytree(mount / "VaultSync.app", install / "VaultSync.app", symlinks=True)
+            shutil.copytree(mount / APP_BUNDLE, install / APP_BUNDLE, symlinks=True)
         finally:
             subprocess.run(["hdiutil", "detach", str(mount)], check=True, timeout=60)
-        install = install / "VaultSync.app"
+        install = install / APP_BUNDLE
     return install
 
 
@@ -129,7 +131,7 @@ def qualification_workspace(evidence):
         try:
             yield root
         finally:
-            logs = list(root.rglob("patch-helper.log"))
+            logs = list(root.rglob(HELPER_LOG))
             if os.environ.get("LOCALAPPDATA"):
                 logs.append(Path(os.environ["LOCALAPPDATA"]) / "VaultSync/patch-runtime/patch-helper.log")
             logs.append(Path.home() / "Library/Application Support/VaultSync/patch-runtime/patch-helper.log")
@@ -138,10 +140,7 @@ def qualification_workspace(evidence):
                     shutil.copyfile(log, evidence / f"patch-helper-{index}.log")
 
 
-def qualify(args):
-    if os.environ.get("GITHUB_ACTIONS") != "true":
-        raise RuntimeError("Executable qualification requires a disposable GitHub Actions host")
-    system = platform.system()
+def candidate_payload(args, system):
     suffix = {"Windows": "windows", "Linux":
               "linux-arm64" if platform.machine() in ("aarch64", "arm64") else "linux-x64", "Darwin":
               "macos-apple-silicon" if platform.machine() == "arm64" else "macos-intel"}[system]
@@ -153,6 +152,86 @@ def qualify(args):
         raise ValueError("Candidate patch identity or primary predecessor mismatch")
     if archive.stat().st_size != manifest["archiveSize"] or sha256(archive) != manifest["archiveSha256"].lower():
         raise ValueError("Candidate patch archive failed integrity verification")
+    return assets, suffix, manifest_path, archive, manifest
+
+
+def reject_invalid_patches(root, helper, archive, manifest_path, manifest, install, env, evidence, before):
+    corrupt = root / "corrupt.zip"
+    shutil.copyfile(archive, corrupt)
+    with corrupt.open("r+b") as stream:
+        stream.write(b"corrupted")
+    rejected = apply(helper, corrupt, manifest_path, install, env)
+    if rejected.wait(timeout=120) == 0 or snapshot(install) != before:
+        raise RuntimeError("Corrupt patch was accepted or changed installed files")
+    evidence["checks"].append("corrupt archive rejected without mutation")
+    invalid = root / "wrong-base.json"
+    invalid_manifest = dict(manifest, previousVersion="0.0.0", baseVersions=["0.0.0"])
+    invalid.write_text(json.dumps(invalid_manifest))
+    rejected = apply(helper, archive, invalid, install, env)
+    if rejected.wait(timeout=120) == 0 or snapshot(install) != before:
+        raise RuntimeError("Unlisted base was accepted or changed installed files")
+    evidence["checks"].append("unlisted base rejected without mutation")
+
+
+def apply_after_parent_exit(helper, archive, manifest_path, install, env, before):
+    parent = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    process = None
+    try:
+        process = apply(helper, archive, manifest_path, install, env, parent.pid)
+        time.sleep(2)
+        if process.poll() is not None or snapshot(install) != before:
+            raise RuntimeError(f"Helper did not wait for parent shutdown (exit={process.poll()}); see helper logs")
+        parent.terminate()
+        parent.wait(timeout=10)
+        if process.wait(timeout=180) != 0:
+            raise RuntimeError("Released helper failed candidate patch application")
+    finally:
+        for owned in (parent, process):
+            if owned is not None and owned.poll() is None:
+                owned.terminate()
+                owned.wait(timeout=30)
+
+
+def smoke_startup(install, system, env):
+    command = [str(executable(install, system))]
+    if system == "Linux":
+        command = ["xvfb-run", "-a"] + command
+    launched = subprocess.Popen(command, env=env, start_new_session=system != "Windows")
+    try:
+        time.sleep(8)
+        if launched.poll() is not None:
+            raise RuntimeError("Updated application exited during startup smoke test")
+    finally:
+        if launched.poll() is None:
+            if system == "Windows":
+                launched.terminate()
+            else:
+                os.killpg(launched.pid, signal.SIGTERM)
+            launched.wait(timeout=30)
+
+
+def qualify_installer(args, root, base, assets, system, suffix, manifest, evidence):
+    if system == "Windows":
+        candidate = next(assets.rglob(f"VaultSync-Setup-{args.target}.exe"))
+        install_windows(candidate, base, args.evidence / "candidate-install.log")
+        verify_payload(base, manifest)
+        evidence["checks"].append("candidate installer upgraded released Windows installation")
+    elif system == "Linux":
+        base_deb = root / "base.deb"
+        download_base(args.previous, f"VaultSync-{args.previous}-{suffix}.deb", base_deb)
+        candidate = next(assets.rglob(f"VaultSync-{args.target}-{suffix}.deb"))
+        for package in (base_deb, candidate):
+            subprocess.run(["sudo", "-n", "apt-get", "install", "--reinstall", "-y", str(package)],
+                           check=True, timeout=180)
+        verify_payload(Path("/opt/vaultsync"), manifest)
+        evidence["checks"].append("candidate Debian package upgraded released Linux installation")
+
+
+def qualify(args):
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        raise RuntimeError("Executable qualification requires a disposable GitHub Actions host")
+    system = platform.system()
+    assets, suffix, manifest_path, archive, manifest = candidate_payload(args, system)
     args.evidence.mkdir(parents=True, exist_ok=True)
     evidence = {"platform": system, "previous": args.previous, "target": args.target,
                 "archiveSha256": sha256(archive), "checks": []}
@@ -178,74 +257,18 @@ def qualify(args):
         sentinel = profile / "qualification-sentinel.txt"
         sentinel.write_text("user data must survive")
         before = snapshot(install)
-        corrupt = root / "corrupt.zip"
-        shutil.copyfile(archive, corrupt)
-        with corrupt.open("r+b") as stream:
-            stream.write(b"corrupted")
-        rejected = apply(helper, corrupt, manifest_path, install, env)
-        if rejected.wait(timeout=120) == 0 or snapshot(install) != before:
-            raise RuntimeError("Corrupt patch was accepted or changed installed files")
-        evidence["checks"].append("corrupt archive rejected without mutation")
-        invalid = root / "wrong-base.json"
-        invalid_manifest = dict(manifest, previousVersion="0.0.0", baseVersions=["0.0.0"])
-        invalid.write_text(json.dumps(invalid_manifest))
-        rejected = apply(helper, archive, invalid, install, env)
-        if rejected.wait(timeout=120) == 0 or snapshot(install) != before:
-            raise RuntimeError("Unlisted base was accepted or changed installed files")
-        evidence["checks"].append("unlisted base rejected without mutation")
-        parent = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
-        process = None
-        try:
-            process = apply(helper, archive, manifest_path, install, env, parent.pid)
-            time.sleep(2)
-            if process.poll() is not None or snapshot(install) != before:
-                raise RuntimeError(f"Helper did not wait for parent shutdown (exit={process.poll()}); see helper logs")
-            parent.terminate()
-            parent.wait(timeout=10)
-            if process.wait(timeout=180) != 0:
-                raise RuntimeError("Released helper failed candidate patch application")
-        finally:
-            for owned in (parent, process):
-                if owned is not None and owned.poll() is None:
-                    owned.terminate()
-                    owned.wait(timeout=30)
+        reject_invalid_patches(root, helper, archive, manifest_path, manifest, install, env, evidence, before)
+        apply_after_parent_exit(helper, archive, manifest_path, install, env, before)
         verify_payload(install, manifest)
         evidence["checks"].append("released helper waited for parent and installed every verified file")
-        command = [str(executable(install, system))]
-        if system == "Linux":
-            command = ["xvfb-run", "-a"] + command
-        launched = subprocess.Popen(command, env=env, start_new_session=system != "Windows")
-        try:
-            time.sleep(8)
-            if launched.poll() is not None:
-                raise RuntimeError("Updated application exited during startup smoke test")
-            evidence["checks"].append("updated application started and remained running")
-        finally:
-            if launched.poll() is None:
-                if system == "Windows":
-                    launched.terminate()
-                else:
-                    os.killpg(launched.pid, signal.SIGTERM)
-                launched.wait(timeout=30)
+        smoke_startup(install, system, env)
+        evidence["checks"].append("updated application started and remained running")
         if sentinel.read_text() != "user data must survive":
             raise RuntimeError("Update changed user data sentinel")
         evidence["checks"].append("external user data preserved")
-        if system == "Windows":
-            candidate = next(assets.rglob(f"VaultSync-Setup-{args.target}.exe"))
-            install_windows(candidate, base, args.evidence / "candidate-install.log")
-            verify_payload(base, manifest)
-            evidence["checks"].append("candidate installer upgraded released Windows installation")
-        elif system == "Linux":
-            base_deb = root / "base.deb"
-            download_base(args.previous, f"VaultSync-{args.previous}-{suffix}.deb", base_deb)
-            candidate = next(assets.rglob(f"VaultSync-{args.target}-{suffix}.deb"))
-            for package in (base_deb, candidate):
-                subprocess.run(["sudo", "-n", "apt-get", "install", "--reinstall", "-y", str(package)],
-                               check=True, timeout=180)
-            verify_payload(Path("/opt/vaultsync"), manifest)
-            evidence["checks"].append("candidate Debian package upgraded released Linux installation")
-        for log in root.rglob("patch-helper.log"):
-            shutil.copyfile(log, args.evidence / "patch-helper.log")
+        qualify_installer(args, root, base, assets, system, suffix, manifest, evidence)
+        for log in root.rglob(HELPER_LOG):
+            shutil.copyfile(log, args.evidence / HELPER_LOG)
     (args.evidence / "updater-qualification.json").write_text(json.dumps(evidence, indent=2) + "\n")
     print(json.dumps(evidence, indent=2))
 
