@@ -22,6 +22,12 @@ This document defines the current release packaging flow.
 - The current stable release is `1.8.8`.
 - The active development target is `1.8.9` on `release/1.8.9`, integrating
   through `Dev` and promoted to `Stable` only after its release gates pass.
+- The owner-approved 1.8.9 maintainer exception is recorded on
+  [PR #634](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168).
+  It allowed missing review approval and documented interactive/Store-runtime
+  gaps for promotion through #660; it did not claim those checks passed,
+  weaken repository protections, waive failed automated checks, publish the
+  draft, or authorize a Store submission. Follow-up gate #633 remains open.
 - Do not create a beta or prerelease implicitly. A prerelease requires an
   explicit release decision, a version suffix, and the beta workflow inputs.
 
