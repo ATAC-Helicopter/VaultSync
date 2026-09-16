@@ -48,6 +48,10 @@ run. Read it carefully: forgetting local registration is different from
 deleting source files or stored backup data.
 
 ## Smart Presets
+CLI diagnostics (`vaultsync doctor --check-dest <PATH>`) check database and
+destination writability using unique temporary probes. Existing files are not
+overwritten; each probe is removed when its owning stream closes.
+
 - Presets apply `.vaultsyncignore` rules to project backups.
 - Consumer-friendly presets are available for:
   - Photos libraries

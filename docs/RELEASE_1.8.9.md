@@ -1,9 +1,18 @@
 # VaultSync 1.8.9 — Bug fixes and everyday polish
 
-Status: unreleased; native candidate upgrades qualified. The 20 assets currently
-attached to the unpublished draft are pre-Stable qualification assets, not final
-release assets. Rebuild every asset from Stable after merge-commit promotion.
-Desktop and Store-runtime promotion gates remain open.
+Status: unreleased; implementation integrated into Stable through #634 and #660.
+Native upgrades qualified in the initial Stable build, but its source
+`adafac380df41a29552929fbd451ddd36c9d9139` and
+[run 35075261085](https://github.com/ATAC-Helicopter/VaultSync/actions/runs/35075261085)
+are superseded by the BUG-18176 safety fix. Rebuild every final asset from the
+subsequent Stable merge and verify its native qualification and uploaded
+canonical manifest, which records the exact source commit. Neither the initial
+Stable assets nor pre-Stable draft attachments may be promoted as final.
+
+The owner [explicitly approved a documented maintainer exception](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168)
+for missing review approval and interactive Windows/Linux/Store-runtime results.
+This permitted Stable promotion; those checks remain incomplete in #633, not
+passed. Publication and Partner Center submission were not authorized.
 
 ## Release identity
 
@@ -125,8 +134,8 @@ icon rail is reserved for windows below 1100 pixels.
 - Hosted Windows, Linux, and macOS build/test jobs, CodeQL, YAML, Store
   metadata, and dependency submission are tracked on
   [PR #634](https://github.com/ATAC-Helicopter/VaultSync/pull/634). Final-head
-  Sonar analysis must pass after qualification-tooling changes; integration
-  remains a promotion requirement.
+  Sonar analysis passed on promotion PR #660 with **84.5% new-code coverage**
+  and zero open findings; Stable integration completed via its merge commit.
 - Updater qualification on the exact release head passes **115 focused .NET
   tests** and **19 patch-builder/release-manifest tests**. The hosted Windows
   and Linux jobs each pass all **919 tests**, including platform asset selection,
@@ -195,37 +204,39 @@ native executable upgrades and draft upload integrity passed.
 
 | ID | Work | State |
 | --- | --- | --- |
-| [`BUG-18155` / #628](https://github.com/ATAC-Helicopter/VaultSync/issues/628) | Preserve backup group expansion and loaded history during refreshes | In progress |
-| [`BUG-18156` / #629](https://github.com/ATAC-Helicopter/VaultSync/issues/629) | Preserve surviving UI rows during collection refreshes | In progress |
-| [`BUG-18157` / #630](https://github.com/ATAC-Helicopter/VaultSync/issues/630) | Retain selected project identity after refreshed models are rebuilt | In progress |
-| [`BUG-18158` / #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635) | Keep Linux updater handoff qualification portable on Windows CI | In progress |
-| [`BUG-18174` / #658](https://github.com/ATAC-Helicopter/VaultSync/issues/658) | Bind Store upload packages to release metadata and provenance | In progress |
-| [`BUG-18175` / #659](https://github.com/ATAC-Helicopter/VaultSync/issues/659) | Keep the app open for manually installed Linux update archives | In progress |
-| [`VS-1892` / #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631) | Polish shared pill alignment and theme readability | In progress |
-| [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | In progress |
-| [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | In progress |
-| [`VS-1895` / #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636) | Service coordinated runtime, rendering, and validation dependencies | In progress |
-| [`VS-1896` / #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637) | Clear remaining desktop Sonar maintainability findings | In progress |
-| [`BUG-18159` / #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638) | Prevent page-width bindings from restoring horizontal overflow | In progress |
-| [`VS-1897` / #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639) | Audit and renew 1.8.9 safety, usability, and repository health | In progress |
-| [`BUG-18160` / #640](https://github.com/ATAC-Helicopter/VaultSync/issues/640) | Reclaim abandoned metadata read-copy workspaces | In progress |
-| [`BUG-18161` / #641](https://github.com/ATAC-Helicopter/VaultSync/issues/641) | Isolate overlapping updater cancellation ownership | In progress |
-| [`BUG-18162` / #642](https://github.com/ATAC-Helicopter/VaultSync/issues/642) | Restore CLI snapshots from recorded backup data safely | In progress |
-| [`BUG-18163` / #643](https://github.com/ATAC-Helicopter/VaultSync/issues/643) | Reject empty backup payload paths before cleanup | In progress |
-| [`BUG-18164` / #644](https://github.com/ATAC-Helicopter/VaultSync/issues/644) | Confine CLI preset reads to preset roots | In progress |
-| [`BUG-18165` / #645](https://github.com/ATAC-Helicopter/VaultSync/issues/645) | Expand only leading home markers in CLI paths | In progress |
-| [`BUG-18166` / #646](https://github.com/ATAC-Helicopter/VaultSync/issues/646) | Skip linked directories during backup preflight enumeration | In progress |
-| [`BUG-18167` / #647](https://github.com/ATAC-Helicopter/VaultSync/issues/647) | Parse CLI prune dates invariantly | In progress |
-| [`BUG-18168` / #648](https://github.com/ATAC-Helicopter/VaultSync/issues/648) | Preserve backed snapshots during CLI prune | In progress |
-| [`BUG-18169` / #649](https://github.com/ATAC-Helicopter/VaultSync/issues/649) | Verify recorded backup bytes before CLI restore | In progress |
-| [`BUG-18170` / #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650) | Recover tray refresh after background failures | In progress |
-| [`BUG-18171` / #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651) | Keep Unix instance locks in private app data | In progress |
-| [`BUG-18172` / #656](https://github.com/ATAC-Helicopter/VaultSync/issues/656) | Support the macOS system rsync in CLI and direct sync | In progress |
-| [`BUG-18173` / #657](https://github.com/ATAC-Helicopter/VaultSync/issues/657) | Reflow dense Backups and Settings cards at compact widths | In progress |
+| [`BUG-18155` / #628](https://github.com/ATAC-Helicopter/VaultSync/issues/628) | Preserve backup group expansion and loaded history during refreshes | Integrated into Stable |
+| [`BUG-18156` / #629](https://github.com/ATAC-Helicopter/VaultSync/issues/629) | Preserve surviving UI rows during collection refreshes | Integrated into Stable |
+| [`BUG-18157` / #630](https://github.com/ATAC-Helicopter/VaultSync/issues/630) | Retain selected project identity after refreshed models are rebuilt | Integrated into Stable |
+| [`BUG-18158` / #635](https://github.com/ATAC-Helicopter/VaultSync/issues/635) | Keep Linux updater handoff qualification portable on Windows CI | Integrated into Stable |
+| [`BUG-18174` / #658](https://github.com/ATAC-Helicopter/VaultSync/issues/658) | Bind Store upload packages to release metadata and provenance | Integrated into Stable |
+| [`BUG-18175` / #659](https://github.com/ATAC-Helicopter/VaultSync/issues/659) | Keep the app open for manually installed Linux update archives | Integrated into Stable |
+| [`BUG-18176` / #664](https://github.com/ATAC-Helicopter/VaultSync/issues/664) | Preserve user files during CLI diagnostics and drain tool output safely | Local tests pass; integration and fresh asset qualification pending |
+| [`VS-1892` / #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631) | Polish shared pill alignment and theme readability | Integrated into Stable |
+| [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | Integrated into Stable |
+| [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Deferred checks open |
+| [`VS-1895` / #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636) | Service coordinated runtime, rendering, and validation dependencies | Integrated into Stable |
+| [`VS-1896` / #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637) | Clear remaining desktop Sonar maintainability findings | Integrated into Stable |
+| [`BUG-18159` / #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638) | Prevent page-width bindings from restoring horizontal overflow | Integrated into Stable |
+| [`VS-1897` / #639](https://github.com/ATAC-Helicopter/VaultSync/issues/639) | Audit and renew 1.8.9 safety, usability, and repository health | Integrated into Stable |
+| [`BUG-18160` / #640](https://github.com/ATAC-Helicopter/VaultSync/issues/640) | Reclaim abandoned metadata read-copy workspaces | Integrated into Stable |
+| [`BUG-18161` / #641](https://github.com/ATAC-Helicopter/VaultSync/issues/641) | Isolate overlapping updater cancellation ownership | Integrated into Stable |
+| [`BUG-18162` / #642](https://github.com/ATAC-Helicopter/VaultSync/issues/642) | Restore CLI snapshots from recorded backup data safely | Integrated into Stable |
+| [`BUG-18163` / #643](https://github.com/ATAC-Helicopter/VaultSync/issues/643) | Reject empty backup payload paths before cleanup | Integrated into Stable |
+| [`BUG-18164` / #644](https://github.com/ATAC-Helicopter/VaultSync/issues/644) | Confine CLI preset reads to preset roots | Integrated into Stable |
+| [`BUG-18165` / #645](https://github.com/ATAC-Helicopter/VaultSync/issues/645) | Expand only leading home markers in CLI paths | Integrated into Stable |
+| [`BUG-18166` / #646](https://github.com/ATAC-Helicopter/VaultSync/issues/646) | Skip linked directories during backup preflight enumeration | Integrated into Stable |
+| [`BUG-18167` / #647](https://github.com/ATAC-Helicopter/VaultSync/issues/647) | Parse CLI prune dates invariantly | Integrated into Stable |
+| [`BUG-18168` / #648](https://github.com/ATAC-Helicopter/VaultSync/issues/648) | Preserve backed snapshots during CLI prune | Integrated into Stable |
+| [`BUG-18169` / #649](https://github.com/ATAC-Helicopter/VaultSync/issues/649) | Verify recorded backup bytes before CLI restore | Integrated into Stable |
+| [`BUG-18170` / #650](https://github.com/ATAC-Helicopter/VaultSync/issues/650) | Recover tray refresh after background failures | Integrated into Stable |
+| [`BUG-18171` / #651](https://github.com/ATAC-Helicopter/VaultSync/issues/651) | Keep Unix instance locks in private app data | Integrated into Stable |
+| [`BUG-18172` / #656](https://github.com/ATAC-Helicopter/VaultSync/issues/656) | Support the macOS system rsync in CLI and direct sync | Integrated into Stable |
+| [`BUG-18173` / #657](https://github.com/ATAC-Helicopter/VaultSync/issues/657) | Reflow dense Backups and Settings cards at compact widths | Integrated into Stable |
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
-In-progress work is implemented locally or under preparation; it is not marked
-Done until integrated and verified. `VS-1894` is the release-blocking evidence gate.
+Implementation integrated through #634 and #660 is tracked separately from
+public release. `VS-1894` remains open for explicitly deferred interactive and
+Store-runtime evidence under the owner-approved promotion exception.
 
 - [Milestone 1.8.9](https://github.com/ATAC-Helicopter/VaultSync/milestone/16)
 - [Delivery Project](https://github.com/users/ATAC-Helicopter/projects/7)
