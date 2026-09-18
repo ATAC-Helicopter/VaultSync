@@ -31,6 +31,7 @@ public static class Program
             app.Configure(cfg =>
             {
                 VaultSync.CLI.Commands.ResourceCommands.Register(cfg);
+                VaultSync.CLI.Commands.CommandOutput.ConfigureErrors(cfg, args);
 
                 // Compatibility routes retained throughout the 1.9 family.
                 // Core commands

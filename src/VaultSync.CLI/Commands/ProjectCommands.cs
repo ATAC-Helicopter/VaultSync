@@ -126,42 +126,6 @@ namespace VaultSync.CLI.Commands
         }
     }
 
-    sealed class ListProjectsSettings : CommandSettings
-    {
-        [CommandOption("--db")] public string? Db { get; init; }
-        [CommandOption("--json")] public bool Json { get; init; } = false;
-    }
-
-    sealed class ListProjectsCommand : AsyncCommand<ListProjectsSettings>
-    {
-        protected override Task<int> ExecuteAsync(CommandContext context, ListProjectsSettings s, CancellationToken cancellationToken)
-        {
-            string db = ConfigHelper.ResolveDb(s.Db);
-            var repo = new SqliteRepository(db);
-            repo.EnsureSchema();
-
-            IEnumerable<Project> rows = repo.ListProjects();
-            if (s.Json)
-            {
-                Console.WriteLine(JsonSerializer.Serialize(rows.Select(r => new
-                {
-                    r.Name, r.RootPath, r.Preset, CreatedUtc = r.CreatedUtc.ToString("u")
-                }), CommandJsonOptions.Indented));
-                return Task.FromResult(0);
-            }
-
-            Table table = new Table().Border(TableBorder.Rounded);
-            table.AddColumn("Name");
-            table.AddColumn(new TableColumn("Path").NoWrap());
-            table.AddColumn("Preset");
-            table.AddColumn("Created (UTC)");
-
-            foreach (Project p in rows) table.AddRow(p.Name, p.RootPath, p.Preset, p.CreatedUtc.ToString("u"));
-            AnsiConsole.Write(table);
-            return Task.FromResult(0);
-        }
-    }
-
     sealed class DiscoverProjectsSettings : CommandSettings
     {
         [CommandOption("--root")] public string? OverrideRoot { get; init; }

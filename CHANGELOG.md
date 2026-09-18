@@ -2,6 +2,8 @@
 ## [1.9.0] - Unreleased
 
 ### Added
+- [VS-1973] Inspect projects by explicit ID or literal name and filter/limit project listings.
+- [VS-1974] Add opt-in versioned JSON results and predictable errors for read-only project inspection.
 - [VS-1973] Add grouped projects, snapshots, and recovery commands alongside existing CLI routes.
 - [VS-1973] Expose candidate source-folder discovery with `projects discover --root`.
 - [VS-1973] Add `mirror` with explicit live-transfer semantics and existing dry-run behavior.

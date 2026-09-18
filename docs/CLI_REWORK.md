@@ -14,7 +14,7 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | Existing route | Decision | 1.9 direction and current implementation |
 | --- | --- | --- |
 | `add-project` | Keep compatibility route; add resource route | `projects add` implemented with identical source/preset/DB handling |
-| `list-projects` | Keep compatibility route; extend inspection later | `projects list` implemented; current `--json` shape retained |
+| `list-projects` | Keep compatibility route; extend inspection later | `projects list` implemented; filters/limits and explicit versioned `--output json`; current `--json` retained |
 | `remove-project` | Keep route; change unsafe confirmation behavior | `projects remove` implemented; both require `--yes` with quiet/redirected input |
 | `set-path` | Keep compatibility route | `projects set-path` implemented; validates an existing source folder |
 | `update-path` | Keep existing alias | Same handler as `set-path`; no independent behavior |
@@ -56,7 +56,9 @@ recovery require their owning shared services and qualification contracts.
 - `recovery`: recorded-byte restore and, later, independent recovery workflows.
 - `destinations`, `config`, `presets`: resource inspection and explicit management.
 
-Project names remain the positional selector in this compatible first slice.
+Project names remain the positional selector in mutation commands. New read-only
+`projects show [name]` accepts a literal name or explicit `--id`, with conflicting
+selectors rejected before any database access. Versioned list output exposes IDs.
 Stable numeric IDs and filter/bulk selectors must become explicit alternatives
 under VS-1973 rather than interpreting a numeric name as an ID. Conflicting
 selectors must fail before any mutation. Bulk work must expose per-item outcomes
@@ -115,19 +117,23 @@ Removal continues to leave source and stored backup files intact. `--yes` must
 never bypass containment, backup integrity, destination identity, or supported
 format checks in other destructive workflows.
 
-## Output and unattended contracts still to implement
+## Output and unattended contracts
 
-The current JSON payloads are unversioned and inconsistent in property casing.
-Do not silently replace existing `--json` output. VS-1974 must define an explicit
-versioned output mode before scripts depend on a new shared envelope. That
+Legacy JSON payloads are unversioned and inconsistent in property casing.
+The next slice implements an explicit v1 envelope for project list/show under
+`--output json`, including parse/selection errors and process exit codes. See
+[the implemented output contract](CLI_OUTPUT.md). Existing database inspection
+uses read-only connections; no initialization or migration occurs in this mode.
+Do not silently replace existing `--json` output. VS-1974 must extend the implemented versioned mode to the remaining workflows
+before scripts depend on a shared envelope across commands. That
 contract must include schema version, operation/resource identity, status,
 per-item results, evidence scope, limitations, actionable errors, and exit code.
 Streaming progress/events need a separate documented framing contract.
 
 Existing failures vary: verification/doctor/watch commonly use 2, aborted removal
 uses 1, mirroring exposes tool/service exit codes, and other failures can go
-through Spectre exception handling. A uniform public exit-code table is still
-pending; the new removal guard's 2 is not a claim that every command conforms.
+through Spectre exception handling. Project list/show now document 0/1/2 under explicit versioned output. A uniform
+public exit-code table across all commands is still pending; the new removal guard's 2 is not a claim that every command conforms.
 Legacy automation must have a migration path before exit meanings change.
 
 Pending requirements:

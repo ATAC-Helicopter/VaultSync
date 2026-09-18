@@ -16,7 +16,9 @@ internal static class ResourceCommands
             projects.AddCommand<AddProjectCommand>("add")
                 .WithDescription("Register an existing source folder with a preset");
             projects.AddCommand<ListProjectsCommand>("list")
-                .WithDescription("List registered projects; use --json for structured output");
+                .WithDescription("List projects with filters/limits; --output json provides versioned results");
+            projects.AddCommand<ShowProjectCommand>("show")
+                .WithDescription("Inspect one project by literal name or explicit --id; supports --output json");
             projects.AddCommand<DiscoverProjectsCommand>("discover")
                 .WithDescription("Discover candidate source folders beneath Projects Root; use --root to select a root");
             projects.AddCommand<SetPathCommand>("set-path")

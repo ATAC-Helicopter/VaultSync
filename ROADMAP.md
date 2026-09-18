@@ -1243,7 +1243,8 @@ destabilizing the maintenance release.
     supported legacy invocations retain their documented behavior or migration path.
   - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
     naming reuse existing handlers; projects discover now exposes source-folder
-    discovery. This first slice does not complete backup/parity/bulk scope.
+    discovery. Read-only projects show accepts literal names or explicit IDs;
+    listing supports name/preset filters and limits. Backup/parity/bulk scope remains.
 - [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
   - Scope: versioned JSON and streaming result contracts, stable exit codes,
     stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
@@ -1252,7 +1253,9 @@ destabilizing the maintenance release.
     prompts; machine output parses without log/progress contamination; failures,
     cancellation, unsupported scope, and partial results have documented outcomes.
   - Progress: raw argv logging is removed; BUG-19001 owns the confirmed quiet
-    removal defect. Versioned output and uniform unattended contracts remain pending.
+    removal defect. Project list/show implement explicit v1 JSON envelopes,
+    read-only inspection, and parse/selection/operational errors; remaining
+    workflows and uniform unattended contracts remain pending.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
   - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
     and snapshot inspection, selective safe restore, integrity evidence, destination

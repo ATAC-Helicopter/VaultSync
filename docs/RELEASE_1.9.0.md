@@ -105,6 +105,20 @@ remaining service/output gaps. No disk implementation is implied. The initial im
 fix and pass afterward. [BUG-19001 / #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699)
 remains In progress until integrated.
 
+## Project inspection and output slice
+
+Projects list/show now support explicit versioned `--output json` with stable
+result/error envelopes and 0/1/2 outcomes. Listing supports case-insensitive
+name/preset filters and positive limits, while show accepts a literal name or
+explicit local ID. Numeric names remain literal. Explicit-output listing and
+all show invocations use read-only database connections, leaving initialization
+and schema migration to explicit operations. Legacy `--json` is preserved.
+
+The [v1 output contract](CLI_OUTPUT.md) and envelope schema document this scoped
+implementation. Remaining commands do not yet implement the uniform output
+contract. All 949 .NET tests pass; the initial implementation's previous hosted
+Windows/macOS/Linux, CodeQL, Store/metadata preflights, and Sonar checks passed.
+
 ## CLI execution tracking
 
 | ID | Issue | Release | Work |

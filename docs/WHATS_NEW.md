@@ -6,7 +6,9 @@ Recovery Horizon is in planning and architecture work. Its approved scope includ
 disk and bootable recovery foundations and a full CLI rework for practical
 terminal and automation workflows. These capabilities have not shipped. The development CLI now includes grouped
 `projects`, `snapshots`, and `recovery` commands, candidate folder discovery,
-and an explicitly named `mirror` command. Existing command routes remain.
+and an explicitly named `mirror` command. Project inspection adds explicit IDs,
+filtered/limited listings, and opt-in versioned JSON via `--output json` with
+read-only database access. Existing command routes and legacy `--json` remain.
 Quiet or unattended project removal requires `--yes`; `--quiet` alone no longer
 authorizes deletion of the local registration/history. See the
 [CLI audit and migration notes](CLI_REWORK.md).
