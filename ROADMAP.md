@@ -893,7 +893,7 @@ compatibility, and smoke tests on all supported operating systems.
 
 ## 1.8.9 — Bug fixes and everyday polish
 
-**Status:** Released on 2026-09-16 as `v1.8.9`; deferred manual qualification remains in VS-1894
+**Status:** Released on 2026-09-16 as `v1.8.9`; tracking closed on maintainer instruction 2026-09-18
 **Tagline:** *Keep your place. Work with clarity.*
 **Released:** 2026-09-16
 **Tag:** `v1.8.9`
@@ -944,9 +944,9 @@ Checked items represent implementation integrated into Dev or Stable, not public
   [Issue #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632).
   Advance UI, CLI, installer, Store manifest, canonical and public metadata to 1.8.9. Record the published 1.8.8 stable date, target the exact 1.8.8 predecessor, retire the obsolete 1.8.8 working contract, preserve historical evidence, and align roadmap, changelog, What's New, milestone, Project fields, and release documentation. Use release/1.8.9 into Dev, then Stable via merge commits. Validate metadata consumers and release scripts; do not publish or claim qualification during kickoff.
 
-- [ ] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
+- [x] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
   [Issue #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633).
-  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Candidate run 35071592180 passes the real released 1.8.8 helper upgrade on Windows x64, Linux x64/ARM64, and macOS Apple Silicon/Intel; Windows installer and both Debian upgrades pass. All platform, patch, and Store packages pass canonical verification and supply-chain proof. The full .NET suite has 919 tests and the script suite has 97 tests. Public draft discovery, interactive UAC/polkit, Wayland/Xorg, packaged Store runtime, and remaining rendered desktop checks are not proven by these tests. Record draft-upload integrity and remaining evidence before promotion; keep this P0 gate open.
+  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Candidate run 35071592180 passes the real released 1.8.8 helper upgrade on Windows x64, Linux x64/ARM64, and macOS Apple Silicon/Intel; Windows installer and both Debian upgrades pass. All platform, patch, and Store packages pass canonical verification and supply-chain proof. The full .NET suite has 919 tests and the script suite has 97 tests. Public draft discovery, interactive UAC/polkit, Wayland/Xorg, packaged Store runtime, and remaining rendered desktop checks are not proven by these tests. Record draft-upload integrity and remaining evidence before promotion; this historical P0 gate was closed on maintainer instruction 2026-09-18, with unproven checks waived for closeout rather than marked passed.
 
 - [x] `VS-1895` `P1` Service coordinated runtime, rendering, and validation dependencies.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
@@ -1028,6 +1028,12 @@ Checked items represent implementation integrated into Dev or Stable, not public
 
   _(Issue #659; implemented on the release branch, Stable integration complete.)_
   Linux tar.gz fallback opens installation files rather than running an installer, but the generic handoff closed VaultSync immediately. Keep the app running for manual Linux archives and macOS disk images, explain the remaining installation/restart steps in all 19 localization files, and retain shutdown for executable installers. Regression tests and all five native candidate updater jobs pass; Stable integration is complete; the interactive permission walkthrough remains in VS-1894.
+
+Maintainer closeout on 2026-09-18: VS-1894 / #633 and milestone 1.8.9 are
+complete on explicit instruction after publication. Previously unproven manual
+checks are waived for this release closeout, not represented as passed; their
+historical limitations remain in the release contract. Applicable 1.9 gates
+still require fresh evidence.
 
 ---
 
@@ -1211,12 +1217,23 @@ destabilizing the maintenance release.
 - [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on
   representative hardware and virtual machines.
 
+- [ ] `BUG-19001` `P0` Require explicit confirmation for quiet and unattended CLI project removal.
+  - Scope: reject removal without --yes when --quiet is set or standard input
+    is redirected, before touching configuration or the database; preserve
+    interactive confirmation and source/backup-file safety on both command routes.
+  - Acceptance: rejected removal preserves registration and snapshot history;
+    explicit --yes still works; scripts receive a nonzero result and actionable
+    stderr guidance. Two isolated cases reproduced the old deletion behavior.
+  - Tracking: [issue #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699);
+    the implementation and passing regression evidence await release integration.
 - [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
   - Scope: inventory existing commands and core-service gaps; define resource/action
     naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
     semantics, restore/verification scope, aliases, and deprecation policy.
   - Acceptance: each current command has a keep, change, replace, or retire decision;
     incompatible changes have migration examples and a defined compatibility window.
+  - Progress: command inventory and initial compatibility/behavior decisions are
+    in [the CLI rework audit](docs/CLI_REWORK.md); review/integration remains pending.
 - [ ] `VS-1973` `P1` Rebuild CLI commands around consistent tasks and shared services.
   - Scope: implement the approved tree for projects, destinations, backups,
     snapshots, history, verification, restore, configuration, and diagnostics;
@@ -1224,6 +1241,9 @@ destabilizing the maintenance release.
   - Acceptance: useful terminal workflows use the same safety and storage contracts
     as the desktop; live mirroring cannot masquerade as a recorded recovery point;
     supported legacy invocations retain their documented behavior or migration path.
+  - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
+    naming reuse existing handlers; projects discover now exposes source-folder
+    discovery. This first slice does not complete backup/parity/bulk scope.
 - [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
   - Scope: versioned JSON and streaming result contracts, stable exit codes,
     stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
@@ -1231,6 +1251,8 @@ destabilizing the maintenance release.
   - Acceptance: redirected and scheduled commands terminate without interactive
     prompts; machine output parses without log/progress contamination; failures,
     cancellation, unsupported scope, and partial results have documented outcomes.
+  - Progress: raw argv logging is removed; BUG-19001 owns the confirmed quiet
+    removal defect. Versioned output and uniform unattended contracts remain pending.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
   - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
     and snapshot inspection, selective safe restore, integrity evidence, destination

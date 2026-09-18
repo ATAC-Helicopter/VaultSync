@@ -1,7 +1,16 @@
 ﻿# Changelog
 ## [1.9.0] - Unreleased
 
-No user-facing 1.9.0 changes have shipped. Approved scope and gates are in ROADMAP.md.
+### Added
+- [VS-1973] Add grouped projects, snapshots, and recovery commands alongside existing CLI routes.
+- [VS-1973] Expose candidate source-folder discovery with `projects discover --root`.
+- [VS-1973] Add `mirror` with explicit live-transfer semantics and existing dry-run behavior.
+### Fixed
+- [BUG-19001] Require explicit `--yes` for quiet or redirected-input project removal, preserving registration and local history on rejection.
+### Changed
+- [VS-1974] Stop logging raw command-line arguments at CLI startup.
+
+These changes are in development; 1.9.0 has not shipped.
 
 ## [1.8.9] - 16.09.2026
 ### Maintenance

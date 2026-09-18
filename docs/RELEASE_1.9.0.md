@@ -75,8 +75,10 @@ providers rather than promising unsupported operations in 1.9.0.
 - Metadata, issues, milestones, Project 7 fields/dates, and the draft PR agree.
 
 The legacy desktop shell remains until replacement parity is proven. The
-1.8.9 manual qualification debt remains tracked in VS-1894 / #633; publication
-on 2026-09-16 does not turn its incomplete checks into passed checks.
+1.8.9 tracking was completed on maintainer instruction 2026-09-18. Historical
+unproven checks remain documented in the closed VS-1894 / #633 record; the
+closeout does not convert them into passed checks. Applicable 1.9 qualification
+still requires fresh evidence.
 
 ## Kickoff validation
 
@@ -90,6 +92,18 @@ on 2026-09-16 does not turn its incomplete checks into passed checks.
   dates; the roadmap description dry-run proposes zero managed-body changes.
 - These checks validate kickoff consistency; product and native upgrade gates
   above remain pending.
+
+## Implementation started — 2026-09-18
+
+VS-1972, VS-1973, and VS-1974 are In progress. The first slice adds grouped
+project/snapshot/recovery commands, source-folder discovery, and explicit mirror
+naming while retaining legacy routes. Raw argv logging is removed. BUG-19001
+requires explicit confirmation for quiet or redirected-input project removal.
+The [CLI audit](CLI_REWORK.md) records inventory, compatibility, behavior, and
+remaining service/output gaps. No disk implementation is implied. The initial implementation passes all 932
+.NET tests and 100 script tests; the two quiet-removal cases failed before the
+fix and pass afterward. [BUG-19001 / #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699)
+remains In progress until integrated.
 
 ## CLI execution tracking
 

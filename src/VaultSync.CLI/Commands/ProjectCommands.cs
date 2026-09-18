@@ -59,6 +59,14 @@ namespace VaultSync.CLI.Commands
     {
         protected override Task<int> ExecuteAsync(CommandContext context, RemoveProjectSettings s, CancellationToken cancellationToken)
         {
+            if (!s.Yes && (s.Quiet || Console.IsInputRedirected))
+            {
+                Console.Error.WriteLine(
+                    "Project removal requires --yes when --quiet is set or standard input is redirected. " +
+                    "--quiet suppresses output; it does not authorize removal.");
+                return Task.FromResult(2);
+            }
+
             string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
@@ -66,7 +74,7 @@ namespace VaultSync.CLI.Commands
             if (repo.GetProjectByName(s.Name) is null)
                 throw new InvalidOperationException($"Project '{s.Name}' not found");
 
-            if (!s.Yes && !s.Quiet)
+            if (!s.Yes)
             {
                 AnsiConsole.MarkupLine(
                     "[yellow]This removes the project registration and local history index only.[/] " +
@@ -164,12 +172,12 @@ namespace VaultSync.CLI.Commands
     {
         protected override async Task<int> ExecuteAsync(CommandContext context, DiscoverProjectsSettings s, CancellationToken cancellationToken)
         {
-            AppConfig config = ConfigHelper.Load();
-
-            if (!string.IsNullOrWhiteSpace(s.OverrideRoot))
-            {
-                config.ProjectsRoot = s.OverrideRoot;
-            }
+            AppConfig config = string.IsNullOrWhiteSpace(s.OverrideRoot)
+                ? ConfigHelper.Load()
+                : new AppConfig
+                {
+                    ProjectsRoot = Path.GetFullPath(ConfigHelper.ExpandUserPath(s.OverrideRoot))
+                };
 
             var discovery = new ProjectDiscoveryService();
             IReadOnlyList<DiscoveredProject> projects = await discovery.DiscoverAsync(config, cancellationToken);
