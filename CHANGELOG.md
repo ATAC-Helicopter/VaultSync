@@ -1,5 +1,9 @@
 ﻿# Changelog
-## [1.8.9] - Unreleased
+## [1.9.0] - Unreleased
+
+No user-facing 1.9.0 changes have shipped. Approved scope and gates are in ROADMAP.md.
+
+## [1.8.9] - 16.09.2026
 ### Maintenance
 - [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
 - [VS-1896] Clear static-analysis findings and restore the Sonar coverage gate.

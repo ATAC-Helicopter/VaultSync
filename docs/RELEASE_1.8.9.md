@@ -1,6 +1,8 @@
 # VaultSync 1.8.9 — Bug fixes and everyday polish
 
-Status: unreleased; implementation integrated into Stable through #634 and #660.
+Status: released on 2026-09-16 as `v1.8.9` from Stable integration
+`ec3ba18` / #667. Remaining manual checks stay open in VS-1894 / #633.
+The following qualification narrative retains the pre-publication evidence.
 Native upgrades qualified in the initial Stable build, but its source
 `adafac380df41a29552929fbd451ddd36c9d9139` and
 [run 35075261085](https://github.com/ATAC-Helicopter/VaultSync/actions/runs/35075261085)
@@ -12,7 +14,8 @@ Stable assets nor pre-Stable draft attachments may be promoted as final.
 The owner [explicitly approved a documented maintainer exception](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168)
 for missing review approval and interactive Windows/Linux/Store-runtime results.
 This permitted Stable promotion; those checks remain incomplete in #633, not
-passed. Publication and Partner Center submission were not authorized.
+passed. The release was subsequently published on 2026-09-16; Partner Center submission
+is not established by GitHub publication.
 
 ## Release identity
 

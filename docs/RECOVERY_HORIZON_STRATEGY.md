@@ -43,9 +43,23 @@ implementation enters `1.8.8`.
 
 ### 1.8.9 — bug fixes and everyday polish
 
-The active maintenance patch preserves UI state, improves theme readability,
+The maintenance patch shipped on 2026-09-16 as v1.8.9 and preserves UI state, improves theme readability,
 and closes confirmed workflow regressions. See the
 [1.8.9 release contract](RELEASE_1.8.9.md). No disk-recovery features enter this patch.
+
+### 1.9 kickoff and CLI program
+
+Planning and architecture started on 2026-09-18 on `release/1.9.0` into `Dev`.
+The existing 1.9.0 milestone target remains 2027-03-26 and the family horizon
+remains 2027-09-24. See [the kickoff contract](RELEASE_1.9.0.md).
+
+The full CLI rework starts in 1.9.0 with command/behavior inventory and script
+compatibility (VS-1972), shared-service commands (VS-1973), unattended contracts
+(VS-1974), and useful power-user workflows (VS-1975). Discovery/completions and
+practical documentation follow in 1.9.1 (VS-1977, VS-1978); independent recovery
+follows in 1.9.2 (VS-1976). Reporting, event hooks, stable parity, and accumulated
+CLI qualification remain in 1.9.5 (VS-1953, VS-1955, VS-1956, VS-1979).
+New work does not reuse those existing identifiers. VS-1980 owns kickoff tracking.
 
 ### 1.9 architecture approval
 

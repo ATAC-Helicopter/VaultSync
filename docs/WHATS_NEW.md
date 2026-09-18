@@ -1,8 +1,17 @@
 # What's New
 
+## [1.9.0]
+
+Recovery Horizon is in planning and architecture work. Its approved scope includes
+disk and bootable recovery foundations and a full CLI rework for practical
+terminal and automation workflows. These capabilities have not shipped.
+
+Current stable: **1.8.9**, published September 16, 2026. See the
+[1.9.0 release contract](RELEASE_1.9.0.md) for scope and qualification gates.
+
 ## [1.8.9]
 
-VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
+VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.
 
 Manual Linux update archives now keep VaultSync open and explain installation
 and restart steps.
