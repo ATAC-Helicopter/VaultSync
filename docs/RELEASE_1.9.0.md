@@ -16,6 +16,10 @@ Canonical scope and delivery state remain in [ROADMAP.md](../ROADMAP.md).
 | Store package identity | `1.9.0.0`; build identity only, submission pending |
 | Tagline | *Recover when the installed system cannot.* |
 
+Beta qualification will precede stable support claims. Beta numbering, dates,
+and supported preview scope will be recorded when their contracts are approved;
+the 1.9.0 identity here remains the stable planning target.
+
 ## First delivery sequence
 
 1. Approve UI architecture and disk format, engine/system matrix, and evidence
@@ -80,12 +84,31 @@ on 2026-09-16 does not turn its incomplete checks into passed checks.
 - All 100 existing script tests pass.
 - CLI and desktop warning-as-error builds pass with zero warnings/errors.
 - The CLI version JSON reports 1.9.0 as a development build.
-- The pre-kickoff Project audit covered 491 items with no missing required dates.
+- Created 29 missing execution issues and aligned all 51 approved 1.9 entries
+  with unique IDs, owning patch milestones, labels, and Project fields.
+- The final Project date audit covers 521 items with zero repairs or unresolved
+  dates; the roadmap description dry-run proposes zero managed-body changes.
 - These checks validate kickoff consistency; product and native upgrade gates
   above remain pending.
 
+## CLI execution tracking
+
+| ID | Issue | Release | Work |
+| --- | --- | --- | --- |
+| VS-1972 | [#669](https://github.com/ATAC-Helicopter/VaultSync/issues/669) | 1.9.0 | Command, behavior, and compatibility audit |
+| VS-1973 | [#670](https://github.com/ATAC-Helicopter/VaultSync/issues/670) | 1.9.0 | Commands and shared services |
+| VS-1974 | [#671](https://github.com/ATAC-Helicopter/VaultSync/issues/671) | 1.9.0 | Output and unattended execution |
+| VS-1975 | [#672](https://github.com/ATAC-Helicopter/VaultSync/issues/672) | 1.9.0 | Practical power-user workflows |
+| VS-1977 | [#678](https://github.com/ATAC-Helicopter/VaultSync/issues/678) | 1.9.1 | Help, discovery, and completion |
+| VS-1978 | [#679](https://github.com/ATAC-Helicopter/VaultSync/issues/679) | 1.9.1 | Handbook and script migration |
+| VS-1976 | [#685](https://github.com/ATAC-Helicopter/VaultSync/issues/685) | 1.9.2 | Independent headless recovery |
+| VS-1979 | [#695](https://github.com/ATAC-Helicopter/VaultSync/issues/695) | 1.9.5 | Cross-platform CLI and script qualification |
+
+Kickoff tracking: [VS-1980 / #673](https://github.com/ATAC-Helicopter/VaultSync/issues/673).
+
 ## Tracking
 
+- [Draft release PR #683](https://github.com/ATAC-Helicopter/VaultSync/pull/683), `release/1.9.0` → `Dev`
 - [1.9.0 milestone](https://github.com/ATAC-Helicopter/VaultSync/milestone/14)
 - [1.9 family milestone](https://github.com/ATAC-Helicopter/VaultSync/milestone/15)
 - [Delivery Project 7](https://github.com/users/ATAC-Helicopter/projects/7)
