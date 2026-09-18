@@ -10,7 +10,9 @@ and an explicitly named `mirror` command. Project inspection adds explicit IDs,
 filtered/limited listings, and opt-in versioned JSON via `--output json` with
 read-only database access. Existing command routes and legacy `--json` remain.
 Quiet or unattended project removal requires `--yes`; `--quiet` alone no longer
-authorizes deletion of the local registration/history. See the
+authorizes deletion of the local registration/history. Watchers support explicit
+`--db`, suppress guidance in quiet mode, and drain work before stopping on Ctrl-C
+with exit 130. See the
 [CLI audit and migration notes](CLI_REWORK.md).
 
 Current stable: **1.8.9**, published September 16, 2026. See the

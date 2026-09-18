@@ -17,6 +17,9 @@ namespace VaultSync.CLI.Commands
         [CommandArgument(0, "<ProjectName>")]
         public string ProjectName { get; init; } = default!;
 
+        [CommandOption("--db <PATH>")]
+        public string? DbPath { get; init; }
+
         [CommandOption("--dest <DEST_PATH>")]
         public string? Destination { get; init; }
 
@@ -41,41 +44,61 @@ namespace VaultSync.CLI.Commands
         private static readonly System.Threading.SemaphoreSlim _cycleGate = new(1, 1);
         private sealed record WatchPlan(Core.Models.Project Project, bool DoSync, bool DoVerify);
 
-        protected override async Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken cancellationToken)
+        protected override Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken cancellationToken)
+            => RunAsync(s, cancellationToken);
+
+        internal static async Task<int> RunAsync(WatchSettings settings, CancellationToken cancellationToken)
         {
-            string db = ConfigHelper.ResolveDb(null);
-            var repo = new SqliteRepository(db);
-            repo.EnsureSchema();
-
-            WatchPlan? plan = CreateWatchPlan(repo, s);
-            if (plan is null)
-                return 2;
-
-            WriteWatchPlan(plan, s);
-            await RunCycleAsync(repo, plan, s, cancellationToken, "startup");
-
-            using var watcher = new FileSystemWatcher(plan.Project.RootPath)
+            using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            ConsoleCancelEventHandler onCancel = (_, args) =>
             {
-                IncludeSubdirectories = true,
-                EnableRaisingEvents = true,
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size
+                args.Cancel = true;
+                stopping.Cancel();
             };
-
-            var debouncer = new AsyncDebouncer(Math.Max(100, s.DebounceMs));
-            AttachHandlers(watcher, debouncer, repo, plan, s, cancellationToken);
-
-            AnsiConsole.MarkupLine("[grey]Press Ctrl+C to stop.[/]");
-            var tcs = new TaskCompletionSource();
-            Console.CancelKeyPress += (sender, ea) =>
+            Console.CancelKeyPress += onCancel;
+            try
             {
-                ea.Cancel = true;
-                tcs.TrySetResult();
-            };
-            await tcs.Task;
+                stopping.Token.ThrowIfCancellationRequested();
+                string db = ConfigHelper.ResolveDb(settings.DbPath);
+                var repo = new SqliteRepository(db);
+                repo.EnsureSchema();
+                WatchPlan? plan = CreateWatchPlan(repo, settings);
+                if (plan is null)
+                    return 2;
 
-            debouncer.Cancel();
-            watcher.EnableRaisingEvents = false;
-            return 0;
+                if (!settings.Quiet)
+                    WriteWatchPlan(plan, settings);
+                await RunCycleAsync(repo, plan, settings, stopping.Token, "startup");
+                stopping.Token.ThrowIfCancellationRequested();
+
+                using var watcher = new FileSystemWatcher(plan.Project.RootPath)
+                {
+                    IncludeSubdirectories = true,
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size
+                };
+                await using var debouncer = new AsyncDebouncer(Math.Max(100, settings.DebounceMs));
+                AttachHandlers(watcher, debouncer, repo, plan, settings, stopping.Token);
+                watcher.EnableRaisingEvents = true;
+                try
+                {
+                    if (!settings.Quiet)
+                        AnsiConsole.MarkupLine("[grey]Press Ctrl+C to stop.[/]");
+                    await Task.Delay(Timeout.Infinite, stopping.Token);
+                }
+                finally
+                {
+                    watcher.EnableRaisingEvents = false;
+                }
+                return 0;
+            }
+            catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+            {
+                return 130;
+            }
+            finally
+            {
+                Console.CancelKeyPress -= onCancel;
+            }
         }
 
         private static WatchPlan? CreateWatchPlan(SqliteRepository repo, WatchSettings settings)
@@ -141,7 +164,18 @@ namespace VaultSync.CLI.Commands
             if (cancellationToken.IsCancellationRequested)
                 return;
 
-            debouncer.Trigger(t => RunCycleAsync(repo, plan, settings, t, reason));
+            debouncer.Trigger(async token =>
+            {
+                using var cycle = CancellationTokenSource.CreateLinkedTokenSource(token, cancellationToken);
+                try
+                {
+                    await RunCycleAsync(repo, plan, settings, cycle.Token, reason);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    // Session shutdown is expected, not a failed cycle.
+                }
+            });
         }
 
         private static async Task RunCycleAsync(

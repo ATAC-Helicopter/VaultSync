@@ -119,6 +119,23 @@ implementation. Remaining commands do not yet implement the uniform output
 contract. All 949 .NET tests pass; the initial implementation's previous hosted
 Windows/macOS/Linux, CodeQL, Store/metadata preflights, and Sonar checks passed.
 
+## Watcher lifecycle slice
+
+`watch --db PATH` selects the same store as other CLI operations. Quiet sessions
+suppress startup/progress guidance. Cancellation at startup, while idle, or with
+pending changes now terminates with exit 130 after events are disabled and all
+queued/active debounce work has been cancelled and drained. Ctrl-C handlers are
+detached, and token cancellation/disposal shares a lock to prevent disposal races.
+[BUG-19002 / #700](https://github.com/ATAC-Helicopter/VaultSync/issues/700) remains
+In progress until integrated. Watcher JSON, cycle failure propagation, and dry-run
+contracts remain pending under VS-1974.
+
+All 954 .NET tests pass with warning-as-error compilation, including startup/idle/
+pending-change cancellation, superseded active-work draining, and concurrent
+trigger/cancel/completion. All 100 script tests and release metadata checks pass.
+The prior project-inspection push passed hosted Windows/macOS/Linux builds and
+release profiles, CodeQL, Store/metadata preflights, and the Sonar quality gate.
+
 ## CLI execution tracking
 
 | ID | Issue | Release | Work |

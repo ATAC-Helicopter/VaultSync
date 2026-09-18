@@ -1226,6 +1226,15 @@ destabilizing the maintenance release.
     stderr guidance. Two isolated cases reproduced the old deletion behavior.
   - Tracking: [issue #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699);
     the implementation and passing regression evidence await release integration.
+- [ ] `BUG-19002` `P1` Stop CLI watchers cleanly on cancellation and drain active work.
+  - Scope: honor command cancellation during startup and idle waiting; detach
+    Ctrl-C handlers; disable filesystem events and cancel/drain all debounce work
+    before returning. Synchronize debounce cancellation with token-source disposal.
+  - Acceptance: idle and pending-change sessions terminate with exit 130;
+    superseded active work is drained; no snapshots occur after shutdown;
+    concurrent trigger/cancel/completion does not access disposed token sources.
+  - Tracking: [issue #700](https://github.com/ATAC-Helicopter/VaultSync/issues/700);
+    implementation and regression evidence await release integration.
 - [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
   - Scope: inventory existing commands and core-service gaps; define resource/action
     naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
@@ -1244,7 +1253,8 @@ destabilizing the maintenance release.
   - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
     naming reuse existing handlers; projects discover now exposes source-folder
     discovery. Read-only projects show accepts literal names or explicit IDs;
-    listing supports name/preset filters and limits. Backup/parity/bulk scope remains.
+    listing supports name/preset filters and limits; watch accepts explicit --db.
+    Backup/parity/bulk scope remains.
 - [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
   - Scope: versioned JSON and streaming result contracts, stable exit codes,
     stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
@@ -1255,7 +1265,8 @@ destabilizing the maintenance release.
   - Progress: raw argv logging is removed; BUG-19001 owns the confirmed quiet
     removal defect. Project list/show implement explicit v1 JSON envelopes,
     read-only inspection, and parse/selection/operational errors; remaining
-    workflows and uniform unattended contracts remain pending.
+    workflows and uniform unattended contracts remain pending. BUG-19002 owns
+    watcher shutdown/draining; quiet startup and cancellation exit 130 are implemented.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
   - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
     and snapshot inspection, selective safe restore, integrity evidence, destination

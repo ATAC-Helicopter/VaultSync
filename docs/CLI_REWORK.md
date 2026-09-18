@@ -25,7 +25,7 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | `restore` | Keep compatibility route; extend qualified formats later | `recovery restore` implemented; recorded folder backups only; archive/encrypted inputs remain rejected |
 | `sync` | Keep live-mirroring compatibility route | `mirror` implemented over the same rsync/robocopy service; does not create a recorded backup |
 | `verify` | Keep current workflow; evolve evidence contract | Currently checks a supplied folder against the latest indexed snapshot, sample/full; must not imply whole-vault or image validation |
-| `watch` | Keep current behavior; evolve unattended lifecycle | Existing snapshot/live-sync/verification loop; uniform DB selection, cancellation, and headless results remain pending |
+| `watch` | Keep current behavior; evolve unattended lifecycle | Existing snapshot/live-sync/verification loop; explicit DB selection and drained cancellation implemented; uniform headless results remain pending |
 | `doctor` | Keep current diagnostics; evolve machine results | Existing isolated write probes and concurrent tool-output draining retained; stderr/JSON/provenance contract pending |
 | `destinations` | Keep existing listing/testing invocation | Future resource actions must preserve today's `--test` and `--json`; testing can involve mount/credential access |
 | `init` | Keep explicit initialization | Future profile/config selection must preserve shared CLI/desktop storage and owner-only data policy |
@@ -76,8 +76,8 @@ and partial failure; it must not return success when only some requested work ra
 Keep that order for existing invocations. `ConfigHelper.Load` can additionally
 migrate a legacy DB value into an empty shared path; a future read-only inspection
 contract must separate inspection from migration. Avoid adding a second independent
-CLI database/config authority. `watch` currently lacks `--db`; parity must be made
-explicit rather than silently choosing a different store.
+CLI database/config authority. `watch --db PATH` now follows the same explicit
+selection precedence.
 
 Keep paths literal apart from the documented leading `~` expansion. The new
 `projects discover --root` expands and resolves the explicit root using a fresh
@@ -182,3 +182,18 @@ backup creation, dry-run versus actual index pruning, source-folder discovery,
 recorded-byte restore, and restore-clean dry-run preservation. Two pre-fix cases
 reproduced quiet removal without `--yes`; both must preserve the registration,
 local snapshot history, and source data after the guard is applied.
+
+## Watcher shutdown contract
+
+`watch NAME --db PATH --quiet` runs against the selected store and suppresses
+startup/progress guidance. It still creates a snapshot at startup; snapshots are
+indexes, not recorded backup bytes. Ctrl-C or a supplied command cancellation token
+returns 130 after filesystem events are disabled and all queued/active debounce
+work has been cancelled and drained. A cancelled session detaches its Ctrl-C
+handler; it cannot create later snapshots. Cancellation before startup does not
+initialize the database. BUG-19002 owns the previous shutdown and token-disposal
+defects; VS-1973 owns explicit store selection and VS-1974 owns unattended behavior.
+
+This does not yet unify watcher failure reporting, JSON events, or dry-run semantics.
+The existing cycle failure handling remains pending under VS-1974; exit 130 reports
+cancellation rather than qualification of all prior cycles.
