@@ -1,5 +1,23 @@
 ﻿# Changelog
-## [1.8.9] - Unreleased
+## [1.9.0] - Unreleased
+
+### Added
+- [VS-1973] Select an explicit database for unattended watcher sessions with `watch --db`.
+- [VS-1973] Inspect projects by explicit ID or literal name and filter/limit project listings.
+- [VS-1974] Add opt-in versioned JSON results and predictable errors for read-only project inspection.
+- [VS-1973] Add grouped projects, snapshots, and recovery commands alongside existing CLI routes.
+- [VS-1973] Expose candidate source-folder discovery with `projects discover --root`.
+- [VS-1973] Add `mirror` with explicit live-transfer semantics and existing dry-run behavior.
+### Fixed
+- [BUG-19002] Honor watcher cancellation, detach Ctrl-C handlers, and drain queued/active work before returning exit 130.
+- [BUG-19001] Require explicit `--yes` for quiet or redirected-input project removal, preserving registration and local history on rejection.
+### Changed
+- [VS-1974] Suppress watcher startup guidance in quiet mode.
+- [VS-1974] Stop logging raw command-line arguments at CLI startup.
+
+These changes are in development; 1.9.0 has not shipped.
+
+## [1.8.9] - 16.09.2026
 ### Maintenance
 - [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
 - [VS-1896] Clear static-analysis findings and restore the Sonar coverage gate.

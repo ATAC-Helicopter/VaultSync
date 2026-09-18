@@ -14,8 +14,10 @@ namespace VaultSync.Core.Tests;
 
 public sealed class CliRestoreCommandTests
 {
-    [Fact]
-    public async Task RestoreCopiesRecordedBackupInsteadOfCurrentProjectState()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RestoreCopiesRecordedBackupInsteadOfCurrentProjectState(bool groupedRoute)
     {
         using var root = new TempDirectory();
         string projectRoot = Directory.CreateDirectory(Path.Combine(root.Path, "project")).FullName;
@@ -43,8 +45,8 @@ public sealed class CliRestoreCommandTests
             backupRoot,
             "Test");
 
-        int exitCode = await Program.Main(
-            ["restore", "CLI Restore", destination, "--db", database, "--quiet"]);
+        string[] args = ["restore", "CLI Restore", destination, "--db", database, "--quiet"];
+        int exitCode = await Program.Main(groupedRoute ? ["recovery", .. args] : args);
 
         Assert.Equal(0, exitCode);
         Assert.Equal("recorded-backup-state", File.ReadAllText(Path.Combine(destination, "state.txt")));
@@ -84,16 +86,18 @@ public sealed class CliRestoreCommandTests
         Assert.False(Directory.Exists(staleDirectory));
     }
 
-    [Fact]
-    public async Task DryRunReportsCleanPlanWithoutChangingDestination()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DryRunReportsCleanPlanWithoutChangingDestination(bool groupedRoute)
     {
         using var fixture = RestoreFixture.Create();
         Directory.CreateDirectory(fixture.Destination);
         string staleFile = Path.Combine(fixture.Destination, "old.txt");
         File.WriteAllText(staleFile, "keep-me");
 
-        int exitCode = await Program.Main(
-            ["restore", fixture.ProjectName, fixture.Destination, "--db", fixture.Database, "--clean", "--dry-run"]);
+        string[] args = ["restore", fixture.ProjectName, fixture.Destination, "--db", fixture.Database, "--clean", "--dry-run"];
+        int exitCode = await Program.Main(groupedRoute ? ["recovery", .. args] : args);
 
         Assert.Equal(0, exitCode);
         Assert.Equal("keep-me", File.ReadAllText(staleFile));

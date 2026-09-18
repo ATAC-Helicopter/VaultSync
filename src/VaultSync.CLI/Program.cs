@@ -30,6 +30,10 @@ public static class Program
 
             app.Configure(cfg =>
             {
+                VaultSync.CLI.Commands.ResourceCommands.Register(cfg);
+                VaultSync.CLI.Commands.CommandOutput.ConfigureErrors(cfg, args);
+
+                // Compatibility routes retained throughout the 1.9 family.
                 // Core commands
                 cfg.AddCommand<VaultSync.CLI.Commands.PruneCommand>("prune")
                     .WithDescription("Delete old snapshots by count (--keep-last) or date (--before). Supports --dry-run.");
@@ -102,7 +106,7 @@ public static class Program
                 });
             });
 
-            Log.Info($"argv: {string.Join(" ", args.Select(a => a.Contains(' ') ? $"\\\"{a}\\\"" : a))}");
+            Log.Info("command execution started");
             int code = await app.RunAsync(args);
             Log.Info($"exit: {code}");
             return code;

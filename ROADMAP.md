@@ -893,9 +893,11 @@ compatibility, and smoke tests on all supported operating systems.
 
 ## 1.8.9 — Bug fixes and everyday polish
 
-**Status:** Implementation integrated into Stable; unreleased draft preparation and deferred qualification remain
+**Status:** Released on 2026-09-16 as `v1.8.9`; tracking closed on maintainer instruction 2026-09-18
 **Tagline:** *Keep your place. Work with clarity.*
-**Current stable:** 1.8.8, released 2026-09-02
+**Released:** 2026-09-16
+**Tag:** `v1.8.9`
+**Stable integration:** `ec3ba18` / PR #667
 **Planning started:** 2026-09-05
 **Stable target:** 2026-09-09
 **Maximum date:** 2026-09-16
@@ -942,9 +944,9 @@ Checked items represent implementation integrated into Dev or Stable, not public
   [Issue #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632).
   Advance UI, CLI, installer, Store manifest, canonical and public metadata to 1.8.9. Record the published 1.8.8 stable date, target the exact 1.8.8 predecessor, retire the obsolete 1.8.8 working contract, preserve historical evidence, and align roadmap, changelog, What's New, milestone, Project fields, and release documentation. Use release/1.8.9 into Dev, then Stable via merge commits. Validate metadata consumers and release scripts; do not publish or claim qualification during kickoff.
 
-- [ ] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
+- [x] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
   [Issue #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633).
-  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Candidate run 35071592180 passes the real released 1.8.8 helper upgrade on Windows x64, Linux x64/ARM64, and macOS Apple Silicon/Intel; Windows installer and both Debian upgrades pass. All platform, patch, and Store packages pass canonical verification and supply-chain proof. The full .NET suite has 919 tests and the script suite has 97 tests. Public draft discovery, interactive UAC/polkit, Wayland/Xorg, packaged Store runtime, and remaining rendered desktop checks are not proven by these tests. Record draft-upload integrity and remaining evidence before promotion; keep this P0 gate open.
+  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Candidate run 35071592180 passes the real released 1.8.8 helper upgrade on Windows x64, Linux x64/ARM64, and macOS Apple Silicon/Intel; Windows installer and both Debian upgrades pass. All platform, patch, and Store packages pass canonical verification and supply-chain proof. The full .NET suite has 919 tests and the script suite has 97 tests. Public draft discovery, interactive UAC/polkit, Wayland/Xorg, packaged Store runtime, and remaining rendered desktop checks are not proven by these tests. Record draft-upload integrity and remaining evidence before promotion; this historical P0 gate was closed on maintainer instruction 2026-09-18, with unproven checks waived for closeout rather than marked passed.
 
 - [x] `VS-1895` `P1` Service coordinated runtime, rendering, and validation dependencies.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
@@ -1027,6 +1029,12 @@ Checked items represent implementation integrated into Dev or Stable, not public
   _(Issue #659; implemented on the release branch, Stable integration complete.)_
   Linux tar.gz fallback opens installation files rather than running an installer, but the generic handoff closed VaultSync immediately. Keep the app running for manual Linux archives and macOS disk images, explain the remaining installation/restart steps in all 19 localization files, and retain shutdown for executable installers. Regression tests and all five native candidate updater jobs pass; Stable integration is complete; the interactive permission walkthrough remains in VS-1894.
 
+Maintainer closeout on 2026-09-18: VS-1894 / #633 and milestone 1.8.9 are
+complete on explicit instruction after publication. Previously unproven manual
+checks are waived for this release closeout, not represented as passed; their
+historical limitations remain in the release contract. Applicable 1.9 gates
+still require fresh evidence.
+
 ---
 
 # VaultSync 1.9 — Recovery Horizon
@@ -1043,6 +1051,12 @@ media to be ready and tested together.
 The maintained strategy, sequencing rationale, architecture gates, Project
 entry contract, and `1.10` versus `2.0` decision rule are in
 [`docs/RECOVERY_HORIZON_STRATEGY.md`](docs/RECOVERY_HORIZON_STRATEGY.md).
+
+Planning opened on 2026-09-18. The `1.9.0` target remains 2027-03-26; the
+family horizon remains 2027-09-24. Later patch milestones define sequence,
+not individual committed dates; their Project target dates use the family
+horizon until a reviewed patch schedule exists. The conditional VS-1943
+follow-up and candidate VS-1971 remain outside the execution kickoff.
 
 ## 1.9 architecture approval gate
 
@@ -1062,6 +1076,36 @@ following contracts must be reviewed together:
 
 Unsupported combinations must remain explicit. A prototype or dependency
 spike is evidence for a decision, not a stable product commitment.
+
+## 1.9 CLI rework program
+
+The CLI becomes a first-class power-user interface throughout 1.9. This is a
+full command and behavior rework: add missing operations, change inconsistent
+semantics where needed, and make terminal use worthwhile for bulk work,
+inspection, scripting, unattended verification, and emergency recovery.
+
+- Approve an inventory of commands, user tasks, behavioral defects, and
+  compatibility changes before rewriting the command tree.
+- Use consistent resource/action commands, stable IDs, explicit selectors,
+  predictable configuration precedence, and shared desktop/core services.
+- Separate recorded backup creation from live directory mirroring; describe
+  the exact data and verification scope used by every restore or check.
+- Provide stable structured output, exit codes, stdout/stderr separation,
+  non-interactive operation, cancellation, and actionable errors.
+- Make destructive operations previewable; generic confirmation must never
+  bypass destination identity, containment, overwrite, or integrity checks.
+- Add useful bulk/filter workflows, shell completion, contextual examples,
+  and packaged CLI discovery on supported systems.
+- Preserve supported old commands through explicit aliases or documented
+  deprecation and migration; do not silently change existing scripts.
+- Introduce image, portable, and offsite commands only alongside the
+  corresponding qualified services and supported recovery contracts.
+
+Delivery: command/behavior and automation foundations in `1.9.0`; discovery
+and power-user documentation in `1.9.1`; independent recovery in `1.9.2`;
+offsite parity with `1.9.3`; reporting, stable workflow parity, and final
+automation qualification in `1.9.5`. `VS-1953`, `VS-1955`, and `VS-1956`
+retain their reporting, event-hook, and parity ownership.
 
 ## 1.9 UI migration program
 
@@ -1123,8 +1167,14 @@ destabilizing the maintenance release.
 
 ## 1.9.0 — Disk and Bootable Recovery Foundation
 
-**Status:** Planned; implementation begins only after the shipped `1.8.8` qualification is recorded and the
-1.9 architecture approval gate is complete.
+**Status:** Active planning and architecture; destructive disk implementation remains gated
+**Planning started:** 2026-09-18
+**Current stable:** `1.8.9`, published 2026-09-16
+**Stable target:** 2027-03-26
+**Working branch:** `release/1.9.0`
+**Integration target:** `Dev`
+**Primary upgrade predecessor:** `1.8.9`; qualification pending
+**Release contract:** [1.9.0 kickoff and gates](docs/RELEASE_1.9.0.md)
 **Tagline:** *Recover when the installed system cannot.*
 
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
@@ -1167,8 +1217,76 @@ destabilizing the maintenance release.
 - [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on
   representative hardware and virtual machines.
 
+- [ ] `BUG-19001` `P0` Require explicit confirmation for quiet and unattended CLI project removal.
+  - Scope: reject removal without --yes when --quiet is set or standard input
+    is redirected, before touching configuration or the database; preserve
+    interactive confirmation and source/backup-file safety on both command routes.
+  - Acceptance: rejected removal preserves registration and snapshot history;
+    explicit --yes still works; scripts receive a nonzero result and actionable
+    stderr guidance. Two isolated cases reproduced the old deletion behavior.
+  - Tracking: [issue #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699);
+    the implementation and passing regression evidence await release integration.
+- [ ] `BUG-19002` `P1` Stop CLI watchers cleanly on cancellation and drain active work.
+  - Scope: honor command cancellation during startup and idle waiting; detach
+    Ctrl-C handlers; disable filesystem events and cancel/drain all debounce work
+    before returning. Synchronize debounce cancellation with token-source disposal.
+  - Acceptance: idle and pending-change sessions terminate with exit 130;
+    superseded active work is drained; no snapshots occur after shutdown;
+    concurrent trigger/cancel/completion does not access disposed token sources.
+  - Tracking: [issue #700](https://github.com/ATAC-Helicopter/VaultSync/issues/700);
+    implementation and regression evidence await release integration.
+- [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
+  - Scope: inventory existing commands and core-service gaps; define resource/action
+    naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
+    semantics, restore/verification scope, aliases, and deprecation policy.
+  - Acceptance: each current command has a keep, change, replace, or retire decision;
+    incompatible changes have migration examples and a defined compatibility window.
+  - Progress: command inventory and initial compatibility/behavior decisions are
+    in [the CLI rework audit](docs/CLI_REWORK.md); review/integration remains pending.
+- [ ] `VS-1973` `P1` Rebuild CLI commands around consistent tasks and shared services.
+  - Scope: implement the approved tree for projects, destinations, backups,
+    snapshots, history, verification, restore, configuration, and diagnostics;
+    add filtering, bulk selection, plan/dry-run, and explicit per-item results.
+  - Acceptance: useful terminal workflows use the same safety and storage contracts
+    as the desktop; live mirroring cannot masquerade as a recorded recovery point;
+    supported legacy invocations retain their documented behavior or migration path.
+  - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
+    naming reuse existing handlers; projects discover now exposes source-folder
+    discovery. Read-only projects show accepts literal names or explicit IDs;
+    listing supports name/preset filters and limits; watch accepts explicit --db.
+    Backup/parity/bulk scope remains.
+- [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
+  - Scope: versioned JSON and streaming result contracts, stable exit codes,
+    stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
+    input and redaction, Ctrl-C cancellation, and explicit partial-failure results.
+  - Acceptance: redirected and scheduled commands terminate without interactive
+    prompts; machine output parses without log/progress contamination; failures,
+    cancellation, unsupported scope, and partial results have documented outcomes.
+  - Progress: raw argv logging is removed; BUG-19001 owns the confirmed quiet
+    removal defect. Project list/show implement explicit v1 JSON envelopes,
+    read-only inspection, and parse/selection/operational errors; remaining
+    workflows and uniform unattended contracts remain pending. BUG-19002 owns
+    watcher shutdown/draining; quiet startup and cancellation exit 130 are implemented.
+- [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
+  - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
+    and snapshot inspection, selective safe restore, integrity evidence, destination
+    diagnostics, and previewable retention using qualified shared services.
+  - Acceptance: isolated end-to-end examples protect and recover recorded bytes;
+    protected points survive bulk operations; per-item evidence and failures are
+    inspectable; unavailable or unsupported combinations fail explicitly.
+- [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
+  - Scope: synchronize version consumers, canonical/public metadata, historical
+    1.8.9 publication, release contract, milestone, labels, project fields, and
+    the release/1.9.0 draft PR into Dev; retain existing dates and immutable IDs.
+  - Acceptance: metadata validation and roadmap/project audits pass; the current
+    stable remains 1.8.9; disk support and predecessor upgrades remain unqualified
+    until their owning gates have evidence.
+
 ### 1.9.0 stable release gate
 
+- CLI command and compatibility contracts are approved; unattended output and
+  failure behavior are qualified for the workflows introduced in this release;
+- upgrades from exact `1.8.9` preserve existing repositories and user settings;
 - source and destination cannot be confused silently;
 - destructive actions require an exact wipe/overwrite preview;
 - interrupted clones are rejected or safely resumable;
@@ -1190,6 +1308,20 @@ destabilizing the maintenance release.
   infrastructure without removing the existing workflow views.
 - [ ] `VS-1916` `P1` Migrate Dashboard and Recovery entry points into
   goal-oriented home and recovery workspaces.
+- [ ] `VS-1977` `P1` Add CLI discovery, contextual help, and shell completion.
+  - Scope: task-oriented help and examples, Bash/Zsh/PowerShell completion,
+    stable-ID discovery, clear command suggestions, and packaged executable/PATH
+    guidance for Windows, macOS, and Linux.
+  - Acceptance: a user can discover and complete a backup, inspection, or safe
+    restore task from terminal help; generated completions track the command tree
+    and installation instructions work on supported packages.
+- [ ] `VS-1978` `P1` Publish a practical CLI handbook and script migration guide.
+  - Scope: quick start, command reference, bulk workflows, JSON/exit-code
+    contracts, cron/systemd/Task Scheduler examples, credentials, troubleshooting,
+    cancellation, legacy migration, and recovery runbooks.
+  - Acceptance: executable examples run against disposable data on supported
+    systems; each command documents mutation, verification scope, and failure
+    behavior; a script author can migrate without guessing.
 
 ## 1.9.2 — Portable Recovery
 
@@ -1206,6 +1338,13 @@ unchanged because work IDs are immutable and do not encode the patch number.
   emergency read-only policies.
 - [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
   focused activity, inspection, and management workspaces.
+- [ ] `VS-1976` `P0` Add independent headless recovery through the reworked CLI.
+  - Scope: discover, inspect, unlock, plan, restore, and verify supported portable
+    repositories without the original database; add image commands only through
+    the approved engine/environment and preserve explicit privilege boundaries.
+  - Acceptance: a clean isolated machine recovers supported recorded content
+    without the original installation; credentials remain private, unsupported
+    formats stay unmodified, and destructive plans require exact target identity.
 
 ## 1.9.3 — Offsite Protection
 
@@ -1241,6 +1380,13 @@ unchanged because work IDs are immutable and do not encode the patch number.
   verification, and restore events.
 - [ ] `VS-1956` `P2` Bring the CLI to documented parity with stable,
   automation-safe desktop workflows.
+- [ ] `VS-1979` `P0` Qualify the CLI rework and script compatibility across supported platforms.
+  - Scope: qualify the accumulated command/output contracts, aliases and migration,
+    non-TTY/scheduler use, shell quoting, bulk partial failures, cancellation,
+    encrypted/unavailable destinations, clean-machine restore, and packaged CLI.
+  - Acceptance: representative power-user scripts and independent recovery
+    runbooks pass on Windows, macOS, and Linux; no misleading success or secret
+    output remains; results provide evidence for VS-1956 parity closure.
 
 ## 1.9.6 — Stability and LTS Baseline
 

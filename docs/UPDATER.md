@@ -128,3 +128,10 @@ payload-level contract describing the files inside one platform patch.
 - `docs/RELEASING.md`
 - `docs/wiki/Updates.md`
 - `CHANGELOG.md`
+
+## 1.9.0 planning baseline
+
+The active target is `1.9.0`, with exact `1.8.9` as the primary upgrade
+predecessor. This is a planning identity, not evidence of a qualified patch
+or migration. Native upgrades, format compatibility, and installer fallback
+must pass the 1.9.0 gates before release; extra patch bases remain disabled.
