@@ -1,8 +1,9 @@
 # CLI structured output v1
 
-Available in the 1.9 development CLI for `projects list`, `list-projects`, and
-`projects show` with explicit `--output json`. This contract does not yet apply
-to snapshot, mirror, restore, watch, or other command results. Legacy `--json`
+Available in the 1.9 development CLI for `projects list`, `list-projects`,
+`projects show`, `snapshots list`, and legacy `history` with explicit
+`--output json`. This contract does not yet apply to snapshot creation/diff,
+mirror, restore, watch, or other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
 
 These inspection invocations open an existing database in read-only mode. They
@@ -19,6 +20,7 @@ vaultsync projects list --db ./vault.db --output json
 vaultsync projects list --db ./vault.db --filter alpha --preset dotnet --limit 10 --output json
 vaultsync projects show "My project" --db ./vault.db --output json
 vaultsync projects show --id 42 --db ./vault.db --output json
+vaultsync snapshots list "My project" --db ./vault.db --limit 10 --output json
 ```
 
 `--filter` matches a case-insensitive project-name fragment. `--preset` matches
@@ -39,7 +41,7 @@ markup, or log messages mixed into it. The object contains:
 | Property | Meaning |
 | --- | --- |
 | `schemaVersion` | `1` |
-| `operation` | `projects.list` or `projects.show` |
+| `operation` | `projects.list`, `projects.show`, or `snapshots.list` |
 | `status` | `success` or `error` |
 | `data` | Success payload; null on failure |
 | `error` | Null on success; failure `{code, message}` |
@@ -52,7 +54,7 @@ markup, or log messages mixed into it. The object contains:
 | 2 | Invalid arguments/options/selector or project not found |
 
 Unknown options, malformed typed values, missing option values, incompatible
-selectors, invalid limits, and conflicting output modes fail explicitly in the
+selectors, invalid positive limits, and conflicting output modes fail explicitly in the
 versioned mode. Human `--help` requests display normal terminal help rather than
 a result envelope. Other commands' exit codes and cancellation semantics have
 not yet been unified under this contract.
@@ -72,6 +74,20 @@ and the full application configuration.
 `projects.list` data contains `projects`, `count` (returned), `matchedCount`
 (after filters, before the limit), and `totalCount` (all registered projects).
 `projects.show` data contains one `project`.
+
+
+## Snapshot history payload
+
+`snapshots.list` identifies its project with the same project-summary shape and
+returns `snapshots`, `count` (after the optional positive limit), and `totalCount`.
+Each snapshot contains its local `id`, ISO 8601 UTC `createdUtc`, `fileCount`, and
+`totalBytes`. Snapshot IDs are local to the selected database. The list describes
+source indexes and hashes; it does not claim that recoverable backup bytes exist.
+An unknown project is `project_not_found` with exit 2. An empty history is a
+successful empty list.
+
+Legacy `history --json` keeps its existing array, PascalCase field names, and UTC
+text dates. It retains initialization behavior unless explicit `--output` is used.
 
 Example selection failure:
 

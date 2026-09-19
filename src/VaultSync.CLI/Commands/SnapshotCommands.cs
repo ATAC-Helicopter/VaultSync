@@ -66,52 +66,81 @@ namespace VaultSync.CLI.Commands
     sealed class HistorySettings : CommandSettings
     {
         [CommandArgument(0, "<name>")] public string Name { get; init; } = "";
-        [CommandOption("--db")] public string? Db { get; init; }
-        [CommandOption("--json")] public bool Json { get; init; } = false;
-        [CommandOption("--limit")] public int? Limit { get; init; }
+        [CommandOption("--db <PATH>")] public string? Db { get; init; }
+        [CommandOption("--json")] public bool Json { get; init; }
+        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
+        [CommandOption("--limit <COUNT>")] public int? Limit { get; init; }
     }
 
     sealed class HistoryCommand : AsyncCommand<HistorySettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, HistorySettings s, CancellationToken cancellationToken)
+        protected override Task<int> ExecuteAsync(CommandContext context, HistorySettings settings, CancellationToken cancellationToken)
         {
-            string db = ConfigHelper.ResolveDb(s.Db);
-            var repo = new SqliteRepository(db);
-            repo.EnsureSchema();
+            string? invalid = CommandOutput.Validate(settings.Output, settings.Json);
+            if (settings.Output is not null && settings.Limit is <= 0)
+                invalid = "--limit must be greater than zero.";
+            if (invalid is not null)
+                return Task.FromResult(CommandOutput.Failure(settings.Output, "snapshots.list", "invalid_options", invalid, 2));
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
+            return Task.FromResult(CommandInspection.Run(settings.Output, "snapshots.list",
+                () => Inspect(settings, cancellationToken), preserveLegacyExceptions: settings.Output is null));
+        }
 
-            IEnumerable<Core.Models.Snapshot> snaps = repo.GetSnapshotsForProject(proj.Name);
-            if (s.Limit is int lim && lim > 0) snaps = snaps.Take(lim);
-
-            var list = snaps.ToList();
-
-            Log.Info($"history name={proj.Name} count={list.Count} json={s.Json}");
-
-            if (s.Json)
+        private static int Inspect(HistorySettings settings, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var repository = new SqliteRepository(ConfigHelper.ResolveDb(settings.Db), readOnly: settings.Output is not null);
+            if (settings.Output is null)
+                repository.EnsureSchema();
+            Core.Models.Project? project = repository.GetProjectByName(settings.Name);
+            if (project is null)
             {
-                string json = JsonSerializer.Serialize(
-                    list.Select(x => new {
-                        x.Id, CreatedUtc = x.CreatedUtc.ToString("u"), x.FileCount, x.TotalBytes
-                    }),
-                    CommandJsonOptions.Indented);
-                Console.WriteLine(json);
-                return Task.FromResult(0);
+                if (settings.Output is null)
+                    throw new InvalidOperationException($"Project '{settings.Name}' not found.");
+                return CommandOutput.Failure(settings.Output, "snapshots.list", "project_not_found",
+                    "No registered project matches the supplied name.", 2);
             }
 
-            Table table = new Table().Border(TableBorder.Rounded);
+            Core.Models.Snapshot[] all = repository.GetSnapshotsForProject(project.Name).ToArray();
+            Core.Models.Snapshot[] rows = settings.Limit is int limit && limit > 0 ? all.Take(limit).ToArray() : all;
+            Log.Info($"history name={project.Name} count={rows.Length} json={settings.Json || CommandOutput.IsJson(settings.Output)}");
+
+            if (CommandOutput.IsJson(settings.Output))
+                return CommandOutput.Success("snapshots.list", new
+                {
+                    project = ProjectInspection.Describe(project),
+                    snapshots = rows.Select(Describe).ToArray(),
+                    count = rows.Length,
+                    totalCount = all.Length
+                });
+            if (settings.Json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(rows.Select(snapshot => new
+                {
+                    snapshot.Id, CreatedUtc = snapshot.CreatedUtc.ToString("u"), snapshot.FileCount, snapshot.TotalBytes
+                }), CommandJsonOptions.Indented));
+                return 0;
+            }
+
+            var table = new Table().Border(TableBorder.Rounded);
             table.AddColumn("Snapshot");
             table.AddColumn("Created (UTC)");
             table.AddColumn(new TableColumn("Files").RightAligned());
             table.AddColumn(new TableColumn("Bytes").RightAligned());
-
-            foreach (Core.Models.Snapshot? srow in list)
-                table.AddRow(srow.Id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), ByteSizeFormat.FormatBytes(srow.TotalBytes, "0.#"));
-
-            AnsiConsole.MarkupLine($"History for [bold]{Markup.Escape(proj.Name)}[/] - {list.Count} snapshot(s)");
+            foreach (Core.Models.Snapshot snapshot in rows)
+                table.AddRow(snapshot.Id.ToString(), snapshot.CreatedUtc.ToString("u"), snapshot.FileCount.ToString(), ByteSizeFormat.FormatBytes(snapshot.TotalBytes, "0.#"));
+            AnsiConsole.MarkupLine($"History for [bold]{Markup.Escape(project.Name)}[/] - {rows.Length} snapshot(s)");
             AnsiConsole.Write(table);
-            return Task.FromResult(0);
+            return 0;
         }
+
+        private static object Describe(Core.Models.Snapshot snapshot) => new
+        {
+            snapshot.Id,
+            createdUtc = DateTime.SpecifyKind(snapshot.CreatedUtc, DateTimeKind.Utc).ToString("O"),
+            snapshot.FileCount,
+            snapshot.TotalBytes
+        };
     }
 
     sealed class DiffSettings : CommandSettings

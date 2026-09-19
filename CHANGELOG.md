@@ -2,6 +2,7 @@
 ## [1.9.0] - Unreleased
 
 ### Added
+- [VS-1973][VS-1974] Add versioned, read-only snapshot-history results while preserving legacy `history --json`.
 - [VS-1973] Select an explicit database for unattended watcher sessions with `watch --db`.
 - [VS-1973] Inspect projects by explicit ID or literal name and filter/limit project listings.
 - [VS-1974] Add opt-in versioned JSON results and predictable errors for read-only project inspection.

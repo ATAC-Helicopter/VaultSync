@@ -1253,8 +1253,9 @@ destabilizing the maintenance release.
   - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
     naming reuse existing handlers; projects discover now exposes source-folder
     discovery. Read-only projects show accepts literal names or explicit IDs;
-    listing supports name/preset filters and limits; watch accepts explicit --db.
-    Backup/parity/bulk scope remains.
+    listing supports name/preset filters and limits; snapshot history now has
+    versioned read-only results; watch accepts explicit --db. Backup/parity/bulk
+    scope remains.
 - [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
   - Scope: versioned JSON and streaming result contracts, stable exit codes,
     stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
@@ -1264,8 +1265,9 @@ destabilizing the maintenance release.
     cancellation, unsupported scope, and partial results have documented outcomes.
   - Progress: raw argv logging is removed; BUG-19001 owns the confirmed quiet
     removal defect. Project list/show implement explicit v1 JSON envelopes,
-    read-only inspection, and parse/selection/operational errors; remaining
-    workflows and uniform unattended contracts remain pending. BUG-19002 owns
+    read-only project and snapshot-history inspection, plus parse/selection/
+    operational errors; remaining workflows and uniform unattended contracts
+    remain pending. BUG-19002 owns
     watcher shutdown/draining; quiet startup and cancellation exit 130 are implemented.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
   - Scope: repeatable multi-project tasks, filters and selectors, recorded backup

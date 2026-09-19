@@ -119,6 +119,16 @@ implementation. Remaining commands do not yet implement the uniform output
 contract. All 949 .NET tests pass; the initial implementation's previous hosted
 Windows/macOS/Linux, CodeQL, Store/metadata preflights, and Sonar checks passed.
 
+## Snapshot-history inspection slice
+
+`snapshots list` and legacy `history` now accept explicit `--output json` for a
+versioned result envelope containing project identity, limited snapshot rows,
+and returned/total counts. These calls open existing databases read-only and do
+not initialize or migrate stores. Invalid options fail before database access;
+missing stores and projects have stable errors. Legacy `history --json` retains
+its original array and property casing. Snapshot rows describe indexes and hashes,
+not recoverable backup bytes. All 960 .NET tests and 100 script tests pass.
+
 ## Watcher lifecycle slice
 
 `watch --db PATH` selects the same store as other CLI operations. Quiet sessions

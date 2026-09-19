@@ -37,7 +37,7 @@ internal sealed class ListProjectsCommand : AsyncCommand<ListProjectsSettings>
         if (invalid is not null)
             return Task.FromResult(CommandOutput.Failure(settings.Output, "projects.list", "invalid_options", invalid, 2));
 
-        return Task.FromResult(ProjectInspection.Run(settings.Output, "projects.list",
+        return Task.FromResult(CommandInspection.Run(settings.Output, "projects.list",
             () => Inspect(settings, cancellationToken), preserveLegacyExceptions: settings.Output is null));
     }
 
@@ -95,7 +95,7 @@ internal sealed class ShowProjectCommand : AsyncCommand<ShowProjectSettings>
         if (invalid is not null)
             return Task.FromResult(CommandOutput.Failure(settings.Output, "projects.show", "invalid_options", invalid, 2));
 
-        return Task.FromResult(ProjectInspection.Run(settings.Output, "projects.show", () =>
+        return Task.FromResult(CommandInspection.Run(settings.Output, "projects.show", () =>
         {
             cancellationToken.ThrowIfCancellationRequested();
             var repository = new SqliteRepository(ConfigHelper.ResolveDb(settings.Db), readOnly: true);
@@ -120,19 +120,6 @@ internal static class ProjectInspection
     public static ProjectSummary Describe(Project project) => new(project.Id, project.ExternalId, project.Name,
         project.RootPath, project.Preset, DateTime.SpecifyKind(project.CreatedUtc, DateTimeKind.Utc).ToString("O"), project.NeedsRestore);
 
-    public static int Run(string? output, string operation, Func<int> action, bool preserveLegacyExceptions = false)
-    {
-        try
-        {
-            return action();
-        }
-        catch (Exception error) when (!preserveLegacyExceptions && error is SqliteException or IOException or UnauthorizedAccessException)
-        {
-            return CommandOutput.Failure(output, operation, "repository_unavailable",
-                "Cannot inspect the database. Check --db, access permissions, and supported schema; initialize or migrate it explicitly.", 1);
-        }
-    }
-
     public static void WriteTable(Project[] rows, bool includeId)
     {
         var table = new Table().Border(TableBorder.Rounded);
@@ -151,3 +138,20 @@ internal static class ProjectInspection
         AnsiConsole.Write(table);
     }
 }
+
+internal static class CommandInspection
+{
+    public static int Run(string? output, string operation, Func<int> action, bool preserveLegacyExceptions = false)
+    {
+        try
+        {
+            return action();
+        }
+        catch (Exception error) when (!preserveLegacyExceptions && error is SqliteException or IOException or UnauthorizedAccessException)
+        {
+            return CommandOutput.Failure(output, operation, "repository_unavailable",
+                "Cannot inspect the database. Check --db, access permissions, and supported schema; initialize or migrate it explicitly.", 1);
+        }
+    }
+
+ }

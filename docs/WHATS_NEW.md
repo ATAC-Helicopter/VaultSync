@@ -8,7 +8,8 @@ terminal and automation workflows. These capabilities have not shipped. The deve
 `projects`, `snapshots`, and `recovery` commands, candidate folder discovery,
 and an explicitly named `mirror` command. Project inspection adds explicit IDs,
 filtered/limited listings, and opt-in versioned JSON via `--output json` with
-read-only database access. Existing command routes and legacy `--json` remain.
+read-only database access. Snapshot history now supports the same versioned,
+read-only result contract and positive limits. Existing command routes and legacy `--json` remain.
 Quiet or unattended project removal requires `--yes`; `--quiet` alone no longer
 authorizes deletion of the local registration/history. Watchers support explicit
 `--db`, suppress guidance in quiet mode, and drain work before stopping on Ctrl-C
