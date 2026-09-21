@@ -20,6 +20,7 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | `update-path` | Keep existing alias | Same handler as `set-path`; no independent behavior |
 | `snapshot` | Keep compatibility route; clarify indexing | `snapshots create` implemented; scans/hashes/indexes source state, stores no backup payload |
 | `history` | Keep compatibility route; add resource listing | `snapshots list` implements versioned read-only results and positive limits; current JSON retained |
+| — | Add single-resource inspection | `snapshots show PROJECT --id ID` reports one same-project index, History markers, and aggregate backup references without exposing paths or claiming payload availability |
 | `diff` | Keep compatibility route; add resource comparison | `snapshots diff` implements bounded versioned read-only results and same-project ID checks; compares indexed records, not two stored backup payloads |
 | `prune` | Keep compatibility route; make retention scope explicit | `snapshots prune` implemented; local-index retention, existing dry-run and backed/protected-point safeguards retained |
 | `restore` | Keep compatibility route; extend qualified formats later | `recovery restore` implemented; recorded folder backups only; archive/encrypted inputs remain rejected |

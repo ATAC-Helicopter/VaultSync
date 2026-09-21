@@ -52,6 +52,8 @@ internal static class CommandOutput
             return null;
         if (string.Equals(arguments[1], "list", StringComparison.OrdinalIgnoreCase))
             return "snapshots.list";
+        if (string.Equals(arguments[1], "show", StringComparison.OrdinalIgnoreCase))
+            return "snapshots.show";
         return string.Equals(arguments[1], "diff", StringComparison.OrdinalIgnoreCase) ? "snapshots.diff" : null;
     }
 

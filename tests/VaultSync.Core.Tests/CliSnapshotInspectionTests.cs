@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using VaultSync.CLI;
+using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Tests.TestSupport;
 using Xunit;
@@ -159,6 +160,84 @@ public sealed class CliSnapshotInspectionTests
         };
         var result = await RunAsync([.. arguments, "--db", database, "--output", "json"]);
         AssertEnvelope(result.Json, "snapshots.diff", 2);
+        Assert.Equal("invalid_options", result.Json.GetProperty("error").GetProperty("code").GetString());
+        Assert.False(Directory.Exists(Path.GetDirectoryName(database)));
+    }
+
+    [Fact]
+    public async Task SnapshotShowReportsHistoryMarkersAndRecordedBackupReferences()
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "vault.db");
+        SqliteRepository repository = TestRepository.Create(database);
+        int projectId = TestRepository.AddProject(repository, "Inspect [snapshot]", root.Path);
+        int snapshotId = repository.CreateSnapshot(projectId, 7, 4096,
+            new SnapshotDiffSummary(2, 3, 1, 512, []));
+        repository.UpsertSnapshotHistoryMetadata(new SnapshotHistoryMetadata
+        {
+            SnapshotId = snapshotId,
+            Label = "Release [candidate]",
+            Note = "Verified locally",
+            Tags = "release,important",
+            IsProtected = true,
+            IsKnownGood = true
+        });
+        repository.CreateBackup(projectId, snapshotId, "manual", 4096, "backup", root.Path,
+            "Local", isProtected: true, isEncrypted: true);
+
+        var result = await RunAsync("snapshots", "show", "Inspect [snapshot]", "--id", snapshotId.ToString(),
+            "--db", database, "--output", "json");
+        AssertEnvelope(result.Json, "snapshots.show", 0);
+        JsonElement snapshot = result.Json.GetProperty("data").GetProperty("snapshot");
+        Assert.Equal(snapshotId, snapshot.GetProperty("id").GetInt32());
+        Assert.Equal(7, snapshot.GetProperty("fileCount").GetInt64());
+        Assert.Equal(2, snapshot.GetProperty("changes").GetProperty("added").GetInt32());
+        Assert.Equal(1, snapshot.GetProperty("recordedBackupCount").GetInt32());
+        Assert.Equal(1, snapshot.GetProperty("encryptedBackupCount").GetInt32());
+        Assert.Equal(1, snapshot.GetProperty("protectedBackupCount").GetInt32());
+        Assert.True(snapshot.GetProperty("history").GetProperty("isProtected").GetBoolean());
+        Assert.True(snapshot.GetProperty("history").GetProperty("isKnownGood").GetBoolean());
+        Assert.Equal("Release [candidate]", snapshot.GetProperty("history").GetProperty("label").GetString());
+    }
+
+    [Fact]
+    public async Task SnapshotShowRejectsForeignIdsWithoutExposingTheirMetadata()
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "vault.db");
+        SqliteRepository repository = TestRepository.Create(database);
+        _ = TestRepository.AddProject(repository, "Selected", root.Path);
+        int other = TestRepository.AddProject(repository, "Other", root.Path);
+        int foreign = repository.CreateSnapshot(other, 99, 123456);
+        repository.UpsertSnapshotHistoryMetadata(new SnapshotHistoryMetadata
+        {
+            SnapshotId = foreign,
+            Note = "foreign private note"
+        });
+
+        var result = await RunAsync("snapshots", "show", "Selected", "--id", foreign.ToString(),
+            "--db", database, "--output", "json");
+        AssertEnvelope(result.Json, "snapshots.show", 2);
+        Assert.Equal("snapshot_not_found", result.Json.GetProperty("error").GetProperty("code").GetString());
+        Assert.DoesNotContain("private note", result.Json.ToString(), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("zero")]
+    [InlineData("unknown")]
+    public async Task SnapshotShowRejectsInvalidSelectorsBeforeDatabaseAccess(string scenario)
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "missing", "vault.db");
+        string[] arguments = scenario switch
+        {
+            "missing" => ["snapshots", "show", "project"],
+            "zero" => ["snapshots", "show", "project", "--id", "0"],
+            _ => ["snapshots", "show", "project", "--id", "1", "--unknown"]
+        };
+        var result = await RunAsync([.. arguments, "--db", database, "--output", "json"]);
+        AssertEnvelope(result.Json, "snapshots.show", 2);
         Assert.Equal("invalid_options", result.Json.GetProperty("error").GetProperty("code").GetString());
         Assert.False(Directory.Exists(Path.GetDirectoryName(database)));
     }

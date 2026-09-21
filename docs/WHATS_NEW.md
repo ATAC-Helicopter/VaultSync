@@ -9,8 +9,10 @@ terminal and automation workflows. These capabilities have not shipped. The deve
 and an explicitly named `mirror` command. Project inspection adds explicit IDs,
 filtered/limited listings, and opt-in versioned JSON via `--output json` with
 read-only database access. Snapshot history and diffs now support the same versioned, read-only result
-contract. Diff path arrays are bounded with complete counts and reject snapshot
-IDs outside the selected project. Existing command routes and legacy `--json` remain.
+contract. A new snapshot detail view reports change summaries, History markers,
+and aggregate recorded-backup references without exposing storage paths or claiming
+that payload bytes are available. Diff path arrays are bounded with complete counts
+and reject snapshot IDs outside the selected project. Existing command routes and legacy `--json` remain.
 Quiet or unattended project removal requires `--yes`; `--quiet` alone no longer
 authorizes deletion of the local registration/history. Watchers support explicit
 `--db`, suppress guidance in quiet mode, and drain work before stopping on Ctrl-C

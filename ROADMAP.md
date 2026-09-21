@@ -1293,9 +1293,9 @@ destabilizing the maintenance release.
   - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
     naming reuse existing handlers; projects discover now exposes source-folder
     discovery. Read-only projects show accepts literal names or explicit IDs;
-    listing supports name/preset filters and limits; snapshot history and bounded
-    same-project diffs now have versioned read-only results; watch accepts explicit --db. Backup/parity/bulk
-    scope remains.
+    listing supports name/preset filters and limits; snapshot show/history and
+    bounded same-project diffs now have versioned read-only results; watch accepts
+    explicit --db. Backup/parity/bulk scope remains.
 - [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
   - Scope: versioned JSON and streaming result contracts, stable exit codes,
     stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
@@ -1316,6 +1316,9 @@ destabilizing the maintenance release.
   - Acceptance: isolated end-to-end examples protect and recover recorded bytes;
     protected points survive bulk operations; per-item evidence and failures are
     inspectable; unavailable or unsupported combinations fail explicitly.
+  - Progress: snapshot show exposes identity, size/change summaries, History
+    markers, and recorded-backup reference counts without claiming payload
+    availability or integrity. Backup execution/selective restore/bulk scope remains.
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and

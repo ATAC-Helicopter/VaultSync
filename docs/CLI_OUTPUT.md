@@ -1,8 +1,8 @@
 # CLI structured output v1
 
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
-`projects show`, `snapshots list`, `snapshots diff`, and legacy `history`/`diff`
-with explicit `--output json`. This contract does not yet apply to snapshot
+`projects show`, `snapshots list`, `snapshots show`, `snapshots diff`, and legacy
+`history`/`diff` with explicit `--output json`. This contract does not yet apply to snapshot
 creation, mirror, restore, watch, or other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
 
@@ -21,6 +21,7 @@ vaultsync projects list --db ./vault.db --filter alpha --preset dotnet --limit 1
 vaultsync projects show "My project" --db ./vault.db --output json
 vaultsync projects show --id 42 --db ./vault.db --output json
 vaultsync snapshots list "My project" --db ./vault.db --limit 10 --output json
+vaultsync snapshots show "My project" --id 42 --db ./vault.db --output json
 vaultsync snapshots diff "My project" 42 41 --db ./vault.db --limit 200 --output json
 ```
 
@@ -42,7 +43,7 @@ markup, or log messages mixed into it. The object contains:
 | Property | Meaning |
 | --- | --- |
 | `schemaVersion` | `1` |
-| `operation` | `projects.list`, `projects.show`, `snapshots.list`, or `snapshots.diff` |
+| `operation` | `projects.list`, `projects.show`, `snapshots.list`, `snapshots.show`, or `snapshots.diff` |
 | `status` | `success` or `error` |
 | `data` | Success payload; null on failure |
 | `error` | Null on success; failure `{code, message}` |
@@ -91,6 +92,22 @@ successful empty list.
 Legacy `history --json` keeps its existing array, PascalCase field names, and UTC
 text dates. It retains initialization behavior unless explicit `--output` is used.
 
+
+## Single-snapshot payload
+
+`snapshots.show PROJECT --id ID` requires an explicit positive local ID and
+verifies that it belongs to the named project before reading its metadata. The
+result includes snapshot identity, UTC creation time, file and byte totals,
+change-summary counts, optional History label/note/tags/protection/known-good
+metadata, and aggregate recorded-backup, encrypted-backup, and protected-backup
+record counts. It omits backup paths, destination identities, crypto descriptors,
+file paths, and hashes.
+
+Backup counts describe database records only. They do not assert that payload
+bytes are currently available, readable, verified, or sufficient for recovery.
+A foreign or missing ID returns `snapshot_not_found` without exposing its metadata.
+The command is new in 1.9 and always opens the existing database read-only,
+including its default human output.
 
 ## Snapshot diff payload
 

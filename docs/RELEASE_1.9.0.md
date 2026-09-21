@@ -129,6 +129,17 @@ missing stores and projects have stable errors. Legacy `history --json` retains
 its original array and property casing. Snapshot rows describe indexes and hashes,
 not recoverable backup bytes. All 960 .NET tests and 100 script tests pass.
 
+## Single-snapshot inspection slice
+
+`snapshots show PROJECT --id ID` opens an existing database read-only and enforces
+project ownership before returning one snapshot. Versioned output includes identity,
+size and change summaries, optional History markers, and aggregate recorded-backup,
+encrypted, and protected record counts. It omits paths, destination identities,
+crypto descriptors, file entries, and hashes. Backup counts are records, not claims
+that payload bytes are available or verified. This starts VS-1975's practical
+inspection work; backup execution, selective restore, and bulk workflows remain.
+All 970 .NET tests and 100 script tests pass for the accumulated implementation.
+
 ## Snapshot-diff inspection slice
 
 `snapshots diff` and legacy `diff` now accept explicit `--output json` for a

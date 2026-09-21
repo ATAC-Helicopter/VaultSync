@@ -34,6 +34,8 @@ internal static class ResourceCommands
                 .WithDescription("Scan and hash a project into the local index; does not store backup bytes");
             snapshots.AddCommand<HistoryCommand>("list")
                 .WithDescription("List a project's indexed snapshots; --output json provides versioned read-only results");
+            snapshots.AddCommand<ShowSnapshotCommand>("show")
+                .WithDescription("Inspect one same-project snapshot, history markers, and recorded backup references");
             snapshots.AddCommand<DiffCommand>("diff")
                 .WithDescription("Compare two same-project snapshots; --output json provides bounded versioned results");
             snapshots.AddCommand<PruneCommand>("prune")
