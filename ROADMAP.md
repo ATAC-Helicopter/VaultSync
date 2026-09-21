@@ -1040,6 +1040,12 @@ Checked items represent implementation integrated into Dev or Stable, not public
 requires cloning, validation, image-to-disk recovery, and bootable recovery
 media to be ready and tested together.
 
+Recovery Horizon also carries a later **Binary Source Control** track for
+binary-heavy project workflows. It is intentionally sequenced after the core
+recovery path so it cannot block disk/boot recovery. Its maintained architecture,
+storage, locking, recovery, collaboration, and qualification contract is in
+[`docs/BINARY_SOURCE_CONTROL_STRATEGY.md`](docs/BINARY_SOURCE_CONTROL_STRATEGY.md).
+
 The maintained strategy, sequencing rationale, architecture gates, Project
 entry contract, and `1.10` versus `2.0` decision rule are in
 [`docs/RECOVERY_HORIZON_STRATEGY.md`](docs/RECOVERY_HORIZON_STRATEGY.md).
@@ -1058,7 +1064,10 @@ following contracts must be reviewed together:
   recovery media, immutable storage, and provider-account loss;
 - portable recovery dependencies and the minimum independent restore path;
 - shared identities, dependencies, evidence, and failure domains required by
-  later resilience evaluation.
+  later resilience evaluation;
+- the Binary Source Control repository/object format, workspace/ref model,
+  locking and conflict semantics, encryption/recovery boundary, GC/repair
+  invariants, and local/NAS-to-offsite backend contract.
 
 Unsupported combinations must remain explicit. A prototype or dependency
 spike is evidence for a decision, not a stable product commitment.
@@ -1095,6 +1104,29 @@ Migration principles:
   - Acceptance: issue #114 remains closed and Done; any later scheduling,
     evidence, or recovery-assurance expansion receives a new release-specific
     identifier rather than reopening or reusing `VS-1903`.
+
+## 1.9 Binary Source Control architecture gate
+
+Binary Source Control is a separate version-control repository model, not a
+rename of backup snapshots and not a Git replacement. Implementation may use
+prototypes and benchmarks before this gate closes, but stable-format work does
+not begin until the following contracts are approved together:
+
+- [ ] `VS-1970` `P0` Define the Binary Source Control architecture,
+  repository format, immutable object/change graph, product boundary, backend
+  primitives, threat model, migration rules, and Stable-versus-Preview gate.
+  _(Issue #703.)_
+- [ ] `VS-1971` `P0` Define BSC authorship, workspace identity, ownership,
+  long-lived path locks, short writer leases, guarded ref updates, stale-lock
+  takeover, conflict review, and audit evidence.
+  _(Issue #704.)_
+
+The gate must explicitly preserve the distinction from `VS-1801` full
+`.git` repository backup. BSC must coexist with Git without silently mutating
+Git metadata or claiming Git LFS protocol compatibility.
+
+The full maintained strategy is
+[`docs/BINARY_SOURCE_CONTROL_STRATEGY.md`](docs/BINARY_SOURCE_CONTROL_STRATEGY.md).
 
 ## 1.9 platform modernization gate
 
@@ -1242,12 +1274,93 @@ unchanged because work IDs are immutable and do not encode the patch number.
 - [ ] `VS-1956` `P2` Bring the CLI to documented parity with stable,
   automation-safe desktop workflows.
 
-## 1.9.6 — Stability and LTS Baseline
+## 1.9.6 — Binary Source Control Foundation
 
-- [ ] `VS-1961` `P0` Stabilize disk-image, offsite, and portable-recovery
-  formats.
+Binary Source Control enters the 1.9 family only after `VS-1970` and
+`VS-1971` approve the repository and collaboration contracts. This release
+targets a complete local/NAS mainline workflow before branching or offsite scale.
+
+- [ ] `VS-1972` `P0` Build the immutable binary object store with
+  content-defined chunking, repository-local deduplication, independently
+  verifiable packs, rebuildable indexes, and bounded-memory streaming.
+  _(Issue #705.)_
+- [ ] `VS-1973` `P0` Build canonical file/tree objects, immutable changesets,
+  tags, and compare-and-swap refs with atomic publication ordering.
+  _(Issue #706.)_
+- [ ] `VS-1974` `P0` Build workspace status, staging, check-in, sync, and
+  safe checkout with dirty-workspace protection and cross-platform path checks.
+  _(Issue #707.)_
+- [ ] `VS-1975` `P0` Add binary lock rules, exclusive checkout, lock
+  heartbeat, commit-time ownership checks, and explicit stale-lock takeover.
+  _(Issue #708.)_
+- [ ] `VS-1976` `P1` Add changeset/path history, read-only browse, exact
+  restore, compare, tagging, and recovery evidence.
+  _(Issue #709.)_
+- [ ] `VS-1978` `P0` Add authenticated repository encryption, secure local
+  credential use, and a portable recovery-key path.
+  _(Issue #711.)_
+- [ ] `VS-1979` `P0` Add repository verification, index rebuild, reachability
+  analysis, quarantine, safe GC/repack, and emergency read-only recovery.
+  _(Issue #712.)_
+- [ ] `VS-1981` `P1` Integrate the BSC desktop and CLI foundation with clear
+  Git coexistence guidance and no automatic mutation of `.git`.
+  _(Issue #714.)_
+
+### 1.9.6 stable release gate
+
+- a repository can be created, reopened, and recovered without the original
+  local application database;
+- a second machine can attach a workspace, sync, lock, modify, check in, and
+  restore earlier content through one guarded default ref;
+- interrupted object/pack/index/tree/changeset writes cannot publish an
+  incomplete changeset;
+- guarded ref updates reject a stale base rather than overwriting newer work;
+- dirty workspace paths are never silently overwritten by sync/checkout;
+- exclusive locks cannot be silently stolen and stale takeover retains evidence;
+- index/cache loss is rebuildable from authoritative repository data;
+- full verification detects injected corruption;
+- encrypted repositories are recoverable on a clean machine with documented
+  authorized recovery material;
+- GC/repack fault tests preserve every reachable changeset;
+- Windows, macOS, Linux, and representative NAS/SMB workflows pass the stated
+  qualification envelope.
+
+If these gates are not met, BSC remains clearly labelled Preview and cannot
+block the earlier Recovery Horizon releases.
+
+## 1.9.7 — Binary Collaboration and Scale
+
+- [ ] `VS-1977` `P1` Add branches and deterministic three-way path planning,
+  auto-resolving only provably non-overlapping or byte-identical changes and
+  requiring explicit resolution for overlapping binary edits.
+  _(Issue #710.)_
+- [ ] `VS-1980` `P1` Add sparse workspaces, verified local cache, resumable
+  object transfer, and safe mirror/offsite replication where backend
+  conditional-write semantics are sufficient.
+  _(Issue #713.)_
+- [ ] `VS-1982` `P0` Qualify BSC performance, cross-platform clean-machine
+  recovery, multi-client NAS concurrency, large logical histories, corruption,
+  interruption, maintenance, and fault injection.
+  _(Issue #715.)_
+
+### 1.9.7 stable release gate
+
+- branch/ref operations never silently discard overlapping binary work;
+- sparse and full workspaces reconstruct identical bytes for included paths;
+- cache corruption causes re-fetch/reverification rather than trusted output;
+- resumable transfer never publishes incomplete history;
+- a mirror is reported protected only after all objects reachable from the
+  selected changeset are durable and verifiable;
+- large-history performance and memory budgets are enforced;
+- repeated commit/verify/GC/repack cycles remain recoverable under forced
+  termination and network loss.
+
+## 1.9.8 — Stability and LTS Baseline
+
+- [ ] `VS-1961` `P0` Stabilize disk-image, offsite, portable-recovery, and
+  Binary Source Control formats.
 - [ ] `VS-1962` `P0` Complete long-duration, large-dataset, migration,
-  filesystem, and fault-injection qualification.
+  filesystem, source-control, and fault-injection qualification.
 - [ ] `VS-1963` `P1` Publish the supported compatibility window and LTS policy.
 
 ---
@@ -1309,8 +1422,6 @@ These items are not assigned to a release until their contracts are approved:
 
 - `VS-1801` full repository backup mode including `.git` (tracked by #296);
 - additional object-storage and WebDAV providers;
-- `VS-1971` optional shared/team vault workflows with explicit ownership,
-  access, conflict, and audit contracts;
 - enterprise deployment and centralized administration;
 - universal boot media or guaranteed cross-hardware bare-metal recovery;
 - self-healing protection under explicit user policy;
