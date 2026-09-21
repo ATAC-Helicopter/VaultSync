@@ -148,60 +148,92 @@ namespace VaultSync.CLI.Commands
         [CommandArgument(0, "<name>")] public string Name { get; init; } = "";
         [CommandArgument(1, "[A]")] public int? A { get; init; }
         [CommandArgument(2, "[B]")] public int? B { get; init; }
-        [CommandOption("--db")] public string? Db { get; init; }
-        [CommandOption("--limit")] public int Limit { get; init; } = 200;
-        [CommandOption("--json")] public bool Json { get; init; } = false;
+        [CommandOption("--db <PATH>")] public string? Db { get; init; }
+        [CommandOption("--limit <COUNT>")] public int Limit { get; init; } = 200;
+        [CommandOption("--json")] public bool Json { get; init; }
+        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
     }
 
     sealed class DiffCommand : AsyncCommand<DiffSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, DiffSettings s, CancellationToken cancellationToken)
+        protected override Task<int> ExecuteAsync(CommandContext context, DiffSettings settings, CancellationToken cancellationToken)
         {
-            string db = ConfigHelper.ResolveDb(s.Db);
-            var repo = new SqliteRepository(db);
-            repo.EnsureSchema();
+            string? invalid = CommandOutput.Validate(settings.Output, settings.Json);
+            if (settings.Output is not null && settings.Limit <= 0)
+                invalid = "--limit must be greater than zero.";
+            if (invalid is not null)
+                return Task.FromResult(CommandOutput.Failure(settings.Output, "snapshots.diff", "invalid_options", invalid, 2));
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
-
-            var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
-            if (snaps.Count < 1) throw new InvalidOperationException("No snapshots exist for this project.");
-
-            DiffSelection selection = ResolveDiffSelection(snaps, s);
-
-            var aFiles = repo.GetFilesForSnapshot(selection.A).ToDictionary(f => f.RelPath, f => f);
-            var bFiles = repo.GetFilesForSnapshot(selection.B).ToDictionary(f => f.RelPath, f => f);
-            DiffResult diff = BuildDiff(aFiles, bFiles);
-
-            Log.Info($"diff name={proj.Name} A={selection.A} B={selection.B} added={diff.Added.Count} deleted={diff.Deleted.Count} modified={diff.Modified.Count} unchanged={diff.Unchanged.Count} json={s.Json}");
-
-            if (s.Json)
-            {
-                WriteDiffJson(selection, diff, aFiles.Count, bFiles.Count);
-                return Task.FromResult(0);
-            }
-
-            WriteDiffTable(proj.Name, selection, diff, s.Limit);
-            return Task.FromResult(0);
+            return Task.FromResult(CommandInspection.Run(settings.Output, "snapshots.diff",
+                () => Inspect(settings, cancellationToken), preserveLegacyExceptions: settings.Output is null));
         }
 
-        private static DiffSelection ResolveDiffSelection(IReadOnlyList<Core.Models.Snapshot> snaps, DiffSettings settings)
+        private static int Inspect(DiffSettings settings, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var repository = new SqliteRepository(ConfigHelper.ResolveDb(settings.Db), readOnly: settings.Output is not null);
+            if (settings.Output is null)
+                repository.EnsureSchema();
+            Core.Models.Project? project = repository.GetProjectByName(settings.Name);
+            if (project is null)
+                return FailOrThrow(settings, "project_not_found", "No registered project matches the supplied name.");
+
+            Core.Models.Snapshot[] snapshots = repository.GetSnapshotsForProject(project.Name).ToArray();
+            if (snapshots.Length == 0)
+                return FailOrThrow(settings, "snapshot_history_empty", "The project has no snapshots to compare.");
+
+            DiffSelection selection;
+            try
+            {
+                selection = ResolveDiffSelection(snapshots, settings);
+            }
+            catch (InvalidOperationException) when (settings.Output is not null)
+            {
+                return CommandOutput.Failure(settings.Output, "snapshots.diff", "snapshot_not_found",
+                    "The requested snapshots must exist and belong to the selected project; provide two valid IDs when inference is unavailable.", 2);
+            }
+            HashSet<int> projectSnapshotIds = snapshots.Select(snapshot => snapshot.Id).ToHashSet();
+            if (!projectSnapshotIds.Contains(selection.A) || !projectSnapshotIds.Contains(selection.B))
+                return FailOrThrow(settings, "snapshot_not_found",
+                    "The requested snapshots must exist and belong to the selected project.");
+
+            var aFiles = repository.GetFilesForSnapshot(selection.A).ToDictionary(file => file.RelPath, file => file);
+            var bFiles = repository.GetFilesForSnapshot(selection.B).ToDictionary(file => file.RelPath, file => file);
+            DiffResult diff = BuildDiff(aFiles, bFiles);
+            Log.Info($"diff name={project.Name} A={selection.A} B={selection.B} added={diff.Added.Count} deleted={diff.Deleted.Count} modified={diff.Modified.Count} unchanged={diff.Unchanged.Count} json={settings.Json || CommandOutput.IsJson(settings.Output)}");
+
+            if (CommandOutput.IsJson(settings.Output))
+                return WriteStructuredDiff(project, selection, diff, aFiles.Count, bFiles.Count, settings.Limit);
+            if (settings.Json)
+            {
+                WriteLegacyDiffJson(selection, diff, aFiles.Count, bFiles.Count);
+                return 0;
+            }
+            WriteDiffTable(project.Name, selection, diff, settings.Limit);
+            return 0;
+        }
+
+        private static int FailOrThrow(DiffSettings settings, string code, string message)
+        {
+            if (settings.Output is not null)
+                return CommandOutput.Failure(settings.Output, "snapshots.diff", code, message, 2);
+            throw new InvalidOperationException(message);
+        }
+
+        private static DiffSelection ResolveDiffSelection(IReadOnlyList<Core.Models.Snapshot> snapshots, DiffSettings settings)
         {
             if (settings.A.HasValue && settings.B.HasValue)
                 return new DiffSelection(settings.A.Value, settings.B.Value);
-
             if (settings.A.HasValue)
             {
-                int idx = snaps.ToList().FindIndex(x => x.Id == settings.A.Value);
-                if (idx < 0 || idx + 1 >= snaps.Count)
+                int index = snapshots.ToList().FindIndex(snapshot => snapshot.Id == settings.A.Value);
+                if (index < 0 || index + 1 >= snapshots.Count)
                     throw new InvalidOperationException("Cannot infer the other snapshot; provide both A and B.");
-
-                return new DiffSelection(settings.A.Value, snaps[idx + 1].Id);
+                return new DiffSelection(settings.A.Value, snapshots[index + 1].Id);
             }
-
-            if (snaps.Count < 2)
+            if (snapshots.Count < 2)
                 throw new InvalidOperationException("Need at least two snapshots to diff.");
-
-            return new DiffSelection(snaps[0].Id, snaps[1].Id);
+            return new DiffSelection(snapshots[0].Id, snapshots[1].Id);
         }
 
         private static DiffResult BuildDiff(
@@ -212,56 +244,63 @@ namespace VaultSync.CLI.Commands
             var deleted = new List<string>();
             var modified = new List<string>();
             var unchanged = new List<string>();
-
-            foreach ((string rel, Core.Models.FileEntry af) in aFiles)
+            foreach ((string path, Core.Models.FileEntry aFile) in aFiles)
             {
-                if (!bFiles.TryGetValue(rel, out Core.Models.FileEntry? bf))
-                    added.Add(rel);
-                else if (FileChanged(af, bf))
-                    modified.Add(rel);
+                if (!bFiles.TryGetValue(path, out Core.Models.FileEntry? bFile))
+                    added.Add(path);
+                else if (FileChanged(aFile, bFile))
+                    modified.Add(path);
                 else
-                    unchanged.Add(rel);
+                    unchanged.Add(path);
             }
-
-            deleted.AddRange(bFiles.Keys.Where(rel => !aFiles.ContainsKey(rel)));
+            deleted.AddRange(bFiles.Keys.Where(path => !aFiles.ContainsKey(path)));
+            added.Sort(StringComparer.Ordinal); deleted.Sort(StringComparer.Ordinal);
+            modified.Sort(StringComparer.Ordinal); unchanged.Sort(StringComparer.Ordinal);
             return new DiffResult(added, deleted, modified, unchanged);
         }
 
         private static bool FileChanged(Core.Models.FileEntry a, Core.Models.FileEntry b) =>
-            !string.Equals(a.HashSha256, b.HashSha256, StringComparison.OrdinalIgnoreCase) ||
-            a.Size != b.Size;
+            !string.Equals(a.HashSha256, b.HashSha256, StringComparison.OrdinalIgnoreCase) || a.Size != b.Size;
 
-        private static void WriteDiffJson(DiffSelection selection, DiffResult diff, int totalA, int totalB)
+        private static int WriteStructuredDiff(Core.Models.Project project, DiffSelection selection,
+            DiffResult diff, int totalA, int totalB, int limit)
         {
-            string json = JsonSerializer.Serialize(new {
-                A = selection.A, B = selection.B,
-                added = diff.Added,
-                deleted = diff.Deleted,
-                modified = diff.Modified,
-                unchanged = diff.Unchanged,
-                summary = new {
-                    added = diff.Added.Count,
-                    deleted = diff.Deleted.Count,
-                    modified = diff.Modified.Count,
-                    unchanged = diff.Unchanged.Count,
-                    totalA,
-                    totalB
-                }
-            }, CommandJsonOptions.Indented);
-            Console.WriteLine(json);
+            string[] added = [.. diff.Added.Take(limit)];
+            string[] deleted = [.. diff.Deleted.Take(limit)];
+            string[] modified = [.. diff.Modified.Take(limit)];
+            string[] unchanged = [.. diff.Unchanged.Take(limit)];
+            bool truncated = added.Length < diff.Added.Count || deleted.Length < diff.Deleted.Count ||
+                modified.Length < diff.Modified.Count || unchanged.Length < diff.Unchanged.Count;
+            return CommandOutput.Success("snapshots.diff", new
+            {
+                project = ProjectInspection.Describe(project),
+                fromSnapshotId = selection.B,
+                toSnapshotId = selection.A,
+                paths = new { added, deleted, modified, unchanged },
+                summary = new { added = diff.Added.Count, deleted = diff.Deleted.Count,
+                    modified = diff.Modified.Count, unchanged = diff.Unchanged.Count, fromFiles = totalB, toFiles = totalA },
+                pathLimit = limit,
+                pathsTruncated = truncated
+            });
+        }
+
+        private static void WriteLegacyDiffJson(DiffSelection selection, DiffResult diff, int totalA, int totalB)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new {
+                A = selection.A, B = selection.B, added = diff.Added, deleted = diff.Deleted,
+                modified = diff.Modified, unchanged = diff.Unchanged,
+                summary = new { added = diff.Added.Count, deleted = diff.Deleted.Count,
+                    modified = diff.Modified.Count, unchanged = diff.Unchanged.Count, totalA, totalB }
+            }, CommandJsonOptions.Indented));
         }
 
         private static void WriteDiffTable(string projectName, DiffSelection selection, DiffResult diff, int limit)
         {
             AnsiConsole.MarkupLine($"Diff [bold]{Markup.Escape(projectName)}[/] - A: {selection.A} vs B: {selection.B}");
             Grid grid = new Grid().AddColumn().AddColumn().AddColumn().AddColumn();
-            grid.AddRow(
-                $"[green]Added[/]: {diff.Added.Count}",
-                $"[red]Deleted[/]: {diff.Deleted.Count}",
-                $"[yellow]Modified[/]: {diff.Modified.Count}",
-                $"[grey]Unchanged[/]: {diff.Unchanged.Count}");
+            grid.AddRow($"[green]Added[/]: {diff.Added.Count}", $"[red]Deleted[/]: {diff.Deleted.Count}",
+                $"[yellow]Modified[/]: {diff.Modified.Count}", $"[grey]Unchanged[/]: {diff.Unchanged.Count}");
             AnsiConsole.Write(grid);
-
             PrintList("ADDED", "green", diff.Added, limit);
             PrintList("DELETED", "red", diff.Deleted, limit);
             PrintList("MODIFIED", "yellow", diff.Modified, limit);
@@ -269,16 +308,15 @@ namespace VaultSync.CLI.Commands
 
         private static void PrintList(string title, string color, IEnumerable<string> rows, int limit)
         {
-            int total = rows is ICollection<string> c ? c.Count : rows.Count();
-            var list = rows.Take(limit).ToList();
+            int total = rows is ICollection<string> collection ? collection.Count : rows.Count();
+            List<string> list = rows.Take(limit).ToList();
             if (list.Count == 0)
                 return;
-
-            Table table = new Table().Border(TableBorder.Rounded);
+            var table = new Table().Border(TableBorder.Rounded);
             table.Title = new TableTitle($"[{color}]{title}[/] (showing {list.Count}{(total > list.Count ? $"/{total}" : "")})");
             table.AddColumn("Path");
-            foreach (string? r in list)
-                table.AddRow(r);
+            foreach (string path in list)
+                table.AddRow(Markup.Escape(path));
             AnsiConsole.Write(table);
         }
     }

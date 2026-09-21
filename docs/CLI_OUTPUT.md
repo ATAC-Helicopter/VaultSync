@@ -1,9 +1,9 @@
 # CLI structured output v1
 
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
-`projects show`, `snapshots list`, and legacy `history` with explicit
-`--output json`. This contract does not yet apply to snapshot creation/diff,
-mirror, restore, watch, or other command results. Legacy `--json`
+`projects show`, `snapshots list`, `snapshots diff`, and legacy `history`/`diff`
+with explicit `--output json`. This contract does not yet apply to snapshot
+creation, mirror, restore, watch, or other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
 
 These inspection invocations open an existing database in read-only mode. They
@@ -21,6 +21,7 @@ vaultsync projects list --db ./vault.db --filter alpha --preset dotnet --limit 1
 vaultsync projects show "My project" --db ./vault.db --output json
 vaultsync projects show --id 42 --db ./vault.db --output json
 vaultsync snapshots list "My project" --db ./vault.db --limit 10 --output json
+vaultsync snapshots diff "My project" 42 41 --db ./vault.db --limit 200 --output json
 ```
 
 `--filter` matches a case-insensitive project-name fragment. `--preset` matches
@@ -41,7 +42,7 @@ markup, or log messages mixed into it. The object contains:
 | Property | Meaning |
 | --- | --- |
 | `schemaVersion` | `1` |
-| `operation` | `projects.list`, `projects.show`, or `snapshots.list` |
+| `operation` | `projects.list`, `projects.show`, `snapshots.list`, or `snapshots.diff` |
 | `status` | `success` or `error` |
 | `data` | Success payload; null on failure |
 | `error` | Null on success; failure `{code, message}` |
@@ -60,7 +61,8 @@ a result envelope. Other commands' exit codes and cancellation semantics have
 not yet been unified under this contract.
 
 Error codes currently include `invalid_options`, `project_not_found`,
-`repository_unavailable`, and `command_failed`. Error messages are actionable,
+`snapshot_history_empty`, `snapshot_not_found`, `repository_unavailable`, and
+`command_failed`. Error messages are actionable,
 without embedding the underlying exception or connection string. Consumers
 should use codes rather than parsing text and tolerate additional properties.
 The envelope schema is [cli-result-v1.schema.json](schemas/cli-result-v1.schema.json).
@@ -88,6 +90,23 @@ successful empty list.
 
 Legacy `history --json` keeps its existing array, PascalCase field names, and UTC
 text dates. It retains initialization behavior unless explicit `--output` is used.
+
+
+## Snapshot diff payload
+
+`snapshots.diff` accepts two local snapshot IDs, or defaults to the latest and
+previous snapshots. Both IDs must belong to the selected project. A foreign,
+missing, or non-inferable selection returns `snapshot_not_found` with exit 2
+before any file paths are read. A project without snapshots returns
+`snapshot_history_empty`.
+
+The result names the older baseline as `fromSnapshotId` and newer target as
+`toSnapshotId`. `paths` contains deterministic ordinal-sorted `added`, `deleted`,
+`modified`, and `unchanged` arrays. The positive `--limit` bounds each array;
+`summary` retains complete category and file counts, while `pathsTruncated`
+explicitly reports omitted paths and `pathLimit` records the applied bound.
+Legacy `diff --json` keeps its original `A`/`B`, path arrays, and summary shape,
+but now also rejects cross-project IDs.
 
 Example selection failure:
 

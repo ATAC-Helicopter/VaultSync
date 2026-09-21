@@ -35,7 +35,7 @@ internal static class ResourceCommands
             snapshots.AddCommand<HistoryCommand>("list")
                 .WithDescription("List a project's indexed snapshots; --output json provides versioned read-only results");
             snapshots.AddCommand<DiffCommand>("diff")
-                .WithDescription("Compare two indexed snapshots; defaults to latest versus previous");
+                .WithDescription("Compare two same-project snapshots; --output json provides bounded versioned results");
             snapshots.AddCommand<PruneCommand>("prune")
                 .WithDescription("Prune eligible local snapshot indexes; protected and backed snapshots remain; supports --dry-run");
         });

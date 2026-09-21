@@ -38,6 +38,8 @@ internal static class CommandOutput
             return "projects.list";
         if (arguments.Length > 0 && string.Equals(arguments[0], "history", StringComparison.OrdinalIgnoreCase))
             return "snapshots.list";
+        if (arguments.Length > 0 && string.Equals(arguments[0], "diff", StringComparison.OrdinalIgnoreCase))
+            return "snapshots.diff";
         if (arguments.Length < 2)
             return null;
         if (string.Equals(arguments[0], "projects", StringComparison.OrdinalIgnoreCase))
@@ -46,8 +48,11 @@ internal static class CommandOutput
                 return "projects.list";
             return string.Equals(arguments[1], "show", StringComparison.OrdinalIgnoreCase) ? "projects.show" : null;
         }
-        return string.Equals(arguments[0], "snapshots", StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(arguments[1], "list", StringComparison.OrdinalIgnoreCase) ? "snapshots.list" : null;
+        if (!string.Equals(arguments[0], "snapshots", StringComparison.OrdinalIgnoreCase))
+            return null;
+        if (string.Equals(arguments[1], "list", StringComparison.OrdinalIgnoreCase))
+            return "snapshots.list";
+        return string.Equals(arguments[1], "diff", StringComparison.OrdinalIgnoreCase) ? "snapshots.diff" : null;
     }
 
     private static bool RequestsJson(string[] arguments)

@@ -80,6 +80,89 @@ public sealed class CliSnapshotInspectionTests
         Assert.Equal(before, File.ReadAllBytes(database));
     }
 
+    [Fact]
+    public async Task StructuredDiffIsBoundedDeterministicAndKeepsLegacyJsonShape()
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "vault.db");
+        SqliteRepository repository = TestRepository.Create(database);
+        int projectId = TestRepository.AddProject(repository, "Diff project", root.Path);
+        DateTime time = DateTime.UtcNow;
+        int older = repository.CreateSnapshot(projectId, 3, 30);
+        repository.InsertFiles(older,
+        [
+            new("same.txt", 10, time, "same"),
+            new("modified.txt", 10, time, "old"),
+            new("removed.txt", 10, time, "removed")
+        ]);
+        int newer = repository.CreateSnapshot(projectId, 4, 50);
+        repository.InsertFiles(newer,
+        [
+            new("same.txt", 10, time, "same"),
+            new("modified.txt", 20, time, "new"),
+            new("z-added.txt", 10, time, "z"),
+            new("a-added.txt", 10, time, "a")
+        ]);
+
+        var result = await RunAsync("snapshots", "diff", "Diff project", newer.ToString(), older.ToString(),
+            "--db", database, "--limit", "1", "--output", "json");
+        AssertEnvelope(result.Json, "snapshots.diff", 0);
+        JsonElement data = result.Json.GetProperty("data");
+        Assert.Equal(older, data.GetProperty("fromSnapshotId").GetInt32());
+        Assert.Equal(newer, data.GetProperty("toSnapshotId").GetInt32());
+        Assert.Equal("a-added.txt", data.GetProperty("paths").GetProperty("added")[0].GetString());
+        Assert.Equal(2, data.GetProperty("summary").GetProperty("added").GetInt32());
+        Assert.Equal(1, data.GetProperty("summary").GetProperty("deleted").GetInt32());
+        Assert.Equal(1, data.GetProperty("summary").GetProperty("modified").GetInt32());
+        Assert.Equal(1, data.GetProperty("summary").GetProperty("unchanged").GetInt32());
+        Assert.True(data.GetProperty("pathsTruncated").GetBoolean());
+
+        var legacy = await RunAsync("diff", "Diff project", newer.ToString(), older.ToString(), "--db", database, "--json");
+        Assert.Equal(new[] { "A", "B", "added", "deleted", "modified", "unchanged", "summary" },
+            legacy.Json.EnumerateObject().Select(property => property.Name));
+        Assert.Equal(2, legacy.Json.GetProperty("added").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task DiffRejectsSnapshotIdsFromAnotherProjectOnBothRoutes()
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "vault.db");
+        SqliteRepository repository = TestRepository.Create(database);
+        int selectedProject = TestRepository.AddProject(repository, "Selected", root.Path);
+        int otherProject = TestRepository.AddProject(repository, "Other", root.Path);
+        int selectedSnapshot = repository.CreateSnapshot(selectedProject, 0, 0);
+        int foreignSnapshot = repository.CreateSnapshot(otherProject, 0, 0);
+
+        var structured = await RunAsync("snapshots", "diff", "Selected", selectedSnapshot.ToString(),
+            foreignSnapshot.ToString(), "--db", database, "--output", "json");
+        AssertEnvelope(structured.Json, "snapshots.diff", 2);
+        Assert.Equal("snapshot_not_found", structured.Json.GetProperty("error").GetProperty("code").GetString());
+        int legacyExit = await Program.Main(
+            ["diff", "Selected", selectedSnapshot.ToString(), foreignSnapshot.ToString(), "--db", database, "--json"]);
+        Assert.NotEqual(0, legacyExit);
+    }
+
+    [Theory]
+    [InlineData("limit")]
+    [InlineData("conflict")]
+    [InlineData("unknown")]
+    public async Task StructuredDiffRejectsInvalidArgumentsBeforeDatabaseAccess(string scenario)
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "missing", "vault.db");
+        string[] arguments = scenario switch
+        {
+            "limit" => ["snapshots", "diff", "project", "--limit", "0"],
+            "conflict" => ["snapshots", "diff", "project", "--json"],
+            _ => ["snapshots", "diff", "project", "--unknown"]
+        };
+        var result = await RunAsync([.. arguments, "--db", database, "--output", "json"]);
+        AssertEnvelope(result.Json, "snapshots.diff", 2);
+        Assert.Equal("invalid_options", result.Json.GetProperty("error").GetProperty("code").GetString());
+        Assert.False(Directory.Exists(Path.GetDirectoryName(database)));
+    }
+
     private static void AssertEnvelope(JsonElement json, string operation, int exitCode)
     {
         Assert.Equal(1, json.GetProperty("schemaVersion").GetInt32());

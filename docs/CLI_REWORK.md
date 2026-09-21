@@ -19,8 +19,8 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | `set-path` | Keep compatibility route | `projects set-path` implemented; validates an existing source folder |
 | `update-path` | Keep existing alias | Same handler as `set-path`; no independent behavior |
 | `snapshot` | Keep compatibility route; clarify indexing | `snapshots create` implemented; scans/hashes/indexes source state, stores no backup payload |
-| `history` | Keep compatibility route; add resource listing | `snapshots list` implemented; limits and current JSON retained |
-| `diff` | Keep compatibility route; add resource comparison | `snapshots diff` implemented; compares indexed file records, not file contents from two stored backups |
+| `history` | Keep compatibility route; add resource listing | `snapshots list` implements versioned read-only results and positive limits; current JSON retained |
+| `diff` | Keep compatibility route; add resource comparison | `snapshots diff` implements bounded versioned read-only results and same-project ID checks; compares indexed records, not two stored backup payloads |
 | `prune` | Keep compatibility route; make retention scope explicit | `snapshots prune` implemented; local-index retention, existing dry-run and backed/protected-point safeguards retained |
 | `restore` | Keep compatibility route; extend qualified formats later | `recovery restore` implemented; recorded folder backups only; archive/encrypted inputs remain rejected |
 | `sync` | Keep live-mirroring compatibility route | `mirror` implemented over the same rsync/robocopy service; does not create a recorded backup |

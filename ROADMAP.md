@@ -1267,6 +1267,14 @@ destabilizing the maintenance release.
     concurrent trigger/cancel/completion does not access disposed token sources.
   - Tracking: [issue #700](https://github.com/ATAC-Helicopter/VaultSync/issues/700);
     implementation and regression evidence await release integration.
+- [ ] `BUG-19003` `P1` Restrict CLI snapshot diffs to the selected project's history.
+  - Scope: validate both explicit snapshot IDs against the selected project before
+    reading file paths on grouped and legacy routes; return a stable structured
+    error and retain nonzero legacy failure behavior.
+  - Acceptance: foreign-project snapshot IDs cannot contribute paths or counts;
+    valid same-project comparisons and legacy JSON remain compatible.
+  - Tracking: [issue #716](https://github.com/ATAC-Helicopter/VaultSync/issues/716);
+    implementation and regression evidence await release integration.
 - [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
   - Scope: inventory existing commands and core-service gaps; define resource/action
     naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
@@ -1285,8 +1293,8 @@ destabilizing the maintenance release.
   - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
     naming reuse existing handlers; projects discover now exposes source-folder
     discovery. Read-only projects show accepts literal names or explicit IDs;
-    listing supports name/preset filters and limits; snapshot history now has
-    versioned read-only results; watch accepts explicit --db. Backup/parity/bulk
+    listing supports name/preset filters and limits; snapshot history and bounded
+    same-project diffs now have versioned read-only results; watch accepts explicit --db. Backup/parity/bulk
     scope remains.
 - [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
   - Scope: versioned JSON and streaming result contracts, stable exit codes,
@@ -1297,8 +1305,8 @@ destabilizing the maintenance release.
     cancellation, unsupported scope, and partial results have documented outcomes.
   - Progress: raw argv logging is removed; BUG-19001 owns the confirmed quiet
     removal defect. Project list/show implement explicit v1 JSON envelopes,
-    read-only project and snapshot-history inspection, plus parse/selection/
-    operational errors; remaining workflows and uniform unattended contracts
+    read-only project, snapshot-history, and bounded diff inspection, plus parse/
+    selection/operational errors; remaining workflows and uniform unattended contracts
     remain pending. BUG-19002 owns
     watcher shutdown/draining; quiet startup and cancellation exit 130 are implemented.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.

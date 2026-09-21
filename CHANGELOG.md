@@ -2,6 +2,7 @@
 ## [1.9.0] - Unreleased
 
 ### Added
+- [VS-1973][VS-1974] Add bounded, versioned, read-only snapshot-diff results with complete summary counts.
 - [VS-1973][VS-1974] Add versioned, read-only snapshot-history results while preserving legacy `history --json`.
 - [VS-1973] Select an explicit database for unattended watcher sessions with `watch --db`.
 - [VS-1973] Inspect projects by explicit ID or literal name and filter/limit project listings.
@@ -10,6 +11,7 @@
 - [VS-1973] Expose candidate source-folder discovery with `projects discover --root`.
 - [VS-1973] Add `mirror` with explicit live-transfer semantics and existing dry-run behavior.
 ### Fixed
+- [BUG-19003] Reject snapshot IDs outside the selected project before CLI diff reads their paths.
 - [BUG-19002] Honor watcher cancellation, detach Ctrl-C handlers, and drain queued/active work before returning exit 130.
 - [BUG-19001] Require explicit `--yes` for quiet or redirected-input project removal, preserving registration and local history on rejection.
 ### Changed

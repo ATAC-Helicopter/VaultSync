@@ -129,6 +129,17 @@ missing stores and projects have stable errors. Legacy `history --json` retains
 its original array and property casing. Snapshot rows describe indexes and hashes,
 not recoverable backup bytes. All 960 .NET tests and 100 script tests pass.
 
+## Snapshot-diff inspection slice
+
+`snapshots diff` and legacy `diff` now accept explicit `--output json` for a
+versioned read-only comparison. Both snapshot IDs must belong to the selected
+project before paths are read. Path arrays are deterministic and bounded by a
+positive limit; complete counts and an explicit truncation flag remain available.
+Legacy JSON retains its original shape while inheriting the project boundary.
+[BUG-19003 / #716](https://github.com/ATAC-Helicopter/VaultSync/issues/716)
+tracks the previously unrestricted cross-project selection. All 965 .NET tests
+and 100 script tests pass; roadmap and Project date audits are clean.
+
 ## Watcher lifecycle slice
 
 `watch --db PATH` selects the same store as other CLI operations. Quiet sessions
