@@ -1048,6 +1048,12 @@ still require fresh evidence.
 requires cloning, validation, image-to-disk recovery, and bootable recovery
 media to be ready and tested together.
 
+Recovery Horizon also carries a later **Binary Source Control** track for
+binary-heavy project workflows. It is intentionally sequenced after the core
+recovery path so it cannot block disk/boot recovery. Its maintained architecture,
+storage, locking, recovery, collaboration, and qualification contract is in
+[`docs/BINARY_SOURCE_CONTROL_STRATEGY.md`](docs/BINARY_SOURCE_CONTROL_STRATEGY.md).
+
 The maintained strategy, sequencing rationale, architecture gates, Project
 entry contract, and `1.10` versus `2.0` decision rule are in
 [`docs/RECOVERY_HORIZON_STRATEGY.md`](docs/RECOVERY_HORIZON_STRATEGY.md).
@@ -1072,7 +1078,10 @@ following contracts must be reviewed together:
   recovery media, immutable storage, and provider-account loss;
 - portable recovery dependencies and the minimum independent restore path;
 - shared identities, dependencies, evidence, and failure domains required by
-  later resilience evaluation.
+  later resilience evaluation;
+- the Binary Source Control repository/object format, workspace/ref model,
+  locking and conflict semantics, encryption/recovery boundary, GC/repair
+  invariants, and local/NAS-to-offsite backend contract.
 
 Unsupported combinations must remain explicit. A prototype or dependency
 spike is evidence for a decision, not a stable product commitment.
@@ -1139,6 +1148,29 @@ Migration principles:
   - Acceptance: issue #114 remains closed and Done; any later scheduling,
     evidence, or recovery-assurance expansion receives a new release-specific
     identifier rather than reopening or reusing `VS-1903`.
+
+## 1.9 Binary Source Control architecture gate
+
+Binary Source Control is a separate version-control repository model, not a
+rename of backup snapshots and not a Git replacement. Implementation may use
+prototypes and benchmarks before this gate closes, but stable-format work does
+not begin until the following contracts are approved together:
+
+- [ ] `VS-1981` `P0` Define the Binary Source Control architecture,
+  repository format, immutable object/change graph, product boundary, backend
+  primitives, threat model, migration rules, and Stable-versus-Preview gate.
+  _(Issue #703.)_
+- [ ] `VS-1982` `P0` Define BSC authorship, workspace identity, ownership,
+  long-lived path locks, short writer leases, guarded ref updates, stale-lock
+  takeover, conflict review, and audit evidence.
+  _(Issue #704.)_
+
+The gate must explicitly preserve the distinction from `VS-1801` full
+`.git` repository backup. BSC must coexist with Git without silently mutating
+Git metadata or claiming Git LFS protocol compatibility.
+
+The full maintained strategy is
+[`docs/BINARY_SOURCE_CONTROL_STRATEGY.md`](docs/BINARY_SOURCE_CONTROL_STRATEGY.md).
 
 ## 1.9 platform modernization gate
 
@@ -1390,12 +1422,93 @@ unchanged because work IDs are immutable and do not encode the patch number.
     runbooks pass on Windows, macOS, and Linux; no misleading success or secret
     output remains; results provide evidence for VS-1956 parity closure.
 
-## 1.9.6 — Stability and LTS Baseline
+## 1.9.6 — Binary Source Control Foundation
 
-- [ ] `VS-1961` `P0` Stabilize disk-image, offsite, and portable-recovery
-  formats.
+Binary Source Control enters the 1.9 family only after `VS-1981` and
+`VS-1982` approve the repository and collaboration contracts. This release
+targets a complete local/NAS mainline workflow before branching or offsite scale.
+
+- [ ] `VS-1983` `P0` Build the immutable binary object store with
+  content-defined chunking, repository-local deduplication, independently
+  verifiable packs, rebuildable indexes, and bounded-memory streaming.
+  _(Issue #705.)_
+- [ ] `VS-1984` `P0` Build canonical file/tree objects, immutable changesets,
+  tags, and compare-and-swap refs with atomic publication ordering.
+  _(Issue #706.)_
+- [ ] `VS-1985` `P0` Build workspace status, staging, check-in, sync, and
+  safe checkout with dirty-workspace protection and cross-platform path checks.
+  _(Issue #707.)_
+- [ ] `VS-1986` `P0` Add binary lock rules, exclusive checkout, lock
+  heartbeat, commit-time ownership checks, and explicit stale-lock takeover.
+  _(Issue #708.)_
+- [ ] `VS-1987` `P1` Add changeset/path history, read-only browse, exact
+  restore, compare, tagging, and recovery evidence.
+  _(Issue #709.)_
+- [ ] `VS-1989` `P0` Add authenticated repository encryption, secure local
+  credential use, and a portable recovery-key path.
+  _(Issue #711.)_
+- [ ] `VS-1990` `P0` Add repository verification, index rebuild, reachability
+  analysis, quarantine, safe GC/repack, and emergency read-only recovery.
+  _(Issue #712.)_
+- [ ] `VS-1992` `P1` Integrate the BSC desktop and CLI foundation with clear
+  Git coexistence guidance and no automatic mutation of `.git`.
+  _(Issue #714.)_
+
+### 1.9.6 stable release gate
+
+- a repository can be created, reopened, and recovered without the original
+  local application database;
+- a second machine can attach a workspace, sync, lock, modify, check in, and
+  restore earlier content through one guarded default ref;
+- interrupted object/pack/index/tree/changeset writes cannot publish an
+  incomplete changeset;
+- guarded ref updates reject a stale base rather than overwriting newer work;
+- dirty workspace paths are never silently overwritten by sync/checkout;
+- exclusive locks cannot be silently stolen and stale takeover retains evidence;
+- index/cache loss is rebuildable from authoritative repository data;
+- full verification detects injected corruption;
+- encrypted repositories are recoverable on a clean machine with documented
+  authorized recovery material;
+- GC/repack fault tests preserve every reachable changeset;
+- Windows, macOS, Linux, and representative NAS/SMB workflows pass the stated
+  qualification envelope.
+
+If these gates are not met, BSC remains clearly labelled Preview and cannot
+block the earlier Recovery Horizon releases.
+
+## 1.9.7 — Binary Collaboration and Scale
+
+- [ ] `VS-1988` `P1` Add branches and deterministic three-way path planning,
+  auto-resolving only provably non-overlapping or byte-identical changes and
+  requiring explicit resolution for overlapping binary edits.
+  _(Issue #710.)_
+- [ ] `VS-1991` `P1` Add sparse workspaces, verified local cache, resumable
+  object transfer, and safe mirror/offsite replication where backend
+  conditional-write semantics are sufficient.
+  _(Issue #713.)_
+- [ ] `VS-1993` `P0` Qualify BSC performance, cross-platform clean-machine
+  recovery, multi-client NAS concurrency, large logical histories, corruption,
+  interruption, maintenance, and fault injection.
+  _(Issue #715.)_
+
+### 1.9.7 stable release gate
+
+- branch/ref operations never silently discard overlapping binary work;
+- sparse and full workspaces reconstruct identical bytes for included paths;
+- cache corruption causes re-fetch/reverification rather than trusted output;
+- resumable transfer never publishes incomplete history;
+- a mirror is reported protected only after all objects reachable from the
+  selected changeset are durable and verifiable;
+- large-history performance and memory budgets are enforced;
+- repeated commit/verify/GC/repack cycles remain recoverable under forced
+  termination and network loss.
+
+## 1.9.8 — Stability and LTS Baseline
+
+- [ ] `VS-1961` `P0` Stabilize disk-image, offsite, portable-recovery, and
+  Binary Source Control formats.
 - [ ] `VS-1962` `P0` Complete long-duration, large-dataset, migration,
-  filesystem, and fault-injection qualification.
+  filesystem, source-control, and fault-injection qualification.
 - [ ] `VS-1963` `P1` Publish the supported compatibility window and LTS policy.
 
 ---
@@ -1459,8 +1572,6 @@ These items are not assigned to a release until their contracts are approved:
 - additional object-storage and WebDAV providers;
 - `VS-1971` optional shared/team vault workflows with explicit ownership,
   access, conflict, and audit contracts;
-- Binary Source Control for large, opaque, or non-mergeable project assets,
-  subject to the study and approval gates below;
 - enterprise deployment and centralized administration;
 - universal boot media or guaranteed cross-hardware bare-metal recovery;
 - self-healing protection under explicit user policy;
@@ -1469,177 +1580,6 @@ These items are not assigned to a release until their contracts are approved:
 - multi-step recovery orchestration;
 - local-first device resilience summaries;
 - historical resilience simulation with fact/inference separation.
-
-## Candidate study — Binary Source Control
-
-**Candidate promise:** *Keep every important binary revision recoverable,
-inspectable, and safe from silent overwrite.*
-
-Binary Source Control is a possible post-1.9 product capability for creative,
-engineering, media, design, game, CAD, archive, and dataset workflows whose
-important files are large, opaque, or cannot be merged meaningfully as text.
-It is not approved release scope and receives no execution ID, milestone, or
-delivery date until the gates in this section pass.
-
-The capability must be designed as version control over durable file content,
-not as a new label for the current snapshot index. A published revision exists
-only after its referenced bytes and manifest are durably stored, verified, and
-reachable. Snapshot metadata alone cannot establish a recoverable revision.
-
-### Product boundary
-
-The first useful product slice should support:
-
-- an explicit binary repository and workspace identity, independent from a
-  machine-local project row or mutable source path;
-- user-created immutable checkpoints containing parent revision, author or
-  installation provenance, timestamp, message, paths, sizes, content hashes,
-  file modes where portable, and deletion/rename records;
-- version history by repository, folder, and file, including previewable
-  added, changed, renamed, and removed paths without pretending that opaque
-  binary content has a textual diff;
-- safe checkout, export, and restore to a new destination, with a separate
-  reviewed replace-in-place workflow;
-- protected revisions, retention preview, reachability analysis, integrity
-  verification, and deterministic recovery evidence;
-- path-level exclusive edit leases for file types declared non-mergeable,
-  including owner, repository, canonical path, base revision, acquisition,
-  heartbeat, expiry, and explicit administrative takeover evidence;
-- offline work that never silently overwrites a newer published revision:
-  reconnecting with a stale base must publish a conflict or a distinct revision
-  for review;
-- CLI and desktop operations that share the same repository, locking,
-  transaction, recovery, and error contracts.
-
-The initial slice must not promise:
-
-- semantic merge for arbitrary binary formats;
-- real-time co-editing, hosted collaboration, code review, issue tracking, or a
-  replacement for Git, Git LFS, Perforce, or an artifact registry;
-- branches, tags, pull requests, remote hosting, or Git-wire compatibility
-  before a validated user workflow requires them;
-- that source control is itself an independent backup, offsite copy, or
-  disaster-recovery plan;
-- storage savings from binary deltas or chunking without representative
-  measurements and a format/compatibility decision.
-
-### Repository and storage contract to investigate
-
-Start with a content-addressed immutable object model and a versioned canonical
-manifest. Whole-file SHA-256 objects are the reference baseline because they
-are simple to verify and recover independently. Content-defined chunking,
-binary delta chains, compression, and pack files remain alternatives to test,
-not assumed requirements. The study must measure them against real workloads:
-already-compressed media may gain little, while large VM, CAD, database, or
-game-project files may benefit substantially.
-
-Any accepted format must define:
-
-- domain-separated object and manifest identities, canonical serialization,
-  collision handling, maximum sizes/counts, and algorithm migration;
-- transaction ordering from staged objects to an atomically visible revision;
-- crash recovery, orphan-object quarantine, garbage-collection roots, protected
-  revisions, interrupted compaction, and rollback behavior;
-- exact reachability rules so prune or garbage collection cannot delete bytes
-  referenced by a revision, backup, export, recovery drill, active lease, or
-  in-progress transaction;
-- encryption boundaries, key loss behavior, credential references, metadata
-  privacy, and whether equality leakage from deduplication is acceptable;
-- forward/read compatibility, unknown-version rejection, migration fixtures,
-  and emergency read-only extraction without a working application database;
-- local disk, removable media, NAS/SMB, case-sensitive and case-insensitive
-  filesystem behavior, including Unicode normalization and reserved names;
-- repository lease interaction with the existing portable metadata store. A
-  metadata writer lease is not automatically sufficient authority for binary
-  object publication or per-file edit ownership.
-
-### Concurrency and conflict model
-
-Binary files frequently lack safe automatic merge semantics. A lock is therefore
-coordination evidence, not proof that another machine cannot modify a file.
-Publication must use compare-and-swap against the expected base revision even
-when a valid lease exists. Stale, expired, forced, or missing leases must remain
-visible in history, and a network partition must produce an explicit conflict
-rather than last-writer-wins replacement.
-
-Files not declared lockable may use optimistic parallel revisions, but the
-first slice should resolve conflicts by retaining both complete versions and
-asking the user to select or publish a successor. External format-aware preview
-or diff tools may be added only through an explicit, sandboxed, argument-safe
-contract; they must never become required for byte recovery.
-
-### Security and recovery requirements
-
-The design and prototype must cover:
-
-- traversal, absolute paths, alternate data streams, device names, case and
-  Unicode collisions, hard links, symlinks/reparse points, sparse files, and
-  files that change while being hashed or copied;
-- atomic no-follow writes, destination containment, temporary-file permissions,
-  bounded memory/disk use, decompression limits, object-count limits, and
-  malicious or corrupt manifests;
-- verification before checkout and after restore, with no executable launch,
-  preview-handler invocation, or format parser required to prove byte identity;
-- secret-safe logs and evidence, especially for filenames, workspace paths,
-  repository names, lock owners, comments, and external tool output;
-- authenticated authorization for lock takeover, retention changes, revision
-  removal, and shared/remote publication if collaboration is later approved;
-- a clean-machine recovery exercise using only the documented repository
-  format, required keys, and supported recovery tooling;
-- independent backup guidance for the binary repository itself, including how
-  VaultSync proves that version history survives loss of the working machine or
-  primary repository destination.
-
-### Research basis and interoperability boundary
-
-The study should compare, without inheriting their product assumptions:
-
-- Git LFS pointer/object separation and its explicit large-file migration
-  model: <https://git-lfs.com/>;
-- Git LFS path locking and push-time lock verification, while recognizing that
-  its documented locking API begins with a simple single-branch model:
-  <https://github.com/git-lfs/git-lfs/blob/main/docs/api/locking.md>;
-- Git's explicit treatment of binary content as non-textual and normally
-  non-mergeable: <https://git-scm.com/docs/gitattributes>;
-- restic's content-defined chunking and content-addressed backup design as a
-  storage reference rather than a source-control contract:
-  <https://restic.readthedocs.io/en/stable/design.html>.
-
-Git LFS import/export may be studied later, but compatibility must preserve
-object hashes, pointer validation, missing-object detection, authorization, and
-history completeness. VaultSync must not edit `.gitattributes`, install Git
-hooks, contact an LFS server, or migrate existing history implicitly.
-
-### Approval evidence
-
-Promote Binary Source Control from candidate study to execution work only when:
-
-1. Interviews or repository evidence identify concrete workflows that current
-   VaultSync recovery history and established tools do not already solve.
-2. A written product contract distinguishes checkpoint, revision, working copy,
-   lock, conflict, restore, retention, and backup semantics.
-3. Representative datasets and change patterns are published for small files,
-   large mutable binaries, compressed media, sparse files, and high-file-count
-   projects, with storage, publish, checkout, verify, and garbage-collection
-   measurements.
-4. An architecture decision selects the object, manifest, transaction,
-   concurrency, encryption, and compatibility model and documents rejected
-   alternatives.
-5. A disposable prototype proves interrupted publication recovery, stale-base
-   conflict retention, lock takeover evidence, corruption detection, safe
-   checkout, protected-revision retention, and clean-machine extraction.
-6. Threat modelling covers malicious repositories, untrusted collaborators,
-   hostile paths, denial of service, equality leakage, credential/key loss,
-   rollback, and compromised working files.
-7. The proposal defines how existing projects, snapshots, backups, metadata
-   stores, schedules, destinations, CLI automation, and Recovery evidence
-   coexist without migration by surprise or duplicate authority.
-8. The first release has bounded platform/filesystem support, measurable
-   performance and recovery gates, and an honest support/LTS cost.
-
-Until these gates pass, use established source-control or large-file tooling
-for collaboration and VaultSync backups for independent recovery. Do not market
-existing snapshots, mirrors, or backup retention as Binary Source Control.
 
 # Roadmap governance
 
