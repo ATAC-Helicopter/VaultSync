@@ -89,6 +89,9 @@ public static class Program
                 cfg.AddCommand<VaultSync.CLI.Commands.VersionCommand>("version")
                     .WithDescription("Show version");
 
+                cfg.AddCommand<VaultSync.CLI.Commands.DocsCommand>("docs")
+                    .WithDescription("Show documentation links, print the bundled CLI handbook, or open it online");
+
                 // Branches
                 cfg.AddBranch<CommandSettings>("config", b =>
                 {
@@ -106,8 +109,12 @@ public static class Program
                 });
             });
 
+            string[] effectiveArgs = args.Length == 0 ? ["--help"] : args;
+            if (VaultSync.CLI.Commands.CliPresentation.ShouldWriteWelcome(args))
+                VaultSync.CLI.Commands.CliPresentation.WriteWelcome();
+
             Log.Info("command execution started");
-            int code = await app.RunAsync(args);
+            int code = await app.RunAsync(effectiveArgs);
             Log.Info($"exit: {code}");
             return code;
         }

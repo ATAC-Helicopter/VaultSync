@@ -16,7 +16,9 @@ and reject snapshot IDs outside the selected project. Existing command routes an
 Quiet or unattended project removal requires `--yes`; `--quiet` alone no longer
 authorizes deletion of the local registration/history. Watchers support explicit
 `--db`, suppress guidance in quiet mode, and drain work before stopping on Ctrl-C
-with exit 130. See the
+with exit 130. Root help now presents a compact VaultSync identity, useful links,
+and quick-start guidance. `vaultsync docs` provides the bundled full handbook and
+an online entry point. See the [CLI handbook](CLI.md) and
 [CLI audit and migration notes](CLI_REWORK.md).
 
 Current stable: **1.8.9**, published September 16, 2026. See the

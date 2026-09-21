@@ -2,6 +2,8 @@
 ## [1.9.0] - Unreleased
 
 ### Added
+- [VS-1977] Add compact branded root help with purpose text, links, and quick-start discovery.
+- [VS-1978] Add and package a full CLI handbook accessible through `docs --full`, `--open`, or `--url`.
 - [VS-1973][VS-1975] Add read-only single-snapshot inspection with History markers and aggregate recorded-backup references.
 - [VS-1973][VS-1974] Add bounded, versioned, read-only snapshot-diff results with complete summary counts.
 - [VS-1973][VS-1974] Add versioned, read-only snapshot-history results while preserving legacy `history --json`.

@@ -1360,6 +1360,9 @@ destabilizing the maintenance release.
   - Acceptance: a user can discover and complete a backup, inspection, or safe
     restore task from terminal help; generated completions track the command tree
     and installation instructions work on supported packages.
+  - Progress: compact branded root help, purpose and quick-start copy, clickable
+    project/documentation links, and the `docs` discovery command are implemented
+    on the shared 1.9 branch. Shell completion and packaged PATH guidance remain.
 - [ ] `VS-1978` `P1` Publish a practical CLI handbook and script migration guide.
   - Scope: quick start, command reference, bulk workflows, JSON/exit-code
     contracts, cron/systemd/Task Scheduler examples, credentials, troubleshooting,
@@ -1367,6 +1370,10 @@ destabilizing the maintenance release.
   - Acceptance: executable examples run against disposable data on supported
     systems; each command documents mutation, verification scope, and failure
     behavior; a script author can migrate without guessing.
+  - Progress: `docs/CLI.md` now covers concepts, configuration precedence, grouped
+    and compatibility routes, structured results, automation safety, and current
+    limits; it is embedded and packaged, printable with `docs --full`, and reachable
+    online with `docs --open`/`--url`. Scheduler recipes and migration runbooks remain.
 
 ## 1.9.2 — Portable Recovery
 

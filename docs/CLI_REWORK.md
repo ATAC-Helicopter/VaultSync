@@ -31,6 +31,7 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | `destinations` | Keep existing listing/testing invocation | Future resource actions must preserve today's `--test` and `--json`; testing can involve mount/credential access |
 | `init` | Keep explicit initialization | Future profile/config selection must preserve shared CLI/desktop storage and owner-only data policy |
 | `version` | Keep existing build-identity output | Existing JSON identity retained |
+| `docs` | Add documentation entry point | Compact terminal guide plus bundled `--full`, browser `--open`, and pipe-friendly `--url` access to the full handbook |
 | `--version` | Keep early read-only shortcut | Remains before logging/config initialization |
 | `config show` | Keep legacy output; add safe inspect/export later | Current full serialized config is not a redacted support export; secrets/privacy audit required |
 | `config path` | Keep current meaning | Returns configured database path, not the configuration file path; new file-location inspection needs an explicit action |
@@ -198,3 +199,18 @@ defects; VS-1973 owns explicit store selection and VS-1974 owns unattended behav
 This does not yet unify watcher failure reporting, JSON events, or dry-run semantics.
 The existing cycle failure handling remains pending under VS-1974; exit 130 reports
 cancellation rather than qualification of all prior cycles.
+
+## Terminal identity and documentation
+
+Root help now begins with a compact bordered VaultSync name, version, four-part
+purpose line, short introduction, documentation/website/source links, and quick
+start pointers. It appears only for an empty invocation or root `--help`; command
+execution and structured output never receive the decoration. An empty invocation
+is normalized to root help and returns success.
+
+`vaultsync docs` shows the compact documentation menu. `docs --full` prints the
+complete embedded Markdown handbook without terminal decoration, `docs --url`
+prints only its online URL, and `docs --open` asks the operating system to open that
+URL. `docs/CLI.md` is embedded for runtime use and also included in the tool package.
+This is early implementation under VS-1977 and VS-1978; shell completion, platform
+PATH guidance, scheduler examples, and script-migration runbooks remain pending.

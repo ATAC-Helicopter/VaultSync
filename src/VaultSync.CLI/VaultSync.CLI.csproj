@@ -43,6 +43,8 @@
   <ItemGroup>
     <!-- Ensure README is included in the package -->
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <EmbeddedResource Include="..\..\docs\CLI.md" LogicalName="VaultSync.CLI.Docs.CLI.md" />
+    <None Include="..\..\docs\CLI.md" Pack="true" PackagePath="docs\CLI.md" />
   </ItemGroup>
 
   <ItemGroup>

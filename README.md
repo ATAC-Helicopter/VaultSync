@@ -314,7 +314,7 @@ Replace the server address, export, and destination folder with values from your
 
 ## CLI
 
-The VaultSync CLI supports snapshots, synchronization, verification, scripting, automation, and headless environments.
+The VaultSync CLI supports snapshots, synchronization, verification, scripting, automation, and headless environments. Run `vaultsync docs` for its compact guide, `vaultsync docs --full` for the bundled handbook, or read the [full CLI handbook](docs/CLI.md).
 
 ### Install from source
 
@@ -347,9 +347,10 @@ dotnet tool update --global vaultsync.cli
 
 ```sh
 vaultsync init
-vaultsync add-project Demo ~/Projects/Demo --preset unity
-vaultsync snapshot Demo
-vaultsync sync Demo ~/Backups/Demo
+vaultsync projects add Demo ~/Projects/Demo --preset unity
+vaultsync snapshots create Demo
+vaultsync snapshots list Demo --output json
+vaultsync mirror Demo ~/Backups/Demo --dry-run
 vaultsync verify Demo ~/Backups/Demo --full
 ```
 
