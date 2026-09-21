@@ -30,6 +30,7 @@ public static class Program
 
             app.Configure(cfg =>
             {
+                cfg.ConfigureConsole(AnsiConsole.Console);
                 VaultSync.CLI.Commands.ResourceCommands.Register(cfg);
                 VaultSync.CLI.Commands.CommandOutput.ConfigureErrors(cfg, args);
 
@@ -109,12 +110,17 @@ public static class Program
                 });
             });
 
-            string[] effectiveArgs = args.Length == 0 ? ["--help"] : args;
-            if (VaultSync.CLI.Commands.CliPresentation.ShouldWriteWelcome(args))
-                VaultSync.CLI.Commands.CliPresentation.WriteWelcome();
-
             Log.Info("command execution started");
-            int code = await app.RunAsync(effectiveArgs);
+            if (args.Length == 0)
+            {
+                VaultSync.CLI.Commands.CliPresentation.WriteLanding();
+                Log.Info("exit: 0");
+                return 0;
+            }
+            if (VaultSync.CLI.Commands.CliPresentation.IsRootHelp(args))
+                VaultSync.CLI.Commands.CliPresentation.WriteHelpHeader();
+
+            int code = await app.RunAsync(args);
             Log.Info($"exit: {code}");
             return code;
         }

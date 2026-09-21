@@ -9,9 +9,11 @@ remain available throughout the 1.9 family.
 - Source: https://github.com/ATAC-Helicopter/VaultSync
 - Releases: https://github.com/ATAC-Helicopter/VaultSync/releases/latest
 - Issues: https://github.com/ATAC-Helicopter/VaultSync/issues
+- Exhaustive generated command help: [CLI_COMMAND_REFERENCE.md](CLI_COMMAND_REFERENCE.md)
 
-Run `vaultsync docs` for the compact terminal guide, `vaultsync docs --full` for
-this bundled handbook, `vaultsync docs --open` to open the online copy, or
+Run `vaultsync` with no arguments for the introductory screen, `vaultsync docs`
+for the compact documentation menu, `vaultsync docs --full` for this bundled
+handbook plus the exhaustive generated command reference, `vaultsync docs --open` to open the online copy, or
 `vaultsync COMMAND --help` for exact command options.
 
 ## Install and identify the build

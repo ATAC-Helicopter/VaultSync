@@ -314,7 +314,7 @@ Replace the server address, export, and destination folder with values from your
 
 ## CLI
 
-The VaultSync CLI supports snapshots, synchronization, verification, scripting, automation, and headless environments. Run `vaultsync docs` for its compact guide, `vaultsync docs --full` for the bundled handbook, or read the [full CLI handbook](docs/CLI.md).
+The VaultSync CLI supports snapshots, synchronization, verification, scripting, automation, and headless environments. Run `vaultsync` for its introductory screen, `vaultsync docs --full` for the bundled handbook and exhaustive reference, or read the [CLI handbook](docs/CLI.md) and [generated command reference](docs/CLI_COMMAND_REFERENCE.md).
 
 ### Install from source
 

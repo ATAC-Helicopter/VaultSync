@@ -18,10 +18,42 @@ internal static class CliPresentation
     public const string ReleasesUrl = "https://github.com/ATAC-Helicopter/VaultSync/releases/latest";
     public const string DocumentationUrl = "https://github.com/ATAC-Helicopter/VaultSync/blob/release/1.9.0/docs/CLI.md";
 
-    public static bool ShouldWriteWelcome(string[] arguments) => arguments.Length == 0 ||
-        (arguments.Length == 1 && (arguments[0] == "--help" || arguments[0] == "-h"));
+    public static bool IsRootHelp(string[] arguments) => arguments.Length == 1 &&
+        (arguments[0] == "--help" || arguments[0] == "-h");
 
-    public static void WriteWelcome()
+    public static void WriteLanding()
+    {
+        if (AnsiConsole.Profile.Width >= 72)
+            AnsiConsole.Write(new FigletText("VaultSync").Centered().Color(Color.DeepSkyBlue1));
+        else
+            AnsiConsole.Write(new Rule("[bold deepskyblue1]VaultSync[/]").RuleStyle("deepskyblue1"));
+
+        WritePurposePanel();
+        WriteLinks();
+
+        AnsiConsole.MarkupLine("[bold]Start here[/]");
+        var commands = new Table().Border(TableBorder.Simple).HideHeaders();
+        commands.AddColumn("Command");
+        commands.AddColumn("Purpose");
+        commands.AddRow("[cyan]vaultsync projects list[/]", "Inspect registered projects");
+        commands.AddRow("[cyan]vaultsync projects add NAME PATH[/]", "Register a source folder");
+        commands.AddRow("[cyan]vaultsync snapshots create NAME[/]", "Index and hash current source state");
+        commands.AddRow("[cyan]vaultsync snapshots list NAME[/]", "Inspect snapshot history");
+        commands.AddRow("[cyan]vaultsync mirror NAME DEST --dry-run[/]", "Preview a live mirror operation");
+        commands.AddRow("[cyan]vaultsync docs[/]", "Open documentation choices");
+        AnsiConsole.Write(commands);
+        AnsiConsole.MarkupLine("[grey]Every command:[/] vaultsync --help   [grey]One command:[/] vaultsync COMMAND --help");
+    }
+
+    public static void WriteHelpHeader()
+    {
+        WritePurposePanel();
+        WriteLinks();
+        AnsiConsole.MarkupLine("[grey]Handbook:[/] vaultsync docs");
+        AnsiConsole.WriteLine();
+    }
+
+    private static void WritePurposePanel()
     {
         BuildInformation build = BuildInformationService.Create(typeof(CliPresentation).Assembly);
         var panel = new Panel(new Markup(
@@ -34,17 +66,21 @@ internal static class CliPresentation
             Padding = new Padding(1, 0, 1, 0)
         };
         AnsiConsole.Write(panel);
+    }
+
+    private static void WriteLinks()
+    {
         AnsiConsole.MarkupLine(
             $"[grey]Docs:[/] [link={DocumentationUrl}]{DocumentationUrl}[/]\n" +
             $"[grey]Website:[/] [link={WebsiteUrl}]{WebsiteUrl}[/]\n" +
-            $"[grey]Source:[/] [link={SourceUrl}]{SourceUrl}[/]\n" +
-            "[grey]Start:[/] vaultsync projects list   [grey]Handbook:[/] vaultsync docs");
+            $"[grey]Repository:[/] [link={SourceUrl}]{SourceUrl}[/]\n" +
+            $"[grey]Releases:[/] [link={ReleasesUrl}]{ReleasesUrl}[/]");
         AnsiConsole.WriteLine();
     }
 
     public static void WriteDocumentationIntro()
     {
-        WriteWelcome();
+        WriteHelpHeader();
         var table = new Table().Border(TableBorder.Simple).HideHeaders();
         table.AddColumn("Command");
         table.AddColumn("Purpose");
@@ -70,6 +106,8 @@ internal sealed class DocsSettings : CommandSettings
 internal sealed class DocsCommand : AsyncCommand<DocsSettings>
 {
     private const string HandbookResource = "VaultSync.CLI.Docs.CLI.md";
+    private const string ReferenceResource = "VaultSync.CLI.Docs.CLI_COMMAND_REFERENCE.md";
+    internal static Func<string, bool> BrowserLauncher { get; set; } = LaunchBrowser;
 
     protected override Task<int> ExecuteAsync(CommandContext context, DocsSettings settings, CancellationToken cancellationToken)
     {
@@ -81,32 +119,53 @@ internal sealed class DocsCommand : AsyncCommand<DocsSettings>
         }
         if (settings.Full)
         {
-            using Stream? stream = typeof(DocsCommand).Assembly.GetManifestResourceStream(HandbookResource);
-            if (stream is null)
+            string? handbook = ReadResource(HandbookResource);
+            string? reference = ReadResource(ReferenceResource);
+            if (handbook is null || reference is null)
             {
                 Console.Error.WriteLine("The bundled CLI handbook is unavailable. Use `vaultsync docs --url` for the online documentation.");
                 return Task.FromResult(1);
             }
-            using var reader = new StreamReader(stream);
-            Console.Write(reader.ReadToEnd());
+            Console.Write(handbook.TrimEnd());
+            Console.Write("\n\n---\n\n");
+            Console.Write(reference);
             return Task.FromResult(0);
         }
         if (settings.Open)
         {
-            try
+            if (BrowserLauncher(CliPresentation.DocumentationUrl))
             {
-                Process.Start(new ProcessStartInfo(CliPresentation.DocumentationUrl) { UseShellExecute = true });
                 Console.WriteLine("Opened the VaultSync CLI handbook in the default browser.");
                 return Task.FromResult(0);
             }
-            catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception)
-            {
-                Console.Error.WriteLine($"Could not open the browser. Documentation: {CliPresentation.DocumentationUrl}");
-                return Task.FromResult(1);
-            }
+            Console.Error.WriteLine($"Could not open the browser. Documentation: {CliPresentation.DocumentationUrl}");
+            return Task.FromResult(1);
         }
 
         CliPresentation.WriteDocumentationIntro();
         return Task.FromResult(0);
+    }
+
+    private static string? ReadResource(string name)
+    {
+        using Stream? stream = typeof(DocsCommand).Assembly.GetManifestResourceStream(name);
+        if (stream is null)
+            return null;
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    private static bool LaunchBrowser(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            return true;
+        }
+        catch (Exception error) when (error is InvalidOperationException or
+            System.ComponentModel.Win32Exception or PlatformNotSupportedException)
+        {
+            return false;
+        }
     }
 }

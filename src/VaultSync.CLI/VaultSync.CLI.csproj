@@ -45,6 +45,8 @@
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <EmbeddedResource Include="..\..\docs\CLI.md" LogicalName="VaultSync.CLI.Docs.CLI.md" />
     <None Include="..\..\docs\CLI.md" Pack="true" PackagePath="docs\CLI.md" />
+    <EmbeddedResource Include="..\..\docs\CLI_COMMAND_REFERENCE.md" LogicalName="VaultSync.CLI.Docs.CLI_COMMAND_REFERENCE.md" />
+    <None Include="..\..\docs\CLI_COMMAND_REFERENCE.md" Pack="true" PackagePath="docs\CLI_COMMAND_REFERENCE.md" />
   </ItemGroup>
 
   <ItemGroup>

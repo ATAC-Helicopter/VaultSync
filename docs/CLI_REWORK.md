@@ -202,15 +202,18 @@ cancellation rather than qualification of all prior cycles.
 
 ## Terminal identity and documentation
 
-Root help now begins with a compact bordered VaultSync name, version, four-part
-purpose line, short introduction, documentation/website/source links, and quick
-start pointers. It appears only for an empty invocation or root `--help`; command
-execution and structured output never receive the decoration. An empty invocation
-is normalized to root help and returns success.
+A no-argument invocation now renders a dedicated introductory UI: a compact text
+logo, bordered name/version and purpose, documentation/website/repository/release
+links, six starter tasks, and pointers to root and command help. It returns success
+without dumping the full command tree. Root `--help` uses a smaller header before
+normal generated help. Command execution and structured output receive no decoration.
 
 `vaultsync docs` shows the compact documentation menu. `docs --full` prints the
-complete embedded Markdown handbook without terminal decoration, `docs --url`
+embedded practical handbook followed by the generated exhaustive command reference,
+`docs --url`
 prints only its online URL, and `docs --open` asks the operating system to open that
-URL. `docs/CLI.md` is embedded for runtime use and also included in the tool package.
+URL. `docs/CLI.md` and `docs/CLI_COMMAND_REFERENCE.md` are embedded for runtime use and
+included in the tool package. `scripts/generate_cli_reference.py` rebuilds the latter
+from every registered grouped, utility, branch, and compatibility command.
 This is early implementation under VS-1977 and VS-1978; shell completion, platform
 PATH guidance, scheduler examples, and script-migration runbooks remain pending.

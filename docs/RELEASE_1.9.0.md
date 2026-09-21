@@ -170,15 +170,18 @@ release profiles, CodeQL, Store/metadata preflights, and the Sonar quality gate.
 
 ## CLI identity and handbook foundation
 
-Root help now uses a restrained framed VaultSync identity with the running version,
-short purpose copy, project/documentation links, and quick-start pointers. It is
-limited to empty/root-help invocations and cannot contaminate structured output.
-The new `docs` command displays documentation choices, prints the embedded handbook,
-opens the online copy, or returns its URL for scripts. `docs/CLI.md` is embedded and
-included in the tool package. This pulls the first VS-1977/VS-1978 foundation into
+A no-argument invocation now displays a dedicated introductory UI with a compact
+VaultSync text logo, running version, purpose, documentation/website/repository/
+release links, six starter commands, and help pointers. Root help remains a separate,
+smaller presentation. Neither path can contaminate command or structured output.
+The new `docs` command displays documentation choices, prints the embedded handbook
+plus an exhaustive 878-line generated command reference, opens the online copy, or
+returns its URL for scripts. Both Markdown files are embedded and packaged;
+`scripts/generate_cli_reference.py` rebuilds exact help for every registered route. This pulls the first VS-1977/VS-1978 foundation into
 the shared branch; completion and full migration/scheduler guidance remain 1.9.1.
-All 974 .NET tests and 100 script tests pass; the generated tool package contains
-the handbook and the assembly carries the embedded copy.
+All 979 .NET tests and 105 script tests pass; the generated tool package contains
+both Markdown documents and the assembly carries both embedded copies. The generated
+reference check is deterministic and fails when the committed output is stale.
 
 ## CLI execution tracking
 
