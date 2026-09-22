@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-09-21T08:51:53Z`
+Captured at: `2026-09-22T08:28:48Z`
 
 - Releases: **53**
 - Assets: **499**
-- Total asset downloads: **3114**
-- Change since previous snapshot: **+10**
+- Total asset downloads: **3121**
+- Change since previous snapshot: **+7**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **50** downloads (+8)
+- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **57** downloads (+7)
 - Latest prerelease: **VaultSync 1.8.5 Beta 1** with **19** downloads (0)
 
 ## Top assets
@@ -33,18 +33,18 @@ Captured at: `2026-09-21T08:51:53Z`
 
 - Tag: `v1.8.9`
 - Published: `2026-09-16T10:06:22Z`
-- Total downloads: **50**
-- Delta: **+8**
+- Total downloads: **57**
+- Delta: **+7**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| vaultsync-patch-windows.json | 24 | +5 | 57975 |
-| VaultSync-Setup-1.8.9.exe | 12 | +2 | 64315420 |
+| vaultsync-patch-windows.json | 30 | +6 | 57975 |
+| VaultSync-Setup-1.8.9.exe | 13 | +1 | 64315420 |
 | vaultsync-release-manifest.json | 5 | 0 | 7399 |
 | VaultSync-1.8.9-macos-apple-silicon.dmg | 2 | 0 | 55235061 |
 | vaultsync-patch-linux-x64.json | 2 | 0 | 55016 |
 | vaultsync-patch-macos-apple-silicon.json | 2 | 0 | 61158 |
-| VaultSync-1.8.9-linux-x64.AppImage | 1 | +1 | 52630720 |
+| VaultSync-1.8.9-linux-x64.AppImage | 1 | 0 | 52630720 |
 | vaultsync-patch-linux-x64.zip | 1 | 0 | 52566967 |
 | vaultsync-patch-windows.zip | 1 | 0 | 92462440 |
 | VaultSync-1.8.9-linux-arm64.deb | 0 | 0 | 39075410 |
@@ -63,11 +63,11 @@ Captured at: `2026-09-21T08:51:53Z`
 - Tag: `v1.8.8`
 - Published: `2026-09-02T19:31:38Z`
 - Total downloads: **88**
-- Delta: **+2**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| VaultSync-Setup-1.8.8.exe | 40 | +2 | 62425999 |
+| VaultSync-Setup-1.8.8.exe | 40 | 0 | 62425999 |
 | VaultSync-1.8.8-linux-x64.deb | 8 | 0 | 41200030 |
 | VaultSync-1.8.8-linux-x64.tar.gz | 7 | 0 | 51874548 |
 | VaultSync-1.8.8-macos-apple-silicon.dmg | 7 | 0 | 54819154 |
