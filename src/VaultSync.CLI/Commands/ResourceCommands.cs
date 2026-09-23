@@ -53,6 +53,8 @@ internal static class ResourceCommands
                 .WithDescription("Inspect one project-scoped backup record without exposing storage paths or secrets");
             backups.AddCommand<VerifyBackupCommand>("verify")
                 .WithDescription("Hash-check recorded folder-backup bytes against the selected snapshot");
+            backups.AddCommand<VerifyAllBackupsCommand>("verify-all")
+                .WithDescription("Check recorded backups across projects with bounded per-backup results");
         });
 
         configuration.AddBranch<CommandSettings>("recovery", recovery =>

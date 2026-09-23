@@ -214,6 +214,54 @@ public sealed class CliBackupInspectionTests
         Assert.False(Directory.Exists(Path.GetDirectoryName(database)));
     }
 
+    [Fact]
+    public async Task VerifyAllReportsPerBackupFailureAndTruncatedWorkAsIncomplete()
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "vault.db");
+        string backupRoot = Directory.CreateDirectory(Path.Combine(root.Path, "backups")).FullName;
+        SqliteRepository repository = TestRepository.Create(database);
+        foreach (string name in new[] { "Alpha", "Beta" })
+        {
+            int projectId = TestRepository.AddProject(repository, name, Path.Combine(root.Path, name));
+            int snapshotId = repository.CreateSnapshot(projectId, 1, 8);
+            repository.InsertFiles(snapshotId,
+            [
+                new FileEntry("state.txt", 8, DateTime.UtcNow,
+                    Convert.ToHexString(SHA256.HashData("recorded"u8.ToArray())))
+            ]);
+            string folder = Directory.CreateDirectory(Path.Combine(backupRoot, name)).FullName;
+            File.WriteAllText(Path.Combine(folder, "state.txt"), name == "Alpha" ? "recorded" : "tampered");
+            repository.CreateBackup(projectId, snapshotId, "manual", 8, name, backupRoot, "Test");
+        }
+
+        var mixed = await RunAsync("backups", "verify-all", "--db", database, "--output", "json");
+        AssertEnvelope(mixed.Json, "backups.verify-all", 3);
+        JsonElement details = mixed.Json.GetProperty("error").GetProperty("details");
+        Assert.Equal(1, details.GetProperty("passedCount").GetInt32());
+        Assert.Equal(1, details.GetProperty("failedCount").GetInt32());
+        Assert.Equal("verification_failed", details.GetProperty("results")[1].GetProperty("code").GetString());
+
+        var limited = await RunAsync("backups", "verify-all", "--db", database,
+            "--limit", "1", "--output", "json");
+        AssertEnvelope(limited.Json, "backups.verify-all", 3);
+        Assert.True(limited.Json.GetProperty("error").GetProperty("details")
+            .GetProperty("resultsTruncated").GetBoolean());
+        Assert.Equal(1, limited.Json.GetProperty("error").GetProperty("details")
+            .GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task VerifyAllRejectsInvalidOptionsBeforeOpeningDatabase()
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "missing", "vault.db");
+        var result = await RunAsync("backups", "verify-all", "--db", database,
+            "--limit", "0", "--output", "json");
+        AssertEnvelope(result.Json, "backups.verify-all", 2);
+        Assert.False(Directory.Exists(Path.GetDirectoryName(database)));
+    }
+
     [Theory]
     [InlineData("--id", "0")]
     [InlineData("--limit", "0")]

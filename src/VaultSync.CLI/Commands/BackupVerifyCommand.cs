@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -8,10 +7,9 @@ using Microsoft.Data.Sqlite;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using VaultSync.CLI.Config;
-using VaultSync.Core.Config;
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
-using VaultSync.Core.Services;
+using VaultSync.Core.Config;
 
 namespace VaultSync.CLI.Commands;
 
@@ -26,8 +24,6 @@ internal sealed class VerifyBackupSettings : CommandSettings
 
 internal sealed class VerifyBackupCommand : AsyncCommand<VerifyBackupSettings>
 {
-    private sealed record Failure(string Path, string Reason);
-
     protected override async Task<int> ExecuteAsync(CommandContext context, VerifyBackupSettings settings, CancellationToken cancellationToken)
     {
         string? invalid = CommandOutput.Validate(settings.Output);
@@ -73,94 +69,30 @@ internal sealed class VerifyBackupCommand : AsyncCommand<VerifyBackupSettings>
             return CommandOutput.Failure(settings.Output, "backups.verify", "backup_not_found",
                 "No recorded backup with that ID belongs to the selected project.", 2);
 
-        if (!repository.GetSnapshotsForProject(project.Name).Any(snapshot => snapshot.Id == backup.SnapshotId))
-            return CommandOutput.Failure(settings.Output, "backups.verify", "snapshot_not_found",
-                "The backup does not reference a snapshot owned by the selected project.", 2);
-
-        if (backup.IsEncrypted || !string.Equals(backup.BackupMode, BackupModes.Full, StringComparison.OrdinalIgnoreCase))
-            return CommandOutput.Failure(settings.Output, "backups.verify", "unsupported_backup_format",
-                "This CLI check supports full, unencrypted folder backups only.", 2);
-
-        string? sourceRoot = BackupContentPathResolver.Resolve(backup, StaticAppConfigStore.Instance.Load());
-        if (sourceRoot is null || !Directory.Exists(sourceRoot))
-            return CommandOutput.Failure(settings.Output, "backups.verify", "backup_unavailable",
-                "The recorded backup folder is unavailable at its selected destination.", 1);
-        if (File.Exists(Path.Combine(sourceRoot, BackupArchiveCryptoService.PlainArchiveFileName)) ||
-            File.Exists(Path.Combine(sourceRoot, BackupArchiveCryptoService.EncryptedArchiveFileName)))
-            return CommandOutput.Failure(settings.Output, "backups.verify", "unsupported_backup_format",
-                "This CLI check supports recorded folder backups only; archive data requires a qualified verifier.", 2);
-
-        FileEntry[] files = repository.GetFilesForSnapshot(backup.SnapshotId).ToArray();
-        if (files.Length == 0)
-            return CommandOutput.Failure(settings.Output, "backups.verify", "snapshot_history_empty",
-                "The backup's snapshot has no indexed files to verify.", 2);
-
-        var hash = new HashService();
-        var failures = new List<Failure>();
-        int failedCount = 0;
-        foreach (FileEntry file in files)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Failure? failure = await CheckFileAsync(sourceRoot, file, hash, cancellationToken).ConfigureAwait(false);
-            if (failure is null)
-                continue;
-            failedCount++;
-            if (failures.Count < settings.Limit)
-                failures.Add(failure);
-        }
-
-        var result = new
-        {
-            projectId = project.Id,
-            backupId = backup.Id,
-            snapshotId = backup.SnapshotId,
-            checkedFiles = files.Length,
-            passedFiles = files.Length - failedCount,
-            failedFiles = failedCount,
-            failures,
-            failureLimit = settings.Limit,
-            failuresTruncated = failedCount > failures.Count,
-            payloadChecked = true
-        };
+        BackupVerificationService.Outcome result = await BackupVerificationService.CheckAsync(
+            repository, project, backup, StaticAppConfigStore.Instance.Load(), settings.Limit,
+            cancellationToken).ConfigureAwait(false);
         if (CommandOutput.IsJson(settings.Output))
-            return failedCount == 0
-                ? CommandOutput.Success("backups.verify", result)
-                : CommandOutput.FailureWithDetails("backups.verify", "verification_failed",
-                    "Recorded backup bytes did not match the selected snapshot.", result, 1);
+            return result.ErrorCode is null
+                ? CommandOutput.Success("backups.verify", result.Details)
+                : result.ErrorCode == "verification_failed"
+                    ? CommandOutput.FailureWithDetails("backups.verify", result.ErrorCode,
+                        result.ErrorMessage!, result.Details, result.ExitCode)
+                    : CommandOutput.Failure(settings.Output, "backups.verify", result.ErrorCode,
+                        result.ErrorMessage!, result.ExitCode);
 
-        WriteResult(project, backup, files.Length, failedCount, failures);
-        return failedCount == 0 ? 0 : 1;
+        if (result.ErrorCode is not null && result.ErrorCode != "verification_failed")
+            return CommandOutput.Failure(settings.Output, "backups.verify", result.ErrorCode,
+                result.ErrorMessage!, result.ExitCode);
+        WriteResult(project, result);
+        return result.ExitCode;
     }
 
-    private static async Task<Failure?> CheckFileAsync(string sourceRoot, FileEntry file, HashService hash,
-        CancellationToken cancellationToken)
+    private static void WriteResult(Project project, BackupVerificationService.Outcome result)
     {
-        if (string.IsNullOrWhiteSpace(file.HashSha256))
-            return new Failure(file.RelPath, "hash_unavailable");
-        if (!BackupSafetyService.TryResolveExistingFileUnderRoot(sourceRoot, file.RelPath, out string sourcePath))
-            return new Failure(file.RelPath, "missing_or_unsafe");
-        try
-        {
-            string actual = await hash.Sha256Async(sourcePath, cancellationToken).ConfigureAwait(false);
-            return string.Equals(actual, file.HashSha256, StringComparison.OrdinalIgnoreCase)
-                ? null : new Failure(file.RelPath, "hash_mismatch");
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        {
-            return new Failure(file.RelPath, "read_error");
-        }
-    }
-
-    private static void WriteResult(Project project, Backup backup, int checkedCount, int failedCount,
-        IReadOnlyList<Failure> failures)
-    {
-        AnsiConsole.MarkupLine($"Backup {backup.Id} for [bold]{Markup.Escape(project.Name)}[/]: " +
-            $"checked {checkedCount} file(s), failed {failedCount}.");
-        if (failedCount == 0)
+        AnsiConsole.MarkupLine($"Backup {result.BackupId} for [bold]{Markup.Escape(project.Name)}[/]: " +
+            $"checked {result.CheckedFiles} file(s), failed {result.FailedFiles}.");
+        if (result.FailedFiles == 0)
         {
             AnsiConsole.MarkupLine("[green]Recorded folder bytes match the indexed snapshot.[/]");
             return;
@@ -168,10 +100,10 @@ internal sealed class VerifyBackupCommand : AsyncCommand<VerifyBackupSettings>
         var table = new Table().Border(TableBorder.Rounded);
         table.AddColumn("Path");
         table.AddColumn("Reason");
-        foreach (Failure failure in failures)
+        foreach (BackupVerificationService.FileFailure failure in result.Failures)
             table.AddRow(Markup.Escape(failure.Path), failure.Reason);
         AnsiConsole.Write(table);
-        if (failedCount > failures.Count)
-            AnsiConsole.MarkupLine($"[yellow]{failedCount - failures.Count} additional failure(s) omitted.[/]");
+        if (result.FailuresTruncated)
+            AnsiConsole.MarkupLine($"[yellow]{result.FailedFiles - result.Failures.Count} additional failure(s) omitted.[/]");
     }
 }

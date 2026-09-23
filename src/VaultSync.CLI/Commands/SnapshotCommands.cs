@@ -4,6 +4,7 @@ using System.IO;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
 using System.Threading;
 using System.Threading.Tasks;
 using Spectre.Console;
@@ -21,23 +22,61 @@ namespace VaultSync.CLI.Commands
         [CommandOption("--full-hash")] public bool FullHash { get; init; } = true;
         [CommandOption("--db")] public string? Db { get; init; }
         [CommandOption("--quiet")] public bool Quiet { get; init; } = false;
+        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
     }
 
     sealed class SnapshotCommand : AsyncCommand<SnapshotSettings>
     {
         protected override async Task<int> ExecuteAsync(CommandContext context, SnapshotSettings s, CancellationToken cancellationToken)
         {
+            string? invalid = CommandOutput.Validate(s.Output);
+            if (string.IsNullOrWhiteSpace(s.Name))
+                invalid = "Project name must not be blank.";
+            if (invalid is not null)
+                return CommandOutput.Failure(s.Output, "snapshots.create", "invalid_options", invalid, 2);
+
+            try
+            {
+                return await CreateAsync(s, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (s.Output is not null)
+            {
+                return CommandOutput.Failure(s.Output, "snapshots.create", "cancelled",
+                    "Snapshot creation was cancelled before completion.", 130);
+            }
+            catch (Exception error) when (s.Output is not null &&
+                error is SqliteException or IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                Log.Exception(error, "snapshots.create");
+                return CommandOutput.Failure(s.Output, "snapshots.create", "snapshot_failed",
+                    "Snapshot creation failed. Check source access and the private CLI log.", 1);
+            }
+        }
+
+        private static async Task<int> CreateAsync(SnapshotSettings s, CancellationToken cancellationToken)
+        {
             string db = ConfigHelper.ResolveDb(s.Db);
+            if (s.Output is not null)
+            {
+                var lookup = new SqliteRepository(db, readOnly: true);
+                if (lookup.GetProjectByName(s.Name) is null)
+                    return CommandOutput.Failure(s.Output, "snapshots.create", "project_not_found",
+                        "No registered project matches the supplied name.", 2);
+            }
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
+            Core.Models.Project? proj = repo.GetProjectByName(s.Name);
+            if (proj is null)
+            {
+                throw new InvalidOperationException($"Project '{s.Name}' not found.");
+            }
 
             var svc = new SnapshotService(repo, new HashService(), CliVaultLogger.Instance);
 
             Log.Info($"snapshot start name={proj.Name} fullHash={s.FullHash} root={proj.RootPath}");
 
-            if (!s.Quiet)
+            if (!s.Quiet && !CommandOutput.IsJson(s.Output))
                 AnsiConsole.MarkupLine($"[blue]Scanning & hashing[/] {Markup.Escape(proj.Name)} at {Markup.Escape(proj.RootPath)} (preset: {Markup.Escape(proj.Preset)})...");
 
             DateTime started = DateTime.UtcNow;
@@ -48,6 +87,24 @@ namespace VaultSync.CLI.Commands
                 ct: cancellationToken);
             TimeSpan took = DateTime.UtcNow - started;
             SnapshotOutcome? outcome = SnapshotService.LastOutcome;
+
+            if (CommandOutput.IsJson(s.Output))
+            {
+                Core.Models.Snapshot snapshot = repo.GetSnapshotById(snapId)
+                    ?? throw new InvalidOperationException("The created snapshot could not be read back.");
+                return CommandOutput.Success("snapshots.create", new
+                {
+                    projectId = proj.Id,
+                    snapshotId = snapId,
+                    createdUtc = DateTime.SpecifyKind(snapshot.CreatedUtc, DateTimeKind.Utc).ToString("O"),
+                    fileCount = snapshot.FileCount,
+                    totalBytes = snapshot.TotalBytes,
+                    added = outcome?.Added,
+                    modified = outcome?.Modified,
+                    deleted = outcome?.Deleted,
+                    unchanged = outcome?.Unchanged
+                });
+            }
 
             if (!s.Quiet)
             {

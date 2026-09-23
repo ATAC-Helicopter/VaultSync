@@ -21,7 +21,7 @@ class GenerateCliReferenceTests(unittest.TestCase):
             "projects add", "projects list", "projects show", "projects discover",
             "projects set-path", "projects remove", "snapshots create", "snapshots list",
             "snapshots show", "snapshots diff", "snapshots prune", "backups create", "backups list",
-            "backups show", "backups verify", "recovery restore",
+            "backups show", "backups verify", "backups verify-all", "recovery restore",
             "mirror", "verify", "watch", "doctor", "destinations", "self-test", "init",
             "config show", "config path", "config set-db", "presets list", "presets show",
             "version", "docs", "add-project", "remove-project", "list-projects",
