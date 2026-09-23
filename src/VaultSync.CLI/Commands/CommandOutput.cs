@@ -49,6 +49,8 @@ internal static class CommandOutput
             return "mirror";
         if (arguments.Length > 0 && string.Equals(arguments[0], "verify", StringComparison.OrdinalIgnoreCase))
             return "verify";
+        if (arguments.Length > 0 && string.Equals(arguments[0], "doctor", StringComparison.OrdinalIgnoreCase))
+            return "doctor";
         if (arguments.Length < 2)
             return null;
         if (string.Equals(arguments[0], "projects", StringComparison.OrdinalIgnoreCase))
