@@ -214,6 +214,16 @@ topics after `docs --task` and `text`/`json` after supported `--output` options.
 The generator reads task headings from the bundled guide, and Bash/Zsh probes
 exercise the value suggestions locally. This remains unpushed; no hosted checks ran.
 
+The CLI demo exposed mirror filter diagnostics in stdout. Mirror, watcher, and
+self-test paths now pass the private CLI logger into platform transfer runners;
+quiet mirror output and the preview screen no longer include core filter traces.
+The Windows runner also avoids creating the destination before a dry run.
+The preview labels source and target separately and says when the preview completes.
+Quiet mirror, watcher-mirror, and self-test failures report briefly on stderr;
+transfer details remain in the private log.
+The isolated demo transcript is local evidence only; Windows transfer behavior
+still needs its supported-system gate.
+
 ## CLI execution tracking
 
 | ID | Issue | Release | Work |

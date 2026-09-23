@@ -146,7 +146,7 @@ internal sealed class SelfTestRunner(
 
     private sealed class SyncServiceRunner : ISyncRunner
     {
-        private readonly SyncService _service = new();
+        private readonly SyncService _service = new(CliVaultLogger.Instance);
 
         public string Name => _service.RunnerName;
 

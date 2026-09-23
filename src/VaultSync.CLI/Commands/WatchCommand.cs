@@ -247,11 +247,14 @@ namespace VaultSync.CLI.Commands
             CancellationToken token)
         {
             string dest = ConfigHelper.ExpandUserPath(settings.Destination!);
-            var syncSvc = new SyncService();
+            var syncSvc = new SyncService(CliVaultLogger.Instance);
             int code = await syncSvc.SyncAsync(plan.Project, dest, settings.DryRun, token);
             if (code != 0)
             {
-                AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {code})");
+                if (settings.Quiet)
+                    Console.Error.WriteLine($"Watcher mirror failed (exit {code}). See the VaultSync CLI log for details.");
+                else
+                    AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {code})");
                 return;
             }
 

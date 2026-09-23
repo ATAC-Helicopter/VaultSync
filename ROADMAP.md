@@ -1309,6 +1309,8 @@ destabilizing the maintenance release.
     selection/operational errors; remaining workflows and uniform unattended contracts
     remain pending. BUG-19002 owns
     watcher shutdown/draining; quiet startup and cancellation exit 130 are implemented.
+    Snapshot and mirror service diagnostics now use the private CLI log rather
+    than contaminating quiet or preview output.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
   - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
     and snapshot inspection, selective safe restore, integrity evidence, destination
@@ -1318,7 +1320,8 @@ destabilizing the maintenance release.
     inspectable; unavailable or unsupported combinations fail explicitly.
   - Progress: snapshot show exposes identity, size/change summaries, History
     markers, and recorded-backup reference counts without claiming payload
-    availability or integrity. Backup execution/selective restore/bulk scope remains.
+    availability or integrity. The Windows mirror runner no longer creates a
+    destination before a dry run. Backup execution/selective restore/bulk scope remains.
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and

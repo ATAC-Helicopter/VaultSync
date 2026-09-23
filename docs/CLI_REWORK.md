@@ -232,3 +232,13 @@ does not call `init`, which writes shared configuration. The CLI now routes
 snapshot service diagnostics to its private log instead of stdout, so quiet
 snapshot creation does not emit service traces. Scheduler and migration examples
 are drafts pending supported-platform qualification.
+
+The same CLI-private logger now reaches platform mirror runners, including filter
+loading, cancellation cleanup, and transfer diagnostics. A mirror preview therefore
+shows command-level status without internal filter traces, and quiet mirror output
+stays empty on success. The Windows runner no longer creates the target folder
+before a dry run. The preview labels source, target, and preset separately and
+reports preview completion rather than a completed transfer. Quiet mirror,
+watcher-mirror, and self-test failures write a brief error to stderr while
+transfer detail stays in the private log. Supported-platform
+transfer behavior still requires qualification.

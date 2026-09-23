@@ -11,11 +11,14 @@
 - [VS-1973] Let `watch --db` select a database.
 ### Fixed
 - [VS-1974] Keep quiet snapshot diagnostics out of stdout.
+- [VS-1974] Keep mirror service diagnostics out of CLI output.
+- [VS-1975] Avoid creating Windows mirror targets during dry runs.
 - [BUG-19003] Reject cross-project snapshot IDs in diffs.
 - [BUG-19002] Drain watcher work on cancellation.
 - [BUG-19001] Require `--yes` for unattended project removal.
 ### Changed
 - [VS-1974] Keep quiet watcher output and startup logs private.
+- [VS-1975] Label mirror preview sources and targets clearly.
 
 These changes are in development; 1.9.0 has not shipped.
 

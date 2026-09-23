@@ -35,14 +35,17 @@ namespace VaultSync.CLI.Commands
             var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
             var dest = ConfigHelper.ExpandUserPath(s.Destination);
 
-            var svc = new SyncService();
+            var svc = new SyncService(Utils.CliVaultLogger.Instance);
 
             if (!s.Quiet)
             {
                 if (s.DryRun)
-                    AnsiConsole.MarkupLine($"[yellow]Dry run[/]: mirroring [blue]{Markup.Escape(proj.RootPath)}[/] -> [blue]{Markup.Escape(dest)}[/] (preset: {Markup.Escape(proj.Preset)})");
+                    AnsiConsole.MarkupLine($"[yellow]Dry run[/]: mirroring {Markup.Escape(proj.Name)}");
                 else
-                    AnsiConsole.MarkupLine($"Mirroring [blue]{Markup.Escape(proj.RootPath)}[/] -> [blue]{Markup.Escape(dest)}[/] (preset: {Markup.Escape(proj.Preset)})");
+                    AnsiConsole.MarkupLine($"Mirroring {Markup.Escape(proj.Name)}");
+                AnsiConsole.MarkupLine($"  Source: [blue]{Markup.Escape(proj.RootPath)}[/]");
+                AnsiConsole.MarkupLine($"  Target: [blue]{Markup.Escape(dest)}[/]");
+                AnsiConsole.MarkupLine($"  Preset: {Markup.Escape(proj.Preset)}");
             }
 
             var started = DateTime.UtcNow;
@@ -51,8 +54,12 @@ namespace VaultSync.CLI.Commands
 
             if (!s.Quiet)
             {
-                if (code == 0) AnsiConsole.MarkupLine($"[green]Sync complete[/] in {took.TotalSeconds:F1}s (exit 0)");
+                if (code == 0) AnsiConsole.MarkupLine($"[green]{(s.DryRun ? "Preview" : "Sync")} complete[/] in {took.TotalSeconds:F1}s (exit 0)");
                 else AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {code})");
+            }
+            else if (code != 0)
+            {
+                Console.Error.WriteLine($"Mirror failed (exit {code}). See the VaultSync CLI log for transfer details.");
             }
 
             return code;
@@ -501,6 +508,8 @@ namespace VaultSync.CLI.Commands
 
             if (!s.Quiet)
                 WriteResult(result);
+            else if (result.ExitCode != 0)
+                Console.Error.WriteLine($"Self-test failed (exit {result.ExitCode}). See the VaultSync CLI log for details.");
 
             return result.ExitCode;
         }
