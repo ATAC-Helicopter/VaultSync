@@ -27,7 +27,7 @@ function Get-VaultSyncOptions([string]$route) {
         'snapshots list' { return '-h --help --db --json --output --limit' }
         'snapshots show' { return '-h --help --id --db --output' }
         'snapshots diff' { return '-h --help --db --limit --json --output' }
-        'snapshots prune' { return '-h --help --keep-last --before --dry-run --db --quiet --json' }
+        'snapshots prune' { return '-h --help --keep-last --before --dry-run --db --quiet --json --output --limit' }
         'backups' { return '-h --help' }
         'backups create' { return '-h --help --destination --db --dry-run --quiet --output' }
         'backups list' { return '-h --help --db --limit --output' }
@@ -63,7 +63,7 @@ function Get-VaultSyncOptions([string]$route) {
         'restore' { return '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' }
         'history' { return '-h --help --db --json --output --limit' }
         'diff' { return '-h --help --db --limit --json --output' }
-        'prune' { return '-h --help --keep-last --before --dry-run --db --quiet --json' }
+        'prune' { return '-h --help --keep-last --before --dry-run --db --quiet --json --output --limit' }
     }
     return ''
 }
@@ -75,6 +75,7 @@ function Get-VaultSyncValues([string]$route) {
         'snapshots list --output' { return 'text json' }
         'snapshots show --output' { return 'text json' }
         'snapshots diff --output' { return 'text json' }
+        'snapshots prune --output' { return 'text json' }
         'backups create --output' { return 'text json' }
         'backups list --output' { return 'text json' }
         'backups show --output' { return 'text json' }
@@ -90,6 +91,7 @@ function Get-VaultSyncValues([string]$route) {
         'restore --output' { return 'text json' }
         'history --output' { return 'text json' }
         'diff --output' { return 'text json' }
+        'prune --output' { return 'text json' }
         'docs --task' { return 'setup inspect mirror restore automate migrate' }
     }
     return ''

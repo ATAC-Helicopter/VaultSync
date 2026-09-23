@@ -349,6 +349,8 @@ OPTIONS:
         --db
         --quiet
         --json
+        --output <FORMAT>
+        --limit <N>
 ```
 
 ## `vaultsync backups`
@@ -1035,4 +1037,6 @@ OPTIONS:
         --db
         --quiet
         --json
+        --output <FORMAT>
+        --limit <N>
 ```

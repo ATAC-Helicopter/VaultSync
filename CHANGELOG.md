@@ -8,9 +8,11 @@
 - [VS-1973] Add project and snapshot inspection with bounded diffs.
 - [VS-1974] Add versioned JSON for inspection, snapshots, mirror, verify, doctor, and restore.
 - [VS-1975] Create and inspect folder backups; verify one or many; select restore paths.
+- [VS-1975] Batch snapshot pruning with versioned preview and result counts.
 - [VS-1973] Let `watch --db` select a database.
 ### Fixed
 - [BUG-19004] Recheck staged restore bytes before replacing target files.
+- [BUG-19005] Keep live prune JSON parseable after deletion.
 - [BUG-19003] Reject cross-project snapshot IDs in diffs.
 - [BUG-19002] Drain watcher work on cancellation.
 - [BUG-19001] Require `--yes` for unattended project removal.

@@ -26,7 +26,7 @@ _vaultsync_options() {
     'snapshots list') printf '%s' '-h --help --db --json --output --limit' ;;
     'snapshots show') printf '%s' '-h --help --id --db --output' ;;
     'snapshots diff') printf '%s' '-h --help --db --limit --json --output' ;;
-    'snapshots prune') printf '%s' '-h --help --keep-last --before --dry-run --db --quiet --json' ;;
+    'snapshots prune') printf '%s' '-h --help --keep-last --before --dry-run --db --quiet --json --output --limit' ;;
     'backups') printf '%s' '-h --help' ;;
     'backups create') printf '%s' '-h --help --destination --db --dry-run --quiet --output' ;;
     'backups list') printf '%s' '-h --help --db --limit --output' ;;
@@ -62,7 +62,7 @@ _vaultsync_options() {
     'restore') printf '%s' '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'history') printf '%s' '-h --help --db --json --output --limit' ;;
     'diff') printf '%s' '-h --help --db --limit --json --output' ;;
-    'prune') printf '%s' '-h --help --keep-last --before --dry-run --db --quiet --json' ;;
+    'prune') printf '%s' '-h --help --keep-last --before --dry-run --db --quiet --json --output --limit' ;;
   esac
 }
 _vaultsync_values() {
@@ -73,6 +73,7 @@ _vaultsync_values() {
     'snapshots list --output') printf '%s' 'text json' ;;
     'snapshots show --output') printf '%s' 'text json' ;;
     'snapshots diff --output') printf '%s' 'text json' ;;
+    'snapshots prune --output') printf '%s' 'text json' ;;
     'backups create --output') printf '%s' 'text json' ;;
     'backups list --output') printf '%s' 'text json' ;;
     'backups show --output') printf '%s' 'text json' ;;
@@ -88,6 +89,7 @@ _vaultsync_values() {
     'restore --output') printf '%s' 'text json' ;;
     'history --output') printf '%s' 'text json' ;;
     'diff --output') printf '%s' 'text json' ;;
+    'prune --output') printf '%s' 'text json' ;;
     'docs --task') printf '%s' 'setup inspect mirror restore automate migrate' ;;
   esac
 }

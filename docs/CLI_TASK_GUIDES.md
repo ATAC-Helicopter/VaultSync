@@ -74,6 +74,17 @@ For a read-only check across recorded backups, run `vaultsync backups verify-all
 project or `--filter photo` for a project-name fragment. Exit 3 means some
 selected records failed or `--limit` omitted records; inspect `error.details`.
 
+For local snapshot-index retention, preview a bounded batch and inspect its
+`selectedIds` and `remainingCount` before applying the same selector:
+
+```sh
+vaultsync snapshots prune 'Photos' --keep-last 10 --limit 100 --db /absolute/path/to/vault.db --dry-run --output json
+vaultsync snapshots prune 'Photos' --keep-last 10 --limit 100 --db /absolute/path/to/vault.db --output json
+```
+
+The command excludes snapshots referenced by backups or marked protected. It
+does not delete stored backup payloads; the live result reports actual deletions.
+
 ## mirror
 
 **Goal:** preview a live source transfer into a separate destination. Replace

@@ -27,7 +27,7 @@ _vaultsync_options() {
     'snapshots list') reply='-h --help --db --json --output --limit' ;;
     'snapshots show') reply='-h --help --id --db --output' ;;
     'snapshots diff') reply='-h --help --db --limit --json --output' ;;
-    'snapshots prune') reply='-h --help --keep-last --before --dry-run --db --quiet --json' ;;
+    'snapshots prune') reply='-h --help --keep-last --before --dry-run --db --quiet --json --output --limit' ;;
     'backups') reply='-h --help' ;;
     'backups create') reply='-h --help --destination --db --dry-run --quiet --output' ;;
     'backups list') reply='-h --help --db --limit --output' ;;
@@ -63,7 +63,7 @@ _vaultsync_options() {
     'restore') reply='-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'history') reply='-h --help --db --json --output --limit' ;;
     'diff') reply='-h --help --db --limit --json --output' ;;
-    'prune') reply='-h --help --keep-last --before --dry-run --db --quiet --json' ;;
+    'prune') reply='-h --help --keep-last --before --dry-run --db --quiet --json --output --limit' ;;
   esac
 }
 _vaultsync_values() {
@@ -74,6 +74,7 @@ _vaultsync_values() {
     'snapshots list --output') reply='text json' ;;
     'snapshots show --output') reply='text json' ;;
     'snapshots diff --output') reply='text json' ;;
+    'snapshots prune --output') reply='text json' ;;
     'backups create --output') reply='text json' ;;
     'backups list --output') reply='text json' ;;
     'backups show --output') reply='text json' ;;
@@ -89,6 +90,7 @@ _vaultsync_values() {
     'restore --output') reply='text json' ;;
     'history --output') reply='text json' ;;
     'diff --output') reply='text json' ;;
+    'prune --output') reply='text json' ;;
     'docs --task') reply='setup inspect mirror restore automate migrate' ;;
   esac
 }

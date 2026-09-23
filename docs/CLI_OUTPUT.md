@@ -1,7 +1,7 @@
 # CLI structured output v1
 
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
-`projects show`, `snapshots create`, `snapshots list`, `snapshots show`, `snapshots diff`, `backups list`,
+`projects show`, `snapshots create`, `snapshots list`, `snapshots show`, `snapshots diff`, `snapshots prune`, `backups list`,
 `backups show`, `backups verify`, `backups verify-all`, `backups create`,
 `recovery restore`, `mirror`/`sync`, `verify`, `doctor`, and legacy `history`/`diff`
 with explicit `--output json`. This contract does not yet apply to watch or
@@ -31,6 +31,7 @@ vaultsync snapshots list "My project" --db ./vault.db --limit 10 --output json
 vaultsync snapshots create "My project" --db ./vault.db --output json
 vaultsync snapshots show "My project" --id 42 --db ./vault.db --output json
 vaultsync snapshots diff "My project" 42 41 --db ./vault.db --limit 200 --output json
+vaultsync snapshots prune "My project" --keep-last 10 --db ./vault.db --dry-run --output json
 vaultsync backups list "My project" --db ./vault.db --output json
 vaultsync backups show "My project" --id 7 --db ./vault.db --output json
 vaultsync backups verify "My project" --id 7 --db ./vault.db --output json
@@ -156,6 +157,17 @@ The result names the older baseline as `fromSnapshotId` and newer target as
 explicitly reports omitted paths and `pathLimit` records the applied bound.
 Legacy `diff --json` keeps its original `A`/`B`, path arrays, and summary shape,
 but now also rejects cross-project IDs.
+
+## Snapshot retention
+
+`snapshots.prune` applies only to local snapshot index entries; it never removes
+recorded backup payloads. Backed and protected snapshots are excluded. Versioned
+output reports total/protected snapshots, `plannedCount`, bounded `selectedIds`,
+`remainingCount`, dry-run status, and actual deleted snapshot/file-index counts.
+The default batch limit is 100; `--limit` selects another positive batch size.
+A dry run opens the repository read-only. An absent database fails without
+initialization. Legacy `prune --json` keeps its original plan shape and now
+stays parseable after a live deletion.
 
 ## Recorded backup payloads
 

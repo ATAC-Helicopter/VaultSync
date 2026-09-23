@@ -258,6 +258,11 @@ indexed snapshot. Legacy text and `verify --json` remain compatible.
 `doctor` now offers v1 JSON check codes and counts without filesystem paths or
 raw exception text. Its versioned mode reads an existing database without
 initializing it, while isolated writability probes remain explicit.
+`snapshots prune` and legacy `prune` now support bounded v1 JSON batches with
+planned, remaining, and actual deletion counts. A versioned dry run reads the
+existing database without writing it. Legacy `prune --json` no longer appends
+a human completion line after a live deletion, closing
+[BUG-19005 / #718](https://github.com/ATAC-Helicopter/VaultSync/issues/718).
 
 ## CLI execution tracking
 
@@ -268,6 +273,7 @@ initializing it, while isolated writability probes remain explicit.
 | VS-1974 | [#671](https://github.com/ATAC-Helicopter/VaultSync/issues/671) | 1.9.0 | Output and unattended execution |
 | VS-1975 | [#672](https://github.com/ATAC-Helicopter/VaultSync/issues/672) | 1.9.0 | Practical power-user workflows |
 | BUG-19004 | [#717](https://github.com/ATAC-Helicopter/VaultSync/issues/717) | 1.9.0 | Recheck staged restore bytes |
+| BUG-19005 | [#718](https://github.com/ATAC-Helicopter/VaultSync/issues/718) | 1.9.0 | Keep live prune JSON parseable |
 | VS-1977 | [#678](https://github.com/ATAC-Helicopter/VaultSync/issues/678) | 1.9.1 | Help, discovery, and completion |
 | VS-1978 | [#679](https://github.com/ATAC-Helicopter/VaultSync/issues/679) | 1.9.1 | Handbook and script migration |
 | VS-1976 | [#685](https://github.com/ATAC-Helicopter/VaultSync/issues/685) | 1.9.2 | Independent headless recovery |

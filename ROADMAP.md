@@ -1282,6 +1282,13 @@ destabilizing the maintenance release.
     temporary files are cleaned up on failure.
   - Tracking: [issue #717](https://github.com/ATAC-Helicopter/VaultSync/issues/717);
     implementation and regression evidence await release integration.
+- [ ] `BUG-19005` `P1` Keep live CLI prune JSON parseable after deletion.
+  - Scope: preserve one JSON document on legacy live and empty-history paths;
+    keep quiet success silent and add bounded versioned prune results.
+  - Acceptance: scripts can parse dry-run and live outcomes, including actual
+    deletion and remaining counts, without human output mixed into stdout.
+  - Tracking: [issue #718](https://github.com/ATAC-Helicopter/VaultSync/issues/718);
+    implementation and regression evidence await release integration.
 - [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
   - Scope: inventory existing commands and core-service gaps; define resource/action
     naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
@@ -1344,7 +1351,9 @@ destabilizing the maintenance release.
     backups now run through the shared service with a dry-run preflight.
     Selective folder/file restore and exact backup-ID selection now preserve
     unrelated target files. Read-only verify-all reports failed and omitted
-    records explicitly. Archive/encrypted creation and bulk mutations remain.
+    records explicitly. Snapshot pruning now has a read-only v1 preview and
+    bounded mutation batches with remaining-work counts. Archive/encrypted
+    creation and cross-project bulk mutations remain.
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and

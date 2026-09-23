@@ -176,7 +176,8 @@ vaultsync snapshots show PROJECT --id ID [--db PATH] [--output text|json]
 vaultsync snapshots diff NAME [A] [B] [--limit COUNT] [--db PATH]
                          [--output text|json]
 vaultsync snapshots prune NAME (--keep-last N | --before YYYY-MM-DD)
-                          [--dry-run] [--db PATH] [--quiet] [--json]
+                          [--dry-run] [--limit N] [--db PATH] [--quiet] [--json]
+                          [--output text|json]
 ```
 
 `create` supports a versioned result with the persisted snapshot ID and counts.
@@ -192,6 +193,9 @@ results; complete counts and `pathsTruncated` remain available.
 
 Pruning affects eligible local snapshot indexes. Recorded-backup snapshots and
 History-protected snapshots are retained. Use `--dry-run` before applying a plan.
+Versioned output limits each deletion batch to 100 snapshots by default and
+reports both selected and remaining counts. The preview reads the database
+without modifying it. Legacy `prune --json` remains a plan-shaped payload.
 
 ### Recorded backups
 
@@ -298,6 +302,7 @@ Explicit `--output json` is currently supported by:
 - `snapshots create` and compatibility `snapshot`;
 - `snapshots show`;
 - `snapshots diff` and compatibility `diff`;
+- `snapshots prune` and compatibility `prune`;
 - `backups create`, `backups list`, `backups show`, `backups verify`, and `backups verify-all`;
 - `recovery restore` and compatibility `restore`.
 - `mirror` and compatibility `sync`, plus `verify`.
