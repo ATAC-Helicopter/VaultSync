@@ -214,7 +214,7 @@ namespace VaultSync.CLI.Commands
             bool quiet,
             CancellationToken token)
         {
-            var snapSvc = new SnapshotService(repo, new HashService());
+            var snapSvc = new SnapshotService(repo, new HashService(), CliVaultLogger.Instance);
             int snapId = await snapSvc.CreateSnapshotAsync(
                 project,
                 fullHash: true,

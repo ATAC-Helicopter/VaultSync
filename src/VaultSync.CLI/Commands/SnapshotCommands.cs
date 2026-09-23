@@ -33,7 +33,7 @@ namespace VaultSync.CLI.Commands
 
             Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
-            var svc = new SnapshotService(repo, new HashService());
+            var svc = new SnapshotService(repo, new HashService(), CliVaultLogger.Instance);
 
             Log.Info($"snapshot start name={proj.Name} fullHash={s.FullHash} root={proj.RootPath}");
 

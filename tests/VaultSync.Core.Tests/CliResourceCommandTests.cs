@@ -81,6 +81,33 @@ public sealed class CliResourceCommandTests
         Assert.Equal("second and changed", File.ReadAllText(file));
     }
 
+    [Fact]
+    public async Task QuietSnapshotDoesNotWriteCoreDiagnosticsToStdout()
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "vault.db");
+        string source = Directory.CreateDirectory(Path.Combine(root.Path, "source")).FullName;
+        File.WriteAllText(Path.Combine(source, "state.txt"), "sample");
+        Assert.Equal(0, await Program.Main(["projects", "add", "Quiet project", source,
+            "--db", database, "--quiet"]));
+
+        TextWriter previous = Console.Out;
+        using var output = new StringWriter();
+        try
+        {
+            Console.SetOut(output);
+            Assert.Equal(0, await Program.Main(["snapshots", "create", "Quiet project",
+                "--db", database, "--quiet"]));
+        }
+        finally
+        {
+            Console.SetOut(previous);
+        }
+
+        Assert.Empty(output.ToString());
+        Assert.Single(new SqliteRepository(database).GetSnapshotsForProject("Quiet project"));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

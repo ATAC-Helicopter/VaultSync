@@ -394,7 +394,7 @@ namespace VaultSync.CLI.Commands
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    RuntimeLog.WriteVerbose(
+                    Utils.CliVaultLogger.Instance.Verbose(
                         $"[CLI Restore] Failed to remove temporary file '{temporaryPath}': {ex.Message}");
                 }
             }
