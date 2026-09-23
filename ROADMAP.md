@@ -1304,7 +1304,9 @@ destabilizing the maintenance release.
     bounded same-project diffs now have versioned read-only results; watch accepts
     explicit --db. Project-scoped backup list/show/verify now cover records and
     full, unencrypted folder payloads. Full folder backup creation with explicit
-    destination and dry-run now uses the shared service. Parity/bulk scope remains.
+    destination and dry-run now uses the shared service. Read-only verify-all
+    checks bounded records across projects with per-backup outcomes. Backup
+    creation/restore bulk mutations and format parity remain.
 - [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
   - Scope: versioned JSON and streaming result contracts, stable exit codes,
     stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
@@ -1323,7 +1325,7 @@ destabilizing the maintenance release.
     read existing databases without initializing them and report missing stores
     on stderr. Backup list/show/verify also use read-only v1 results; failed
     folder verification carries bounded details without leaking storage paths.
-    Backup creation and its dry run now return v1 results; shared-service
+    Backup and snapshot creation now return v1 results; shared-service
     diagnostics stay in the private CLI log.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
   - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
@@ -1339,7 +1341,8 @@ destabilizing the maintenance release.
     unencrypted folder payloads hash-checked. Explicit-destination full folder
     backups now run through the shared service with a dry-run preflight.
     Selective folder/file restore and exact backup-ID selection now preserve
-    unrelated target files. Archive/encrypted creation and bulk scope remain.
+    unrelated target files. Read-only verify-all reports failed and omitted
+    records explicitly. Archive/encrypted creation and bulk mutations remain.
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and

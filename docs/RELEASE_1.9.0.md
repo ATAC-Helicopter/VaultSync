@@ -246,6 +246,11 @@ to repeated relative file/directory paths. Selective restore preserves unrelated
 target files and rejects `--clean`; the v1 result reports affected counts while
 legacy `--json` stays compatible. Staged bytes are checked before replacing a
 target file, closing [BUG-19004 / #717](https://github.com/ATAC-Helicopter/VaultSync/issues/717).
+`backups verify-all` now checks bounded records across projects, returning a
+per-backup outcome and a nonzero incomplete result for any failure or omitted
+record. It uses the same full folder verifier as the single-backup command.
+`snapshots create` now returns a v1 JSON result with the persisted snapshot ID
+and counts, keeping service diagnostics out of machine output.
 
 ## CLI execution tracking
 

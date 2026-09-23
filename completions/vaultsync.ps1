@@ -4,7 +4,7 @@ function Get-VaultSyncChildren([string]$route) {
         '' { return 'projects snapshots backups recovery mirror prune set-path update-path restore history diff self-test init add-project remove-project list-projects snapshot sync verify watch doctor destinations version docs completion config presets' }
         'projects' { return 'add list show discover set-path remove' }
         'snapshots' { return 'create list show diff prune' }
-        'backups' { return 'create list show verify' }
+        'backups' { return 'create list show verify verify-all' }
         'recovery' { return 'restore' }
         'config' { return 'show path set-db' }
         'presets' { return 'list show' }
@@ -23,7 +23,7 @@ function Get-VaultSyncOptions([string]$route) {
         'projects set-path' { return '-h --help --db --quiet' }
         'projects remove' { return '-h --help --db --yes --quiet' }
         'snapshots' { return '-h --help' }
-        'snapshots create' { return '-h --help --full-hash --db --quiet' }
+        'snapshots create' { return '-h --help --full-hash --db --quiet --output' }
         'snapshots list' { return '-h --help --db --json --output --limit' }
         'snapshots show' { return '-h --help --id --db --output' }
         'snapshots diff' { return '-h --help --db --limit --json --output' }
@@ -33,6 +33,7 @@ function Get-VaultSyncOptions([string]$route) {
         'backups list' { return '-h --help --db --limit --output' }
         'backups show' { return '-h --help --id --db --output' }
         'backups verify' { return '-h --help --id --db --limit --output' }
+        'backups verify-all' { return '-h --help --project --filter --db --limit --failure-limit --output' }
         'recovery' { return '-h --help' }
         'recovery restore' { return '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' }
         'mirror' { return '-h --help --dry-run --db --quiet' }
@@ -57,7 +58,7 @@ function Get-VaultSyncOptions([string]$route) {
         'list-projects' { return '-h --help --db --json --output --filter --preset --limit' }
         'set-path' { return '-h --help --db --quiet' }
         'update-path' { return '-h --help --db --quiet' }
-        'snapshot' { return '-h --help --full-hash --db --quiet' }
+        'snapshot' { return '-h --help --full-hash --db --quiet --output' }
         'sync' { return '-h --help --dry-run --db --quiet' }
         'restore' { return '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' }
         'history' { return '-h --help --db --json --output --limit' }
@@ -70,6 +71,7 @@ function Get-VaultSyncValues([string]$route) {
     switch ($route) {
         'projects list --output' { return 'text json' }
         'projects show --output' { return 'text json' }
+        'snapshots create --output' { return 'text json' }
         'snapshots list --output' { return 'text json' }
         'snapshots show --output' { return 'text json' }
         'snapshots diff --output' { return 'text json' }
@@ -77,8 +79,10 @@ function Get-VaultSyncValues([string]$route) {
         'backups list --output' { return 'text json' }
         'backups show --output' { return 'text json' }
         'backups verify --output' { return 'text json' }
+        'backups verify-all --output' { return 'text json' }
         'recovery restore --output' { return 'text json' }
         'list-projects --output' { return 'text json' }
+        'snapshot --output' { return 'text json' }
         'restore --output' { return 'text json' }
         'history --output' { return 'text json' }
         'diff --output' { return 'text json' }

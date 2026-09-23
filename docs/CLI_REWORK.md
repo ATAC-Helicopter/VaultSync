@@ -18,7 +18,7 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | `remove-project` | Keep route; change unsafe confirmation behavior | `projects remove` implemented; both require `--yes` with quiet/redirected input |
 | `set-path` | Keep compatibility route | `projects set-path` implemented; validates an existing source folder |
 | `update-path` | Keep existing alias | Same handler as `set-path`; no independent behavior |
-| `snapshot` | Keep compatibility route; clarify indexing | `snapshots create` implemented; scans/hashes/indexes source state, stores no backup payload |
+| `snapshot` | Keep compatibility route; clarify indexing | `snapshots create` scans/hashes/indexes source state, stores no backup payload, and supports opt-in v1 results |
 | `history` | Keep compatibility route; add resource listing | `snapshots list` implements versioned read-only results and positive limits; current JSON retained |
 | — | Add single-resource inspection | `snapshots show PROJECT --id ID` reports one same-project index, History markers, and aggregate backup references without exposing paths or claiming payload availability |
 | `diff` | Keep compatibility route; add resource comparison | `snapshots diff` implements bounded versioned read-only results and same-project ID checks; compares indexed records, not two stored backup payloads |
@@ -256,6 +256,9 @@ crypto descriptors. `backups verify` checks full, unencrypted folder payloads
 against indexed hashes, rejects foreign snapshot references and unsupported
 formats, and returns bounded per-file failures in v1 JSON error details.
 Record inspection explicitly reports `payloadChecked: false`.
+`backups verify-all` aggregates the same check across recorded backups with
+project filtering, bounded per-file details, and explicit incomplete results
+when any record fails or the backup limit omits records.
 `backups create` uses the shared backup service and an explicitly selected,
 existing destination. It takes a full-hash snapshot before copying so that the
 new backup can pass the folder verifier. A dry run leaves the repository and

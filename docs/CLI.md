@@ -169,6 +169,7 @@ stored backup files remain.
 
 ```text
 vaultsync snapshots create NAME [--full-hash] [--db PATH] [--quiet]
+                           [--output text|json]
 vaultsync snapshots list NAME [--limit COUNT] [--db PATH]
                          [--output text|json]
 vaultsync snapshots show PROJECT --id ID [--db PATH] [--output text|json]
@@ -178,6 +179,7 @@ vaultsync snapshots prune NAME (--keep-last N | --before YYYY-MM-DD)
                           [--dry-run] [--db PATH] [--quiet] [--json]
 ```
 
+`create` supports a versioned result with the persisted snapshot ID and counts.
 `list`, `show`, and `diff` support read-only v1 output. `show` reports snapshot
 identity, file/byte and change totals, optional History metadata, and aggregate
 recorded/encrypted/protected backup-record counts. It omits paths, destinations,
@@ -200,6 +202,9 @@ vaultsync backups list PROJECT [--limit COUNT] [--db PATH] [--output text|json]
 vaultsync backups show PROJECT --id ID [--db PATH] [--output text|json]
 vaultsync backups verify PROJECT --id ID [--limit COUNT] [--db PATH]
                          [--output text|json]
+vaultsync backups verify-all [--project NAME | --filter TEXT] [--limit COUNT]
+                             [--failure-limit COUNT] [--db PATH]
+                             [--output text|json]
 ```
 
 `create` writes a new full, unencrypted folder backup through the shared backup
@@ -217,8 +222,11 @@ paths or crypto descriptors. Their `payloadChecked: false` field matters: a reco
 does not prove that bytes are present. `verify` hashes indexed files in a full,
 unencrypted folder backup and reports mismatches. It rejects archive, encrypted,
 and incremental formats explicitly; it does not test whether a restore target is
-safe or whether a portable repository can be recovered on a new machine. All
-three commands open the selected database read-only.
+safe or whether a portable repository can be recovered on a new machine.
+`verify-all` checks recorded backups across projects or an exact `--project`;
+`--filter` matches project-name fragments. Each backup gets an outcome. Failed
+or omitted work returns nonzero, so a bounded run cannot claim that every backup
+passed. Listing and verification open the selected database read-only.
 
 ### Recovery
 
@@ -281,9 +289,10 @@ Explicit `--output json` is currently supported by:
 - `projects list` and compatibility `list-projects`;
 - `projects show`;
 - `snapshots list` and compatibility `history`;
+- `snapshots create` and compatibility `snapshot`;
 - `snapshots show`;
 - `snapshots diff` and compatibility `diff`;
-- `backups create`, `backups list`, `backups show`, and `backups verify`;
+- `backups create`, `backups list`, `backups show`, `backups verify`, and `backups verify-all`;
 - `recovery restore` and compatibility `restore`.
 
 Each invocation writes one JSON object to stdout:

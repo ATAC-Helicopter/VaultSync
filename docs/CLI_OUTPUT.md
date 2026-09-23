@@ -1,15 +1,15 @@
 # CLI structured output v1
 
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
-`projects show`, `snapshots list`, `snapshots show`, `snapshots diff`, `backups list`,
-`backups show`, `backups verify`, `backups create`, `recovery restore`, and legacy `history`/`diff`
-with explicit `--output json`. This contract does not yet apply to snapshot
-creation, mirror, watch, or other command results. Legacy `--json`
+`projects show`, `snapshots create`, `snapshots list`, `snapshots show`, `snapshots diff`, `backups list`,
+`backups show`, `backups verify`, `backups verify-all`, `backups create`,
+`recovery restore`, and legacy `history`/`diff`
+with explicit `--output json`. This contract does not yet apply to mirror,
+watch, or other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
 
 The inspection and verification invocations open an existing database in
-read-only mode. They
-do not initialize the database, create its parent directory, migrate schema, or
+read-only mode. They do not initialize the database, create its parent directory, migrate schema, or
 change SQLite journal configuration. `--output text` also selects read-only
 listing; listing without `--output` retains its legacy initialization behavior.
 Unsupported/older schemas require an explicit supported migration, not an
@@ -17,6 +17,8 @@ implicit migration during inspection.
 `backups create` requires an existing database but writes a new fully hashed
 snapshot and backup record unless `--dry-run` is set. Its dry run opens the
 database read-only and leaves the source and destination unchanged.
+`snapshots create` also writes a new snapshot. It checks project registration
+read-only before opening the store for writing in versioned mode.
 
 ## Requests
 
@@ -26,11 +28,13 @@ vaultsync projects list --db ./vault.db --filter alpha --preset dotnet --limit 1
 vaultsync projects show "My project" --db ./vault.db --output json
 vaultsync projects show --id 42 --db ./vault.db --output json
 vaultsync snapshots list "My project" --db ./vault.db --limit 10 --output json
+vaultsync snapshots create "My project" --db ./vault.db --output json
 vaultsync snapshots show "My project" --id 42 --db ./vault.db --output json
 vaultsync snapshots diff "My project" 42 41 --db ./vault.db --limit 200 --output json
 vaultsync backups list "My project" --db ./vault.db --output json
 vaultsync backups show "My project" --id 7 --db ./vault.db --output json
 vaultsync backups verify "My project" --id 7 --db ./vault.db --output json
+vaultsync backups verify-all --filter My --db ./vault.db --output json
 vaultsync backups create "My project" --destination /mounted/backup --db ./vault.db --dry-run --output json
 vaultsync recovery restore "My project" /safe/target --backup-id 7 --include Documents --dry-run --output json
 ```
@@ -64,6 +68,7 @@ markup, or log messages mixed into it. The object contains:
 | 0 | Success, including an empty filtered list |
 | 1 | Database inaccessible, invalid/unsupported schema, or an operational failure |
 | 2 | Invalid arguments/options/selector or project not found |
+| 3 | Bulk verification has failed or omitted records; inspect per-backup results |
 | 130 | Backup creation or verification was cancelled before completion |
 
 Unknown options, malformed typed values, missing option values, incompatible
@@ -77,7 +82,8 @@ Error codes currently include `invalid_options`, `project_not_found`,
 `backup_unavailable`, `unsupported_backup_format`, `verification_failed`,
 `cancelled`, `destination_unavailable`, `source_unavailable`,
 `unsafe_destination`, `insufficient_space`, `backup_failed`,
-`backup_not_created`, `repository_unavailable`, and `command_failed`.
+`backup_not_created`, `bulk_verification_incomplete`, `repository_unavailable`,
+and `command_failed`.
 Error messages are actionable,
 without embedding the underlying exception or connection string. Consumers
 should use codes rather than parsing text and tolerate additional properties.
@@ -95,6 +101,11 @@ and the full application configuration.
 
 
 ## Snapshot history payload
+
+`snapshots.create` returns `projectId`, local `snapshotId`, UTC `createdUtc`,
+`fileCount`, `totalBytes`, and added/modified/deleted/unchanged counts when the
+service supplies them. It indexes source state; it does not write a backup.
+The compatibility `snapshot` route accepts the same opt-in v1 mode.
 
 `snapshots.list` identifies its project with the same project-summary shape and
 returns `snapshots`, `count` (after the optional positive limit), and `totalCount`.
@@ -169,6 +180,17 @@ missing/unsafe file, unreadable file, or missing hash produces
 `verification_failed` with the same result under `error.details` and exit 1.
 `--limit` bounds returned failures, not the number of files checked. Failure paths
 come from the selected project's snapshot and may be sensitive when shared.
+
+`backups.verify-all` checks up to 100 records by default, ordered by project
+name and newest backup within each project. `--project` selects one exact name;
+`--filter` matches project-name fragments; they cannot be combined. `--limit`
+bounds backup records and `--failure-limit` bounds file failures per backup.
+The result contains per-backup status/code/counts, `count`, `totalCount`,
+`passedCount`, `failedCount`, and `resultsTruncated`. An empty selection succeeds.
+Any failed record or omitted record returns `bulk_verification_incomplete` with
+these results in `error.details`; exit 1 means all checked records failed, and
+exit 3 means mixed outcomes or an omitted tail. A pass applies only to the
+checked full, unencrypted folder backups with indexed hashes.
 
 ## Restore payload
 

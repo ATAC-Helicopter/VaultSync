@@ -69,6 +69,10 @@ dry-run estimate before starting the actual backup. Replace `7` with an ID from
 the list. Listing and showing records do not check
 payload bytes. Verification supports full, unencrypted folder backups with indexed
 hashes; it reports missing or changed files and rejects other formats explicitly.
+For a read-only check across recorded backups, run `vaultsync backups verify-all
+--db /absolute/path/to/vault.db --output json`. Use `--project 'Photos'` for one
+project or `--filter photo` for a project-name fragment. Exit 3 means some
+selected records failed or `--limit` omitted records; inspect `error.details`.
 
 ## mirror
 

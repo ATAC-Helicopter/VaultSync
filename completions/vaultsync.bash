@@ -4,7 +4,7 @@ _vaultsync_children() {
     '') printf '%s' 'projects snapshots backups recovery mirror prune set-path update-path restore history diff self-test init add-project remove-project list-projects snapshot sync verify watch doctor destinations version docs completion config presets' ;;
     'projects') printf '%s' 'add list show discover set-path remove' ;;
     'snapshots') printf '%s' 'create list show diff prune' ;;
-    'backups') printf '%s' 'create list show verify' ;;
+    'backups') printf '%s' 'create list show verify verify-all' ;;
     'recovery') printf '%s' 'restore' ;;
     'config') printf '%s' 'show path set-db' ;;
     'presets') printf '%s' 'list show' ;;
@@ -22,7 +22,7 @@ _vaultsync_options() {
     'projects set-path') printf '%s' '-h --help --db --quiet' ;;
     'projects remove') printf '%s' '-h --help --db --yes --quiet' ;;
     'snapshots') printf '%s' '-h --help' ;;
-    'snapshots create') printf '%s' '-h --help --full-hash --db --quiet' ;;
+    'snapshots create') printf '%s' '-h --help --full-hash --db --quiet --output' ;;
     'snapshots list') printf '%s' '-h --help --db --json --output --limit' ;;
     'snapshots show') printf '%s' '-h --help --id --db --output' ;;
     'snapshots diff') printf '%s' '-h --help --db --limit --json --output' ;;
@@ -32,6 +32,7 @@ _vaultsync_options() {
     'backups list') printf '%s' '-h --help --db --limit --output' ;;
     'backups show') printf '%s' '-h --help --id --db --output' ;;
     'backups verify') printf '%s' '-h --help --id --db --limit --output' ;;
+    'backups verify-all') printf '%s' '-h --help --project --filter --db --limit --failure-limit --output' ;;
     'recovery') printf '%s' '-h --help' ;;
     'recovery restore') printf '%s' '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'mirror') printf '%s' '-h --help --dry-run --db --quiet' ;;
@@ -56,7 +57,7 @@ _vaultsync_options() {
     'list-projects') printf '%s' '-h --help --db --json --output --filter --preset --limit' ;;
     'set-path') printf '%s' '-h --help --db --quiet' ;;
     'update-path') printf '%s' '-h --help --db --quiet' ;;
-    'snapshot') printf '%s' '-h --help --full-hash --db --quiet' ;;
+    'snapshot') printf '%s' '-h --help --full-hash --db --quiet --output' ;;
     'sync') printf '%s' '-h --help --dry-run --db --quiet' ;;
     'restore') printf '%s' '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'history') printf '%s' '-h --help --db --json --output --limit' ;;
@@ -68,6 +69,7 @@ _vaultsync_values() {
   case "$1" in
     'projects list --output') printf '%s' 'text json' ;;
     'projects show --output') printf '%s' 'text json' ;;
+    'snapshots create --output') printf '%s' 'text json' ;;
     'snapshots list --output') printf '%s' 'text json' ;;
     'snapshots show --output') printf '%s' 'text json' ;;
     'snapshots diff --output') printf '%s' 'text json' ;;
@@ -75,8 +77,10 @@ _vaultsync_values() {
     'backups list --output') printf '%s' 'text json' ;;
     'backups show --output') printf '%s' 'text json' ;;
     'backups verify --output') printf '%s' 'text json' ;;
+    'backups verify-all --output') printf '%s' 'text json' ;;
     'recovery restore --output') printf '%s' 'text json' ;;
     'list-projects --output') printf '%s' 'text json' ;;
+    'snapshot --output') printf '%s' 'text json' ;;
     'restore --output') printf '%s' 'text json' ;;
     'history --output') printf '%s' 'text json' ;;
     'diff --output') printf '%s' 'text json' ;;

@@ -257,10 +257,11 @@ ARGUMENTS:
     <name>
 
 OPTIONS:
-    -h, --help         Prints help information
+    -h, --help               Prints help information
         --full-hash
         --db
         --quiet
+        --output <FORMAT>
 ```
 
 ## `vaultsync snapshots list`
@@ -372,6 +373,8 @@ COMMANDS:
                         exposing storage paths or secrets
     verify <project>    Hash-check recorded folder-backup bytes against the
                         selected snapshot
+    verify-all          Check recorded backups across projects with bounded
+                        per-backup results
 ```
 
 ## `vaultsync backups create`
@@ -452,6 +455,25 @@ OPTIONS:
         --id <ID>
         --db <PATH>
         --limit <COUNT>
+        --output <FORMAT>
+```
+
+## `vaultsync backups verify-all`
+
+```text
+DESCRIPTION:
+Check recorded backups across projects with bounded per-backup results
+
+USAGE:
+    vaultsync backups verify-all [OPTIONS]
+
+OPTIONS:
+    -h, --help                     Prints help information
+        --project <NAME>
+        --filter <TEXT>
+        --db <PATH>
+        --limit <COUNT>
+        --failure-limit <COUNT>
         --output <FORMAT>
 ```
 
@@ -892,10 +914,11 @@ ARGUMENTS:
     <name>
 
 OPTIONS:
-    -h, --help         Prints help information
+    -h, --help               Prints help information
         --full-hash
         --db
         --quiet
+        --output <FORMAT>
 ```
 
 ## `vaultsync sync`
