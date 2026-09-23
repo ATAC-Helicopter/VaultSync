@@ -8,6 +8,7 @@
 - [VS-1973] Add project and snapshot inspection with bounded diffs.
 - [VS-1974] Add versioned JSON for read-only inspection.
 - [VS-1975] Show recorded-backup counts in snapshot inspection.
+- [VS-1975] Inspect backup records and verify full folder backups.
 - [VS-1973] Let `watch --db` select a database.
 ### Fixed
 - [VS-1974] Keep quiet snapshot diagnostics out of stdout.

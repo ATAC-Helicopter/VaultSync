@@ -51,6 +51,19 @@ read-only v1 JSON; the diff compares the latest two indexed source states. A
 snapshot stores hashes and metadata, not recoverable backup bytes. The output
 contains local paths, so review it before sharing.
 
+For an existing project with recorded backups, inspect the records and verify a
+supported folder payload before restoring:
+
+```sh
+vaultsync backups list 'Photos' --db /absolute/path/to/vault.db --output json
+vaultsync backups show 'Photos' --id 7 --db /absolute/path/to/vault.db --output json
+vaultsync backups verify 'Photos' --id 7 --db /absolute/path/to/vault.db --output json
+```
+
+Replace `7` with an ID from the list. Listing and showing records do not check
+payload bytes. Verification supports full, unencrypted folder backups with indexed
+hashes; it reports missing or changed files and rejects other formats explicitly.
+
 ## mirror
 
 **Goal:** preview a live source transfer into a separate destination. Replace
@@ -81,6 +94,8 @@ already exist.
 ```sh
 vaultsync snapshots list 'Photos' --db /absolute/path/to/vault.db --output json
 vaultsync snapshots show 'Photos' --id 123 --db /absolute/path/to/vault.db --output json
+vaultsync backups list 'Photos' --db /absolute/path/to/vault.db --output json
+vaultsync backups verify 'Photos' --id 7 --db /absolute/path/to/vault.db --output json
 vaultsync recovery restore 'Photos' /absolute/path/to/restore-preview \
   --snapshot 123 --db /absolute/path/to/vault.db --dry-run --json
 # After checking the selected backup, target, and dry-run result:

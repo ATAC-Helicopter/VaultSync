@@ -53,8 +53,9 @@ recovery require their owning shared services and qualification contracts.
   a stored backup and cannot establish recoverability.
 - `mirror`: transfer current live source files. It does not publish a recorded
   recovery point, retention policy, or immutable backup.
-- `backups`: reserved design direction for recorded recovery payload operations;
-  no fake backup command is introduced over the mirroring service.
+- `backups`: recorded recovery payload operations. Project-scoped list/show
+  inspect records; verify hashes full, unencrypted folder payloads. Backup
+  creation remains pending and mirroring does not stand in for it.
 - `recovery`: recorded-byte restore and, later, independent recovery workflows.
 - `destinations`, `config`, `presets`: resource inspection and explicit management.
 
@@ -248,3 +249,9 @@ Their CLI handlers now open the selected database read-only and reject an absent
 path with exit 1 and stderr guidance before any destination work. They no longer
 run schema initialization or migrate a repository as a side effect of a preview
 or verification.
+
+`backups list/show` now expose project-scoped records without storage paths or
+crypto descriptors. `backups verify` checks full, unencrypted folder payloads
+against indexed hashes, rejects foreign snapshot references and unsupported
+formats, and returns bounded per-file failures in v1 JSON error details.
+Record inspection explicitly reports `payloadChecked: false`.

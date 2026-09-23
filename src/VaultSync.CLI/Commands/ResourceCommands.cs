@@ -42,6 +42,17 @@ internal static class ResourceCommands
                 .WithDescription("Prune eligible local snapshot indexes; protected and backed snapshots remain; supports --dry-run");
         });
 
+        configuration.AddBranch<CommandSettings>("backups", backups =>
+        {
+            backups.SetDescription("Inspect recorded backup references; records do not prove payload availability");
+            backups.AddCommand<ListBackupsCommand>("list")
+                .WithDescription("List a project's recorded backups with stable local IDs and optional versioned JSON");
+            backups.AddCommand<ShowBackupCommand>("show")
+                .WithDescription("Inspect one project-scoped backup record without exposing storage paths or secrets");
+            backups.AddCommand<VerifyBackupCommand>("verify")
+                .WithDescription("Hash-check recorded folder-backup bytes against the selected snapshot");
+        });
+
         configuration.AddBranch<CommandSettings>("recovery", recovery =>
         {
             recovery.SetDescription("Recover recorded backup data through supported restore workflows");

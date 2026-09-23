@@ -16,6 +16,7 @@ COMMANDS: tuple[tuple[str, ...], ...] = (
     ("projects", "discover"), ("projects", "set-path"), ("projects", "remove"),
     ("snapshots",), ("snapshots", "create"), ("snapshots", "list"),
     ("snapshots", "show"), ("snapshots", "diff"), ("snapshots", "prune"),
+    ("backups",), ("backups", "list"), ("backups", "show"), ("backups", "verify"),
     ("recovery",), ("recovery", "restore"), ("mirror",), ("verify",), ("watch",),
     ("doctor",), ("destinations",), ("self-test",), ("init",),
     ("config",), ("config", "show"), ("config", "path"), ("config", "set-db"),

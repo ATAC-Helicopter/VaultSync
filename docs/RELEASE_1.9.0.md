@@ -212,7 +212,7 @@ recipes and PowerShell completion still require their supported-system gates.
 Generated Bash/Zsh/PowerShell completion now also suggests the bundled task
 topics after `docs --task` and `text`/`json` after supported `--output` options.
 The generator reads task headings from the bundled guide, and Bash/Zsh probes
-exercise the value suggestions locally. This remains unpushed; no hosted checks ran.
+exercise the value suggestions locally.
 
 The CLI demo exposed mirror filter diagnostics in stdout. Mirror, watcher, and
 self-test paths now pass the private CLI logger into platform transfer runners;
@@ -224,11 +224,18 @@ transfer details remain in the private log.
 The isolated demo transcript is local evidence only; Windows transfer behavior
 still needs its supported-system gate.
 
-The next unattended-safety slice opens mirror, verify, and recorded-folder
+The unattended-safety slice opens mirror, verify, and recorded-folder
 restore databases read-only. An absent `--db` path now returns exit 1 on stderr
 without creating the database, its parent directory, or a target. Existing
 restore and transfer behavior remains covered by local tests; supported-platform
 qualification remains pending.
+
+Recorded-backup inspection now has project-scoped `backups list/show` routes
+with local IDs and no exposed destination or crypto descriptors. The read-only
+`backups verify` route checks indexed hashes against a full, unencrypted folder
+payload and returns bounded per-file failures in v1 JSON. Missing data and
+unsupported formats fail explicitly. Backup creation, archive/encrypted
+verification, and selective restore remain under VS-1973/VS-1975.
 
 ## CLI execution tracking
 

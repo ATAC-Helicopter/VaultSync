@@ -35,6 +35,8 @@ COMMANDS:
     snapshots                       Index source state and inspect local
                                     snapshot history; snapshots alone are not
                                     stored backups
+    backups                         Inspect recorded backup references; records
+                                    do not prove payload availability
     recovery                        Recover recorded backup data through
                                     supported restore workflows
     mirror <name> <destination>     Mirror live project files with
@@ -346,6 +348,87 @@ OPTIONS:
         --db
         --quiet
         --json
+```
+
+## `vaultsync backups`
+
+```text
+DESCRIPTION:
+Inspect recorded backup references; records do not prove payload availability
+
+USAGE:
+    vaultsync backups [OPTIONS] <COMMAND>
+
+OPTIONS:
+    -h, --help    Prints help information
+
+COMMANDS:
+    list <project>      List a project's recorded backups with stable local IDs
+                        and optional versioned JSON
+    show <project>      Inspect one project-scoped backup record without
+                        exposing storage paths or secrets
+    verify <project>    Hash-check recorded folder-backup bytes against the
+                        selected snapshot
+```
+
+## `vaultsync backups list`
+
+```text
+DESCRIPTION:
+List a project's recorded backups with stable local IDs and optional versioned
+JSON
+
+USAGE:
+    vaultsync backups list <project> [OPTIONS]
+
+ARGUMENTS:
+    <project>
+
+OPTIONS:
+    -h, --help               Prints help information
+        --db <PATH>
+        --limit <COUNT>
+        --output <FORMAT>
+```
+
+## `vaultsync backups show`
+
+```text
+DESCRIPTION:
+Inspect one project-scoped backup record without exposing storage paths or
+secrets
+
+USAGE:
+    vaultsync backups show <project> [OPTIONS]
+
+ARGUMENTS:
+    <project>
+
+OPTIONS:
+    -h, --help               Prints help information
+        --id <ID>
+        --db <PATH>
+        --output <FORMAT>
+```
+
+## `vaultsync backups verify`
+
+```text
+DESCRIPTION:
+Hash-check recorded folder-backup bytes against the selected snapshot
+
+USAGE:
+    vaultsync backups verify <project> [OPTIONS]
+
+ARGUMENTS:
+    <project>
+
+OPTIONS:
+    -h, --help               Prints help information
+        --id <ID>
+        --db <PATH>
+        --limit <COUNT>
+        --output <FORMAT>
 ```
 
 ## `vaultsync recovery`

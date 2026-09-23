@@ -1,8 +1,9 @@
 # CLI structured output v1
 
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
-`projects show`, `snapshots list`, `snapshots show`, `snapshots diff`, and legacy
-`history`/`diff` with explicit `--output json`. This contract does not yet apply to snapshot
+`projects show`, `snapshots list`, `snapshots show`, `snapshots diff`, `backups list`,
+`backups show`, `backups verify`, and legacy `history`/`diff` with explicit
+`--output json`. This contract does not yet apply to snapshot
 creation, mirror, restore, watch, or other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
 
@@ -23,6 +24,9 @@ vaultsync projects show --id 42 --db ./vault.db --output json
 vaultsync snapshots list "My project" --db ./vault.db --limit 10 --output json
 vaultsync snapshots show "My project" --id 42 --db ./vault.db --output json
 vaultsync snapshots diff "My project" 42 41 --db ./vault.db --limit 200 --output json
+vaultsync backups list "My project" --db ./vault.db --output json
+vaultsync backups show "My project" --id 7 --db ./vault.db --output json
+vaultsync backups verify "My project" --id 7 --db ./vault.db --output json
 ```
 
 `--filter` matches a case-insensitive project-name fragment. `--preset` matches
@@ -43,10 +47,10 @@ markup, or log messages mixed into it. The object contains:
 | Property | Meaning |
 | --- | --- |
 | `schemaVersion` | `1` |
-| `operation` | `projects.list`, `projects.show`, `snapshots.list`, `snapshots.show`, or `snapshots.diff` |
+| `operation` | The documented resource action, such as `backups.verify` |
 | `status` | `success` or `error` |
 | `data` | Success payload; null on failure |
-| `error` | Null on success; failure `{code, message}` |
+| `error` | Null on success; failure `{code, message}` and optional `details` |
 | `exitCode` | Matches the process/command result |
 
 | Exit | Meaning for these operations |
@@ -62,8 +66,9 @@ a result envelope. Other commands' exit codes and cancellation semantics have
 not yet been unified under this contract.
 
 Error codes currently include `invalid_options`, `project_not_found`,
-`snapshot_history_empty`, `snapshot_not_found`, `repository_unavailable`, and
-`command_failed`. Error messages are actionable,
+`snapshot_history_empty`, `snapshot_not_found`, `backup_not_found`,
+`backup_unavailable`, `unsupported_backup_format`, `verification_failed`,
+`cancelled`, `repository_unavailable`, and `command_failed`. Error messages are actionable,
 without embedding the underlying exception or connection string. Consumers
 should use codes rather than parsing text and tolerate additional properties.
 The envelope schema is [cli-result-v1.schema.json](schemas/cli-result-v1.schema.json).
@@ -124,6 +129,25 @@ The result names the older baseline as `fromSnapshotId` and newer target as
 explicitly reports omitted paths and `pathLimit` records the applied bound.
 Legacy `diff --json` keeps its original `A`/`B`, path arrays, and summary shape,
 but now also rejects cross-project IDs.
+
+## Recorded backup payloads
+
+`backups.list` returns a project summary, `backups`, `count`, and `totalCount`.
+`backups.show` returns the project and one backup. Each backup record includes its
+local ID, external ID, snapshot ID, UTC creation time, type, mode, byte total,
+protected/encrypted/imported flags, and `payloadChecked: false`. Storage paths,
+destination identities, and crypto descriptors are omitted. Both commands are
+record inspection only; absent bytes can still have a valid record.
+
+`backups.verify` accepts a positive project-scoped backup ID. It supports full,
+unencrypted folder payloads with indexed file hashes. It rejects unsupported
+formats and missing data rather than inferring that a record is healthy. A result
+reports `checkedFiles`, `passedFiles`, `failedFiles`, bounded `failures`,
+`failureLimit`, `failuresTruncated`, and `payloadChecked: true`. A hash mismatch,
+missing/unsafe file, unreadable file, or missing hash produces
+`verification_failed` with the same result under `error.details` and exit 1.
+`--limit` bounds returned failures, not the number of files checked. Failure paths
+come from the selected project's snapshot and may be sensitive when shared.
 
 Example selection failure:
 

@@ -48,6 +48,14 @@ internal static class CommandOutput
                 return "projects.list";
             return string.Equals(arguments[1], "show", StringComparison.OrdinalIgnoreCase) ? "projects.show" : null;
         }
+        if (string.Equals(arguments[0], "backups", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(arguments[1], "list", StringComparison.OrdinalIgnoreCase))
+                return "backups.list";
+            if (string.Equals(arguments[1], "show", StringComparison.OrdinalIgnoreCase))
+                return "backups.show";
+            return string.Equals(arguments[1], "verify", StringComparison.OrdinalIgnoreCase) ? "backups.verify" : null;
+        }
         if (!string.Equals(arguments[0], "snapshots", StringComparison.OrdinalIgnoreCase))
             return null;
         if (string.Equals(arguments[1], "list", StringComparison.OrdinalIgnoreCase))
@@ -81,6 +89,12 @@ internal static class CommandOutput
             Write(operation, "error", null, new { code, message }, exitCode);
         else
             Console.Error.WriteLine(message);
+        return exitCode;
+    }
+
+    public static int FailureWithDetails(string operation, string code, string message, object details, int exitCode)
+    {
+        Write(operation, "error", null, new { code, message, details }, exitCode);
         return exitCode;
     }
 

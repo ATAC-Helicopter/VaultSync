@@ -191,6 +191,23 @@ results; complete counts and `pathsTruncated` remain available.
 Pruning affects eligible local snapshot indexes. Recorded-backup snapshots and
 History-protected snapshots are retained. Use `--dry-run` before applying a plan.
 
+### Recorded backups
+
+```text
+vaultsync backups list PROJECT [--limit COUNT] [--db PATH] [--output text|json]
+vaultsync backups show PROJECT --id ID [--db PATH] [--output text|json]
+vaultsync backups verify PROJECT --id ID [--limit COUNT] [--db PATH]
+                         [--output text|json]
+```
+
+`list` and `show` inspect project-scoped backup records without exposing storage
+paths or crypto descriptors. Their `payloadChecked: false` field matters: a record
+does not prove that bytes are present. `verify` hashes indexed files in a full,
+unencrypted folder backup and reports mismatches. It rejects archive, encrypted,
+and incremental formats explicitly; it does not test whether a restore target is
+safe or whether a portable repository can be recovered on a new machine. All
+three commands open the selected database read-only.
+
 ### Recovery
 
 ```text
@@ -246,7 +263,8 @@ Explicit `--output json` is currently supported by:
 - `projects show`;
 - `snapshots list` and compatibility `history`;
 - `snapshots show`;
-- `snapshots diff` and compatibility `diff`.
+- `snapshots diff` and compatibility `diff`;
+- `backups list`, `backups show`, and `backups verify`.
 
 Each invocation writes one JSON object to stdout:
 
