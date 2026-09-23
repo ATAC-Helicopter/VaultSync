@@ -1275,6 +1275,13 @@ destabilizing the maintenance release.
     valid same-project comparisons and legacy JSON remain compatible.
   - Tracking: [issue #716](https://github.com/ATAC-Helicopter/VaultSync/issues/716);
     implementation and regression evidence await release integration.
+- [ ] `BUG-19004` `P1` Recheck staged CLI restore bytes before target replacement.
+  - Scope: validate size and available SHA-256 hash after copying backup data to
+    the temporary restore file, before atomically replacing the target.
+  - Acceptance: changed or incomplete bytes cannot replace an existing target;
+    temporary files are cleaned up on failure.
+  - Tracking: [issue #717](https://github.com/ATAC-Helicopter/VaultSync/issues/717);
+    implementation and regression evidence await release integration.
 - [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
   - Scope: inventory existing commands and core-service gaps; define resource/action
     naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
@@ -1296,7 +1303,8 @@ destabilizing the maintenance release.
     listing supports name/preset filters and limits; snapshot show/history and
     bounded same-project diffs now have versioned read-only results; watch accepts
     explicit --db. Project-scoped backup list/show/verify now cover records and
-    full, unencrypted folder payloads. Backup creation/parity/bulk scope remains.
+    full, unencrypted folder payloads. Full folder backup creation with explicit
+    destination and dry-run now uses the shared service. Parity/bulk scope remains.
 - [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
   - Scope: versioned JSON and streaming result contracts, stable exit codes,
     stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
@@ -1315,6 +1323,8 @@ destabilizing the maintenance release.
     read existing databases without initializing them and report missing stores
     on stderr. Backup list/show/verify also use read-only v1 results; failed
     folder verification carries bounded details without leaking storage paths.
+    Backup creation and its dry run now return v1 results; shared-service
+    diagnostics stay in the private CLI log.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
   - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
     and snapshot inspection, selective safe restore, integrity evidence, destination
@@ -1326,8 +1336,10 @@ destabilizing the maintenance release.
     markers, and recorded-backup reference counts without claiming payload
     availability or integrity. The Windows mirror runner no longer creates a
     destination before a dry run. Backup records can now be inspected and full,
-    unencrypted folder payloads hash-checked. Backup execution/selective
-    restore/bulk scope remains.
+    unencrypted folder payloads hash-checked. Explicit-destination full folder
+    backups now run through the shared service with a dry-run preflight.
+    Selective folder/file restore and exact backup-ID selection now preserve
+    unrelated target files. Archive/encrypted creation and bulk scope remain.
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and

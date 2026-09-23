@@ -35,8 +35,8 @@ COMMANDS:
     snapshots                       Index source state and inspect local
                                     snapshot history; snapshots alone are not
                                     stored backups
-    backups                         Inspect recorded backup references; records
-                                    do not prove payload availability
+    backups                         Create and inspect recorded backups; records
+                                    alone do not prove payload availability
     recovery                        Recover recorded backup data through
                                     supported restore workflows
     mirror <name> <destination>     Mirror live project files with
@@ -354,7 +354,8 @@ OPTIONS:
 
 ```text
 DESCRIPTION:
-Inspect recorded backup references; records do not prove payload availability
+Create and inspect recorded backups; records alone do not prove payload
+availability
 
 USAGE:
     vaultsync backups [OPTIONS] <COMMAND>
@@ -363,12 +364,35 @@ OPTIONS:
     -h, --help    Prints help information
 
 COMMANDS:
+    create <project>    Create a full folder backup at an explicit destination;
+                        supports --dry-run
     list <project>      List a project's recorded backups with stable local IDs
                         and optional versioned JSON
     show <project>      Inspect one project-scoped backup record without
                         exposing storage paths or secrets
     verify <project>    Hash-check recorded folder-backup bytes against the
                         selected snapshot
+```
+
+## `vaultsync backups create`
+
+```text
+DESCRIPTION:
+Create a full folder backup at an explicit destination; supports --dry-run
+
+USAGE:
+    vaultsync backups create <project> [OPTIONS]
+
+ARGUMENTS:
+    <project>
+
+OPTIONS:
+    -h, --help                  Prints help information
+        --destination <PATH>
+        --db <PATH>
+        --dry-run
+        --quiet
+        --output <FORMAT>
 ```
 
 ## `vaultsync backups list`
@@ -466,12 +490,15 @@ ARGUMENTS:
 OPTIONS:
     -h, --help               Prints help information
         --snapshot
+        --backup-id <ID>
+        --include <PATH>
         --dry-run
         --clean
         --keep-empty-dirs
         --db
         --quiet
         --json
+        --output <FORMAT>
 ```
 
 ## `vaultsync mirror`
@@ -907,12 +934,15 @@ ARGUMENTS:
 OPTIONS:
     -h, --help               Prints help information
         --snapshot
+        --backup-id <ID>
+        --include <PATH>
         --dry-run
         --clean
         --keep-empty-dirs
         --db
         --quiet
         --json
+        --output <FORMAT>
 ```
 
 ## `vaultsync history`

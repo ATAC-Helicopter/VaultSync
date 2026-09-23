@@ -194,11 +194,23 @@ History-protected snapshots are retained. Use `--dry-run` before applying a plan
 ### Recorded backups
 
 ```text
+vaultsync backups create PROJECT --destination PATH [--db PATH] [--dry-run]
+                         [--quiet] [--output text|json]
 vaultsync backups list PROJECT [--limit COUNT] [--db PATH] [--output text|json]
 vaultsync backups show PROJECT --id ID [--db PATH] [--output text|json]
 vaultsync backups verify PROJECT --id ID [--limit COUNT] [--db PATH]
                          [--output text|json]
 ```
+
+`create` writes a new full, unencrypted folder backup through the shared backup
+service. It requires an existing destination outside the project source, creates
+a fresh fully hashed snapshot, and records the backup in the selected database.
+`--dry-run` checks the source and destination and reports an estimated file/byte
+count without writing either. The estimate can come from the latest snapshot;
+the actual run scans again. An encryption policy that requires an archive is
+rejected by this route. `--quiet` suppresses successful text output; `--output
+json` writes one versioned result and routes service diagnostics to the private
+CLI log.
 
 `list` and `show` inspect project-scoped backup records without exposing storage
 paths or crypto descriptors. Their `payloadChecked: false` field matters: a record
@@ -211,13 +223,20 @@ three commands open the selected database read-only.
 ### Recovery
 
 ```text
-vaultsync recovery restore NAME DESTINATION [options]
+vaultsync recovery restore NAME DESTINATION [--backup-id ID | --snapshot ID]
+                           [--include RELATIVE_PATH ...] [--dry-run] [--clean]
+                           [--db PATH] [--output text|json]
 ```
 
 The current CLI restore supports recorded folder backups. Archive and encrypted
 recovery are rejected until qualified handlers are available. It never restores
 from the live source merely because a snapshot exists. Use command help for
 snapshot selection, dry-run, cleanup, and empty-directory options.
+`--backup-id` selects the exact project-scoped backup record. Repeat `--include`
+to restore specific files or directory subtrees; unrelated target files remain.
+Selective restore rejects `--clean` because cleanup outside the selected paths
+would be surprising. The versioned JSON result reports the selected backup,
+snapshot, file count, and copy/delete counts. Legacy `--json` keeps its old shape.
 
 ### Live mirroring and verification
 
@@ -264,7 +283,8 @@ Explicit `--output json` is currently supported by:
 - `snapshots list` and compatibility `history`;
 - `snapshots show`;
 - `snapshots diff` and compatibility `diff`;
-- `backups list`, `backups show`, and `backups verify`.
+- `backups create`, `backups list`, `backups show`, and `backups verify`;
+- `recovery restore` and compatibility `restore`.
 
 Each invocation writes one JSON object to stdout:
 
@@ -327,7 +347,7 @@ only the relevant guide in a terminal.
 ## Current 1.9 development limits
 
 The CLI rework is active. Bulk project operations, complete recorded-backup command
-parity, selective restore, uniform JSON across all commands, watcher event streams,
+parity, uniform JSON across all commands, watcher event streams,
 project/path-aware completion, portable emergency recovery, and final cross-platform
 automation qualification remain planned under their owning 1.9 issues. Disk imaging and bootable
 recovery commands will appear only with qualified recovery services and support

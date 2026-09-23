@@ -2,17 +2,21 @@
 
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
 `projects show`, `snapshots list`, `snapshots show`, `snapshots diff`, `backups list`,
-`backups show`, `backups verify`, and legacy `history`/`diff` with explicit
-`--output json`. This contract does not yet apply to snapshot
-creation, mirror, restore, watch, or other command results. Legacy `--json`
+`backups show`, `backups verify`, `backups create`, `recovery restore`, and legacy `history`/`diff`
+with explicit `--output json`. This contract does not yet apply to snapshot
+creation, mirror, watch, or other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
 
-These inspection invocations open an existing database in read-only mode. They
+The inspection and verification invocations open an existing database in
+read-only mode. They
 do not initialize the database, create its parent directory, migrate schema, or
 change SQLite journal configuration. `--output text` also selects read-only
 listing; listing without `--output` retains its legacy initialization behavior.
 Unsupported/older schemas require an explicit supported migration, not an
 implicit migration during inspection.
+`backups create` requires an existing database but writes a new fully hashed
+snapshot and backup record unless `--dry-run` is set. Its dry run opens the
+database read-only and leaves the source and destination unchanged.
 
 ## Requests
 
@@ -27,6 +31,8 @@ vaultsync snapshots diff "My project" 42 41 --db ./vault.db --limit 200 --output
 vaultsync backups list "My project" --db ./vault.db --output json
 vaultsync backups show "My project" --id 7 --db ./vault.db --output json
 vaultsync backups verify "My project" --id 7 --db ./vault.db --output json
+vaultsync backups create "My project" --destination /mounted/backup --db ./vault.db --dry-run --output json
+vaultsync recovery restore "My project" /safe/target --backup-id 7 --include Documents --dry-run --output json
 ```
 
 `--filter` matches a case-insensitive project-name fragment. `--preset` matches
@@ -58,6 +64,7 @@ markup, or log messages mixed into it. The object contains:
 | 0 | Success, including an empty filtered list |
 | 1 | Database inaccessible, invalid/unsupported schema, or an operational failure |
 | 2 | Invalid arguments/options/selector or project not found |
+| 130 | Backup creation or verification was cancelled before completion |
 
 Unknown options, malformed typed values, missing option values, incompatible
 selectors, invalid positive limits, and conflicting output modes fail explicitly in the
@@ -68,7 +75,10 @@ not yet been unified under this contract.
 Error codes currently include `invalid_options`, `project_not_found`,
 `snapshot_history_empty`, `snapshot_not_found`, `backup_not_found`,
 `backup_unavailable`, `unsupported_backup_format`, `verification_failed`,
-`cancelled`, `repository_unavailable`, and `command_failed`. Error messages are actionable,
+`cancelled`, `destination_unavailable`, `source_unavailable`,
+`unsafe_destination`, `insufficient_space`, `backup_failed`,
+`backup_not_created`, `repository_unavailable`, and `command_failed`.
+Error messages are actionable,
 without embedding the underlying exception or connection string. Consumers
 should use codes rather than parsing text and tolerate additional properties.
 The envelope schema is [cli-result-v1.schema.json](schemas/cli-result-v1.schema.json).
@@ -132,6 +142,17 @@ but now also rejects cross-project IDs.
 
 ## Recorded backup payloads
 
+`backups.create` takes a project and explicit existing destination. A dry-run
+result reports `projectId`, `dryRun: true`, `estimatedFiles`, `estimatedBytes`,
+null backup/snapshot IDs, and `payloadChecked: false`. A completed creation
+returns the new local `backupId` and `snapshotId` with `dryRun: false`.
+The estimate may use the latest indexed snapshot and can differ from the
+source rescanned during creation. Creation does not assert payload integrity;
+run `backups verify` afterward. The new route rejects encryption policies that
+require archive format. For creation only, exit 1 also covers failed source or
+destination access and backup execution; exit 2 covers an unsafe destination or
+unsupported format.
+
 `backups.list` returns a project summary, `backups`, `count`, and `totalCount`.
 `backups.show` returns the project and one backup. Each backup record includes its
 local ID, external ID, snapshot ID, UTC creation time, type, mode, byte total,
@@ -148,6 +169,21 @@ missing/unsafe file, unreadable file, or missing hash produces
 `verification_failed` with the same result under `error.details` and exit 1.
 `--limit` bounds returned failures, not the number of files checked. Failure paths
 come from the selected project's snapshot and may be sensitive when shared.
+
+## Restore payload
+
+`recovery.restore` is available for the grouped `recovery restore` and
+compatibility `restore` routes. It selects the latest recorded backup by default,
+or a positive project-scoped `--backup-id` or `--snapshot` ID. It reports
+`projectId`, `backupId`, `snapshotId`, `dryRun`, `clean`, `selectedPaths`,
+`selectedFiles`, `copied`, `deleted`, and `deletedDirectories`. Repeated
+`--include` paths select files or directory subtrees relative to the backup root.
+The command rejects `--include` with `--clean`; unrelated target files stay
+untouched. A dry run verifies selected backup bytes and target safety without
+writing the target. A live restore also verifies copied staging bytes before
+replacing each target file. Legacy `--json` keeps its prior payload and casing.
+The v1 error `restore_failed` reports an operational failure with exit 1; if a
+live restore has already copied some files, inspect the target before retrying.
 
 Example selection failure:
 

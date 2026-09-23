@@ -136,8 +136,9 @@ project ownership before returning one snapshot. Versioned output includes ident
 size and change summaries, optional History markers, and aggregate recorded-backup,
 encrypted, and protected record counts. It omits paths, destination identities,
 crypto descriptors, file entries, and hashes. Backup counts are records, not claims
-that payload bytes are available or verified. This starts VS-1975's practical
-inspection work; backup execution, selective restore, and bulk workflows remain.
+that payload bytes are available or verified. This started VS-1975's practical
+inspection work; subsequent slices added folder backup execution and selective
+restore, while bulk workflows remain.
 All 970 .NET tests and 100 script tests pass for the accumulated implementation.
 
 ## Snapshot-diff inspection slice
@@ -234,8 +235,17 @@ Recorded-backup inspection now has project-scoped `backups list/show` routes
 with local IDs and no exposed destination or crypto descriptors. The read-only
 `backups verify` route checks indexed hashes against a full, unencrypted folder
 payload and returns bounded per-file failures in v1 JSON. Missing data and
-unsupported formats fail explicitly. Backup creation, archive/encrypted
-verification, and selective restore remain under VS-1973/VS-1975.
+unsupported formats fail explicitly. `backups create` uses the shared service to
+write a full folder backup to an explicit destination after a dry-run preflight;
+it takes a fully hashed snapshot for subsequent verification. Archive/encrypted
+verification and bulk work remain under VS-1973–VS-1975.
+Creation now also returns a versioned JSON result and routes shared-service
+diagnostics to the private CLI log.
+Restore now selects a project-scoped backup ID or snapshot and can limit writes
+to repeated relative file/directory paths. Selective restore preserves unrelated
+target files and rejects `--clean`; the v1 result reports affected counts while
+legacy `--json` stays compatible. Staged bytes are checked before replacing a
+target file, closing [BUG-19004 / #717](https://github.com/ATAC-Helicopter/VaultSync/issues/717).
 
 ## CLI execution tracking
 
@@ -245,6 +255,7 @@ verification, and selective restore remain under VS-1973/VS-1975.
 | VS-1973 | [#670](https://github.com/ATAC-Helicopter/VaultSync/issues/670) | 1.9.0 | Commands and shared services |
 | VS-1974 | [#671](https://github.com/ATAC-Helicopter/VaultSync/issues/671) | 1.9.0 | Output and unattended execution |
 | VS-1975 | [#672](https://github.com/ATAC-Helicopter/VaultSync/issues/672) | 1.9.0 | Practical power-user workflows |
+| BUG-19004 | [#717](https://github.com/ATAC-Helicopter/VaultSync/issues/717) | 1.9.0 | Recheck staged restore bytes |
 | VS-1977 | [#678](https://github.com/ATAC-Helicopter/VaultSync/issues/678) | 1.9.1 | Help, discovery, and completion |
 | VS-1978 | [#679](https://github.com/ATAC-Helicopter/VaultSync/issues/679) | 1.9.1 | Handbook and script migration |
 | VS-1976 | [#685](https://github.com/ATAC-Helicopter/VaultSync/issues/685) | 1.9.2 | Independent headless recovery |

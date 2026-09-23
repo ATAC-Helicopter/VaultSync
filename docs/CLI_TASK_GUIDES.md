@@ -55,12 +55,18 @@ For an existing project with recorded backups, inspect the records and verify a
 supported folder payload before restoring:
 
 ```sh
+vaultsync backups create 'Photos' --destination /absolute/path/to/backups \
+  --db /absolute/path/to/vault.db --dry-run
+vaultsync backups create 'Photos' --destination /absolute/path/to/backups \
+  --db /absolute/path/to/vault.db
 vaultsync backups list 'Photos' --db /absolute/path/to/vault.db --output json
 vaultsync backups show 'Photos' --id 7 --db /absolute/path/to/vault.db --output json
 vaultsync backups verify 'Photos' --id 7 --db /absolute/path/to/vault.db --output json
 ```
 
-Replace `7` with an ID from the list. Listing and showing records do not check
+The destination must already exist and be separate from the source. Review the
+dry-run estimate before starting the actual backup. Replace `7` with an ID from
+the list. Listing and showing records do not check
 payload bytes. Verification supports full, unencrypted folder backups with indexed
 hashes; it reports missing or changed files and rejects other formats explicitly.
 
@@ -97,10 +103,10 @@ vaultsync snapshots show 'Photos' --id 123 --db /absolute/path/to/vault.db --out
 vaultsync backups list 'Photos' --db /absolute/path/to/vault.db --output json
 vaultsync backups verify 'Photos' --id 7 --db /absolute/path/to/vault.db --output json
 vaultsync recovery restore 'Photos' /absolute/path/to/restore-preview \
-  --snapshot 123 --db /absolute/path/to/vault.db --dry-run --json
+  --backup-id 7 --db /absolute/path/to/vault.db --dry-run --output json
 # After checking the selected backup, target, and dry-run result:
 vaultsync recovery restore 'Photos' /absolute/path/to/restore-preview \
-  --snapshot 123 --db /absolute/path/to/vault.db --json
+  --backup-id 7 --db /absolute/path/to/vault.db --output json
 ```
 
 Replace `123` with an ID from this project's snapshot list that has a recorded
@@ -109,6 +115,9 @@ dry run does not write restored files; the second invocation does. `--clean`
 also removes extra target files and should only be used after its own dry run.
 Current CLI restore uses the selected local database and cannot yet recover a
 portable repository on a clean machine.
+To restore only a folder or file, repeat `--include RELATIVE_PATH`; those paths
+are relative to the backup root. Unselected target files remain. `--clean` cannot
+be combined with `--include`.
 
 ## automate
 
@@ -192,7 +201,7 @@ accident. Compatibility routes remain available throughout the 1.9 family.
 | `diff` | `snapshots diff` |
 | `prune` | `snapshots prune` |
 | `sync` | `mirror` (live transfer, no recorded backup) |
-| `restore` | `recovery restore` (recorded folder backup) |
+| `restore` | `recovery restore` (recorded folder backup; optional `--backup-id` and `--include`) |
 
 Keep `--json` while a script depends on the old payload shape and casing.
 Migrate read-only project/snapshot inspection to explicit `--output json` one

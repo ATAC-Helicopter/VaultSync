@@ -348,12 +348,13 @@ dotnet tool update --global vaultsync.cli --version 1.9.0 \
 ### CLI quick start
 
 ```sh
-vaultsync init
-vaultsync projects add Demo ~/Projects/Demo --preset unity
-vaultsync snapshots create Demo
-vaultsync snapshots list Demo --output json
-vaultsync mirror Demo ~/Backups/Demo --dry-run
-vaultsync verify Demo ~/Backups/Demo --full
+# Assumes ~/Projects/Demo exists and contains files.
+mkdir -p ~/Backups
+vaultsync projects add Demo ~/Projects/Demo --preset unity --db ./vault.db
+vaultsync backups create Demo --destination ~/Backups --db ./vault.db --dry-run
+vaultsync backups create Demo --destination ~/Backups --db ./vault.db
+vaultsync backups list Demo --db ./vault.db --output json
+vaultsync backups verify Demo --id ID_FROM_LIST --db ./vault.db --output json
 ```
 
 ### Useful commands
@@ -365,7 +366,9 @@ vaultsync verify Demo ~/Backups/Demo --full
 | `vaultsync list-projects` | Show all tracked projects |
 | `vaultsync snapshot <name>` | Create a project snapshot |
 | `vaultsync sync <name> <dest>` | Mirror a project to a destination |
-| `vaultsync verify <name> <dest>` | Hash-compare a project and backup |
+| `vaultsync verify <name> <dest>` | Hash-compare a supplied folder with the latest snapshot |
+| `vaultsync backups create <name> --destination <path>` | Record a full folder backup |
+| `vaultsync backups verify <name> --id <id>` | Hash-check recorded folder bytes |
 | `vaultsync history <name>` | Show snapshot history |
 | `vaultsync diff <name>` | Compare snapshots |
 | `vaultsync prune <name>` | Remove old snapshots |

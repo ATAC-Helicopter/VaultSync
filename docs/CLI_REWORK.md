@@ -23,7 +23,7 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | — | Add single-resource inspection | `snapshots show PROJECT --id ID` reports one same-project index, History markers, and aggregate backup references without exposing paths or claiming payload availability |
 | `diff` | Keep compatibility route; add resource comparison | `snapshots diff` implements bounded versioned read-only results and same-project ID checks; compares indexed records, not two stored backup payloads |
 | `prune` | Keep compatibility route; make retention scope explicit | `snapshots prune` implemented; local-index retention, existing dry-run and backed/protected-point safeguards retained |
-| `restore` | Keep compatibility route; extend qualified formats later | `recovery restore` implemented; recorded folder backups only; archive/encrypted inputs remain rejected |
+| `restore` | Keep compatibility route; extend qualified formats later | `recovery restore` supports project-scoped backup ID selection, selective folder/file paths, and v1 JSON; archive/encrypted inputs remain rejected |
 | `sync` | Keep live-mirroring compatibility route | `mirror` implemented over the same rsync/robocopy service; does not create a recorded backup |
 | `verify` | Keep current workflow; evolve evidence contract | Currently checks a supplied folder against the latest indexed snapshot, sample/full; must not imply whole-vault or image validation |
 | `watch` | Keep current behavior; evolve unattended lifecycle | Existing snapshot/live-sync/verification loop; explicit DB selection and drained cancellation implemented; uniform headless results remain pending |
@@ -42,9 +42,9 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | Previously unregistered `DiscoverProjectsCommand` | Expose existing service | `projects discover` implemented: candidate child source folders, no registration or recovery-evidence claim |
 
 No current registered command is silently removed or repurposed in this slice.
-Actual stored-backup creation, backup-format inspection, image operations, remote
-providers, bulk selectors, stable project-ID selectors, and emergency database-free
-recovery require their owning shared services and qualification contracts.
+Archive/encrypted backup inspection, image operations, remote providers, bulk
+selectors, stable project-ID selectors, and emergency database-free recovery
+require their owning shared services and qualification contracts.
 
 ## Resource and data semantics
 
@@ -53,9 +53,10 @@ recovery require their owning shared services and qualification contracts.
   a stored backup and cannot establish recoverability.
 - `mirror`: transfer current live source files. It does not publish a recorded
   recovery point, retention policy, or immutable backup.
-- `backups`: recorded recovery payload operations. Project-scoped list/show
-  inspect records; verify hashes full, unencrypted folder payloads. Backup
-  creation remains pending and mirroring does not stand in for it.
+- `backups`: recorded recovery payload operations. `create` writes a full folder
+  backup through the shared service with explicit destination and dry-run;
+  project-scoped list/show inspect records; verify hashes full, unencrypted
+  folder payloads. Mirroring does not stand in for backup creation.
 - `recovery`: recorded-byte restore and, later, independent recovery workflows.
 - `destinations`, `config`, `presets`: resource inspection and explicit management.
 
@@ -255,3 +256,14 @@ crypto descriptors. `backups verify` checks full, unencrypted folder payloads
 against indexed hashes, rejects foreign snapshot references and unsupported
 formats, and returns bounded per-file failures in v1 JSON error details.
 Record inspection explicitly reports `payloadChecked: false`.
+`backups create` uses the shared backup service and an explicitly selected,
+existing destination. It takes a full-hash snapshot before copying so that the
+new backup can pass the folder verifier. A dry run leaves the repository and
+destination unchanged. Encryption policies requiring archives fail explicitly.
+
+`recovery restore` and its compatibility route now accept `--backup-id` and
+repeatable `--include` paths. Selective restore leaves unrelated target data
+alone and rejects `--clean`. The v1 result reports the selected backup/snapshot
+and affected counts; legacy `--json` remains unchanged. Restore reads shared
+configuration without invoking the legacy migration writer. The copied staging
+file is checked again before replacing each target to close a source-change gap.

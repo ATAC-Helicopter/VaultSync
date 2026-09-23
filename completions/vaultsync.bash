@@ -4,7 +4,7 @@ _vaultsync_children() {
     '') printf '%s' 'projects snapshots backups recovery mirror prune set-path update-path restore history diff self-test init add-project remove-project list-projects snapshot sync verify watch doctor destinations version docs completion config presets' ;;
     'projects') printf '%s' 'add list show discover set-path remove' ;;
     'snapshots') printf '%s' 'create list show diff prune' ;;
-    'backups') printf '%s' 'list show verify' ;;
+    'backups') printf '%s' 'create list show verify' ;;
     'recovery') printf '%s' 'restore' ;;
     'config') printf '%s' 'show path set-db' ;;
     'presets') printf '%s' 'list show' ;;
@@ -28,11 +28,12 @@ _vaultsync_options() {
     'snapshots diff') printf '%s' '-h --help --db --limit --json --output' ;;
     'snapshots prune') printf '%s' '-h --help --keep-last --before --dry-run --db --quiet --json' ;;
     'backups') printf '%s' '-h --help' ;;
+    'backups create') printf '%s' '-h --help --destination --db --dry-run --quiet --output' ;;
     'backups list') printf '%s' '-h --help --db --limit --output' ;;
     'backups show') printf '%s' '-h --help --id --db --output' ;;
     'backups verify') printf '%s' '-h --help --id --db --limit --output' ;;
     'recovery') printf '%s' '-h --help' ;;
-    'recovery restore') printf '%s' '-h --help --snapshot --dry-run --clean --keep-empty-dirs --db --quiet --json' ;;
+    'recovery restore') printf '%s' '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'mirror') printf '%s' '-h --help --dry-run --db --quiet' ;;
     'verify') printf '%s' '-h --help --percent --full --db --quiet --json' ;;
     'watch') printf '%s' '-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' ;;
@@ -57,7 +58,7 @@ _vaultsync_options() {
     'update-path') printf '%s' '-h --help --db --quiet' ;;
     'snapshot') printf '%s' '-h --help --full-hash --db --quiet' ;;
     'sync') printf '%s' '-h --help --dry-run --db --quiet' ;;
-    'restore') printf '%s' '-h --help --snapshot --dry-run --clean --keep-empty-dirs --db --quiet --json' ;;
+    'restore') printf '%s' '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'history') printf '%s' '-h --help --db --json --output --limit' ;;
     'diff') printf '%s' '-h --help --db --limit --json --output' ;;
     'prune') printf '%s' '-h --help --keep-last --before --dry-run --db --quiet --json' ;;
@@ -70,10 +71,13 @@ _vaultsync_values() {
     'snapshots list --output') printf '%s' 'text json' ;;
     'snapshots show --output') printf '%s' 'text json' ;;
     'snapshots diff --output') printf '%s' 'text json' ;;
+    'backups create --output') printf '%s' 'text json' ;;
     'backups list --output') printf '%s' 'text json' ;;
     'backups show --output') printf '%s' 'text json' ;;
     'backups verify --output') printf '%s' 'text json' ;;
+    'recovery restore --output') printf '%s' 'text json' ;;
     'list-projects --output') printf '%s' 'text json' ;;
+    'restore --output') printf '%s' 'text json' ;;
     'history --output') printf '%s' 'text json' ;;
     'diff --output') printf '%s' 'text json' ;;
     'docs --task') printf '%s' 'setup inspect mirror restore automate migrate' ;;
