@@ -27,7 +27,7 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | `sync` | Keep live-mirroring compatibility route | `mirror` implemented over the same rsync/robocopy service; does not create a recorded backup |
 | `verify` | Keep current workflow; evolve evidence contract | Currently checks a supplied folder against the latest indexed snapshot, sample/full; must not imply whole-vault or image validation |
 | `watch` | Keep current behavior; evolve unattended lifecycle | Existing snapshot/live-sync/verification loop; explicit DB selection and drained cancellation implemented; uniform headless results remain pending |
-| `doctor` | Keep current diagnostics; evolve machine results | Existing isolated write probes and concurrent tool-output draining retained; stderr/JSON/provenance contract pending |
+| `doctor` | Keep current diagnostics; evolve machine results | Isolated write probes and concurrent tool-output draining retained; opt-in v1 JSON checks and read-only repository inspection implemented; provenance/remaining unattended contract pending |
 | `destinations` | Keep existing listing/testing invocation | Future resource actions must preserve today's `--test` and `--json`; testing can involve mount/credential access |
 | `init` | Keep explicit initialization | Future profile/config selection must preserve shared CLI/desktop storage and owner-only data policy |
 | `version` | Keep existing build-identity output | Existing JSON identity retained |

@@ -606,6 +606,7 @@ OPTIONS:
         --db
         --check-dest <PATH>
         --quiet
+        --output <FORMAT>
 ```
 
 ## `vaultsync destinations`

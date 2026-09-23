@@ -269,7 +269,7 @@ from a recorded backup. Legacy `verify --json` is unchanged.
 ### Diagnostics, destinations, presets, and configuration
 
 ```text
-vaultsync doctor [--db PATH] [--check-dest PATH] [--quiet]
+vaultsync doctor [--db PATH] [--check-dest PATH] [--quiet] [--output text|json]
 vaultsync destinations [--test] [--json]
 vaultsync presets list
 vaultsync presets show NAME
@@ -285,6 +285,8 @@ vaultsync completion bash|zsh|powershell
 `config show` is a full configuration view, not a redacted support export. Review
 its contents before sharing it. Destination tests may access mounts or credential
 providers. Doctor uses isolated probes and should not overwrite existing files.
+`doctor --output json` emits check codes and counts without paths or raw errors;
+it requires an existing database rather than initializing one.
 
 ## Structured output v1
 
@@ -299,6 +301,7 @@ Explicit `--output json` is currently supported by:
 - `backups create`, `backups list`, `backups show`, `backups verify`, and `backups verify-all`;
 - `recovery restore` and compatibility `restore`.
 - `mirror` and compatibility `sync`, plus `verify`.
+- `doctor` diagnostics.
 
 Each invocation writes one JSON object to stdout:
 

@@ -3,12 +3,12 @@
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
 `projects show`, `snapshots create`, `snapshots list`, `snapshots show`, `snapshots diff`, `backups list`,
 `backups show`, `backups verify`, `backups verify-all`, `backups create`,
-`recovery restore`, `mirror`/`sync`, `verify`, and legacy `history`/`diff`
+`recovery restore`, `mirror`/`sync`, `verify`, `doctor`, and legacy `history`/`diff`
 with explicit `--output json`. This contract does not yet apply to watch or
 other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
 
-The inspection and verification invocations open an existing database in
+The record-inspection and file-verification invocations open an existing database in
 read-only mode. They do not initialize the database, create its parent directory, migrate schema, or
 change SQLite journal configuration. `--output text` also selects read-only
 listing; listing without `--output` retains its legacy initialization behavior.
@@ -39,6 +39,7 @@ vaultsync backups create "My project" --destination /mounted/backup --db ./vault
 vaultsync recovery restore "My project" /safe/target --backup-id 7 --include Documents --dry-run --output json
 vaultsync mirror "My project" /safe/target --db ./vault.db --dry-run --output json
 vaultsync verify "My project" /safe/target --db ./vault.db --full --output json
+vaultsync doctor --db ./vault.db --check-dest /safe/target --output json
 ```
 
 `--filter` matches a case-insensitive project-name fragment. `--preset` matches
@@ -87,7 +88,7 @@ Error codes currently include `invalid_options`, `project_not_found`,
 `backup_unavailable`, `unsupported_backup_format`, `verification_failed`,
 `cancelled`, `destination_unavailable`, `source_unavailable`,
 `unsafe_destination`, `insufficient_space`, `backup_failed`,
-`backup_not_created`, `bulk_verification_incomplete`, `mirror_failed`, `repository_unavailable`,
+`backup_not_created`, `bulk_verification_incomplete`, `mirror_failed`, `diagnostics_failed`, `repository_unavailable`,
 and `command_failed`.
 Error messages are actionable,
 without embedding the underlying exception or connection string. Consumers
@@ -227,6 +228,16 @@ checked/passed counts, failure count, up to 100 relative paths and reasons,
 `failuresTruncated`, and elapsed seconds. On a mismatch these counts appear in
 `error.details` with exit 2. Hashes and underlying read-error text are omitted
 from v1 output. Legacy `verify --json` retains its existing payload.
+
+## Environment diagnostics
+
+`doctor --output json` returns check codes and pass/fail/warning statuses with
+counts. It omits paths and raw process or filesystem errors. Failed checks return
+`diagnostics_failed` with the same checks under `error.details` and exit 2.
+The command probes database-directory and optional destination writability with
+temporary files, so those directories can be created, but versioned mode does
+not create or migrate the database itself. Missing databases fail the repository
+check. Legacy doctor retains its existing initialization behavior.
 
 Example selection failure:
 

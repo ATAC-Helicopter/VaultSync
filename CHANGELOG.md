@@ -6,7 +6,7 @@
 - [VS-1978] Bundle the handbook, task guides, and command reference.
 - [VS-1973] Add grouped routes, source discovery, and live mirroring.
 - [VS-1973] Add project and snapshot inspection with bounded diffs.
-- [VS-1974] Add versioned JSON for inspection, snapshots, mirror, verify, and restore.
+- [VS-1974] Add versioned JSON for inspection, snapshots, mirror, verify, doctor, and restore.
 - [VS-1975] Create and inspect folder backups; verify one or many; select restore paths.
 - [VS-1973] Let `watch --db` select a database.
 ### Fixed

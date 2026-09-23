@@ -255,6 +255,9 @@ and counts, keeping service diagnostics out of machine output.
 Mirror distinguishes dry runs from actual transfers and explicitly reports that
 it did not record a backup; verify bounds failure details against the latest
 indexed snapshot. Legacy text and `verify --json` remain compatible.
+`doctor` now offers v1 JSON check codes and counts without filesystem paths or
+raw exception text. Its versioned mode reads an existing database without
+initializing it, while isolated writability probes remain explicit.
 
 ## CLI execution tracking
 

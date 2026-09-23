@@ -39,7 +39,7 @@ _vaultsync_options() {
     'mirror') reply='-h --help --dry-run --db --quiet --output' ;;
     'verify') reply='-h --help --percent --full --db --quiet --json --output' ;;
     'watch') reply='-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' ;;
-    'doctor') reply='-h --help --db --check-dest --quiet' ;;
+    'doctor') reply='-h --help --db --check-dest --quiet --output' ;;
     'destinations') reply='-h --help --test --json' ;;
     'self-test') reply='-h --help --db --quiet' ;;
     'init') reply='-h --help --db --quiet' ;;
@@ -82,6 +82,7 @@ _vaultsync_values() {
     'recovery restore --output') reply='text json' ;;
     'mirror --output') reply='text json' ;;
     'verify --output') reply='text json' ;;
+    'doctor --output') reply='text json' ;;
     'list-projects --output') reply='text json' ;;
     'snapshot --output') reply='text json' ;;
     'sync --output') reply='text json' ;;
