@@ -10,6 +10,10 @@ using Xunit;
 
 namespace VaultSync.Core.Tests;
 
+[CollectionDefinition("CLI presentation console", DisableParallelization = true)]
+public sealed class CliPresentationConsoleCollection;
+
+[Collection("CLI presentation console")]
 public sealed class CliDocumentationTests
 {
     [Fact]
@@ -120,6 +124,32 @@ public sealed class CliDocumentationTests
         }
     }
 
+    [Theory]
+    [InlineData("bash", "complete -F _vaultsync_complete vaultsync")]
+    [InlineData("zsh", "#compdef vaultsync")]
+    [InlineData("powershell", "Register-ArgumentCompleter -Native -CommandName vaultsync")]
+    [InlineData("pwsh", "Register-ArgumentCompleter -Native -CommandName vaultsync")]
+    public async Task CompletionPrintsBundledShellScript(string shell, string marker)
+    {
+        (int code, string output, string error) = await CaptureStandardStreams("completion", shell);
+        Assert.Equal(0, code);
+        Assert.StartsWith("#", output, StringComparison.Ordinal);
+        Assert.Contains(marker, output, StringComparison.Ordinal);
+        Assert.Contains("projects", output, StringComparison.Ordinal);
+        Assert.Contains("snapshots", output, StringComparison.Ordinal);
+        Assert.Contains("--output", output, StringComparison.Ordinal);
+        Assert.Empty(error);
+    }
+
+    [Fact]
+    public async Task CompletionRejectsUnsupportedShellWithoutPrintingAScript()
+    {
+        (int code, string output, string error) = await CaptureStandardStreams("completion", "fish");
+        Assert.Equal(2, code);
+        Assert.Empty(output);
+        Assert.Contains("Choose bash, zsh, or powershell", error, StringComparison.Ordinal);
+    }
+
     private static async Task<(int Code, string Output, string Error)> CaptureStandardStreams(params string[] args)
     {
         TextWriter originalOut = Console.Out;
@@ -144,7 +174,7 @@ public sealed class CliDocumentationTests
     {
         IAnsiConsole previousConsole = AnsiConsole.Console;
         TextWriter previousOut = Console.Out;
-        using var output = new StringWriter();
+        var output = new StringWriter();
         var console = AnsiConsole.Create(new AnsiConsoleSettings
         {
             Out = new AnsiConsoleOutput(output),

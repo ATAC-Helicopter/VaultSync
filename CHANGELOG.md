@@ -4,6 +4,7 @@
 ### Added
 - [VS-1977] Add a dedicated no-argument CLI introduction with a compact logo, purpose, links, starter commands, and help pointers.
 - [VS-1978] Add and package a practical handbook plus generated exhaustive command reference, accessible through `docs --full`, `--open`, or `--url`.
+- [VS-1977] Generate and package Bash, Zsh, and PowerShell command/option completion; expose scripts through `vaultsync completion`.
 - [VS-1973][VS-1975] Add read-only single-snapshot inspection with History markers and aggregate recorded-backup references.
 - [VS-1973][VS-1974] Add bounded, versioned, read-only snapshot-diff results with complete summary counts.
 - [VS-1973][VS-1974] Add versioned, read-only snapshot-history results while preserving legacy `history --json`.

@@ -13,14 +13,41 @@ remain available throughout the 1.9 family.
 
 Run `vaultsync` with no arguments for the introductory screen, `vaultsync docs`
 for the compact documentation menu, `vaultsync docs --full` for this bundled
-handbook plus the exhaustive generated command reference, `vaultsync docs --open` to open the online copy, or
-`vaultsync COMMAND --help` for exact command options.
+handbook plus the exhaustive generated command reference, `vaultsync docs --open`
+to open the online copy, or `vaultsync COMMAND --help` for exact options.
 
 ## Install and identify the build
 
 VaultSync CLI targets .NET 10 and is packaged as the `vaultsync.cli` .NET tool.
-Use the package or release instructions for the version and platform you intend
-to run. Inspect the exact executable before automation:
+For a local 1.9 development package from a checkout:
+
+```sh
+dotnet pack src/VaultSync.CLI/VaultSync.CLI.csproj -c Release
+dotnet tool install --global vaultsync.cli --version 1.9.0 \
+  --add-source src/VaultSync.CLI/bin/ToolPackages
+```
+
+If the tool is already installed, use `dotnet tool update --global` with the
+same package, version, and source arguments. A global .NET tool is placed in
+`$HOME/.dotnet/tools` on macOS/Linux and `%USERPROFILE%\.dotnet\tools` on Windows.
+If `vaultsync` is not found after installation, add that directory to your shell's
+`PATH` and open a new terminal. For the current session:
+
+```sh
+# Bash or Zsh on macOS/Linux
+export PATH="$HOME/.dotnet/tools:$PATH"
+command -v vaultsync
+```
+
+```powershell
+# PowerShell on Windows
+$env:PATH = (Join-Path $env:USERPROFILE '.dotnet\tools') + [IO.Path]::PathSeparator + $env:PATH
+Get-Command vaultsync
+```
+
+Persist the path in your shell profile or user environment. Scheduled jobs should
+use the absolute path to the installed tool because their environment may differ
+from an interactive terminal. Inspect the exact executable before automation:
 
 ```sh
 vaultsync --version
@@ -30,6 +57,33 @@ vaultsync --version --json
 The JSON identity includes version, channel, source commit, runtime, package kind,
 official-build state, and signature state. Do not infer release provenance from a
 filename alone.
+
+## Shell completion
+
+The CLI prints generated command and option completion for Bash, Zsh, and
+PowerShell. These scripts cover grouped and compatibility routes and are embedded
+in the packaged tool. They suggest command names and option names; they do not
+read the database, enumerate local paths, or suggest project names.
+
+```sh
+# Bash: load for this terminal, or save the output and source it from ~/.bashrc.
+source <(vaultsync completion bash)
+
+# Zsh: install in a directory on fpath before compinit runs.
+mkdir -p "$HOME/.zsh/completions"
+vaultsync completion zsh > "$HOME/.zsh/completions/_vaultsync"
+# Put this line before `autoload -Uz compinit; compinit` in ~/.zshrc:
+# fpath=("$HOME/.zsh/completions" $fpath)
+```
+
+```powershell
+# PowerShell: load for this session, or put the line in $PROFILE.
+vaultsync completion powershell | Out-String | Invoke-Expression
+```
+
+Regenerate the installed script after updating VaultSync. `vaultsync completion
+SHELL` prints plain script text, so it can be redirected to a file without a
+banner. Use `vaultsync completion --help` for the accepted shell names.
 
 ## Concepts that affect every command
 
@@ -169,6 +223,7 @@ vaultsync config set-db PATH
 vaultsync self-test [--db PATH] [--quiet]
 vaultsync version [--json]
 vaultsync docs [--full | --open | --url]
+vaultsync completion bash|zsh|powershell
 ```
 
 `config show` is a full configuration view, not a redacted support export. Review
@@ -242,7 +297,7 @@ apply to both old and grouped routes.
 
 The CLI rework is active. Bulk project operations, complete recorded-backup command
 parity, selective restore, uniform JSON across all commands, watcher event streams,
-completion scripts, portable emergency recovery, and final cross-platform automation
+project/path-aware completion, portable emergency recovery, and final cross-platform automation
 qualification remain planned under their owning 1.9 issues. Disk imaging and bootable
 recovery commands will appear only with qualified recovery services and support
 contracts.

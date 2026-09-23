@@ -215,5 +215,9 @@ prints only its online URL, and `docs --open` asks the operating system to open 
 URL. `docs/CLI.md` and `docs/CLI_COMMAND_REFERENCE.md` are embedded for runtime use and
 included in the tool package. `scripts/generate_cli_reference.py` rebuilds the latter
 from every registered grouped, utility, branch, and compatibility command.
-This is early implementation under VS-1977 and VS-1978; shell completion, platform
-PATH guidance, scheduler examples, and script-migration runbooks remain pending.
+`vaultsync completion bash|zsh|powershell` prints packaged scripts for command and
+option names without reading the database. The generator inspects registered help,
+checks the route inventory, and produces the three shell scripts; the handbook
+documents global-tool PATH setup. This is early implementation under VS-1977 and
+VS-1978; contextual examples, platform completion qualification, scheduler examples,
+and full script-migration runbooks remain pending.

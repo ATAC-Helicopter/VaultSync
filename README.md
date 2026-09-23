@@ -314,7 +314,7 @@ Replace the server address, export, and destination folder with values from your
 
 ## CLI
 
-The VaultSync CLI supports snapshots, synchronization, verification, scripting, automation, and headless environments. Run `vaultsync` for its introductory screen, `vaultsync docs --full` for the bundled handbook and exhaustive reference, or read the [CLI handbook](docs/CLI.md) and [generated command reference](docs/CLI_COMMAND_REFERENCE.md).
+The VaultSync CLI supports snapshots, synchronization, verification, scripting, automation, and headless environments. Run `vaultsync` for its introductory screen, `vaultsync docs --full` for the bundled handbook and exhaustive reference, or `vaultsync completion bash|zsh|powershell` for shell completion. The [CLI handbook](docs/CLI.md) covers installation and shell setup; the [generated command reference](docs/CLI_COMMAND_REFERENCE.md) lists every route.
 
 ### Install from source
 
@@ -333,6 +333,7 @@ export PATH="$PATH:$HOME/.dotnet/tools"
 
 dotnet tool install \
   --global \
+  --version 1.9.0 \
   --add-source src/VaultSync.CLI/bin/ToolPackages \
   vaultsync.cli
 ```
@@ -340,7 +341,8 @@ dotnet tool install \
 Update the installed CLI:
 
 ```sh
-dotnet tool update --global vaultsync.cli
+dotnet tool update --global vaultsync.cli --version 1.9.0 \
+  --add-source src/VaultSync.CLI/bin/ToolPackages
 ```
 
 ### CLI quick start

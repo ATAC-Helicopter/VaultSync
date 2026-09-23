@@ -47,6 +47,9 @@
     <None Include="..\..\docs\CLI.md" Pack="true" PackagePath="docs\CLI.md" />
     <EmbeddedResource Include="..\..\docs\CLI_COMMAND_REFERENCE.md" LogicalName="VaultSync.CLI.Docs.CLI_COMMAND_REFERENCE.md" />
     <None Include="..\..\docs\CLI_COMMAND_REFERENCE.md" Pack="true" PackagePath="docs\CLI_COMMAND_REFERENCE.md" />
+    <EmbeddedResource Include="..\..\completions\vaultsync.bash" LogicalName="VaultSync.CLI.Completions.vaultsync.bash" />
+    <EmbeddedResource Include="..\..\completions\_vaultsync" LogicalName="VaultSync.CLI.Completions._vaultsync" />
+    <EmbeddedResource Include="..\..\completions\vaultsync.ps1" LogicalName="VaultSync.CLI.Completions.vaultsync.ps1" />
   </ItemGroup>
 
   <ItemGroup>

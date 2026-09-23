@@ -4,7 +4,8 @@
 
 This reference is generated from the registered command tree. The practical handbook is
 [CLI.md](CLI.md). Run `vaultsync COMMAND --help` against your installed version for
-the authoritative options supported by that executable.
+the authoritative options supported by that executable. The early
+`vaultsync --version [--json]` shortcut is also supported.
 
 ## `vaultsync`
 
@@ -71,6 +72,8 @@ COMMANDS:
     version                         Show version
     docs                            Show documentation links, print the bundled
                                     CLI handbook, or open it online
+    completion <shell>              Print generated Bash, Zsh, or PowerShell
+                                    completion (bash|zsh|powershell)
     config                          Inspect and modify VaultSync configuration
     presets                         View preset names and contents
 ```
@@ -650,6 +653,22 @@ OPTIONS:
         --full
         --open
         --url
+```
+
+## `vaultsync completion`
+
+```text
+DESCRIPTION:
+Print generated Bash, Zsh, or PowerShell completion (bash|zsh|powershell)
+
+USAGE:
+    vaultsync completion <shell> [OPTIONS]
+
+ARGUMENTS:
+    <shell>
+
+OPTIONS:
+    -h, --help    Prints help information
 ```
 
 ## `vaultsync add-project`

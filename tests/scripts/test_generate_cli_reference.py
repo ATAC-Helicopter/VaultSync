@@ -46,7 +46,8 @@ class GenerateCliReferenceTests(unittest.TestCase):
             assembly.touch()
             completed = SimpleNamespace(stdout="USAGE:\n    VaultSync.CLI.dll\n", stderr="")
             with mock.patch.object(generate_cli_reference.subprocess, "run", return_value=completed) as run:
-                rendered = generate_cli_reference.generate(assembly)
+                with mock.patch.object(generate_cli_reference, "verify_inventory"):
+                    rendered = generate_cli_reference.generate(assembly)
 
         self.assertEqual(len(generate_cli_reference.COMMANDS), run.call_count)
         first_arguments = run.call_args_list[0].args[0]
@@ -83,6 +84,27 @@ class GenerateCliReferenceTests(unittest.TestCase):
             missing = Path(directory) / "missing.dll"
             with self.assertRaisesRegex(FileNotFoundError, "CLI assembly not found"):
                 generate_cli_reference.generate(missing)
+
+    def test_inventory_verification_rejects_missing_registered_route(self) -> None:
+        def help_for(command):
+            if not command:
+                return "COMMANDS:\n    projects  Manage projects\n    unexpected  New route\n"
+            return "USAGE:\n    vaultsync " + " ".join(command)
+
+        with self.assertRaisesRegex(ValueError, "CLI route inventory drift"):
+            generate_cli_reference.verify_inventory(help_for)
+
+    def test_command_children_reads_only_direct_subcommands(self) -> None:
+        help_text = """USAGE:
+    vaultsync projects [OPTIONS] <COMMAND>
+OPTIONS:
+    -h, --help  Prints help
+COMMANDS:
+    add <name> <path>    Register a source
+                              continued description
+    list                 List sources
+"""
+        self.assertEqual(("add", "list"), generate_cli_reference.command_children(help_text))
 
 
 if __name__ == "__main__":

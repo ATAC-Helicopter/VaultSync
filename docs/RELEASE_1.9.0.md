@@ -175,13 +175,27 @@ VaultSync text logo, running version, purpose, documentation/website/repository/
 release links, six starter commands, and help pointers. Root help remains a separate,
 smaller presentation. Neither path can contaminate command or structured output.
 The new `docs` command displays documentation choices, prints the embedded handbook
-plus an exhaustive 878-line generated command reference, opens the online copy, or
+plus an exhaustive generated command reference, opens the online copy, or
 returns its URL for scripts. Both Markdown files are embedded and packaged;
-`scripts/generate_cli_reference.py` rebuilds exact help for every registered route. This pulls the first VS-1977/VS-1978 foundation into
-the shared branch; completion and full migration/scheduler guidance remain 1.9.1.
+`scripts/generate_cli_reference.py` rebuilds exact help for every registered route.
+`vaultsync completion bash|zsh|powershell` prints generated, embedded command/option
+completion, and the handbook documents tool PATH setup. This advances VS-1977/VS-1978
+on the shared branch; contextual examples, platform completion qualification, and
+full migration/scheduler guidance remain 1.9.1.
 All 979 .NET tests and 105 script tests pass; the generated tool package contains
 both Markdown documents and the assembly carries both embedded copies. The generated
 reference check is deterministic and fails when the committed output is stale.
+
+## CLI completion and installation guidance
+
+`vaultsync completion bash|zsh|powershell` now prints generated command and option
+completion from scripts embedded in the tool. The generation check inspects the
+registered command tree and rejects missing routes or stale scripts. The CLI handbook
+documents a pinned local 1.9 tool install, global-tool PATH setup, and shell loading.
+Local validation passes 984 .NET tests, 109 script tests, Bash/Zsh syntax and
+completion probes, both generation checks, release metadata, and a warning-free
+NuGet tool pack. PowerShell execution and installation on supported Windows
+packages remain to be qualified; no hosted Actions run was started for this slice.
 
 ## CLI execution tracking
 

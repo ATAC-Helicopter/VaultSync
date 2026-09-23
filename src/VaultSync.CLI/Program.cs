@@ -30,7 +30,8 @@ public static class Program
 
             app.Configure(cfg =>
             {
-                cfg.ConfigureConsole(AnsiConsole.Console);
+                if (VaultSync.CLI.Commands.CliPresentation.IsRootHelp(args))
+                    cfg.ConfigureConsole(AnsiConsole.Console);
                 VaultSync.CLI.Commands.ResourceCommands.Register(cfg);
                 VaultSync.CLI.Commands.CommandOutput.ConfigureErrors(cfg, args);
 
@@ -92,6 +93,9 @@ public static class Program
 
                 cfg.AddCommand<VaultSync.CLI.Commands.DocsCommand>("docs")
                     .WithDescription("Show documentation links, print the bundled CLI handbook, or open it online");
+
+                cfg.AddCommand<VaultSync.CLI.Commands.CompletionCommand>("completion")
+                    .WithDescription("Print generated Bash, Zsh, or PowerShell completion (bash|zsh|powershell)");
 
                 // Branches
                 cfg.AddBranch<CommandSettings>("config", b =>

@@ -20,16 +20,53 @@ COMMANDS: tuple[tuple[str, ...], ...] = (
     ("doctor",), ("destinations",), ("self-test",), ("init",),
     ("config",), ("config", "show"), ("config", "path"), ("config", "set-db"),
     ("presets",), ("presets", "list"), ("presets", "show"), ("version",), ("docs",),
+    ("completion",),
     ("add-project",), ("remove-project",), ("list-projects",), ("set-path",),
     ("update-path",), ("snapshot",), ("sync",), ("restore",), ("history",),
     ("diff",), ("prune",),
 )
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+COMMAND_LINE = re.compile(r"^    ([a-z][a-z0-9-]*)(?:\s|$)")
 
 
 def normalize_help(text: str) -> str:
     normalized = ANSI_ESCAPE.sub("", text).replace("VaultSync.CLI.dll", "vaultsync")
     return "\n".join(line.rstrip() for line in normalized.strip().splitlines())
+
+
+def command_children(text: str) -> tuple[str, ...]:
+    """Read direct subcommands from Spectre's command-help section."""
+    in_commands = False
+    children = []
+    for line in normalize_help(text).splitlines():
+        if line == "COMMANDS:":
+            in_commands = True
+            continue
+        if in_commands and line and not line.startswith(" "):
+            break
+        if in_commands:
+            match = COMMAND_LINE.match(line)
+            if match:
+                children.append(match.group(1))
+    return tuple(children)
+
+
+def verify_inventory(run_help: Callable[[Sequence[str]], str]) -> None:
+    """Reject an inventory that misses or invents a registered route."""
+    known = set(COMMANDS)
+    discovered = {()}
+    pending = [()]
+    while pending:
+        route = pending.pop()
+        for child in command_children(run_help(route)):
+            path = (*route, child)
+            if path not in discovered:
+                discovered.add(path)
+                pending.append(path)
+    if known != discovered:
+        missing = sorted(" ".join(path) for path in discovered - known)
+        obsolete = sorted(" ".join(path) for path in known - discovered)
+        raise ValueError(f"CLI route inventory drift: missing={missing}; obsolete={obsolete}")
 
 
 def render_document(run_help: Callable[[Sequence[str]], str]) -> str:
@@ -40,7 +77,8 @@ def render_document(run_help: Callable[[Sequence[str]], str]) -> str:
         "",
         "This reference is generated from the registered command tree. The practical handbook is",
         "[CLI.md](CLI.md). Run `vaultsync COMMAND --help` against your installed version for",
-        "the authoritative options supported by that executable.",
+        "the authoritative options supported by that executable. The early",
+        "`vaultsync --version [--json]` shortcut is also supported.",
         "",
     ]
     for command in COMMANDS:
@@ -66,6 +104,7 @@ def generate(assembly: Path) -> str:
         )
         return completed.stdout
 
+    verify_inventory(run_help)
     return render_document(run_help)
 
 

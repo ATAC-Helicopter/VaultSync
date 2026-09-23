@@ -19,7 +19,9 @@ authorizes deletion of the local registration/history. Watchers support explicit
 with exit 130. Running `vaultsync` now opens a compact introductory UI with a text
 logo, useful links, starter commands, and help pointers. `vaultsync docs` provides
 the bundled practical handbook, exhaustive generated command reference, and an
-online entry point. See the [CLI handbook](CLI.md) and
+online entry point. Generated Bash, Zsh, and PowerShell command/option completion
+is available through `vaultsync completion`; the handbook covers tool PATH setup.
+See the [CLI handbook](CLI.md) and
 [CLI audit and migration notes](CLI_REWORK.md).
 
 Current stable: **1.8.9**, published September 16, 2026. See the
