@@ -42,6 +42,8 @@ internal static class CommandOutput
             return "snapshots.create";
         if (arguments.Length > 0 && string.Equals(arguments[0], "diff", StringComparison.OrdinalIgnoreCase))
             return "snapshots.diff";
+        if (arguments.Length > 0 && string.Equals(arguments[0], "prune", StringComparison.OrdinalIgnoreCase))
+            return "snapshots.prune";
         if (arguments.Length > 0 && string.Equals(arguments[0], "restore", StringComparison.OrdinalIgnoreCase))
             return "recovery.restore";
         if (arguments.Length > 0 && (string.Equals(arguments[0], "mirror", StringComparison.OrdinalIgnoreCase) ||
@@ -81,6 +83,8 @@ internal static class CommandOutput
             return "snapshots.list";
         if (string.Equals(arguments[1], "show", StringComparison.OrdinalIgnoreCase))
             return "snapshots.show";
+        if (string.Equals(arguments[1], "prune", StringComparison.OrdinalIgnoreCase))
+            return "snapshots.prune";
         return string.Equals(arguments[1], "diff", StringComparison.OrdinalIgnoreCase) ? "snapshots.diff" : null;
     }
 

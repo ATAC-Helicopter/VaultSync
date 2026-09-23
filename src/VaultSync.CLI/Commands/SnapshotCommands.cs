@@ -387,9 +387,16 @@ namespace VaultSync.CLI.Commands
         [CommandOption("--db")] public string? Db { get; init; }
         [CommandOption("--quiet")] public bool Quiet { get; init; } = false;
         [CommandOption("--json")] public bool Json { get; init; } = false;
+        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
+        [CommandOption("--limit <N>")] public int? Limit { get; init; }
 
         public override ValidationResult Validate()
         {
+            string? outputError = CommandOutput.Validate(Output, Json);
+            if (outputError is not null)
+                return ValidationResult.Error(outputError);
+            if (Limit is <= 0)
+                return ValidationResult.Error("--limit must be positive.");
             if (KeepLast is null && string.IsNullOrWhiteSpace(Before))
                 return ValidationResult.Error("Provide --keep-last or --before.");
             if (KeepLast is not null && !string.IsNullOrWhiteSpace(Before))
@@ -415,15 +422,34 @@ namespace VaultSync.CLI.Commands
         protected override Task<int> ExecuteAsync(CommandContext context, PruneSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
-            var repo = new SqliteRepository(db);
-            repo.EnsureSchema();
+            if (s.Output is not null && !File.Exists(db))
+                return Task.FromResult(CommandOutput.Failure(s.Output, "snapshots.prune", "repository_unavailable",
+                    "The selected database does not exist.", 1));
+            var repo = new SqliteRepository(db, readOnly: s.Output is not null && s.DryRun);
+            if (s.Output is null)
+                repo.EnsureSchema();
 
-            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
+            Core.Models.Project? proj = repo.GetProjectByName(s.Name);
+            if (proj is null && s.Output is not null)
+                return Task.FromResult(CommandOutput.Failure(s.Output, "snapshots.prune", "project_not_found",
+                    "No project matches the supplied name.", 2));
+            if (proj is null)
+                throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
             if (snaps.Count == 0)
             {
-                AnsiConsole.MarkupLine("[yellow]No snapshots to prune[/].");
+                if (CommandOutput.IsJson(s.Output))
+                    return Task.FromResult(CommandOutput.Success("snapshots.prune", new
+                    {
+                        projectId = proj.Id, project = proj.Name, totalSnapshots = 0,
+                        protectedSnapshots = 0, plannedCount = 0, selectedIds = Array.Empty<int>(),
+                        remainingCount = 0, dryRun = s.DryRun, deletedSnapshots = 0, deletedFiles = 0
+                    }));
+                if (!s.Quiet && !s.Json)
+                    AnsiConsole.MarkupLine("[yellow]No snapshots to prune[/].");
+                if (s.Json)
+                    WritePruneJson(proj.Name, 0, [], s.DryRun);
                 return Task.FromResult(0);
             }
 
@@ -436,20 +462,38 @@ namespace VaultSync.CLI.Commands
                 .Where(static entry => entry.Value.IsProtected)
                 .Select(static entry => entry.Key));
             List<int> planned = PlanPrune(snaps, s, protectedSnapshotIds);
+            int selectedLimit = s.Limit ?? (s.Output is not null ? 100 : int.MaxValue);
+            List<int> selected = planned.Take(selectedLimit).ToList();
+
+            if (CommandOutput.IsJson(s.Output))
+            {
+                int deletedSnapshots = 0;
+                int deletedFiles = 0;
+                if (!s.DryRun && selected.Count > 0)
+                    (deletedSnapshots, deletedFiles) = repo.DeleteSnapshotsById(proj.Name, selected);
+                return Task.FromResult(CommandOutput.Success("snapshots.prune", new
+                {
+                    projectId = proj.Id, project = proj.Name, totalSnapshots = snaps.Count,
+                    protectedSnapshots = protectedSnapshotIds.Count, plannedCount = planned.Count,
+                    selectedIds = selected, remainingCount = planned.Count - selected.Count,
+                    dryRun = s.DryRun, deletedSnapshots, deletedFiles
+                }));
+            }
 
             if (s.Json)
             {
-                WritePruneJson(proj.Name, snaps.Count, planned, s.DryRun);
+                WritePruneJson(proj.Name, snaps.Count, selected, s.DryRun);
             }
             else
             {
-                WritePruneTable(proj.Name, snaps, planned, s.DryRun);
+                WritePruneTable(proj.Name, snaps, selected, s.DryRun);
             }
 
-            if (planned.Count == 0 || s.DryRun) return Task.FromResult(0);
+            if (selected.Count == 0 || s.DryRun) return Task.FromResult(0);
 
-            (int snapshots, int files) = repo.DeleteSnapshotsById(proj.Name, planned);
-            AnsiConsole.MarkupLine($"[green]Pruned[/] snapshots: {snapshots}, files: {files}");
+            (int snapshots, int files) = repo.DeleteSnapshotsById(proj.Name, selected);
+            if (!s.Quiet && !s.Json)
+                AnsiConsole.MarkupLine($"[green]Pruned[/] snapshots: {snapshots}, files: {files}");
             return Task.FromResult(0);
         }
 
