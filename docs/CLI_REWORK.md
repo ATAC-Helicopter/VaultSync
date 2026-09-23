@@ -218,7 +218,9 @@ from every registered grouped, utility, branch, and compatibility command.
 `vaultsync completion bash|zsh|powershell` prints packaged scripts for command and
 option names without reading the database. The generator inspects registered help,
 checks the route inventory, and produces the three shell scripts; the handbook
-documents global-tool PATH setup. This is early implementation under VS-1977 and
+documents global-tool PATH setup. Completion also suggests task topics from the
+bundled guides and `text`/`json` for supported `--output` options. This is early
+implementation under VS-1977 and
 VS-1978; platform completion qualification and full script-migration runbooks
 remain pending.
 

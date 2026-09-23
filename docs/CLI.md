@@ -19,6 +19,10 @@ handbook, task guides, and exhaustive generated command reference, `vaultsync
 docs --task inspect` for one workflow, `vaultsync docs --open` to open the online
 copy, or `vaultsync COMMAND --help` for exact options.
 
+Shell completion suggests command names, options, task-guide topics after
+`docs --task`, and supported values after `--output`. It does not inspect the
+database or suggest project names and IDs.
+
 ## Install and identify the build
 
 VaultSync CLI targets .NET 10 and is packaged as the `vaultsync.cli` .NET tool.

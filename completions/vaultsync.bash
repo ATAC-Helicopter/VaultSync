@@ -58,9 +58,22 @@ _vaultsync_options() {
     'prune') printf '%s' '-h --help --keep-last --before --dry-run --db --quiet --json' ;;
   esac
 }
+_vaultsync_values() {
+  case "$1" in
+    'projects list --output') printf '%s' 'text json' ;;
+    'projects show --output') printf '%s' 'text json' ;;
+    'snapshots list --output') printf '%s' 'text json' ;;
+    'snapshots show --output') printf '%s' 'text json' ;;
+    'snapshots diff --output') printf '%s' 'text json' ;;
+    'list-projects --output') printf '%s' 'text json' ;;
+    'history --output') printf '%s' 'text json' ;;
+    'diff --output') printf '%s' 'text json' ;;
+    'docs --task') printf '%s' 'setup inspect mirror restore automate migrate' ;;
+  esac
+}
 
 _vaultsync_complete() {
-  local current="${COMP_WORDS[COMP_CWORD]}" route='' word choices child
+  local current="${COMP_WORDS[COMP_CWORD]}" route='' word choices
   local index
   for ((index = 1; index < COMP_CWORD; index++)); do
     word="${COMP_WORDS[index]}"
@@ -69,10 +82,13 @@ _vaultsync_complete() {
       *" $word "*) route="${route:+$route }$word" ;;
     esac
   done
-  if [[ "$current" == -* ]]; then
-    choices="$(_vaultsync_options "$route")"
-  else
-    choices="$(_vaultsync_children "$route")"
+  choices="$(_vaultsync_values "$route ${COMP_WORDS[COMP_CWORD-1]}")"
+  if [[ -z "$choices" ]]; then
+    if [[ "$current" == -* ]]; then
+      choices="$(_vaultsync_options "$route")"
+    else
+      choices="$(_vaultsync_children "$route")"
+    fi
   fi
   COMPREPLY=( $(compgen -W "$choices" -- "$current") )
 }

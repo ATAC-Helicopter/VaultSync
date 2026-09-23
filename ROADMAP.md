@@ -1363,9 +1363,10 @@ destabilizing the maintenance release.
   - Progress: the no-argument introductory UI now has a compact text logo, purpose,
     website/repository/release/documentation links, six starter commands, and help
     pointers. Root help remains separate. The `docs` discovery command and generated
-    Bash/Zsh/PowerShell command/option completion are implemented on the shared 1.9
-    branch. The handbook now documents packaged tool/PATH setup, and `docs --task`
-    exposes focused workflow examples. Stable-ID discovery, richer contextual
+    Bash/Zsh/PowerShell command/option completion and `--task`/`--output` value
+    suggestions are implemented on the shared 1.9 branch. The handbook documents
+    packaged tool/PATH setup, and `docs --task` exposes focused workflow examples.
+    Stable-ID discovery, richer contextual
     suggestions, and supported-platform completion qualification remain.
 - [ ] `VS-1978` `P1` Publish a practical CLI handbook and script migration guide.
   - Scope: quick start, command reference, bulk workflows, JSON/exit-code

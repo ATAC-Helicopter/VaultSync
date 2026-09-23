@@ -176,12 +176,12 @@ release links, six starter commands, and help pointers. Root help remains a sepa
 smaller presentation. Neither path can contaminate command or structured output.
 The new `docs` command displays documentation choices, prints the embedded handbook
 plus an exhaustive generated command reference, opens the online copy, or
-returns its URL for scripts. Both Markdown files are embedded and packaged;
+returns its URL for scripts. At this foundation stage both Markdown files were embedded and packaged;
 `scripts/generate_cli_reference.py` rebuilds exact help for every registered route.
 `vaultsync completion bash|zsh|powershell` prints generated, embedded command/option
 completion, and the handbook documents tool PATH setup. This advances VS-1977/VS-1978
-on the shared branch; contextual examples, platform completion qualification, and
-full migration/scheduler guidance remain 1.9.1.
+on the shared branch; the task guides and value completion below add the next slice.
+Platform completion qualification and full migration/recovery guidance remain 1.9.1.
 All 979 .NET tests and 105 script tests pass; the generated tool package contains
 both Markdown documents and the assembly carries both embedded copies. The generated
 reference check is deterministic and fails when the committed output is stale.
@@ -209,6 +209,10 @@ instead of suggesting `init` or a fixed sample ID. CLI snapshot, watcher,
 and self-test snapshot services send diagnostics to the private CLI log;
 quiet snapshot stdout is empty in a focused regression test. Platform scheduler
 recipes and PowerShell completion still require their supported-system gates.
+Generated Bash/Zsh/PowerShell completion now also suggests the bundled task
+topics after `docs --task` and `text`/`json` after supported `--output` options.
+The generator reads task headings from the bundled guide, and Bash/Zsh probes
+exercise the value suggestions locally. This remains unpushed; no hosted checks ran.
 
 ## CLI execution tracking
 

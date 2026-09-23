@@ -22,8 +22,9 @@ the bundled practical handbook, exhaustive generated command reference, and an
 online entry point. Generated Bash, Zsh, and PowerShell command/option completion
 is available through `vaultsync completion`; the handbook covers tool PATH setup.
 `vaultsync docs --task` now provides focused setup, inspection, mirror, restore,
-automation, and migration examples. Quiet snapshot creation no longer prints
-core-service diagnostics to stdout.
+automation, and migration examples. Shell completion suggests task topics and
+supported output formats. Quiet snapshot creation no longer prints core-service
+diagnostics to stdout.
 See the [CLI handbook](CLI.md) and
 [CLI audit and migration notes](CLI_REWORK.md).
 

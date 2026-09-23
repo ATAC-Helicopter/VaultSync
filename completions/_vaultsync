@@ -59,6 +59,19 @@ _vaultsync_options() {
     'prune') reply='-h --help --keep-last --before --dry-run --db --quiet --json' ;;
   esac
 }
+_vaultsync_values() {
+  case "$1" in
+    'projects list --output') reply='text json' ;;
+    'projects show --output') reply='text json' ;;
+    'snapshots list --output') reply='text json' ;;
+    'snapshots show --output') reply='text json' ;;
+    'snapshots diff --output') reply='text json' ;;
+    'list-projects --output') reply='text json' ;;
+    'history --output') reply='text json' ;;
+    'diff --output') reply='text json' ;;
+    'docs --task') reply='setup inspect mirror restore automate migrate' ;;
+  esac
+}
 
 _vaultsync() {
   local route='' word reply='' choices=''
@@ -72,10 +85,13 @@ _vaultsync() {
     esac
   done
   reply=''
-  if [[ "$words[CURRENT]" == -* ]]; then
-    _vaultsync_options "$route"
-  else
-    _vaultsync_children "$route"
+  _vaultsync_values "$route $words[CURRENT-1]"
+  if [[ -z "$reply" ]]; then
+    if [[ "$words[CURRENT]" == -* ]]; then
+      _vaultsync_options "$route"
+    else
+      _vaultsync_children "$route"
+    fi
   fi
   compadd -Q -- ${(s: :)reply}
 }

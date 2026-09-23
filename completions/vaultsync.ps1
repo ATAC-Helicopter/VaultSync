@@ -60,22 +60,41 @@ function Get-VaultSyncOptions([string]$route) {
     }
     return ''
 }
+function Get-VaultSyncValues([string]$route) {
+    switch ($route) {
+        'projects list --output' { return 'text json' }
+        'projects show --output' { return 'text json' }
+        'snapshots list --output' { return 'text json' }
+        'snapshots show --output' { return 'text json' }
+        'snapshots diff --output' { return 'text json' }
+        'list-projects --output' { return 'text json' }
+        'history --output' { return 'text json' }
+        'diff --output' { return 'text json' }
+        'docs --task' { return 'setup inspect mirror restore automate migrate' }
+    }
+    return ''
+}
 
 Register-ArgumentCompleter -Native -CommandName vaultsync -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
     $route = ''
+    $previous = ''
     foreach ($element in @($commandAst.CommandElements | Select-Object -Skip 1)) {
         if ($element.Extent.EndOffset -ge $cursorPosition) { break }
         $word = $element.Extent.Text.Trim('"', "'")
+        $previous = $word
         $children = @((Get-VaultSyncChildren $route) -split ' ')
         if ($children -contains $word) {
             if ($route) { $route = "$route $word" } else { $route = $word }
         }
     }
-    if ($wordToComplete.StartsWith('-')) {
-        $choices = Get-VaultSyncOptions $route
-    } else {
-        $choices = Get-VaultSyncChildren $route
+    $choices = Get-VaultSyncValues "$route $previous"
+    if (-not $choices) {
+        if ($wordToComplete.StartsWith('-')) {
+            $choices = Get-VaultSyncOptions $route
+        } else {
+            $choices = Get-VaultSyncChildren $route
+        }
     }
     foreach ($choice in @($choices -split ' ')) {
         if ($choice -and $choice.StartsWith($wordToComplete, [StringComparison]::OrdinalIgnoreCase)) {

@@ -2,27 +2,20 @@
 ## [1.9.0] - Unreleased
 
 ### Added
-- [VS-1977] Add a dedicated no-argument CLI introduction with a compact logo, purpose, links, starter commands, and help pointers.
-- [VS-1978] Add and package a practical handbook plus generated exhaustive command reference, accessible through `docs --full`, `--open`, or `--url`.
-- [VS-1977] Generate and package Bash, Zsh, and PowerShell command/option completion; expose scripts through `vaultsync completion`.
-- [VS-1977][VS-1978] Add focused CLI task guides for setup, inspection, mirroring, recorded-folder restore, scheduling, and script migration through `docs --task`.
-- [VS-1973][VS-1975] Add read-only single-snapshot inspection with History markers and aggregate recorded-backup references.
-- [VS-1973][VS-1974] Add bounded, versioned, read-only snapshot-diff results with complete summary counts.
-- [VS-1973][VS-1974] Add versioned, read-only snapshot-history results while preserving legacy `history --json`.
-- [VS-1973] Select an explicit database for unattended watcher sessions with `watch --db`.
-- [VS-1973] Inspect projects by explicit ID or literal name and filter/limit project listings.
-- [VS-1974] Add opt-in versioned JSON results and predictable errors for read-only project inspection.
-- [VS-1973] Add grouped projects, snapshots, and recovery commands alongside existing CLI routes.
-- [VS-1973] Expose candidate source-folder discovery with `projects discover --root`.
-- [VS-1973] Add `mirror` with explicit live-transfer semantics and existing dry-run behavior.
+- [VS-1977] Add the CLI welcome screen and shell completion, including documentation topics.
+- [VS-1978] Bundle the handbook, task guides, and command reference.
+- [VS-1973] Add grouped routes, source discovery, and live mirroring.
+- [VS-1973] Add project and snapshot inspection with bounded diffs.
+- [VS-1974] Add versioned JSON for read-only inspection.
+- [VS-1975] Show recorded-backup counts in snapshot inspection.
+- [VS-1973] Let `watch --db` select a database.
 ### Fixed
-- [VS-1974] Keep snapshot-service diagnostics out of quiet CLI stdout, including watcher and self-test snapshot paths.
-- [BUG-19003] Reject snapshot IDs outside the selected project before CLI diff reads their paths.
-- [BUG-19002] Honor watcher cancellation, detach Ctrl-C handlers, and drain queued/active work before returning exit 130.
-- [BUG-19001] Require explicit `--yes` for quiet or redirected-input project removal, preserving registration and local history on rejection.
+- [VS-1974] Keep quiet snapshot diagnostics out of stdout.
+- [BUG-19003] Reject cross-project snapshot IDs in diffs.
+- [BUG-19002] Drain watcher work on cancellation.
+- [BUG-19001] Require `--yes` for unattended project removal.
 ### Changed
-- [VS-1974] Suppress watcher startup guidance in quiet mode.
-- [VS-1974] Stop logging raw command-line arguments at CLI startup.
+- [VS-1974] Keep quiet watcher output and startup logs private.
 
 These changes are in development; 1.9.0 has not shipped.
 
