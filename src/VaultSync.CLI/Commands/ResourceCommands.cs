@@ -44,7 +44,9 @@ internal static class ResourceCommands
 
         configuration.AddBranch<CommandSettings>("backups", backups =>
         {
-            backups.SetDescription("Inspect recorded backup references; records do not prove payload availability");
+            backups.SetDescription("Create and inspect recorded backups; records alone do not prove payload availability");
+            backups.AddCommand<CreateBackupCommand>("create")
+                .WithDescription("Create a full folder backup at an explicit destination; supports --dry-run");
             backups.AddCommand<ListBackupsCommand>("list")
                 .WithDescription("List a project's recorded backups with stable local IDs and optional versioned JSON");
             backups.AddCommand<ShowBackupCommand>("show")

@@ -154,6 +154,66 @@ public sealed class CliBackupInspectionTests
         Assert.Equal("unsupported_backup_format", result.Json.GetProperty("error").GetProperty("code").GetString());
     }
 
+    [Fact]
+    public async Task CreateDryRunLeavesNoRecordAndCreatedBackupVerifies()
+    {
+        using var root = new TempDirectory();
+        string source = Directory.CreateDirectory(Path.Combine(root.Path, "source")).FullName;
+        string destination = Directory.CreateDirectory(Path.Combine(root.Path, "backups")).FullName;
+        File.WriteAllText(Path.Combine(source, "state.txt"), "recorded");
+        string database = Path.Combine(root.Path, "vault.db");
+        SqliteRepository repository = TestRepository.Create(database);
+        int projectId = TestRepository.AddProject(repository, "Photos", source);
+
+        var preview = await RunTextAsync("backups", "create", "Photos", "--destination", destination,
+            "--db", database, "--dry-run", "--quiet");
+        Assert.Equal(0, preview.Code);
+        Assert.Empty(preview.Output);
+        Assert.Empty(preview.Error);
+        Assert.Empty(repository.GetBackupsForProject(projectId));
+        Assert.Empty(repository.GetSnapshotsForProject("Photos"));
+
+        var previewJson = await RunAsync("backups", "create", "Photos", "--destination", destination,
+            "--db", database, "--dry-run", "--output", "json");
+        AssertEnvelope(previewJson.Json, "backups.create", 0);
+        Assert.Empty(previewJson.Error);
+        Assert.True(previewJson.Json.GetProperty("data").GetProperty("dryRun").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, previewJson.Json.GetProperty("data").GetProperty("backupId").ValueKind);
+
+        var created = await RunTextAsync("backups", "create", "Photos", "--destination", destination,
+            "--db", database, "--quiet");
+        Assert.Equal(0, created.Code);
+        Assert.Empty(created.Error);
+        Backup backup = Assert.Single(repository.GetBackupsForProject(projectId));
+        Assert.Equal("full", backup.BackupMode);
+        Assert.NotEmpty(repository.GetFilesForSnapshot(backup.SnapshotId));
+
+        var verified = await RunAsync("backups", "verify", "Photos", "--id", backup.Id.ToString(),
+            "--db", database, "--output", "json");
+        AssertEnvelope(verified.Json, "backups.verify", 0);
+        Assert.Equal(1, verified.Json.GetProperty("data").GetProperty("passedFiles").GetInt32());
+
+        var createdJson = await RunAsync("backups", "create", "Photos", "--destination", destination,
+            "--db", database, "--output", "json");
+        AssertEnvelope(createdJson.Json, "backups.create", 0);
+        Assert.Empty(createdJson.Error);
+        Assert.False(createdJson.Json.GetProperty("data").GetProperty("dryRun").GetBoolean());
+        Assert.True(createdJson.Json.GetProperty("data").GetProperty("backupId").GetInt32() > backup.Id);
+    }
+
+    [Fact]
+    public async Task CreateReturnsVersionedErrorBeforeCreatingAStore()
+    {
+        using var root = new TempDirectory();
+        string source = Directory.CreateDirectory(Path.Combine(root.Path, "source")).FullName;
+        string database = Path.Combine(root.Path, "missing", "vault.db");
+        var result = await RunAsync("backups", "create", "Photos", "--destination", source,
+            "--db", database, "--output", "json");
+        AssertEnvelope(result.Json, "backups.create", 1);
+        Assert.Empty(result.Error);
+        Assert.False(Directory.Exists(Path.GetDirectoryName(database)));
+    }
+
     [Theory]
     [InlineData("--id", "0")]
     [InlineData("--limit", "0")]
@@ -195,5 +255,26 @@ public sealed class CliBackupInspectionTests
         }
         using JsonDocument document = JsonDocument.Parse(output.ToString());
         return (code, document.RootElement.Clone(), output.ToString(), error.ToString());
+    }
+
+    private static async Task<(int Code, string Output, string Error)> RunTextAsync(params string[] args)
+    {
+        _ = Spectre.Console.AnsiConsole.Console;
+        TextWriter previousOutput = Console.Out;
+        TextWriter previousError = Console.Error;
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        try
+        {
+            Console.SetOut(output);
+            Console.SetError(error);
+            int code = await Program.Main(args);
+            return (code, output.ToString(), error.ToString());
+        }
+        finally
+        {
+            Console.SetOut(previousOutput);
+            Console.SetError(previousError);
+        }
     }
 }

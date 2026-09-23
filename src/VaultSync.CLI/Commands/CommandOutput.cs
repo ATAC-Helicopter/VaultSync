@@ -40,6 +40,8 @@ internal static class CommandOutput
             return "snapshots.list";
         if (arguments.Length > 0 && string.Equals(arguments[0], "diff", StringComparison.OrdinalIgnoreCase))
             return "snapshots.diff";
+        if (arguments.Length > 0 && string.Equals(arguments[0], "restore", StringComparison.OrdinalIgnoreCase))
+            return "recovery.restore";
         if (arguments.Length < 2)
             return null;
         if (string.Equals(arguments[0], "projects", StringComparison.OrdinalIgnoreCase))
@@ -50,12 +52,16 @@ internal static class CommandOutput
         }
         if (string.Equals(arguments[0], "backups", StringComparison.OrdinalIgnoreCase))
         {
+            if (string.Equals(arguments[1], "create", StringComparison.OrdinalIgnoreCase))
+                return "backups.create";
             if (string.Equals(arguments[1], "list", StringComparison.OrdinalIgnoreCase))
                 return "backups.list";
             if (string.Equals(arguments[1], "show", StringComparison.OrdinalIgnoreCase))
                 return "backups.show";
             return string.Equals(arguments[1], "verify", StringComparison.OrdinalIgnoreCase) ? "backups.verify" : null;
         }
+        if (string.Equals(arguments[0], "recovery", StringComparison.OrdinalIgnoreCase))
+            return string.Equals(arguments[1], "restore", StringComparison.OrdinalIgnoreCase) ? "recovery.restore" : null;
         if (!string.Equals(arguments[0], "snapshots", StringComparison.OrdinalIgnoreCase))
             return null;
         if (string.Equals(arguments[1], "list", StringComparison.OrdinalIgnoreCase))

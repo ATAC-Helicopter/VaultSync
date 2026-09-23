@@ -150,12 +150,15 @@ namespace VaultSync.CLI.Commands
         [CommandArgument(0, "<name>")] public string Name { get; init; } = "";
         [CommandArgument(1, "<destination>")] public string Destination { get; init; } = "";
         [CommandOption("--snapshot")] public int? Snapshot { get; init; }
+        [CommandOption("--backup-id <ID>")] public int? BackupId { get; init; }
+        [CommandOption("--include <PATH>")] public string[] Includes { get; init; } = [];
         [CommandOption("--dry-run")] public bool DryRun { get; init; } = false;
         [CommandOption("--clean")] public bool Clean { get; init; } = false;
         [CommandOption("--keep-empty-dirs")] public bool KeepEmptyDirs { get; init; } = false;
         [CommandOption("--db")] public string? Db { get; init; }
         [CommandOption("--quiet")] public bool Quiet { get; init; } = false;
         [CommandOption("--json")] public bool Json { get; init; } = false;
+        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
     }
 
     sealed class RestoreCommand : AsyncCommand<RestoreSettings>
@@ -167,15 +170,51 @@ namespace VaultSync.CLI.Commands
             string SourceRoot,
             IReadOnlyList<FileEntry> Files);
 
-        private sealed record RestoreCopy(string RelativePath, string SourcePath, string TargetPath);
+        private sealed record RestoreCopy(string RelativePath, string SourcePath, string TargetPath, FileEntry Expected);
 
         protected override async Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
+        {
+            string? invalid = CommandOutput.Validate(s.Output, s.Json);
+            if (s.Snapshot is <= 0 || s.BackupId is <= 0 ||
+                (s.Snapshot.HasValue && s.BackupId.HasValue))
+                invalid = "Choose one positive --snapshot or --backup-id selector.";
+            if (s.Includes.Length > 0 && s.Clean)
+                invalid = "--clean cannot be combined with selective --include restore.";
+            if (s.Includes.Any(path => !IsValidInclude(path)))
+                invalid = "--include requires a relative file or directory path without . or .. segments.";
+            if (invalid is not null)
+                return CommandOutput.Failure(s.Output, "recovery.restore", "invalid_options", invalid, 2);
+
+            try
+            {
+                return await RestoreAsync(s, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (s.Output is not null)
+            {
+                return CommandOutput.Failure(s.Output, "recovery.restore", "cancelled",
+                    "Restore was cancelled before completion; inspect the target before retrying.", 130);
+            }
+            catch (Exception error) when (s.Output is not null &&
+                error is IOException or UnauthorizedAccessException or InvalidOperationException or NotSupportedException)
+            {
+                Utils.CliVaultLogger.Instance.Error($"Restore failed: {error}");
+                return CommandOutput.Failure(s.Output, "recovery.restore", "restore_failed",
+                    "Restore could not complete. Check backup availability, target safety, and the private CLI log.", 1);
+            }
+        }
+
+        private static async Task<int> RestoreAsync(RestoreSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
             if (!File.Exists(db))
             {
-                Console.Error.WriteLine($"Database not found: {db}");
-                return 1;
+                if (s.Output is null)
+                {
+                    Console.Error.WriteLine($"Database not found: {db}");
+                    return 1;
+                }
+                return CommandOutput.Failure(s.Output, "recovery.restore", "repository_unavailable",
+                    "The selected database does not exist.", 1);
             }
             var repo = new SqliteRepository(db, readOnly: true);
             RestoreSelection selection = ResolveSelection(repo, s);
@@ -188,7 +227,8 @@ namespace VaultSync.CLI.Commands
             (IReadOnlyList<string> existingFiles, IReadOnlyList<string> existingDirectories) =
                 InspectDestination(destination, s.Clean, cancellationToken);
             var started = DateTime.UtcNow;
-            int copied = CopyBackupFiles(copies, destination, s, cancellationToken);
+            int copied = await CopyBackupFilesAsync(copies, destination, s, cancellationToken)
+                .ConfigureAwait(false);
             int deleted = DeleteExtraFiles(existingFiles, copies, destination, s, cancellationToken);
             int deletedDirectories = DeleteEmptyDirectories(existingDirectories, destination, s);
             TimeSpan took = DateTime.UtcNow - started;
@@ -197,12 +237,24 @@ namespace VaultSync.CLI.Commands
             return 0;
         }
 
+        private static bool IsValidInclude(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || Path.IsPathFullyQualified(path))
+                return false;
+            string normalized = path.Replace('\\', '/');
+            return normalized.Split('/').All(segment => segment.Length > 0 && segment is not "." and not "..");
+        }
+
         private static RestoreSelection ResolveSelection(SqliteRepository repo, RestoreSettings settings)
         {
             Project project = repo.GetProjectByName(settings.Name)
                 ?? throw new InvalidOperationException($"Project '{settings.Name}' not found.");
             List<Backup> backups = [.. repo.GetBackupsForProject(project.Id)];
-            Backup backup = settings.Snapshot is int requestedSnapshot
+            Backup backup = settings.BackupId is int requestedBackup
+                ? backups.FirstOrDefault(item => item.Id == requestedBackup)
+                    ?? throw new InvalidOperationException(
+                        $"Backup {requestedBackup} does not belong to project '{project.Name}'.")
+                : settings.Snapshot is int requestedSnapshot
                 ? backups.FirstOrDefault(item => item.SnapshotId == requestedSnapshot)
                     ?? throw new InvalidOperationException(
                         $"Snapshot {requestedSnapshot} has no recorded backup for project '{project.Name}'.")
@@ -215,8 +267,18 @@ namespace VaultSync.CLI.Commands
             List<FileEntry> files = [.. repo.GetFilesForSnapshot(snapshot.Id)];
             if (files.Count == 0)
                 throw new InvalidDataException($"Snapshot {snapshot.Id} has no files.");
+            if (settings.Includes.Length > 0)
+            {
+                string[] prefixes = settings.Includes.Select(path => path.Replace('\\', '/')).ToArray();
+                files = files.Where(file => prefixes.Any(prefix =>
+                        string.Equals(file.RelPath.Replace('\\', '/'), prefix, GetPathComparison()) ||
+                        file.RelPath.Replace('\\', '/').StartsWith(prefix + "/", GetPathComparison())))
+                    .ToList();
+                if (files.Count == 0)
+                    throw new InvalidOperationException("No indexed files match the selected --include paths.");
+            }
 
-            string sourceRoot = BackupContentPathResolver.Resolve(backup, ConfigHelper.Load())
+            string sourceRoot = BackupContentPathResolver.Resolve(backup, Core.Config.StaticAppConfigStore.Instance.Load())
                 ?? throw new DirectoryNotFoundException(
                     $"The stored data for backup {backup.Id} is unavailable at its recorded destination.");
             if (backup.IsEncrypted ||
@@ -279,7 +341,7 @@ namespace VaultSync.CLI.Commands
                     hashService,
                     cancellationToken).ConfigureAwait(false);
 
-                copies.Add(new RestoreCopy(relativePath.Replace('\\', '/'), sourcePath, targetPath));
+                copies.Add(new RestoreCopy(relativePath.Replace('\\', '/'), sourcePath, targetPath, file));
             }
 
             return copies;
@@ -357,7 +419,7 @@ namespace VaultSync.CLI.Commands
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 string relative = Path.GetRelativePath(destination, file).Replace('\\', '/');
-                if (!settings.Quiet && !settings.Json)
+                if (!settings.Quiet && !settings.Json && !CommandOutput.IsJson(settings.Output))
                     AnsiConsole.MarkupLine($"[red]- delete[/] {Markup.Escape(relative)}");
                 if (!settings.DryRun)
                     File.Delete(file);
@@ -367,7 +429,7 @@ namespace VaultSync.CLI.Commands
             return deleted;
         }
 
-        private static int CopyBackupFiles(
+        private static async Task<int> CopyBackupFilesAsync(
             IReadOnlyList<RestoreCopy> copies,
             string destination,
             RestoreSettings settings,
@@ -378,7 +440,7 @@ namespace VaultSync.CLI.Commands
             foreach (RestoreCopy copy in copies)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!settings.Quiet && !settings.Json)
+                if (!settings.Quiet && !settings.Json && !CommandOutput.IsJson(settings.Output))
                     AnsiConsole.MarkupLine($"[green]+ write[/] {Markup.Escape(copy.RelativePath)}");
                 if (settings.DryRun)
                     continue;
@@ -392,18 +454,22 @@ namespace VaultSync.CLI.Commands
                     throw new IOException($"Restore target became unsafe before writing '{copy.RelativePath}'.");
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(copy.TargetPath)!);
-                CopyFileAtomically(copy.SourcePath, copy.TargetPath);
+                await CopyVerifiedFileAtomicallyAsync(copy.SourcePath, copy.TargetPath, copy.Expected,
+                    cancellationToken).ConfigureAwait(false);
             }
 
             return copies.Count;
         }
 
-        private static void CopyFileAtomically(string sourcePath, string targetPath)
+        internal static async Task CopyVerifiedFileAtomicallyAsync(string sourcePath, string targetPath,
+            FileEntry expected, CancellationToken cancellationToken)
         {
             string temporaryPath = $"{targetPath}.{Guid.NewGuid():N}.vaultsync-restore.tmp";
             try
             {
                 File.Copy(sourcePath, temporaryPath, overwrite: false);
+                await VerifyBackupFileAsync(temporaryPath, expected, new HashService(), cancellationToken)
+                    .ConfigureAwait(false);
                 File.Move(temporaryPath, targetPath, overwrite: true);
             }
             finally
@@ -436,7 +502,7 @@ namespace VaultSync.CLI.Commands
                 if (!settings.DryRun)
                     Directory.Delete(directory);
                 deleted++;
-                if (!settings.Quiet && !settings.Json)
+                if (!settings.Quiet && !settings.Json && !CommandOutput.IsJson(settings.Output))
                 {
                     string relative = Path.GetRelativePath(destination, directory).Replace('\\', '/');
                     AnsiConsole.MarkupLine($"[red]- rmdir[/] {Markup.Escape(relative)}");
@@ -455,6 +521,23 @@ namespace VaultSync.CLI.Commands
             int deletedDirectories,
             TimeSpan took)
         {
+            if (CommandOutput.IsJson(settings.Output))
+            {
+                CommandOutput.Success("recovery.restore", new
+                {
+                    projectId = selection.Project.Id,
+                    backupId = selection.Backup.Id,
+                    snapshotId = selection.Snapshot.Id,
+                    dryRun = settings.DryRun,
+                    clean = settings.Clean,
+                    selectedPaths = settings.Includes,
+                    selectedFiles = selection.Files.Count,
+                    copied,
+                    deleted,
+                    deletedDirectories
+                });
+                return;
+            }
             if (settings.Json)
             {
                 Console.WriteLine(JsonSerializer.Serialize(new
