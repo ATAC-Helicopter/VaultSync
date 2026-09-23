@@ -36,8 +36,8 @@ function Get-VaultSyncOptions([string]$route) {
         'backups verify-all' { return '-h --help --project --filter --db --limit --failure-limit --output' }
         'recovery' { return '-h --help' }
         'recovery restore' { return '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' }
-        'mirror' { return '-h --help --dry-run --db --quiet' }
-        'verify' { return '-h --help --percent --full --db --quiet --json' }
+        'mirror' { return '-h --help --dry-run --db --quiet --output' }
+        'verify' { return '-h --help --percent --full --db --quiet --json --output' }
         'watch' { return '-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' }
         'doctor' { return '-h --help --db --check-dest --quiet' }
         'destinations' { return '-h --help --test --json' }
@@ -59,7 +59,7 @@ function Get-VaultSyncOptions([string]$route) {
         'set-path' { return '-h --help --db --quiet' }
         'update-path' { return '-h --help --db --quiet' }
         'snapshot' { return '-h --help --full-hash --db --quiet --output' }
-        'sync' { return '-h --help --dry-run --db --quiet' }
+        'sync' { return '-h --help --dry-run --db --quiet --output' }
         'restore' { return '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' }
         'history' { return '-h --help --db --json --output --limit' }
         'diff' { return '-h --help --db --limit --json --output' }
@@ -81,8 +81,11 @@ function Get-VaultSyncValues([string]$route) {
         'backups verify --output' { return 'text json' }
         'backups verify-all --output' { return 'text json' }
         'recovery restore --output' { return 'text json' }
+        'mirror --output' { return 'text json' }
+        'verify --output' { return 'text json' }
         'list-projects --output' { return 'text json' }
         'snapshot --output' { return 'text json' }
+        'sync --output' { return 'text json' }
         'restore --output' { return 'text json' }
         'history --output' { return 'text json' }
         'diff --output' { return 'text json' }

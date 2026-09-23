@@ -538,10 +538,11 @@ ARGUMENTS:
     <destination>
 
 OPTIONS:
-    -h, --help       Prints help information
+    -h, --help               Prints help information
         --dry-run
         --db
         --quiet
+        --output <FORMAT>
 ```
 
 ## `vaultsync verify`
@@ -558,12 +559,13 @@ ARGUMENTS:
     <from>
 
 OPTIONS:
-    -h, --help       Prints help information
+    -h, --help               Prints help information
         --percent
         --full
         --db
         --quiet
         --json
+        --output <FORMAT>
 ```
 
 ## `vaultsync watch`
@@ -935,10 +937,11 @@ ARGUMENTS:
     <destination>
 
 OPTIONS:
-    -h, --help       Prints help information
+    -h, --help               Prints help information
         --dry-run
         --db
         --quiet
+        --output <FORMAT>
 ```
 
 ## `vaultsync restore`

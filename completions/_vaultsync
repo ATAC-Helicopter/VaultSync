@@ -36,8 +36,8 @@ _vaultsync_options() {
     'backups verify-all') reply='-h --help --project --filter --db --limit --failure-limit --output' ;;
     'recovery') reply='-h --help' ;;
     'recovery restore') reply='-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
-    'mirror') reply='-h --help --dry-run --db --quiet' ;;
-    'verify') reply='-h --help --percent --full --db --quiet --json' ;;
+    'mirror') reply='-h --help --dry-run --db --quiet --output' ;;
+    'verify') reply='-h --help --percent --full --db --quiet --json --output' ;;
     'watch') reply='-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' ;;
     'doctor') reply='-h --help --db --check-dest --quiet' ;;
     'destinations') reply='-h --help --test --json' ;;
@@ -59,7 +59,7 @@ _vaultsync_options() {
     'set-path') reply='-h --help --db --quiet' ;;
     'update-path') reply='-h --help --db --quiet' ;;
     'snapshot') reply='-h --help --full-hash --db --quiet --output' ;;
-    'sync') reply='-h --help --dry-run --db --quiet' ;;
+    'sync') reply='-h --help --dry-run --db --quiet --output' ;;
     'restore') reply='-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'history') reply='-h --help --db --json --output --limit' ;;
     'diff') reply='-h --help --db --limit --json --output' ;;
@@ -80,8 +80,11 @@ _vaultsync_values() {
     'backups verify --output') reply='text json' ;;
     'backups verify-all --output') reply='text json' ;;
     'recovery restore --output') reply='text json' ;;
+    'mirror --output') reply='text json' ;;
+    'verify --output') reply='text json' ;;
     'list-projects --output') reply='text json' ;;
     'snapshot --output') reply='text json' ;;
+    'sync --output') reply='text json' ;;
     'restore --output') reply='text json' ;;
     'history --output') reply='text json' ;;
     'diff --output') reply='text json' ;;

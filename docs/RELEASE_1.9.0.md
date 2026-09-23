@@ -251,6 +251,10 @@ per-backup outcome and a nonzero incomplete result for any failure or omitted
 record. It uses the same full folder verifier as the single-backup command.
 `snapshots create` now returns a v1 JSON result with the persisted snapshot ID
 and counts, keeping service diagnostics out of machine output.
+`mirror`/`sync` and `verify` now return one v1 result with `--output json`.
+Mirror distinguishes dry runs from actual transfers and explicitly reports that
+it did not record a backup; verify bounds failure details against the latest
+indexed snapshot. Legacy text and `verify --json` remain compatible.
 
 ## CLI execution tracking
 

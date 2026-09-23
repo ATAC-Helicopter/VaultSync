@@ -35,8 +35,8 @@ _vaultsync_options() {
     'backups verify-all') printf '%s' '-h --help --project --filter --db --limit --failure-limit --output' ;;
     'recovery') printf '%s' '-h --help' ;;
     'recovery restore') printf '%s' '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
-    'mirror') printf '%s' '-h --help --dry-run --db --quiet' ;;
-    'verify') printf '%s' '-h --help --percent --full --db --quiet --json' ;;
+    'mirror') printf '%s' '-h --help --dry-run --db --quiet --output' ;;
+    'verify') printf '%s' '-h --help --percent --full --db --quiet --json --output' ;;
     'watch') printf '%s' '-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' ;;
     'doctor') printf '%s' '-h --help --db --check-dest --quiet' ;;
     'destinations') printf '%s' '-h --help --test --json' ;;
@@ -58,7 +58,7 @@ _vaultsync_options() {
     'set-path') printf '%s' '-h --help --db --quiet' ;;
     'update-path') printf '%s' '-h --help --db --quiet' ;;
     'snapshot') printf '%s' '-h --help --full-hash --db --quiet --output' ;;
-    'sync') printf '%s' '-h --help --dry-run --db --quiet' ;;
+    'sync') printf '%s' '-h --help --dry-run --db --quiet --output' ;;
     'restore') printf '%s' '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'history') printf '%s' '-h --help --db --json --output --limit' ;;
     'diff') printf '%s' '-h --help --db --limit --json --output' ;;
@@ -79,8 +79,11 @@ _vaultsync_values() {
     'backups verify --output') printf '%s' 'text json' ;;
     'backups verify-all --output') printf '%s' 'text json' ;;
     'recovery restore --output') printf '%s' 'text json' ;;
+    'mirror --output') printf '%s' 'text json' ;;
+    'verify --output') printf '%s' 'text json' ;;
     'list-projects --output') printf '%s' 'text json' ;;
     'snapshot --output') printf '%s' 'text json' ;;
+    'sync --output') printf '%s' 'text json' ;;
     'restore --output') printf '%s' 'text json' ;;
     'history --output') printf '%s' 'text json' ;;
     'diff --output') printf '%s' 'text json' ;;

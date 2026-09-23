@@ -3,9 +3,9 @@
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
 `projects show`, `snapshots create`, `snapshots list`, `snapshots show`, `snapshots diff`, `backups list`,
 `backups show`, `backups verify`, `backups verify-all`, `backups create`,
-`recovery restore`, and legacy `history`/`diff`
-with explicit `--output json`. This contract does not yet apply to mirror,
-watch, or other command results. Legacy `--json`
+`recovery restore`, `mirror`/`sync`, `verify`, and legacy `history`/`diff`
+with explicit `--output json`. This contract does not yet apply to watch or
+other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
 
 The inspection and verification invocations open an existing database in
@@ -37,6 +37,8 @@ vaultsync backups verify "My project" --id 7 --db ./vault.db --output json
 vaultsync backups verify-all --filter My --db ./vault.db --output json
 vaultsync backups create "My project" --destination /mounted/backup --db ./vault.db --dry-run --output json
 vaultsync recovery restore "My project" /safe/target --backup-id 7 --include Documents --dry-run --output json
+vaultsync mirror "My project" /safe/target --db ./vault.db --dry-run --output json
+vaultsync verify "My project" /safe/target --db ./vault.db --full --output json
 ```
 
 `--filter` matches a case-insensitive project-name fragment. `--preset` matches
@@ -67,9 +69,12 @@ markup, or log messages mixed into it. The object contains:
 | ---: | --- |
 | 0 | Success, including an empty filtered list |
 | 1 | Database inaccessible, invalid/unsupported schema, or an operational failure |
-| 2 | Invalid arguments/options/selector or project not found |
+| 2 | Invalid arguments/options/selector, project not found, or live-folder verification mismatch |
 | 3 | Bulk verification has failed or omitted records; inspect per-backup results |
 | 130 | Backup creation or verification was cancelled before completion |
+
+`mirror` can also return a platform transfer-tool exit code on failure. Its
+error includes `toolExitCode`; inspect the destination before retrying.
 
 Unknown options, malformed typed values, missing option values, incompatible
 selectors, invalid positive limits, and conflicting output modes fail explicitly in the
@@ -82,7 +87,7 @@ Error codes currently include `invalid_options`, `project_not_found`,
 `backup_unavailable`, `unsupported_backup_format`, `verification_failed`,
 `cancelled`, `destination_unavailable`, `source_unavailable`,
 `unsafe_destination`, `insufficient_space`, `backup_failed`,
-`backup_not_created`, `bulk_verification_incomplete`, `repository_unavailable`,
+`backup_not_created`, `bulk_verification_incomplete`, `mirror_failed`, `repository_unavailable`,
 and `command_failed`.
 Error messages are actionable,
 without embedding the underlying exception or connection string. Consumers
@@ -206,6 +211,22 @@ writing the target. A live restore also verifies copied staging bytes before
 replacing each target file. Legacy `--json` keeps its prior payload and casing.
 The v1 error `restore_failed` reports an operational failure with exit 1; if a
 live restore has already copied some files, inspect the target before retrying.
+
+## Live mirror and folder verification
+
+`mirror` and compatibility `sync` report `projectId`, project name, source and
+destination, `dryRun`, `recordedBackup: false`, and elapsed seconds. A mirror
+transfers current source content through the platform tool; it does not create a
+recorded backup or prove the destination matches an indexed snapshot. A dry run
+does not create the target. Versioned mode keeps tool diagnostics in the private
+CLI log and writes one result envelope.
+
+`verify` compares a supplied folder with the latest indexed snapshot, not with
+a recorded backup. It accepts `--full` or a 1–100 `--percent` sample and returns
+checked/passed counts, failure count, up to 100 relative paths and reasons,
+`failuresTruncated`, and elapsed seconds. On a mismatch these counts appear in
+`error.details` with exit 2. Hashes and underlying read-error text are omitted
+from v1 output. Legacy `verify --json` retains its existing payload.
 
 Example selection failure:
 

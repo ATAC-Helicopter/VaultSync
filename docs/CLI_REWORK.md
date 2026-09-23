@@ -250,6 +250,9 @@ Their CLI handlers now open the selected database read-only and reject an absent
 path with exit 1 and stderr guidance before any destination work. They no longer
 run schema initialization or migrate a repository as a side effect of a preview
 or verification.
+`mirror`/`sync` and `verify` now offer opt-in v1 JSON. Mirror reports preview or
+transfer status without making a backup claim; verify returns bounded failures
+against the latest indexed snapshot. Legacy text and `verify --json` remain.
 
 `backups list/show` now expose project-scoped records without storage paths or
 crypto descriptors. `backups verify` checks full, unencrypted folder payloads

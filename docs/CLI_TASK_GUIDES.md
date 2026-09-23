@@ -89,7 +89,9 @@ vaultsync verify 'Photos' /absolute/path/to/mirror --db /absolute/path/to/vault.
 
 `mirror` uses the platform transfer tool (rsync or robocopy). Its dry run
 previews transfer work; the actual invocation changes the destination. `verify`
-checks the supplied folder against the latest indexed snapshot, so create a
+can emit one v1 result with `--output json`; its failure paths are capped at 100.
+Use `mirror --output json` to capture preview or transfer status without parsing
+human output. Verification checks the supplied folder against the latest indexed snapshot, so create a
 fresh snapshot before relying on that comparison. Neither a mirror nor a
 successful verification creates a recorded recovery point or verifies unrelated
 backup storage.

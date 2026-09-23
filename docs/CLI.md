@@ -249,8 +249,9 @@ snapshot, file count, and copy/delete counts. Legacy `--json` keeps its old shap
 ### Live mirroring and verification
 
 ```text
-vaultsync mirror NAME DESTINATION [--dry-run] [--db PATH] [--quiet]
+vaultsync mirror NAME DESTINATION [--dry-run] [--db PATH] [--quiet] [--output text|json]
 vaultsync verify NAME FROM [--percent N | --full] [--db PATH] [--quiet] [--json]
+                       [--output text|json]
 vaultsync watch NAME [--db PATH] [--dest PATH] [--sync] [--verify]
                     [--debounce-ms N] [--dry-run] [--quiet]
 ```
@@ -261,6 +262,9 @@ checks a supplied folder against the latest indexed snapshot. Watch creates a
 startup snapshot and then debounces changes; `--verify` implies sync and requires
 `--dest`. Cancellation returns 130 after filesystem events stop and queued/active
 work drains. Watcher JSON events and unified cycle-failure reporting remain planned.
+Both `mirror`/`sync` and `verify` offer v1 `--output json`. Verification reports
+bounded mismatches against the latest snapshot; a live mirror remains distinct
+from a recorded backup. Legacy `verify --json` is unchanged.
 
 ### Diagnostics, destinations, presets, and configuration
 
@@ -294,6 +298,7 @@ Explicit `--output json` is currently supported by:
 - `snapshots diff` and compatibility `diff`;
 - `backups create`, `backups list`, `backups show`, `backups verify`, and `backups verify-all`;
 - `recovery restore` and compatibility `restore`.
+- `mirror` and compatibility `sync`, plus `verify`.
 
 Each invocation writes one JSON object to stdout:
 
@@ -309,7 +314,7 @@ Each invocation writes one JSON object to stdout:
 ```
 
 Exit 0 is success, exit 1 is an operational/repository failure, exit 2 is invalid
-input or an absent selector, and exit 130 is cancellation where that contract is
+input, an absent selector, or a live-folder verification mismatch, and exit 130 is cancellation where that contract is
 implemented. Errors use stable codes. Consumers should ignore additional object
 properties and must not parse human text. `--output json` is distinct from legacy
 `--json`; do not combine them. The exact implemented envelope and payload fields
