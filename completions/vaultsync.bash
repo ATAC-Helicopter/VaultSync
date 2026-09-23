@@ -43,7 +43,7 @@ _vaultsync_options() {
     'presets list') printf '%s' '-h --help' ;;
     'presets show') printf '%s' '-h --help' ;;
     'version') printf '%s' '-h --help --json' ;;
-    'docs') printf '%s' '-h --help --full --open --url' ;;
+    'docs') printf '%s' '-h --help --full --open --url --task' ;;
     'completion') printf '%s' '-h --help' ;;
     'add-project') printf '%s' '-h --help --preset --db --quiet' ;;
     'remove-project') printf '%s' '-h --help --db --yes --quiet' ;;

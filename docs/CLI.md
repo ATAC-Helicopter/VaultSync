@@ -9,12 +9,15 @@ remain available throughout the 1.9 family.
 - Source: https://github.com/ATAC-Helicopter/VaultSync
 - Releases: https://github.com/ATAC-Helicopter/VaultSync/releases/latest
 - Issues: https://github.com/ATAC-Helicopter/VaultSync/issues
+- Focused setup, inspection, mirror, restore, automation, and migration guides:
+  [CLI_TASK_GUIDES.md](CLI_TASK_GUIDES.md)
 - Exhaustive generated command help: [CLI_COMMAND_REFERENCE.md](CLI_COMMAND_REFERENCE.md)
 
 Run `vaultsync` with no arguments for the introductory screen, `vaultsync docs`
 for the compact documentation menu, `vaultsync docs --full` for this bundled
-handbook plus the exhaustive generated command reference, `vaultsync docs --open`
-to open the online copy, or `vaultsync COMMAND --help` for exact options.
+handbook, task guides, and exhaustive generated command reference, `vaultsync
+docs --task inspect` for one workflow, `vaultsync docs --open` to open the online
+copy, or `vaultsync COMMAND --help` for exact options.
 
 ## Install and identify the build
 
@@ -123,19 +126,20 @@ and paths containing whitespace.
 ## Quick start
 
 ```sh
-vaultsync init
-vaultsync projects add "My project" ./src --preset dotnet
-vaultsync projects list
-vaultsync snapshots create "My project"
-vaultsync snapshots list "My project"
-vaultsync snapshots show "My project" --id 42
-vaultsync snapshots diff "My project" 42 41
-vaultsync mirror "My project" /Volumes/Backup --dry-run
-vaultsync doctor
+vaultsync projects add "My project" ./src --preset dotnet --db ./vault.db
+vaultsync projects list --db ./vault.db --output json
+vaultsync snapshots create "My project" --db ./vault.db --quiet
+vaultsync snapshots list "My project" --db ./vault.db --output json
+vaultsync mirror "My project" /absolute/path/to/mirror --db ./vault.db --dry-run
+vaultsync doctor --db ./vault.db
 ```
 
-Run a dry run before a new mirror, restore, or pruning plan. Review the selected
-project, destination, and snapshot IDs before removing or restoring anything.
+These commands use an explicit database; they do not change the shared configured
+database. `projects add` creates a new store when the path is absent. Run a dry
+run before a new mirror, restore, or pruning plan. Review the selected project,
+destination, and snapshot IDs before removing or restoring anything. For a full
+isolated walkthrough with IDs discovered from JSON, run `vaultsync docs --task
+inspect` or read the [task guides](CLI_TASK_GUIDES.md).
 
 ## Resource/action commands
 
@@ -222,7 +226,7 @@ vaultsync config path
 vaultsync config set-db PATH
 vaultsync self-test [--db PATH] [--quiet]
 vaultsync version [--json]
-vaultsync docs [--full | --open | --url]
+vaultsync docs [--full | --open | --url | --task TOPIC]
 vaultsync completion bash|zsh|powershell
 ```
 
@@ -283,6 +287,11 @@ apply to both old and grouped routes.
 
 ## Automation guidance
 
+The [task guides](CLI_TASK_GUIDES.md) include cron, systemd user timer, and
+Windows Task Scheduler examples, plus legacy route and JSON migration steps.
+Use `vaultsync docs --task automate` or `vaultsync docs --task migrate` to print
+only the relevant guide in a terminal.
+
 - Pin the VaultSync version and inspect `--version --json` in scheduled jobs.
 - Pass `--db` explicitly when the job must use a specific store.
 - Use `--output json` only on operations documented for the v1 contract.
@@ -297,8 +306,8 @@ apply to both old and grouped routes.
 
 The CLI rework is active. Bulk project operations, complete recorded-backup command
 parity, selective restore, uniform JSON across all commands, watcher event streams,
-project/path-aware completion, portable emergency recovery, and final cross-platform automation
-qualification remain planned under their owning 1.9 issues. Disk imaging and bootable
+project/path-aware completion, portable emergency recovery, and final cross-platform
+automation qualification remain planned under their owning 1.9 issues. Disk imaging and bootable
 recovery commands will appear only with qualified recovery services and support
 contracts.
 

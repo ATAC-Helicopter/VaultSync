@@ -197,6 +197,19 @@ completion probes, both generation checks, release metadata, and a warning-free
 NuGet tool pack. PowerShell execution and installation on supported Windows
 packages remain to be qualified; no hosted Actions run was started for this slice.
 
+## CLI task guides and quiet snapshot output
+
+`vaultsync docs --task` now selects setup, inspection, mirror, restore,
+automation, or migration guidance from the bundled task-guide document.
+`docs --full` includes all three CLI documents. The disposable inspection
+walkthrough was executed against an isolated temporary database and returned
+versioned project, snapshot, and diff results with one changed file. The
+handbook quick start now uses an explicit database and discovers actual IDs
+instead of suggesting `init` or a fixed sample ID. CLI snapshot, watcher,
+and self-test snapshot services send diagnostics to the private CLI log;
+quiet snapshot stdout is empty in a focused regression test. Platform scheduler
+recipes and PowerShell completion still require their supported-system gates.
+
 ## CLI execution tracking
 
 | ID | Issue | Release | Work |

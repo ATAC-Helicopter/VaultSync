@@ -44,7 +44,7 @@ _vaultsync_options() {
     'presets list') reply='-h --help' ;;
     'presets show') reply='-h --help' ;;
     'version') reply='-h --help --json' ;;
-    'docs') reply='-h --help --full --open --url' ;;
+    'docs') reply='-h --help --full --open --url --task' ;;
     'completion') reply='-h --help' ;;
     'add-project') reply='-h --help --preset --db --quiet' ;;
     'remove-project') reply='-h --help --db --yes --quiet' ;;

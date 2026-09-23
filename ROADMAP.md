@@ -1364,8 +1364,9 @@ destabilizing the maintenance release.
     website/repository/release/documentation links, six starter commands, and help
     pointers. Root help remains separate. The `docs` discovery command and generated
     Bash/Zsh/PowerShell command/option completion are implemented on the shared 1.9
-    branch. The handbook now documents packaged tool/PATH setup. Contextual examples,
-    stable-ID discovery, and supported-platform completion qualification remain.
+    branch. The handbook now documents packaged tool/PATH setup, and `docs --task`
+    exposes focused workflow examples. Stable-ID discovery, richer contextual
+    suggestions, and supported-platform completion qualification remain.
 - [ ] `VS-1978` `P1` Publish a practical CLI handbook and script migration guide.
   - Scope: quick start, command reference, bulk workflows, JSON/exit-code
     contracts, cron/systemd/Task Scheduler examples, credentials, troubleshooting,
@@ -1374,10 +1375,12 @@ destabilizing the maintenance release.
     systems; each command documents mutation, verification scope, and failure
     behavior; a script author can migrate without guessing.
   - Progress: `docs/CLI.md` covers concepts, configuration precedence, workflows,
-    structured results, automation safety, and limits. An 878-line reference is
+    structured results, automation safety, and limits. A complete reference is
     generated from help for every registered grouped and compatibility command.
-    Both are embedded, packaged, and printed by `docs --full`; online access uses
-    `docs --open`/`--url`. Scheduler recipes and migration runbooks remain.
+    The handbook, task guides, and reference are embedded, packaged, and printed
+    by `docs --full`; online access uses `docs --open`/`--url`. Disposable inspection,
+    scheduler recipes, and migration instructions are drafted; supported-platform
+    qualification and independent recovery runbooks remain.
 
 ## 1.9.2 — Portable Recovery
 

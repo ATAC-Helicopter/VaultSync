@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Spectre.Console;
@@ -85,6 +86,7 @@ internal static class CliPresentation
         table.AddColumn("Command");
         table.AddColumn("Purpose");
         table.AddRow("[cyan]vaultsync docs --full[/]", "Print the complete bundled Markdown handbook");
+        table.AddRow("[cyan]vaultsync docs --task inspect[/]", "Read a focused setup, inspection, mirror, restore, automation, or migration guide");
         table.AddRow("[cyan]vaultsync docs --open[/]", "Open the full online handbook in the default browser");
         table.AddRow("[cyan]vaultsync docs --url[/]", "Print only the canonical documentation URL");
         table.AddRow("[cyan]vaultsync COMMAND --help[/]", "Show command-specific options and arguments");
@@ -97,9 +99,10 @@ internal sealed class DocsSettings : CommandSettings
     [CommandOption("--full")] public bool Full { get; init; }
     [CommandOption("--open")] public bool Open { get; init; }
     [CommandOption("--url")] public bool Url { get; init; }
+    [CommandOption("--task <TOPIC>")] public string? Task { get; init; }
 
-    public override ValidationResult Validate() => new[] { Full, Open, Url }.Count(value => value) > 1
-        ? ValidationResult.Error("Choose only one of --full, --open, or --url.")
+    public override ValidationResult Validate() => new[] { Full, Open, Url, Task is not null }.Count(value => value) > 1
+        ? ValidationResult.Error("Choose only one of --full, --open, --url, or --task.")
         : ValidationResult.Success();
 }
 
@@ -107,6 +110,8 @@ internal sealed class DocsCommand : AsyncCommand<DocsSettings>
 {
     private const string HandbookResource = "VaultSync.CLI.Docs.CLI.md";
     private const string ReferenceResource = "VaultSync.CLI.Docs.CLI_COMMAND_REFERENCE.md";
+    private const string TasksResource = "VaultSync.CLI.Docs.CLI_TASK_GUIDES.md";
+    private static readonly string[] Topics = ["setup", "inspect", "mirror", "restore", "automate", "migrate"];
     internal static Func<string, bool> BrowserLauncher { get; set; } = LaunchBrowser;
 
     protected override Task<int> ExecuteAsync(CommandContext context, DocsSettings settings, CancellationToken cancellationToken)
@@ -120,15 +125,36 @@ internal sealed class DocsCommand : AsyncCommand<DocsSettings>
         if (settings.Full)
         {
             string? handbook = ReadResource(HandbookResource);
+            string? tasks = ReadResource(TasksResource);
             string? reference = ReadResource(ReferenceResource);
-            if (handbook is null || reference is null)
+            if (handbook is null || tasks is null || reference is null)
             {
                 Console.Error.WriteLine("The bundled CLI handbook is unavailable. Use `vaultsync docs --url` for the online documentation.");
                 return Task.FromResult(1);
             }
             Console.Write(handbook.TrimEnd());
             Console.Write("\n\n---\n\n");
+            Console.Write(tasks.TrimEnd());
+            Console.Write("\n\n---\n\n");
             Console.Write(reference);
+            return Task.FromResult(0);
+        }
+        if (settings.Task is not null)
+        {
+            string topic = settings.Task.Trim().ToLowerInvariant();
+            if (!Topics.Contains(topic, StringComparer.Ordinal))
+            {
+                Console.Error.WriteLine($"Unknown task '{settings.Task}'. Choose: {string.Join(", ", Topics)}.");
+                return Task.FromResult(2);
+            }
+            string? guides = ReadResource(TasksResource);
+            string? guide = guides is null ? null : FindTask(guides, topic);
+            if (guide is null)
+            {
+                Console.Error.WriteLine("The bundled CLI task guide is unavailable. Use `vaultsync docs --url` for online documentation.");
+                return Task.FromResult(1);
+            }
+            Console.Write(guide);
             return Task.FromResult(0);
         }
         if (settings.Open)
@@ -153,6 +179,25 @@ internal sealed class DocsCommand : AsyncCommand<DocsSettings>
             return null;
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
+    }
+
+    private static string? FindTask(string markdown, string topic)
+    {
+        using var reader = new StringReader(markdown);
+        var section = new StringBuilder();
+        bool found = false;
+        while (reader.ReadLine() is string line)
+        {
+            if (line.StartsWith("## ", StringComparison.Ordinal))
+            {
+                if (found)
+                    break;
+                found = string.Equals(line[3..].Trim(), topic, StringComparison.Ordinal);
+            }
+            if (found)
+                section.AppendLine(line);
+        }
+        return found ? section.ToString().TrimEnd() + Environment.NewLine : null;
     }
 
     private static bool LaunchBrowser(string url)

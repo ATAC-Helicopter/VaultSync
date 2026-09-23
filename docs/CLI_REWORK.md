@@ -209,15 +209,24 @@ without dumping the full command tree. Root `--help` uses a smaller header befor
 normal generated help. Command execution and structured output receive no decoration.
 
 `vaultsync docs` shows the compact documentation menu. `docs --full` prints the
-embedded practical handbook followed by the generated exhaustive command reference,
-`docs --url`
-prints only its online URL, and `docs --open` asks the operating system to open that
-URL. `docs/CLI.md` and `docs/CLI_COMMAND_REFERENCE.md` are embedded for runtime use and
-included in the tool package. `scripts/generate_cli_reference.py` rebuilds the latter
+embedded practical handbook, focused task guides, and generated exhaustive command
+reference. `docs --url` prints only its online URL, and `docs --open` asks the
+operating system to open that URL. `docs/CLI.md`, `docs/CLI_TASK_GUIDES.md`, and
+`docs/CLI_COMMAND_REFERENCE.md` are embedded for runtime use and included in the
+tool package. `scripts/generate_cli_reference.py` rebuilds the reference
 from every registered grouped, utility, branch, and compatibility command.
 `vaultsync completion bash|zsh|powershell` prints packaged scripts for command and
 option names without reading the database. The generator inspects registered help,
 checks the route inventory, and produces the three shell scripts; the handbook
 documents global-tool PATH setup. This is early implementation under VS-1977 and
-VS-1978; contextual examples, platform completion qualification, scheduler examples,
-and full script-migration runbooks remain pending.
+VS-1978; platform completion qualification and full script-migration runbooks
+remain pending.
+
+`vaultsync docs --task setup|inspect|mirror|restore|automate|migrate` now prints
+focused, embedded Markdown guides. `docs --full` includes them between the
+handbook and generated command reference. The disposable inspection example
+uses an explicit temporary database and discovers live IDs from v1 JSON; it
+does not call `init`, which writes shared configuration. The CLI now routes
+snapshot service diagnostics to its private log instead of stdout, so quiet
+snapshot creation does not emit service traces. Scheduler and migration examples
+are drafts pending supported-platform qualification.

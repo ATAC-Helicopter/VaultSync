@@ -44,7 +44,7 @@ function Get-VaultSyncOptions([string]$route) {
         'presets list' { return '-h --help' }
         'presets show' { return '-h --help' }
         'version' { return '-h --help --json' }
-        'docs' { return '-h --help --full --open --url' }
+        'docs' { return '-h --help --full --open --url --task' }
         'completion' { return '-h --help' }
         'add-project' { return '-h --help --preset --db --quiet' }
         'remove-project' { return '-h --help --db --yes --quiet' }

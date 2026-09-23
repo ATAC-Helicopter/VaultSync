@@ -71,6 +71,8 @@ public sealed class CliDocumentationTests
         Assert.StartsWith("# VaultSync CLI handbook", output, StringComparison.Ordinal);
         Assert.Contains("## Structured output v1", output, StringComparison.Ordinal);
         Assert.Contains("## Compatibility routes", output, StringComparison.Ordinal);
+        Assert.Contains("# VaultSync CLI task guides", output, StringComparison.Ordinal);
+        Assert.Contains("## automate", output, StringComparison.Ordinal);
         Assert.Contains("# VaultSync CLI generated command reference", output, StringComparison.Ordinal);
         Assert.Contains("## `vaultsync recovery restore`", output, StringComparison.Ordinal);
         Assert.Empty(error);
@@ -86,11 +88,38 @@ public sealed class CliDocumentationTests
         Assert.Empty(error);
     }
 
+    [Theory]
+    [InlineData("setup", "vaultsync --version --json")]
+    [InlineData("inspect", "mktemp -d")]
+    [InlineData("mirror", "--dry-run")]
+    [InlineData("restore", "recorded folder backup")]
+    [InlineData("automate", "systemd user timer")]
+    [InlineData("migrate", "--output json")]
+    public async Task DocsTaskPrintsOnlyTheRequestedGuide(string topic, string marker)
+    {
+        (int code, string output, string error) = await CaptureStandardStreams("docs", "--task", topic);
+        Assert.Equal(0, code);
+        Assert.StartsWith($"## {topic}", output, StringComparison.Ordinal);
+        Assert.Contains(marker, output, StringComparison.Ordinal);
+        Assert.DoesNotContain("# VaultSync CLI generated command reference", output, StringComparison.Ordinal);
+        Assert.Empty(error);
+    }
+
+    [Fact]
+    public async Task DocsTaskRejectsUnknownTopicWithoutWritingToStdout()
+    {
+        (int code, string output, string error) = await CaptureStandardStreams("docs", "--task", "unknown");
+        Assert.Equal(2, code);
+        Assert.Empty(output);
+        Assert.Contains("Choose: setup, inspect, mirror, restore, automate, migrate", error, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void CliHandbookIsEmbeddedInTheToolAssembly()
     {
         string[] resources = typeof(Program).Assembly.GetManifestResourceNames();
         Assert.Contains("VaultSync.CLI.Docs.CLI.md", resources, StringComparer.Ordinal);
+        Assert.Contains("VaultSync.CLI.Docs.CLI_TASK_GUIDES.md", resources, StringComparer.Ordinal);
         Assert.Contains("VaultSync.CLI.Docs.CLI_COMMAND_REFERENCE.md", resources, StringComparer.Ordinal);
     }
 

@@ -649,10 +649,11 @@ USAGE:
     vaultsync docs [OPTIONS]
 
 OPTIONS:
-    -h, --help    Prints help information
+    -h, --help            Prints help information
         --full
         --open
         --url
+        --task <TOPIC>
 ```
 
 ## `vaultsync completion`
