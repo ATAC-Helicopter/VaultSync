@@ -242,3 +242,9 @@ reports preview completion rather than a completed transfer. Quiet mirror,
 watcher-mirror, and self-test failures write a brief error to stderr while
 transfer detail stays in the private log. Supported-platform
 transfer behavior still requires qualification.
+
+Mirror, verification, and recorded-folder restore only query repository records.
+Their CLI handlers now open the selected database read-only and reject an absent
+path with exit 1 and stderr guidance before any destination work. They no longer
+run schema initialization or migrate a repository as a side effect of a preview
+or verification.

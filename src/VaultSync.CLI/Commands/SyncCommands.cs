@@ -29,8 +29,12 @@ namespace VaultSync.CLI.Commands
         protected override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken cancellationToken)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
-            var repo = new SqliteRepository(db);
-            repo.EnsureSchema();
+            if (!File.Exists(db))
+            {
+                Console.Error.WriteLine($"Database not found: {db}");
+                return 1;
+            }
+            var repo = new SqliteRepository(db, readOnly: true);
 
             var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
             var dest = ConfigHelper.ExpandUserPath(s.Destination);
@@ -82,8 +86,12 @@ namespace VaultSync.CLI.Commands
         protected override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken cancellationToken)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
-            var repo = new SqliteRepository(db);
-            repo.EnsureSchema();
+            if (!File.Exists(db))
+            {
+                Console.Error.WriteLine($"Database not found: {db}");
+                return 1;
+            }
+            var repo = new SqliteRepository(db, readOnly: true);
 
             var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
             var src = ConfigHelper.ExpandUserPath(s.From);
@@ -163,8 +171,13 @@ namespace VaultSync.CLI.Commands
 
         protected override async Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
         {
-            var repo = new SqliteRepository(ConfigHelper.ResolveDb(s.Db));
-            repo.EnsureSchema();
+            string db = ConfigHelper.ResolveDb(s.Db);
+            if (!File.Exists(db))
+            {
+                Console.Error.WriteLine($"Database not found: {db}");
+                return 1;
+            }
+            var repo = new SqliteRepository(db, readOnly: true);
             RestoreSelection selection = ResolveSelection(repo, s);
             string destination = Path.GetFullPath(ConfigHelper.ExpandUserPath(s.Destination));
             EnsureDestinationIsSafe(selection, destination, s.Clean);

@@ -1310,7 +1310,9 @@ destabilizing the maintenance release.
     remain pending. BUG-19002 owns
     watcher shutdown/draining; quiet startup and cancellation exit 130 are implemented.
     Snapshot and mirror service diagnostics now use the private CLI log rather
-    than contaminating quiet or preview output.
+    than contaminating quiet or preview output. Mirror, verify, and restore now
+    read existing databases without initializing them and report missing stores
+    on stderr.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
   - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
     and snapshot inspection, selective safe restore, integrity evidence, destination

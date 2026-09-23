@@ -315,5 +315,9 @@ automation qualification remain planned under their owning 1.9 issues. Disk imag
 recovery commands will appear only with qualified recovery services and support
 contracts.
 
+`mirror`, `verify`, and `recovery restore` read an existing selected database
+without initializing or migrating it. A missing `--db` path returns exit 1 with
+a short stderr error and does not create the database or its parent directory.
+
 For implementation state and compatibility decisions, see [CLI_REWORK.md](CLI_REWORK.md).
 For the release scope and gates, see [RELEASE_1.9.0.md](RELEASE_1.9.0.md).

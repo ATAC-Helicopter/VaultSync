@@ -24,7 +24,8 @@ is available through `vaultsync completion`; the handbook covers tool PATH setup
 `vaultsync docs --task` now provides focused setup, inspection, mirror, restore,
 automation, and migration examples. Shell completion suggests task topics and
 supported output formats. Quiet snapshot creation no longer prints core-service
-diagnostics to stdout.
+diagnostics to stdout. Mirror, verify, and recorded-folder restore now read an
+existing database without initializing it during a preview or check.
 See the [CLI handbook](CLI.md) and
 [CLI audit and migration notes](CLI_REWORK.md).
 

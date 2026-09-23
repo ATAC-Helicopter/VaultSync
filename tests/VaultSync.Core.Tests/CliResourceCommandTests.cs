@@ -12,6 +12,44 @@ namespace VaultSync.Core.Tests;
 
 public sealed class CliResourceCommandTests
 {
+    [Fact]
+    public async Task MirrorVerifyAndRestoreRejectMissingDatabaseWithoutCreatingIt()
+    {
+        using var root = new TempDirectory();
+        string database = Path.Combine(root.Path, "absent", "vault.db");
+        string destination = Path.Combine(root.Path, "target");
+        string[][] commands =
+        [
+            ["mirror", "Missing", destination, "--dry-run", "--quiet", "--db", database],
+            ["verify", "Missing", destination, "--full", "--quiet", "--db", database],
+            ["recovery", "restore", "Missing", destination, "--dry-run", "--quiet", "--db", database]
+        ];
+
+        foreach (string[] command in commands)
+        {
+            TextWriter previousOutput = Console.Out;
+            TextWriter previousError = Console.Error;
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+            try
+            {
+                Console.SetOut(output);
+                Console.SetError(error);
+                Assert.Equal(1, await Program.Main(command));
+            }
+            finally
+            {
+                Console.SetOut(previousOutput);
+                Console.SetError(previousError);
+            }
+
+            Assert.Empty(output.ToString());
+            Assert.Contains("Database not found:", error.ToString(), StringComparison.Ordinal);
+            Assert.False(Directory.Exists(Path.GetDirectoryName(database)));
+            Assert.False(Directory.Exists(destination));
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

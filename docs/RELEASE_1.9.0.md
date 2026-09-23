@@ -224,6 +224,12 @@ transfer details remain in the private log.
 The isolated demo transcript is local evidence only; Windows transfer behavior
 still needs its supported-system gate.
 
+The next unattended-safety slice opens mirror, verify, and recorded-folder
+restore databases read-only. An absent `--db` path now returns exit 1 on stderr
+without creating the database, its parent directory, or a target. Existing
+restore and transfer behavior remains covered by local tests; supported-platform
+qualification remains pending.
+
 ## CLI execution tracking
 
 | ID | Issue | Release | Work |

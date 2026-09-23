@@ -12,6 +12,7 @@
 ### Fixed
 - [VS-1974] Keep quiet snapshot diagnostics out of stdout.
 - [VS-1974] Keep mirror service diagnostics out of CLI output.
+- [VS-1974] Keep mirror, verify, and restore database lookups read-only.
 - [VS-1975] Avoid creating Windows mirror targets during dry runs.
 - [BUG-19003] Reject cross-project snapshot IDs in diffs.
 - [BUG-19002] Drain watcher work on cancellation.
