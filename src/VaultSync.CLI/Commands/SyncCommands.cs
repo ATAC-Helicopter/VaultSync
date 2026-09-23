@@ -22,26 +22,54 @@ namespace VaultSync.CLI.Commands
         [CommandOption("--dry-run")] public bool DryRun { get; init; } = false;
         [CommandOption("--db")] public string? Db { get; init; }
         [CommandOption("--quiet")] public bool Quiet { get; init; } = false;
+        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
     }
 
     sealed class SyncCommand : AsyncCommand<SyncSettings>
     {
         protected override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken cancellationToken)
         {
+            string? invalid = CommandOutput.Validate(s.Output);
+            if (invalid is not null)
+                return CommandOutput.Failure(s.Output, "mirror", "invalid_options", invalid, 2);
+            if (s.Output is not null)
+            {
+                try { return await MirrorAsync(s, cancellationToken); }
+                catch (OperationCanceledException)
+                {
+                    return CommandOutput.Failure(s.Output, "mirror", "cancelled", "Mirror was cancelled; inspect the target before retrying.", 130);
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
+                {
+                    Utils.CliVaultLogger.Instance.Error($"Mirror failed: {error}");
+                    return CommandOutput.Failure(s.Output, "mirror", "mirror_failed", "Mirror could not complete. Check the source, target, and private CLI log.", 1);
+                }
+            }
+            return await MirrorAsync(s, cancellationToken);
+        }
+
+        private static async Task<int> MirrorAsync(SyncSettings s, CancellationToken cancellationToken)
+        {
             var db = ConfigHelper.ResolveDb(s.Db);
             if (!File.Exists(db))
             {
+                if (s.Output is not null)
+                    return CommandOutput.Failure(s.Output, "mirror", "repository_unavailable", "The selected database does not exist.", 1);
                 Console.Error.WriteLine($"Database not found: {db}");
                 return 1;
             }
             var repo = new SqliteRepository(db, readOnly: true);
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
+            var proj = repo.GetProjectByName(s.Name);
+            if (proj is null && s.Output is not null)
+                return CommandOutput.Failure(s.Output, "mirror", "project_not_found", "No project matches the supplied name.", 2);
+            if (proj is null)
+                throw new InvalidOperationException($"Project '{s.Name}' not found.");
             var dest = ConfigHelper.ExpandUserPath(s.Destination);
 
             var svc = new SyncService(Utils.CliVaultLogger.Instance);
 
-            if (!s.Quiet)
+            if (!s.Quiet && !CommandOutput.IsJson(s.Output))
             {
                 if (s.DryRun)
                     AnsiConsole.MarkupLine($"[yellow]Dry run[/]: mirroring {Markup.Escape(proj.Name)}");
@@ -55,6 +83,15 @@ namespace VaultSync.CLI.Commands
             var started = DateTime.UtcNow;
             var code = await svc.SyncAsync(proj, dest, s.DryRun, cancellationToken);
             var took = DateTime.UtcNow - started;
+
+            if (CommandOutput.IsJson(s.Output))
+                return code == 0
+                    ? CommandOutput.Success("mirror", new { projectId = proj.Id, project = proj.Name, source = proj.RootPath,
+                        destination = dest, dryRun = s.DryRun, recordedBackup = false,
+                        tookSeconds = Math.Round(took.TotalSeconds, 3) })
+                    : CommandOutput.FailureWithDetails("mirror", "mirror_failed",
+                        "The platform transfer tool failed. Check the private CLI log and inspect the target before retrying.",
+                        new { toolExitCode = code }, code);
 
             if (!s.Quiet)
             {
@@ -79,31 +116,81 @@ namespace VaultSync.CLI.Commands
         [CommandOption("--db")] public string? Db { get; init; }
         [CommandOption("--quiet")] public bool Quiet { get; init; } = false;
         [CommandOption("--json")] public bool Json { get; init; } = false;
+        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
     }
 
     sealed class VerifyCommand : AsyncCommand<VerifySettings>
     {
         protected override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken cancellationToken)
         {
+            string? invalid = CommandOutput.Validate(s.Output, s.Json);
+            if (s.Output is not null && (s.Percent is < 1 or > 100 || (s.Full && s.Percent != 10)))
+                invalid = "--percent must be 1 through 100 and cannot be combined with --full.";
+            if (invalid is not null)
+                return CommandOutput.Failure(s.Output, "verify", "invalid_options", invalid, 2);
+            if (s.Output is not null)
+            {
+                try { return await VerifyAsync(s, cancellationToken); }
+                catch (OperationCanceledException)
+                {
+                    return CommandOutput.Failure(s.Output, "verify", "cancelled", "Verification was cancelled before completion.", 130);
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
+                {
+                    Utils.CliVaultLogger.Instance.Error($"Verification failed: {error}");
+                    return CommandOutput.Failure(s.Output, "verify", "verification_failed", "Verification could not complete. Check the selected snapshot and private CLI log.", 1);
+                }
+            }
+            return await VerifyAsync(s, cancellationToken);
+        }
+
+        private static async Task<int> VerifyAsync(VerifySettings s, CancellationToken cancellationToken)
+        {
             var db = ConfigHelper.ResolveDb(s.Db);
             if (!File.Exists(db))
             {
+                if (s.Output is not null)
+                    return CommandOutput.Failure(s.Output, "verify", "repository_unavailable", "The selected database does not exist.", 1);
                 Console.Error.WriteLine($"Database not found: {db}");
                 return 1;
             }
             var repo = new SqliteRepository(db, readOnly: true);
 
-            var proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
+            var proj = repo.GetProjectByName(s.Name);
+            if (proj is null && s.Output is not null)
+                return CommandOutput.Failure(s.Output, "verify", "project_not_found", "No project matches the supplied name.", 2);
+            if (proj is null)
+                throw new InvalidOperationException($"Project '{s.Name}' not found.");
             var src = ConfigHelper.ExpandUserPath(s.From);
+
+            if (s.Output is not null && repo.GetLatestSnapshot(proj.Id) is null)
+                return CommandOutput.Failure(s.Output, "verify", "snapshot_history_empty",
+                    "The project has no indexed snapshot to verify against.", 2);
 
             var svc = new VerifyService(repo, new HashService());
 
-            if (!s.Quiet && !s.Json)
+            if (!s.Quiet && !s.Json && !CommandOutput.IsJson(s.Output))
                 AnsiConsole.MarkupLine($"Verifying [blue]{Markup.Escape(proj.Name)}[/] against [blue]{Markup.Escape(src)}[/] - {(s.Full ? "full scan" : $"{s.Percent}% sample")}...");
 
             var started = DateTime.UtcNow;
             var result = await svc.VerifyAsync(proj, src, s.Percent, s.Full, cancellationToken);
             var took = DateTime.UtcNow - started;
+
+            if (CommandOutput.IsJson(s.Output))
+            {
+                const int failureLimit = 100;
+                var failures = result.Failures.Take(failureLimit)
+                    .Select(f => new { path = f.RelPath,
+                        reason = f.Reason.StartsWith("error:", StringComparison.Ordinal) ? "unreadable" : f.Reason }).ToArray();
+                var data = new { projectId = proj.Id, project = proj.Name, source = src, full = s.Full,
+                    percent = s.Full ? 100 : s.Percent, checkedFiles = result.Checked, passedFiles = result.Passed,
+                    failureCount = result.Failures.Count, failures, failuresTruncated = result.Failures.Count > failureLimit,
+                    tookSeconds = Math.Round(took.TotalSeconds, 3) };
+                return result.Failures.Count == 0
+                    ? CommandOutput.Success("verify", data)
+                    : CommandOutput.FailureWithDetails("verify", "verification_failed",
+                        "The selected folder does not match the latest indexed snapshot.", data, 2);
+            }
 
             if (s.Json)
             {

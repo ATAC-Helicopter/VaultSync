@@ -44,6 +44,11 @@ internal static class CommandOutput
             return "snapshots.diff";
         if (arguments.Length > 0 && string.Equals(arguments[0], "restore", StringComparison.OrdinalIgnoreCase))
             return "recovery.restore";
+        if (arguments.Length > 0 && (string.Equals(arguments[0], "mirror", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(arguments[0], "sync", StringComparison.OrdinalIgnoreCase)))
+            return "mirror";
+        if (arguments.Length > 0 && string.Equals(arguments[0], "verify", StringComparison.OrdinalIgnoreCase))
+            return "verify";
         if (arguments.Length < 2)
             return null;
         if (string.Equals(arguments[0], "projects", StringComparison.OrdinalIgnoreCase))
