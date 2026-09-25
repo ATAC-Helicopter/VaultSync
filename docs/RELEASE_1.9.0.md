@@ -264,6 +264,12 @@ existing database without writing it. Legacy `prune --json` no longer appends
 a human completion line after a live deletion, closing
 [BUG-19005 / #718](https://github.com/ATAC-Helicopter/VaultSync/issues/718).
 
+[BUG-19006 / #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719):
+The watcher now exits 2 on startup or later cycle failure, including mirror and
+verification failures, instead of silently continuing. Filesystem watcher errors
+also stop the session. Quiet failures report on stderr with details in the private
+log. JSON events and watch dry-run semantics remain pending.
+
 ## CLI execution tracking
 
 | ID | Issue | Release | Work |
@@ -274,6 +280,7 @@ a human completion line after a live deletion, closing
 | VS-1975 | [#672](https://github.com/ATAC-Helicopter/VaultSync/issues/672) | 1.9.0 | Practical power-user workflows |
 | BUG-19004 | [#717](https://github.com/ATAC-Helicopter/VaultSync/issues/717) | 1.9.0 | Recheck staged restore bytes |
 | BUG-19005 | [#718](https://github.com/ATAC-Helicopter/VaultSync/issues/718) | 1.9.0 | Keep live prune JSON parseable |
+| BUG-19006 | [#719](https://github.com/ATAC-Helicopter/VaultSync/issues/719) | 1.9.0 | Stop watchers on failed cycles |
 | VS-1977 | [#678](https://github.com/ATAC-Helicopter/VaultSync/issues/678) | 1.9.1 | Help, discovery, and completion |
 | VS-1978 | [#679](https://github.com/ATAC-Helicopter/VaultSync/issues/679) | 1.9.1 | Handbook and script migration |
 | VS-1976 | [#685](https://github.com/ATAC-Helicopter/VaultSync/issues/685) | 1.9.2 | Independent headless recovery |

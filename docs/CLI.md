@@ -265,7 +265,10 @@ as compatibility route `sync`; neither route creates a recorded backup. Verifica
 checks a supplied folder against the latest indexed snapshot. Watch creates a
 startup snapshot and then debounces changes; `--verify` implies sync and requires
 `--dest`. Cancellation returns 130 after filesystem events stop and queued/active
-work drains. Watcher JSON events and unified cycle-failure reporting remain planned.
+work drains.
+Startup and later mirror, verification, snapshot, or filesystem-watcher failures
+end the session with exit 2. Quiet failure guidance goes to stderr; details stay
+in the private CLI log. Watcher JSON events and dry-run semantics remain planned.
 Both `mirror`/`sync` and `verify` offer v1 `--output json`. Verification reports
 bounded mismatches against the latest snapshot; a live mirror remains distinct
 from a recorded backup. Legacy `verify --json` is unchanged.

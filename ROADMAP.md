@@ -1289,6 +1289,15 @@ destabilizing the maintenance release.
     deletion and remaining counts, without human output mixed into stdout.
   - Tracking: [issue #718](https://github.com/ATAC-Helicopter/VaultSync/issues/718);
     implementation and regression evidence await release integration.
+- [ ] `BUG-19006` `P1` Stop CLI watchers when a snapshot, mirror, verification, or filesystem cycle fails.
+  - Scope: propagate startup and background cycle failures to the watcher session;
+    report brief errors on stderr, keep details in the private log, disable events,
+    and drain queued or active debounce work before returning a nonzero result.
+  - Acceptance: a failed startup mirror returns exit 2 without quiet stdout;
+    later cycle and filesystem watcher failures stop the session instead of
+    silently continuing; cancellation retains exit 130.
+  - Tracking: [issue #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719);
+    implementation and regression evidence await release integration.
 - [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
   - Scope: inventory existing commands and core-service gaps; define resource/action
     naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup

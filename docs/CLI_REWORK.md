@@ -198,9 +198,11 @@ handler; it cannot create later snapshots. Cancellation before startup does not
 initialize the database. BUG-19002 owns the previous shutdown and token-disposal
 defects; VS-1973 owns explicit store selection and VS-1974 owns unattended behavior.
 
-This does not yet unify watcher failure reporting, JSON events, or dry-run semantics.
-The existing cycle failure handling remains pending under VS-1974; exit 130 reports
-cancellation rather than qualification of all prior cycles.
+[BUG-19006 / #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719)
+owns startup and background cycle failures, which now stop the watcher with exit 2
+after queued work drains. Mirror, verification, snapshot, and filesystem-watcher failures send
+brief guidance to stderr and details to the private log. JSON events and dry-run
+semantics remain pending under VS-1974; exit 130 reports cancellation.
 
 ## Terminal identity and documentation
 
