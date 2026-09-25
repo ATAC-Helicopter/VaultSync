@@ -68,7 +68,8 @@ namespace VaultSync.CLI.Commands
 
                 if (!settings.Quiet)
                     WriteWatchPlan(plan, settings);
-                await RunCycleAsync(repo, plan, settings, stopping.Token, "startup");
+                if (!await RunCycleAsync(repo, plan, settings, stopping.Token, "startup"))
+                    return 2;
                 stopping.Token.ThrowIfCancellationRequested();
 
                 using var watcher = new FileSystemWatcher(plan.Project.RootPath)
@@ -77,23 +78,32 @@ namespace VaultSync.CLI.Commands
                     NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size
                 };
                 await using var debouncer = new AsyncDebouncer(Math.Max(100, settings.DebounceMs));
-                AttachHandlers(watcher, debouncer, repo, plan, settings, stopping.Token);
+                var failed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                AttachHandlers(watcher, debouncer, repo, plan, settings, stopping.Token, failed);
                 watcher.EnableRaisingEvents = true;
                 try
                 {
                     if (!settings.Quiet)
                         AnsiConsole.MarkupLine("[grey]Press Ctrl+C to stop.[/]");
-                    await Task.Delay(Timeout.Infinite, stopping.Token);
+                    await Task.WhenAny(Task.Delay(Timeout.Infinite, stopping.Token), failed.Task);
+                    stopping.Token.ThrowIfCancellationRequested();
+                    stopping.Cancel();
+                    return 2;
                 }
                 finally
                 {
                     watcher.EnableRaisingEvents = false;
                 }
-                return 0;
             }
             catch (OperationCanceledException) when (stopping.IsCancellationRequested)
             {
                 return 130;
+            }
+            catch (Exception error)
+            {
+                Log.Exception(error, "Watcher failed");
+                Console.Error.WriteLine("Watcher failed. See the VaultSync CLI log for details.");
+                return 2;
             }
             finally
             {
@@ -144,13 +154,19 @@ namespace VaultSync.CLI.Commands
             SqliteRepository repo,
             WatchPlan plan,
             WatchSettings settings,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            TaskCompletionSource failed)
         {
-            watcher.Changed += (_, e) => QueueCycle(debouncer, repo, plan, settings, cancellationToken, $"{e.ChangeType}: {e.FullPath}");
-            watcher.Created += (_, e) => QueueCycle(debouncer, repo, plan, settings, cancellationToken, $"{e.ChangeType}: {e.FullPath}");
-            watcher.Deleted += (_, e) => QueueCycle(debouncer, repo, plan, settings, cancellationToken, $"{e.ChangeType}: {e.FullPath}");
-            watcher.Renamed += (_, e) => QueueCycle(debouncer, repo, plan, settings, cancellationToken, $"Renamed: {e.OldFullPath} -> {e.FullPath}");
-            watcher.Error += (_, e) => AnsiConsole.MarkupLine($"[red]watch error:[/] {Markup.Escape(e.GetException().Message)}");
+            watcher.Changed += (_, e) => QueueCycle(debouncer, repo, plan, settings, cancellationToken, failed, $"{e.ChangeType}: {e.FullPath}");
+            watcher.Created += (_, e) => QueueCycle(debouncer, repo, plan, settings, cancellationToken, failed, $"{e.ChangeType}: {e.FullPath}");
+            watcher.Deleted += (_, e) => QueueCycle(debouncer, repo, plan, settings, cancellationToken, failed, $"{e.ChangeType}: {e.FullPath}");
+            watcher.Renamed += (_, e) => QueueCycle(debouncer, repo, plan, settings, cancellationToken, failed, $"Renamed: {e.OldFullPath} -> {e.FullPath}");
+            watcher.Error += (_, e) =>
+            {
+                Log.Exception(e.GetException(), "Filesystem watcher failed");
+                Console.Error.WriteLine("Filesystem watcher failed. See the VaultSync CLI log for details.");
+                failed.TrySetResult();
+            };
         }
 
         private static void QueueCycle(
@@ -159,6 +175,7 @@ namespace VaultSync.CLI.Commands
             WatchPlan plan,
             WatchSettings settings,
             CancellationToken cancellationToken,
+            TaskCompletionSource failed,
             string reason)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -169,16 +186,23 @@ namespace VaultSync.CLI.Commands
                 using var cycle = CancellationTokenSource.CreateLinkedTokenSource(token, cancellationToken);
                 try
                 {
-                    await RunCycleAsync(repo, plan, settings, cycle.Token, reason);
+                    if (!await RunCycleAsync(repo, plan, settings, cycle.Token, reason))
+                        failed.TrySetResult();
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (cycle.IsCancellationRequested)
                 {
-                    // Session shutdown is expected, not a failed cycle.
+                    // A newer change or session shutdown superseded this cycle.
+                }
+                catch (Exception error)
+                {
+                    Log.Exception(error, "Watcher cycle failed");
+                    Console.Error.WriteLine("Watcher cycle failed. See the VaultSync CLI log for details.");
+                    failed.TrySetResult();
                 }
             });
         }
 
-        private static async Task RunCycleAsync(
+        private static async Task<bool> RunCycleAsync(
             SqliteRepository repo,
             WatchPlan plan,
             WatchSettings settings,
@@ -189,18 +213,21 @@ namespace VaultSync.CLI.Commands
             try
             {
                 if (token.IsCancellationRequested)
-                    return;
+                    return true;
 
                 if (!settings.Quiet)
                     AnsiConsole.MarkupLine($"[dim]* change detected ({Markup.Escape(reason)}); snapshotting...[/]");
 
                 await CreateSnapshotAsync(repo, plan.Project, settings.Quiet, token);
                 if (plan.DoSync)
-                    await SyncAndVerifyAsync(repo, plan, settings, token);
+                    return await SyncAndVerifyAsync(repo, plan, settings, token);
+                return true;
             }
             catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.SqliteErrorCode == 19)
             {
-                AnsiConsole.MarkupLine("[red]Database error[/]: FOREIGN KEY constraint failed during snapshot write. This can occur if two cycles overlap. The watcher now enforces a single in-flight cycle.");
+                Log.Exception(ex, "Watcher snapshot database constraint failed");
+                Console.Error.WriteLine("Watcher snapshot database write failed. See the VaultSync CLI log for details.");
+                return false;
             }
             finally
             {
@@ -240,7 +267,7 @@ namespace VaultSync.CLI.Commands
                 $"Unchanged: {outcome.Unchanged}, Bytes: {ByteSizeFormat.FormatBytes(outcome.TotalBytes, "0.#")}");
         }
 
-        private static async Task SyncAndVerifyAsync(
+        private static async Task<bool> SyncAndVerifyAsync(
             SqliteRepository repo,
             WatchPlan plan,
             WatchSettings settings,
@@ -251,21 +278,19 @@ namespace VaultSync.CLI.Commands
             int code = await syncSvc.SyncAsync(plan.Project, dest, settings.DryRun, token);
             if (code != 0)
             {
-                if (settings.Quiet)
-                    Console.Error.WriteLine($"Watcher mirror failed (exit {code}). See the VaultSync CLI log for details.");
-                else
-                    AnsiConsole.MarkupLine($"[red]Sync failed[/] (exit {code})");
-                return;
+                Console.Error.WriteLine($"Watcher mirror failed (exit {code}). See the VaultSync CLI log for details.");
+                return false;
             }
 
             if (!settings.Quiet)
                 AnsiConsole.MarkupLine("[green]Sync complete[/]");
 
             if (plan.DoVerify)
-                await VerifyAsync(repo, plan.Project, dest, settings.Quiet, token);
+                return await VerifyAsync(repo, plan.Project, dest, settings.Quiet, token);
+            return true;
         }
 
-        private static async Task VerifyAsync(
+        private static async Task<bool> VerifyAsync(
             SqliteRepository repo,
             Core.Models.Project project,
             string dest,
@@ -275,9 +300,13 @@ namespace VaultSync.CLI.Commands
             var verifySvc = new VerifyService(repo, new HashService());
             VerifyResult result = await verifySvc.VerifyAsync(project, dest, percent: 100, full: true, token);
             if (result.Failures.Count > 0)
-                AnsiConsole.MarkupLine($"[red]Verify failed:[/] {result.Failures.Count} issue(s)");
+            {
+                Console.Error.WriteLine($"Watcher verification failed: {result.Failures.Count} issue(s).");
+                return false;
+            }
             else if (!quiet)
                 AnsiConsole.MarkupLine("[green]Verify OK[/]");
+            return true;
         }
     }
 }

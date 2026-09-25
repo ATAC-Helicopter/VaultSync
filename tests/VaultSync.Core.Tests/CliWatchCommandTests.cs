@@ -28,6 +28,91 @@ public sealed class CliWatchCommandTests
         Assert.False(Directory.Exists(Path.GetDirectoryName(database)));
     }
 
+    [Fact]
+    public async Task FailedStartupMirrorStopsSessionWithNonzeroExit()
+    {
+        using var root = new TempDirectory();
+        string source = Directory.CreateDirectory(Path.Combine(root.Path, "source")).FullName;
+        File.WriteAllText(Path.Combine(source, "content.txt"), "content");
+        string destination = Path.Combine(root.Path, "destination-file");
+        File.WriteAllText(destination, "not a directory");
+        string database = Path.Combine(root.Path, "vault.db");
+        SqliteRepository repository = TestRepository.Create(database);
+        TestRepository.AddProject(repository, "watched", source);
+
+        IAnsiConsole previous = AnsiConsole.Console;
+        using var output = new StringWriter();
+        using var errors = new StringWriter();
+        TextWriter previousError = Console.Error;
+        AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(output) });
+        Console.SetError(errors);
+        try
+        {
+            int exit = await WatchCommand.RunAsync(new WatchSettings
+            {
+                ProjectName = "watched", DbPath = database, Destination = destination,
+                Sync = true, Quiet = true
+            }, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(15));
+
+            Assert.Equal(2, exit);
+            Assert.Equal("", output.ToString());
+            Assert.Contains("failed", errors.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Console.SetError(previousError);
+            AnsiConsole.Console = previous;
+        }
+    }
+
+    [Fact]
+    public async Task FailedLaterMirrorStopsWatchingAndDrainsPendingWork()
+    {
+        using var root = new TempDirectory();
+        string source = Directory.CreateDirectory(Path.Combine(root.Path, "source")).FullName;
+        string sourceFile = Path.Combine(source, "content.txt");
+        File.WriteAllText(sourceFile, "startup");
+        string destination = Path.Combine(root.Path, "destination");
+        string database = Path.Combine(root.Path, "vault.db");
+        SqliteRepository repository = TestRepository.Create(database);
+        TestRepository.AddProject(repository, "watched", source);
+        using var stopping = new CancellationTokenSource();
+        using var errors = new StringWriter();
+        TextWriter previousError = Console.Error;
+        Console.SetError(errors);
+        Task<int>? session = null;
+        try
+        {
+            session = WatchCommand.RunAsync(new WatchSettings
+            {
+                ProjectName = "watched", DbPath = database, Destination = destination,
+                Sync = true, Quiet = true, DebounceMs = 100
+            }, stopping.Token);
+            string mirroredFile = Path.Combine(destination, "content.txt");
+            using var startupDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            while (!File.Exists(mirroredFile) && !session.IsCompleted)
+                await Task.Delay(20, startupDeadline.Token);
+            Assert.False(session.IsCompleted);
+
+            Directory.Delete(destination, recursive: true);
+            File.WriteAllText(destination, "not a directory");
+            File.WriteAllText(sourceFile, "trigger failed mirror");
+            Assert.Equal(2, await session.WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.Contains("failed", errors.ToString(), StringComparison.OrdinalIgnoreCase);
+            int snapshotCount = repository.GetSnapshotsForProject("watched").Count();
+            File.WriteAllText(sourceFile, "after shutdown");
+            await Task.Delay(300);
+            Assert.Equal(snapshotCount, repository.GetSnapshotsForProject("watched").Count());
+        }
+        finally
+        {
+            stopping.Cancel();
+            if (session is not null)
+                await session.WaitAsync(TimeSpan.FromSeconds(5));
+            Console.SetError(previousError);
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
