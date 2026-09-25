@@ -1,8 +1,40 @@
 # What's New
 
+## [1.9.0]
+
+Recovery Horizon is in planning and architecture work. Its approved scope includes
+disk and bootable recovery foundations and a full CLI rework for practical
+terminal and automation workflows. These capabilities have not shipped. The development CLI now includes grouped
+`projects`, `snapshots`, and `recovery` commands, candidate folder discovery,
+and an explicitly named `mirror` command. Project inspection adds explicit IDs,
+filtered/limited listings, and opt-in versioned JSON via `--output json` with
+read-only database access. Snapshot history and diffs now support the same versioned, read-only result
+contract. A new snapshot detail view reports change summaries, History markers,
+and aggregate recorded-backup references without exposing storage paths or claiming
+that payload bytes are available. Diff path arrays are bounded with complete counts
+and reject snapshot IDs outside the selected project. Existing command routes and legacy `--json` remain.
+Quiet or unattended project removal requires `--yes`; `--quiet` alone no longer
+authorizes deletion of the local registration/history. Watchers support explicit
+`--db`, suppress guidance in quiet mode, and drain work before stopping on Ctrl-C
+with exit 130. Running `vaultsync` now opens a compact introductory UI with a text
+logo, useful links, starter commands, and help pointers. `vaultsync docs` provides
+the bundled practical handbook, exhaustive generated command reference, and an
+online entry point. Generated Bash, Zsh, and PowerShell command/option completion
+is available through `vaultsync completion`; the handbook covers tool PATH setup.
+`vaultsync docs --task` now provides focused setup, inspection, mirror, restore,
+automation, and migration examples. Shell completion suggests task topics and
+supported output formats. Quiet snapshot creation no longer prints core-service
+diagnostics to stdout. Mirror, verify, and recorded-folder restore now read an
+existing database without initializing it during a preview or check.
+See the [CLI handbook](CLI.md) and
+[CLI audit and migration notes](CLI_REWORK.md).
+
+Current stable: **1.8.9**, published September 16, 2026. See the
+[1.9.0 release contract](RELEASE_1.9.0.md) for scope and qualification gates.
+
 ## [1.8.9]
 
-VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
+VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.
 
 Manual Linux update archives now keep VaultSync open and explain installation
 and restart steps.

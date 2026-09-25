@@ -43,9 +43,23 @@ implementation enters `1.8.8`.
 
 ### 1.8.9 — bug fixes and everyday polish
 
-The active maintenance patch preserves UI state, improves theme readability,
+The maintenance patch shipped on 2026-09-16 as v1.8.9 and preserves UI state, improves theme readability,
 and closes confirmed workflow regressions. See the
 [1.8.9 release contract](RELEASE_1.8.9.md). No disk-recovery features enter this patch.
+
+### 1.9 kickoff and CLI program
+
+Planning and architecture started on 2026-09-18 on `release/1.9.0` into `Dev`.
+The existing 1.9.0 milestone target remains 2027-03-26 and the family horizon
+remains 2027-09-24. See [the kickoff contract](RELEASE_1.9.0.md).
+
+The full CLI rework starts in 1.9.0 with command/behavior inventory and script
+compatibility (VS-1972), shared-service commands (VS-1973), unattended contracts
+(VS-1974), and useful power-user workflows (VS-1975). Discovery/completions and
+practical documentation follow in 1.9.1 (VS-1977, VS-1978); independent recovery
+follows in 1.9.2 (VS-1976). Reporting, event hooks, stable parity, and accumulated
+CLI qualification remain in 1.9.5 (VS-1953, VS-1955, VS-1956, VS-1979).
+New work does not reuse those existing identifiers. VS-1980 owns kickoff tracking.
 
 ### 1.9 architecture approval
 
@@ -75,11 +89,41 @@ the original plan.
 | 4 | `1.9.3` | Offsite Protection | Remote data is resumable, verifiable, cost-explainable, and independently recoverable |
 | 5 | `1.9.4` | Unified Recovery Experience | Replacement workflows meet parity before legacy removal |
 | 6 | `1.9.5` | Continuous Recovery Assurance | VaultSync explains when evidence becomes stale or invalid |
-| 7 | `1.9.6` | Stability and LTS Baseline | Formats, migrations, long-duration behavior, and support windows are durable |
+| 7 | `1.9.6` | Binary Source Control Foundation | Local/NAS binary history, locking, exact recovery, verification, and maintenance meet the BSC stable gate |
+| 8 | `1.9.7` | Binary Collaboration and Scale | Branch/conflict, sparse workspace, resumable transfer, replication, and scale qualification pass |
+| 9 | `1.9.8` | Stability and LTS Baseline | Recovery and BSC formats, migrations, long-duration behavior, and support windows are durable |
 
 If the complete disk-recovery loop cannot meet the stable gate, disk imaging
 must remain a clearly labelled preview and cannot block portable project/file
 recovery from advancing.
+
+
+### Binary Source Control track
+
+Binary Source Control is a later 1.9 program and does not redefine the
+Recovery Horizon promotion order above it. The feature is intentionally
+sequenced after the core recovery, offsite, and assurance foundations so it
+cannot turn disk/boot recovery into a prerequisite-free source-control rewrite.
+
+The architecture gate is `VS-1981` plus `VS-1982`. Canonical history uses
+immutable content-addressed objects and content-defined chunk reuse rather than
+unbounded binary-delta chains. File/path locks are separate from the short
+repository writer lease, and ref publication uses compare-and-swap against the
+expected head.
+
+`1.9.6` targets the complete local/NAS default-line workflow. `1.9.7` adds
+branches, explicit binary conflict resolution, sparse workspaces, resumable
+transfer, replication, and the final large-history qualification. The previous
+Stability/LTS release moves to `1.9.8` without renumbering `VS-1961` through
+`VS-1963`.
+
+If BSC cannot meet its clean-machine recovery, concurrency, corruption,
+interruption, GC/repack, encryption, or performance gates, it remains Preview.
+That outcome does not prevent earlier 1.9 recovery releases from becoming
+Stable.
+
+The maintained technical contract is
+[`BINARY_SOURCE_CONTROL_STRATEGY.md`](BINARY_SOURCE_CONTROL_STRATEGY.md).
 
 ## Architecture questions that must be answered
 

@@ -45,8 +45,12 @@ namespace VaultSync.Core.Repositories
         public string? CryptoDescriptorJson { get; init; }
     }
 
-    public class SqliteRepository(string dbPath)
+    public class SqliteRepository(string dbPath, bool readOnly)
     {
+        public SqliteRepository(string dbPath) : this(dbPath, readOnly: false)
+        {
+        }
+
         private const string BackupsTable = "backups";
         private const string ProjectsTable = "projects";
         private const string SnapshotsTable = "snapshots";
@@ -96,7 +100,7 @@ namespace VaultSync.Core.Repositories
         private SqliteConnection Open()
         {
             string? dir = Path.GetDirectoryName(_dbPath);
-            if (!string.IsNullOrWhiteSpace(dir))
+            if (!readOnly && !string.IsNullOrWhiteSpace(dir))
             {
                 Directory.CreateDirectory(dir);
             }
@@ -104,14 +108,15 @@ namespace VaultSync.Core.Repositories
             var builder = new SqliteConnectionStringBuilder
             {
                 DataSource = _dbPath,
-                Mode = SqliteOpenMode.ReadWriteCreate,
+                Mode = readOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
                 Pooling = false,
                 DefaultTimeout = 10
             };
 
             var conn = new SqliteConnection(builder.ConnectionString);
             conn.Open();
-            ConfigureConnection(conn, _dbPath);
+            if (!readOnly)
+                ConfigureConnection(conn, _dbPath);
             return conn;
         }
 

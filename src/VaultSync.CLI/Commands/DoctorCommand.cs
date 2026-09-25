@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -16,19 +17,41 @@ namespace VaultSync.CLI.Commands
         [CommandOption("--db")] public string? Db { get; init; }
         [CommandOption("--check-dest <PATH>")] public string? CheckDest { get; init; }
         [CommandOption("--quiet")] public bool Quiet { get; init; } = false;
+        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
     }
 
     sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     {
         protected override async Task<int> ExecuteAsync(CommandContext context, DoctorSettings s, CancellationToken cancellationToken)
         {
-            var reporter = new DoctorReporter(s.Quiet);
+            string? invalid = CommandOutput.Validate(s.Output);
+            if (invalid is not null)
+                return CommandOutput.Failure(s.Output, "doctor", "invalid_options", invalid, 2);
+            try { return await DiagnoseAsync(s, cancellationToken); }
+            catch (OperationCanceledException) when (s.Output is not null)
+            {
+                return CommandOutput.Failure(s.Output, "doctor", "cancelled", "Diagnostics were cancelled before completion.", 130);
+            }
+        }
+
+        private static async Task<int> DiagnoseAsync(DoctorSettings s, CancellationToken cancellationToken)
+        {
+            var reporter = new DoctorReporter(s.Quiet || CommandOutput.IsJson(s.Output));
             bool ok = await CheckSyncToolAsync(reporter, cancellationToken);
             ok &= await CheckDatabaseWritableAsync(s, reporter, cancellationToken);
             ok &= CheckProjects(s, reporter);
 
             if (!string.IsNullOrWhiteSpace(s.CheckDest))
                 ok &= await CheckDestinationWritableAsync(s.CheckDest, reporter, cancellationToken);
+
+            if (CommandOutput.IsJson(s.Output))
+            {
+                var data = new { checks = reporter.Checks, passedCount = reporter.PassedCount,
+                    failedCount = reporter.FailedCount, warningCount = reporter.WarningCount };
+                return ok ? CommandOutput.Success("doctor", data)
+                    : CommandOutput.FailureWithDetails("doctor", "diagnostics_failed",
+                        "One or more environment checks failed.", data, 2);
+            }
 
             if (!s.Quiet)
                 AnsiConsole.MarkupLine(ok ? "[green]Doctor: all good[/]" : "[red]Doctor: issues found[/]");
@@ -44,9 +67,13 @@ namespace VaultSync.CLI.Commands
                     ? await CheckRobocopyAsync(reporter, cancellationToken)
                     : await CheckRsyncAsync(reporter, cancellationToken);
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch
             {
-                return reporter.Fail("Platform sync tool not found on PATH");
+                return reporter.Fail("sync_tool", "Platform sync tool not found on PATH");
             }
         }
 
@@ -55,8 +82,8 @@ namespace VaultSync.CLI.Commands
             using System.Diagnostics.Process proc = StartProcess("robocopy", "/?");
             await ReadProcessOutputAsync(proc, cancellationToken);
             return proc.ExitCode <= 16
-                ? reporter.Pass("robocopy found (Windows sync runner)")
-                : reporter.Fail("robocopy returned unexpected exit");
+                ? reporter.Pass("sync_tool", "robocopy found (Windows sync runner)")
+                : reporter.Fail("sync_tool", "robocopy returned unexpected exit");
         }
 
         private static async Task<bool> CheckRsyncAsync(DoctorReporter reporter, CancellationToken cancellationToken)
@@ -64,8 +91,8 @@ namespace VaultSync.CLI.Commands
             using System.Diagnostics.Process proc = StartProcess("rsync", "--version");
             string txt = await ReadProcessOutputAsync(proc, cancellationToken);
             return proc.ExitCode == 0 && txt.Contains("rsync", StringComparison.OrdinalIgnoreCase)
-                ? reporter.Pass("rsync found (Unix sync runner)")
-                : reporter.Fail("rsync not available or returned non-zero");
+                ? reporter.Pass("sync_tool", "rsync found (Unix sync runner)")
+                : reporter.Fail("sync_tool", "rsync not available or returned non-zero");
         }
 
         private static async Task<string> ReadProcessOutputAsync(
@@ -100,11 +127,15 @@ namespace VaultSync.CLI.Commands
             {
                 string db = ConfigHelper.ResolveDb(settings.Db);
                 await WriteProbeAsync(Path.GetDirectoryName(db)!, cancellationToken);
-                return reporter.Pass($"Database path writable: {db}");
+                return reporter.Pass("database_writable", $"Database path writable: {db}");
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                return reporter.Fail($"Database path not writable: {ex.Message}");
+                return reporter.Fail("database_writable", $"Database path not writable: {ex.Message}");
             }
         }
 
@@ -113,13 +144,16 @@ namespace VaultSync.CLI.Commands
             try
             {
                 string db = ConfigHelper.ResolveDb(settings.Db);
-                var repo = new SqliteRepository(db);
-                repo.EnsureSchema();
+                if (settings.Output is not null && !File.Exists(db))
+                    return reporter.Fail("repository", "Database not found; initialize it explicitly before diagnostics");
+                var repo = new SqliteRepository(db, readOnly: settings.Output is not null);
+                if (settings.Output is null)
+                    repo.EnsureSchema();
                 return CheckProjectPaths(repo.ListProjects(), reporter);
             }
             catch (Exception ex)
             {
-                return reporter.Fail($"Could not inspect projects: {ex.Message}");
+                return reporter.Fail("repository", $"Could not inspect projects: {ex.Message}");
             }
         }
 
@@ -127,14 +161,14 @@ namespace VaultSync.CLI.Commands
         {
             var list = projects.ToList();
             if (list.Count == 0)
-                reporter.Warn("No projects registered yet");
+                reporter.Warn("projects", "No projects registered yet");
 
             bool ok = true;
             foreach (Core.Models.Project project in list)
             {
                 ok &= Directory.Exists(project.RootPath)
-                    ? reporter.Pass($"Project path exists: {project.Name} -> {project.RootPath}")
-                    : reporter.Fail($"Project path missing: {project.Name} -> {project.RootPath}");
+                    ? reporter.Pass("project_path", $"Project path exists: {project.Name} -> {project.RootPath}")
+                    : reporter.Fail("project_path", $"Project path missing: {project.Name} -> {project.RootPath}");
             }
 
             return ok;
@@ -149,11 +183,15 @@ namespace VaultSync.CLI.Commands
             {
                 string dest = ConfigHelper.ExpandUserPath(rawDestination);
                 await WriteProbeAsync(dest, cancellationToken);
-                return reporter.Pass($"Destination writable: {dest}");
+                return reporter.Pass("destination_writable", $"Destination writable: {dest}");
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                return reporter.Fail($"Destination not writable: {ex.Message}");
+                return reporter.Fail("destination_writable", $"Destination not writable: {ex.Message}");
             }
         }
 
@@ -168,24 +206,35 @@ namespace VaultSync.CLI.Commands
 
         private sealed class DoctorReporter(bool quiet)
         {
-            public bool Pass(string msg)
+            public List<object> Checks { get; } = [];
+            public int PassedCount { get; private set; }
+            public int FailedCount { get; private set; }
+            public int WarningCount { get; private set; }
+
+            public bool Pass(string code, string msg)
             {
+                Checks.Add(new { code, status = "pass" });
+                PassedCount++;
                 if (!quiet)
                     AnsiConsole.MarkupLine($"[green]+[/] {Markup.Escape(msg)}");
 
                 return true;
             }
 
-            public bool Fail(string msg)
+            public bool Fail(string code, string msg)
             {
+                Checks.Add(new { code, status = "fail" });
+                FailedCount++;
                 if (!quiet)
                     AnsiConsole.MarkupLine($"[red]x[/] {Markup.Escape(msg)}");
 
                 return false;
             }
 
-            public void Warn(string msg)
+            public void Warn(string code, string msg)
             {
+                Checks.Add(new { code, status = "warning" });
+                WarningCount++;
                 if (!quiet)
                     AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(msg)}[/]");
             }
