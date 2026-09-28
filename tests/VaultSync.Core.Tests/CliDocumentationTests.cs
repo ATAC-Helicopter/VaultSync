@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -201,6 +202,7 @@ public sealed class CliDocumentationTests
 
     private static async Task<(int Code, string Output)> CaptureAnsi(int width, params string[] args)
     {
+        CultureInfo previousUiCulture = CultureInfo.CurrentUICulture;
         IAnsiConsole previousConsole = AnsiConsole.Console;
         TextWriter previousOut = Console.Out;
         var output = new StringWriter();
@@ -213,6 +215,7 @@ public sealed class CliDocumentationTests
 
         try
         {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
             AnsiConsole.Console = console;
             Console.SetOut(output);
             int code = await Program.Main(args);
@@ -220,6 +223,7 @@ public sealed class CliDocumentationTests
         }
         finally
         {
+            CultureInfo.CurrentUICulture = previousUiCulture;
             Console.SetOut(previousOut);
             AnsiConsole.Console = previousConsole;
         }
