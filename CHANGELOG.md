@@ -16,7 +16,7 @@
 - [BUG-19005] Keep live prune JSON parseable after deletion.
 - [BUG-19003] Reject cross-project snapshot IDs in diffs.
 - [BUG-19002] Drain watcher work on cancellation.
-- [BUG-19006] Stop watcher sessions on failed cycles and report quiet failures on stderr.
+- [BUG-19006] Observe startup changes and stop watcher sessions on failed cycles.
 - [BUG-19001] Require `--yes` for unattended project removal.
 ### Changed
 - [VS-1974] Keep CLI service logs private and inspection lookups read-only.

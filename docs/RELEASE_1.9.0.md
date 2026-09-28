@@ -272,7 +272,8 @@ its mount and error contracts are qualified. Empty legacy `--json` now emits `[]
 The watcher now exits 2 on startup or later cycle failure, including mirror and
 verification failures, instead of silently continuing. Filesystem watcher errors
 also stop the session. Quiet failures report on stderr with details in the private
-log. JSON events and watch dry-run semantics remain pending.
+log. Source observation begins before the initial snapshot/mirror so edits made
+during startup are not missed. JSON events and watch dry-run semantics remain pending.
 
 ## CLI execution tracking
 

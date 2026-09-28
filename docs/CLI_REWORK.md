@@ -203,6 +203,8 @@ owns startup and background cycle failures, which now stop the watcher with exit
 after queued work drains. Mirror, verification, snapshot, and filesystem-watcher failures send
 brief guidance to stderr and details to the private log. JSON events and dry-run
 semantics remain pending under VS-1974; exit 130 reports cancellation.
+The watcher starts observing the source before its initial snapshot and mirror,
+so edits made during that first transfer can trigger a follow-up cycle.
 
 ## Terminal identity and documentation
 
