@@ -68,10 +68,6 @@ namespace VaultSync.CLI.Commands
 
                 if (!settings.Quiet)
                     WriteWatchPlan(plan, settings);
-                if (!await RunCycleAsync(repo, plan, settings, stopping.Token, "startup"))
-                    return 2;
-                stopping.Token.ThrowIfCancellationRequested();
-
                 using var watcher = new FileSystemWatcher(plan.Project.RootPath)
                 {
                     IncludeSubdirectories = true,
@@ -83,6 +79,11 @@ namespace VaultSync.CLI.Commands
                 watcher.EnableRaisingEvents = true;
                 try
                 {
+                    // Observe source changes during the initial snapshot and transfer too.
+                    // Otherwise a change made before startup finishes can be missed forever.
+                    if (!await RunCycleAsync(repo, plan, settings, stopping.Token, "startup"))
+                        return 2;
+                    stopping.Token.ThrowIfCancellationRequested();
                     if (!settings.Quiet)
                         AnsiConsole.MarkupLine("[grey]Press Ctrl+C to stop.[/]");
                     await Task.WhenAny(Task.Delay(Timeout.Infinite, stopping.Token), failed.Task);

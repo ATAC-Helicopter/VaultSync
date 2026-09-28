@@ -3,7 +3,7 @@
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
 `projects show`, `snapshots create`, `snapshots list`, `snapshots show`, `snapshots diff`, `snapshots prune`, `backups list`,
 `backups show`, `backups verify`, `backups verify-all`, `backups create`,
-`recovery restore`, `mirror`/`sync`, `verify`, `doctor`, and legacy `history`/`diff`
+`recovery restore`, `mirror`/`sync`, `verify`, `doctor`, `destinations`, and legacy `history`/`diff`
 with explicit `--output json`. This contract does not yet apply to watch or
 other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
@@ -41,6 +41,7 @@ vaultsync recovery restore "My project" /safe/target --backup-id 7 --include Doc
 vaultsync mirror "My project" /safe/target --db ./vault.db --dry-run --output json
 vaultsync verify "My project" /safe/target --db ./vault.db --full --output json
 vaultsync doctor --db ./vault.db --check-dest /safe/target --output json
+vaultsync destinations --output json
 ```
 
 `--filter` matches a case-insensitive project-name fragment. `--preset` matches
@@ -89,7 +90,7 @@ Error codes currently include `invalid_options`, `project_not_found`,
 `backup_unavailable`, `unsupported_backup_format`, `verification_failed`,
 `cancelled`, `destination_unavailable`, `source_unavailable`,
 `unsafe_destination`, `insufficient_space`, `backup_failed`,
-`backup_not_created`, `bulk_verification_incomplete`, `mirror_failed`, `diagnostics_failed`, `repository_unavailable`,
+`backup_not_created`, `bulk_verification_incomplete`, `mirror_failed`, `diagnostics_failed`, `config_unavailable`, `repository_unavailable`,
 and `command_failed`.
 Error messages are actionable,
 without embedding the underlying exception or connection string. Consumers
@@ -250,6 +251,19 @@ The command probes database-directory and optional destination writability with
 temporary files, so those directories can be created, but versioned mode does
 not create or migrate the database itself. Missing databases fail the repository
 check. Legacy doctor retains its existing initialization behavior.
+
+## Destination configuration inspection
+
+`destinations --output json` returns `destinations.list` with a `destinations`
+array and `count`. Each row has a one-based `position`, `alias`, `active`,
+`offsite`, `preMounted`, and `accessibilityChecked: false`. It omits paths,
+credential names, usernames, key references, passwords, and raw errors. An
+empty configuration succeeds with an empty array. Inspection reads primary or
+backup configuration without persisting defaults. A damaged configuration
+returns `config_unavailable` and exit 1 rather than presenting defaults as
+confirmed settings. Explicit `--test` is not yet supported with `--output`;
+the legacy route remains available for mount/access checks. Legacy `--json`
+now returns a valid empty array when no destinations are configured.
 
 Example selection failure:
 

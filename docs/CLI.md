@@ -277,7 +277,7 @@ from a recorded backup. Legacy `verify --json` is unchanged.
 
 ```text
 vaultsync doctor [--db PATH] [--check-dest PATH] [--quiet] [--output text|json]
-vaultsync destinations [--test] [--json]
+vaultsync destinations [--test] [--json | --output text|json]
 vaultsync presets list
 vaultsync presets show NAME
 vaultsync config show
@@ -294,6 +294,10 @@ its contents before sharing it. Destination tests may access mounts or credentia
 providers. Doctor uses isolated probes and should not overwrite existing files.
 `doctor --output json` emits check codes and counts without paths or raw errors;
 it requires an existing database rather than initializing one.
+`destinations --output json` lists aliases and classification without paths or
+credential fields. It does not test reachability or persist configuration defaults.
+Use the legacy `destinations --test` explicitly for mount/access checks; it cannot
+be combined with `--output` yet. Legacy `--json` returns `[]` when nothing is configured.
 
 ## Structured output v1
 
@@ -310,6 +314,7 @@ Explicit `--output json` is currently supported by:
 - `recovery restore` and compatibility `restore`.
 - `mirror` and compatibility `sync`, plus `verify`.
 - `doctor` diagnostics.
+- `destinations` configuration inspection (without `--test`).
 
 Each invocation writes one JSON object to stdout:
 

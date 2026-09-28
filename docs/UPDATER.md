@@ -2,6 +2,11 @@
 
 VaultSync uses GitHub Releases for update discovery and supports patch assets to avoid full-installer downloads on every update.
 
+The 1.9 staging change accepts exact release assets under the current
+repository owner and the planned FG Labs owner. This is preparation for a
+possible transfer, not permission to transfer today: a compatible release must
+ship and be adopted first. See [organization transfer](ORGANIZATION_TRANSFER.md).
+
 ## Channels
 - Stable: latest non-prerelease release.
 - Beta/Dev: prerelease-capable flow for `Dev` branch builds that use a prerelease suffix (when enabled in app settings).

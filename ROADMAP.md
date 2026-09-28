@@ -1209,6 +1209,11 @@ destabilizing the maintenance release.
 **Release contract:** [1.9.0 kickoff and gates](docs/RELEASE_1.9.0.md)
 **Tagline:** *Recover when the installed system cannot.*
 
+Updater owner-transfer compatibility from [PR #721](https://github.com/ATAC-Helicopter/VaultSync/pull/721)
+is staged for this release through [PR #722](https://github.com/ATAC-Helicopter/VaultSync/pull/722).
+It needs exact 1.8.9 upgrade and platform qualification before shipping; the
+repository must not transfer before a compatible release is adopted.
+
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
   workflow boundaries, navigation invariants, and legacy-shell migration map.
   _(Issue #501.)_

@@ -72,6 +72,8 @@ providers rather than promising unsupported operations in 1.9.0.
   non-interactive execution, cancellation, and redacted diagnostics.
 - Windows, macOS, Linux, localization, accessibility, static analysis,
   dependency, supply-chain, packaging, and exact 1.8.9 upgrade gates.
+- Qualify the updater against both exact repository owners and real installed
+  1.8.9 upgrades before any future owner transfer; keep older-client fallback explicit.
 - Metadata, issues, milestones, Project 7 fields/dates, and the draft PR agree.
 
 The legacy desktop shell remains until replacement parity is proven. The
@@ -263,12 +265,29 @@ planned, remaining, and actual deletion counts. A versioned dry run reads the
 existing database without writing it. Legacy `prune --json` no longer appends
 a human completion line after a live deletion, closing
 [BUG-19005 / #718](https://github.com/ATAC-Helicopter/VaultSync/issues/718).
+`destinations --output json` now reads configured targets without persisting
+defaults and returns aliases and classification without paths or credentials.
+It does not claim reachability; explicit legacy `--test` remains separate until
+its mount and error contracts are qualified. Empty legacy `--json` now emits `[]`.
 
 [BUG-19006 / #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719):
 The watcher now exits 2 on startup or later cycle failure, including mirror and
 verification failures, instead of silently continuing. Filesystem watcher errors
 also stop the session. Quiet failures report on stderr with details in the private
-log. JSON events and watch dry-run semantics remain pending.
+log. Source observation begins before the initial snapshot/mirror so edits made
+during startup are not missed. JSON events and watch dry-run semantics remain pending.
+
+## Updater owner compatibility
+
+The updater compatibility change from [PR #721](https://github.com/ATAC-Helicopter/VaultSync/pull/721)
+is included in the combined [staging PR #722](https://github.com/ATAC-Helicopter/VaultSync/pull/722),
+not yet in the protected release branch. It allows only exact current and planned
+FG Labs repository identities for release manifest and asset validation while
+retaining byte-size, digest, tag, name, schema, and predecessor checks. Trusted
+download URLs reject credentials, queries, and fragments. The isolated combined
+tree passed 1,039 local .NET tests with warnings as errors. This does not qualify
+an installed 1.8.9 upgrade or authorize a repository transfer; see the
+[migration sequence](ORGANIZATION_TRANSFER.md).
 
 ## CLI execution tracking
 
