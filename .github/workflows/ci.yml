@@ -72,6 +72,19 @@ jobs:
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
 
+      - name: Verify AppImage packaging
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("release/release-metadata.json"))["activeRelease"]["version"])')"
+          bash scripts/build_linux_release.sh "$version" x64 "${{ runner.temp }}/runtime-audit"
+          appimage="$(realpath "dist/linux/VaultSync-${version}-linux-x64.AppImage")"
+          extract_dir="$(mktemp -d)"
+          trap 'rm -rf "$extract_dir"' EXIT
+          (cd "$extract_dir" && "$appimage" --appimage-extract >/dev/null)
+          root="$extract_dir/squashfs-root"
+          [[ "$(stat -c '%a' "$root")" == 755 ]]
+          [[ -x "$root/AppRun" && -x "$root/usr/bin/VaultSync.UI" ]]
+
   macos:
     name: macOS build and test
     runs-on: macos-latest
