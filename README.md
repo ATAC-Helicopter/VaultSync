@@ -314,7 +314,7 @@ Replace the server address, export, and destination folder with values from your
 
 ## CLI
 
-The VaultSync CLI supports snapshots, synchronization, verification, scripting, automation, and headless environments.
+The VaultSync CLI supports snapshots, synchronization, verification, scripting, automation, and headless environments. Run `vaultsync` for its introductory screen, `vaultsync docs --full` for the bundled handbook, task guides, and exhaustive reference, `vaultsync docs --task inspect` for a focused workflow, or `vaultsync completion bash|zsh|powershell` for command, option, and supported value completion. The [CLI handbook](docs/CLI.md) covers installation and shell setup; the [task guides](docs/CLI_TASK_GUIDES.md) and [generated command reference](docs/CLI_COMMAND_REFERENCE.md) cover workflows and every route.
 
 ### Install from source
 
@@ -333,6 +333,7 @@ export PATH="$PATH:$HOME/.dotnet/tools"
 
 dotnet tool install \
   --global \
+  --version 1.9.0 \
   --add-source src/VaultSync.CLI/bin/ToolPackages \
   vaultsync.cli
 ```
@@ -340,17 +341,20 @@ dotnet tool install \
 Update the installed CLI:
 
 ```sh
-dotnet tool update --global vaultsync.cli
+dotnet tool update --global vaultsync.cli --version 1.9.0 \
+  --add-source src/VaultSync.CLI/bin/ToolPackages
 ```
 
 ### CLI quick start
 
 ```sh
-vaultsync init
-vaultsync add-project Demo ~/Projects/Demo --preset unity
-vaultsync snapshot Demo
-vaultsync sync Demo ~/Backups/Demo
-vaultsync verify Demo ~/Backups/Demo --full
+# Assumes ~/Projects/Demo exists and contains files.
+mkdir -p ~/Backups
+vaultsync projects add Demo ~/Projects/Demo --preset unity --db ./vault.db
+vaultsync backups create Demo --destination ~/Backups --db ./vault.db --dry-run
+vaultsync backups create Demo --destination ~/Backups --db ./vault.db
+vaultsync backups list Demo --db ./vault.db --output json
+vaultsync backups verify Demo --id ID_FROM_LIST --db ./vault.db --output json
 ```
 
 ### Useful commands
@@ -362,7 +366,9 @@ vaultsync verify Demo ~/Backups/Demo --full
 | `vaultsync list-projects` | Show all tracked projects |
 | `vaultsync snapshot <name>` | Create a project snapshot |
 | `vaultsync sync <name> <dest>` | Mirror a project to a destination |
-| `vaultsync verify <name> <dest>` | Hash-compare a project and backup |
+| `vaultsync verify <name> <dest>` | Hash-compare a supplied folder with the latest snapshot |
+| `vaultsync backups create <name> --destination <path>` | Record a full folder backup |
+| `vaultsync backups verify <name> --id <id>` | Hash-check recorded folder bytes |
 | `vaultsync history <name>` | Show snapshot history |
 | `vaultsync diff <name>` | Compare snapshots |
 | `vaultsync prune <name>` | Remove old snapshots |

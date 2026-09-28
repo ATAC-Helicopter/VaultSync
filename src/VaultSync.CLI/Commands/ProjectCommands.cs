@@ -59,6 +59,14 @@ namespace VaultSync.CLI.Commands
     {
         protected override Task<int> ExecuteAsync(CommandContext context, RemoveProjectSettings s, CancellationToken cancellationToken)
         {
+            if (!s.Yes && (s.Quiet || Console.IsInputRedirected))
+            {
+                Console.Error.WriteLine(
+                    "Project removal requires --yes when --quiet is set or standard input is redirected. " +
+                    "--quiet suppresses output; it does not authorize removal.");
+                return Task.FromResult(2);
+            }
+
             string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
@@ -66,7 +74,7 @@ namespace VaultSync.CLI.Commands
             if (repo.GetProjectByName(s.Name) is null)
                 throw new InvalidOperationException($"Project '{s.Name}' not found");
 
-            if (!s.Yes && !s.Quiet)
+            if (!s.Yes)
             {
                 AnsiConsole.MarkupLine(
                     "[yellow]This removes the project registration and local history index only.[/] " +
@@ -118,42 +126,6 @@ namespace VaultSync.CLI.Commands
         }
     }
 
-    sealed class ListProjectsSettings : CommandSettings
-    {
-        [CommandOption("--db")] public string? Db { get; init; }
-        [CommandOption("--json")] public bool Json { get; init; } = false;
-    }
-
-    sealed class ListProjectsCommand : AsyncCommand<ListProjectsSettings>
-    {
-        protected override Task<int> ExecuteAsync(CommandContext context, ListProjectsSettings s, CancellationToken cancellationToken)
-        {
-            string db = ConfigHelper.ResolveDb(s.Db);
-            var repo = new SqliteRepository(db);
-            repo.EnsureSchema();
-
-            IEnumerable<Project> rows = repo.ListProjects();
-            if (s.Json)
-            {
-                Console.WriteLine(JsonSerializer.Serialize(rows.Select(r => new
-                {
-                    r.Name, r.RootPath, r.Preset, CreatedUtc = r.CreatedUtc.ToString("u")
-                }), CommandJsonOptions.Indented));
-                return Task.FromResult(0);
-            }
-
-            Table table = new Table().Border(TableBorder.Rounded);
-            table.AddColumn("Name");
-            table.AddColumn(new TableColumn("Path").NoWrap());
-            table.AddColumn("Preset");
-            table.AddColumn("Created (UTC)");
-
-            foreach (Project p in rows) table.AddRow(p.Name, p.RootPath, p.Preset, p.CreatedUtc.ToString("u"));
-            AnsiConsole.Write(table);
-            return Task.FromResult(0);
-        }
-    }
-
     sealed class DiscoverProjectsSettings : CommandSettings
     {
         [CommandOption("--root")] public string? OverrideRoot { get; init; }
@@ -164,12 +136,12 @@ namespace VaultSync.CLI.Commands
     {
         protected override async Task<int> ExecuteAsync(CommandContext context, DiscoverProjectsSettings s, CancellationToken cancellationToken)
         {
-            AppConfig config = ConfigHelper.Load();
-
-            if (!string.IsNullOrWhiteSpace(s.OverrideRoot))
-            {
-                config.ProjectsRoot = s.OverrideRoot;
-            }
+            AppConfig config = string.IsNullOrWhiteSpace(s.OverrideRoot)
+                ? ConfigHelper.Load()
+                : new AppConfig
+                {
+                    ProjectsRoot = Path.GetFullPath(ConfigHelper.ExpandUserPath(s.OverrideRoot))
+                };
 
             var discovery = new ProjectDiscoveryService();
             IReadOnlyList<DiscoveredProject> projects = await discovery.DiscoverAsync(config, cancellationToken);

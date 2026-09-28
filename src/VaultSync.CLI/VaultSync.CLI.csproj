@@ -21,11 +21,11 @@
     <PackageId>vaultsync.cli</PackageId>
 
     <!-- Version info -->
-    <Version>1.8.9</Version>
-    <PackageVersion>1.8.9</PackageVersion>
-    <AssemblyVersion>1.8.9.0</AssemblyVersion>
-    <FileVersion>1.8.9.0</FileVersion>
-    <AssemblyInformationalVersion>1.8.9</AssemblyInformationalVersion>
+    <Version>1.9.0</Version>
+    <PackageVersion>1.9.0</PackageVersion>
+    <AssemblyVersion>1.9.0.0</AssemblyVersion>
+    <FileVersion>1.9.0.0</FileVersion>
+    <AssemblyInformationalVersion>1.9.0</AssemblyInformationalVersion>
     <!-- Package info -->
     <Authors>Flavio Giacchetti</Authors>
     <Company>Flavio Giacchetti</Company>
@@ -43,6 +43,15 @@
   <ItemGroup>
     <!-- Ensure README is included in the package -->
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <EmbeddedResource Include="..\..\docs\CLI.md" LogicalName="VaultSync.CLI.Docs.CLI.md" />
+    <None Include="..\..\docs\CLI.md" Pack="true" PackagePath="docs\CLI.md" />
+    <EmbeddedResource Include="..\..\docs\CLI_TASK_GUIDES.md" LogicalName="VaultSync.CLI.Docs.CLI_TASK_GUIDES.md" />
+    <None Include="..\..\docs\CLI_TASK_GUIDES.md" Pack="true" PackagePath="docs\CLI_TASK_GUIDES.md" />
+    <EmbeddedResource Include="..\..\docs\CLI_COMMAND_REFERENCE.md" LogicalName="VaultSync.CLI.Docs.CLI_COMMAND_REFERENCE.md" />
+    <None Include="..\..\docs\CLI_COMMAND_REFERENCE.md" Pack="true" PackagePath="docs\CLI_COMMAND_REFERENCE.md" />
+    <EmbeddedResource Include="..\..\completions\vaultsync.bash" LogicalName="VaultSync.CLI.Completions.vaultsync.bash" />
+    <EmbeddedResource Include="..\..\completions\_vaultsync" LogicalName="VaultSync.CLI.Completions._vaultsync" />
+    <EmbeddedResource Include="..\..\completions\vaultsync.ps1" LogicalName="VaultSync.CLI.Completions.vaultsync.ps1" />
   </ItemGroup>
 
   <ItemGroup>

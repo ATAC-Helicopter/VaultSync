@@ -22,12 +22,14 @@ namespace VaultSync.Core.Services;
 public sealed class BackupService(
     SqliteRepository repo,
     BackupEncryptionSecretService? backupEncryptionSecretService = null,
-    IAppConfigStore? configStore = null)
+    IAppConfigStore? configStore = null,
+    IVaultLogger? logger = null)
 {
     private readonly BackupCancellationRegistry _cancellationRegistry = new();
     private readonly SqliteRepository _repo = repo;
     private readonly BackupEncryptionSecretService _backupEncryptionSecretService = backupEncryptionSecretService ?? new BackupEncryptionSecretService();
     private readonly IAppConfigStore _configStore = configStore ?? StaticAppConfigStore.Instance;
+    private readonly IVaultLogger _logger = logger ?? RuntimeVaultLogger.Instance;
     private const string InProgressMarkerFileName = ".vaultsync_inprogress";
     private const string CompletedMarkerFileName = ".vaultsync_complete";
     private const string ArchiveResumeCheckpointFileName = ".vaultsync_resume.json";
@@ -224,7 +226,7 @@ public sealed class BackupService(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[BackupService] Failed to delete partial backup '{backupFolder}': {ex.Message}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to delete partial backup '{backupFolder}': {ex.Message}");
         }
     }
 
@@ -237,7 +239,7 @@ public sealed class BackupService(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[BackupService] Failed to write marker '{fileName}' in '{backupFolder}': {ex.Message}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to write marker '{fileName}' in '{backupFolder}': {ex.Message}");
         }
     }
 
@@ -251,7 +253,7 @@ public sealed class BackupService(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[BackupService] Failed to remove marker '{fileName}' in '{backupFolder}': {ex.Message}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to remove marker '{fileName}' in '{backupFolder}': {ex.Message}");
         }
     }
 
@@ -268,7 +270,7 @@ public sealed class BackupService(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[BackupService] Failed to write archive resume checkpoint in '{backupFolder}': {ex.Message}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to write archive resume checkpoint in '{backupFolder}': {ex.Message}");
         }
     }
 
@@ -287,7 +289,7 @@ public sealed class BackupService(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[BackupService] Failed to read archive resume checkpoint in '{backupFolder}': {ex.Message}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to read archive resume checkpoint in '{backupFolder}': {ex.Message}");
             return null;
         }
     }
@@ -304,7 +306,7 @@ public sealed class BackupService(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[BackupService] Failed to remove archive resume checkpoint in '{backupFolder}': {ex.Message}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to remove archive resume checkpoint in '{backupFolder}': {ex.Message}");
         }
     }
 
@@ -649,7 +651,7 @@ public sealed class BackupService(
             return (cached.TotalFiles, cached.TotalBytes);
         }
 
-        (int totalFiles, long totalBytes) computed = ComputeBackupStats(project.RootPath, project.Preset, ct);
+        (int totalFiles, long totalBytes) computed = ComputeBackupStats(project.RootPath, project.Preset, ct, _logger);
         StatsCache[statsKey] = (DateTime.UtcNow, computed.totalFiles, computed.totalBytes);
         TrimStatsCache();
         return computed;
@@ -769,7 +771,7 @@ public sealed class BackupService(
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
             {
-                Console.WriteLine($"[BackupService] Skipping incomplete backup cleanup for '{backupDir}': {ex.Message}");
+                RuntimeLog.WriteWarning($"[BackupService] Skipping incomplete backup cleanup for '{backupDir}': {ex.Message}");
             }
         }
 
@@ -1162,6 +1164,7 @@ public sealed class BackupService(
                         configSnapshot.Backups.EnableBandwidthLimit,
                         configSnapshot.Backups.MaxBandwidthMbps),
                     PreferRunnerProgressOnly = preferRunnerProgressOnly,
+                    Logger = _logger,
                     CancellationToken = linkedToken
                 });
             }
@@ -1181,21 +1184,21 @@ public sealed class BackupService(
 
             if (useArchiveMode)
             {
-                Console.WriteLine($"[BackupService] Archive backup failed for '{project.Name}': {ex}");
+                RuntimeLog.WriteWarning($"[BackupService] Archive backup failed for '{project.Name}': {ex}");
                 throw;
             }
 
             // If the native tool is not available or fails unexpectedly, fall back
             // to the managed File.Copy-based implementation so the backup still
             // succeeds (albeit more slowly).
-            Console.WriteLine($"[BackupService] Backup phase failed for '{project.Name}', falling back to managed copy. Exception: {ex}");
+            _logger.Warning($"[BackupService] Backup phase failed for '{project.Name}', falling back to managed copy. Exception: {ex}");
 
             totalBytes = await Task.Run(() =>
             {
                 long bytes = 0;
                 try
                 {
-                    CopyDirectoryRecursive(project.RootPath, backupFolder, project.Preset, filesForBackup, ref bytes, progressCallback, linkedToken);
+                    CopyDirectoryRecursive(project.RootPath, backupFolder, project.Preset, filesForBackup, ref bytes, progressCallback, linkedToken, _logger);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1247,7 +1250,7 @@ public sealed class BackupService(
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[BackupService] Failed to move backup from temp to preferred root: {ex.Message}");
+                RuntimeLog.WriteWarning($"[BackupService] Failed to move backup from temp to preferred root: {ex.Message}");
             }
         }
 
@@ -1318,7 +1321,7 @@ public sealed class BackupService(
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[BackupService] Retention step failed for project '{project.Name}': {ex}");
+                RuntimeLog.WriteWarning($"[BackupService] Retention step failed for project '{project.Name}': {ex}");
             }
         }
 
@@ -1431,7 +1434,7 @@ public sealed class BackupService(
             ? Math.Min(32, Math.Max(4, Environment.ProcessorCount))
             : Math.Min(128, Math.Max(8, Environment.ProcessorCount * 2));
         RuntimeLog.WriteVerbose($"[BackupService] Starting robocopy backup (threads={threads}, bw={(request.MaxBandwidthMbps is > 0 ? $"{request.MaxBandwidthMbps}Mbps" : "unlimited")}).");
-        var runner = new RobocopyRunner(isNetworkDestination);
+        var runner = new RobocopyRunner(isNetworkDestination, request.Logger);
         int exitCode = await runner.SyncAsync(
             request.Project,
             destDir,
@@ -1460,7 +1463,8 @@ public sealed class BackupService(
         if (OperatingSystem.IsWindows())
             RuntimeLog.WriteVerbose($"[BackupService] Using rsync on Windows ({source}).");
 
-        var runner = new RsyncRunner(useWholeFile: !useRsyncDelta, rsyncPath: bundledRsync ?? RsyncExecutableName);
+        var runner = new RsyncRunner(useWholeFile: !useRsyncDelta, rsyncPath: bundledRsync ?? RsyncExecutableName,
+            logger: request.Logger);
         int exitCode = await runner.SyncAsync(
             request.Project,
             destDir,
@@ -1609,7 +1613,7 @@ public sealed class BackupService(
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
-                    Console.WriteLine($"[BackupService] Progress scan skipped '{targetPath}': {ex.Message}");
+                    RuntimeLog.WriteWarning($"[BackupService] Progress scan skipped '{targetPath}': {ex.Message}");
                     scanned++;
                     continue;
                 }
@@ -2266,7 +2270,7 @@ public sealed class BackupService(
                 }
                 catch (TimeoutException ex)
                 {
-                    Console.WriteLine($"[BackupService] Parallel archive upload stalled: {ex.Message}. Falling back to single stream.");
+                    RuntimeLog.WriteWarning($"[BackupService] Parallel archive upload stalled: {ex.Message}. Falling back to single stream.");
                     await UploadSingleWithResumeAsync(2);
                 }
             }
@@ -2782,13 +2786,14 @@ public sealed class BackupService(
         await task;
     }
 
-    private static (int totalFiles, long totalBytes) ComputeBackupStats(string sourceDir, string preset, CancellationToken ct)
+    private static (int totalFiles, long totalBytes) ComputeBackupStats(string sourceDir, string preset,
+        CancellationToken ct, IVaultLogger logger)
     {
         var dirInfo = new DirectoryInfo(sourceDir);
         if (!dirInfo.Exists)
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
 
-        var filter = FilterService.FromPresetAndLocal(sourceDir, preset);
+        var filter = FilterService.FromPresetAndLocal(sourceDir, preset, logger: logger);
         long totalBytes = 0;
         int totalFiles = 0;
 
@@ -2807,13 +2812,13 @@ public sealed class BackupService(
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
-                    Console.WriteLine($"[BackupService] Skipping file while computing size '{filePath}': {ex.Message}");
+                    RuntimeLog.WriteWarning($"[BackupService] Skipping file while computing size '{filePath}': {ex.Message}");
                 }
             }
         }
         catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
         {
-            Console.WriteLine($"[BackupService] Failed to enumerate files for size computation in '{sourceDir}': {ex.Message}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to enumerate files for size computation in '{sourceDir}': {ex.Message}");
             throw;
         }
 
@@ -2888,14 +2893,15 @@ public sealed class BackupService(
         IReadOnlyList<string>? filesForBackup,
         ref long totalBytes,
         Action<double, string, string>? progressCallback,
-        CancellationToken ct)
+        CancellationToken ct,
+        IVaultLogger logger)
     {
         var srcInfo = new DirectoryInfo(sourceDir);
         if (!srcInfo.Exists)
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
 
         // Build a path filter based on the project's preset plus any local .vaultsyncignore-style rules.
-        var filter = FilterService.FromPresetAndLocal(sourceDir, preset);
+        var filter = FilterService.FromPresetAndLocal(sourceDir, preset, logger: logger);
 
         // Get all files up front so we can compute a simple percent and ETA, applying
         // the same vaultsyncignore-style filtering used by SnapshotService.
@@ -3112,7 +3118,7 @@ public sealed class BackupService(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[BackupService] Failed to load backups for retention (projectId={projectId}): {ex}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to load backups for retention (projectId={projectId}): {ex}");
             return;
         }
 
@@ -3275,7 +3281,7 @@ public sealed class BackupService(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[BackupService] Failed to delete old backup (backupId={backup.Id}): {ex}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to delete old backup (backupId={backup.Id}): {ex}");
             return false;
         }
     }
@@ -3469,7 +3475,7 @@ public sealed class BackupService(
         }
         catch (Exception firstEx)
         {
-            Console.WriteLine($"[BackupService] Retention recursive delete failed for '{fullPath}' (backupId={backupId}), attempting fallback delete: {firstEx.Message}");
+            RuntimeLog.WriteWarning($"[BackupService] Retention recursive delete failed for '{fullPath}' (backupId={backupId}), attempting fallback delete: {firstEx.Message}");
             try
             {
                 FallbackDeleteDirectory(fullPath);
@@ -3673,6 +3679,7 @@ public sealed class BackupService(
         public string? LinkDestination { get; init; }
         public int? MaxBandwidthMbps { get; init; }
         public bool PreferRunnerProgressOnly { get; init; }
+        public required IVaultLogger Logger { get; init; }
         public CancellationToken CancellationToken { get; init; }
     }
 
@@ -3845,7 +3852,7 @@ public sealed class BackupService(
 
             if (OperatingSystem.IsMacOS() && IsMacManagedMountPath(fullPath) && !IsNetworkMountPath(fullPath))
             {
-                Console.WriteLine($"[BackupService] Skipping free-space check for '{fullPath}': network mount not detected.");
+                RuntimeLog.WriteWarning($"[BackupService] Skipping free-space check for '{fullPath}': network mount not detected.");
                 return null;
             }
 
@@ -3864,7 +3871,7 @@ public sealed class BackupService(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[BackupService] Failed to read disk space for '{path}': {ex.Message}");
+            RuntimeLog.WriteWarning($"[BackupService] Failed to read disk space for '{path}': {ex.Message}");
             return null;
         }
     }

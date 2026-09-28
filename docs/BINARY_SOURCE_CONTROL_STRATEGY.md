@@ -6,7 +6,7 @@ This is the architecture and delivery contract for VaultSync Binary Source Contr
 `ROADMAP.md` remains the canonical source for work IDs, priority, release
 assignment, and delivery state. This document explains the product boundary,
 storage model, safety invariants, sequencing, and qualification gates behind
-`VS-1970` through `VS-1982`.
+`VS-1981` through `VS-1993`.
 
 ## Product definition
 
@@ -109,7 +109,7 @@ must not invalidate many later revisions.
 
 ## Proposed domain model
 
-The exact serialization is decided by `VS-1970`, but the logical model is:
+The exact serialization is decided by `VS-1981`, but the logical model is:
 
 ### Repository
 
@@ -230,7 +230,7 @@ A possible version-1 physical namespace is:
   quarantine/
 ```
 
-This is illustrative. `VS-1970` owns the final format.
+This is illustrative. `VS-1981` owns the final format.
 
 ## Chunking and deduplication
 
@@ -514,8 +514,8 @@ The format must separate:
 - non-secret algorithm/version metadata;
 - machine-local credential reference.
 
-The exact AEAD, nonce, keyed-ID, and rotation design is a `VS-1970` /
-`VS-1978` security decision and requires dedicated fixtures.
+The exact AEAD, nonce, keyed-ID, and rotation design is a `VS-1981` /
+`VS-1989` security decision and requires dedicated fixtures.
 
 ## Verification and recovery
 
@@ -725,7 +725,7 @@ corruption, missing key, unavailable repository, and maintenance contention.
 
 ### Architecture gate — starts before BSC implementation
 
-`VS-1970` and `VS-1971` must be approved before `VS-1972` onward are treated
+`VS-1981` and `VS-1982` must be approved before `VS-1983` onward are treated
 as stable implementation commitments.
 
 Prototypes and benchmarks are allowed to inform the decision.
@@ -875,16 +875,16 @@ and qualifying them.
 
 ## Work IDs
 
-- `VS-1970` — architecture, format, and product boundary — issue #703.
-- `VS-1971` — identity, ownership, locking, conflict, audit — issue #704.
-- `VS-1972` — immutable CDC object store — issue #705.
-- `VS-1973` — trees, changesets, refs, atomic publication — issue #706.
-- `VS-1974` — workspace engine — issue #707.
-- `VS-1975` — exclusive binary locking — issue #708.
-- `VS-1976` — history, restore, compare, evidence — issue #709.
-- `VS-1977` — branches and binary conflict resolution — issue #710.
-- `VS-1978` — encryption and portable key recovery — issue #711.
-- `VS-1979` — verification, rebuild, GC, disaster recovery — issue #712.
-- `VS-1980` — sparse/cache/transfer/offsite replication — issue #713.
-- `VS-1981` — desktop, CLI, Git coexistence — issue #714.
-- `VS-1982` — scale, cross-platform, NAS, and fault qualification — issue #715.
+- `VS-1981` — architecture, format, and product boundary — issue #703.
+- `VS-1982` — identity, ownership, locking, conflict, audit — issue #704.
+- `VS-1983` — immutable CDC object store — issue #705.
+- `VS-1984` — trees, changesets, refs, atomic publication — issue #706.
+- `VS-1985` — workspace engine — issue #707.
+- `VS-1986` — exclusive binary locking — issue #708.
+- `VS-1987` — history, restore, compare, evidence — issue #709.
+- `VS-1988` — branches and binary conflict resolution — issue #710.
+- `VS-1989` — encryption and portable key recovery — issue #711.
+- `VS-1990` — verification, rebuild, GC, disaster recovery — issue #712.
+- `VS-1991` — sparse/cache/transfer/offsite replication — issue #713.
+- `VS-1992` — desktop, CLI, Git coexistence — issue #714.
+- `VS-1993` — scale, cross-platform, NAS, and fault qualification — issue #715.
