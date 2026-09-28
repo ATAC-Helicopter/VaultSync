@@ -25,6 +25,7 @@ Use this page as the primary index for all project documentation.
 - Canonical direct-download manifest schema:
   [release manifest v1](schemas/release-manifest-v1.schema.json)
 - Updater and patch assets: [Updater](UPDATER.md)
+- Future repository-owner migration: [Organization transfer](ORGANIZATION_TRANSFER.md)
 - Microsoft Store planning and packaging notes: [Microsoft Store](MICROSOFT_STORE.md)
 - Microsoft Store submission checklist: [Store submission checklist](MICROSOFT_STORE_SUBMISSION_CHECKLIST.md)
 - Download stats snapshots: [Download stats](DOWNLOAD_STATS.md)

@@ -13,3 +13,5 @@ Before transferring:
 5. Verify the real post-transfer API and existing historical manifests, updater download/install flow, Pages URL, and GitHub Project links.
 
 The compatibility patch is preparation, not evidence that a release has shipped or that existing installed clients have adopted it.
+It is staged for 1.9.0; if that is the first compatible release, older clients
+will require a manual upgrade after a later transfer.

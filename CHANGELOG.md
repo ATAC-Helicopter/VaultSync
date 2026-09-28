@@ -19,6 +19,7 @@
 - [BUG-19006] Observe startup changes and stop watcher sessions on failed cycles.
 - [BUG-19001] Require `--yes` for unattended project removal.
 ### Changed
+- [#721] Accept exact FG Labs release URLs during updater validation.
 - [VS-1974] Keep CLI service logs private and inspection lookups read-only.
 - [VS-1974] Keep quiet watcher output private.
 - [VS-1975] Keep Windows mirror dry runs from creating targets.

@@ -72,6 +72,8 @@ providers rather than promising unsupported operations in 1.9.0.
   non-interactive execution, cancellation, and redacted diagnostics.
 - Windows, macOS, Linux, localization, accessibility, static analysis,
   dependency, supply-chain, packaging, and exact 1.8.9 upgrade gates.
+- Qualify the updater against both exact repository owners and real installed
+  1.8.9 upgrades before any future owner transfer; keep older-client fallback explicit.
 - Metadata, issues, milestones, Project 7 fields/dates, and the draft PR agree.
 
 The legacy desktop shell remains until replacement parity is proven. The
@@ -274,6 +276,18 @@ verification failures, instead of silently continuing. Filesystem watcher errors
 also stop the session. Quiet failures report on stderr with details in the private
 log. Source observation begins before the initial snapshot/mirror so edits made
 during startup are not missed. JSON events and watch dry-run semantics remain pending.
+
+## Updater owner compatibility
+
+The updater compatibility change from [PR #721](https://github.com/ATAC-Helicopter/VaultSync/pull/721)
+is included in the combined [staging PR #722](https://github.com/ATAC-Helicopter/VaultSync/pull/722),
+not yet in the protected release branch. It allows only exact current and planned
+FG Labs repository identities for release manifest and asset validation while
+retaining byte-size, digest, tag, name, schema, and predecessor checks. Trusted
+download URLs reject credentials, queries, and fragments. The isolated combined
+tree passed 1,039 local .NET tests with warnings as errors. This does not qualify
+an installed 1.8.9 upgrade or authorize a repository transfer; see the
+[migration sequence](ORGANIZATION_TRANSFER.md).
 
 ## CLI execution tracking
 
