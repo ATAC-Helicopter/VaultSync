@@ -89,7 +89,32 @@ Examples:
   Stable first-parent history remains release/hotfix merges only.
 - Even for direct pushes, keep issue/roadmap/changelog links exactly as with PRs.
 
-## 6.1) Issue And PR Linking Rules
+## 6.1) Stacked Pull Requests
+Use a PR stack when one reviewable change depends on another and separate PRs
+make the work easier to review or qualify. A release-branch fix followed by a
+dependent feature is one example. Keep unrelated changes in separate branches;
+do not use a stack to bypass reviews, protected branches, or required checks.
+
+- Base the first PR on its intended integration branch (`Dev` or
+  `release/<version>`). Base each dependent PR on the preceding PR's branch.
+  Keep each layer focused, with its own issue links, documentation, and validation.
+- Open dependent PRs as drafts until their parent is ready. In every stacked PR,
+  link the parent and state the merge order and final target in the PR body.
+  Reviewers should be able to see only that layer's changes in its diff.
+- Merge from the bottom of the stack upward, using the merge-commit policy for
+  `Dev` and release branches. After a parent merges, confirm or retarget the
+  next PR's base to the integration branch and review its new diff before
+  merging. Preserve published commit history; do not force-push or rebase a
+  shared branch just to reshape the stack.
+- Merge all release-branch layers before merging `release/<version>` into `Dev`.
+  The release PR must show the combined result and remain draft while dependent
+  layers or release gates are outstanding.
+- Keep issue and Project status tied to actual integration and release evidence.
+  Use `Refs #...` for partial layers; use `Closes #...` only when the relevant
+  work should close on that merge. Required checks apply to every protected
+  target and cannot be replaced by checks on a different layer.
+
+## 6.2) Issue And PR Linking Rules
 Keep planning, implementation, and release tracking connected:
 - Every meaningful PR should link to at least one issue.
 - Preferred PR body footer:

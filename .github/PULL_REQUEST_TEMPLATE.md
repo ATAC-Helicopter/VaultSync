@@ -2,7 +2,12 @@
 -
 
 ## Linked Issues
-Closes #
+Refs #
+<!-- Use Closes # only when this PR's merge should close the issue. -->
+
+## Stack (if applicable)
+- Depends on:
+- Merge order and final target:
 
 ## Validation
 - [ ] `dotnet build VaultSync.sln --no-restore -m:1 /p:UseSharedCompilation=false`
