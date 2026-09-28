@@ -11,6 +11,7 @@ using Xunit;
 
 namespace VaultSync.Core.Tests;
 
+[Collection("CLI presentation console")]
 public sealed class CliProjectInspectionTests
 {
     [Fact]
