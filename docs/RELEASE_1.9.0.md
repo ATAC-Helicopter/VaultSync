@@ -263,6 +263,10 @@ planned, remaining, and actual deletion counts. A versioned dry run reads the
 existing database without writing it. Legacy `prune --json` no longer appends
 a human completion line after a live deletion, closing
 [BUG-19005 / #718](https://github.com/ATAC-Helicopter/VaultSync/issues/718).
+`destinations --output json` now reads configured targets without persisting
+defaults and returns aliases and classification without paths or credentials.
+It does not claim reachability; explicit legacy `--test` remains separate until
+its mount and error contracts are qualified. Empty legacy `--json` now emits `[]`.
 
 [BUG-19006 / #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719):
 The watcher now exits 2 on startup or later cycle failure, including mirror and

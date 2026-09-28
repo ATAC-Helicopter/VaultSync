@@ -621,9 +621,10 @@ USAGE:
     vaultsync destinations [OPTIONS]
 
 OPTIONS:
-    -h, --help    Prints help information
+    -h, --help               Prints help information
         --test
         --json
+        --output <FORMAT>
 ```
 
 ## `vaultsync self-test`

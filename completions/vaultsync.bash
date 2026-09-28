@@ -39,7 +39,7 @@ _vaultsync_options() {
     'verify') printf '%s' '-h --help --percent --full --db --quiet --json --output' ;;
     'watch') printf '%s' '-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' ;;
     'doctor') printf '%s' '-h --help --db --check-dest --quiet --output' ;;
-    'destinations') printf '%s' '-h --help --test --json' ;;
+    'destinations') printf '%s' '-h --help --test --json --output' ;;
     'self-test') printf '%s' '-h --help --db --quiet' ;;
     'init') printf '%s' '-h --help --db --quiet' ;;
     'config') printf '%s' '-h --help' ;;
@@ -83,6 +83,7 @@ _vaultsync_values() {
     'mirror --output') printf '%s' 'text json' ;;
     'verify --output') printf '%s' 'text json' ;;
     'doctor --output') printf '%s' 'text json' ;;
+    'destinations --output') printf '%s' 'text json' ;;
     'list-projects --output') printf '%s' 'text json' ;;
     'snapshot --output') printf '%s' 'text json' ;;
     'sync --output') printf '%s' 'text json' ;;

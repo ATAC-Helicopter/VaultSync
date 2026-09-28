@@ -127,6 +127,33 @@ namespace VaultSync.Core.Config
             }
         }
 
+        /// <summary>Read configuration for an inspection command without persisting defaults or emitting diagnostics to stdout.</summary>
+        public static AppConfig ReadForInspection()
+        {
+            if (!File.Exists(ConfigFilePath))
+                return new AppConfig();
+
+            try
+            {
+                return JsonSerializer.Deserialize<AppConfig>(ReadConfigWithRetry(ConfigFilePath), JsonOptions)
+                    ?? throw new InvalidDataException("Configuration is empty.");
+            }
+            catch (Exception primaryError) when (primaryError is IOException or JsonException or InvalidDataException)
+            {
+                if (!File.Exists(ConfigBackupFilePath))
+                    throw new InvalidDataException("Configuration cannot be read for inspection.", primaryError);
+                try
+                {
+                    return JsonSerializer.Deserialize<AppConfig>(ReadConfigWithRetry(ConfigBackupFilePath), JsonOptions)
+                        ?? throw new InvalidDataException("Backup configuration is empty.");
+                }
+                catch (Exception backupError) when (backupError is IOException or JsonException or InvalidDataException)
+                {
+                    throw new InvalidDataException("Configuration and its backup cannot be read for inspection.", backupError);
+                }
+            }
+        }
+
         private static void TrySetFirstLoadState(bool missingConfig)
         {
             int state = missingConfig ? 1 : 2;

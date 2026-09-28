@@ -7,6 +7,7 @@
 - [VS-1973] Add grouped routes, source discovery, and live mirroring.
 - [VS-1973] Add project and snapshot inspection with bounded diffs.
 - [VS-1974] Add versioned JSON for inspection, snapshots, mirror, verify, doctor, and restore.
+- [VS-1974] Add private destination summaries and valid empty legacy JSON.
 - [VS-1975] Create and inspect folder backups; verify one or many; select restore paths.
 - [VS-1975] Batch snapshot pruning with versioned preview and result counts.
 - [VS-1973] Let `watch --db` select a database.

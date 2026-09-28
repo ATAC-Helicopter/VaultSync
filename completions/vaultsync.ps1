@@ -40,7 +40,7 @@ function Get-VaultSyncOptions([string]$route) {
         'verify' { return '-h --help --percent --full --db --quiet --json --output' }
         'watch' { return '-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' }
         'doctor' { return '-h --help --db --check-dest --quiet --output' }
-        'destinations' { return '-h --help --test --json' }
+        'destinations' { return '-h --help --test --json --output' }
         'self-test' { return '-h --help --db --quiet' }
         'init' { return '-h --help --db --quiet' }
         'config' { return '-h --help' }
@@ -85,6 +85,7 @@ function Get-VaultSyncValues([string]$route) {
         'mirror --output' { return 'text json' }
         'verify --output' { return 'text json' }
         'doctor --output' { return 'text json' }
+        'destinations --output' { return 'text json' }
         'list-projects --output' { return 'text json' }
         'snapshot --output' { return 'text json' }
         'sync --output' { return 'text json' }

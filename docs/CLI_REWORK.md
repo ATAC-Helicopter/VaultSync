@@ -28,7 +28,7 @@ New grouped routes reuse the same handlers rather than forwarding argument strin
 | `verify` | Keep current workflow; evolve evidence contract | Currently checks a supplied folder against the latest indexed snapshot, sample/full; must not imply whole-vault or image validation |
 | `watch` | Keep current behavior; evolve unattended lifecycle | Existing snapshot/live-sync/verification loop; explicit DB selection and drained cancellation implemented; uniform headless results remain pending |
 | `doctor` | Keep current diagnostics; evolve machine results | Isolated write probes and concurrent tool-output draining retained; opt-in v1 JSON checks and read-only repository inspection implemented; provenance/remaining unattended contract pending |
-| `destinations` | Keep existing listing/testing invocation | Future resource actions must preserve today's `--test` and `--json`; testing can involve mount/credential access |
+| `destinations` | Keep existing listing/testing invocation | Versioned read-only configuration summary lists aliases/classification without paths or credentials; legacy `--test` and `--json` remain, while versioned testing awaits a bounded private diagnostic contract |
 | `init` | Keep explicit initialization | Future profile/config selection must preserve shared CLI/desktop storage and owner-only data policy |
 | `version` | Keep existing build-identity output | Existing JSON identity retained |
 | `docs` | Add documentation entry point | Compact terminal guide plus bundled `--full`, browser `--open`, and pipe-friendly `--url` access to the full handbook |
