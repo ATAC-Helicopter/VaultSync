@@ -10,6 +10,7 @@ using Xunit;
 
 namespace VaultSync.Core.Tests;
 
+[Collection("CLI presentation console")]
 public sealed class DestinationCommandTests
 {
     [Fact]
@@ -109,6 +110,7 @@ public sealed class DestinationCommandTests
 
     private static async Task<(int ExitCode, string Stdout)> RunAsync(params string[] args)
     {
+        _ = Spectre.Console.AnsiConsole.Console;
         TextWriter previous = Console.Out;
         using var output = new StringWriter();
         try
