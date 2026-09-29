@@ -19,6 +19,7 @@ Use this page as the primary index for all project documentation.
 - 1.9 CLI structured project inspection: [output contract](CLI_OUTPUT.md)
 - 1.9 CLI command and behavior audit: [CLI rework](CLI_REWORK.md)
 - 1.9.0 Recovery Horizon kickoff: [release contract](RELEASE_1.9.0.md)
+- 1.9 desktop route and migration review: [route architecture](ROUTE_ARCHITECTURE_1.9.md)
 - 1.8.9 bug fixes and UI polish: [1.8.9 release review](RELEASE_1.8.9.md)
 - Reproducible release performance profile: [performance benchmarks](PERFORMANCE_BENCHMARKS.md)
 - Release process: [Releasing](RELEASING.md)

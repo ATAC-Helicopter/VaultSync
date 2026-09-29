@@ -38,6 +38,11 @@ support the intended stable claims. Existing backups remain independently
 recoverable during migration. Paid signing is feasibility work under VS-1902;
 unavailable signing must not weaken published integrity and provenance.
 
+The [VS-1910 route architecture draft](ROUTE_ARCHITECTURE_1.9.md) maps the
+existing desktop shell to Protect, History, Recover, and Manage and defines
+state and compatibility gates for review. It does not approve the route API or
+claim replacement-shell parity.
+
 ## CLI rework
 
 This release begins the full 1.9 CLI program, including new commands and

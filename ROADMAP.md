@@ -1216,7 +1216,10 @@ repository must not transfer before a compatible release is adopted.
 
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
   workflow boundaries, navigation invariants, and legacy-shell migration map.
-  _(Issue #501.)_
+  - Progress: the [route architecture review draft](docs/ROUTE_ARCHITECTURE_1.9.md)
+    inventories the current shell and proposes typed routes, state ownership,
+    compatibility mapping, and parity gates. API, deep-link inventory, and
+    cross-platform usability evidence remain open. _(Issue #501.)_
 - [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility
   contract.
   - Scope: cover source identity, partition layout, block/sparse maps,

@@ -79,6 +79,10 @@ Architecture work may result in scope reduction, a technology preview, or a
 release re-sequence. That is a valid result when the evidence does not support
 the original plan.
 
+The [VS-1910 route architecture draft](ROUTE_ARCHITECTURE_1.9.md) records the
+current shell inventory, proposed route/state boundary, and migration gates for
+review. The route API and replacement parity remain unapproved.
+
 ### 1.9 delivery sequence
 
 | Order | Release | Outcome | Promotion condition |
