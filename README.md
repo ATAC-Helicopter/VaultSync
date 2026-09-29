@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-09-28T09:40:57Z`
+Captured at: `2026-09-29T09:45:30Z`
 
 - Releases: **53**
 - Assets: **499**
-- Total asset downloads: **3178**
+- Total asset downloads: **3186**
 - Change since previous snapshot: **+8**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **114** downloads (+8)
+- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **122** downloads (+8)
 - Latest prerelease: **VaultSync 1.8.5 Beta 1** with **19** downloads (0)
 
 ## Top assets
@@ -25,7 +25,7 @@ Captured at: `2026-09-28T09:40:57Z`
 | vaultsync-patch-windows.json | `v1.8.4` | 79 | 0 |
 | vaultsync-patch-windows.json | `v1.4.1` | 67 | 0 |
 | vaultsync-patch-windows.json | `v1.3.5` | 67 | 0 |
-| vaultsync-patch-windows.json | `v1.8.9` | 57 | +3 |
+| vaultsync-patch-windows.json | `v1.8.9` | 61 | +4 |
 
 ## By release
 
@@ -33,19 +33,19 @@ Captured at: `2026-09-28T09:40:57Z`
 
 - Tag: `v1.8.9`
 - Published: `2026-09-16T10:06:22Z`
-- Total downloads: **114**
+- Total downloads: **122**
 - Delta: **+8**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| vaultsync-patch-windows.json | 57 | +3 | 57975 |
-| VaultSync-Setup-1.8.9.exe | 31 | +2 | 64315420 |
-| vaultsync-release-manifest.json | 7 | +1 | 7399 |
+| vaultsync-patch-windows.json | 61 | +4 | 57975 |
+| VaultSync-Setup-1.8.9.exe | 35 | +4 | 64315420 |
+| vaultsync-release-manifest.json | 7 | 0 | 7399 |
 | VaultSync-1.8.9-macos-apple-silicon.dmg | 3 | 0 | 55235061 |
 | vaultsync-patch-linux-x64.json | 3 | 0 | 55016 |
 | vaultsync-patch-macos-apple-silicon.json | 3 | 0 | 61158 |
-| VaultSync-1.8.9-linux-x64.AppImage | 2 | +1 | 52630720 |
-| VaultSync-1.8.9-macos-intel.dmg | 2 | +1 | 58169854 |
+| VaultSync-1.8.9-linux-x64.AppImage | 2 | 0 | 52630720 |
+| VaultSync-1.8.9-macos-intel.dmg | 2 | 0 | 58169854 |
 | vaultsync-patch-linux-x64.zip | 2 | 0 | 52566967 |
 | vaultsync-patch-windows.zip | 2 | 0 | 92462440 |
 | vaultsync-patch-linux-arm64.json | 1 | 0 | 55021 |
