@@ -12,6 +12,7 @@ using Xunit;
 
 namespace VaultSync.Core.Tests;
 
+[Collection("CLI presentation console")]
 public sealed class CliWatchCommandTests
 {
     [Fact]
@@ -96,8 +97,13 @@ public sealed class CliWatchCommandTests
 
             Directory.Delete(destination, recursive: true);
             File.WriteAllText(destination, "not a directory");
-            File.WriteAllText(sourceFile, "trigger failed mirror");
-            Assert.Equal(2, await session.WaitAsync(TimeSpan.FromSeconds(10)));
+            // Keep changing the source until a watched cycle observes the failure.
+            for (int attempt = 0; attempt < 40 && !session.IsCompleted; attempt++)
+            {
+                File.WriteAllText(sourceFile, $"trigger failed mirror {attempt}");
+                await Task.Delay(250);
+            }
+            Assert.Equal(2, await session.WaitAsync(TimeSpan.FromSeconds(5)));
             Assert.Contains("failed", errors.ToString(), StringComparison.OrdinalIgnoreCase);
             int snapshotCount = repository.GetSnapshotsForProject("watched").Count();
             File.WriteAllText(sourceFile, "after shutdown");
