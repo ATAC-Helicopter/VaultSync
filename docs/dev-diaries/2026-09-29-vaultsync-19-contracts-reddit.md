@@ -1,6 +1,6 @@
 # VaultSync 1.9 dev update: what a backup script can actually know
 
-Draft for Reddit. Publish only after the matching site entry is live; add its final URL here.
+Draft for Reddit. Publish only after the matching site entry is live at the planned URL below.
 
 I have been continuing VaultSync's 1.9 work after the CLI backup/restore preview shown last week. The latest slice is about reporting only what the app has actually checked.
 
@@ -19,3 +19,5 @@ On the desktop side, I have drafted the navigation contract for Protect, History
 All of this is in the draft [1.9 PR stack](https://github.com/ATAC-Helicopter/VaultSync/pull/728) (#721, #722, #726, #729), with the final release promotion still [draft #683](https://github.com/ATAC-Helicopter/VaultSync/pull/683). Windows, macOS, and Linux builds/tests pass on the implementation PRs. Disk imaging, bootable restore, supported-system qualification, and exact installed 1.8.9 upgrades are still open. **1.9 has not shipped.**
 
 When reading backup status from a CLI, which distinction matters most to you: configured, reachable, backed up, or verified?
+
+[Longer development note on the FG Labs site](https://fglabs.dev/devlog/vaultsync-19-what-a-backup-script-can-know).

@@ -1,6 +1,7 @@
-# VaultSync 1.9 dev update — a useful answer before a risky action
+# VaultSync 1.9 dev update — what a backup script can know
 
 Draft: 2026-09-29. For the FG Labs site; not a release announcement.
+Planned site path: https://fglabs.dev/devlog/vaultsync-19-what-a-backup-script-can-know
 
 The previous 1.9 update showed a recorded folder backup, verification, and a restore preview from the CLI. Since then, I have been working on a less visible question: what should VaultSync say when a script asks about protection, and what should it refuse to imply?
 
