@@ -1306,6 +1306,14 @@ repository must not transfer before a compatible release is adopted.
     scheduler recipes, and migration instructions are drafted; supported-platform
     qualification and independent recovery runbooks remain.
 
+- [ ] `BUG-19008` `P1` Isolate captured CLI console writers during Windows qualification.
+  - Scope: initialize/save the original Spectre console before redirecting stdout
+    and restore both consoles before disposing captured writers.
+  - Acceptance: bundled documentation/completion assertions and later restore/
+    self-test output pass on Windows; no disposed output writer leaks across tests.
+  - Evidence: PR #737 Windows job 111221779954 reproduced the failure; the fix
+    is prepared on fix/1.9.1-console-isolation and awaits native revalidation.
+
 ## 1.9.2 — Portable Recovery
 
 Portable recovery moves ahead of offsite expansion because provider support is

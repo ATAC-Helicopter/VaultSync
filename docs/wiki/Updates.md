@@ -43,7 +43,7 @@ VaultSync supports two Windows update models:
 - The update banner shows the channel and current status.
 - Microsoft Store builds replace GitHub update actions with `Open Microsoft Store`.
 
-![Maintenance and update controls in Settings](../images/Settings_Maintenance.png)
+![Maintenance and update controls in Settings](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/images/Settings_Maintenance.png)
 
 ## Skipping a version
 - Use the Skip version action in the update banner.

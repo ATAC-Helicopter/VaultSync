@@ -6,7 +6,7 @@ Current stable is **1.8.9**, published September 16, 2026. The **1.9.5** develop
 recovery architecture are in development; see [development status](Development-Status.md)
 and the [development CLI guide](CLI-Development.md) before using preview commands.
 
-![VaultSync dashboard showing protection, activity, storage, and recovery status](../images/Dashboard.png)
+![VaultSync dashboard showing protection, activity, storage, and recovery status](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/images/Dashboard.png)
 
 ## Getting Started
 - [Quick start](Quick-Start.md)
@@ -46,11 +46,11 @@ and the [development CLI guide](CLI-Development.md) before using preview command
 - [Reporting bugs](Reporting-Bugs.md)
 
 ## Repository Docs
-- [Documentation index](../README.md)
-- [Documentation hub](../../DOCUMENTATION.md)
-- [Roadmap](../../ROADMAP.md)
-- [Changelog](../../CHANGELOG.md)
-- [Contributing](../../CONTRIBUTING.md)
-- [Security](../../SECURITY.md)
+- [Documentation index](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/README.md)
+- [Documentation hub](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/DOCUMENTATION.md)
+- [Roadmap](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/ROADMAP.md)
+- [Changelog](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/CHANGELOG.md)
+- [Contributing](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/CONTRIBUTING.md)
+- [Security](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/SECURITY.md)
 
 - [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.

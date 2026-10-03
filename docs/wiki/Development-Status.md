@@ -30,3 +30,11 @@ Capture → Validate → Boot → Restore → Validate on the declared matrix.
 Portable, offsite, unified recovery, assurance and BSC follow in their own
 releases. BSC gates cannot block earlier releases. No new individual patch dates
 were invented; the existing family horizon remains planning context.
+
+## Qualification follow-up
+
+The 1.9.1 Windows suite exposed BUG-19008 / #745; [fix PR #746](https://github.com/ATAC-Helicopter/VaultSync/pull/746)
+is prepared and requires native checks/review. Sonar fails before analysis while
+looking up the new PR key; a rerun did not resolve it. Full remote CI is not
+claimed green. The corrected release/1.9.0 tree still awaits [#736](https://github.com/ATAC-Helicopter/VaultSync/pull/736)
+external review/merge under the repository rulesets.

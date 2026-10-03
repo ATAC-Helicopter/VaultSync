@@ -36,7 +36,7 @@ def validate(root: Path, data: dict) -> list[str]:
     if ids != expected:
         errors.append(f'Roadmap ownership drift: unowned={sorted(ids-expected)}, absent={sorted(expected-ids)}')
     aliases = data['documentAliases']
-    if len({a['documentId'] for a in aliases}) != len(aliases) or len({a['canonicalId'] for a in aliases}) != len(aliases):
+    if len({a['documentId'] for a in aliases}) != len(aliases) or len({a['canonicalId'] for a in aliases}) != len(aliases) or len({a['issue'] for a in aliases}) != len(aliases):
         errors.append('Document aliases must be one-to-one')
     for alias in aliases:
         if alias['canonicalId'] not in seen or not 703 <= alias['issue'] <= 715:

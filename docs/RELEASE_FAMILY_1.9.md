@@ -116,3 +116,8 @@ The preserved CLI is an implemented development slice, not a completed 1.9.5.
 BSC implementation has not begun. 1.10 covers compatible incremental expansion;
 2.0 remains conditional on an authoritative product-model/compatibility change,
 not visual redesign alone.
+
+Current publication, preserved branches, PRs and test limits are recorded in
+[the full-roadmap alignment evidence](release-evidence/1.9-realignment-2026-10-03.md).
+BUG-19008 tracks the Windows console-isolation issue found in the 1.9.1 slice;
+its focused fix is PR #746 and must pass native checks before qualification.

@@ -32,3 +32,17 @@ class ReleaseFamilyTests(unittest.TestCase):
         errors = module.validate(ROOT, broken)
         self.assertTrue(any('branch' in e for e in errors))
         self.assertTrue(any('one-to-one' in e for e in errors))
+
+
+    def test_alias_cannot_reuse_the_same_live_issue(self):
+        broken = copy.deepcopy(self.data)
+        broken['documentAliases'][1]['issue'] = broken['documentAliases'][0]['issue']
+        self.assertTrue(any('one-to-one' in e for e in module.validate(ROOT, broken)))
+
+    def test_missing_owner_and_external_import_fail_closed(self):
+        broken = copy.deepcopy(self.data)
+        broken['releases'][0]['workIds'].pop()
+        self.assertTrue(any('unowned' in e for e in module.validate(ROOT, broken)))
+        broken = copy.deepcopy(self.data)
+        broken['source']['path'] = '../outside-planning.md'
+        self.assertTrue(any('repository file' in e for e in module.validate(ROOT, broken)))
