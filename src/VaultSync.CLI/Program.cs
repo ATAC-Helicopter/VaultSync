@@ -102,7 +102,6 @@ public static class Program
                 });
             });
 
-            Log.Info($"argv: {string.Join(" ", args.Select(a => a.Contains(' ') ? $"\\\"{a}\\\"" : a))}");
             int code = await app.RunAsync(args);
             Log.Info($"exit: {code}");
             return code;
