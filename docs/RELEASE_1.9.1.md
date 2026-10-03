@@ -12,3 +12,6 @@ See [family contract and stable gates](RELEASE_FAMILY_1.9.md) and
 [canonical scope/status](../ROADMAP.md). Before promotion, integrate the qualified
 predecessor, verify actual functionality and all version/packaging consumers,
 record a reviewed target date, and complete native release evidence.
+
+BUG-19008 tracks the Windows console-capture isolation defect found during
+qualification; the focused fix remains subject to native CI and review.

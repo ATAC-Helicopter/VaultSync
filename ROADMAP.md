@@ -1244,6 +1244,12 @@ repository must not transfer before a compatible release is adopted.
     stderr guidance. Two isolated cases reproduced the old deletion behavior.
   - Tracking: [issue #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699);
     the implementation and passing regression evidence await release integration.
+- [ ] `BUG-19009` `P1` Run required release checks for embedded documentation changes.
+  - Scope: CI/CodeQL/Sonar PR and integration triggers must include docs-only
+    changes; bundled CLI guides change executable content and require validation.
+  - Acceptance: protected release PRs emit every required check context while
+    preserving existing OS jobs and source-analysis gates. Related #736 and #747.
+
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and
@@ -1305,6 +1311,14 @@ repository must not transfer before a compatible release is adopted.
     by `docs --full`; online access uses `docs --open`/`--url`. Disposable inspection,
     scheduler recipes, and migration instructions are drafted; supported-platform
     qualification and independent recovery runbooks remain.
+
+- [ ] `BUG-19008` `P1` Isolate captured CLI console writers during Windows qualification.
+  - Scope: initialize/save the original Spectre console before redirecting stdout
+    and restore both consoles before disposing captured writers.
+  - Acceptance: bundled documentation/completion assertions and later restore/
+    self-test output pass on Windows; no disposed output writer leaks across tests.
+  - Evidence: PR #737 Windows job 111221779954 reproduced the failure; the fix
+    is prepared on fix/1.9.1-console-isolation and awaits native revalidation.
 
 ## 1.9.2 — Portable Recovery
 
