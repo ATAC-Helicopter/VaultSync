@@ -29,7 +29,7 @@ intermediate stack branch is not a shipped release or a completed release gate.
 | [#729](https://github.com/ATAC-Helicopter/VaultSync/pull/729) | VS-1910 route architecture draft | #726 |
 | [#730](https://github.com/ATAC-Helicopter/VaultSync/pull/730) | Development diary and mirror | #729 |
 | [#731](https://github.com/ATAC-Helicopter/VaultSync/pull/731) | Stacked PR workflow | #730 |
-| `work/1.9-watch-preview` | BUG-19007 / #734, finite plans and tracking | #731 |
+| [#735](https://github.com/ATAC-Helicopter/VaultSync/pull/735) | BUG-19007 / #734, finite plans and tracking | #731 |
 
 Merge bottom-up with merge commits, retarget each child after its parent merges,
 and review its resulting diff and checks. The separate draft release PR
