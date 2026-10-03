@@ -1580,6 +1580,9 @@ block the earlier Recovery Horizon releases.
 
 ## 1.9.8 — Stability and LTS Baseline
 
+**Stable target:** Unscheduled
+**Working branch:** `release/1.9.8`
+
 - [ ] `VS-1961` `P0` Stabilize disk-image, offsite, portable-recovery, and
   Binary Source Control formats.
 - [ ] `VS-1962` `P0` Complete long-duration, large-dataset, migration,
