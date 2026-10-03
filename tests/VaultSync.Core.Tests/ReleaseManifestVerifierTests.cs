@@ -35,6 +35,50 @@ public sealed class ReleaseManifestVerifierTests
     }
 
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void OwnerTransfer_AcceptsHistoricalAndOrganizationMetadata(bool organizationManifest, bool organizationApi)
+    {
+        string manifest = CreateManifest();
+        if (organizationManifest)
+            manifest = manifest.Replace("ATAC-Helicopter/VaultSync", "FGLabs-dev/VaultSync", StringComparison.Ordinal);
+        string publishedUrl = organizationApi
+            ? Url.Replace("ATAC-Helicopter/VaultSync", "FGLabs-dev/VaultSync", StringComparison.Ordinal)
+            : Url;
+
+        Assert.True(ReleaseManifestVerifier.TryValidate(
+            manifest, Tag, false, CreatePublishedAssets(url: publishedUrl), out _));
+    }
+
+    [Theory]
+    [InlineData("https://github.com/FGLabs-dev/VaultSync/releases/download/v1.8.8/VaultSync-1.8.7-linux-x64.tar.gz")]
+    [InlineData("https://github.com/FGLabs-dev/VaultSync/releases/download/v1.8.7/other.tar.gz")]
+    [InlineData("https://github.com/other/VaultSync/releases/download/v1.8.7/VaultSync-1.8.7-linux-x64.tar.gz")]
+    public void OwnerTransfer_StillRejectsWrongTagNameAndRepository(string url)
+    {
+        Assert.False(ReleaseManifestVerifier.TryValidate(
+            CreateManifest(), Tag, false, CreatePublishedAssets(url: url), out _));
+    }
+
+    [Fact]
+    public void OwnerTransfer_ResolvesOrganizationManifestDescriptorAgainstHistoricalManifest()
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(CreateManifest());
+        string hash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        List<GitHubUpdateService.GitHubAsset> assets = CreateGitHubAssets(bytes.Length, hash);
+        foreach (GitHubUpdateService.GitHubAsset asset in assets)
+            asset.BrowserDownloadUrl = asset.BrowserDownloadUrl?.Replace(
+                "ATAC-Helicopter/VaultSync", "FGLabs-dev/VaultSync", StringComparison.Ordinal);
+
+        Assert.True(GitHubUpdateService.TryGetReleaseManifestAsset(
+            assets, Tag, out var manifest, out _, out var expectedHash));
+        Assert.Single(GitHubUpdateService.ValidateDownloadedReleaseManifest(
+            bytes, manifest!, expectedHash!, Tag, false, assets)!);
+    }
+
+    [Theory]
     [InlineData(11, Hash, Url)]
     [InlineData(10, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Url)]
     [InlineData(10, Hash, "https://evil.example/VaultSync.tar.gz")]
