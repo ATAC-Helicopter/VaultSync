@@ -3,16 +3,10 @@ name: CI
 on:
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   push:
     # Release branches are validated by their required PR. Keep post-merge
     # validation on the integration and stable branches.
     branches: [ "Dev", "Stable" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -71,6 +65,25 @@ jobs:
 
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+
+      - name: Validate release ownership and metadata
+        run: |
+          python3 scripts/release_family.py
+          python3 scripts/public_release_metadata.py check
+          python3 -m unittest discover -s tests/scripts -q
+
+      - name: Verify AppImage packaging
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("release/release-metadata.json"))["activeRelease"]["version"])')"
+          bash scripts/build_linux_release.sh "$version" x64 "${{ runner.temp }}/runtime-audit"
+          appimage="$(realpath "dist/linux/VaultSync-${version}-linux-x64.AppImage")"
+          extract_dir="$(mktemp -d)"
+          trap 'rm -rf "$extract_dir"' EXIT
+          (cd "$extract_dir" && "$appimage" --appimage-extract >/dev/null)
+          root="$extract_dir/squashfs-root"
+          [[ "$(stat -c '%a' "$root")" == 755 ]]
+          [[ -x "$root/AppRun" && -x "$root/usr/bin/VaultSync.UI" ]]
 
   macos:
     name: macOS build and test

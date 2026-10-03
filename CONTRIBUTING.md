@@ -20,6 +20,10 @@ Rules:
 - Reuse the same ID in PR description, validation notes, and changelog entry when applicable.
 
 ## 2) Before You Start
+- Active development is **1.9.0** on `work/1.9-roadmap-realignment`, assembled
+  in sole release PR #736. Read [the working context](AGENTS.md) and
+  [the release contract](docs/RELEASE_1.9.0.md); keep later-release work in its
+  owning preparation branch and PR.
 - Check `ROADMAP.md` and open issues.
 - Confirm acceptance criteria before coding.
 - For risky or cross-cutting changes, align scope first.
@@ -113,6 +117,45 @@ Keep planning, implementation, and release tracking connected:
 - CLI formatting rule:
   - For `gh issue comment` and similar commands, use a PowerShell here-string (`@' ... '@`) or `--body-file`.
   - Do not pass escaped newline text (`\\n`) in quoted one-liners, to avoid literal backslash-n output in GitHub comments.
+
+## 6.2) Stacked Pull Requests
+
+Use a stack when one reviewable change depends on another that has not merged.
+Use separate PRs against the release branch for independent work so reviewers
+can merge either one without waiting for the other.
+
+- Open the first PR against its intended integration branch (for example,
+  `release/1.9.0`). Open each dependent PR against the preceding PR's head
+  branch. Keep one focused change per layer and verify that each PR's **Files
+  changed** view contains only that layer's work.
+- In every stacked PR, identify its immediate parent PR and branch, its final
+  target branch, and the complete merge order. Update these links and the PR
+  base when the stack changes. The top layer must not obscure the review diff
+  of a lower layer.
+- Merge from the bottom upward with merge commits. After a parent merges,
+  retarget its child to the parent's integration branch, review the resulting
+  diff, and rerun required checks before merging the child. Repeat until the
+  stack is integrated. Do not squash, rebase, force-push, or bypass the ruleset
+  of a protected release branch, `Dev`, or `Stable`.
+- Keep issue and Project state tied to actual integration. A partial layer uses
+  `Refs #123`; use `Closes #123` only on the PR whose merge satisfies the issue's
+  acceptance criteria and closure policy. Update the issue and Project when a
+  layer merges. A draft, passing check, or merge into an intermediate stack
+  branch does not by itself complete release-gated work.
+- The release PR from `release/<version>` to `Dev`, and promotion from `Dev` to
+  `Stable`, remain separate merge-commit steps with their own required checks.
+
+### Recovery Horizon review grouping
+
+The maintainer requested one open draft PR per 1.9 release on 2026-10-03.
+Assemble that release's contracts, features, fixes and changelog into its sole
+preparation PR against Dev; close duplicate preparation/fix PRs as superseded
+without deleting branches or rewriting protected refs. The review head may be
+an unprotected preparation branch while release/<version> retains its reviewed
+history. This convention changes review grouping, not required approvals or
+release qualification. Keep release PRs draft; no automatic release merge.
+Shared maintenance must be propagated without moving future features forward.
+The daily ledger records each release, source head and qualification status.
 
 ## 7) Quality Gates
 Run before requesting review:

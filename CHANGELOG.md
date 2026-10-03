@@ -1,5 +1,32 @@
-﻿# Changelog
-## [1.8.9] - Unreleased
+# Changelog
+
+## [1.9.0] - Unreleased
+### Planning and tracking — 2026-10-03
+- [VS-1980] Establish the active 1.9.0 working branch and sole release PR, with persistent contributor instructions keeping later-release implementation in its owning branches.
+- [VS-1980] Import the complete Recovery Horizon roadmap, preserve existing work IDs, and validate release ownership against its immutable BSC crosswalk.
+- [VS-1980] Prepare nine release contracts, version identities and unscheduled future metadata, while preserving the published stable version and historical milestones.
+- [VS-1980] Separate discovery into 1.9.1 and resource automation into 1.9.5, preserving the full earlier implementation in a published archive branch.
+- [VS-1980] Link the GitHub Project, reconcile issue fields and wiki, and consolidate preparation and corrections into one draft PR per release.
+- [VS-1980] Make project date audits work with installed GitHub CLI pagination and keep candidate publication dates mandatory during planned-release validation.
+- [VS-1910] Draft typed recovery routes and adaptive UI architecture, retaining explicit approval and complete disk capture, boot and restore qualification gates.
+### Fixed in development
+- [BUG-19001] Require explicit authorization before unattended project removal touches configuration or registration, preserving interactive confirmation and existing source and backup files.
+- [VS-1980] Preserve finite read-only legacy watcher previews, database selection, cancellation draining and failed-cycle reporting independently of future resource CLI command ownership.
+- [BUG-19009] Run required platform and analysis workflows for documentation changes because bundled CLI guides affect artifacts and protected PR check contexts.
+- [BUG-19010] Align all managed and native rendering packages together, correcting incomplete Dependabot updates before their compatibility qualification and eventual release integration.
+- [BUG-19011] Upgrade Spectre command parsing atomically with public async overrides, preserving existing cancellation signatures and flat CLI behavior across the API change.
+- [VS-1980] Accept exact FG Labs updater release URLs after the organization transfer and handle root-owned AppImage extraction outputs during application packaging.
+### Maintenance
+- [VS-1980] Remove unused Avalonia Inter font packaging after confirming no registration or resource consumers, preserving existing bundled fonts and system fallback behavior.
+- [VS-1980] Integrate the verified Dependabot test SDK patch and preserve coordinated rendering, CLI and CodeQL update commits for reviewed release maintenance.
+- [VS-1980] Correct the authorized ruleset update prohibition while retaining required review, strict platform checks, merge history protection and deletion restrictions throughout integration.
+
+1.9.0 has not shipped. Disk capture, independent boot and disk restore remain
+unimplemented/unqualified. Discovery fixes belong to 1.9.1; resource CLI and its
+regressions belong to 1.9.5. Every change, PR, package audit and remaining gate
+from today is recorded in [the daily ledger](docs/release-evidence/1.9-work-2026-10-03.md).
+
+## [1.8.9] - 16.09.2026
 ### Maintenance
 - [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
 - [VS-1896] Clear static-analysis findings and restore the Sonar coverage gate.
@@ -252,6 +279,8 @@
 - [VS-1834] Refactored CLI destination, doctor, snapshot, and watch command flows into smaller validation and execution helpers without changing their command-line contracts.
 - [VS-1835] Refactored Projects and Settings workflows, project snapshot commands, and rich-text rendering into focused helpers to reduce UI complexity and improve maintainability.
 - [VS-1836] Addressed Sonar analyzer findings and consolidated repeated literals across backup, navigation, update, credential, telemetry, verification, network-mount, and encryption services.
+- [VS-1839] Limited frameless tray and backup-widget dragging to their title areas, restored visible Log Console multi-selection, and updated folder pickers to resolve Avalonia 12 storage items without assuming `file://` URIs.
+
 ### Fixed
 - [BUG-18065] Large text comparisons now retain edits beyond the first 800 lines, collapse long unchanged regions into Git-style hunks, keep the comparison dialog stable while switching files, and reset each selected diff to its first hunk.
 - [BUG-18064] Folder selection now opens from the existing destination or a valid home/Documents fallback, avoiding an empty Avalonia macOS start URL that could trap the native picker and break New Folder navigation.
@@ -260,8 +289,6 @@
 - [BUG-18060] Hardened Snapshot Explorer ZIP restore with explicit destination containment and linked-path rejection so malicious archive entries cannot write outside the selected restore root.
 - [BUG-18060] Applied the same linked-path rejection to ordinary folder restores so an existing symlink or junction inside the restore target cannot redirect copied files outside it.
 - [BUG-18059] Diagnostics retention now runs periodically on every platform, keeps at most two hang dumps within a 1 GiB diagnostics budget, and stops timed-out dump collection before partial files consume disk space.
-- [VS-1839] Limited frameless tray and backup-widget dragging to their title areas, restored visible Log Console multi-selection, and updated folder pickers to resolve Avalonia 12 storage items without assuming `file://` URIs.
-
 ## [1.8.2] - 04.07.2026
 ### Added
 - [VS-1808] Added Snapshot Explorer v1 for backup folder/archive browsing, text preview, search, and selected-item restore.
@@ -278,10 +305,10 @@
 - [VS-1822] Reduced duplicated Settings, shell, onboarding, metadata-sync, and rsync lookup literals flagged by Sonar.
 - [VS-1828] Refreshed setup-python, Spectre.Console, Microsoft.NET.Test.Sdk, SkiaSharp, and HarfBuzzSharp dependencies for the 1.8.2 release train.
 - [VS-1830] Release readiness now warns when a changelog section reuses IDs so scopes can be checked before publishing.
-### Fixed
 - [VS-1808] Snapshot Explorer now previews selected text-like files automatically, highlights the selected row more clearly, and prevents repeated Explore actions from opening duplicate Explorer windows.
 - [VS-1808] Snapshot Explorer action buttons no longer stay disabled after switching from an in-flight file preview to a folder selection.
 - [VS-1821] Download stats path guards now normalize macOS-resolved roots before child-path validation, avoiding false escape failures while preserving workspace confinement.
+### Fixed
 - [BUG-18058] macOS now uses an exclusive per-user lock file for single-instance startup, reducing intermittent duplicate app launches.
 
 ## [1.8.1] - 25.06.2026
@@ -293,14 +320,14 @@
 - [VS-1825] Published a backup encryption guide covering setup, format, credential storage, password changes, opening, and restore.
 - [VS-1826] Recovery project triage now supports search and focused ready or needs-attention filters.
 - [VS-1827] Release-facing issue and PR templates now default to the 1.8.1 release train and show the milestone-scoped release gate command.
-### Fixed
-- [BUG-18057] Linux now holds a per-user OS file lock for the UI process lifetime, preventing duplicate app instances while preserving activation of the existing window.
-- [BUG-18056] Metadata exports now skip backups removed before asynchronous export and commit each shared SQLite metadata update atomically, reducing false invalid-store reports and lock contention.
-- [BUG-18056] Protected Linux patch installs now run the elevated helper headlessly instead of losing the desktop session after `pkexec`.
 - [VS-1825] Linux credential references now store, find, and delete the correct Secret Service entry.
 - [VS-1825] Encrypted archive readers now reject unsupported formats and excessive embedded KDF parameters before derivation.
 - [VS-1827] Release readiness checks now scope Project completion to the target milestone instead of later train work.
 
+### Fixed
+- [BUG-18057] Linux now holds a per-user OS file lock for the UI process lifetime, preventing duplicate app instances while preserving activation of the existing window.
+- [BUG-18056] Metadata exports now skip backups removed before asynchronous export and commit each shared SQLite metadata update atomically, reducing false invalid-store reports and lock contention.
+- [BUG-18056] Protected Linux patch installs now run the elevated helper headlessly instead of losing the desktop session after `pkexec`.
 ## [1.8.0] - 20.06.2026
 ### Added
 - [VS-1814] Added guarded SonarQube Cloud analysis workflow and setup notes for the public OSS repository.
@@ -716,6 +743,7 @@
 - [ISS-15014] Config persistence now exposes async save with cancellation-aware retry backoff, and Settings save paths now use the async flow to reduce blocking waits.
 - [ISS-15015] Main README was refreshed for the current 1.5.x feature set and outdated wording was cleaned up.
 - [ISS-15016] README now includes dedicated app screenshot placeholders (`Dashboard`, `Projects`, `Backups`, `Settings`) under `docs/images/placeholders/`.
+- [VS-1573] Projects action buttons now re-evaluate command state on selection changes so `Open folder` / `Remove from VaultSync` no longer remain incorrectly disabled; notification auto-dismiss cancellation is now handled as expected flow to prevent debug-noise cancellation exceptions.
 ### Fixed
 - [BUG-15001] Pie/donut chart now re-renders more reliably after async startup data load and late layout passes.
 - [BUG-15002] Lock now and encrypted open-timeout labels now bind through localization keys instead of hardcoded literals.
@@ -726,7 +754,6 @@
 - [BUG-15007] Backup/history/runtime async entry points no longer rely on `async void`; handlers now run as `Task` flows with centralized detached-operation exception logging.
 - [BUG-15008] Tray encrypted-open lock/open handlers and project destination/encryption change handlers now use detached `Task` wrappers instead of `async void`.
 - [BUG-15009] Notification auto-dismiss, project snapshot action, settings browse/test commands, and tray refresh no longer use `async void` handlers.
-- [VS-1573] Projects action buttons now re-evaluate command state on selection changes so `Open folder` / `Remove from VaultSync` no longer remain incorrectly disabled; notification auto-dismiss cancellation is now handled as expected flow to prevent debug-noise cancellation exceptions.
 - [BUG-15011] Metadata schema migration now checks column presence with `PRAGMA table_info(...)` before running `ALTER TABLE`, preventing duplicate-column SQLite exceptions (`origin_machine_name`) on already-migrated stores.
 - [BUG-15017] Drive health probing now resolves external tool paths before process launch; when `smartctl` is missing on Windows, manual backup no longer emits first-chance `Win32Exception` and cleanly falls back to `Unknown`.
 - [BUG-15018] SMB/UNC path detection no longer constructs `DriveInfo` from invalid UNC roots; manual backup startup checks now avoid `ArgumentException` (`Drive name must be a root directory...`) and classify UNC paths as network directly.
@@ -849,19 +876,19 @@
 - [ISS-15053] Projects detail action row now wraps responsively so `Open folder` / `Snapshot now` / `Remove from VaultSync` actions do not clip or overlap in windowed layouts.
 - [ISS-15054] Dashboard storage donut now uses explicit visibility toggling against `HasStorageSeries` to avoid stale empty-chart presentation when data arrives after initial layout.
 - [ISS-15055] Added `1.4` <-> `1.5` compatibility matrix runbook (`CM-1501`..`CM-1508`) to drive `VS-1591` release-gate validation.
-### Fixed
 - [VS-1501] Legacy plain backup crypto metadata (`{}`) now parses through the typed descriptor compatibility path.
 - [VS-1504] Secure-store failures no longer require plaintext secret persistence in config as fallback path.
 - [VS-1502] Destination scans and backup-size probes now recognize encrypted archive artifacts alongside plain archives.
 - [VS-1503] Encrypted restore now fails with an explicit invalid-password/corruption error and leaves no partial restored output on wrong-password attempts.
 - [VS-1503] `NeedsRestore` flags are now cleared only after a successful restore completion.
 - [VS-1505] Import/preview from older metadata stores (missing `origin_machine_name` and encryption columns) no longer fails and defaults backups to plain compatibility values.
-- [BUG-15009] Dashboard storage donut now force-invalidates measure/visual on `StorageSeries` updates so the pie reliably appears after async data refreshes.
 - [VS-1536] Rotation failures now preserve original encrypted backup artifacts via rollback-safe swap logic (no corruption on failure/interruption).
+- [VS-1538] In-app `Open folder` no longer sends encrypted backups to the raw backup folder path that could trigger OS "Open with" on `.vse`.
+### Fixed
+- [BUG-15009] Dashboard storage donut now force-invalidates measure/visual on `StorageSeries` updates so the pie reliably appears after async data refreshes.
 - [BUG-15010] Windows startup/debug runs no longer attempt to execute `/bin/ps` for parent-process info logging.
 - [BUG-15011] Metadata sync tests now reflect current import rules for existing/missing backup paths.
 - [BUG-15012] Windows installer now registers `.vse` file association so encrypted backup files open directly in VaultSync.
-- [VS-1538] In-app `Open folder` no longer sends encrypted backups to the raw backup folder path that could trigger OS "Open with" on `.vse`.
 - [BUG-15013] Build no longer picks up generated `artifacts/tmpobj` sources as compile inputs, fixing duplicate assembly attribute errors (`CS0579`) in local builds.
 - [BUG-15014] Dashboard weekly summary labels now compute after day-series arrays are populated, so summary text matches the rendered weekly chart.
 - [BUG-15015] Dashboard activity summary now includes imported-run counts for parity with the weekly graph breakdown.
