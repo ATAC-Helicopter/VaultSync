@@ -15,3 +15,11 @@ record a reviewed target date, and complete native release evidence.
 
 BUG-19008 tracks the Windows console-capture isolation defect found during
 qualification; the focused fix remains subject to native CI and review.
+
+## Assembled release review — 2026-10-03
+
+PR #746 into Dev is the sole release review; preparation source `fix/1.9.1-console-isolation`.
+It includes the original release preparation and all its follow-up corrections.
+The earlier preparation PR is superseded. No release auto-merge is enabled.
+Shared dependency maintenance is propagated atomically with CLI API compatibility.
+See [the complete daily ledger](release-evidence/1.9-work-2026-10-03.md).

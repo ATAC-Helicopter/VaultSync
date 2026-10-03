@@ -114,7 +114,7 @@ internal sealed class DocsCommand : AsyncCommand<DocsSettings>
     private static readonly string[] Topics = ["setup", "inspect", "mirror", "restore", "automate", "migrate"];
     internal static Func<string, bool> BrowserLauncher { get; set; } = LaunchBrowser;
 
-    protected override Task<int> ExecuteAsync(CommandContext context, DocsSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, DocsSettings settings, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (settings.Url)

@@ -116,3 +116,20 @@ The preserved CLI is an implemented development slice, not a completed 1.9.5.
 BSC implementation has not begun. 1.10 covers compatible incremental expansion;
 2.0 remains conditional on an authoritative product-model/compatibility change,
 not visual redesign alone.
+
+Current publication, preserved branches, PRs and test limits are recorded in
+[the full-roadmap alignment evidence](release-evidence/1.9-realignment-2026-10-03.md).
+BUG-19008 tracks the Windows console-isolation issue found in the 1.9.1 slice;
+its fix is included in sole release PR #746; current-head native checks and review remain required.
+
+## Consolidated release review and dependency audit
+
+The maintainer requested one PR per release on 2026-10-03: 1.9.0 #736,
+1.9.1 #746, 1.9.2 #738, 1.9.3 #739, 1.9.4 #740, 1.9.5 #747,
+1.9.6 #742, 1.9.7 #743 and 1.9.8 #744. All remain draft; none is eligible for
+automatic release promotion. Duplicate follow-up/preparation PRs are superseded
+and branches are preserved. Preparation heads need not rewrite protected refs.
+See [the complete daily ledger](release-evidence/1.9-work-2026-10-03.md) and
+[dependency removal/replacement evidence](release-evidence/1.9-dependencies-2026-10-03.md).
+BUG-19010 and BUG-19011 are shared maintenance foundation defects, propagated
+to implemented later CLI slices without changing ownership or claiming release.

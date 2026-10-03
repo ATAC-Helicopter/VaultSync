@@ -1244,6 +1244,21 @@ repository must not transfer before a compatible release is adopted.
     stderr guidance. Two isolated cases reproduced the old deletion behavior.
   - Tracking: [issue #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699);
     the implementation and passing regression evidence await release integration.
+- [ ] `BUG-19009` `P1` Run required release checks for embedded documentation changes.
+  - Scope: CI/CodeQL/Sonar PR and integration triggers must include docs-only
+    changes; bundled CLI guides change executable content and require validation.
+  - Acceptance: protected release PRs emit every required check context while
+    preserving existing OS jobs and source-analysis gates. Related #736 and #747.
+
+- [ ] `BUG-19010` `P1` Keep managed and native rendering package versions aligned.
+  - Scope: qualify all eleven SkiaSharp/HarfBuzzSharp packages together; retain
+    ABI/security pins and remove only dependencies without active consumers.
+  - Tracking: [issue #749](https://github.com/ATAC-Helicopter/VaultSync/issues/749).
+- [ ] `BUG-19011` `P1` Preserve CLI behavior across the Spectre command API upgrade.
+  - Scope: port async overrides atomically with 0.57.2; qualify flat, discovery
+    and future resource variants without moving features between releases.
+  - Tracking: [issue #750](https://github.com/ATAC-Helicopter/VaultSync/issues/750).
+
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and
@@ -1251,6 +1266,11 @@ repository must not transfer before a compatible release is adopted.
   - Acceptance: metadata validation and roadmap/project audits pass; the current
     stable remains 1.8.9; disk support and predecessor upgrades remain unqualified
     until their owning gates have evidence.
+
+Today’s audit, dependency reduction, immutable ID crosswalk and one-PR-per-release
+tracking are recorded in [the daily ledger](docs/release-evidence/1.9-work-2026-10-03.md).
+The assembled 1.9.0 release PR is #736; protected preparation refs retain their
+history and are not rewritten merely to consolidate review.
 
 ### 1.9.0 stable release gate
 
@@ -1269,7 +1289,6 @@ repository must not transfer before a compatible release is adopted.
 ## 1.9.1 — Clone Explorer
 
 **Stable target:** Unscheduled
-**Working branch:** `release/1.9.1`
 
 - [ ] `VS-1911` `P1` Browse supported image partitions and files read-only.
 - [ ] `VS-1912` `P1` Search and selectively extract files from images.

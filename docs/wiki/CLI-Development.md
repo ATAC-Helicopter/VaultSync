@@ -84,3 +84,12 @@ See the [handbook](../CLI.md), [task guides](../CLI_TASK_GUIDES.md),
 and [audit/migration decisions](../CLI_REWORK.md). `vaultsync docs --task` prints
 the bundled guides offline; `vaultsync completion bash|zsh|powershell` prints
 generated shell completion. Supported-platform completion qualification remains open.
+
+## Release grouping and dependency audit — 2026-10-03
+
+One open draft PR per release now includes its preparation and corrections;
+see [Release Plan](Release-Plan.md). Dependabot #661/#720 merged as verified
+maintenance; rendering/CLI compatibility fixes are assembled in 1.9.0 and
+propagated to later implemented CLI variants. Unused Inter packaging is removed.
+[Development status](Development-Status.md) and the linked daily ledger record
+full changelog ownership, dependency consumers and remaining qualification gates.
