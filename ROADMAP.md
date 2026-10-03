@@ -1353,6 +1353,9 @@ unchanged because work IDs are immutable and do not encode the patch number.
 
 ## 1.9.5 — Continuous Recovery Assurance
 
+**Stable target:** Unscheduled
+**Working branch:** `release/1.9.5`
+
 - [ ] `VS-1951` `P1` Schedule full verification and recovery drills.
 - [ ] `VS-1952` `P1` Add user-controlled stale, missed, offline, credential,
   and offsite alerts.

@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "repository": "ATAC-Helicopter/VaultSync",
   "activeRelease": {
-    "version": "1.9.0",
+    "version": "1.9.5",
     "channel": "stable",
     "stage": "planned",
-    "tag": "v1.9.0",
-    "targetDate": "2027-03-26",
-    "previousVersion": "1.8.9",
+    "tag": "v1.9.5",
+    "targetDate": null,
+    "previousVersion": "1.9.4",
     "compatiblePredecessors": [
-      "1.8.9"
+      "1.9.4"
     ],
     "patchBaseCandidates": {
       "windows": [],
@@ -17,7 +17,7 @@
       "linux": []
     },
     "tagline": "Recover when the installed system cannot.",
-    "releaseBranch": "release/1.9.0",
+    "releaseBranch": "release/1.9.5",
     "integrationBranch": "Dev",
     "stableBranch": "Stable"
   },
@@ -33,7 +33,7 @@
   ],
   "store": {
     "status": "planned",
-    "packageVersion": "1.9.0.0",
+    "packageVersion": "1.9.5.0",
     "storeId": "9N9HRX4JCLCP"
   }
 }
