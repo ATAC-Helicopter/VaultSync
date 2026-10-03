@@ -33,7 +33,7 @@ For a local 1.9 development package from a checkout:
 
 ```sh
 dotnet pack src/VaultSync.CLI/VaultSync.CLI.csproj -c Release
-dotnet tool install --global vaultsync.cli --version 1.9.0 \
+dotnet tool install --global vaultsync.cli --version 1.9.5 \
   --add-source src/VaultSync.CLI/bin/ToolPackages
 ```
 
@@ -398,4 +398,4 @@ without initializing or migrating it. A missing `--db` path returns exit 1 with
 a short stderr error and does not create the database or its parent directory.
 
 For implementation state and compatibility decisions, see [CLI_REWORK.md](CLI_REWORK.md).
-For the release scope and gates, see [RELEASE_1.9.0.md](RELEASE_1.9.0.md).
+For the release scope and gates, see [RELEASE_1.9.5.md](RELEASE_1.9.5.md).
