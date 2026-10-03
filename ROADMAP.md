@@ -1331,6 +1331,9 @@ unchanged because work IDs are immutable and do not encode the patch number.
 
 ## 1.9.3 — Offsite Protection
 
+**Stable target:** Unscheduled
+**Working branch:** `release/1.9.3`
+
 - [ ] `VS-1921` `P0` Add resumable S3-compatible object-storage destinations.
 - [ ] `VS-1922` `P1` Add Backblaze B2 and SFTP destination profiles.
 - [ ] `VS-1923` `P0` Validate remote manifests and clean incomplete uploads.
