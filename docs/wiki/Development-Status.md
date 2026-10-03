@@ -34,7 +34,12 @@ were invented; the existing family horizon remains planning context.
 ## Qualification follow-up
 
 The 1.9.1 Windows suite exposed BUG-19008 / #745; [fix PR #746](https://github.com/ATAC-Helicopter/VaultSync/pull/746)
-is prepared and requires native checks/review. Sonar fails before analysis while
+has passed full Windows/Linux/macOS checks and CodeQL; integration still requires
+external review. Sonar fails before analysis while
 looking up the new PR key; a rerun did not resolve it. Full remote CI is not
 claimed green. The corrected release/1.9.0 tree still awaits [#736](https://github.com/ATAC-Helicopter/VaultSync/pull/736)
 external review/merge under the repository rulesets.
+
+[Handbook/CI fix #747](https://github.com/ATAC-Helicopter/VaultSync/pull/747)
+corrects the 1.9.5 package examples. BUG-19009 / #748 ensures protected PRs
+run required checks even when only embedded Markdown changes.

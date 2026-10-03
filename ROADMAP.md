@@ -1244,6 +1244,12 @@ repository must not transfer before a compatible release is adopted.
     stderr guidance. Two isolated cases reproduced the old deletion behavior.
   - Tracking: [issue #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699);
     the implementation and passing regression evidence await release integration.
+- [ ] `BUG-19009` `P1` Run required release checks for embedded documentation changes.
+  - Scope: CI/CodeQL/Sonar PR and integration triggers must include docs-only
+    changes; bundled CLI guides change executable content and require validation.
+  - Acceptance: protected release PRs emit every required check context while
+    preserving existing OS jobs and source-analysis gates. Related #736 and #747.
+
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and

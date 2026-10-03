@@ -37,3 +37,6 @@ Legacy watcher safety is retained: finite read-only text dry runs, explicit `--d
 shutdown cancellation/drain and explicit failure. Resource/JSON commands stay in 1.9.5.
 
 Raw command arguments are not logged, preserving secret input safety.
+
+BUG-19009 requires CI/CodeQL/Sonar triggers to include documentation changes:
+protected PR contexts must exist and bundled CLI documentation affects artifacts.

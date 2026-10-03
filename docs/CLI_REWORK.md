@@ -6,7 +6,8 @@
 Implementation started 2026-09-18 under VS-1972, VS-1973, and VS-1974.
 [ROADMAP.md](../ROADMAP.md) owns scope and delivery state. This document records
 code-grounded inventory and initial design decisions; it is not a second roadmap.
-The first implementation slice is in the 1.9.0 development branch, not 1.8.9 stable.
+The first slice was developed before realignment on the 1.9.0 development line.
+Its current release owner is 1.9.5; current published stable remains 1.8.9.
 The full audit contract remains under review/integration in the draft release PR.
 
 ## Command inventory and decisions
