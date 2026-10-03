@@ -114,6 +114,33 @@ Keep planning, implementation, and release tracking connected:
   - For `gh issue comment` and similar commands, use a PowerShell here-string (`@' ... '@`) or `--body-file`.
   - Do not pass escaped newline text (`\\n`) in quoted one-liners, to avoid literal backslash-n output in GitHub comments.
 
+## 6.2) Stacked Pull Requests
+
+Use a stack when one reviewable change depends on another that has not merged.
+Use separate PRs against the release branch for independent work so reviewers
+can merge either one without waiting for the other.
+
+- Open the first PR against its intended integration branch (for example,
+  `release/1.9.0`). Open each dependent PR against the preceding PR's head
+  branch. Keep one focused change per layer and verify that each PR's **Files
+  changed** view contains only that layer's work.
+- In every stacked PR, identify its immediate parent PR and branch, its final
+  target branch, and the complete merge order. Update these links and the PR
+  base when the stack changes. The top layer must not obscure the review diff
+  of a lower layer.
+- Merge from the bottom upward with merge commits. After a parent merges,
+  retarget its child to the parent's integration branch, review the resulting
+  diff, and rerun required checks before merging the child. Repeat until the
+  stack is integrated. Do not squash, rebase, force-push, or bypass the ruleset
+  of a protected release branch, `Dev`, or `Stable`.
+- Keep issue and Project state tied to actual integration. A partial layer uses
+  `Refs #123`; use `Closes #123` only on the PR whose merge satisfies the issue's
+  acceptance criteria and closure policy. Update the issue and Project when a
+  layer merges. A draft, passing check, or merge into an intermediate stack
+  branch does not by itself complete release-gated work.
+- The release PR from `release/<version>` to `Dev`, and promotion from `Dev` to
+  `Stable`, remain separate merge-commit steps with their own required checks.
+
 ## 7) Quality Gates
 Run before requesting review:
 - `dotnet build VaultSync.sln --configuration Release -warnaserror -p:UseSharedCompilation=false`
