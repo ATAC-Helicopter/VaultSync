@@ -12,6 +12,7 @@
 - [VS-1975] Batch snapshot pruning with versioned preview and result counts.
 - [VS-1973] Let `watch --db` select a database.
 ### Fixed
+- [VS-1974] Keep watcher dry runs finite without snapshot, transfer, or configuration writes.
 - [BUG-19004] Recheck staged restore bytes before replacing target files.
 - [BUG-19005] Keep live prune JSON parseable after deletion.
 - [BUG-19003] Reject cross-project snapshot IDs in diffs.
@@ -19,6 +20,7 @@
 - [BUG-19006] Observe startup changes and stop watcher sessions on failed cycles.
 - [BUG-19001] Require `--yes` for unattended project removal.
 ### Changed
+- [VS-1974] Add versioned watcher plans; keep live event streaming pending.
 - [#721] Accept exact FG Labs release URLs during updater validation.
 - [VS-1974] Keep CLI service logs private and inspection lookups read-only.
 - [VS-1974] Keep quiet watcher output private.

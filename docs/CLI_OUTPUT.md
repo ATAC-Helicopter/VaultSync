@@ -4,7 +4,8 @@ Available in the 1.9 development CLI for `projects list`, `list-projects`,
 `projects show`, `snapshots create`, `snapshots list`, `snapshots show`, `snapshots diff`, `snapshots prune`, `backups list`,
 `backups show`, `backups verify`, `backups verify-all`, `backups create`,
 `recovery restore`, `mirror`/`sync`, `verify`, `doctor`, `destinations`, and legacy `history`/`diff`
-with explicit `--output json`. This contract does not yet apply to watch or
+with explicit `--output json`. `watch --dry-run` also returns a finite `watch.plan`
+result; live watcher events remain unsupported. This contract does not yet apply to
 other command results. Legacy `--json`
 retains its existing payload and casing. Do not combine the two output options.
 
@@ -41,6 +42,7 @@ vaultsync recovery restore "My project" /safe/target --backup-id 7 --include Doc
 vaultsync mirror "My project" /safe/target --db ./vault.db --dry-run --output json
 vaultsync verify "My project" /safe/target --db ./vault.db --full --output json
 vaultsync doctor --db ./vault.db --check-dest /safe/target --output json
+vaultsync watch "My project" --db ./vault.db --verify --dest /safe/target --dry-run --output json
 vaultsync destinations --output json
 ```
 
@@ -53,6 +55,25 @@ Results keep repository name ordering. No match is a successful empty list.
 42. IDs belong to the selected local database and must not be assumed to identify
 the same project on another machine. `externalId` is exposed separately when
 present; selection by external ID is not implemented in this slice.
+
+## Watch planning
+
+`watch --dry-run --output json` returns operation `watch.plan` and exits. Its
+data contains the local `projectId`, `dryRun`, startup/change snapshot intent,
+`mirror`, `verify`, and effective `debounceMs`. `--verify` implies mirroring and
+requires `--dest`; debounce must be positive and values below 100 use 100 ms.
+`watching`, `payloadChecked`, `destinationChecked`, `transferToolChecked`, and
+`recordedBackup` are all false. Paths and credentials are omitted. A successful
+plan establishes registration and source-directory existence, not destination
+safety/reachability, tool availability, file-transfer feasibility, or integrity.
+
+The plan reads configuration without saving defaults and opens an existing
+database read-only, without schema or journal changes. Private CLI logging still
+applies. Invalid options or missing project/source return 2, unavailable or
+unsupported repositories/configuration return 1, and cancellation returns 130.
+Errors use `invalid_options`, `project_not_found`, `source_unavailable`,
+`repository_unavailable`, `planning_failed`, or `cancelled`. Live `--output json`
+is rejected before database access; no streaming contract is implied.
 
 ## Envelope and process result
 

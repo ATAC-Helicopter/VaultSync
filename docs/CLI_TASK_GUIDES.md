@@ -232,3 +232,14 @@ Handle exit 0 as success, 1 as an operational/repository failure, 2 as invalid
 input for the documented v1 inspections, and 130 as cancellation where the
 watch contract implements it. Other commands still have legacy result rules;
 check their exact help and do not assume uniform exit codes yet.
+
+Preview a watcher before starting a long-running session:
+
+```sh
+vaultsync watch "My project" --db ./vault.db --verify --dest /safe/mirror --dry-run --output json
+```
+
+The preview now exits without watching or creating snapshot indexes. It reports
+the planned operations, not a destination/tool probe or successful verification.
+Remove `--dry-run --output json` to start the live session; JSON event streaming
+is not implemented. Earlier development dry runs wrote snapshots and kept watching.

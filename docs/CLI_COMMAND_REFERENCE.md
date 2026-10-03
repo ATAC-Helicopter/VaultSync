@@ -589,7 +589,10 @@ OPTIONS:
         --debounce-ms <MILLISECONDS>
         --sync
         --verify
-        --dry-run
+        --dry-run                       Print a finite, read-only watch plan
+                                        without snapshots or transfers
+        --output <FORMAT>               Plan output: text or json; JSON requires
+                                        --dry-run
         --quiet
 ```
 

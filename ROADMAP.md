@@ -1353,6 +1353,9 @@ repository must not transfer before a compatible release is adopted.
     diagnostics stay in the private CLI log. Live mirror/sync and verify also
     return opt-in v1 results while preserving legacy output. Doctor now returns
     versioned check results without initializing an absent database.
+    Watch dry runs now terminate with a read-only plan and opt-in `watch.plan`
+    JSON, without snapshot, transfer, or configuration writes. Live event
+    framing, uniform cancellation, and the remaining unattended contracts remain.
 - [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
   - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
     and snapshot inspection, selective safe restore, integrity evidence, destination

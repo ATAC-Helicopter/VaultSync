@@ -26,6 +26,8 @@ automation, and migration examples. Shell completion suggests task topics and
 supported output formats. Quiet snapshot creation no longer prints core-service
 diagnostics to stdout. Mirror, verify, and recorded-folder restore now read an
 existing database without initializing it during a preview or check.
+`watch --dry-run` now prints a finite plan, optionally as versioned JSON, and
+exits without creating snapshots or starting transfers. Live JSON events remain pending.
 See the [CLI handbook](CLI.md) and
 [CLI audit and migration notes](CLI_REWORK.md).
 

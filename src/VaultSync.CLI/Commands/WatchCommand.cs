@@ -33,7 +33,12 @@ namespace VaultSync.CLI.Commands
         public bool Verify { get; init; }
 
         [CommandOption("--dry-run")]
+        [System.ComponentModel.Description("Print a finite, read-only watch plan without snapshots or transfers")]
         public bool DryRun { get; init; }
+
+        [CommandOption("--output <FORMAT>")]
+        [System.ComponentModel.Description("Plan output: text or json; JSON requires --dry-run")]
+        public string? Output { get; init; }
 
         [CommandOption("--quiet")]
         public bool Quiet { get; init; }
@@ -49,6 +54,18 @@ namespace VaultSync.CLI.Commands
 
         internal static async Task<int> RunAsync(WatchSettings settings, CancellationToken cancellationToken)
         {
+            string? invalid = CommandOutput.Validate(settings.Output);
+            if (CommandOutput.IsJson(settings.Output) && !settings.DryRun)
+                invalid = "Watcher JSON is available for --dry-run plans only; live events are not supported yet.";
+            if (settings.DebounceMs <= 0)
+                invalid = "--debounce-ms must be positive.";
+            if ((settings.Sync || settings.Verify) && string.IsNullOrWhiteSpace(settings.Destination))
+                invalid = "--sync/--verify requires --dest.";
+            if (invalid is not null)
+                return CommandOutput.Failure(settings.Output, "watch.plan", "invalid_options", invalid, 2);
+            if (settings.DryRun)
+                return Preview(settings, cancellationToken);
+
             using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             ConsoleCancelEventHandler onCancel = (_, args) =>
             {
@@ -112,18 +129,69 @@ namespace VaultSync.CLI.Commands
             }
         }
 
+        private static int Preview(WatchSettings settings, CancellationToken cancellationToken)
+        {
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string db = ConfigHelper.ResolveDbForInspection(settings.DbPath);
+                if (!File.Exists(db))
+                    return CommandOutput.Failure(settings.Output, "watch.plan", "repository_unavailable",
+                        "The selected database does not exist. Register the project first.", 1);
+                var repo = new SqliteRepository(db, readOnly: true);
+                WatchPlan? plan = CreateWatchPlan(repo, settings);
+                if (plan is null)
+                    return 2;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (CommandOutput.IsJson(settings.Output))
+                    return CommandOutput.Success("watch.plan", new
+                    {
+                        projectId = plan.Project.Id,
+                        dryRun = true,
+                        snapshotOnStartup = true,
+                        snapshotOnChange = true,
+                        mirror = plan.DoSync,
+                        verify = plan.DoVerify,
+                        debounceMs = Math.Max(100, settings.DebounceMs),
+                        watching = false,
+                        payloadChecked = false,
+                        destinationChecked = false,
+                        transferToolChecked = false,
+                        recordedBackup = false
+                    });
+                if (!settings.Quiet)
+                {
+                    AnsiConsole.MarkupLine($"Watch plan for [bold]{Markup.Escape(plan.Project.Name)}[/]: " +
+                        $"snapshot at startup and on changes; debounce {Math.Max(100, settings.DebounceMs)} ms; " +
+                        $"mirror: {plan.DoSync}; verify: {plan.DoVerify}.");
+                    AnsiConsole.MarkupLine("No watching, snapshots, or transfers started. Destination, transfer tools, and payload bytes were not checked.");
+                }
+                return 0;
+            }
+            catch (OperationCanceledException)
+            {
+                return CommandOutput.Failure(settings.Output, "watch.plan", "cancelled", "Watch planning was cancelled.", 130);
+            }
+            catch (Exception error)
+            {
+                Log.Exception(error, "Watcher planning failed");
+                return CommandOutput.Failure(settings.Output, "watch.plan", "planning_failed",
+                    "Watch planning failed. Check database access and supported schema; see the private CLI log.", 1);
+            }
+        }
+
         private static WatchPlan? CreateWatchPlan(SqliteRepository repo, WatchSettings settings)
         {
             Core.Models.Project? project = repo.GetProjectByName(settings.ProjectName);
             if (project is null)
             {
-                AnsiConsole.MarkupLine($"[red]Error:[/] Project '{Markup.Escape(settings.ProjectName)}' not found");
+                CommandOutput.Failure(settings.Output, "watch.plan", "project_not_found", "No registered project matches the supplied name.", 2);
                 return null;
             }
 
             if (!Directory.Exists(project.RootPath))
             {
-                AnsiConsole.MarkupLine($"[red]Error:[/] Project path not found: {Markup.Escape(project.RootPath)}");
+                CommandOutput.Failure(settings.Output, "watch.plan", "source_unavailable", "The registered project source is unavailable.", 2);
                 return null;
             }
 
@@ -131,7 +199,7 @@ namespace VaultSync.CLI.Commands
             bool doSync = settings.Sync || doVerify;
             if (doSync && string.IsNullOrWhiteSpace(settings.Destination))
             {
-                AnsiConsole.MarkupLine("[red]Error:[/] --sync/--verify requires --dest");
+                CommandOutput.Failure(settings.Output, "watch.plan", "invalid_options", "--sync/--verify requires --dest.", 2);
                 return null;
             }
 

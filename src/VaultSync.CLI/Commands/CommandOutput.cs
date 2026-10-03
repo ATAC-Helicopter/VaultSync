@@ -53,6 +53,8 @@ internal static class CommandOutput
             return "verify";
         if (arguments.Length > 0 && string.Equals(arguments[0], "doctor", StringComparison.OrdinalIgnoreCase))
             return "doctor";
+        if (arguments.Length > 0 && string.Equals(arguments[0], "watch", StringComparison.OrdinalIgnoreCase))
+            return "watch.plan";
         if (arguments.Length > 0 && string.Equals(arguments[0], "destinations", StringComparison.OrdinalIgnoreCase))
             return "destinations.list";
         if (arguments.Length < 2)

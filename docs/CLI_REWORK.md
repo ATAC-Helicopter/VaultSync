@@ -201,8 +201,11 @@ defects; VS-1973 owns explicit store selection and VS-1974 owns unattended behav
 [BUG-19006 / #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719)
 owns startup and background cycle failures, which now stop the watcher with exit 2
 after queued work drains. Mirror, verification, snapshot, and filesystem-watcher failures send
-brief guidance to stderr and details to the private log. JSON events and dry-run
-semantics remain pending under VS-1974; exit 130 reports cancellation.
+brief guidance to stderr and details to the private log. Under VS-1974,
+`watch --dry-run` now returns a finite read-only plan, optionally as `watch.plan`
+v1 JSON. It no longer writes snapshots or waits for changes. Configuration is
+read without saving defaults; destination, tools, and payloads are not probed.
+Live JSON events remain pending; exit 130 reports cancellation.
 The watcher starts observing the source before its initial snapshot and mirror,
 so edits made during that first transfer can trigger a follow-up cycle.
 

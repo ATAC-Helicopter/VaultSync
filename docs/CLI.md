@@ -257,7 +257,7 @@ vaultsync mirror NAME DESTINATION [--dry-run] [--db PATH] [--quiet] [--output te
 vaultsync verify NAME FROM [--percent N | --full] [--db PATH] [--quiet] [--json]
                        [--output text|json]
 vaultsync watch NAME [--db PATH] [--dest PATH] [--sync] [--verify]
-                    [--debounce-ms N] [--dry-run] [--quiet]
+                    [--debounce-ms N] [--dry-run] [--quiet] [--output text|json]
 ```
 
 `mirror` is the explicitly named live-transfer command. It uses the same handler
@@ -268,7 +268,14 @@ startup snapshot and then debounces changes; `--verify` implies sync and require
 work drains.
 Startup and later mirror, verification, snapshot, or filesystem-watcher failures
 end the session with exit 2. Quiet failure guidance goes to stderr; details stay
-in the private CLI log. Watcher JSON events and dry-run semantics remain planned.
+in the private CLI log. `watch --dry-run` prints a finite plan and exits without
+starting a watcher, creating snapshots, transferring files, or verifying bytes.
+It reads an existing database and configuration without initialization, migration,
+or saving defaults. `--output json` is supported for this plan only; live JSON
+events remain planned. The plan reports intended sync/verification and the
+effective debounce (positive values below 100 ms use 100 ms). It does not probe
+the destination or transfer tool. This intentionally replaces the earlier
+development behavior that kept watching and wrote snapshots during a dry run.
 Both `mirror`/`sync` and `verify` offer v1 `--output json`. Verification reports
 bounded mismatches against the latest snapshot; a live mirror remains distinct
 from a recorded backup. Legacy `verify --json` is unchanged.

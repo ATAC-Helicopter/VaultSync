@@ -185,6 +185,14 @@ namespace VaultSync.Core.Config
             return Path.Combine(GetDefaultDataDir(), "vaultsync.db");
         }
 
+        /// <summary>Resolve the default database location without creating its directory.</summary>
+        public static string GetDefaultDbPathForInspection()
+        {
+            string directory = ResolveIsolatedConfigDir() ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VaultSync");
+            return Path.Combine(directory, "vaultsync.db");
+        }
+
         public static string ResolveDbPath(AppConfig? config = null)
         {
             AppConfig cfg = config ?? GetSnapshot();

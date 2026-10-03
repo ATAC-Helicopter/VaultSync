@@ -280,7 +280,10 @@ The watcher now exits 2 on startup or later cycle failure, including mirror and
 verification failures, instead of silently continuing. Filesystem watcher errors
 also stop the session. Quiet failures report on stderr with details in the private
 log. Source observation begins before the initial snapshot/mirror so edits made
-during startup are not missed. JSON events and watch dry-run semantics remain pending.
+during startup are not missed. Live JSON events remain pending. `watch --dry-run`
+now returns a finite read-only plan, optionally as `watch.plan` v1 JSON, without
+watching, snapshot writes, transfers, or verification. Configuration reads do not
+save defaults. The plan does not qualify the destination, tools, or payload bytes.
 
 ## Updater owner compatibility
 
@@ -313,6 +316,10 @@ an installed 1.8.9 upgrade or authorize a repository transfer; see the
 Kickoff tracking: [VS-1980 / #673](https://github.com/ATAC-Helicopter/VaultSync/issues/673).
 
 ## Tracking
+
+The [2026-10-03 local audit](release-evidence/1.9-audit-2026-10-03.md) records the
+complete PR stack, accumulated validation, finite watcher-preview continuation,
+and remaining integration/platform/recovery gates.
 
 - [Draft release PR #683](https://github.com/ATAC-Helicopter/VaultSync/pull/683), `release/1.9.0` → `Dev`
 - [1.9.0 milestone](https://github.com/ATAC-Helicopter/VaultSync/milestone/14)

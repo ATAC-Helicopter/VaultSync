@@ -38,7 +38,7 @@ _vaultsync_options() {
     'recovery restore') reply='-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'mirror') reply='-h --help --dry-run --db --quiet --output' ;;
     'verify') reply='-h --help --percent --full --db --quiet --json --output' ;;
-    'watch') reply='-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' ;;
+    'watch') reply='-h --help --db --dest --debounce-ms --sync --verify --dry-run --output --quiet' ;;
     'doctor') reply='-h --help --db --check-dest --quiet --output' ;;
     'destinations') reply='-h --help --test --json --output' ;;
     'self-test') reply='-h --help --db --quiet' ;;
@@ -83,6 +83,7 @@ _vaultsync_values() {
     'recovery restore --output') reply='text json' ;;
     'mirror --output') reply='text json' ;;
     'verify --output') reply='text json' ;;
+    'watch --output') reply='text json' ;;
     'doctor --output') reply='text json' ;;
     'destinations --output') reply='text json' ;;
     'list-projects --output') reply='text json' ;;

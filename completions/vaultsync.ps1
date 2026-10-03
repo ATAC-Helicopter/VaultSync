@@ -38,7 +38,7 @@ function Get-VaultSyncOptions([string]$route) {
         'recovery restore' { return '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' }
         'mirror' { return '-h --help --dry-run --db --quiet --output' }
         'verify' { return '-h --help --percent --full --db --quiet --json --output' }
-        'watch' { return '-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' }
+        'watch' { return '-h --help --db --dest --debounce-ms --sync --verify --dry-run --output --quiet' }
         'doctor' { return '-h --help --db --check-dest --quiet --output' }
         'destinations' { return '-h --help --test --json --output' }
         'self-test' { return '-h --help --db --quiet' }
@@ -84,6 +84,7 @@ function Get-VaultSyncValues([string]$route) {
         'recovery restore --output' { return 'text json' }
         'mirror --output' { return 'text json' }
         'verify --output' { return 'text json' }
+        'watch --output' { return 'text json' }
         'doctor --output' { return 'text json' }
         'destinations --output' { return 'text json' }
         'list-projects --output' { return 'text json' }

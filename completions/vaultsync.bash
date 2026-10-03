@@ -37,7 +37,7 @@ _vaultsync_options() {
     'recovery restore') printf '%s' '-h --help --snapshot --backup-id --include --dry-run --clean --keep-empty-dirs --db --quiet --json --output' ;;
     'mirror') printf '%s' '-h --help --dry-run --db --quiet --output' ;;
     'verify') printf '%s' '-h --help --percent --full --db --quiet --json --output' ;;
-    'watch') printf '%s' '-h --help --db --dest --debounce-ms --sync --verify --dry-run --quiet' ;;
+    'watch') printf '%s' '-h --help --db --dest --debounce-ms --sync --verify --dry-run --output --quiet' ;;
     'doctor') printf '%s' '-h --help --db --check-dest --quiet --output' ;;
     'destinations') printf '%s' '-h --help --test --json --output' ;;
     'self-test') printf '%s' '-h --help --db --quiet' ;;
@@ -82,6 +82,7 @@ _vaultsync_values() {
     'recovery restore --output') printf '%s' 'text json' ;;
     'mirror --output') printf '%s' 'text json' ;;
     'verify --output') printf '%s' 'text json' ;;
+    'watch --output') printf '%s' 'text json' ;;
     'doctor --output') printf '%s' 'text json' ;;
     'destinations --output') printf '%s' 'text json' ;;
     'list-projects --output') printf '%s' 'text json' ;;
