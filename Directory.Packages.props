@@ -12,7 +12,7 @@
 
     <!-- CLI -->
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
-    <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
+    <PackageVersion Include="Spectre.Console.Cli" Version="0.57.2" />
 
     <!-- Avalonia UI -->
     <PackageVersion Include="Avalonia" Version="12.1.2" />
