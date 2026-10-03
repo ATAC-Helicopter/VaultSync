@@ -20,6 +20,10 @@ Rules:
 - Reuse the same ID in PR description, validation notes, and changelog entry when applicable.
 
 ## 2) Before You Start
+- Active development is **1.9.0** on `work/1.9-roadmap-realignment`, assembled
+  in sole release PR #736. Read [the working context](AGENTS.md) and
+  [the release contract](docs/RELEASE_1.9.0.md); keep later-release work in its
+  owning preparation branch and PR.
 - Check `ROADMAP.md` and open issues.
 - Confirm acceptance criteria before coding.
 - For risky or cross-cutting changes, align scope first.

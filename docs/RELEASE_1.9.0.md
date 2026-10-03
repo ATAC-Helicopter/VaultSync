@@ -1,8 +1,11 @@
 # VaultSync 1.9.0 — Disk and Bootable Recovery Foundation
 
 Planning release; current stable is 1.8.9. Stable target: 2027-03-26.
-Working branch: `release/1.9.0`; PRs into `Dev`, promotion to `Stable` through
-merge commits. No disk support or predecessor upgrade is qualified yet.
+Active development branch: `work/1.9-roadmap-realignment`; sole release PR:
+[#736](https://github.com/ATAC-Helicopter/VaultSync/pull/736) into `Dev`.
+Protected release identity: `release/1.9.0`; its older ref is not the assembled
+working tree. Promotion to `Stable` uses reviewed merge commits.
+No disk support or predecessor upgrade is qualified yet.
 
 ## Delivery order
 

@@ -2,6 +2,7 @@
 
 ## [1.9.0] - Unreleased
 ### Planning and tracking — 2026-10-03
+- [VS-1980] Establish the active 1.9.0 working branch and sole release PR, with persistent contributor instructions keeping later-release implementation in its owning branches.
 - [VS-1980] Import the complete Recovery Horizon roadmap, preserve existing work IDs, and validate release ownership against its immutable BSC crosswalk.
 - [VS-1980] Prepare nine release contracts, version identities and unscheduled future metadata, while preserving the published stable version and historical milestones.
 - [VS-1980] Separate discovery into 1.9.1 and resource automation into 1.9.5, preserving the full earlier implementation in a published archive branch.
