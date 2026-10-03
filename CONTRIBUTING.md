@@ -141,6 +141,18 @@ can merge either one without waiting for the other.
 - The release PR from `release/<version>` to `Dev`, and promotion from `Dev` to
   `Stable`, remain separate merge-commit steps with their own required checks.
 
+### Recovery Horizon review grouping
+
+The maintainer requested one open draft PR per 1.9 release on 2026-10-03.
+Assemble that release's contracts, features, fixes and changelog into its sole
+preparation PR against Dev; close duplicate preparation/fix PRs as superseded
+without deleting branches or rewriting protected refs. The review head may be
+an unprotected preparation branch while release/<version> retains its reviewed
+history. This convention changes review grouping, not required approvals or
+release qualification. Keep release PRs draft; no automatic release merge.
+Shared maintenance must be propagated without moving future features forward.
+The daily ledger records each release, source head and qualification status.
+
 ## 7) Quality Gates
 Run before requesting review:
 - `dotnet build VaultSync.sln --configuration Release -warnaserror -p:UseSharedCompilation=false`

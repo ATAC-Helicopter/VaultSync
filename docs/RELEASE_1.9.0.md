@@ -40,3 +40,12 @@ Raw command arguments are not logged, preserving secret input safety.
 
 BUG-19009 requires CI/CodeQL/Sonar triggers to include documentation changes:
 protected PR contexts must exist and bundled CLI documentation affects artifacts.
+
+## Assembled release review — 2026-10-03
+
+PR #736 into Dev is the sole 1.9.0 release review, including its maintenance,
+contracts and tracking. Its preparation source is work/1.9-roadmap-realignment;
+#683 is superseded. It stays draft and is not eligible for automatic promotion.
+BUG-19010/#749 and BUG-19011/#750 qualify dependency ABI/API coherence.
+The unused Inter package is removed without changing bundled/system fallbacks.
+See [the complete daily ledger](release-evidence/1.9-work-2026-10-03.md).
