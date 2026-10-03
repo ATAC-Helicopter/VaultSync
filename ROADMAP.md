@@ -1308,6 +1308,9 @@ repository must not transfer before a compatible release is adopted.
 
 ## 1.9.2 — Portable Recovery
 
+**Stable target:** Unscheduled
+**Working branch:** `release/1.9.2`
+
 Portable recovery moves ahead of offsite expansion because provider support is
 not a recovery path until a fresh installation can discover, inspect, unlock,
 restore, and verify supported portable data. Existing identifiers remain
