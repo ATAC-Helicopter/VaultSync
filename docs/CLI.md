@@ -1,17 +1,37 @@
-# VaultSync CLI — current supported command line
+# VaultSync CLI handbook — 1.9.1 development
 
-This branch retains the 1.8.9 flat command tree with the 1.9.0 planning identity.
-Run `vaultsync --help` and `vaultsync COMMAND --help` for executable options.
-Common commands: `list-projects`, `add-project`, `snapshot`, `history`, `diff`,
-`sync`, `verify`, `restore`, `prune`, `watch`, `doctor`, `destinations`.
-Mirroring uses live source bytes; restore uses recorded backups and verifies
-stored bytes before changing the target. Unattended removal requires `--yes`.
+This branch adds discovery, bundled documentation and completion to the
+supported flat CLI. It does not contain the future grouped/resource command tree.
+Run `vaultsync`, `vaultsync --help`, `vaultsync docs --full`,
+`vaultsync docs --task inspect` or `vaultsync completion bash|zsh|powershell`.
+Build/package the CLI, add the tool directory to PATH and verify the executable
+version. `dotnet tool install --global vaultsync.cli --version 1.9.1` is a future
+published-package example; this development version has not been released.
 
-The resource commands, versioned result envelopes, bundled task guides and
-full automation rework belong to the [1.9.5 development branch](https://github.com/ATAC-Helicopter/VaultSync/tree/release/1.9.5).
-Discovery, handbook and completion are developed against this flat tree in 1.9.1.
-Earlier CLI audit/output documents retained in this tree describe that future
-implementation; they do not describe the active 1.9.0 executable.
+## Existing workflows
 
-Legacy watcher safety is retained: finite read-only text dry runs, explicit `--db`,
-shutdown cancellation/drain and explicit failure. Resource/JSON commands stay in 1.9.5.
+Register with `add-project NAME PATH --db PATH`; inspect with `list-projects`
+(`--json` preserves legacy output), `history NAME` and `diff NAME`.
+`snapshot NAME` indexes/hashes the source; it does not create stored recovery bytes.
+`sync NAME DEST --dry-run` previews mirroring from the live source.
+`restore NAME TARGET --dry-run` restores recorded folder backups and verifies
+stored bytes before changes. `prune --dry-run` previews bounded retention scope.
+`watch NAME --db PATH --dry-run` prints a finite read-only plan.
+Unattended removal requires `remove-project NAME --yes`; quiet is not authorization.
+Use an isolated database and disposable paths when testing development builds.
+
+## Compatibility and migration
+
+Existing flat command names and legacy JSON stay supported. Grouped commands,
+backup creation/inspection/verification, selective restore and v1 result envelopes
+are preserved in release/1.9.5 and are not available in this branch.
+Archive/encrypted CLI parity, database-independent recovery and disk/offsite
+support remain unqualified. Shell completion does not validate path safety.
+
+## Shell setup
+
+Bash: `vaultsync completion bash > vaultsync.bash`; source the generated file.
+Zsh: put `vaultsync completion zsh` in `_vaultsync` on `fpath`, then run `compinit`.
+PowerShell: load `vaultsync completion powershell` from the profile.
+Generated scripts come from executable help. Bash is checked locally; Zsh and
+PowerShell runtime qualification still requires their supported environments.

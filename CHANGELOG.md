@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.1] - Unreleased
+
+Planning scaffold for 1.9.1; current published stable remains 1.8.9.
+This branch is unscheduled and requires qualified predecessor integration.
+See [the family plan](docs/RELEASE_FAMILY_1.9.md).
+
 ## [1.9.0] - Unreleased
 ### Planning
 - [VS-1980] Align the Recovery Horizon family with the complete supplied roadmap.

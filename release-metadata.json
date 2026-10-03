@@ -7,8 +7,8 @@
     "releasedDate": "2026-09-16"
   },
   "nextRelease": {
-    "version": "1.9.0",
-    "targetDate": "2027-03-26",
+    "version": "1.9.1",
+    "targetDate": null,
     "stage": "planned"
   },
   "platforms": [

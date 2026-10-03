@@ -1268,6 +1268,9 @@ repository must not transfer before a compatible release is adopted.
 
 ## 1.9.1 — Clone Explorer
 
+**Stable target:** Unscheduled
+**Working branch:** `release/1.9.1`
+
 - [ ] `VS-1911` `P1` Browse supported image partitions and files read-only.
 - [ ] `VS-1912` `P1` Search and selectively extract files from images.
 - [ ] `VS-1913` `P1` Inspect image creation, verification, and compatibility.
