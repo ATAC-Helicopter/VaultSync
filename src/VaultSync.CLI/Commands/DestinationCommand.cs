@@ -16,16 +16,55 @@ namespace VaultSync.CLI.Commands
     {
         [CommandOption("--test")] public bool Test { get; init; }
         [CommandOption("--json")] public bool Json { get; init; } = false;
+        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
     }
 
     sealed class DestinationCommand : AsyncCommand<DestinationSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, DestinationSettings settings, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, DestinationSettings settings, CancellationToken cancellationToken)
         {
-            AppConfig config = ConfigHelper.Load();
+            string? invalid = CommandOutput.Validate(settings.Output, settings.Json);
+            if (settings.Output is not null && settings.Test)
+                invalid = "--test is not available with --output yet; use the legacy destinations --test route.";
+            if (invalid is not null)
+                return Task.FromResult(CommandOutput.Failure(settings.Output, "destinations.list", "invalid_options", invalid, 2));
+
+            AppConfig config;
+            try
+            {
+                config = settings.Output is null ? ConfigHelper.Load() : AppConfigStore.ReadForInspection();
+                if (config.Backups is null)
+                    throw new InvalidOperationException("Backup configuration is missing.");
+            }
+            catch (Exception) when (settings.Output is not null)
+            {
+                return Task.FromResult(CommandOutput.Failure(settings.Output, "destinations.list", "config_unavailable",
+                    "Configuration cannot be read. Check its primary and backup files.", 1));
+            }
+
             List<BackupDestination> destinations = BuildActiveDestinations(config);
+            if (CommandOutput.IsJson(settings.Output))
+                return Task.FromResult(CommandOutput.Success("destinations.list", new
+                {
+                    destinations = destinations.Select((dest, index) => new
+                    {
+                        position = index + 1,
+                        alias = string.IsNullOrWhiteSpace(dest.Alias) ? "Unnamed" : dest.Alias,
+                        active = dest.Active,
+                        offsite = dest.IsOffsite,
+                        preMounted = dest.PreMounted,
+                        accessibilityChecked = false
+                    }).ToArray(),
+                    count = destinations.Count
+                }));
+
             if (destinations.Count == 0)
             {
+                if (settings.Json)
+                {
+                    WriteJson([]);
+                    return Task.FromResult(0);
+                }
                 AnsiConsole.MarkupLine("[yellow]No backup destinations configured.[/]");
                 return Task.FromResult(0);
             }
