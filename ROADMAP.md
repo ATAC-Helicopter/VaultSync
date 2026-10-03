@@ -1553,6 +1553,9 @@ block the earlier Recovery Horizon releases.
 
 ## 1.9.7 — Binary Collaboration and Scale
 
+**Stable target:** Unscheduled
+**Working branch:** `release/1.9.7`
+
 - [ ] `VS-1988` `P1` Add branches and deterministic three-way path planning,
   auto-resolving only provably non-overlapping or byte-identical changes and
   requiring explicit resolution for overlapping binary edits.

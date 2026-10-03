@@ -1,5 +1,11 @@
 # What's New
 
+## [1.9.7]
+
+Planning scaffold for 1.9.7; current published stable remains 1.8.9.
+This branch is unscheduled and requires qualified predecessor integration.
+See [the family plan](RELEASE_FAMILY_1.9.md).
+
 ## [1.9.0]
 
 Recovery Horizon is in planning and architecture work. 1.9.0 owns disk capture,
