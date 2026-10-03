@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Spectre.Console;
 using VaultSync.CLI;
 using Xunit;
 
@@ -13,6 +14,9 @@ public sealed class CliDiscoveryTests
     [InlineData("--url", "/release/1.9.1/docs/CLI.md")]
     public async Task BundledDocumentationMatchesThisBranch(string mode, string marker)
     {
+        // Initialize Spectre before redirecting Console.Out: on Windows its
+        // default console can retain the writer that existed on first access.
+        IAnsiConsole previousAnsi = AnsiConsole.Console;
         TextWriter previous = Console.Out;
         using var output = new StringWriter();
         try
@@ -20,7 +24,11 @@ public sealed class CliDiscoveryTests
             Console.SetOut(output);
             Assert.Equal(0, await Program.Main(["docs", mode]));
         }
-        finally { Console.SetOut(previous); }
+        finally
+        {
+            Console.SetOut(previous);
+            AnsiConsole.Console = previousAnsi;
+        }
         Assert.Contains(marker, output.ToString());
     }
 
@@ -30,6 +38,9 @@ public sealed class CliDiscoveryTests
     [InlineData("powershell")]
     public async Task PackagedCompletionSuggestsAvailableCommandsOnly(string shell)
     {
+        // Initialize Spectre before redirecting Console.Out: on Windows its
+        // default console can retain the writer that existed on first access.
+        IAnsiConsole previousAnsi = AnsiConsole.Console;
         TextWriter previous = Console.Out;
         using var output = new StringWriter();
         try
@@ -37,7 +48,11 @@ public sealed class CliDiscoveryTests
             Console.SetOut(output);
             Assert.Equal(0, await Program.Main(["completion", shell]));
         }
-        finally { Console.SetOut(previous); }
+        finally
+        {
+            Console.SetOut(previous);
+            AnsiConsole.Console = previousAnsi;
+        }
         Assert.Contains("add-project", output.ToString());
         Assert.Contains("--dry-run", output.ToString());
         Assert.DoesNotContain("backups", output.ToString());
