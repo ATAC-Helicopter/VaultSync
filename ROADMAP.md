@@ -1499,6 +1499,9 @@ implementation evidence, not stable release qualification.
 
 ## 1.9.6 — Binary Source Control Foundation
 
+**Stable target:** Unscheduled
+**Working branch:** `release/1.9.6`
+
 Binary Source Control enters the 1.9 family only after `VS-1981` and
 `VS-1982` approve the repository and collaboration contracts. This release
 targets a complete local/NAS mainline workflow before branching or offsite scale.
