@@ -1,5 +1,12 @@
 # Updates
 
+The current published stable release is **1.8.9**, released September 16, 2026.
+The **1.9** branch and its CLI commands are development work, not an available
+stable update. Follow [development status](Development-Status.md) for the PR stack
+and qualification gates. Upgrade qualification from an installed 1.8.9 to 1.9
+is still pending. The planned FG Labs owner compatibility has not authorized a
+repository transfer; official stable downloads remain in this repository.
+
 VaultSync supports two Windows update models:
 - Direct builds use GitHub patch and installer updates.
 - Microsoft Store builds use Store-managed updates.

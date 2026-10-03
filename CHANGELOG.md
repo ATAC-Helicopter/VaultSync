@@ -12,7 +12,7 @@
 - [VS-1975] Batch snapshot pruning with versioned preview and result counts.
 - [VS-1973] Let `watch --db` select a database.
 ### Fixed
-- [VS-1974] Keep watcher dry runs finite without snapshot, transfer, or configuration writes.
+- [BUG-19007] Keep watcher dry runs finite without snapshot, transfer, or configuration writes.
 - [BUG-19004] Recheck staged restore bytes before replacing target files.
 - [BUG-19005] Keep live prune JSON parseable after deletion.
 - [BUG-19003] Reject cross-project snapshot IDs in diffs.

@@ -308,6 +308,7 @@ an installed 1.8.9 upgrade or authorize a repository transfer; see the
 | BUG-19004 | [#717](https://github.com/ATAC-Helicopter/VaultSync/issues/717) | 1.9.0 | Recheck staged restore bytes |
 | BUG-19005 | [#718](https://github.com/ATAC-Helicopter/VaultSync/issues/718) | 1.9.0 | Keep live prune JSON parseable |
 | BUG-19006 | [#719](https://github.com/ATAC-Helicopter/VaultSync/issues/719) | 1.9.0 | Stop watchers on failed cycles |
+| BUG-19007 | [#734](https://github.com/ATAC-Helicopter/VaultSync/issues/734) | 1.9.0 | Finite, read-only watcher plans |
 | VS-1977 | [#678](https://github.com/ATAC-Helicopter/VaultSync/issues/678) | 1.9.1 | Help, discovery, and completion |
 | VS-1978 | [#679](https://github.com/ATAC-Helicopter/VaultSync/issues/679) | 1.9.1 | Handbook and script migration |
 | VS-1976 | [#685](https://github.com/ATAC-Helicopter/VaultSync/issues/685) | 1.9.2 | Independent headless recovery |

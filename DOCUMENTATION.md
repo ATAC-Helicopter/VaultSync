@@ -31,11 +31,13 @@ Core pillars:
 - `docs/RELEASING.md`: release packaging/publishing flow.
 - `docs/schemas/release-manifest-v1.schema.json`: canonical direct-download
   artifact identity, size, SHA-256, and compatibility schema.
-- `docs/RELEASE_1.8.9.md`: active-release status, feedback intake, sequencing,
-  and gates.
+- `docs/RELEASE_1.8.9.md`: shipped predecessor status and historical qualification.
+- `docs/RELEASE_1.9.0.md`: active development scope, PR stack, delivery and upgrade gates.
+- `docs/CLI.md`, `docs/CLI_TASK_GUIDES.md`, and `docs/CLI_OUTPUT.md`: development
+  CLI workflows, compatibility, evidence limits, and versioned machine results.
+- `docs/ROUTE_ARCHITECTURE_1.9.md`: UI route/state migration contract for review.
 - `docs/RECOVERY_HORIZON_STRATEGY.md`: maintainer planning for the 1.9
-  architecture gates, delivery order, issue preparation, and the `1.10` versus
-  `2.0` decision.
+  architecture gates, delivery order, issue preparation, and the gated `2.0` candidate.
 - `docs/REPOSITORY_FORMATS.md`: repository layouts, compatibility boundaries,
   and emergency read-only recovery guidance.
 - `docs/CROSS_MACHINE_SAFETY.md`: cross-machine threat model, identity,
@@ -51,6 +53,8 @@ Core pillars:
 
 ### 2.3 Wiki docs
 - `docs/wiki/Home.md`: wiki entry page.
+- `docs/wiki/Development-Status.md`: stable versus development state, stack and release gates.
+- `docs/wiki/CLI-Development.md`: recorded backup/verification/restore and finite watcher previews.
 - `docs/wiki/*`: task and feature guides (installation, backups, destinations, troubleshooting, etc.).
 - `docs/wiki/Encryption.md`: backup encryption setup, format, credential storage, password changes, opening, and restore.
 - `docs/wiki/Metadata-Sync.md`: portable metadata behavior, current limitations,

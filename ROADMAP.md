@@ -1306,6 +1306,17 @@ repository must not transfer before a compatible release is adopted.
     silently continuing; cancellation retains exit 130.
   - Tracking: [issue #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719);
     implementation and regression evidence await release integration.
+- [ ] `BUG-19007` `P1` Keep watcher dry runs finite and read-only.
+  - Scope: stop dry-run snapshot writes and persistent listening; return a finite
+    plan without destination transfers, verification, database migration, or
+    configuration-default writes. Related: VS-1974 / #671.
+  - Acceptance: preview exits with unchanged database/configuration and no later
+    watcher work; missing stores stay absent; v1 JSON describes intent and evidence
+    limits without paths. Live JSON remains explicitly unsupported.
+  - Progress: [#734](https://github.com/ATAC-Helicopter/VaultSync/issues/734),
+    commit `5c01fa25` on `work/1.9-watch-preview`; fourteen preview cases and the
+    accumulated 1,053 .NET tests pass locally. In progress until release integration.
+  - Start: 2026-10-03; target: 2027-03-26; owner: Flavio Giacchetti / Team Work.
 - [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
   - Scope: inventory existing commands and core-service gaps; define resource/action
     naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
