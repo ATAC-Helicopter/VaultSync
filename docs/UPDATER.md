@@ -140,3 +140,9 @@ The active target is `1.9.0`, with exact `1.8.9` as the primary upgrade
 predecessor. This is a planning identity, not evidence of a qualified patch
 or migration. Native upgrades, format compatibility, and installer fallback
 must pass the 1.9.0 gates before release; extra patch bases remain disabled.
+
+## Planned 1.9.4 branch
+
+Predecessor candidate: 1.9.3; exact installed-upgrade
+qualification is pending. A branch scaffold does not authorize publishing updater
+artifacts or patch-base support. Current stable remains 1.8.9.

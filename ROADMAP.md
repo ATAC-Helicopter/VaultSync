@@ -1343,6 +1343,9 @@ unchanged because work IDs are immutable and do not encode the patch number.
 
 ## 1.9.4 — Unified Recovery Experience
 
+**Stable target:** Unscheduled
+**Working branch:** `release/1.9.4`
+
 - [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
   recovery navigation and retire the legacy shell after parity.
 - [ ] `VS-1942` `P1` Add a shared Recovery Inspector across recovery types.
