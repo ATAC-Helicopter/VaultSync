@@ -55,3 +55,12 @@ failed before analysis while looking up new PR keys; it is not claimed green.
 [Complete daily work ledger](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/release-evidence/1.9-work-2026-10-03.md)
 and [dependency audit](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/release-evidence/1.9-dependencies-2026-10-03.md)
 record actual work, preserved history and remaining release gates.
+
+## Active 1.9.0 workspace
+
+The main working copy stays on `work/1.9-roadmap-realignment`, source of sole
+[1.9.0 PR #736](https://github.com/ATAC-Helicopter/VaultSync/pull/736) into Dev.
+All work intended to ship with 1.9.0 is added there. AGENTS.md, CONTRIBUTING.md
+and the release contract record this context. The protected release/1.9.0 ref
+retains older history and must not be mistaken for the assembled working tree.
+Later-release implementation stays in its owning preparation branch and PR.
