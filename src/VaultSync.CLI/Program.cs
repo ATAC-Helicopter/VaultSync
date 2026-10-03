@@ -26,10 +26,24 @@ public static class Program
 
         try
         {
+            if (args.Length == 0)
+            {
+                VaultSync.CLI.Commands.CliPresentation.WriteLanding();
+                return 0;
+            }
+            if (VaultSync.CLI.Commands.CliPresentation.IsRootHelp(args))
+                VaultSync.CLI.Commands.CliPresentation.WriteHelpHeader();
             var app = new Spectre.Console.Cli.CommandApp();
 
             app.Configure(cfg =>
             {
+                cfg.SetApplicationName("vaultsync");
+                if (VaultSync.CLI.Commands.CliPresentation.IsRootHelp(args))
+                    cfg.ConfigureConsole(AnsiConsole.Console);
+                cfg.AddCommand<VaultSync.CLI.Commands.DocsCommand>("docs")
+                    .WithDescription("Read bundled handbook, task guides and reference");
+                cfg.AddCommand<VaultSync.CLI.Commands.CompletionCommand>("completion")
+                    .WithDescription("Print Bash, Zsh or PowerShell completion");
                 // Core commands
                 cfg.AddCommand<VaultSync.CLI.Commands.PruneCommand>("prune")
                     .WithDescription("Delete old snapshots by count (--keep-last) or date (--before). Supports --dry-run.");
@@ -102,7 +116,6 @@ public static class Program
                 });
             });
 
-            Log.Info($"argv: {string.Join(" ", args.Select(a => a.Contains(' ') ? $"\\\"{a}\\\"" : a))}");
             int code = await app.RunAsync(args);
             Log.Info($"exit: {code}");
             return code;
