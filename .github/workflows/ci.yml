@@ -72,6 +72,12 @@ jobs:
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
 
+      - name: Validate release ownership and metadata
+        run: |
+          python3 scripts/release_family.py
+          python3 scripts/public_release_metadata.py check
+          python3 -m unittest discover -s tests/scripts -q
+
       - name: Verify AppImage packaging
         run: |
           set -euo pipefail

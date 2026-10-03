@@ -1,33 +1,18 @@
-﻿# Changelog
+# Changelog
+
 ## [1.9.0] - Unreleased
+### Planning
+- [VS-1980] Align the Recovery Horizon family with the complete supplied roadmap.
+- [VS-1910] Draft typed route and adaptive UI architecture; approval pending.
+### Fixed in development
+- [BUG-19001] Require explicit authorization for unattended project removal.
+- Preserve finite read-only watcher previews, cancellation/draining and failed-cycle reporting.
+- Accept the exact FG Labs updater release URLs after the organization transfer.
+- Handle root-owned AppImage extraction outputs during packaging.
 
-### Added
-- [VS-1977] Add the CLI welcome screen and shell completion, including documentation topics.
-- [VS-1978] Bundle the handbook, task guides, and command reference.
-- [VS-1973] Add grouped routes, source discovery, and live mirroring.
-- [VS-1973] Add project and snapshot inspection with bounded diffs.
-- [VS-1974] Add versioned JSON for inspection, snapshots, mirror, verify, doctor, and restore.
-- [VS-1974] Add private destination summaries and valid empty legacy JSON.
-- [VS-1975] Create and inspect folder backups; verify one or many; select restore paths.
-- [VS-1975] Batch snapshot pruning with versioned preview and result counts.
-- [VS-1973] Let `watch --db` select a database.
-### Fixed
-- [BUG-19007] Keep watcher dry runs finite without snapshot, transfer, or configuration writes.
-- [BUG-19004] Recheck staged restore bytes before replacing target files.
-- [BUG-19005] Keep live prune JSON parseable after deletion.
-- [BUG-19003] Reject cross-project snapshot IDs in diffs.
-- [BUG-19002] Drain watcher work on cancellation.
-- [BUG-19006] Observe startup changes and stop watcher sessions on failed cycles.
-- [BUG-19001] Require `--yes` for unattended project removal.
-### Changed
-- [VS-1974] Add versioned watcher plans; keep live event streaming pending.
-- [#721] Accept exact FG Labs release URLs during updater validation.
-- [VS-1974] Keep CLI service logs private and inspection lookups read-only.
-- [VS-1974] Keep quiet watcher output private.
-- [VS-1975] Keep Windows mirror dry runs from creating targets.
-- [VS-1975] Label mirror preview sources and targets clearly.
-
-These changes are in development; 1.9.0 has not shipped.
+1.9.0 has not shipped. Disk capture, independent boot and disk restore remain
+unimplemented/unqualified. The future CLI implementation is preserved in 1.9.5;
+its previous development notes are retained in the archived branch.
 
 ## [1.8.9] - 16.09.2026
 ### Maintenance

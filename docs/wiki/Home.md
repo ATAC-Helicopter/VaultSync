@@ -2,7 +2,7 @@
 
 Use this wiki for user-facing workflows and troubleshooting.
 
-Current stable is **1.8.9**, published September 16, 2026. The **1.9** CLI and
+Current stable is **1.8.9**, published September 16, 2026. The **1.9.5** development CLI and
 recovery architecture are in development; see [development status](Development-Status.md)
 and the [development CLI guide](CLI-Development.md) before using preview commands.
 
@@ -52,3 +52,5 @@ and the [development CLI guide](CLI-Development.md) before using preview command
 - [Changelog](../../CHANGELOG.md)
 - [Contributing](../../CONTRIBUTING.md)
 - [Security](../../SECURITY.md)
+
+- [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.

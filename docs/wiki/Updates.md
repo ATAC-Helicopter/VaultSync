@@ -78,3 +78,5 @@ Switch channels in Settings > Advanced.
   - very old versions
   - blocked or incompatible patch preflight results
 - For Microsoft Store builds, use the Store listing and Store app update flow instead of the GitHub installer.
+
+- [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.

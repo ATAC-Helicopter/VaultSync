@@ -18,7 +18,7 @@ Use this page as the primary index for all project documentation.
 - Current release highlights: [What's New](WHATS_NEW.md)
 - 1.9 CLI structured project inspection: [output contract](CLI_OUTPUT.md)
 - 1.9 CLI command and behavior audit: [CLI rework](CLI_REWORK.md)
-- 1.9.0 Recovery Horizon kickoff: [release contract](RELEASE_1.9.0.md)
+- 1.9.0 disk/boot foundation: [release contract](RELEASE_1.9.0.md)
 - 1.9 desktop route and migration review: [route architecture](ROUTE_ARCHITECTURE_1.9.md)
 - 1.9 accumulated local validation: [October 3 audit](release-evidence/1.9-audit-2026-10-03.md)
 - GitHub/wiki/Project and historical closeout: [October 3 tracking](release-evidence/1.9-tracking-2026-10-03.md)
@@ -89,3 +89,5 @@ Use this page as the primary index for all project documentation.
   - feature and usage docs (`docs/wiki/*`, `docs/HELP.md`)
   - release notes (`CHANGELOG.md`, `docs/WHATS_NEW.md`)
 - Keep IDs and naming aligned with `CONTRIBUTING.md`.
+
+- [Complete 1.9 family alignment](RELEASE_FAMILY_1.9.md): branch ownership, immutable ID crosswalk and stable gates.

@@ -4,7 +4,6 @@ using System.IO;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
-using Microsoft.Data.Sqlite;
 using System.Threading;
 using System.Threading.Tasks;
 using Spectre.Console;
@@ -22,61 +21,23 @@ namespace VaultSync.CLI.Commands
         [CommandOption("--full-hash")] public bool FullHash { get; init; } = true;
         [CommandOption("--db")] public string? Db { get; init; }
         [CommandOption("--quiet")] public bool Quiet { get; init; } = false;
-        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
     }
 
     sealed class SnapshotCommand : AsyncCommand<SnapshotSettings>
     {
         protected override async Task<int> ExecuteAsync(CommandContext context, SnapshotSettings s, CancellationToken cancellationToken)
         {
-            string? invalid = CommandOutput.Validate(s.Output);
-            if (string.IsNullOrWhiteSpace(s.Name))
-                invalid = "Project name must not be blank.";
-            if (invalid is not null)
-                return CommandOutput.Failure(s.Output, "snapshots.create", "invalid_options", invalid, 2);
-
-            try
-            {
-                return await CreateAsync(s, cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (s.Output is not null)
-            {
-                return CommandOutput.Failure(s.Output, "snapshots.create", "cancelled",
-                    "Snapshot creation was cancelled before completion.", 130);
-            }
-            catch (Exception error) when (s.Output is not null &&
-                error is SqliteException or IOException or UnauthorizedAccessException or InvalidOperationException)
-            {
-                Log.Exception(error, "snapshots.create");
-                return CommandOutput.Failure(s.Output, "snapshots.create", "snapshot_failed",
-                    "Snapshot creation failed. Check source access and the private CLI log.", 1);
-            }
-        }
-
-        private static async Task<int> CreateAsync(SnapshotSettings s, CancellationToken cancellationToken)
-        {
             string db = ConfigHelper.ResolveDb(s.Db);
-            if (s.Output is not null)
-            {
-                var lookup = new SqliteRepository(db, readOnly: true);
-                if (lookup.GetProjectByName(s.Name) is null)
-                    return CommandOutput.Failure(s.Output, "snapshots.create", "project_not_found",
-                        "No registered project matches the supplied name.", 2);
-            }
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
 
-            Core.Models.Project? proj = repo.GetProjectByName(s.Name);
-            if (proj is null)
-            {
-                throw new InvalidOperationException($"Project '{s.Name}' not found.");
-            }
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
-            var svc = new SnapshotService(repo, new HashService(), CliVaultLogger.Instance);
+            var svc = new SnapshotService(repo, new HashService());
 
             Log.Info($"snapshot start name={proj.Name} fullHash={s.FullHash} root={proj.RootPath}");
 
-            if (!s.Quiet && !CommandOutput.IsJson(s.Output))
+            if (!s.Quiet)
                 AnsiConsole.MarkupLine($"[blue]Scanning & hashing[/] {Markup.Escape(proj.Name)} at {Markup.Escape(proj.RootPath)} (preset: {Markup.Escape(proj.Preset)})...");
 
             DateTime started = DateTime.UtcNow;
@@ -87,24 +48,6 @@ namespace VaultSync.CLI.Commands
                 ct: cancellationToken);
             TimeSpan took = DateTime.UtcNow - started;
             SnapshotOutcome? outcome = SnapshotService.LastOutcome;
-
-            if (CommandOutput.IsJson(s.Output))
-            {
-                Core.Models.Snapshot snapshot = repo.GetSnapshotById(snapId)
-                    ?? throw new InvalidOperationException("The created snapshot could not be read back.");
-                return CommandOutput.Success("snapshots.create", new
-                {
-                    projectId = proj.Id,
-                    snapshotId = snapId,
-                    createdUtc = DateTime.SpecifyKind(snapshot.CreatedUtc, DateTimeKind.Utc).ToString("O"),
-                    fileCount = snapshot.FileCount,
-                    totalBytes = snapshot.TotalBytes,
-                    added = outcome?.Added,
-                    modified = outcome?.Modified,
-                    deleted = outcome?.Deleted,
-                    unchanged = outcome?.Unchanged
-                });
-            }
 
             if (!s.Quiet)
             {
@@ -123,81 +66,52 @@ namespace VaultSync.CLI.Commands
     sealed class HistorySettings : CommandSettings
     {
         [CommandArgument(0, "<name>")] public string Name { get; init; } = "";
-        [CommandOption("--db <PATH>")] public string? Db { get; init; }
-        [CommandOption("--json")] public bool Json { get; init; }
-        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
-        [CommandOption("--limit <COUNT>")] public int? Limit { get; init; }
+        [CommandOption("--db")] public string? Db { get; init; }
+        [CommandOption("--json")] public bool Json { get; init; } = false;
+        [CommandOption("--limit")] public int? Limit { get; init; }
     }
 
     sealed class HistoryCommand : AsyncCommand<HistorySettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, HistorySettings settings, CancellationToken cancellationToken)
+        protected override Task<int> ExecuteAsync(CommandContext context, HistorySettings s, CancellationToken cancellationToken)
         {
-            string? invalid = CommandOutput.Validate(settings.Output, settings.Json);
-            if (settings.Output is not null && settings.Limit is <= 0)
-                invalid = "--limit must be greater than zero.";
-            if (invalid is not null)
-                return Task.FromResult(CommandOutput.Failure(settings.Output, "snapshots.list", "invalid_options", invalid, 2));
+            string db = ConfigHelper.ResolveDb(s.Db);
+            var repo = new SqliteRepository(db);
+            repo.EnsureSchema();
 
-            return Task.FromResult(CommandInspection.Run(settings.Output, "snapshots.list",
-                () => Inspect(settings, cancellationToken), preserveLegacyExceptions: settings.Output is null));
-        }
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
-        private static int Inspect(HistorySettings settings, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var repository = new SqliteRepository(ConfigHelper.ResolveDb(settings.Db), readOnly: settings.Output is not null);
-            if (settings.Output is null)
-                repository.EnsureSchema();
-            Core.Models.Project? project = repository.GetProjectByName(settings.Name);
-            if (project is null)
+            IEnumerable<Core.Models.Snapshot> snaps = repo.GetSnapshotsForProject(proj.Name);
+            if (s.Limit is int lim && lim > 0) snaps = snaps.Take(lim);
+
+            var list = snaps.ToList();
+
+            Log.Info($"history name={proj.Name} count={list.Count} json={s.Json}");
+
+            if (s.Json)
             {
-                if (settings.Output is null)
-                    throw new InvalidOperationException($"Project '{settings.Name}' not found.");
-                return CommandOutput.Failure(settings.Output, "snapshots.list", "project_not_found",
-                    "No registered project matches the supplied name.", 2);
+                string json = JsonSerializer.Serialize(
+                    list.Select(x => new {
+                        x.Id, CreatedUtc = x.CreatedUtc.ToString("u"), x.FileCount, x.TotalBytes
+                    }),
+                    CommandJsonOptions.Indented);
+                Console.WriteLine(json);
+                return Task.FromResult(0);
             }
 
-            Core.Models.Snapshot[] all = repository.GetSnapshotsForProject(project.Name).ToArray();
-            Core.Models.Snapshot[] rows = settings.Limit is int limit && limit > 0 ? all.Take(limit).ToArray() : all;
-            Log.Info($"history name={project.Name} count={rows.Length} json={settings.Json || CommandOutput.IsJson(settings.Output)}");
-
-            if (CommandOutput.IsJson(settings.Output))
-                return CommandOutput.Success("snapshots.list", new
-                {
-                    project = ProjectInspection.Describe(project),
-                    snapshots = rows.Select(Describe).ToArray(),
-                    count = rows.Length,
-                    totalCount = all.Length
-                });
-            if (settings.Json)
-            {
-                Console.WriteLine(JsonSerializer.Serialize(rows.Select(snapshot => new
-                {
-                    snapshot.Id, CreatedUtc = snapshot.CreatedUtc.ToString("u"), snapshot.FileCount, snapshot.TotalBytes
-                }), CommandJsonOptions.Indented));
-                return 0;
-            }
-
-            var table = new Table().Border(TableBorder.Rounded);
+            Table table = new Table().Border(TableBorder.Rounded);
             table.AddColumn("Snapshot");
             table.AddColumn("Created (UTC)");
             table.AddColumn(new TableColumn("Files").RightAligned());
             table.AddColumn(new TableColumn("Bytes").RightAligned());
-            foreach (Core.Models.Snapshot snapshot in rows)
-                table.AddRow(snapshot.Id.ToString(), snapshot.CreatedUtc.ToString("u"), snapshot.FileCount.ToString(), ByteSizeFormat.FormatBytes(snapshot.TotalBytes, "0.#"));
-            AnsiConsole.MarkupLine($"History for [bold]{Markup.Escape(project.Name)}[/] - {rows.Length} snapshot(s)");
-            AnsiConsole.Write(table);
-            return 0;
-        }
 
-        private static object Describe(Core.Models.Snapshot snapshot) => new
-        {
-            snapshot.Id,
-            createdUtc = DateTime.SpecifyKind(snapshot.CreatedUtc, DateTimeKind.Utc).ToString("O"),
-            snapshot.FileCount,
-            snapshot.TotalBytes
-        };
+            foreach (Core.Models.Snapshot? srow in list)
+                table.AddRow(srow.Id.ToString(), srow.CreatedUtc.ToString("u"), srow.FileCount.ToString(), ByteSizeFormat.FormatBytes(srow.TotalBytes, "0.#"));
+
+            AnsiConsole.MarkupLine($"History for [bold]{Markup.Escape(proj.Name)}[/] - {list.Count} snapshot(s)");
+            AnsiConsole.Write(table);
+            return Task.FromResult(0);
+        }
     }
 
     sealed class DiffSettings : CommandSettings
@@ -205,92 +119,60 @@ namespace VaultSync.CLI.Commands
         [CommandArgument(0, "<name>")] public string Name { get; init; } = "";
         [CommandArgument(1, "[A]")] public int? A { get; init; }
         [CommandArgument(2, "[B]")] public int? B { get; init; }
-        [CommandOption("--db <PATH>")] public string? Db { get; init; }
-        [CommandOption("--limit <COUNT>")] public int Limit { get; init; } = 200;
-        [CommandOption("--json")] public bool Json { get; init; }
-        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
+        [CommandOption("--db")] public string? Db { get; init; }
+        [CommandOption("--limit")] public int Limit { get; init; } = 200;
+        [CommandOption("--json")] public bool Json { get; init; } = false;
     }
 
     sealed class DiffCommand : AsyncCommand<DiffSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, DiffSettings settings, CancellationToken cancellationToken)
+        protected override Task<int> ExecuteAsync(CommandContext context, DiffSettings s, CancellationToken cancellationToken)
         {
-            string? invalid = CommandOutput.Validate(settings.Output, settings.Json);
-            if (settings.Output is not null && settings.Limit <= 0)
-                invalid = "--limit must be greater than zero.";
-            if (invalid is not null)
-                return Task.FromResult(CommandOutput.Failure(settings.Output, "snapshots.diff", "invalid_options", invalid, 2));
+            string db = ConfigHelper.ResolveDb(s.Db);
+            var repo = new SqliteRepository(db);
+            repo.EnsureSchema();
 
-            return Task.FromResult(CommandInspection.Run(settings.Output, "snapshots.diff",
-                () => Inspect(settings, cancellationToken), preserveLegacyExceptions: settings.Output is null));
-        }
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
-        private static int Inspect(DiffSettings settings, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var repository = new SqliteRepository(ConfigHelper.ResolveDb(settings.Db), readOnly: settings.Output is not null);
-            if (settings.Output is null)
-                repository.EnsureSchema();
-            Core.Models.Project? project = repository.GetProjectByName(settings.Name);
-            if (project is null)
-                return FailOrThrow(settings, "project_not_found", "No registered project matches the supplied name.");
+            var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
+            if (snaps.Count < 1) throw new InvalidOperationException("No snapshots exist for this project.");
 
-            Core.Models.Snapshot[] snapshots = repository.GetSnapshotsForProject(project.Name).ToArray();
-            if (snapshots.Length == 0)
-                return FailOrThrow(settings, "snapshot_history_empty", "The project has no snapshots to compare.");
+            DiffSelection selection = ResolveDiffSelection(snaps, s);
 
-            DiffSelection selection;
-            try
-            {
-                selection = ResolveDiffSelection(snapshots, settings);
-            }
-            catch (InvalidOperationException) when (settings.Output is not null)
-            {
-                return CommandOutput.Failure(settings.Output, "snapshots.diff", "snapshot_not_found",
-                    "The requested snapshots must exist and belong to the selected project; provide two valid IDs when inference is unavailable.", 2);
-            }
-            HashSet<int> projectSnapshotIds = snapshots.Select(snapshot => snapshot.Id).ToHashSet();
-            if (!projectSnapshotIds.Contains(selection.A) || !projectSnapshotIds.Contains(selection.B))
-                return FailOrThrow(settings, "snapshot_not_found",
-                    "The requested snapshots must exist and belong to the selected project.");
-
-            var aFiles = repository.GetFilesForSnapshot(selection.A).ToDictionary(file => file.RelPath, file => file);
-            var bFiles = repository.GetFilesForSnapshot(selection.B).ToDictionary(file => file.RelPath, file => file);
+            var aFiles = repo.GetFilesForSnapshot(selection.A).ToDictionary(f => f.RelPath, f => f);
+            var bFiles = repo.GetFilesForSnapshot(selection.B).ToDictionary(f => f.RelPath, f => f);
             DiffResult diff = BuildDiff(aFiles, bFiles);
-            Log.Info($"diff name={project.Name} A={selection.A} B={selection.B} added={diff.Added.Count} deleted={diff.Deleted.Count} modified={diff.Modified.Count} unchanged={diff.Unchanged.Count} json={settings.Json || CommandOutput.IsJson(settings.Output)}");
 
-            if (CommandOutput.IsJson(settings.Output))
-                return WriteStructuredDiff(project, selection, diff, aFiles.Count, bFiles.Count, settings.Limit);
-            if (settings.Json)
+            Log.Info($"diff name={proj.Name} A={selection.A} B={selection.B} added={diff.Added.Count} deleted={diff.Deleted.Count} modified={diff.Modified.Count} unchanged={diff.Unchanged.Count} json={s.Json}");
+
+            if (s.Json)
             {
-                WriteLegacyDiffJson(selection, diff, aFiles.Count, bFiles.Count);
-                return 0;
+                WriteDiffJson(selection, diff, aFiles.Count, bFiles.Count);
+                return Task.FromResult(0);
             }
-            WriteDiffTable(project.Name, selection, diff, settings.Limit);
-            return 0;
+
+            WriteDiffTable(proj.Name, selection, diff, s.Limit);
+            return Task.FromResult(0);
         }
 
-        private static int FailOrThrow(DiffSettings settings, string code, string message)
-        {
-            if (settings.Output is not null)
-                return CommandOutput.Failure(settings.Output, "snapshots.diff", code, message, 2);
-            throw new InvalidOperationException(message);
-        }
-
-        private static DiffSelection ResolveDiffSelection(IReadOnlyList<Core.Models.Snapshot> snapshots, DiffSettings settings)
+        private static DiffSelection ResolveDiffSelection(IReadOnlyList<Core.Models.Snapshot> snaps, DiffSettings settings)
         {
             if (settings.A.HasValue && settings.B.HasValue)
                 return new DiffSelection(settings.A.Value, settings.B.Value);
+
             if (settings.A.HasValue)
             {
-                int index = snapshots.ToList().FindIndex(snapshot => snapshot.Id == settings.A.Value);
-                if (index < 0 || index + 1 >= snapshots.Count)
+                int idx = snaps.ToList().FindIndex(x => x.Id == settings.A.Value);
+                if (idx < 0 || idx + 1 >= snaps.Count)
                     throw new InvalidOperationException("Cannot infer the other snapshot; provide both A and B.");
-                return new DiffSelection(settings.A.Value, snapshots[index + 1].Id);
+
+                return new DiffSelection(settings.A.Value, snaps[idx + 1].Id);
             }
-            if (snapshots.Count < 2)
+
+            if (snaps.Count < 2)
                 throw new InvalidOperationException("Need at least two snapshots to diff.");
-            return new DiffSelection(snapshots[0].Id, snapshots[1].Id);
+
+            return new DiffSelection(snaps[0].Id, snaps[1].Id);
         }
 
         private static DiffResult BuildDiff(
@@ -301,63 +183,56 @@ namespace VaultSync.CLI.Commands
             var deleted = new List<string>();
             var modified = new List<string>();
             var unchanged = new List<string>();
-            foreach ((string path, Core.Models.FileEntry aFile) in aFiles)
+
+            foreach ((string rel, Core.Models.FileEntry af) in aFiles)
             {
-                if (!bFiles.TryGetValue(path, out Core.Models.FileEntry? bFile))
-                    added.Add(path);
-                else if (FileChanged(aFile, bFile))
-                    modified.Add(path);
+                if (!bFiles.TryGetValue(rel, out Core.Models.FileEntry? bf))
+                    added.Add(rel);
+                else if (FileChanged(af, bf))
+                    modified.Add(rel);
                 else
-                    unchanged.Add(path);
+                    unchanged.Add(rel);
             }
-            deleted.AddRange(bFiles.Keys.Where(path => !aFiles.ContainsKey(path)));
-            added.Sort(StringComparer.Ordinal); deleted.Sort(StringComparer.Ordinal);
-            modified.Sort(StringComparer.Ordinal); unchanged.Sort(StringComparer.Ordinal);
+
+            deleted.AddRange(bFiles.Keys.Where(rel => !aFiles.ContainsKey(rel)));
             return new DiffResult(added, deleted, modified, unchanged);
         }
 
         private static bool FileChanged(Core.Models.FileEntry a, Core.Models.FileEntry b) =>
-            !string.Equals(a.HashSha256, b.HashSha256, StringComparison.OrdinalIgnoreCase) || a.Size != b.Size;
+            !string.Equals(a.HashSha256, b.HashSha256, StringComparison.OrdinalIgnoreCase) ||
+            a.Size != b.Size;
 
-        private static int WriteStructuredDiff(Core.Models.Project project, DiffSelection selection,
-            DiffResult diff, int totalA, int totalB, int limit)
+        private static void WriteDiffJson(DiffSelection selection, DiffResult diff, int totalA, int totalB)
         {
-            string[] added = [.. diff.Added.Take(limit)];
-            string[] deleted = [.. diff.Deleted.Take(limit)];
-            string[] modified = [.. diff.Modified.Take(limit)];
-            string[] unchanged = [.. diff.Unchanged.Take(limit)];
-            bool truncated = added.Length < diff.Added.Count || deleted.Length < diff.Deleted.Count ||
-                modified.Length < diff.Modified.Count || unchanged.Length < diff.Unchanged.Count;
-            return CommandOutput.Success("snapshots.diff", new
-            {
-                project = ProjectInspection.Describe(project),
-                fromSnapshotId = selection.B,
-                toSnapshotId = selection.A,
-                paths = new { added, deleted, modified, unchanged },
-                summary = new { added = diff.Added.Count, deleted = diff.Deleted.Count,
-                    modified = diff.Modified.Count, unchanged = diff.Unchanged.Count, fromFiles = totalB, toFiles = totalA },
-                pathLimit = limit,
-                pathsTruncated = truncated
-            });
-        }
-
-        private static void WriteLegacyDiffJson(DiffSelection selection, DiffResult diff, int totalA, int totalB)
-        {
-            Console.WriteLine(JsonSerializer.Serialize(new {
-                A = selection.A, B = selection.B, added = diff.Added, deleted = diff.Deleted,
-                modified = diff.Modified, unchanged = diff.Unchanged,
-                summary = new { added = diff.Added.Count, deleted = diff.Deleted.Count,
-                    modified = diff.Modified.Count, unchanged = diff.Unchanged.Count, totalA, totalB }
-            }, CommandJsonOptions.Indented));
+            string json = JsonSerializer.Serialize(new {
+                A = selection.A, B = selection.B,
+                added = diff.Added,
+                deleted = diff.Deleted,
+                modified = diff.Modified,
+                unchanged = diff.Unchanged,
+                summary = new {
+                    added = diff.Added.Count,
+                    deleted = diff.Deleted.Count,
+                    modified = diff.Modified.Count,
+                    unchanged = diff.Unchanged.Count,
+                    totalA,
+                    totalB
+                }
+            }, CommandJsonOptions.Indented);
+            Console.WriteLine(json);
         }
 
         private static void WriteDiffTable(string projectName, DiffSelection selection, DiffResult diff, int limit)
         {
             AnsiConsole.MarkupLine($"Diff [bold]{Markup.Escape(projectName)}[/] - A: {selection.A} vs B: {selection.B}");
             Grid grid = new Grid().AddColumn().AddColumn().AddColumn().AddColumn();
-            grid.AddRow($"[green]Added[/]: {diff.Added.Count}", $"[red]Deleted[/]: {diff.Deleted.Count}",
-                $"[yellow]Modified[/]: {diff.Modified.Count}", $"[grey]Unchanged[/]: {diff.Unchanged.Count}");
+            grid.AddRow(
+                $"[green]Added[/]: {diff.Added.Count}",
+                $"[red]Deleted[/]: {diff.Deleted.Count}",
+                $"[yellow]Modified[/]: {diff.Modified.Count}",
+                $"[grey]Unchanged[/]: {diff.Unchanged.Count}");
             AnsiConsole.Write(grid);
+
             PrintList("ADDED", "green", diff.Added, limit);
             PrintList("DELETED", "red", diff.Deleted, limit);
             PrintList("MODIFIED", "yellow", diff.Modified, limit);
@@ -365,15 +240,16 @@ namespace VaultSync.CLI.Commands
 
         private static void PrintList(string title, string color, IEnumerable<string> rows, int limit)
         {
-            int total = rows is ICollection<string> collection ? collection.Count : rows.Count();
-            List<string> list = rows.Take(limit).ToList();
+            int total = rows is ICollection<string> c ? c.Count : rows.Count();
+            var list = rows.Take(limit).ToList();
             if (list.Count == 0)
                 return;
-            var table = new Table().Border(TableBorder.Rounded);
+
+            Table table = new Table().Border(TableBorder.Rounded);
             table.Title = new TableTitle($"[{color}]{title}[/] (showing {list.Count}{(total > list.Count ? $"/{total}" : "")})");
             table.AddColumn("Path");
-            foreach (string path in list)
-                table.AddRow(Markup.Escape(path));
+            foreach (string? r in list)
+                table.AddRow(r);
             AnsiConsole.Write(table);
         }
     }
@@ -387,16 +263,9 @@ namespace VaultSync.CLI.Commands
         [CommandOption("--db")] public string? Db { get; init; }
         [CommandOption("--quiet")] public bool Quiet { get; init; } = false;
         [CommandOption("--json")] public bool Json { get; init; } = false;
-        [CommandOption("--output <FORMAT>")] public string? Output { get; init; }
-        [CommandOption("--limit <N>")] public int? Limit { get; init; }
 
         public override ValidationResult Validate()
         {
-            string? outputError = CommandOutput.Validate(Output, Json);
-            if (outputError is not null)
-                return ValidationResult.Error(outputError);
-            if (Limit is <= 0)
-                return ValidationResult.Error("--limit must be positive.");
             if (KeepLast is null && string.IsNullOrWhiteSpace(Before))
                 return ValidationResult.Error("Provide --keep-last or --before.");
             if (KeepLast is not null && !string.IsNullOrWhiteSpace(Before))
@@ -422,34 +291,15 @@ namespace VaultSync.CLI.Commands
         protected override Task<int> ExecuteAsync(CommandContext context, PruneSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
-            if (s.Output is not null && !File.Exists(db))
-                return Task.FromResult(CommandOutput.Failure(s.Output, "snapshots.prune", "repository_unavailable",
-                    "The selected database does not exist.", 1));
-            var repo = new SqliteRepository(db, readOnly: s.Output is not null && s.DryRun);
-            if (s.Output is null)
-                repo.EnsureSchema();
+            var repo = new SqliteRepository(db);
+            repo.EnsureSchema();
 
-            Core.Models.Project? proj = repo.GetProjectByName(s.Name);
-            if (proj is null && s.Output is not null)
-                return Task.FromResult(CommandOutput.Failure(s.Output, "snapshots.prune", "project_not_found",
-                    "No project matches the supplied name.", 2));
-            if (proj is null)
-                throw new InvalidOperationException($"Project '{s.Name}' not found.");
+            Core.Models.Project proj = repo.GetProjectByName(s.Name) ?? throw new InvalidOperationException($"Project '{s.Name}' not found.");
 
             var snaps = repo.GetSnapshotsForProject(proj.Name).ToList();
             if (snaps.Count == 0)
             {
-                if (CommandOutput.IsJson(s.Output))
-                    return Task.FromResult(CommandOutput.Success("snapshots.prune", new
-                    {
-                        projectId = proj.Id, project = proj.Name, totalSnapshots = 0,
-                        protectedSnapshots = 0, plannedCount = 0, selectedIds = Array.Empty<int>(),
-                        remainingCount = 0, dryRun = s.DryRun, deletedSnapshots = 0, deletedFiles = 0
-                    }));
-                if (!s.Quiet && !s.Json)
-                    AnsiConsole.MarkupLine("[yellow]No snapshots to prune[/].");
-                if (s.Json)
-                    WritePruneJson(proj.Name, 0, [], s.DryRun);
+                AnsiConsole.MarkupLine("[yellow]No snapshots to prune[/].");
                 return Task.FromResult(0);
             }
 
@@ -462,38 +312,20 @@ namespace VaultSync.CLI.Commands
                 .Where(static entry => entry.Value.IsProtected)
                 .Select(static entry => entry.Key));
             List<int> planned = PlanPrune(snaps, s, protectedSnapshotIds);
-            int selectedLimit = s.Limit ?? (s.Output is not null ? 100 : int.MaxValue);
-            List<int> selected = planned.Take(selectedLimit).ToList();
-
-            if (CommandOutput.IsJson(s.Output))
-            {
-                int deletedSnapshots = 0;
-                int deletedFiles = 0;
-                if (!s.DryRun && selected.Count > 0)
-                    (deletedSnapshots, deletedFiles) = repo.DeleteSnapshotsById(proj.Name, selected);
-                return Task.FromResult(CommandOutput.Success("snapshots.prune", new
-                {
-                    projectId = proj.Id, project = proj.Name, totalSnapshots = snaps.Count,
-                    protectedSnapshots = protectedSnapshotIds.Count, plannedCount = planned.Count,
-                    selectedIds = selected, remainingCount = planned.Count - selected.Count,
-                    dryRun = s.DryRun, deletedSnapshots, deletedFiles
-                }));
-            }
 
             if (s.Json)
             {
-                WritePruneJson(proj.Name, snaps.Count, selected, s.DryRun);
+                WritePruneJson(proj.Name, snaps.Count, planned, s.DryRun);
             }
             else
             {
-                WritePruneTable(proj.Name, snaps, selected, s.DryRun);
+                WritePruneTable(proj.Name, snaps, planned, s.DryRun);
             }
 
-            if (selected.Count == 0 || s.DryRun) return Task.FromResult(0);
+            if (planned.Count == 0 || s.DryRun) return Task.FromResult(0);
 
-            (int snapshots, int files) = repo.DeleteSnapshotsById(proj.Name, selected);
-            if (!s.Quiet && !s.Json)
-                AnsiConsole.MarkupLine($"[green]Pruned[/] snapshots: {snapshots}, files: {files}");
+            (int snapshots, int files) = repo.DeleteSnapshotsById(proj.Name, planned);
+            AnsiConsole.MarkupLine($"[green]Pruned[/] snapshots: {snapshots}, files: {files}");
             return Task.FromResult(0);
         }
 

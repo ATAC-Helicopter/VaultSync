@@ -36,9 +36,6 @@ namespace VaultSync.CLI.Commands
         [System.ComponentModel.Description("Print a finite, read-only watch plan without snapshots or transfers")]
         public bool DryRun { get; init; }
 
-        [CommandOption("--output <FORMAT>")]
-        [System.ComponentModel.Description("Plan output: text or json; JSON requires --dry-run")]
-        public string? Output { get; init; }
 
         [CommandOption("--quiet")]
         public bool Quiet { get; init; }
@@ -54,15 +51,13 @@ namespace VaultSync.CLI.Commands
 
         internal static async Task<int> RunAsync(WatchSettings settings, CancellationToken cancellationToken)
         {
-            string? invalid = CommandOutput.Validate(settings.Output);
-            if (CommandOutput.IsJson(settings.Output) && !settings.DryRun)
-                invalid = "Watcher JSON is available for --dry-run plans only; live events are not supported yet.";
+            string? invalid = null;
             if (settings.DebounceMs <= 0)
                 invalid = "--debounce-ms must be positive.";
             if ((settings.Sync || settings.Verify) && string.IsNullOrWhiteSpace(settings.Destination))
                 invalid = "--sync/--verify requires --dest.";
             if (invalid is not null)
-                return CommandOutput.Failure(settings.Output, "watch.plan", "invalid_options", invalid, 2);
+                return Failure(invalid, 2);
             if (settings.DryRun)
                 return Preview(settings, cancellationToken);
 
@@ -136,29 +131,12 @@ namespace VaultSync.CLI.Commands
                 cancellationToken.ThrowIfCancellationRequested();
                 string db = ConfigHelper.ResolveDbForInspection(settings.DbPath);
                 if (!File.Exists(db))
-                    return CommandOutput.Failure(settings.Output, "watch.plan", "repository_unavailable",
-                        "The selected database does not exist. Register the project first.", 1);
+                    return Failure("The selected database does not exist. Register the project first.", 1);
                 var repo = new SqliteRepository(db, readOnly: true);
                 WatchPlan? plan = CreateWatchPlan(repo, settings);
                 if (plan is null)
                     return 2;
                 cancellationToken.ThrowIfCancellationRequested();
-                if (CommandOutput.IsJson(settings.Output))
-                    return CommandOutput.Success("watch.plan", new
-                    {
-                        projectId = plan.Project.Id,
-                        dryRun = true,
-                        snapshotOnStartup = true,
-                        snapshotOnChange = true,
-                        mirror = plan.DoSync,
-                        verify = plan.DoVerify,
-                        debounceMs = Math.Max(100, settings.DebounceMs),
-                        watching = false,
-                        payloadChecked = false,
-                        destinationChecked = false,
-                        transferToolChecked = false,
-                        recordedBackup = false
-                    });
                 if (!settings.Quiet)
                 {
                     AnsiConsole.MarkupLine($"Watch plan for [bold]{Markup.Escape(plan.Project.Name)}[/]: " +
@@ -170,14 +148,19 @@ namespace VaultSync.CLI.Commands
             }
             catch (OperationCanceledException)
             {
-                return CommandOutput.Failure(settings.Output, "watch.plan", "cancelled", "Watch planning was cancelled.", 130);
+                return Failure("Watch planning was cancelled.", 130);
             }
             catch (Exception error)
             {
                 Log.Exception(error, "Watcher planning failed");
-                return CommandOutput.Failure(settings.Output, "watch.plan", "planning_failed",
-                    "Watch planning failed. Check database access and supported schema; see the private CLI log.", 1);
+                return Failure("Watch planning failed. Check database access and supported schema; see the private CLI log.", 1);
             }
+        }
+
+        private static int Failure(string message, int exitCode)
+        {
+            Console.Error.WriteLine(message);
+            return exitCode;
         }
 
         private static WatchPlan? CreateWatchPlan(SqliteRepository repo, WatchSettings settings)
@@ -185,13 +168,13 @@ namespace VaultSync.CLI.Commands
             Core.Models.Project? project = repo.GetProjectByName(settings.ProjectName);
             if (project is null)
             {
-                CommandOutput.Failure(settings.Output, "watch.plan", "project_not_found", "No registered project matches the supplied name.", 2);
+                Failure("No registered project matches the supplied name.", 2);
                 return null;
             }
 
             if (!Directory.Exists(project.RootPath))
             {
-                CommandOutput.Failure(settings.Output, "watch.plan", "source_unavailable", "The registered project source is unavailable.", 2);
+                Failure("The registered project source is unavailable.", 2);
                 return null;
             }
 
@@ -199,7 +182,7 @@ namespace VaultSync.CLI.Commands
             bool doSync = settings.Sync || doVerify;
             if (doSync && string.IsNullOrWhiteSpace(settings.Destination))
             {
-                CommandOutput.Failure(settings.Output, "watch.plan", "invalid_options", "--sync/--verify requires --dest.", 2);
+                Failure("--sync/--verify requires --dest.", 2);
                 return null;
             }
 
@@ -310,7 +293,7 @@ namespace VaultSync.CLI.Commands
             bool quiet,
             CancellationToken token)
         {
-            var snapSvc = new SnapshotService(repo, new HashService(), CliVaultLogger.Instance);
+            var snapSvc = new SnapshotService(repo, new HashService());
             int snapId = await snapSvc.CreateSnapshotAsync(
                 project,
                 fullHash: true,
@@ -343,7 +326,7 @@ namespace VaultSync.CLI.Commands
             CancellationToken token)
         {
             string dest = ConfigHelper.ExpandUserPath(settings.Destination!);
-            var syncSvc = new SyncService(CliVaultLogger.Instance);
+            var syncSvc = new SyncService();
             int code = await syncSvc.SyncAsync(plan.Project, dest, settings.DryRun, token);
             if (code != 0)
             {

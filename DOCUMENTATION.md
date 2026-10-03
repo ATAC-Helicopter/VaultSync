@@ -33,7 +33,7 @@ Core pillars:
   artifact identity, size, SHA-256, and compatibility schema.
 - `docs/RELEASE_1.8.9.md`: shipped predecessor status and historical qualification.
 - `docs/RELEASE_1.9.0.md`: active development scope, PR stack, delivery and upgrade gates.
-- `docs/CLI.md`, `docs/CLI_TASK_GUIDES.md`, and `docs/CLI_OUTPUT.md`: development
+- `docs/CLI.md`, `docs/CLI_OUTPUT.md`: development
   CLI workflows, compatibility, evidence limits, and versioned machine results.
 - `docs/ROUTE_ARCHITECTURE_1.9.md`: UI route/state migration contract for review.
 - `docs/RECOVERY_HORIZON_STRATEGY.md`: maintainer planning for the 1.9
@@ -160,3 +160,5 @@ logical commit:
 - this file for the exported field-level contract;
 - executable migration and regression tests;
 - `CHANGELOG.md` only when the behavior exists on the release branch.
+
+- [Complete 1.9 family alignment](docs/RELEASE_FAMILY_1.9.md): branch ownership, immutable ID crosswalk and stable gates.

@@ -1066,6 +1066,9 @@ follow-up and candidate VS-1971 remain outside the execution kickoff.
 
 ## 1.9 architecture approval gate
 
+The imported full roadmap and the immutable work-ID crosswalk are recorded in
+[the family alignment contract](docs/RELEASE_FAMILY_1.9.md).
+
 Feature implementation does not begin merely because `1.9` is the next release
 family. Before destructive disk work or public support claims begin, the
 following contracts must be reviewed together:
@@ -1079,16 +1082,15 @@ following contracts must be reviewed together:
 - portable recovery dependencies and the minimum independent restore path;
 - shared identities, dependencies, evidence, and failure domains required by
   later resilience evaluation;
-- the Binary Source Control repository/object format, workspace/ref model,
-  locking and conflict semantics, encryption/recovery boundary, GC/repair
-  invariants, and local/NAS-to-offsite backend contract.
+- BSC has its own later architecture gate; it cannot block the preceding
+  disk, explorer, portable, offsite, and assurance releases.
 
 Unsupported combinations must remain explicit. A prototype or dependency
 spike is evidence for a decision, not a stable product commitment.
 
 ## 1.9 CLI rework program
 
-The CLI becomes a first-class power-user interface throughout 1.9. This is a
+The CLI becomes a first-class power-user interface through the sequenced 1.9 releases. This is a
 full command and behavior rework: add missing operations, change inconsistent
 semantics where needed, and make terminal use worthwhile for bulk work,
 inspection, scripting, unattended verification, and emergency recovery.
@@ -1110,11 +1112,12 @@ inspection, scripting, unattended verification, and emergency recovery.
 - Introduce image, portable, and offsite commands only alongside the
   corresponding qualified services and supported recovery contracts.
 
-Delivery: command/behavior and automation foundations in `1.9.0`; discovery
-and power-user documentation in `1.9.1`; independent recovery in `1.9.2`;
-offsite parity with `1.9.3`; reporting, stable workflow parity, and final
-automation qualification in `1.9.5`. `VS-1953`, `VS-1955`, and `VS-1956`
-retain their reporting, event-hook, and parity ownership.
+Delivery realigned on 2026-10-03: discovery and legacy-command documentation
+in `1.9.1`; independent recovery in `1.9.2`; offsite commands with qualified
+services in `1.9.3`; the implemented resource-command, structured-output,
+backup/restore and automation rework in `1.9.5`. It is preserved separately
+and is not part of the `1.9.0` disk/boot release gate. Existing safety fixes
+may be backported independently without introducing the future command tree.
 
 ## 1.9 UI migration program
 
@@ -1171,31 +1174,6 @@ Git metadata or claiming Git LFS protocol compatibility.
 
 The full maintained strategy is
 [`docs/BINARY_SOURCE_CONTROL_STRATEGY.md`](docs/BINARY_SOURCE_CONTROL_STRATEGY.md).
-
-## 1.9 platform modernization gate
-
-These migrations are isolated from the `1.8.8` patch so their runtime,
-packaging, activation, test-discovery, and CI effects can be qualified without
-destabilizing the maintenance release.
-
-- [ ] `VS-1928` `P1` Migrate the Windows notification backend to the Windows
-  App SDK while preserving the platform-neutral notification contract.
-  - Scope: qualify packaged and unpackaged activation, single-instance routing,
-    elevated-process fallback, install/update/uninstall behavior, and Windows
-    runtime payload isolation from macOS and Linux builds.
-  - Acceptance: supported Windows packages render and activate notifications;
-    unsupported contexts retain an understandable in-app fallback; non-Windows
-    builds and notification implementations remain unchanged; the legacy
-    CommunityToolkit notification dependency is removed. _(Issue #586.)_
-- [ ] `VS-1929` `P1` Migrate the repository test platform to xUnit v3 without
-  reducing discovery, coverage, filtering, diagnostics, or OS coverage.
-  - Scope: qualify fixture disposal, async lifetime, theory data, serialization,
-    skips, timeouts, IDE discovery, `dotnet test`, coverage, SonarQube, CodeQL,
-    and the selected VSTest or Microsoft Testing Platform contract.
-  - Acceptance: reconciled test and coverage counts pass on Windows, macOS, and
-    Linux; no xUnit v2 framework or incompatible runner remains; changed test
-    semantics have regression coverage and contributor documentation.
-    _(Issue #587.)_
 
 ## 1.9.0 — Disk and Bootable Recovery Foundation
 
@@ -1266,125 +1244,6 @@ repository must not transfer before a compatible release is adopted.
     stderr guidance. Two isolated cases reproduced the old deletion behavior.
   - Tracking: [issue #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699);
     the implementation and passing regression evidence await release integration.
-- [ ] `BUG-19002` `P1` Stop CLI watchers cleanly on cancellation and drain active work.
-  - Scope: honor command cancellation during startup and idle waiting; detach
-    Ctrl-C handlers; disable filesystem events and cancel/drain all debounce work
-    before returning. Synchronize debounce cancellation with token-source disposal.
-  - Acceptance: idle and pending-change sessions terminate with exit 130;
-    superseded active work is drained; no snapshots occur after shutdown;
-    concurrent trigger/cancel/completion does not access disposed token sources.
-  - Tracking: [issue #700](https://github.com/ATAC-Helicopter/VaultSync/issues/700);
-    implementation and regression evidence await release integration.
-- [ ] `BUG-19003` `P1` Restrict CLI snapshot diffs to the selected project's history.
-  - Scope: validate both explicit snapshot IDs against the selected project before
-    reading file paths on grouped and legacy routes; return a stable structured
-    error and retain nonzero legacy failure behavior.
-  - Acceptance: foreign-project snapshot IDs cannot contribute paths or counts;
-    valid same-project comparisons and legacy JSON remain compatible.
-  - Tracking: [issue #716](https://github.com/ATAC-Helicopter/VaultSync/issues/716);
-    implementation and regression evidence await release integration.
-- [ ] `BUG-19004` `P1` Recheck staged CLI restore bytes before target replacement.
-  - Scope: validate size and available SHA-256 hash after copying backup data to
-    the temporary restore file, before atomically replacing the target.
-  - Acceptance: changed or incomplete bytes cannot replace an existing target;
-    temporary files are cleaned up on failure.
-  - Tracking: [issue #717](https://github.com/ATAC-Helicopter/VaultSync/issues/717);
-    implementation and regression evidence await release integration.
-- [ ] `BUG-19005` `P1` Keep live CLI prune JSON parseable after deletion.
-  - Scope: preserve one JSON document on legacy live and empty-history paths;
-    keep quiet success silent and add bounded versioned prune results.
-  - Acceptance: scripts can parse dry-run and live outcomes, including actual
-    deletion and remaining counts, without human output mixed into stdout.
-  - Tracking: [issue #718](https://github.com/ATAC-Helicopter/VaultSync/issues/718);
-    implementation and regression evidence await release integration.
-- [ ] `BUG-19006` `P1` Stop CLI watchers when a snapshot, mirror, verification, or filesystem cycle fails.
-  - Scope: propagate startup and background cycle failures to the watcher session;
-    report brief errors on stderr, keep details in the private log, disable events,
-    and drain queued or active debounce work before returning a nonzero result.
-  - Acceptance: a failed startup mirror returns exit 2 without quiet stdout;
-    later cycle and filesystem watcher failures stop the session instead of
-    silently continuing; cancellation retains exit 130.
-  - Tracking: [issue #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719);
-    implementation and regression evidence await release integration.
-- [ ] `BUG-19007` `P1` Keep watcher dry runs finite and read-only.
-  - Scope: stop dry-run snapshot writes and persistent listening; return a finite
-    plan without destination transfers, verification, database migration, or
-    configuration-default writes. Related: VS-1974 / #671.
-  - Acceptance: preview exits with unchanged database/configuration and no later
-    watcher work; missing stores stay absent; v1 JSON describes intent and evidence
-    limits without paths. Live JSON remains explicitly unsupported.
-  - Progress: [#734](https://github.com/ATAC-Helicopter/VaultSync/issues/734),
-    commit `5c01fa25` on `work/1.9-watch-preview`; fourteen preview cases and the
-    accumulated 1,053 .NET tests pass locally. In progress until release integration.
-  - Start: 2026-10-03; target: 2027-03-26; owner: Flavio Giacchetti / Team Work.
-- [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
-  - Scope: inventory existing commands and core-service gaps; define resource/action
-    naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
-    semantics, restore/verification scope, aliases, and deprecation policy.
-  - Acceptance: each current command has a keep, change, replace, or retire decision;
-    incompatible changes have migration examples and a defined compatibility window.
-  - Progress: command inventory and initial compatibility/behavior decisions are
-    in [the CLI rework audit](docs/CLI_REWORK.md); review/integration remains pending.
-- [ ] `VS-1973` `P1` Rebuild CLI commands around consistent tasks and shared services.
-  - Scope: implement the approved tree for projects, destinations, backups,
-    snapshots, history, verification, restore, configuration, and diagnostics;
-    add filtering, bulk selection, plan/dry-run, and explicit per-item results.
-  - Acceptance: useful terminal workflows use the same safety and storage contracts
-    as the desktop; live mirroring cannot masquerade as a recorded recovery point;
-    supported legacy invocations retain their documented behavior or migration path.
-  - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
-    naming reuse existing handlers; projects discover now exposes source-folder
-    discovery. Read-only projects show accepts literal names or explicit IDs;
-    listing supports name/preset filters and limits; snapshot show/history and
-    bounded same-project diffs now have versioned read-only results; watch accepts
-    explicit --db. Project-scoped backup list/show/verify now cover records and
-    full, unencrypted folder payloads. Full folder backup creation with explicit
-    destination and dry-run now uses the shared service. Read-only verify-all
-    checks bounded records across projects with per-backup outcomes. Backup
-    creation/restore bulk mutations and format parity remain.
-- [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
-  - Scope: versioned JSON and streaming result contracts, stable exit codes,
-    stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
-    input and redaction, Ctrl-C cancellation, and explicit partial-failure results.
-  - Acceptance: redirected and scheduled commands terminate without interactive
-    prompts; machine output parses without log/progress contamination; failures,
-    cancellation, unsupported scope, and partial results have documented outcomes.
-  - Progress: raw argv logging is removed; BUG-19001 owns the confirmed quiet
-    removal defect. Project list/show implement explicit v1 JSON envelopes,
-    read-only project, snapshot-history, and bounded diff inspection, plus parse/
-    selection/operational errors; remaining workflows and uniform unattended contracts
-    remain pending. BUG-19002 owns
-    watcher shutdown/draining; quiet startup and cancellation exit 130 are implemented.
-    Snapshot and mirror service diagnostics now use the private CLI log rather
-    than contaminating quiet or preview output. Mirror, verify, and restore now
-    read existing databases without initializing them and report missing stores
-    on stderr. Backup list/show/verify also use read-only v1 results; failed
-    folder verification carries bounded details without leaking storage paths.
-    Backup and snapshot creation now return v1 results; shared-service
-    diagnostics stay in the private CLI log. Live mirror/sync and verify also
-    return opt-in v1 results while preserving legacy output. Doctor now returns
-    versioned check results without initializing an absent database.
-    Watch dry runs now terminate with a read-only plan and opt-in `watch.plan`
-    JSON, without snapshot, transfer, or configuration writes. Live event
-    framing, uniform cancellation, and the remaining unattended contracts remain.
-- [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
-  - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
-    and snapshot inspection, selective safe restore, integrity evidence, destination
-    diagnostics, and previewable retention using qualified shared services.
-  - Acceptance: isolated end-to-end examples protect and recover recorded bytes;
-    protected points survive bulk operations; per-item evidence and failures are
-    inspectable; unavailable or unsupported combinations fail explicitly.
-  - Progress: snapshot show exposes identity, size/change summaries, History
-    markers, and recorded-backup reference counts without claiming payload
-    availability or integrity. The Windows mirror runner no longer creates a
-    destination before a dry run. Backup records can now be inspected and full,
-    unencrypted folder payloads hash-checked. Explicit-destination full folder
-    backups now run through the shared service with a dry-run preflight.
-    Selective folder/file restore and exact backup-ID selection now preserve
-    unrelated target files. Read-only verify-all reports failed and omitted
-    records explicitly. Snapshot pruning now has a read-only v1 preview and
-    bounded mutation batches with remaining-work counts. Archive/encrypted
-    creation and cross-project bulk mutations remain.
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and
@@ -1395,8 +1254,6 @@ repository must not transfer before a compatible release is adopted.
 
 ### 1.9.0 stable release gate
 
-- CLI command and compatibility contracts are approved; unattended output and
-  failure behavior are qualified for the workflows introduced in this release;
 - upgrades from exact `1.8.9` preserve existing repositories and user settings;
 - source and destination cannot be confused silently;
 - destructive actions require an exact wipe/overwrite preview;
@@ -1514,6 +1371,132 @@ unchanged because work IDs are immutable and do not encode the patch number.
     runbooks pass on Windows, macOS, and Linux; no misleading success or secret
     output remains; results provide evidence for VS-1956 parity closure.
 
+### Preserved CLI implementation cohort
+
+The following work is retained under its original ID, with release ownership
+moved from 1.9.0 to 1.9.5. Local evidence predating realignment is historical
+implementation evidence, not stable release qualification.
+
+- [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
+  - Scope: inventory existing commands and core-service gaps; define resource/action
+    naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
+    semantics, restore/verification scope, aliases, and deprecation policy.
+  - Acceptance: each current command has a keep, change, replace, or retire decision;
+    incompatible changes have migration examples and a defined compatibility window.
+  - Progress: command inventory and initial compatibility/behavior decisions are
+    in [the CLI rework audit](docs/CLI_REWORK.md); review/integration remains pending.
+- [ ] `VS-1973` `P1` Rebuild CLI commands around consistent tasks and shared services.
+  - Scope: implement the approved tree for projects, destinations, backups,
+    snapshots, history, verification, restore, configuration, and diagnostics;
+    add filtering, bulk selection, plan/dry-run, and explicit per-item results.
+  - Acceptance: useful terminal workflows use the same safety and storage contracts
+    as the desktop; live mirroring cannot masquerade as a recorded recovery point;
+    supported legacy invocations retain their documented behavior or migration path.
+  - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
+    naming reuse existing handlers; projects discover now exposes source-folder
+    discovery. Read-only projects show accepts literal names or explicit IDs;
+    listing supports name/preset filters and limits; snapshot show/history and
+    bounded same-project diffs now have versioned read-only results; watch accepts
+    explicit --db. Project-scoped backup list/show/verify now cover records and
+    full, unencrypted folder payloads. Full folder backup creation with explicit
+    destination and dry-run now uses the shared service. Read-only verify-all
+    checks bounded records across projects with per-backup outcomes. Backup
+    creation/restore bulk mutations and format parity remain.
+- [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
+  - Scope: versioned JSON and streaming result contracts, stable exit codes,
+    stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
+    input and redaction, Ctrl-C cancellation, and explicit partial-failure results.
+  - Acceptance: redirected and scheduled commands terminate without interactive
+    prompts; machine output parses without log/progress contamination; failures,
+    cancellation, unsupported scope, and partial results have documented outcomes.
+  - Progress: raw argv logging is removed; BUG-19001 owns the confirmed quiet
+    removal defect. Project list/show implement explicit v1 JSON envelopes,
+    read-only project, snapshot-history, and bounded diff inspection, plus parse/
+    selection/operational errors; remaining workflows and uniform unattended contracts
+    remain pending. BUG-19002 owns
+    watcher shutdown/draining; quiet startup and cancellation exit 130 are implemented.
+    Snapshot and mirror service diagnostics now use the private CLI log rather
+    than contaminating quiet or preview output. Mirror, verify, and restore now
+    read existing databases without initializing them and report missing stores
+    on stderr. Backup list/show/verify also use read-only v1 results; failed
+    folder verification carries bounded details without leaking storage paths.
+    Backup and snapshot creation now return v1 results; shared-service
+    diagnostics stay in the private CLI log. Live mirror/sync and verify also
+    return opt-in v1 results while preserving legacy output. Doctor now returns
+    versioned check results without initializing an absent database.
+    Watch dry runs now terminate with a read-only plan and opt-in `watch.plan`
+    JSON, without snapshot, transfer, or configuration writes. Live event
+    framing, uniform cancellation, and the remaining unattended contracts remain.
+- [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
+  - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
+    and snapshot inspection, selective safe restore, integrity evidence, destination
+    diagnostics, and previewable retention using qualified shared services.
+  - Acceptance: isolated end-to-end examples protect and recover recorded bytes;
+    protected points survive bulk operations; per-item evidence and failures are
+    inspectable; unavailable or unsupported combinations fail explicitly.
+  - Progress: snapshot show exposes identity, size/change summaries, History
+    markers, and recorded-backup reference counts without claiming payload
+    availability or integrity. The Windows mirror runner no longer creates a
+    destination before a dry run. Backup records can now be inspected and full,
+    unencrypted folder payloads hash-checked. Explicit-destination full folder
+    backups now run through the shared service with a dry-run preflight.
+    Selective folder/file restore and exact backup-ID selection now preserve
+    unrelated target files. Read-only verify-all reports failed and omitted
+    records explicitly. Snapshot pruning now has a read-only v1 preview and
+    bounded mutation batches with remaining-work counts. Archive/encrypted
+    creation and cross-project bulk mutations remain.
+- [ ] `BUG-19002` `P1` Stop CLI watchers cleanly on cancellation and drain active work.
+  - Scope: honor command cancellation during startup and idle waiting; detach
+    Ctrl-C handlers; disable filesystem events and cancel/drain all debounce work
+    before returning. Synchronize debounce cancellation with token-source disposal.
+  - Acceptance: idle and pending-change sessions terminate with exit 130;
+    superseded active work is drained; no snapshots occur after shutdown;
+    concurrent trigger/cancel/completion does not access disposed token sources.
+  - Tracking: [issue #700](https://github.com/ATAC-Helicopter/VaultSync/issues/700);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19003` `P1` Restrict CLI snapshot diffs to the selected project's history.
+  - Scope: validate both explicit snapshot IDs against the selected project before
+    reading file paths on grouped and legacy routes; return a stable structured
+    error and retain nonzero legacy failure behavior.
+  - Acceptance: foreign-project snapshot IDs cannot contribute paths or counts;
+    valid same-project comparisons and legacy JSON remain compatible.
+  - Tracking: [issue #716](https://github.com/ATAC-Helicopter/VaultSync/issues/716);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19004` `P1` Recheck staged CLI restore bytes before target replacement.
+  - Scope: validate size and available SHA-256 hash after copying backup data to
+    the temporary restore file, before atomically replacing the target.
+  - Acceptance: changed or incomplete bytes cannot replace an existing target;
+    temporary files are cleaned up on failure.
+  - Tracking: [issue #717](https://github.com/ATAC-Helicopter/VaultSync/issues/717);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19005` `P1` Keep live CLI prune JSON parseable after deletion.
+  - Scope: preserve one JSON document on legacy live and empty-history paths;
+    keep quiet success silent and add bounded versioned prune results.
+  - Acceptance: scripts can parse dry-run and live outcomes, including actual
+    deletion and remaining counts, without human output mixed into stdout.
+  - Tracking: [issue #718](https://github.com/ATAC-Helicopter/VaultSync/issues/718);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19006` `P1` Stop CLI watchers when a snapshot, mirror, verification, or filesystem cycle fails.
+  - Scope: propagate startup and background cycle failures to the watcher session;
+    report brief errors on stderr, keep details in the private log, disable events,
+    and drain queued or active debounce work before returning a nonzero result.
+  - Acceptance: a failed startup mirror returns exit 2 without quiet stdout;
+    later cycle and filesystem watcher failures stop the session instead of
+    silently continuing; cancellation retains exit 130.
+  - Tracking: [issue #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19007` `P1` Keep watcher dry runs finite and read-only.
+  - Scope: stop dry-run snapshot writes and persistent listening; return a finite
+    plan without destination transfers, verification, database migration, or
+    configuration-default writes. Related: VS-1974 / #671.
+  - Acceptance: preview exits with unchanged database/configuration and no later
+    watcher work; missing stores stay absent; v1 JSON describes intent and evidence
+    limits without paths. Live JSON remains explicitly unsupported.
+  - Progress: [#734](https://github.com/ATAC-Helicopter/VaultSync/issues/734),
+    commit `5c01fa25` on `work/1.9-watch-preview`; fourteen preview cases and the
+    accumulated 1,053 .NET tests pass locally. In progress until release integration.
+  - Start: 2026-10-03; target: 2027-03-26; owner: Flavio Giacchetti / Team Work.
+
 ## 1.9.6 — Binary Source Control Foundation
 
 Binary Source Control enters the 1.9 family only after `VS-1981` and
@@ -1614,6 +1597,32 @@ automation, performance, or incremental interface improvements.
 Use `2.0` only when VaultSync changes the authoritative unit users manage from
 backup/recovery operations to resilience outcomes and that change creates an
 intentional compatibility or migration boundary.
+
+### Independent platform maintenance gates (LTS ownership)
+
+These migrations are isolated from the `1.8.8` patch so their runtime,
+packaging, activation, test-discovery, and CI effects can be qualified without
+destabilizing the maintenance release.
+
+- [ ] `VS-1928` `P1` Migrate the Windows notification backend to the Windows
+  App SDK while preserving the platform-neutral notification contract.
+  - Scope: qualify packaged and unpackaged activation, single-instance routing,
+    elevated-process fallback, install/update/uninstall behavior, and Windows
+    runtime payload isolation from macOS and Linux builds.
+  - Acceptance: supported Windows packages render and activate notifications;
+    unsupported contexts retain an understandable in-app fallback; non-Windows
+    builds and notification implementations remain unchanged; the legacy
+    CommunityToolkit notification dependency is removed. _(Issue #586.)_
+- [ ] `VS-1929` `P1` Migrate the repository test platform to xUnit v3 without
+  reducing discovery, coverage, filtering, diagnostics, or OS coverage.
+  - Scope: qualify fixture disposal, async lifetime, theory data, serialization,
+    skips, timeouts, IDE discovery, `dotnet test`, coverage, SonarQube, CodeQL,
+    and the selected VSTest or Microsoft Testing Platform contract.
+  - Acceptance: reconciled test and coverage counts pass on Windows, macOS, and
+    Linux; no xUnit v2 framework or incompatible runner remains; changed test
+    semantics have regression coverage and contributor documentation.
+    _(Issue #587.)_
+
 
 ## Candidate VaultSync 2 — Resilience
 

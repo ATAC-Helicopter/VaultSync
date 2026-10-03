@@ -53,12 +53,12 @@ Planning and architecture started on 2026-09-18 on `release/1.9.0` into `Dev`.
 The existing 1.9.0 milestone target remains 2027-03-26 and the family horizon
 remains 2027-09-24. See [the kickoff contract](RELEASE_1.9.0.md).
 
-The full CLI rework starts in 1.9.0 with command/behavior inventory and script
-compatibility (VS-1972), shared-service commands (VS-1973), unattended contracts
-(VS-1974), and useful power-user workflows (VS-1975). Discovery/completions and
-practical documentation follow in 1.9.1 (VS-1977, VS-1978); independent recovery
-follows in 1.9.2 (VS-1976). Reporting, event hooks, stable parity, and accumulated
-CLI qualification remain in 1.9.5 (VS-1953, VS-1955, VS-1956, VS-1979).
+The 2026-10-03 full-roadmap alignment moves the implemented CLI command/behavior
+and automation cohort (VS-1972–1975) to 1.9.5. Discovery/completion and legacy
+handbook work stay in 1.9.1 (VS-1977/1978); independent recovery follows in 1.9.2
+(VS-1976). Reporting, hooks, stable parity and final qualification remain in
+1.9.5 (VS-1953/1955/1956/1979). Independent safety fixes can be backported.
+See [complete family ownership and ID crosswalk](RELEASE_FAMILY_1.9.md).
 New work does not reuse those existing identifiers. VS-1980 owns kickoff tracking.
 
 ### 1.9 architecture approval

@@ -1,5 +1,8 @@
 # 1.9 CLI command and behavior audit
 
+> Scope realigned 2026-10-03: this document describes the preserved **1.9.5**
+> resource CLI development cohort, not the 1.9.0 executable.
+
 Implementation started 2026-09-18 under VS-1972, VS-1973, and VS-1974.
 [ROADMAP.md](../ROADMAP.md) owns scope and delivery state. This document records
 code-grounded inventory and initial design decisions; it is not a second roadmap.

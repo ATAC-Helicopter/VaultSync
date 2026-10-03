@@ -48,3 +48,5 @@
   - [Changelog](../../CHANGELOG.md)
   - [Contributing](../../CONTRIBUTING.md)
   - [Security](../../SECURITY.md)
+
+- [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.

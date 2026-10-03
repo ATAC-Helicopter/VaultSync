@@ -888,3 +888,37 @@ and qualifying them.
 - `VS-1991` — sparse/cache/transfer/offsite replication — issue #713.
 - `VS-1992` — desktop, CLI, Git coexistence — issue #714.
 - `VS-1993` — scale, cross-platform, NAS, and fault qualification — issue #715.
+
+## Full-roadmap reconciliation — 2026-10-03
+
+The [family crosswalk](RELEASE_FAMILY_1.9.md) retains canonical VS-1981–1993;
+the supplied VS-1970–1982 are aliases that collide with live CLI IDs.
+Architecture gates apply to BSC releases only.
+
+Publication holds a short writer lease distinct from long path leases, rereads
+head and validates expected base/ownership, verifies staged crypto objects,
+durably writes objects/indexes/trees/changeset, then performs guarded CAS and
+records audit evidence. Every interruption before CAS leaves the previous head
+valid; new unreferenced objects remain reclaimable. Offline lock ownership is
+unverified, never implicit authorization. Expiry/takeover uses repository evidence
+and renewed ownership checks; wall clock alone cannot establish expiry.
+
+Packs validate magic/version/durable length/checksums and bounded ranges; indexes
+are rebuildable acceleration only. Encryption uses authenticated chunks and
+repository-local keyed identity; key rotation must survive interruption and
+clean-machine history verification/restore. Unknown required writer features
+fail closed; a reader-only fallback must not grant write permission.
+
+Checkout stages/verifies/replaces atomically with rollback; interruption leaves
+old or new verified state while preserving dirty/untracked data. Preflight free
+space for checkout, restore, repack, quarantine, rotation and mirror. GC roots
+include refs/protected tags/maintenance and recovery states; mark/quarantine/grace
+then recheck roots before delete. Repack verifies new packs/indexes before old
+ones retire. Replication completion counts all reachable objects as durable and
+verified; weak CAS backends are read-only replicas.
+
+Qualification covers 100k/500k/1M paths, 100GB/1TB/multi-TB repositories,
+1GB/10GB files, p95 latency, throughput, CPU/allocations, reuse, IO, GC and temporary
+space, cancellation and faults at each publication stage. Security targets
+accidental failures/crashes/cooperative writers, not hostile administrators,
+enterprise ACL, signing or nonrepudiation without separate qualification.

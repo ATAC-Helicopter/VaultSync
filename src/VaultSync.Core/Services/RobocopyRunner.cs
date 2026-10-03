@@ -21,11 +21,9 @@ namespace VaultSync.Core.Services
     {
         public string Name => "robocopy";
         private readonly bool _isNetworkDestination;
-        private readonly IVaultLogger _logger;
-        public RobocopyRunner(bool isNetworkDestination = false, IVaultLogger? logger = null)
+        public RobocopyRunner(bool isNetworkDestination = false)
         {
             _isNetworkDestination = isNetworkDestination;
-            _logger = logger ?? RuntimeVaultLogger.Instance;
         }
 
         // ISyncRunner base signature (no progress)
@@ -57,8 +55,7 @@ namespace VaultSync.Core.Services
             string src = NormalizeWinPath(project.RootPath);
             string dst = NormalizeWinPath(destination);
 
-            if (!dryRun)
-                Directory.CreateDirectory(destination); // ensure exists for a real transfer
+            Directory.CreateDirectory(destination); // ensure exists; robocopy handles \\?\
 
             var psi = new ProcessStartInfo
             {
@@ -154,7 +151,7 @@ namespace VaultSync.Core.Services
 
                             if ((DateTime.UtcNow - lastLog) >= logInterval)
                             {
-                                _logger.Info($"[RobocopyRunner] {line}");
+                                Console.WriteLine($"[RobocopyRunner] {line}");
                                 lastLog = DateTime.UtcNow;
                             }
                         }
@@ -186,7 +183,7 @@ namespace VaultSync.Core.Services
 
                                 if ((DateTime.UtcNow - lastLog) >= logInterval)
                                 {
-                                    _logger.Info($"[RobocopyRunner] {currentFile}");
+                                    Console.WriteLine($"[RobocopyRunner] {currentFile}");
                                     lastLog = DateTime.UtcNow;
                                 }
                             }
@@ -239,11 +236,11 @@ namespace VaultSync.Core.Services
                     string outText = TrimLog(stdout);
                     string errText = TrimLog(stderr);
 
-                    _logger.Error($"[RobocopyRunner] robocopy failed (exit={exit}, normalized={normalized}) src='{src}' dst='{dst}'.");
+                    Console.WriteLine($"[RobocopyRunner] robocopy failed (exit={exit}, normalized={normalized}) src='{src}' dst='{dst}'.");
                     if (outText.Length > 0)
-                        _logger.Error($"[RobocopyRunner][stdout]\n{outText}");
+                        Console.WriteLine($"[RobocopyRunner][stdout]\n{outText}");
                     if (errText.Length > 0)
-                        _logger.Error($"[RobocopyRunner][stderr]\n{errText}");
+                        Console.WriteLine($"[RobocopyRunner][stderr]\n{errText}");
                 }
 
                 return normalized;
@@ -274,14 +271,14 @@ namespace VaultSync.Core.Services
             }
         }
 
-        private (List<string> files, List<string> dirs) LoadExcludes(Project project)
+        private static (List<string> files, List<string> dirs) LoadExcludes(Project project)
         {
             var files = new List<string>();
             var dirs  = new List<string>();
 
             // Use the same resolved, normalized preset + local + reserved rules as
             // snapshots and managed-copy backups. Platform runners must not drift.
-            FilterService filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset, logger: _logger);
+            FilterService filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
             MergeIgnorePatterns(filter.RawPatterns, files, dirs);
 
             return (files, dirs);

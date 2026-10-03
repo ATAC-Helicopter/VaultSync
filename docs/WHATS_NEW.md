@@ -2,37 +2,12 @@
 
 ## [1.9.0]
 
-Recovery Horizon is in planning and architecture work. Its approved scope includes
-disk and bootable recovery foundations and a full CLI rework for practical
-terminal and automation workflows. These capabilities have not shipped. The development CLI now includes grouped
-`projects`, `snapshots`, and `recovery` commands, candidate folder discovery,
-and an explicitly named `mirror` command. Project inspection adds explicit IDs,
-filtered/limited listings, and opt-in versioned JSON via `--output json` with
-read-only database access. Snapshot history and diffs now support the same versioned, read-only result
-contract. A new snapshot detail view reports change summaries, History markers,
-and aggregate recorded-backup references without exposing storage paths or claiming
-that payload bytes are available. Diff path arrays are bounded with complete counts
-and reject snapshot IDs outside the selected project. Existing command routes and legacy `--json` remain.
-Quiet or unattended project removal requires `--yes`; `--quiet` alone no longer
-authorizes deletion of the local registration/history. Watchers support explicit
-`--db`, suppress guidance in quiet mode, and drain work before stopping on Ctrl-C
-with exit 130. Running `vaultsync` now opens a compact introductory UI with a text
-logo, useful links, starter commands, and help pointers. `vaultsync docs` provides
-the bundled practical handbook, exhaustive generated command reference, and an
-online entry point. Generated Bash, Zsh, and PowerShell command/option completion
-is available through `vaultsync completion`; the handbook covers tool PATH setup.
-`vaultsync docs --task` now provides focused setup, inspection, mirror, restore,
-automation, and migration examples. Shell completion suggests task topics and
-supported output formats. Quiet snapshot creation no longer prints core-service
-diagnostics to stdout. Mirror, verify, and recorded-folder restore now read an
-existing database without initializing it during a preview or check.
-`watch --dry-run` now prints a finite plan, optionally as versioned JSON, and
-exits without creating snapshots or starting transfers. Live JSON events remain pending.
-See the [CLI handbook](CLI.md) and
-[CLI audit and migration notes](CLI_REWORK.md).
-
-Current stable: **1.8.9**, published September 16, 2026. See the
-[1.9.0 release contract](RELEASE_1.9.0.md) for scope and qualification gates.
+Recovery Horizon is in planning and architecture work. 1.9.0 owns disk capture,
+validation, independent boot media, restore and post-restore validation.
+These capabilities have not shipped. The earlier CLI development cohort has
+been moved to 1.9.5, with discovery/legacy documentation in 1.9.1.
+Current stable remains **1.8.9**, published 2026-09-16.
+See [the release contract](RELEASE_1.9.0.md) and [family plan](RELEASE_FAMILY_1.9.md).
 
 ## [1.8.9]
 

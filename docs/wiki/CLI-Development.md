@@ -1,6 +1,8 @@
-# Development CLI workflows (1.9)
+# Development CLI workflows (1.9.5)
 
-These commands require a **1.9 development CLI**. Current stable is **1.8.9**;
+The full-roadmap alignment moved this command cohort out of 1.9.0.
+
+These commands require a **release/1.9.5 development CLI**. Current stable is **1.8.9**;
 the examples are not a promise that the stable executable has these routes or
 JSON contracts. Use an explicit test database and disposable source/destination
 folders when trying a development build. See [development status](Development-Status.md).

@@ -13,8 +13,6 @@ namespace VaultSync.Core.Services
 
         public SyncService() : this(ChooseRunner()) { }
 
-        public SyncService(IVaultLogger logger) : this(ChooseRunner(logger)) { }
-
         public SyncService(ISyncRunner runner)
         {
             _runner = runner;
@@ -25,18 +23,18 @@ namespace VaultSync.Core.Services
 
         public string RunnerName => _runner.Name;
 
-        private static ISyncRunner ChooseRunner(IVaultLogger? logger = null)
+        private static ISyncRunner ChooseRunner()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // Prefer robocopy if present; otherwise fail with an actionable setup error.
-                if (IsOnPath("robocopy")) return new RobocopyRunner(logger: logger);
+                if (IsOnPath("robocopy")) return new RobocopyRunner();
 
                 throw new InvalidOperationException("robocopy not found on PATH. Install it (comes with Windows) or add to PATH.");
             }
 
             // macOS/Linux: rsync
-            if (IsOnPath("rsync")) return new RsyncRunner(logger: logger);
+            if (IsOnPath("rsync")) return new RsyncRunner();
 
             throw new InvalidOperationException("rsync not found on PATH. Please install rsync.");
         }

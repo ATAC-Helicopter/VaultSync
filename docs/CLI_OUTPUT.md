@@ -1,5 +1,8 @@
 # CLI structured output v1
 
+> Scope realigned 2026-10-03: this document describes the preserved **1.9.5**
+> resource CLI development cohort, not the 1.9.0 executable.
+
 Available in the 1.9 development CLI for `projects list`, `list-projects`,
 `projects show`, `snapshots create`, `snapshots list`, `snapshots show`, `snapshots diff`, `snapshots prune`, `backups list`,
 `backups show`, `backups verify`, `backups verify-all`, `backups create`,
