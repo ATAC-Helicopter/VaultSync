@@ -41,7 +41,7 @@ namespace VaultSync.CLI.Commands
         private static readonly System.Threading.SemaphoreSlim _cycleGate = new(1, 1);
         private sealed record WatchPlan(Core.Models.Project Project, bool DoSync, bool DoVerify);
 
-        protected override async Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(null);
             var repo = new SqliteRepository(db);
