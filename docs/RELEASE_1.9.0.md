@@ -324,6 +324,9 @@ and remaining integration/platform/recovery gates.
 The continuation is published in [draft PR #735](https://github.com/ATAC-Helicopter/VaultSync/pull/735),
 with parent #731 and final target `release/1.9.0`. The [wiki development status](wiki/Development-Status.md)
 and [CLI guide](wiki/CLI-Development.md) mirror this distinction from stable 1.8.9.
+The [tracking closeout](release-evidence/1.9-tracking-2026-10-03.md) records the
+published wiki, native Project linkage, aligned issues/PRs/milestones and the
+historical 1.8.x closeout; active 1.9 release gates remain open.
 
 - [Draft release PR #683](https://github.com/ATAC-Helicopter/VaultSync/pull/683), `release/1.9.0` → `Dev`
 - [1.9.0 milestone](https://github.com/ATAC-Helicopter/VaultSync/milestone/14)

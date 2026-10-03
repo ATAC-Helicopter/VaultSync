@@ -21,6 +21,7 @@ Use this page as the primary index for all project documentation.
 - 1.9.0 Recovery Horizon kickoff: [release contract](RELEASE_1.9.0.md)
 - 1.9 desktop route and migration review: [route architecture](ROUTE_ARCHITECTURE_1.9.md)
 - 1.9 accumulated local validation: [October 3 audit](release-evidence/1.9-audit-2026-10-03.md)
+- GitHub/wiki/Project and historical closeout: [October 3 tracking](release-evidence/1.9-tracking-2026-10-03.md)
 - 1.8.9 bug fixes and UI polish: [1.8.9 release review](RELEASE_1.8.9.md)
 - Reproducible release performance profile: [performance benchmarks](PERFORMANCE_BENCHMARKS.md)
 - Release process: [Releasing](RELEASING.md)
