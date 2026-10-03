@@ -61,3 +61,14 @@ class PublicReleaseMetadataTests(unittest.TestCase):
 
     def test_repository_consumers_match_contract(self) -> None:
         self.assertEqual([], public_release_metadata.validate_consumers(REPO_ROOT, self.metadata))
+
+
+class PlannedReleaseDateTests(unittest.TestCase):
+    def test_undated_planning_is_allowed_but_candidate_and_released_require_dates(self):
+        stable = {"releasedDate": "2026-09-16"}
+        public_release_metadata.validate_dates({"targetDate": None, "stage": "planned"}, stable)
+        for stage in ("candidate", "released"):
+            with self.subTest(stage=stage), self.assertRaises(ValueError):
+                public_release_metadata.validate_dates({"targetDate": None, "stage": stage}, stable)
+        with self.assertRaises(ValueError):
+            public_release_metadata.validate_dates({"targetDate": "not-a-date", "stage": "planned"}, stable)

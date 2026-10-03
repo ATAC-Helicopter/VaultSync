@@ -723,6 +723,19 @@ jobs:
           bash scripts/build_linux_release.sh "$TARGET_VERSION" x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
           bash scripts/build_linux_release.sh "$TARGET_VERSION" arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
 
+      - name: Verify AppImage payload permissions
+        run: |
+          set -euo pipefail
+          appimage=(dist/linux/VaultSync-*-linux-x64.AppImage)
+          [[ ${#appimage[@]} -eq 1 && -f ${appimage[0]} ]]
+          image_path="$(realpath "${appimage[0]}")"
+          extract_dir="$(mktemp -d)"
+          trap 'rm -rf "$extract_dir"' EXIT
+          (cd "$extract_dir" && "$image_path" --appimage-extract >/dev/null)
+          root="$extract_dir/squashfs-root"
+          [[ "$(stat -c '%a' "$root")" == 755 ]]
+          [[ -x "$root/AppRun" && -x "$root/usr/bin/VaultSync.UI" ]]
+
       - name: Build patch assets
         if: ${{ inputs.include_linux_patches }}
         env:
