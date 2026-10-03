@@ -38,7 +38,6 @@
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Wayland" Condition="'$(TargetFramework)' == 'net10.0'" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
-    <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.HarfBuzz" />
     <!-- Keep native packages pinned directly so every RID resolves the same Skia/HarfBuzz ABI. -->

@@ -46,7 +46,7 @@ namespace VaultSync.CLI.Commands
         private static readonly System.Threading.SemaphoreSlim _cycleGate = new(1, 1);
         private sealed record WatchPlan(Core.Models.Project Project, bool DoSync, bool DoVerify);
 
-        protected override Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, WatchSettings s, CancellationToken cancellationToken)
             => RunAsync(s, cancellationToken);
 
         internal static async Task<int> RunAsync(WatchSettings settings, CancellationToken cancellationToken)
