@@ -25,7 +25,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class AddProjectCommand : AsyncCommand<AddProjectSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, AddProjectSettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, AddProjectSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -57,7 +57,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class RemoveProjectCommand : AsyncCommand<RemoveProjectSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, RemoveProjectSettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, RemoveProjectSettings s, CancellationToken cancellationToken)
         {
             if (!s.Yes && (s.Quiet || Console.IsInputRedirected))
             {
@@ -107,7 +107,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SetPathCommand : AsyncCommand<SetPathSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, SetPathSettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, SetPathSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -134,7 +134,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class DiscoverProjectsCommand : AsyncCommand<DiscoverProjectsSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, DiscoverProjectsSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, DiscoverProjectsSettings s, CancellationToken cancellationToken)
         {
             AppConfig config = string.IsNullOrWhiteSpace(s.OverrideRoot)
                 ? ConfigHelper.Load()

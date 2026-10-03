@@ -21,7 +21,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class DestinationCommand : AsyncCommand<DestinationSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, DestinationSettings settings, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, DestinationSettings settings, CancellationToken cancellationToken)
         {
             string? invalid = CommandOutput.Validate(settings.Output, settings.Json);
             if (settings.Output is not null && settings.Test)

@@ -24,7 +24,7 @@ internal sealed class VerifyBackupSettings : CommandSettings
 
 internal sealed class VerifyBackupCommand : AsyncCommand<VerifyBackupSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, VerifyBackupSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, VerifyBackupSettings settings, CancellationToken cancellationToken)
     {
         string? invalid = CommandOutput.Validate(settings.Output);
         if (string.IsNullOrWhiteSpace(settings.Project))

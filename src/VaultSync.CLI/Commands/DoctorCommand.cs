@@ -22,7 +22,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, DoctorSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, DoctorSettings s, CancellationToken cancellationToken)
         {
             string? invalid = CommandOutput.Validate(s.Output);
             if (invalid is not null)

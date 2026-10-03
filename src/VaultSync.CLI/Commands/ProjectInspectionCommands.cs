@@ -25,7 +25,7 @@ internal sealed class ListProjectsSettings : CommandSettings
 
 internal sealed class ListProjectsCommand : AsyncCommand<ListProjectsSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, ListProjectsSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, ListProjectsSettings settings, CancellationToken cancellationToken)
     {
         string? invalid = CommandOutput.Validate(settings.Output, settings.Json);
         if (settings.Limit is <= 0)
@@ -83,7 +83,7 @@ internal sealed class ShowProjectSettings : CommandSettings
 
 internal sealed class ShowProjectCommand : AsyncCommand<ShowProjectSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, ShowProjectSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, ShowProjectSettings settings, CancellationToken cancellationToken)
     {
         string? invalid = CommandOutput.Validate(settings.Output);
         if ((settings.Name is null) == (settings.Id is null))

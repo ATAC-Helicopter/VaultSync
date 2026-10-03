@@ -26,7 +26,7 @@ internal sealed class CreateBackupSettings : CommandSettings
 
 internal sealed class CreateBackupCommand : AsyncCommand<CreateBackupSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, CreateBackupSettings settings,
+    public override async Task<int> ExecuteAsync(CommandContext context, CreateBackupSettings settings,
         CancellationToken cancellationToken)
     {
         string? invalid = CommandOutput.Validate(settings.Output);

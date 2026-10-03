@@ -27,7 +27,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SyncCommand : AsyncCommand<SyncSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken cancellationToken)
         {
             string? invalid = CommandOutput.Validate(s.Output);
             if (invalid is not null)
@@ -121,7 +121,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class VerifyCommand : AsyncCommand<VerifySettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken cancellationToken)
         {
             string? invalid = CommandOutput.Validate(s.Output, s.Json);
             if (s.Output is not null && (s.Percent is < 1 or > 100 || (s.Full && s.Percent != 10)))
@@ -259,7 +259,7 @@ namespace VaultSync.CLI.Commands
 
         private sealed record RestoreCopy(string RelativePath, string SourcePath, string TargetPath, FileEntry Expected);
 
-        protected override async Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
         {
             string? invalid = CommandOutput.Validate(s.Output, s.Json);
             if (s.Snapshot is <= 0 || s.BackupId is <= 0 ||
@@ -680,7 +680,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SelfTestCommand : AsyncCommand<SelfTestSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, SelfTestSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, SelfTestSettings s, CancellationToken cancellationToken)
         {
             string? explicitDatabasePath = string.IsNullOrWhiteSpace(s.Db)
                 ? null

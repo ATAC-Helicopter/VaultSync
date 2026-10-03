@@ -535,3 +535,5 @@ Current `1.7` release-train highlights, including repair tooling, safer updates,
 
 ### Updates
 - Release notes are available in the app. [Release notes](https://github.com/ATAC-Helicopter/VaultSync/releases)
+
+Complete development changes and release PR grouping: [daily ledger](release-evidence/1.9-work-2026-10-03.md).

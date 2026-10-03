@@ -45,7 +45,7 @@ internal sealed class VerifyAllBackupsCommand : AsyncCommand<VerifyAllBackupsSet
         };
     }
 
-    protected override async Task<int> ExecuteAsync(CommandContext context, VerifyAllBackupsSettings settings,
+    public override async Task<int> ExecuteAsync(CommandContext context, VerifyAllBackupsSettings settings,
         CancellationToken cancellationToken)
     {
         string? invalid = CommandOutput.Validate(settings.Output);

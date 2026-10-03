@@ -12,3 +12,11 @@ See [family contract and stable gates](RELEASE_FAMILY_1.9.md) and
 [canonical scope/status](../ROADMAP.md). Before promotion, integrate the qualified
 predecessor, verify actual functionality and all version/packaging consumers,
 record a reviewed target date, and complete native release evidence.
+
+## Assembled release review — 2026-10-03
+
+PR #747 into Dev is the sole release review; preparation source `docs/1.9.5-package-guide`.
+It includes the original release preparation and all its follow-up corrections.
+The earlier preparation PR is superseded. No release auto-merge is enabled.
+Shared dependency maintenance is propagated atomically with CLI API compatibility.
+See [the complete daily ledger](release-evidence/1.9-work-2026-10-03.md).

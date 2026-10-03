@@ -20,7 +20,7 @@ internal sealed class ShowSnapshotSettings : CommandSettings
 
 internal sealed class ShowSnapshotCommand : AsyncCommand<ShowSnapshotSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, ShowSnapshotSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, ShowSnapshotSettings settings, CancellationToken cancellationToken)
     {
         string? invalid = CommandOutput.Validate(settings.Output);
         if (string.IsNullOrWhiteSpace(settings.Project))

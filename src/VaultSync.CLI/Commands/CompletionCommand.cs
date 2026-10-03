@@ -14,7 +14,7 @@ internal sealed class CompletionSettings : CommandSettings
 
 internal sealed class CompletionCommand : AsyncCommand<CompletionSettings>
 {
-    protected override Task<int> ExecuteAsync(
+    public override Task<int> ExecuteAsync(
         CommandContext context, CompletionSettings settings, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

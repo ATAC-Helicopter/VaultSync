@@ -20,7 +20,7 @@ internal sealed class ListBackupsSettings : CommandSettings
 
 internal sealed class ListBackupsCommand : AsyncCommand<ListBackupsSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, ListBackupsSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, ListBackupsSettings settings, CancellationToken cancellationToken)
     {
         string? invalid = CommandOutput.Validate(settings.Output);
         if (string.IsNullOrWhiteSpace(settings.Project))
@@ -69,7 +69,7 @@ internal sealed class ShowBackupSettings : CommandSettings
 
 internal sealed class ShowBackupCommand : AsyncCommand<ShowBackupSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, ShowBackupSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, ShowBackupSettings settings, CancellationToken cancellationToken)
     {
         string? invalid = CommandOutput.Validate(settings.Output);
         if (string.IsNullOrWhiteSpace(settings.Project))

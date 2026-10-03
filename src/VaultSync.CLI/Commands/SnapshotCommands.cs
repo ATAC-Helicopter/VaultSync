@@ -27,7 +27,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SnapshotCommand : AsyncCommand<SnapshotSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, SnapshotSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, SnapshotSettings s, CancellationToken cancellationToken)
         {
             string? invalid = CommandOutput.Validate(s.Output);
             if (string.IsNullOrWhiteSpace(s.Name))
@@ -131,7 +131,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class HistoryCommand : AsyncCommand<HistorySettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, HistorySettings settings, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, HistorySettings settings, CancellationToken cancellationToken)
         {
             string? invalid = CommandOutput.Validate(settings.Output, settings.Json);
             if (settings.Output is not null && settings.Limit is <= 0)
@@ -213,7 +213,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class DiffCommand : AsyncCommand<DiffSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, DiffSettings settings, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, DiffSettings settings, CancellationToken cancellationToken)
         {
             string? invalid = CommandOutput.Validate(settings.Output, settings.Json);
             if (settings.Output is not null && settings.Limit <= 0)
@@ -419,7 +419,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class PruneCommand : AsyncCommand<PruneSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, PruneSettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, PruneSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
             if (s.Output is not null && !File.Exists(db))

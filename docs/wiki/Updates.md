@@ -43,7 +43,7 @@ VaultSync supports two Windows update models:
 - The update banner shows the channel and current status.
 - Microsoft Store builds replace GitHub update actions with `Open Microsoft Store`.
 
-![Maintenance and update controls in Settings](../images/Settings_Maintenance.png)
+![Maintenance and update controls in Settings](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/images/Settings_Maintenance.png)
 
 ## Skipping a version
 - Use the Skip version action in the update banner.
@@ -80,3 +80,12 @@ Switch channels in Settings > Advanced.
 - For Microsoft Store builds, use the Store listing and Store app update flow instead of the GitHub installer.
 
 - [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.
+
+## Release grouping and dependency audit — 2026-10-03
+
+One open draft PR per release now includes its preparation and corrections;
+see [Release Plan](Release-Plan.md). Dependabot #661/#720 merged as verified
+maintenance; rendering/CLI compatibility fixes are assembled in 1.9.0 and
+propagated to later implemented CLI variants. Unused Inter packaging is removed.
+[Development status](Development-Status.md) and the linked daily ledger record
+full changelog ownership, dependency consumers and remaining qualification gates.
