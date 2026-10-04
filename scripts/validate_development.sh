@@ -30,6 +30,7 @@ run_check() {
 run_check release-family python3 scripts/release_family.py
 run_check release-metadata python3 scripts/public_release_metadata.py check
 run_check changelog python3 scripts/changelog.py check
+run_check disk-support python3 scripts/disk_support.py check
 run_check script-tests python3 -m unittest discover -s tests/scripts -q
 
 if [[ "$mode" == release ]]; then

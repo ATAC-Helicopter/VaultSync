@@ -95,3 +95,5 @@ Use this page as the primary index for all project documentation.
 - [Complete 1.9 family alignment](RELEASE_FAMILY_1.9.md): branch ownership, immutable ID crosswalk and stable gates.
 
 - [Recovery identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) — VS-1919; schema, evaluator and approval remain open.
+
+- [Imaging engine ADR and qualification procedure](adr/001-imaging-engine-1.9.md) — VS-1918 proposed decision; zero qualified profiles.

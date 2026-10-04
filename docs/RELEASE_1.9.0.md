@@ -33,6 +33,12 @@ The [VS-1919 identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) defines
 generation binding, dependency/failure correlation, evidence provenance and
 freshness, privacy and read-only portable inspection. Schema, fixtures and an
 evaluator remain unimplemented; joint architecture approval is still required.
+The [VS-1918 engine ADR](adr/001-imaging-engine-1.9.md) proposes an internal
+raw/offline worker and explicit support exclusions. The executable
+[qualification matrix](../release/disk-support-1.9.0.json) has four candidates
+and zero qualified profiles. `python3 scripts/disk_support.py check` verifies
+structural evidence rules; `--require-qualified` intentionally fails until actual
+approved, measured recovery evidence exists. This adds no engine or device access.
 Local architecture/workflow progress and its verification limits are recorded
 in [the October 4 ledger](release-evidence/1.9-work-2026-10-04.md).
 

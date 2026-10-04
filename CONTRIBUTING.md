@@ -47,7 +47,11 @@ They use Rider's bundled Shell scripts plugin and Bash/Python/.NET from PATH;
 the checked-in `/bin/bash` interpreter suits Linux/macOS. Windows contributors
 can run the commands in section 7 directly or select their installed Bash path.
 
-- `bash scripts/validate_development.sh contracts`: family/metadata and script tests.
+- `bash scripts/validate_development.sh contracts`: family/metadata, changelog,
+  disk qualification plan and script tests. The disk plan checker establishes
+  structural consistency only. `python3 scripts/disk_support.py check
+  --require-qualified` is the separate disk-support gate and deliberately fails
+  while no approved measured profile is qualified.
 - `bash scripts/validate_development.sh release`: also the warning-as-error Release
   solution build and core tests, with a TRX report in the printed log directory.
 

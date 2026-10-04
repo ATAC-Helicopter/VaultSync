@@ -136,6 +136,9 @@ jobs:
       - name: Validate changelog protocol
         run: python3 scripts/changelog.py check
 
+      - name: Validate disk qualification plan
+        run: python3 scripts/disk_support.py check
+
   store-metadata:
     name: Microsoft Store metadata preflight
     needs: changes

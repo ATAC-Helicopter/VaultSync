@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1918] Propose the offline imaging engine and support boundaries, with automated evidence checks keeping unapproved or unmeasured recovery profiles unqualified.
 - [BUG-19012] Document the Linux font-initialization startup block and reproduction evidence, retaining visible-window verification and durable remediation as open work.
 - [VS-1919] Draft shared recovery identities, dependencies and evidence provenance, distinguishing measured results, simulations, confirmations and stale observations before implementation.
 - [VS-1980] Standardize release histories and ongoing notes on Keep a Changelog, preserving original detail and enforcing concise entries automatically.
