@@ -19,9 +19,11 @@ Refs #
 - [ ] Manual UI/CLI check, if applicable:
 
 ## Release Notes
-- [ ] `CHANGELOG.md` updated or not needed
+- [ ] `CHANGELOG.md` updated under a Keep a Changelog category, or not needed
+- [ ] `python3 scripts/changelog.py check` passes
 - [ ] `docs/WHATS_NEW.md` updated or not needed
 - [ ] `ROADMAP.md` updated or not needed
+- [ ] Owning issue, release PR and native Project status/dates align with actual evidence
 
 ## Risk
 -

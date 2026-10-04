@@ -114,13 +114,24 @@ def validate_version_consumers(root: Path, metadata: dict[str, object], errors: 
         "src/VaultSync.CLI/VaultSync.CLI.csproj": (r"<Version>([^<]+)</Version>", version),
         "installer/VaultSyncInstaller.iss": (r'#define MyAppVersion "([^"]+)"', version),
         "packaging/VaultSync.Store/Package.appxmanifest": (r'Version="([^"]+)"', str(store["packageVersion"])),
-        "CHANGELOG.md": (r"^## \[([^]]+)\] - (?:Unreleased|\d{2}\.\d{2}\.\d{4})", version),
         "docs/WHATS_NEW.md": (r"^## \[([^]]+)\]", version),
     }
     for relative, (pattern, wanted) in expected.items():
         actual = _first_match(root, relative, pattern)
         if actual != wanted:
             errors.append(f"{relative}: expected {wanted!r}, found {actual!r}")
+
+    changelog = repo_file(root, "CHANGELOG.md").read_text(encoding="utf-8-sig")
+    header = re.search(r"^## \[([^]]+)\](.*)$", changelog, re.MULTILINE)
+    actual = None
+    if header and header[1] == "Unreleased":
+        body = changelog[header.end():].split("\n## ", 1)[0]
+        target = re.search(r"^\*\*Target version:\*\* `([^`]+)`", body, re.MULTILINE)
+        actual = target[1] if target else None
+    elif header and re.fullmatch(r" - \d{4}-\d{2}-\d{2}", header[2]):
+        actual = header[1]
+    if actual != version:
+        errors.append(f"CHANGELOG.md: expected {version!r}, found {actual!r}")
 
     cli_text = repo_file(root, "src/VaultSync.CLI/VaultSync.CLI.csproj").read_text(encoding="utf-8-sig")
     for field, suffix in (("PackageVersion", ""), ("AssemblyVersion", ".0"), ("FileVersion", ".0"), ("AssemblyInformationalVersion", "")):
