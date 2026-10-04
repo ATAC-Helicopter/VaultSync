@@ -39,6 +39,24 @@ Keep the working copy outside iCloud Drive, OneDrive, Dropbox, or another live f
 4. Run the UI on Windows:
    `dotnet run -f net10.0-windows10.0.19041.0 --project src/VaultSync.UI/VaultSync.UI.csproj`
 
+### Rider development checks
+
+The shared `VaultSync Contracts` and `VaultSync Release Checks` configurations
+run existing repository checks with compact output and retained temporary logs.
+They use Rider's bundled Shell scripts plugin and Bash/Python/.NET from PATH;
+the checked-in `/bin/bash` interpreter suits Linux/macOS. Windows contributors
+can run the commands in section 7 directly or select their installed Bash path.
+
+- `bash scripts/validate_development.sh contracts`: family/metadata and script tests.
+- `bash scripts/validate_development.sh release`: also the warning-as-error Release
+  solution build and core tests, with a TRX report in the printed log directory.
+
+The build uses `-m:1` to avoid simultaneous builds of Core under different UI
+target-framework properties. Run it after any IDE build finishes. Shared run
+configurations have no additional before-launch build, preventing duplicate work.
+These checks do not qualify UI behavior, disk recovery, upgrade or release approval.
+See AGENTS.md for scoped semantic search, refactoring, debugging and diagnostics.
+
 ## 4) Implementation Rules
 - Keep changes focused.
 - Avoid unrelated refactors in the same PR.
@@ -56,10 +74,36 @@ When behavior changes, update in the same PR:
 Use `docs/README.md` and `DOCUMENTATION.md` as structure references.
 
 ### Changelog Style Rules
-From `1.7.0` onward, keep `CHANGELOG.md` intentionally short:
+`CHANGELOG.md` follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/).
+Use a linked `## [Unreleased]` section for the active version declared in
+`release/release-metadata.json`; show its target version beneath the heading.
+Published headers use `## [version] - YYYY-MM-DD`, preserving historical
+versions and publication dates. At release cut, rename Unreleased to the
+published version/date and open a fresh Unreleased section for the next version.
+
+Group entries under these exact headings, omitting empty groups:
+- `Added`: new capabilities or documentation actually present on the branch.
+- `Changed`: changes to existing behavior, dependencies or maintained contracts.
+- `Deprecated`: capabilities scheduled for removal, with migration guidance.
+- `Removed`: capabilities or dependencies actually removed.
+- `Fixed`: corrected defects.
+- `Security`: resolved vulnerabilities; do not reclassify every safety feature.
+
+Use that order. Do not add Maintenance, Planning, daily-date or implementation
+subheadings. Pending architecture documents must explicitly say draft/review;
+plans do not establish shipped behavior. Keep development ledgers and historical
+technical detail in docs/release-evidence rather than changelog entries.
+Run `python3 scripts/changelog.py check` before commit; shared documentation
+standards must be propagated to every owning release PR without importing its
+siblings' unreleased features. Never rewrite published Git tags or packages
+merely to normalize historical notes.
+
+Keep every `CHANGELOG.md` entry intentionally short, including historical backfills:
 - Write for release readers, not implementers.
 - Prefer one user-facing outcome per bullet.
-- Keep each bullet to roughly `18-22` words max.
+- Aim for `18-22` words per bullet, with a maximum of **22 words**, excluding
+  the owning `[ID]` prefix. Count whitespace-separated words; shorter clear
+  entries are fine and do not need padding.
 - Do not list internal implementation details unless they change user expectations or upgrade behavior.
 - If a change needs deep explanation, keep the short summary in `CHANGELOG.md` and put the detail in the issue, PR, or `docs/WHATS_NEW.md`.
 
@@ -222,7 +266,11 @@ Project board rules:
 
 Commit/push defaults:
 - Default active branch: `Dev` (unless explicitly specified otherwise).
-- Do not push unless explicitly asked.
+- The maintainer authorizes commits and pushes of completed, validated work to
+  the preparation head of the owning release PR. Do not ask again for routine
+  delivery; protected reviews, merge-only integration and release gates remain.
+- Public branch, issue, PR, commit and Project names describe product/work scope,
+  never assistants, agents, models or AI systems. Do not add tool attribution.
 - If asked to commit everything, include all modified/new files unless paths are excluded.
 
 Reference:

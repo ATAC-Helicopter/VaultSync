@@ -22,7 +22,19 @@ No disk support or predecessor upgrade is qualified yet.
 Unsupported Secure Boot, live capture, encryption and filesystem combinations
 must be explicit. If the complete loop fails, imaging remains Preview.
 There is no universal bare-metal recovery claim. BSC prerequisites do not
-block this release. The approved route draft is still awaiting review.
+block this release. The proposed route draft is still awaiting review.
+
+The [VS-1917 image-format review draft](DISK_IMAGE_FORMAT_1.9.md) now specifies
+logical coverage, integrity, completion/checkpoints, unknown-version rejection,
+independent inspection and a permanent fixture plan. It is not an approved
+serialization or implementation. Engine/support decisions (VS-1918), shared
+identity/evidence alignment (VS-1919), fixtures and joint approval remain open.
+The [VS-1919 identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) defines
+generation binding, dependency/failure correlation, evidence provenance and
+freshness, privacy and read-only portable inspection. Schema, fixtures and an
+evaluator remain unimplemented; joint architecture approval is still required.
+Local architecture/workflow progress and its verification limits are recorded
+in [the October 4 ledger](release-evidence/1.9-work-2026-10-04.md).
 
 ## Scope realignment on 2026-10-03
 
@@ -52,3 +64,10 @@ contracts and tracking. Its preparation source is work/1.9-roadmap-realignment;
 BUG-19010/#749 and BUG-19011/#750 qualify dependency ABI/API coherence.
 The unused Inter package is removed without changing bundled/system fallbacks.
 See [the complete daily ledger](release-evidence/1.9-work-2026-10-03.md).
+
+## Linux startup qualification
+
+BUG-19012/#751 tracks the installed Linux process blocked during native font
+initialization. Relaunch passes initialization but window visibility, triggering
+input and durable remediation remain open. See [the evidence](release-evidence/linux-startup-2026-10-04.md).
+A living process or completed startup log is insufficient desktop qualification.

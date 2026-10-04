@@ -1181,7 +1181,8 @@ The full maintained strategy is
 **Planning started:** 2026-09-18
 **Current stable:** `1.8.9`, published 2026-09-16
 **Stable target:** 2027-03-26
-**Working branch:** `release/1.9.0`
+**Working branch:** `work/1.9-roadmap-realignment` (sole release PR #736)
+**Protected release identity:** `release/1.9.0`
 **Integration target:** `Dev`
 **Primary upgrade predecessor:** `1.8.9`; qualification pending
 **Release contract:** [1.9.0 kickoff and gates](docs/RELEASE_1.9.0.md)
@@ -1200,6 +1201,10 @@ repository must not transfer before a compatible release is adopted.
     cross-platform usability evidence remain open. _(Issue #501.)_
 - [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility
   contract.
+  - Progress: the [format review draft](docs/DISK_IMAGE_FORMAT_1.9.md) defines
+    coverage, integrity, completion/checkpoints, read-only compatibility and
+    permanent fixture requirements. Wire format, engine alignment, fixtures and
+    joint architecture approval remain open; no reader/writer is implemented.
   - Scope: cover source identity, partition layout, block/sparse maps,
     integrity records, compression and encryption descriptors, incomplete and
     resumable states, build identity, and reader/writer compatibility.
@@ -1216,6 +1221,10 @@ repository must not transfer before a compatible release is adopted.
     behavior. _(Issue #575.)_
 - [ ] `VS-1919` `P0` Define recovery identities, dependencies, failure domains,
   and evidence provenance shared by Recovery Horizon and candidate Resilience.
+  - Progress: the [identity/evidence review draft](docs/RECOVERY_IDENTITIES_1.9.md)
+    defines generation binding, dependency alternatives, failure correlation,
+    evidence provenance/freshness and privacy. Schema, fixtures, evaluator and
+    joint architecture approval remain open.
   - Scope: model devices, sites, repositories, destinations, credentials,
     encryption-key references, recovery media, tools, recovery points,
     verification, drills, and dependency correlation without exporting secrets.
@@ -1234,6 +1243,13 @@ repository must not transfer before a compatible release is adopted.
   source-machine and tool-version identity.
 - [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on
   representative hardware and virtual machines.
+
+- [ ] `BUG-19012` `P1` Diagnose and resolve Linux startup blocked before the desktop window.
+  - Progress: the installed 1.8.9 process was blocked in native font-manager
+    initialization. Relaunch now passes initialization; visible-window and login
+    qualification, triggering input and durable remediation remain open.
+    See [the evidence ledger](docs/release-evidence/linux-startup-2026-10-04.md).
+    _(Issue #751; preparation PR #736.)_
 
 - [ ] `BUG-19001` `P0` Require explicit confirmation for quiet and unattended CLI project removal.
   - Scope: reject removal without --yes when --quiet is set or standard input

@@ -83,6 +83,11 @@ The [VS-1910 route architecture draft](ROUTE_ARCHITECTURE_1.9.md) records the
 current shell inventory, proposed route/state boundary, and migration gates for
 review. The route API and replacement parity remain unapproved.
 
+The [VS-1917 disk-image format draft](DISK_IMAGE_FORMAT_1.9.md) records coverage,
+integrity, checkpoint/completion, compatibility and independent-reader invariants.
+Serialization, engine alignment and permanent fixtures remain pending joint
+review with VS-1918/VS-1919; no stable format or disk implementation is approved.
+
 ### 1.9 delivery sequence
 
 | Order | Release | Outcome | Promotion condition |
@@ -182,9 +187,9 @@ only implementation notes, dependencies, and evidence links.
 | ID | Issue | Title | Priority | Area | Milestone | Start | Target | Status |
 |---|---:|---|---:|---|---|---|---|---|
 | `VS-1910` | `#501` | Define the 1.9 information architecture and migration map | P0 | UI | `1.9.0` | 2026-07-27 | 2027-03-26 | In progress |
-| `VS-1917` | `#574` | Define the versioned disk-image format and compatibility contract | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | Todo |
+| `VS-1917` | `#574` | Define the versioned disk-image format and compatibility contract | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | In progress |
 | `VS-1918` | `#575` | Approve the imaging-engine strategy and supported-system matrix | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | Todo |
-| `VS-1919` | `#576` | Define recovery identities, dependencies, failure domains, and evidence provenance | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | Todo |
+| `VS-1919` | `#576` | Define recovery identities, dependencies, failure domains, and evidence provenance | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | In progress |
 
 Common issue metadata:
 

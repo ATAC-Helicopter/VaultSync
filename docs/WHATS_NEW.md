@@ -9,6 +9,11 @@ been moved to 1.9.5, with discovery/legacy documentation in 1.9.1.
 Current stable remains **1.8.9**, published 2026-09-16.
 See [the release contract](RELEASE_1.9.0.md) and [family plan](RELEASE_FAMILY_1.9.md).
 
+Image-format and shared identity/evidence contracts now have review drafts;
+these documents do not establish working disk capture or recovery. Changelog
+history and ongoing notes follow Keep a Changelog with automatically checked
+concise entries. See [the October 4 ledger](release-evidence/1.9-work-2026-10-04.md).
+
 The daily development record, including release grouping and dependency reduction,
 is available in [the work ledger](release-evidence/1.9-work-2026-10-03.md).
 
