@@ -2,11 +2,12 @@
 
 This copy prepares 1.9.7; it does not change the global active product release 1.9.0.
 Read ROADMAP.md, release/1.9-family.json, CONTRIBUTING.md and docs/RELEASE_1.9.7.md.
-Owning draft release PR: #743 into Dev; current public head: `release/1.9.7`.
+Owning draft release PR: #756 into Dev; current public head: `work/1.9.7-changelog-protocol`.
 Use this preparation copy only for this release or shared standards; do not switch
 it to the 1.9.0 head or import its unreleased features. The main 1.9.0 workspace
 remains work/1.9-roadmap-realignment / #736. Protected release refs require
-reviewed PRs; local protocol propagation branches await approved delivery routing.
+reviewed PRs; this preparation head preserves their existing commits.
+The complete current-head map is in docs/RELEASE_FAMILY_1.9.md.
 
 ## Working copy and delivery
 
@@ -35,7 +36,7 @@ reviewed PRs; local protocol propagation branches await approved delivery routin
 - Cross-release documentation/validation standards apply to every open release
   PR, using its real head and active metadata. Never copy one release's
   unreleased features into another; `release/1.9-family.json` owns the IDs.
-- Keep #743 draft until its actual release gates pass. Do not merge or promote
+- Keep #756 draft until its actual release gates pass. Do not merge or promote
   a release merely because compilation or mandatory CI checks pass.
 
 When the maintainer changes the active release, update this working context and
