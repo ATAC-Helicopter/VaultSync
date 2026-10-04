@@ -1602,7 +1602,7 @@ See [the original development notes](docs/release-evidence/changelog-development
 
 - Project initialized, foundational scaffolding set up for CLI + SQLite architecture.
 
-[Unreleased]: https://github.com/ATAC-Helicopter/VaultSync/compare/v1.8.9...release/1.9.2
+[Unreleased]: https://github.com/ATAC-Helicopter/VaultSync/compare/v1.8.9...work/1.9.2-changelog-protocol
 [1.8.9]: https://github.com/ATAC-Helicopter/VaultSync/compare/v1.8.8...v1.8.9
 [1.8.8]: https://github.com/ATAC-Helicopter/VaultSync/compare/v1.8.7...v1.8.8
 [1.8.7]: https://github.com/ATAC-Helicopter/VaultSync/compare/v1.8.6...v1.8.7
