@@ -6,7 +6,8 @@ Owning draft release PR: #747 into Dev; current public head: `docs/1.9.5-package
 Use this preparation copy only for this release or shared standards; do not switch
 it to the 1.9.0 head or import its unreleased features. The main 1.9.0 workspace
 remains work/1.9-roadmap-realignment / #736. Protected release refs require
-reviewed PRs; local protocol propagation branches await approved delivery routing.
+reviewed PRs; this preparation head preserves their existing commits.
+The complete current-head map is in docs/RELEASE_FAMILY_1.9.md.
 
 ## Working copy and delivery
 
