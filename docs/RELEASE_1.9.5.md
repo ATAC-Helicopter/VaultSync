@@ -20,3 +20,11 @@ It includes the original release preparation and all its follow-up corrections.
 The earlier preparation PR is superseded. No release auto-merge is enabled.
 Shared dependency maintenance is propagated atomically with CLI API compatibility.
 See [the complete daily ledger](release-evidence/1.9-work-2026-10-03.md).
+
+## Changelog protocol — 2026-10-04
+
+Own development notes use one explicit-target `Unreleased` section and standard
+Keep a Changelog categories. Published history is backfilled without rewriting
+tags/assets. Original inherited development notes remain in the evidence ledger;
+they do not establish shipped predecessor features. Run scripts/changelog.py check
+and scripts/validate_development.sh contracts before updating the owning PR.
