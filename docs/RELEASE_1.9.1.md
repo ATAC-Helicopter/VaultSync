@@ -31,3 +31,5 @@ Keep a Changelog categories. Published history is backfilled without rewriting
 tags/assets. Original inherited development notes remain in the evidence ledger;
 they do not establish shipped predecessor features. Run scripts/changelog.py check
 and scripts/validate_development.sh contracts before updating the owning PR.
+
+Current preparation: `fix/1.9.1-console-isolation` / #746. Protected release identity stays `release/1.9.1`. See the family preparation-head map.
