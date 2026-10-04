@@ -124,12 +124,35 @@ its fix is included in sole release PR #746; current-head native checks and revi
 
 ## Consolidated release review and dependency audit
 
-The maintainer requested one PR per release on 2026-10-03: 1.9.0 #736,
-1.9.1 #746, 1.9.2 #738, 1.9.3 #739, 1.9.4 #740, 1.9.5 #747,
-1.9.6 #742, 1.9.7 #743 and 1.9.8 #744. All remain draft; none is eligible for
+The maintainer requested one PR per release on 2026-10-03. Current preparation: 1.9.0 #736,
+1.9.1 #746, 1.9.2 #752, 1.9.3 #753, 1.9.4 #754, 1.9.5 #747,
+1.9.6 #755, 1.9.7 #756 and 1.9.8 #757. All remain draft; none is eligible for
 automatic release promotion. Duplicate follow-up/preparation PRs are superseded
 and branches are preserved. Preparation heads need not rewrite protected refs.
 See [the complete daily ledger](release-evidence/1.9-work-2026-10-03.md) and
 [dependency removal/replacement evidence](release-evidence/1.9-dependencies-2026-10-03.md).
 BUG-19010 and BUG-19011 are shared maintenance foundation defects, propagated
 to implemented later CLI slices without changing ownership or claiming release.
+
+## Current preparation heads — 2026-10-04
+
+Use these draft PRs for ongoing work. Protected `release/*` refs retain their
+release identities and reviewed history; they are not necessarily the assembled
+preparation head. One release preparation PR targets Dev for each version.
+
+| Release | Preparation head | Sole draft PR | Superseded preparation |
+| --- | --- | --- | --- |
+| 1.9.0 | `work/1.9-roadmap-realignment` | [#736](https://github.com/ATAC-Helicopter/VaultSync/pull/736) | — |
+| 1.9.1 | `fix/1.9.1-console-isolation` | [#746](https://github.com/ATAC-Helicopter/VaultSync/pull/746) | — |
+| 1.9.2 | `work/1.9.2-changelog-protocol` | [#752](https://github.com/ATAC-Helicopter/VaultSync/pull/752) | #738 |
+| 1.9.3 | `work/1.9.3-changelog-protocol` | [#753](https://github.com/ATAC-Helicopter/VaultSync/pull/753) | #739 |
+| 1.9.4 | `work/1.9.4-changelog-protocol` | [#754](https://github.com/ATAC-Helicopter/VaultSync/pull/754) | #740 |
+| 1.9.5 | `docs/1.9.5-package-guide` | [#747](https://github.com/ATAC-Helicopter/VaultSync/pull/747) | — |
+| 1.9.6 | `work/1.9.6-changelog-protocol` | [#755](https://github.com/ATAC-Helicopter/VaultSync/pull/755) | #742 |
+| 1.9.7 | `work/1.9.7-changelog-protocol` | [#756](https://github.com/ATAC-Helicopter/VaultSync/pull/756) | #743 |
+| 1.9.8 | `work/1.9.8-changelog-protocol` | [#757](https://github.com/ATAC-Helicopter/VaultSync/pull/757) | #744 |
+
+All remain draft. Shared changelog validation passed locally on every owning
+head; this is not platform, predecessor, disk or release qualification. Future
+release dates remain unscheduled. Project target dates use the existing family
+planning horizon, not an invented publication commitment.

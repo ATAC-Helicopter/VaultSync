@@ -34,6 +34,9 @@ docs/RELEASE_1.9.0.md before implementation.
   native Project #7 status and traceable dates, CHANGELOG.md, ROADMAP.md and
   relevant contracts/user docs. Use `Refs` while release-gated work stays open.
   Keep historical evidence separate from current-head test results.
+- Find current preparation heads and sole PRs in the preparation map in
+  docs/RELEASE_FAMILY_1.9.md. Refresh that map and owning contracts whenever
+  a preparation PR is superseded; protected release identities stay separate.
 - Cross-release documentation/validation standards apply to every open release
   PR, using its real head and active metadata. Never copy one release's
   unreleased features into another; `release/1.9-family.json` owns the IDs.
