@@ -1235,6 +1235,10 @@ repository must not transfer before a compatible release is adopted.
 - [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on
   representative hardware and virtual machines.
 
+- [ ] `BUG-19012` `P1` Diagnose Linux startup blocked before the desktop window.
+  - Owned by 1.9.0 / #736; investigation #751 remains open. No desktop
+    visibility or durable remediation is qualified by the process relaunch.
+
 - [ ] `BUG-19001` `P0` Require explicit confirmation for quiet and unattended CLI project removal.
   - Scope: reject removal without --yes when --quiet is set or standard input
     is redirected, before touching configuration or the database; preserve
