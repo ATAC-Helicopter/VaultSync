@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-10-04T09:43:00Z`
+Captured at: `2026-10-05T10:20:31Z`
 
 - Releases: **53**
 - Assets: **499**
-- Total asset downloads: **3226**
-- Change since previous snapshot: **+8**
+- Total asset downloads: **3232**
+- Change since previous snapshot: **+6**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **162** downloads (+8)
+- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **168** downloads (+6)
 - Latest prerelease: **VaultSync 1.8.5 Beta 1** with **19** downloads (0)
 
 ## Top assets
@@ -22,7 +22,7 @@ Captured at: `2026-10-04T09:43:00Z`
 | vaultsync-patch-windows.json | `v1.8.6` | 133 | 0 |
 | vaultsync-patch-windows.json | `v1.8.3` | 121 | 0 |
 | vaultsync-patch-windows.json | `v1.8.7` | 91 | 0 |
-| vaultsync-patch-windows.json | `v1.8.9` | 83 | +4 |
+| vaultsync-patch-windows.json | `v1.8.9` | 87 | +4 |
 | vaultsync-patch-windows.json | `v1.8.4` | 79 | 0 |
 | vaultsync-patch-windows.json | `v1.4.1` | 67 | 0 |
 | vaultsync-patch-windows.json | `v1.3.5` | 67 | 0 |
@@ -33,17 +33,17 @@ Captured at: `2026-10-04T09:43:00Z`
 
 - Tag: `v1.8.9`
 - Published: `2026-09-16T10:06:22Z`
-- Total downloads: **162**
-- Delta: **+8**
+- Total downloads: **168**
+- Delta: **+6**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| vaultsync-patch-windows.json | 83 | +4 | 57975 |
-| VaultSync-Setup-1.8.9.exe | 46 | 0 | 64315420 |
+| vaultsync-patch-windows.json | 87 | +4 | 57975 |
+| VaultSync-Setup-1.8.9.exe | 48 | +2 | 64315420 |
 | vaultsync-release-manifest.json | 7 | 0 | 7399 |
-| VaultSync-1.8.9-macos-apple-silicon.dmg | 6 | +3 | 55235061 |
+| VaultSync-1.8.9-macos-apple-silicon.dmg | 6 | 0 | 55235061 |
 | vaultsync-patch-linux-x64.json | 4 | 0 | 55016 |
-| VaultSync-1.8.9-macos-intel.dmg | 3 | +1 | 58169854 |
+| VaultSync-1.8.9-macos-intel.dmg | 3 | 0 | 58169854 |
 | vaultsync-patch-linux-x64.zip | 3 | 0 | 52566967 |
 | vaultsync-patch-macos-apple-silicon.json | 3 | 0 | 61158 |
 | vaultsync-patch-windows.zip | 3 | 0 | 92462440 |
