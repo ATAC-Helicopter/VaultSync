@@ -1216,6 +1216,7 @@ repository must not transfer before a compatible release is adopted.
   - Progress: [ADR 001](docs/adr/001-imaging-engine-1.9.md) compares engines and
     proposes an isolated full raw/offline profile. Four candidate GPT/UEFI
     ext4/NTFS sector profiles have an executable evidence gate; none is qualified.
+    The October 5 gate fix rejects runs preceding valid retained engine approval.
     Engine choice, privileges, joint approval and actual recovery runs remain open.
   - Scope: decide build versus integration, privilege and isolation boundaries,
     supported operating systems, filesystems, partition tables, encryption,

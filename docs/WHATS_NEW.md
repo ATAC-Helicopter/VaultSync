@@ -16,6 +16,10 @@ do not establish working disk capture or recovery. Changelog
 history and ongoing notes follow Keep a Changelog with automatically checked
 concise entries. See [the October 4 ledger](release-evidence/1.9-work-2026-10-04.md).
 
+The October 5 evidence gate fix rejects recovery runs predating valid retained
+engine approval. See [the dev update](dev-diaries/2026-10-05-vaultsync-190-evidence.md)
+and [current validation record](release-evidence/1.9-work-2026-10-05.md).
+
 The daily development record, including release grouping and dependency reduction,
 is available in [the work ledger](release-evidence/1.9-work-2026-10-03.md).
 

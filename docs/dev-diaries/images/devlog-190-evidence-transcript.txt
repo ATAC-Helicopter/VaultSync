@@ -1,0 +1,7 @@
+$ python3 scripts/disk_support.py check
+Disk qualification plan valid: 4 profiles, 0 qualified; structural checks do not prove recovery.
+[exit 0]
+
+$ python3 scripts/disk_support.py check --require-qualified
+No qualified disk profile; stable disk support remains gated.
+[exit 1]

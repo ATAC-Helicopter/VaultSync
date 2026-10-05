@@ -65,6 +65,27 @@ class DiskSupportTests(unittest.TestCase):
         self.measured_fixture()
         self.assertEqual([], self.check(require=True))
 
+    def test_approval_must_precede_capture(self):
+        self.measured_fixture()
+        approval = self.data['engine']['approval']
+        for observed, accepted in (('2026-10-04T11:00:00Z', True),
+                                   ('2026-10-04T11:00:01Z', False),
+                                   ('2026-10-04T12:00:00Z', False)):
+            with self.subTest(observed=observed):
+                approval['observedAt'] = observed
+                errors = self.check(require=True)
+                if accepted:
+                    self.assertEqual([], errors)
+                else:
+                    self.assertTrue(any('predates engine approval' in e for e in errors))
+
+    def test_invalid_approval_cannot_count_a_qualified_profile(self):
+        self.measured_fixture()
+        self.data['engine']['approval']['artifact']['sha256'] = '0' * 64
+        errors = self.check(require=True)
+        self.assertTrue(any('artifact digest mismatch' in e for e in errors))
+        self.assertIn('No qualified disk profile; stable disk support remains gated.', errors)
+
     def test_unapproved_engine_and_incomplete_loop_cannot_qualify(self):
         profile = self.measured_fixture()
         approved = copy.deepcopy(self.data['engine'])

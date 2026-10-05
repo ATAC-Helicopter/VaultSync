@@ -142,6 +142,8 @@ Approve the engine option, initial source/recovery platform scope, licenses,
 worker trust/privilege boundary and joint VS-1917/VS-1919 semantics. Record approval
 in the matrix with its repository evidence reference; do not flip it just to
 make CI green. Candidate support remains visible as unqualified after approval.
+The retained approval must be valid before capture begins. Runs predating that
+approval remain unqualified and must be repeated under the approved decision.
 
 Then implement file-backed deterministic prototypes and fault fixtures, followed
 by reviewed OS device adapters in disposable environments. Measure full raw-image

@@ -63,13 +63,15 @@ def validate(root: Path, data: object, require_qualified: bool = False,
     engine = data.get('engine')
     if not isinstance(engine, dict) or engine.get('proposal') != 'internal-raw-offline' or engine.get('decision') not in ('proposed', 'approved'):
         return ['Unknown engine proposal/decision; revise the reviewed contract first.']
+    approval_time = None
     if engine['decision'] == 'approved':
         try:
             approval = engine.get('approval')
             if not isinstance(approval, dict) or not text(approval.get('by')):
                 raise ValueError('approval needs a named reviewer and retained record')
-            timestamp(approval.get('observedAt'), now)
+            observed_approval = timestamp(approval.get('observedAt'), now)
             artifact(root, approval.get('artifact'))
+            approval_time = observed_approval
         except (ValueError, OSError) as exc:
             errors.append(f'Engine approval: {exc}')
     elif engine.get('approval') is not None:
@@ -106,6 +108,8 @@ def validate(root: Path, data: object, require_qualified: bool = False,
                 continue
             if status != 'qualified' or engine['decision'] != 'approved':
                 raise ValueError('qualification requires the approved engine decision')
+            if approval_time is None:
+                raise ValueError('qualification requires valid retained engine approval')
             if not isinstance(evidence, list) or len(evidence) != len(STAGES):
                 raise ValueError('qualification needs the complete five-stage measured loop')
             if not text(profile.get('environment')) or profile.get('hardwareKind') not in ('virtual', 'physical'):
@@ -131,6 +135,8 @@ def validate(root: Path, data: object, require_qualified: bool = False,
                     raise ValueError('evidence belongs to different runs, images or builds')
                 binding = current
                 observed = timestamp(report.get('observedAt'), now)
+                if observed < approval_time:
+                    raise ValueError('qualification evidence predates engine approval')
                 if previous_time is not None and observed < previous_time:
                     raise ValueError('evidence timestamps contradict the required stage order')
                 previous_time = observed

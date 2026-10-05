@@ -39,6 +39,8 @@ raw/offline worker and explicit support exclusions. The executable
 and zero qualified profiles. `python3 scripts/disk_support.py check` verifies
 structural evidence rules; `--require-qualified` intentionally fails until actual
 approved, measured recovery evidence exists. This adds no engine or device access.
+Qualification runs must begin at or after valid retained engine approval; an
+approval recorded after capture cannot qualify that earlier run.
 Local architecture/workflow progress and its verification limits are recorded
 in [the October 4 ledger](release-evidence/1.9-work-2026-10-04.md).
 
