@@ -1,0 +1,52 @@
+# Agent Development Rules
+
+## Work tracking
+
+For non-trivial code, behavior, packaging, security, release, or user-facing documentation work, keep the change tied to a GitHub issue.
+
+Before starting new work, prefer:
+
+```bash
+./dev issue <bug|feature|change|security|maintenance> "Concise scope" --branch current
+```
+
+Use `--branch new` when the work should have a dedicated branch. The default is deliberately `current`; branch creation is a choice, not a ritual.
+
+When a public/existing issue already describes the work, adopt it instead of creating a duplicate:
+
+```bash
+./dev adopt <issue-number> --type bug --branch current
+```
+
+The helper allocates the canonical VaultSync ID from the active release family, adds available repository labels, attempts to add the issue to Project #7, and associates the active branch with the issue in local git config.
+
+Release-family inference order is:
+
+1. explicit `--release X.Y`;
+2. an active `release/X.Y[.Z]` branch;
+3. the first `Unreleased` entry in `CHANGELOG.md`.
+
+Use `./dev status` before committing if the branch-to-issue association is unclear.
+
+## Commit and PR references
+
+Include the canonical ID in meaningful commit subjects when practical, for example:
+
+```text
+fix(BUG-18177): reject incomplete recovery evidence
+feat(VS-1898): add recovery report export
+```
+
+PRs must contain both a canonical ID and an issue link (`Closes #N`, `Fixes #N`, `Resolves #N`, or `Refs #N`). Use `./dev pr` to create the standard PR automatically from the branch association.
+
+Only use `Tracking: skip - <reason>` for genuinely untracked maintenance. `Tracking: bootstrap` exists only for the tracker bootstrap itself.
+
+## Release notes
+
+PR labels feed GitHub's native generated release-note categories through `.github/release.yml`. Preview notes with:
+
+```bash
+./dev notes --tag vX.Y.Z --previous-tag vA.B.C --target <branch>
+```
+
+The generated notes are a release drafting aid; the curated `CHANGELOG.md` remains authoritative until the release workflow explicitly changes that policy.
