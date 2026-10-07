@@ -33,3 +33,7 @@ they do not establish shipped predecessor features. Run scripts/changelog.py che
 and scripts/validate_development.sh contracts before updating the owning PR.
 
 Current preparation: `fix/1.9.1-console-isolation` / #746. Protected release identity stays `release/1.9.1`. See the family preparation-head map.
+
+## Repository tracking — 2026-10-07
+
+VS-1980/#673 distributes the shared helper from #759/#758. Use `./dev adopt` for existing owning issues and `./dev status` before pushes; reuse this release's preparation PR. Allocating IDs requires a complete remote audit. This tooling does not qualify product or release gates.
