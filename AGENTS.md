@@ -28,6 +28,17 @@ Release-family inference order is:
 
 Use `./dev status` before committing if the branch-to-issue association is unclear.
 
+### Before every push
+
+For any non-trivial tracked change, work tracking is a push prerequisite:
+
+1. Run `./dev status` and confirm the active branch is associated with the intended issue and canonical ID.
+2. If tracking is missing, use `./dev issue ... --branch current` or `./dev adopt ... --branch current` before pushing. Do not reconstruct the ticket from commits afterward.
+3. Confirm the issue scope/status still matches the implemented work and update required roadmap/changelog/release metadata.
+4. A dedicated branch remains optional unless another repository/release rule requires one.
+5. Tiny typo/format-only maintenance may use the repository's explicit tracking-skip mechanism; larger work must not silently bypass tracking.
+
+
 ## Commit and PR references
 
 Include the canonical ID in meaningful commit subjects when practical, for example:
