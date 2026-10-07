@@ -27,3 +27,8 @@ Refs #
 
 ## Risk
 -
+
+## Work tracking
+
+Include the canonical work ID in the title and `Refs #N` for the owning issue.
+Reuse the sole release PR and keep release-gated issues open. Run `./dev status` before pushing.
