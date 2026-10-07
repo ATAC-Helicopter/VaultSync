@@ -11,6 +11,8 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Automate issue and branch tracking, auditing all remote IDs before allocation and preserving release ownership and existing preparation PRs.
+
 - [VS-1980] Standardize release history and ongoing notes on Keep a Changelog, preserving original detail and enforcing concise entries automatically.
 
 Current stable remains 1.8.9. This release is unscheduled; predecessor and product qualification remain open.
