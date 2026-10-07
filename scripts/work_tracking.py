@@ -120,9 +120,24 @@ def infer_release_family(root: Path, branch: str, explicit: str | None) -> tuple
     match = RELEASE_BRANCH_RE.search(branch)
     if match:
         return int(match.group(1)), int(match.group(2))
+    metadata = root / "release" / "release-metadata.json"
+    if metadata.exists():
+        try:
+            active = json.loads(metadata.read_text(encoding="utf-8-sig"))["activeRelease"]["version"]
+            if not isinstance(active, str):
+                raise ValueError("active release must be a version string")
+            return parse_release_family(active)
+        except (ValueError, KeyError, TypeError) as error:
+            raise TrackingError("Invalid active release metadata; fix it or pass --release explicitly.") from error
     changelog = root / "CHANGELOG.md"
     if changelog.exists():
-        match = UNRELEASED_RE.search(changelog.read_text(encoding="utf-8-sig"))
+        text = changelog.read_text(encoding="utf-8-sig")
+        section = re.search(r"^##\s+\[Unreleased\]\s*$([\s\S]*?)(?=^##\s|\Z)", text, re.M | re.I)
+        if section:
+            target = re.search(r"\*\*Target version:\*\*\s*`(\d+\.\d+(?:\.\d+)?)`", section.group(1))
+            if target:
+                return parse_release_family(target.group(1))
+        match = UNRELEASED_RE.search(text)
         if match:
             return int(match.group(1)), int(match.group(2))
     raise TrackingError("Cannot infer release family. Pass --release <major.minor>, for example --release 1.9.")
@@ -140,19 +155,26 @@ def collect_used_ids(root: Path, config: dict[str, Any], prefix: str) -> set[int
         if path.exists():
             used.update(extract_ids(path.read_text(encoding="utf-8-sig"), prefix))
 
+    repository = github_repo(root)
     result = run(
-        ["gh", "issue", "list", "--state", "all", "--limit", "1000", "--json", "title,body"],
+        ["gh", "api", "--paginate", "--slurp", f"repos/{repository}/issues?state=all&per_page=100"],
         cwd=root,
         check=False,
     )
-    if result.returncode == 0 and result.stdout:
-        try:
-            issues = json.loads(result.stdout)
-            for issue in issues:
+    if result.returncode != 0:
+        raise TrackingError("Cannot audit remote work IDs; no ID was allocated. Check GitHub access and retry.")
+    try:
+        pages = json.loads(result.stdout)
+        if not isinstance(pages, list) or any(not isinstance(page, list) for page in pages):
+            raise ValueError("Expected paginated issue lists")
+        for page in pages:
+            for issue in page:
+                if not isinstance(issue, dict):
+                    raise ValueError("Invalid issue record")
                 used.update(extract_ids(issue.get("title") or "", prefix))
                 used.update(extract_ids(issue.get("body") or "", prefix))
-        except json.JSONDecodeError:
-            pass
+    except (ValueError, TypeError) as error:
+        raise TrackingError("Cannot parse the remote ID audit; no ID was allocated.") from error
     return used
 
 

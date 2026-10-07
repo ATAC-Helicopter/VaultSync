@@ -36,7 +36,7 @@ The helper preserves VaultSync's existing ID families instead of introducing a s
 
 For example, 1.8.x work follows `VS-18xx` and `BUG-18xxx`; 1.9.x follows `VS-19xx` and `BUG-19xxx`.
 
-The allocator scans `ROADMAP.md`, `CHANGELOG.md`, and all GitHub Issues, then selects the next unused ID in the inferred release family. Historical IDs are never renumbered.
+The allocator scans `ROADMAP.md`, `CHANGELOG.md`, and all pages of GitHub Issues, then selects the next unused ID in the inferred release family. Historical IDs are never renumbered.
 
 ## Adopt an existing issue
 
@@ -77,12 +77,12 @@ Once the branch is tracked:
 
 The helper creates a PR to `Dev` by default, includes the canonical ID, and links the issue. Use `--keep-open` for release-gated or incremental work so the PR uses `Refs #N` instead of `Closes #N`.
 
-`.github/workflows/tracking.yml` checks PRs targeting `Dev`, `Stable`, and release branches. Meaningful PRs require:
+`.github/workflows/tracking.yml` checks PRs targeting every branch. Meaningful PRs require:
 
 1. a canonical work ID;
 2. a closing/reference keyword to a GitHub issue.
 
-Direct pushes to tracked branches are audited but not failed: commits without an ID are surfaced as warnings. This keeps the safety net useful without making emergency or metadata maintenance impossible.
+Direct pushes to every branch are audited but not failed: commits without an ID are surfaced as warnings. This keeps the safety net useful without making emergency or metadata maintenance impossible.
 
 ## Generated release notes
 
@@ -108,3 +108,9 @@ This does not silently rewrite `CHANGELOG.md`. VaultSync's curated changelog rem
 - Project write permission if automatic insertion into Project #7 is desired
 
 If Project insertion is unavailable because the local GitHub token lacks project scope, issue creation still succeeds and the helper prints a warning instead of rolling back the work item.
+
+Release ownership and preparation instructions take precedence over this helper.
+Use the existing owning issue and sole release PR, with `Refs` for release-gated work.
+ID allocation fails closed if the complete remote issue audit is unavailable; it
+never silently allocates using only a local roadmap. Permission or network failures
+must be resolved before creating a new numbered work item.

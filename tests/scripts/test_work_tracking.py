@@ -2,6 +2,8 @@ import importlib.util
 import pathlib
 import sys
 import unittest
+import tempfile
+from unittest.mock import patch
 
 MODULE_PATH = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "work_tracking.py"
 spec = importlib.util.spec_from_file_location("work_tracking", MODULE_PATH)
@@ -12,6 +14,37 @@ spec.loader.exec_module(work_tracking)
 
 
 class WorkTrackingTests(unittest.TestCase):
+    def test_family_uses_active_metadata_and_explicit_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / "release").mkdir()
+            (root / "release/release-metadata.json").write_text('{"activeRelease":{"version":"1.9.5"}}')
+            self.assertEqual(work_tracking.infer_release_family(root, "docs/package-guide", None), (1, 9))
+            self.assertEqual(work_tracking.infer_release_family(root, "release/1.8.9", None), (1, 8))
+            self.assertEqual(work_tracking.infer_release_family(root, "docs/package-guide", "1.10"), (1, 10))
+            (root / "release/release-metadata.json").write_text('{"activeRelease":null}')
+            with self.assertRaises(work_tracking.TrackingError):
+                work_tracking.infer_release_family(root, "work/preparation", None)
+
+    def test_linked_unreleased_and_legacy_family(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / "CHANGELOG.md").write_text('## [Unreleased]\n\n**Target version:** `1.9.0`.\n## [1.8.9] - 2026-09-16\n')
+            self.assertEqual(work_tracking.infer_release_family(root, "work/preparation", None), (1, 9))
+            (root / "CHANGELOG.md").write_text('## [1.8.9] - Unreleased\n')
+            self.assertEqual(work_tracking.infer_release_family(root, "work/preparation", None), (1, 8))
+
+    def test_remote_id_audit_paginates_and_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(work_tracking, "github_repo", return_value="owner/repo"), patch.object(work_tracking, "run") as execute:
+            root = pathlib.Path(directory)
+            execute.return_value = work_tracking.CommandResult(stdout='[[{"title":"VS-1990"}],[{"body":"VS-1993"}]]', stderr='', returncode=0)
+            self.assertEqual(work_tracking.collect_used_ids(root, {"planning_files":[]}, "VS"), {1990, 1993})
+            self.assertIn("--paginate", execute.call_args.args[0])
+            for response in [work_tracking.CommandResult(stdout='', stderr='unavailable', returncode=1), work_tracking.CommandResult(stdout='{"message":"bad"}', stderr='', returncode=0)]:
+                execute.return_value = response
+                with self.assertRaises(work_tracking.TrackingError):
+                    work_tracking.collect_used_ids(root, {"planning_files":[]}, "VS")
+
     def test_slugify(self):
         self.assertEqual(work_tracking.slugify("Fix: Résumé / restore path!"), "fix-resume-restore-path")
 

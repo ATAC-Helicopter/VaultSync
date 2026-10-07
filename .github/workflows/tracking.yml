@@ -2,10 +2,10 @@ name: Work Tracking
 
 on:
   pull_request:
-    branches: ["Dev", "Stable", "release/**"]
+    branches: ["**"]
     types: [opened, edited, synchronize, reopened, ready_for_review]
   push:
-    branches: ["Dev", "Stable", "release/**"]
+    branches: ["**"]
   workflow_dispatch:
 
 permissions:

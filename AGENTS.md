@@ -24,7 +24,8 @@ Release-family inference order is:
 
 1. explicit `--release X.Y`;
 2. an active `release/X.Y[.Z]` branch;
-3. the first `Unreleased` entry in `CHANGELOG.md`.
+3. `activeRelease.version` in `release/release-metadata.json`;
+4. the linked `Unreleased` target version or legacy unreleased entry in `CHANGELOG.md`.
 
 Use `./dev status` before committing if the branch-to-issue association is unclear.
 
@@ -61,3 +62,9 @@ PR labels feed GitHub's native generated release-note categories through `.githu
 ```
 
 The generated notes are a release drafting aid; the curated `CHANGELOG.md` remains authoritative until the release workflow explicitly changes that policy.
+
+Release ownership and preparation instructions take precedence over this helper.
+Use the existing owning issue and sole release PR, with `Refs` for release-gated work.
+ID allocation fails closed if the complete remote issue audit is unavailable; it
+never silently allocates using only a local roadmap. Permission or network failures
+must be resolved before creating a new numbered work item.
