@@ -19,6 +19,8 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Automate issue and branch tracking, auditing all remote IDs before allocation and preserving release ownership and existing preparation PRs.
+
 - [VS-1974] Remove raw argument logging, keep service logs private and inspection lookups read-only, and reject live JSON watch until streaming is qualified.
 - [VS-1975] Keep Windows mirror previews from creating targets and label source and destination paths clearly before any authorized live transfer begins.
 - [VS-1980] Include qualified shared rendering, Spectre API and unused-font dependency maintenance while preserving all resource command signatures and recorded-backup safety regression coverage.
