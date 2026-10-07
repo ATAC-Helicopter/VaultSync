@@ -79,3 +79,7 @@ BUG-19012/#751 tracks the installed Linux process blocked during native font
 initialization. Relaunch passes initialization but window visibility, triggering
 input and durable remediation remain open. See [the evidence](release-evidence/linux-startup-2026-10-04.md).
 A living process or completed startup log is insufficient desktop qualification.
+
+## Repository tracking — 2026-10-07
+
+VS-1980/#673 distributes the shared helper from #759/#758. Use `./dev adopt` for existing owning issues and `./dev status` before pushes; reuse this release's preparation PR. Allocating IDs requires a complete remote audit. This tooling does not qualify product or release gates.
