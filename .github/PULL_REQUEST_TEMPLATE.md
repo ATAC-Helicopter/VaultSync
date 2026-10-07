@@ -18,3 +18,7 @@ Closes #
 
 ## Risk
 -
+
+## Work tracking
+
+Include the canonical work ID and `Refs #N` for the owning issue. Reuse release preparation PRs and keep release-gated issues open.
