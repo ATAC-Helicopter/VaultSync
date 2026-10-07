@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "path": "docs/planning/VaultSync_1.9_Recovery_Horizon_Full_Roadmap.md",
+    "sha256": "80aafd7e93ffa00554b0c7cba0a485419b4a992b9b9e8a9b0eadc3d260f156d1",
+    "importedOn": "2026-10-03"
+  },
+  "preservedImplementation": {
+    "branch": "archive/1.9-before-roadmap-20261003",
+    "commit": "ae6dfc34703afdbe59bd8a4f22a8df3a59a75e52"
+  },
+  "canonicalRoadmap": "ROADMAP.md",
+  "currentStable": "1.8.9",
+  "familyHorizon": "2027-09-24",
+  "releases": [
+    {
+      "version": "1.9.0",
+      "name": "Disk and Bootable Recovery Foundation",
+      "branch": "release/1.9.0",
+      "predecessor": "1.8.9",
+      "targetDate": "2027-03-26",
+      "workIds": [
+        "VS-1902",
+        "VS-1910",
+        "VS-1917",
+        "VS-1918",
+        "VS-1919",
+        "VS-1904",
+        "VS-1905",
+        "VS-1906",
+        "VS-1907",
+        "VS-1908",
+        "VS-1909",
+        "BUG-19001",
+        "VS-1980",
+        "BUG-19009",
+        "BUG-19010",
+        "BUG-19011",
+        "BUG-19012"
+      ],
+      "stage": "planned"
+    },
+    {
+      "version": "1.9.1",
+      "name": "Clone Explorer",
+      "branch": "release/1.9.1",
+      "predecessor": "1.9.0",
+      "targetDate": null,
+      "workIds": [
+        "VS-1911",
+        "VS-1912",
+        "VS-1913",
+        "VS-1914",
+        "VS-1915",
+        "VS-1916",
+        "VS-1977",
+        "VS-1978",
+        "BUG-19008"
+      ],
+      "stage": "planned"
+    },
+    {
+      "version": "1.9.2",
+      "name": "Portable Recovery",
+      "branch": "release/1.9.2",
+      "predecessor": "1.9.1",
+      "targetDate": null,
+      "workIds": [
+        "VS-1931",
+        "VS-1932",
+        "VS-1933",
+        "VS-1934",
+        "VS-1935",
+        "VS-1976"
+      ],
+      "stage": "planned"
+    },
+    {
+      "version": "1.9.3",
+      "name": "Offsite Protection",
+      "branch": "release/1.9.3",
+      "predecessor": "1.9.2",
+      "targetDate": null,
+      "workIds": [
+        "VS-1921",
+        "VS-1922",
+        "VS-1923",
+        "VS-1924",
+        "VS-1925",
+        "VS-1926",
+        "VS-1927"
+      ],
+      "stage": "planned"
+    },
+    {
+      "version": "1.9.4",
+      "name": "Unified Recovery Experience",
+      "branch": "release/1.9.4",
+      "predecessor": "1.9.3",
+      "targetDate": null,
+      "workIds": [
+        "VS-1941",
+        "VS-1942",
+        "VS-1943",
+        "VS-1944"
+      ],
+      "stage": "planned"
+    },
+    {
+      "version": "1.9.5",
+      "name": "Continuous Recovery Assurance",
+      "branch": "release/1.9.5",
+      "predecessor": "1.9.4",
+      "targetDate": null,
+      "workIds": [
+        "VS-1951",
+        "VS-1952",
+        "VS-1953",
+        "VS-1954",
+        "VS-1955",
+        "VS-1956",
+        "VS-1979",
+        "VS-1972",
+        "VS-1973",
+        "VS-1974",
+        "VS-1975",
+        "BUG-19002",
+        "BUG-19003",
+        "BUG-19004",
+        "BUG-19005",
+        "BUG-19006",
+        "BUG-19007"
+      ],
+      "stage": "planned"
+    },
+    {
+      "version": "1.9.6",
+      "name": "Binary Source Control Foundation",
+      "branch": "release/1.9.6",
+      "predecessor": "1.9.5",
+      "targetDate": null,
+      "workIds": [
+        "VS-1981",
+        "VS-1982",
+        "VS-1983",
+        "VS-1984",
+        "VS-1985",
+        "VS-1986",
+        "VS-1987",
+        "VS-1989",
+        "VS-1990",
+        "VS-1992"
+      ],
+      "stage": "planned"
+    },
+    {
+      "version": "1.9.7",
+      "name": "Binary Collaboration and Scale",
+      "branch": "release/1.9.7",
+      "predecessor": "1.9.6",
+      "targetDate": null,
+      "workIds": [
+        "VS-1988",
+        "VS-1991",
+        "VS-1993"
+      ],
+      "stage": "planned"
+    },
+    {
+      "version": "1.9.8",
+      "name": "Stability and LTS Baseline",
+      "branch": "release/1.9.8",
+      "predecessor": "1.9.7",
+      "targetDate": null,
+      "workIds": [
+        "VS-1961",
+        "VS-1962",
+        "VS-1963",
+        "VS-1928",
+        "VS-1929"
+      ],
+      "stage": "planned"
+    }
+  ],
+  "documentAliases": [
+    {
+      "documentId": "VS-1970",
+      "canonicalId": "VS-1981",
+      "issue": 703
+    },
+    {
+      "documentId": "VS-1971",
+      "canonicalId": "VS-1982",
+      "issue": 704
+    },
+    {
+      "documentId": "VS-1972",
+      "canonicalId": "VS-1983",
+      "issue": 705
+    },
+    {
+      "documentId": "VS-1973",
+      "canonicalId": "VS-1984",
+      "issue": 706
+    },
+    {
+      "documentId": "VS-1974",
+      "canonicalId": "VS-1985",
+      "issue": 707
+    },
+    {
+      "documentId": "VS-1975",
+      "canonicalId": "VS-1986",
+      "issue": 708
+    },
+    {
+      "documentId": "VS-1976",
+      "canonicalId": "VS-1987",
+      "issue": 709
+    },
+    {
+      "documentId": "VS-1977",
+      "canonicalId": "VS-1988",
+      "issue": 710
+    },
+    {
+      "documentId": "VS-1978",
+      "canonicalId": "VS-1989",
+      "issue": 711
+    },
+    {
+      "documentId": "VS-1979",
+      "canonicalId": "VS-1990",
+      "issue": 712
+    },
+    {
+      "documentId": "VS-1980",
+      "canonicalId": "VS-1991",
+      "issue": 713
+    },
+    {
+      "documentId": "VS-1981",
+      "canonicalId": "VS-1992",
+      "issue": 714
+    },
+    {
+      "documentId": "VS-1982",
+      "canonicalId": "VS-1993",
+      "issue": 715
+    }
+  ],
+  "conditionalWorkIds": [
+    "VS-1943"
+  ],
+  "deliveredFoundationWorkIds": [
+    "VS-1903"
+  ],
+  "candidateWorkIds": [
+    "VS-1971"
+  ]
+}
