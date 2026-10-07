@@ -20,3 +20,18 @@
 Refs #736. Diagnostic evidence and limits: docs/release-evidence/linux-startup-2026-10-04.md. Keep this issue open until the actual acceptance evidence exists.
 
 Local full diagnostics: installed startup session log and /tmp/vaultsync-installed-relaunch-20261004.log. These are temporary/private host evidence, not public artifacts.
+
+## Current-host recheck — 2026-10-07
+
+Read-only managed debugger attachment to the installed 1.8.9 process found the
+main thread in `Avalonia.Controls.Platform.ManagedDispatcherImpl.RunLoop` at
+line 143, rather than font-manager initialization. The `this` runtime value was
+`ManagedDispatcherImpl`. Current startup/session logs and the heartbeat show
+ongoing application activity. Explicit property evaluation was disabled by the
+IDE, so no window visibility or interactivity conclusion is drawn.
+
+The attach session was stopped/detached and the same process remained alive. No
+font configuration, installed binary, credentials or application behavior was
+changed. This run did not reproduce the earlier startup block; it supplies no
+durable fix or release qualification. The original trigger and visible-window,
+restart/login acceptance remain open.

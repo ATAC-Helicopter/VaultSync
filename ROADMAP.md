@@ -1744,3 +1744,5 @@ These items are not assigned to a release until their contracts are approved:
   fields, and draft PR description together.
 
 Repository tracking rollout (2026-10-07): VS-1980/#673 adopts the helper from #759/#758 on active preparation heads. Release ownership, approval gates and sole PRs remain authoritative; see [workflow](docs/WORK_TRACKING.md).
+
+VS-1910/#501 progress (2026-10-07): the pure typed-route/legacy adapter prototype covers all eight existing page keys and explicit refusal/fallback behavior. Live navigation and persistence remain unchanged; coordinator, identity, architecture and platform parity review are open.

@@ -67,3 +67,25 @@ Legacy shell commands, tray entry points, onboarding steps, and saved `LastView`
 - Record a family-by-family parity matrix and usability evidence before replacing the legacy shell.
 
 VS-1910 remains In progress until these decisions are reviewed and the acceptance criteria in #501 have evidence. Destructive disk work remains governed by VS-1917–VS-1919 and the supported-system gate.
+
+## Adapter prototype — 2026-10-07
+
+`Infrastructure/DesktopRoute.cs` proposes a value with a version, typed intent and
+typed page. `LegacyDesktopRouteAdapter` round-trips the eight exact existing page
+keys through the mapping above. Unsupported versions, enum values and intent/page
+pairs fail explicitly. A default zero-initialized route is invalid. Only
+`RestoreLegacyLocation` permits a saved-location fallback to Protect overview;
+request mapping never silently redirects unsupported input. Matching remains
+ordinal and case-sensitive, as in the current page switch.
+
+The prototype is pure and has no repository, device, credential or dispatcher
+access. It intentionally has no resource fields, serializer, deep-link parsing,
+back stack or operation-resume state. Resource resolution, typed identity schema,
+versioned persistence and coordinator API still require joint review. Existing
+`SetCurrentView`, tray/onboarding entry points, cached view models and `LastView`
+persistence are unchanged. The adapter is not wired into live navigation yet.
+
+Focused round-trip and refusal tests exercise compatibility and unsupported input;
+they do not establish visual parity or the readiness of the four-intent UI.
+This is the small adapter prototype requested by the decision gate above, not
+architecture approval or a supported new navigation flow.
