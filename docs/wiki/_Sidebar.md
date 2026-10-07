@@ -29,6 +29,11 @@
   - Update flow: [Updates](Updates.md)
   - Troubleshooting: [Troubleshooting](Troubleshooting.md)
 
+- Recovery Horizon development (1.9)
+  - [Development status and PR stack](Development-Status.md)
+  - [Development CLI workflows](CLI-Development.md)
+  - [Delivery Project](https://github.com/users/ATAC-Helicopter/projects/7)
+
 - Support
   - [Troubleshooting](Troubleshooting.md)
   - [FAQ](FAQ.md)
@@ -43,3 +48,5 @@
   - [Changelog](../../CHANGELOG.md)
   - [Contributing](../../CONTRIBUTING.md)
   - [Security](../../SECURITY.md)
+
+- [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.
