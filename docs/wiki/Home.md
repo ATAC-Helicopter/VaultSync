@@ -2,6 +2,10 @@
 
 Use this wiki for user-facing workflows and troubleshooting.
 
+Current stable is **1.8.9**, published September 16, 2026. The **1.9.5** development CLI and
+recovery architecture are in development; see [development status](Development-Status.md)
+and the [development CLI guide](CLI-Development.md) before using preview commands.
+
 ![VaultSync dashboard showing protection, activity, storage, and recovery status](../images/Dashboard.png)
 
 ## Getting Started
@@ -25,6 +29,11 @@ Use this wiki for user-facing workflows and troubleshooting.
 ## Updates
 - [Updates](Updates.md)
 
+## Recovery Horizon development (1.9)
+- [Current development, release gates, and PR stack](Development-Status.md)
+- [CLI backup, verification, selective restore, and watcher plans](CLI-Development.md)
+- [Delivery Project](https://github.com/users/ATAC-Helicopter/projects/7)
+
 ## Chronicle (1.8) focus areas
 - History, Snapshot Explorer, and comparisons explain what changed between restore points.
 - Recovery drills prove that bounded stored bytes remain readable without touching live project data.
@@ -43,3 +52,5 @@ Use this wiki for user-facing workflows and troubleshooting.
 - [Changelog](../../CHANGELOG.md)
 - [Contributing](../../CONTRIBUTING.md)
 - [Security](../../SECURITY.md)
+
+- [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.
