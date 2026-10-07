@@ -185,3 +185,7 @@ Commit/push defaults:
 Reference:
 - `DOCUMENTATION.md`
 - `docs/README.md`
+
+## Repository-native Work Tracking
+
+Use `./dev adopt <issue-number> --type bug --branch current` for existing reports or `./dev issue <type> "Scope" --branch current` for new work. Run `./dev status` before pushing. Respect the owning release branch and sole PR; generated notes do not replace the curated changelog. See [workflow](docs/WORK_TRACKING.md).
