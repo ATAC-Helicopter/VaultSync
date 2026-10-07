@@ -24,6 +24,19 @@ Rules:
 - Confirm acceptance criteria before coding.
 - For risky or cross-cutting changes, align scope first.
 
+## 2.1) Repository-native Work Tracking
+For non-trivial work, use the repository helper to create or adopt the GitHub issue before implementation:
+
+- Keep the active branch: `./dev issue bug "Concise scope" --branch current`
+- Create a dedicated branch: `./dev issue feature "Concise scope" --branch new`
+- Adopt an existing report: `./dev adopt <issue-number> --type bug --branch current`
+- Inspect the active association: `./dev status`
+- Create a linked PR from a tracked branch: `./dev pr --draft`
+
+The helper preserves the existing `VS-xxxx` and `BUG-xxxxx` release-family numbering, reuses existing public Issue Forms rather than replacing them, and stores branch association only in local git config.
+
+See `docs/WORK_TRACKING.md` for ID allocation, branch choice, PR gates, Project #7 integration, and generated release-note behavior.
+
 ## 3) Development Setup
 Keep the working copy outside iCloud Drive, OneDrive, Dropbox, or another live file-sync root. On macOS, a directory ending in `.nosync` prevents iCloud from taking ownership of repository files and breaking builds or Git operations.
 
