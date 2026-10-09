@@ -89,3 +89,26 @@ Focused round-trip and refusal tests exercise compatibility and unsupported inpu
 they do not establish visual parity or the readiness of the four-intent UI.
 This is the small adapter prototype requested by the decision gate above, not
 architecture approval or a supported new navigation flow.
+
+## Coordinator prototype — 2026-10-09
+
+`DesktopRouteCoordinator` extends the review prototype with explicit Open,
+Back and Forward results. A read-only asynchronous resolver checks a destination
+before the coordinator commits its current route and history. Unavailable,
+cancelled and faulted resolution retain both stacks; a resolver exception remains
+visible to the caller. Repeated navigation does not duplicate history. A successful
+new route clears forward history; an unavailable route does not.
+
+History retains 64 locations per direction by default, with a configurable limit
+of 1–256. The most recent valid request supersedes pending older requests, even
+when the newer destination is unavailable or requests staying on the current
+page. Unsupported, empty-history and already-cancelled requests do not supersede
+pending requests. Cancellation is checked again before commit, including when
+the resolver ignores its token. The coordinator never cancels page-owned work.
+
+This is page-only in-memory state. The initial route is supplied as an already
+resolved supported page. The prototype has no dispatcher/events, resource
+resolution, origin, serialization, view-state restoration or durable persistence,
+and is not connected to `SetCurrentView`, tray, onboarding or desktop buttons.
+API and lifecycle review must settle these boundaries before integration.
+The regressions establish state invariants rather than UI/platform parity.

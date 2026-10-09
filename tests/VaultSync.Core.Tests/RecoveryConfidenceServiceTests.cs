@@ -279,6 +279,38 @@ public sealed class RecoveryConfidenceServiceTests
         Assert.Equal(RecoveryConfidenceState.FullyVerified, result.State);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Evaluate_FutureMeasurementsNeverMakeRecoveryFullyVerified(bool verification)
+    {
+        RecoveryConfidenceInput input = verification
+            ? FullyVerifiedInput() with { VerificationUtc = NowUtc.AddTicks(1) }
+            : FullyVerifiedInput() with { DrillUtc = NowUtc.AddTicks(1) };
+        ProjectRecoveryConfidence result = RecoveryConfidenceService.Evaluate(input, NowUtc);
+
+        Assert.NotEqual(RecoveryConfidenceState.FullyVerified, result.State);
+        Assert.Equal(verification ? "verification.stale" : "restore-drill.overdue", result.DecisiveEvidenceCode);
+        Assert.Contains(result.Evidence, item =>
+            item.Kind == (verification ? RecoveryEvidenceKind.IntegrityVerification : RecoveryEvidenceKind.RestoreDrill) &&
+            item.Status == RecoveryEvidenceStatus.Stale);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Evaluate_FreshnessBoundaryIsInclusiveAndImmediatelyOlderEvidenceIsStale(bool verification)
+    {
+        TimeSpan window = verification ? RecoveryConfidenceService.DefaultVerificationFreshness : RecoveryConfidenceService.DefaultDrillFreshness;
+        DateTime boundary = NowUtc - window;
+        RecoveryConfidenceInput input = verification
+            ? FullyVerifiedInput() with { VerificationUtc = boundary }
+            : FullyVerifiedInput() with { DrillUtc = boundary };
+        Assert.Equal(RecoveryConfidenceState.FullyVerified, RecoveryConfidenceService.Evaluate(input, NowUtc).State);
+        input = verification ? input with { VerificationUtc = boundary.AddTicks(-1) } : input with { DrillUtc = boundary.AddTicks(-1) };
+        Assert.NotEqual(RecoveryConfidenceState.FullyVerified, RecoveryConfidenceService.Evaluate(input, NowUtc).State);
+    }
+
     private static RecoveryConfidenceInput FullyVerifiedInput() =>
         new()
         {

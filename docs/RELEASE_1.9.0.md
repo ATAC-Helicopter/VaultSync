@@ -89,3 +89,14 @@ VS-1980/#673 distributes the shared helper from #759/#758. Use `./dev adopt` for
 VS-1910/#501 adds a pure typed-route mapping prototype and compatibility/refusal tests, as preparation for the proposed route API review. It does not replace current pages, saved state or navigation commands. See [route contract](ROUTE_ARCHITECTURE_1.9.md); architecture approval and platform UI parity remain open.
 
 VS-1918 qualification input hardening (2026-10-09) rejects ambiguous/non-finite/non-UTF-8 JSON and bounds actual reads against growing files. Four candidate profiles remain unqualified; evidence parsing does not approve an engine or prove recovery.
+
+## Navigation and observation prototypes — 2026-10-09
+
+VS-1910/#501 adds a page-only resolve-before-commit coordinator with bounded
+back/forward history and explicit cancellation/supersession. VS-1919/#576 adds
+a read-only single-observation applicability classifier, separating provenance,
+binding, chronology, outcome and measurement basis. Both remain review prototypes
+without UI, persistence or device integration. The existing confidence service
+also fixes future-dated verification/drill results incorrectly being treated as fresh.
+See [current development evidence](release-evidence/1.9-prototypes-2026-10-09.md).
+Joint architecture approval, platform parity and measured recovery gates remain open.

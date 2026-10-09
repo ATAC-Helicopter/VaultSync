@@ -9,9 +9,13 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 **Target version:** `1.9.0`. Development work remains subject to its release gates.
 
+### Added
+
+- [VS-1919] Prototype recovery-observation applicability checks that preserve provenance, execution outcomes and freshness without claiming overall recoverability.
+
 ### Changed
 
-- [VS-1910] Prototype typed desktop routes with explicit legacy-page mappings and rejection tests, preserving existing navigation until architecture and UI parity are reviewed.
+- [VS-1910] Extend the navigation prototype with bounded back/forward history and resolution before committing page changes, pending architecture and UI parity review.
 
 - [VS-1980] Automate issue and branch tracking, auditing all remote IDs before allocation and preserving release ownership and existing preparation PRs.
 
@@ -36,6 +40,8 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [VS-1980] Remove unused Avalonia Inter font packaging after confirming no registration or resource consumers, preserving existing bundled fonts and system fallback behavior.
 
 ### Fixed
+
+- [VS-1919] Prevent future-dated verification and restore-drill results from making recovery confidence fully verified.
 
 - [VS-1918] Reject ambiguous JSON qualification reports and keep evidence reads bounded even when files grow during inspection.
 

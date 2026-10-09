@@ -2,7 +2,7 @@
 
 Proposed contract for [VS-1919 / #576](https://github.com/ATAC-Helicopter/VaultSync/issues/576),
 prepared 2026-10-04 for 1.9.0 / PR #736. This defines semantics for review, not
-an approved schema, implemented readiness evaluator or supported restore path.
+an approved schema, integrated readiness evaluator or supported restore path.
 Review alongside [VS-1917](DISK_IMAGE_FORMAT_1.9.md), VS-1918 engine/support
 and [VS-1910 routes](ROUTE_ARCHITECTURE_1.9.md). Existing backup metadata
 keeps its current format and migration rules.
@@ -135,3 +135,29 @@ silently import a foreign secret reference into the local trusted store.
   unknown failure correlation, privacy redaction and portable inspection.
 - Qualify independent boot/restore and distinguish measured, simulated and
   confirmed results in the eventual UI/CLI. No such implementation is claimed.
+
+## Observation applicability prototype — 2026-10-09
+
+`RecoveryObservationService.Assess` evaluates one caller-supplied in-memory
+observation against an explicit subject UUID, generation, exact scope, evaluation
+time and positive maximum age. It retains the original observation while
+classifying applicability as Missing, Current, Stale or Invalid with a named reason.
+Absent identities, producer build, generation/scope and unknown enum values are
+invalid provenance. Future observations and expiry before observation are invalid
+chronology. Subject, generation or scope changes invalidate applicability;
+expired observations remain historical results. Age is inclusive at its maximum;
+an explicit expiry is exclusive. Equivalent offset timestamps compare as UTC instants.
+
+Basis, execution outcome and checker support remain independent from freshness.
+Only a current, supported, passed measurement sets `HasCurrentPassedMeasurement`.
+Simulations, inferences and confirmations never become measurements, and current
+failed/interrupted checks retain those outcomes. This property describes only
+the supplied observation, not overall recovery readiness or producer authenticity.
+The fixture producer strings are synthetic and do not prove executed recovery.
+
+The prototype has no wire encoding, storage/migration, observation selection or
+conflict precedence, dependency/failure-domain graph, trust validation, artifact
+inspection, privacy export or UI/CLI integration. These remain joint review work.
+Existing backup metadata is unchanged. Separately, the existing
+`RecoveryConfidenceService` now rejects future-dated passed verification/drill
+observations as stale, using existing warning codes and refresh actions.

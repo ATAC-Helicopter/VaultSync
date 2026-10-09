@@ -1197,7 +1197,10 @@ repository must not transfer before a compatible release is adopted.
   workflow boundaries, navigation invariants, and legacy-shell migration map.
   - Progress: the [route architecture review draft](docs/ROUTE_ARCHITECTURE_1.9.md)
     inventories the current shell and proposes typed routes, state ownership,
-    compatibility mapping, and parity gates. API, deep-link inventory, and
+    compatibility mapping, and parity gates. The October 9 in-memory coordinator
+    prototype adds bounded back/forward history and resolve-before-commit navigation,
+    including cancellation and overlapping-request regression coverage.
+    API, deep-link inventory, and
     cross-platform usability evidence remain open. _(Issue #501.)_
 - [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility
   contract.
@@ -1228,8 +1231,10 @@ repository must not transfer before a compatible release is adopted.
   and evidence provenance shared by Recovery Horizon and candidate Resilience.
   - Progress: the [identity/evidence review draft](docs/RECOVERY_IDENTITIES_1.9.md)
     defines generation binding, dependency alternatives, failure correlation,
-    evidence provenance/freshness and privacy. Schema, fixtures, evaluator and
-    joint architecture approval remain open.
+    evidence provenance/freshness and privacy. The October 9 single-observation
+    prototype tests binding, chronology, basis and outcome separately, and fixes
+    future timestamps in existing confidence evaluation. Stable schemas,
+    dependency/conflict evaluation and joint architecture approval remain open.
   - Scope: model devices, sites, repositories, destinations, credentials,
     encryption-key references, recovery media, tools, recovery points,
     verification, drills, and dependency correlation without exporting secrets.
@@ -1748,5 +1753,7 @@ Repository tracking rollout (2026-10-07): VS-1980/#673 adopts the helper from #7
 VS-1910/#501 progress (2026-10-07): the pure typed-route/legacy adapter prototype covers all eight existing page keys and explicit refusal/fallback behavior. Live navigation and persistence remain unchanged; coordinator, identity, architecture and platform parity review are open.
 
 VS-1918/#575 progress (2026-10-09): qualification rejects duplicate/conflicting JSON keys, non-finite/non-UTF-8 input and evidence growth beyond bounded reads. Positive and refusal regression fixtures are synthetic; engine approval and actual five-stage recovery remain open.
+
+VS-1919/#576 progress (2026-10-09): a read-only in-memory observation classifier binds subject, generation and scope, retaining execution result separately from freshness and measurement basis. Existing recovery confidence now treats future verification/drill timestamps as stale. Stable schemas, dependency evaluation, producer trust and measured recovery qualification remain open; see the [development evidence](docs/release-evidence/1.9-prototypes-2026-10-09.md).
 
 BUG-19012/#751 progress (2026-10-09): read-only REA inspection binds the installed stable SkiaSharp artifact and its font-manager P/Invoke declaration; retained evidence does not establish native resolution, the hang cause or 1.9.0 runtime qualification.
