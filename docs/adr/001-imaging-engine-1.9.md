@@ -198,5 +198,9 @@ plus one detection byte and reject excess, including files growing after the
 initial size check. This reads ordinary review files only; no device operation
 or engine approval is introduced. Unit fixtures remain synthetic.
 
-Excessive JSON nesting produces an explicit refusal instead of an uncaught parser
-recursion failure. Ordinary finite fractions/exponents retain their values.
+JSON nesting is limited to 64 object/array containers, including the root.
+A non-recursive preflight ignores delimiters inside strings and handles escaped
+quotes/backslashes; the JSON decoder still validates syntax. This explicit bound
+replaces relying on the runtime's recursion failure, which did not reject the
+deep-nesting fixture in hosted CI. Parser recursion failures still become named
+refusals. Ordinary finite fractions/exponents retain their values.

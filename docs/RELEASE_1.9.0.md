@@ -31,8 +31,9 @@ serialization or implementation. Engine/support decisions (VS-1918), shared
 identity/evidence alignment (VS-1919), fixtures and joint approval remain open.
 The [VS-1919 identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) defines
 generation binding, dependency/failure correlation, evidence provenance and
-freshness, privacy and read-only portable inspection. Schema, fixtures and an
-evaluator remain unimplemented; joint architecture approval is still required.
+freshness, privacy and read-only portable inspection. A single-observation
+applicability prototype has synthetic fixtures; stable schemas, dependency
+evaluation and integration remain open. Joint architecture approval is still required.
 The [VS-1918 engine ADR](adr/001-imaging-engine-1.9.md) proposes an internal
 raw/offline worker and explicit support exclusions. The executable
 [qualification matrix](../release/disk-support-1.9.0.json) has four candidates
@@ -100,3 +101,7 @@ without UI, persistence or device integration. The existing confidence service
 also fixes future-dated verification/drill results incorrectly being treated as fresh.
 See [current development evidence](release-evidence/1.9-prototypes-2026-10-09.md).
 Joint architecture approval, platform parity and measured recovery gates remain open.
+
+VS-1918/#575 CI follow-up (2026-10-09) replaces interpreter-dependent nesting
+refusal with an explicit 64-container bound for JSON qualification input.
+See [repair evidence](release-evidence/1.9-json-depth-2026-10-09.md).

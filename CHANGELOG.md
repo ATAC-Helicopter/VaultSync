@@ -41,6 +41,8 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [VS-1918] Enforce a consistent JSON nesting limit for recovery evidence across local and CI Python runtimes.
+
 - [VS-1919] Prevent future-dated verification and restore-drill results from making recovery confidence fully verified.
 
 - [VS-1918] Reject ambiguous JSON qualification reports and keep evidence reads bounded even when files grow during inspection.

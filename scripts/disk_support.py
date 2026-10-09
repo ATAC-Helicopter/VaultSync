@@ -21,6 +21,30 @@ STAGE_CHECKS = {
 }
 DIGEST = re.compile(r'[0-9a-f]{64}')
 MAX_ARTIFACT_BYTES = 16 * 1024 * 1024
+MAX_JSON_DEPTH = 64
+
+
+def check_json_depth(document: str) -> None:
+    """Bound container nesting before parsing, ignoring escaped string content."""
+    depth = 0
+    in_string = False
+    escaped = False
+    for character in document:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == '\\':
+                escaped = True
+            elif character == '"':
+                in_string = False
+        elif character == '"':
+            in_string = True
+        elif character in '{[':
+            depth += 1
+            if depth > MAX_JSON_DEPTH:
+                raise ValueError('JSON nesting exceeds the 64-container inspection bound')
+        elif character in '}]':
+            depth -= 1
 
 
 def load_json(content: bytes) -> object:
@@ -42,7 +66,9 @@ def load_json(content: bytes) -> object:
         return number
 
     try:
-        return json.loads(content.decode('utf-8'), object_pairs_hook=members,
+        document = content.decode('utf-8')
+        check_json_depth(document)
+        return json.loads(document, object_pairs_hook=members,
                           parse_constant=reject_constant, parse_float=finite_number)
     except RecursionError as exc:
         raise ValueError('JSON nesting exceeds the parser inspection bound') from exc

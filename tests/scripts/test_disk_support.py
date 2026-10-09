@@ -91,6 +91,31 @@ class DiskSupportTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'nesting exceeds'):
             disk.load_json(b'[' * 10000 + b'0' + b']' * 10000)
 
+    def test_json_container_depth_has_a_fixed_inclusive_boundary(self):
+        for opening, closing in ((b'[', b']'), (b'{"child":', b'}')):
+            with self.subTest(opening=opening):
+                accepted = opening * 64 + b'0' + closing * 64
+                self.assertIsNotNone(disk.load_json(accepted))
+                rejected = opening * 65 + b'0' + closing * 65
+                with self.assertRaisesRegex(ValueError, 'nesting exceeds'):
+                    disk.load_json(rejected)
+
+    def test_json_depth_ignores_brackets_and_escaped_quotes_in_strings(self):
+        value = '[{' * 100 + '"' + '\\' + '}]' * 100
+        content = json.dumps({'quoted': value, value: [0]}).encode()
+        self.assertEqual({'quoted': value, value: [0]}, disk.load_json(content))
+        # Even trailing backslashes do not escape the closing quote or hide a container.
+        prefix = json.dumps('\\\\').encode() + b','
+        rejected = b'[' + prefix + b'[' * 64 + b'0' + b']' * 64 + b']'
+        with self.assertRaisesRegex(ValueError, 'nesting exceeds'):
+            disk.load_json(rejected)
+
+    def test_json_depth_check_does_not_replace_syntax_validation(self):
+        for content in (b'{"a":[0}', b'"unterminated', b'[[0]] trailing', b']0['):
+            with self.subTest(content=content):
+                with self.assertRaises(ValueError):
+                    disk.load_json(content)
+
     def test_valid_finite_numbers_are_preserved(self):
         self.assertEqual({'fraction': 0.125, 'large': 1e100, 'whole': 4096},
                          disk.load_json(b'{"fraction":0.125,"large":1e100,"whole":4096}'))
