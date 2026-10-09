@@ -1746,3 +1746,7 @@ These items are not assigned to a release until their contracts are approved:
 Repository tracking rollout (2026-10-07): VS-1980/#673 adopts the helper from #759/#758 on active preparation heads. Release ownership, approval gates and sole PRs remain authoritative; see [workflow](docs/WORK_TRACKING.md).
 
 VS-1910/#501 progress (2026-10-07): the pure typed-route/legacy adapter prototype covers all eight existing page keys and explicit refusal/fallback behavior. Live navigation and persistence remain unchanged; coordinator, identity, architecture and platform parity review are open.
+
+VS-1918/#575 progress (2026-10-09): qualification rejects duplicate/conflicting JSON keys, non-finite/non-UTF-8 input and evidence growth beyond bounded reads. Positive and refusal regression fixtures are synthetic; engine approval and actual five-stage recovery remain open.
+
+BUG-19012/#751 progress (2026-10-09): read-only REA inspection binds the installed stable SkiaSharp artifact and its font-manager P/Invoke declaration; retained evidence does not establish native resolution, the hang cause or 1.9.0 runtime qualification.

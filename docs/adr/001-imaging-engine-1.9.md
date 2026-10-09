@@ -185,3 +185,18 @@ retained approval record are required, but this metadata does not cryptographica
 authenticate that reviewer. Actual approval must come from the maintainer's
 review; do not manufacture records. Unit-test reports stay synthetic and temporary,
 and must never become release evidence.
+
+
+## Evidence input hardening — 2026-10-09
+
+The qualification plan and stage reports require UTF-8 JSON with unique object
+members and finite JSON numbers. Duplicate names (including conflicting
+outcomes/checks), NaN, Infinity and overflowing numeric exponents are rejected before any profile can qualify.
+Artifact digests still bind the exact report bytes; a matching hash does not make
+an ambiguous report acceptable. Plan and artifact reads stop at the 16 MiB bound
+plus one detection byte and reject excess, including files growing after the
+initial size check. This reads ordinary review files only; no device operation
+or engine approval is introduced. Unit fixtures remain synthetic.
+
+Excessive JSON nesting produces an explicit refusal instead of an uncaught parser
+recursion failure. Ordinary finite fractions/exponents retain their values.

@@ -37,6 +37,8 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [VS-1918] Reject ambiguous JSON qualification reports and keep evidence reads bounded even when files grow during inspection.
+
 - [VS-1918] Reject recovery qualification evidence collected before valid engine approval, preventing retrospective approval from qualifying an earlier run.
 - [BUG-19001] Require explicit authorization before unattended project removal touches configuration or registration, preserving interactive confirmation and existing source and backup files.
 - [VS-1980] Preserve finite read-only legacy watcher previews, database selection, cancellation draining and failed-cycle reporting independently of future resource CLI command ownership.

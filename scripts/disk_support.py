@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +20,40 @@ STAGE_CHECKS = {
     'validate-restored': ('target-byte-coverage', 'restored-os-boot', 'expected-files', 'desktop-interactive'),
 }
 DIGEST = re.compile(r'[0-9a-f]{64}')
+MAX_ARTIFACT_BYTES = 16 * 1024 * 1024
+
+
+def load_json(content: bytes) -> object:
+    def members(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('duplicate JSON object member')
+            result[key] = value
+        return result
+
+    def reject_constant(_value: str) -> object:
+        raise ValueError('non-finite JSON constant')
+
+    def finite_number(value: str) -> float:
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError('non-finite JSON number')
+        return number
+
+    try:
+        return json.loads(content.decode('utf-8'), object_pairs_hook=members,
+                          parse_constant=reject_constant, parse_float=finite_number)
+    except RecursionError as exc:
+        raise ValueError('JSON nesting exceeds the parser inspection bound') from exc
+
+
+def read_bounded(path: Path) -> bytes:
+    with path.open('rb') as stream:
+        content = stream.read(MAX_ARTIFACT_BYTES + 1)
+    if len(content) > MAX_ARTIFACT_BYTES:
+        raise ValueError('artifact exceeds the 16 MiB inspection bound')
+    return content
 
 
 def text(value: object) -> bool:
@@ -34,9 +69,9 @@ def artifact(root: Path, reference: object) -> bytes:
     path = (root / relative).resolve()
     if not path.is_relative_to(root.resolve()) or not path.is_file():
         raise ValueError('artifact must be an existing repository file without escape')
-    if path.stat().st_size > 16 * 1024 * 1024:
+    if path.stat().st_size > MAX_ARTIFACT_BYTES:
         raise ValueError('artifact exceeds the 16 MiB inspection bound')
-    content = path.read_bytes()
+    content = read_bounded(path)
     digest = reference.get('sha256')
     if not isinstance(digest, str) or not DIGEST.fullmatch(digest):
         raise ValueError('artifact needs a lowercase SHA-256 digest')
@@ -117,7 +152,7 @@ def validate(root: Path, data: object, require_qualified: bool = False,
             binding = None
             previous_time = None
             for stage, reference in zip(STAGES, evidence):
-                report = json.loads(artifact(root, reference))
+                report = load_json(artifact(root, reference))
                 if not isinstance(report, dict) or report.get('stage') != stage or report.get('profileId') != identity:
                     raise ValueError('report stage/profile binding mismatch')
                 if report.get('kind') != 'measured' or report.get('outcome') != 'passed':
@@ -166,7 +201,7 @@ def main() -> int:
     parser.add_argument('--require-qualified', action='store_true')
     args = parser.parse_args()
     try:
-        data = json.loads((ROOT / 'release/disk-support-1.9.0.json').read_text(encoding='utf-8'))
+        data = load_json(read_bounded(ROOT / 'release/disk-support-1.9.0.json'))
         errors = validate(ROOT, data, args.require_qualified)
     except (ValueError, OSError) as exc:
         errors = [str(exc)]

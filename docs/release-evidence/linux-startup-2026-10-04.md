@@ -35,3 +35,19 @@ font configuration, installed binary, credentials or application behavior was
 changed. This run did not reproduce the earlier startup block; it supplies no
 durable fix or release qualification. The original trigger and visible-window,
 restart/login acceptance remain open.
+
+## Third-party artifact inspection — 2026-10-09
+
+REA 6.1.0's read-only managed PE provider inspects the installed stable
+`SkiaSharp.dll` without loading its code. The retained [sanitized evidence](skiasharp-managed-boundary-2026-10-09.json)
+binds SHA-256, MVID and assembly version `4.152.0.0`, identifies managed AnyCPU
+metadata and records the `sk_fontmgr_create_default` P/Invoke declaration against
+`libSkiaSharp`. The PE container's x86 machine field is not proof of a 32-bit
+managed runtime or native-library architecture.
+
+This confirms the declared managed/native boundary relevant to the previous
+stack; it does not identify a triggering font, prove actual native export
+resolution, decompile the native library or qualify the 1.9.0 build. Native
+providers are not configured on this host. No target code was executed, no
+proprietary code/assets were copied, and no product fix or live startup result
+is claimed. BUG-19012 remains open.

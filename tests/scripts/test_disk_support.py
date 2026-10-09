@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('disk_support', ROOT / 'scripts/disk_support.py')
@@ -64,6 +65,54 @@ class DiskSupportTests(unittest.TestCase):
     def test_complete_bound_fixture_passes_structural_gate(self):
         self.measured_fixture()
         self.assertEqual([], self.check(require=True))
+
+    def test_conflicting_duplicate_report_cannot_qualify(self):
+        profile = self.measured_fixture()
+        reference = profile['evidence'][4]
+        report = (self.root / reference['path']).read_text()
+        content = report.replace('"outcome": "passed"', '"outcome": "failed", "outcome": "passed"').encode()
+        (self.root / reference['path']).write_bytes(content)
+        reference['sha256'] = hashlib.sha256(content).hexdigest()
+        errors = self.check(require=True)
+        self.assertTrue(any('duplicate JSON object member' in error for error in errors))
+        self.assertIn('No qualified disk profile; stable disk support remains gated.', errors)
+
+    def test_ambiguous_nonfinite_and_non_utf8_json_are_rejected(self):
+        for content in (b'{"engine":{"decision":"proposed","decision":"approved"}}',
+                        b'{"checks":{"payload-integrity":"failed","payload-integrity":"passed"}}',
+                        b'{"value":NaN}', b'{"value":Infinity}', b'{"value":-Infinity}',
+                        b'{"value":1e999}', b'{"value":-1e999}',
+                        '{}'.encode('utf-16')):
+            with self.subTest(content=content):
+                with self.assertRaises((ValueError, UnicodeError)):
+                    disk.load_json(content)
+
+    def test_excessive_json_nesting_has_an_explicit_refusal(self):
+        with self.assertRaisesRegex(ValueError, 'nesting exceeds'):
+            disk.load_json(b'[' * 10000 + b'0' + b']' * 10000)
+
+    def test_valid_finite_numbers_are_preserved(self):
+        self.assertEqual({'fraction': 0.125, 'large': 1e100, 'whole': 4096},
+                         disk.load_json(b'{"fraction":0.125,"large":1e100,"whole":4096}'))
+
+    def test_artifact_growth_after_size_check_is_still_bounded(self):
+        path = self.root / 'growing.json'
+        path.write_bytes(b'x')
+        old_stat = path.stat()
+        content = b'x' * 65
+        path.write_bytes(content)
+        reference = {'path': path.name, 'sha256': hashlib.sha256(content).hexdigest()}
+        with patch.object(disk, 'MAX_ARTIFACT_BYTES', 64), patch.object(Path, 'stat', return_value=old_stat):
+            with self.assertRaisesRegex(ValueError, 'inspection bound'):
+                disk.artifact(self.root, reference)
+
+    def test_exact_artifact_bound_is_accepted(self):
+        path = self.root / 'exact.json'
+        content = b'x' * 64
+        path.write_bytes(content)
+        reference = {'path': path.name, 'sha256': hashlib.sha256(content).hexdigest()}
+        with patch.object(disk, 'MAX_ARTIFACT_BYTES', 64):
+            self.assertEqual(content, disk.artifact(self.root, reference))
 
     def test_approval_must_precede_capture(self):
         self.measured_fixture()
