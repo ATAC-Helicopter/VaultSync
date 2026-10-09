@@ -1,8 +1,46 @@
 # What's New
 
+## [1.9.0]
+
+Recovery Horizon is in planning and architecture work. 1.9.0 owns disk capture,
+validation, independent boot media, restore and post-restore validation.
+These capabilities have not shipped. The earlier CLI development cohort has
+been moved to 1.9.5, with discovery/legacy documentation in 1.9.1.
+Current stable remains **1.8.9**, published 2026-09-16.
+See [the release contract](RELEASE_1.9.0.md) and [family plan](RELEASE_FAMILY_1.9.md).
+
+### Keep your place while navigating
+
+The 1.9.0 development shell now has Back and Forward buttons beside the page
+title. Use **Alt+Left** and **Alt+Right** to move through this session's visited
+pages. Opening a different page after going back starts a new history branch.
+The history is kept in memory; restarting resumes only your saved last page when
+that setting is enabled. Background backup/restore jobs keep their own lifecycle.
+
+Last-page saves are ordered so rapid navigation cannot leave an older location
+saved for the next startup. History refresh also retains unfinished snapshot
+labels, notes and tags while the same snapshot remains selected. Choosing another
+snapshot loads that snapshot's metadata; unfinished drafts do not survive restart.
+This is an increment on the existing pages, rather than the full four-intent UI
+or working disk recovery. See [verification limits](release-evidence/1.9-navigation-2026-10-09.md).
+
+Image-format, engine/support and shared identity/evidence contracts now have review drafts;
+the proposed disk-support matrix has four candidates and zero qualified profiles.
+Automated evidence checks preserve that distinction; these documents and checks
+do not establish working disk capture or recovery. Changelog
+history and ongoing notes follow Keep a Changelog with automatically checked
+concise entries. See [the October 4 ledger](release-evidence/1.9-work-2026-10-04.md).
+
+The October 5 evidence gate fix rejects recovery runs predating valid retained
+engine approval. See [the dev update](dev-diaries/2026-10-05-vaultsync-190-evidence.md)
+and [current validation record](release-evidence/1.9-work-2026-10-05.md).
+
+The daily development record, including release grouping and dependency reduction,
+is available in [the work ledger](release-evidence/1.9-work-2026-10-03.md).
+
 ## [1.8.9]
 
-VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
+VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.
 
 Manual Linux update archives now keep VaultSync open and explain installation
 and restart steps.

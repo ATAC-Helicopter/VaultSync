@@ -3483,6 +3483,7 @@ public class ProjectItemViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(LastSnapshotSummary));
                 OnPropertyChanged(nameof(LastSnapshotShort));
+                OnPropertyChanged(nameof(HasSnapshot));
                 OnPropertyChanged(nameof(LatestSnapshotSizeDisplay));
                 OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
             }
@@ -3820,6 +3821,8 @@ public class ProjectItemViewModel : ViewModelBase
     public string LastSnapshotShort => LastSnapshot == default
         ? GetMissingSnapshotLabel("Projects.LastSnapshot.NoneShort")
         : LastSnapshot.ToString("ddd - HH:mm", CultureInfo.CurrentCulture);
+
+    public bool HasSnapshot => LastSnapshot != default;
 
     private string GetMissingSnapshotLabel(string registeredKey)
     {

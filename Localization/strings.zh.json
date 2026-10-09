@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "检查每个生成的文件。路径、凭据、令牌和机密会被移除或假名化。可以排除可选部分。",
   "Settings.Advanced.SupportBundle.Diagnostics": "包含已清理的诊断信息",
   "Settings.Advanced.SupportBundle.Telemetry": "包含匿名化的本地遥测",
-  "Settings.Advanced.SupportBundle.Size": "最大未压缩大小：{0:0.0} MB。导出前会清理文件内容。"
+  "Settings.Advanced.SupportBundle.Size": "最大未压缩大小：{0:0.0} MB。导出前会清理文件内容。",
+  "Nav.Back": "后退 (Alt+Left)",
+  "Nav.Forward": "前进 (Alt+Right)"
 }

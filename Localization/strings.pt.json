@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Reveja cada ficheiro gerado. Caminhos, credenciais, tokens e segredos são removidos ou pseudonimizados. As secções opcionais podem ser excluídas.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Incluir diagnósticos higienizados",
   "Settings.Advanced.SupportBundle.Telemetry": "Incluir telemetria local anonimizada",
-  "Settings.Advanced.SupportBundle.Size": "Tamanho máximo sem compressão: {0:0.0} MB. O conteúdo é higienizado antes da exportação."
+  "Settings.Advanced.SupportBundle.Size": "Tamanho máximo sem compressão: {0:0.0} MB. O conteúdo é higienizado antes da exportação.",
+  "Nav.Back": "Voltar (Alt+Left)",
+  "Nav.Forward": "Avançar (Alt+Right)"
 }

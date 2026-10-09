@@ -13,6 +13,16 @@ namespace VaultSync.UI.ViewModels
     {
         private const string DashboardViewKey = "Dashboard";
         private const string BackupsViewKey = "Backups";
+        private readonly DesktopRouteCoordinator _desktopNavigation = new(
+            DesktopRoute.ProtectOverview,
+            (route, token) => Task.FromResult(LegacyDesktopRouteAdapter.TryGetLegacyKey(route, out _)));
+
+        public bool CanNavigateBack => _desktopNavigation.CanGoBack;
+        public bool CanNavigateForward => _desktopNavigation.CanGoForward;
+        public DesktopRoute CurrentRoute => _desktopNavigation.Current;
+        public ICommand NavigateBack { get; }
+        public ICommand NavigateForward { get; }
+        private PageLocationWriter? _pageLocationWriter;
 
         public object? CurrentView
         {
@@ -123,6 +133,53 @@ namespace VaultSync.UI.ViewModels
 
         private void SetCurrentView(string viewKey, bool remember = true)
         {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(() => SetCurrentView(viewKey, remember));
+                return;
+            }
+            // Keep the legacy shell's saved-location fallback during this first migration.
+            DesktopRoute route = LegacyDesktopRouteAdapter.RestoreLegacyLocation(viewKey);
+            _ = DetachedTask.RunAsync(async () =>
+            {
+                DesktopNavigationResult result = await _desktopNavigation.OpenAsync(route);
+                if (result == DesktopNavigationResult.Opened ||
+                    (result == DesktopNavigationResult.AlreadyCurrent && CurrentView is null))
+                    ApplyResolvedPage(remember);
+            }, nameof(SetCurrentView));
+        }
+
+        private void NavigatePageHistory(bool forward)
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(() => NavigatePageHistory(forward));
+                return;
+            }
+            _ = DetachedTask.RunAsync(async () =>
+            {
+                DesktopNavigationResult result = forward
+                    ? await _desktopNavigation.ForwardAsync()
+                    : await _desktopNavigation.BackAsync();
+                if (result == DesktopNavigationResult.Opened)
+                    ApplyResolvedPage(remember: true);
+            }, nameof(NavigatePageHistory));
+        }
+
+        private void ApplyResolvedPage(bool remember)
+        {
+            if (!LegacyDesktopRouteAdapter.TryGetLegacyKey(CurrentRoute, out string? viewKey))
+                throw new InvalidOperationException("Resolved desktop route has no legacy page.");
+            RenderCurrentPage(viewKey!, remember);
+            OnPropertyChanged(nameof(CurrentRoute));
+            OnPropertyChanged(nameof(CanNavigateBack));
+            OnPropertyChanged(nameof(CanNavigateForward));
+            (NavigateBack as RelayCommand)?.RaiseCanExecuteChanged();
+            (NavigateForward as RelayCommand)?.RaiseCanExecuteChanged();
+        }
+
+        private void RenderCurrentPage(string viewKey, bool remember)
+        {
             if (_currentView is not null &&
                 string.Equals(viewKey, _currentViewKey, StringComparison.OrdinalIgnoreCase))
             {
@@ -232,21 +289,21 @@ namespace VaultSync.UI.ViewModels
 
             if (remember)
             {
-                string viewToSave = viewKey;
-                _ = Task.Run(() =>
-                {
-                    try
+                _pageLocationWriter ??= new PageLocationWriter(
+                    viewToSave =>
                     {
                         AppConfig cfg = _configStore.Load();
                         cfg.LastView = viewToSave;
                         _configStore.Save(cfg);
-                        Dispatcher.UIThread.Post(() => _config.LastView = viewToSave);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[Config] Failed to persist last view: {ex.Message}");
-                    }
-                });
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            if (CurrentViewKey == viewToSave)
+                                _config.LastView = viewToSave;
+                        });
+                        return Task.CompletedTask;
+                    },
+                    ex => Console.WriteLine($"[Config] Failed to persist last view: {ex.Message}"));
+                _ = _pageLocationWriter.Enqueue(viewKey);
             }
         }
 
@@ -342,14 +399,9 @@ namespace VaultSync.UI.ViewModels
 
         private void ApplyLastSessionView()
         {
-            DetachedTask.Run(() =>
-            {
-                AppConfig cfg = _configStore.GetSnapshot();
-                string last = string.IsNullOrWhiteSpace(cfg.LastView)
-                    ? DashboardViewKey
-                    : cfg.LastView;
-                Dispatcher.UIThread.Post(() => SetCurrentView(last, remember: false));
-            }, nameof(ApplyLastSessionView));
+            // Config is already loaded. Do not let a delayed startup callback override
+            // a page the user has opened in the meantime.
+            SetCurrentView(_config.LastView ?? DashboardViewKey, remember: false);
         }
     }
 }

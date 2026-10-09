@@ -3,16 +3,10 @@ name: SonarQube
 on:
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   push:
     # Release branches are analyzed by their required PR. Running again for the
     # same branch push duplicates the complete build and coverage pipeline.
     branches: [ "Dev", "Stable" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
 
 permissions:

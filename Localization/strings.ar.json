@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "راجع كل ملف تم إنشاؤه. تتم إزالة المسارات وبيانات الاعتماد والرموز والأسرار أو استبدالها بمعرّفات مستعارة. يمكن استبعاد الأقسام الاختيارية.",
   "Settings.Advanced.SupportBundle.Diagnostics": "تضمين التشخيصات المنقحة",
   "Settings.Advanced.SupportBundle.Telemetry": "تضمين القياس عن بُعد المحلي مجهول الهوية",
-  "Settings.Advanced.SupportBundle.Size": "الحد الأقصى للحجم غير المضغوط: {0:0.0} م.ب. تتم تنقية المحتوى قبل التصدير."
+  "Settings.Advanced.SupportBundle.Size": "الحد الأقصى للحجم غير المضغوط: {0:0.0} م.ب. تتم تنقية المحتوى قبل التصدير.",
+  "Nav.Back": "رجوع (Alt+Left)",
+  "Nav.Forward": "تقدم (Alt+Right)"
 }

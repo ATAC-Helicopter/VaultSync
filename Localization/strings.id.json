@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Tinjau setiap file yang dibuat. Jalur, kredensial, token, dan rahasia dihapus atau diberi pseudonim. Bagian opsional dapat dikecualikan.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Sertakan diagnostik yang telah dibersihkan",
   "Settings.Advanced.SupportBundle.Telemetry": "Sertakan telemetri lokal anonim",
-  "Settings.Advanced.SupportBundle.Size": "Ukuran maksimum tanpa kompresi: {0:0.0} MB. Isi file dibersihkan sebelum diekspor."
+  "Settings.Advanced.SupportBundle.Size": "Ukuran maksimum tanpa kompresi: {0:0.0} MB. Isi file dibersihkan sebelum diekspor.",
+  "Nav.Back": "Kembali (Alt+Left)",
+  "Nav.Forward": "Maju (Alt+Right)"
 }

@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Xem lại từng tệp được tạo. Đường dẫn, thông tin đăng nhập, mã thông báo và bí mật được xóa hoặc đặt bí danh. Có thể loại trừ các phần tùy chọn.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Bao gồm chẩn đoán đã làm sạch",
   "Settings.Advanced.SupportBundle.Telemetry": "Bao gồm dữ liệu đo từ xa cục bộ đã ẩn danh",
-  "Settings.Advanced.SupportBundle.Size": "Kích thước tối đa chưa nén: {0:0.0} MB. Nội dung được làm sạch trước khi xuất."
+  "Settings.Advanced.SupportBundle.Size": "Kích thước tối đa chưa nén: {0:0.0} MB. Nội dung được làm sạch trước khi xuất.",
+  "Nav.Back": "Quay lại (Alt+Left)",
+  "Nav.Forward": "Tiến tới (Alt+Right)"
 }

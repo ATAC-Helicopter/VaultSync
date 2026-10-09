@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Przejrzyj każdy wygenerowany plik. Ścieżki, dane logowania, tokeny i sekrety są usuwane lub pseudonimizowane. Sekcje opcjonalne można wykluczyć.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Dołącz oczyszczoną diagnostykę",
   "Settings.Advanced.SupportBundle.Telemetry": "Dołącz zanonimizowaną telemetrię lokalną",
-  "Settings.Advanced.SupportBundle.Size": "Maksymalny rozmiar bez kompresji: {0:0.0} MB. Zawartość jest oczyszczana przed eksportem."
+  "Settings.Advanced.SupportBundle.Size": "Maksymalny rozmiar bez kompresji: {0:0.0} MB. Zawartość jest oczyszczana przed eksportem.",
+  "Nav.Back": "Wstecz (Alt+Left)",
+  "Nav.Forward": "Dalej (Alt+Right)"
 }
