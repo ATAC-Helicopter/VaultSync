@@ -9,6 +9,21 @@ been moved to 1.9.5, with discovery/legacy documentation in 1.9.1.
 Current stable remains **1.8.9**, published 2026-09-16.
 See [the release contract](RELEASE_1.9.0.md) and [family plan](RELEASE_FAMILY_1.9.md).
 
+### Keep your place while navigating
+
+The 1.9.0 development shell now has Back and Forward buttons beside the page
+title. Use **Alt+Left** and **Alt+Right** to move through this session's visited
+pages. Opening a different page after going back starts a new history branch.
+The history is kept in memory; restarting resumes only your saved last page when
+that setting is enabled. Background backup/restore jobs keep their own lifecycle.
+
+Last-page saves are ordered so rapid navigation cannot leave an older location
+saved for the next startup. History refresh also retains unfinished snapshot
+labels, notes and tags while the same snapshot remains selected. Choosing another
+snapshot loads that snapshot's metadata; unfinished drafts do not survive restart.
+This is an increment on the existing pages, rather than the full four-intent UI
+or working disk recovery. See [verification limits](release-evidence/1.9-navigation-2026-10-09.md).
+
 Image-format, engine/support and shared identity/evidence contracts now have review drafts;
 the proposed disk-support matrix has four candidates and zero qualified profiles.
 Automated evidence checks preserve that distinction; these documents and checks

@@ -112,3 +112,42 @@ resolution, origin, serialization, view-state restoration or durable persistence
 and is not connected to `SetCurrentView`, tray, onboarding or desktop buttons.
 API and lifecycle review must settle these boundaries before integration.
 The regressions establish state invariants rather than UI/platform parity.
+
+## First page-shell integration — 2026-10-09
+
+The later VS-1910 increment connects the page-only coordinator and compatibility
+adapter to existing cached page view models. It adds header Back/Forward controls
+and Alt+Left/Right shortcuts. Availability comes from the bounded in-process
+history; unavailable directions are visibly disabled and have localized tooltip
+and accessible names in all 19 existing locale files. The asynchronous resolver
+currently checks only whether a route maps to an existing page, with no resource
+or device lookup. The integration dispatches legacy/tray calls onto the UI thread.
+
+Startup restores the already-loaded configuration synchronously and clears
+history afterward, so the implicit Dashboard initialization is not a user visit.
+This also removes the delayed saved-page callback that could override a user's
+first navigation. `PageLocationWriter` serializes last-page saves with at most
+one newest pending page, preventing older writes from finishing after newer
+ones. Errors are reported without stranding later saves. This does not make
+all application configuration writes transactional or guarantee shutdown flushing.
+
+History refresh retains unsaved label/note/tag drafts while replacing a row for
+the same project/snapshot identity, ignoring transient ListBox selection callbacks
+only during collection reconciliation and then restoring the resolved selection.
+A different snapshot or removed selection
+loads its own metadata. Successful save/clear normalizes the submitted draft
+only if the selection and draft have not changed during the save. This does
+not persist unsaved drafts across process restarts or resolve concurrent remote
+metadata edits automatically.
+
+The eight pages remain available. A successful new visit clears forward history;
+startup and restart persist only the existing `LastView` key, never the back stack
+or a destructive-operation authorization. No URL scheme or new serialized route
+format is introduced. Resource-level routes, four-intent layout replacement,
+precise API/lifecycle review and full Windows/macOS/Linux parity remain open.
+See [native UI evidence](release-evidence/1.9-navigation-2026-10-09.md).
+
+The small-window check also separates project-card names from snapshot statistics
+on two lines and hides duplicate missing-snapshot size text. The existing
+responsive sidebar remains in use; this increment does not redesign the project
+editor or qualify all narrow layouts.

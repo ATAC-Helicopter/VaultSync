@@ -291,7 +291,7 @@
             ColumnDefinitions="*,Auto"
             RowSpacing="{DynamicResource ListRowSpacing}">
         <Grid Grid.Row="0"
-              ColumnDefinitions="Auto,*,Auto,Auto"
+              ColumnDefinitions="Auto,*"
               ColumnSpacing="8"
               MinHeight="40"
               VerticalAlignment="Center">
@@ -315,7 +315,8 @@
                        FontWeight="SemiBold"
                        Foreground="{Binding AvatarColor, Converter={StaticResource ContrastForegroundConverter}}" />
           </Grid>
-          <TextBlock Grid.Column="1"
+          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+          <TextBlock
                      Text="{Binding Name}"
                      FontSize="{DynamicResource SectionHeaderFontSize}"
                      FontWeight="Bold"
@@ -323,15 +324,20 @@
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      TextWrapping="NoWrap"
                      TextTrimming="CharacterEllipsis" />
-          <TextBlock Grid.Column="2"
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBlock
                      Text="{Binding LastSnapshotShort}"
                      FontSize="{DynamicResource PageSubtitleFontSize}"
-                     Foreground="{DynamicResource TextSecondaryBrush}" />
-          <TextBlock Grid.Column="3"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="1"
+                     IsVisible="{Binding HasSnapshot}"
                      Text="{Binding LatestSnapshotSizeDisplay}"
                      FontSize="{DynamicResource PageSubtitleFontSize}"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
+          </Grid>
+          </StackPanel>
         </Grid>
 
         <TextBlock Grid.Row="1"

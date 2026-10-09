@@ -1200,6 +1200,11 @@ repository must not transfer before a compatible release is adopted.
     compatibility mapping, and parity gates. The October 9 in-memory coordinator
     prototype adds bounded back/forward history and resolve-before-commit navigation,
     including cancellation and overlapping-request regression coverage.
+    The subsequent page-shell integration adds localized Back/Forward controls
+    and Alt+Left/Right, ordered/coalesced last-page writes, synchronous startup
+    restoration and retention of unfinished History drafts on same-snapshot refresh.
+    Native Linux UI evidence and limitations are recorded in the
+    [navigation ledger](docs/release-evidence/1.9-navigation-2026-10-09.md).
     API, deep-link inventory, and
     cross-platform usability evidence remain open. _(Issue #501.)_
 - [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility

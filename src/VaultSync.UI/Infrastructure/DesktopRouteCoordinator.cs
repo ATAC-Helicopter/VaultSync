@@ -50,6 +50,17 @@ public sealed class DesktopRouteCoordinator
     public bool CanGoBack { get { lock (_gate) return _back.Count > 0; } }
     public bool CanGoForward { get { lock (_gate) return _forward.Count > 0; } }
 
+    /// <summary>Start a new in-process history at the resolved current location.</summary>
+    public void ClearHistory()
+    {
+        lock (_gate)
+        {
+            ++_requestVersion;
+            _back.Clear();
+            _forward.Clear();
+        }
+    }
+
     public Task<DesktopNavigationResult> OpenAsync(DesktopRoute route, CancellationToken cancellationToken = default) =>
         NavigateAsync(route, NavigationDirection.Open, cancellationToken);
 

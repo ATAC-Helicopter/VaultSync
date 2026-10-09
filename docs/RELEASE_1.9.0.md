@@ -105,3 +105,14 @@ Joint architecture approval, platform parity and measured recovery gates remain 
 VS-1918/#575 CI follow-up (2026-10-09) replaces interpreter-dependent nesting
 refusal with an explicit 64-container bound for JSON qualification input.
 See [repair evidence](release-evidence/1.9-json-depth-2026-10-09.md).
+
+## First visible page-navigation increment — 2026-10-09
+
+VS-1910/#501 subsequently connects the page-only route coordinator to the legacy
+shell, with localized Back/Forward and Alt+Left/Right. Cached page state remains
+in process; startup restoration, last-page write ordering and same-snapshot
+History draft preservation are corrected. No resource route, disk workflow or
+new persisted authorization is introduced. The earlier prototype snapshots
+above remain historical. See [current UI evidence](release-evidence/1.9-navigation-2026-10-09.md)
+and [navigation contract](ROUTE_ARCHITECTURE_1.9.md). Full parity, joint
+architecture, predecessor upgrade and measured disk-recovery gates remain open.

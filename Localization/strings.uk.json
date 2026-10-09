@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Перевірте кожен створений файл. Шляхи, облікові дані, токени й секрети видаляються або псевдонімізуються. Необов’язкові розділи можна виключити.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Додати очищену діагностику",
   "Settings.Advanced.SupportBundle.Telemetry": "Додати анонімізовану локальну телеметрію",
-  "Settings.Advanced.SupportBundle.Size": "Максимальний розмір без стиснення: {0:0.0} МБ. Вміст очищається перед експортом."
+  "Settings.Advanced.SupportBundle.Size": "Максимальний розмір без стиснення: {0:0.0} МБ. Вміст очищається перед експортом.",
+  "Nav.Back": "Назад (Alt+Left)",
+  "Nav.Forward": "Вперед (Alt+Right)"
 }

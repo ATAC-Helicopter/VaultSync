@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Prüfen Sie jede erzeugte Datei. Pfade, Anmeldedaten, Token und Geheimnisse werden entfernt oder pseudonymisiert. Optionale Bereiche können ausgeschlossen werden.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Bereinigte Diagnose einschließen",
   "Settings.Advanced.SupportBundle.Telemetry": "Anonymisierte lokale Telemetrie einschließen",
-  "Settings.Advanced.SupportBundle.Size": "Maximale unkomprimierte Größe: {0:0.0} MB. Dateiinhalte werden vor dem Export bereinigt."
+  "Settings.Advanced.SupportBundle.Size": "Maximale unkomprimierte Größe: {0:0.0} MB. Dateiinhalte werden vor dem Export bereinigt.",
+  "Nav.Back": "Zurück (Alt+Left)",
+  "Nav.Forward": "Vorwärts (Alt+Right)"
 }

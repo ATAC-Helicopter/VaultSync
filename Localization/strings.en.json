@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Review every generated file. Paths, credentials, tokens, and secrets are removed or pseudonymized. Optional sections can be excluded.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Include sanitized diagnostics",
   "Settings.Advanced.SupportBundle.Telemetry": "Include anonymized local telemetry",
-  "Settings.Advanced.SupportBundle.Size": "Maximum uncompressed size: {0:0.0} MB. File contents are sanitized before export."
+  "Settings.Advanced.SupportBundle.Size": "Maximum uncompressed size: {0:0.0} MB. File contents are sanitized before export.",
+  "Nav.Back": "Back (Alt+Left)",
+  "Nav.Forward": "Forward (Alt+Right)"
 }

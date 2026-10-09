@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "생성되는 모든 파일을 검토하세요. 경로, 자격 증명, 토큰 및 비밀은 제거되거나 가명 처리됩니다. 선택 항목은 제외할 수 있습니다.",
   "Settings.Advanced.SupportBundle.Diagnostics": "정리된 진단 포함",
   "Settings.Advanced.SupportBundle.Telemetry": "익명화된 로컬 원격 분석 포함",
-  "Settings.Advanced.SupportBundle.Size": "최대 압축 해제 크기: {0:0.0} MB. 내보내기 전에 파일 내용을 정리합니다."
+  "Settings.Advanced.SupportBundle.Size": "최대 압축 해제 크기: {0:0.0} MB. 내보내기 전에 파일 내용을 정리합니다.",
+  "Nav.Back": "뒤로 (Alt+Left)",
+  "Nav.Forward": "앞으로 (Alt+Right)"
 }

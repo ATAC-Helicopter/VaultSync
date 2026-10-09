@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "তৈরি হওয়া প্রতিটি ফাইল পর্যালোচনা করুন। পাথ, পরিচয়পত্র, টোকেন ও গোপন তথ্য সরানো বা ছদ্মনামকরণ করা হয়। ঐচ্ছিক অংশ বাদ দেওয়া যায়।",
   "Settings.Advanced.SupportBundle.Diagnostics": "পরিশোধিত ডায়াগনস্টিক অন্তর্ভুক্ত করুন",
   "Settings.Advanced.SupportBundle.Telemetry": "বেনামী স্থানীয় টেলিমেট্রি অন্তর্ভুক্ত করুন",
-  "Settings.Advanced.SupportBundle.Size": "সর্বোচ্চ আনকম্প্রেসড আকার: {0:0.0} MB। রপ্তানির আগে বিষয়বস্তু পরিশোধিত হয়।"
+  "Settings.Advanced.SupportBundle.Size": "সর্বোচ্চ আনকম্প্রেসড আকার: {0:0.0} MB। রপ্তানির আগে বিষয়বস্তু পরিশোধিত হয়।",
+  "Nav.Back": "পিছনে (Alt+Left)",
+  "Nav.Forward": "সামনে (Alt+Right)"
 }

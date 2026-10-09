@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Проверьте каждый создаваемый файл. Пути, учётные данные, токены и секреты удаляются или псевдонимизируются. Необязательные разделы можно исключить.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Включить очищенную диагностику",
   "Settings.Advanced.SupportBundle.Telemetry": "Включить анонимизированную локальную телеметрию",
-  "Settings.Advanced.SupportBundle.Size": "Максимальный размер без сжатия: {0:0.0} МБ. Содержимое очищается перед экспортом."
+  "Settings.Advanced.SupportBundle.Size": "Максимальный размер без сжатия: {0:0.0} МБ. Содержимое очищается перед экспортом.",
+  "Nav.Back": "Назад (Alt+Left)",
+  "Nav.Forward": "Вперёд (Alt+Right)"
 }

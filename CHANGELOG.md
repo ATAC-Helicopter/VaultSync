@@ -11,11 +11,11 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1910] Move between desktop pages with Back, Forward and keyboard shortcuts, retaining in-session history and cached page state.
+
 - [VS-1919] Prototype recovery-observation applicability checks that preserve provenance, execution outcomes and freshness without claiming overall recoverability.
 
 ### Changed
-
-- [VS-1910] Extend the navigation prototype with bounded back/forward history and resolution before committing page changes, pending architecture and UI parity review.
 
 - [VS-1980] Automate issue and branch tracking, auditing all remote IDs before allocation and preserving release ownership and existing preparation PRs.
 
@@ -40,6 +40,12 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [VS-1980] Remove unused Avalonia Inter font packaging after confirming no registration or resource consumers, preserving existing bundled fonts and system fallback behavior.
 
 ### Fixed
+
+- [VS-1910] Keep project names readable in narrow cards instead of crowding them out with snapshot statistics.
+
+- [VS-1910] Preserve unfinished History metadata drafts when refresh rebuilds the same selected snapshot.
+- [VS-1910] Save the newest visited page in order, preventing slower earlier writes from changing the next startup location.
+- [VS-1910] Restore the saved startup page before user navigation can be overwritten by a delayed callback.
 
 - [VS-1918] Enforce a consistent JSON nesting limit for recovery evidence across local and CI Python runtimes.
 

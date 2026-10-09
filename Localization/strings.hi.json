@@ -1914,5 +1914,7 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "हर बनाई गई फ़ाइल की समीक्षा करें। पथ, क्रेडेंशियल, टोकन और रहस्य हटाए या छद्मनामित किए जाते हैं। वैकल्पिक अनुभाग हटाए जा सकते हैं।",
   "Settings.Advanced.SupportBundle.Diagnostics": "साफ़ किए गए निदान शामिल करें",
   "Settings.Advanced.SupportBundle.Telemetry": "अनाम स्थानीय टेलीमेट्री शामिल करें",
-  "Settings.Advanced.SupportBundle.Size": "अधिकतम असंपीड़ित आकार: {0:0.0} MB। निर्यात से पहले सामग्री साफ़ की जाती है।"
+  "Settings.Advanced.SupportBundle.Size": "अधिकतम असंपीड़ित आकार: {0:0.0} MB। निर्यात से पहले सामग्री साफ़ की जाती है।",
+  "Nav.Back": "पीछे (Alt+Left)",
+  "Nav.Forward": "आगे (Alt+Right)"
 }

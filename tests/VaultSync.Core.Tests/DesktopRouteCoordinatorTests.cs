@@ -224,5 +224,27 @@ public sealed class DesktopRouteCoordinatorTests
         Assert.Throws<ArgumentNullException>(() => new DesktopRouteCoordinator(Home, null!));
     }
 
+    [Fact]
+    public async Task ClearingHistoryStartsAtTheCurrentLocationAndSupersedesPendingNavigation()
+    {
+        TaskCompletionSource<bool>? pending = null;
+        var coordinator = new DesktopRouteCoordinator(Home, (_, _) => pending?.Task ?? Task.FromResult(true));
+        await coordinator.OpenAsync(Projects);
+        await coordinator.OpenAsync(History);
+        await coordinator.BackAsync();
+        pending = NewCompletion();
+        Task<DesktopNavigationResult> older = coordinator.OpenAsync(Settings);
+        coordinator.ClearHistory();
+        Assert.Equal(Projects, coordinator.Current);
+        Assert.False(coordinator.CanGoBack);
+        Assert.False(coordinator.CanGoForward);
+        pending.SetResult(true);
+        Assert.Equal(DesktopNavigationResult.Superseded, await older);
+        pending = null;
+        await coordinator.OpenAsync(Settings);
+        await coordinator.BackAsync();
+        Assert.Equal(Projects, coordinator.Current);
+    }
+
     private static TaskCompletionSource<bool> NewCompletion() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 }

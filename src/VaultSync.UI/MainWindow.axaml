@@ -15,7 +15,15 @@
     TransparencyLevelHint="AcrylicBlur, Blur, Transparent, None"
     Title="{infra:LocalizedString Key=Shell.Title}">
 
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Alt+Left" Command="{CompiledBinding NavigateBack}" />
+    <KeyBinding Gesture="Alt+Right" Command="{CompiledBinding NavigateForward}" />
+  </Window.KeyBindings>
+
   <Window.Styles>
+    <Style Selector="Button.navigation-history:disabled">
+      <Setter Property="Opacity" Value="0.35" />
+    </Style>
     <Style Selector="Border.pulse-ring">
       <Setter Property="Opacity" Value="0.6" />
       <Setter Property="Width" Value="8" />
@@ -292,10 +300,28 @@
 
     <Border Grid.Row="0" Grid.Column="1" Classes="header" Padding="18,14">
       <StackPanel Spacing="8">
-        <StackPanel>
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+          <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <Button x:Name="NavigateBackButton" Command="{CompiledBinding NavigateBack}"
+                    IsEnabled="{CompiledBinding CanNavigateBack}" Width="36" Height="36"
+                    Classes="action-ghost navigation-history" ToolTip.Tip="{infra:LocalizedString Key=Nav.Back}"
+                    AutomationProperties.Name="{infra:LocalizedString Key=Nav.Back}">
+              <shapes:Path Data="M14,4 L6,12 L14,20 M6,12 L22,12" Width="18" Height="18" Stretch="Uniform"
+                           Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="2" />
+            </Button>
+            <Button x:Name="NavigateForwardButton" Command="{CompiledBinding NavigateForward}"
+                    IsEnabled="{CompiledBinding CanNavigateForward}" Width="36" Height="36"
+                    Classes="action-ghost navigation-history" ToolTip.Tip="{infra:LocalizedString Key=Nav.Forward}"
+                    AutomationProperties.Name="{infra:LocalizedString Key=Nav.Forward}">
+              <shapes:Path Data="M10,4 L18,12 L10,20 M18,12 L2,12" Width="18" Height="18" Stretch="Uniform"
+                           Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="2" />
+            </Button>
+          </StackPanel>
+          <StackPanel Grid.Column="1">
           <TextBlock Text="{CompiledBinding HeaderTitle}" FontSize="24" FontWeight="SemiBold"/>
           <TextBlock Text="{CompiledBinding HeaderKicker}" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0"/>
-        </StackPanel>
+          </StackPanel>
+        </Grid>
 
         <Border Margin="0,4,0,0"
                 Padding="12"
