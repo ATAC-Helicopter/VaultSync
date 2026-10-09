@@ -1205,6 +1205,7 @@ repository must not transfer before a compatible release is adopted.
     restoration and retention of unfinished History drafts on same-snapshot refresh.
     Native Linux UI evidence and limitations are recorded in the
     [navigation ledger](docs/release-evidence/1.9-navigation-2026-10-09.md).
+    The [October 9 public diary](https://fglabs.dev/devlog/vaultsync-190-keeping-your-place) documents this increment with actual screenshots; Reddit text awaits maintainer submission.
     API, deep-link inventory, and
     cross-platform usability evidence remain open. _(Issue #501.)_
 - [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility

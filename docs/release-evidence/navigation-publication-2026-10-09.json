@@ -1,0 +1,40 @@
+[
+  {
+    "path": "/devlog/vaultsync-190-keeping-your-place",
+    "status": 200,
+    "bytes": 48744,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/devlog",
+    "status": 200,
+    "bytes": 148352,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/vaultsync",
+    "status": 200,
+    "bytes": 101344,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/sitemap.xml",
+    "status": 200,
+    "bytes": 94277,
+    "contentType": "application/xml"
+  },
+  {
+    "path": "/products/vaultsync/devlog-190-history-navigation.png",
+    "status": 200,
+    "bytes": 131335,
+    "contentType": "image/png",
+    "sha256": "71d6330aa4b07f5a079ccfa6ecb3cfd89eefcc32590916f698cc635890cd3385"
+  },
+  {
+    "path": "/products/vaultsync/devlog-190-project-navigation-narrow.png",
+    "status": 200,
+    "bytes": 103276,
+    "contentType": "image/png",
+    "sha256": "cb3fbccdb176dcdeaae91a7f05f8210ea8f7882877407a884e3d2912496397fd"
+  }
+]

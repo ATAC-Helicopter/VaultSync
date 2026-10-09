@@ -116,3 +116,12 @@ new persisted authorization is introduced. The earlier prototype snapshots
 above remain historical. See [current UI evidence](release-evidence/1.9-navigation-2026-10-09.md)
 and [navigation contract](ROUTE_ARCHITECTURE_1.9.md). Full parity, joint
 architecture, predecessor upgrade and measured disk-recovery gates remain open.
+
+## Development publication — 2026-10-09
+
+The [navigation diary](https://fglabs.dev/devlog/vaultsync-190-keeping-your-place) is live with actual native screenshots and explicit
+stable, fixture and recovery limits. Website PR #42 and its Production deployment
+pass; Reddit copy is prepared for the maintainer to submit. The release remains
+in draft PR #736, with Sonar, full desktop parity, architecture and measured
+recovery gates open. Implementation test results refer to `42e6b064`, not to this
+later documentation-only update.

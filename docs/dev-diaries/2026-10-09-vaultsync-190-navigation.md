@@ -1,6 +1,6 @@
 # VaultSync 1.9.0 dev update — keeping your place
 
-**Draft for publication review. VaultSync 1.9.0 has not shipped.**
+**Published October 9, 2026 on [FG Labs](https://fglabs.dev/devlog/vaultsync-190-keeping-your-place). Work in draft PR #736; VaultSync 1.9.0 has not shipped.**
 
 Most of the recent 1.9.0 work has been foundations: deciding what a recovery
 image must prove and keeping unsupported combinations explicit. This time there
@@ -17,6 +17,9 @@ restarting resumes the saved last page rather than replaying the whole history.
 
 The useful test was not whether an arrow appeared. It was whether I could leave
 History, open Settings, return and still find the same filter and unfinished work.
+
+Apparently a Back button comes with a complimentary tour of everything that
+forgets where you were.
 
 That exposed a draft-loss bug. Refresh rebuilt the timeline rows, the list briefly
 cleared its selection, and unfinished snapshot labels, notes and tags disappeared.
@@ -46,6 +49,11 @@ tiny fixture file. There is no stored backup payload or disk image in that demo;
 History correctly calls it **Metadata only**. Disk capture, independent boot
 media and disk restore still need implementation and measured qualification.
 **Stable remains 1.8.9.**
+
+The current local Release check passes **1,012 .NET tests and 144 Python tests**,
+with no build warnings or errors. Hosted Windows, Linux and macOS build/test
+checks pass on this development commit. Sonar remains blocked while retrieving
+the pull request; that is an open check, not a green release gate.
 
 The code, regressions, screenshots and limits are tracked in
 [PR #736](https://github.com/ATAC-Helicopter/VaultSync/pull/736) and the

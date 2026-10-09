@@ -17,6 +17,8 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1910] Explain session navigation and recovery limits in a development diary with actual desktop screenshots.
+
 - [VS-1980] Automate issue and branch tracking, auditing all remote IDs before allocation and preserving release ownership and existing preparation PRs.
 
 - [VS-1918] Propose the offline imaging engine and support boundaries, with automated evidence checks keeping unapproved or unmeasured recovery profiles unqualified.
