@@ -831,7 +831,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Download candidate packages and patches
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: '*-release-assets'
           merge-multiple: true
@@ -870,7 +870,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Download direct-release artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: "*-release-assets"
           path: release-assets
@@ -878,7 +878,7 @@ jobs:
 
       - name: Download Store upload for the canonical asset contract
         if: ${{ inputs.include_store_upload }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: windows-store-upload
           path: release-assets/dist/store
@@ -946,21 +946,21 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Download direct-release artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: "*-release-assets"
           path: release-assets
           merge-multiple: true
 
       - name: Download canonical release manifest
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: canonical-release-manifest
           path: release-assets
 
       - name: Download Store upload for supply-chain proof
         if: ${{ inputs.include_store_upload }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: windows-store-upload
           path: release-assets/dist/store
@@ -1124,7 +1124,7 @@ jobs:
           git merge-base --is-ancestor "$source_sha" origin/Stable
           git diff --exit-code "$source_sha" HEAD -- src installer packaging Directory.Build.props Directory.Packages.props global.json scripts/build_patch.py scripts/build_linux_release.sh scripts/build_macos_dmg.sh scripts/thin_macos_native_libraries.sh
       - name: Download qualified direct packages and patches
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.prepare_draft_from_run }}
@@ -1132,14 +1132,14 @@ jobs:
           merge-multiple: true
           path: release-assets
       - name: Download qualified Store upload
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.prepare_draft_from_run }}
           name: windows-store-upload
           path: release-assets/dist/store
       - name: Download qualified canonical manifest
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.prepare_draft_from_run }}
