@@ -1770,4 +1770,6 @@ VS-1919/#576 progress (2026-10-09): a read-only in-memory observation classifier
 
 VS-1980/#673 validation portability (2026-10-12): preserve LF bytes for the hash-bound imported planning source and make mocked Unix process cleanup available in Windows updater fixtures. Artifact path/hash refusals remain tested; the separate symlink-escape case reports a skip only when Windows denies symlink creation. These are contributor checks, not installed-upgrade or disk-recovery qualification.
 
+VS-1980/#673 changelog standard (2026-10-12): AGENTS.md and CONTRIBUTING.md require one short outcome per entry, aiming for 8–14 words with the existing 22-word ceiling. Consecutive entries have no blank or whitespace-only separators; release/category spacing remains. Validation rejects separated entries in current and historical sections. The shared standard applies to all nine owning preparation PRs without importing sibling features.
+
 BUG-19012/#751 progress (2026-10-09): read-only REA inspection binds the installed stable SkiaSharp artifact and its font-manager P/Invoke declaration; retained evidence does not establish native resolution, the hang cause or 1.9.0 runtime qualification.

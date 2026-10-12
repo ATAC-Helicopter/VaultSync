@@ -19,8 +19,12 @@ docs/RELEASE_1.9.0.md before implementation.
   goes to their own preparation branches/PRs, not into the 1.9.0 binary.
 - Reuse the owning issue and update the 1.9.0 changelog, relevant contracts,
   documentation and native GitHub Project tracking with each meaningful change.
-- Changelog entries use one user-facing result and at most 22 words, excluding
-  the `[ID]` prefix; see CONTRIBUTING.md for the counting and detail-placement rules.
+- Changelog entries use one short sentence describing one user-facing result.
+  Aim for 8–14 words; 22 words is the hard ceiling, excluding the `[ID]` prefix.
+  Never pad an entry to reach a word count. Move explanations into linked docs.
+  Keep consecutive entries adjacent, with no blank or whitespace-only lines
+  between them. Retain blank lines around release and category headings.
+  See CONTRIBUTING.md for counting and detail-placement rules.
   Follow Keep a Changelog 1.1.0: `Added`, `Changed`, `Deprecated`, `Removed`,
   `Fixed`, `Security`, ISO release dates, and a linked `Unreleased` section.
 - Commit and push completed, validated work to the owning release PR's

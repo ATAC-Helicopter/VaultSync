@@ -117,10 +117,12 @@ merely to normalize historical notes.
 
 Keep every `CHANGELOG.md` entry intentionally short, including historical backfills:
 - Write for release readers, not implementers.
-- Prefer one user-facing outcome per bullet.
-- Aim for `18-22` words per bullet, with a maximum of **22 words**, excluding
-  the owning `[ID]` prefix. Count whitespace-separated words; shorter clear
-  entries are fine and do not need padding.
+- Use one short sentence describing one user-facing outcome per bullet.
+- Aim for **8–14 words**; keep **22 words** as the hard ceiling, excluding
+  the owning `[ID]` prefix. Count whitespace-separated words. Never pad an
+  entry to reach a word count; prefer the shortest clear description.
+- Keep consecutive entries adjacent: no blank or whitespace-only lines
+  between bullets. Retain blank lines around release and category headings.
 - Do not list internal implementation details unless they change user expectations or upgrade behavior.
 - If a change needs deep explanation, keep the short summary in `CHANGELOG.md` and put the detail in the issue, PR, or `docs/WHATS_NEW.md`.
 
@@ -128,7 +130,7 @@ Preferred bullet format:
 - `[ID] Short user-facing result.`
 
 Examples:
-- Good: `[VS-1721] Added app-wide custom tag colors with in-context editing from Projects.`
+- Good: `[VS-1721] Edit custom tag colors directly from Projects.`
 - Bad: `[VS-1721] Added a visual picker, swatches, preview card, shared appearance helper, and a Settings pointer flow for app-wide tag color editing.`
 
 ## 6) Pull Request Requirements

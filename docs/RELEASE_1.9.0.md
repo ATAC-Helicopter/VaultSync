@@ -142,3 +142,11 @@ not bypass required keys, unsupported evidence, cycles or graph limits. This is
 synthetic architecture evidence, with no storage, secret or device access and no
 overall recovery claim. Stable schemas, observation selection, failure-domain
 scenarios and joint approval remain open. See [the current evidence](release-evidence/1.9-dependencies-2026-10-12.md).
+
+## Compact changelog standard — 2026-10-12
+
+VS-1980/#673 updates AGENTS.md and CONTRIBUTING.md to prefer one short sentence
+of 8–14 words, with the existing 22-word ceiling. Consecutive entries have no
+blank or whitespace-only separators; headings retain their spacing. Automated
+checks cover both active and historical lists. Shared standards are distributed
+to all nine preparation PRs; each retains its own unreleased scope and metadata.

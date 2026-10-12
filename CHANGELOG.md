@@ -11,59 +11,50 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
-- [VS-1910] Move between desktop pages with Back, Forward and keyboard shortcuts, retaining in-session history and cached page state.
-
-- [VS-1919] Prototype recovery evidence and dependency checks, preserving freshness and alternatives while rejecting cycles without claiming overall recoverability.
+- [VS-1910] Navigate desktop pages with Back, Forward and keyboard shortcuts.
+- [VS-1919] Prototype bounded recovery dependency checks; overall recoverability remains unqualified.
 
 ### Changed
 
-- [VS-1910] Explain session navigation and recovery limits in a development diary with actual desktop screenshots.
-
-- [VS-1980] Automate issue and branch tracking, auditing all remote IDs before allocation and preserving release ownership and existing preparation PRs.
-
-- [VS-1980] Preserve the planning-source checksum on Windows checkouts and make simulated updater tests portable across hosts.
-
-- [VS-1918] Propose the offline imaging engine and support boundaries, with automated evidence checks keeping unapproved or unmeasured recovery profiles unqualified.
-- [BUG-19012] Document the Linux font-initialization startup block and reproduction evidence, retaining visible-window verification and durable remediation as open work.
-- [VS-1919] Draft shared recovery identities, dependencies and evidence provenance, distinguishing measured results, simulations, confirmations and stale observations before implementation.
-- [VS-1980] Standardize release histories and ongoing notes on Keep a Changelog, preserving original detail and enforcing concise entries automatically.
-- [VS-1917] Draft image completeness, integrity, checkpoint and compatibility requirements for review, keeping disk implementation and supported-system claims gated on approval.
-- [VS-1980] Add reusable Rider validation with concise output and retained logs, and clarify changelog limits while preserving required release gates.
-- [VS-1980] Establish the active 1.9.0 working branch and sole release PR, with persistent contributor instructions keeping later-release implementation in its owning branches.
-- [VS-1980] Import the complete Recovery Horizon roadmap, preserve existing work IDs, and validate release ownership against its immutable BSC crosswalk.
-- [VS-1980] Prepare nine release contracts, version identities and unscheduled future metadata, while preserving the published stable version and historical milestones.
-- [VS-1980] Separate discovery into 1.9.1 and resource automation into 1.9.5, preserving the full earlier implementation in a published archive branch.
-- [VS-1980] Link the GitHub Project, reconcile issue fields and wiki, and consolidate preparation and corrections into one draft PR per release.
-- [VS-1980] Make project date audits work with installed GitHub CLI pagination and keep candidate publication dates mandatory during planned-release validation.
-- [VS-1910] Draft typed recovery routes and adaptive UI architecture, retaining explicit approval and complete disk capture, boot and restore qualification gates.
-- [VS-1980] Integrate the verified Dependabot test SDK patch and preserve coordinated rendering, CLI and CodeQL update commits for reviewed release maintenance.
-- [VS-1980] Correct the authorized ruleset update prohibition while retaining required review, strict platform checks, merge history protection and deletion restrictions throughout integration.
+- [VS-1910] Document navigation behavior and recovery limits with actual desktop screenshots.
+- [VS-1980] Automate issue tracking while preserving release ownership and existing work IDs.
+- [VS-1980] Preserve planning-source checksums and portable updater fixtures on Windows.
+- [VS-1918] Propose offline imaging boundaries; unapproved recovery profiles remain unqualified.
+- [BUG-19012] Document the Linux startup block; visible-window qualification remains open.
+- [VS-1919] Draft recovery identities and evidence provenance for joint architecture review.
+- [VS-1980] Keep release notes brief and consecutive entries adjacent.
+- [VS-1917] Draft image integrity and compatibility requirements; disk implementation remains gated.
+- [VS-1980] Add reusable Rider validation with concise output and retained logs.
+- [VS-1980] Define the active development branch and sole preparation PR.
+- [VS-1980] Import Recovery Horizon planning while preserving work IDs and release ownership.
+- [VS-1980] Prepare nine release contracts without inventing future publication dates.
+- [VS-1980] Assign CLI discovery to 1.9.1 and resource automation to 1.9.5.
+- [VS-1980] Align Project tracking and consolidate one preparation PR per release.
+- [VS-1980] Fix paginated Project date audits and require candidate publication dates.
+- [VS-1910] Draft typed routes and adaptive navigation; architecture approval remains open.
+- [VS-1980] Integrate the verified test SDK patch and retain coordinated dependency updates.
+- [VS-1980] Correct ruleset updates while preserving required reviews and merge protections.
 
 ### Removed
 
-- [VS-1980] Remove unused Avalonia Inter font packaging after confirming no registration or resource consumers, preserving existing bundled fonts and system fallback behavior.
+- [VS-1980] Remove unused Inter font packaging while preserving existing font fallbacks.
 
 ### Fixed
 
-- [VS-1910] Keep project names readable in narrow cards instead of crowding them out with snapshot statistics.
-
-- [VS-1910] Preserve unfinished History metadata drafts when refresh rebuilds the same selected snapshot.
-- [VS-1910] Save the newest visited page in order, preventing slower earlier writes from changing the next startup location.
-- [VS-1910] Restore the saved startup page before user navigation can be overwritten by a delayed callback.
-
-- [VS-1918] Enforce a consistent JSON nesting limit for recovery evidence across local and CI Python runtimes.
-
-- [VS-1919] Prevent future-dated verification and restore-drill results from making recovery confidence fully verified.
-
-- [VS-1918] Reject ambiguous JSON qualification reports and keep evidence reads bounded even when files grow during inspection.
-
-- [VS-1918] Reject recovery qualification evidence collected before valid engine approval, preventing retrospective approval from qualifying an earlier run.
-- [BUG-19001] Require explicit authorization before unattended project removal touches configuration or registration, preserving interactive confirmation and existing source and backup files.
-- [VS-1980] Preserve finite read-only legacy watcher previews, database selection, cancellation draining and failed-cycle reporting independently of future resource CLI command ownership.
-- [BUG-19009] Run required platform and analysis workflows for documentation changes because bundled CLI guides affect artifacts and protected PR check contexts.
-- [BUG-19010] Align all managed and native rendering packages together, correcting incomplete Dependabot updates before their compatibility qualification and eventual release integration.
-- [BUG-19011] Upgrade Spectre command parsing atomically with public async overrides, preserving existing cancellation signatures and flat CLI behavior across the API change.
-- [VS-1980] Accept exact FG Labs updater release URLs after the organization transfer and handle root-owned AppImage extraction outputs during application packaging.
+- [VS-1910] Keep project names readable in narrow cards beside snapshot statistics.
+- [VS-1910] Preserve unfinished History drafts when refreshing the same selected snapshot.
+- [VS-1910] Save visited pages in order so startup restores the newest location.
+- [VS-1910] Restore the saved page before accepting initial user navigation.
+- [VS-1918] Apply consistent evidence JSON nesting limits across Python runtimes.
+- [VS-1919] Reject future-dated checks when evaluating current recovery confidence.
+- [VS-1918] Reject ambiguous qualification JSON and bound growing evidence reads.
+- [VS-1918] Reject recovery evidence collected before valid engine approval.
+- [BUG-19001] Require explicit authorization before removing projects during unattended execution.
+- [VS-1980] Preserve legacy watcher previews, cancellation draining and explicit failures.
+- [BUG-19009] Run required platform and analysis checks for documentation changes.
+- [BUG-19010] Align managed and native rendering packages before compatibility qualification.
+- [BUG-19011] Update Spectre parsing atomically while preserving existing CLI behavior.
+- [VS-1980] Support transferred updater URLs and root-owned AppImage extraction outputs.
 
 Disk capture, independent boot and disk restore remain unimplemented/unqualified.
 See the [release contract](docs/RELEASE_1.9.0.md) and [work ledger](docs/release-evidence/1.9-work-2026-10-04.md).
