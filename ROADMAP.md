@@ -1263,6 +1263,56 @@ repository must not transfer before a compatible release is adopted.
     and future resource variants without moving features between releases.
   - Tracking: [issue #750](https://github.com/ATAC-Helicopter/VaultSync/issues/750).
 
+- [ ] `BUG-19013` `P1` Decode repository tracking command output as UTF-8.
+  - Scope: The complete GitHub ID audit must decode Unicode output on Windows without locale-dependent reader failures; decoding errors must never allocate IDs.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #766; related development/maintenance issue #673.
+
+- [ ] `BUG-19014` `P1` Preserve unfinished History drafts during snapshot refresh.
+  - Scope: Same-snapshot refresh and transient selection callbacks must retain unfinished label, note and tag edits.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #768; related development/maintenance issue #501.
+
+- [ ] `BUG-19015` `P1` Keep last-page saves ordered during rapid navigation.
+  - Scope: An older asynchronous page save must never overwrite the newest visited startup location.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #769; related development/maintenance issue #501.
+
+- [ ] `BUG-19016` `P1` Keep project names readable in narrow desktop cards.
+  - Scope: Narrow project cards must retain visible project names beside snapshot statistics.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #767; related development/maintenance issue #501.
+
+- [ ] `BUG-19017` `P1` Restore the saved page before accepting initial navigation.
+  - Scope: A delayed startup callback must never override the first deliberate user navigation.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #770; related development/maintenance issue #501.
+
+- [ ] `BUG-19018` `P1` Enforce consistent qualification JSON nesting limits.
+  - Scope: Qualification parsing must enforce the same 64-container limit across supported Python runtimes.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #771; related development/maintenance issue #575.
+
+- [ ] `BUG-19019` `P1` Reject future-dated checks in recovery confidence.
+  - Scope: Future verification and drill observations must not make recovery confidence FullyVerified.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #772; related development/maintenance issue #576.
+
+- [ ] `BUG-19020` `P0` Reject ambiguous and growing qualification evidence input.
+  - Scope: Duplicate keys, non-finite or invalid UTF-8 JSON and evidence files growing beyond the byte budget must reject.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #773; related development/maintenance issue #575.
+
+- [ ] `BUG-19021` `P0` Reject recovery evidence predating valid engine approval.
+  - Scope: Approval recorded after a recovery run must never retrospectively qualify that run.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #774; related development/maintenance issue #575.
+
+- [ ] `BUG-19022` `P1` Handle root-owned AppImage extraction during packaging.
+  - Scope: AppImage packaging must handle the retained root-owned extraction case without weakening archive or workspace containment.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #775; related development/maintenance issue #673.
+
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and

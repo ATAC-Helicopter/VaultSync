@@ -52,6 +52,7 @@ def run(
         cwd=str(cwd) if cwd else None,
         input=input_text,
         text=True,
+        encoding="utf-8",
         capture_output=True,
         env=env,
         check=False,
@@ -150,6 +151,11 @@ def extract_ids(text: str, prefix: str) -> set[int]:
 
 def collect_used_ids(root: Path, config: dict[str, Any], prefix: str) -> set[int]:
     used: set[int] = set()
+    # Keep locally allocated IDs reserved while GitHub issue listings catch up.
+    reserved = run(["git", "config", "--get-all", "vaultsync.reservedWorkId"], cwd=root, check=False)
+    if reserved.returncode not in (0, 1):
+        raise TrackingError("Cannot read local ID reservations; no ID was allocated.")
+    used.update(extract_ids(reserved.stdout, prefix))
     for relative in config.get("planning_files", []):
         path = root / relative
         if path.exists():
@@ -382,6 +388,7 @@ def cmd_issue(args: argparse.Namespace) -> int:
         extra=args.context,
     )
     labels = select_labels(root, type_config, priority, release)
+    run(["git", "config", "--add", "vaultsync.reservedWorkId", work_id], cwd=root)
     issue = create_issue(root, f"{work_id}: {args.title}", body, labels)
     add_to_project(root, config, issue["url"])
     branch = maybe_create_branch(
