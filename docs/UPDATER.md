@@ -2,6 +2,11 @@
 
 VaultSync uses GitHub Releases for update discovery and supports patch assets to avoid full-installer downloads on every update.
 
+The 1.9 staging change accepts exact release assets under the current
+repository owner and the planned FG Labs owner. This is preparation for a
+possible transfer, not permission to transfer today: a compatible release must
+ship and be adopted first. See [organization transfer](ORGANIZATION_TRANSFER.md).
+
 ## Channels
 - Stable: latest non-prerelease release.
 - Beta/Dev: prerelease-capable flow for `Dev` branch builds that use a prerelease suffix (when enabled in app settings).
@@ -128,3 +133,16 @@ payload-level contract describing the files inside one platform patch.
 - `docs/RELEASING.md`
 - `docs/wiki/Updates.md`
 - `CHANGELOG.md`
+
+## 1.9.0 planning baseline
+
+The active target is `1.9.0`, with exact `1.8.9` as the primary upgrade
+predecessor. This is a planning identity, not evidence of a qualified patch
+or migration. Native upgrades, format compatibility, and installer fallback
+must pass the 1.9.0 gates before release; extra patch bases remain disabled.
+
+## Planned 1.9.4 branch
+
+Predecessor candidate: 1.9.3; exact installed-upgrade
+qualification is pending. A branch scaffold does not authorize publishing updater
+artifacts or patch-base support. Current stable remains 1.8.9.
