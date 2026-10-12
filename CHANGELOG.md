@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Require BUG identifiers for active fixes and preserve historical ownership.
 - [VS-1980] Automate issue and branch tracking, auditing all remote IDs before allocation and preserving release ownership and existing preparation PRs.
 - [VS-1980] Keep release notes brief and consecutive entries adjacent.
 

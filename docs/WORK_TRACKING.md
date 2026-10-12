@@ -38,6 +38,19 @@ For example, 1.8.x work follows `VS-18xx` and `BUG-18xxx`; 1.9.x follows `VS-19x
 
 The allocator scans `ROADMAP.md`, `CHANGELOG.md`, and all pages of GitHub Issues, then selects the next unused ID in the inferred release family. Historical IDs are never renumbered.
 
+Command input/output uses UTF-8 explicitly, including the complete GitHub audit
+on Windows. Before issue creation, the allocated identifier is reserved in local
+Git config (`vaultsync.reservedWorkId`). The audit includes these reservations
+while remote issue listings catch up. Failed creation leaves the reservation
+intact; never recycle the identifier. These local reservations do not coordinate
+independent workspaces or concurrent remote writers.
+
+Defects use one owning `BUG-xxxxx` identifier; features and maintenance keep their
+`VS-xxxx` identifiers. Active changelog `Fixed` entries require BUG ownership.
+Link related development issues by reference rather than dual BUG/VS titles.
+Preserve published historical identifiers. Retained functionality or compatibility
+maintenance belongs in its appropriate category, not automatically in `Fixed`.
+
 ## Adopt an existing issue
 
 Public Issue Forms stay unchanged. When an existing report becomes active engineering work:
