@@ -19,6 +19,9 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Retain legacy watcher safety during release scope realignment.
+- [VS-1980] Extend updater compatibility to official transferred repository URLs.
+- [VS-1980] Require BUG identifiers for active fixes and preserve historical ownership.
 - [VS-1910] Document navigation behavior and recovery limits with actual desktop screenshots.
 - [VS-1980] Automate issue tracking while preserving release ownership and existing work IDs.
 - [VS-1980] Preserve planning-source checksums and portable updater fixtures on Windows.
@@ -44,20 +47,20 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
-- [VS-1910] Keep project names readable in narrow cards beside snapshot statistics.
-- [VS-1910] Preserve unfinished History drafts when refreshing the same selected snapshot.
-- [VS-1910] Save visited pages in order so startup restores the newest location.
-- [VS-1910] Restore the saved page before accepting initial user navigation.
-- [VS-1918] Apply consistent evidence JSON nesting limits across Python runtimes.
-- [VS-1919] Reject future-dated checks when evaluating current recovery confidence.
-- [VS-1918] Reject ambiguous qualification JSON and bound growing evidence reads.
-- [VS-1918] Reject recovery evidence collected before valid engine approval.
+- [BUG-19013] Preserve Unicode decoding and local ID reservations in repository tracking.
+- [BUG-19016] Keep project names readable in narrow cards beside snapshot statistics.
+- [BUG-19014] Preserve unfinished History drafts when refreshing the same selected snapshot.
+- [BUG-19015] Save visited pages in order so startup restores the newest location.
+- [BUG-19017] Restore the saved page before accepting initial user navigation.
+- [BUG-19018] Apply consistent evidence JSON nesting limits across Python runtimes.
+- [BUG-19019] Reject future-dated checks when evaluating current recovery confidence.
+- [BUG-19020] Reject ambiguous qualification JSON and bound growing evidence reads.
+- [BUG-19021] Reject recovery evidence collected before valid engine approval.
 - [BUG-19001] Require explicit authorization before removing projects during unattended execution.
-- [VS-1980] Preserve legacy watcher previews, cancellation draining and explicit failures.
 - [BUG-19009] Run required platform and analysis checks for documentation changes.
 - [BUG-19010] Align managed and native rendering packages before compatibility qualification.
 - [BUG-19011] Update Spectre parsing atomically while preserving existing CLI behavior.
-- [VS-1980] Support transferred updater URLs and root-owned AppImage extraction outputs.
+- [BUG-19022] Handle root-owned AppImage extraction during packaging.
 
 Disk capture, independent boot and disk restore remain unimplemented/unqualified.
 See the [release contract](docs/RELEASE_1.9.0.md) and [work ledger](docs/release-evidence/1.9-work-2026-10-04.md).

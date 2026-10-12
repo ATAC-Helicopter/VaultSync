@@ -24,6 +24,9 @@ docs/RELEASE_1.9.0.md before implementation.
   Never pad an entry to reach a word count. Move explanations into linked docs.
   Keep consecutive entries adjacent, with no blank or whitespace-only lines
   between them. Retain blank lines around release and category headings.
+  Active `Fixed` entries must use the defect's sole `BUG-xxxxx` owning ID.
+  Keep development/maintenance under `VS-xxxx` in the appropriate category;
+  never use dual BUG/VS titles. Preserve published historical identifiers.
   See CONTRIBUTING.md for counting and detail-placement rules.
   Follow Keep a Changelog 1.1.0: `Added`, `Changed`, `Deprecated`, `Removed`,
   `Fixed`, `Security`, ISO release dates, and a linked `Unreleased` section.

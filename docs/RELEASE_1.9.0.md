@@ -168,3 +168,12 @@ flags multiple current observations as ambiguous, retaining basis and historical
 records. These prototypes have no encoded-image reader, disk I/O, producer trust
 or automatic conflict precedence. Joint approval and measured disk/boot/restore
 gates remain open. See [batch verification](release-evidence/1.9-contract-batch-2026-10-12.md).
+
+## Defect ownership and tracking reliability — 2026-10-12
+
+Active corrected defects now have independent BUG ownership; development IDs
+and published historical entries remain unchanged. Retained watcher safety and
+updater compatibility maintenance are categorized as Changed. Active Fixed
+entries require one BUG identifier. Repository tracking explicitly decodes UTF-8
+and reserves allocated IDs locally while remote listings catch up. The ten new
+defect records remain open for release acceptance. See [ownership and verification](release-evidence/1.9-defect-ownership-2026-10-12.md).
