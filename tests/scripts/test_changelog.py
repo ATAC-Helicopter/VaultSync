@@ -82,6 +82,26 @@ class ChangelogTests(unittest.TestCase):
         self.assertTrue(changelog.validate(text.replace(entry, entry + " extra"), "1.9.0"))
         self.assertTrue(changelog.validate(text.replace(entry, entry + "\n  hidden detail"), "1.9.0"))
 
+    def test_consecutive_entries_are_compact_but_headings_keep_blank_lines(self):
+        first = "- [VS-1917] Added a review draft; format approval remains pending."
+        second = "- [VS-1910] Preserve page history during navigation."
+        compact = VALID.replace(first, first + "\n" + second)
+        self.assertEqual([], changelog.validate(compact, "1.9.0"))
+        for gap in ("\n", "\n\n", " \t\n"):
+            with self.subTest(gap=gap):
+                spaced = VALID.replace(first, first + "\n" + gap + second)
+                self.assertIn("Unreleased: no blank lines between consecutive entries.",
+                              changelog.validate(spaced, "1.9.0"))
+
+    def test_historical_entries_also_reject_blank_lines(self):
+        first = "- [VS-1895] Refreshed coordinated dependencies."
+        second = "- [VS-1894] Publish qualified packages."
+        compact = VALID.replace(first, first + "\n" + second)
+        self.assertEqual([], changelog.validate(compact, "1.9.0"))
+        spaced = VALID.replace(first, first + "\n\n" + second)
+        self.assertIn("1.8.9: no blank lines between consecutive entries.",
+                      changelog.validate(spaced, "1.9.0"))
+
 
 if __name__ == "__main__":
     unittest.main()
