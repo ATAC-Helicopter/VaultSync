@@ -14,6 +14,20 @@ spec.loader.exec_module(work_tracking)
 
 
 class WorkTrackingTests(unittest.TestCase):
+    def test_command_output_is_decoded_as_utf8(self):
+        result = work_tracking.run([sys.executable, "-c",
+            "import sys; sys.stdout.buffer.write(bytes([0xE2, 0x80, 0x9D]))"])
+        self.assertEqual("\u201d", result.stdout)
+
+    def test_local_reservations_cover_delayed_remote_lists(self):
+        def fake_run(args, **kwargs):
+            if args[:3] == ["git", "config", "--get-all"]:
+                return work_tracking.CommandResult("BUG-19016", "", 0)
+            return work_tracking.CommandResult('[[]]', "", 0)
+        with tempfile.TemporaryDirectory() as directory, patch.object(work_tracking, "github_repo", return_value="owner/repo"), patch.object(work_tracking, "run", side_effect=fake_run):
+            used = work_tracking.collect_used_ids(pathlib.Path(directory), {"planning_files": []}, "BUG")
+            self.assertEqual("BUG-19017", work_tracking.allocate_id(used, prefix="BUG", major=1, minor=9, family_digits=3))
+
     def test_family_uses_active_metadata_and_explicit_override(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
