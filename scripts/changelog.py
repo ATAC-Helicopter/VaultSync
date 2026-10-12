@@ -101,6 +101,8 @@ def validate(text: str, expected_version: str | None = None) -> list[str]:
                 entries += 1
                 if category is None:
                     errors.append(f"{version}: entry has no change category.")
+                if version == "Unreleased" and category == "Fixed" and not re.match(r"^- \[BUG-\d{5,}\] ", line):
+                    errors.append("Unreleased: Fixed entries require one owning BUG-xxxxx ID.")
                 summary = re.sub(r"^\[[^]]+\]\s*", "", line[2:])
                 if limit_words and len(summary.split()) > 22:
                     errors.append(f"{version}: entry exceeds 22 words: {line}")
