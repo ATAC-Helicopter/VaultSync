@@ -195,3 +195,23 @@ Capture → Validate → Boot → Restore → Validate on its supported matrix.
 
 Issue #574 stays open and In progress. The architecture gate remains unapproved;
 no destructive device implementation or stable support claim follows from this draft.
+
+## Logical coverage prototype — 2026-10-12
+
+`DiskImageCoverageService` checks supplied in-memory raw/explicit-zero map records.
+It supports only the proposed 512/4096-byte logical-sector profiles, positive
+sector-aligned capacity and ordered contiguous extents. Part identities are unique;
+raw ranges must fit the declared stored length. Zero extents have no part reference
+or storage offset. Subtraction-based bounds prevent unsigned arithmetic overflow.
+Provisional review limits are 4,096 parts and 65,536 extents.
+
+Gaps, overlap, impossible/misaligned ranges and invalid zero/part records reject.
+Unknown geometry/extent rules are Unsupported. Missing tail coverage or completion
+is Incomplete. Exact finalized coverage is only CompleteUnverified: the service
+never reads payloads, validates digests, resolves paths, checks manifest/completion
+roots, acquires keys, implements durability or authorizes restore.
+
+These are synthetic logical fixtures, not permanent encoded-image fixtures, a
+wire format or a reader/writer. Serialization, image identity/manifest binding,
+transforms, independent byte inspection and joint architecture approval remain
+open. See [the multi-contract validation batch](release-evidence/1.9-contract-batch-2026-10-12.md).
