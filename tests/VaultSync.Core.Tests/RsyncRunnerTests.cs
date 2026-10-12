@@ -13,6 +13,40 @@ namespace VaultSync.Core.Tests;
 public sealed class RsyncRunnerTests
 {
     [Fact]
+    public async Task SyncAsync_UsesInjectedLoggerWithoutWritingFilterDiagnosticsToStdout()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var temp = new TempDirectory();
+        string source = Path.Combine(temp.Path, "source");
+        string destination = Path.Combine(temp.Path, "destination");
+        string toolPath = Path.Combine(temp.Path, "rsync-quiet-test-tool");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(destination);
+        File.WriteAllText(toolPath, "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then echo 'rsync version 3.2.7 protocol version 31'; fi\nexit 0\n");
+        File.SetUnixFileMode(toolPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        var logger = new RecordingLogger();
+        var runner = new RsyncRunner(rsyncPath: toolPath, logger: logger);
+        var project = new Project { Id = 44, Name = "Quiet rsync", RootPath = source, Preset = "custom" };
+        TextWriter previous = Console.Out;
+        using var output = new StringWriter();
+        try
+        {
+            Console.SetOut(output);
+            Assert.Equal(0, await runner.SyncAsync(project, destination, dryRun: true, CancellationToken.None));
+        }
+        finally
+        {
+            Console.SetOut(previous);
+        }
+
+        Assert.Empty(output.ToString());
+        Assert.Contains(logger.Messages, message => message.Contains("[FilterService] Total rules", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task SyncAsync_CancellationStopsRunningTool()
     {
         if (OperatingSystem.IsWindows())
@@ -107,5 +141,15 @@ public sealed class RsyncRunnerTests
 
         Assert.Equal(0, exitCode);
         Assert.Contains(updates, update => update.Percent == 100 && update.File == "folder/file.txt");
+    }
+
+    private sealed class RecordingLogger : IVaultLogger
+    {
+        public List<string> Messages { get; } = [];
+
+        public void Verbose(string message) => Messages.Add(message);
+        public void Info(string message) => Messages.Add(message);
+        public void Warning(string message) => Messages.Add(message);
+        public void Error(string message) => Messages.Add(message);
     }
 }

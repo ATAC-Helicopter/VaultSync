@@ -381,6 +381,8 @@ vaultsync watch Game \
 
 ---
 
+See [1.9 family ownership](docs/RELEASE_FAMILY_1.9.md) for future CLI development.
+
 ## Updates
 
 VaultSync checks GitHub Releases according to the selected update channel and interval.

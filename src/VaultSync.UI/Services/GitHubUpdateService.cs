@@ -537,12 +537,11 @@ namespace VaultSync.UI.Services
                 return false;
 
             manifestAsset = matches[0];
-            string expectedUrl = $"https://github.com/ATAC-Helicopter/VaultSync/releases/download/{releaseTag}/{ReleaseManifestVerifier.ManifestName}";
             expectedHash = TryParseSha256Digest(manifestAsset.Digest);
             return manifestAsset.Size is > 0 and <= MaxReleaseManifestBytes &&
                    TryGetTrustedReleaseAssetUri(manifestAsset.BrowserDownloadUrl, out manifestUri) &&
                    manifestUri is not null &&
-                   string.Equals(manifestUri.AbsoluteUri, expectedUrl, StringComparison.Ordinal) &&
+                   ReleaseManifestVerifier.IsOfficialAssetUrl(manifestUri.AbsoluteUri, releaseTag, ReleaseManifestVerifier.ManifestName) &&
                    expectedHash is not null;
         }
 
@@ -679,9 +678,15 @@ namespace VaultSync.UI.Services
                 !string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(parsed.Host, "github.com", StringComparison.OrdinalIgnoreCase) ||
                 !parsed.IsDefaultPort ||
-                !parsed.AbsolutePath.StartsWith(
+                !string.IsNullOrEmpty(parsed.UserInfo) ||
+                !string.IsNullOrEmpty(parsed.Query) ||
+                !string.IsNullOrEmpty(parsed.Fragment) ||
+                !(parsed.AbsolutePath.StartsWith(
                     "/ATAC-Helicopter/VaultSync/releases/download/",
-                    StringComparison.OrdinalIgnoreCase))
+                    StringComparison.OrdinalIgnoreCase) ||
+                  parsed.AbsolutePath.StartsWith(
+                    "/FGLabs-dev/VaultSync/releases/download/",
+                    StringComparison.OrdinalIgnoreCase)))
             {
                 return false;
             }

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+case "${1:-}" in
+  issue|adopt|status|pr|notes)
+    exec python3 "$ROOT/scripts/work_tracking.py" "$@"
+    ;;
+  "")
+    echo "Usage: ./dev {issue|adopt|status|pr|notes} ..." >&2
+    exit 2
+    ;;
+  *)
+    echo "Unknown dev command: $1" >&2
+    echo "Usage: ./dev {issue|adopt|status|pr|notes} ..." >&2
+    exit 2
+    ;;
+esac
