@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-10-11T09:56:13Z`
+Captured at: `2026-10-12T10:42:03Z`
 
 - Releases: **53**
 - Assets: **499**
-- Total asset downloads: **3315**
-- Change since previous snapshot: **+9**
+- Total asset downloads: **3348**
+- Change since previous snapshot: **+33**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **227** downloads (+9)
+- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **260** downloads (+33)
 - Latest prerelease: **VaultSync 1.8.5 Beta 1** with **19** downloads (0)
 
 ## Top assets
@@ -33,30 +33,30 @@ Captured at: `2026-10-11T09:56:13Z`
 
 - Tag: `v1.8.9`
 - Published: `2026-09-16T10:06:22Z`
-- Total downloads: **227**
-- Delta: **+9**
+- Total downloads: **260**
+- Delta: **+33**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 99 | 0 | 57975 |
-| VaultSync-Setup-1.8.9.exe | 58 | +2 | 64315420 |
-| VaultSync-1.8.9-macos-intel.dmg | 13 | +1 | 58169854 |
-| VaultSync-1.8.9-macos-apple-silicon.dmg | 11 | 0 | 55235061 |
+| VaultSync-Setup-1.8.9.exe | 59 | +1 | 64315420 |
+| VaultSync-1.8.9-macos-intel.dmg | 19 | +6 | 58169854 |
+| VaultSync-1.8.9-macos-apple-silicon.dmg | 15 | +4 | 55235061 |
+| vaultsync-patch-macos-apple-silicon.zip | 9 | +5 | 48686145 |
+| vaultsync-patch-macos-intel.zip | 8 | +5 | 51703031 |
 | vaultsync-release-manifest.json | 8 | 0 | 7399 |
-| VaultSync-1.8.9-linux-x64.AppImage | 6 | +1 | 52630720 |
-| vaultsync-patch-windows.zip | 5 | +1 | 92462440 |
+| VaultSync-1.8.9-linux-x64.AppImage | 7 | +1 | 52630720 |
+| vaultsync-patch-linux-x64.zip | 7 | +3 | 52566967 |
+| vaultsync-patch-windows.zip | 6 | +1 | 92462440 |
+| VaultSync-1.8.9-linux-arm64.tar.gz | 4 | +1 | 50026263 |
 | vaultsync-patch-linux-x64.json | 4 | 0 | 55016 |
-| vaultsync-patch-linux-x64.zip | 4 | 0 | 52566967 |
-| vaultsync-patch-macos-apple-silicon.zip | 4 | +1 | 48686145 |
-| VaultSync-1.8.9-linux-arm64.tar.gz | 3 | 0 | 50026263 |
+| VaultSync-1.8.9-linux-arm64.deb | 3 | +1 | 39075410 |
+| VaultSync-1.8.9-linux-x64.deb | 3 | +2 | 41556214 |
 | vaultsync-patch-macos-apple-silicon.json | 3 | 0 | 61158 |
-| vaultsync-patch-macos-intel.zip | 3 | +2 | 51703031 |
-| VaultSync-1.8.9-linux-arm64.deb | 2 | +1 | 39075410 |
-| VaultSync-1.8.9-linux-x64.deb | 1 | 0 | 41556214 |
-| VaultSync-1.8.9-linux-x64.tar.gz | 1 | 0 | 52350407 |
+| VaultSync-1.8.9-linux-x64.tar.gz | 2 | +1 | 52350407 |
+| vaultsync-patch-linux-arm64.zip | 2 | +2 | 50238954 |
 | vaultsync-patch-linux-arm64.json | 1 | 0 | 55021 |
 | vaultsync-patch-macos-intel.json | 1 | 0 | 61155 |
-| vaultsync-patch-linux-arm64.zip | 0 | 0 | 50238954 |
 
 ### VaultSync 1.8.8 — Stability
 
