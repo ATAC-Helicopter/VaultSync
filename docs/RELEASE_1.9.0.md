@@ -125,3 +125,11 @@ pass; Reddit copy is prepared for the maintainer to submit. The release remains
 in draft PR #736, with Sonar, full desktop parity, architecture and measured
 recovery gates open. Implementation test results refer to `42e6b064`, not to this
 later documentation-only update.
+
+## Windows contributor validation — 2026-10-12
+
+VS-1980/#673 preserves the exact imported planning-source digest with a scoped
+LF checkout rule. Updater orchestration fixtures can mock Unix process cleanup
+on Windows. The symlink escape check is separate from ordinary artifact refusal
+checks and skips only when Windows denies link creation. This does not qualify
+an installed upgrade or authorize changes to the imported planning document.

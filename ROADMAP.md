@@ -1765,4 +1765,6 @@ VS-1918/#575 progress (2026-10-09): qualification rejects duplicate/conflicting 
 
 VS-1919/#576 progress (2026-10-09): a read-only in-memory observation classifier binds subject, generation and scope, retaining execution result separately from freshness and measurement basis. Existing recovery confidence now treats future verification/drill timestamps as stale. Stable schemas, dependency evaluation, producer trust and measured recovery qualification remain open; see the [development evidence](docs/release-evidence/1.9-prototypes-2026-10-09.md).
 
+VS-1980/#673 validation portability (2026-10-12): preserve LF bytes for the hash-bound imported planning source and make mocked Unix process cleanup available in Windows updater fixtures. Artifact path/hash refusals remain tested; the separate symlink-escape case reports a skip only when Windows denies symlink creation. These are contributor checks, not installed-upgrade or disk-recovery qualification.
+
 BUG-19012/#751 progress (2026-10-09): read-only REA inspection binds the installed stable SkiaSharp artifact and its font-manager P/Invoke declaration; retained evidence does not establish native resolution, the hang cause or 1.9.0 runtime qualification.

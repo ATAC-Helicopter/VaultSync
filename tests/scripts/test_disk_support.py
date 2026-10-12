@@ -210,7 +210,16 @@ class DiskSupportTests(unittest.TestCase):
         profile['evidence'][4] = original
         (self.root / original['path']).write_text('{}')
         self.assertTrue(self.check())
-        (self.root / 'escape.json').symlink_to(ROOT / 'LICENSE')
+
+    def test_symlink_escaping_artifact_is_rejected(self):
+        profile = self.measured_fixture()
+        original = copy.deepcopy(profile['evidence'][4])
+        try:
+            (self.root / 'escape.json').symlink_to(ROOT / 'LICENSE')
+        except OSError as error:
+            if getattr(error, 'winerror', None) == 1314:
+                self.skipTest('Windows symlink creation requires Developer Mode or elevated privileges.')
+            raise
         profile['evidence'][4] = {**original, 'path': 'escape.json'}
         self.assertTrue(self.check())
 
