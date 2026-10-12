@@ -26,3 +26,7 @@ Current preparation: `work/1.9.2-changelog-protocol` / #752. Protected release i
 ## Repository tracking — 2026-10-07
 
 VS-1980/#673 distributes the shared helper from #759/#758. Use `./dev adopt` for existing owning issues and `./dev status` before pushes; reuse this release's preparation PR. Allocating IDs requires a complete remote audit. This tooling does not qualify product or release gates.
+
+## Shared compact changelog standard — 2026-10-12
+
+VS-1980/#673 distributes short descriptions (aim 8–14 words; ceiling 22) and adjacent entries without blank separators. AGENTS.md, CONTRIBUTING.md and the automated validator agree; headings retain spacing. No sibling unreleased features or release metadata are imported.
