@@ -13,15 +13,19 @@ This document defines the current release packaging flow.
 - Major releases begin after their planned minor train is complete and use one
   or more explicit betas when the combined feature set is stable enough for
   broader qualification.
-- `1.8.9` targets Stable on 2026-09-09 and has a maximum date of 2026-09-16.
+- Recovery Horizon 1.9.0 follows its explicit release contract and gates; later
+  family releases remain unscheduled until their predecessor is qualified.
 
 ## Prerequisites
 - .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The current stable release is `1.8.8`.
-- The active development target is `1.8.9` on `release/1.8.9`, integrating
-  through `Dev` and promoted to `Stable` only after its release gates pass.
+- The current stable release is `1.8.9`.
+- Active development is `1.9.0` on `work/1.9-roadmap-realignment`, sole draft
+  PR #736 into `Dev`. Read AGENTS.md, release/1.9-family.json and the owning
+  release contract before changing an existing preparation PR.
+- `release/1.9.0` is a protected release identity, not the assembled head.
+  Promotion to `Stable` still requires the actual release gates and reviews.
 - The owner-approved 1.8.9 maintainer exception is recorded on
   [PR #634](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168).
   It allowed missing review approval and documented interactive/Store-runtime
@@ -30,6 +34,21 @@ This document defines the current release packaging flow.
   draft, or authorize a Store submission. Follow-up gate #633 remains open.
 - Do not create a beta or prerelease implicitly. A prerelease requires an
   explicit release decision, a version suffix, and the beta workflow inputs.
+
+## Changelog protocol
+
+Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) and
+CONTRIBUTING.md. Keep one linked `Unreleased` section with the explicit active
+target, standard ordered categories and at most 22 words per entry excluding
+its work ID. Historical dates use `YYYY-MM-DD`; preserve IDs and shipped scope.
+Run `python3 scripts/changelog.py check` before pushing.
+
+At publication, freeze only the qualified target notes under
+`## [<version>] - YYYY-MM-DD`, create a fresh `Unreleased` section for the next
+authorized target, update comparison links and synchronize release metadata.
+Extract reviewable notes with `python3 scripts/changelog.py notes --version <version>`.
+Backfills update documentation only; never rewrite release tags, assets or
+publication dates. Keep original detail in the linked evidence archive.
 
 ## 1) Windows Installer
 1. Publish:
