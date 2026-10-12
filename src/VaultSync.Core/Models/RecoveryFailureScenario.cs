@@ -31,3 +31,14 @@ public sealed record RecoveryFailureScenarioAssessment(
     // All scenario conclusions are simulations, even when baseline observations were measured.
     public RecoveryEvidenceBasis Basis => RecoveryEvidenceBasis.Simulated;
 }
+
+public sealed record RecoveryMultiFailureScenarioAssessment(
+    RecoveryFailureScenarioOutcome Outcome,
+    string Reason,
+    IReadOnlyList<RecoveryFailureDomain> FailedDomains,
+    RecoveryDependencyGraphAssessment Baseline,
+    IReadOnlyList<Guid> RemovedSubjects,
+    IReadOnlyList<Guid> UnknownSubjects)
+{
+    public RecoveryEvidenceBasis Basis => RecoveryEvidenceBasis.Simulated;
+}

@@ -9,6 +9,7 @@ namespace VaultSync.Core.Services;
 public static class RecoveryFailureScenarioService
 {
     public const int MaximumBindings = 1024;
+    public const int MaximumFailedDomains = 32;
 
     public static RecoveryFailureScenarioAssessment Assess(
         IReadOnlyList<RecoveryDependencyNode> nodes,
@@ -18,21 +19,43 @@ public static class RecoveryFailureScenarioService
         DateTimeOffset nowUtc,
         TimeSpan maximumAge)
     {
-        ArgumentNullException.ThrowIfNull(bindings);
         ArgumentNullException.ThrowIfNull(failedDomain);
+        RecoveryMultiFailureScenarioAssessment result = AssessMultiple(nodes, rootSubjectId, bindings,
+            [failedDomain], nowUtc, maximumAge);
+        return new(result.Outcome, result.Reason, failedDomain, result.Baseline,
+            result.RemovedSubjects, result.UnknownSubjects);
+    }
+
+    public static RecoveryMultiFailureScenarioAssessment AssessMultiple(
+        IReadOnlyList<RecoveryDependencyNode> nodes,
+        Guid rootSubjectId,
+        IReadOnlyList<RecoveryFailureDomainBinding> bindings,
+        IReadOnlyList<RecoveryFailureDomain> failedDomains,
+        DateTimeOffset nowUtc,
+        TimeSpan maximumAge)
+    {
+        ArgumentNullException.ThrowIfNull(bindings);
+        ArgumentNullException.ThrowIfNull(failedDomains);
         RecoveryDependencyGraphAssessment baseline = RecoveryDependencyService.Assess(nodes, rootSubjectId, nowUtc, maximumAge);
-        RecoveryFailureScenarioAssessment Invalid(string reason) => new(
-            RecoveryFailureScenarioOutcome.InvalidInput, reason, failedDomain, baseline, [], []);
+        if (failedDomains.Count > MaximumFailedDomains)
+            return new(RecoveryFailureScenarioOutcome.InvalidInput, "scenario.domain-limit", [], baseline, [], []);
+        IReadOnlyList<RecoveryFailureDomain> domainSnapshot = Array.AsReadOnly(failedDomains.ToArray());
+        RecoveryMultiFailureScenarioAssessment Invalid(string reason) => new(
+            RecoveryFailureScenarioOutcome.InvalidInput, reason, domainSnapshot, baseline, [], []);
         if (!baseline.IsValid)
             return Invalid(baseline.Reason);
-        if (!Enum.IsDefined(failedDomain.Kind) || failedDomain.DomainId == Guid.Empty)
+        if (domainSnapshot.Count == 0 || domainSnapshot.Any(domain => domain is null ||
+            !Enum.IsDefined(domain.Kind) || domain.DomainId == Guid.Empty) ||
+            domainSnapshot.Distinct().Count() != domainSnapshot.Count)
             return Invalid("scenario.invalid-domain");
         if (bindings.Count > MaximumBindings)
             return Invalid("scenario.binding-limit");
 
         var subjects = nodes.ToDictionary(node => node.SubjectId);
         var distinct = new HashSet<RecoveryFailureDomainBinding>();
-        var domainSubjects = new HashSet<Guid>();
+        var selectedDomains = domainSnapshot.ToHashSet();
+        var selectedKinds = domainSnapshot.Select(domain => domain.Kind).ToHashSet();
+        var domainSubjects = new HashSet<(Guid Subject, RecoveryFailureDomainKind Kind)>();
         var removed = new HashSet<Guid>();
         var unknown = new HashSet<Guid>();
         foreach (RecoveryFailureDomainBinding binding in bindings)
@@ -43,12 +66,12 @@ public static class RecoveryFailureScenarioService
                 return Invalid("scenario.invalid-binding");
             if (!string.Equals(binding.Generation, subject.Generation, StringComparison.Ordinal))
                 return Invalid("scenario.binding-generation-changed");
-            if (binding.Kind != failedDomain.Kind)
+            if (!selectedKinds.Contains(binding.Kind))
                 continue;
-            domainSubjects.Add(binding.SubjectId);
+            domainSubjects.Add((binding.SubjectId, binding.Kind));
             if (binding.DomainId is null)
                 unknown.Add(binding.SubjectId);
-            else if (binding.DomainId == failedDomain.DomainId)
+            else if (selectedDomains.Contains(new(binding.Kind, binding.DomainId.Value)))
                 removed.Add(binding.SubjectId);
         }
 
@@ -56,12 +79,12 @@ public static class RecoveryFailureScenarioService
         // bindings and the whole dependency graph have already been validated.
         var observations = baseline.Nodes.ToDictionary(node => node.SubjectId);
         removed.IntersectWith(observations.Keys);
-        unknown.UnionWith(observations.Keys.Where(id => !domainSubjects.Contains(id)));
+        unknown.UnionWith(observations.Keys.Where(id => selectedKinds.Any(kind => !domainSubjects.Contains((id, kind)))));
         unknown.IntersectWith(observations.Keys);
         unknown.ExceptWith(removed);
 
-        RecoveryFailureScenarioAssessment Result(RecoveryFailureScenarioOutcome outcome, string reason) => new(
-            outcome, reason, failedDomain, baseline,
+        RecoveryMultiFailureScenarioAssessment Result(RecoveryFailureScenarioOutcome outcome, string reason) => new(
+            outcome, reason, domainSnapshot, baseline,
             Array.AsReadOnly(removed.Order().ToArray()), Array.AsReadOnly(unknown.Order().ToArray()));
 
         if (!baseline.HasCurrentMeasuredCoverage)

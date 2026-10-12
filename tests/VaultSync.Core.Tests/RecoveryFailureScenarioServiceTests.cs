@@ -213,6 +213,82 @@ public sealed class RecoveryFailureScenarioServiceTests
         RecoveryFailureDomainBinding[] bindings, RecoveryFailureDomainKind kind = Device) =>
         RecoveryFailureScenarioService.Assess(nodes, root.SubjectId, bindings, new(kind, Failed), Now, TimeSpan.FromDays(7));
 
+    [Fact]
+    public void TwoFailuresCanRemoveAlternativesWhichSurviveEitherFailureAlone()
+    {
+        Guid safe = Guid.NewGuid();
+        RecoveryDependencyNode first = Node();
+        RecoveryDependencyNode second = Node();
+        RecoveryDependencyNode root = Node(first.SubjectId, second.SubjectId);
+        RecoveryDependencyNode[] nodes = [root, first, second];
+        RecoveryFailureDomainBinding[] bindings = [Bind(root, safe), Bind(first, Failed), Bind(second, Other)];
+        Assert.Equal(RecoveryFailureScenarioOutcome.CoverageRetained, Assess(nodes, root, bindings).Outcome);
+        Assert.Equal(RecoveryFailureScenarioOutcome.CoverageRetained, RecoveryFailureScenarioService.Assess(
+            nodes, root.SubjectId, bindings, new(Device, Other), Now, TimeSpan.FromDays(7)).Outcome);
+        RecoveryMultiFailureScenarioAssessment together = RecoveryFailureScenarioService.AssessMultiple(
+            nodes, root.SubjectId, bindings, [new(Device, Failed), new(Device, Other)], Now, TimeSpan.FromDays(7));
+        Assert.Equal(RecoveryFailureScenarioOutcome.CoverageLost, together.Outcome);
+        Assert.Equal(2, together.RemovedSubjects.Count);
+        Assert.Equal(RecoveryEvidenceBasis.Simulated, together.Basis);
+    }
+
+    [Fact]
+    public void DiskAndAccountFailuresAreCombinedWithoutConflatingDimensions()
+    {
+        Guid safe = Guid.NewGuid();
+        RecoveryDependencyNode first = Node();
+        RecoveryDependencyNode second = Node();
+        RecoveryDependencyNode root = Node(first.SubjectId, second.SubjectId);
+        var account = RecoveryFailureDomainKind.ProviderAccount;
+        RecoveryMultiFailureScenarioAssessment result = RecoveryFailureScenarioService.AssessMultiple(
+            [root, first, second], root.SubjectId,
+            [Bind(root, safe), Bind(root, safe, account), Bind(first, Failed), Bind(first, safe, account),
+             Bind(second, safe), Bind(second, Other, account)],
+            [new(Device, Failed), new(account, Other)], Now, TimeSpan.FromDays(7));
+        Assert.Equal(RecoveryFailureScenarioOutcome.CoverageLost, result.Outcome);
+        Assert.Equal(2, result.RemovedSubjects.Count);
+        Assert.Empty(result.UnknownSubjects);
+    }
+
+    [Fact]
+    public void MembershipMustBeKnownForEverySelectedDimension()
+    {
+        RecoveryDependencyNode payload = Node();
+        RecoveryDependencyNode root = Node(payload.SubjectId);
+        var account = RecoveryFailureDomainKind.ProviderAccount;
+        RecoveryMultiFailureScenarioAssessment result = RecoveryFailureScenarioService.AssessMultiple(
+            [root, payload], root.SubjectId,
+            [Bind(root, Other), Bind(root, Other, account), Bind(payload, Other)],
+            [new(Device, Failed), new(account, Failed)], Now, TimeSpan.FromDays(7));
+        Assert.Equal(RecoveryFailureScenarioOutcome.UnknownCorrelation, result.Outcome);
+        Assert.Equal(payload.SubjectId, Assert.Single(result.UnknownSubjects));
+    }
+
+    [Fact]
+    public void DomainCountBudgetAndDuplicateRefusalsAreExplicit()
+    {
+        RecoveryDependencyNode root = Node();
+        RecoveryFailureDomain[] domains = Enumerable.Range(0, 32).Select(_ => new RecoveryFailureDomain(Device, Guid.NewGuid())).ToArray();
+        RecoveryMultiFailureScenarioAssessment Run(RecoveryFailureDomain[] values) =>
+            RecoveryFailureScenarioService.AssessMultiple([root], root.SubjectId, [Bind(root, Other)], values, Now, TimeSpan.FromDays(7));
+        Assert.Equal(RecoveryFailureScenarioOutcome.CoverageRetained, Run(domains).Outcome);
+        Assert.Equal("scenario.domain-limit", Run(domains.Append(new(Device, Failed)).ToArray()).Reason);
+        Assert.Equal("scenario.invalid-domain", Run([domains[0], domains[0]]).Reason);
+        Assert.Equal("scenario.invalid-domain", Run([]).Reason);
+    }
+
+    [Fact]
+    public void MultiDomainResultOwnsItsFailureList()
+    {
+        RecoveryDependencyNode root = Node();
+        RecoveryFailureDomain[] domains = [new(Device, Failed)];
+        RecoveryMultiFailureScenarioAssessment result = RecoveryFailureScenarioService.AssessMultiple(
+            [root], root.SubjectId, [Bind(root, Failed)], domains, Now, TimeSpan.FromDays(7));
+        domains[0] = new(Device, Other);
+        Assert.Equal(Failed, result.FailedDomains[0].DomainId);
+        Assert.True(result.Baseline.HasCurrentMeasuredCoverage);
+    }
+
     private static RecoveryFailureDomainBinding Bind(RecoveryDependencyNode node, Guid? domain,
         RecoveryFailureDomainKind kind = Device) => new(node.SubjectId, node.Generation, kind, domain);
 

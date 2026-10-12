@@ -230,3 +230,26 @@ model assumptions, not authenticated observations or proof of independence.
 Serialized formats, membership provenance/freshness, joint architecture approval,
 multi-domain scenarios, portable inspection and UI/CLI integration remain open.
 See [scenario validation](release-evidence/1.9-failure-scenarios-2026-10-12.md).
+
+## Combined scenarios and ambiguous observations — 2026-10-12
+
+`AssessMultiple` models the union of up to 32 explicitly failed domains. Duplicate,
+empty and unsupported domain sets reject; the original single-domain API delegates
+to the same evaluator. Two copies can survive either loss separately and still
+lose coverage when both domains fail. Membership must be known in every selected
+dimension; physical-device and provider-account identifiers are never conflated.
+All results remain Simulated, with unchanged measured baseline records and copied
+failure lists. Model membership provenance/freshness and live qualification stay open.
+
+`RecoveryObservationSelectionService` evaluates up to 256 supplied candidates.
+Invalid chronology/provenance, duplicate evidence identities and null candidates
+reject without falling back to an older success. Stale or differently bound records
+remain inspectable but cannot be selected. Exactly one current record is selected,
+preserving its outcome, support and basis. No current record means missing applicable
+evidence. Multiple current records are Ambiguous even if both passed or one is newer;
+there is no approved producer/chronology precedence to silently choose between them.
+Simulations or confirmations never become measurements merely through selection.
+
+These remain review prototypes without observation discovery, automatic conflict
+resolution, producer authentication, persistence or UI/CLI integration. The shared
+architecture gate is open. See [batch evidence](release-evidence/1.9-contract-batch-2026-10-12.md).

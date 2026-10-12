@@ -159,3 +159,12 @@ missing membership remains unknown. Every result is simulated and preserves
 its supplied baseline observations. No domain discovery, device/secret access
 or measured recovery qualification is introduced. Joint architecture approval
 remains open. See [current scenario evidence](release-evidence/1.9-failure-scenarios-2026-10-12.md).
+
+## Linked contract batch — 2026-10-12
+
+VS-1917/#574 adds bounded in-memory image coverage checks; complete structure
+remains unverified. VS-1919/#576 combines explicit simultaneous failures and
+flags multiple current observations as ambiguous, retaining basis and historical
+records. These prototypes have no encoded-image reader, disk I/O, producer trust
+or automatic conflict precedence. Joint approval and measured disk/boot/restore
+gates remain open. See [batch verification](release-evidence/1.9-contract-batch-2026-10-12.md).

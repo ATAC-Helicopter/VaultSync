@@ -48,6 +48,11 @@ unknown correlation instead of assuming that multiple copies are independent.
 Its conclusions are simulations; historical measurements remain unchanged.
 See [scenario scope and evidence](release-evidence/1.9-failure-scenarios-2026-10-12.md).
 
+A linked prototype batch now checks logical image coverage, combines modeled
+failures and flags ambiguous current observations. Complete map structure does
+not verify payload bytes; scenario conclusions remain simulations.
+See [scope and verification](release-evidence/1.9-contract-batch-2026-10-12.md).
+
 ## [1.8.9]
 
 VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.

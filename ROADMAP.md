@@ -1212,7 +1212,9 @@ repository must not transfer before a compatible release is adopted.
   contract.
   - Progress: the [format review draft](docs/DISK_IMAGE_FORMAT_1.9.md) defines
     coverage, integrity, completion/checkpoints, read-only compatibility and
-    permanent fixture requirements. Wire format, engine alignment, fixtures and
+    permanent fixture requirements. A bounded logical-map prototype now checks
+    exact coverage, raw part bounds, zero reconstruction and incomplete states;
+    a complete structure remains unverified. Wire format, engine alignment, fixtures and
     joint architecture approval remain open; no reader/writer is implemented.
   - Scope: cover source identity, partition layout, block/sparse maps,
     integrity records, compression and encryption descriptors, incomplete and
@@ -1248,8 +1250,11 @@ repository must not transfer before a compatible release is adopted.
     generation-bound failure-domain simulation distinguishes modeled coverage
     loss, retained alternatives and unknown correlation while preserving measured
     baseline observations. Stable schemas, conflict selection, domain membership
-    provenance, multi-domain scenarios and joint architecture approval
+    provenance and joint architecture approval
     remain open; see [dependency evidence](docs/release-evidence/1.9-dependencies-2026-10-12.md).
+    A subsequent contract batch combines up to 32 modeled failures and refuses
+    ambiguous current observations without guessing precedence. See
+    [batch validation](docs/release-evidence/1.9-contract-batch-2026-10-12.md).
   - Scope: model devices, sites, repositories, destinations, credentials,
     encryption-key references, recovery media, tools, recovery points,
     verification, drills, and dependency correlation without exporting secrets.
