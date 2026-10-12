@@ -1729,3 +1729,5 @@ These items are not assigned to a release until their contracts are approved:
   fields, and draft PR description together.
 
 Repository tracking rollout (2026-10-07): VS-1980/#673 adopts the helper from #759/#758 on active preparation heads. Release ownership, approval gates and sole PRs remain authoritative; see [workflow](docs/WORK_TRACKING.md).
+
+VS-1980/#673 shared changelog standard (2026-10-12): one short sentence per entry, aiming for 8–14 words with the existing 22-word ceiling. Consecutive entries have no blank separators; headings retain spacing. Current/historical list validation and AGENTS.md/CONTRIBUTING.md are aligned across owning release PRs; unreleased scope stays release-specific.
