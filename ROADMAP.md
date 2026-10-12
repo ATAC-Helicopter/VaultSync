@@ -1244,8 +1244,11 @@ repository must not transfer before a compatible release is adopted.
     prototype tests binding, chronology, basis and outcome separately, and fixes
     future timestamps in existing confidence evaluation. The October 12 read-only
     dependency prototype checks required groups, explicit alternatives, missing
-    parents, cycles and graph limits with synthetic observations. Stable schemas,
-    conflict selection, failure-domain scenarios and joint architecture approval
+    parents, cycles and graph limits with synthetic observations. A subsequent
+    generation-bound failure-domain simulation distinguishes modeled coverage
+    loss, retained alternatives and unknown correlation while preserving measured
+    baseline observations. Stable schemas, conflict selection, domain membership
+    provenance, multi-domain scenarios and joint architecture approval
     remain open; see [dependency evidence](docs/release-evidence/1.9-dependencies-2026-10-12.md).
   - Scope: model devices, sites, repositories, destinations, credentials,
     encryption-key references, recovery media, tools, recovery points,

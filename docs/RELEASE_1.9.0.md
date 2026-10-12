@@ -150,3 +150,12 @@ of 8–14 words, with the existing 22-word ceiling. Consecutive entries have no
 blank or whitespace-only separators; headings retain their spacing. Automated
 checks cover both active and historical lists. Shared standards are distributed
 to all nine preparation PRs; each retains its own unreleased scope and metadata.
+
+## Failure-domain simulation prototype — 2026-10-12
+
+VS-1919/#576 adds a bounded, generation-bound model for one explicit failure
+domain. Shared disks/accounts remove their correlated alternatives together;
+missing membership remains unknown. Every result is simulated and preserves
+its supplied baseline observations. No domain discovery, device/secret access
+or measured recovery qualification is introduced. Joint architecture approval
+remains open. See [current scenario evidence](release-evidence/1.9-failure-scenarios-2026-10-12.md).

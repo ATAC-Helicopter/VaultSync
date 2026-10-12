@@ -193,3 +193,40 @@ The graph is a review prototype with synthetic fixtures, no wire schema,
 persistence/migration, conflicting-observation selection, failure-domain scenarios,
 device/provider access or UI/CLI integration. Unknown failure correlation and
 joint architecture approval remain open. See [validation and limits](release-evidence/1.9-dependencies-2026-10-12.md).
+
+## Failure-domain simulation prototype — 2026-10-12
+
+`RecoveryFailureScenarioService` models the loss of one explicitly supplied
+failure domain against the dependency prototype's immutable assessed baseline.
+Domain identities are opaque GUIDs separated by physical device, controller,
+host, power, network, site, provider/account, repository administration and
+credential/key custody. It never derives independence from paths, names or
+an offsite label. Bindings refer to exact subject identities and generations;
+missing generation, unknown subjects, unsupported kinds, duplicate bindings
+and changed generations reject the input. At most 1,024 bindings are accepted.
+Multiple known domain memberships are allowed; loss of any one affects that subject.
+
+The entire graph and every binding are validated before a modeled conclusion.
+Only graph subjects reachable from the requested root participate. A missing
+binding for the selected dimension, or an explicit null domain identity, means
+unknown correlation. A known matching domain removes that subject in the model.
+Known and unknown memberships may coexist; an unknown additional membership
+remains uncertain even when another domain is explicitly supplied.
+
+The result distinguishes invalid input, insufficient baseline measurements,
+modeled coverage loss, unknown correlation and modeled retained coverage.
+Incomplete baseline evidence is not reported as a loss caused by the scenario.
+Known removal is evaluated first. If coverage survives, a conservative second
+evaluation also excludes unknown memberships. Retained coverage requires a
+complete path through explicitly known surviving alternatives; an unknown
+unused alternative remains visible without invalidating that path. A key lost
+with the original image cannot be replaced by an independent payload mirror.
+
+Every scenario result has `Basis = Simulated`, including retained coverage.
+The original observation records and measured outcomes remain unchanged in the
+baseline. The operation never reads a device, discovers domain membership,
+acquires a secret, writes metadata or performs restore. Supplied bindings are
+model assumptions, not authenticated observations or proof of independence.
+Serialized formats, membership provenance/freshness, joint architecture approval,
+multi-domain scenarios, portable inspection and UI/CLI integration remain open.
+See [scenario validation](release-evidence/1.9-failure-scenarios-2026-10-12.md).
