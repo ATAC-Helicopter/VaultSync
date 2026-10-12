@@ -84,6 +84,8 @@ def validate(text: str, expected_version: str | None = None) -> list[str]:
         seen: list[str] = []
         category: str | None = None
         entries = 0
+        previous_content = ""
+        blank_since_content = False
         for line in body:
             if line.startswith("### "):
                 if category is not None and not entries:
@@ -94,6 +96,8 @@ def validate(text: str, expected_version: str | None = None) -> list[str]:
                     errors.append(f"{version}: unsupported category {category!r}.")
                 seen.append(category)
             elif line.startswith("- "):
+                if blank_since_content and previous_content.startswith("- "):
+                    errors.append(f"{version}: no blank lines between consecutive entries.")
                 entries += 1
                 if category is None:
                     errors.append(f"{version}: entry has no change category.")
@@ -102,6 +106,11 @@ def validate(text: str, expected_version: str | None = None) -> list[str]:
                     errors.append(f"{version}: entry exceeds 22 words: {line}")
             elif limit_words and line.startswith("  ") and line.strip():
                 errors.append(f"{version}: use one concise line per entry; move detail into documentation.")
+            if line.strip():
+                previous_content = line
+                blank_since_content = False
+            else:
+                blank_since_content = True
         if category is not None and not entries:
             errors.append(f"{version}: empty category {category}.")
         if len(seen) != len(set(seen)):
