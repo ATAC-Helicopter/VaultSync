@@ -16,6 +16,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Require BUG identifiers for active fixes and preserve historical ownership.
 - [VS-1980] Automate issue and branch tracking, auditing all remote IDs before allocation and preserving release ownership and existing preparation PRs.
 - [VS-1977] Adapt earlier discovery work to flat CLI routes and qualify actual locally installed version, help, documentation URLs and Bash completion ownership.
 - [VS-1980] Include qualified shared rendering, Spectre API and unused-font dependency maintenance from the foundation without importing future grouped resource CLI features.
