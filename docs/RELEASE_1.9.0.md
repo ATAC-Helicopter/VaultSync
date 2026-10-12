@@ -133,3 +133,12 @@ LF checkout rule. Updater orchestration fixtures can mock Unix process cleanup
 on Windows. The symlink escape check is separate from ordinary artifact refusal
 checks and skips only when Windows denies link creation. This does not qualify
 an installed upgrade or authorize changes to the imported planning document.
+
+## Dependency applicability prototype — 2026-10-12
+
+VS-1919/#576 adds a bounded, read-only dependency graph over explicitly supplied
+observations. Named requirements retain missing dependencies; alternatives do
+not bypass required keys, unsupported evidence, cycles or graph limits. This is
+synthetic architecture evidence, with no storage, secret or device access and no
+overall recovery claim. Stable schemas, observation selection, failure-domain
+scenarios and joint approval remain open. See [the current evidence](release-evidence/1.9-dependencies-2026-10-12.md).

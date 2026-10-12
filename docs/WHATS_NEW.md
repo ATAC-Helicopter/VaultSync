@@ -38,6 +38,11 @@ and [current validation record](release-evidence/1.9-work-2026-10-05.md).
 The daily development record, including release grouping and dependency reduction,
 is available in [the work ledger](release-evidence/1.9-work-2026-10-03.md).
 
+The October 12 architecture prototype checks explicit recovery dependencies and
+alternatives without treating a missing key, stale observation or circular
+dependency as measured coverage. It has no desktop/CLI integration or disk access;
+see [the review boundary and validation](release-evidence/1.9-dependencies-2026-10-12.md).
+
 ## [1.8.9]
 
 VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.

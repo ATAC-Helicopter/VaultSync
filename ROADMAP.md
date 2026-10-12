@@ -1242,8 +1242,11 @@ repository must not transfer before a compatible release is adopted.
     defines generation binding, dependency alternatives, failure correlation,
     evidence provenance/freshness and privacy. The October 9 single-observation
     prototype tests binding, chronology, basis and outcome separately, and fixes
-    future timestamps in existing confidence evaluation. Stable schemas,
-    dependency/conflict evaluation and joint architecture approval remain open.
+    future timestamps in existing confidence evaluation. The October 12 read-only
+    dependency prototype checks required groups, explicit alternatives, missing
+    parents, cycles and graph limits with synthetic observations. Stable schemas,
+    conflict selection, failure-domain scenarios and joint architecture approval
+    remain open; see [dependency evidence](docs/release-evidence/1.9-dependencies-2026-10-12.md).
   - Scope: model devices, sites, repositories, destinations, credentials,
     encryption-key references, recovery media, tools, recovery points,
     verification, drills, and dependency correlation without exporting secrets.

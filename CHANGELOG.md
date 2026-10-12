@@ -13,7 +13,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 - [VS-1910] Move between desktop pages with Back, Forward and keyboard shortcuts, retaining in-session history and cached page state.
 
-- [VS-1919] Prototype recovery-observation applicability checks that preserve provenance, execution outcomes and freshness without claiming overall recoverability.
+- [VS-1919] Prototype recovery evidence and dependency checks, preserving freshness and alternatives while rejecting cycles without claiming overall recoverability.
 
 ### Changed
 

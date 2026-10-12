@@ -161,3 +161,35 @@ inspection, privacy export or UI/CLI integration. These remain joint review work
 Existing backup metadata is unchanged. Separately, the existing
 `RecoveryConfidenceService` now rejects future-dated passed verification/drill
 observations as stale, using existing warning codes and refresh actions.
+
+## Dependency applicability prototype — 2026-10-12
+
+`RecoveryDependencyService` adds a read-only in-memory graph to the observation
+prototype. Each node binds one subject, generation, scope and supplied observation.
+Its requirements are conjunctive: payload and key both need coverage. Each named
+requirement explicitly lists alternatives: either measured payload copy can cover
+that requirement. Empty alternatives and absent subjects remain unsatisfied;
+the requirement retains its name, relation and candidate identities. Known nodes
+retain their separate observation freshness, outcome, support and basis, including
+failed alternatives when another candidate supplies coverage.
+
+The entire supplied graph is validated before evaluation, including disconnected
+nodes and unselected alternatives. Unsupported relations, duplicate subject IDs,
+duplicate requirement names, duplicate/empty candidate identities, missing node
+bindings, cycles and excessive input return an explicit invalid result with no
+assessment. Limits are 256 nodes, 1,024 requirements, 1,024 candidate references
+and 64 nodes on any dependency path. Shared DAG paths obey the longest-path limit
+independently of input order. Missing references are requirements to resolve,
+not an implicit passed leaf. A missing root has an explicit missing-root result.
+
+`HasCurrentMeasuredCoverage` means only that the supplied root and every required
+group have current, supported, passed measurements under the supplied age policy.
+It does not authenticate producers, inspect retained artifacts, acquire keys,
+locate payloads or prove boot/restore. Even that limited result requires the
+root's own applicable measurement. Result collections own their copied candidate
+lists; evaluation never edits observations or caller lists.
+
+The graph is a review prototype with synthetic fixtures, no wire schema,
+persistence/migration, conflicting-observation selection, failure-domain scenarios,
+device/provider access or UI/CLI integration. Unknown failure correlation and
+joint architecture approval remain open. See [validation and limits](release-evidence/1.9-dependencies-2026-10-12.md).
