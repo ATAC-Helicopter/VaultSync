@@ -1,67 +1,91 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Spectre.Console;
 
-namespace VaultSync.CLI.Utils
+namespace VaultSync.CLI.Utils;
+
+public sealed class AsyncDebouncer(int delayMs) : IAsyncDisposable
 {
-    // Note: original had 'file sealed class' (typo) - fixed to 'sealed class'
-    public sealed class AsyncDebouncer(int delayMs)
+    private readonly int _delayMs = Math.Max(0, delayMs);
+    private readonly object _gate = new();
+    private readonly HashSet<Invocation> _running = [];
+    private Invocation? _pending;
+    private bool _stopped;
+
+    private sealed class Invocation
     {
-        private readonly int _delayMs = Math.Max(0, delayMs);
-        private readonly object _gate = new();
-        private CancellationTokenSource? _cts;
+        public CancellationTokenSource Cancellation { get; } = new();
+        public Task Completion { get; set; } = Task.CompletedTask;
+    }
 
-        public void Trigger(Func<CancellationToken, Task> work)
+    public void Trigger(Func<CancellationToken, Task> work)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        lock (_gate)
         {
-            ArgumentNullException.ThrowIfNull(work);
+            if (_stopped)
+                return;
 
-            CancellationTokenSource? toCancel;
-            CancellationTokenSource localCts;
+            // Cancellation and disposal share this lock so superseding a completed
+            // invocation cannot cancel an already disposed token source.
+            _pending?.Cancellation.Cancel();
+            var invocation = new Invocation();
+            _pending = invocation;
+            _running.Add(invocation);
+            invocation.Completion = Task.Run(() => RunAsync(invocation, work));
+        }
+    }
+
+    private async Task RunAsync(Invocation invocation, Func<CancellationToken, Task> work)
+    {
+        try
+        {
+            await Task.Delay(_delayMs, invocation.Cancellation.Token);
+            await work(invocation.Cancellation.Token);
+        }
+        catch (OperationCanceledException) when (invocation.Cancellation.IsCancellationRequested)
+        {
+            // A newer trigger or shutdown superseded this invocation.
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]watch error:[/] {Markup.Escape(ex.Message)}");
+        }
+        finally
+        {
             lock (_gate)
             {
-                toCancel = _cts;
-                localCts = new CancellationTokenSource();
-                _cts = localCts;
+                if (ReferenceEquals(_pending, invocation))
+                    _pending = null;
+                _running.Remove(invocation);
+                invocation.Cancellation.Dispose();
             }
-            toCancel?.Cancel();
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await Task.Delay(_delayMs, localCts.Token);
-                    await work(localCts.Token);
-                }
-                catch (OperationCanceledException) when (localCts.IsCancellationRequested)
-                {
-                    // A newer trigger or an explicit cancel superseded this pending invocation.
-                }
-                catch (Exception ex)
-                {
-                    AnsiConsole.MarkupLine($"[red]watch error:[/] {Markup.Escape(ex.Message)}");
-                }
-                finally
-                {
-                    lock (_gate)
-                    {
-                        if (ReferenceEquals(_cts, localCts))
-                            _cts = null;
-                    }
-                    localCts.Dispose();
-                }
-            }, CancellationToken.None);
         }
+    }
 
-        public void Cancel()
+    public void Cancel()
+    {
+        lock (_gate)
         {
-            CancellationTokenSource? toCancel;
-            lock (_gate)
-            {
-                toCancel = _cts;
-                _cts = null;
-            }
-            toCancel?.Cancel();
+            _pending?.Cancellation.Cancel();
+            _pending = null;
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Task[] running;
+        lock (_gate)
+        {
+            _stopped = true;
+            foreach (Invocation invocation in _running)
+                invocation.Cancellation.Cancel();
+            running = _running.Select(invocation => invocation.Completion).ToArray();
+            _pending = null;
+        }
+        await Task.WhenAll(running);
     }
 }

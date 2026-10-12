@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>1.8.9</Version>
+    <Version>1.9.1</Version>
     <Product>VaultSync</Product>
     <Company>Flavio Giacchetti</Company>
     <ApplicationIcon>Assets\vaultsync.ico</ApplicationIcon>
@@ -38,7 +38,6 @@
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Wayland" Condition="'$(TargetFramework)' == 'net10.0'" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
-    <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.HarfBuzz" />
     <!-- Keep native packages pinned directly so every RID resolves the same Skia/HarfBuzz ABI. -->

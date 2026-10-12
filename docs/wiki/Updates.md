@@ -1,5 +1,12 @@
 # Updates
 
+The current published stable release is **1.8.9**, released September 16, 2026.
+The **1.9** branch and its CLI commands are development work, not an available
+stable update. Follow [development status](Development-Status.md) for the PR stack
+and qualification gates. Upgrade qualification from an installed 1.8.9 to 1.9
+is still pending. The planned FG Labs owner compatibility has not authorized a
+repository transfer; official stable downloads remain in this repository.
+
 VaultSync supports two Windows update models:
 - Direct builds use GitHub patch and installer updates.
 - Microsoft Store builds use Store-managed updates.
@@ -36,7 +43,7 @@ VaultSync supports two Windows update models:
 - The update banner shows the channel and current status.
 - Microsoft Store builds replace GitHub update actions with `Open Microsoft Store`.
 
-![Maintenance and update controls in Settings](../images/Settings_Maintenance.png)
+![Maintenance and update controls in Settings](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/images/Settings_Maintenance.png)
 
 ## Skipping a version
 - Use the Skip version action in the update banner.
@@ -71,3 +78,14 @@ Switch channels in Settings > Advanced.
   - very old versions
   - blocked or incompatible patch preflight results
 - For Microsoft Store builds, use the Store listing and Store app update flow instead of the GitHub installer.
+
+- [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.
+
+## Release grouping and dependency audit — 2026-10-03
+
+One open draft PR per release now includes its preparation and corrections;
+see [Release Plan](Release-Plan.md). Dependabot #661/#720 merged as verified
+maintenance; rendering/CLI compatibility fixes are assembled in 1.9.0 and
+propagated to later implemented CLI variants. Unused Inter packaging is removed.
+[Development status](Development-Status.md) and the linked daily ledger record
+full changelog ownership, dependency consumers and remaining qualification gates.
