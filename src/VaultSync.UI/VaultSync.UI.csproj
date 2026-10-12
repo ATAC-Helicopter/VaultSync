@@ -40,7 +40,8 @@
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.HarfBuzz" />
-    <!-- Keep native packages pinned directly so every RID resolves the same Skia/HarfBuzz ABI. -->
+    <!-- Keep native packages pinned directly so every RID resolves the same Skia/HarfBuzz ABI.
+         Avalonia also pulls WebAssembly transitively; these pins prevent older versions returning. -->
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
     <PackageReference Include="SkiaSharp.NativeAssets.macOS" />
     <PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" />
@@ -50,7 +51,6 @@
     <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.WebAssembly" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" />
   </ItemGroup>
 
   <!-- Reference to core project -->

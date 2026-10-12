@@ -37,6 +37,16 @@ class PackageFamilyAlignmentTests(unittest.TestCase):
     def test_harfbuzzsharp_packages_use_one_version(self) -> None:
         self.assert_family_is_aligned("HarfBuzzSharp", 5)
 
+    def test_desktop_native_pins_cover_all_supported_platforms(self) -> None:
+        project = ET.parse(ROOT / "src/VaultSync.UI/VaultSync.UI.csproj")
+        references = {item.attrib["Include"] for item in project.findall(".//PackageReference")}
+        for family in ("SkiaSharp", "HarfBuzzSharp"):
+            for platform in ("Linux", "macOS", "Win32", "WebAssembly"):
+                package = f"{family}.NativeAssets.{platform}"
+                self.assertIn(package, self.versions)
+                self.assertIn(package, references)
+
+
 
 if __name__ == "__main__":
     unittest.main()

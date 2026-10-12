@@ -1355,6 +1355,15 @@ repository must not transfer before a compatible release is adopted.
   - Acceptance: retained regressions pass; owning release integration remains required.
   - Tracking: issue #775; related development/maintenance issue #673.
 
+- [ ] `VS-1994` `P1` Refresh desktop dependencies and simplify storage charts.
+  - Scope: service Avalonia, Dapper and the xUnit runner; replace the two
+    LiveCharts summaries with native Avalonia drawing and retain ABI/security
+    overrides, localized legends, sort order and empty/error behavior.
+  - Progress: three LiveCharts packages removed; local builds, proportion tests
+    and native offscreen rendering pass. Linux/macOS desktop acceptance remains
+    open. See [dependency audit](docs/release-evidence/1.9-desktop-dependencies-2026-10-12.md).
+  - Tracking: issue #776; preparation PR #736; Project In progress.
+
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and

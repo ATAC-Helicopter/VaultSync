@@ -19,6 +19,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1994] Refresh desktop dependencies and use native Avalonia storage charts.
 - [VS-1980] Retain legacy watcher safety during release scope realignment.
 - [VS-1980] Extend updater compatibility to official transferred repository URLs.
 - [VS-1980] Require BUG identifiers for active fixes and preserve historical ownership.
@@ -43,6 +44,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Removed
 
+- [VS-1994] Remove LiveCharts packages and unused weekly chart construction.
 - [VS-1980] Remove unused Inter font packaging while preserving existing font fallbacks.
 
 ### Fixed

@@ -9,6 +9,13 @@ been moved to 1.9.5, with discovery/legacy documentation in 1.9.1.
 Current stable remains **1.8.9**, published 2026-09-16.
 See [the release contract](RELEASE_1.9.0.md) and [family plan](RELEASE_FAMILY_1.9.md).
 
+### Simpler storage charts
+
+The development dashboard draws storage summaries directly with Avalonia,
+retaining project colors, sortable legends and their tooltips. This removes the
+separate chart library; the supported dependency baseline also receives patch
+updates. Cross-platform desktop acceptance remains part of the release gates.
+
 ### Keep your place while navigating
 
 The 1.9.0 development shell now has Back and Forward buttons beside the page

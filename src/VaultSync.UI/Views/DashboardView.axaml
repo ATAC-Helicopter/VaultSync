@@ -1,7 +1,7 @@
 <UserControl
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
+    xmlns:charts="using:VaultSync.UI.Controls"
     xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
     xmlns:vm="using:VaultSync.UI.ViewModels"
     xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
@@ -496,10 +496,9 @@
                         VerticalAlignment="Top"
                         Opacity="0.35"/>
 
-                <lvc:PieChart x:Name="StorageDonutChart"
-                              Series="{Binding StorageSeries}"
-                              Background="{Binding $parent[Border].Background}"
-                              LegendPosition="Hidden"
+                <charts:StorageChart x:Name="StorageDonutChart"
+                              Segments="{Binding StorageSeries}"
+                              IsDonut="True"
                               ClipToBounds="True"
                               Width="290"
                               Height="290"
@@ -560,15 +559,10 @@
 
             <Grid Grid.Row="1" Margin="0,2,0,0" Height="12" ClipToBounds="True" Background="{DynamicResource ItemBg}">
               <ProgressBar Minimum="0" Maximum="100" Value="{Binding BackupDiskUsedPercent}" Height="12" Margin="0" Foreground="{DynamicResource TextSecondaryBrush}" Background="{DynamicResource Surface2}" IsVisible="{Binding HasBackupUsageSegments, Converter={StaticResource BoolInvertConverter}}"/>
-              <lvc:CartesianChart Series="{Binding BackupUsageSeries}"
-                                  XAxes="{Binding BackupUsageXAxes}"
-                                  YAxes="{Binding BackupUsageYAxes}"
-                                  Background="{DynamicResource ItemBg}"
-                                  IsVisible="{Binding HasBackupUsageSegments}"
-                                  LegendPosition="Hidden"
-                                  Height="12"
-                                  Margin="0"
-                                  Padding="0"/>
+              <charts:StorageChart Segments="{Binding BackupUsageSeries}"
+                                   IsVisible="{Binding HasBackupUsageSegments}"
+                                   IsHitTestVisible="False"
+                                   Height="12"/>
             </Grid>
 
             <Border Grid.Row="2"

@@ -177,3 +177,13 @@ updater compatibility maintenance are categorized as Changed. Active Fixed
 entries require one BUG identifier. Repository tracking explicitly decodes UTF-8
 and reserves allocated IDs locally while remote listings catch up. The ten new
 defect records remain open for release acceptance. See [ownership and verification](release-evidence/1.9-defect-ownership-2026-10-12.md).
+
+## Desktop dependency simplification — 2026-10-12
+
+VS-1994/#776 updates the five Avalonia packages to 12.1.4, Dapper to 2.1.89
+and the xUnit runner to 4.0.1. Native Avalonia ring/bar drawing replaces
+LiveCharts; localized legends, colors, sorting and free-space proportions remain.
+The unused weekly chart construction and three resolved LiveCharts packages
+are removed. Rendering/security overrides remain, including Avalonia's transitive
+WebAssembly dependencies. Windows offscreen rendering is checked; Linux/macOS
+installed desktop acceptance remains open. See [audit and evidence](release-evidence/1.9-desktop-dependencies-2026-10-12.md).
