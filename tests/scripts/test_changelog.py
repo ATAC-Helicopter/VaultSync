@@ -102,6 +102,15 @@ class ChangelogTests(unittest.TestCase):
         self.assertIn("1.8.9: no blank lines between consecutive entries.",
                       changelog.validate(spaced, "1.9.0"))
 
+    def test_active_fixes_require_bug_ids_without_renumbering_history(self):
+        for prefix in ("VS-1910", "BUG-19001 / VS-1910", "BUG-123", "REL-19001"):
+            with self.subTest(prefix=prefix):
+                changed = VALID.replace("[BUG-19001]", f"[{prefix}]")
+                self.assertIn("Unreleased: Fixed entries require one owning BUG-xxxxx ID.",
+                              changelog.validate(changed, "1.9.0"))
+        historical = VALID.replace("- Corrected elevated patch launches.", "- [VS-0971] Corrected elevated patch launches.")
+        self.assertEqual([], changelog.validate(historical, "1.9.0"))
+
 
 if __name__ == "__main__":
     unittest.main()

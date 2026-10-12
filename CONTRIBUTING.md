@@ -9,7 +9,7 @@ ID model:
 - `VS-xxxx` (default): roadmap, implementation, test, release execution
   - release family by hundreds (example: `15xx` for `1.5`)
 - `ISS-xxxx` (optional): grouped issue/UX cleanup batches in changelog-only tracking
-- `BUG-xxxx` (optional): explicit bug-fix IDs in changelog tracking
+- `BUG-xxxxx` (required for defects): sole owning identifier for bug-fix tracking
 - `REL-xxxx` (optional): release-gate follow-up tracking
   - changelog version-family numbering: `1.0.x -> 10xxx`, `1.1.x -> 11xxx`, ... `1.8.x -> 18xxx`
 
@@ -103,6 +103,9 @@ Group entries under these exact headings, omitting empty groups:
 - `Deprecated`: capabilities scheduled for removal, with migration guidance.
 - `Removed`: capabilities or dependencies actually removed.
 - `Fixed`: corrected defects.
+  Active entries require the defect's sole `BUG-xxxxx` ID; development and
+  maintenance use their `VS-xxxx` ID in the appropriate category. Published
+  historical identifiers are preserved, including legacy conventions.
 - `Security`: resolved vulnerabilities; do not reclassify every safety feature.
 
 Use that order. Do not add Maintenance, Planning, daily-date or implementation
@@ -164,9 +167,9 @@ Keep planning, implementation, and release tracking connected:
 - If an issue does not exist yet, create it before opening the PR for non-trivial work.
 - Keep issue titles aligned with roadmap/changelog IDs when applicable:
   - Feature work: `VS-xxxx: concise scope`
-  - Bug-fix work with changelog bug IDs: `BUG-xxxxx / VS-xxxx: concise scope`
+  - Bug-fix work: `BUG-xxxxx: concise scope`; never add a second VS identifier
   - Example (feature): `VS-1601: richer restore flows`
-  - Example (bug): `BUG-15020 / VS-1578: harden app config reads against transient file locks`
+  - Example (bug): `BUG-15020: harden app config reads against transient file locks`
 - Update issue metadata when opening/updating a PR:
   - labels (`kind:*`, `priority:*`, `release:*`, `status:*`, optional human label `Feature/Improvement/Idea`)
   - assignment and project status
