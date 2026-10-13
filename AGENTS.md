@@ -143,3 +143,14 @@ Use the existing owning issue and sole release PR, with `Refs` for release-gated
 ID allocation fails closed if the complete remote issue audit is unavailable; it
 never silently allocates using only a local roadmap. Permission or network failures
 must be resolved before creating a new numbered work item.
+
+## Release provenance signing
+
+Candidate, beta and stable direct-download builds must attest the canonical
+manifest and every declared final asset, including updater patch JSON and ZIP.
+Verify all signatures online and offline against the exact source repository,
+workflow, commit and authorized ref before success or draft upload. Retain and
+archive the proof artifact; missing proof requires a new qualified build.
+Follow [release signing policy](docs/RELEASE_SIGNING.md). Preserve updater schema
+and asset names; keep native unsigned metadata truthful until platform publisher
+signing is separately qualified. This shared rule applies to every release.
