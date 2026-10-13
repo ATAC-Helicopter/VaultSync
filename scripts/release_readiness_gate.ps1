@@ -275,6 +275,12 @@ Add-CheckResult -Results $results -Code "docs-unsigned-integrity-policy" `
     -FailMessage "Unsigned distribution policy or mandatory SHA-256 integrity guidance is missing." `
     -Data @{ paths = @("docs/RELEASING.md", "SECURITY.md") }
 
+Add-CheckResult -Results $results -Code "release-provenance-policy" `
+    -Condition ((Test-Path "scripts/release_signing.py") -and (Test-Path "docs/RELEASE_SIGNING.md") -and $releasingDoc -match 'RELEASE_SIGNING.md') `
+    -PassMessage "Mandatory release provenance policy and verifier are present; actual run proof remains required." `
+    -FailMessage "Mandatory release provenance policy or verifier is missing." `
+    -Data @{ paths = @("scripts/release_signing.py", "docs/RELEASE_SIGNING.md") }
+
 if ($SkipGitHubChecks) {
     $results.Add((New-Result -Code "github-checks-skipped" -Status "warn" -Message "GitHub release and project checks were skipped for PR-local validation." -Data @{
         reason = "Use the full gate without -SkipGitHubChecks before final publish."

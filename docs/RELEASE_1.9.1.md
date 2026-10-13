@@ -41,3 +41,9 @@ VS-1980/#673 distributes the shared helper from #759/#758. Use `./dev adopt` for
 ## Shared compact changelog standard — 2026-10-12
 
 VS-1980/#673 distributes short descriptions (aim 8–14 words; ceiling 22) and adjacent entries without blank separators. AGENTS.md, CONTRIBUTING.md and the automated validator agree; headings retain spacing. No sibling unreleased features or release metadata are imported.
+
+Shared release standard (2026-10-13): VS-1980/#673 adopts mandatory provenance
+signing under [the policy](RELEASE_SIGNING.md), including updater manifests and
+patches, retained offline proof and exact workflow/ref/commit verification. This
+changes release validation only; native publisher signing remains owned by
+VS-1902/#113 in 1.9.0. This release retains its own feature scope and metadata.

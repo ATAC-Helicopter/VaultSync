@@ -156,3 +156,9 @@ All remain draft. Shared changelog validation passed locally on every owning
 head; this is not platform, predecessor, disk or release qualification. Future
 release dates remain unscheduled. Project target dates use the existing family
 planning horizon, not an invented publication commitment.
+
+Shared release standard (2026-10-13): VS-1980/#673 adopts mandatory provenance
+signing under [the policy](RELEASE_SIGNING.md), including updater manifests and
+patches, retained offline proof and exact workflow/ref/commit verification. This
+changes release validation only; native publisher signing remains owned by
+VS-1902/#113 in 1.9.0. This release retains its own feature scope and metadata.
