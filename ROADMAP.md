@@ -1953,3 +1953,9 @@ Signing standard delivery (2026-10-13): the shared rule is committed and pushed
 to all nine sole preparation PRs, with each real release's metadata preserved
 and its required CLI Release checks passed. See [per-head signing evidence](docs/release-evidence/1.9-signing-2026-10-13.md).
 Current tests, historical signatures and pending publication gates remain separate.
+
+Localization delivery (2026-10-13): all nine sole preparation PRs have the shared
+rule and validated existing-desktop repairs, retaining release ownership and
+metadata. Locale-only changes invalidate reused packages. See
+[per-head localization evidence](docs/release-evidence/1.9-localization-2026-10-13.md); native translation/rendering and
+release qualification remain separate.

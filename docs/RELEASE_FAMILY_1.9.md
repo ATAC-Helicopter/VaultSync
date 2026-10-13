@@ -168,3 +168,9 @@ new visible application strings in its maintained locales and validate source
 references, catalogs and placeholder signatures. See
 [localization contract](LOCALIZATION.md). BUG-19030/#785 owns the 1.9.0 repair;
 VS-1980/#673 owns shared-standard propagation without moving sibling features.
+
+Localization delivery (2026-10-13): all nine sole preparation PRs have the shared
+rule and validated existing-desktop repairs, retaining release ownership and
+metadata. Locale-only changes invalidate reused packages. See
+[per-head localization evidence](release-evidence/1.9-localization-2026-10-13.md); native translation/rendering and
+release qualification remain separate.

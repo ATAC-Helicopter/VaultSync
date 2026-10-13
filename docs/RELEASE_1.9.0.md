@@ -307,3 +307,9 @@ requires resource coverage, placeholder parity, static-source checks, state
 preservation and rendered review for every added UI string. See
 [localization contract](LOCALIZATION.md). Refs #785 in draft #736; technical
 historical payloads and remaining release qualification are separate.
+
+Localization delivery (2026-10-13): all nine sole preparation PRs have the shared
+rule and validated existing-desktop repairs, retaining release ownership and
+metadata. Locale-only changes invalidate reused packages. See
+[per-head localization evidence](release-evidence/1.9-localization-2026-10-13.md); native translation/rendering and
+release qualification remain separate.
