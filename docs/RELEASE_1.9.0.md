@@ -207,6 +207,14 @@ The version suffix and date remain unset. The [readiness snapshot](release-evide
 orders the architecture, measured recovery, desktop/upgrade and CI work without
 changing the stable release gate or claiming disk support.
 
+Beta means the complete 1.9.0 feature paths are integrated and ready for wider
+testing, with no known data-loss or app-breaking defect. Before distributing a
+beta that can write disks, measure the full five-stage loop on at least one
+explicitly supported disposable virtual profile and pass wrong-destination,
+corrupt-image and interruption refusals. List all unqualified combinations as
+unsupported. Broader physical-device and platform qualification remains a
+stable-release gate; the beta does not imply universal bare-metal support.
+
 BUG-19023/#777 removes stale beta feature claims from the generated Linux
 `.deb` and AppImage metadata. The package descriptions are release-neutral;
 actual beta contents and qualification remain governed by the selected scope.

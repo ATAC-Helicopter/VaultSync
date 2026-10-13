@@ -1190,7 +1190,9 @@ The full maintained strategy is
 
 The 2026-10-13 beta direction requires the complete 1.9.0 feature scope,
 including an independently qualified disk recovery loop on an explicitly
-supported profile. Later 1.9.x features remain in their owning releases.
+supported disposable virtual profile and refusal tests for destructive errors.
+The beta is for wider testing; physical hardware breadth remains a stable gate.
+Later 1.9.x features remain in their owning releases.
 
 Updater owner-transfer compatibility from [PR #721](https://github.com/ATAC-Helicopter/VaultSync/pull/721)
 is staged for this release through [PR #722](https://github.com/ATAC-Helicopter/VaultSync/pull/722).

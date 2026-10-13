@@ -21,6 +21,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Set complete-feature beta safety gates before wider recovery testing.
 - [VS-1994] Refresh desktop dependencies and use native Avalonia storage charts.
 - [VS-1980] Retain legacy watcher safety during release scope realignment.
 - [VS-1980] Extend updater compatibility to official transferred repository URLs.
