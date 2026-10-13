@@ -157,3 +157,8 @@ All remain draft. Shared changelog validation passed locally on every owning
 head; this is not platform, predecessor, disk or release qualification. Future
 release dates remain unscheduled. Project target dates use the existing family
 planning horizon, not an invented publication commitment.
+
+Signing standard delivery (2026-10-13): the shared rule is committed and pushed
+to all nine sole preparation PRs, with each real release's metadata preserved
+and its required CLI Release checks passed. See [per-head signing evidence](release-evidence/1.9-signing-2026-10-13.md).
+Current tests, historical signatures and pending publication gates remain separate.

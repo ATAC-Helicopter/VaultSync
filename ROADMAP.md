@@ -1941,3 +1941,8 @@ VS-1980/#673 validation portability (2026-10-12): preserve LF bytes for the hash
 VS-1980/#673 changelog standard (2026-10-12): AGENTS.md and CONTRIBUTING.md require one short outcome per entry, aiming for 8–14 words with the existing 22-word ceiling. Consecutive entries have no blank or whitespace-only separators; release/category spacing remains. Validation rejects separated entries in current and historical sections. The shared standard applies to all nine owning preparation PRs without importing sibling features.
 
 BUG-19012/#751 progress (2026-10-09): read-only REA inspection binds the installed stable SkiaSharp artifact and its font-manager P/Invoke declaration; retained evidence does not establish native resolution, the hang cause or 1.9.0 runtime qualification.
+
+Signing standard delivery (2026-10-13): the shared rule is committed and pushed
+to all nine sole preparation PRs, with each real release's metadata preserved
+and its required CLI Release checks passed. See [per-head signing evidence](docs/release-evidence/1.9-signing-2026-10-13.md).
+Current tests, historical signatures and pending publication gates remain separate.
