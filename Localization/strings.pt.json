@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Importado",
+  "Projects.Imported.Available": "Projeto importado. A pasta de origem está disponível nesta máquina.",
+  "Projects.Imported.Unavailable": "Histórico de backups importado. Restaure o projeto ou vincule uma pasta de origem local antes de criar snapshots.",
+  "Projects.Imported.NoPath": "Nenhuma pasta local vinculada",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
   "Settings.Advanced.MetadataUndoNone": "Nenhuma resolução de metadados pode ser desfeita no momento.",
   "Settings.Advanced.MetadataUndoAvailable": "A última decisão para {0} pode ser desfeita até à próxima gravação no repositório.",

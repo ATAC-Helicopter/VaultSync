@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Імпортовано",
+  "Projects.Imported.Available": "Імпортований проєкт. Вихідна папка доступна на цьому комп’ютері.",
+  "Projects.Imported.Unavailable": "Історію резервних копій імпортовано. Відновіть проєкт або підключіть локальну вихідну папку перед створенням знімків.",
+  "Projects.Imported.NoPath": "Локальну папку не підключено",
   "Settings.Advanced.MetadataConflictsBaseLabel": "База",
   "Settings.Advanced.MetadataUndoNone": "Наразі немає рішення щодо метаданих, яке можна скасувати.",
   "Settings.Advanced.MetadataUndoAvailable": "Останнє рішення для {0} можна скасувати до наступного запису в репозиторій.",

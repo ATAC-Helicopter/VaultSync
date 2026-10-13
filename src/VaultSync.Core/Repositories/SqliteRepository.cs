@@ -55,7 +55,7 @@ namespace VaultSync.Core.Repositories
         private const string ProjectsTable = "projects";
         private const string SnapshotsTable = "snapshots";
         private const int RecoveryDrillsPerProjectLimit = 20;
-        private const string ProjectSelectColumns = "id, external_id as ExternalId, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, group_id as GroupId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc";
+        private const string ProjectSelectColumns = "id, external_id as ExternalId, is_imported as IsImported, needs_restore as NeedsRestore, preferred_destination_id as PreferredDestinationId, encryption_policy as EncryptionPolicy, encryption_key_ref as EncryptionKeyRef, restore_mode as RestoreMode, verification_policy as VerificationPolicy, tags as Tags, group_id as GroupId, name, root_path as RootPath, preset as Preset, created_utc as CreatedUtc";
 
         private static readonly ConcurrentDictionary<string, byte> JournalModeConfigured = new(StringComparer.OrdinalIgnoreCase);
         private readonly string _dbPath = dbPath;
@@ -227,6 +227,7 @@ namespace VaultSync.Core.Repositories
         CREATE TABLE IF NOT EXISTS projects(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           external_id TEXT NOT NULL DEFAULT '',
+          is_imported INTEGER NOT NULL DEFAULT 0,
           needs_restore INTEGER NOT NULL DEFAULT 0,
           preferred_destination_id TEXT,
           encryption_policy TEXT NOT NULL DEFAULT 'inherit',
@@ -374,6 +375,7 @@ namespace VaultSync.Core.Repositories
             EnsureColumnExists(connection, BackupsTable, "crypto_descriptor_json", "ALTER TABLE backups ADD COLUMN crypto_descriptor_json TEXT NOT NULL DEFAULT '{}';");
             EnsureColumnExists(connection, BackupsTable, "backup_mode", "ALTER TABLE backups ADD COLUMN backup_mode TEXT NOT NULL DEFAULT 'full';");
             EnsureColumnExists(connection, ProjectsTable, "external_id", "ALTER TABLE projects ADD COLUMN external_id TEXT NOT NULL DEFAULT '';");
+            EnsureColumnExists(connection, ProjectsTable, "is_imported", "ALTER TABLE projects ADD COLUMN is_imported INTEGER NOT NULL DEFAULT 0;");
             EnsureColumnExists(connection, ProjectsTable, "needs_restore", "ALTER TABLE projects ADD COLUMN needs_restore INTEGER NOT NULL DEFAULT 0;");
             EnsureColumnExists(connection, ProjectsTable, "preferred_destination_id", "ALTER TABLE projects ADD COLUMN preferred_destination_id TEXT;");
             EnsureColumnExists(connection, ProjectsTable, "encryption_policy", "ALTER TABLE projects ADD COLUMN encryption_policy TEXT NOT NULL DEFAULT 'inherit';");
@@ -568,13 +570,14 @@ DELETE FROM sqlite_sequence;";
                 : p.ExternalId;
             return c.ExecuteScalar<int>(
                 """
-                INSERT INTO projects(external_id, needs_restore, preferred_destination_id, encryption_policy, encryption_key_ref, restore_mode, verification_policy, tags, group_id, name, root_path, preset, created_utc)
-                VALUES(@ExternalId, @NeedsRestore, @PreferredDestinationId, @EncryptionPolicy, @EncryptionKeyRef, @RestoreMode, @VerificationPolicy, @Tags, @GroupId, @Name, @RootPath, @Preset, @CreatedUtc);
+                INSERT INTO projects(external_id, is_imported, needs_restore, preferred_destination_id, encryption_policy, encryption_key_ref, restore_mode, verification_policy, tags, group_id, name, root_path, preset, created_utc)
+                VALUES(@ExternalId, @IsImported, @NeedsRestore, @PreferredDestinationId, @EncryptionPolicy, @EncryptionKeyRef, @RestoreMode, @VerificationPolicy, @Tags, @GroupId, @Name, @RootPath, @Preset, @CreatedUtc);
                 SELECT last_insert_rowid();
                 """,
                 new
                 {
                     ExternalId = externalId,
+                    IsImported = p.IsImported ? 1 : 0,
                     NeedsRestore = p.NeedsRestore ? 1 : 0,
                     PreferredDestinationId = string.IsNullOrWhiteSpace(p.PreferredDestinationId) ? null : p.PreferredDestinationId,
                     EncryptionPolicy = ProjectEncryptionPolicy.Normalize(p.EncryptionPolicy),
@@ -596,6 +599,23 @@ DELETE FROM sqlite_sequence;";
             c.Execute(
                 "UPDATE projects SET needs_restore = @needs WHERE id = @id;",
                 new { needs = needsRestore ? 1 : 0, id = projectId });
+        }
+
+        public void ReconcileHistoricalImportedProjectOrigins()
+        {
+            using SqliteConnection c = Open();
+            var candidates = c.Query<Project>($"""
+                SELECT {ProjectSelectColumns} FROM projects
+                WHERE is_imported = 0
+                  AND EXISTS(SELECT 1 FROM backups b WHERE b.project_id = projects.id AND b.is_imported = 1)
+                  AND NOT EXISTS(SELECT 1 FROM backups b WHERE b.project_id = projects.id AND b.is_imported = 0)
+                """);
+            foreach (Project project in candidates)
+            {
+                // A missing folder alone cannot identify import origin (e.g. an unplugged local drive).
+                if (!Directory.Exists(project.RootPath))
+                    c.Execute("UPDATE projects SET is_imported = 1 WHERE id = @Id;", new { project.Id });
+            }
         }
 
         public void UpdateProjectPreferredDestination(int projectId, string? preferredDestinationId)

@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1995] Show imported projects with recognizable labels and local source availability.
 - [VS-1907] Reconstruct verified synthetic images into new files using staged payloads.
 - [VS-1904] Capture synthetic raw images with explicit incomplete and interrupted outcomes.
 - [VS-1917] Bind raw payload verification to image manifests and completion records.

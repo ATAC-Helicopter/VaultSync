@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Zaimportowany",
+  "Projects.Imported.Available": "Zaimportowany projekt. Folder źródłowy jest dostępny na tym komputerze.",
+  "Projects.Imported.Unavailable": "Zaimportowana historia kopii zapasowych. Przywróć projekt lub połącz lokalny folder źródłowy przed utworzeniem migawek.",
+  "Projects.Imported.NoPath": "Nie połączono lokalnego folderu",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Baza",
   "Settings.Advanced.MetadataUndoNone": "Obecnie nie można cofnąć żadnej decyzji dotyczącej metadanych.",
   "Settings.Advanced.MetadataUndoAvailable": "Ostatnią decyzję dla {0} można cofnąć do czasu następnego zapisu w repozytorium.",

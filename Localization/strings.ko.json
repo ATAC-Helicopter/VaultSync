@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "가져옴",
+  "Projects.Imported.Available": "가져온 프로젝트입니다. 이 컴퓨터에서 원본 폴더를 사용할 수 있습니다.",
+  "Projects.Imported.Unavailable": "백업 기록을 가져왔습니다. 스냅샷을 만들기 전에 프로젝트를 복원하거나 로컬 원본 폴더를 연결하세요.",
+  "Projects.Imported.NoPath": "연결된 로컬 폴더 없음",
   "Settings.Advanced.MetadataConflictsBaseLabel": "기준",
   "Settings.Advanced.MetadataUndoNone": "현재 실행 취소할 수 있는 메타데이터 결정이 없습니다.",
   "Settings.Advanced.MetadataUndoAvailable": "{0}의 마지막 결정은 다음 저장소 쓰기 전까지 실행 취소할 수 있습니다.",

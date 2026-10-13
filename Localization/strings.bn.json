@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "আমদানি করা",
+  "Projects.Imported.Available": "আমদানি করা প্রকল্প। এর উৎস ফোল্ডার এই মেশিনে উপলব্ধ।",
+  "Projects.Imported.Unavailable": "ব্যাকআপের ইতিহাস আমদানি করা হয়েছে। স্ন্যাপশট তৈরির আগে প্রকল্প পুনরুদ্ধার করুন বা স্থানীয় উৎস ফোল্ডার যুক্ত করুন।",
+  "Projects.Imported.NoPath": "কোনো স্থানীয় ফোল্ডার যুক্ত নেই",
   "Settings.Advanced.MetadataConflictsBaseLabel": "ভিত্তি",
   "Settings.Advanced.MetadataUndoNone": "বর্তমানে কোনো মেটাডেটা সিদ্ধান্ত পূর্বাবস্থায় ফেরানো যাবে না।",
   "Settings.Advanced.MetadataUndoAvailable": "{0}-এর শেষ সিদ্ধান্তটি পরবর্তী রিপোজিটরি লেখার আগে পর্যন্ত পূর্বাবস্থায় ফেরানো যাবে।",

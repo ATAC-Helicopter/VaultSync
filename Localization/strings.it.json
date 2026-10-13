@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Importato",
+  "Projects.Imported.Available": "Progetto importato. La cartella sorgente è disponibile su questa macchina.",
+  "Projects.Imported.Unavailable": "Cronologia di backup importata. Ripristina il progetto o collega una cartella sorgente locale prima di creare snapshot.",
+  "Projects.Imported.NoPath": "Nessuna cartella locale collegata",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
   "Settings.Advanced.MetadataUndoNone": "Nessuna risoluzione dei metadati può essere annullata al momento.",
   "Settings.Advanced.MetadataUndoAvailable": "L'ultima decisione per {0} può essere annullata fino alla prossima scrittura nel repository.",

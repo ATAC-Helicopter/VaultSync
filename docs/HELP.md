@@ -87,6 +87,13 @@ VaultSync supports two destination modes:
 - VaultSync can import and merge metadata from reachable destinations.
 - Optional auto-import is available in Settings.
 - Conflicting imported project settings can be reviewed and resolved from Settings > Advanced > Doctor.
+- Imported projects also appear in Projects with an **Imported** label in cards,
+  compact rows and details. Projects without a source path remain visible.
+  The label's explanation distinguishes a local source folder from imported
+  history that still needs a restore or a local folder link. Importing history
+  does not copy source files. The import label remains after restoring locally.
+  Snapshot creation and opening the source folder are unavailable while that
+  imported source is missing; backup history remains available for recovery.
 
 Metadata sync carries:
 - project identity and portable project settings such as encryption policy references, preferred destination, restore mode, verification policy, tags, and avatar color

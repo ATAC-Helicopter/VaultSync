@@ -1309,6 +1309,15 @@ repository must not transfer before a compatible release is adopted.
     encoded fixtures and read-back verification pass; device adapters, source
     consistency, worker isolation, checkpoints/resume and crash/filesystem durability
     remain open. See [file capture evidence](docs/release-evidence/1.9-file-capture-2026-10-13.md).
+- [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
+  - Progress: imported projects remain visible without source paths. A local
+    persisted import marker distinguishes origin from restore state; cards,
+    compact rows and details display a translated label and source availability.
+    Discovery merges restored paths without replacing the registered project name.
+    Imported-only historical entries with missing sources can recover the marker.
+    Issue #784; preparation PR #736.
+  - Acceptance: additive schema/import/restore/discovery regressions and focused
+    UI checks pass; origin labels do not authorize backup or disk restore.
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
   capacity checks, interruption semantics, and block validation.
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI

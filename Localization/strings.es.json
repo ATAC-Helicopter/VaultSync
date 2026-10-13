@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Importado",
+  "Projects.Imported.Available": "Proyecto importado. La carpeta de origen está disponible en este equipo.",
+  "Projects.Imported.Unavailable": "Historial de copias importado. Restaura el proyecto o vincula una carpeta de origen local antes de crear instantáneas.",
+  "Projects.Imported.NoPath": "Ninguna carpeta local vinculada",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
   "Settings.Advanced.MetadataUndoNone": "Actualmente no se puede deshacer ninguna resolución de metadatos.",
   "Settings.Advanced.MetadataUndoAvailable": "La última decisión para {0} se puede deshacer hasta la próxima escritura en el repositorio.",

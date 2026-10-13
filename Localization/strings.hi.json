@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "आयातित",
+  "Projects.Imported.Available": "आयातित प्रोजेक्ट। इसका स्रोत फ़ोल्डर इस मशीन पर उपलब्ध है।",
+  "Projects.Imported.Unavailable": "बैकअप इतिहास आयात किया गया है। स्नैपशॉट बनाने से पहले प्रोजेक्ट बहाल करें या स्थानीय स्रोत फ़ोल्डर लिंक करें।",
+  "Projects.Imported.NoPath": "कोई स्थानीय फ़ोल्डर लिंक नहीं है",
   "Settings.Advanced.MetadataConflictsBaseLabel": "आधार",
   "Settings.Advanced.MetadataUndoNone": "फ़िलहाल कोई मेटाडेटा निर्णय पूर्ववत नहीं किया जा सकता।",
   "Settings.Advanced.MetadataUndoAvailable": "{0} के अंतिम निर्णय को अगली रिपॉज़िटरी लिखाई तक पूर्ववत किया जा सकता है।",

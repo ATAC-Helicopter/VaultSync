@@ -7,6 +7,18 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1995/#784 makes existing file-backup metadata imports visible in Projects,
+including entries with no usable source path. A local persisted import marker
+drives translated badges in cards, compact rows and details; restoring changes
+source availability without erasing that marker. Legacy inferred origin requires
+imported-only history and an unavailable source. This extends the current file
+backup UI, without moving the separate 1.9.2 portable recovery scope forward.
+Missing imported sources disable snapshot/source-folder actions. Local Release
+verification passed with 0 warnings/errors, 1,177 Core and 154 Python tests;
+the 19 locale files contain the four new labels. Focused native macOS rendering
+was visually inspected in an isolated profile. See
+[imported project evidence](release-evidence/1.9-imported-projects-2026-10-13.md).
+
 BUG-19029/#783 corrects macOS SMB cleanup for destinations inside a share.
 Auto-unmount resolves a current SMB mount root and checks path containment;
 similar path prefixes cannot select a neighboring mount. The audit reproduced

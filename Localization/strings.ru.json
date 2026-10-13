@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Импортирован",
+  "Projects.Imported.Available": "Импортированный проект. Исходная папка доступна на этом компьютере.",
+  "Projects.Imported.Unavailable": "История резервных копий импортирована. Восстановите проект или подключите локальную исходную папку перед созданием снимков.",
+  "Projects.Imported.NoPath": "Локальная папка не подключена",
   "Settings.Advanced.MetadataConflictsBaseLabel": "База",
   "Settings.Advanced.MetadataUndoNone": "Сейчас нет решения по метаданным, которое можно отменить.",
   "Settings.Advanced.MetadataUndoAvailable": "Последнее решение для {0} можно отменить до следующей записи в репозиторий.",

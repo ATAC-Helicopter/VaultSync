@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "مستورد",
+  "Projects.Imported.Available": "مشروع مستورد. مجلد المصدر متاح على هذا الجهاز.",
+  "Projects.Imported.Unavailable": "سجل نسخ احتياطي مستورد. استعد المشروع أو اربط مجلد مصدر محليًا قبل إنشاء لقطات.",
+  "Projects.Imported.NoPath": "لا يوجد مجلد محلي مرتبط",
   "Settings.Advanced.MetadataConflictsBaseLabel": "الأساس",
   "Settings.Advanced.MetadataUndoNone": "لا يوجد حاليًا قرار بيانات وصفية يمكن التراجع عنه.",
   "Settings.Advanced.MetadataUndoAvailable": "يمكن التراجع عن آخر قرار لـ {0} حتى عملية الكتابة التالية إلى المستودع.",

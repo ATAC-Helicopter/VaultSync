@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Diimpor",
+  "Projects.Imported.Available": "Proyek diimpor. Folder sumbernya tersedia di komputer ini.",
+  "Projects.Imported.Unavailable": "Riwayat cadangan diimpor. Pulihkan proyek atau tautkan folder sumber lokal sebelum membuat snapshot.",
+  "Projects.Imported.NoPath": "Tidak ada folder lokal tertaut",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Dasar",
   "Settings.Advanced.MetadataUndoNone": "Saat ini tidak ada keputusan metadata yang dapat dibatalkan.",
   "Settings.Advanced.MetadataUndoAvailable": "Keputusan terakhir untuk {0} dapat dibatalkan hingga penulisan repositori berikutnya.",

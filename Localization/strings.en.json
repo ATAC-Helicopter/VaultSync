@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Imported",
+  "Projects.Imported.Available": "Imported project. Its source folder is available on this machine.",
+  "Projects.Imported.Unavailable": "Imported backup history. Restore or link a local source folder before creating snapshots.",
+  "Projects.Imported.NoPath": "No local folder linked",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
   "Settings.Advanced.MetadataUndoNone": "No metadata resolution is currently undoable.",
   "Settings.Advanced.MetadataUndoAvailable": "The last decision for {0} can be undone until the next repository write.",

@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Geïmporteerd",
+  "Projects.Imported.Available": "Geïmporteerd project. De bronmap is beschikbaar op deze computer.",
+  "Projects.Imported.Unavailable": "Geïmporteerde back-upgeschiedenis. Herstel het project of koppel een lokale bronmap voordat je snapshots maakt.",
+  "Projects.Imported.NoPath": "Geen lokale map gekoppeld",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Basis",
   "Settings.Advanced.MetadataUndoNone": "Er kan momenteel geen metadatabeslissing ongedaan worden gemaakt.",
   "Settings.Advanced.MetadataUndoAvailable": "De laatste beslissing voor {0} kan ongedaan worden gemaakt tot de volgende schrijfactie naar de opslagplaats.",

@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Importiert",
+  "Projects.Imported.Available": "Importiertes Projekt. Der Quellordner ist auf diesem Computer verfügbar.",
+  "Projects.Imported.Unavailable": "Importierter Sicherungsverlauf. Stelle das Projekt wieder her oder verknüpfe einen lokalen Quellordner, bevor du Snapshots erstellst.",
+  "Projects.Imported.NoPath": "Kein lokaler Ordner verknüpft",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Basis",
   "Settings.Advanced.MetadataUndoNone": "Derzeit kann keine Metadatenentscheidung rückgängig gemacht werden.",
   "Settings.Advanced.MetadataUndoAvailable": "Die letzte Entscheidung für {0} kann bis zum nächsten Repository-Schreibvorgang rückgängig gemacht werden.",

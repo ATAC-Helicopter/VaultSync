@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "已导入",
+  "Projects.Imported.Available": "已导入的项目。源文件夹在此计算机上可用。",
+  "Projects.Imported.Unavailable": "已导入备份历史。创建快照前，请还原项目或关联本地源文件夹。",
+  "Projects.Imported.NoPath": "未关联本地文件夹",
   "Settings.Advanced.MetadataConflictsBaseLabel": "基准",
   "Settings.Advanced.MetadataUndoNone": "当前没有可撤销的元数据决定。",
   "Settings.Advanced.MetadataUndoAvailable": "在下次写入存储库之前，可以撤销对 {0} 的最后决定。",

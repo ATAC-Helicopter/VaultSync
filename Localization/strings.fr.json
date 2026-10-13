@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Importé",
+  "Projects.Imported.Available": "Projet importé. Le dossier source est disponible sur cette machine.",
+  "Projects.Imported.Unavailable": "Historique des sauvegardes importé. Restaurez le projet ou associez un dossier source local avant de créer des instantanés.",
+  "Projects.Imported.NoPath": "Aucun dossier local associé",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
   "Settings.Advanced.MetadataUndoNone": "Aucune résolution de métadonnées ne peut actuellement être annulée.",
   "Settings.Advanced.MetadataUndoAvailable": "La dernière décision pour {0} peut être annulée jusqu'à la prochaine écriture dans le dépôt.",

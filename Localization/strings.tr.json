@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "İçe aktarıldı",
+  "Projects.Imported.Available": "İçe aktarılan proje. Kaynak klasörü bu bilgisayarda kullanılabilir.",
+  "Projects.Imported.Unavailable": "Yedekleme geçmişi içe aktarıldı. Anlık görüntü oluşturmadan önce projeyi geri yükleyin veya yerel bir kaynak klasörü bağlayın.",
+  "Projects.Imported.NoPath": "Yerel klasör bağlı değil",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Temel",
   "Settings.Advanced.MetadataUndoNone": "Şu anda geri alınabilecek bir meta veri kararı yok.",
   "Settings.Advanced.MetadataUndoAvailable": "{0} için son karar, depoya bir sonraki yazmaya kadar geri alınabilir.",

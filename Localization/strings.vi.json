@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Đã nhập",
+  "Projects.Imported.Available": "Dự án đã nhập. Thư mục nguồn có sẵn trên máy này.",
+  "Projects.Imported.Unavailable": "Đã nhập lịch sử sao lưu. Khôi phục dự án hoặc liên kết thư mục nguồn cục bộ trước khi tạo ảnh chụp nhanh.",
+  "Projects.Imported.NoPath": "Chưa liên kết thư mục cục bộ",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Cơ sở",
   "Settings.Advanced.MetadataUndoNone": "Hiện không có quyết định siêu dữ liệu nào có thể hoàn tác.",
   "Settings.Advanced.MetadataUndoAvailable": "Quyết định gần nhất cho {0} có thể được hoàn tác cho đến lần ghi kho tiếp theo.",
