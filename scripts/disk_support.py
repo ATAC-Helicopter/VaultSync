@@ -217,7 +217,7 @@ def validate(root: Path, data: object, require_qualified: bool = False,
             else:
                 excluded_ids.add(exclusion['id'])
     if require_qualified and not qualified:
-        errors.append('No qualified disk profile; stable disk support remains gated.')
+        errors.append('No qualified disk profile; disk support remains gated.')
     return errors
 
 

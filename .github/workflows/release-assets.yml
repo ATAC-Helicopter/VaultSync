@@ -153,6 +153,9 @@ jobs:
               echo "Beta target_version must include a prerelease suffix (example: 1.7.x-beta.N)."
               exit 1
             fi
+            if [[ "$target" == 1.9.0-* ]]; then
+              python3 scripts/disk_support.py check --require-qualified
+            fi
           fi
 
           if [[ "$channel" == "stable" ]]; then

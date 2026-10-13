@@ -1404,7 +1404,8 @@ repository must not transfer before a compatible release is adopted.
   - Progress: the [beta readiness snapshot](docs/release-evidence/1.9-beta-readiness-2026-10-13.md)
     records current build/CI evidence, open architecture and measured recovery
     gates, and the versioned beta workflow. Complete 1.9.0 feature scope is now
-    required for beta; suffix and date remain unset. Stable target: 2027-03-26.
+    required for beta; the asset workflow now refuses a 1.9.0 beta with no
+    qualified disk profile. Suffix and date remain unset. Stable target: 2027-03-26.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and
     the release/1.9.0 draft PR into Dev; retain existing dates and immutable IDs.

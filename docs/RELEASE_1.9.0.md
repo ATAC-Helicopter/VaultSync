@@ -214,6 +214,9 @@ explicitly supported disposable virtual profile and pass wrong-destination,
 corrupt-image and interruption refusals. List all unqualified combinations as
 unsupported. Broader physical-device and platform qualification remains a
 stable-release gate; the beta does not imply universal bare-metal support.
+The 1.9.0 beta asset workflow enforces the qualified-profile matrix gate before
+building packages. A passing structural check still requires review of the
+retained measurements and all other release gates.
 
 BUG-19023/#777 removes stale beta feature claims from the generated Linux
 `.deb` and AppImage metadata. The package descriptions are release-neutral;

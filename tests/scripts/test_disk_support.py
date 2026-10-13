@@ -75,7 +75,7 @@ class DiskSupportTests(unittest.TestCase):
         reference['sha256'] = hashlib.sha256(content).hexdigest()
         errors = self.check(require=True)
         self.assertTrue(any('duplicate JSON object member' in error for error in errors))
-        self.assertIn('No qualified disk profile; stable disk support remains gated.', errors)
+        self.assertIn('No qualified disk profile; disk support remains gated.', errors)
 
     def test_ambiguous_nonfinite_and_non_utf8_json_are_rejected(self):
         for content in (b'{"engine":{"decision":"proposed","decision":"approved"}}',
@@ -158,7 +158,7 @@ class DiskSupportTests(unittest.TestCase):
         self.data['engine']['approval']['artifact']['sha256'] = '0' * 64
         errors = self.check(require=True)
         self.assertTrue(any('artifact digest mismatch' in e for e in errors))
-        self.assertIn('No qualified disk profile; stable disk support remains gated.', errors)
+        self.assertIn('No qualified disk profile; disk support remains gated.', errors)
 
     def test_unapproved_engine_and_incomplete_loop_cannot_qualify(self):
         profile = self.measured_fixture()
