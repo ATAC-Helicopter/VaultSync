@@ -7,6 +7,12 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+BUG-19028/#782 adds saved Unity `.pdata` profiling captures to the Unity preset's
+exclusions. Read-only archive inspection found those recordings dominated a real
+source backup; normal game assets, source, settings and package locks are retained
+by regression fixtures. Existing archives are preserved. See
+[the bounded preset audit](release-evidence/1.9-exclusion-presets-2026-10-13.md).
+
 BUG-19027/#781 fixes lowercase preset catalog fields being ignored by UI, CLI
 and backup readers. Indexed IDs now display and resolve to their declared rule
 files; legacy PascalCase catalogs remain supported. A cross-layer regression

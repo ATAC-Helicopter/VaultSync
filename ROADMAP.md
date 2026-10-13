@@ -1247,6 +1247,14 @@ repository must not transfer before a compatible release is adopted.
     Issue #781; preparation PR #736.
   - Acceptance: catalog selection and applied rules agree on the actual head;
     recovery/upgrade and release gates remain separate.
+- [ ] `BUG-19028` `P1` Exclude saved Unity profiler captures from source backups.
+  - Progress: read-only inspection of three maintainer-selected Unity archives
+    found two `.pdata` files contributing approximately 98 percent of logical
+    backup bytes. The Unity preset now excludes that diagnostic capture format;
+    source, normal assets, project settings and package manifests/locks remain
+    covered by regression fixtures. Issue #782; preparation PR #736.
+  - Acceptance: current-head checks and native exclusion comparison pass; existing
+    archives remain preserved. See [preset audit evidence](docs/release-evidence/1.9-exclusion-presets-2026-10-13.md).
 - [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
   matrix before implementation claims begin.
   - Progress: [ADR 001](docs/adr/001-imaging-engine-1.9.md) compares engines and

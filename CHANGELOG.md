@@ -56,6 +56,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19028] Exclude saved Unity profiling captures from source project backups.
 - [BUG-19027] Apply indexed exclusion presets consistently in projects, CLI and backups.
 - [BUG-19026] Reject unaligned raw payload offsets before image verification or reconstruction.
 - [BUG-19024] Keep macOS beta bundle versions valid and ordered before the final release.

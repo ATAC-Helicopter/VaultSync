@@ -68,6 +68,12 @@ overwritten; each probe is removed when its owning stream closes.
   and test caches, logs, and machine-local IDE indexes.
 - `.vaultsyncignore` supports exclusion rules only. Git-style `!` include/negation
   rules are not supported, and VaultSync does not automatically import `.gitignore`.
+- The Unity preset excludes saved Profile Analyzer `.pdata` captures at all
+  depths, alongside generated Unity folders. These are profiling recordings,
+  not ordinary game assets. To back up those recordings too, clone the Unity
+  preset and remove both `.pdata` rules. Local rules add exclusions and cannot
+  re-include files excluded by a preset. Changing presets affects future backups;
+  existing archives are preserved.
 
 ## Destination Modes
 VaultSync supports two destination modes:
