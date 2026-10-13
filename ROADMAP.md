@@ -1255,6 +1255,13 @@ repository must not transfer before a compatible release is adopted.
     covered by regression fixtures. Issue #782; preparation PR #736.
   - Acceptance: current-head checks and native exclusion comparison pass; existing
     archives remain preserved. See [preset audit evidence](docs/release-evidence/1.9-exclusion-presets-2026-10-13.md).
+- [ ] `BUG-19029` `P1` Unmount the actual SMB share root for nested destinations.
+  - Progress: the preset audit reproduced auto-unmount targeting a share's `Dev`
+    child instead of the mount point. Cleanup now resolves the current SMB mount
+    root with path-boundary checks and chooses the most specific matching mount.
+    Issue #783; preparation PR #736.
+  - Acceptance: nested/root/neighbor/parent-traversal regressions pass and temporary
+    audit mounts close without modifying stored backups.
 - [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
   matrix before implementation claims begin.
   - Progress: [ADR 001](docs/adr/001-imaging-engine-1.9.md) compares engines and

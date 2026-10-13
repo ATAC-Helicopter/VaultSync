@@ -7,6 +7,14 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+BUG-19029/#783 corrects macOS SMB cleanup for destinations inside a share.
+Auto-unmount resolves a current SMB mount root and checks path containment;
+similar path prefixes cannot select a neighboring mount. The audit reproduced
+the nested-path failure independently of exclusion filtering.
+Required local Release checks on this correction passed with 0 warnings/errors,
+1,170 Core and 154 Python tests. Native macOS cleanup of the audit-owned SMB
+mount succeeded; the mount table confirmed it was absent afterward.
+
 BUG-19028/#782 adds saved Unity `.pdata` profiling captures to the Unity preset's
 exclusions. Read-only archive inspection found those recordings dominated a real
 source backup; normal game assets, source, settings and package locks are retained

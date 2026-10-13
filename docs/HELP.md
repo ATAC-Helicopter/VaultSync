@@ -79,6 +79,8 @@ overwritten; each probe is removed when its owning stream closes.
 VaultSync supports two destination modes:
 - Simple mode: one backup location.
 - Advanced mode: multiple destinations (NAS, USB, network) with per-destination options and credentials.
+- On macOS, auto-unmount closes the SMB share mount even when the destination
+  points to a subfolder inside that share.
 
 ## Cross-Machine Metadata Sync
 - Metadata is stored under `.vaultsync/meta/` on destinations.
