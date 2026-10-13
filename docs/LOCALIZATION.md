@@ -46,7 +46,9 @@ The first check fails on missing/extra/duplicate/blank/non-string locale entries
 invalid English entries, changed placeholder signatures, missing language files
 advertised by the picker, unresolved static UI resource references and fixed text
 in recognized AXAML/C# UI properties. It runs in local contracts/Release checks,
-PR quality, required Linux CI and the release-assets quality gate before packaging.
+PR quality, required Linux CI and the release-assets quality gate before packaging. Reusing a qualified source run
+for draft assembly also compares `Localization/` inputs; translation-only changes
+require rebuilding its packages.
 A failed localization check must be repaired before pushing release-ready work.
 
 `python3 scripts/localization_audit.py --json` provides the detailed audit.
