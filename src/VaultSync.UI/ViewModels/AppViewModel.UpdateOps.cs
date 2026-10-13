@@ -135,6 +135,8 @@ namespace VaultSync.UI.ViewModels
         private void RefreshCurrentViewLocalization()
         {
             _projectsViewModel?.RefreshLocalization();
+            _recoveryViewModel?.ReapplyLocalization();
+            _guideViewModel?.ReapplyLocalization();
             if (_dashboardViewModel != null)
             {
                 _dashboardViewModel.ReapplyLocalization();
@@ -975,12 +977,12 @@ namespace VaultSync.UI.ViewModels
                 {
                     string completionMessage;
                     if (launchResult.RelaunchAfterShutdown)
-                        completionMessage = "Update ready. VaultSync will restart with the new version.";
+                        completionMessage = L("Update.Installer.ReadyToRestart", "Update ready. VaultSync will restart with the new version.");
                     else if (launchResult.Completed)
-                        completionMessage = "Update installed. VaultSync will close so the new version can start cleanly.";
+                        completionMessage = L("Update.Installer.Installed", "Update installed. VaultSync will close so the new version can start cleanly.");
                     else
-                        completionMessage = "Installer launched. VaultSync will close so setup can continue.";
-                    PatchStatusMessage = L("Update.Installer.Launched", completionMessage);
+                        completionMessage = L("Update.Installer.Launched", "Installer launched. VaultSync will close so setup can continue.");
+                    PatchStatusMessage = completionMessage;
                 }
                 if (launchResult.ShouldShutdown)
                 {
