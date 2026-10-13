@@ -1920,5 +1920,14 @@
   "Settings.Advanced.SupportBundle.Telemetry": "익명화된 로컬 원격 분석 포함",
   "Settings.Advanced.SupportBundle.Size": "최대 압축 해제 크기: {0:0.0} MB. 내보내기 전에 파일 내용을 정리합니다.",
   "Nav.Back": "뒤로 (Alt+Left)",
-  "Nav.Forward": "앞으로 (Alt+Right)"
+  "Nav.Forward": "앞으로 (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "자격 증명 삭제",
+  "Update.Installer.RelaunchFailed": "업데이트가 설치되었지만 VaultSync를 자동으로 다시 시작하지 못했습니다. 앱 메뉴에서 VaultSync를 여세요.",
+  "Recovery.Loading": "복구 준비 상태를 불러오는 중...",
+  "Recovery.Checking": "프로젝트, 백업의 최신 상태, 검증 정책 및 대상 가용성을 확인하고 있습니다.",
+  "Guide.Checking": "설정을 확인하는 중…",
+  "Update.Installer.ReadyToRestart": "업데이트가 준비되었습니다. VaultSync가 새 버전으로 다시 시작됩니다.",
+  "Update.Installer.Installed": "업데이트가 설치되었습니다. 새 버전이 정상적으로 시작되도록 VaultSync가 종료됩니다.",
+  "Recovery.Coverage.Hours": "{0} 시간",
+  "Recovery.Coverage.Days": "{0} 일"
 }

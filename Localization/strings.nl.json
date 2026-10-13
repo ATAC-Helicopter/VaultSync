@@ -412,7 +412,7 @@
   "Dashboard.Activity.RestoreFailed": "Herstel behoefte-review",
   "Dashboard.Activity.SnapshotCreated": "Snapshot gemaakt",
   "Dashboard.Activity.UnknownProject": "Onbekend project",
-  "Dashboard.Chart.AvgLabel": "Avg {0:0.0}",
+  "Dashboard.Chart.AvgLabel": "Gem. {0:0.0}",
   "Dashboard.Chart.Tooltip": "{0}: {1} back-ups",
   "Dashboard.Chart.TooltipBreakdown": "{0}: {1} auto, {2} handgeschakeld, {3} geïmporteerd",
   "Dashboard.Chart.TooltipNone": "{0}: Geen back-ups",
@@ -1114,7 +1114,7 @@
   "Settings.Advanced.UpdateIntervalDescription": "Hoe vaak VaultSync controleert op updates tijdens het draaien.",
   "Settings.Advanced.UpdateStatusError": "Laatste fout: {0}",
   "Settings.Advanced.UpdateDiagnosticsEmpty": "Nog geen release-target diagnostiek vastgelegd.",
-  "Settings.Advanced.UpdateDiagnosticsPatch": "Patch preflight: {0} ({1})",
+  "Settings.Advanced.UpdateDiagnosticsPatch": "Patchcontrole: {0} ({1})",
   "Settings.Advanced.UpdateDiagnosticsPatchBlocked": "geblokkeerd",
   "Settings.Advanced.UpdateDiagnosticsPatchEligible": "Geschikt",
   "Settings.Advanced.UpdateDiagnosticsTemplate": "Beslissing: {0} | Kanaal: {1} | Geselecteerd: {2} ({3}) | Stabiel: {4} | Beta: {5}",
@@ -1920,5 +1920,14 @@
   "Settings.Advanced.SupportBundle.Telemetry": "Geanonimiseerde lokale telemetrie opnemen",
   "Settings.Advanced.SupportBundle.Size": "Maximale ongecomprimeerde grootte: {0:0.0} MB. Inhoud wordt vóór export opgeschoond.",
   "Nav.Back": "Terug (Alt+Left)",
-  "Nav.Forward": "Vooruit (Alt+Right)"
+  "Nav.Forward": "Vooruit (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Inloggegevens verwijderen",
+  "Update.Installer.RelaunchFailed": "Update geïnstalleerd, maar VaultSync kon niet automatisch herstarten. Open VaultSync via het toepassingsmenu.",
+  "Recovery.Loading": "Herstelgereedheid laden...",
+  "Recovery.Checking": "Projecten, ouderdom van back-ups, verificatiebeleid en beschikbaarheid van bestemmingen controleren.",
+  "Guide.Checking": "Configuratie controleren…",
+  "Update.Installer.ReadyToRestart": "Update gereed. VaultSync herstart met de nieuwe versie.",
+  "Update.Installer.Installed": "Update geïnstalleerd. VaultSync wordt gesloten zodat de nieuwe versie correct kan starten.",
+  "Recovery.Coverage.Hours": "{0} u",
+  "Recovery.Coverage.Days": "{0} d"
 }

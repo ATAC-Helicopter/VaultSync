@@ -1920,5 +1920,14 @@
   "Settings.Advanced.SupportBundle.Telemetry": "包含匿名化的本地遥测",
   "Settings.Advanced.SupportBundle.Size": "最大未压缩大小：{0:0.0} MB。导出前会清理文件内容。",
   "Nav.Back": "后退 (Alt+Left)",
-  "Nav.Forward": "前进 (Alt+Right)"
+  "Nav.Forward": "前进 (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "移除凭据",
+  "Update.Installer.RelaunchFailed": "更新已安装，但 VaultSync 无法自动重启。请从应用菜单打开 VaultSync。",
+  "Recovery.Loading": "正在加载恢复就绪状态...",
+  "Recovery.Checking": "正在检查项目、备份时效、验证策略和目标可用性。",
+  "Guide.Checking": "正在检查配置…",
+  "Update.Installer.ReadyToRestart": "更新已就绪。VaultSync 将以新版本重启。",
+  "Update.Installer.Installed": "更新已安装。VaultSync 将关闭，以便新版本正常启动。",
+  "Recovery.Coverage.Hours": "{0} 小时",
+  "Recovery.Coverage.Days": "{0} 天"
 }

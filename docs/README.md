@@ -97,3 +97,5 @@ Use this page as the primary index for all project documentation.
 - [Recovery identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) — VS-1919; schema, evaluator and approval remain open.
 
 - [Imaging engine ADR and qualification procedure](adr/001-imaging-engine-1.9.md) — VS-1918 proposed decision; zero qualified profiles.
+
+- UI text and translation requirements: [localization contract](LOCALIZATION.md).

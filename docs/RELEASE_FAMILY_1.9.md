@@ -162,3 +162,9 @@ Signing standard delivery (2026-10-13): the shared rule is committed and pushed
 to all nine sole preparation PRs, with each real release's metadata preserved
 and its required CLI Release checks passed. See [per-head signing evidence](release-evidence/1.9-signing-2026-10-13.md).
 Current tests, historical signatures and pending publication gates remain separate.
+
+Shared localization standard (2026-10-13): every preparation PR must localize all
+new visible application strings in its maintained locales and validate source
+references, catalogs and placeholder signatures. See
+[localization contract](LOCALIZATION.md). BUG-19030/#785 owns the 1.9.0 repair;
+VS-1980/#673 owns shared-standard propagation without moving sibling features.

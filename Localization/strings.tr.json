@@ -1920,5 +1920,14 @@
   "Settings.Advanced.SupportBundle.Telemetry": "Anonimleştirilmiş yerel telemetriyi dahil et",
   "Settings.Advanced.SupportBundle.Size": "Sıkıştırılmamış azami boyut: {0:0.0} MB. Dosya içerikleri dışa aktarmadan önce temizlenir.",
   "Nav.Back": "Geri (Alt+Left)",
-  "Nav.Forward": "İleri (Alt+Right)"
+  "Nav.Forward": "İleri (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Kimlik bilgisini kaldır",
+  "Update.Installer.RelaunchFailed": "Güncelleme yüklendi ancak VaultSync otomatik olarak yeniden başlatılamadı. Uygulama menüsünden VaultSync’i açın.",
+  "Recovery.Loading": "Kurtarma hazırlığı yükleniyor...",
+  "Recovery.Checking": "Projeler, yedeklerin güncelliği, doğrulama ilkesi ve hedeflerin kullanılabilirliği denetleniyor.",
+  "Guide.Checking": "Yapılandırmanız denetleniyor…",
+  "Update.Installer.ReadyToRestart": "Güncelleme hazır. VaultSync yeni sürümle yeniden başlayacak.",
+  "Update.Installer.Installed": "Güncelleme yüklendi. Yeni sürümün düzgün başlaması için VaultSync kapanacak.",
+  "Recovery.Coverage.Hours": "{0} sa.",
+  "Recovery.Coverage.Days": "{0} g"
 }

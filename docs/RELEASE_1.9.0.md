@@ -297,3 +297,13 @@ Signing standard delivery (2026-10-13): the shared rule is committed and pushed
 to all nine sole preparation PRs, with each real release's metadata preserved
 and its required CLI Release checks passed. See [per-head signing evidence](release-evidence/1.9-signing-2026-10-13.md).
 Current tests, historical signatures and pending publication gates remain separate.
+
+## Localization coverage — 2026-10-13
+
+BUG-19030/#785 repairs missing desktop keys, loading text, coverage labels, Recovery
+summaries and distinct updater outcomes in all 19 locales. Guide/Recovery cached
+presentation reapplies on language changes. The shared localization contract
+requires resource coverage, placeholder parity, static-source checks, state
+preservation and rendered review for every added UI string. See
+[localization contract](LOCALIZATION.md). Refs #785 in draft #736; technical
+historical payloads and remaining release qualification are separate.

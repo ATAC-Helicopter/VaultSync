@@ -1920,5 +1920,14 @@
   "Settings.Advanced.SupportBundle.Telemetry": "تضمين القياس عن بُعد المحلي مجهول الهوية",
   "Settings.Advanced.SupportBundle.Size": "الحد الأقصى للحجم غير المضغوط: {0:0.0} م.ب. تتم تنقية المحتوى قبل التصدير.",
   "Nav.Back": "رجوع (Alt+Left)",
-  "Nav.Forward": "تقدم (Alt+Right)"
+  "Nav.Forward": "تقدم (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "إزالة بيانات الاعتماد",
+  "Update.Installer.RelaunchFailed": "تم تثبيت التحديث، لكن تعذّر إعادة تشغيل VaultSync تلقائيًا. افتح VaultSync من قائمة التطبيقات.",
+  "Recovery.Loading": "جارٍ تحميل حالة الاستعداد للاستعادة...",
+  "Recovery.Checking": "جارٍ التحقق من المشاريع وحداثة النسخ الاحتياطية وسياسة التحقق وتوفر الوجهات.",
+  "Guide.Checking": "جارٍ التحقق من الإعدادات…",
+  "Update.Installer.ReadyToRestart": "التحديث جاهز. سيُعاد تشغيل VaultSync بالإصدار الجديد.",
+  "Update.Installer.Installed": "تم تثبيت التحديث. سيُغلق VaultSync ليبدأ الإصدار الجديد بشكل صحيح.",
+  "Recovery.Coverage.Hours": "{0} س",
+  "Recovery.Coverage.Days": "{0} ي"
 }

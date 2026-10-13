@@ -1262,6 +1262,13 @@ repository must not transfer before a compatible release is adopted.
     covered by regression fixtures. Issue #782; preparation PR #736.
   - Acceptance: current-head checks and native exclusion comparison pass; existing
     archives remain preserved. See [preset audit evidence](docs/release-evidence/1.9-exclusion-presets-2026-10-13.md).
+- [ ] `BUG-19030` `P1` Localize omitted desktop messages and enforce UI coverage.
+  - 2026-10-13: missing keys, initial Guide/Recovery text, coverage units,
+    Recovery summaries and updater outcomes use all 19 locale catalogs.
+    Cached Guide/Recovery text reapplies on language changes without resetting
+    filters/search or rewriting recorded evidence. Structural/source checks run
+    in local validation, required CI and before packaging. Issue #785; Refs #785
+    in #736. See [localization contract](docs/LOCALIZATION.md).
 - [ ] `BUG-19029` `P1` Unmount the actual SMB share root for nested destinations.
   - Progress: the preset audit reproduced auto-unmount targeting a share's `Dev`
     child instead of the mount point. Cleanup now resolves the current SMB mount

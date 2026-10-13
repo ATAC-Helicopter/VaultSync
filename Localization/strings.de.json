@@ -1920,5 +1920,14 @@
   "Settings.Advanced.SupportBundle.Telemetry": "Anonymisierte lokale Telemetrie einschließen",
   "Settings.Advanced.SupportBundle.Size": "Maximale unkomprimierte Größe: {0:0.0} MB. Dateiinhalte werden vor dem Export bereinigt.",
   "Nav.Back": "Zurück (Alt+Left)",
-  "Nav.Forward": "Vorwärts (Alt+Right)"
+  "Nav.Forward": "Vorwärts (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Zugangsdaten entfernen",
+  "Update.Installer.RelaunchFailed": "Update installiert, aber VaultSync konnte nicht automatisch neu starten. Öffne VaultSync über das Anwendungsmenü.",
+  "Recovery.Loading": "Wiederherstellungsbereitschaft wird geladen...",
+  "Recovery.Checking": "Projekte, Alter der Backups, Prüfregeln und Verfügbarkeit der Ziele werden geprüft.",
+  "Guide.Checking": "Einrichtung wird geprüft…",
+  "Update.Installer.ReadyToRestart": "Update bereit. VaultSync startet mit der neuen Version neu.",
+  "Update.Installer.Installed": "Update installiert. VaultSync wird geschlossen, damit die neue Version sauber starten kann.",
+  "Recovery.Coverage.Hours": "{0} Std.",
+  "Recovery.Coverage.Days": "{0} T."
 }
