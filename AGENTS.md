@@ -154,3 +154,16 @@ archive the proof artifact; missing proof requires a new qualified build.
 Follow [release signing policy](docs/RELEASE_SIGNING.md). Preserve updater schema
 and asset names; keep native unsigned metadata truthful until platform publisher
 signing is separately qualified. This shared rule applies to every release.
+
+## Mandatory UI localization
+
+Localize every new or changed user-visible application string in the same change,
+including C# dialogs, notifications, errors, loading states, accessibility, tray
+and updater outcomes. Add real translations in every maintained locale; English
+fallbacks do not satisfy coverage. Preserve placeholder signatures and format
+with the selected culture. Reapply cached text on language changes without losing
+user state; review indirect Core messages and dynamic keys explicitly. Preserve
+user data and recorded technical payloads. Run
+`python3 scripts/localization_audit.py --check` and the required Release gate.
+See [the localization contract](docs/LOCALIZATION.md); this is a shared rule for
+every release and PR. Static checks supplement translation and rendered UI review.

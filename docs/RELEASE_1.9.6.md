@@ -36,3 +36,10 @@ signing under [the policy](RELEASE_SIGNING.md), including updater manifests and
 patches, retained offline proof and exact workflow/ref/commit verification. This
 changes release validation only; native publisher signing remains owned by
 VS-1902/#113 in 1.9.0. This release retains its own feature scope and metadata.
+
+Shared localization standard (2026-10-13): VS-1980/#673 adopts the mandatory
+[UI localization contract](LOCALIZATION.md), source/catalog checks in required CI
+and before packaging, plus shared existing-desktop text repairs from
+BUG-19030/#785 (owned by 1.9.0). Maintained locales and cached language-change
+behavior are covered. This release retains its metadata and feature scope;
+static checks do not establish native-speaker or rendered platform qualification.

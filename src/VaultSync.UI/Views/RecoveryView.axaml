@@ -195,24 +195,24 @@
 
               <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                     RowSpacing="12">
-                <Grid ColumnDefinitions="44,*,Auto"
+                <Grid ColumnDefinitions="Auto,*,Auto"
                       ColumnSpacing="10">
-                  <TextBlock Text="24h" Classes="recovery-label" VerticalAlignment="Center" />
+                  <TextBlock Text="{CompiledBinding Coverage24WindowLabel}" Classes="recovery-label" VerticalAlignment="Center" />
                   <ProgressBar Grid.Column="1" Classes="recovery-bar" Value="{CompiledBinding Coverage24Percent}" />
                   <TextBlock Grid.Column="2" Text="{CompiledBinding Coverage24Hours}" FontWeight="SemiBold" />
                 </Grid>
-                <Grid Grid.Row="1" ColumnDefinitions="44,*,Auto" ColumnSpacing="10">
-                  <TextBlock Text="7d" Classes="recovery-label" VerticalAlignment="Center" />
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                  <TextBlock Text="{CompiledBinding Coverage7WindowLabel}" Classes="recovery-label" VerticalAlignment="Center" />
                   <ProgressBar Grid.Column="1" Classes="recovery-bar" Value="{CompiledBinding Coverage7Percent}" />
                   <TextBlock Grid.Column="2" Text="{CompiledBinding Coverage7Days}" FontWeight="SemiBold" />
                 </Grid>
-                <Grid Grid.Row="2" ColumnDefinitions="44,*,Auto" ColumnSpacing="10">
-                  <TextBlock Text="30d" Classes="recovery-label" VerticalAlignment="Center" />
+                <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                  <TextBlock Text="{CompiledBinding Coverage30WindowLabel}" Classes="recovery-label" VerticalAlignment="Center" />
                   <ProgressBar Grid.Column="1" Classes="recovery-bar" Value="{CompiledBinding Coverage30Percent}" />
                   <TextBlock Grid.Column="2" Text="{CompiledBinding Coverage30Days}" FontWeight="SemiBold" />
                 </Grid>
-                <Grid Grid.Row="3" ColumnDefinitions="44,*,Auto" ColumnSpacing="10">
-                  <TextBlock Text="90d" Classes="recovery-label" VerticalAlignment="Center" />
+                <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                  <TextBlock Text="{CompiledBinding Coverage90WindowLabel}" Classes="recovery-label" VerticalAlignment="Center" />
                   <ProgressBar Grid.Column="1" Classes="recovery-bar" Value="{CompiledBinding Coverage90Percent}" />
                   <TextBlock Grid.Column="2" Text="{CompiledBinding Coverage90Days}" FontWeight="SemiBold" />
                 </Grid>
