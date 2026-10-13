@@ -89,3 +89,13 @@ maintenance; rendering/CLI compatibility fixes are assembled in 1.9.0 and
 propagated to later implemented CLI variants. Unused Inter packaging is removed.
 [Development status](Development-Status.md) and the linked daily ledger record
 full changelog ownership, dependency consumers and remaining qualification gates.
+
+## Release provenance verification
+
+Candidate, beta and stable release preparation verifies GitHub/Sigstore provenance
+signatures for the canonical manifest and every declared asset, including patch
+JSON and ZIP. Proof is retained outside the release asset inventory. Updater
+schema, asset names and byte-integrity checks remain compatible; desktop clients
+do not verify Sigstore at runtime. Native publisher signing and notarization
+remain separate from provenance, and unsigned distribution metadata stays
+truthful. See [release signing policy](../RELEASE_SIGNING.md).
