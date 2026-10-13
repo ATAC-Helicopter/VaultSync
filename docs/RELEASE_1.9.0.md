@@ -211,3 +211,8 @@ See [the bounded validation record](release-evidence/1.9-linux-package-metadata-
 BUG-19024/#778 separately tracks the macOS DMG builder's beta suffix in
 numeric bundle-version fields. Its build-number mapping needs a reviewed
 decision and native package inspection before beta assets can be distributed.
+
+BUG-19025/#779 tracks the SonarQube Cloud PR lookup failure across the 1.9
+preparation PRs. A successful branch analysis does not satisfy #736's PR
+quality gate. See the [failure diagnosis](release-evidence/1.9-sonarqube-pr-2026-10-13.md);
+the gate stays open until a current-head PR analysis passes.

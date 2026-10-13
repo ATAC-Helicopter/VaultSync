@@ -1381,6 +1381,14 @@ repository must not transfer before a compatible release is adopted.
     native bundle inspection proves the selected mapping.
   - Tracking: issue #778; preparation PR #736; implementation pending.
 
+- [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
+  - Scope: SonarCloud rejects PR metadata after successful build and coverage
+    on #736 and the other 1.9 preparation PRs; `Dev` branch analyses pass.
+  - Acceptance: verify the project repository binding and GitHub app access,
+    then obtain a successful SonarQube PR check on the actual #736 head.
+  - Tracking: issue #779; preparation PR #736; see the
+    [diagnosis](docs/release-evidence/1.9-sonarqube-pr-2026-10-13.md).
+
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Progress: the [beta readiness snapshot](docs/release-evidence/1.9-beta-readiness-2026-10-13.md)
     records current build/CI evidence, open architecture and measured recovery
