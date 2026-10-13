@@ -96,6 +96,20 @@ jobs:
             .github/ISSUE_TEMPLATE/*.yml \
             .github/dependabot.yml
 
+  localization:
+    name: UI localization coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.x"
+      - name: Check locale files and UI source
+        run: python3 scripts/localization_audit.py --check
+
   script-tests:
     name: Script tests
     needs: changes
