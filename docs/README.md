@@ -91,3 +91,5 @@ Use this page as the primary index for all project documentation.
 - Keep IDs and naming aligned with `CONTRIBUTING.md`.
 
 - [Complete 1.9 family alignment](RELEASE_FAMILY_1.9.md): branch ownership, immutable ID crosswalk and stable gates.
+
+- UI text and translation requirements: [localization contract](LOCALIZATION.md).

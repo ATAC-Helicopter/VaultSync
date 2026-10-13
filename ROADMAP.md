@@ -1235,6 +1235,13 @@ repository must not transfer before a compatible release is adopted.
 - [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on
   representative hardware and virtual machines.
 
+- [ ] `BUG-19030` `P1` Localize omitted desktop messages and enforce UI coverage.
+  - 2026-10-13: missing keys, initial Guide/Recovery text, coverage units,
+    Recovery summaries and updater outcomes use all 19 locale catalogs.
+    Cached Guide/Recovery text reapplies on language changes without resetting
+    filters/search or rewriting recorded evidence. Structural/source checks run
+    in local validation, required CI and before packaging. Issue #785; Refs #785
+    in #736. See [localization contract](docs/LOCALIZATION.md).
 - [ ] `BUG-19012` `P1` Diagnose Linux startup blocked before the desktop window.
   - Owned by 1.9.0 / #736; investigation #751 remains open. No desktop
     visibility or durable remediation is qualified by the process relaunch.
@@ -1760,3 +1767,10 @@ signing under [the policy](docs/RELEASE_SIGNING.md), including updater manifests
 patches, retained offline proof and exact workflow/ref/commit verification. This
 changes release validation only; native publisher signing remains owned by
 VS-1902/#113 in 1.9.0. This release retains its own feature scope and metadata.
+
+Shared localization standard (2026-10-13): VS-1980/#673 adopts the mandatory
+[UI localization contract](docs/LOCALIZATION.md), source/catalog checks in required CI
+and before packaging, plus shared existing-desktop text repairs from
+BUG-19030/#785 (owned by 1.9.0). Maintained locales and cached language-change
+behavior are covered. This release retains its metadata and feature scope;
+static checks do not establish native-speaker or rendered platform qualification.
