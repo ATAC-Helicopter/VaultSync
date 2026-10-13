@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1996] Add isolated compression experiments and repeatable archive size measurements.
 - [VS-1995] Show imported projects with recognizable labels and local source availability.
 - [VS-1907] Reconstruct verified synthetic images into new files using staged payloads.
 - [VS-1904] Capture synthetic raw images with explicit incomplete and interrupted outcomes.
@@ -25,6 +26,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1996] Compress Unity scenes, prefabs and metadata more densely using compatible ZIP archives.
 - [VS-1902] Require verified release provenance for manifests, packages and updater patches.
 - [VS-1980] Block beta asset builds until recovery evidence qualifies a disk profile.
 - [VS-1980] Set complete-feature beta safety gates before wider recovery testing.

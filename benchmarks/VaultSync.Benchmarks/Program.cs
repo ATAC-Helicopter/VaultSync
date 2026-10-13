@@ -9,6 +9,12 @@ using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.Benchmarks;
 
+if (args.Contains("--compression-profile", StringComparer.Ordinal))
+{
+    CompressionProfile.Run(args);
+    return 0;
+}
+
 BenchmarkOptions options = BenchmarkOptions.Parse(args);
 string fixtureRoot = Path.Combine(Path.GetTempPath(), $"vaultsync-benchmark-{Guid.NewGuid():N}");
 Directory.CreateDirectory(fixtureRoot);

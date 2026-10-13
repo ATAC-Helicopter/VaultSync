@@ -1332,6 +1332,17 @@ repository must not transfer before a compatible release is adopted.
     Issue #784; preparation PR #736.
   - Acceptance: additive schema/import/restore/discovery regressions and focused
     UI checks pass; origin labels do not authorize backup or disk restore.
+- [ ] `VS-1996` `P2` Improve compatible ZIP compression and develop an isolated native codec design.
+  - Progress (2026-10-13): generated Unity text/meta measurements support targeted
+    `Optimal` compression. A bounded LZ77 Python prototype has raw fallback and
+    checksums; hostile framing and roundtrip tests run in repository validation.
+    The experiment is excluded from product builds and currently compresses
+    less densely than DEFLATE. Issue #786; preparation PR #736.
+  - Acceptance: legacy ZIP readability, production backup readback and failure
+    checks; traceable measurements and staged migration design. Production codec
+    replacement requires independent readers, fuzzing, cross-platform and restore
+    qualification; no new backup format is introduced for beta by this experiment.
+    See [compression evolution](docs/COMPRESSION_EVOLUTION.md).
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
   capacity checks, interruption semantics, and block validation.
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI

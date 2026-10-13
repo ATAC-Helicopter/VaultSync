@@ -26,6 +26,7 @@ Use this page as the primary index for all project documentation.
 - GitHub/wiki/Project and historical closeout: [October 3 tracking](release-evidence/1.9-tracking-2026-10-03.md)
 - 1.8.9 bug fixes and UI polish: [1.8.9 release review](RELEASE_1.8.9.md)
 - Reproducible release performance profile: [performance benchmarks](PERFORMANCE_BENCHMARKS.md)
+- ZIP tuning and staged compression research: [compression evolution](COMPRESSION_EVOLUTION.md)
 - Release process: [Releasing](RELEASING.md)
 - Canonical direct-download manifest schema:
   [release manifest v1](schemas/release-manifest-v1.schema.json)

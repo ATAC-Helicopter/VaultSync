@@ -7,6 +7,15 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1996/#786 adds measured ZIP tuning for Unity scenes, prefabs and metadata,
+plus an isolated bounded LZ77 compression experiment. Production backups remain
+ZIP; no custom codec is registered, shipped or promised for beta. The experiment
+currently compresses less densely than DEFLATE. Reader-first opt-in migration
+and measured promotion gates are proposed in
+[compression evolution](COMPRESSION_EVOLUTION.md); source-qualified measurements
+and current validation are in
+[compression evidence](release-evidence/1.9-compression-2026-10-13.md).
+
 VS-1995/#784 makes existing file-backup metadata imports visible in Projects,
 including entries with no usable source path. A local persisted import marker
 drives translated badges in cards, compact rows and details; restoring changes

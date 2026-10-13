@@ -33,6 +33,20 @@ Archive-mode retries can resume from validated checkpoints when the destination 
 
 For encrypted archive backups, VaultSync creates and encrypts the archive locally before uploading `data.vse`. The destination does not receive a completed plaintext `data.zip`. See [Backup encryption](Encryption.md) for setup and usage.
 
+## Archive compression
+
+When compression is enabled, file backups use standard ZIP. In 1.9.0, Unity
+scenes (`.unity`), prefabs (`.prefab`) and metadata (`.meta`) use a denser
+compression level. This can save space at the cost of extra CPU time; results
+depend on file content. Binary `.asset` files keep the existing policy, and
+previous backups remain readable without conversion. Many tiny files can still
+produce an archive larger than their contents because ZIP stores file metadata.
+Compression remains off by default for new installations.
+
+An experimental VaultSync compressor is being developed separately. It is not
+used to write or restore backups in this version. See
+[compression development](../COMPRESSION_EVOLUTION.md) for the staged plan.
+
 ## Restore guidance
 - Before restore starts, VaultSync shows a confirmation dialog with a `What happens next` block.
 - The guidance is type-aware (`Full`, `Incremental`, `Imported`) and highlights password requirements for encrypted backups.
