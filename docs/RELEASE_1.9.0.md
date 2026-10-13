@@ -26,8 +26,9 @@ block this release. The proposed route draft is still awaiting review.
 
 The [VS-1917 image-format review draft](DISK_IMAGE_FORMAT_1.9.md) now specifies
 logical coverage, integrity, completion/checkpoints, unknown-version rejection,
-independent inspection and a permanent fixture plan. It is not an approved
-serialization or implementation. Engine/support decisions (VS-1918), shared
+independent inspection and a permanent fixture plan. A bounded draft header
+recognizer and serialized refusal fixtures are implemented; no complete-image
+reader/writer or approved serialization exists. Engine/support decisions (VS-1918), shared
 identity/evidence alignment (VS-1919), fixtures and joint approval remain open.
 The [VS-1919 identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) defines
 generation binding, dependency/failure correlation, evidence provenance and

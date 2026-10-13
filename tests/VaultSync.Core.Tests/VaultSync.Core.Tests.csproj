@@ -23,4 +23,8 @@
     <ProjectReference Include="..\..\src\VaultSync.UI\VaultSync.UI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Fixtures\disk-image-envelope-v1.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

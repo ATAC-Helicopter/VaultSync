@@ -1218,8 +1218,9 @@ repository must not transfer before a compatible release is adopted.
     coverage, integrity, completion/checkpoints, read-only compatibility and
     permanent fixture requirements. A bounded logical-map prototype now checks
     exact coverage, raw part bounds, zero reconstruction and incomplete states;
-    a complete structure remains unverified. Wire format, engine alignment, fixtures and
-    joint architecture approval remain open; no reader/writer is implemented.
+    a complete structure remains unverified. A bounded read-only draft envelope
+    recognizer and permanent header/refusal fixtures now exist. Manifest and
+    payload readers, writer, engine alignment and joint approval remain open.
   - Scope: cover source identity, partition layout, block/sparse maps,
     integrity records, compression and encryption descriptors, incomplete and
     resumable states, build identity, and reader/writer compatibility.

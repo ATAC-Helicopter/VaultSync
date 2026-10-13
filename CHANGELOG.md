@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1917] Recognize disk image headers without treating them as verified recovery data.
 - [VS-1917] Prototype image coverage validation without reading payloads or authorizing restore.
 - [VS-1910] Navigate desktop pages with Back, Forward and keyboard shortcuts.
 - [VS-1919] Prototype bounded recovery dependency checks; overall recoverability remains unqualified.

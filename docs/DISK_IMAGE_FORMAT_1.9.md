@@ -1,8 +1,9 @@
 # Disk-image format and compatibility — VS-1917 review draft
 
 Status: proposed contract for [VS-1917 / #574](https://github.com/ATAC-Helicopter/VaultSync/issues/574),
-prepared on 2026-10-04 for the sole 1.9.0 review, #736. No disk-image reader,
-writer, extension, wire encoding or stable format is established by this draft.
+prepared on 2026-10-04 for the sole 1.9.0 review, #736. A draft read-only
+recognition envelope exists; no manifest/payload reader, writer, extension or
+stable format is established by this draft.
 Review this together with VS-1918 (engine/support) and VS-1919 (identity/evidence).
 Existing file backups and portable SQLite metadata keep their current contracts
 in [Repository formats](REPOSITORY_FORMATS.md).
@@ -211,7 +212,25 @@ is Incomplete. Exact finalized coverage is only CompleteUnverified: the service
 never reads payloads, validates digests, resolves paths, checks manifest/completion
 roots, acquires keys, implements durability or authorizes restore.
 
-These are synthetic logical fixtures, not permanent encoded-image fixtures, a
-wire format or a reader/writer. Serialization, image identity/manifest binding,
-transforms, independent byte inspection and joint architecture approval remain
-open. See [the multi-contract validation batch](release-evidence/1.9-contract-batch-2026-10-12.md).
+These are synthetic logical fixtures, not complete encoded-image fixtures or a
+reader/writer. Serialization, image identity/manifest binding, transforms,
+independent byte inspection and joint architecture approval remain open. See
+[the multi-contract validation batch](release-evidence/1.9-contract-batch-2026-10-12.md).
+
+## Draft recognition envelope — 2026-10-13
+
+A read-only recognizer consumes exactly 24 bytes from a supplied stream. Its
+draft little-endian header is eight bytes `VSIMAGE\0`, then unsigned 16-bit
+major and minor versions, unsigned 32-bit required feature flags, unsigned
+32-bit manifest length and unsigned 32-bit reserved field. Version `1.0`
+with zero required flags/reserved bits and a manifest length of 1–16 MiB is
+recognized as `SupportedEnvelope`. Future version or required flags are
+`Unsupported`; missing bytes are `Incomplete`; impossible length or nonzero
+reserved data is `Invalid`. An unrelated magic is `NotImage`.
+
+`SupportedEnvelope` means only that the header is recognizable. The service
+does not read or trust manifest bytes, payload, completion or source identity;
+it never opens a path or writes a destination. This provisional encoding may
+change in joint review before a writer or compatible reader is accepted.
+Permanent serialized header/refusal fixtures and their limits are documented
+in [the envelope evidence](release-evidence/1.9-image-envelope-2026-10-13.md).
