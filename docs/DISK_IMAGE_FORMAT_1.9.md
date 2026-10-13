@@ -2,8 +2,8 @@
 
 Status: proposed contract for [VS-1917 / #574](https://github.com/ATAC-Helicopter/VaultSync/issues/574),
 prepared on 2026-10-04 for the sole 1.9.0 review, #736. A draft read-only
-recognition envelope exists; no manifest/payload reader, writer, extension or
-stable format is established by this draft.
+recognition envelope and manifest/completion-bound raw payload verifier exist;
+no complete-image reader, writer, extension or stable format is established by this draft.
 Review this together with VS-1918 (engine/support) and VS-1919 (identity/evidence).
 Existing file backups and portable SQLite metadata keep their current contracts
 in [Repository formats](REPOSITORY_FORMATS.md).
@@ -251,3 +251,35 @@ digests. Those digests are not yet bound to a serialized manifest root or
 trusted producer. No decoded extent, completion record, source identity,
 independent image or restore destination is certified by this result. See
 [the bounded byte-verification evidence](release-evidence/1.9-payload-verification-2026-10-13.md).
+
+## Provisional manifest binding — 2026-10-13
+
+`DiskImageManifestVerificationService` extends read-only verification with a
+fixed-record binary review profile. These provisional bytes can change before
+joint approval. Integers are little-endian; UUIDs are 16 network-order bytes.
+Metadata contains the existing 24-byte 1.0 envelope, exactly the declared
+manifest bytes, then exactly one 64-byte completion record and EOF.
+
+The manifest header is 64 bytes: schema `uint32=1`, image UUID, capture UUID,
+generation `uint64`, capacity `uint64`, logical sector `uint32`, part count
+`uint32`, extent count `uint32`. Identities must be nonempty and generation
+positive. Each 56-byte part is UUID, length `uint64`, raw 32-byte SHA-256.
+Each 44-byte extent is offset/length `uint64`, kind `uint32` (`0=stored`,
+`1=zero`), part UUID (empty only for zero), part offset `uint64`.
+Counts and exact encoded length are checked before record allocation.
+Existing envelope, coverage and raw-part limits apply.
+
+Completion is `VSCOMP\0\0`, image UUID, generation `uint64`, and SHA-256
+of the exact manifest bytes. Identity, generation, manifest root and metadata
+EOF must match before payload access. Coverage and payload verification then
+check the bound part lengths, digests and map. `ContentVerified` returns image,
+capture, generation and root for this observed draft content only. Checksums
+provide no trusted-origin guarantee; no persisted report authorizes later
+reads of potentially changed bytes or a restore destination.
+
+Permanent independently encoded raw, zero and mixed fixtures accompany
+mutation, missing completion, generation substitution, count/resource-limit,
+invalid-map, payload damage, short-read and cancellation tests. This closes
+the narrow manifest binding gap, while source/layout/provenance records,
+storage durability, writer, independent boot environment and joint approval
+remain open. See [current evidence](release-evidence/1.9-manifest-binding-2026-10-13.md).

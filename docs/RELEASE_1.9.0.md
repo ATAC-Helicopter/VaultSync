@@ -28,9 +28,10 @@ The [VS-1917 image-format review draft](DISK_IMAGE_FORMAT_1.9.md) now specifies
 logical coverage, integrity, completion/checkpoints, unknown-version rejection,
 independent inspection and a permanent fixture plan. A bounded draft header
 recognizer and serialized refusal fixtures are implemented; no complete-image
-reader/writer or approved serialization exists. Raw-part streams can now be
-checked against supplied SHA-256 digests without disk writes; manifest binding
-is still absent. Engine/support decisions (VS-1918), shared
+reader/writer or approved serialization exists. A bounded draft manifest and
+completion reader now binds raw-part SHA-256 digests to image/capture identity,
+generation and logical coverage without disk writes. Source/layout/provenance
+records and durable writing remain absent. Engine/support decisions (VS-1918), shared
 identity/evidence alignment (VS-1919), fixtures and joint approval remain open.
 The [VS-1919 identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) defines
 generation binding, dependency/failure correlation, evidence provenance and
