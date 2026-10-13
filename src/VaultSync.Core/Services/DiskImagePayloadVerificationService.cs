@@ -30,6 +30,15 @@ public static class DiskImagePayloadVerificationService
             return new(state, coverage.Reason, 0);
         }
 
+        ulong declaredBytes = 0;
+        foreach (DiskImagePayloadPart part in request.Coverage.Parts)
+        {
+            if (part.StoredLength % request.Coverage.LogicalSectorBytes != 0 ||
+                part.StoredLength > request.Coverage.Capacity - declaredBytes)
+                return new(DiskImagePayloadVerificationState.Invalid, "image.raw-part-size-limit", 0);
+            declaredBytes += part.StoredLength;
+        }
+
         if (request.Digests.Count != request.Coverage.Parts.Count ||
             streams.Count > request.Coverage.Parts.Count)
             return new(DiskImagePayloadVerificationState.Invalid, "image.part-set-mismatch", 0);

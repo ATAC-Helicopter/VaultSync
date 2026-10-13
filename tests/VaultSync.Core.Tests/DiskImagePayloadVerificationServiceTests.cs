@@ -93,7 +93,7 @@ public sealed class DiskImagePayloadVerificationServiceTests
     }
 
     [Fact]
-    public async Task HugeDeclaredPartStopsAtEndOfStreamWithoutLargeAllocation()
+    public async Task OversizedRawPartIsRefusedBeforeReading()
     {
         using var source = new MemoryStream(TestBytes(), writable: false);
         DiskImagePayloadVerificationRequest request = Request();
@@ -103,8 +103,25 @@ public sealed class DiskImagePayloadVerificationServiceTests
         DiskImagePayloadVerificationAssessment result = await DiskImagePayloadVerificationService.VerifyAsync(
             request, new Dictionary<Guid, Stream> { [PartId] = source });
 
-        Assert.Equal(DiskImagePayloadVerificationState.Incomplete, result.State);
-        Assert.Equal(512UL, result.VerifiedBytes);
+        Assert.Equal(DiskImagePayloadVerificationState.Invalid, result.State);
+        Assert.Equal("image.raw-part-size-limit", result.Reason);
+        Assert.Equal(0, source.Position);
+    }
+
+    [Fact]
+    public async Task MisalignedRawPartIsRefusedBeforeReading()
+    {
+        using var source = new MemoryStream(TestBytes(), writable: false);
+        DiskImagePayloadVerificationRequest request = Request();
+        request = request with
+        { Coverage = request.Coverage with { Parts = [new(PartId, 513)] } };
+
+        DiskImagePayloadVerificationAssessment result = await DiskImagePayloadVerificationService.VerifyAsync(
+            request, new Dictionary<Guid, Stream> { [PartId] = source });
+
+        Assert.Equal(DiskImagePayloadVerificationState.Invalid, result.State);
+        Assert.Equal("image.raw-part-size-limit", result.Reason);
+        Assert.Equal(0, source.Position);
     }
 
     private static DiskImagePayloadVerificationRequest Request() => new(

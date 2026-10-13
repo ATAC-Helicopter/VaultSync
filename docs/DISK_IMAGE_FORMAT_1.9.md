@@ -239,8 +239,9 @@ in [the envelope evidence](release-evidence/1.9-image-envelope-2026-10-13.md).
 
 `DiskImagePayloadVerificationService` checks supplied raw-part streams against
 lowercase SHA-256 expectations after logical coverage is complete. It requires
-one digest and one readable stream for each declared part, reads in 128 KiB
-chunks, rejects missing/truncated/extra bytes and mismatched digests, and
+one digest and one readable stream for each declared part, rejects raw part
+lengths beyond the image capacity or not aligned to the logical sector,
+reads in 128 KiB chunks, rejects missing/truncated/extra bytes and mismatched digests, and
 honors cancellation. The caller owns the streams; this service opens no path,
 allocates no capacity-sized buffer and writes no destination. A malformed or
 unfinished coverage plan fails before any part is read.
