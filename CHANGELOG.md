@@ -58,6 +58,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19030] Require fresh release packages after changes to shipped UI translations.
 - [BUG-19030] Translate omitted desktop messages and preserve distinct updater outcome instructions.
 - [BUG-19029] Unmount SMB share roots when destinations use nested folders.
 - [BUG-19028] Exclude saved Unity profiling captures from source project backups.
