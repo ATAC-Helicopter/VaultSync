@@ -1248,6 +1248,13 @@ repository must not transfer before a compatible release is adopted.
     stderr guidance. Two isolated cases reproduced the old deletion behavior.
   - Tracking: [issue #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699);
     the implementation and passing regression evidence await release integration.
+- [ ] `BUG-19030` `P1` Localize omitted desktop messages and enforce UI coverage.
+  - 2026-10-13: missing keys, initial Guide/Recovery text, coverage units,
+    Recovery summaries and updater outcomes use all 19 locale catalogs.
+    Cached Guide/Recovery text reapplies on language changes without resetting
+    filters/search or rewriting recorded evidence. Structural/source checks run
+    in local validation, required CI and before packaging. Issue #785; Refs #785
+    in #736. See [localization contract](docs/LOCALIZATION.md).
 - [ ] `BUG-19009` `P1` Run required release checks for embedded documentation changes.
   - Scope: CI/CodeQL/Sonar PR and integration triggers must include docs-only
     changes; bundled CLI guides change executable content and require validation.
@@ -1787,3 +1794,10 @@ signing under [the policy](docs/RELEASE_SIGNING.md), including updater manifests
 patches, retained offline proof and exact workflow/ref/commit verification. This
 changes release validation only; native publisher signing remains owned by
 VS-1902/#113 in 1.9.0. This release retains its own feature scope and metadata.
+
+Shared localization standard (2026-10-13): VS-1980/#673 adopts the mandatory
+[UI localization contract](docs/LOCALIZATION.md), source/catalog checks in required CI
+and before packaging, plus shared existing-desktop text repairs from
+BUG-19030/#785 (owned by 1.9.0). Maintained locales and cached language-change
+behavior are covered. This release retains its metadata and feature scope;
+static checks do not establish native-speaker or rendered platform qualification.

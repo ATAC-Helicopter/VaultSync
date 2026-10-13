@@ -16,6 +16,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Enforce translation coverage for every new user-visible desktop string.
 - [VS-1980] Require complete release provenance verification under the shared signing policy.
 - [VS-1980] Require BUG identifiers for active fixes and preserve historical ownership.
 - [VS-1980] Automate issue and branch tracking, auditing all remote IDs before allocation and preserving release ownership and existing preparation PRs.

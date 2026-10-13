@@ -1110,7 +1110,7 @@
   "Settings.Advanced.UpdateIntervalDescription": "Seberapa sering VaultSync memeriksa pembaruan saat berjalan.",
   "Settings.Advanced.UpdateStatusError": "Kesalahan terakhir: {0}",
   "Settings.Advanced.UpdateDiagnosticsEmpty": "Belum ada diagnostik target rilis yang diambil.",
-  "Settings.Advanced.UpdateDiagnosticsPatch": "Patch preflight: {0} ({1})",
+  "Settings.Advanced.UpdateDiagnosticsPatch": "Pemeriksaan awal patch: {0} ({1})",
   "Settings.Advanced.UpdateDiagnosticsPatchBlocked": "diblokir",
   "Settings.Advanced.UpdateDiagnosticsPatchEligible": "Memenuhi syarat",
   "Settings.Advanced.UpdateDiagnosticsTemplate": "Keputusan: {0} | Saluran: {1} | Terpilih: {2} ({3}) | Stabil: {4} | Beta: {5}",
@@ -1914,5 +1914,14 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Tinjau setiap file yang dibuat. Jalur, kredensial, token, dan rahasia dihapus atau diberi pseudonim. Bagian opsional dapat dikecualikan.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Sertakan diagnostik yang telah dibersihkan",
   "Settings.Advanced.SupportBundle.Telemetry": "Sertakan telemetri lokal anonim",
-  "Settings.Advanced.SupportBundle.Size": "Ukuran maksimum tanpa kompresi: {0:0.0} MB. Isi file dibersihkan sebelum diekspor."
+  "Settings.Advanced.SupportBundle.Size": "Ukuran maksimum tanpa kompresi: {0:0.0} MB. Isi file dibersihkan sebelum diekspor.",
+  "Settings.Destinations.RemoveCredential": "Hapus kredensial",
+  "Update.Installer.RelaunchFailed": "Pembaruan terpasang, tetapi VaultSync tidak dapat dimulai ulang otomatis. Buka VaultSync dari menu aplikasi.",
+  "Recovery.Loading": "Memuat kesiapan pemulihan...",
+  "Recovery.Checking": "Memeriksa proyek, usia cadangan, kebijakan verifikasi, dan ketersediaan tujuan.",
+  "Guide.Checking": "Memeriksa pengaturan…",
+  "Update.Installer.ReadyToRestart": "Pembaruan siap. VaultSync akan dimulai ulang dengan versi baru.",
+  "Update.Installer.Installed": "Pembaruan terpasang. VaultSync akan ditutup agar versi baru dapat dimulai dengan benar.",
+  "Recovery.Coverage.Hours": "{0} j",
+  "Recovery.Coverage.Days": "{0} h"
 }
