@@ -49,6 +49,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19024] Keep macOS beta bundle versions valid and ordered before the final release.
 - [BUG-19023] Show release-neutral descriptions in Linux package metadata.
 - [BUG-19013] Preserve Unicode decoding and local ID reservations in repository tracking.
 - [BUG-19016] Keep project names readable in narrow cards beside snapshot statistics.

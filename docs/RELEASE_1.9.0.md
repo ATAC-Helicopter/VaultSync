@@ -198,8 +198,9 @@ desktop or Linux qualification. See [the macOS record](release-evidence/1.9-desk
 
 ## Beta preparation — 2026-10-13
 
-A near-term beta is the next delivery objective. Its scope, version suffix and
-date still need an explicit release decision. The [readiness snapshot](release-evidence/1.9-beta-readiness-2026-10-13.md)
+A near-term beta is the next delivery objective. The maintainer requires every
+feature owned by 1.9.0, including a qualified disk recovery path, before beta.
+The version suffix and date remain unset. The [readiness snapshot](release-evidence/1.9-beta-readiness-2026-10-13.md)
 orders the architecture, measured recovery, desktop/upgrade and CI work without
 changing the stable release gate or claiming disk support.
 
@@ -209,8 +210,11 @@ actual beta contents and qualification remain governed by the selected scope.
 See [the bounded validation record](release-evidence/1.9-linux-package-metadata-2026-10-13.md).
 
 BUG-19024/#778 separately tracks the macOS DMG builder's beta suffix in
-numeric bundle-version fields. Its build-number mapping needs a reviewed
-decision and native package inspection before beta assets can be distributed.
+numeric bundle-version fields. The implemented mapping uses `X.Y.Z` for the
+short version and `X.Y.(1000*Z+N)` for beta `N` (1–998); the final build uses
+`X.Y.(1000*Z+999)`. `VaultSyncReleaseVersion` preserves the exact suffixed
+target. See [native synthetic DMG evidence](release-evidence/1.9-macos-beta-bundle-2026-10-13.md).
+Actual beta packages and exact 1.8.9 upgrade behavior remain unqualified.
 
 BUG-19025/#779 tracks the SonarQube Cloud PR lookup failure across the 1.9
 preparation PRs. A successful branch analysis does not satisfy #736's PR

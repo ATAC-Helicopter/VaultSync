@@ -1188,6 +1188,10 @@ The full maintained strategy is
 **Release contract:** [1.9.0 kickoff and gates](docs/RELEASE_1.9.0.md)
 **Tagline:** *Recover when the installed system cannot.*
 
+The 2026-10-13 beta direction requires the complete 1.9.0 feature scope,
+including an independently qualified disk recovery loop on an explicitly
+supported profile. Later 1.9.x features remain in their owning releases.
+
 Updater owner-transfer compatibility from [PR #721](https://github.com/ATAC-Helicopter/VaultSync/pull/721)
 is staged for this release through [PR #722](https://github.com/ATAC-Helicopter/VaultSync/pull/722).
 It needs exact 1.8.9 upgrade and platform qualification before shipping; the
@@ -1373,13 +1377,15 @@ repository must not transfer before a compatible release is adopted.
   - Tracking: issue #777; preparation PR #736.
 
 - [ ] `BUG-19024` `P1` Keep macOS beta bundle versions valid and monotonic.
-  - Scope: the DMG builder currently writes the full target version into both
-    macOS bundle version keys, but a beta suffix violates Apple's numeric format.
-    Define a distinct numeric build mapping before beta packaging.
+  - Progress: the builder now maps `X.Y.Z-beta.N` to numeric short version
+    `X.Y.Z` and build `X.Y.(1000*Z+N)`; stable uses `X.Y.(1000*Z+999)`.
+    The exact target is retained in bundle metadata and the DMG filename.
+    Native synthetic beta/stable DMGs pass plist, signing and checksum checks.
   - Acceptance: beta and stable bundle fields are valid, beta builds have
     traceable increasing build numbers, package identity remains coherent, and
-    native bundle inspection proves the selected mapping.
-  - Tracking: issue #778; preparation PR #736; implementation pending.
+    actual beta package inspection and predecessor upgrade still pass.
+  - Tracking: issue #778; preparation PR #736; see the
+    [native fixture record](docs/release-evidence/1.9-macos-beta-bundle-2026-10-13.md).
 
 - [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
   - Scope: SonarCloud rejects PR metadata after successful build and coverage
@@ -1392,8 +1398,8 @@ repository must not transfer before a compatible release is adopted.
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Progress: the [beta readiness snapshot](docs/release-evidence/1.9-beta-readiness-2026-10-13.md)
     records current build/CI evidence, open architecture and measured recovery
-    gates, and the versioned beta workflow. Beta scope, suffix and date require
-    an explicit release decision; the stable target remains 2027-03-26.
+    gates, and the versioned beta workflow. Complete 1.9.0 feature scope is now
+    required for beta; suffix and date remain unset. Stable target: 2027-03-26.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and
     the release/1.9.0 draft PR into Dev; retain existing dates and immutable IDs.
