@@ -1234,6 +1234,12 @@ repository must not transfer before a compatible release is adopted.
   - Acceptance: incomplete images cannot appear valid; verification detects
     missing or corrupt regions; readers reject unsupported versions without
     mutation. _(Issue #574.)_
+- [ ] `BUG-19026` `P0` Reject unaligned raw payload offsets.
+  - Progress: stored extent offsets now require logical-sector alignment even
+    when their byte ranges fit within a payload. Regression cases cover 512/4096
+    sectors and refuse before payload reads. Issue #780; preparation PR #736.
+  - Acceptance: current-head checks pass and only aligned raw maps can be verified;
+    destructive restore and disk qualification remain gated.
 - [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
   matrix before implementation claims begin.
   - Progress: [ADR 001](docs/adr/001-imaging-engine-1.9.md) compares engines and

@@ -45,6 +45,8 @@ public static class DiskImageCoverageService
                 if (extent.PartId is not null || extent.PartOffset != 0)
                     return Invalid("image.invalid-zero-rule", cursor);
             }
+            else if (extent.PartOffset % plan.LogicalSectorBytes != 0)
+                return Invalid("image.misaligned-part-offset", cursor);
             else if (extent.PartId is not Guid partId || !parts.TryGetValue(partId, out ulong length) ||
                      extent.PartOffset > length || extent.Length > length - extent.PartOffset)
                 return Invalid("image.part-range-unavailable", cursor);

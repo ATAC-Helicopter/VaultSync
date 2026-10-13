@@ -7,6 +7,14 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+BUG-19026/#780 rejects unaligned raw payload offsets before byte verification;
+512/4096-sector regression cases cover byte ranges that otherwise fit the part.
+This closes a map-validation defect without qualifying disk access or restore.
+Local Release validation on the BUG-19026 implementation passed with no build
+warnings/errors, 1,151 Core tests and 154 Python tests. Six new cases cover
+unaligned refusal before reads and preserved aligned offsets. Hosted CI remains
+separate; Project #7 retains In progress, Start 2026-10-13, Target 2027-03-26.
+
 ## Delivery order
 
 1. Approve VS-1910 typed routes and adaptive UI architecture, VS-1917 versioned

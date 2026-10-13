@@ -202,8 +202,10 @@ no destructive device implementation or stable support claim follows from this d
 `DiskImageCoverageService` checks supplied in-memory raw/explicit-zero map records.
 It supports only the proposed 512/4096-byte logical-sector profiles, positive
 sector-aligned capacity and ordered contiguous extents. Part identities are unique;
-raw ranges must fit the declared stored length. Zero extents have no part reference
-or storage offset. Subtraction-based bounds prevent unsigned arithmetic overflow.
+raw ranges must fit the declared stored length. BUG-19026 also requires stored
+offsets to align to the logical sector; an in-bounds byte shift cannot be accepted
+as a raw sector map. Zero extents have no part reference or storage offset.
+Subtraction-based bounds prevent unsigned arithmetic overflow.
 Provisional review limits are 4,096 parts and 65,536 extents.
 
 Gaps, overlap, impossible/misaligned ranges and invalid zero/part records reject.

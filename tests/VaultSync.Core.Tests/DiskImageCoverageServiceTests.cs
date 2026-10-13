@@ -11,6 +11,19 @@ public sealed class DiskImageCoverageServiceTests
     [Theory]
     [InlineData(512)]
     [InlineData(4096)]
+    public void AlignedNonzeroRawOffsetsRemainSupported(int sector)
+    {
+        Guid part = Guid.NewGuid();
+        var plan = new DiskImageCoveragePlan((ulong)sector * 2, (uint)sector,
+            [new(part, (ulong)sector * 2)],
+            [new(0, (ulong)sector, DiskImageExtentKind.Stored, part, (ulong)sector),
+             new((ulong)sector, (ulong)sector, DiskImageExtentKind.Zero)], true);
+        Assert.Equal(DiskImageCoverageState.CompleteUnverified, DiskImageCoverageService.Assess(plan).State);
+    }
+
+    [Theory]
+    [InlineData(512)]
+    [InlineData(4096)]
     public void RawAndExplicitZeroCoverageIsCompleteButNeverVerified(int sector)
     {
         Guid part = Guid.NewGuid();

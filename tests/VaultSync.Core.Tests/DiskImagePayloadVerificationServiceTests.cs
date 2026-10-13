@@ -15,6 +15,26 @@ public sealed class DiskImagePayloadVerificationServiceTests
     private static readonly Guid PartId = Guid.Parse("3a3b4083-876d-4fb2-b6c3-878f54c47560");
     private const string ExpectedSha256 = "110009dcee21620b166f3abfecb5eff7a873be729d1c2d53822e7acc5f34eb9b";
 
+    [Theory]
+    [InlineData(512, 1)]
+    [InlineData(512, 511)]
+    [InlineData(4096, 1)]
+    [InlineData(4096, 4095)]
+    public async Task InBoundsButUnalignedRawOffsetFailsBeforePayloadReads(int sector, int offset)
+    {
+        using var source = new MemoryStream(new byte[sector * 2], writable: false);
+        var coverage = new DiskImageCoveragePlan((ulong)sector * 2, (uint)sector,
+            [new(PartId, (ulong)sector * 2)],
+            [new(0, (ulong)sector, DiskImageExtentKind.Stored, PartId, (ulong)offset),
+             new((ulong)sector, (ulong)sector, DiskImageExtentKind.Zero)], true);
+        var request = new DiskImagePayloadVerificationRequest(coverage, [new(PartId, ExpectedSha256)]);
+        var result = await DiskImagePayloadVerificationService.VerifyAsync(request,
+            new Dictionary<Guid, Stream> { [PartId] = source });
+        Assert.Equal(DiskImagePayloadVerificationState.Invalid, result.State);
+        Assert.Equal("image.misaligned-part-offset", result.Reason);
+        Assert.Equal(0, source.Position);
+    }
+
     [Fact]
     public async Task ExactRawPartPassesWithoutClaimingTheWholeImage()
     {
