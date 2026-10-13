@@ -1360,8 +1360,9 @@ repository must not transfer before a compatible release is adopted.
     LiveCharts summaries with native Avalonia drawing and retain ABI/security
     overrides, localized legends, sort order and empty/error behavior.
   - Progress: three LiveCharts packages removed; local builds, proportion tests
-    and native offscreen rendering pass. Linux/macOS desktop acceptance remains
-    open. See [dependency audit](docs/release-evidence/1.9-desktop-dependencies-2026-10-12.md).
+    and Windows/macOS native offscreen rendering pass. Installed desktop
+    acceptance remains open. See the [dependency audit](docs/release-evidence/1.9-desktop-dependencies-2026-10-12.md)
+    and [macOS render evidence](docs/release-evidence/1.9-desktop-macos-2026-10-13.md).
   - Tracking: issue #776; preparation PR #736; Project In progress.
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.

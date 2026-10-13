@@ -187,3 +187,11 @@ The unused weekly chart construction and three resolved LiveCharts packages
 are removed. Rendering/security overrides remain, including Avalonia's transitive
 WebAssembly dependencies. Windows offscreen rendering is checked; Linux/macOS
 installed desktop acceptance remains open. See [audit and evidence](release-evidence/1.9-desktop-dependencies-2026-10-12.md).
+
+## macOS chart rendering — 2026-10-13
+
+VS-1994/#776 now has a native macOS offscreen render of the actual chart
+control: two segments, replacement with a full ring, replacement with an empty
+ring, and a 65% bar. The serialized Release build and all 1,100 Core and 151
+Python tests pass locally. This is focused rendering evidence, not installed
+desktop or Linux qualification. See [the macOS record](release-evidence/1.9-desktop-macos-2026-10-13.md).
