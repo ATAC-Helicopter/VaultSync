@@ -234,3 +234,19 @@ it never opens a path or writes a destination. This provisional encoding may
 change in joint review before a writer or compatible reader is accepted.
 Permanent serialized header/refusal fixtures and their limits are documented
 in [the envelope evidence](release-evidence/1.9-image-envelope-2026-10-13.md).
+
+## Raw payload byte verification — 2026-10-13
+
+`DiskImagePayloadVerificationService` checks supplied raw-part streams against
+lowercase SHA-256 expectations after logical coverage is complete. It requires
+one digest and one readable stream for each declared part, reads in 128 KiB
+chunks, rejects missing/truncated/extra bytes and mismatched digests, and
+honors cancellation. The caller owns the streams; this service opens no path,
+allocates no capacity-sized buffer and writes no destination. A malformed or
+unfinished coverage plan fails before any part is read.
+
+`PayloadsVerified` means only that the supplied streams matched the supplied
+digests. Those digests are not yet bound to a serialized manifest root or
+trusted producer. No decoded extent, completion record, source identity,
+independent image or restore destination is certified by this result. See
+[the bounded byte-verification evidence](release-evidence/1.9-payload-verification-2026-10-13.md).

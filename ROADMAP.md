@@ -1219,8 +1219,10 @@ repository must not transfer before a compatible release is adopted.
     permanent fixture requirements. A bounded logical-map prototype now checks
     exact coverage, raw part bounds, zero reconstruction and incomplete states;
     a complete structure remains unverified. A bounded read-only draft envelope
-    recognizer and permanent header/refusal fixtures now exist. Manifest and
-    payload readers, writer, engine alignment and joint approval remain open.
+    recognizer, permanent header/refusal fixtures and streaming raw-part digest
+    checks now exist. Manifest binding, complete-image reader/writer, engine
+    alignment and joint approval remain open. See the
+    [payload verification evidence](docs/release-evidence/1.9-payload-verification-2026-10-13.md).
   - Scope: cover source identity, partition layout, block/sparse maps,
     integrity records, compression and encryption descriptors, incomplete and
     resumable states, build identity, and reader/writer compatibility.
