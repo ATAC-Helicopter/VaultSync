@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1904] Capture synthetic raw images with explicit incomplete and interrupted outcomes.
 - [VS-1917] Bind raw payload verification to image manifests and completion records.
 - [VS-1917] Check raw image payload integrity without accessing restore destinations.
 - [VS-1917] Recognize disk image headers without treating them as verified recovery data.

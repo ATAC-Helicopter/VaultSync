@@ -2,7 +2,8 @@
 
 Status: **proposed**, 2026-10-04. Owner: VS-1918 / [#575](https://github.com/ATAC-Helicopter/VaultSync/issues/575).
 Review: sole 1.9.0 PR #736. This is a recommendation, not approval or a support
-announcement. No imaging engine, elevated helper or boot medium is implemented.
+announcement. A synthetic file capture prototype exists; no device imaging engine,
+elevated helper or boot medium is implemented.
 Review with VS-1917 format, VS-1919 evidence and VS-1910 route contracts.
 
 ## Problem and options

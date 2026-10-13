@@ -283,3 +283,32 @@ invalid-map, payload damage, short-read and cancellation tests. This closes
 the narrow manifest binding gap, while source/layout/provenance records,
 storage durability, writer, independent boot environment and joint approval
 remain open. See [current evidence](release-evidence/1.9-manifest-binding-2026-10-13.md).
+
+## Synthetic file capture — 2026-10-13
+
+VS-1904's `DiskImageFileCaptureService` writes the provisional single-raw-part
+profile from a supplied synthetic stream at its current position. It opens no
+source path or device and creates only new regular files under an exclusive
+temporary workspace; callers cannot select an overwrite destination. Capture
+identities/generation, geometry and capacity are checked before workspace creation.
+Supported test geometry is 512/4096 bytes, with positive aligned capacity bounded
+by the regular-file length domain. Reads and writes use a 128 KiB buffer.
+
+Publication order: create files exclusively, write/flush recognition header,
+copy exactly declared source capacity while hashing, reject source truncation or
+trailing bytes, flush payload to disk, write/flush manifest, then write/flush
+completion. Cancellation is observed before completion publication. Once final
+publication begins, it finishes without treating cancellation as rollback.
+The caller retains its source handle; partial workspaces remain available for
+diagnosis and require explicit cleanup. No checkpoint/resume is implemented.
+
+`FileFixtureCaptured` records successful file writes/flushes only. Source read
+errors, wrong lengths and cancellation before publication produce explicit
+Failed/Invalid/Incomplete/Interrupted results without a completion record.
+Storage failures during final publication may leave incomplete or structurally
+consistent metadata; they never return successful capture, and content inspection
+must still verify all observed bytes. File flushes do not prove directory-entry
+durability, power-loss semantics or source consistency. Atomic/crash behavior on
+supported filesystems remains unqualified. No worker, source lock, disk access,
+user capture workflow or restoration claim follows from these fixtures.
+See [file capture evidence](release-evidence/1.9-file-capture-2026-10-13.md).

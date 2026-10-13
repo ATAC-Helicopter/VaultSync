@@ -1275,6 +1275,12 @@ repository must not transfer before a compatible release is adopted.
     stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
   explicit operation states and checkpoint contracts.
+  - Progress: a file-only capture prototype streams synthetic input into an
+    exclusive temporary workspace, flushes the payload before manifest/completion
+    publication and preserves incomplete/interrupted/failed captures. Independent
+    encoded fixtures and read-back verification pass; device adapters, source
+    consistency, worker isolation, checkpoints/resume and crash/filesystem durability
+    remain open. See [file capture evidence](docs/release-evidence/1.9-file-capture-2026-10-13.md).
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
   capacity checks, interruption semantics, and block validation.
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
