@@ -207,3 +207,7 @@ BUG-19023/#777 removes stale beta feature claims from the generated Linux
 `.deb` and AppImage metadata. The package descriptions are release-neutral;
 actual beta contents and qualification remain governed by the selected scope.
 See [the bounded validation record](release-evidence/1.9-linux-package-metadata-2026-10-13.md).
+
+BUG-19024/#778 separately tracks the macOS DMG builder's beta suffix in
+numeric bundle-version fields. Its build-number mapping needs a reviewed
+decision and native package inspection before beta assets can be distributed.

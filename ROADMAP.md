@@ -1372,6 +1372,15 @@ repository must not transfer before a compatible release is adopted.
     script passes syntax validation, and owning release integration remains open.
   - Tracking: issue #777; preparation PR #736.
 
+- [ ] `BUG-19024` `P1` Keep macOS beta bundle versions valid and monotonic.
+  - Scope: the DMG builder currently writes the full target version into both
+    macOS bundle version keys, but a beta suffix violates Apple's numeric format.
+    Define a distinct numeric build mapping before beta packaging.
+  - Acceptance: beta and stable bundle fields are valid, beta builds have
+    traceable increasing build numbers, package identity remains coherent, and
+    native bundle inspection proves the selected mapping.
+  - Tracking: issue #778; preparation PR #736; implementation pending.
+
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Progress: the [beta readiness snapshot](docs/release-evidence/1.9-beta-readiness-2026-10-13.md)
     records current build/CI evidence, open architecture and measured recovery
