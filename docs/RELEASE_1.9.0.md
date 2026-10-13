@@ -42,6 +42,9 @@ generation and logical coverage without disk writes. Source/layout/provenance
 records remain absent. VS-1904 now has a synthetic file capture prototype with
 ordered file flushes and explicit incomplete/interrupted/failed results;
 crash/filesystem durability and device capture remain unqualified.
+VS-1907 reconstructs synthetic raw/zero maps into a new temporary file from
+payloads staged during verification and checks target read-back. This file loop
+does not qualify the independently booted restore path or a physical destination.
 Engine/support decisions (VS-1918), shared
 identity/evidence alignment (VS-1919), fixtures and joint approval remain open.
 The [VS-1919 identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) defines

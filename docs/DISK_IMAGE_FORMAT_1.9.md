@@ -314,3 +314,31 @@ durability, power-loss semantics or source consistency. Atomic/crash behavior on
 supported filesystems remains unqualified. No worker, source lock, disk access,
 user capture workflow or restoration claim follows from these fixtures.
 See [file capture evidence](release-evidence/1.9-file-capture-2026-10-13.md).
+
+## Synthetic file reconstruction — 2026-10-13
+
+VS-1907's `DiskImageFileReconstructionService` stages each supplied raw part into
+a new exclusive temporary regular file while the manifest verifier reads/hashes
+it. After all metadata, coverage and payload checks pass, reconstruction uses
+only these snapshots. Changed original streams cannot substitute unverified bytes
+after validation. Output is a newly created regular file; no existing target path,
+device or overwrite authorization is accepted. Parser-owned verified coverage
+is internal to this file-only path and is not public device authorization.
+
+The prototype bounds simultaneous part handles to 32, staged bytes to 1 GiB
+total and declared output capacity to 1 GiB; these fixture limits are separate
+from the general reader's format count limits. Resource exhaustion fails
+explicitly. It resolves only provided UUID/stream pairs and creates fixed or
+UUID-derived filenames in its own fresh workspace. Nothing follows image paths.
+
+Stored extents seek only within staged regular files; zero extents explicitly
+write zeros. A 128 KiB buffer bounds memory. After writing and flushing, the
+output is read back and its whole-file SHA-256/length must match the bytes written
+and declared capacity. Only then can `FileFixtureReconstructed` be returned,
+bound to manifest root and output content digest. Corrupt/incomplete/unsupported
+input refuses before the reconstructed output is created. Cancellation and I/O
+failure retain staged or partial artifacts for explicit caller cleanup; they
+cannot report completed reconstruction. Filesystem crash durability, hostile
+same-account changes to staging storage, device writes, offline worker/media
+and boot qualification remain outside this fixture profile.
+See [file reconstruction evidence](release-evidence/1.9-file-reconstruction-2026-10-13.md).

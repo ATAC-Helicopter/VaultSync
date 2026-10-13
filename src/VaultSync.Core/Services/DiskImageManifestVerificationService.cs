@@ -102,7 +102,11 @@ public static class DiskImageManifestVerificationService
         };
         return new(state, state == DiskImageManifestVerificationState.ContentVerified
             ? "image.draft-content-only" : result.Reason, result.VerifiedBytes,
-            imageId, captureId, generation, Convert.ToHexStringLower(root));
+            imageId, captureId, generation, Convert.ToHexStringLower(root))
+        {
+            VerifiedCoverage = state == DiskImageManifestVerificationState.ContentVerified
+                ? new(capacity, sector, parts, extents, HasCompletion: true) : null
+        };
     }
 
     private static async ValueTask<bool> ReadExactlyAsync(
