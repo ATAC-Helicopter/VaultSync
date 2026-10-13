@@ -37,7 +37,8 @@ VS-1972/1973/1974/1975 and BUG-19002–19007 follow 1.9.5; VS-1977/1978 remain
 1.9.1, VS-1976 remains 1.9.2, VS-1979 remains 1.9.5, VS-1980 remains 1.9.0.
 BUG-19001 and legacy text watcher preview/cancellation safety are independent
 backports retained in 1.9.0. They add no grouped command tree or JSON contracts.
-VS-1902 signing remains feasibility work; delivered VS-1903 stays closed.
+VS-1902 requires full-inventory provenance signing under
+[the shared policy](RELEASE_SIGNING.md); native publisher signing remains feasibility work; delivered VS-1903 stays closed.
 VS-1928/1929 are independent maintenance gates, tracked with the LTS baseline;
 they do not expand the 1.9.0 feature promise. VS-1943 and candidate VS-1971
 remain conditional and are not pulled into execution just by this import.

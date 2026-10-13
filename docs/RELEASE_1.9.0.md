@@ -282,3 +282,13 @@ BUG-19025/#779 tracks the SonarQube Cloud PR lookup failure across the 1.9
 preparation PRs. A successful branch analysis does not satisfy #736's PR
 quality gate. See the [failure diagnosis](release-evidence/1.9-sonarqube-pr-2026-10-13.md);
 the gate stays open until a current-head PR analysis passes.
+
+## Release signing — 2026-10-13
+
+VS-1902/#113 requires full-inventory keyless provenance signatures and retained
+offline proof, bound to the authorized source workflow/ref/commit and checked
+again before draft upload. The updater format and asset inventory remain
+unchanged. Native publisher signing remains financially gated and metadata
+remains unsigned. Historical 1.8.9 cryptographic verification and tamper rejection
+are separate from current-head tests and pending new-run/platform qualification.
+See [shared signing policy](RELEASE_SIGNING.md). Refs #113; #736 remains draft.

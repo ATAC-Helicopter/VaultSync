@@ -25,6 +25,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1902] Require verified release provenance for manifests, packages and updater patches.
 - [VS-1980] Block beta asset builds until recovery evidence qualifies a disk profile.
 - [VS-1980] Set complete-feature beta safety gates before wider recovery testing.
 - [VS-1994] Refresh desktop dependencies and use native Avalonia storage charts.

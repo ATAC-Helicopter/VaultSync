@@ -1145,6 +1145,13 @@ Migration principles:
 
 - [ ] `VS-1902` `P1` Add trusted application signing where operationally and
   financially feasible. _(Tracked by #113.)_
+  - 2026-10-13: mandatory keyless provenance covers canonical manifests and all
+    updater assets with workflow/ref/commit-bound online and offline checks.
+    Proof is retained and reverified before draft upload. Native publisher
+    certificates remain unavailable; unsigned metadata stays truthful.
+    Historical 1.8.9 signing was independently verified, including tamper
+    rejection. New-run and platform upgrade qualification remain open.
+    See [signing policy](docs/RELEASE_SIGNING.md); Refs #113 in #736.
 - [x] `VS-1903` `P2` Add background integrity audits with alerts.
   - Scope: retain the delivered background repository-integrity audit and its
     user-visible warning path as historical foundation work.

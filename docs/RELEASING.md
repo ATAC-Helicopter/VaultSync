@@ -285,11 +285,18 @@ python3 scripts/release_sbom.py validate \
 
 GitHub attestations bind the final installer, DMG, tarball, Debian package, or
 AppImage bytes—not an intermediate publish directory—to this repository,
-workflow run, triggering event, and commit. Verify a downloaded package online:
+workflow run, triggering event, and commit. The shared release rule additionally
+attests the canonical manifest and every patch JSON/ZIP, retains offline proof,
+and verifies all subjects against the exact signer/ref/commit before draft upload.
+See [release signing policy](RELEASE_SIGNING.md). Verify a downloaded package online:
 
 ```bash
 gh attestation verify VaultSync-Setup-1.8.9.exe \
-  --repo ATAC-Helicopter/VaultSync
+  --repo ATAC-Helicopter/VaultSync \
+  --signer-workflow ATAC-Helicopter/VaultSync/.github/workflows/release-assets.yml \
+  --source-ref refs/heads/Stable \
+  --source-digest ce0f7dbd1c674814c9454c110767986d5cc3414c \
+  --deny-self-hosted-runners
 ```
 
 For later offline verification, prepare the bundle and current public trusted
@@ -307,6 +314,10 @@ CLI to the offline machine, then run:
 ```bash
 gh attestation verify VaultSync-Setup-1.8.9.exe \
   --repo ATAC-Helicopter/VaultSync \
+  --signer-workflow ATAC-Helicopter/VaultSync/.github/workflows/release-assets.yml \
+  --source-ref refs/heads/Stable \
+  --source-digest ce0f7dbd1c674814c9454c110767986d5cc3414c \
+  --deny-self-hosted-runners \
   --bundle 'sha256:DIGEST.jsonl' \
   --custom-trusted-root trusted_root.jsonl
 ```
@@ -331,15 +342,16 @@ copy cannot reveal trust-root revocations that occurred after it was captured.
 - canonical release manifest generated from the final direct-download assets
   and validated against the same bytes before upload
 - one validated SPDX 2.3 SBOM per self-contained package, with final-byte
-  provenance and SBOM attestations plus candidate online/offline verification
+  provenance and SBOM attestations plus mandatory full-inventory online/offline verification
 - every direct-download asset exposes a GitHub SHA-256 digest and the updater
   rejects missing, mismatched, or non-official integrity metadata
 - Windows SmartScreen and macOS Gatekeeper instructions remain current
 
 ## 6) Unsigned Distribution Policy
 VaultSync direct-download builds are intentionally unsigned because paid
-platform signing programs are outside the supported release budget. Signing
-and notarization are not release gates. Integrity verification and clear user
+platform signing programs are outside the supported release budget. Native publisher signing
+and notarization are not release gates. Provenance signatures are mandatory
+under [the release signing policy](RELEASE_SIGNING.md). Integrity verification and clear user
 disclosure are mandatory compensating controls:
 
 - publish only through the official `ATAC-Helicopter/VaultSync` release page;
