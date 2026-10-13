@@ -297,3 +297,14 @@ Commit/push defaults:
 Reference:
 - `DOCUMENTATION.md`
 - `docs/README.md`
+
+## Release provenance signing
+
+Candidate, beta and stable direct-download builds must attest the canonical
+manifest and every declared final asset, including updater patch JSON and ZIP.
+Verify all signatures online and offline against the exact source repository,
+workflow, commit and authorized ref before success or draft upload. Retain and
+archive the proof artifact; missing proof requires a new qualified build.
+Follow [release signing policy](docs/RELEASE_SIGNING.md). Preserve updater schema
+and asset names; keep native unsigned metadata truthful until platform publisher
+signing is separately qualified. This shared rule applies to every release.
