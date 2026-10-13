@@ -146,3 +146,13 @@ must pass the 1.9.0 gates before release; extra patch bases remain disabled.
 Predecessor candidate: 1.9.1; exact installed-upgrade
 qualification is pending. A branch scaffold does not authorize publishing updater
 artifacts or patch-base support. Current stable remains 1.8.9.
+
+## Release provenance verification
+
+Candidate, beta and stable release preparation verifies GitHub/Sigstore provenance
+signatures for the canonical manifest and every declared asset, including patch
+JSON and ZIP. Proof is retained outside the release asset inventory. Updater
+schema, asset names and byte-integrity checks remain compatible; desktop clients
+do not verify Sigstore at runtime. Native publisher signing and notarization
+remain separate from provenance, and unsigned distribution metadata stays
+truthful. See [release signing policy](RELEASE_SIGNING.md).
