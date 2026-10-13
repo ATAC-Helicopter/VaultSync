@@ -49,6 +49,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19023] Show release-neutral descriptions in Linux package metadata.
 - [BUG-19013] Preserve Unicode decoding and local ID reservations in repository tracking.
 - [BUG-19016] Keep project names readable in narrow cards beside snapshot statistics.
 - [BUG-19014] Preserve unfinished History drafts when refreshing the same selected snapshot.

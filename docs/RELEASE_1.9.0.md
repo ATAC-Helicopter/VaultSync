@@ -202,3 +202,8 @@ A near-term beta is the next delivery objective. Its scope, version suffix and
 date still need an explicit release decision. The [readiness snapshot](release-evidence/1.9-beta-readiness-2026-10-13.md)
 orders the architecture, measured recovery, desktop/upgrade and CI work without
 changing the stable release gate or claiming disk support.
+
+BUG-19023/#777 removes stale beta feature claims from the generated Linux
+`.deb` and AppImage metadata. The package descriptions are release-neutral;
+actual beta contents and qualification remain governed by the selected scope.
+See [the bounded validation record](release-evidence/1.9-linux-package-metadata-2026-10-13.md).

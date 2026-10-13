@@ -198,7 +198,7 @@ EOF
   <releases>
     <release version="${version}" date="${release_date}">
       <description>
-        <p>Beta release with Linux installer, update, tray, diagnostics, and backup reliability fixes.</p>
+        <p>VaultSync project backup and synchronization update.</p>
       </description>
     </release>
   </releases>
@@ -345,7 +345,7 @@ cat > "${appdir}/usr/share/metainfo/${appimage_app_id}.appdata.xml" <<EOF
   <releases>
     <release version="${version}" date="${appimage_release_date}">
       <description>
-        <p>Beta release with Linux installer, update, tray, diagnostics, and backup reliability fixes.</p>
+        <p>VaultSync project backup and synchronization update.</p>
       </description>
     </release>
   </releases>

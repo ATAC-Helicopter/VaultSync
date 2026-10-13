@@ -1365,6 +1365,13 @@ repository must not transfer before a compatible release is adopted.
     and [macOS render evidence](docs/release-evidence/1.9-desktop-macos-2026-10-13.md).
   - Tracking: issue #776; preparation PR #736; Project In progress.
 
+- [ ] `BUG-19023` `P2` Remove stale beta claims from Linux package metadata.
+  - Scope: make the `.deb` and AppImage AppStream release descriptions accurate
+    for the selected target version without implying unqualified beta features.
+  - Acceptance: both package templates use release-neutral text, the packaging
+    script passes syntax validation, and owning release integration remains open.
+  - Tracking: issue #777; preparation PR #736.
+
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Progress: the [beta readiness snapshot](docs/release-evidence/1.9-beta-readiness-2026-10-13.md)
     records current build/CI evidence, open architecture and measured recovery
