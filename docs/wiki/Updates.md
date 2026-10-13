@@ -80,3 +80,13 @@ Switch channels in Settings > Advanced.
 - For Microsoft Store builds, use the Store listing and Store app update flow instead of the GitHub installer.
 
 - [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.
+
+## Release provenance verification
+
+Candidate, beta and stable release preparation verifies GitHub/Sigstore provenance
+signatures for the canonical manifest and every declared asset, including patch
+JSON and ZIP. Proof is retained outside the release asset inventory. Updater
+schema, asset names and byte-integrity checks remain compatible; desktop clients
+do not verify Sigstore at runtime. Native publisher signing and notarization
+remain separate from provenance, and unsigned distribution metadata stays
+truthful. See [release signing policy](../RELEASE_SIGNING.md).
