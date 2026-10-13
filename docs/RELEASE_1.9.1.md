@@ -54,3 +54,6 @@ and before packaging, plus shared existing-desktop text repairs from
 BUG-19030/#785 (owned by 1.9.0). Maintained locales and cached language-change
 behavior are covered. This release retains its metadata and feature scope;
 static checks do not establish native-speaker or rendered platform qualification.
+
+Reused release packages must also have unchanged `Localization/` source inputs;
+translation-only changes require rebuilding the qualified source run.
