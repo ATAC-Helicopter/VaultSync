@@ -2720,7 +2720,8 @@ public partial class ProjectsViewModel : ViewModelBase
     private static void AddIndexedPresetInfos(string indexPath, List<PresetInfo> presets, HashSet<string> ids)
     {
         var json = File.ReadAllText(indexPath);
-        var index = JsonSerializer.Deserialize<PresetIndex>(json);
+        var index = JsonSerializer.Deserialize<PresetIndex>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         foreach (var preset in index?.Presets ?? [])
         {
             AddPresetInfo(preset, presets, ids);

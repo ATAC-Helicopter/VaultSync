@@ -54,6 +54,9 @@ overwritten; each probe is removed when its owning stream closes.
 
 ## Smart Presets
 - Presets apply `.vaultsyncignore` rules to project backups.
+- Preset IDs use the catalog's mapped filenames: for example, `cpp` applies
+  `c_cpp.vaultsyncignore`. Project selection, CLI listing and backup filtering
+  read the same catalog, including lowercase field names in shipped presets.
 - Consumer-friendly presets are available for:
   - Photos libraries
   - Documents libraries

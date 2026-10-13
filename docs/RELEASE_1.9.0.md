@@ -7,6 +7,13 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+BUG-19027/#781 fixes lowercase preset catalog fields being ignored by UI, CLI
+and backup readers. Indexed IDs now display and resolve to their declared rule
+files; legacy PascalCase catalogs remain supported. A cross-layer regression
+checks catalog selection, mapped content and actual file exclusion.
+Local Release checks on the catalog fix passed: 0 build warnings/errors,
+1,163 Core tests and 154 Python tests. Hosted CI remains separate.
+
 BUG-19026/#780 rejects unaligned raw payload offsets before byte verification;
 512/4096-sector regression cases cover byte ranges that otherwise fit the part.
 This closes a map-validation defect without qualifying disk access or restore.

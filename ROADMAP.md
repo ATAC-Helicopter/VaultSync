@@ -1240,6 +1240,13 @@ repository must not transfer before a compatible release is adopted.
     sectors and refuse before payload reads. Issue #780; preparation PR #736.
   - Acceptance: current-head checks pass and only aligned raw maps can be verified;
     destructive restore and disk qualification remain gated.
+- [ ] `BUG-19027` `P1` Read the exclusion preset catalog consistently.
+  - Progress: UI, CLI and backup readers now accept the shipped lowercase JSON
+    fields and legacy PascalCase catalogs. An end-to-end regression resolves
+    `cpp` to `c_cpp.vaultsyncignore`, displays its ID and excludes generated files.
+    Issue #781; preparation PR #736.
+  - Acceptance: catalog selection and applied rules agree on the actual head;
+    recovery/upgrade and release gates remain separate.
 - [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
   matrix before implementation claims begin.
   - Progress: [ADR 001](docs/adr/001-imaging-engine-1.9.md) compares engines and
