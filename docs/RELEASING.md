@@ -121,10 +121,16 @@ Optional prerelease example (only after an explicit release decision):
 - branch: `Dev` after the beta changes are merged there
 - release channel: `beta`
 - `release_candidate = false`
-- `previous_version = 1.8.8`
-- `target_version = <next-version>-Beta.1`
+- `previous_version = 1.8.9` for the first 1.9.0 beta, after exact predecessor
+  qualification
+- `target_version = <approved-1.9.0-beta-suffix>`; the exact value must also
+  match `activeRelease.version` and the UI project version on `Dev`
 - `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
 - Omit patch assets for package-managed Windows, macOS, or Linux releases unless the exact package/install layout has been update-tested on that OS.
+
+The 1.9.0 beta scope, suffix and date are not yet approved. See the
+[beta readiness snapshot](release-evidence/1.9-beta-readiness-2026-10-13.md)
+before changing canonical versions or dispatching assets.
 
 The `release_candidate` switch is not used for beta builds. It exists only to
 build unpublished, stable-version candidate assets from a matching release

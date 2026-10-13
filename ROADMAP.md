@@ -1366,6 +1366,10 @@ repository must not transfer before a compatible release is adopted.
   - Tracking: issue #776; preparation PR #736; Project In progress.
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
+  - Progress: the [beta readiness snapshot](docs/release-evidence/1.9-beta-readiness-2026-10-13.md)
+    records current build/CI evidence, open architecture and measured recovery
+    gates, and the versioned beta workflow. Beta scope, suffix and date require
+    an explicit release decision; the stable target remains 2027-03-26.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and
     the release/1.9.0 draft PR into Dev; retain existing dates and immutable IDs.

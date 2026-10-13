@@ -195,3 +195,10 @@ control: two segments, replacement with a full ring, replacement with an empty
 ring, and a 65% bar. The serialized Release build and all 1,100 Core and 151
 Python tests pass locally. This is focused rendering evidence, not installed
 desktop or Linux qualification. See [the macOS record](release-evidence/1.9-desktop-macos-2026-10-13.md).
+
+## Beta preparation — 2026-10-13
+
+A near-term beta is the next delivery objective. Its scope, version suffix and
+date still need an explicit release decision. The [readiness snapshot](release-evidence/1.9-beta-readiness-2026-10-13.md)
+orders the architecture, measured recovery, desktop/upgrade and CI work without
+changing the stable release gate or claiming disk support.
