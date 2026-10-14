@@ -294,7 +294,10 @@ source path or device and creates only new regular files under an exclusive
 temporary workspace; callers cannot select an overwrite destination. Capture
 identities/generation, geometry and capacity are checked before workspace creation.
 Supported test geometry is 512/4096 bytes, with positive aligned capacity bounded
-by the regular-file length domain. Reads and writes use a 128 KiB buffer.
+by a 1 GiB fixture limit shared with reconstruction. Oversized requests return
+`capture.fixture-size-limit` before any source read or workspace creation. This
+is a prototype resource limit, not a supported disk capacity. Reads and writes
+use a 128 KiB buffer.
 
 Publication order: create files exclusively, write/flush recognition header,
 copy exactly declared source capacity while hashing, reject source truncation or

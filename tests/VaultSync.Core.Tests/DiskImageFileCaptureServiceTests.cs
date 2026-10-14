@@ -141,6 +141,45 @@ public sealed class DiskImageFileCaptureServiceTests
         Assert.Equal(0, source.Position);
     }
 
+    [Theory]
+    [InlineData(512)]
+    [InlineData(4096)]
+    public async Task OversizedFixtureRefusesBeforeReadingOrCreatingFiles(uint sector)
+    {
+        using var source = new ProbeSource(new byte[512]);
+        var result = await DiskImageFileCaptureService.CaptureAsync(
+            Request(DiskImageFileReconstructionService.MaximumFixtureBytes + sector, sector), source);
+        try
+        {
+            Assert.Equal(DiskImageFileCaptureState.Invalid, result.State);
+            Assert.Equal("capture.fixture-size-limit", result.Reason);
+            Assert.Null(result.Workspace);
+            Assert.Null(result.ManifestRoot);
+            Assert.Equal(0UL, result.WrittenBytes);
+            Assert.Equal(0, source.MaximumRead);
+            Assert.Equal(0, source.Position);
+        }
+        finally { RemoveWorkspace(result); }
+    }
+
+    [Theory]
+    [InlineData(512)]
+    [InlineData(4096)]
+    public async Task ExactFixtureLimitRemainsAcceptedWithoutAllocatingLargeInput(uint sector)
+    {
+        using var source = new MemoryStream();
+        var result = await DiskImageFileCaptureService.CaptureAsync(
+            Request(DiskImageFileReconstructionService.MaximumFixtureBytes, sector), source);
+        try
+        {
+            Assert.Equal(DiskImageFileCaptureState.Incomplete, result.State);
+            Assert.Equal("capture.truncated-source", result.Reason);
+            Assert.NotNull(result.Workspace);
+            await AssertIncomplete(result);
+        }
+        finally { RemoveWorkspace(result); }
+    }
+
     private static async Task AssertIncomplete(DiskImageFileCaptureAssessment result)
     {
         using var metadata = File.OpenRead(Path.Combine(result.Workspace!, DiskImageFileCaptureService.MetadataFileName));

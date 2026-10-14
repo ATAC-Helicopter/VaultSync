@@ -9,6 +9,7 @@ public static class DiskImageFileCaptureService
 {
     public const string MetadataFileName = "image.metadata";
     public const string PayloadFileName = "payload.raw";
+    public const ulong MaximumFixtureBytes = DiskImageFileReconstructionService.MaximumFixtureBytes;
     private const int BufferLength = 128 * 1024;
     private const int ManifestLength = 164;
 
@@ -25,6 +26,8 @@ public static class DiskImageFileCaptureService
             return new(DiskImageFileCaptureState.Unsupported, "capture.unsupported-sector-size");
         if (request.Capacity % request.LogicalSectorBytes != 0)
             return new(DiskImageFileCaptureState.Invalid, "capture.invalid-capacity");
+        if (request.Capacity > MaximumFixtureBytes)
+            return new(DiskImageFileCaptureState.Invalid, "capture.fixture-size-limit");
 
         string? workspace = null;
         ulong written = 0;

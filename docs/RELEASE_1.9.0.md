@@ -343,3 +343,12 @@ rule and validated existing-desktop repairs, retaining release ownership and
 metadata. Locale-only changes invalidate reused packages. See
 [per-head localization evidence](release-evidence/1.9-localization-2026-10-13.md); native translation/rendering and
 release qualification remain separate.
+
+## Synthetic capture resource limit — 2026-10-14
+
+BUG-19031/#789 refuses synthetic capture requests above 1 GiB before reading
+input or creating a temporary workspace, matching the reconstruction fixture
+limit. Sector-boundary refusal and exact-limit truncation tests use small inputs.
+See [current verification](release-evidence/1.9-capture-limit-2026-10-14.md).
+This adds no device access or measured disk qualification. Refs #789;
+#736 remains draft.

@@ -1315,6 +1315,16 @@ repository must not transfer before a compatible release is adopted.
   - Acceptance: later readiness and scenario evaluation can distinguish
     recorded facts, measured evidence, simulation, inference, user confirmation,
     stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
+- [ ] `BUG-19031` `P2` Bound synthetic capture before temporary storage allocation.
+  - Progress: requests above 1 GiB are refused before source reads or workspace
+    creation, matching the reconstruction fixture limit. Boundary regressions
+    cover 512/4096-byte sectors without allocating large files. Issue #789;
+    preparation PR #736. See [capture limit evidence](docs/release-evidence/1.9-capture-limit-2026-10-14.md).
+  - Scope: apply the reconstruction fixture's resource bound to synthetic capture;
+    keep disk support and device authorization outside this correction.
+  - Acceptance: current-head Release checks pass, oversized requests allocate no
+    workspace and supported boundaries retain truncation refusal. This fixture
+    correction does not qualify disk capture or recovery.
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
   explicit operation states and checkpoint contracts.
   - Progress: a file-only capture prototype streams synthetic input into an
