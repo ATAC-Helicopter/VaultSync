@@ -1230,6 +1230,9 @@ repository must not transfer before a compatible release is adopted.
     included framework is checked; each preparation head validates its own
     metadata and tests. Native installed upgrades and release gates remain open.
     See [runtime security](docs/RUNTIME_SECURITY.md).
+  - Delivery (2026-10-14): all nine sole draft preparation PRs have the shared
+    standard, with each own zero-warning Release gate passed. Per-head counts
+    and commits are in [runtime evidence](docs/release-evidence/1.9-runtime-servicing-2026-10-14.md).
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
   capacity checks, interruption semantics, and block validation.
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
