@@ -17,7 +17,8 @@ This document defines the current release packaging flow.
   family releases remain unscheduled until their predecessor is qualified.
 
 ## Prerequisites
-- .NET 10 SDK
+- Serviced .NET 10 SDK from `global.json` (currently 10.0.402), with embedded
+  runtime verification against the [runtime security contract](RUNTIME_SECURITY.md)
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
 - The current stable release is `1.8.9`.

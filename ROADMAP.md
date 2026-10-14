@@ -1224,6 +1224,12 @@ repository must not transfer before a compatible release is adopted.
     stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
   explicit operation states and checkpoint contracts.
+- [ ] `VS-1997` `P0` Require serviced runtimes and verify every included release framework.
+  - Shared security foundation (2026-10-14), owned in 1.9.0 by #787: SDK
+    10.0.402, runtime floor 10.0.13 and coordinated Microsoft packages. Every
+    included framework is checked; each preparation head validates its own
+    metadata and tests. Native installed upgrades and release gates remain open.
+    See [runtime security](docs/RUNTIME_SECURITY.md).
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
   capacity checks, interruption semantics, and block validation.
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
