@@ -174,3 +174,11 @@ rule and validated existing-desktop repairs, retaining release ownership and
 metadata. Locale-only changes invalidate reused packages. See
 [per-head localization evidence](release-evidence/1.9-localization-2026-10-13.md); native translation/rendering and
 release qualification remain separate.
+
+
+Runtime servicing delivery (2026-10-14): VS-1997/#787 applies SDK 10.0.402,
+.NET 10.0.13 and per-framework embedded runtime checks to all nine sole draft
+preparation PRs. Each real head passed its required Release gate and retained
+its own metadata/features. See [per-head runtime evidence](release-evidence/1.9-runtime-servicing-2026-10-14.md).
+Compression experiments remain only in 1.9.0. Reviewed default-branch integration,
+native installed upgrades and actual release gates remain open.
