@@ -27,6 +27,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Prepare development diaries with native UI captures and scoped compression measurements.
 - [VS-1996] Compress Unity scenes, prefabs and metadata more densely using compatible ZIP archives.
 - [VS-1902] Require verified release provenance for manifests, packages and updater patches.
 - [VS-1980] Block beta asset builds until recovery evidence qualifies a disk profile.

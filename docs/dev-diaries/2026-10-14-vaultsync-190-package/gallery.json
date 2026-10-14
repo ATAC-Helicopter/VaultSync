@@ -1,0 +1,44 @@
+{
+  "preparedOn": "2026-10-14",
+  "sourceCommit": "62c84474c712c2a93de4dc1115ba6f52937c57a3",
+  "images": [
+    {
+      "file": "images/devlog-190-imported-projects.png",
+      "siteSrc": "/products/vaultsync/devlog-190-imported-projects.png",
+      "width": 1710,
+      "height": 1045,
+      "sha256": "c5f8ddf3c72d3152735362a57b632f43a4e0d3c39cabde1dadc5a463f0747406",
+      "alt": "Actual VaultSync development Projects UI with the synthetic Level Kit project marked Imported, no local source folder and disabled source actions.",
+      "caption": "Native render of the real development MainWindow content on macOS with synthetic projects and two temporary local file backups. This is not an OS screen grab or disk-recovery qualification.",
+      "mode": "Avalonia RenderTargetBitmap, native macOS backend, 96 DPI, unmodified production controls",
+      "sourceCommit": "62c84474c712c2a93de4dc1115ba6f52937c57a3"
+    },
+    {
+      "file": "images/devlog-190-unity-preset.png",
+      "siteSrc": "/products/vaultsync/devlog-190-unity-preset.png",
+      "width": 1700,
+      "height": 1045,
+      "sha256": "9ba768a147224a0b5eeb9c2783e382f99b90555d1e89185c28b7ea234ed276e6",
+      "alt": "Actual Unity preset editor displaying Library exclusions and the highlighted saved-profiler capture .pdata rule.",
+      "caption": "Actual production ProjectsView in an isolated native window; the existing editor shows corrected rules. Synthetic Library and .pdata files are excluded by the real backup path.",
+      "mode": "Avalonia RenderTargetBitmap, native macOS backend, 96 DPI, unmodified production controls",
+      "sourceCommit": "62c84474c712c2a93de4dc1115ba6f52937c57a3"
+    },
+    {
+      "file": "images/devlog-190-native-storage-chart.png",
+      "siteSrc": "/products/vaultsync/devlog-190-native-storage-chart.png",
+      "width": 749,
+      "height": 449,
+      "sha256": "9065c80935758c8800358037bae04bbba913b34a67d71a13a533f5bcdd078278",
+      "alt": "Actual native Avalonia storage card showing two synthetic project payloads and the capture filesystem free-space gauge.",
+      "caption": "Focused native render of the current storage card. Project figures are recorded logical payload sizes, not compressed ZIP sizes; free space comes from the capture filesystem.",
+      "mode": "Avalonia RenderTargetBitmap, native macOS backend, 96 DPI, unmodified production controls",
+      "sourceCommit": "62c84474c712c2a93de4dc1115ba6f52937c57a3"
+    }
+  ],
+  "fixture": "Three synthetic projects; one imported marker; two real local ZIP backups, no disk images.",
+  "toolLimitations": [
+    "Computer Use native pipe could not start; screenshots are native view renders, not OS screen grabs.",
+    "No browser connection is available; desktop/mobile browser visual review remains pending."
+  ]
+}

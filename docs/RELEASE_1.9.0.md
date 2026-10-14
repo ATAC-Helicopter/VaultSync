@@ -7,6 +7,14 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1980/#673 prepares an October 14 development diary, website entry and Reddit
+copy with unmodified native view captures and isolated synthetic file backups.
+These are renderer captures of production controls, not OS screen grabs or disk
+qualification. ZIP tuning, isolated Huffman research and release servicing remain
+distinct in the story. Site publication and browser visual review are pending;
+the existing #736 release gates stay open. See the
+[publication package](dev-diaries/2026-10-14-vaultsync-190-package/README.md).
+
 VS-1997/#787 requires the October security-serviced .NET 10.0.13 runtime,
 SDK 10.0.402 and coordinated Microsoft packages. Release runtime audits verify
 every included framework, including optional ASP.NET/Windows Desktop, instead
