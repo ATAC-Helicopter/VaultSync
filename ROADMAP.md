@@ -1501,7 +1501,8 @@ repository must not transfer before a compatible release is adopted.
   - Editorial placement (2026-10-14): development diaries, Reddit drafts and
     publication packages are retained in the private editorial workspace and
     removed from the current public tree. Technical release evidence remains
-    tracked separately. Publication is pending; this does not close beta gates.
+    tracked separately. The [new article](https://fglabs.dev/devlog/vaultsync-190-following-the-files)
+    is published from the private site source; email delivery and beta gates remain open.
   - Progress: the [beta readiness snapshot](docs/release-evidence/1.9-beta-readiness-2026-10-13.md)
     records current build/CI evidence, open architecture and measured recovery
     gates, and the versioned beta workflow. Complete 1.9.0 feature scope is now
