@@ -12,8 +12,9 @@ in a private editorial workspace outside GitHub. Existing public commit history
 is preserved; manuscript files are removed from the current preparation tree.
 Technical release evidence remains in its owning documentation. The new diary
 is [published on FG Labs](https://fglabs.dev/devlog/vaultsync-190-following-the-files)
-from the private site source. Newsletter delivery is not verified; beta
-qualification remains separate and pending.
+from the private site source. Website issue #25/PR #43 owns automatic product
+notifications, with provider-confirmed delivery of the new article and duplicate
+suppression. This website behavior does not qualify the VaultSync binary or beta.
 
 VS-1997/#787 requires the October security-serviced .NET 10.0.13 runtime,
 SDK 10.0.402 and coordinated Microsoft packages. Release runtime audits verify

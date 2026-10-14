@@ -178,5 +178,8 @@ Development diary manuscripts, Reddit drafts and publication packages belong in
 a private editorial workspace outside this public repository. Do not commit or
 upload them to GitHub, issues, pull requests or attachments. Keep technical
 release evidence in its owning documentation directory; link published articles
-on FG Labs when useful. Website publication and audience email sends remain
-separate actions requiring the maintainer's publication decision.
+on FG Labs when useful. Approved publication of a new first-party website devlog
+also authorizes its automatic notification to confirmed followers of that product,
+respecting unsubscribe state and durable duplicate protection. Follow the owning
+website publication contract; previews and unrelated sends require their own
+maintainer authorization.
