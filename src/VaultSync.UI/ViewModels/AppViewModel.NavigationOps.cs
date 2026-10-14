@@ -209,7 +209,8 @@ namespace VaultSync.UI.ViewModels
                             () => BackupsViewModel.LoadFromBackups(
                                 _backupsCacheProjects,
                                 _backupsCacheBackups,
-                                _backupsCacheDisabledAuto ?? []),
+                                _backupsCacheDisabledAuto ?? [],
+                                _backupsCacheDestinationQuotaPlans),
                             DispatcherPriority.Background);
                     }
 

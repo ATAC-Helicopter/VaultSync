@@ -2108,6 +2108,18 @@ DELETE FROM sqlite_sequence;";
                 """).AsList();
         }
 
+        /// <summary>Complete lightweight history for logical quota accounting, independent of page limits.</summary>
+        public List<Backup> GetBackupsForQuotaAccounting()
+        {
+            using SqliteConnection c = Open();
+            return c.Query<Backup>(
+                """
+                SELECT id, created_utc as CreatedUtc, total_bytes as TotalBytes,
+                       destination_path as DestinationPath, is_protected as IsProtected
+                FROM backups;
+                """).AsList();
+        }
+
         public int GetBackupCount()
         {
             using SqliteConnection c = Open();

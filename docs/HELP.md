@@ -82,7 +82,17 @@ VaultSync supports two destination modes:
 - On macOS, auto-unmount closes the SMB share mount even when the destination
   points to a subfolder inside that share.
 
+The destination cards, including the sidebar, show **known backups (logical)**:
+the sum of source-data sizes recorded for that destination in this device's
+complete backup history. Loading a shorter Backups list does not reduce this
+count. It is not physical disk allocation: ZIP compression, incremental/shared
+files and filesystem allocation can change actual storage use. Devices can still
+show different known totals until their metadata histories agree. Destination
+quota suggestions use the same logical accounting; disk free-space checks remain
+separate. Hover over a truncated size label to read its full text.
+
 ## Cross-Machine Metadata Sync
+
 - Metadata is stored under `.vaultsync/meta/` on destinations.
 - VaultSync can import and merge metadata from reachable destinations.
 - Optional auto-import is available in Settings.

@@ -1315,6 +1315,16 @@ repository must not transfer before a compatible release is adopted.
   - Acceptance: later readiness and scenario evaluation can distinguish
     recorded facts, measured evidence, simulation, inference, user confirmation,
     stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
+- [ ] `BUG-19032` `P1` Keep destination totals independent of partial backup lists.
+  - Scope: count complete recorded history off the UI thread, retaining light
+    page caches and describing known logical size honestly in all locales.
+  - Progress: a narrow accounting projection feeds sidebar totals and quota
+    suggestions separately from five-item page caches. Partial/empty page loads
+    cannot replace those totals. Cached labels reapply on language changes.
+    Issue #790; preparation PR #736. See [current evidence](docs/release-evidence/1.9-destination-sidebar-2026-10-14.md).
+  - Acceptance: current-head Release and localization checks pass; native sidebar
+    review and cross-device checks distinguish database coverage from actual
+    allocated destination storage. Release acceptance remains open.
 - [ ] `BUG-19031` `P2` Bound synthetic capture before temporary storage allocation.
   - Progress: requests above 1 GiB are refused before source reads or workspace
     creation, matching the reconstruction fixture limit. Boundary regressions

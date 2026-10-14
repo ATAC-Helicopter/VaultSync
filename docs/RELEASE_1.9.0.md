@@ -352,3 +352,15 @@ limit. Sector-boundary refusal and exact-limit truncation tests use small inputs
 See [current verification](release-evidence/1.9-capture-limit-2026-10-14.md).
 This adds no device access or measured disk qualification. Refs #789;
 #736 remains draft.
+
+## Complete destination sidebar totals — 2026-10-14
+
+BUG-19032/#790 separates destination logical accounting from partial Backups
+page caches. A complete narrow database projection builds totals and protected
+cleanup suggestions off the UI thread, while cached pages retain their limits.
+All locales describe known logical size; language changes reapply cached labels.
+[Verification and tray diagnosis](release-evidence/1.9-destination-sidebar-2026-10-14.md)
+keep synthetic checks, native review and actual physical allocation separate.
+The installed Linux app still uses Avalonia 12.1.2; the development tree already
+uses 12.1.4's D-Bus registration corrections under VS-1994/#776. A fresh login
+with the updated app is not yet qualified. Refs #790; #736 remains draft.
