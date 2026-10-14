@@ -1358,6 +1358,10 @@ repository must not transfer before a compatible release is adopted.
     self-contained runtime/asset verification; malformed, duplicate, unknown and
     unserviced framework fixtures fail closed. Installed updates and platform
     qualification remain separate. See [runtime security](docs/RUNTIME_SECURITY.md).
+  - Delivery (2026-10-14): all nine sole draft preparation PRs contain this
+    standard, each with zero-warning Release checks and own metadata preserved.
+    Active 1.9.0 five-RID outputs embed NETCore 10.0.13; default-branch alerts
+    await reviewed integration. See [per-head evidence](docs/release-evidence/1.9-runtime-servicing-2026-10-14.md).
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
   capacity checks, interruption semantics, and block validation.
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
