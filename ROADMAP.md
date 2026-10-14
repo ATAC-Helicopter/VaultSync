@@ -1343,6 +1343,16 @@ repository must not transfer before a compatible release is adopted.
     replacement requires independent readers, fuzzing, cross-platform and restore
     qualification; no new backup format is introduced for beta by this experiment.
     See [compression evolution](docs/COMPRESSION_EVOLUTION.md).
+- [ ] `VS-1997` `P0` Require serviced runtimes and verify every included release framework.
+  - Scope (2026-10-14): October runtime advisories require .NET 10.0.13.
+    Raise the SDK, runtime and coordinated Microsoft package baseline; reject
+    vulnerable ASP.NET/Windows Desktop versions even when NETCore is updated.
+    Reuse sole preparation PRs when applying the shared packaging standard.
+    Issue #787; active preparation PR #736.
+  - Acceptance: required Release checks, fresh dependency audit and real
+    self-contained runtime/asset verification; malformed, duplicate, unknown and
+    unserviced framework fixtures fail closed. Installed updates and platform
+    qualification remain separate. See [runtime security](docs/RUNTIME_SECURITY.md).
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
   capacity checks, interruption semantics, and block validation.
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI

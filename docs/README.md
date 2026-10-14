@@ -28,6 +28,7 @@ Use this page as the primary index for all project documentation.
 - Reproducible release performance profile: [performance benchmarks](PERFORMANCE_BENCHMARKS.md)
 - ZIP tuning and staged compression research: [compression evolution](COMPRESSION_EVOLUTION.md)
 - Release process: [Releasing](RELEASING.md)
+- Embedded runtime servicing: [runtime security](RUNTIME_SECURITY.md)
 - Canonical direct-download manifest schema:
   [release manifest v1](schemas/release-manifest-v1.schema.json)
 - Updater and patch assets: [Updater](UPDATER.md)

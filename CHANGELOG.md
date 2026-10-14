@@ -83,6 +83,10 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [BUG-19011] Update Spectre parsing atomically while preserving existing CLI behavior.
 - [BUG-19022] Handle root-owned AppImage extraction during packaging.
 
+### Security
+
+- [VS-1997] Require serviced .NET runtimes and validate every framework included in release packages.
+
 Disk capture, independent boot and disk restore remain unimplemented/unqualified.
 See the [release contract](docs/RELEASE_1.9.0.md) and [work ledger](docs/release-evidence/1.9-work-2026-10-04.md).
 

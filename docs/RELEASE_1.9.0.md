@@ -7,6 +7,14 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1997/#787 requires the October security-serviced .NET 10.0.13 runtime,
+SDK 10.0.402 and coordinated Microsoft packages. Release runtime audits verify
+every included framework, including optional ASP.NET/Windows Desktop, instead
+of accepting an updated NETCore beside vulnerable companions. See
+[runtime security](RUNTIME_SECURITY.md) and
+[current servicing evidence](release-evidence/1.9-runtime-servicing-2026-10-14.md).
+This does not qualify installed upgrades, recovery or default-branch alert closure.
+
 VS-1996/#786 adds measured ZIP tuning for Unity scenes, prefabs and metadata,
 plus an isolated bounded LZ77 compression experiment. Production backups remain
 ZIP; no custom codec is registered, shipped or promised for beta. The experiment
