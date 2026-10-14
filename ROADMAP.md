@@ -1498,11 +1498,10 @@ repository must not transfer before a compatible release is adopted.
     [diagnosis](docs/release-evidence/1.9-sonarqube-pr-2026-10-13.md).
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
-  - Editorial preparation (2026-10-14): the [new devlog and Reddit draft](docs/dev-diaries/2026-10-14-vaultsync-190-package/README.md)
-    include source-bound native captures of imported projects, Unity rules and
-    the storage card. Two synthetic ZIPs have exact source readback and exclusion
-    checks. Website lint/build and local routes/assets pass; desktop/mobile browser
-    review awaits an available connection. Site/Reddit publication remains pending.
+  - Editorial placement (2026-10-14): development diaries, Reddit drafts and
+    publication packages are retained in the private editorial workspace and
+    removed from the current public tree. Technical release evidence remains
+    tracked separately. Publication is pending; this does not close beta gates.
   - Progress: the [beta readiness snapshot](docs/release-evidence/1.9-beta-readiness-2026-10-13.md)
     records current build/CI evidence, open architecture and measured recovery
     gates, and the versioned beta workflow. Complete 1.9.0 feature scope is now

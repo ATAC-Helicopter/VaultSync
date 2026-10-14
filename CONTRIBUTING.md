@@ -323,3 +323,12 @@ user data and recorded technical payloads. Run
 `python3 scripts/localization_audit.py --check` and the required Release gate.
 See [the localization contract](docs/LOCALIZATION.md); this is a shared rule for
 every release and PR. Static checks supplement translation and rendered UI review.
+
+## Private editorial material
+
+Development diary manuscripts, Reddit drafts and publication packages belong in
+a private editorial workspace outside this public repository. Do not commit or
+upload them to GitHub, issues, pull requests or attachments. Keep technical
+release evidence in its owning documentation directory; link published articles
+on FG Labs when useful. Website publication and audience email sends remain
+separate actions requiring the maintainer's publication decision.
