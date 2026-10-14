@@ -56,7 +56,7 @@ class CompressionPrototypeTests(unittest.TestCase):
                 codec.decode(sample)
 
     def test_forged_header_limits_and_unknown_mode_are_rejected(self):
-        for sample in (frame(2, 0, b''), frame(0, codec.MAX_BLOCK_BYTES + 1, b''),
+        for sample in (frame(255, 0, b''), frame(0, codec.MAX_BLOCK_BYTES + 1, b''),
                        frame(0, 2, b'a', b'a'), frame(1, 0, b'\x00a')):
             with self.assertRaises(ValueError):
                 codec.decode(sample)

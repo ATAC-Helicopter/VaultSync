@@ -12,3 +12,7 @@ python3 experiments/compression/benchmark.py --output /tmp/compression-prototype
 
 The benchmark generates fixtures and writes a report. It never reads backups or
 user project files. Draft frames are not a supported backup/container format.
+
+The profile compares the original LZ77 encoder with `encode_entropy`, which
+adds canonical Huffman coding and keeps raw/LZ fallback. Run all compression
+tests with `-p 'test_compression*.py'`. Both paths remain isolated research.

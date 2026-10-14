@@ -32,8 +32,8 @@ prediction for Endless Drive, server transfers or all Unity projects. See the
 2. Match repeated sequences with an LZ dictionary. Keep lookup/search budgets
    explicit; compare a single candidate with bounded deeper searches.
 3. Encode literals, match lengths and distances with a separately specified
-   entropy coder. Compare Huffman and rANS candidates; neither is implemented
-   in the first prototype. Deterministic output and an independent decoder are
+   entropy coder. Canonical Huffman is implemented in the second Python iteration;
+   rANS remains a candidate. Deterministic output and an independent decoder are
    prerequisites for comparison.
 4. Store the original block when encoding offers no saving. Include framing
    overhead in the decision at production container level. Sampling can avoid
@@ -80,6 +80,29 @@ Tests include boundary/random roundtrips, raw fallback, a hand-written overlap
 fixture, malformed tokens with valid encoded checksums, corrupt headers,
 truncation, trailing bytes and logical digest mismatch. They are not fuzzing or
 independent implementation qualification.
+
+### Second iteration: canonical Huffman — 2026-10-14
+
+`encode_entropy` optionally compresses the same LZ77 tokens using the original
+canonical Huffman implementation in `entropy.py`. The original `encode` path
+remains the LZ77 baseline. The writer chooses the smallest of raw, LZ tokens or
+entropy-coded tokens, including the 264-byte entropy header/codebook. Draft
+mode 2 is understood only by the experimental reader; it is not a production
+codec registration or stable format commitment.
+
+The token stream is bounded at 132,096 bytes, code lengths at 24 bits; empty,
+single-symbol and full canonical tables have explicit handling. Decoder checks
+complete/non-oversubscribed tables, exact bit consumption, zero padding and
+decoded token size before the existing LZ/digest checks. Hostile entropy payloads
+with valid outer hashes still cannot bypass token distances or plaintext hashes.
+The bit-by-bit Python decoder is deliberately simple and bounded; it is slow.
+
+Generated YAML and source-code frames are respectively 28.4% and 33.3% smaller
+than the first prototype. They remain larger than zlib level 6, and restores
+are slower. This is research progress, not a promotion gate. See
+[second-iteration evidence](release-evidence/1.9-compression-entropy-2026-10-14.md).
+Next work: bounded deeper match search and a separately implemented native
+reader with differential tests; measure native restore throughput before rollout.
 
 ## Incremental rollout and acceptance
 

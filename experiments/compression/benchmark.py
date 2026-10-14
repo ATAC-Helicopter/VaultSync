@@ -6,11 +6,13 @@ import platform
 import random
 import statistics
 import subprocess
+import sys
 import time
 import zlib
 from pathlib import Path
 
-from codec import MAX_BLOCK_BYTES, decode, encode
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from experiments.compression.codec import MAX_BLOCK_BYTES, decode, encode, encode_entropy
 
 
 def run():
@@ -33,6 +35,7 @@ def run():
         blocks = [data[i:i + MAX_BLOCK_BYTES] for i in range(0, len(data), MAX_BLOCK_BYTES)]
         for label, compressor, decompressor in (
                 ('prototype-v0', encode, decode),
+                ('prototype-huffman', encode_entropy, decode),
                 ('zlib-1', lambda b: zlib.compress(b, 1), zlib.decompress),
                 ('zlib-6', lambda b: zlib.compress(b, 6), zlib.decompress),
                 ('zlib-9', lambda b: zlib.compress(b, 9), zlib.decompress)):
@@ -57,6 +60,7 @@ def run():
     report = dict(schemaVersion=1, recordedUtc=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                   python=platform.python_version(), platform=platform.platform(),
                   codecSha256=hashlib.sha256(Path(__file__).with_name('codec.py').read_bytes()).hexdigest(),
+                  entropySha256=hashlib.sha256(Path(__file__).with_name('entropy.py').read_bytes()).hexdigest(),
                   benchmarkSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                   worktreeBaseCommit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                   worktreeDirty=bool(subprocess.check_output(['git', 'status', '--porcelain'], text=True).strip()),

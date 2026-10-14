@@ -23,6 +23,10 @@ and measured promotion gates are proposed in
 [compression evolution](COMPRESSION_EVOLUTION.md); source-qualified measurements
 and current validation are in
 [compression evidence](release-evidence/1.9-compression-2026-10-13.md).
+The October 14 research iteration adds bounded canonical Huffman coding, reducing
+generated frames by 28.4%/33.3% against v0 with slower Python decode. It remains
+outside product builds and does not outperform DEFLATE overall. See
+[entropy iteration evidence](release-evidence/1.9-compression-entropy-2026-10-14.md).
 
 VS-1995/#784 makes existing file-backup metadata imports visible in Projects,
 including entries with no usable source path. A local persisted import marker

@@ -1343,6 +1343,11 @@ repository must not transfer before a compatible release is adopted.
     replacement requires independent readers, fuzzing, cross-platform and restore
     qualification; no new backup format is introduced for beta by this experiment.
     See [compression evolution](docs/COMPRESSION_EVOLUTION.md).
+  - Second iteration (2026-10-14): original canonical Huffman coding shrinks
+    generated YAML/code frames by 28.4%/33.3% against v0, with bounded codebooks,
+    token sizes and exact bit/padding validation. Raw/LZ fallback counts full
+    entropy framing. DEFLATE remains denser and faster; native independent readers
+    and deeper match search remain open. No production codec/default is changed.
 - [ ] `VS-1997` `P0` Require serviced runtimes and verify every included release framework.
   - Scope (2026-10-14): October runtime advisories require .NET 10.0.13.
     Raise the SDK, runtime and coordinated Microsoft package baseline; reject
