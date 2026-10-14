@@ -47,7 +47,8 @@ See `docs/WORK_TRACKING.md` for ID allocation, branch choice, PR gates, Project 
 ## 3) Development Setup
 Keep the working copy outside iCloud Drive, OneDrive, Dropbox, or another live file-sync root. On macOS, a directory ending in `.nosync` prevents iCloud from taking ownership of repository files and breaking builds or Git operations.
 
-1. Install .NET 10 SDK.
+1. Install the serviced .NET 10 SDK required by `global.json` (currently 10.0.402).
+   See [runtime security](docs/RUNTIME_SECURITY.md) for embedded runtime checks.
 2. Restore:
    `dotnet restore`
 3. Run the UI on macOS or Linux:

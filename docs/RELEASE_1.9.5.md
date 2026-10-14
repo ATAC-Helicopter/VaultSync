@@ -54,3 +54,15 @@ static checks do not establish native-speaker or rendered platform qualification
 
 Reused release packages must also have unchanged `Localization/` source inputs;
 translation-only changes require rebuilding the qualified source run.
+
+
+## Shared runtime security — 2026-10-14
+
+VS-1997/#787 raises the shared SDK to 10.0.402, the .NET runtime floor and
+coordinated Microsoft packages to 10.0.13. Every included framework is audited;
+optional unserviced frameworks cannot hide behind an updated NETCore. This
+preparation head retains its own features, release metadata and sole draft PR.
+See [runtime security](RUNTIME_SECURITY.md) and
+[this head's validation](release-evidence/1.9.5-runtime-2026-10-14.md).
+Historical 1.9.0 artifact evidence does not qualify this release's native
+upgrades, recovery or publication gates.

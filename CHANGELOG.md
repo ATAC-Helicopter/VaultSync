@@ -40,6 +40,11 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 Current stable remains 1.8.9. This release is unscheduled; predecessor and product qualification remain open.
 See [the original development notes](docs/release-evidence/changelog-development-before-standard-2026-10-04.md) and [the release contract](docs/RELEASE_1.9.5.md).
 
+### Security
+
+- [VS-1997] Require serviced .NET runtimes and validate every framework included in release packages.
+
+
 ## [1.8.9] - 2026-09-16
 
 ### Changed
