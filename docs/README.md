@@ -25,6 +25,7 @@ Use this page as the primary index for all project documentation.
 - 1.8.9 bug fixes and UI polish: [1.8.9 release review](RELEASE_1.8.9.md)
 - Reproducible release performance profile: [performance benchmarks](PERFORMANCE_BENCHMARKS.md)
 - Release process: [Releasing](RELEASING.md)
+- Embedded runtime servicing: [runtime security](RUNTIME_SECURITY.md)
 - Canonical direct-download manifest schema:
   [release manifest v1](schemas/release-manifest-v1.schema.json)
 - Updater and patch assets: [Updater](UPDATER.md)
