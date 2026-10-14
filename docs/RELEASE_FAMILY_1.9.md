@@ -155,3 +155,11 @@ static checks do not establish native-speaker or rendered platform qualification
 
 Reused release packages must also have unchanged `Localization/` source inputs;
 translation-only changes require rebuilding the qualified source run.
+
+
+Runtime servicing delivery (2026-10-14): VS-1997/#787 applies SDK 10.0.402,
+.NET 10.0.13 and per-framework embedded runtime checks to all nine sole draft
+preparation PRs. Each real head passed its required Release gate and retained
+its own metadata/features. See [per-head runtime evidence](release-evidence/1.9-runtime-servicing-2026-10-14.md).
+Compression experiments remain only in 1.9.0. Reviewed default-branch integration,
+native installed upgrades and actual release gates remain open.
