@@ -20,6 +20,10 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 Current stable remains 1.8.9. This release is unscheduled; predecessor and product qualification remain open.
 See [the original development notes](docs/release-evidence/changelog-development-before-standard-2026-10-04.md) and [the release contract](docs/RELEASE_1.9.2.md).
 
+### Fixed
+
+- [BUG-19033] Preserve canonical issue priorities when adopting existing work.
+
 ### Security
 
 - [VS-1997] Require serviced .NET runtimes and validate every framework included in release packages.
@@ -78,6 +82,7 @@ See [the original development notes](docs/release-evidence/changelog-development
 
 ### Added
 
+- [VS-1980] Audit release issues and Project metadata before tracked pushes.
 - [VS-1823] Added repeatable large-history and high-file-count performance budgets.
 - [VS-1882] Added deterministic interruption and recovery qualification for plain and encrypted archives.
 - [VS-1890] Added native Wayland with automatic X11 fallback and opaque Linux windows.
