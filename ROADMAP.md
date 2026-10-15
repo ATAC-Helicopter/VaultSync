@@ -1315,6 +1315,13 @@ repository must not transfer before a compatible release is adopted.
   - Acceptance: later readiness and scenario evaluation can distinguish
     recorded facts, measured evidence, simulation, inference, user confirmation,
     stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
+- [ ] `BUG-19033` `P1` Preserve canonical priority when adopting existing issues.
+  - Scope: default adoption uses the roadmap or existing priority and removes
+    conflicting priority labels atomically without changing unrelated labels.
+    Unknown conflicts or denied metadata writes cannot report adoption success.
+  - Progress (2026-10-15): #792 supplies the sole defect owner; regressions
+    cover P0/P1 preservation, explicit overrides and failed writes. Shared
+    contributor tooling applies to all preparation heads; release gates stay open.
 - [ ] `BUG-19032` `P1` Keep destination totals independent of partial backup lists.
   - Scope: count complete recorded history off the UI thread, retaining light
     page caches and describing known logical size honestly in all locales.

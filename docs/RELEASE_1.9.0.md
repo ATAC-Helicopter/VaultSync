@@ -187,6 +187,9 @@ already had issues and Project entries, but 34 had inconsistent/missing metadata
 these were repaired without closing release-gated work. One missing conditional
 1.9.4 record is disposed separately as not planned with historical proof.
 See [tracking evidence](release-evidence/1.9-tracking-audit-2026-10-15.md).
+BUG-19033/#792 also prevents default adoption from adding conflicting P2 labels
+to established P0/P1 work; it preserves canonical priority and fails on denied
+metadata updates. This is shared contributor tooling, not a new binary feature.
 
 ## Route adapter prototype — 2026-10-07
 

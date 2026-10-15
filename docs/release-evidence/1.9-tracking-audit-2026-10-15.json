@@ -1,5 +1,5 @@
 {
-  "recordedUtc": "2026-10-15T09:06:34.118130+00:00",
+  "recordedUtc": "2026-10-15T09:12:12.705530+00:00",
   "releases": [
     {
       "version": "1.9.0",
@@ -674,6 +674,22 @@
             "Release": "1.9.x",
             "Priority": "P1",
             "Area": "UI"
+          }
+        },
+        {
+          "workId": "BUG-19033",
+          "findings": [],
+          "issue": 792,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhA7xpc",
+          "fields": {
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Ops",
+            "Start date": "2026-10-15",
+            "Target date": "2027-03-26"
           }
         }
       ]

@@ -61,6 +61,13 @@ Public Issue Forms stay unchanged. When an existing report becomes active engine
 
 If the issue already has a canonical ID, it is reused. Otherwise the helper allocates one and prefixes the issue title.
 
+Adoption preserves the roadmap priority, or the existing single priority when
+there is no roadmap entry. `--priority` explicitly overrides that choice and
+requires the roadmap to be updated consistently. Conflicting priority labels
+are reconciled in one issue edit; unrelated labels are retained. An unresolved
+conflict without a canonical priority or a denied edit aborts adoption. The
+default must never append P2 beside an existing P0/P1 label (BUG-19033/#792).
+
 ## Branch association
 
 Tracking data is stored locally under the active git branch:
