@@ -104,6 +104,32 @@ are slower. This is research progress, not a promotion gate. See
 Next work: bounded deeper match search and a separately implemented native
 reader with differential tests; measure native restore throughput before rollout.
 
+## Third iteration: numeric context lanes — 2026-10-15
+
+`encode_structured` adds a reversible numeric preconditioner before the existing
+LZ77/Huffman backend. At most 32 lanes are selected from the preceding 64 bytes;
+lexeme widths preserve zeros and literal bytes preserve signs/decimal punctuation,
+NULs and line endings. Policies extract 1–18 or 4–18 digits. The writer compares
+both complete candidates, including the transform and inner/outer frames, with
+raw/LZ/Huffman fallback. Mode 3 is disposable; its reader forbids recursive
+structure and checks all lengths, lane consumption, varints and hashes.
+
+The new pipeline reduces generated numeric JSON frames from 75,775 to 6,413
+bytes, but these regular counters favor delta coding. Ordinary generated YAML
+and source improve by 15.2%/7.5% versus prior Huffman; native Zstandard remains
+smaller/faster there. The same transform plus zlib 6 is still smaller on numeric
+JSON than the custom backend. Full-size blocks whose transform exceeds 128 KiB
+are skipped; speculative encoding has a CPU cost. This is measured research,
+not a production codec or a novelty claim. Structure/value separation and
+specialized value compression have prior art in
+[XMill (2000)](https://sigmodrecord.org/publications/sigmodRecord/0006/pdfs/XMILL_%20An%20Efficient%20Compressor%20for%20XML%20Data..pdf).
+
+See [third-iteration evidence](release-evidence/1.9-compression-structure-2026-10-15.md)
+for reference versions, exact sizes, controls and reader limits. Next: held-out
+corpus, cheap selection, bounded transform segmentation and independent native
+reader qualification. A unique useful combination must be demonstrated rather
+than inferred from implementing established primitives ourselves.
+
 ## Incremental rollout and acceptance
 
 | Stage | Deliverable | Promotion evidence |

@@ -1368,6 +1368,12 @@ repository must not transfer before a compatible release is adopted.
     token sizes and exact bit/padding validation. Raw/LZ fallback counts full
     entropy framing. DEFLATE remains denser and faster; native independent readers
     and deeper match search remain open. No production codec/default is changed.
+  - Third iteration (2026-10-15): bounded numeric context lanes preserve byte
+    spelling and select complete broad/wide-only transform candidates. Generated
+    numeric JSON shrinks 91.5% versus prior Huffman; ordinary YAML/code improve
+    15.2%/7.5%, with Zstandard still denser/faster there. The transformed-zlib
+    control exposes backend limits; no verified novelty or production rollout
+    is claimed. See [current research evidence](docs/release-evidence/1.9-compression-structure-2026-10-15.md).
 - [ ] `VS-1997` `P0` Require serviced runtimes and verify every included release framework.
   - Scope (2026-10-14): October runtime advisories require .NET 10.0.13.
     Raise the SDK, runtime and coordinated Microsoft package baseline; reject

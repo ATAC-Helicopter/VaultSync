@@ -13,6 +13,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 - [VS-1996] Add isolated compression experiments and repeatable archive size measurements.
 - [VS-1996] Prototype bounded Huffman coding with verified raw and LZ fallback.
+- [VS-1996] Prototype byte-exact numeric context lanes with adaptive compression selection.
 - [VS-1995] Show imported projects with recognizable labels and local source availability.
 - [VS-1907] Reconstruct verified synthetic images into new files using staged payloads.
 - [VS-1904] Capture synthetic raw images with explicit incomplete and interrupted outcomes.

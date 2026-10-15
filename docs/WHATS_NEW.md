@@ -59,6 +59,14 @@ failures and flags ambiguous current observations. Complete map structure does
 not verify payload bytes; scenario conclusions remain simulations.
 See [scope and verification](release-evidence/1.9-contract-batch-2026-10-12.md).
 
+### Compression research
+
+Compression research now tests byte-exact numeric context lanes with bounded
+readers and full-cost fallback. Generated counter-heavy data benefits, while
+mature codecs remain stronger on ordinary text. This experiment is outside the
+application and does not change ZIP backups. See
+[research evidence](release-evidence/1.9-compression-structure-2026-10-15.md).
+
 ## [1.8.9]
 
 VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.

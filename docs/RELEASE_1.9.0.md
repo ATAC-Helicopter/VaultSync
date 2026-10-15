@@ -37,6 +37,13 @@ generated frames by 28.4%/33.3% against v0 with slower Python decode. It remains
 outside product builds and does not outperform DEFLATE overall. See
 [entropy iteration evidence](release-evidence/1.9-compression-entropy-2026-10-14.md).
 
+The October 15 research iteration adds byte-exact numeric context lanes and
+cost-based selection, with original raw/Huffman fallback. Synthetic numeric JSON
+frames shrink 91.5% against prior Huffman; ordinary YAML/code improve 15.2%/7.5%
+but remain behind Zstandard. This is corpus-specific experimental progress;
+no new application codec or verified novelty is established. See
+[structural compression evidence](release-evidence/1.9-compression-structure-2026-10-15.md).
+
 VS-1995/#784 makes existing file-backup metadata imports visible in Projects,
 including entries with no usable source path. A local persisted import marker
 drives translated badges in cards, compact rows and details; restoring changes
