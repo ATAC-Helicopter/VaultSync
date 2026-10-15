@@ -1538,8 +1538,8 @@ repository must not transfer before a compatible release is adopted.
     [diagnosis](docs/release-evidence/1.9-sonarqube-pr-2026-10-13.md).
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
-  - Tracking reconciliation (2026-10-15): the complete family audit covers 102
-    canonical IDs. All 41 active-release owners already existed; 34 required
+  - Tracking reconciliation (2026-10-15): the initial family audit covered 102
+    canonical IDs; BUG-19033 raises the current checked total to 103. All 41 active-release owners already existed; 34 required
     issue/Project metadata repairs, including 57 native fields. `./dev audit`
     now checks exact milestones, unique labels, owners, status and traceable
     dates before pushes; unavailable/partial data cannot pass. VS-1943's missing
