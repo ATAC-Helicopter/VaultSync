@@ -181,6 +181,13 @@ A living process or completed startup log is insufficient desktop qualification.
 
 VS-1980/#673 distributes the shared helper from #759/#758. Use `./dev adopt` for existing owning issues and `./dev status` before pushes; reuse this release's preparation PR. Allocating IDs requires a complete remote audit. This tooling does not qualify product or release gates.
 
+The October 15 reconciliation adds `./dev audit --release 1.9.0` as a tracked
+push prerequisite and `--all-releases` for the full family. All 41 release IDs
+already had issues and Project entries, but 34 had inconsistent/missing metadata;
+these were repaired without closing release-gated work. One missing conditional
+1.9.4 record is disposed separately as not planned with historical proof.
+See [tracking evidence](release-evidence/1.9-tracking-audit-2026-10-15.md).
+
 ## Route adapter prototype — 2026-10-07
 
 VS-1910/#501 adds a pure typed-route mapping prototype and compatibility/refusal tests, as preparation for the proposed route API review. It does not replace current pages, saved state or navigation commands. See [route contract](ROUTE_ARCHITECTURE_1.9.md); architecture approval and platform UI parity remain open.

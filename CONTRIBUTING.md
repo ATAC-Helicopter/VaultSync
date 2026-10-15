@@ -35,6 +35,7 @@ For non-trivial work, use the repository helper to create or adopt the GitHub is
 - Create a dedicated branch: `./dev issue feature "Concise scope" --branch new`
 - Adopt an existing report: `./dev adopt <issue-number> --type bug --branch current`
 - Inspect the active association: `./dev status`
+- Before every tracked push: `./dev audit --release <owning-version>`
 - Create a linked PR from a tracked branch: `./dev pr --draft`
 
 The helper preserves the existing `VS-xxxx` and `BUG-xxxxx` release-family numbering, reuses existing public Issue Forms rather than replacing them, and stores branch association only in local git config.
@@ -179,8 +180,17 @@ Keep planning, implementation, and release tracking connected:
   - issue should be closed (`Closes #...`) or explicitly left open with next-step notes
   - project status should be updated (`Done` for closed; `In progress`/`Todo` otherwise)
 - Release-gated policy:
-  - For unreleased work (for example under `1.5.1 - Unreleased`), keep issue open and set project status `In progress` (or `Done` only when you intentionally track implementation-complete but unreleased in your process).
+  - Keep unreleased, release-gated work open and Project status `In progress`, even when its implementation passes local tests.
   - Close the issue when the release cut/merge policy says the item is truly shipped.
+  - Conditional work proven unnecessary may close as `not planned`, with linked
+    evidence and a clear distinction from delivered functionality.
+  - Mirror Project status in the issue status label; use one roadmap priority,
+    exact release milestone/label, assignee, Area and Release fields. Preserve
+    traceable Start/Target dates; Completed on comes from actual closure.
+  - Run `./dev audit --release <owning-version>` before every tracked push and
+    `./dev audit --all-releases` for release tracking reconciliation. Resolve
+    discrepancies before declaring completion; unavailable or partial API data
+    is not a passing result. See [the audit contract](docs/WORK_TRACKING.md).
 - CLI formatting rule:
   - For `gh issue comment` and similar commands, use a PowerShell here-string (`@' ... '@`) or `--body-file`.
   - Do not pass escaped newline text (`\\n`) in quoted one-liners, to avoid literal backslash-n output in GitHub comments.

@@ -1,0 +1,1759 @@
+{
+  "recordedUtc": "2026-10-15T09:06:34.118130+00:00",
+  "releases": [
+    {
+      "version": "1.9.0",
+      "items": [
+        {
+          "workId": "VS-1902",
+          "findings": [],
+          "issue": 113,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzgmV37U",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Release",
+            "Target date": "2027-03-26",
+            "Start date": "2026-02-26"
+          }
+        },
+        {
+          "workId": "VS-1910",
+          "findings": [],
+          "issue": 501,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S1xE",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P0",
+            "Start date": "2026-07-27",
+            "Target date": "2027-03-26"
+          }
+        },
+        {
+          "workId": "VS-1917",
+          "findings": [],
+          "issue": 574,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg39KuQ",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Start date": "2026-08-25",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1918",
+          "findings": [],
+          "issue": 575,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg39KxQ",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Start date": "2026-08-25",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1919",
+          "findings": [],
+          "issue": 576,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg39KzQ",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Start date": "2026-08-25",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1904",
+          "findings": [],
+          "issue": 492,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0SVqw",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1905",
+          "findings": [],
+          "issue": 493,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0SVso",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Start date": "2026-10-15",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1906",
+          "findings": [],
+          "issue": 494,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0SVuc",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-11-30",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1907",
+          "findings": [],
+          "issue": 495,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0SVwM",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1908",
+          "findings": [],
+          "issue": 496,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0SVxw",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-11-30",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1"
+          }
+        },
+        {
+          "workId": "VS-1909",
+          "findings": [],
+          "issue": 497,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0SVz4",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-11-30",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Release",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "BUG-19001",
+          "findings": [],
+          "issue": 699,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kPms",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-03-26"
+          }
+        },
+        {
+          "workId": "VS-1980",
+          "findings": [],
+          "issue": 673,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kGpM",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Release",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-03-26"
+          }
+        },
+        {
+          "workId": "BUG-19009",
+          "findings": [],
+          "issue": 748,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg-Ud60",
+          "fields": {
+            "Release": "1.9.x",
+            "Status": "In progress",
+            "Team": "Work",
+            "Area": "Ops",
+            "Priority": "P1",
+            "Start date": "2026-10-03",
+            "Target date": "2027-03-26"
+          }
+        },
+        {
+          "workId": "BUG-19010",
+          "findings": [],
+          "issue": 749,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg-Urx8",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-10-03",
+            "Target date": "2027-03-26"
+          }
+        },
+        {
+          "workId": "BUG-19011",
+          "findings": [],
+          "issue": 750,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg-Ur0A",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-10-03",
+            "Target date": "2027-03-26"
+          }
+        },
+        {
+          "workId": "BUG-19012",
+          "findings": [],
+          "issue": 751,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg-dI3I",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-04",
+            "Target date": "2027-03-26",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "UI"
+          }
+        },
+        {
+          "workId": "BUG-19013",
+          "findings": [],
+          "issue": 766,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJUi8",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Ops"
+          }
+        },
+        {
+          "workId": "BUG-19014",
+          "findings": [],
+          "issue": 768,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJU2s",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "UI"
+          }
+        },
+        {
+          "workId": "BUG-19015",
+          "findings": [],
+          "issue": 769,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJVBU",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "UI"
+          }
+        },
+        {
+          "workId": "BUG-19016",
+          "findings": [],
+          "issue": 767,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJUss",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "UI"
+          }
+        },
+        {
+          "workId": "BUG-19017",
+          "findings": [],
+          "issue": 770,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJW3I",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "UI"
+          }
+        },
+        {
+          "workId": "BUG-19018",
+          "findings": [],
+          "issue": 771,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJXAc",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "BUG-19019",
+          "findings": [],
+          "issue": 772,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJXIo",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "BUG-19020",
+          "findings": [],
+          "issue": 773,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJXSY",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P0",
+            "Release": "1.9.x",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "BUG-19021",
+          "findings": [],
+          "issue": 774,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJXcI",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P0",
+            "Release": "1.9.x",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "BUG-19022",
+          "findings": [],
+          "issue": 775,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJXoU",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Release"
+          }
+        },
+        {
+          "workId": "BUG-19023",
+          "findings": [],
+          "issue": 777,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAX55Y",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Priority": "P2",
+            "Release": "1.9.x",
+            "Area": "Release"
+          }
+        },
+        {
+          "workId": "BUG-19024",
+          "findings": [],
+          "issue": 778,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAX_wc",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Release"
+          }
+        },
+        {
+          "workId": "BUG-19025",
+          "findings": [],
+          "issue": 779,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAYFQY",
+          "fields": {
+            "Status": "In progress",
+            "Release": "1.9.x",
+            "Area": "Ops",
+            "Priority": "P1",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26"
+          }
+        },
+        {
+          "workId": "BUG-19026",
+          "findings": [],
+          "issue": 780,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAZPO4",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Priority": "P0",
+            "Release": "1.9.x",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "BUG-19027",
+          "findings": [],
+          "issue": 781,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAgJag",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "BUG-19028",
+          "findings": [],
+          "issue": 782,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAgO94",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "BUG-19029",
+          "findings": [],
+          "issue": 783,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAgThE",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "VS-1994",
+          "findings": [],
+          "issue": 776,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAJmiM",
+          "fields": {
+            "Start date": "2026-10-12",
+            "Target date": "2027-03-26",
+            "Status": "In progress",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "UI"
+          }
+        },
+        {
+          "workId": "VS-1995",
+          "findings": [],
+          "issue": 784,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAgYwI",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Priority": "P1",
+            "Release": "1.9.x",
+            "Area": "UI"
+          }
+        },
+        {
+          "workId": "VS-1996",
+          "findings": [],
+          "issue": 786,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAinNE",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Area": "Performance",
+            "Priority": "P2"
+          }
+        },
+        {
+          "workId": "VS-1997",
+          "findings": [],
+          "issue": 787,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAooZ4",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-14",
+            "Target date": "2027-03-26",
+            "Priority": "P0",
+            "Release": "1.9.x",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "BUG-19030",
+          "findings": [],
+          "issue": 785,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAhx94",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-13",
+            "Target date": "2027-03-26",
+            "Area": "Localization",
+            "Priority": "P1",
+            "Release": "1.9.x"
+          }
+        },
+        {
+          "workId": "BUG-19031",
+          "findings": [],
+          "issue": 789,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAxaaw",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-14",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Priority": "P2",
+            "Area": "Core"
+          }
+        },
+        {
+          "workId": "BUG-19032",
+          "findings": [],
+          "issue": 790,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhAxq-M",
+          "fields": {
+            "Status": "In progress",
+            "Start date": "2026-10-14",
+            "Target date": "2027-03-26",
+            "Release": "1.9.x",
+            "Priority": "P1",
+            "Area": "UI"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "items": [
+        {
+          "workId": "VS-1911",
+          "findings": [],
+          "issue": 674,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kGrM",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1912",
+          "findings": [],
+          "issue": 675,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kGtY",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1913",
+          "findings": [],
+          "issue": 676,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kGvk",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1914",
+          "findings": [],
+          "issue": 677,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kGww",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P2",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1915",
+          "findings": [],
+          "issue": 502,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S1yQ",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P0",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1916",
+          "findings": [],
+          "issue": 503,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S1zI",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P1",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1977",
+          "findings": [],
+          "issue": 678,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kG18",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1978",
+          "findings": [],
+          "issue": 679,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kG3s",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Docs",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "BUG-19008",
+          "findings": [],
+          "issue": 745,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg-UZbE",
+          "fields": {
+            "Release": "1.9.x",
+            "Status": "In progress",
+            "Team": "Work",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-10-03",
+            "Target date": "2027-09-24"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.2",
+      "items": [
+        {
+          "workId": "VS-1931",
+          "findings": [],
+          "issue": 680,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kG48",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1932",
+          "findings": [],
+          "issue": 681,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kG6k",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1933",
+          "findings": [],
+          "issue": 682,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kJm0",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Docs",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1934",
+          "findings": [],
+          "issue": 684,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kJow",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Docs",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1935",
+          "findings": [],
+          "issue": 506,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S11w",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P1",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1976",
+          "findings": [],
+          "issue": 685,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kJrQ",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.3",
+      "items": [
+        {
+          "workId": "VS-1921",
+          "findings": [],
+          "issue": 511,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S4_M",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1922",
+          "findings": [],
+          "issue": 512,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S4_s",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1923",
+          "findings": [],
+          "issue": 686,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kJxU",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1924",
+          "findings": [],
+          "issue": 687,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kJzk",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1925",
+          "findings": [],
+          "issue": 688,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kJ1o",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1926",
+          "findings": [],
+          "issue": 504,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S1z8",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P1",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1927",
+          "findings": [],
+          "issue": 505,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S11I",
+          "fields": {
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Status": "Todo",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.4",
+      "items": [
+        {
+          "workId": "VS-1941",
+          "findings": [],
+          "issue": 689,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kJ8c",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1942",
+          "findings": [],
+          "issue": 690,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kJ_Q",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1943",
+          "findings": [],
+          "issue": 791,
+          "state": "closed",
+          "stateReason": "not_planned",
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6FzhA7tt8",
+          "fields": {
+            "Status": "Done",
+            "Priority": "P2",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Start date": "2026-10-15",
+            "Target date": "2027-09-24",
+            "Completed on": "2026-10-15"
+          }
+        },
+        {
+          "workId": "VS-1944",
+          "findings": [],
+          "issue": 507,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S12w",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P0",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.5",
+      "items": [
+        {
+          "workId": "VS-1951",
+          "findings": [],
+          "issue": 691,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kKDA",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1952",
+          "findings": [],
+          "issue": 692,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kKE4",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1953",
+          "findings": [],
+          "issue": 693,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kKII",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1954",
+          "findings": [],
+          "issue": 694,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kKMo",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P2",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1955",
+          "findings": [],
+          "issue": 508,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S13o",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P2",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1956",
+          "findings": [],
+          "issue": 509,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg0S14g",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P2",
+            "Start date": "2026-07-27",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1979",
+          "findings": [],
+          "issue": 695,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kKSw",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Release",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1972",
+          "findings": [],
+          "issue": 669,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kGhM",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1973",
+          "findings": [],
+          "issue": 670,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kGjQ",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1974",
+          "findings": [],
+          "issue": 671,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kGk4",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1975",
+          "findings": [],
+          "issue": 672,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kGnQ",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "BUG-19002",
+          "findings": [],
+          "issue": 700,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7lcic",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "BUG-19003",
+          "findings": [],
+          "issue": 716,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg8ADlc",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "BUG-19004",
+          "findings": [],
+          "issue": 717,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg8Zl6g",
+          "fields": {
+            "Status": "In progress",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-23",
+            "Target date": "2027-09-24",
+            "Team": "Work"
+          }
+        },
+        {
+          "workId": "BUG-19005",
+          "findings": [],
+          "issue": 718,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg8aAOY",
+          "fields": {
+            "Status": "In progress",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-23",
+            "Target date": "2027-09-24",
+            "Team": "Work"
+          }
+        },
+        {
+          "workId": "BUG-19006",
+          "findings": [],
+          "issue": 719,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg8xHbA",
+          "fields": {
+            "Status": "In progress",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-09-25",
+            "Target date": "2027-09-24",
+            "Team": "Work"
+          }
+        },
+        {
+          "workId": "BUG-19007",
+          "findings": [],
+          "issue": 734,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg-UBDY",
+          "fields": {
+            "Status": "In progress",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1",
+            "Start date": "2026-10-03",
+            "Target date": "2027-09-24"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.6",
+      "items": [
+        {
+          "workId": "VS-1981",
+          "findings": [],
+          "issue": 703,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76ABE",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1982",
+          "findings": [],
+          "issue": 704,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BEg",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Security",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1983",
+          "findings": [],
+          "issue": 705,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BFs",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1984",
+          "findings": [],
+          "issue": 706,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BGY",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1985",
+          "findings": [],
+          "issue": 707,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BHc",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1986",
+          "findings": [],
+          "issue": 708,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BIY",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Security",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1987",
+          "findings": [],
+          "issue": 709,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BJs",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P1"
+          }
+        },
+        {
+          "workId": "VS-1989",
+          "findings": [],
+          "issue": 711,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BLo",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Security",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1990",
+          "findings": [],
+          "issue": 712,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BMs",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Security",
+            "Priority": "P0"
+          }
+        },
+        {
+          "workId": "VS-1992",
+          "findings": [],
+          "issue": 714,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BPg",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P1"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.7",
+      "items": [
+        {
+          "workId": "VS-1988",
+          "findings": [],
+          "issue": 710,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BKo",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P1"
+          }
+        },
+        {
+          "workId": "VS-1991",
+          "findings": [],
+          "issue": 713,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BN8",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P1"
+          }
+        },
+        {
+          "workId": "VS-1993",
+          "findings": [],
+          "issue": 715,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg76BQU",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-09-21",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Performance",
+            "Priority": "P0"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.8",
+      "items": [
+        {
+          "workId": "VS-1961",
+          "findings": [],
+          "issue": 696,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kKUU",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Core",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1962",
+          "findings": [],
+          "issue": 697,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kKWY",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Release",
+            "Priority": "P0",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1963",
+          "findings": [],
+          "issue": 698,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg7kKY4",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Release": "1.9.x",
+            "Area": "Docs",
+            "Priority": "P1",
+            "Start date": "2026-09-18",
+            "Target date": "2027-09-24"
+          }
+        },
+        {
+          "workId": "VS-1928",
+          "findings": [],
+          "issue": 586,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg4JTQk",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-08-26",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "UI",
+            "Priority": "P1"
+          }
+        },
+        {
+          "workId": "VS-1929",
+          "findings": [],
+          "issue": 587,
+          "state": "open",
+          "stateReason": null,
+          "projectItem": "PVTI_lAHOAkc3bs4BQW6Fzg4JTSU",
+          "fields": {
+            "Status": "Todo",
+            "Team": "Work",
+            "Start date": "2026-08-26",
+            "Target date": "2027-09-24",
+            "Release": "1.9.x",
+            "Area": "Release",
+            "Priority": "P1"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -654,6 +654,19 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status", help="Show tracking associated with the active branch")
     status.set_defaults(func=cmd_status)
 
+    audit = sub.add_parser("audit", help="Read-only issue and Project audit for a release")
+    audit_scope = audit.add_mutually_exclusive_group()
+    audit_scope.add_argument("--release", help="Exact family-manifest release; defaults to active metadata")
+    audit_scope.add_argument("--all-releases", action="store_true", help="Audit every release in the family manifest")
+    audit.add_argument("--output", help="Write the detailed JSON report")
+    def audit_command(args):
+        from work_tracking_audit import cmd_audit, TrackingError as AuditError
+        try:
+            return cmd_audit(args)
+        except AuditError as error:
+            raise TrackingError(str(error)) from error
+    audit.set_defaults(func=audit_command)
+
     pr = sub.add_parser("pr", help="Create a PR linked to the tracked issue")
     pr.add_argument("--base")
     pr.add_argument("--draft", action="store_true")

@@ -1531,6 +1531,13 @@ repository must not transfer before a compatible release is adopted.
     [diagnosis](docs/release-evidence/1.9-sonarqube-pr-2026-10-13.md).
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
+  - Tracking reconciliation (2026-10-15): the complete family audit covers 102
+    canonical IDs. All 41 active-release owners already existed; 34 required
+    issue/Project metadata repairs, including 57 native fields. `./dev audit`
+    now checks exact milestones, unique labels, owners, status and traceable
+    dates before pushes; unavailable/partial data cannot pass. VS-1943's missing
+    conditional record is #791, closed as not planned because VS-1811 shipped.
+    Release-gated issues stay open. See [audit evidence](docs/release-evidence/1.9-tracking-audit-2026-10-15.md).
   - Editorial placement (2026-10-14): development diaries, Reddit drafts and
     publication packages are retained in the private editorial workspace and
     removed from the current public tree. Technical release evidence remains
@@ -1657,8 +1664,12 @@ unchanged because work IDs are immutable and do not encode the patch number.
 - [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
   recovery navigation and retire the legacy shell after parity.
 - [ ] `VS-1942` `P1` Add a shared Recovery Inspector across recovery types.
-- [ ] `VS-1943` `P2` Revisit project groups and high-density organization if
+- [x] `VS-1943` `P2` Revisit project groups and high-density organization if
   `VS-1811` moved out of 1.8.
+  - Conditional disposition (2026-10-15): not activated. VS-1811/#363 shipped
+    in 1.8, so #791 records the linked proof and closes as not planned. This
+    resolves the condition without claiming new 1.9.4 functionality or changing
+    its manifest ownership; no beta feature is removed.
 - [ ] `VS-1944` `P0` Qualify the complete 1.9 interface across supported
   widths, scaling, keyboard, screen-reader, theme, and interrupted-work states.
 
