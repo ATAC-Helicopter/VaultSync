@@ -393,3 +393,12 @@ keep synthetic checks, native review and actual physical allocation separate.
 The installed Linux app still uses Avalonia 12.1.2; the development tree already
 uses 12.1.4's D-Bus registration corrections under VS-1994/#776. A fresh login
 with the updated app is not yet qualified. Refs #790; #736 remains draft.
+
+## Reconstruction capacity admission — 2026-10-15
+
+BUG-19031/#789 also refuses oversized reconstruction metadata before raw payload
+reads or staging writes. Small 512/4096-sector regression inputs reproduce the
+previous late refusal; exact-limit declarations still reach truncation checks.
+This closes a resource-bound gap in the synthetic pipeline, without changing
+the image layout or qualifying physical restore. See
+[follow-up evidence](release-evidence/1.9-reconstruction-limit-2026-10-15.md).

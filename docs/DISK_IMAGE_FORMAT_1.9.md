@@ -345,3 +345,13 @@ cannot report completed reconstruction. Filesystem crash durability, hostile
 same-account changes to staging storage, device writes, offline worker/media
 and boot qualification remain outside this fixture profile.
 See [file reconstruction evidence](release-evidence/1.9-file-reconstruction-2026-10-13.md).
+
+### Reconstruction admission follow-up — 2026-10-15
+
+BUG-19031/#789 applies the 1 GiB reconstruction capacity policy during bounded
+metadata parsing, before reading or staging any raw part. Refusal does not imply
+that the remaining metadata or payload was verified. Empty temporary staging
+files can remain; no reconstructed output is opened. The generic verification
+API retains the provisional format capacity range, and the running staged-byte
+budget remains a separate guard. No serialized layout, native device access or
+UI message changes. See [regression evidence](release-evidence/1.9-reconstruction-limit-2026-10-15.md).

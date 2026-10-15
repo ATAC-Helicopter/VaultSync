@@ -152,6 +152,37 @@ public sealed class DiskImageFileReconstructionServiceTests
         finally { Cleanup(result); }
     }
 
+    [Theory]
+    [InlineData(512, true)]
+    [InlineData(4096, true)]
+    [InlineData(512, false)]
+    [InlineData(4096, false)]
+    public async Task CapacityIsCheckedBeforeStagingRawPayload(uint sector, bool oversized)
+    {
+        Fixture fixture = (await Fixtures())[0];
+        byte[] bytes = Convert.FromHexString(fixture.MetadataHex);
+        ulong capacity = DiskImageFileReconstructionService.MaximumFixtureBytes + (oversized ? sector : 0UL);
+        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(24 + 44), capacity);
+        BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(24 + 52), sector);
+        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(24 + 80), capacity);
+        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(24 + 128), capacity);
+        SHA256.HashData(bytes.AsSpan(24, bytes.Length - 24 - 64)).CopyTo(bytes.AsSpan(bytes.Length - 32));
+        using var metadata = new MemoryStream(bytes, writable: false);
+        // A short source makes the historical read-before-refusal observable without allocating 1 GiB.
+        using var payload = new MemoryStream(new byte[sector], writable: false);
+        var result = await DiskImageFileReconstructionService.ReconstructAsync(metadata,
+            new Dictionary<Guid, Stream> { [PartId] = payload });
+        try
+        {
+            Assert.Equal(oversized ? DiskImageFileReconstructionState.Invalid : DiskImageFileReconstructionState.Incomplete, result.State);
+            Assert.Equal(oversized ? "reconstruct.fixture-size-limit" : "image.truncated-part", result.Reason);
+            Assert.Equal(oversized ? 0 : sector, payload.Position);
+            Assert.False(File.Exists(Path.Combine(result.Workspace!, DiskImageFileReconstructionService.OutputFileName)));
+            Assert.Equal(oversized ? 0 : sector, new FileInfo(Path.Combine(result.Workspace!, PartId.ToString("N") + ".raw")).Length);
+        }
+        finally { Cleanup(result); }
+    }
+
     [Fact]
     public async Task CapturedSyntheticImageReconstructsWithoutOriginalSource()
     {

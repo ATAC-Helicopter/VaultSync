@@ -65,6 +65,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19031] Reject oversized image reconstruction before reading or staging payloads.
 - [BUG-19033] Preserve canonical issue priorities when adopting existing work.
 - [BUG-19032] Keep destination totals complete when backup pages load partial history.
 - [BUG-19031] Refuse oversized synthetic image captures before allocating temporary storage.

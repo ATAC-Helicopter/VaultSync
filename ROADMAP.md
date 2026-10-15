@@ -1332,7 +1332,12 @@ repository must not transfer before a compatible release is adopted.
   - Acceptance: current-head Release and localization checks pass; native sidebar
     review and cross-device checks distinguish database coverage from actual
     allocated destination storage. Release acceptance remains open.
-- [ ] `BUG-19031` `P2` Bound synthetic capture before temporary storage allocation.
+- [ ] `BUG-19031` `P2` Bound synthetic capture and reconstruction before payload storage.
+  - Follow-up (2026-10-15): reconstruction enforces its capacity limit during
+    metadata parsing, before payload reads or staging writes. Both oversized raw
+    regressions failed before correction; exact-limit cases retain truncation
+    refusal. Empty temporary workspaces can remain for diagnostics. See
+    [reconstruction admission evidence](docs/release-evidence/1.9-reconstruction-limit-2026-10-15.md).
   - Progress: requests above 1 GiB are refused before source reads or workspace
     creation, matching the reconstruction fixture limit. Boundary regressions
     cover 512/4096-byte sectors without allocating large files. Issue #789;

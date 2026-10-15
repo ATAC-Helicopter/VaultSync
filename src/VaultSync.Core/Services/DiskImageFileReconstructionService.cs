@@ -39,8 +39,8 @@ public static class DiskImageFileReconstructionService
                 staged.Add(pair.Key, file);
                 sources.Add(pair.Key, new StagingReadStream(pair.Value, file, budget));
             }
-            var verification = await DiskImageManifestVerificationService.VerifyAsync(
-                metadata, sources, cancellationToken).ConfigureAwait(false);
+            var verification = await DiskImageManifestVerificationService.VerifyWithinCapacityAsync(
+                metadata, sources, MaximumFixtureBytes, cancellationToken).ConfigureAwait(false);
             if (verification.State != DiskImageManifestVerificationState.ContentVerified)
                 return new(verification.State switch
                 {
@@ -48,7 +48,8 @@ public static class DiskImageFileReconstructionService
                     DiskImageManifestVerificationState.Incomplete => DiskImageFileReconstructionState.Incomplete,
                     DiskImageManifestVerificationState.Corrupt => DiskImageFileReconstructionState.Corrupt,
                     _ => DiskImageFileReconstructionState.Invalid
-                }, verification.Reason, Workspace: workspace);
+                }, verification.Reason == "image.capacity-policy-limit"
+                    ? "reconstruct.fixture-size-limit" : verification.Reason, Workspace: workspace);
             DiskImageCoveragePlan plan = verification.VerifiedCoverage!;
             if (plan.Capacity > MaximumFixtureBytes)
                 return new(DiskImageFileReconstructionState.Invalid, "reconstruct.fixture-size-limit", Workspace: workspace);

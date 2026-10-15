@@ -15,6 +15,13 @@ public static class DiskImageManifestVerificationService
     public static async ValueTask<DiskImageManifestVerificationAssessment> VerifyAsync(
         Stream metadata, IReadOnlyDictionary<Guid, Stream> payloads,
         CancellationToken cancellationToken = default)
+        => await VerifyWithinCapacityAsync(metadata, payloads, ulong.MaxValue, cancellationToken).ConfigureAwait(false);
+
+    // Fixture admission happens during metadata parsing, before any payload is read or staged.
+    // This bound is caller policy, not a change to the provisional format's capacity range.
+    internal static async ValueTask<DiskImageManifestVerificationAssessment> VerifyWithinCapacityAsync(
+        Stream metadata, IReadOnlyDictionary<Guid, Stream> payloads, ulong maximumCapacity,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentNullException.ThrowIfNull(payloads);
@@ -45,6 +52,8 @@ public static class DiskImageManifestVerificationService
         uint extentCount = BinaryPrimitives.ReadUInt32LittleEndian(manifest.AsSpan(60));
         if (imageId == Guid.Empty || captureId == Guid.Empty || generation == 0)
             return new(DiskImageManifestVerificationState.Invalid, "image.invalid-manifest-identity");
+        if (capacity > maximumCapacity)
+            return new(DiskImageManifestVerificationState.Invalid, "image.capacity-policy-limit");
         if (partCount > DiskImageCoverageService.MaximumParts ||
             extentCount > DiskImageCoverageService.MaximumExtents ||
             (ulong)ManifestHeaderLength + (ulong)partCount * PartRecordLength +
