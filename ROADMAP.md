@@ -1222,6 +1222,9 @@ repository must not transfer before a compatible release is adopted.
   - Acceptance: later readiness and scenario evaluation can distinguish
     recorded facts, measured evidence, simulation, inference, user confirmation,
     stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
+- [ ] `BUG-19033` `P1` Preserve canonical priority when adopting existing issues.
+  - Shared contributor tooling; #792 owns priority preservation and failure
+    handling. No application feature is moved between releases.
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
   explicit operation states and checkpoint contracts.
 - [ ] `VS-1997` `P0` Require serviced runtimes and verify every included release framework.
@@ -1419,7 +1422,7 @@ unchanged because work IDs are immutable and do not encode the patch number.
 - [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
   recovery navigation and retire the legacy shell after parity.
 - [ ] `VS-1942` `P1` Add a shared Recovery Inspector across recovery types.
-- [ ] `VS-1943` `P2` Revisit project groups and high-density organization if
+- [x] `VS-1943` `P2` Revisit project groups and high-density organization if
   `VS-1811` moved out of 1.8.
 - [ ] `VS-1944` `P0` Qualify the complete 1.9 interface across supported
   widths, scaling, keyboard, screen-reader, theme, and interrupted-work states.
@@ -1786,3 +1789,5 @@ static checks do not establish native-speaker or rendered platform qualification
 
 Reused release packages must also have unchanged `Localization/` source inputs;
 translation-only changes require rebuilding the qualified source run.
+
+Shared tracking standard (2026-10-15): VS-1980/#673 requires `./dev audit` before tracked pushes; BUG-19033/#792 prevents adoption priority conflicts. Conditional VS-1943/#791 closes as not planned because VS-1811/#363 shipped in 1.8. No new 1.9.4 functionality or beta readiness is claimed.
