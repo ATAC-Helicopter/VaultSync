@@ -425,3 +425,11 @@ or conflicting tables and invalid/overlapping partitions without disk writes.
 This prerequisite does not approve the pending architecture contracts or qualify
 boot/recovery. See [GPT validation](release-evidence/1.9-gpt-inspection-2026-10-15.md)
 and [remaining beta work](release-evidence/1.9-beta-readiness-2026-10-15.md).
+
+## Disposable UEFI laboratory preflight — 2026-10-15
+
+VS-1918/#575 records an isolated pinned Debian guest boot with UEFI/ext4/512
+observations, normal shutdown and real-image GPT inspection. Cloud network/SSH
+startup failures are retained; this is not the recovery product medium. No
+engine approval or disk-support row changes. See
+[measured lab inputs and limits](release-evidence/1.9-vm-lab-preflight-2026-10-15.md).

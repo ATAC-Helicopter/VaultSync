@@ -32,6 +32,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1918] Record isolated UEFI guest boot measurements for recovery development.
 - [VS-1980] Keep diaries outside GitHub and document automatic publication notifications.
 - [VS-1996] Compress Unity scenes, prefabs and metadata more densely using compatible ZIP archives.
 - [VS-1902] Require verified release provenance for manifests, packages and updater patches.

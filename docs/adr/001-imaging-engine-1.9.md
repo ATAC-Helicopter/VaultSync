@@ -227,3 +227,18 @@ quotes/backslashes; the JSON decoder still validates syntax. This explicit bound
 replaces relying on the runtime's recursion failure, which did not reject the
 deep-nesting fixture in hosted CI. Parser recursion failures still become named
 refusals. Ordinary finite fractions/exponents retain their values.
+
+## Candidate laboratory preflight — 2026-10-15
+
+VS-1918/#575 records the first isolated x86 UEFI/ext4/512 guest OS preflight
+using QEMU 11.1.1 and a pinned Debian 13 cloud image, with no host device or
+network adapter passed. The guest emits UEFI/root filesystem observations and
+powers off; the Core inspector also accepts the real GPT metadata from its
+unchanged 3 GiB base. Source/firmware/seed hashes and exact arguments are retained
+in [lab evidence](../release-evidence/1.9-vm-lab-preflight-2026-10-15.md).
+
+Cloud network-wait and disabled-key SSH failures are explicitly retained. Future
+offline recovery media must reach local recovery without a network-online wait
+or cloud-service dependency. This source image is not VaultSync recovery media;
+no imaging worker, target authorization, disk write, restore or restored boot
+was exercised. Engine approval and all support rows remain unchanged/unqualified.

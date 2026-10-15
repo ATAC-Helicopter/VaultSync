@@ -1291,6 +1291,11 @@ repository must not transfer before a compatible release is adopted.
     October 9 CI follow-up enforces a runtime-independent 64-container JSON
     depth bound, including escaped-string and boundary regressions; see the
     [CI repair evidence](docs/release-evidence/1.9-json-depth-2026-10-09.md).
+  - Lab preflight (2026-10-15): a pinned Debian guest boots x86 UEFI/ext4/512
+    under isolated QEMU with no network/host devices, emits observation markers
+    and powers off. Core also inspects the real 3 GiB GPT after conversion.
+    Cloud network-wait/SSH failures are retained; this is not recovery media,
+    engine approval or disk qualification. See [lab evidence](docs/release-evidence/1.9-vm-lab-preflight-2026-10-15.md).
   - Scope: decide build versus integration, privilege and isolation boundaries,
     supported operating systems, filesystems, partition tables, encryption,
     live capture, Secure Boot, recovery-media signing, drivers, and hardware.
