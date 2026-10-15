@@ -93,6 +93,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Security
 
+- [VS-1997] Prepare scoped runtime security backports across maintained source branches.
 - [VS-1997] Require serviced .NET runtimes and validate every framework included in release packages.
 
 Disk capture, independent boot and disk restore remain unimplemented/unqualified.

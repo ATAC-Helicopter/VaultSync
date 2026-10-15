@@ -1382,6 +1382,13 @@ repository must not transfer before a compatible release is adopted.
     control exposes backend limits; no verified novelty or production rollout
     is claimed. See [current research evidence](docs/release-evidence/1.9-compression-structure-2026-10-15.md).
 - [ ] `VS-1997` `P0` Require serviced runtimes and verify every included release framework.
+  - All-branch follow-up (2026-10-15): 28 remote branches are classified; nine
+    maintained preparations pass fresh full NuGet/runtime graph audits and 17
+    other maintained sources have validated scoped backports. Five existing PR
+    heads are updated; twelve protected targets await security PR integration.
+    Stable #793 and Dev #794 retain review/merge-only protections; the 18 default
+    alerts stay open until Stable is patched and reanalyzed. See
+    [branch evidence](docs/release-evidence/1.9-runtime-branches-2026-10-15.md).
   - Scope (2026-10-14): October runtime advisories require .NET 10.0.13.
     Raise the SDK, runtime and coordinated Microsoft package baseline; reject
     vulnerable ASP.NET/Windows Desktop versions even when NETCore is updated.

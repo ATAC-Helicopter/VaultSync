@@ -23,6 +23,10 @@ of accepting an updated NETCore beside vulnerable companions. See
 [runtime security](RUNTIME_SECURITY.md) and
 [current servicing evidence](release-evidence/1.9-runtime-servicing-2026-10-14.md).
 This does not qualify installed upgrades, recovery or default-branch alert closure.
+The October 15 all-branch follow-up rechecks all nine serviced preparations and
+prepares 17 scoped security backports, including protected Stable/Dev and release
+identities. Protected integration and the 18 default alerts remain open; see
+[branch-specific evidence](release-evidence/1.9-runtime-branches-2026-10-15.md).
 
 VS-1996/#786 adds measured ZIP tuning for Unity scenes, prefabs and metadata,
 plus an isolated bounded LZ77 compression experiment. Production backups remain

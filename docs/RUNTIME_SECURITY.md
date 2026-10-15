@@ -58,3 +58,15 @@ we still require serviced runtime artifacts and assess all alerts.
 The earlier October 13 dependency audit preceded these advisories and is
 historical evidence. Current output and per-head results are recorded separately
 in [runtime servicing evidence](release-evidence/1.9-runtime-servicing-2026-10-14.md).
+
+## All maintained source branches — 2026-10-15
+
+The requested inventory includes Stable, Dev, all protected release identities
+and open maintenance/dependency PR heads, not only the nine assembled release
+preparations. Scope, source hashes, fresh package/runtime graph audits and each
+reviewed-integration candidate are in
+[the current branch ledger](release-evidence/1.9-runtime-branches-2026-10-15.md).
+Protected sources and the default alert count remain unpatched until their
+required PR review/merge. Historical archives and non-code branches retain their
+declared roles. Never equate a prepared fix with a closed default-branch alert
+or replace a published package under the same version.
