@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 ## [1.9.0] - Unreleased
 
 ### Added
@@ -24,6 +24,10 @@
 - [VS-1975] Label mirror preview sources and targets clearly.
 
 These changes are in development; 1.9.0 has not shipped.
+
+### Security
+
+- [VS-1997] Require security-serviced runtimes and verify every included Microsoft framework.
 
 ## [1.8.9] - 16.09.2026
 ### Maintenance
