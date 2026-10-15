@@ -69,6 +69,15 @@ mature codecs remain stronger on ordinary text. This experiment is outside the
 application and does not change ZIP backups. See
 [research evidence](release-evidence/1.9-compression-structure-2026-10-15.md).
 
+### Disk recovery development
+
+The image development path can now inspect GPT layout metadata without writes,
+including the backup table and partition boundaries. Synthetic file-based
+capture/reconstruction preserves both the raw bytes and inspected layout.
+This is not an available disk restore workflow; independent boot media, native
+device safety and measured recovery remain release gates. See
+[validation and limits](release-evidence/1.9-gpt-inspection-2026-10-15.md).
+
 ## [1.8.9]
 
 VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.

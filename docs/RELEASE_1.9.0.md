@@ -410,3 +410,18 @@ packing. Each block tries one transform family and keeps the smallest complete
 result versus baseline. The draft decoder reads an explicit mode and rejects
 nested transforms. This remains outside application builds; the beta continues
 to use compatible ZIP. See [current research evidence](release-evidence/1.9-compression-hybrid-2026-10-15.md).
+
+## GPT layout prerequisite and beta priority — 2026-10-15
+
+The maintainer requests a complete-feature beta within the coming days. This is
+an urgency goal, not a qualified release date: disk-worker, independently booted
+recovery, native identity and end-to-end recovery gates remain unfinished.
+Further custom-compression experiments are deferred while these blockers take
+priority; compatible ZIP remains unchanged.
+
+VS-1917/#574 adds bounded GPT inspection, independently generated 512/4096-sector
+fixtures and a capture/reconstruction/layout readback exercise. It refuses corrupt
+or conflicting tables and invalid/overlapping partitions without disk writes.
+This prerequisite does not approve the pending architecture contracts or qualify
+boot/recovery. See [GPT validation](release-evidence/1.9-gpt-inspection-2026-10-15.md)
+and [remaining beta work](release-evidence/1.9-beta-readiness-2026-10-15.md).

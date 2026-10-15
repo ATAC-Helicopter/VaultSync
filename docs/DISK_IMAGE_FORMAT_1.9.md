@@ -355,3 +355,39 @@ files can remain; no reconstructed output is opened. The generic verification
 API retains the provisional format capacity range, and the running staged-byte
 budget remains a separate guard. No serialized layout, native device access or
 UI message changes. See [regression evidence](release-evidence/1.9-reconstruction-limit-2026-10-15.md).
+
+## Bounded GPT layout inspection — 2026-10-15
+
+VS-1917/#574 adds read-only `DiskImageGptInspectionService` for caller-owned
+seekable streams. Its current profile accepts 512/4096-byte logical sectors,
+GPT revision 1.0 with 92-byte headers, 128-byte entries and 128–1,024 entry slots.
+Other revisions/entry sizes are explicitly unsupported, not guessed. It verifies
+protective MBR geometry, header CRCs and reciprocal locations, matching disk and
+usable-range observations, array CRCs and exact primary/backup array equality.
+Metadata cannot overlap usable ranges or headers; used partitions need unique
+nonempty GUIDs, valid nonoverlapping ranges and no reserved attribute bits.
+Partition types and names do not prove filesystem content or boot capability.
+
+The inspector reads at most 274,432 bytes even for a large declared source, after
+checking length/geometry and validating all metadata offsets before seeks. It
+preserves stream position, owns no handle/path and performs no writes, repair,
+mount or device enumeration. I/O/cancellation propagate; truncation has an
+explicit incomplete result. Unknown/hybrid MBRs refuse. No UI text is introduced.
+
+A successful result is `LayoutInspected`, never image verified or restore
+permitted. Its versioned SHA-256 fingerprint binds geometry, protective sector,
+full header sectors and both exact entry arrays. It is an observation, not a
+manifest record, authenticated provenance or physical identity. It excludes
+partition payloads and unrelated gaps. A trusted caller must separately verify
+complete image bytes, source consistency and current device identity; labels and
+cloned disk/partition GUIDs cannot authorize destination writes.
+
+Independent Python/zlib/UUID fixtures cover both geometries. The synthetic file
+capture → reconstruction → inspection loop preserves entire-image hashes and
+layout fingerprints, with no original source dependency during reconstruction.
+No filesystem, EFI executable, boot medium or physical restore is qualified.
+See [current evidence](release-evidence/1.9-gpt-inspection-2026-10-15.md).
+Layout fields follow the
+[UEFI GPT specification](https://github.com/UEFI/UEFI-Specification-Release/blob/main/source/05_GUID_Partition_Table_Format.rst)
+and [EDK II field definitions](https://github.com/tianocore/edk2/blob/master/MdePkg/Include/Uefi/UefiGpt.h);
+this parser's narrower admission profile is VaultSync policy.

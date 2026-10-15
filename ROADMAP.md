@@ -1235,6 +1235,11 @@ repository must not transfer before a compatible release is adopted.
     alignment and joint approval remain open. See the
     [payload verification evidence](docs/release-evidence/1.9-payload-verification-2026-10-13.md).
     See also [manifest binding evidence](docs/release-evidence/1.9-manifest-binding-2026-10-13.md).
+  - GPT increment (2026-10-15): bounded read-only inspection validates protective
+    MBR, primary/backup header and array CRCs, GUIDs and partition ranges. Both
+    geometry fixtures survive capture/reconstruction with identical layout roots;
+    colliding array CRCs still require exact copy equality. This adds no device
+    adapter or stable serialization. See [GPT evidence](docs/release-evidence/1.9-gpt-inspection-2026-10-15.md).
   - Scope: cover source identity, partition layout, block/sparse maps,
     integrity records, compression and encryption descriptors, incomplete and
     resumable states, build identity, and reader/writer compatibility.
