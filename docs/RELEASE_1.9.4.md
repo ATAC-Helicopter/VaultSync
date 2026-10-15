@@ -58,3 +58,16 @@ See [runtime security](RUNTIME_SECURITY.md) and
 [this head's validation](release-evidence/1.9.4-runtime-2026-10-14.md).
 Historical 1.9.0 artifact evidence does not qualify this release's native
 upgrades, recovery or publication gates.
+
+## Shared issue and Project lifecycle — 2026-10-15
+
+VS-1980/#673 adds `./dev audit --release 1.9.4` before tracked pushes;
+BUG-19033/#792 preserves canonical adoption priorities. Issue creation/adoption,
+Project status and traceable dates, incremental evidence and release-gated
+closure follow AGENTS.md and WORK_TRACKING.md. This shared tooling does not
+import another release's application features or qualify product gates.
+Evidence: [current checks](release-evidence/1.9.4-tracking-2026-10-15.md).
+
+Conditional VS-1943/#791 is not planned: VS-1811/#363 shipped in 1.8, so the
+activation condition did not occur. This is a recorded disposition, not newly
+delivered organization functionality. Other 1.9.4 work remains open.
