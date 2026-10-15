@@ -253,3 +253,15 @@ Simulations or confirmations never become measurements merely through selection.
 These remain review prototypes without observation discovery, automatic conflict
 resolution, producer authentication, persistence or UI/CLI integration. The shared
 architecture gate is open. See [batch evidence](release-evidence/1.9-contract-batch-2026-10-12.md).
+
+## Regular-file image origin binding — 2026-10-15
+
+VS-1917's provisional manifest schema 2 binds source registration/observation IDs,
+writer-observed UTC milliseconds, geometry, GPT layout and caller tool/build
+claims to the same completion root as raw bytes. `DeclaredOrigin` is explicitly
+untrusted attribution data: UUIDs do not prove device identity, and checksums do
+not establish producer authenticity. Full file reconstruction compares actual
+GPT observations before success; generic payload verification alone does not.
+No external locator, physical serial or secret is exported. The explicit scope
+is regular-file fixtures, never privileged device permission or complete recovery
+evidence. See [the format boundary](DISK_IMAGE_FORMAT_1.9.md#provisional-sourcelayouttool-binding--2026-10-15).

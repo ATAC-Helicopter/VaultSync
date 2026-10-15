@@ -75,7 +75,7 @@ public sealed class DiskImageManifestVerificationServiceTests
             case "excess-count": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(24 + 56), uint.MaxValue); break;
             case "wrong-count": bytes[24 + 60] = 2; break;
             case "empty-id": bytes.AsSpan(24 + 4, 16).Clear(); break;
-            case "unknown-schema": bytes[24] = 2; break;
+            case "unknown-schema": bytes[24] = 3; break;
             case "unknown-rule": bytes[24 + 64 + 56 + 16] = 2; break;
         }
         using var metadata = new MemoryStream(bytes, writable: false);

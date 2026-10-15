@@ -391,3 +391,58 @@ Layout fields follow the
 [UEFI GPT specification](https://github.com/UEFI/UEFI-Specification-Release/blob/main/source/05_GUID_Partition_Table_Format.rst)
 and [EDK II field definitions](https://github.com/tianocore/edk2/blob/master/MdePkg/Include/Uefi/UefiGpt.h);
 this parser's narrower admission profile is VaultSync policy.
+
+## Provisional source/layout/tool binding — 2026-10-15
+
+VS-1917/#574 adds explicit `CaptureGptFixtureAsync` and manifest schema 2 for
+bounded regular-file GPT fixtures. The existing generic `CaptureAsync` still
+writes schema 1; both remain readable. The 1.0 draft envelope still recognizes
+the family, while the manifest schema dispatches its payload layout. A schema-1
+reader rejects schema 2 rather than guessing; unknown schemas still refuse.
+These provisional records are not a stable format or a device-capture profile.
+
+Schema 2 retains the 64-byte base header and inserts an origin record before
+parts/extents. It supports exactly one whole-capacity stored raw part/extent,
+with no transforms, zero omissions or parents. Integers are little-endian and
+all serialized UUIDs are network-order, including GPT identifiers converted
+from their native byte representation. Exact record length and map checks apply.
+
+The fixed origin header is 216 bytes, in order: origin schema `uint32=1`, source
+kind `uint32=1` (regular-file fixture), source/observation UUIDs, physical sector
+`uint32`, signed UTC Unix milliseconds `int64`, GPT disk UUID, raw metadata SHA-256,
+first/last usable LBA `uint64`, used-partition count `uint32`, 32-byte tool version
+and 64-byte source commit. Text is bounded printable ASCII with canonical zero
+padding; versions use letters/digits/`.`/`+`/`-`, commits are 40/64 lowercase hex
+characters. Times are nonnegative representable UTC milliseconds. Physical
+sectors are 512/4096 and cannot be smaller than logical sectors.
+
+Each 64-byte partition observation is entry number `uint32`, type/partition
+UUIDs, offset/length/attributes `uint64`, and reserved `uint32=0`. At most 1,024
+observations are admitted in increasing entry-number order. Unique nonempty IDs,
+alignment, range/overflow, overlap and reserved attributes are checked before
+payload access. Neither names, locators, serial numbers nor secrets are stored.
+Unknown origin schema/source kind refuses as unsupported; no physical-disk
+claim is accepted through this fixture profile.
+
+Capture inspects the source without changing its position, then copies/hashes
+it into a new exclusive workspace. Before manifest/completion publication, the
+copied payload is flushed and independently inspected; a different GPT metadata
+fingerprint prevents completion. The writer records its UTC observation time;
+source IDs, physical geometry and tool fields remain caller-supplied claims.
+This does not lock the source or establish consistent filesystem state.
+
+The completion root binds the complete origin, layout, map and part digests.
+Generic verification exposes `DeclaredOrigin`: ContentVerified proves raw
+stream consistency with that root, not the truth of source/tool claims or GPT
+semantics. File reconstruction additionally inspects the reconstructed bytes
+and compares disk ID, fingerprint, usable bounds and every partition observation.
+False but self-consistently checksummed layout claims therefore cannot report
+completed reconstruction. A refused diagnostic file may remain; it is not a
+successful recovery artifact and has no success digest in the assessment.
+
+Unkeyed roots do not authenticate a producer. A changed tool claim plus a new
+completion hash can still be parsed; authentication, native source consistency,
+fresh device identity and recovery authorization remain separate gates. Ordinary
+file IDs/GPT GUIDs are not physical destination authority. No device writes,
+boot-medium implementation, UI workflow or approved format follows from this work.
+See [independent fixtures and current checks](release-evidence/1.9-image-origin-2026-10-15.md).

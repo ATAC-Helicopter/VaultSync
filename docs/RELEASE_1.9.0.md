@@ -120,8 +120,9 @@ independent inspection and a permanent fixture plan. A bounded draft header
 recognizer and serialized refusal fixtures are implemented; no complete-image
 reader/writer or approved serialization exists. A bounded draft manifest and
 completion reader now binds raw-part SHA-256 digests to image/capture identity,
-generation and logical coverage without disk writes. Source/layout/provenance
-records remain absent. VS-1904 now has a synthetic file capture prototype with
+generation and logical coverage without disk writes. Draft schema 2 now binds regular-file source/tool claims and GPT layout
+observations. Native source consistency, authenticated provenance and approved
+complete-image serialization remain open. VS-1904 now has a synthetic file capture prototype with
 ordered file flushes and explicit incomplete/interrupted/failed results;
 crash/filesystem durability and device capture remain unqualified.
 VS-1907 reconstructs synthetic raw/zero maps into a new temporary file from
@@ -433,3 +434,13 @@ observations, normal shutdown and real-image GPT inspection. Cloud network/SSH
 startup failures are retained; this is not the recovery product medium. No
 engine approval or disk-support row changes. See
 [measured lab inputs and limits](release-evidence/1.9-vm-lab-preflight-2026-10-15.md).
+
+## Bound GPT fixture origins — 2026-10-15
+
+VS-1917/#574 integrates source/observation IDs, UTC time, physical geometry,
+GPT layout and tool version/source commit into provisional schema-2 manifests.
+Explicit GPT-file capture checks the copied layout before completion; file
+reconstruction refuses observations inconsistent with reconstructed bytes.
+Schema 1 remains readable and the generic writer keeps its existing format.
+Caller source/tool claims are not authenticated; this adds no device adapter,
+boot medium or release qualification. See [current origin evidence](release-evidence/1.9-image-origin-2026-10-15.md).

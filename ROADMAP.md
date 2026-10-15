@@ -1230,9 +1230,10 @@ repository must not transfer before a compatible release is adopted.
     a complete structure remains unverified. A bounded read-only draft envelope
     recognizer, permanent header/refusal fixtures and streaming raw-part digest
     checks now exist. A bounded draft manifest/completion reader now binds image
-    identity, generation, extent map and raw payload digests. Complete-image
-    reader/writer, source/layout/provenance records, engine
-    alignment and joint approval remain open. See the
+    identity, generation, extent map and raw payload digests. Draft schema 2 now
+    binds regular-file source/tool claims and GPT layout observations, with
+    copied-layout checks before completion and after reconstruction. Native source
+    observations, complete-image approval, engine alignment and joint review remain open. See the
     [payload verification evidence](docs/release-evidence/1.9-payload-verification-2026-10-13.md).
     See also [manifest binding evidence](docs/release-evidence/1.9-manifest-binding-2026-10-13.md).
   - GPT increment (2026-10-15): bounded read-only inspection validates protective
@@ -1240,6 +1241,12 @@ repository must not transfer before a compatible release is adopted.
     geometry fixtures survive capture/reconstruction with identical layout roots;
     colliding array CRCs still require exact copy equality. This adds no device
     adapter or stable serialization. See [GPT evidence](docs/release-evidence/1.9-gpt-inspection-2026-10-15.md).
+  - Origin increment (2026-10-15): explicit GPT-file captures retain source and
+    observation IDs, UTC time, physical geometry, full partition observations and
+    tool version/source commit. Layout changes prevent completion; reconstructed
+    bytes must match the recorded layout. Generic verification reports claims,
+    not authenticated origin. Legacy schema 1 remains readable. See
+    [origin evidence](docs/release-evidence/1.9-image-origin-2026-10-15.md).
   - Scope: cover source identity, partition layout, block/sparse maps,
     integrity records, compression and encryption descriptors, incomplete and
     resumable states, build identity, and reader/writer compatibility.

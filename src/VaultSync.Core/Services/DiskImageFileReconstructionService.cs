@@ -91,6 +91,17 @@ public static class DiskImageFileReconstructionService
             byte[] observed = await SHA256.HashDataAsync(output, cancellationToken).ConfigureAwait(false);
             if (output.Length != (long)plan.Capacity || !CryptographicOperations.FixedTimeEquals(expected, observed))
                 return new(DiskImageFileReconstructionState.Failed, "reconstruct.readback-mismatch", written, workspace);
+            if (verification.DeclaredOrigin is not null)
+            {
+                var layout = await DiskImageGptInspectionService.InspectAsync(output, plan.Capacity,
+                    plan.LogicalSectorBytes, cancellationToken).ConfigureAwait(false);
+                DiskImageGptLayout expectedLayout = verification.DeclaredOrigin.Layout;
+                if (layout.Layout is null || layout.Layout.DiskId != expectedLayout.DiskId ||
+                    layout.Layout.MetadataSha256 != expectedLayout.MetadataSha256 ||
+                    layout.Layout.FirstUsableLba != expectedLayout.FirstUsableLba || layout.Layout.LastUsableLba != expectedLayout.LastUsableLba ||
+                    !layout.Layout.Partitions.SequenceEqual(expectedLayout.Partitions))
+                    return new(DiskImageFileReconstructionState.Corrupt, "reconstruct.layout-mismatch", written, workspace);
+            }
             return new(DiskImageFileReconstructionState.FileFixtureReconstructed, "reconstruct.file-fixture-only",
                 written, workspace, verification.ManifestRoot, Convert.ToHexStringLower(observed));
         }

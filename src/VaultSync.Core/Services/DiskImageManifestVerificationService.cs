@@ -40,7 +40,8 @@ public static class DiskImageManifestVerificationService
         byte[] manifest = new byte[envelope.ManifestLength];
         if (!await ReadExactlyAsync(metadata, manifest, cancellationToken).ConfigureAwait(false))
             return new(DiskImageManifestVerificationState.Incomplete, "image.truncated-manifest");
-        if (BinaryPrimitives.ReadUInt32LittleEndian(manifest) != 1)
+        uint schema = BinaryPrimitives.ReadUInt32LittleEndian(manifest);
+        if (schema is not (1 or 2))
             return new(DiskImageManifestVerificationState.Unsupported, "image.unsupported-manifest");
 
         Guid imageId = new(manifest.AsSpan(4, 16), bigEndian: true);
@@ -54,15 +55,23 @@ public static class DiskImageManifestVerificationService
             return new(DiskImageManifestVerificationState.Invalid, "image.invalid-manifest-identity");
         if (capacity > maximumCapacity)
             return new(DiskImageManifestVerificationState.Invalid, "image.capacity-policy-limit");
+        DiskImageCaptureOrigin? origin = null;
+        int originLength = 0;
+        if (schema == 2 && !DiskImageOriginRecordCodec.TryDecode(manifest.AsSpan(ManifestHeaderLength), capacity, sector,
+                out origin, out originLength, out bool unsupportedOrigin))
+            return new(unsupportedOrigin ? DiskImageManifestVerificationState.Unsupported : DiskImageManifestVerificationState.Invalid,
+                "image.invalid-origin-record");
+        if (schema == 2 && (partCount != 1 || extentCount != 1))
+            return new(DiskImageManifestVerificationState.Unsupported, "image.unsupported-origin-map");
         if (partCount > DiskImageCoverageService.MaximumParts ||
             extentCount > DiskImageCoverageService.MaximumExtents ||
-            (ulong)ManifestHeaderLength + (ulong)partCount * PartRecordLength +
+            (ulong)ManifestHeaderLength + (ulong)originLength + (ulong)partCount * PartRecordLength +
             (ulong)extentCount * ExtentRecordLength != (ulong)manifest.Length)
             return new(DiskImageManifestVerificationState.Invalid, "image.manifest-record-limit");
 
         var parts = new List<DiskImagePayloadPart>((int)partCount);
         var digests = new List<DiskImagePayloadDigest>((int)partCount);
-        int offset = ManifestHeaderLength;
+        int offset = ManifestHeaderLength + originLength;
         for (int index = 0; index < partCount; index++, offset += PartRecordLength)
         {
             Guid partId = new(manifest.AsSpan(offset, 16), bigEndian: true);
@@ -83,6 +92,10 @@ public static class DiskImageManifestVerificationService
             extents.Add(new(start, length, (DiskImageExtentKind)kind,
                 partId == Guid.Empty ? null : partId, partOffset));
         }
+
+        if (schema == 2 && (extents[0].Kind != DiskImageExtentKind.Stored || extents[0].Offset != 0 ||
+            extents[0].Length != capacity || extents[0].PartOffset != 0 || parts[0].StoredLength != capacity))
+            return new(DiskImageManifestVerificationState.Unsupported, "image.unsupported-origin-map");
 
         byte[] completion = new byte[CompletionLength];
         if (!await ReadExactlyAsync(metadata, completion, cancellationToken).ConfigureAwait(false))
@@ -113,6 +126,7 @@ public static class DiskImageManifestVerificationService
             ? "image.draft-content-only" : result.Reason, result.VerifiedBytes,
             imageId, captureId, generation, Convert.ToHexStringLower(root))
         {
+            DeclaredOrigin = origin,
             VerifiedCoverage = state == DiskImageManifestVerificationState.ContentVerified
                 ? new(capacity, sector, parts, extents, HasCompletion: true) : null
         };

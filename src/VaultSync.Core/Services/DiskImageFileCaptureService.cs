@@ -13,8 +13,49 @@ public static class DiskImageFileCaptureService
     private const int BufferLength = 128 * 1024;
     private const int ManifestLength = 164;
 
-    public static async ValueTask<DiskImageFileCaptureAssessment> CaptureAsync(
-        DiskImageFileCaptureRequest request, Stream source, CancellationToken cancellationToken = default)
+    public static ValueTask<DiskImageFileCaptureAssessment> CaptureAsync(
+        DiskImageFileCaptureRequest request, Stream source, CancellationToken cancellationToken = default) =>
+        CaptureCoreAsync(request, source, null, cancellationToken);
+
+    public static async ValueTask<DiskImageFileCaptureAssessment> CaptureGptFixtureAsync(
+        DiskImageGptFileCaptureRequest request, Stream source, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Image);
+        ArgumentNullException.ThrowIfNull(source);
+        if (request.Image.Capacity > MaximumFixtureBytes)
+            return new(DiskImageFileCaptureState.Invalid, "capture.fixture-size-limit");
+        if (request.Image.ImageId == Guid.Empty || request.Image.CaptureId == Guid.Empty || request.Image.PartId == Guid.Empty ||
+            request.Image.Generation == 0 || request.Image.Capacity == 0 ||
+            request.Image.LogicalSectorBytes is not (512 or 4096) || request.Image.Capacity % request.Image.LogicalSectorBytes != 0 ||
+            request.SourceId == Guid.Empty || request.ObservationId == Guid.Empty || request.PhysicalSectorBytes is not (512 or 4096) ||
+            request.PhysicalSectorBytes < request.Image.LogicalSectorBytes ||
+            !DiskImageOriginRecordCodec.ValidTool(request.ToolVersion, request.ToolSourceCommit))
+            return new(DiskImageFileCaptureState.Invalid, "capture.invalid-origin");
+        try
+        {
+            if (!source.CanSeek || source.Position != 0)
+                return new(DiskImageFileCaptureState.Invalid, "capture.gpt-source-position");
+            var inspection = await DiskImageGptInspectionService.InspectAsync(source,
+                request.Image.Capacity, request.Image.LogicalSectorBytes, cancellationToken).ConfigureAwait(false);
+            if (inspection.Layout is null)
+                return new(inspection.State == DiskImageGptInspectionState.Unsupported
+                    ? DiskImageFileCaptureState.Unsupported : DiskImageFileCaptureState.Invalid, "capture.invalid-gpt-source");
+            var origin = new DiskImageCaptureOrigin(request.SourceId, request.ObservationId, request.PhysicalSectorBytes,
+                DateTimeOffset.FromUnixTimeMilliseconds(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()),
+                request.ToolVersion, request.ToolSourceCommit, inspection.Layout);
+            if (!DiskImageOriginRecordCodec.Valid(origin))
+                return new(DiskImageFileCaptureState.Invalid, "capture.invalid-origin");
+            return await CaptureCoreAsync(request.Image, source, origin, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        { return new(DiskImageFileCaptureState.Interrupted, "capture.interrupted"); }
+        catch (IOException) { return new(DiskImageFileCaptureState.Failed, "capture.io-failure"); }
+        catch (UnauthorizedAccessException) { return new(DiskImageFileCaptureState.Failed, "capture.storage-denied"); }
+    }
+
+    private static async ValueTask<DiskImageFileCaptureAssessment> CaptureCoreAsync(
+        DiskImageFileCaptureRequest request, Stream source, DiskImageCaptureOrigin? origin, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(source);
@@ -37,8 +78,10 @@ public static class DiskImageFileCaptureService
             // The caller cannot select output paths or overwrite existing files.
             workspace = Directory.CreateTempSubdirectory("vaultsync-draft-capture-").FullName;
             await using var metadata = NewFile(Path.Combine(workspace, MetadataFileName));
-            await using var payload = NewFile(Path.Combine(workspace, PayloadFileName));
-            byte[] header = EncodeHeader();
+            await using var payload = new FileStream(Path.Combine(workspace, PayloadFileName), FileMode.CreateNew,
+                FileAccess.ReadWrite, FileShare.None, BufferLength, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            byte[] originBytes = origin is null ? [] : DiskImageOriginRecordCodec.Encode(origin);
+            byte[] header = EncodeHeader(ManifestLength + originBytes.Length);
             await metadata.WriteAsync(header, cancellationToken).ConfigureAwait(false);
             metadata.Flush(flushToDisk: true);
 
@@ -59,7 +102,14 @@ public static class DiskImageFileCaptureService
 
             cancellationToken.ThrowIfCancellationRequested();
             payload.Flush(flushToDisk: true);
-            byte[] manifest = EncodeManifest(request, digest.GetHashAndReset());
+            if (origin is not null)
+            {
+                var copied = await DiskImageGptInspectionService.InspectAsync(payload, request.Capacity,
+                    request.LogicalSectorBytes, cancellationToken).ConfigureAwait(false);
+                if (copied.Layout?.MetadataSha256 != origin.Layout.MetadataSha256)
+                    return new(DiskImageFileCaptureState.Invalid, "capture.source-layout-changed", written, workspace);
+            }
+            byte[] manifest = EncodeManifest(request, digest.GetHashAndReset(), originBytes);
             byte[] root = SHA256.HashData(manifest);
             await metadata.WriteAsync(manifest, cancellationToken).ConfigureAwait(false);
             metadata.Flush(flushToDisk: true);
@@ -88,19 +138,19 @@ public static class DiskImageFileCaptureService
     private static FileStream NewFile(string path) => new(path, FileMode.CreateNew, FileAccess.Write,
         FileShare.None, BufferLength, FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-    private static byte[] EncodeHeader()
+    private static byte[] EncodeHeader(int manifestLength)
     {
         byte[] header = new byte[DiskImageEnvelopeService.HeaderLength];
         "VSIMAGE\0"u8.CopyTo(header);
         BinaryPrimitives.WriteUInt16LittleEndian(header.AsSpan(8), 1);
-        BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(16), ManifestLength);
+        BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(16), (uint)manifestLength);
         return header;
     }
 
-    private static byte[] EncodeManifest(DiskImageFileCaptureRequest request, byte[] digest)
+    private static byte[] EncodeManifest(DiskImageFileCaptureRequest request, byte[] digest, byte[] origin)
     {
-        byte[] manifest = new byte[ManifestLength];
-        BinaryPrimitives.WriteUInt32LittleEndian(manifest, 1);
+        byte[] manifest = new byte[ManifestLength + origin.Length];
+        BinaryPrimitives.WriteUInt32LittleEndian(manifest, origin.Length == 0 ? 1U : 2U);
         request.ImageId.TryWriteBytes(manifest.AsSpan(4, 16), bigEndian: true, out _);
         request.CaptureId.TryWriteBytes(manifest.AsSpan(20, 16), bigEndian: true, out _);
         BinaryPrimitives.WriteUInt64LittleEndian(manifest.AsSpan(36), request.Generation);
@@ -108,11 +158,13 @@ public static class DiskImageFileCaptureService
         BinaryPrimitives.WriteUInt32LittleEndian(manifest.AsSpan(52), request.LogicalSectorBytes);
         BinaryPrimitives.WriteUInt32LittleEndian(manifest.AsSpan(56), 1);
         BinaryPrimitives.WriteUInt32LittleEndian(manifest.AsSpan(60), 1);
-        request.PartId.TryWriteBytes(manifest.AsSpan(64, 16), bigEndian: true, out _);
-        BinaryPrimitives.WriteUInt64LittleEndian(manifest.AsSpan(80), request.Capacity);
-        digest.CopyTo(manifest.AsSpan(88, 32));
-        BinaryPrimitives.WriteUInt64LittleEndian(manifest.AsSpan(128), request.Capacity);
-        request.PartId.TryWriteBytes(manifest.AsSpan(140, 16), bigEndian: true, out _);
+        origin.CopyTo(manifest, 64);
+        int extra = origin.Length;
+        request.PartId.TryWriteBytes(manifest.AsSpan(64 + extra, 16), bigEndian: true, out _);
+        BinaryPrimitives.WriteUInt64LittleEndian(manifest.AsSpan(80 + extra), request.Capacity);
+        digest.CopyTo(manifest.AsSpan(88 + extra, 32));
+        BinaryPrimitives.WriteUInt64LittleEndian(manifest.AsSpan(128 + extra), request.Capacity);
+        request.PartId.TryWriteBytes(manifest.AsSpan(140 + extra, 16), bigEndian: true, out _);
         return manifest;
     }
 
