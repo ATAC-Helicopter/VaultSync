@@ -412,10 +412,25 @@ def cmd_issue(args: argparse.Namespace) -> int:
     return 0
 
 
+def adoption_priority(root: Path, work_id: str, labels: Sequence[str], requested: str | None) -> str:
+    if requested:
+        return requested.upper()
+    roadmap = root / "ROADMAP.md"
+    if roadmap.exists():
+        match = re.search(r"^- \[[ xX]\] `" + re.escape(work_id) + r"` `(P[0-2])`",
+                          roadmap.read_text(encoding="utf-8-sig"), re.M)
+        if match:
+            return match.group(1)
+    existing = {label.split(":", 1)[1].upper() for label in labels if label.lower().startswith("priority:")}
+    if len(existing) > 1:
+        raise TrackingError("Existing priorities conflict; update the roadmap or pass --priority explicitly.")
+    return next(iter(existing), "P2")
+
+
 def cmd_adopt(args: argparse.Namespace) -> int:
     root = repo_root()
     config = load_config(root)
-    raw = run(["gh", "issue", "view", str(args.issue), "--json", "number,title,body,url"], cwd=root)
+    raw = run(["gh", "issue", "view", str(args.issue), "--json", "number,title,body,url,labels"], cwd=root)
     issue = json.loads(raw.stdout)
     existing = canonical_id_from_text(issue.get("title"), issue.get("body"))
     if existing is None and args.type is None:
@@ -444,9 +459,18 @@ def cmd_adopt(args: argparse.Namespace) -> int:
     else:
         title = re.sub(rf"^\s*{re.escape(work_id)}\s*:\s*", "", title, flags=re.I).strip()
 
-    labels = select_labels(root, type_config, args.priority, release)
+    existing_labels = [label["name"] for label in issue.get("labels", [])]
+    priority = adoption_priority(root, work_id, existing_labels, args.priority)
+    labels = select_labels(root, type_config, priority, release)
+    if not any(label.lower() == "priority:" + priority.lower() for label in labels):
+        raise TrackingError(f"Repository has no priority label for {priority}; adoption remains incomplete.")
+    edit = ["gh", "issue", "edit", str(issue["number"])]
     for label in labels:
-        run(["gh", "issue", "edit", str(issue["number"]), "--add-label", label], cwd=root, check=False)
+        edit += ["--add-label", label]
+    for label in existing_labels:
+        if label.lower().startswith("priority:") and label not in labels:
+            edit += ["--remove-label", label]
+    run(edit, cwd=root)
     add_to_project(root, config, issue["url"])
     branch = maybe_create_branch(
         root,
@@ -648,11 +672,24 @@ def build_parser() -> argparse.ArgumentParser:
     adopt.add_argument("--type", choices=["bug", "feature", "change", "security", "maintenance"])
     adopt.add_argument("--branch", choices=["current", "new"], default="current")
     adopt.add_argument("--release")
-    adopt.add_argument("--priority", default="P2")
+    adopt.add_argument("--priority", help="Override roadmap/existing priority; otherwise preserve it")
     adopt.set_defaults(func=cmd_adopt)
 
     status = sub.add_parser("status", help="Show tracking associated with the active branch")
     status.set_defaults(func=cmd_status)
+
+    audit = sub.add_parser("audit", help="Read-only issue and Project audit for a release")
+    audit_scope = audit.add_mutually_exclusive_group()
+    audit_scope.add_argument("--release", help="Exact family-manifest release; defaults to active metadata")
+    audit_scope.add_argument("--all-releases", action="store_true", help="Audit every release in the family manifest")
+    audit.add_argument("--output", help="Write the detailed JSON report")
+    def audit_command(args):
+        from work_tracking_audit import cmd_audit, TrackingError as AuditError
+        try:
+            return cmd_audit(args)
+        except AuditError as error:
+            raise TrackingError(str(error)) from error
+    audit.set_defaults(func=audit_command)
 
     pr = sub.add_parser("pr", help="Create a PR linked to the tracked issue")
     pr.add_argument("--base")

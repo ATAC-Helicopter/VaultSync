@@ -111,8 +111,28 @@ For any non-trivial tracked change, work tracking is a push prerequisite:
 1. Run `./dev status` and confirm the active branch is associated with the intended issue and canonical ID.
 2. If tracking is missing, use `./dev issue ... --branch current` or `./dev adopt ... --branch current` before pushing. Do not reconstruct the ticket from commits afterward.
 3. Confirm the issue scope/status still matches the implemented work and update required roadmap/changelog/release metadata.
+   Run `./dev audit --release <owning-version>` and resolve every discrepancy
+   before pushing. A missing permission, partial API result or failed audit is
+   not a pass; retain the output and report the exact unresolved condition.
 4. A dedicated branch remains optional unless another repository/release rule requires one.
 5. Tiny typo/format-only maintenance may use the repository's explicit tracking-skip mechanism; larger work must not silently bypass tracking.
+
+### Issue and Project lifecycle
+
+- Before implementation, reuse or create the owning issue and ensure it has
+  its exact release milestone/label, one roadmap priority, assignee and native
+  Project #7 item with Status, Priority, Area, Release and traceable dates.
+- Starting work updates both the issue status label and Project status. Each
+  meaningful increment records delivered scope, remaining acceptance, current
+  evidence and its commit/PR; preserve historical results as historical.
+- Keep release-gated work open and In progress after implementation. Close and
+  move to Done only when its owning closure criteria pass. Conditional work
+  proven unnecessary may close as not planned with linked evidence; do not
+  describe that disposition as delivered functionality. Record Completed on
+  from the actual closure date, never from a successful build or planned date.
+- Before declaring a release tracking audit complete, run `./dev audit
+  --all-releases` against the complete family manifest. Repair missing owners
+  without allocating duplicate IDs or importing later-release features.
 
 
 ## Commit and PR references
