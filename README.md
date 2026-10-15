@@ -403,6 +403,7 @@ See [Updater documentation](docs/UPDATER.md) for release manifests, packaging, p
 ## Documentation
 
 - [Documentation overview](DOCUMENTATION.md)
+- [Media and community kit](docs/MEDIA_KIT.md)
 - [Wiki and how-to guides](docs/wiki/Home.md)
 - [Recovery guide](docs/wiki/Recovery.md)
 - [Encryption guide](docs/wiki/Encryption.md)
