@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1980] Audit release issues and Project metadata before tracked pushes.
 - [VS-1973] Preserve grouped resource routes, source discovery, live mirroring and bounded project or snapshot inspection while assigning automation to its owning release.
 - [VS-1974] Preserve versioned JSON inspection, snapshots, mirror, verify, doctor and restore output with private destination summaries and valid empty legacy results.
 - [VS-1975] Preserve recorded folder backup creation and inspection, individual or batch verification, selective restore and bounded snapshot pruning with preview/result counts.
@@ -30,6 +31,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19033] Preserve canonical issue priorities when adopting existing work.
 - [BUG-19002] Drain active watcher work on cancellation before shutdown, preserving cancellation propagation and avoiding abandoned snapshot or transfer operations during exit.
 - [BUG-19003] Reject snapshot IDs belonging to another project before constructing a history diff, keeping inspection scoped to the selected registered project.
 - [BUG-19004] Recheck staged restore bytes before target replacement, retaining corruption rejection before any destructive change to the user’s existing destination files.

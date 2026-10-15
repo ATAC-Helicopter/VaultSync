@@ -66,3 +66,12 @@ See [runtime security](RUNTIME_SECURITY.md) and
 [this head's validation](release-evidence/1.9.5-runtime-2026-10-14.md).
 Historical 1.9.0 artifact evidence does not qualify this release's native
 upgrades, recovery or publication gates.
+
+## Shared issue and Project lifecycle — 2026-10-15
+
+VS-1980/#673 adds `./dev audit --release 1.9.5` before tracked pushes;
+BUG-19033/#792 preserves canonical adoption priorities. Issue creation/adoption,
+Project status and traceable dates, incremental evidence and release-gated
+closure follow AGENTS.md and WORK_TRACKING.md. This shared tooling does not
+import another release's application features or qualify product gates.
+Evidence: [current checks](release-evidence/1.9.5-tracking-2026-10-15.md).
