@@ -61,6 +61,13 @@ Public Issue Forms stay unchanged. When an existing report becomes active engine
 
 If the issue already has a canonical ID, it is reused. Otherwise the helper allocates one and prefixes the issue title.
 
+Adoption preserves the roadmap priority, or the existing single priority when
+there is no roadmap entry. `--priority` explicitly overrides that choice and
+requires the roadmap to be updated consistently. Conflicting priority labels
+are reconciled in one issue edit; unrelated labels are retained. An unresolved
+conflict without a canonical priority or a denied edit aborts adoption. The
+default must never append P2 beside an existing P0/P1 label (BUG-19033/#792).
+
 ## Branch association
 
 Tracking data is stored locally under the active git branch:
@@ -79,6 +86,46 @@ Inspect the association with:
 ```bash
 ./dev status
 ```
+
+## Release audit and issue lifecycle
+
+Before every tracked push, verify both local association and remote state:
+
+```bash
+./dev status
+./dev audit --release 1.9.0 --output /tmp/vaultsync-tracking.json
+```
+
+Use the actual owning version on other branches. `./dev audit` defaults to the
+active metadata version, stripping a prerelease suffix. `--all-releases` checks
+every owning ID in `release/1.9-family.json`, including conditional IDs. The
+complete paginated issue listing excludes PRs; owning IDs must lead the issue
+title. Project membership/field pagination truncation or unavailable APIs abort
+the audit without a passing result. Native Project ownership is checked by
+account and number; another account's Project #7 cannot satisfy this contract.
+
+The read-only audit detects missing/duplicate owners or Project items, wrong
+milestones, missing assignees, conflicting priority/status labels, missing exact
+release labels, inconsistent board status/priority, missing Area/Release and
+invalid/missing/inconsistent dates. It exits 1 for discrepancies, 2 for incomplete
+execution, and 0 for complete consistent metadata. It never creates, closes,
+reopens, assigns or edits anything, and cannot decide feature acceptance from
+labels or a passing build. Review implementation evidence separately.
+
+Create/adopt before implementation, move started work to In progress in both
+issue labels and Project, and update delivered scope, remaining acceptance and
+commit/PR evidence with every meaningful increment. The creation helper's
+best-effort Project insertion warning does not satisfy the before-push audit.
+Fix missing access or retain/report the precise unresolved condition.
+
+Release-gated issues stay open/In progress until their owning closure gates
+pass. Close completed shipped work as completed; conditional scope proven
+unnecessary may close as not planned with linked proof. Done is the final issue
+disposition, not a promise that an unnecessary feature was built. Completed on
+must match the retained closure date. Start dates for planned records may come
+from issue creation; actual starts must be described separately when different.
+Target dates may reference the retained release-family horizon for unscheduled
+releases; label them as planning, never a publication commitment.
 
 ## Pull requests
 
