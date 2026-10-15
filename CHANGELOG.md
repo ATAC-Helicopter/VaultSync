@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1980] Audit release issues and Project metadata before tracked pushes.
 - [VS-1977] Add branded CLI welcome and task discovery with generated shell completion, advertising only the supported flat commands owned by this release.
 - [VS-1978] Bundle the handbook, task guides and command reference with package-aware documentation links, preserving generated reference consistency against actual executable help.
 
@@ -26,6 +27,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19033] Preserve canonical issue priorities when adopting existing work.
 - [BUG-19008] Restore both console globals before disposing captured discovery output, preventing Windows test runs from retaining a closed Spectre output writer.
 
 Current stable remains 1.8.9. This release is unscheduled; predecessor and product qualification remain open.
