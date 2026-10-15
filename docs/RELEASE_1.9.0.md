@@ -87,6 +87,14 @@ separate; Project #7 retains In progress, Start 2026-10-13, Target 2027-03-26.
 
 ## Delivery order
 
+The maintainer reaffirmed the complete-feature beta priority on October 15.
+Compression research (VS-1996) is secondary and does not block that beta. The
+VS-1905 pure overwrite planner now binds operation/image/destination observations
+and invalidates changed selections, without device I/O or write authorization.
+This is a prerequisite increment, not the completed restore workflow. See
+[current readiness](release-evidence/1.9-beta-readiness-2026-10-15.md) and
+[preview evidence](release-evidence/1.9-disk-preview-2026-10-15.md).
+
 1. Approve VS-1910 typed routes and adaptive UI architecture, VS-1917 versioned
    image format, VS-1918 engine/isolation and supported-system matrix, and
    VS-1919 recovery identities, dependencies, evidence and failure domains.

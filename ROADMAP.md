@@ -1390,6 +1390,13 @@ repository must not transfer before a compatible release is adopted.
     await reviewed integration. See [per-head evidence](docs/release-evidence/1.9-runtime-servicing-2026-10-14.md).
 - [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
   capacity checks, interruption semantics, and block validation.
+  - Progress (2026-10-15): pure whole-disk previews bind operation, image root,
+    generation and exact observed destination. Unknown/ambiguous identity,
+    in-use/read-only targets, repository co-location, incompatible geometry and
+    smaller/larger destinations refuse. Rechecking rejects changed selections.
+    This is no device authorization or UI/worker integration; adapter freshness,
+    native ancestry checks, interruption semantics and measured recovery remain open.
+    See [preview evidence](docs/release-evidence/1.9-disk-preview-2026-10-15.md).
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the

@@ -61,6 +61,8 @@ See [scope and verification](release-evidence/1.9-contract-batch-2026-10-12.md).
 
 ### Compression research
 
+Complete 1.9.0 beta functionality takes priority over this optional research.
+
 Compression research now tests byte-exact numeric context lanes with bounded
 readers and full-cost fallback. Generated counter-heavy data benefits, while
 mature codecs remain stronger on ordinary text. This experiment is outside the

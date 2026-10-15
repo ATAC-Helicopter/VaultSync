@@ -99,6 +99,28 @@ privilege escalation and durable-state implementations require security review.
 
 ## Qualification procedure
 
+### Pure overwrite planning increment — 2026-10-15
+
+VS-1905/#493 adds `DiskRestorePreviewService` without native device access or
+an execution capability. Its immutable preview names the operation, image ID,
+generation, lowercase manifest root, repository device and exact target
+observation. It describes overwrite offset zero and image capacity. Only
+equal-capacity whole disks with matching 512/4096-byte geometry can produce a
+`PreviewOnly` result; larger targets remain unqualified pending GPT handling.
+Changed selections invalidate the prior preview even if the new pair is safe.
+
+Observations are caller-supplied review data, not proven physical identity or
+freshness. Repository device means its containing physical disk, not a mount
+path, partition UUID or destination-folder ID. A future trusted adapter must
+resolve partition/alias ancestry, report unknown/ambiguous relationships, inspect
+mount/use state and re-observe through the handle that would perform writes.
+The planner cannot close that race or authenticate observations. It verifies
+neither image contents nor its source layout and never creates write authority.
+No device writer may accept `PreviewOnly` as permission. UI translations, explicit
+overwrite confirmation, image verification, authenticated isolated worker,
+native handle checks and interrupted-write evidence remain integration gates.
+Reason enums are internal outcomes, not text for display to users.
+
 Use disposable QEMU UEFI machines first, then dedicated physical SATA and NVMe
 hardware. Record actual firmware, controllers/drivers, OS build, filesystem,
 geometry, capacities, tool/engine/recovery-media builds and source content root.
