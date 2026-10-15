@@ -1386,6 +1386,10 @@ repository must not transfer before a compatible release is adopted.
     15.2%/7.5%, with Zstandard still denser/faster there. The transformed-zlib
     control exposes backend limits; no verified novelty or production rollout
     is claimed. See [current research evidence](docs/release-evidence/1.9-compression-structure-2026-10-15.md).
+  - Fourth iteration (2026-10-15): a bounded content sampler selects one numeric
+    or hexadecimal transform family. GUID-like lexemes preserve exact casing;
+    full framed cost retains raw/LZ/Huffman fallback. No production registration
+    or new beta prerequisite. See [hybrid evidence](docs/release-evidence/1.9-compression-hybrid-2026-10-15.md).
 - [ ] `VS-1997` `P0` Require serviced runtimes and verify every included release framework.
   - All-branch follow-up (2026-10-15): 28 remote branches are classified; nine
     maintained preparations pass fresh full NuGet/runtime graph audits and 17

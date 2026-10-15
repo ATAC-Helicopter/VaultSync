@@ -130,6 +130,38 @@ corpus, cheap selection, bounded transform segmentation and independent native
 reader qualification. A unique useful combination must be demonstrated rather
 than inferred from implementing established primitives ourselves.
 
+## Fourth iteration: bounded hybrid selection — 2026-10-15
+
+`encode_hybrid` samples up to 8,192 bytes in four separated windows (or the
+whole small block), selecting one transform family from content. Two sampled
+standalone 32-digit hex lexemes choose hex packing; otherwise mostly printable
+text with at least eight numeric runs chooses numeric lanes. Other blocks
+retain the original raw/LZ/Huffman path. Extensions are not consulted. The
+sampler bounds classification work, not total encoder time: full baseline
+encoding and at most two numeric candidates or one hex candidate still run.
+Thresholds are experimental and sampling can miss useful structure.
+
+`hexlanes.py` packs standalone 32-digit hex spellings into 16 bytes, retaining
+lower/upper case through tags and mixed case through a 32-bit mask. Literal
+NULs are escaped, all other bytes remain exact, and no semantic GUID parsing or
+schema normalization occurs. Contiguous longer hex strings are not split into
+GUIDs. Disposable mode 4 holds one inner raw/LZ/Huffman frame; nested transforms
+are refused. The reader checks size/expansion, escape tags, exact consumption,
+canonical casing and existing inner/outer content hashes.
+
+The writer compares complete candidate cost against the original baseline,
+so a transform cannot enlarge that baseline's framed output. It can be worse
+than the exhaustive structural profile by selecting a different family or
+missing numeric structure. No incompressible block is skipped solely because
+of a sample; raw fallback still comes from actual encoded cost. Hashes detect
+corruption and do not establish authenticity. No product format, ZIP behavior,
+updater schema or release gate changes.
+
+See [hybrid measurements and limitations](release-evidence/1.9-compression-hybrid-2026-10-15.md).
+This is an implemented hybrid research policy, not evidence of a new compression
+primitive or worldwide novelty. Held-out licensed projects, independent native
+readers, fuzzing and measured production safety/performance remain open.
+
 ## Incremental rollout and acceptance
 
 | Stage | Deliverable | Promotion evidence |

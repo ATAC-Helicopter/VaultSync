@@ -402,3 +402,11 @@ previous late refusal; exact-limit declarations still reach truncation checks.
 This closes a resource-bound gap in the synthetic pipeline, without changing
 the image layout or qualifying physical restore. See
 [follow-up evidence](release-evidence/1.9-reconstruction-limit-2026-10-15.md).
+
+## Secondary hybrid compression research — 2026-10-15
+
+VS-1996/#786 adds an isolated content sampler and exact-case GUID-like hex
+packing. Each block tries one transform family and keeps the smallest complete
+result versus baseline. The draft decoder reads an explicit mode and rejects
+nested transforms. This remains outside application builds; the beta continues
+to use compatible ZIP. See [current research evidence](release-evidence/1.9-compression-hybrid-2026-10-15.md).

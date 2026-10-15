@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1996] Prototype content-guided numeric and GUID compression with exact spelling recovery.
 - [VS-1980] Audit release issues and Project metadata before tracked pushes.
 - [VS-1905] Model whole-disk overwrite previews that reject unsafe or changed destinations.
 - [VS-1996] Add isolated compression experiments and repeatable archive size measurements.

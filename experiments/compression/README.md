@@ -36,3 +36,12 @@ python3 -m venv /tmp/vaultsync-compression-reference
 Without `--zstandard` the benchmark needs only Python's standard library. The
 structure+zlib control includes its transform metadata and one-byte selector;
 all other prototype framing is included in reported byte counts.
+
+`encode_hybrid` samples at most 8 KiB per block, selecting either numeric lanes,
+32-digit hex packing or the original baseline. Hex packing preserves lowercase,
+uppercase and mixed case plus arbitrary literal bytes. Experimental mode 4
+stores the transform explicitly; decoding never repeats sampling. Complete
+inner/outer frame costs decide whether the candidate wins. Numeric lanes keep
+two bounded policies; hex packing tries one. Sampling may miss useful structure,
+so this profile can lose compression opportunities versus exhaustive selection.
+The benchmark includes a hex+zlib control and records hybrid routes/modes.
