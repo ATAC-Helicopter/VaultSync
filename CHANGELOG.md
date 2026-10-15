@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 ## [1.8.9] - Unreleased
 ### Maintenance
 - [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
@@ -40,6 +40,10 @@
 - [VS-1892] Center icon-and-label stacks inside shared status pills and backup tags.
 - [VS-1892] Improve muted text contrast, light-theme status colors, and dark-theme accent labels.
 - [VS-1892] Keep custom-theme muted text readable against the configured surfaces.
+
+### Security
+
+- [VS-1997] Require security-serviced runtimes and verify every included Microsoft framework.
 
 ## [1.8.8] - 02.09.2026
 ### Added
