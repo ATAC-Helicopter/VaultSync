@@ -5,6 +5,10 @@ Review: sole 1.9.0 PR #736. This is a recommendation, not approval or a support
 announcement. A synthetic file capture prototype exists; no device imaging engine,
 elevated helper or boot medium is implemented.
 Review with VS-1917 format, VS-1919 evidence and VS-1910 route contracts.
+The VS-1904 read-only [development worker](../DISK_WORKER_1.9.md) implements
+one bounded inventory request in a separate process, without elevation,
+authentication, raw-device access or product launch integration. It does not
+approve or implement the privileged boundary below.
 
 ## Problem and options
 

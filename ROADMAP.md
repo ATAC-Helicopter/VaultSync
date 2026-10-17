@@ -1370,8 +1370,14 @@ repository must not transfer before a compatible release is adopted.
     exclusive temporary workspace, flushes the payload before manifest/completion
     publication and preserves incomplete/interrupted/failed captures. Independent
     encoded fixtures and read-back verification pass; device adapters, source
-    consistency, worker isolation, checkpoints/resume and crash/filesystem durability
+    consistency, privileged worker isolation, checkpoints/resume and crash/filesystem durability
     remain open. See [file capture evidence](docs/release-evidence/1.9-file-capture-2026-10-13.md).
+    A separate read-only inventory executable now accepts one bounded, correlated
+    request over inherited pipes, with refusal before observation and a host
+    deadline. It is not an authenticated/elevated worker or desktop integration.
+    Issue #492; preparation PR #736. See
+    [worker contract](docs/DISK_WORKER_1.9.md) and
+    [current evidence](docs/release-evidence/1.9-disk-worker-2026-10-17.md).
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
     persisted import marker distinguishes origin from restore state; cards,

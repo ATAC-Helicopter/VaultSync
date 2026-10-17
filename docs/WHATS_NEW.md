@@ -89,6 +89,10 @@ does not establish that an unmounted-looking disk is safe to overwrite and is
 not yet exposed as a disk recovery workflow. See
 [validation and limits](release-evidence/1.9-linux-block-inventory-2026-10-17.md).
 
+Disk observation also has a separate development worker with bounded requests
+and a deadline. It does not yet provide privileged disk capture or restore in
+the app. See [development limits](DISK_WORKER_1.9.md).
+
 ## [1.8.9]
 
 VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.

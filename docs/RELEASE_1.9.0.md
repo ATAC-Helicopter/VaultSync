@@ -128,6 +128,11 @@ crash/filesystem durability and device capture remain unqualified.
 VS-1907 reconstructs synthetic raw/zero maps into a new temporary file from
 payloads staged during verification and checks target read-back. This file loop
 does not qualify the independently booted restore path or a physical destination.
+VS-1904 also has a separate development-only read-only inventory executable,
+with a bounded one-shot protocol and deadline. It has no launcher integration,
+authentication, elevation, device access or release packaging. See
+[worker contract](DISK_WORKER_1.9.md) and
+[current evidence](release-evidence/1.9-disk-worker-2026-10-17.md).
 Engine/support decisions (VS-1918), shared
 identity/evidence alignment (VS-1919), fixtures and joint approval remain open.
 The [VS-1919 identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) defines
