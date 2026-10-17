@@ -242,3 +242,39 @@ offline recovery media must reach local recovery without a network-online wait
 or cloud-service dependency. This source image is not VaultSync recovery media;
 no imaging worker, target authorization, disk write, restore or restored boot
 was exercised. Engine approval and all support rows remain unchanged/unqualified.
+
+## Linux metadata observation boundary — 2026-10-17
+
+VS-1905/#493 adds `LinuxBlockInventoryService`, a read-only sysfs/proc collector.
+It never opens `/dev` contents, mounts filesystems, invokes subprocesses or writes.
+The public entry point uses fixed Linux kernel metadata locations; other platforms
+return UnsupportedPlatform. Injected filesystem views exist only in internal tests.
+
+A bounded snapshot records boot ID, mount namespace, kernel major/minor numbers,
+disk sequence where available, capacity and logical/physical geometry, persistent
+WWID/serial candidates and partition ancestry. Used-block counts are interpreted
+in 512-byte units regardless of logical sector size. These values are observations,
+not authenticated hardware identity. Shared WWID or serial aliases across eligible
+whole disks mark ambiguity, even if their preferred identifiers differ. Virtual/
+stacked and optical devices are not whole-disk identity candidates. Identity and
+boot IDs remain private diagnostic data and require redaction before publication.
+
+Mounted or swap use and active holder relationships propagate through the related
+partition/stack graph. Unknown swap aliases/files remain explicitly unresolved.
+Only the current mount namespace is observed; other namespaces, open handles and
+future changes are not excluded. The API has no Offline result or conversion to
+restore authority: unobserved use remains Unknown. A native worker still needs
+fresh handle-based identity/geometry, global use/exclusive-access checks, repository
+ancestry and authenticated authorization before device access.
+
+Limits: 256 entries, 4,096 relationship entries, 8 MiB cumulative text reads; bounded
+attribute sizes, mount/swap records and names. Malformed/denied/missing required
+metadata or exceeded budgets return no devices. Bracketed identity, geometry,
+topology, boot and mount/swap reads reject changed views. This is not an atomic
+kernel snapshot or a guarantee against changes after observation. Cancellation
+propagates; byte/count limits do not guarantee kernel I/O latency.
+
+See [implementation checks and VM measurement](../release-evidence/1.9-linux-block-inventory-2026-10-17.md).
+Kernel field semantics follow the [Linux sysfs ABI](https://github.com/torvalds/linux/blob/master/Documentation/ABI/stable/sysfs-block)
+and [mount namespace contract](https://man7.org/linux/man-pages/man5/proc_pid_mountinfo.5.html).
+This does not approve an elevated worker or qualify a disk support profile.

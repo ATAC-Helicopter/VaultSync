@@ -444,3 +444,12 @@ reconstruction refuses observations inconsistent with reconstructed bytes.
 Schema 1 remains readable and the generic writer keeps its existing format.
 Caller source/tool claims are not authenticated; this adds no device adapter,
 boot medium or release qualification. See [current origin evidence](release-evidence/1.9-image-origin-2026-10-15.md).
+
+## Linux block inventory — 2026-10-17
+
+VS-1905/#493 adds bounded, read-only kernel metadata observations for disk and
+partition relationships, geometry, identity ambiguity and current-namespace use.
+Changed or incomplete scans return no devices. No result declares a disk Offline
+or authorizes writes; native handle checks and the isolated worker remain open.
+No application-visible string or file-backup behavior changes. See
+[current checks and scope](release-evidence/1.9-linux-block-inventory-2026-10-17.md).

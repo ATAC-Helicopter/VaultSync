@@ -83,6 +83,12 @@ manifest and refuses changed or falsely described GPT layouts before successful
 reconstruction. These records are not proof of a trusted producer or physical
 destination identity. See [current validation](release-evidence/1.9-image-origin-2026-10-15.md).
 
+Linux recovery development now reads bounded kernel metadata to distinguish
+mounted descendants, stacked devices and ambiguous disk identifiers. The scan
+does not establish that an unmounted-looking disk is safe to overwrite and is
+not yet exposed as a disk recovery workflow. See
+[validation and limits](release-evidence/1.9-linux-block-inventory-2026-10-17.md).
+
 ## [1.8.9]
 
 VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.

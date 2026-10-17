@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1905] Observe Linux disk geometry, mounted descendants and ambiguous device identities.
 - [VS-1917] Bind draft image source and tool claims to captured GPT layouts.
 - [VS-1917] Inspect GPT metadata with bounded reads and matching backup tables.
 - [VS-1996] Prototype content-guided numeric and GUID compression with exact spelling recovery.

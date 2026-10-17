@@ -1437,6 +1437,12 @@ repository must not transfer before a compatible release is adopted.
     This is no device authorization or UI/worker integration; adapter freshness,
     native ancestry checks, interruption semantics and measured recovery remain open.
     See [preview evidence](docs/release-evidence/1.9-disk-preview-2026-10-15.md).
+  - Linux observation increment (2026-10-17): bounded sysfs/proc reads collect
+    device numbers, geometry, disk sequence and persistent identity candidates.
+    Mount/swap use propagates across partitions and stacked-device relationships;
+    shared identity aliases are ambiguous. Changed/incomplete scans return no
+    devices. Namespace absence never becomes Offline or write permission.
+    See [Linux observation evidence](docs/release-evidence/1.9-linux-block-inventory-2026-10-17.md).
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
