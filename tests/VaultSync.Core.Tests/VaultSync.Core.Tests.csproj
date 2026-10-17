@@ -23,4 +23,11 @@
     <ProjectReference Include="..\..\src\VaultSync.UI\VaultSync.UI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Fixtures\disk-image-origin-v2.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\disk-gpt-v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\disk-image-envelope-v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\disk-image-manifest-v1.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

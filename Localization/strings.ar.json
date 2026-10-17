@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "مستورد",
+  "Projects.Imported.Available": "مشروع مستورد. مجلد المصدر متاح على هذا الجهاز.",
+  "Projects.Imported.Unavailable": "سجل نسخ احتياطي مستورد. استعد المشروع أو اربط مجلد مصدر محليًا قبل إنشاء لقطات.",
+  "Projects.Imported.NoPath": "لا يوجد مجلد محلي مرتبط",
   "Settings.Advanced.MetadataConflictsBaseLabel": "الأساس",
   "Settings.Advanced.MetadataUndoNone": "لا يوجد حاليًا قرار بيانات وصفية يمكن التراجع عنه.",
   "Settings.Advanced.MetadataUndoAvailable": "يمكن التراجع عن آخر قرار لـ {0} حتى عملية الكتابة التالية إلى المستودع.",
@@ -90,7 +94,8 @@
   "Backups.Delete.Warning": "يؤدي هذا إلى إزالة البيانات الموجودة على الوجهة.",
   "Backups.Destinations.Inactive": "غير نشطة",
   "Backups.Destinations.Pending": "قيد الانتظار",
-  "Backups.Destinations.StoredBytes": "المخزن: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · النسخ الاحتياطية المعروفة (الحجم المنطقي)",
+  "Backups.Destinations.StoredBytesLabel": "النسخ الاحتياطية المعروفة (الحجم المنطقي)",
   "Backups.Destinations.QuotaUsage": "الحصة: {0} من {1} (تحذير {2}%)",
   "Backups.Destinations.CleanupSuggestion": "{0} يُقترح حذف {1} نسخة احتياطية غير محمية لاستعادة حوالي {2}.",
   "Backups.Destinations.CleanupBlocked": "{0} لا توجد نسخ احتياطية غير محمية متاحة حالياً للعودة إلى ما دون حد التحذير.",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "راجع كل ملف تم إنشاؤه. تتم إزالة المسارات وبيانات الاعتماد والرموز والأسرار أو استبدالها بمعرّفات مستعارة. يمكن استبعاد الأقسام الاختيارية.",
   "Settings.Advanced.SupportBundle.Diagnostics": "تضمين التشخيصات المنقحة",
   "Settings.Advanced.SupportBundle.Telemetry": "تضمين القياس عن بُعد المحلي مجهول الهوية",
-  "Settings.Advanced.SupportBundle.Size": "الحد الأقصى للحجم غير المضغوط: {0:0.0} م.ب. تتم تنقية المحتوى قبل التصدير."
+  "Settings.Advanced.SupportBundle.Size": "الحد الأقصى للحجم غير المضغوط: {0:0.0} م.ب. تتم تنقية المحتوى قبل التصدير.",
+  "Nav.Back": "رجوع (Alt+Left)",
+  "Nav.Forward": "تقدم (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "إزالة بيانات الاعتماد",
+  "Update.Installer.RelaunchFailed": "تم تثبيت التحديث، لكن تعذّر إعادة تشغيل VaultSync تلقائيًا. افتح VaultSync من قائمة التطبيقات.",
+  "Recovery.Loading": "جارٍ تحميل حالة الاستعداد للاستعادة...",
+  "Recovery.Checking": "جارٍ التحقق من المشاريع وحداثة النسخ الاحتياطية وسياسة التحقق وتوفر الوجهات.",
+  "Guide.Checking": "جارٍ التحقق من الإعدادات…",
+  "Update.Installer.ReadyToRestart": "التحديث جاهز. سيُعاد تشغيل VaultSync بالإصدار الجديد.",
+  "Update.Installer.Installed": "تم تثبيت التحديث. سيُغلق VaultSync ليبدأ الإصدار الجديد بشكل صحيح.",
+  "Recovery.Coverage.Hours": "{0} س",
+  "Recovery.Coverage.Days": "{0} ي"
 }

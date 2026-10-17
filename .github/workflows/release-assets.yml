@@ -153,6 +153,9 @@ jobs:
               echo "Beta target_version must include a prerelease suffix (example: 1.7.x-beta.N)."
               exit 1
             fi
+            if [[ "$target" == 1.9.0-* ]]; then
+              python3 scripts/disk_support.py check --require-qualified
+            fi
           fi
 
           if [[ "$channel" == "stable" ]]; then
@@ -212,6 +215,9 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: "10.0.x"
+
+      - name: Validate UI localization before packaging
+        run: python3 scripts/localization_audit.py --check
 
       - name: Restore
         run: dotnet restore VaultSync.sln
@@ -615,6 +621,8 @@ jobs:
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           set -euo pipefail
+          bundle_versions="$(python3 scripts/macos_bundle_version.py "$TARGET_VERSION")"
+          read -r short_version build_version <<< "$bundle_versions"
           for arch in arm64 x64; do
             app="dist/macos/staging/$arch/VaultSync.app"
             [[ -f "$app/Contents/Info.plist" ]] || {
@@ -622,8 +630,9 @@ jobs:
               exit 1
             }
             [[ "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" == "com.vaultsync.app" ]]
-            [[ "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" == "$TARGET_VERSION" ]]
-            [[ "$(plutil -extract CFBundleVersion raw "$app/Contents/Info.plist")" == "$TARGET_VERSION" ]]
+            [[ "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" == "$short_version" ]]
+            [[ "$(plutil -extract CFBundleVersion raw "$app/Contents/Info.plist")" == "$build_version" ]]
+            [[ "$(plutil -extract VaultSyncReleaseVersion raw "$app/Contents/Info.plist")" == "$TARGET_VERSION" ]]
             [[ "$(readlink "dist/macos/staging/$arch/Applications")" == "/Applications" ]]
             codesign --verify --deep --strict "$app"
             codesign -dv --verbose=4 "$app" 2>&1 | grep -q '^Identifier=com.vaultsync.app$'
@@ -722,6 +731,19 @@ jobs:
         run: |
           bash scripts/build_linux_release.sh "$TARGET_VERSION" x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
           bash scripts/build_linux_release.sh "$TARGET_VERSION" arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
+
+      - name: Verify AppImage payload permissions
+        run: |
+          set -euo pipefail
+          appimage=(dist/linux/VaultSync-*-linux-x64.AppImage)
+          [[ ${#appimage[@]} -eq 1 && -f ${appimage[0]} ]]
+          image_path="$(realpath "${appimage[0]}")"
+          extract_dir="$(mktemp -d)"
+          trap 'rm -rf "$extract_dir"' EXIT
+          (cd "$extract_dir" && "$image_path" --appimage-extract >/dev/null)
+          root="$extract_dir/squashfs-root"
+          [[ "$(stat -c '%a' "$root")" == 755 ]]
+          [[ -x "$root/AppRun" && -x "$root/usr/bin/VaultSync.UI" ]]
 
       - name: Build patch assets
         if: ${{ inputs.include_linux_patches }}
@@ -995,9 +1017,10 @@ jobs:
           python3 scripts/release_sbom.py validate \
             --manifest release-assets/vaultsync-release-manifest.json \
             --sbom-root supply-chain/sboms
-          sed 's# \*# *release-assets/#' \
-            supply-chain/sboms/vaultsync-release-subjects.sha256 \
-            > supply-chain/attestation-subjects.sha256
+          python3 scripts/release_signing.py subjects \
+            --asset-root release-assets --repository "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" --source-ref "$GITHUB_REF" \
+            --output supply-chain/attestation-subjects.sha256
 
       - name: Attest release-package provenance
         id: provenance
@@ -1071,31 +1094,32 @@ jobs:
           subject-path: release-assets/dist/linux/VaultSync-${{ inputs.target_version }}-linux-arm64.deb
           sbom-path: supply-chain/sboms/VaultSync-${{ inputs.target_version }}-linux-arm64.deb.spdx.json
 
-      - name: Verify online and offline release-candidate provenance
-        if: ${{ inputs.release_candidate }}
+      - name: Retain and verify all release provenance
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
-          TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           set -euo pipefail
-          subject="release-assets/dist/windows/VaultSync-Setup-$TARGET_VERSION.exe"
-          gh attestation verify "$subject" --repo "$GITHUB_REPOSITORY"
+          mkdir -p supply-chain/attestations
+          cp "$PROVENANCE_BUNDLE" supply-chain/attestations/release-provenance.json
           gh attestation trusted-root > supply-chain/trusted-root.jsonl
-          gh attestation verify "$subject" \
-            --repo "$GITHUB_REPOSITORY" \
-            --bundle "$PROVENANCE_BUNDLE" \
-            --custom-trusted-root supply-chain/trusted-root.jsonl
+          python3 scripts/release_signing.py verify \
+            --asset-root release-assets --repository "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" --source-ref "$GITHUB_REF" \
+            --bundle supply-chain/attestations/release-provenance.json \
+            --trusted-root supply-chain/trusted-root.jsonl
 
-      - name: Upload release SBOMs
+      - name: Upload release supply-chain proof
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-supply-chain-proof
           if-no-files-found: error
           path: |
             supply-chain/sboms
+            supply-chain/attestations
             supply-chain/trusted-root.jsonl
+            supply-chain/attestation-subjects.sha256
 
   prepare-draft:
     name: Assemble verified unpublished draft
@@ -1122,7 +1146,7 @@ jobs:
           jq -e '.conclusion == "success" and .head_branch == "Stable" and .path == ".github/workflows/release-assets.yml"' source-run.json
           source_sha="$(jq -r '.head_sha' source-run.json)"
           git merge-base --is-ancestor "$source_sha" origin/Stable
-          git diff --exit-code "$source_sha" HEAD -- src installer packaging Directory.Build.props Directory.Packages.props global.json scripts/build_patch.py scripts/build_linux_release.sh scripts/build_macos_dmg.sh scripts/thin_macos_native_libraries.sh
+          git diff --exit-code "$source_sha" HEAD -- src Localization installer packaging Directory.Build.props Directory.Packages.props global.json scripts/build_patch.py scripts/build_linux_release.sh scripts/build_macos_dmg.sh scripts/macos_bundle_version.py scripts/thin_macos_native_libraries.sh
       - name: Download qualified direct packages and patches
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -1145,6 +1169,23 @@ jobs:
           run-id: ${{ inputs.prepare_draft_from_run }}
           name: canonical-release-manifest
           path: release-assets
+      - name: Download qualified signing proof
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prepare_draft_from_run }}
+          name: release-supply-chain-proof
+          path: supply-chain
+      - name: Verify qualified source signatures before draft upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release_signing.py verify \
+            --asset-root release-assets --repository "$GITHUB_REPOSITORY" \
+            --commit "$(jq -r '.head_sha' source-run.json)" --source-ref refs/heads/Stable \
+            --bundle supply-chain/attestations/release-provenance.json \
+            --trusted-root supply-chain/trusted-root.jsonl
       - name: Verify assets and upload only to the existing draft
         env:
           GH_TOKEN: ${{ github.token }}

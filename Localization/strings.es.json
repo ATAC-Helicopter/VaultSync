@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Importado",
+  "Projects.Imported.Available": "Proyecto importado. La carpeta de origen está disponible en este equipo.",
+  "Projects.Imported.Unavailable": "Historial de copias importado. Restaura el proyecto o vincula una carpeta de origen local antes de crear instantáneas.",
+  "Projects.Imported.NoPath": "Ninguna carpeta local vinculada",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
   "Settings.Advanced.MetadataUndoNone": "Actualmente no se puede deshacer ninguna resolución de metadatos.",
   "Settings.Advanced.MetadataUndoAvailable": "La última decisión para {0} se puede deshacer hasta la próxima escritura en el repositorio.",
@@ -90,7 +94,8 @@
   "Backups.Delete.Warning": "Esto elimina datos en el destino.",
   "Backups.Destinations.Inactive": "Inactivo",
   "Backups.Destinations.Pending": "Pendiente",
-  "Backups.Destinations.StoredBytes": "Almacenado: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · Copias conocidas (tamaño lógico)",
+  "Backups.Destinations.StoredBytesLabel": "Copias conocidas (tamaño lógico)",
   "Backups.Destinations.QuotaUsage": "Cuota: {0} de {1} ({2}% advertencia)",
   "Backups.Destinations.CleanupSuggestion": "{0} Se sugiere eliminar {1} copias de seguridad sin protección para recuperar aproximadamente {2}.",
   "Backups.Destinations.CleanupBlocked": "{0} Actualmente no hay copias de seguridad sin protección disponibles para volver por debajo del umbral de advertencia.",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Revisa cada archivo generado. Las rutas, credenciales, tokens y secretos se eliminan o seudonimizan. Puedes excluir las secciones opcionales.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Incluir diagnósticos depurados",
   "Settings.Advanced.SupportBundle.Telemetry": "Incluir telemetría local anonimizada",
-  "Settings.Advanced.SupportBundle.Size": "Tamaño máximo sin comprimir: {0:0.0} MB. El contenido se depura antes de exportarlo."
+  "Settings.Advanced.SupportBundle.Size": "Tamaño máximo sin comprimir: {0:0.0} MB. El contenido se depura antes de exportarlo.",
+  "Nav.Back": "Atrás (Alt+Left)",
+  "Nav.Forward": "Adelante (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Eliminar credencial",
+  "Update.Installer.RelaunchFailed": "Actualización instalada, pero VaultSync no pudo reiniciarse automáticamente. Abre VaultSync desde el menú de aplicaciones.",
+  "Recovery.Loading": "Cargando el estado de recuperación...",
+  "Recovery.Checking": "Comprobando proyectos, antigüedad de las copias, política de verificación y disponibilidad de los destinos.",
+  "Guide.Checking": "Comprobando la configuración…",
+  "Update.Installer.ReadyToRestart": "Actualización lista. VaultSync se reiniciará con la nueva versión.",
+  "Update.Installer.Installed": "Actualización instalada. VaultSync se cerrará para que la nueva versión se inicie correctamente.",
+  "Recovery.Coverage.Hours": "{0} h",
+  "Recovery.Coverage.Days": "{0} d"
 }

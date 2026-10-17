@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "İçe aktarıldı",
+  "Projects.Imported.Available": "İçe aktarılan proje. Kaynak klasörü bu bilgisayarda kullanılabilir.",
+  "Projects.Imported.Unavailable": "Yedekleme geçmişi içe aktarıldı. Anlık görüntü oluşturmadan önce projeyi geri yükleyin veya yerel bir kaynak klasörü bağlayın.",
+  "Projects.Imported.NoPath": "Yerel klasör bağlı değil",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Temel",
   "Settings.Advanced.MetadataUndoNone": "Şu anda geri alınabilecek bir meta veri kararı yok.",
   "Settings.Advanced.MetadataUndoAvailable": "{0} için son karar, depoya bir sonraki yazmaya kadar geri alınabilir.",
@@ -90,7 +94,8 @@
   "Backups.Delete.Warning": "Bu, varış noktasındaki verileri kaldırır.",
   "Backups.Destinations.Inactive": "Aktif olmayan",
   "Backups.Destinations.Pending": "Bekleme",
-  "Backups.Destinations.StoredBytes": "Saklanan: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · Bilinen yedekler (mantıksal boyut)",
+  "Backups.Destinations.StoredBytesLabel": "Bilinen yedekler (mantıksal boyut)",
   "Backups.Destinations.QuotaUsage": "Kota: {0} {1} (%{2} uyarı)",
   "Backups.Destinations.CleanupSuggestion": "{0} Yaklaşık {2} geri almak için {1} korumasız yedeklemeleri silmeyi öneririm.",
   "Backups.Destinations.CleanupBlocked": "{0} Şu anda uyarı eşiğinin altına geri dönmek için korumasız yedekleme mevcut değil.",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Oluşturulan her dosyayı inceleyin. Yollar, kimlik bilgileri, belirteçler ve gizli bilgiler kaldırılır veya takma adla değiştirilir. İsteğe bağlı bölümler hariç tutulabilir.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Temizlenmiş tanılamayı dahil et",
   "Settings.Advanced.SupportBundle.Telemetry": "Anonimleştirilmiş yerel telemetriyi dahil et",
-  "Settings.Advanced.SupportBundle.Size": "Sıkıştırılmamış azami boyut: {0:0.0} MB. Dosya içerikleri dışa aktarmadan önce temizlenir."
+  "Settings.Advanced.SupportBundle.Size": "Sıkıştırılmamış azami boyut: {0:0.0} MB. Dosya içerikleri dışa aktarmadan önce temizlenir.",
+  "Nav.Back": "Geri (Alt+Left)",
+  "Nav.Forward": "İleri (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Kimlik bilgisini kaldır",
+  "Update.Installer.RelaunchFailed": "Güncelleme yüklendi ancak VaultSync otomatik olarak yeniden başlatılamadı. Uygulama menüsünden VaultSync’i açın.",
+  "Recovery.Loading": "Kurtarma hazırlığı yükleniyor...",
+  "Recovery.Checking": "Projeler, yedeklerin güncelliği, doğrulama ilkesi ve hedeflerin kullanılabilirliği denetleniyor.",
+  "Guide.Checking": "Yapılandırmanız denetleniyor…",
+  "Update.Installer.ReadyToRestart": "Güncelleme hazır. VaultSync yeni sürümle yeniden başlayacak.",
+  "Update.Installer.Installed": "Güncelleme yüklendi. Yeni sürümün düzgün başlaması için VaultSync kapanacak.",
+  "Recovery.Coverage.Hours": "{0} sa.",
+  "Recovery.Coverage.Days": "{0} g"
 }

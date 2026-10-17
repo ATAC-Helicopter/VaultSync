@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "가져옴",
+  "Projects.Imported.Available": "가져온 프로젝트입니다. 이 컴퓨터에서 원본 폴더를 사용할 수 있습니다.",
+  "Projects.Imported.Unavailable": "백업 기록을 가져왔습니다. 스냅샷을 만들기 전에 프로젝트를 복원하거나 로컬 원본 폴더를 연결하세요.",
+  "Projects.Imported.NoPath": "연결된 로컬 폴더 없음",
   "Settings.Advanced.MetadataConflictsBaseLabel": "기준",
   "Settings.Advanced.MetadataUndoNone": "현재 실행 취소할 수 있는 메타데이터 결정이 없습니다.",
   "Settings.Advanced.MetadataUndoAvailable": "{0}의 마지막 결정은 다음 저장소 쓰기 전까지 실행 취소할 수 있습니다.",
@@ -90,7 +94,8 @@
   "Backups.Delete.Warning": "이로 인해 목적지에 대한 데이터가 제거됩니다.",
   "Backups.Destinations.Inactive": "비활성화",
   "Backups.Destinations.Pending": "대기 중입니다",
-  "Backups.Destinations.StoredBytes": "저장 상태: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · 확인된 백업(논리적 크기)",
+  "Backups.Destinations.StoredBytesLabel": "확인된 백업(논리적 크기)",
   "Backups.Destinations.QuotaUsage": "할당량: {1} {0} ({2}% 경고)",
   "Backups.Destinations.CleanupSuggestion": "{0} 보호받지 않은 백업{1} 삭제해서 {2}을 되찾는 것을 제안합니다.",
   "Backups.Destinations.CleanupBlocked": "{0} 현재 경고 임계값 아래로 돌아가기 위한 무보호 백업은 없습니다.",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "생성되는 모든 파일을 검토하세요. 경로, 자격 증명, 토큰 및 비밀은 제거되거나 가명 처리됩니다. 선택 항목은 제외할 수 있습니다.",
   "Settings.Advanced.SupportBundle.Diagnostics": "정리된 진단 포함",
   "Settings.Advanced.SupportBundle.Telemetry": "익명화된 로컬 원격 분석 포함",
-  "Settings.Advanced.SupportBundle.Size": "최대 압축 해제 크기: {0:0.0} MB. 내보내기 전에 파일 내용을 정리합니다."
+  "Settings.Advanced.SupportBundle.Size": "최대 압축 해제 크기: {0:0.0} MB. 내보내기 전에 파일 내용을 정리합니다.",
+  "Nav.Back": "뒤로 (Alt+Left)",
+  "Nav.Forward": "앞으로 (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "자격 증명 삭제",
+  "Update.Installer.RelaunchFailed": "업데이트가 설치되었지만 VaultSync를 자동으로 다시 시작하지 못했습니다. 앱 메뉴에서 VaultSync를 여세요.",
+  "Recovery.Loading": "복구 준비 상태를 불러오는 중...",
+  "Recovery.Checking": "프로젝트, 백업의 최신 상태, 검증 정책 및 대상 가용성을 확인하고 있습니다.",
+  "Guide.Checking": "설정을 확인하는 중…",
+  "Update.Installer.ReadyToRestart": "업데이트가 준비되었습니다. VaultSync가 새 버전으로 다시 시작됩니다.",
+  "Update.Installer.Installed": "업데이트가 설치되었습니다. 새 버전이 정상적으로 시작되도록 VaultSync가 종료됩니다.",
+  "Recovery.Coverage.Hours": "{0} 시간",
+  "Recovery.Coverage.Days": "{0} 일"
 }

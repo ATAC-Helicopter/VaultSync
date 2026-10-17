@@ -54,6 +54,9 @@ overwritten; each probe is removed when its owning stream closes.
 
 ## Smart Presets
 - Presets apply `.vaultsyncignore` rules to project backups.
+- Preset IDs use the catalog's mapped filenames: for example, `cpp` applies
+  `c_cpp.vaultsyncignore`. Project selection, CLI listing and backup filtering
+  read the same catalog, including lowercase field names in shipped presets.
 - Consumer-friendly presets are available for:
   - Photos libraries
   - Documents libraries
@@ -65,17 +68,42 @@ overwritten; each probe is removed when its owning stream closes.
   and test caches, logs, and machine-local IDE indexes.
 - `.vaultsyncignore` supports exclusion rules only. Git-style `!` include/negation
   rules are not supported, and VaultSync does not automatically import `.gitignore`.
+- The Unity preset excludes saved Profile Analyzer `.pdata` captures at all
+  depths, alongside generated Unity folders. These are profiling recordings,
+  not ordinary game assets. To back up those recordings too, clone the Unity
+  preset and remove both `.pdata` rules. Local rules add exclusions and cannot
+  re-include files excluded by a preset. Changing presets affects future backups;
+  existing archives are preserved.
 
 ## Destination Modes
 VaultSync supports two destination modes:
 - Simple mode: one backup location.
 - Advanced mode: multiple destinations (NAS, USB, network) with per-destination options and credentials.
+- On macOS, auto-unmount closes the SMB share mount even when the destination
+  points to a subfolder inside that share.
+
+The destination cards, including the sidebar, show **known backups (logical)**:
+the sum of source-data sizes recorded for that destination in this device's
+complete backup history. Loading a shorter Backups list does not reduce this
+count. It is not physical disk allocation: ZIP compression, incremental/shared
+files and filesystem allocation can change actual storage use. Devices can still
+show different known totals until their metadata histories agree. Destination
+quota suggestions use the same logical accounting; disk free-space checks remain
+separate. Hover over a truncated size label to read its full text.
 
 ## Cross-Machine Metadata Sync
+
 - Metadata is stored under `.vaultsync/meta/` on destinations.
 - VaultSync can import and merge metadata from reachable destinations.
 - Optional auto-import is available in Settings.
 - Conflicting imported project settings can be reviewed and resolved from Settings > Advanced > Doctor.
+- Imported projects also appear in Projects with an **Imported** label in cards,
+  compact rows and details. Projects without a source path remain visible.
+  The label's explanation distinguishes a local source folder from imported
+  history that still needs a restore or a local folder link. Importing history
+  does not copy source files. The import label remains after restoring locally.
+  Snapshot creation and opening the source folder are unavailable while that
+  imported source is missing; backup history remains available for recovery.
 
 Metadata sync carries:
 - project identity and portable project settings such as encryption policy references, preferred destination, restore mode, verification policy, tags, and avatar color

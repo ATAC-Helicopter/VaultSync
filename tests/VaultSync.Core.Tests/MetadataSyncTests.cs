@@ -843,6 +843,7 @@ public sealed class MetadataSyncTests : IDisposable
         Project project = repo.GetProjectByName("Project One");
         Assert.NotNull(project);
         Assert.True(project!.NeedsRestore);
+        Assert.True(project.IsImported);
 
         Assert.NotNull(repo.GetSnapshotByExternalId("snap-1"));
         Assert.NotNull(repo.GetBackupByExternalId("backup-1"));

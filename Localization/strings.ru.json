@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Импортирован",
+  "Projects.Imported.Available": "Импортированный проект. Исходная папка доступна на этом компьютере.",
+  "Projects.Imported.Unavailable": "История резервных копий импортирована. Восстановите проект или подключите локальную исходную папку перед созданием снимков.",
+  "Projects.Imported.NoPath": "Локальная папка не подключена",
   "Settings.Advanced.MetadataConflictsBaseLabel": "База",
   "Settings.Advanced.MetadataUndoNone": "Сейчас нет решения по метаданным, которое можно отменить.",
   "Settings.Advanced.MetadataUndoAvailable": "Последнее решение для {0} можно отменить до следующей записи в репозиторий.",
@@ -90,7 +94,8 @@
   "Backups.Delete.Warning": "Это удалит данные в целевом хранилище.",
   "Backups.Destinations.Inactive": "Неактивно",
   "Backups.Destinations.Pending": "В ожидании",
-  "Backups.Destinations.StoredBytes": "Хранится: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · Известные резервные копии (логический размер)",
+  "Backups.Destinations.StoredBytesLabel": "Известные резервные копии (логический размер)",
   "Backups.Destinations.QuotaUsage": "Квота: {0} из {1} (предупреждение {2}%)",
   "Backups.Destinations.CleanupSuggestion": "{0} Рекомендуется удалить {1} незащищённых резервных копий, чтобы освободить примерно {2}.",
   "Backups.Destinations.CleanupBlocked": "{0} В настоящее время нет незащищённых резервных копий, чтобы опуститься ниже порога предупреждения.",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Проверьте каждый создаваемый файл. Пути, учётные данные, токены и секреты удаляются или псевдонимизируются. Необязательные разделы можно исключить.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Включить очищенную диагностику",
   "Settings.Advanced.SupportBundle.Telemetry": "Включить анонимизированную локальную телеметрию",
-  "Settings.Advanced.SupportBundle.Size": "Максимальный размер без сжатия: {0:0.0} МБ. Содержимое очищается перед экспортом."
+  "Settings.Advanced.SupportBundle.Size": "Максимальный размер без сжатия: {0:0.0} МБ. Содержимое очищается перед экспортом.",
+  "Nav.Back": "Назад (Alt+Left)",
+  "Nav.Forward": "Вперёд (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Удалить учётные данные",
+  "Update.Installer.RelaunchFailed": "Обновление установлено, но VaultSync не удалось перезапустить автоматически. Откройте VaultSync из меню приложений.",
+  "Recovery.Loading": "Загрузка состояния готовности к восстановлению...",
+  "Recovery.Checking": "Проверка проектов, давности резервных копий, правил проверки и доступности мест назначения.",
+  "Guide.Checking": "Проверка настроек…",
+  "Update.Installer.ReadyToRestart": "Обновление готово. VaultSync перезапустится с новой версией.",
+  "Update.Installer.Installed": "Обновление установлено. VaultSync закроется, чтобы новая версия могла запуститься корректно.",
+  "Recovery.Coverage.Hours": "{0} ч",
+  "Recovery.Coverage.Days": "{0} д"
 }

@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "recordedUtc": "2026-10-13T21:07:41Z",
+  "python": "3.9.6",
+  "platform": "macOS-27.2-arm64-arm-64bit",
+  "codecSha256": "8525d7fbb1242bad3b0d00e2ee71476972c004707c8e6b489154032759e52d8a",
+  "benchmarkSha256": "86fc9e439df716589c6de1c6e4eb115ce32ba754be6c2f3a998b838bafe13cb9",
+  "worktreeBaseCommit": "44d631dbf42075fe9c17d146252b5c2f6cc70857",
+  "worktreeDirty": true,
+  "iterations": 5,
+  "measurements": [
+    {
+      "fixture": "unity-yaml",
+      "codec": "prototype-v0",
+      "logicalBytes": 486480,
+      "storedBytes": 75999,
+      "blocks": 4,
+      "sha256": "7ae2431904e044a25431108ff2dd7aefd060eeedf8e5ae609d9cd041c50f139b",
+      "encodeMedianMs": 59.746792,
+      "decodeMedianMs": 34.368125,
+      "roundtrip": true
+    },
+    {
+      "fixture": "unity-yaml",
+      "codec": "zlib-1",
+      "logicalBytes": 486480,
+      "storedBytes": 50442,
+      "blocks": 4,
+      "sha256": "7ae2431904e044a25431108ff2dd7aefd060eeedf8e5ae609d9cd041c50f139b",
+      "encodeMedianMs": 0.876417,
+      "decodeMedianMs": 0.194125,
+      "roundtrip": true
+    },
+    {
+      "fixture": "unity-yaml",
+      "codec": "zlib-6",
+      "logicalBytes": 486480,
+      "storedBytes": 38181,
+      "blocks": 4,
+      "sha256": "7ae2431904e044a25431108ff2dd7aefd060eeedf8e5ae609d9cd041c50f139b",
+      "encodeMedianMs": 2.070125,
+      "decodeMedianMs": 0.152625,
+      "roundtrip": true
+    },
+    {
+      "fixture": "unity-yaml",
+      "codec": "zlib-9",
+      "logicalBytes": 486480,
+      "storedBytes": 37136,
+      "blocks": 4,
+      "sha256": "7ae2431904e044a25431108ff2dd7aefd060eeedf8e5ae609d9cd041c50f139b",
+      "encodeMedianMs": 3.5425,
+      "decodeMedianMs": 0.148625,
+      "roundtrip": true
+    },
+    {
+      "fixture": "source-code",
+      "codec": "prototype-v0",
+      "logicalBytes": 426490,
+      "storedBytes": 54726,
+      "blocks": 4,
+      "sha256": "84348ae9485e5c36688a85a92144a591b2e18c8894f420a79e4cc45e89ae8977",
+      "encodeMedianMs": 48.670166,
+      "decodeMedianMs": 28.233584,
+      "roundtrip": true
+    },
+    {
+      "fixture": "source-code",
+      "codec": "zlib-1",
+      "logicalBytes": 426490,
+      "storedBytes": 40627,
+      "blocks": 4,
+      "sha256": "84348ae9485e5c36688a85a92144a591b2e18c8894f420a79e4cc45e89ae8977",
+      "encodeMedianMs": 0.683458,
+      "decodeMedianMs": 0.151125,
+      "roundtrip": true
+    },
+    {
+      "fixture": "source-code",
+      "codec": "zlib-6",
+      "logicalBytes": 426490,
+      "storedBytes": 25943,
+      "blocks": 4,
+      "sha256": "84348ae9485e5c36688a85a92144a591b2e18c8894f420a79e4cc45e89ae8977",
+      "encodeMedianMs": 1.633708,
+      "decodeMedianMs": 0.116417,
+      "roundtrip": true
+    },
+    {
+      "fixture": "source-code",
+      "codec": "zlib-9",
+      "logicalBytes": 426490,
+      "storedBytes": 25649,
+      "blocks": 4,
+      "sha256": "84348ae9485e5c36688a85a92144a591b2e18c8894f420a79e4cc45e89ae8977",
+      "encodeMedianMs": 3.731833,
+      "decodeMedianMs": 0.119333,
+      "roundtrip": true
+    },
+    {
+      "fixture": "random-proxy",
+      "codec": "prototype-v0",
+      "logicalBytes": 524288,
+      "storedBytes": 524612,
+      "blocks": 4,
+      "sha256": "00d496e9a09a459ad082817d456d3810e61bb450f8a66450c2de6485d31d7b8a",
+      "encodeMedianMs": 370.55575,
+      "decodeMedianMs": 0.455875,
+      "roundtrip": true
+    },
+    {
+      "fixture": "random-proxy",
+      "codec": "zlib-1",
+      "logicalBytes": 524288,
+      "storedBytes": 524472,
+      "blocks": 4,
+      "sha256": "00d496e9a09a459ad082817d456d3810e61bb450f8a66450c2de6485d31d7b8a",
+      "encodeMedianMs": 7.607125,
+      "decodeMedianMs": 0.071542,
+      "roundtrip": true
+    },
+    {
+      "fixture": "random-proxy",
+      "codec": "zlib-6",
+      "logicalBytes": 524288,
+      "storedBytes": 524472,
+      "blocks": 4,
+      "sha256": "00d496e9a09a459ad082817d456d3810e61bb450f8a66450c2de6485d31d7b8a",
+      "encodeMedianMs": 7.810042,
+      "decodeMedianMs": 0.071916,
+      "roundtrip": true
+    },
+    {
+      "fixture": "random-proxy",
+      "codec": "zlib-9",
+      "logicalBytes": 524288,
+      "storedBytes": 524472,
+      "blocks": 4,
+      "sha256": "00d496e9a09a459ad082817d456d3810e61bb450f8a66450c2de6485d31d7b8a",
+      "encodeMedianMs": 7.809667,
+      "decodeMedianMs": 0.071542,
+      "roundtrip": true
+    },
+    {
+      "fixture": "already-deflated",
+      "codec": "prototype-v0",
+      "logicalBytes": 36398,
+      "storedBytes": 31995,
+      "blocks": 1,
+      "sha256": "1053348f85215e7ecce7dfb627426017e0cce47bba6308ce29244fe40263c817",
+      "encodeMedianMs": 13.879709,
+      "decodeMedianMs": 4.686959,
+      "roundtrip": true
+    },
+    {
+      "fixture": "already-deflated",
+      "codec": "zlib-1",
+      "logicalBytes": 36398,
+      "storedBytes": 18126,
+      "blocks": 1,
+      "sha256": "1053348f85215e7ecce7dfb627426017e0cce47bba6308ce29244fe40263c817",
+      "encodeMedianMs": 0.29925,
+      "decodeMedianMs": 0.062792,
+      "roundtrip": true
+    },
+    {
+      "fixture": "already-deflated",
+      "codec": "zlib-6",
+      "logicalBytes": 36398,
+      "storedBytes": 17462,
+      "blocks": 1,
+      "sha256": "1053348f85215e7ecce7dfb627426017e0cce47bba6308ce29244fe40263c817",
+      "encodeMedianMs": 0.894333,
+      "decodeMedianMs": 0.060709,
+      "roundtrip": true
+    },
+    {
+      "fixture": "already-deflated",
+      "codec": "zlib-9",
+      "logicalBytes": 36398,
+      "storedBytes": 17462,
+      "blocks": 1,
+      "sha256": "1053348f85215e7ecce7dfb627426017e0cce47bba6308ce29244fe40263c817",
+      "encodeMedianMs": 0.880333,
+      "decodeMedianMs": 0.060917,
+      "roundtrip": true
+    }
+  ],
+  "limitations": [
+    "Generated fixtures; no real project or network measurements.",
+    "Python prototype versus native zlib is not a fair runtime comparison.",
+    "Prototype includes 81 bytes per block; zlib includes its stream wrapper.",
+    "No archive/file metadata or production concurrency is measured."
+  ]
+}

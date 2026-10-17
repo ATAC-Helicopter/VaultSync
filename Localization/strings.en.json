@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Imported",
+  "Projects.Imported.Available": "Imported project. Its source folder is available on this machine.",
+  "Projects.Imported.Unavailable": "Imported backup history. Restore or link a local source folder before creating snapshots.",
+  "Projects.Imported.NoPath": "No local folder linked",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
   "Settings.Advanced.MetadataUndoNone": "No metadata resolution is currently undoable.",
   "Settings.Advanced.MetadataUndoAvailable": "The last decision for {0} can be undone until the next repository write.",
@@ -66,7 +70,8 @@
   "Backups.Delete.Warning": "This removes data on the destination.",
   "Backups.Destinations.Inactive": "Inactive",
   "Backups.Destinations.Pending": "Pending",
-  "Backups.Destinations.StoredBytes": "Stored: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · Known backups (logical)",
+  "Backups.Destinations.StoredBytesLabel": "Known backups (logical)",
   "Backups.Destinations.QuotaUsage": "Quota: {0} of {1} ({2}% warn)",
   "Backups.Destinations.CleanupSuggestion": "{0} Suggest deleting {1} unprotected backups to reclaim about {2}.",
   "Backups.Destinations.CleanupBlocked": "{0} No unprotected backups are currently available to get back under the warning threshold.",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Review every generated file. Paths, credentials, tokens, and secrets are removed or pseudonymized. Optional sections can be excluded.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Include sanitized diagnostics",
   "Settings.Advanced.SupportBundle.Telemetry": "Include anonymized local telemetry",
-  "Settings.Advanced.SupportBundle.Size": "Maximum uncompressed size: {0:0.0} MB. File contents are sanitized before export."
+  "Settings.Advanced.SupportBundle.Size": "Maximum uncompressed size: {0:0.0} MB. File contents are sanitized before export.",
+  "Nav.Back": "Back (Alt+Left)",
+  "Nav.Forward": "Forward (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Remove credential",
+  "Update.Installer.RelaunchFailed": "Update installed, but VaultSync could not restart automatically. Open VaultSync from your app menu.",
+  "Recovery.Loading": "Loading recovery readiness...",
+  "Recovery.Checking": "Checking projects, backup recency, verification policy, and destination availability.",
+  "Guide.Checking": "Checking your setup…",
+  "Update.Installer.ReadyToRestart": "Update ready. VaultSync will restart with the new version.",
+  "Update.Installer.Installed": "Update installed. VaultSync will close so the new version can start cleanly.",
+  "Recovery.Coverage.Hours": "{0} h",
+  "Recovery.Coverage.Days": "{0} d"
 }

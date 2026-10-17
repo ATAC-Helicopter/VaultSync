@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "release": "1.9.0",
+  "engine": {
+    "proposal": "internal-raw-offline",
+    "decision": "proposed",
+    "approval": null
+  },
+  "profiles": [
+    {
+      "id": "uefi-gpt-ext4-512",
+      "status": "candidate",
+      "sourceOS": "linux",
+      "recoveryEnvironment": "linux-x64-offline",
+      "firmware": "uefi",
+      "partitionTable": "gpt",
+      "filesystem": "ext4",
+      "logicalSectorBytes": 512,
+      "encryption": "none",
+      "liveCapture": false,
+      "secureBoot": false,
+      "scope": "disk",
+      "owner": "ATAC-Helicopter",
+      "method": "docs/adr/001-imaging-engine-1.9.md",
+      "evidence": []
+    },
+    {
+      "id": "uefi-gpt-ext4-4096",
+      "status": "candidate",
+      "sourceOS": "linux",
+      "recoveryEnvironment": "linux-x64-offline",
+      "firmware": "uefi",
+      "partitionTable": "gpt",
+      "filesystem": "ext4",
+      "logicalSectorBytes": 4096,
+      "encryption": "none",
+      "liveCapture": false,
+      "secureBoot": false,
+      "scope": "disk",
+      "owner": "ATAC-Helicopter",
+      "method": "docs/adr/001-imaging-engine-1.9.md",
+      "evidence": []
+    },
+    {
+      "id": "uefi-gpt-ntfs-512",
+      "status": "candidate",
+      "sourceOS": "windows",
+      "recoveryEnvironment": "linux-x64-offline",
+      "firmware": "uefi",
+      "partitionTable": "gpt",
+      "filesystem": "ntfs",
+      "logicalSectorBytes": 512,
+      "encryption": "none",
+      "liveCapture": false,
+      "secureBoot": false,
+      "scope": "disk",
+      "owner": "ATAC-Helicopter",
+      "method": "docs/adr/001-imaging-engine-1.9.md",
+      "evidence": []
+    },
+    {
+      "id": "uefi-gpt-ntfs-4096",
+      "status": "candidate",
+      "sourceOS": "windows",
+      "recoveryEnvironment": "linux-x64-offline",
+      "firmware": "uefi",
+      "partitionTable": "gpt",
+      "filesystem": "ntfs",
+      "logicalSectorBytes": 4096,
+      "encryption": "none",
+      "liveCapture": false,
+      "secureBoot": false,
+      "scope": "disk",
+      "owner": "ATAC-Helicopter",
+      "method": "docs/adr/001-imaging-engine-1.9.md",
+      "evidence": []
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "live-capture",
+      "reason": "No reviewed live consistency or snapshot contract.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "secure-boot",
+      "reason": "Recovery signing and Secure Boot chain are unqualified.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "encryption",
+      "reason": "Source unlocking, image encryption and independent key recovery are unqualified.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "macos-apfs",
+      "reason": "macOS/APFS boot and restore adapters are unqualified.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "multi-disk",
+      "reason": "RAID/LVM and multi-disk dependency reconstruction are unqualified.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "other-layouts",
+      "reason": "BIOS/MBR, sector translation and partition resizing are outside the first proposal.",
+      "behavior": "reject-before-device-write"
+    }
+  ]
+}

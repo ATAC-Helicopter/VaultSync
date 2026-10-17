@@ -43,9 +43,23 @@ implementation enters `1.8.8`.
 
 ### 1.8.9 — bug fixes and everyday polish
 
-The active maintenance patch preserves UI state, improves theme readability,
+The maintenance patch shipped on 2026-09-16 as v1.8.9 and preserves UI state, improves theme readability,
 and closes confirmed workflow regressions. See the
 [1.8.9 release contract](RELEASE_1.8.9.md). No disk-recovery features enter this patch.
+
+### 1.9 kickoff and CLI program
+
+Planning and architecture started on 2026-09-18 on `release/1.9.0` into `Dev`.
+The existing 1.9.0 milestone target remains 2027-03-26 and the family horizon
+remains 2027-09-24. See [the kickoff contract](RELEASE_1.9.0.md).
+
+The 2026-10-03 full-roadmap alignment moves the implemented CLI command/behavior
+and automation cohort (VS-1972–1975) to 1.9.5. Discovery/completion and legacy
+handbook work stay in 1.9.1 (VS-1977/1978); independent recovery follows in 1.9.2
+(VS-1976). Reporting, hooks, stable parity and final qualification remain in
+1.9.5 (VS-1953/1955/1956/1979). Independent safety fixes can be backported.
+See [complete family ownership and ID crosswalk](RELEASE_FAMILY_1.9.md).
+New work does not reuse those existing identifiers. VS-1980 owns kickoff tracking.
 
 ### 1.9 architecture approval
 
@@ -65,6 +79,15 @@ Architecture work may result in scope reduction, a technology preview, or a
 release re-sequence. That is a valid result when the evidence does not support
 the original plan.
 
+The [VS-1910 route architecture draft](ROUTE_ARCHITECTURE_1.9.md) records the
+current shell inventory, proposed route/state boundary, and migration gates for
+review. The route API and replacement parity remain unapproved.
+
+The [VS-1917 disk-image format draft](DISK_IMAGE_FORMAT_1.9.md) records coverage,
+integrity, checkpoint/completion, compatibility and independent-reader invariants.
+Serialization, engine alignment and permanent fixtures remain pending joint
+review with VS-1918/VS-1919; no stable format or disk implementation is approved.
+
 ### 1.9 delivery sequence
 
 | Order | Release | Outcome | Promotion condition |
@@ -75,11 +98,41 @@ the original plan.
 | 4 | `1.9.3` | Offsite Protection | Remote data is resumable, verifiable, cost-explainable, and independently recoverable |
 | 5 | `1.9.4` | Unified Recovery Experience | Replacement workflows meet parity before legacy removal |
 | 6 | `1.9.5` | Continuous Recovery Assurance | VaultSync explains when evidence becomes stale or invalid |
-| 7 | `1.9.6` | Stability and LTS Baseline | Formats, migrations, long-duration behavior, and support windows are durable |
+| 7 | `1.9.6` | Binary Source Control Foundation | Local/NAS binary history, locking, exact recovery, verification, and maintenance meet the BSC stable gate |
+| 8 | `1.9.7` | Binary Collaboration and Scale | Branch/conflict, sparse workspace, resumable transfer, replication, and scale qualification pass |
+| 9 | `1.9.8` | Stability and LTS Baseline | Recovery and BSC formats, migrations, long-duration behavior, and support windows are durable |
 
 If the complete disk-recovery loop cannot meet the stable gate, disk imaging
 must remain a clearly labelled preview and cannot block portable project/file
 recovery from advancing.
+
+
+### Binary Source Control track
+
+Binary Source Control is a later 1.9 program and does not redefine the
+Recovery Horizon promotion order above it. The feature is intentionally
+sequenced after the core recovery, offsite, and assurance foundations so it
+cannot turn disk/boot recovery into a prerequisite-free source-control rewrite.
+
+The architecture gate is `VS-1981` plus `VS-1982`. Canonical history uses
+immutable content-addressed objects and content-defined chunk reuse rather than
+unbounded binary-delta chains. File/path locks are separate from the short
+repository writer lease, and ref publication uses compare-and-swap against the
+expected head.
+
+`1.9.6` targets the complete local/NAS default-line workflow. `1.9.7` adds
+branches, explicit binary conflict resolution, sparse workspaces, resumable
+transfer, replication, and the final large-history qualification. The previous
+Stability/LTS release moves to `1.9.8` without renumbering `VS-1961` through
+`VS-1963`.
+
+If BSC cannot meet its clean-machine recovery, concurrency, corruption,
+interruption, GC/repack, encryption, or performance gates, it remains Preview.
+That outcome does not prevent earlier 1.9 recovery releases from becoming
+Stable.
+
+The maintained technical contract is
+[`BINARY_SOURCE_CONTROL_STRATEGY.md`](BINARY_SOURCE_CONTROL_STRATEGY.md).
 
 ## Architecture questions that must be answered
 
@@ -133,16 +186,16 @@ only implementation notes, dependencies, and evidence links.
 
 | ID | Issue | Title | Priority | Area | Milestone | Start | Target | Status |
 |---|---:|---|---:|---|---|---|---|---|
-| `VS-1910` | `#501` | Define the 1.9 information architecture and migration map | P0 | UI | `1.9.0` | 2026-07-27 | 2027-03-26 | Todo |
-| `VS-1917` | `#574` | Define the versioned disk-image format and compatibility contract | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | Todo |
-| `VS-1918` | `#575` | Approve the imaging-engine strategy and supported-system matrix | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | Todo |
-| `VS-1919` | `#576` | Define recovery identities, dependencies, failure domains, and evidence provenance | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | Todo |
+| `VS-1910` | `#501` | Define the 1.9 information architecture and migration map | P0 | UI | `1.9.0` | 2026-07-27 | 2027-03-26 | In progress |
+| `VS-1917` | `#574` | Define the versioned disk-image format and compatibility contract | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | In progress |
+| `VS-1918` | `#575` | Approve the imaging-engine strategy and supported-system matrix | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | In progress |
+| `VS-1919` | `#576` | Define recovery identities, dependencies, failure domains, and evidence provenance | P0 | Core | `1.9.0` | 2026-08-25 | 2027-03-26 | In progress |
 
 Common issue metadata:
 
 - assignee: `ATAC-Helicopter`;
-- labels: `kind:vs`, `roadmap`, `Feature`, `status:todo`, `priority:p0`,
-  `release:1.9.x`, `release:1.9.0`, plus the matching area label;
+- labels: `kind:vs`, `roadmap`, `Feature`, `priority:p0`, `release:1.9.x`,
+  `release:1.9.0`, the matching area label, and the current status label;
 - Project: `ATAC-Helicopter` Project 7;
 - Owner: `Flavio Giacchetti`;
 - Team: `Work`;

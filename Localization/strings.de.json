@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Importiert",
+  "Projects.Imported.Available": "Importiertes Projekt. Der Quellordner ist auf diesem Computer verfügbar.",
+  "Projects.Imported.Unavailable": "Importierter Sicherungsverlauf. Stelle das Projekt wieder her oder verknüpfe einen lokalen Quellordner, bevor du Snapshots erstellst.",
+  "Projects.Imported.NoPath": "Kein lokaler Ordner verknüpft",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Basis",
   "Settings.Advanced.MetadataUndoNone": "Derzeit kann keine Metadatenentscheidung rückgängig gemacht werden.",
   "Settings.Advanced.MetadataUndoAvailable": "Die letzte Entscheidung für {0} kann bis zum nächsten Repository-Schreibvorgang rückgängig gemacht werden.",
@@ -90,7 +94,8 @@
   "Backups.Delete.Warning": "Dadurch werden Daten am Ziel entfernt.",
   "Backups.Destinations.Inactive": "Inaktiv",
   "Backups.Destinations.Pending": "Ausstehend",
-  "Backups.Destinations.StoredBytes": "Gespeichert: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · Bekannte Backups (logische Größe)",
+  "Backups.Destinations.StoredBytesLabel": "Bekannte Backups (logische Größe)",
   "Backups.Destinations.QuotaUsage": "Kontingent: {0} von {1} ({2}% Warnung)",
   "Backups.Destinations.CleanupSuggestion": "{0} Es wird vorgeschlagen, {1} ungeschützte Backups zu löschen, um etwa {2} freizugeben.",
   "Backups.Destinations.CleanupBlocked": "{0} Derzeit sind keine ungeschützten Backups verfügbar, um wieder unter den Warnschwellenwert zu kommen.",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Prüfen Sie jede erzeugte Datei. Pfade, Anmeldedaten, Token und Geheimnisse werden entfernt oder pseudonymisiert. Optionale Bereiche können ausgeschlossen werden.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Bereinigte Diagnose einschließen",
   "Settings.Advanced.SupportBundle.Telemetry": "Anonymisierte lokale Telemetrie einschließen",
-  "Settings.Advanced.SupportBundle.Size": "Maximale unkomprimierte Größe: {0:0.0} MB. Dateiinhalte werden vor dem Export bereinigt."
+  "Settings.Advanced.SupportBundle.Size": "Maximale unkomprimierte Größe: {0:0.0} MB. Dateiinhalte werden vor dem Export bereinigt.",
+  "Nav.Back": "Zurück (Alt+Left)",
+  "Nav.Forward": "Vorwärts (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Zugangsdaten entfernen",
+  "Update.Installer.RelaunchFailed": "Update installiert, aber VaultSync konnte nicht automatisch neu starten. Öffne VaultSync über das Anwendungsmenü.",
+  "Recovery.Loading": "Wiederherstellungsbereitschaft wird geladen...",
+  "Recovery.Checking": "Projekte, Alter der Backups, Prüfregeln und Verfügbarkeit der Ziele werden geprüft.",
+  "Guide.Checking": "Einrichtung wird geprüft…",
+  "Update.Installer.ReadyToRestart": "Update bereit. VaultSync startet mit der neuen Version neu.",
+  "Update.Installer.Installed": "Update installiert. VaultSync wird geschlossen, damit die neue Version sauber starten kann.",
+  "Recovery.Coverage.Hours": "{0} Std.",
+  "Recovery.Coverage.Days": "{0} T."
 }

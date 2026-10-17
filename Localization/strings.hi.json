@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "आयातित",
+  "Projects.Imported.Available": "आयातित प्रोजेक्ट। इसका स्रोत फ़ोल्डर इस मशीन पर उपलब्ध है।",
+  "Projects.Imported.Unavailable": "बैकअप इतिहास आयात किया गया है। स्नैपशॉट बनाने से पहले प्रोजेक्ट बहाल करें या स्थानीय स्रोत फ़ोल्डर लिंक करें।",
+  "Projects.Imported.NoPath": "कोई स्थानीय फ़ोल्डर लिंक नहीं है",
   "Settings.Advanced.MetadataConflictsBaseLabel": "आधार",
   "Settings.Advanced.MetadataUndoNone": "फ़िलहाल कोई मेटाडेटा निर्णय पूर्ववत नहीं किया जा सकता।",
   "Settings.Advanced.MetadataUndoAvailable": "{0} के अंतिम निर्णय को अगली रिपॉज़िटरी लिखाई तक पूर्ववत किया जा सकता है।",
@@ -90,7 +94,8 @@
   "Backups.Delete.Warning": "यह गंतव्य से डेटा हटा देता है।",
   "Backups.Destinations.Inactive": "निष्क्रिय",
   "Backups.Destinations.Pending": "लंबित",
-  "Backups.Destinations.StoredBytes": "संग्रहित: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · ज्ञात बैकअप (तार्किक आकार)",
+  "Backups.Destinations.StoredBytesLabel": "ज्ञात बैकअप (तार्किक आकार)",
   "Backups.Destinations.QuotaUsage": "कोटा: {0} / {1} ({2}% चेतावनी)",
   "Backups.Destinations.CleanupSuggestion": "{0} {1} असुरक्षित बैकअप हटाकर लगभग {2} स्थान खाली करने का सुझाव देता है।",
   "Backups.Destinations.CleanupBlocked": "{0} वर्तमान में चेतावनी सीमा से नीचे आने के लिए कोई असुरक्षित बैकअप उपलब्ध नहीं है।",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "हर बनाई गई फ़ाइल की समीक्षा करें। पथ, क्रेडेंशियल, टोकन और रहस्य हटाए या छद्मनामित किए जाते हैं। वैकल्पिक अनुभाग हटाए जा सकते हैं।",
   "Settings.Advanced.SupportBundle.Diagnostics": "साफ़ किए गए निदान शामिल करें",
   "Settings.Advanced.SupportBundle.Telemetry": "अनाम स्थानीय टेलीमेट्री शामिल करें",
-  "Settings.Advanced.SupportBundle.Size": "अधिकतम असंपीड़ित आकार: {0:0.0} MB। निर्यात से पहले सामग्री साफ़ की जाती है।"
+  "Settings.Advanced.SupportBundle.Size": "अधिकतम असंपीड़ित आकार: {0:0.0} MB। निर्यात से पहले सामग्री साफ़ की जाती है।",
+  "Nav.Back": "पीछे (Alt+Left)",
+  "Nav.Forward": "आगे (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "क्रेडेंशियल हटाएँ",
+  "Update.Installer.RelaunchFailed": "अपडेट इंस्टॉल हो गया, लेकिन VaultSync अपने आप फिर से शुरू नहीं हो सका। ऐप मेनू से VaultSync खोलें।",
+  "Recovery.Loading": "पुनर्प्राप्ति की तैयारी की स्थिति लोड हो रही है...",
+  "Recovery.Checking": "प्रोजेक्ट, बैकअप की नवीनता, सत्यापन नीति और गंतव्यों की उपलब्धता की जाँच हो रही है।",
+  "Guide.Checking": "आपके सेटअप की जाँच हो रही है…",
+  "Update.Installer.ReadyToRestart": "अपडेट तैयार है। VaultSync नए संस्करण के साथ फिर से शुरू होगा।",
+  "Update.Installer.Installed": "अपडेट इंस्टॉल हो गया। नया संस्करण सही ढंग से शुरू करने के लिए VaultSync बंद होगा।",
+  "Recovery.Coverage.Hours": "{0} घं.",
+  "Recovery.Coverage.Days": "{0} दिन"
 }

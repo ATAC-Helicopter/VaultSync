@@ -1,8 +1,101 @@
 # What's New
 
+## [1.9.0]
+
+Recovery Horizon is in planning and architecture work. 1.9.0 owns disk capture,
+validation, independent boot media, restore and post-restore validation.
+These capabilities have not shipped. The earlier CLI development cohort has
+been moved to 1.9.5, with discovery/legacy documentation in 1.9.1.
+Current stable remains **1.8.9**, published 2026-09-16.
+See [the release contract](RELEASE_1.9.0.md) and [family plan](RELEASE_FAMILY_1.9.md).
+
+### Simpler storage charts
+
+The development dashboard draws storage summaries directly with Avalonia,
+retaining project colors, sortable legends and their tooltips. This removes the
+separate chart library; the supported dependency baseline also receives patch
+updates. Cross-platform desktop acceptance remains part of the release gates.
+
+### Keep your place while navigating
+
+The 1.9.0 development shell now has Back and Forward buttons beside the page
+title. Use **Alt+Left** and **Alt+Right** to move through this session's visited
+pages. Opening a different page after going back starts a new history branch.
+The history is kept in memory; restarting resumes only your saved last page when
+that setting is enabled. Background backup/restore jobs keep their own lifecycle.
+
+Last-page saves are ordered so rapid navigation cannot leave an older location
+saved for the next startup. History refresh also retains unfinished snapshot
+labels, notes and tags while the same snapshot remains selected. Choosing another
+snapshot loads that snapshot's metadata; unfinished drafts do not survive restart.
+This is an increment on the existing pages, rather than the full four-intent UI
+or working disk recovery. See [verification limits](release-evidence/1.9-navigation-2026-10-09.md).
+
+Image-format, engine/support and shared identity/evidence contracts now have review drafts;
+the proposed disk-support matrix has four candidates and zero qualified profiles.
+Automated evidence checks preserve that distinction; these documents and checks
+do not establish working disk capture or recovery. Changelog
+history and ongoing notes follow Keep a Changelog with automatically checked
+concise entries. See [the October 4 ledger](release-evidence/1.9-work-2026-10-04.md).
+
+The October 5 evidence gate fix rejects recovery runs predating valid retained
+engine approval. See [the current validation record](release-evidence/1.9-work-2026-10-05.md).
+
+The daily development record, including release grouping and dependency reduction,
+is available in [the work ledger](release-evidence/1.9-work-2026-10-03.md).
+
+The October 12 architecture prototype checks explicit recovery dependencies and
+alternatives without treating a missing key, stale observation or circular
+dependency as measured coverage. It has no desktop/CLI integration or disk access;
+see [the review boundary and validation](release-evidence/1.9-dependencies-2026-10-12.md).
+
+The next read-only prototype models shared disk/account failures and shows
+unknown correlation instead of assuming that multiple copies are independent.
+Its conclusions are simulations; historical measurements remain unchanged.
+See [scenario scope and evidence](release-evidence/1.9-failure-scenarios-2026-10-12.md).
+
+A linked prototype batch now checks logical image coverage, combines modeled
+failures and flags ambiguous current observations. Complete map structure does
+not verify payload bytes; scenario conclusions remain simulations.
+See [scope and verification](release-evidence/1.9-contract-batch-2026-10-12.md).
+
+### Compression research
+
+Complete 1.9.0 beta functionality takes priority over this optional research.
+
+Compression research now tests byte-exact numeric context lanes with bounded
+readers and full-cost fallback. Generated counter-heavy data benefits, while
+mature codecs remain stronger on ordinary text. This experiment is outside the
+application and does not change ZIP backups. See
+[research evidence](release-evidence/1.9-compression-structure-2026-10-15.md).
+
+### Disk recovery development
+
+The image development path can now inspect GPT layout metadata without writes,
+including the backup table and partition boundaries. Synthetic file-based
+capture/reconstruction preserves both the raw bytes and inspected layout.
+This is not an available disk restore workflow; independent boot media, native
+device safety and measured recovery remain release gates. See
+[validation and limits](release-evidence/1.9-gpt-inspection-2026-10-15.md).
+
+The draft file-image path also retains source/layout/tool observations in its
+manifest and refuses changed or falsely described GPT layouts before successful
+reconstruction. These records are not proof of a trusted producer or physical
+destination identity. See [current validation](release-evidence/1.9-image-origin-2026-10-15.md).
+
+Linux recovery development now reads bounded kernel metadata to distinguish
+mounted descendants, stacked devices and ambiguous disk identifiers. The scan
+does not establish that an unmounted-looking disk is safe to overwrite and is
+not yet exposed as a disk recovery workflow. See
+[validation and limits](release-evidence/1.9-linux-block-inventory-2026-10-17.md).
+
+Disk observation also has a separate development worker with bounded requests
+and a deadline. It does not yet provide privileged disk capture or restore in
+the app. See [development limits](DISK_WORKER_1.9.md).
+
 ## [1.8.9]
 
-VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
+VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.
 
 Manual Linux update archives now keep VaultSync open and explain installation
 and restart steps.

@@ -200,6 +200,7 @@ public sealed class BackupService(
     {
         ".txt", ".md", ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
         ".csv", ".tsv", ".log", ".sql",
+        ".unity", ".prefab", ".meta",
         ".cs", ".fs", ".vb", ".js", ".ts", ".jsx", ".tsx", ".py", ".java", ".kt", ".swift",
         ".cpp", ".cc", ".cxx", ".c", ".h", ".hpp", ".hh", ".rs", ".go", ".php", ".rb", ".sh",
         ".html", ".css", ".scss", ".less"
@@ -2354,7 +2355,7 @@ public sealed class BackupService(
         }
     }
 
-    private static CompressionLevel ResolveArchiveCompressionLevel(string filePath)
+    internal static CompressionLevel ResolveArchiveCompressionLevel(string filePath)
     {
         string ext = Path.GetExtension(filePath);
         if (string.IsNullOrWhiteSpace(ext))

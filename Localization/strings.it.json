@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Importato",
+  "Projects.Imported.Available": "Progetto importato. La cartella sorgente è disponibile su questa macchina.",
+  "Projects.Imported.Unavailable": "Cronologia di backup importata. Ripristina il progetto o collega una cartella sorgente locale prima di creare snapshot.",
+  "Projects.Imported.NoPath": "Nessuna cartella locale collegata",
   "Settings.Advanced.MetadataConflictsBaseLabel": "Base",
   "Settings.Advanced.MetadataUndoNone": "Nessuna risoluzione dei metadati può essere annullata al momento.",
   "Settings.Advanced.MetadataUndoAvailable": "L'ultima decisione per {0} può essere annullata fino alla prossima scrittura nel repository.",
@@ -90,7 +94,8 @@
   "Backups.Delete.Warning": "Questo rimuove i dati dalla destinazione.",
   "Backups.Destinations.Inactive": "Inattivo",
   "Backups.Destinations.Pending": "In sospeso",
-  "Backups.Destinations.StoredBytes": "Archiviato: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · Backup noti (logici)",
+  "Backups.Destinations.StoredBytesLabel": "Backup noti (logici)",
   "Backups.Destinations.QuotaUsage": "Quota: {0} di {1} ({2}% avviso)",
   "Backups.Destinations.CleanupSuggestion": "{0} Si consiglia di eliminare {1} backup non protetti per recuperare circa {2}.",
   "Backups.Destinations.CleanupBlocked": "{0} Nessun backup non protetto è attualmente disponibile per tornare sotto la soglia di avviso.",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Controlla ogni file generato. Percorsi, credenziali, token e segreti vengono rimossi o pseudonimizzati. Le sezioni opzionali possono essere escluse.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Includi diagnostica ripulita",
   "Settings.Advanced.SupportBundle.Telemetry": "Includi telemetria locale anonimizzata",
-  "Settings.Advanced.SupportBundle.Size": "Dimensione massima non compressa: {0:0.0} MB. I contenuti vengono ripuliti prima dell’esportazione."
+  "Settings.Advanced.SupportBundle.Size": "Dimensione massima non compressa: {0:0.0} MB. I contenuti vengono ripuliti prima dell’esportazione.",
+  "Nav.Back": "Indietro (Alt+Left)",
+  "Nav.Forward": "Avanti (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Rimuovi credenziale",
+  "Update.Installer.RelaunchFailed": "Aggiornamento installato, ma VaultSync non è riuscito a riavviarsi automaticamente. Apri VaultSync dal menu delle applicazioni.",
+  "Recovery.Loading": "Caricamento dello stato di ripristino...",
+  "Recovery.Checking": "Verifica dei progetti, della recenza dei backup, dei criteri di verifica e della disponibilità delle destinazioni.",
+  "Guide.Checking": "Verifica della configurazione…",
+  "Update.Installer.ReadyToRestart": "Aggiornamento pronto. VaultSync si riavvierà con la nuova versione.",
+  "Update.Installer.Installed": "Aggiornamento installato. VaultSync si chiuderà per consentire un avvio corretto della nuova versione.",
+  "Recovery.Coverage.Hours": "{0} h",
+  "Recovery.Coverage.Days": "{0} g"
 }

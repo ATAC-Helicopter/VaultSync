@@ -1,4 +1,8 @@
 {
+  "Projects.Imported.Label": "Імпортовано",
+  "Projects.Imported.Available": "Імпортований проєкт. Вихідна папка доступна на цьому комп’ютері.",
+  "Projects.Imported.Unavailable": "Історію резервних копій імпортовано. Відновіть проєкт або підключіть локальну вихідну папку перед створенням знімків.",
+  "Projects.Imported.NoPath": "Локальну папку не підключено",
   "Settings.Advanced.MetadataConflictsBaseLabel": "База",
   "Settings.Advanced.MetadataUndoNone": "Наразі немає рішення щодо метаданих, яке можна скасувати.",
   "Settings.Advanced.MetadataUndoAvailable": "Останнє рішення для {0} можна скасувати до наступного запису в репозиторій.",
@@ -90,7 +94,8 @@
   "Backups.Delete.Warning": "Це видаляє дані про пункт призначення.",
   "Backups.Destinations.Inactive": "Неактивна",
   "Backups.Destinations.Pending": "Очікується",
-  "Backups.Destinations.StoredBytes": "Зберігається: {0}",
+  "Backups.Destinations.StoredBytes": "{0} · Відомі резервні копії (логічний розмір)",
+  "Backups.Destinations.StoredBytesLabel": "Відомі резервні копії (логічний розмір)",
   "Backups.Destinations.QuotaUsage": "Квота: {0} з {1} ({2}% попередження)",
   "Backups.Destinations.CleanupSuggestion": "{0} Раджу видалити {1} незахищені резервні копії, щоб повернути близько {2}.",
   "Backups.Destinations.CleanupBlocked": "{0} Наразі немає незахищених резервних копій для повернення нижче попереджувального порогу.",
@@ -1914,5 +1919,16 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Перевірте кожен створений файл. Шляхи, облікові дані, токени й секрети видаляються або псевдонімізуються. Необов’язкові розділи можна виключити.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Додати очищену діагностику",
   "Settings.Advanced.SupportBundle.Telemetry": "Додати анонімізовану локальну телеметрію",
-  "Settings.Advanced.SupportBundle.Size": "Максимальний розмір без стиснення: {0:0.0} МБ. Вміст очищається перед експортом."
+  "Settings.Advanced.SupportBundle.Size": "Максимальний розмір без стиснення: {0:0.0} МБ. Вміст очищається перед експортом.",
+  "Nav.Back": "Назад (Alt+Left)",
+  "Nav.Forward": "Вперед (Alt+Right)",
+  "Settings.Destinations.RemoveCredential": "Видалити облікові дані",
+  "Update.Installer.RelaunchFailed": "Оновлення встановлено, але VaultSync не вдалося перезапустити автоматично. Відкрийте VaultSync із меню застосунків.",
+  "Recovery.Loading": "Завантаження стану готовності до відновлення...",
+  "Recovery.Checking": "Перевірка проєктів, давності резервних копій, правил перевірки та доступності місць призначення.",
+  "Guide.Checking": "Перевірка налаштувань…",
+  "Update.Installer.ReadyToRestart": "Оновлення готове. VaultSync перезапуститься з новою версією.",
+  "Update.Installer.Installed": "Оновлення встановлено. VaultSync закриється, щоб нова версія могла запуститися коректно.",
+  "Recovery.Coverage.Hours": "{0} год",
+  "Recovery.Coverage.Days": "{0} д"
 }

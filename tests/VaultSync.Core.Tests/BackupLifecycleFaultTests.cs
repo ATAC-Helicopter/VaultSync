@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,6 +18,54 @@ namespace VaultSync.Core.Tests;
 public sealed class BackupLifecycleFaultTests : IDisposable
 {
     private readonly TempDirectory _tempDir = new();
+
+    [Theory]
+    [InlineData("scene.UNITY")]
+    [InlineData("vehicle.Prefab")]
+    [InlineData("vehicle.meta")]
+    public async Task UnityArchivePolicy_ReducesTextSizeAndPreservesStandardZipReadback(string fileName)
+    {
+        string dbPath = Path.Combine(_tempDir.Path, "compression.db");
+        SqliteRepository repo = TestRepository.Create(dbPath);
+        Project project = CreateProject(repo, encrypted: false);
+        byte[] text = Encoding.UTF8.GetBytes(string.Concat(Enumerable.Range(0, 6000)
+            .Select(i => $"--- !u!114 &{i}\nMonoBehaviour:\n  m_Name: Vehicle{i}\n  speed: {i % 200}\n")));
+        byte[] binary = RandomNumberGenerator.GetBytes(8192);
+        await File.WriteAllBytesAsync(Path.Combine(project.RootPath, fileName), text);
+        await File.WriteAllBytesAsync(Path.Combine(project.RootPath, "binary.asset"), binary);
+        await File.WriteAllBytesAsync(Path.Combine(project.RootPath, "image.png"), binary);
+        string backupRoot = Path.Combine(_tempDir.Path, "compression-backups");
+        Directory.CreateDirectory(backupRoot);
+        var service = new BackupService(repo, CreateSecretService(),
+            new FixedConfigStore(CreateConfig(encrypted: false), dbPath));
+
+        var result = await service.RunBackupAsync(project, backupRoot, isAuto: false, useArchiveMode: true);
+        Assert.False(result.Cancelled);
+        Backup backup = repo.GetBackupById(result.BackupId)!;
+        string folder = Path.Combine(backupRoot, backup.Path);
+        Assert.True(File.Exists(Path.Combine(folder, ".vaultsync_complete")));
+        using var archive = ZipFile.OpenRead(Path.Combine(folder, BackupArchiveCryptoService.PlainArchiveFileName));
+        foreach (var (name, expected) in new[] { (fileName, text), ("binary.asset", binary), ("image.png", binary) })
+        {
+            var entry = archive.GetEntry(name)!;
+            Assert.NotNull(entry);
+            using var stream = entry.Open();
+            using var decoded = new MemoryStream();
+            await stream.CopyToAsync(decoded);
+            Assert.Equal(expected, decoded.ToArray());
+        }
+        Assert.Equal(binary.Length, archive.GetEntry("image.png")!.CompressedLength);
+
+        using var baselineBytes = new MemoryStream();
+        using (var baseline = new ZipArchive(baselineBytes, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            using var stream = baseline.CreateEntry(fileName, CompressionLevel.Fastest).Open();
+            stream.Write(text);
+        }
+        baselineBytes.Position = 0;
+        using var baselineRead = new ZipArchive(baselineBytes, ZipArchiveMode.Read);
+        Assert.True(archive.GetEntry(fileName)!.CompressedLength < baselineRead.GetEntry(fileName)!.CompressedLength);
+    }
 
     [Theory]
     [InlineData(false)]
