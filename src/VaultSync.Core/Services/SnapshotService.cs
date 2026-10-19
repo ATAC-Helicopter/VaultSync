@@ -647,6 +647,7 @@ public class SnapshotService
             TotalBytes: totalBytes);
         LastOutcome = LastCreatedOutcome;
 
+        ProductDiagnostics.Record(DiagnosticOperation.Snapshot, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Commit, quantity: totalFiles);
         _logger.Info($"[SnapshotService] Finished snapshot for '{project.Name}': " +
                      $"added={changes.Added.Count}, modified={changes.Modified.Count}, deleted={changes.Deleted.Count}, unchanged={changes.Unchanged.Count}, totalFiles={totalFiles}, totalBytes={totalBytes}");
     }

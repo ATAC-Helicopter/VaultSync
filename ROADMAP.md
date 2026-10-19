@@ -1387,6 +1387,19 @@ repository must not transfer before a compatible release is adopted.
     Issue #784; preparation PR #736.
   - Acceptance: additive schema/import/restore/discovery regressions and focused
     UI checks pass; origin labels do not authorize backup or disk restore.
+- [ ] `VS-1998` `P1` Add optional private technical diagnostic delivery for beta testing.
+  - Scope: allowlisted operation/error/build data, bounded local records, explicit
+    device-local consent, cancellable upload queue, private FG Labs reception,
+    grouped operator alerts and daily summaries. Never upload existing logs,
+    user content, paths, identities, credentials or free-form exception messages.
+  - Acceptance: prove consent/revocation, hostile input, retry/deduplication,
+    retention and authenticated review across the application and receiver;
+    translate every application control and document provider configuration.
+    Issue #805; sole preparation PR #736; receiver fglabs-site#49.
+    October 19 local validation passed, including actual desktop failure/hang
+    receipt; deployed synthetic hang delivery also reached the operator inbox.
+    Exact source evidence and remaining release gates are recorded in
+    docs/release-evidence/1.9-product-diagnostics-2026-10-19.md.
 - [ ] `VS-1996` `P2` Improve compatible ZIP compression and develop an isolated native codec design.
   - Progress (2026-10-13): generated Unity text/meta measurements support targeted
     `Optimal` compression. A bounded LZ77 Python prototype has raw fallback and

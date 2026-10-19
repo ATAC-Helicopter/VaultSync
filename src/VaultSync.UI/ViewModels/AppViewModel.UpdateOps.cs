@@ -389,6 +389,8 @@ namespace VaultSync.UI.ViewModels
                     CancellationToken.None);
                 if (archivePath is null)
                 {
+                    ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.Update, VaultSync.Core.Models.DiagnosticOutcome.Failed,
+                        phase: VaultSync.Core.Models.DiagnosticPhase.Download, failure: VaultSync.Core.Models.DiagnosticFailure.Other);
                     PatchStatusMessage = L("Patch.Status.DownloadFailed", "Failed to download or verify the patch.");
                     _patchFailed = true;
                     OnPropertyChanged(nameof(ShowInstallerFallback));
@@ -421,6 +423,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch (Exception ex)
             {
+                ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.Update, VaultSync.Core.Models.DiagnosticOutcome.Failed, ex, VaultSync.Core.Models.DiagnosticPhase.Download);
                 PatchStatusMessage = L("Patch.Status.DownloadFailed", "Failed to download or verify the patch.");
                 Debug.WriteLine($"[Patch] Install failed: {ex}");
                 _patchFailed = true;

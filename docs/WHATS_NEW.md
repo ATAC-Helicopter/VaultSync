@@ -93,6 +93,15 @@ Disk observation also has a separate development worker with bounded requests
 and a deadline. It does not yet provide privileged disk capture or restore in
 the app. See [development limits](DISK_WORKER_1.9.md).
 
+### Optional technical diagnostics
+
+You can opt in to sending bounded technical error/operation reports to FG Labs,
+review exactly what the collector stores and cancel queued sends in Settings.
+Reports use fixed codes and coarse measurements, with no file contents, paths,
+credentials or user/device identifiers. Existing logs and text crash reports are
+not uploaded automatically. Reception requires the configured companion service;
+see [fields, retention and delivery limits](PRODUCT_DIAGNOSTICS.md).
+
 ## [1.8.9]
 
 VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.

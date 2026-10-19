@@ -151,6 +151,16 @@ approval recorded after capture cannot qualify that earlier run.
 Local architecture/workflow progress and its verification limits are recorded
 in [the October 4 ledger](release-evidence/1.9-work-2026-10-04.md).
 
+VS-1998/#805 adds optional allowlisted technical diagnostics, device-local opt-in,
+bounded local/queued retention, cancellable receipt-checked HTTPS delivery and a
+companion private FG Labs receiver (fglabs-site#49). Raw logs and text crash reports
+remain manual. Provider/production activation is separately configured; see
+[the contract](PRODUCT_DIAGNOSTICS.md) and
+[current validation](release-evidence/1.9-product-diagnostics-2026-10-19.md).
+The maintainer requested site main integration; a synthetic hang alert reached
+its operator inbox using the configured Production sender. This does not qualify
+imaging, a beta or delivery of every future report.
+
 ## Scope realignment on 2026-10-03
 
 The future CLI rework is preserved in the 1.9.5 branch; discovery and completion

@@ -29,6 +29,9 @@ public class VerifyService(SqliteRepository repo, HashService hash)
             checkedCount++;
         }
 
+        ProductDiagnostics.Record(DiagnosticOperation.Verification, mismatches.Count == 0 ? DiagnosticOutcome.Completed : DiagnosticOutcome.Failed,
+            phase: DiagnosticPhase.Verify, quantity: checkedCount,
+            failure: mismatches.Count == 0 ? DiagnosticFailure.None : DiagnosticFailure.IntegrityMismatch);
         return new VerifyResult(sample.Count, checkedCount - mismatches.Count, mismatches);
     }
 

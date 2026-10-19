@@ -511,6 +511,7 @@ namespace VaultSync.UI.ViewModels
                     }
                     catch (Exception ex)
                     {
+                        ProductDiagnostics.Record(DiagnosticOperation.Backup, DiagnosticOutcome.Failed, ex);
                         failed++;
                         Telemetry.Log("backup_single_failure", b => b
                             .WithHashedString(TelemetryProject, project.Name)
@@ -619,6 +620,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch (Exception ex)
             {
+                ProductDiagnostics.Record(DiagnosticOperation.Backup, DiagnosticOutcome.Failed, ex);
 
                 // Detect the low-disk-space condition thrown by BackupService
                 bool isLowDisk =

@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using VaultSync.Core.Config;
+using VaultSync.Core.Models;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.ViewModels;
 using VaultSync.UI.ViewModels.Notifications;
@@ -143,6 +144,9 @@ public partial class App : Application
 
     private void InitializeDesktopApplication(IClassicDesktopStyleApplicationLifetime desktop)
     {
+        ProductDiagnostics.Initialize(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VaultSync", "product-diagnostics"), typeof(App).Assembly);
+        ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.Application, VaultSync.Core.Models.DiagnosticOutcome.Started);
+        desktop.Exit += (_, _) => ProductDiagnostics.Shutdown();
         CrashHandler.RegisterAvalonia();
         WireGlobalExceptionHandlers();
         WireLifecycleBreadcrumbs(desktop);
@@ -205,6 +209,7 @@ public partial class App : Application
         {
             if (!TryShowOnboarding(desktop))
                 TryShowWhatsNew(desktop);
+            ProductDiagnosticWindows.ShowConsent(desktop.MainWindow);
         });
         _ = Task.Run(CleanupStaleEncryptedOpenTempFolders, CancellationToken.None);
         _ = HandleInitialActivationArgsAsync(desktop);
@@ -321,6 +326,8 @@ public partial class App : Application
             if (Interlocked.Exchange(ref _uiHangReported, 1) == 1)
                 return;
 
+            ProductDiagnostics.Record(DiagnosticOperation.UserInterface, DiagnosticOutcome.Hang,
+                duration: TimeSpan.FromMilliseconds(ageMs));
             var proc = System.Diagnostics.Process.GetCurrentProcess();
             DiagnosticsLogger.Record(
                 $"UI hang suspected ({ageMs:0}ms). Threads={proc.Threads.Count}, " +
@@ -1335,6 +1342,7 @@ public partial class App : Application
                         return;
 
                     DiagnosticsLogger.RecordException("Global unobserved task exception", e.Exception, includeStack: true);
+                    ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.BackgroundTask, VaultSync.Core.Models.DiagnosticOutcome.Failed, e.Exception);
                     Telemetry.Log("app_crash", b => b
                         .WithException(e.Exception)
                         .WithCode(TelemetrySourceCode, "unobserved_task"));

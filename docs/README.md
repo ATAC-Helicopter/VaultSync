@@ -20,6 +20,7 @@ Use this page as the primary index for all project documentation.
 - 1.9 CLI command and behavior audit: [CLI rework](CLI_REWORK.md)
 - 1.9.0 disk/boot foundation: [release contract](RELEASE_1.9.0.md)
 - 1.9 desktop route and migration review: [route architecture](ROUTE_ARCHITECTURE_1.9.md)
+- Optional technical diagnostics: [consent, exact fields and reception](PRODUCT_DIAGNOSTICS.md)
 - 1.9.0 image-format and compatibility review: [disk-image draft](DISK_IMAGE_FORMAT_1.9.md)
 - 1.9.0 read-only worker transport and integration limits: [development contract](DISK_WORKER_1.9.md)
 - 1.9.0 architecture/workflow progress: [October 4 evidence](release-evidence/1.9-work-2026-10-04.md)

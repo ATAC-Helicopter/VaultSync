@@ -177,7 +177,10 @@ See full troubleshooting page: `docs/wiki/Troubleshooting.md`.
 - Metadata store on destinations: `<destination>/.vaultsync/meta/vaultsync.meta.db`
 
 ## Privacy and Crash Assistance
-- VaultSync does not automatically upload crash reports.
+- Text crash reports stay local for review and manual sharing.
+- Optional technical diagnostics requires explicit device-local consent; sending is off by default.
+- Settings > Advanced allows review, local/queue deletion and cancellation of automatic sending.
+- No existing log, exception message, file content/path or user/device identifier is uploaded.
 - If crash-report assistance is enabled, VaultSync creates an allowlisted local report and shows everything it contains.
 - Preparing a draft opens the user's mail app with the report attached; the user must review and send it.
 - The feature can be disabled completely in Settings > Advanced.
