@@ -1594,6 +1594,10 @@ repository must not transfer before a compatible release is adopted.
     then obtain a successful SonarQube PR check on the actual #736 head.
   - Tracking: issue #779; preparation PR #736; see the
     [diagnosis](docs/release-evidence/1.9-sonarqube-pr-2026-10-13.md).
+    October 19 authenticated inspection found the organization unbound while
+    the project claimed BOUND. Approved GitHub access is limited to VaultSync;
+    organization and project bindings are now verified. Current-head analysis
+    remains the acceptance gate; see the October 19 follow-up evidence.
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Tracking reconciliation (2026-10-15): the initial family audit covered 102

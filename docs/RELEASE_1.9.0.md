@@ -356,7 +356,12 @@ Actual beta packages and exact 1.8.9 upgrade behavior remain unqualified.
 BUG-19025/#779 tracks the SonarQube Cloud PR lookup failure across the 1.9
 preparation PRs. A successful branch analysis does not satisfy #736's PR
 quality gate. See the [failure diagnosis](release-evidence/1.9-sonarqube-pr-2026-10-13.md);
-the gate stays open until a current-head PR analysis passes.
+the gate stays open until a current-head PR analysis passes. On October 19,
+authenticated inspection found the organization unbound despite the project
+showing BOUND. Maintainer-approved installation limited to VaultSync restored
+the organization binding and exposed the correct repository. See
+[the configuration follow-up](release-evidence/1.9-sonarqube-binding-2026-10-19.md)
+for the rerun and its actual outcome.
 
 ## Release signing — 2026-10-13
 
