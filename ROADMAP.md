@@ -1596,6 +1596,8 @@ repository must not transfer before a compatible release is adopted.
     actual current-head PR quality gate pass with unchanged thresholds.
   - Tracking: issue #810; sole preparation PR #736. Initial restored analysis
     ec202c1 found four reliability/nine security findings and 62.2% new coverage.
+    Hosted 1a777b0 measured 83.6% coverage and zero reliability findings; the
+    signing-option follow-up still requires a fresh hosted gate.
 
 - [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
   - Scope: SonarCloud rejects PR metadata after successful build and coverage

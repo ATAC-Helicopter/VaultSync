@@ -61,7 +61,8 @@ changing this status. Store distribution retains its separate trust model.
 
 BUG-19034/#810 validates repository, full source SHA and authorized ref syntax
 before invoking the verifier. The GitHub CLI executable and every subject/proof
-path resolve to absolute paths; execution uses an argument vector and no shell.
+path resolve to absolute paths; execution uses an argument vector and no shell. Long-option values use
+`--name=value` so each value remains inseparable from its option.
 Channel-specific source authorization and exact manifest inventory checks remain
 required. Invalid arguments or a missing CLI abort before verification begins.
 

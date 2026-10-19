@@ -90,10 +90,10 @@ class SigningTests(unittest.TestCase):
         self.assertEqual(len(paths)*2, run.call_count)
         for call in run.call_args_list:
             argv = call.args[0]
-            self.assertEqual(COMMIT, argv[argv.index('--source-digest')+1])
-            self.assertEqual(REF, argv[argv.index('--source-ref')+1])
+            self.assertIn('--source-digest=' + COMMIT, argv)
+            self.assertIn('--source-ref=' + REF, argv)
             self.assertIn('--deny-self-hosted-runners', argv)
-        self.assertIn('--bundle', run.call_args.args[0])
+        self.assertTrue(any(arg.startswith('--bundle=') for arg in run.call_args.args[0]))
         bundle.unlink()
         with patch('release_signing.subprocess.run') as run:
             with self.assertRaises(ValueError):
@@ -146,7 +146,7 @@ class SigningTests(unittest.TestCase):
                 command = call.args[0]
                 self.assertTrue(Path(command[0]).is_absolute())
                 self.assertTrue(Path(command[3]).is_absolute())
-                self.assertTrue(Path(command[command.index('--bundle') + 1]).is_absolute())
+                self.assertTrue(Path(next(arg.split('=', 1)[1] for arg in command if arg.startswith('--bundle='))).is_absolute())
 
     def test_cli_subject_inventory_is_complete_and_existing_output_is_preserved(self):
         output = Path(self.temp.name) / 'proof' / 'subjects.sha256'

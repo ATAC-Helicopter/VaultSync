@@ -371,6 +371,9 @@ and the existing experimental tests now contribute measured coverage. Determinis
 public benchmark bytes are preserved with three reviewed call-site exceptions.
 [Safety/coverage follow-up](release-evidence/1.9-sonar-safety-2026-10-19.md) records
 exact source results and the hosted gate separately; thresholds remain unchanged.
+Hosted 1a777b0 reached 83.6% coverage and zero reliability findings. Two public
+synthetic benchmark PRNG findings were formally reviewed as false positives;
+verifier options now bind values with `=` and require a fresh hosted analysis.
 
 ## Release signing — 2026-10-13
 

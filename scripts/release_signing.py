@@ -65,14 +65,14 @@ def verify(paths: list[Path], repository: str, commit: str, source_ref: str,
     bundle, trusted_root = bundle.resolve(strict=True), trusted_root.resolve(strict=True)
     for path in paths:
         path = path.resolve(strict=True)
-        command = [executable, 'attestation', 'verify', str(path), '--repo', repository,
-                   '--signer-workflow', f'{repository}/.github/workflows/release-assets.yml',
-                   '--source-ref', source_ref, '--source-digest', commit,
+        # Bind each option value to its name so it cannot become another option.
+        command = [executable, 'attestation', 'verify', str(path), f'--repo={repository}',
+                   f'--signer-workflow={repository}/.github/workflows/release-assets.yml',
+                   f'--source-ref={source_ref}', f'--source-digest={commit}',
                    '--deny-self-hosted-runners']
         if online:
             subprocess.run(command, check=True, timeout=120)
-        subprocess.run(command + ['--bundle', str(bundle), '--custom-trusted-root',
-                                 str(trusted_root)], check=True, timeout=120)
+        subprocess.run(command + [f'--bundle={bundle}', f'--custom-trusted-root={trusted_root}'], check=True, timeout=120)
 
 
 def main() -> None:
