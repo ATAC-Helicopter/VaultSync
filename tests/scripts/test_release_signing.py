@@ -120,6 +120,59 @@ class SigningTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.subjects()
 
+    def test_untrusted_source_arguments_fail_before_any_verifier_process(self):
+        proof = Path(self.temp.name) / 'proof'
+        proof.write_text('proof')
+        for repo, commit, ref in [('--repo=other/private', COMMIT, REF),
+                                  (REPOSITORY, '--help', REF),
+                                  (REPOSITORY, COMMIT, 'refs/heads/Stable;touch x'),
+                                  (REPOSITORY + '\nprivate', COMMIT, REF)]:
+            with self.subTest(repo=repo, commit=commit, ref=ref), patch('release_signing.subprocess.run') as run:
+                with self.assertRaises(ValueError):
+                    release_signing.verify(self.subjects(), repo, commit, ref, proof, proof)
+                run.assert_not_called()
+
+    def test_verifier_uses_absolute_subject_and_proof_paths_and_requires_cli(self):
+        proof = Path(self.temp.name) / 'proof'
+        proof.write_text('proof')
+        with patch('release_signing.shutil.which', return_value=None), patch('release_signing.subprocess.run') as run:
+            with self.assertRaises(ValueError):
+                release_signing.verify(self.subjects(), REPOSITORY, COMMIT, REF, proof, proof)
+            run.assert_not_called()
+        with patch('release_signing.shutil.which', return_value=sys.executable), patch('release_signing.subprocess.run') as run:
+            release_signing.verify(self.subjects(), REPOSITORY, COMMIT, REF, proof, proof, online=False)
+            self.assertEqual(len(self.subjects()), run.call_count)
+            for call in run.call_args_list:
+                command = call.args[0]
+                self.assertTrue(Path(command[0]).is_absolute())
+                self.assertTrue(Path(command[3]).is_absolute())
+                self.assertTrue(Path(command[command.index('--bundle') + 1]).is_absolute())
+
+    def test_cli_subject_inventory_is_complete_and_existing_output_is_preserved(self):
+        output = Path(self.temp.name) / 'proof' / 'subjects.sha256'
+        argv = ['release_signing.py', 'subjects', '--asset-root', str(self.root),
+                '--repository', REPOSITORY, '--commit', COMMIT, '--source-ref', REF,
+                '--output', str(output)]
+        with patch.object(sys, 'argv', argv):
+            release_signing.main()
+        original = output.read_bytes()
+        self.assertEqual(len(self.subjects()), len(original.decode().splitlines()))
+        self.assertIn('vaultsync-patch-windows.json', original.decode())
+        self.assertIn('vaultsync-patch-windows.zip', original.decode())
+        with patch.object(sys, 'argv', argv), self.assertRaises(FileExistsError):
+            release_signing.main()
+        self.assertEqual(output.read_bytes(), original)
+
+    def test_cli_verify_passes_exact_trusted_source_and_proof_to_the_verifier(self):
+        proof = Path(self.temp.name) / 'proof'
+        proof.write_text('proof')
+        argv = ['release_signing.py', 'verify', '--asset-root', str(self.root),
+                '--repository', REPOSITORY, '--commit', COMMIT, '--source-ref', REF,
+                '--bundle', str(proof), '--trusted-root', str(proof)]
+        with patch.object(sys, 'argv', argv), patch('release_signing.verify') as verify:
+            release_signing.main()
+        self.assertEqual(verify.call_args.args, (self.subjects(), REPOSITORY, COMMIT, REF, proof, proof))
+
     def test_invalid_signature_aborts_without_verifying_remaining_files(self):
         import subprocess
         proof = Path(self.temp.name) / 'proof'

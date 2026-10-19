@@ -57,6 +57,21 @@ truthful. SmartScreen/Gatekeeper guidance remains necessary. Activating native
 certificates requires separately qualified packaging and updater flows before
 changing this status. Store distribution retains its separate trust model.
 
+## Operator input and evidence output
+
+BUG-19034/#810 validates repository, full source SHA and authorized ref syntax
+before invoking the verifier. The GitHub CLI executable and every subject/proof
+path resolve to absolute paths; execution uses an argument vector and no shell.
+Channel-specific source authorization and exact manifest inventory checks remain
+required. Invalid arguments or a missing CLI abort before verification begins.
+
+Checksum inventories are created exclusively as new private evidence files.
+Parent traversal and ambiguous filenames are refused; existing files, symlinks
+and hardlinks cannot be overwritten. Choose a fresh output filename in an owned
+directory for a new run instead of replacing retained proof. Missing evidence still
+requires a new qualified build. Compression benchmark JSON uses the same exclusive
+creation policy; prior measurements are never silently replaced.
+
 ## Updater compatibility
 
 Manifest schema v1, canonical names, exact asset inventory, sizes, hashes,

@@ -72,6 +72,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19034] Reject unsafe signing arguments and preserve existing release evidence files.
 - [BUG-19025] Reconnect SonarQube organization binding with access limited to VaultSync.
 - [BUG-19031] Reject oversized image reconstruction before reading or staging payloads.
 - [BUG-19033] Preserve canonical issue priorities when adopting existing work.

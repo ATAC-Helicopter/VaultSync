@@ -3,12 +3,25 @@
 from __future__ import annotations
 import argparse
 import json
+import re
+import shutil
 import subprocess
 from pathlib import Path
+from safe_artifact_output import write_text_exclusive
 from release_manifest import MANIFEST_NAME, collect_assets, sha256_file, validate_manifest
 
 
+def validate_source(repository: str, commit: str, source_ref: str) -> None:
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,38}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}', repository):
+        raise ValueError('Invalid source repository')
+    if not re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', commit):
+        raise ValueError('Invalid source commit')
+    if not re.fullmatch(r'refs/heads/(?:Dev|Stable|release/[0-9]+\.[0-9]+\.[0-9]+(?:-beta\.[0-9]+)?)', source_ref):
+        raise ValueError('Invalid source ref')
+
+
 def subjects(root: Path, repository: str, commit: str, source_ref: str) -> list[Path]:
+    validate_source(repository, commit, source_ref)
     if root.is_symlink():
         raise ValueError('Asset root must not be a symlink')
     manifests = list(root.rglob(MANIFEST_NAME))
@@ -41,11 +54,18 @@ def subjects(root: Path, repository: str, commit: str, source_ref: str) -> list[
 
 def verify(paths: list[Path], repository: str, commit: str, source_ref: str,
            bundle: Path, trusted_root: Path, *, online: bool = True) -> None:
+    validate_source(repository, commit, source_ref)
     for proof in (bundle, trusted_root):
         if not proof.is_file() or proof.is_symlink() or proof.stat().st_size == 0:
             raise ValueError(f'Missing retained signing proof: {proof}')
+    executable = shutil.which('gh')
+    if executable is None:
+        raise ValueError('GitHub CLI is required for provenance verification')
+    executable = str(Path(executable).resolve(strict=True))
+    bundle, trusted_root = bundle.resolve(strict=True), trusted_root.resolve(strict=True)
     for path in paths:
-        command = ['gh', 'attestation', 'verify', str(path), '--repo', repository,
+        path = path.resolve(strict=True)
+        command = [executable, 'attestation', 'verify', str(path), '--repo', repository,
                    '--signer-workflow', f'{repository}/.github/workflows/release-assets.yml',
                    '--source-ref', source_ref, '--source-digest', commit,
                    '--deny-self-hosted-runners']
@@ -70,8 +90,7 @@ def main() -> None:
     if args.command == 'subjects':
         if args.output is None:
             parser.error('subjects requires --output')
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(''.join(f'{sha256_file(p)} *{p.as_posix()}\n' for p in paths), encoding='utf-8')
+        write_text_exclusive(args.output, ''.join(f'{sha256_file(p)} *{p.as_posix()}\n' for p in paths))
     else:
         if args.bundle is None or args.trusted_root is None:
             parser.error('verify requires --bundle and --trusted-root')

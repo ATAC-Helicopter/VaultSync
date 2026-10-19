@@ -82,7 +82,7 @@ jobs:
         run: |
           dotnet tool install --global dotnet-sonarscanner --version 11.2.1
           dotnet tool install --global dotnet-coverage --version 18.9.0
-          python -m pip install coverage==7.10.4
+          python -m pip install --only-binary :all: coverage==7.10.4
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Restore
@@ -123,7 +123,7 @@ jobs:
       - name: Test Python with coverage
         if: steps.config.outputs.configured == 'true'
         run: |
-          python -m coverage run --source=scripts -m unittest discover -s tests/scripts -p 'test_*.py'
+          python -m coverage run --source=scripts,experiments -m unittest discover -s tests/scripts -p 'test_*.py'
           python -m coverage xml -o python-coverage.xml
 
       - name: End SonarQube analysis

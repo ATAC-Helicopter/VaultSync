@@ -138,11 +138,12 @@ namespace VaultSync.UI.ViewModels
                 Dispatcher.UIThread.Post(() => SetCurrentView(viewKey, remember));
                 return;
             }
+            // Navigation owns its lifetime independently of the updater cancellation source.
             // Keep the legacy shell's saved-location fallback during this first migration.
             DesktopRoute route = LegacyDesktopRouteAdapter.RestoreLegacyLocation(viewKey);
             _ = DetachedTask.RunAsync(async () =>
             {
-                DesktopNavigationResult result = await _desktopNavigation.OpenAsync(route);
+                DesktopNavigationResult result = await _desktopNavigation.OpenAsync(route, CancellationToken.None);
                 if (result == DesktopNavigationResult.Opened ||
                     (result == DesktopNavigationResult.AlreadyCurrent && CurrentView is null))
                     ApplyResolvedPage(remember);
@@ -159,8 +160,8 @@ namespace VaultSync.UI.ViewModels
             _ = DetachedTask.RunAsync(async () =>
             {
                 DesktopNavigationResult result = forward
-                    ? await _desktopNavigation.ForwardAsync()
-                    : await _desktopNavigation.BackAsync();
+                    ? await _desktopNavigation.ForwardAsync(CancellationToken.None)
+                    : await _desktopNavigation.BackAsync(CancellationToken.None);
                 if (result == DesktopNavigationResult.Opened)
                     ApplyResolvedPage(remember: true);
             }, nameof(NavigatePageHistory));

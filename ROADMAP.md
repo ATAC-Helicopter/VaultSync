@@ -1587,6 +1587,16 @@ repository must not transfer before a compatible release is adopted.
   - Tracking: issue #778; preparation PR #736; see the
     [native fixture record](docs/release-evidence/1.9-macos-beta-bundle-2026-10-13.md).
 
+- [ ] `BUG-19034` `P1` Resolve measured Sonar safety findings and coverage omissions.
+  - Scope: review the first restored PR analysis, harden release-tool arguments
+    and report output, make navigation cancellation ownership explicit, and
+    measure existing compression tests alongside scripts without weakening gates.
+    Preserve deterministic benchmark fixtures; review non-security PRNG use honestly.
+  - Acceptance: focused safety regressions, required Release validation and an
+    actual current-head PR quality gate pass with unchanged thresholds.
+  - Tracking: issue #810; sole preparation PR #736. Initial restored analysis
+    ec202c1 found four reliability/nine security findings and 62.2% new coverage.
+
 - [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
   - Scope: SonarCloud rejects PR metadata after successful build and coverage
     on #736 and the other 1.9 preparation PRs; `Dev` branch analyses pass.

@@ -20,7 +20,7 @@ internal static class CompressionProfile
         for (int i = 0; i < 12000; i++)
             yaml.Append($"--- !u!114 &{i}\nMonoBehaviour:\n  m_Name: Vehicle{i}\n  m_Enabled: 1\n  speed: {i % 200}\n");
         byte[] unity = Encoding.UTF8.GetBytes(yaml.ToString());
-        var random = new Random(1996);
+        var random = new Random(1996); // NOSONAR: BUG-19034, fixed public benchmark bytes; never secrets or production IDs.
         byte[] binary = new byte[1024 * 1024];
         random.NextBytes(binary);
         var fixtures = new Dictionary<string, Dictionary<string, byte[]>>
@@ -79,7 +79,8 @@ internal static class CompressionProfile
                 "Release CLI harness; developer research, not a shipping CLI feature." } };
         string output = Path.GetFullPath(args[outputIndex + 1]);
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-        File.WriteAllText(output, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        using (var writer = new StreamWriter(new FileStream(output, FileMode.CreateNew, FileAccess.Write, FileShare.None)))
+            writer.Write(JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"Compression profile: {rows.Count} verified measurements; {output}");
     }
 
@@ -87,7 +88,11 @@ internal static class CompressionProfile
 
     private static string Git(params string[] arguments)
     {
-        var info = new ProcessStartInfo("git") { RedirectStandardOutput = true, UseShellExecute = false };
+        string executable = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Select(directory => Path.GetFullPath(Path.Combine(directory, OperatingSystem.IsWindows() ? "git.exe" : "git")))
+            .FirstOrDefault(File.Exists) ?? throw new InvalidOperationException("Git is required for benchmark source identity.");
+        var info = new ProcessStartInfo(executable) { RedirectStandardOutput = true, UseShellExecute = false };
         foreach (string argument in arguments) info.ArgumentList.Add(argument);
         using var process = Process.Start(info) ?? throw new InvalidOperationException("Cannot read source identity.");
         string output = process.StandardOutput.ReadToEnd();

@@ -209,3 +209,14 @@ Disk transform/version descriptors stay under VS-1917/#574. Stable BSC repositor
 architecture and formats remain VS-1981/#703 in 1.9.6. Any integration affecting
 those formats must use their owning contracts and preparation branches. This
 design does not import BSC features into the 1.9.0 binary.
+
+## Research evidence safety
+
+BUG-19034/#810 keeps public synthetic benchmark seeds unchanged for reproducible
+corpus comparisons. Their PRNG calls do not generate production IDs, credentials
+or encryption material. Three line-scoped Sonar exceptions document only those
+non-security calls; product randomness is not exempted. Existing codec test
+execution is measured with `coverage --source=scripts,experiments`, retaining the
+same quality thresholds and production/test scope. Python and native benchmark
+reports require a fresh filename and do not overwrite prior evidence. Operator
+output directories remain an explicit local CLI choice, not a remote input API.

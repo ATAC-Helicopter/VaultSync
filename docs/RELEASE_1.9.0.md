@@ -363,6 +363,15 @@ the organization binding and exposed the correct repository. See
 [the configuration follow-up](release-evidence/1.9-sonarqube-binding-2026-10-19.md)
 for the rerun and its actual outcome.
 
+BUG-19034/#810 owns findings exposed by the restored analysis on ec202c1:
+four reliability/nine security findings and 62.2% new-code coverage. Navigation
+explicitly opts out of the unrelated updater token; source arguments and proof
+paths are validated before verification, retained outputs are created exclusively,
+and the existing experimental tests now contribute measured coverage. Deterministic
+public benchmark bytes are preserved with three reviewed call-site exceptions.
+[Safety/coverage follow-up](release-evidence/1.9-sonar-safety-2026-10-19.md) records
+exact source results and the hosted gate separately; thresholds remain unchanged.
+
 ## Release signing — 2026-10-13
 
 VS-1902/#113 requires full-inventory keyless provenance signatures and retained

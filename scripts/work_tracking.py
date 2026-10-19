@@ -133,7 +133,7 @@ def infer_release_family(root: Path, branch: str, explicit: str | None) -> tuple
     changelog = root / "CHANGELOG.md"
     if changelog.exists():
         text = changelog.read_text(encoding="utf-8-sig")
-        section = re.search(r"^##\s+\[Unreleased\]\s*$([\s\S]*?)(?=^##\s|\Z)", text, re.M | re.I)
+        section = re.search(r"^##\s+\[Unreleased\]\s*$([\s\S]*?)(?=(?:^##\s)|\Z)", text, re.M | re.I)
         if section:
             target = re.search(r"\*\*Target version:\*\*\s*`(\d+\.\d+(?:\.\d+)?)`", section.group(1))
             if target:

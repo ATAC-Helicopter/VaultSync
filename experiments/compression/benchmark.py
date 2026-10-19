@@ -12,6 +12,7 @@ import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.safe_artifact_output import write_text_exclusive
 from experiments.compression.codec import MAX_BLOCK_BYTES, decode, encode, encode_entropy, encode_structured, encode_hybrid
 from experiments.compression.selection import select
 from experiments.compression.hexlanes import pack as pack_hex, unpack as unpack_hex
@@ -91,14 +92,14 @@ def run():
         'source-code': b''.join(
             f'public class Vehicle{i} {{ public int Speed => {i % 200}; }}\n'.encode()
             for i in range(8000)),
-        'random-proxy': rng.randbytes(512 * 1024),
+        'random-proxy': rng.randbytes(512 * 1024),  # NOSONAR: BUG-19034, reproducible public benchmark bytes; not secret material.
     }
     fixtures['already-deflated'] = zlib.compress(fixtures['unity-yaml'], 6)
     fixtures['numeric-json'] = b''.join(
         f'{{"tick":{i},"object":{1000000000+i},"x":{i%997},"y":{i%191}}}\n'.encode()
         for i in range(6000))
     fixtures['guid-heavy-yaml'] = b''.join(
-        f'guid: {rng.randbytes(16).hex()}\nfileID: {i}\nname: Asset{i}\n'.encode()
+        f'guid: {rng.randbytes(16).hex()}\nfileID: {i}\nname: Asset{i}\n'.encode()  # NOSONAR: BUG-19034, synthetic public GUID-shaped text; no production identity.
         for i in range(3500))
     rows = []
     for name, data in fixtures.items():
@@ -154,8 +155,7 @@ def run():
                                'Hybrid selection samples at most 8192 bytes and tries only one transform family.',
                                'Hex-zlib includes transform metadata and a one-byte selector.',
                                'The numeric fixtures favor this transform; no universal advantage or novelty is established.'])
-    options.output.parent.mkdir(parents=True, exist_ok=True)
-    options.output.write_text(json.dumps(report, indent=2) + '\n')
+    write_text_exclusive(options.output, json.dumps(report, indent=2) + '\n')
 
 
 if __name__ == '__main__':
