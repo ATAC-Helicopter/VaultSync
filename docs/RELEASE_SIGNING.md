@@ -15,7 +15,12 @@ Before a run succeeds, `scripts/release_signing.py verify` verifies every subjec
 online and against a retained offline bundle and trusted roots. Verification
 requires the exact repository, `.github/workflows/release-assets.yml` signer,
 source commit, authorized source ref and GitHub-hosted runner. Beta sources use
-`Dev`; stable sources use `Stable`; reviewed candidates use `release/<version>`.
+`Dev`, or the sole `work/1.9-roadmap-realignment` preparation ref for
+`1.9.0-beta.N` (N 1–998). Stable sources use `Stable`; reviewed candidates use
+`release/<version>`. Workflow and signature inventory admission share
+`scripts/release_source.py`; unrelated work branches and later-release betas
+cannot use this preparation exception. The actual workflow ref and exact SHA
+remain the signing identity; never label a preparation build as a Dev build.
 Missing proof, unexpected assets, altered bytes or identity mismatch abort the
 workflow. Draft assembly repeats verification against the original source run's
 commit and `Stable` ref before uploading. Old runs without complete proof must
@@ -97,3 +102,22 @@ assets, identity restrictions, links and fail-closed verifier behavior. They do
 not establish new-run cryptographic signatures or platform upgrade qualification.
 A successful authorized release-assets run with complete proof is still required
 before publication. No release, tag or candidate was published for these checks.
+
+## Unmerged 1.9.0 beta source — VS-1902
+
+The maintainer requests beta distribution without merging sole release PR #736.
+The build/source authorization above enables packaging from its preparation head,
+not release qualification or automatic publication. Canonical version and project
+metadata must first select the beta identity; the qualified-profile gate still
+executes before packaging. MSStore upload is disabled for this beta request.
+
+Existing installed updaters discover beta releases through the GitHub release's
+`target_commitish=Dev` field, then compare version tags and verify the asset
+manifest and bytes. Proposed staging must create and verify the beta tag at the
+exact qualified preparation SHA **before** creating a release with that legacy
+channel field. GitHub documents that an existing tag is not moved by
+[`target_commitish`](https://docs.github.com/en/rest/releases/releases#create-a-release).
+The returned API field, resolved tag, canonical manifest, source-run SHA and
+actual-ref attestations must all be checked. No source or protected branch moves.
+Draft assembly currently remains Stable-only; beta staging and installed 1.8.9
+upgrade testing remain open. This increment creates no tag or draft.

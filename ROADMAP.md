@@ -1152,6 +1152,10 @@ Migration principles:
     Historical 1.8.9 signing was independently verified, including tamper
     rejection. New-run and platform upgrade qualification remain open.
     See [signing policy](docs/RELEASE_SIGNING.md); Refs #113 in #736.
+  - 2026-10-20: beta packaging and signing share an explicit 1.9.0 preparation-ref
+    authorization without moving Dev or merging #736. Qualified disk evidence,
+    actual source SHA/ref and canonical identity checks remain mandatory.
+    Beta draft staging, immutable tag routing and exact installed upgrades remain open.
 - [x] `VS-1903` `P2` Add background integrity audits with alerts.
   - Scope: retain the delivered background repository-integrity audit and its
     user-visible warning path as historical foundation work.

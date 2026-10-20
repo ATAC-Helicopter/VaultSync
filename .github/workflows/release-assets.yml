@@ -146,10 +146,7 @@ jobs:
               echo "release_candidate can only be used with the stable channel."
               exit 1
             fi
-            if [[ "$branch" != "Dev" ]]; then
-              echo "Beta asset builds must run from Dev. Current branch: $branch"
-              exit 1
-            fi
+            python3 scripts/release_source.py --version "$target" --source-ref "$GITHUB_REF"
             if [[ "$target" != *-* ]]; then
               echo "Beta target_version must include a prerelease suffix (example: 1.7.x-beta.N)."
               exit 1

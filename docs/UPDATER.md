@@ -9,7 +9,17 @@ ship and be adopted first. See [organization transfer](ORGANIZATION_TRANSFER.md)
 
 ## Channels
 - Stable: latest non-prerelease release.
-- Beta/Dev: prerelease-capable flow for `Dev` branch builds that use a prerelease suffix (when enabled in app settings).
+- Beta/Dev: when enabled in settings, discovers published releases whose
+  `target_commitish` is `Dev`, compares their version tags with the installed
+  version and the stable candidate, and requires a valid canonical manifest.
+  This field selects a channel; the updater downloads release assets, not branch
+  contents. A new source commit with the same version is not a new update.
+
+The 1.9.0 beta packaging source may be the unmerged preparation head. Its actual
+SHA/ref must remain bound to provenance, and its immutable tag must select that
+SHA. Keeping `target_commitish=Dev` for old-client discovery does not merge #736
+or change Dev. This staging path and exact installed 1.8.9 upgrade are not yet
+qualified; see [release signing](RELEASE_SIGNING.md#unmerged-190-beta-source--vs-1902).
 
 ## Required Release Assets
 - Canonical release manifest:

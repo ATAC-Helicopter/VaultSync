@@ -107,7 +107,7 @@ class SigningTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.subjects()
 
-    def test_beta_requires_dev_source(self):
+    def test_beta_requires_authorized_source_and_retains_exact_identity(self):
         for path in list(self.root.iterdir()):
             path.unlink()
         for name in NAMES:
@@ -117,8 +117,19 @@ class SigningTests(unittest.TestCase):
             repository=REPOSITORY, predecessors=['1.8.9'], include_windows_patches=True)
         self.write_manifest()
         self.assertTrue(self.subjects(ref='refs/heads/Dev'))
+        self.assertTrue(self.subjects(ref='refs/heads/work/1.9-roadmap-realignment'))
         with self.assertRaises(ValueError):
             self.subjects()
+        for ref in ('refs/heads/work/other', 'refs/heads/release/1.9.0',
+                    'refs/heads/release/1.9.0-beta.1', 'refs/tags/v1.9.0-beta.1'):
+            with self.subTest(ref=ref), self.assertRaises(ValueError):
+                self.subjects(ref=ref)
+        with self.assertRaises(ValueError):
+            self.subjects(commit='b' * 40, ref='refs/heads/work/1.9-roadmap-realignment')
+
+    def test_preparation_ref_cannot_sign_stable_assets(self):
+        with self.assertRaises(ValueError):
+            self.subjects(ref='refs/heads/work/1.9-roadmap-realignment')
 
     def test_untrusted_source_arguments_fail_before_any_verifier_process(self):
         proof = Path(self.temp.name) / 'proof'

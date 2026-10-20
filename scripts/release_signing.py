@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 from safe_artifact_output import write_text_exclusive
 from release_manifest import MANIFEST_NAME, collect_assets, sha256_file, validate_manifest
+from release_source import PREPARATION_REF, beta_source_allowed
 
 
 def validate_source(repository: str, commit: str, source_ref: str) -> None:
@@ -16,7 +17,7 @@ def validate_source(repository: str, commit: str, source_ref: str) -> None:
         raise ValueError('Invalid source repository')
     if not re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', commit):
         raise ValueError('Invalid source commit')
-    if not re.fullmatch(r'refs/heads/(?:Dev|Stable|release/[0-9]+\.[0-9]+\.[0-9]+(?:-beta\.[0-9]+)?)', source_ref):
+    if source_ref != PREPARATION_REF and not re.fullmatch(r'refs/heads/(?:Dev|Stable|release/[0-9]+\.[0-9]+\.[0-9]+(?:-beta\.[0-9]+)?)', source_ref):
         raise ValueError('Invalid source ref')
 
 
@@ -42,9 +43,9 @@ def subjects(root: Path, repository: str, commit: str, source_ref: str) -> list[
     identity = manifest['release']
     if identity['repository'] != repository or identity['commit'] != commit:
         raise ValueError('Manifest repository or commit differs from trusted source run')
-    allowed = {'refs/heads/Dev'} if identity['channel'] == 'beta' else {
-        'refs/heads/Stable', f"refs/heads/release/{identity['version']}"}
-    if source_ref not in allowed:
+    allowed = (beta_source_allowed(identity['version'], source_ref) if identity['channel'] == 'beta' else
+               source_ref in {'refs/heads/Stable', f"refs/heads/release/{identity['version']}"})
+    if not allowed:
         raise ValueError('Source ref is not authorized for this release channel')
     paths = collect_assets(root)
     if {p.name for p in paths} != {a['name'] for a in manifest['assets']}:

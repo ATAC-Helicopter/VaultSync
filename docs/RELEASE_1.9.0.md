@@ -583,3 +583,17 @@ and daily summaries stay private. Public privacy text and all 19 application
 locales disclose the behavior. BUG-19035 makes packaged beta identity truthful.
 [Current evidence](release-evidence/1.9-beta-diagnostics-2026-10-20.md) keeps local,
 native and production observations separate; release/qualification remains open.
+
+
+## Unmerged beta build source — 2026-10-20
+
+VS-1902/#113 permits beta asset builds from the sole preparation ref only for
+1.9.0-beta.N, using one shared workflow/signature admission policy. Dev remains
+compatible; other work refs and later-release identities refuse. Actual source
+SHA/ref binding, canonical/project versions, all signatures and the qualified
+disk-profile gate remain intact. No version cut, tag, package, draft or beta is
+created by this change. Beta draft staging and installed 1.8.9 qualification
+remain open; [signing policy](RELEASE_SIGNING.md#unmerged-190-beta-source--vs-1902)
+records the required tag/channel separation.
+[Current policy evidence](release-evidence/1.9-beta-source-2026-10-20.md).
+#736 remains draft and unmerged.

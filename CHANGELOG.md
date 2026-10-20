@@ -38,6 +38,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1902] Permit verified beta builds from the unmerged 1.9.0 preparation branch.
 - [VS-1918] Record isolated UEFI guest boot measurements for recovery development.
 - [VS-1980] Keep diaries outside GitHub and document automatic publication notifications.
 - [VS-1996] Compress Unity scenes, prefabs and metadata more densely using compatible ZIP archives.
