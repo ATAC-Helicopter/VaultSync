@@ -54,6 +54,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     outputs:
+      build_channel: ${{ steps.validate_inputs.outputs.build_channel }}
       patch_base_versions_windows: ${{ steps.validate_inputs.outputs.patch_base_versions_windows }}
       patch_base_versions_macos: ${{ steps.validate_inputs.outputs.patch_base_versions_macos }}
       patch_base_versions_linux: ${{ steps.validate_inputs.outputs.patch_base_versions_linux }}
@@ -174,6 +175,15 @@ jobs:
               exit 1
             fi
           fi
+
+          # Compile the actual product identity, separately from the stable-version candidate input.
+          case "$channel:$release_candidate" in
+            beta:false) build_channel=beta ;;
+            stable:false) build_channel=stable ;;
+            stable:true) build_channel=candidate ;;
+            *) echo "Unsupported release channel/candidate combination." >&2; exit 1 ;;
+          esac
+          echo "build_channel=$build_channel" >> "$GITHUB_OUTPUT"
 
           for platform in windows macos linux; do
             candidates="$(jq -r --arg platform "$platform" '.activeRelease.patchBaseCandidates[$platform][]? // empty' release/release-metadata.json)"
@@ -335,7 +345,7 @@ jobs:
           -f net10.0-windows10.0.19041.0
           -r win-x64
           --self-contained true
-          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncReleaseChannel=${{ needs.validate.outputs.build_channel }}
           -p:VaultSyncPackageKind=windows-installer
           -p:VaultSyncUpdateSource=github
           -p:VaultSyncOfficialBuild=true
@@ -460,7 +470,7 @@ jobs:
             /p:UapAppxPackageBuildMode=StoreUpload `
             /p:AppxBundle=Never `
             /p:AppxPackageSigningEnabled=false `
-            /p:VaultSyncReleaseChannel=stable `
+            /p:VaultSyncReleaseChannel=${{ needs.validate.outputs.build_channel }} `
             /p:VaultSyncPackageKind=microsoft-store-msix `
             /p:VaultSyncUpdateSource=microsoft-store `
             /p:VaultSyncOfficialBuild=true `
@@ -520,7 +530,7 @@ jobs:
           -f net10.0
           -r osx-arm64
           --self-contained true
-          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncReleaseChannel=${{ needs.validate.outputs.build_channel }}
           -p:VaultSyncPackageKind=macos-dmg
           -p:VaultSyncUpdateSource=github
           -p:VaultSyncOfficialBuild=true
@@ -534,7 +544,7 @@ jobs:
           -f net10.0
           -r osx-x64
           --self-contained true
-          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncReleaseChannel=${{ needs.validate.outputs.build_channel }}
           -p:VaultSyncPackageKind=macos-dmg
           -p:VaultSyncUpdateSource=github
           -p:VaultSyncOfficialBuild=true
@@ -698,7 +708,7 @@ jobs:
           -f net10.0
           -r linux-x64
           --self-contained true
-          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncReleaseChannel=${{ needs.validate.outputs.build_channel }}
           -p:VaultSyncPackageKind=linux-multi-format
           -p:VaultSyncUpdateSource=github
           -p:VaultSyncOfficialBuild=true
@@ -712,7 +722,7 @@ jobs:
           -f net10.0
           -r linux-arm64
           --self-contained true
-          -p:VaultSyncReleaseChannel=stable
+          -p:VaultSyncReleaseChannel=${{ needs.validate.outputs.build_channel }}
           -p:VaultSyncPackageKind=linux-multi-format
           -p:VaultSyncUpdateSource=github
           -p:VaultSyncOfficialBuild=true

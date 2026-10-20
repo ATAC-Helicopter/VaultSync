@@ -1612,6 +1612,14 @@ repository must not transfer before a compatible release is adopted.
   - Tracking: issue #778; preparation PR #736; see the
     [native fixture record](docs/release-evidence/1.9-macos-beta-bundle-2026-10-13.md).
 
+- [ ] `BUG-19035` `P1` Preserve beta and candidate identities in packaged builds.
+  - Scope: replace hardcoded stable compiler metadata with validated beta,
+    candidate or stable identity for all six release packaging commands.
+    Runtime update source, signing/qualification gates and asset names stay intact.
+  - Acceptance: executed workflow-policy regressions and actual compiled beta
+    metadata match; owning release/package qualification remains open.
+    Issue #811; sole draft preparation PR #736; Start 2026-10-20,
+    Target 2027-03-26; Project #7 In progress, Release, P1, 1.9.x.
 - [ ] `BUG-19034` `P1` Resolve measured Sonar safety findings and coverage omissions.
   - Scope: review the first restored PR analysis, harden release-tool arguments
     and report output, make navigation cancellation ownership explicit, and

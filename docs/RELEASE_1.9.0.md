@@ -556,3 +556,15 @@ Independent golden bytes match in both geometries; invalid claims produce no
 metadata. It opens no paths/devices and grants no publication, durability or
 restore claim. Actual capture, staging and directory protocol remain open.
 [Current codec evidence](release-evidence/1.9-raw-metadata-codec-2026-10-20.md).
+
+
+## Packaged release identity — 2026-10-20
+
+BUG-19035/#811 replaces six hardcoded stable compiler identities with an output
+from validated release inputs: beta → beta, final stable → stable, unpublished
+stable-version candidate → candidate. Unsupported combinations refuse. Every
+platform/Store publish consumes that same value. Existing update source,
+package names, source/provenance and protected release gates remain enforced.
+This is required for beta-only diagnostics and truthful build information; it
+neither publishes a beta nor qualifies any disk/installed update path.
+
