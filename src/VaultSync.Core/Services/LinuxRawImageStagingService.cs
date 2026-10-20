@@ -17,11 +17,18 @@ public sealed class LinuxRawImageStagingSession : IAsyncDisposable
     public DiskImageManifestVerificationAssessment Image { get; }
     internal Stream Payload => storage.Payload;
     internal Stream Metadata => storage.Metadata;
+    internal bool IsAlive => storage.Payload.CanRead && storage.Metadata.CanRead;
+    internal IReadOnlyList<string> RepositoryDeviceNumbers { get; }
+    internal bool RepositoryAncestryKnown { get; }
     internal LinuxRawImageStagingSession(LinuxRawImageStagingService.IStorage storage,
-        DiskImageManifestVerificationAssessment image)
+        DiskImageManifestVerificationAssessment image, string? metadataDevice, string? payloadDevice)
     {
         this.storage = storage;
         Image = image;
+        var devices = new[] { metadataDevice, payloadDevice, storage.FilesystemDeviceNumber };
+        RepositoryAncestryKnown = devices.All(value => value is not null);
+        RepositoryDeviceNumbers = Array.AsReadOnly(devices.Where(value => value is not null)
+            .Select(value => value!).Distinct(StringComparer.Ordinal).ToArray());
     }
     public ValueTask DisposeAsync() => storage.DisposeAsync();
 }
@@ -32,7 +39,11 @@ public sealed class LinuxRawImageStagingSession : IAsyncDisposable
 /// </summary>
 public static class LinuxRawImageStagingService
 {
-    internal interface IStorage : LinuxRawImageCaptureService.IStorage { void Seal(); }
+    internal interface IStorage : LinuxRawImageCaptureService.IStorage
+    {
+        void Seal();
+        string? FilesystemDeviceNumber => null;
+    }
 
     public static ValueTask<LinuxRawImageStagingAssessment> StageAsync(Stream metadata, Stream payload,
         string stagingParent, CancellationToken cancellationToken = default)
@@ -59,6 +70,8 @@ public static class LinuxRawImageStagingService
             cancellationToken.ThrowIfCancellationRequested();
             if (!metadata.CanRead || !payload.CanRead || !payload.CanSeek || ReferenceEquals(metadata, payload))
                 return Result(LinuxRawImageStagingState.Invalid, "raw-stage.invalid-streams");
+            string? metadataDevice = LinuxRawImageStorage.TryFilesystemDeviceNumber(metadata);
+            string? payloadDevice = LinuxRawImageStorage.TryFilesystemDeviceNumber(payload);
             byte[]? snapshot = await SnapshotAsync(metadata, cancellationToken).ConfigureAwait(false);
             if (snapshot is null) return Result(LinuxRawImageStagingState.Invalid, "raw-stage.metadata-limit");
             using var ownedMetadata = new MemoryStream(snapshot, writable: false);
@@ -94,7 +107,7 @@ public static class LinuxRawImageStagingService
             storage.FlushDirectories();
             cancellationToken.ThrowIfCancellationRequested();
             storage.Publish();
-            var session = new LinuxRawImageStagingSession(storage, sealedImage.Image!);
+            var session = new LinuxRawImageStagingSession(storage, sealedImage.Image!, metadataDevice, payloadDevice);
             lease.Detach();
             return new(LinuxRawImageStagingState.StagedVerified, "raw-stage.staged", session);
         }

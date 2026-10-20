@@ -633,3 +633,21 @@ qualified recovery profile is supplied. See [staging contract](RAW_IMAGE_STAGING
 1,710 Core / 242 Python pass; 31 native capture/staging cases pass, including
 kernel read-only descriptor checks and original-file mutation isolation.
 These small fixtures do not qualify boot or image-to-device recovery.
+
+
+## Native restore target observation — 2026-10-20
+
+VS-1905/#493 now resolves original/staging filesystem ancestry from held
+descriptors and a fresh kernel inventory, excluding repository disks before
+opening a target. Exact capacity/logical/physical geometry, unchanged selection
+and the existing native read adapter precede a held read-only observation.
+Rechecks expire after 30 seconds and invalidate on stage/identity changes.
+Unknown use is never promoted to Offline or permission; no device write is
+implemented. [Native target contract](LINUX_RESTORE_TARGET_PREVIEW_1.9.md).
+Authenticated worker, exact consent/UI, media and complete recovery qualification
+remain open; four profiles remain candidates and #736 remains draft.
+
+[Current native observation evidence](release-evidence/1.9-native-target-preview-2026-10-20.md):
+1,737 Core / 242 Python and 43 native capture/staging/target checks pass.
+Targets retain their independently checked bytes; no writable device is opened.
+These are prerequisites, not boot/restore or supported-profile qualification.

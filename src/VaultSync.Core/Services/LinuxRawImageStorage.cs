@@ -19,6 +19,7 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorag
     private FileStream payload;
     private FileStream metadata;
     private bool sealedForStaging;
+    public string? FilesystemDeviceNumber { get; }
 
     private LinuxRawImageStorage(SafeFileHandle parent, SafeFileHandle directory,
         string partialName, string finalName, FileStream payload, FileStream metadata)
@@ -29,11 +30,22 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorag
         this.finalName = finalName;
         this.payload = payload;
         this.metadata = metadata;
+        FilesystemDeviceNumber = DeviceNumber(parent, 0x4000);
     }
 
     public Stream Payload => payload;
     public Stream Metadata => metadata;
     public bool Published { get; private set; }
+
+    internal static string? TryFilesystemDeviceNumber(Stream stream) =>
+        OperatingSystem.IsLinux() && RuntimeInformation.ProcessArchitecture == Architecture.X64 &&
+        stream is FileStream file && file.CanRead ? DeviceNumber(file.SafeFileHandle, 0x8000) : null;
+
+    private static string? DeviceNumber(SafeFileHandle handle, ushort type) =>
+        Statx(handle, "", 0x1000 | 0x100, 0x7ff, out var status) == 0 && (status.Mask & 1) != 0 &&
+        (status.Mode & 0xf000) == type
+            ? status.DeviceMajor.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" +
+              status.DeviceMinor.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
 
     internal static LinuxRawImageStorage Create(string outputParent, Guid imageId, ulong capacity)
     {

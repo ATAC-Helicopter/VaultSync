@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1905] Prototype Linux restore previews with fresh handles and repository exclusion.
 - [VS-1907] Stage verified raw images privately and close writable access before recovery.
 - [VS-1904] Prototype verified Linux raw captures with private storage and interruption handling.
 - [VS-1998] Enable richer beta diagnostics by default with private review and opt-out.

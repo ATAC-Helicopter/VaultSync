@@ -71,3 +71,12 @@ exact device consent, overwrite UI in all 19 locales, controlled interruption/
 power-cut qualification and supported profile evidence remain open. All four
 profiles stay candidates; checksums cannot promote a stage to restored-system
 evidence or trusted creator identity. No beta is published by this increment.
+
+
+## Native repository observations
+
+Sessions now privately retain statx filesystem device numbers from original
+regular input descriptors and their staging parent. Unknown source ancestry
+does not invalidate byte inspection, but it blocks a
+[native target description](LINUX_RESTORE_TARGET_PREVIEW_1.9.md). Those numbers
+are not trusted image claims, persistent physical identity or permission to write.

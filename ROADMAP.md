@@ -1503,6 +1503,14 @@ repository must not transfer before a compatible release is adopted.
     shared identity aliases are ambiguous. Changed/incomplete scans return no
     devices. Namespace absence never becomes Offline or write permission.
     See [Linux observation evidence](docs/release-evidence/1.9-linux-block-inventory-2026-10-17.md).
+  - Native target observation now binds a sealed stage to statx repository/
+    staging devices, fresh kernel topology and read-only exclusive target
+    descriptors. Unknown/stacked ancestry, repository conflicts, changed
+    selection and unequal geometry refuse; observations expire after 30 seconds.
+    Unknown use is not Offline or overwrite authority. Worker, exact consent,
+    translated UI and device-write qualification remain open.
+    See [native preview contract](docs/LINUX_RESTORE_TARGET_PREVIEW_1.9.md); #493.
+
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
