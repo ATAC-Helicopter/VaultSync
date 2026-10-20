@@ -65,10 +65,11 @@ or exception/path diagnostics. No state is persisted by this worker.
 | 124 | Deadline/cancellation |
 
 Exit zero does not mean Observed, offline, verified or authorized. Incomplete,
-ChangedDuringRead and UnsupportedPlatform remain typed inventory results. A
-consumer must bound reads and require a complete matching version/operation/UUID,
+ChangedDuringRead and UnsupportedPlatform remain typed inventory results. The
+Core client bounds reads and requires a complete matching version/operation/UUID,
 valid declared body, EOF and process exit zero; partial output or any failure
-cannot become a usable result. There is no product consumer yet.
+cannot become a usable result. The development client below implements this
+transport boundary; desktop integration remains open.
 
 ## Remaining security and integration work
 
@@ -85,3 +86,44 @@ this increment. Those need the reviewed VS-1917/1919 contracts and actual durabl
 capture/restore behavior. Qualification still needs independent recovery media
 and the complete five-stage measured loop. Current validation and its limits:
 [worker evidence](release-evidence/1.9-disk-worker-2026-10-17.md).
+
+## Parent transport client — 2026-10-20
+
+`DiskInventoryWorkerClient.ObserveAsync` selects only the fixed adjacent native
+apphost. Public callers supply cancellation only: no image, UI or protocol value
+can choose a program, argument or working directory. The executable must exist
+and cannot itself be a symlink; no PATH or shell fallback is used. This check is
+not publisher-signature validation or protection against a modified installation
+or linked ancestor directory. The client is unprivileged and not yet called by
+the desktop, recovery media or release packaging. Tests copy the apphost and its
+runtime descriptors into the test output only.
+
+The parent sends one request and closes stdin, concurrently watches stdout,
+stderr and process exit, and rejects the first failing exchange task. A 35-second
+parent deadline covers worker startup and the worker's own 30-second deadline.
+Caller cancellation remains cancellation, rather than a usable partial result.
+On failure, cancellation or timeout, a running worker is killed with a process-tree
+request and its exit wait is bounded to two seconds. This is best-effort cleanup,
+not a sandbox or a guarantee about detached descendants. The real worker spawns
+no child processes.
+
+Response handling requires exact full-width version/operation, matching nonempty
+operation UUID, 1–1,048,576 body bytes, complete input, EOF, empty stderr and exit
+zero. Only one diagnostic byte is examined, never retained or logged. Missing
+workers and failures return typed outcomes with no inventory. Non-observed
+inventory results remain explicit outcomes, never empty successful observations.
+
+The strict JSON reader rejects duplicate, missing required and unknown properties,
+unknown enums, null/oversized device collections, duplicate names/numbers, invalid
+geometry, nonexistent/self parents, inconsistent state/reason or use flags, and
+control characters in hardware identifiers. Metadata observations still cannot
+establish global offline state, authenticated identity, freshness or write
+authority. The operation UUID correlates transport only. No writable device
+handle or capture/restore operation is added by this client.
+
+The worker project explicitly selects invariant globalization so its technical
+protocol can start on a minimal offline Linux environment without ICU. This
+applies only to the worker process, not desktop languages. Localized recovery
+UI/media culture dependencies remain a separate packaging requirement. Current
+[client/runtime measurements](release-evidence/1.9-disk-worker-client-2026-10-20.md)
+retain the initial missing-ICU failure and subsequent exact native results.

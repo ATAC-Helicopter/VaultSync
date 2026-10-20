@@ -1374,7 +1374,9 @@ repository must not transfer before a compatible release is adopted.
     remain open. See [file capture evidence](docs/release-evidence/1.9-file-capture-2026-10-13.md).
     A separate read-only inventory executable now accepts one bounded, correlated
     request over inherited pipes, with refusal before observation and a host
-    deadline. It is not an authenticated/elevated worker or desktop integration.
+    deadline. A fixed-path parent client now enforces correlated bounded replies,
+    strict JSON, process exit, timeout/cancellation and cleanup. It is not an
+    authenticated/elevated worker or desktop integration.
     Issue #492; preparation PR #736. See
     [worker contract](docs/DISK_WORKER_1.9.md) and
     [current evidence](docs/release-evidence/1.9-disk-worker-2026-10-17.md).

@@ -487,3 +487,14 @@ Changed or incomplete scans return no devices. No result declares a disk Offline
 or authorizes writes; native handle checks and the isolated worker remain open.
 No application-visible string or file-backup behavior changes. See
 [current checks and scope](release-evidence/1.9-linux-block-inventory-2026-10-17.md).
+
+## Inventory parent transport — 2026-10-20
+
+VS-1904/#492 adds the fixed adjacent-apphost consumer for the read-only worker.
+It sends one correlated request and EOF, validates bounded strict reply data,
+requires empty diagnostics and successful process exit, and bounds failure/timeout
+cleanup. Neither image content nor UI input chooses executables or arguments.
+Tests launch the real worker on each CI platform; native negative process probes
+exercise refusals and cancellation. This closes the missing parent transport
+boundary, not desktop/media integration, authentication, privilege or device
+access. Current evidence is [the client record](release-evidence/1.9-disk-worker-client-2026-10-20.md).
