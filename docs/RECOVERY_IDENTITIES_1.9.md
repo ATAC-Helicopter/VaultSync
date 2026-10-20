@@ -1,5 +1,11 @@
 # Recovery identities and evidence — VS-1919 review draft
 
+Current direction: **approved by the maintainer on 2026-10-20**;
+[retained joint review](release-evidence/1.9-joint-architecture-approval-2026-10-20.md).
+Implementation/security finalization and all support/release qualification remain open.
+Earlier proposed statuses below are historical.
+
+
 Proposed contract for [VS-1919 / #576](https://github.com/ATAC-Helicopter/VaultSync/issues/576),
 prepared 2026-10-04 for 1.9.0 / PR #736. This defines semantics for review, not
 an approved schema, integrated readiness evaluator or supported restore path.
@@ -273,3 +279,12 @@ provides the concrete first-profile recommendation and remaining implementation
 checks alongside the other three contracts. It remains proposed, not approved
 or qualified. No persisted format, privileged operation or support status changes
 merely because this review candidate exists.
+
+## Joint direction approved — 2026-10-20
+
+The maintainer explicitly approved the combined package published in 484be54;
+[the retained review](release-evidence/1.9-joint-architecture-approval-2026-10-20.md)
+records actual scope, reviewer and observation time. This selects implementation
+direction while concrete serialization/API/security work and qualification
+remain open. Historical proposed/draft status above describes earlier increments.
+No persisted data or supported-device status changes merely from this approval.

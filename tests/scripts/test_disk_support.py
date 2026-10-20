@@ -25,6 +25,9 @@ class DiskSupportTests(unittest.TestCase):
         procedure.write_text('Unit-test procedure fixture. No device operation.')
         self.data = json.loads((ROOT / 'release/disk-support-1.9.0.json').read_text())
         self.data['profiles'] = self.data['profiles'][:1]
+        # Unit chronology is fixed in October 4; real approvals and their files
+        # belong only to the explicit canonical-plan check below.
+        self.data['engine'].update(decision='proposed', approval=None)
 
     def write_artifact(self, name, report):
         content = json.dumps(report).encode()
@@ -65,6 +68,14 @@ class DiskSupportTests(unittest.TestCase):
     def test_complete_bound_fixture_passes_structural_gate(self):
         self.measured_fixture()
         self.assertEqual([], self.check(require=True))
+
+    def test_approved_direction_without_measured_profile_does_not_pass_release_gate(self):
+        self.data['engine'].update(decision='approved', approval={
+            'by': 'test reviewer', 'observedAt': '2026-10-04T10:00:00Z',
+            'artifact': self.write_artifact('approval.json', {'fixture': True}),
+        })
+        self.assertEqual([], self.check())
+        self.assertEqual(['No qualified disk profile; disk support remains gated.'], self.check(require=True))
 
     def test_conflicting_duplicate_report_cannot_qualify(self):
         profile = self.measured_fixture()

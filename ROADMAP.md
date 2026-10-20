@@ -1293,12 +1293,14 @@ repository must not transfer before a compatible release is adopted.
   - Joint review package (2026-10-20): concrete offline platform/raw format,
     bounds, completion, privilege, target identity and desktop recommendations
     are ready in [the combined review](docs/ARCHITECTURE_REVIEW_1.9.0.md).
-    No approval is inferred from continuing development; matrix status stays proposed.
+    The maintainer explicitly approved that package after review; the matrix
+    retains the named, dated and hash-bound decision. All profiles stay candidates.
   - Progress: [ADR 001](docs/adr/001-imaging-engine-1.9.md) compares engines and
     proposes an isolated full raw/offline profile. Four candidate GPT/UEFI
     ext4/NTFS sector profiles have an executable evidence gate; none is qualified.
     The October 5 gate fix rejects runs preceding valid retained engine approval.
-    Engine choice, privileges, joint approval and actual recovery runs remain open.
+    Joint direction approval is now recorded; concrete privilege/format security
+    implementation and actual recovery runs remain open.
     October 9 CI follow-up enforces a runtime-independent 64-container JSON
     depth bound, including escaped-string and boundary regressions; see the
     [CI repair evidence](docs/release-evidence/1.9-json-depth-2026-10-09.md).

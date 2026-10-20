@@ -49,7 +49,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [VS-1910] Document navigation behavior and recovery limits with actual desktop screenshots.
 - [VS-1980] Automate issue tracking while preserving release ownership and existing work IDs.
 - [VS-1980] Preserve planning-source checksums and portable updater fixtures on Windows.
-- [VS-1918] Define offline recovery decisions and safeguards for joint beta implementation review.
+- [VS-1918] Approve offline recovery architecture while keeping untested disk profiles explicitly unsupported.
 - [BUG-19012] Document the Linux startup block; visible-window qualification remains open.
 - [VS-1919] Draft recovery identities and evidence provenance for joint architecture review.
 - [VS-1980] Keep release notes brief and consecutive entries adjacent.

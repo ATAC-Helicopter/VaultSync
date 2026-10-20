@@ -3,8 +3,15 @@
   "release": "1.9.0",
   "engine": {
     "proposal": "internal-raw-offline",
-    "decision": "proposed",
-    "approval": null
+    "decision": "approved",
+    "approval": {
+      "by": "ATAC-Helicopter",
+      "observedAt": "2026-10-20T08:27:28Z",
+      "artifact": {
+        "path": "docs/release-evidence/1.9-joint-architecture-approval-2026-10-20.md",
+        "sha256": "d35256e282cf0131e9c88c51b5fee874e62ee4c96c3f0256eb4f8ad3b96dfd03"
+      }
+    }
   },
   "profiles": [
     {

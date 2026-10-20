@@ -508,3 +508,14 @@ with desktop locales and installed updater/provenance qualification preserved.
 The earlier engine-choice delegation is acknowledged separately from the actual
 joint maintainer approval required before device integration. Matrix decision
 and all candidate status stay unchanged; no review or support is fabricated.
+
+## Actual joint approval — 2026-10-20
+
+After reviewing the combined package at 484be54, the maintainer explicitly
+approved it. [The immutable review record](release-evidence/1.9-joint-architecture-approval-2026-10-20.md)
+is hash-bound in the engine matrix; decision is now approved while all four
+profiles remain candidates with no qualifying evidence. This advances the
+architecture direction gate, preserving concrete implementation/security review,
+disposable-VM scope, exact source/destination authorization and every measured
+recovery, installed updater, signing and release gate. Prior laboratory runs
+remain historical and cannot predate this approval for qualification purposes.

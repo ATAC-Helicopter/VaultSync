@@ -1,5 +1,11 @@
 # Disk-image format and compatibility — VS-1917 review draft
 
+Current direction: **approved by the maintainer on 2026-10-20**;
+[retained joint review](release-evidence/1.9-joint-architecture-approval-2026-10-20.md).
+Implementation/security finalization and all support/release qualification remain open.
+Earlier proposed statuses below are historical.
+
+
 Status: proposed contract for [VS-1917 / #574](https://github.com/ATAC-Helicopter/VaultSync/issues/574),
 prepared on 2026-10-04 for the sole 1.9.0 review, #736. A draft read-only
 recognition envelope and manifest/completion-bound raw payload verifier exist;
@@ -454,3 +460,12 @@ provides the concrete first-profile recommendation and remaining implementation
 checks alongside the other three contracts. It remains proposed, not approved
 or qualified. No persisted format, privileged operation or support status changes
 merely because this review candidate exists.
+
+## Joint direction approved — 2026-10-20
+
+The maintainer explicitly approved the combined package published in 484be54;
+[the retained review](release-evidence/1.9-joint-architecture-approval-2026-10-20.md)
+records actual scope, reviewer and observation time. This selects implementation
+direction while concrete serialization/API/security work and qualification
+remain open. Historical proposed/draft status above describes earlier increments.
+No persisted data or supported-device status changes merely from this approval.

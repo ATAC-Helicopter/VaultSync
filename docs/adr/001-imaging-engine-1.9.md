@@ -1,8 +1,8 @@
 # ADR 001 — Offline imaging engine and qualification boundary
 
-Status: **proposed**, 2026-10-04. Owner: VS-1918 / [#575](https://github.com/ATAC-Helicopter/VaultSync/issues/575).
-Review: sole 1.9.0 PR #736. This is a recommendation, not approval or a support
-announcement. A synthetic file capture prototype exists; no device imaging engine,
+Status: **implementation direction approved**, 2026-10-20; proposal dated 2026-10-04. Owner: VS-1918 / [#575](https://github.com/ATAC-Helicopter/VaultSync/issues/575).
+Review: sole 1.9.0 PR #736. [Actual joint approval](../release-evidence/1.9-joint-architecture-approval-2026-10-20.md)
+selects the implementation direction; it is not a support announcement. A synthetic file capture prototype exists; no device imaging engine,
 elevated helper or boot medium is implemented.
 Review with VS-1917 format, VS-1919 evidence and VS-1910 route contracts.
 The VS-1904 read-only [development worker](../DISK_WORKER_1.9.md) implements
@@ -292,3 +292,11 @@ identity/evidence and desktop scope. It incorporates the maintainer's earlier
 delegation to select the best engine without inferring joint approval from a
 request to continue. The engine matrix stays proposed with no approval record
 and zero qualified profiles until actual review and measured qualification.
+
+## Approval observed — 2026-10-20
+
+The maintainer explicitly approved the combined package published in 484be54.
+The retained review record is hash-bound in the engine matrix with the actual
+observed approval time. Candidate profiles remain unqualified; prior lab work
+is not retroactively accepted. Exact protocol/format security checks and all
+complete-loop, package/updater and reviewed release gates remain in force.

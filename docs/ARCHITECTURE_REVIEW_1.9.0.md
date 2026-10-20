@@ -1,6 +1,12 @@
 # 1.9.0 implementation review — 2026-10-07
 
-Status: **proposed; no approval recorded**. Owning review: PR #736.
+Current direction: **approved by the maintainer on 2026-10-20**;
+[retained joint review](release-evidence/1.9-joint-architecture-approval-2026-10-20.md).
+Implementation/security finalization and all support/release qualification remain open.
+Earlier proposed statuses below are historical.
+
+
+Historical status on 2026-10-07: **proposed; no approval recorded**. Owning review: PR #736.
 The delivery order in [the release contract](RELEASE_1.9.0.md) requires joint
 VS-1910/1917/1918/1919 review before disk capture and restore implementation.
 This page summarizes that review; the linked contracts retain the detailed rules.
@@ -34,7 +40,8 @@ an instruction to continue development or from passing CI.
 
 ## Implementation decision package — 2026-10-20
 
-Status: **ready for joint maintainer review; not approved**. This is the concrete
+Current status: **joint implementation direction approved, 2026-10-20**.
+[Actual maintainer review record](release-evidence/1.9-joint-architecture-approval-2026-10-20.md). This is the concrete
 combined direction for VS-1910/#501, VS-1917/#574, VS-1918/#575 and VS-1919/#576.
 The maintainer already delegated selection of the best engine approach. That
 choice is reflected in the internal raw/offline recommendation below; this
@@ -107,3 +114,11 @@ secondary. No release date or completed-feature claim is made by this package.
 Record an actual joint review outcome, reviewer, date and retained reference in
 this document and the engine matrix before qualifying a capture. If a direction
 changes, update the four contracts and qualification plan together.
+
+## Recorded outcome
+
+The maintainer explicitly approved this combined package after its publication
+in 484be54. The engine matrix now retains the named, dated and hash-bound review
+record. This approves implementation direction; exact serialization/security
+implementation and all qualification remain subject to the retained gates above.
+No profile was promoted and no prior laboratory result became recovery evidence.

@@ -1,5 +1,11 @@
 # 1.9 desktop route architecture — VS-1910 review draft
 
+Current direction: **approved by the maintainer on 2026-10-20**;
+[retained joint review](release-evidence/1.9-joint-architecture-approval-2026-10-20.md).
+Implementation/security finalization and all support/release qualification remain open.
+Earlier proposed statuses below are historical.
+
+
 Status: proposed contract for [VS-1910 / #501](https://github.com/ATAC-Helicopter/VaultSync/issues/501). This document records a migration design; no new route or deep link is implemented by this document. `ROADMAP.md` remains the delivery authority.
 
 ## Current shell and the migration boundary
@@ -159,3 +165,12 @@ provides the concrete first-profile recommendation and remaining implementation
 checks alongside the other three contracts. It remains proposed, not approved
 or qualified. No persisted format, privileged operation or support status changes
 merely because this review candidate exists.
+
+## Joint direction approved — 2026-10-20
+
+The maintainer explicitly approved the combined package published in 484be54;
+[the retained review](release-evidence/1.9-joint-architecture-approval-2026-10-20.md)
+records actual scope, reviewer and observation time. This selects implementation
+direction while concrete serialization/API/security work and qualification
+remain open. Historical proposed/draft status above describes earlier increments.
+No persisted data or supported-device status changes merely from this approval.
