@@ -535,3 +535,15 @@ includes a complete 128 MiB read, both sector geometries, exclusive-claim releas
 and live hot removal. This does not implement complete capture, authenticated
 privilege, repository ancestry, write protection, restore, media or desktop UI.
 The inventory worker remains metadata-only; no profile is qualified.
+
+
+## Raw image profile reader — 2026-10-20
+
+VS-1917/#574 fixes the [first reader wire contract](DISK_IMAGE_RAW_WIRE_1.9.md)
+under the approved joint direction. Read-only verification checks bounded
+metadata, completion/root, exact full raw coverage/digest and actual GPT against
+its declared layout. Synthetic block claims and refusal fixtures cover 512/4096
+geometries; source kind is not authenticated provenance. Generic historical
+fixture/schema compatibility remains intact. No product image writer, durable
+capture, privileged operation, boot medium or qualified profile is claimed.
+[Current results and limits](release-evidence/1.9-raw-image-reader-2026-10-20.md).

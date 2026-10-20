@@ -1233,9 +1233,16 @@ repository must not transfer before a compatible release is adopted.
     identity, generation, extent map and raw payload digests. Draft schema 2 now
     binds regular-file source/tool claims and GPT layout observations, with
     copied-layout checks before completion and after reconstruction. Native source
-    observations, complete-image approval, engine alignment and joint review remain open. See the
+    observations and complete-image qualification remain open; joint direction was approved on October 20. See the
     [payload verification evidence](docs/release-evidence/1.9-payload-verification-2026-10-13.md).
     See also [manifest binding evidence](docs/release-evidence/1.9-manifest-binding-2026-10-13.md).
+  - Raw reader increment (2026-10-20): frozen first-profile bytes distinguish
+    fixture and offline-block source claims; strict capacity/total metadata/GPT
+    limits and actual payload layout comparison now complement content hashes.
+    Permanent independent valid/refusal cases cover both sector geometries.
+    This opens no devices and proves no durable capture, source trust or restore.
+    See [wire contract](docs/DISK_IMAGE_RAW_WIRE_1.9.md) and
+    [current evidence](docs/release-evidence/1.9-raw-image-reader-2026-10-20.md).
   - GPT increment (2026-10-15): bounded read-only inspection validates protective
     MBR, primary/backup header and array CRCs, GUIDs and partition ranges. Both
     geometry fixtures survive capture/reconstruction with identical layout roots;

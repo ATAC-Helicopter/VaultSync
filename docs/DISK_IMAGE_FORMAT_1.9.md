@@ -5,8 +5,13 @@ Current direction: **approved by the maintainer on 2026-10-20**;
 Implementation/security finalization and all support/release qualification remain open.
 Earlier proposed statuses below are historical.
 
+The [raw-block reader wire contract](DISK_IMAGE_RAW_WIRE_1.9.md) now fixes the
+first profile bytes and refusal ceilings. Its independent corpus and actual GPT
+comparison are implemented read-only; native capture, durable publication,
+privileged staging/restore and platform qualification remain open.
 
-Status: proposed contract for [VS-1917 / #574](https://github.com/ATAC-Helicopter/VaultSync/issues/574),
+
+Historical contract status on 2026-10-04: proposed for [VS-1917 / #574](https://github.com/ATAC-Helicopter/VaultSync/issues/574),
 prepared on 2026-10-04 for the sole 1.9.0 review, #736. A draft read-only
 recognition envelope and manifest/completion-bound raw payload verifier exist;
 no complete-image reader, writer, extension or stable format is established by this draft.
@@ -469,3 +474,19 @@ records actual scope, reviewer and observation time. This selects implementation
 direction while concrete serialization/API/security work and qualification
 remain open. Historical proposed/draft status above describes earlier increments.
 No persisted data or supported-device status changes merely from this approval.
+
+
+## Raw-block profile reader — 2026-10-20
+
+VS-1917 adds the frozen [reader byte contract](DISK_IMAGE_RAW_WIRE_1.9.md).
+Schema 2 now distinguishes source kind 1 (fixture) from 2 (claimed offline
+block source); other kinds remain unsupported. Generic readers preserve both
+historical schemas and kind-1 fixtures. The specific raw reader requires kind 2,
+8 TiB maximum capacity, 16 MiB total metadata including framing, one complete
+raw part/extent, and exactly 128 GPT slots. Limits are checked before payload
+access; actual GPT/layout must match even when an attacker recomputes all hashes.
+
+The caller holds supplied streams; no paths/devices are opened, bytes written,
+source consistency authenticated or future reads authorized. A completion record
+is not proof of durable publication. Capture/worker/restore/media qualification
+remains required. See [verification evidence](release-evidence/1.9-raw-image-reader-2026-10-20.md).

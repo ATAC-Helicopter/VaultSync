@@ -126,7 +126,7 @@ public sealed class DiskImageOriginTests
         switch (fault)
         {
             case "origin-schema": bytes[origin] = 2; break;
-            case "source-kind": bytes[origin + 4] = 2; break;
+            case "source-kind": bytes[origin + 4] = 3; break;
             case "source-id": bytes.AsSpan(origin + 8, 16).Clear(); break;
             case "observation-id": bytes.AsSpan(origin + 24, 16).Clear(); break;
             case "physical-sector": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(origin + 40), 1024); break;

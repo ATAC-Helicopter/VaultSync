@@ -4,7 +4,7 @@ using VaultSync.Core.Models;
 
 namespace VaultSync.Core.Services;
 
-// Provisional manifest schema 2, regular-file fixtures only. No product codec registration.
+// Manifest schema 2 source claims. Neither kind proves offline consistency or producer trust.
 internal static class DiskImageOriginRecordCodec
 {
     internal const int HeaderLength = 216;
@@ -13,7 +13,8 @@ internal static class DiskImageOriginRecordCodec
     internal static bool Valid(DiskImageCaptureOrigin origin)
     {
         DiskImageGptLayout layout = origin.Layout;
-        if (origin.SourceId == Guid.Empty || origin.ObservationId == Guid.Empty || origin.CapturedAtUtc.Offset != TimeSpan.Zero ||
+        if (origin.SourceKind is not (DiskImageSourceKind.RegularFileFixture or DiskImageSourceKind.OfflineBlockDevice) ||
+            origin.SourceId == Guid.Empty || origin.ObservationId == Guid.Empty || origin.CapturedAtUtc.Offset != TimeSpan.Zero ||
             origin.CapturedAtUtc.ToUnixTimeMilliseconds() < 0 || origin.PhysicalSectorBytes is not (512 or 4096) ||
             layout is null || layout.LogicalSectorBytes is not (512 or 4096) || origin.PhysicalSectorBytes < layout.LogicalSectorBytes ||
             layout.Capacity == 0 || layout.Capacity > long.MaxValue || layout.Capacity % layout.LogicalSectorBytes != 0 ||
@@ -51,7 +52,7 @@ internal static class DiskImageOriginRecordCodec
         if (!Valid(origin)) throw new ArgumentException("Invalid fixture origin", nameof(origin));
         byte[] bytes = new byte[HeaderLength + PartitionLength * origin.Layout.Partitions.Count];
         Put32(bytes, 0, 1); // origin schema
-        Put32(bytes, 4, 1); // regular-file fixture; never a physical-disk claim
+        Put32(bytes, 4, (uint)origin.SourceKind);
         PutGuid(bytes, 8, origin.SourceId);
         PutGuid(bytes, 24, origin.ObservationId);
         Put32(bytes, 40, origin.PhysicalSectorBytes);
@@ -84,7 +85,7 @@ internal static class DiskImageOriginRecordCodec
         consumed = 0;
         unsupported = false;
         if (bytes.Length < HeaderLength) return false;
-        if (U32(bytes, 0) != 1 || U32(bytes, 4) != 1) { unsupported = true; return false; }
+        if (U32(bytes, 0) != 1 || U32(bytes, 4) is not (1 or 2)) { unsupported = true; return false; }
         uint count = U32(bytes, 116);
         if (count > DiskImageGptInspectionService.MaximumEntries || (ulong)HeaderLength + count * PartitionLength > (ulong)bytes.Length)
             return false;
@@ -104,7 +105,8 @@ internal static class DiskImageOriginRecordCodec
         var layout = new DiskImageGptLayout(new(bytes.Slice(52, 16), bigEndian: true), capacity, sector,
             U64(bytes, 100), U64(bytes, 108), partitions.AsReadOnly(), Convert.ToHexStringLower(bytes.Slice(68, 32)));
         var decoded = new DiskImageCaptureOrigin(new(bytes.Slice(8, 16), bigEndian: true), new(bytes.Slice(24, 16), bigEndian: true),
-            U32(bytes, 40), DateTimeOffset.FromUnixTimeMilliseconds(milliseconds), version, commit, layout);
+            U32(bytes, 40), DateTimeOffset.FromUnixTimeMilliseconds(milliseconds), version, commit, layout)
+        { SourceKind = (DiskImageSourceKind)U32(bytes, 4) };
         if (!Valid(decoded)) return false;
         consumed = HeaderLength + (int)count * PartitionLength;
         origin = decoded;

@@ -19,6 +19,10 @@ public static class DiskImageGptInspectionService
 
     public static async ValueTask<DiskImageGptInspectionAssessment> InspectAsync(
         Stream source, ulong capacity, uint logicalSectorBytes, CancellationToken cancellationToken = default)
+        => await InspectWithinEntryLimitAsync(source, capacity, logicalSectorBytes, MaximumEntries, cancellationToken).ConfigureAwait(false);
+
+    internal static async ValueTask<DiskImageGptInspectionAssessment> InspectWithinEntryLimitAsync(
+        Stream source, ulong capacity, uint logicalSectorBytes, int maximumEntries, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(source);
         cancellationToken.ThrowIfCancellationRequested();
@@ -43,10 +47,10 @@ public static class DiskImageGptInspectionService
                 return Invalid(DiskImageGptInspectionReason.InvalidProtectiveMbr);
 
             byte[] primaryBytes = await ReadAtAsync(source, logicalSectorBytes, (int)logicalSectorBytes, cancellationToken).ConfigureAwait(false);
-            var primary = ParseHeader(primaryBytes, out DiskImageGptInspectionAssessment? failure);
+            var primary = ParseHeader(primaryBytes, maximumEntries, out DiskImageGptInspectionAssessment? failure);
             if (failure is not null) return failure;
             byte[] backupBytes = await ReadAtAsync(source, lastLba * logicalSectorBytes, (int)logicalSectorBytes, cancellationToken).ConfigureAwait(false);
-            var backup = ParseHeader(backupBytes, out failure);
+            var backup = ParseHeader(backupBytes, maximumEntries, out failure);
             if (failure is not null) return failure;
             Header first = primary!, second = backup!;
             if (first.Current != 1 || first.Alternate != lastLba || second.Current != lastLba || second.Alternate != 1 ||
@@ -107,7 +111,7 @@ public static class DiskImageGptInspectionService
         finally { source.Position = originalPosition; }
     }
 
-    private static Header? ParseHeader(byte[] bytes, out DiskImageGptInspectionAssessment? failure)
+    private static Header? ParseHeader(byte[] bytes, int maximumEntries, out DiskImageGptInspectionAssessment? failure)
     {
         failure = null;
         if (!bytes.AsSpan(0, 8).SequenceEqual("EFI PART"u8))
@@ -122,7 +126,7 @@ public static class DiskImageGptInspectionService
             checkedHeader.AsSpan(16, 4).Clear();
             if (Crc32(checkedHeader) != U32(bytes, 16))
                 failure = Invalid(DiskImageGptInspectionReason.HeaderChecksumMismatch);
-            else if (U32(bytes, 84) != EntryBytes || U32(bytes, 80) > MaximumEntries)
+            else if (U32(bytes, 84) != EntryBytes || U32(bytes, 80) > maximumEntries)
                 failure = Unsupported(DiskImageGptInspectionReason.UnsupportedEntryFormat);
             else if (U32(bytes, 80) < 128)
                 failure = Invalid(DiskImageGptInspectionReason.InvalidHeader);

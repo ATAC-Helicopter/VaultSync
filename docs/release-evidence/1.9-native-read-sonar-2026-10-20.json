@@ -1,0 +1,68 @@
+{
+  "observedAt": "2026-10-20T10:16:31.663704+00:00",
+  "source": "50d1926aa8e0adac3817a96de77cea64e9a62461",
+  "analysisDate": "2026-10-20T10:05:17+0000",
+  "status": {
+    "qualityGateStatus": "OK",
+    "bugs": 0,
+    "vulnerabilities": 0,
+    "codeSmells": 159
+  },
+  "gate": {
+    "status": "OK",
+    "conditions": [
+      {
+        "status": "OK",
+        "metricKey": "new_reliability_rating",
+        "comparator": "GT",
+        "periodIndex": 1,
+        "errorThreshold": "1",
+        "actualValue": "1"
+      },
+      {
+        "status": "OK",
+        "metricKey": "new_security_rating",
+        "comparator": "GT",
+        "periodIndex": 1,
+        "errorThreshold": "1",
+        "actualValue": "1"
+      },
+      {
+        "status": "OK",
+        "metricKey": "new_maintainability_rating",
+        "comparator": "GT",
+        "periodIndex": 1,
+        "errorThreshold": "1",
+        "actualValue": "1"
+      },
+      {
+        "status": "OK",
+        "metricKey": "new_coverage",
+        "comparator": "LT",
+        "periodIndex": 1,
+        "errorThreshold": "80",
+        "actualValue": "84.0"
+      },
+      {
+        "status": "OK",
+        "metricKey": "new_duplicated_lines_density",
+        "comparator": "GT",
+        "periodIndex": 1,
+        "errorThreshold": "3",
+        "actualValue": "0.0"
+      },
+      {
+        "status": "OK",
+        "metricKey": "new_security_hotspots_reviewed",
+        "comparator": "LT",
+        "periodIndex": 1,
+        "errorThreshold": "100",
+        "actualValue": "100.0"
+      }
+    ],
+    "periods": [],
+    "ignoredConditions": false
+  },
+  "workflowRun": 39404839965,
+  "scope": "Historical exact head, not new raw-profile source or release qualification"
+}
