@@ -1510,6 +1510,9 @@ repository must not transfer before a compatible release is adopted.
     Unknown use is not Offline or overwrite authority. Worker, exact consent,
     translated UI and device-write qualification remain open.
     See [native preview contract](docs/LINUX_RESTORE_TARGET_PREVIEW_1.9.md); #493.
+    Hosted S2674 findings on 99773d2 identify two implicit empty-read probes;
+    an explicit serialized binding operation now replaces them without reading
+    bytes or changing expiry/authorization. Exact-head reanalysis remains required.
 
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
   systems with offline device discovery and recovery workflows.

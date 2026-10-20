@@ -73,3 +73,12 @@ The same-privilege [Linux raw capture adapter](LINUX_RAW_CAPTURE_1.9.md) consume
 this held source only when its kernel read-only flag is set. Copy/EOF/GPT reads
 retain the checks above. Its output is a verified private raw image, not a writable
 device capability, authenticated worker, recovery environment or qualified disk.
+
+
+## Explicit descriptor validation
+
+The internal ValidateBindingAsync operation serializes through the same source
+gate and performs the native binding checks without reading or advancing stream
+position. Restore-target descriptions use this explicit operation rather than
+implicit zero-byte reads. Cancellation before inspection leaves the source open;
+changed/uninspectable identity still invalidates and closes it.

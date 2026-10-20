@@ -34,8 +34,7 @@ public sealed class LinuxDiskRestoreTargetPreview : IAsyncDisposable
         { await target.DisposeAsync().ConfigureAwait(false); return false; }
         try
         {
-            // Even a zero-byte read checks the held native identity without reading content.
-            await target.ReadAsync(Memory<byte>.Empty, cancellationToken).ConfigureAwait(false);
+            await target.ValidateBindingAsync(cancellationToken).ConfigureAwait(false);
             return true;
         }
         catch (IOException) { await target.DisposeAsync().ConfigureAwait(false); return false; }
@@ -88,7 +87,7 @@ public static class LinuxDiskRestoreTargetPreviewService
             if (opened.State != LinuxBlockReadState.OpenedReadOnly || held is null)
                 return Refuse(LinuxDiskRestoreTargetPreviewReason.TargetUnavailable);
             if (!held.Identity.Matches(selected)) return Refuse(LinuxDiskRestoreTargetPreviewReason.SelectionChanged);
-            await held.ReadAsync(Memory<byte>.Empty, cancellationToken).ConfigureAwait(false);
+            await held.ValidateBindingAsync(cancellationToken).ConfigureAwait(false);
             if (!stage.IsAlive) return Refuse(LinuxDiskRestoreTargetPreviewReason.InvalidImage);
             var preview = new LinuxDiskRestoreTargetPreview(held, stage, selected);
             held = null;

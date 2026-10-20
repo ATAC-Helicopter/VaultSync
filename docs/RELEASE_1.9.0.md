@@ -662,3 +662,17 @@ remaining authenticated worker, writable restore, independent media, translated
 user workflow, complete recovery and installed update/signing gates. Four profiles
 remain candidates. No beta scope reduction, version, publication date, asset run,
 tag, publication or merge is selected by this update. #736 remains draft.
+
+
+## Explicit target binding checks — 2026-10-20
+
+VS-1905/#493 replaces two implicit zero-byte ReadAsync probes with an explicit
+serialized descriptor validation API. This addresses hosted S2674 findings on
+99773d2 while retaining the native identity checks, no-byte-read behavior, source
+closure after change and pre-inspection cancellation. No Sonar rule, threshold
+or exclusion is changed. The old head's failed reliability gate remains
+historical; a new exact-head analysis is required after delivery.
+
+[Current explicit-check evidence](release-evidence/1.9-explicit-binding-check-2026-10-20.md):
+1,740 Core / 242 Python and 43 native read-only cases pass. Hosted reanalysis
+remains separate; the five-stage recovery and beta gates remain open.

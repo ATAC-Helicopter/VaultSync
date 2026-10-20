@@ -47,6 +47,16 @@ public sealed class LinuxBlockReadSession : Stream
         }
     }
 
+    /// <summary>Rechecks the held descriptor without reading bytes or advancing position.</summary>
+    internal async ValueTask ValidateBindingAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { cancellationToken.ThrowIfCancellationRequested(); CheckBinding(); }
+        finally { gate.Release(); }
+    }
+
     public override int Read(byte[] buffer, int offset, int count)
     {
         ValidateBufferArguments(buffer, offset, count);

@@ -33,8 +33,8 @@ refuse; a false read-only flag alone is not write-access permission.
 
 The existing Linux read adapter then re-observes around a fixed O_RDONLY/O_EXCL
 open and checks held type/device number/disk sequence/geometry/read-only state.
-Mounted, ambiguous, changed or uninspectable selections refuse. A zero-byte read
-checks the binding again without reading disk content. Closed staging or late
+Mounted, ambiguous, changed or uninspectable selections refuse. An explicit descriptor
+binding check runs again without reading disk content or changing stream position. Closed staging or late
 refusal closes every acquired target handle.
 
 Success exposes ObservationOnly with a timestamp, immutable native target data

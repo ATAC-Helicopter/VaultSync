@@ -95,6 +95,41 @@ public sealed class LinuxBlockReadServiceTests
     }
 
     [Fact]
+    public async Task ExplicitBindingCheckDoesNotReadOrAdvanceTheHeldSource()
+    {
+        using var device = new Device();
+        using var source = (await device.OpenAsync()).Source!;
+        source.Position = 512;
+        int before = device.InspectCalls;
+        await source.ValidateBindingAsync();
+        Assert.Equal(before + 1, device.InspectCalls);
+        Assert.Equal(512, source.Position);
+        Assert.Equal(device.Bytes, File.ReadAllBytes(device.Path));
+    }
+
+    [Fact]
+    public async Task ExplicitBindingCheckClosesAChangedSourceWithoutReadingIt()
+    {
+        using var device = new Device();
+        using var source = (await device.OpenAsync()).Source!;
+        device.Identity = device.Identity with { DiskSequence = 56 };
+        await Assert.ThrowsAsync<IOException>(async () => await source.ValidateBindingAsync());
+        Assert.False(source.CanRead); Assert.True(device.LastHandle!.IsClosed);
+        Assert.Equal(device.Bytes, File.ReadAllBytes(device.Path));
+    }
+
+    [Fact]
+    public async Task CancelledBindingCheckDoesNotInspectOrInvalidateTheSource()
+    {
+        using var device = new Device();
+        using var source = (await device.OpenAsync()).Source!;
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        int before = device.InspectCalls;
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await source.ValidateBindingAsync(cancelled.Token));
+        Assert.Equal(before, device.InspectCalls); Assert.True(source.CanRead);
+    }
+
+    [Fact]
     public async Task ConcurrentReadsSerializePositionAndReadSizeIsBounded()
     {
         using var device = new Device(512 * 1024);
