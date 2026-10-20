@@ -1,4 +1,4 @@
-# Optional technical diagnostics
+# Technical diagnostics and beta defaults
 
 Owner: VS-1998 / #805; 1.9.0 preparation PR #736. Receiver: companion
 [fglabs-site issue #49](https://github.com/ATAC-Helicopter/fglabs-site/issues/49).
@@ -7,18 +7,29 @@ legacy hashed telemetry, text crash reports or memory dumps.
 
 ## User choice and behavior
 
-At first desktop startup, a translated disclosure offers automatic sending or
-keeping reports on this device. Closing the window does not grant consent.
-Both choices leave the application usable. Settings > Advanced provides the
-same separately persisted switch, a privacy-notice link and complete local
-technical-record review with deletion of local/queued reports.
+Only builds whose compiled `VaultSyncReleaseChannel` is exactly `beta` use the
+maintainer-approved beta-default policy 2. Sending starts enabled on a fresh beta
+profile, with a translated startup disclosure and the same review/disable controls
+in Settings > Advanced. Closing the beta notice leaves its default unchanged;
+choosing to keep reports local persists off. Existing explicit refusal under
+policy 1 is honored unless the user later explicitly enables beta reporting.
+A storage probe must succeed before beta sending starts; malformed, linked,
+inaccessible or future choice records fail closed. A failed save disables sending
+and leaves an error visible instead of dismissing the disclosure.
 
-Sending is off by default. The current version-1 decision is the single byte
-`0` or `1` in the private `product-diagnostics/consent-v1` file. Any missing,
-malformed, inaccessible or future decision fails closed. It is deliberately
-outside exported application configuration, its backup and destination metadata:
-importing settings or another machine's projects cannot authorize transmission.
-A material policy/schema change requires another reviewed consent version.
+Stable, candidate and development builds retain policy 1: automatic delivery is
+off until explicit opt-in. Choosing the update beta channel in Settings does not
+turn a stable executable into a beta build or enable diagnostics.
+
+The single-byte private choice `consent-v1` remains separate from
+`consent-beta-v2`; beta opt-in/defaults never create policy-1 permission. Queues
+are `pending` and `pending-beta-v2` respectively. A non-beta launch deletes the
+beta queue and never sends its policy-2 reports. Choices are deliberately outside
+exported/synced configuration and destination metadata. All policies use the
+same 18-field schema; version 2 identifies the changed beta default, not evidence
+of a user's explicit consent or publisher authenticity. Other material policy or
+schema changes require a newly reviewed version.
+
 Enabling never backfills previously collected local history. Only future reports
 enter the upload queue. Turning off immediately cancels active client requests
 and deletes pending records; already received/in-flight server processing or
@@ -34,7 +45,7 @@ non-random UUID versions are refused. No free-form user string is accepted.
 
 | Field | Meaning / allowed values |
 | --- | --- |
-| schemaVersion, consentVersion | 1, 1 |
+| schemaVersion, consentVersion | Schema 1; policy 1 for explicit opt-in, or policy 2 only for compiled beta |
 | reportId | Fresh UUID v4 for this report; never an installation/session ID |
 | appVersion, runtimeVersion | Numeric versions, not arbitrary build descriptions |
 | sourceCommit | Lowercase 40/64-digit commit, or null |
@@ -64,7 +75,7 @@ anonymous or claim that transport infrastructure processes no personal data.
 
 ## Local retention and transport
 
-The desktop collector stores up to 100 local and 100 pending JSON records, at
+The desktop collector stores up to 100 local and 100 active-channel pending JSON records, at
 most 8 KiB each, with seven-day expiry checked at startup, collection, review
 and periodic flush. Directories/files are restricted where supported; managed
 symlinks are not followed. Corrupt, oversized, tampered or unsupported queued
@@ -80,6 +91,18 @@ The desktop timer first runs after 15 seconds and then once a minute; concurrent
 flushes do not double-send. Fatal crashes can leave records for a subsequent launch.
 CLI commands retain their existing local/manual diagnostics; this increment does
 not add CLI consent commands or hidden CLI uploads.
+
+Beta additionally traces snapshot, backup, verification and restore entry points:
+started, completed, cancelled or failed, plus coarse elapsed buckets. Verification
+mismatches remain failed outcomes; completion is not proof of successful recovery.
+Nested phase/outcome records are observations, not unique operation or user counts.
+Startup completion, clean shutdown, UI recovery after a detected hang and a
+maximum one-per-15-minute UI responsiveness sample add bounded context. No input,
+window title, selected filename or user activity content is inspected. Other
+channels do not gain this expanded tracing. Existing crash/error hooks remain.
+Beta retention evicts older ordinary events before errors/crashes/hangs; an
+all-critical full queue drops new ordinary events. Both queues remain bounded,
+and older critical events can still expire or be replaced by newer critical ones.
 
 Current hooks cover desktop startup, UI/application/background exceptions, hang
 signals, snapshot completion/hashing, backup completion/failure, verification
@@ -141,3 +164,18 @@ protected admin settings, and configure `CRON_SECRET` for the daily route. Previ
 uses its own scope and must be tested before reviewed production deployment.
 This change does not authorize merging the website or publishing a VaultSync beta.
 [Current evidence and remaining checks](release-evidence/1.9-product-diagnostics-2026-10-19.md).
+
+
+## October 20 policy change and qualification
+
+The maintainer explicitly requested beta-only default sending and broader safe
+technical coverage. VS-1998/#805 implements policy 2 and the receiver's beta-only
+validation. BUG-19035/#811 corrects hardcoded stable package metadata, using the
+validated beta/candidate/stable build channel across all release commands.
+[Current source verification](release-evidence/1.9-beta-diagnostics-2026-10-20.md)
+separates native/local tests, server deployment evidence and release gates.
+
+No new client credential, recipient configuration or raw-log upload is required.
+The existing private receiver, grouped operator alerts and daily digest remain;
+ordinary reports do not each generate email. Receipt proves stored acceptance,
+not inbox delivery of every event or completion of daily cron qualification.

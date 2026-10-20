@@ -298,11 +298,15 @@ public class SnapshotService
             },
             ct);
 
-    public async Task<int> CreateSnapshotAsync(
+    public Task<int> CreateSnapshotAsync(Project project, bool fullHash, SnapshotCreationOptions options,
+        CancellationToken ct = default) => ProductDiagnostics.TraceBetaAsync(DiagnosticOperation.Snapshot,
+            () => CreateSnapshotCoreAsync(project, fullHash, options, ct));
+
+    private async Task<int> CreateSnapshotCoreAsync(
         Project project,
         bool fullHash,
         SnapshotCreationOptions options,
-        CancellationToken ct = default)
+        CancellationToken ct)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         ArgumentNullException.ThrowIfNull(options);

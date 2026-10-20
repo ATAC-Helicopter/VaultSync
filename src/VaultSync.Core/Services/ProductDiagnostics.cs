@@ -9,6 +9,7 @@ public static class ProductDiagnostics
     private static ProductDiagnosticReporter? reporter;
     private static Timer? timer;
     private static Assembly? productAssembly;
+    public static bool IsBeta => reporter?.IsBeta == true;
     public static bool Enabled => reporter?.Enabled == true;
     public static bool HasDecision => reporter?.HasDecision == true;
     public static event Action? ConsentChanged;
@@ -25,8 +26,9 @@ public static class ProductDiagnostics
         try
         {
             if (reporter is not null) return;
-            reporter = new ProductDiagnosticReporter(directory);
             productAssembly = assembly;
+            reporter = new ProductDiagnosticReporter(directory,
+                ProductDiagnosticReport.Channel(assembly ?? typeof(ProductDiagnostics).Assembly) == "beta");
             timer = new Timer(_state => { _ = FlushSafely(); }, null, TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(1));
         }
         catch { /* Local storage failure cannot block the application. */ }
@@ -46,6 +48,34 @@ public static class ProductDiagnostics
             reporter?.Record(failure is null ? report : report with { Failure = failure.Value }); }
         catch { }
     }
+    public static Task TraceBetaAsync(DiagnosticOperation operation, Func<Task> action) =>
+        TraceBetaAsync(operation, async () => { await action().ConfigureAwait(false); return true; });
+
+    // Fixed-code operation boundaries only; no delegate arguments/results are inspected or serialized.
+    public static async Task<T> TraceBetaAsync<T>(DiagnosticOperation operation, Func<Task<T>> action,
+        DiagnosticMode mode = DiagnosticMode.None, bool recordCompletion = true)
+    {
+        if (!IsBeta) return await action().ConfigureAwait(false);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        Record(operation, DiagnosticOutcome.Started, mode: mode);
+        try
+        {
+            T result = await action().ConfigureAwait(false);
+            if (recordCompletion) Record(operation, DiagnosticOutcome.Completed, mode: mode, duration: clock.Elapsed);
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            Record(operation, DiagnosticOutcome.Cancelled, mode: mode, duration: clock.Elapsed);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Record(operation, DiagnosticOutcome.Failed, ex, mode: mode, duration: clock.Elapsed);
+            throw;
+        }
+    }
+
     public static string Review() { try { return reporter?.Review() ?? "[]"; } catch { return "[]"; } }
     public static void DeleteReports() => reporter?.DeleteReports();
     private static async Task FlushSafely() { try { if (reporter is not null) await reporter.FlushAsync().ConfigureAwait(false); } catch { } }

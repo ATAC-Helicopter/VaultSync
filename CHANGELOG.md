@@ -11,7 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
-- [VS-1998] Send optional technical diagnostics with explicit consent and private review.
+- [VS-1998] Enable richer beta diagnostics by default with private review and opt-out.
 - [VS-1904] Isolate disk observations and reject malformed or incomplete worker responses.
 - [VS-1904] Prototype Linux disk reads with exclusive handles and native identity checks.
 - [VS-1905] Observe Linux disk geometry, mounted descendants and ambiguous device identities.

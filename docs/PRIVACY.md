@@ -12,8 +12,10 @@ Portable metadata under a configured destination's `.vaultsync/meta/` contains p
 
 Existing diagnostic logs and legacy hashed operational event files remain on the device.
 VaultSync 1.9.0 adds a separate optional technical diagnostic collector: local
-records are bounded, and automatic delivery is off until the user explicitly
-opts in. It never uploads those existing logs or event files. See
+records are bounded. Stable, candidate and development builds require explicit
+opt-in. Compiled beta builds enable technical sending by default with a translated
+disclosure, review and disable controls; a prior explicit refusal is respected.
+Beta choices/queues never grant stable permission or transfer pending beta reports. It never uploads those existing logs or event files. See
 [the exact fields, consent, retention and reception contract](PRODUCT_DIAGNOSTICS.md).
 Support bundles are generated from an allowlist, pseudonymize known paths and
 display identities, scrub configured and structured secrets, bound each input
@@ -26,7 +28,7 @@ sharing it.
 
 ## Crash reports
 
-Text crash reports are never automatically uploaded. A separately consented
+Text crash reports are never automatically uploaded. A separately controlled structured
 technical event can describe the crash using fixed codes and numeric product
 call sites, without its text report or exception message. Optional crash-report assistance creates a minimal, strictly allowlisted report locally and displays its complete contents in a read-only view before offering to prepare an email draft. Its random per-report ID, OS family, crash category, and exception-type reason cannot be changed in VaultSync; users can add optional context in their email application.
 
@@ -46,7 +48,8 @@ retention differs from the 30-day diagnostic-store expiry.
 ## No hidden consent
 
 Opening a preview, copying or saving a report, or preparing a draft does not authorize future reports. Each text report requires a separate action in the user's email application.
-Automatic structured reports require their separate, device-local opt-in;
-turning it off cancels pending client sends. Already received reports/notices
+Automatic structured reports use a separate device-local choice: explicit opt-in
+for non-beta builds, disclosed default-on policy 2 only for beta. Turning it off
+cancels pending client sends; beta choices never enable a stable build. Already received reports/notices
 cannot be recalled by that switch. Request IPs are not application diagnostic
 fields, but network/hosting providers necessarily process connection metadata.

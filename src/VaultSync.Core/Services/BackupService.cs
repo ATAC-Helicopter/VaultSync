@@ -881,11 +881,14 @@ public sealed class BackupService(
             CancellationToken = ct
         });
 
+    public Task<BackupRunResult> RunBackupAsync(BackupRunRequest request) =>
+        ProductDiagnostics.TraceBetaAsync(DiagnosticOperation.Backup, () => RunBackupCoreAsync(request));
+
     [SuppressMessage(
         "Major Code Smell",
         "S3776:Cognitive Complexity of methods should not be too high",
         Justification = "This transaction coordinator intentionally keeps backup creation, cleanup, and metadata publication in one auditable failure boundary; its sub-operations are delegated to focused helpers.")]
-    public async Task<BackupRunResult> RunBackupAsync(BackupRunRequest request)
+    private async Task<BackupRunResult> RunBackupCoreAsync(BackupRunRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         Project project = request.Project;

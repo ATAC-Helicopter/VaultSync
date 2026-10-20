@@ -568,3 +568,18 @@ package names, source/provenance and protected release gates remain enforced.
 This is required for beta-only diagnostics and truthful build information; it
 neither publishes a beta nor qualifies any disk/installed update path.
 
+
+## Beta-only technical diagnostics — 2026-10-20
+
+VS-1998/#805 follows the maintainer's beta-default request. Only compiled beta
+uses default-on policy 2 and expanded operation timing/cancellation/error and UI
+health events. Non-beta retains explicit policy-1 opt-in. Prior refusal, private
+review, stop/cancel/delete controls, policy/channel validation, bounded retention
+and excluded sensitive fields remain. Separate beta choices/queues cannot enable
+stable or transfer its pending reports. The schema still has exactly 18 fields.
+
+The companion receiver accepts policy 2 only for beta; existing operator alerts
+and daily summaries stay private. Public privacy text and all 19 application
+locales disclose the behavior. BUG-19035 makes packaged beta identity truthful.
+[Current evidence](release-evidence/1.9-beta-diagnostics-2026-10-20.md) keeps local,
+native and production observations separate; release/qualification remains open.

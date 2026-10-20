@@ -27,9 +27,9 @@ internal static class ProductDiagnosticWindows
         {
             status.Text = saveFailed ? T("Diagnostics.SaveFailed") : string.Empty;
             window.Title = T("Diagnostics.Title");
-            text.Text = T("Diagnostics.Description");
+            text.Text = T(ProductDiagnostics.IsBeta ? "Diagnostics.BetaDescription" : "Diagnostics.Description");
             privacy.Text = T("Diagnostics.Privacy");
-            accept.Content = T("Diagnostics.Accept");
+            accept.Content = T(ProductDiagnostics.IsBeta && ProductDiagnostics.Enabled ? "Common.Ok" : "Diagnostics.Accept");
             decline.Content = T("Diagnostics.Decline");
             review.Content = T("Diagnostics.Review");
             notice.Content = T("Diagnostics.PrivacyLink");
@@ -43,7 +43,11 @@ internal static class ProductDiagnosticWindows
             if (ProductDiagnostics.SetConsent(true)) window.Close();
             else { saveFailed = true; Refresh(); }
         };
-        decline.Click += (_, _) => { ProductDiagnostics.SetConsent(false); window.Close(); };
+        decline.Click += (_, _) =>
+        {
+            if (ProductDiagnostics.SetConsent(false)) window.Close();
+            else { saveFailed = true; Refresh(); }
+        };
         review.Click += (_, _) => ShowReview(window);
         notice.Click += (_, _) => OpenPrivacy();
         window.Show(owner);

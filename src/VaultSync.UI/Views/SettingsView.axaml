@@ -1999,7 +1999,8 @@
                                   AutomationProperties.Name="{infra:LocalizedString Key=Diagnostics.Enable}"
                                   OnContent="{infra:LocalizedString Key=Common.Yes}" OffContent="{infra:LocalizedString Key=Common.No}"
                                   IsChecked="{Binding AutomaticDiagnosticsEnabled, Mode=TwoWay}" />
-                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" Text="{infra:LocalizedString Key=Diagnostics.Description}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" IsVisible="{Binding !IsBetaDiagnostics}" Text="{infra:LocalizedString Key=Diagnostics.Description}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" IsVisible="{Binding IsBetaDiagnostics}" Text="{infra:LocalizedString Key=Diagnostics.BetaDescription}" TextWrapping="Wrap" />
                     <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Margin="0,6,0,0" Text="{infra:LocalizedString Key=Diagnostics.Privacy}" TextWrapping="Wrap" FontSize="11" />
                     <WrapPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,6,0,0" ItemSpacing="10" LineSpacing="6">
                       <Button Classes="action-ghost" Content="{infra:LocalizedString Key=Diagnostics.Review}" Command="{Binding ReviewDiagnosticReportsCommand}" />

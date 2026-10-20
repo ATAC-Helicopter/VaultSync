@@ -146,7 +146,12 @@ public partial class App : Application
     {
         ProductDiagnostics.Initialize(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VaultSync", "product-diagnostics"), typeof(App).Assembly);
         ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.Application, VaultSync.Core.Models.DiagnosticOutcome.Started);
-        desktop.Exit += (_, _) => ProductDiagnostics.Shutdown();
+        desktop.Exit += (_, _) =>
+        {
+            if (ProductDiagnostics.IsBeta)
+                ProductDiagnostics.Record(DiagnosticOperation.Application, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Cleanup);
+            ProductDiagnostics.Shutdown();
+        };
         CrashHandler.RegisterAvalonia();
         WireGlobalExceptionHandlers();
         WireLifecycleBreadcrumbs(desktop);
@@ -209,6 +214,8 @@ public partial class App : Application
         {
             if (!TryShowOnboarding(desktop))
                 TryShowWhatsNew(desktop);
+            if (ProductDiagnostics.IsBeta)
+                ProductDiagnostics.Record(DiagnosticOperation.Application, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Initialize);
             ProductDiagnosticWindows.ShowConsent(desktop.MainWindow);
         });
         _ = Task.Run(CleanupStaleEncryptedOpenTempFolders, CancellationToken.None);
@@ -306,12 +313,21 @@ public partial class App : Application
         {
             Interval = TimeSpan.FromMilliseconds(250)
         };
+        long lastBetaPulse = System.Diagnostics.Stopwatch.GetTimestamp();
         _uiHeartbeatTimer.Tick += (_, _) =>
         {
-            Interlocked.Exchange(ref _uiHeartbeatTicks, DateTime.UtcNow.Ticks);
+            long previous = Interlocked.Exchange(ref _uiHeartbeatTicks, DateTime.UtcNow.Ticks);
+            TimeSpan latency = DateTime.UtcNow - new DateTime(previous, DateTimeKind.Utc);
             if (Interlocked.Exchange(ref _uiHangReported, 0) == 1)
             {
                 DiagnosticsLogger.Record("UI heartbeat resumed after stall.");
+                if (ProductDiagnostics.IsBeta)
+                    ProductDiagnostics.Record(DiagnosticOperation.UserInterface, DiagnosticOutcome.Completed, duration: latency);
+            }
+            if (ProductDiagnostics.IsBeta && System.Diagnostics.Stopwatch.GetElapsedTime(lastBetaPulse) >= TimeSpan.FromMinutes(15))
+            {
+                lastBetaPulse = System.Diagnostics.Stopwatch.GetTimestamp();
+                ProductDiagnostics.Record(DiagnosticOperation.UserInterface, DiagnosticOutcome.Completed, duration: latency);
             }
         };
         _uiHeartbeatTimer.Start();

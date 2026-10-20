@@ -2260,6 +2260,8 @@ namespace VaultSync.UI
             set => SetField(ref _saveVerboseLogs, value);
         }
 
+        public bool IsBetaDiagnostics => ProductDiagnostics.IsBeta;
+
         public bool AutomaticDiagnosticsEnabled
         {
             get => ProductDiagnostics.Enabled;

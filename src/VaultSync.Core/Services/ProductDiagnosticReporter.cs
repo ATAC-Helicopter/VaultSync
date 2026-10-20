@@ -21,6 +21,7 @@ public sealed class ProductDiagnosticReporter : IDisposable
     private readonly string local;
     private readonly string pending;
     private readonly string decisionPath;
+    public bool IsBeta { get; }
     private readonly HttpClient http;
     private readonly object gate = new();
     private readonly SemaphoreSlim flushGate = new(1, 1);
@@ -31,37 +32,69 @@ public sealed class ProductDiagnosticReporter : IDisposable
     private int failures;
     private DateTimeOffset nextAttempt;
 
-    public ProductDiagnosticReporter(string directory) : this(directory, new HttpClient(new HttpClientHandler
-    { AllowAutoRedirect = false, UseCookies = false }) { Timeout = TimeSpan.FromSeconds(10) }) { }
+    public ProductDiagnosticReporter(string directory, bool betaDefaults = false) : this(directory, new HttpClient(new HttpClientHandler
+    { AllowAutoRedirect = false, UseCookies = false }) { Timeout = TimeSpan.FromSeconds(10) }, betaDefaults) { }
 
-    internal ProductDiagnosticReporter(string directory, HttpClient client)
+    internal ProductDiagnosticReporter(string directory, HttpClient client, bool betaDefaults = false)
     {
         if (Directory.Exists(directory) && (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) throw new IOException();
         PrivateDataPermissions.EnsureDirectory(directory);
         local = Path.Combine(Path.GetFullPath(directory), "local");
-        pending = Path.Combine(Path.GetFullPath(directory), "pending");
-        decisionPath = Path.Combine(Path.GetFullPath(directory), "consent-v1");
+        IsBeta = betaDefaults;
+        pending = Path.Combine(Path.GetFullPath(directory), IsBeta ? "pending-beta-v2" : "pending");
+        string stableDecision = Path.Combine(Path.GetFullPath(directory), "consent-v1");
+        decisionPath = IsBeta ? Path.Combine(Path.GetFullPath(directory), "consent-beta-v2") : stableDecision;
         http = client;
-        try
-        {
-            if (File.Exists(decisionPath) && (File.GetAttributes(decisionPath) & FileAttributes.ReparsePoint) == 0)
-            {
-                using var file = File.OpenRead(decisionPath);
-                int decision = file.ReadByte();
-                if (decision is (byte)'0' or (byte)'1' && file.ReadByte() == -1)
-                { consent = decision == (byte)'1'; hasDecision = true; }
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        Decision decision = ReadDecision(decisionPath);
+        Decision priorStable = IsBeta && decision == Decision.Missing ? ReadDecision(stableDecision) : Decision.Missing;
+        hasDecision = decision is Decision.Enabled or Decision.Disabled ||
+            IsBeta && decision == Decision.Missing && priorStable == Decision.Disabled;
+        consent = decision == Decision.Enabled || IsBeta && decision == Decision.Missing &&
+            priorStable is Decision.Missing or Decision.Enabled;
+        if (IsBeta && consent && !CanPersistBetaChoice()) consent = false;
+        if (!IsBeta) DeleteManaged(Path.Combine(Path.GetFullPath(directory), "pending-beta-v2"));
         if (!consent) DeleteManaged(pending);
         Prune(local);
         Prune(pending);
     }
 
+    private bool CanPersistBetaChoice()
+    {
+        string probe = decisionPath + "." + Guid.NewGuid().ToString("N") + ".probe";
+        try
+        {
+            var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
+            if (!OperatingSystem.IsWindows()) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            using (var file = new FileStream(probe, options)) { file.WriteByte(0); file.Flush(true); }
+            File.Delete(probe);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
+        finally { try { File.Delete(probe); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
+    }
+
+    private enum Decision { Missing, Invalid, Disabled, Enabled }
+
+    private static Decision ReadDecision(string path)
+    {
+        try
+        {
+            if ((File.GetAttributes(path) & (FileAttributes.ReparsePoint | FileAttributes.Directory)) != 0)
+                return Decision.Invalid;
+            using var file = File.OpenRead(path);
+            int value = file.ReadByte();
+            return file.ReadByte() != -1 ? Decision.Invalid : value switch
+            { (byte)'0' => Decision.Disabled, (byte)'1' => Decision.Enabled, _ => Decision.Invalid };
+        }
+        catch (FileNotFoundException) { return Decision.Missing; }
+        catch (DirectoryNotFoundException) { return Decision.Missing; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return Decision.Invalid; }
+    }
+
     public bool Enabled { get { lock (gate) return consent; } }
     public bool HasDecision { get { lock (gate) return hasDecision; } }
 
-    // Consent is a version-1 device-local decision, deliberately outside exported/synced app configuration.
+    // Choices are device-local: explicit policy 1 and separately scoped beta-default policy 2. Never exported/synced.
     public bool SetConsent(bool enabled)
     {
         lock (gate)
@@ -103,18 +136,23 @@ public sealed class ProductDiagnosticReporter : IDisposable
         }
     }
 
+    private bool MatchesPolicy(ProductDiagnosticReport report) => IsBeta
+        ? report.ReleaseChannel == "beta" && report.ConsentVersion == 2
+        : report.ConsentVersion == 1;
+
     public void Record(ProductDiagnosticReport report)
     {
         try
         {
-            if (!report.IsValid()) return;
+            if (!report.IsValid() || !MatchesPolicy(report)) return;
             byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(report, JsonOptions);
             if (bytes.Length > MaximumReportBytes) return;
             lock (gate)
             {
                 if (disposed) return;
-                Write(local, report.ReportId, bytes);
-                if (consent) Write(pending, report.ReportId, bytes);
+                bool critical = report.Outcome is DiagnosticOutcome.Failed or DiagnosticOutcome.Crash or DiagnosticOutcome.Hang;
+                Write(local, report.ReportId, bytes, critical);
+                if (consent) Write(pending, report.ReportId, bytes, critical);
             }
         }
         catch { /* Diagnostics must never interrupt protection operations. */ }
@@ -141,7 +179,7 @@ public sealed class ProductDiagnosticReporter : IDisposable
                     path = Files(pending).FirstOrDefault() ?? "";
                     if (path.Length == 0) return;
                     ProductDiagnosticReport? report = Read(path);
-                    if (report is null) { File.Delete(path); continue; }
+                    if (report is null || !MatchesPolicy(report)) { File.Delete(path); continue; }
                     reportId = report.ReportId;
                     lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, consentLifetime.Token);
                     lifetime.CancelAfter(TimeSpan.FromSeconds(10)); // Includes reading the bounded acknowledgement body.
@@ -248,11 +286,23 @@ public sealed class ProductDiagnosticReporter : IDisposable
             (File.GetAttributes(p) & FileAttributes.ReparsePoint) == 0).OrderBy(File.GetLastWriteTimeUtc).ToArray();
     }
 
-    private static void Write(string directory, Guid id, byte[] bytes)
+    private void Write(string directory, Guid id, byte[] bytes, bool critical)
     {
         if (Directory.Exists(directory) && (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) return;
         PrivateDataPermissions.EnsureDirectory(directory);
-        Prune(directory, MaximumReports - 1);
+        if (IsBeta)
+        {
+            Prune(directory);
+            string[] files = Files(directory);
+            if (files.Length >= MaximumReports)
+            {
+                string? ordinary = files.FirstOrDefault(p => Read(p)?.Outcome is not
+                    (DiagnosticOutcome.Failed or DiagnosticOutcome.Crash or DiagnosticOutcome.Hang));
+                if (ordinary is null && !critical) return;
+                File.Delete(ordinary ?? files[0]);
+            }
+        }
+        else Prune(directory, MaximumReports - 1);
         string path = Path.Combine(directory, id.ToString("D") + ".json");
         var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
         if (!OperatingSystem.IsWindows()) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;

@@ -1412,9 +1412,10 @@ repository must not transfer before a compatible release is adopted.
     Issue #784; preparation PR #736.
   - Acceptance: additive schema/import/restore/discovery regressions and focused
     UI checks pass; origin labels do not authorize backup or disk restore.
-- [ ] `VS-1998` `P1` Add optional private technical diagnostic delivery for beta testing.
-  - Scope: allowlisted operation/error/build data, bounded local records, explicit
-    device-local consent, cancellable upload queue, private FG Labs reception,
+- [ ] `VS-1998` `P1` Add private technical diagnostics with beta-only default delivery.
+  - Scope: allowlisted operation/error/build data, bounded local records, beta-only
+    default policy with isolated preferences and queues, explicit non-beta opt-in,
+    cancellable upload queue, private FG Labs reception,
     grouped operator alerts and daily summaries. Never upload existing logs,
     user content, paths, identities, credentials or free-form exception messages.
   - Acceptance: prove consent/revocation, hostile input, retry/deduplication,
@@ -1425,6 +1426,11 @@ repository must not transfer before a compatible release is adopted.
     receipt; deployed synthetic hang delivery also reached the operator inbox.
     Exact source evidence and remaining release gates are recorded in
     docs/release-evidence/1.9-product-diagnostics-2026-10-19.md.
+    October 20 expands beta operation starts/durations/cancellations/failures,
+    startup/shutdown and sparse UI responsiveness/recovery. Error-priority
+    retention stays bounded; policy 2 is beta-only on both client and receiver.
+    Native Italian disclosure/default sending/disable are observed in isolation.
+    See [current policy evidence](docs/release-evidence/1.9-beta-diagnostics-2026-10-20.md).
 - [ ] `VS-1996` `P2` Improve compatible ZIP compression and develop an isolated native codec design.
   - Progress (2026-10-13): generated Unity text/meta measurements support targeted
     `Optimal` compression. A bounded LZ77 Python prototype has raw fallback and

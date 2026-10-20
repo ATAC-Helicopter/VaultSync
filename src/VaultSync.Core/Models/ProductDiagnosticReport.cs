@@ -29,9 +29,10 @@ public sealed record ProductDiagnosticReport(int SchemaVersion, int ConsentVersi
         string? commit = product.GetCustomAttributes<AssemblyMetadataAttribute>()
             .FirstOrDefault(a => a.Key == "VaultSyncSourceCommit")?.Value;
         if (commit is null || commit.Length is not (40 or 64) || commit.Any(c => !char.IsAsciiHexDigit(c))) commit = null;
-        return new(1, 1, Guid.NewGuid(), product.GetName().Version?.ToString() ?? "0.0.0",
+        string channel = Channel(product);
+        return new(1, channel == "beta" ? 2 : 1, Guid.NewGuid(), product.GetName().Version?.ToString() ?? "0.0.0",
             Environment.Version.ToString(), commit?.ToLowerInvariant(),
-            Channel(product),
+            channel,
             OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : OperatingSystem.IsLinux() ? "linux" : "other",
             Math.Clamp(Environment.OSVersion.Version.Major, 0, 999),
             RuntimeInformation.ProcessArchitecture switch { System.Runtime.InteropServices.Architecture.X64 => "x64", System.Runtime.InteropServices.Architecture.Arm64 => "arm64", System.Runtime.InteropServices.Architecture.X86 => "x86", System.Runtime.InteropServices.Architecture.Arm => "arm", _ => "other" },
@@ -39,7 +40,7 @@ public sealed record ProductDiagnosticReport(int SchemaVersion, int ConsentVersi
             Bucket(duration.TotalMilliseconds, DurationBuckets), Bucket(quantity, QuantityBuckets), Sites(exception));
     }
 
-    private static string Channel(Assembly assembly)
+    internal static string Channel(Assembly assembly)
     {
         string? channel = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == "VaultSyncReleaseChannel")?.Value;
         return channel is "development" or "candidate" or "beta" or "stable" ? channel : "development";
@@ -81,7 +82,8 @@ public sealed record ProductDiagnosticReport(int SchemaVersion, int ConsentVersi
         catch { return Array.Empty<DiagnosticCodeSite>(); }
     }
 
-    internal bool IsValid() => SchemaVersion == 1 && ConsentVersion == 1 && ReportId != Guid.Empty && ReportId.ToString("D")[14] == '4' && "89ab".Contains(ReportId.ToString("D")[19]) &&
+    internal bool IsValid() => SchemaVersion == 1 &&
+        (ConsentVersion == 1 || ConsentVersion == 2 && ReleaseChannel == "beta") && ReportId != Guid.Empty && ReportId.ToString("D")[14] == '4' && "89ab".Contains(ReportId.ToString("D")[19]) &&
         ValidVersion(AppVersion) && ValidVersion(RuntimeVersion) &&
         (SourceCommit is null || SourceCommit.Length is 40 or 64 && SourceCommit.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f')) &&
         ReleaseChannel is "development" or "candidate" or "beta" or "stable" &&

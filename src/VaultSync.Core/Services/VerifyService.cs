@@ -9,11 +9,21 @@ public class VerifyService(SqliteRepository repo, HashService hash)
     private readonly SqliteRepository _repo = repo;
     private readonly HashService _hash = hash;
 
-    public async Task<VerifyResult> VerifyAsync(Project project, string destination, int percent, bool full, CancellationToken ct = default)
+    public Task<VerifyResult> VerifyAsync(Project project, string destination, int percent, bool full, CancellationToken ct = default) =>
+        ProductDiagnostics.TraceBetaAsync(DiagnosticOperation.Verification, () => VerifyCoreAsync(project, destination, percent, full, ct), recordCompletion: false);
+
+    private async Task<VerifyResult> VerifyCoreAsync(Project project, string destination, int percent, bool full, CancellationToken ct)
     {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         Snapshot snap = _repo.GetLatestSnapshot(project.Id) ?? throw new InvalidOperationException("No snapshot found for project.");
         List<FileEntry> files = await _repo.GetFilesForSnapshotAsync(snap.Id, ct).ConfigureAwait(false);
-        if (files.Count == 0) return new VerifyResult(0, 0, []);
+        if (files.Count == 0)
+        {
+            if (ProductDiagnostics.IsBeta)
+                ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Completed,
+                    phase: DiagnosticPhase.Verify, duration: clock.Elapsed);
+            return new VerifyResult(0, 0, []);
+        }
 
         List<FileEntry> sample = ChooseSample(files, ClampPercent(percent), full);
 
@@ -31,6 +41,7 @@ public class VerifyService(SqliteRepository repo, HashService hash)
 
         ProductDiagnostics.Record(DiagnosticOperation.Verification, mismatches.Count == 0 ? DiagnosticOutcome.Completed : DiagnosticOutcome.Failed,
             phase: DiagnosticPhase.Verify, quantity: checkedCount,
+            duration: ProductDiagnostics.IsBeta ? clock.Elapsed : default,
             failure: mismatches.Count == 0 ? DiagnosticFailure.None : DiagnosticFailure.IntegrityMismatch);
         return new VerifyResult(sample.Count, checkedCount - mismatches.Count, mismatches);
     }

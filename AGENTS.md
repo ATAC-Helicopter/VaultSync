@@ -204,6 +204,18 @@ user data and recorded technical payloads. Run
 See [the localization contract](docs/LOCALIZATION.md); this is a shared rule for
 every release and PR. Static checks supplement translation and rendered UI review.
 
+## Beta diagnostic policy
+
+Only the exact compiled beta channel enables default structured technical sending
+and expanded tracing (policy 2). Stable, candidate and development retain explicit
+policy-1 opt-in. Keep beta preferences/queues isolated, honor prior refusal, fail
+closed on invalid/unwritable choice storage and never transfer default beta
+permission or pending reports into stable. Disclose and localize the behavior;
+keep review/disable/delete controls. Preserve fixed allowlisted fields and bounds;
+never upload raw logs/dumps, user content, paths, credentials or persistent user/
+device/session identifiers. Follow docs/PRODUCT_DIAGNOSTICS.md on both client and
+receiver. The maintainer explicitly selected this beta-only default on 2026-10-20.
+
 ## Private editorial material
 
 Development diary manuscripts, Reddit drafts and publication packages belong in
