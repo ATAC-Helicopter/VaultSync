@@ -151,3 +151,11 @@ The small-window check also separates project-card names from snapshot statistic
 on two lines and hides duplicate missing-snapshot size text. The existing
 responsive sidebar remains in use; this increment does not redesign the project
 editor or qualify all narrow layouts.
+
+## Combined implementation review — 2026-10-20
+
+The [joint decision package](ARCHITECTURE_REVIEW_1.9.0.md#implementation-decision-package--2026-10-20)
+provides the concrete first-profile recommendation and remaining implementation
+checks alongside the other three contracts. It remains proposed, not approved
+or qualified. No persisted format, privileged operation or support status changes
+merely because this review candidate exists.

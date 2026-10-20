@@ -446,3 +446,11 @@ fresh device identity and recovery authorization remain separate gates. Ordinary
 file IDs/GPT GUIDs are not physical destination authority. No device writes,
 boot-medium implementation, UI workflow or approved format follows from this work.
 See [independent fixtures and current checks](release-evidence/1.9-image-origin-2026-10-15.md).
+
+## Combined implementation review — 2026-10-20
+
+The [joint decision package](ARCHITECTURE_REVIEW_1.9.0.md#implementation-decision-package--2026-10-20)
+provides the concrete first-profile recommendation and remaining implementation
+checks alongside the other three contracts. It remains proposed, not approved
+or qualified. No persisted format, privileged operation or support status changes
+merely because this review candidate exists.

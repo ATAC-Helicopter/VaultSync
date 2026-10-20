@@ -282,3 +282,13 @@ See [implementation checks and VM measurement](../release-evidence/1.9-linux-blo
 Kernel field semantics follow the [Linux sysfs ABI](https://github.com/torvalds/linux/blob/master/Documentation/ABI/stable/sysfs-block)
 and [mount namespace contract](https://man7.org/linux/man-pages/man5/proc_pid_mountinfo.5.html).
 This does not approve an elevated worker or qualify a disk support profile.
+
+## Joint direction ready for review — 2026-10-20
+
+The [combined implementation package](../ARCHITECTURE_REVIEW_1.9.0.md#implementation-decision-package--2026-10-20)
+now names the initial platform, raw engine/format choice, bounded processing,
+completion/interrupt semantics, privilege and exact target authorization,
+identity/evidence and desktop scope. It incorporates the maintainer's earlier
+delegation to select the best engine without inferring joint approval from a
+request to continue. The engine matrix stays proposed with no approval record
+and zero qualified profiles until actual review and measured qualification.

@@ -1290,6 +1290,10 @@ repository must not transfer before a compatible release is adopted.
     audit mounts close without modifying stored backups.
 - [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
   matrix before implementation claims begin.
+  - Joint review package (2026-10-20): concrete offline platform/raw format,
+    bounds, completion, privilege, target identity and desktop recommendations
+    are ready in [the combined review](docs/ARCHITECTURE_REVIEW_1.9.0.md).
+    No approval is inferred from continuing development; matrix status stays proposed.
   - Progress: [ADR 001](docs/adr/001-imaging-engine-1.9.md) compares engines and
     proposes an isolated full raw/offline profile. Four candidate GPT/UEFI
     ext4/NTFS sector profiles have an executable evidence gate; none is qualified.

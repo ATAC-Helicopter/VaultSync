@@ -498,3 +498,13 @@ Tests launch the real worker on each CI platform; native negative process probes
 exercise refusals and cancellation. This closes the missing parent transport
 boundary, not desktop/media integration, authentication, privilege or device
 access. Current evidence is [the client record](release-evidence/1.9-disk-worker-client-2026-10-20.md).
+
+## Joint implementation review candidate — 2026-10-20
+
+VS-1918/#575 coordinates the concrete combined direction with VS-1910/#501,
+VS-1917/#574 and VS-1919/#576 in [the review package](ARCHITECTURE_REVIEW_1.9.0.md#implementation-decision-package--2026-10-20).
+It selects the recommendation, bounds and refusal/operation semantics for review,
+with desktop locales and installed updater/provenance qualification preserved.
+The earlier engine-choice delegation is acknowledged separately from the actual
+joint maintainer approval required before device integration. Matrix decision
+and all candidate status stay unchanged; no review or support is fabricated.

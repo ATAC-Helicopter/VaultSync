@@ -30,3 +30,80 @@ and retained measured Capture → Validate → Boot → Restore → Validate evi
 Architecture approval would not qualify a device, supported platform or release.
 Approval records must reflect an actual maintainer review; do not infer them from
 an instruction to continue development or from passing CI.
+
+
+## Implementation decision package — 2026-10-20
+
+Status: **ready for joint maintainer review; not approved**. This is the concrete
+combined direction for VS-1910/#501, VS-1917/#574, VS-1918/#575 and VS-1919/#576.
+The maintainer already delegated selection of the best engine approach. That
+choice is reflected in the internal raw/offline recommendation below; this
+package supplies the wider format, operation and identity decisions required
+by this document's joint review gate. It does not manufacture an approval.
+
+### Selected recommendation
+
+1. **Recovery environment:** independently booted Linux x64/UEFI, offline and
+   without Secure Boot. The first measured beta profile is GPT/ext4/512 in a
+   disposable VM. GPT/NTFS and 4096-byte profiles remain candidates until their
+   own runs qualify them. Existing desktop file backups retain their platforms.
+2. **Engine:** internal full raw-byte capture and restore, behind a fixed trusted
+   worker. No Partclone dependency, custom compression, live snapshots, resize,
+   sector translation or filesystem allocation parser in this first profile.
+   Copy all disk bytes, including unused regions; users must be told that raw
+   images can retain deleted data and require protected storage.
+3. **Image:** a self-contained directory with fixed `image.metadata` and
+   `payload.raw` names, not manifest-selected paths. Keep the independently
+   exercised 24-byte VSIMAGE 1.0 envelope, little-endian numeric fields,
+   network-order UUIDs, SHA-256, schema-2 GPT/source/tool records and completion
+   binding as the starting serialization. One full raw part/extent; no
+   compression, encryption, external parents, URLs or executable descriptors.
+   Freeze the complete byte specification and permanent fixtures before a
+   product writer; synthetic records never become native-capture evidence.
+4. **Bounds and completion:** stream fixed-size buffers, enforce numeric/count
+   limits before allocation, and reject unknown required features. Define
+   a first-profile hard ceiling of 8 TiB, 16 MiB metadata, 128 GPT entries and
+   128 KiB buffers; these are refusal limits, not qualified capacity claims.
+   Capture requires space for the entire raw payload and metadata; restore
+   requires separate space for protected staging. Reject overflow before
+   allocation or opening an output. Flush payload,
+   manifest and directory state before publishing completion. An interrupted
+   operation stays incomplete; automatic resume requires separate demonstrated
+   source continuity and must otherwise refuse and require a new attempt.
+5. **Privilege:** keep UI and hostile image inspection unprivileged. Before any
+   write, authenticate the local worker channel and authorized operation, verify
+   the worker build, re-observe exact native identity and geometry through the
+   opened handle, prove supported offline/exclusive state, and resolve repository
+   ancestry. The new inventory client is not this privileged boundary.
+6. **Restore:** fully verify and protect staged payload bytes before writes.
+   Require a whole-disk destination of equal capacity and logical geometry,
+   outside the image repository, with an explicit translated overwrite preview
+   and confirmation. Unknown, ambiguous, mounted, changed or unsupported
+   destinations refuse. Record interrupted writes honestly; no rollback claim.
+7. **Identity and evidence:** image/operation/generation/content root binding is
+   distinct from device identity and trusted origin. Checksums prove recorded
+   byte integrity, not authorship. Record actual measured stages, negative cases
+   and producer/build/environment; never promote a fixture or user confirmation
+   into successful recovery evidence. Redact physical identifiers from exports.
+8. **Desktop integration:** extend the existing typed navigation and retained
+   pages. Add the complete recovery workflow with all 19 locales, accessibility,
+   cancellation and language-change handling; no resource CLI or later-release
+   discovery/help scope is pulled into 1.9.0.
+
+### What approval allows and what remains gated
+
+Approval selects this joint implementation direction and allows device-adapter
+implementation/testing in disposable VMs after the concrete protocol/format
+security checks above. It does not authorize writes to maintainer host devices,
+weaken required PR reviews, qualify support or publish a beta. Keep #736 draft.
+
+A beta still requires all owned feature paths integrated, at least one measured
+Capture → Validate → Boot → Restore → Validate profile, negative/refusal and
+interruption tests, installed desktop/localization review, exact 1.8.9 updater
+qualification, and full-inventory online/offline release provenance. Unsupported
+profiles must be shown explicitly. The custom compression experiment stays
+secondary. No release date or completed-feature claim is made by this package.
+
+Record an actual joint review outcome, reviewer, date and retained reference in
+this document and the engine matrix before qualifying a capture. If a direction
+changes, update the four contracts and qualification plan together.

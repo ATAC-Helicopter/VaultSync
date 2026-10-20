@@ -265,3 +265,11 @@ GPT observations before success; generic payload verification alone does not.
 No external locator, physical serial or secret is exported. The explicit scope
 is regular-file fixtures, never privileged device permission or complete recovery
 evidence. See [the format boundary](DISK_IMAGE_FORMAT_1.9.md#provisional-sourcelayouttool-binding--2026-10-15).
+
+## Combined implementation review — 2026-10-20
+
+The [joint decision package](ARCHITECTURE_REVIEW_1.9.0.md#implementation-decision-package--2026-10-20)
+provides the concrete first-profile recommendation and remaining implementation
+checks alongside the other three contracts. It remains proposed, not approved
+or qualified. No persisted format, privileged operation or support status changes
+merely because this review candidate exists.
