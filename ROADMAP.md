@@ -1597,7 +1597,8 @@ repository must not transfer before a compatible release is adopted.
   - Tracking: issue #810; sole preparation PR #736. Initial restored analysis
     ec202c1 found four reliability/nine security findings and 62.2% new coverage.
     Hosted 1a777b0 measured 83.6% coverage and zero reliability findings; the
-    signing-option follow-up still requires a fresh hosted gate.
+    signing-option follow-up on 6ee344e now passes the actual hosted gate after
+    documented false-positive review; release-gated integration remains open.
 
 - [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
   - Scope: SonarCloud rejects PR metadata after successful build and coverage
@@ -1609,7 +1610,8 @@ repository must not transfer before a compatible release is adopted.
     October 19 authenticated inspection found the organization unbound while
     the project claimed BOUND. Approved GitHub access is limited to VaultSync;
     organization and project bindings are now verified. Current-head analysis
-    remains the acceptance gate; see the October 19 follow-up evidence.
+    passed on 6ee344e, verified October 20; release-gated integration remains open.
+    See the October 19 follow-up evidence and its verified outcome.
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
   - Tracking reconciliation (2026-10-15): the initial family audit covered 102

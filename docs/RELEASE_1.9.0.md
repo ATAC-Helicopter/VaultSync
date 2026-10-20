@@ -373,7 +373,9 @@ public benchmark bytes are preserved with three reviewed call-site exceptions.
 exact source results and the hosted gate separately; thresholds remain unchanged.
 Hosted 1a777b0 reached 83.6% coverage and zero reliability findings. Two public
 synthetic benchmark PRNG findings were formally reviewed as false positives;
-verifier options now bind values with `=` and require a fresh hosted analysis.
+verifier options now bind values with `=`. The actual hosted gate on 6ee344e
+passes after documented review of the source-ref false positives, verified
+2026-10-20. Release-gated integration and beta qualification remain separate.
 
 ## Release signing — 2026-10-13
 
