@@ -1240,6 +1240,9 @@ repository must not transfer before a compatible release is adopted.
     fixture and offline-block source claims; strict capacity/total metadata/GPT
     limits and actual payload layout comparison now complement content hashes.
     Permanent independent valid/refusal cases cover both sector geometries.
+    The pure bounded encoder reproduces those bytes exactly, rejecting invalid
+    identity, origin, geometry, partition and digest claims before serialization.
+    Encoding supplies no durable completion or native acquisition.
     This opens no devices and proves no durable capture, source trust or restore.
     See [wire contract](docs/DISK_IMAGE_RAW_WIRE_1.9.md) and
     [current evidence](docs/release-evidence/1.9-raw-image-reader-2026-10-20.md).

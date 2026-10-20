@@ -15,7 +15,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [VS-1904] Isolate disk observations and reject malformed or incomplete worker responses.
 - [VS-1904] Prototype Linux disk reads with exclusive handles and native identity checks.
 - [VS-1905] Observe Linux disk geometry, mounted descendants and ambiguous device identities.
-- [VS-1917] Verify raw image contents against recorded disk layouts and strict limits.
+- [VS-1917] Encode raw image metadata and verify payload layouts against strict limits.
 - [VS-1917] Bind draft image source and tool claims to captured GPT layouts.
 - [VS-1917] Inspect GPT metadata with bounded reads and matching backup tables.
 - [VS-1996] Prototype content-guided numeric and GUID compression with exact spelling recovery.

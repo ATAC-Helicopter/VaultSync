@@ -139,6 +139,22 @@ trust, physical identity, filesystem semantics, bootability or target safety.
 The core technical reason keys are not exposed as UI text; a desktop flow must
 supply all 19 locale translations when integrated.
 
+## Metadata encoding
+
+`DiskImageRawMetadataEncodingService.Encode` accepts image/capture/part IDs,
+generation, bounded source/layout claims and a lowercase SHA-256 payload digest.
+It owns a bounded partition snapshot, validates claims and emits exactly the
+records above with their completion hash. Both geometries must match the
+independently encoded permanent bytes exactly. Invalid input returns no bytes
+or root. Earlier fixture writers are unchanged.
+
+`MetadataEncoded` means serialized caller-owned bytes, not captured payload,
+verified GPT, trusted producer, disk access or durable publication. For example,
+a syntactically valid 8 TiB claim still refuses verification against a short
+payload. The future writer must verify acquired/staged bytes and honor durable
+publication ordering before persisting the completion portion; this pure codec
+has no file/stream side effects and cannot fulfill those gates itself.
+
 ## Permanent compatibility corpus
 
 `tests/VaultSync.Core.Tests/Fixtures/disk-image-raw-profile-v1.json` contains

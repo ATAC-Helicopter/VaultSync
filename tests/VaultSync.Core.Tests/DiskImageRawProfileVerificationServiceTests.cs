@@ -21,8 +21,8 @@ public sealed class DiskImageRawProfileVerificationServiceTests
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", name)),
         new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
     public static IEnumerable<object[]> Corpus() => Load<Fixture[]>("disk-image-raw-profile-v1.json").Select(f => new object[] { f });
-    private static Fixture Valid(uint sector = 512) => Load<Fixture[]>("disk-image-raw-profile-v1.json").Single(f => f.Sector == sector && f.Name == "valid");
-    private static byte[] Raw(uint sector)
+    internal static Fixture Valid(uint sector = 512) => Load<Fixture[]>("disk-image-raw-profile-v1.json").Single(f => f.Sector == sector && f.Name == "valid");
+    internal static byte[] Raw(uint sector)
     {
         var gpt = Load<JsonElement>("disk-gpt-v1.json").EnumerateArray().Single(g => g.GetProperty("sector").GetUInt32() == sector);
         byte[] raw = new byte[gpt.GetProperty("capacity").GetInt32()];

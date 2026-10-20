@@ -547,3 +547,12 @@ geometries; source kind is not authenticated provenance. Generic historical
 fixture/schema compatibility remains intact. No product image writer, durable
 capture, privileged operation, boot medium or qualified profile is claimed.
 [Current results and limits](release-evidence/1.9-raw-image-reader-2026-10-20.md).
+
+
+## Raw metadata codec — 2026-10-20
+
+VS-1917/#574 adds a bounded pure encoder for the frozen reader contract.
+Independent golden bytes match in both geometries; invalid claims produce no
+metadata. It opens no paths/devices and grants no publication, durability or
+restore claim. Actual capture, staging and directory protocol remain open.
+[Current codec evidence](release-evidence/1.9-raw-metadata-codec-2026-10-20.md).

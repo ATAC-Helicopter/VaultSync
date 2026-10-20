@@ -490,3 +490,13 @@ The caller holds supplied streams; no paths/devices are opened, bytes written,
 source consistency authenticated or future reads authorized. A completion record
 is not proof of durable publication. Capture/worker/restore/media qualification
 remains required. See [verification evidence](release-evidence/1.9-raw-image-reader-2026-10-20.md).
+
+
+## Raw metadata encoder — 2026-10-20
+
+The pure bounded encoder now reproduces both independent first-profile fixtures
+byte for byte. It validates identity, source kind, capacity/geometry, partition
+claims and payload digest, owning its partition snapshot. MetadataEncoded returns
+caller-owned serialized bytes, not a captured or durably complete image. Existing
+fixture writers retain their exact encoding and cap. See
+[codec results](release-evidence/1.9-raw-metadata-codec-2026-10-20.md).
