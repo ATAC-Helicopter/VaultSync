@@ -167,3 +167,13 @@ forged layout with a valid root, corrupt payload and total-metadata overflow.
 Reproduce with `python3 scripts/generate_raw_profile_fixtures.py`; it imports no
 product encoder. These fixtures are synthetic bytes, not native capture proof.
 The earlier schema-1 and source-kind-1 fixtures remain unchanged and readable.
+
+
+## Protected staging consumer
+
+The [raw staging adapter](RAW_IMAGE_STAGING_1.9.md) preserves an owned metadata
+snapshot while independently verifying copied bytes, then reopens the same
+private file inodes with kernel read-only descriptors and verifies again.
+The resulting session is input integrity evidence only. Authenticated privilege,
+source path acquisition, target authorization and image-to-device restore remain
+separate requirements; original metadata/source claims are not upgraded to trust.

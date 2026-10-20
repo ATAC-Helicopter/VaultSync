@@ -615,3 +615,21 @@ image-to-device restore, power-failure qualification or supported profile.
 1,693 Core / 242 Python pass; 20 native virtual-device/storage cases pass in a
 network-free UEFI VM. Small GPT fixtures do not qualify a filesystem or boot
 profile. Earlier lab failures and native-versus-synthetic cases remain separate.
+
+
+## Protected raw staging — 2026-10-20
+
+VS-1907/#495 snapshots bounded input metadata, verifies original bytes/GPT before
+allocation, copies into private preallocated storage, and verifies the copied
+bytes against that original snapshot. Sealing persists 0400 permissions and
+reopens matching inodes with kernel read-only descriptors before closing every
+writer. A further readback and flushed create-only publication precede an owned
+staging session. Changed source/copy/inode, invalid seal, cancellation or I/O
+failure grants no restore-input capability. This is same-privilege Core work;
+no device write, target authorization, authenticated worker, desktop/media or
+qualified recovery profile is supplied. See [staging contract](RAW_IMAGE_STAGING_1.9.md).
+
+[Current staging evidence](release-evidence/1.9-raw-staging-2026-10-20.md):
+1,710 Core / 242 Python pass; 31 native capture/staging cases pass, including
+kernel read-only descriptor checks and original-file mutation isolation.
+These small fixtures do not qualify boot or image-to-device recovery.

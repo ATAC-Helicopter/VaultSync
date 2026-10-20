@@ -80,6 +80,22 @@ public sealed class LinuxRawImageStorageTests(ITestOutputHelper output)
             File.SetUnixFileMode(publicDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead);
             Assert.Throws<IOException>(() => LinuxRawImageStorage.Create(publicDir, Guid.NewGuid(), 65536));
             Assert.Empty(Directory.GetFileSystemEntries(publicDir));
+            Guid stageId = Guid.NewGuid();
+            await using (var staging = LinuxRawImageStorage.Create(root, stageId, 65536))
+            {
+                await staging.Payload.WriteAsync(new byte[] { 7, 8, 9 });
+                await staging.Metadata.WriteAsync(new byte[] { 10, 11, 12 });
+                staging.Seal();
+                Assert.False(staging.Payload.CanWrite); Assert.False(staging.Metadata.CanWrite);
+                Assert.Throws<NotSupportedException>(() => staging.Payload.WriteByte(1));
+                Assert.Throws<IOException>(staging.Seal);
+                Assert.Equal(7, staging.Payload.ReadByte());
+                staging.FlushDirectories(); staging.Publish();
+                Assert.Throws<IOException>(staging.Seal);
+            }
+            string staged = Path.Combine(root, stageId.ToString("N"));
+            Assert.Equal(UnixFileMode.UserRead, File.GetUnixFileMode(Path.Combine(staged, "payload.raw")));
+            Assert.Equal(UnixFileMode.UserRead, File.GetUnixFileMode(Path.Combine(staged, "image.metadata")));
         }
         finally { Directory.Delete(root, recursive: true); }
     }

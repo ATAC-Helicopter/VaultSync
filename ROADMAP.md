@@ -1514,6 +1514,13 @@ repository must not transfer before a compatible release is adopted.
     No physical destination is opened. Offline media, device authorization,
     isolated worker and measured disk restore remain open. See
     [file reconstruction evidence](docs/release-evidence/1.9-file-reconstruction-2026-10-13.md).
+    Raw-profile staging now owns a bounded metadata snapshot, verifies before
+    allocation and after copying, persists private read-only permissions and
+    reopens matching inodes without writable descriptors before returning an
+    independently verified sealed session. Changed original inputs cannot
+    substitute bytes after staging. Device authority, worker/media, lifecycle
+    cleanup and the actual five-stage recovery loop remain open.
+    See [staging contract](docs/RAW_IMAGE_STAGING_1.9.md); issue #495, PR #736.
 - [ ] `VS-1908` `P1` Record clone, validation, boot, and restore evidence with
   source-machine and tool-version identity.
 - [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on

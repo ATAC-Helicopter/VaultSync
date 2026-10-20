@@ -8,7 +8,7 @@ namespace VaultSync.Core.Services;
 /// retained; no automatic cleanup, replacement, resume or arbitrary file names.
 /// Same-user/admin/kernel compromise is outside this storage boundary.
 /// </summary>
-internal sealed class LinuxRawImageStorage : LinuxRawImageCaptureService.IStorage
+internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorage
 {
     private const int DirectoryFlags = 0x10000 | 0x20000 | 0x80000;
     private const int FileFlags = 2 | 0x40 | 0x80 | 0x20000 | 0x80000;
@@ -16,8 +16,9 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageCaptureService.IStorag
     private readonly SafeFileHandle directory;
     private readonly string partialName;
     private readonly string finalName;
-    private readonly FileStream payload;
-    private readonly FileStream metadata;
+    private FileStream payload;
+    private FileStream metadata;
+    private bool sealedForStaging;
 
     private LinuxRawImageStorage(SafeFileHandle parent, SafeFileHandle directory,
         string partialName, string finalName, FileStream payload, FileStream metadata)
@@ -82,6 +83,42 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageCaptureService.IStorag
     public void FlushMetadata() => metadata.Flush(flushToDisk: true);
     public void FlushDirectories() { Sync(directory); Sync(parent); }
 
+    public void Seal()
+    {
+        if (Published || sealedForStaging) throw new IOException("raw-storage.invalid-seal-state");
+        if (Fchmod(payload.SafeFileHandle, 0x100) != 0 || Fchmod(metadata.SafeFileHandle, 0x100) != 0)
+            throw IoFailure(); // 0400; persist permissions before dropping writable descriptors.
+        payload.Flush(flushToDisk: true); metadata.Flush(flushToDisk: true);
+        FileStream? readPayload = null, readMetadata = null;
+        try
+        {
+            readPayload = ReopenReadOnly("payload.raw", payload);
+            readMetadata = ReopenReadOnly("image.metadata", metadata);
+            payload.Dispose(); metadata.Dispose();
+            payload = readPayload; metadata = readMetadata;
+            readPayload = null; readMetadata = null;
+            sealedForStaging = true;
+        }
+        finally { readPayload?.Dispose(); readMetadata?.Dispose(); }
+    }
+
+    private FileStream ReopenReadOnly(string name, FileStream original)
+    {
+        var handle = Hold(Openat(directory, name, 0x800 | 0x20000 | 0x80000, 0));
+        try
+        {
+            if (Statx(original.SafeFileHandle, "", 0x1000 | 0x100, 0x7ff, out var old) != 0 ||
+                Statx(handle, "", 0x1000 | 0x100, 0x7ff, out var fresh) != 0 ||
+                (old.Mask & 0x30f) != 0x30f || (fresh.Mask & 0x30f) != 0x30f ||
+                fresh.Mode != 0x8100 || fresh.UserId != Geteuid() || fresh.Links != 1 ||
+                old.Inode != fresh.Inode || old.Size != fresh.Size ||
+                old.DeviceMajor != fresh.DeviceMajor || old.DeviceMinor != fresh.DeviceMinor)
+                throw IoFailure();
+            return new FileStream(handle, FileAccess.Read, 128 * 1024, isAsync: false);
+        }
+        catch { handle.Dispose(); throw; }
+    }
+
     public void Publish()
     {
         if (Published) throw new IOException("raw-storage.already-published");
@@ -138,6 +175,10 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageCaptureService.IStorag
         [FieldOffset(16)] public uint Links;
         [FieldOffset(20)] public uint UserId;
         [FieldOffset(28)] public ushort Mode;
+        [FieldOffset(32)] public ulong Inode;
+        [FieldOffset(40)] public ulong Size;
+        [FieldOffset(136)] public uint DeviceMajor;
+        [FieldOffset(140)] public uint DeviceMinor;
     }
 
     [StructLayout(LayoutKind.Explicit, Size = 120)]
@@ -171,6 +212,10 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageCaptureService.IStorag
     [DllImport("libc", EntryPoint = "geteuid", CallingConvention = CallingConvention.Cdecl)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     private static extern uint Geteuid();
+
+    [DllImport("libc", EntryPoint = "fchmod", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static extern int Fchmod(SafeFileHandle handle, uint mode);
 
     [DllImport("libc", EntryPoint = "fallocate", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
