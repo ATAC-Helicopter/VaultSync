@@ -18,6 +18,8 @@ public sealed class LinuxBlockReadSession : Stream
     private long position;
     private int disposed;
 
+    internal LinuxBlockReadService.HandleIdentity Identity => identity;
+
     internal LinuxBlockReadSession(SafeFileHandle handle, LinuxBlockReadService.HandleIdentity identity,
         LinuxBlockReadService.IDeviceAccess deviceAccess)
     { this.handle = handle; this.identity = identity; this.deviceAccess = deviceAccess; }

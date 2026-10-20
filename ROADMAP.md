@@ -1402,6 +1402,12 @@ repository must not transfer before a compatible release is adopted.
     Every read rechecks the held descriptor; real virtual-device tests cover
     mounted/busy/changed refusals and hot removal. This is not an offline or
     complete-capture guarantee.
+    A same-privilege raw capture pipeline now requires a kernel-read-only source,
+    reserves private ext4 output, copies and verifies all bytes/GPT, flushes files
+    and directories, then publishes with rename-no-replace. Interruptions stay
+    partial; unconfirmed parent-sync outcomes cannot report completed images.
+    Authenticated worker/UI/media, source consistency, recovery and power-failure
+    qualification remain open. See [capture contract](docs/LINUX_RAW_CAPTURE_1.9.md).
     Issue #492; preparation PR #736. See
     [worker contract](docs/DISK_WORKER_1.9.md) and
     [worker evidence](docs/release-evidence/1.9-disk-worker-2026-10-17.md),

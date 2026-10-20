@@ -65,3 +65,11 @@ synthetic tests do not substitute for native ABI evidence.
 See [current source tests and native measurements](release-evidence/1.9-linux-block-read-2026-10-20.md).
 All support rows remain unqualified. No image, boot medium, installed updater
 or beta was qualified by this read primitive.
+
+
+## Read-only capture consumer
+
+The same-privilege [Linux raw capture adapter](LINUX_RAW_CAPTURE_1.9.md) consumes
+this held source only when its kernel read-only flag is set. Copy/EOF/GPT reads
+retain the checks above. Its output is a verified private raw image, not a writable
+device capability, authenticated worker, recovery environment or qualified disk.

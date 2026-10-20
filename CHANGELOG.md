@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1904] Prototype verified Linux raw captures with private storage and interruption handling.
 - [VS-1998] Enable richer beta diagnostics by default with private review and opt-out.
 - [VS-1904] Isolate disk observations and reject malformed or incomplete worker responses.
 - [VS-1904] Prototype Linux disk reads with exclusive handles and native identity checks.

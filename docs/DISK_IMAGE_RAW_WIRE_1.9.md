@@ -124,9 +124,11 @@ distinct. Only success exposes the observed image assessment. It never writes,
 mounts, opens a device, executes a descriptor or authorizes restore.
 
 A valid completion record proves serialization consistency, **not durable
-publication**. The forthcoming writer must flush payload and metadata, finish
-readback, flush the image directory and parent, and publish completion only
-through the agreed durable protocol. Interrupted partial directories are not
+publication**. The [Linux capture adapter](LINUX_RAW_CAPTURE_1.9.md) now flushes
+payload and metadata, completes independent readback, flushes the image directory
+and parent, then publishes with rename-no-replace and a final parent flush.
+This does not supply authenticated worker/desktop integration or power-failure
+qualification. Interrupted partial directories are not
 ordinary restore inputs. No automatic resume is implemented; a new attempt is
 required until source continuity/checkpoints are qualified.
 

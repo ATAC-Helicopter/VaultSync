@@ -1,0 +1,82 @@
+{
+  "owner": "VS-1904/#492",
+  "date": "2026-10-20",
+  "sourceBase": "83bfec67aaca6b5f0b9c9770118c7902f1045c48",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRawImageCaptureService.cs": "18eea99993747076ae61ccdcf1434e52ecc159f819a9f9c14f206a647057db1c",
+    "src/VaultSync.Core/Services/LinuxRawImageStorage.cs": "cb2c25a5314cf3957bde4fca9e23650609b857842d5c0e45f96f7256ba3298aa",
+    "src/VaultSync.Core/Services/LinuxBlockReadSession.cs": "e337565ee9dabac371f59fe2fd9d1e326387abf7751aaec8ec139b25986dc8dc",
+    "tests/VaultSync.Core.Tests/LinuxRawImageCaptureServiceTests.cs": "91f59e8da3181cebb8bf7b05388073b49c27371e2758ea74196e8960ba806d1a",
+    "tests/VaultSync.Core.Tests/LinuxRawImageStorageTests.cs": "35b0e6a5a9592d560a52be0c4fd6788147ef10454ff7f68747e93dd840ce0cd5"
+  },
+  "validation": {
+    "core": 1693,
+    "python": 242,
+    "warnings": 0,
+    "errors": 0,
+    "skipped": 0,
+    "newCoreCases": 39,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/raw-capture-20261020/release-final.log",
+    "trx": "/Users/flavio/Developer/vaultsync-validation.nosync/raw-capture-20261020/core-tests.trx",
+    "trackingLog": "/Users/flavio/Developer/vaultsync-validation.nosync/raw-capture-20261020/tracking.log"
+  },
+  "native": {
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 38.96,
+    "completed": true,
+    "guestExitZero": true,
+    "serialSha256": "e9eef6f618965ec70fb36f478db7850ac3d8c14d4bb133de50c9f4a80af527ca",
+    "controller": "virtio-blk-pci",
+    "sourceCapacityBytes": [
+      65536,
+      524288
+    ],
+    "logicalSectorBytes": [
+      512,
+      4096
+    ],
+    "cases": [
+      "observed-readonly-512",
+      "native-capture-512",
+      "independent-payload-sha-512",
+      "reopened-profile-512",
+      "private-directory-512",
+      "private-payload-512",
+      "existing-image-no-replace-512",
+      "observed-readonly-4096",
+      "native-capture-4096",
+      "independent-payload-sha-4096",
+      "reopened-profile-4096",
+      "private-directory-4096",
+      "private-payload-4096",
+      "existing-image-no-replace-4096",
+      "empty-directory-no-replace",
+      "writable-source-refused",
+      "symlink-parent-refused",
+      "symlink-ancestor-refused",
+      "nonprivate-parent-refused",
+      "space-preflight-refused"
+    ],
+    "coreAssemblySha256": "d5f8a6310bfa9e7b446740ecef57fe7f449505a987b63c9004b12bb49490fbb6",
+    "harnessAssemblySha256": "ab58a0ad844b2361083393c720402a854edd4677b5e7c9ddc4806775df9cb324",
+    "harnessSourceSha256": "2b49e32476fd1d92c3733297504672e228b2c06a0f5b8f227390adc2faeba7ae",
+    "runtimeConfigSha256": "1bc10a3f7b2e0352dd3df130e2a31514290dd566d64c1c9298b01fb85ff1867b",
+    "seedIsoSha256": "202c7d22e5fa7b6ab15d976a9758ea6149e64ca01380c51898854ffa92c13e71",
+    "qemuArgumentsSha256": "0d13bbd4c7c48795dc15805f22284c2dc257f763468ab097c82618c2cdab72ae",
+    "firmwareSha256": "33090cc07675baa5190d9f1e84bf5176b33bcbfa9bacac522961150cdb6dbb2a",
+    "hostDevicesPassed": false,
+    "network": "none"
+  },
+  "artifacts": "/Users/flavio/Developer/vaultsync-validation.nosync/raw-capture-20261020",
+  "limitations": [
+    "Same privilege; no authenticated/elevated worker or desktop integration.",
+    "Small synthetic GPT devices do not contain qualified filesystems or boot images.",
+    "No power-cut, independently booted recovery, destructive restore or installed upgrade qualification.",
+    "SCSI fixture WWID reads returned EINVAL; the observer refused. No guard relaxed.",
+    "Earlier lab attempts and warning-as-error failure are retained as failed attempts, not passes.",
+    "All four disk profiles remain candidates."
+  ]
+}

@@ -597,3 +597,21 @@ remain open; [signing policy](RELEASE_SIGNING.md#unmerged-190-beta-source--vs-19
 records the required tag/channel separation.
 [Current policy evidence](release-evidence/1.9-beta-source-2026-10-20.md).
 #736 remains draft and unmerged.
+
+
+## Read-only raw capture and private publication — 2026-10-20
+
+VS-1904/#492 connects the held Linux x64 source to the frozen raw metadata/reader
+pipeline. Kernel-read-only source, fresh native descriptor checks, fixed private
+ext4 storage, allocation preflight, bounded streaming, source GPT recheck and
+independent output readback precede flushed rename-no-replace publication.
+Cancellation before commit stays partial; failed post-rename sync is explicitly
+unconfirmed. No image or empty directory can be replaced. See
+[the storage/capture contract](LINUX_RAW_CAPTURE_1.9.md). This opens no writable
+device and supplies no authenticated privilege, desktop/media integration,
+image-to-device restore, power-failure qualification or supported profile.
+
+[Current capture evidence](release-evidence/1.9-linux-raw-capture-2026-10-20.md):
+1,693 Core / 242 Python pass; 20 native virtual-device/storage cases pass in a
+network-free UEFI VM. Small GPT fixtures do not qualify a filesystem or boot
+profile. Earlier lab failures and native-versus-synthetic cases remain separate.
