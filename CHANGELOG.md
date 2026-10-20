@@ -13,6 +13,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 - [VS-1998] Send optional technical diagnostics with explicit consent and private review.
 - [VS-1904] Isolate disk observations and reject malformed or incomplete worker responses.
+- [VS-1904] Prototype Linux disk reads with exclusive handles and native identity checks.
 - [VS-1905] Observe Linux disk geometry, mounted descendants and ambiguous device identities.
 - [VS-1917] Bind draft image source and tool claims to captured GPT layouts.
 - [VS-1917] Inspect GPT metadata with bounded reads and matching backup tables.

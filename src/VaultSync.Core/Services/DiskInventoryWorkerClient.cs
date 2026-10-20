@@ -93,7 +93,8 @@ public static class DiskInventoryWorkerClient
                 catch (InvalidOperationException) { }
                 catch (System.ComponentModel.Win32Exception) { }
                 // Never wait indefinitely for a failed peer during cancellation/timeout.
-                try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); }
+                try { await process.WaitForExitAsync(CancellationToken.None)
+                    .WaitAsync(TimeSpan.FromSeconds(2), CancellationToken.None).ConfigureAwait(false); }
                 catch (TimeoutException) { }
             }
         }

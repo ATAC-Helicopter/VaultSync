@@ -127,3 +127,12 @@ applies only to the worker process, not desktop languages. Localized recovery
 UI/media culture dependencies remain a separate packaging requirement. Current
 [client/runtime measurements](release-evidence/1.9-disk-worker-client-2026-10-20.md)
 retain the initial missing-ICU failure and subsequent exact native results.
+
+## Native read adapter boundary — 2026-10-20
+
+Core now contains [a Linux x64 read adapter](LINUX_BLOCK_READ_1.9.md). The
+inventory executable and protocol still perform no raw-device access: the new
+adapter is not wired into that worker, desktop or recovery media. It executes
+with its caller's existing privileges, offers no elevated endpoint and exposes
+no writable stream or arbitrary native command. Authenticated source operations
+and capture consistency remain required before product integration.

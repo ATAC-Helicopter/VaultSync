@@ -2,8 +2,9 @@
 
 Status: **implementation direction approved**, 2026-10-20; proposal dated 2026-10-04. Owner: VS-1918 / [#575](https://github.com/ATAC-Helicopter/VaultSync/issues/575).
 Review: sole 1.9.0 PR #736. [Actual joint approval](../release-evidence/1.9-joint-architecture-approval-2026-10-20.md)
-selects the implementation direction; it is not a support announcement. A synthetic file capture prototype exists; no device imaging engine,
-elevated helper or boot medium is implemented.
+selects the implementation direction; it is not a support announcement. A synthetic file capture and same-privilege Linux read adapter exist; complete
+device capture/restore, an authenticated elevated helper and boot medium remain
+unimplemented.
 Review with VS-1917 format, VS-1919 evidence and VS-1910 route contracts.
 The VS-1904 read-only [development worker](../DISK_WORKER_1.9.md) implements
 one bounded inventory request in a separate process, without elevation,
@@ -300,3 +301,10 @@ The retained review record is hash-bound in the engine matrix with the actual
 observed approval time. Candidate profiles remain unqualified; prior lab work
 is not retroactively accepted. Exact protocol/format security checks and all
 complete-loop, package/updater and reviewed release gates remain in force.
+
+## Native read feasibility — 2026-10-20
+
+VS-1904 adds held read descriptors and repeated native identity/geometry checks,
+with [measured virtual-device refusals and hot removal](../release-evidence/1.9-linux-block-read-2026-10-20.md).
+This is an implementation primitive under the approved direction, not a global
+offline/consistency proof, elevated protocol, disk writer or qualified profile.

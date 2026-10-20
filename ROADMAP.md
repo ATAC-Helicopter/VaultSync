@@ -1383,9 +1383,16 @@ repository must not transfer before a compatible release is adopted.
     deadline. A fixed-path parent client now enforces correlated bounded replies,
     strict JSON, process exit, timeout/cancellation and cleanup. It is not an
     authenticated/elevated worker or desktop integration.
+    A same-privilege Linux x64 adapter now opens read descriptors with exclusive
+    claims and binds native type, device number, disk sequence and geometry.
+    Every read rechecks the held descriptor; real virtual-device tests cover
+    mounted/busy/changed refusals and hot removal. This is not an offline or
+    complete-capture guarantee.
     Issue #492; preparation PR #736. See
     [worker contract](docs/DISK_WORKER_1.9.md) and
-    [current evidence](docs/release-evidence/1.9-disk-worker-2026-10-17.md).
+    [worker evidence](docs/release-evidence/1.9-disk-worker-2026-10-17.md),
+    [parent client](docs/release-evidence/1.9-disk-worker-client-2026-10-20.md) and
+    [native reads](docs/release-evidence/1.9-linux-block-read-2026-10-20.md).
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
     persisted import marker distinguishes origin from restore state; cards,

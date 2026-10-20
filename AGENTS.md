@@ -4,6 +4,18 @@ The active release is 1.9.0, unless the maintainer explicitly selects another
 release. Read ROADMAP.md, release/1.9-family.json, CONTRIBUTING.md and
 docs/RELEASE_1.9.0.md before implementation.
 
+## Approved recovery direction
+
+The maintainer explicitly approved the joint VS-1910/1917/1918/1919 implementation
+direction on 2026-10-20. The retained record is
+`docs/release-evidence/1.9-joint-architecture-approval-2026-10-20.md`, hash-bound
+in `release/disk-support-1.9.0.json`. Reuse that approval; do not ask again for
+the same engine or joint direction. It permits implementation and disposable-VM
+tests. Concrete format/protocol security checks, exact device authorization,
+protected reviews and recovery/package qualification remain required. Host-device
+writes and release publication are outside that approval; all profiles remain
+unqualified until their own measured loop passes.
+
 ## Working copy and delivery
 
 - The assembled 1.9.0 development branch is `work/1.9-roadmap-realignment`.

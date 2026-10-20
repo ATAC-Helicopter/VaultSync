@@ -99,9 +99,9 @@ This is a prerequisite increment, not the completed restore workflow. See
 [current readiness](release-evidence/1.9-beta-readiness-2026-10-15.md) and
 [preview evidence](release-evidence/1.9-disk-preview-2026-10-15.md).
 
-1. Approve VS-1910 typed routes and adaptive UI architecture, VS-1917 versioned
-   image format, VS-1918 engine/isolation and supported-system matrix, and
-   VS-1919 recovery identities, dependencies, evidence and failure domains.
+1. Finalize the concrete route, serialization and privilege/security boundaries
+   under the joint direction approved on 2026-10-20 for VS-1910/1917/1918/1919.
+   Reuse the retained approval; support remains individually qualification-gated.
 2. Implement VS-1904 capture and VS-1905 exact source/destination and wipe
    previews; incomplete/corrupt captures fail explicitly.
 3. Implement VS-1906 independent boot media and VS-1907 image-to-disk restore.
@@ -112,7 +112,8 @@ This is a prerequisite increment, not the completed restore workflow. See
 Unsupported Secure Boot, live capture, encryption and filesystem combinations
 must be explicit. If the complete loop fails, imaging remains Preview.
 There is no universal bare-metal recovery claim. BSC prerequisites do not
-block this release. The proposed route draft is still awaiting review.
+block this release. Concrete route/API and format/security finalization remain open under the
+approved joint direction.
 
 The [VS-1917 image-format review draft](DISK_IMAGE_FORMAT_1.9.md) now specifies
 logical coverage, integrity, completion/checkpoints, unknown-version rejection,
@@ -134,12 +135,14 @@ authentication, elevation, device access or release packaging. See
 [worker contract](DISK_WORKER_1.9.md) and
 [current evidence](release-evidence/1.9-disk-worker-2026-10-17.md).
 Engine/support decisions (VS-1918), shared
-identity/evidence alignment (VS-1919), fixtures and joint approval remain open.
+identity/evidence alignment (VS-1919) and fixtures remain open under the
+approved joint direction.
 The [VS-1919 identity/evidence review draft](RECOVERY_IDENTITIES_1.9.md) defines
 generation binding, dependency/failure correlation, evidence provenance and
 freshness, privacy and read-only portable inspection. A single-observation
 applicability prototype has synthetic fixtures; stable schemas, dependency
-evaluation and integration remain open. Joint architecture approval is still required.
+evaluation and integration remain open. Joint implementation direction was
+approved on 2026-10-20; concrete security/format work and qualification remain open.
 The [VS-1918 engine ADR](adr/001-imaging-engine-1.9.md) proposes an internal
 raw/offline worker and explicit support exclusions. The executable
 [qualification matrix](../release/disk-support-1.9.0.json) has four candidates
@@ -519,3 +522,16 @@ architecture direction gate, preserving concrete implementation/security review,
 disposable-VM scope, exact source/destination authorization and every measured
 recovery, installed updater, signing and release gate. Prior laboratory runs
 remain historical and cannot predate this approval for qualification purposes.
+
+## Native held read descriptors — 2026-10-20
+
+VS-1904/#492 adds the Linux x64 same-privilege read primitive. Fresh metadata
+brackets a fixed kernel-node open; held descriptor checks bind block type,
+device number, capacity, sectors, disk sequence and kernel read-only state.
+Mounted/busy, changed, ambiguous, stale and uninspectable inputs refuse. Each
+read rechecks the descriptor and closes after invalidation or I/O failure.
+[Native virtual-device evidence](release-evidence/1.9-linux-block-read-2026-10-20.md)
+includes a complete 128 MiB read, both sector geometries, exclusive-claim release
+and live hot removal. This does not implement complete capture, authenticated
+privilege, repository ancestry, write protection, restore, media or desktop UI.
+The inventory worker remains metadata-only; no profile is qualified.
