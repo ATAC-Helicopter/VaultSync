@@ -41,6 +41,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Track measured recovery prerequisites separately from remaining beta release blockers.
 - [VS-1902] Permit verified beta builds from the unmerged 1.9.0 preparation branch.
 - [VS-1918] Record isolated UEFI guest boot measurements for recovery development.
 - [VS-1980] Keep diaries outside GitHub and document automatic publication notifications.

@@ -96,7 +96,7 @@ Compression research (VS-1996) is secondary and does not block that beta. The
 VS-1905 pure overwrite planner now binds operation/image/destination observations
 and invalidates changed selections, without device I/O or write authorization.
 This is a prerequisite increment, not the completed restore workflow. See
-[current readiness](release-evidence/1.9-beta-readiness-2026-10-15.md) and
+[current readiness](release-evidence/1.9-beta-readiness-2026-10-20.md) and
 [preview evidence](release-evidence/1.9-disk-preview-2026-10-15.md).
 
 1. Finalize the concrete route, serialization and privilege/security boundaries
@@ -651,3 +651,14 @@ remain open; four profiles remain candidates and #736 remains draft.
 1,737 Core / 242 Python and 43 native capture/staging/target checks pass.
 Targets retain their independently checked bytes; no writable device is opened.
 These are prerequisites, not boot/restore or supported-profile qualification.
+
+
+## Current beta readiness — 2026-10-20
+
+VS-1980/#673 reconciles the [current readiness snapshot](release-evidence/1.9-beta-readiness-2026-10-20.md)
+with code head 99773d2, its 1,737 Core / 242 Python and 43 native cases.
+Approved direction and delivered native prerequisites are distinct from the
+remaining authenticated worker, writable restore, independent media, translated
+user workflow, complete recovery and installed update/signing gates. Four profiles
+remain candidates. No beta scope reduction, version, publication date, asset run,
+tag, publication or merge is selected by this update. #736 remains draft.

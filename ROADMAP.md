@@ -1188,7 +1188,7 @@ The full maintained strategy is
 
 ## 1.9.0 — Disk and Bootable Recovery Foundation
 
-**Status:** Active planning and architecture; destructive disk implementation remains gated
+**Status:** Active implementation; worker, independent recovery and qualification gates remain open
 **Planning started:** 2026-09-18
 **Current stable:** `1.8.9`, published 2026-09-16
 **Stable target:** 2027-03-26
@@ -1697,6 +1697,11 @@ repository must not transfer before a compatible release is adopted.
     gates, and the versioned beta workflow. Complete 1.9.0 feature scope is now
     required for beta; the asset workflow now refuses a 1.9.0 beta with no
     qualified disk profile. Suffix and date remain unset. Stable target: 2027-03-26.
+  - Current [October 20 readiness](docs/release-evidence/1.9-beta-readiness-2026-10-20.md)
+    records native capture, sealed staging and target observation at 99773d2
+    (1,737 Core / 242 Python; 43 native cases), without claiming the absent
+    worker/write/media/UI/complete-loop/upgrade/package gates. Four candidates
+    remain unqualified; no beta version or publication is selected.
   - Scope: synchronize version consumers, canonical/public metadata, historical
     1.8.9 publication, release contract, milestone, labels, project fields, and
     the release/1.9.0 draft PR into Dev; retain existing dates and immutable IDs.
