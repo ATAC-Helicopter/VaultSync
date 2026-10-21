@@ -1,0 +1,43 @@
+{
+  "owner": "BUG-19034/#810",
+  "sourceBase": "d798e5882f5c4b49e621579190c9566cf07c569b",
+  "date": "2026-10-21",
+  "sourceSha256": {
+    "scripts/release_draft.py": "773cf57ccf61e6a8c1974286ccf8c2badac4d5696c20979275799fa08388a307",
+    ".github/workflows/release-assets.yml": "54d706b2e0410d23f438a5d3b58932dcd60ca88bac24fff9609c29198af91da7",
+    "tests/scripts/test_release_draft.py": "1e734c98cdb4720bdf245f7c736694ae1283158428b282b060d8600cde4639a6",
+    "tests/scripts/test_release_workflow.py": "493e4b77c28f3f77c67d2e6bb27c588d07eddbbc302e3aa90ae99ba8d94389c0"
+  },
+  "hostedFinding": {
+    "rule": "pythonsecurity:S8707",
+    "failedHead": "d798e5882f5c4b49e621579190c9566cf07c569b",
+    "component": "scripts/release_draft.py",
+    "line": 23
+  },
+  "validation": {
+    "core": 1763,
+    "python": 261,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "draftCases": 19,
+    "newBoundaryCases": 6,
+    "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/draft-boundary-20261021/release.log",
+    "trx": "/Users/flavio/Developer/vaultsync-validation.nosync/draft-boundary-20261021/core-tests.trx",
+    "trxSha256": "b41f09e36f4bd3ef7dbd9c484cdb225a8f1a9d91e303afd46b78490f6c9516e7",
+    "trackingOwners": 45,
+    "trackingDiscrepancies": 0
+  },
+  "limits": {
+    "jsonBytes": 2097152,
+    "cliPathOverrides": false,
+    "arbitraryRoleNames": false
+  },
+  "limitations": [
+    "Hosted reanalysis on the delivered head remains required.",
+    "Workspace-owner/admin replacement of directory trees is not a sandbox boundary.",
+    "No beta publication, new asset run or installed-client upgrade qualification."
+  ]
+}

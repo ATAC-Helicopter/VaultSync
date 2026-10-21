@@ -167,3 +167,22 @@ responses, including no-patch/all-patch, partial/complete draft, tag/byte mismat
 and already-published refusal. They do not qualify native packages, new signatures,
 live GitHub tag/field behavior, installed old-client discovery/upgrade or final
 publication. Retained results: [draft evidence](release-evidence/1.9-beta-draft-2026-10-21.md).
+
+
+### Fixed draft input boundary — BUG-19034, 2026-10-21
+
+The draft tool takes no file/directory arguments. It reads `source-run.json`,
+`release-assets/vaultsync-release-manifest.json`, `draft-release.json` /
+`final-draft-release.json` and `draft-assets.json` / `uploaded-assets.json`
+from the job workspace. `target` and `assets` take only `--phase before|after`;
+the phase selects a literal filename, never a path. Inventory root is fixed to
+`release-assets`. Repository, source/version/channel and patch flags retain
+validation; they cannot select local files.
+
+JSON reads refuse parent traversal, paths outside the canonical workspace,
+symbolic links through input components, non-regular or multiply linked files,
+changed held file identities, more than 2 MiB, non-UTF-8 and duplicate members.
+This is input confinement in a trusted CI workspace, not a sandbox against its
+owner or an administrator concurrently replacing directory trees. Existing tag,
+draft, asset and online/offline signature gates remain unchanged. Full current
+validation and hosted reanalysis status: [input boundary evidence](release-evidence/1.9-draft-input-boundary-2026-10-21.md).

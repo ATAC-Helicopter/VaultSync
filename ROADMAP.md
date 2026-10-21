@@ -1684,6 +1684,14 @@ repository must not transfer before a compatible release is adopted.
     signing-option follow-up on 6ee344e now passes the actual hosted gate after
     documented false-positive review; release-gated integration remains open.
 
+
+  - Draft follow-up (2026-10-21): hosted d798e58 reports S8707 on CLI-selected
+    JSON input paths. Remove file/directory overrides, select fixed workspace
+    inputs by phase, bound UTF-8 JSON to 2 MiB and reject outside/traversal,
+    symbolic/hard links and changed descriptors. Preserve exact asset/signature
+    checks; new regressions and exact-head reanalysis are required. See
+    [boundary evidence](docs/release-evidence/1.9-draft-input-boundary-2026-10-21.md).
+
 - [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
   - Scope: SonarCloud rejects PR metadata after successful build and coverage
     on #736 and the other 1.9 preparation PRs; `Dev` branch analyses pass.

@@ -2,7 +2,9 @@
 """Fail-closed source, inventory and existing draft checks; never creates/publishes releases."""
 import argparse
 import json
+import os
 import re
+import stat
 import subprocess
 from pathlib import Path
 from urllib.parse import quote
@@ -12,7 +14,25 @@ from release_manifest import (MANIFEST_NAME, collect_assets, expected_asset_keys
 from release_source import beta_source_allowed
 
 
-def load(path):
+MAXIMUM_JSON_BYTES = 2 * 1024 * 1024
+JSON_INPUTS = {
+    'source': Path('source-run.json'),
+    'manifest': Path('release-assets') / MANIFEST_NAME,
+    'before-target': Path('draft-release.json'),
+    'after-target': Path('final-draft-release.json'),
+    'before-assets': Path('draft-assets.json'),
+    'after-assets': Path('uploaded-assets.json'),
+}
+
+
+def load(role):
+    # Role lookup selects a literal workspace filename, never a CLI path.
+    if role not in JSON_INPUTS:
+        raise ValueError('Unknown draft input role')
+    return read_workspace_json(JSON_INPUTS[role])
+
+
+def read_workspace_json(path):
     def unique(pairs):
         result = {}
         for key, value in pairs:
@@ -20,7 +40,32 @@ def load(path):
                 raise ValueError('Duplicate JSON member')
             result[key] = value
         return result
-    return json.loads(Path(path).read_text(encoding='utf-8'), object_pairs_hook=unique)
+    workspace = Path.cwd().resolve(strict=True)
+    path = Path(path)
+    if '..' in path.parts:
+        raise ValueError('Parent traversal is not a draft input')
+    candidate = path if path.is_absolute() else workspace / path
+    if not candidate.is_relative_to(workspace):
+        raise ValueError('Draft input must be inside the workspace')
+    current = workspace
+    for part in candidate.relative_to(workspace).parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError('Draft inputs cannot traverse symbolic links')
+    before = candidate.lstat()
+    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > MAXIMUM_JSON_BYTES:
+        raise ValueError('Draft JSON must be a bounded single-link regular file')
+    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0)
+    descriptor = os.open(candidate, flags)
+    with os.fdopen(descriptor, 'rb') as stream:
+        held = os.fstat(stream.fileno())
+        if ((held.st_dev, held.st_ino) != (before.st_dev, before.st_ino) or
+                not stat.S_ISREG(held.st_mode) or held.st_nlink != 1):
+            raise ValueError('Draft input changed during opening')
+        content = stream.read(MAXIMUM_JSON_BYTES + 1)
+    if len(content) > MAXIMUM_JSON_BYTES:
+        raise ValueError('Draft JSON exceeds the input limit')
+    return json.loads(content.decode('utf-8'), object_pairs_hook=unique)
 
 
 def source_ref(run, repository, version, channel, dispatch_ref):
@@ -34,7 +79,7 @@ def source_ref(run, repository, version, channel, dispatch_ref):
     ref = 'refs/heads/' + str(run.get('head_branch', ''))
     if ref != dispatch_ref:
         raise ValueError('Draft assembly must use the source branch')
-    allowed = (ref == 'refs/heads/Stable' and re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version)
+    allowed = (ref == 'refs/heads/Stable' and re.fullmatch(r'\d+\.\d+\.\d+', version, re.ASCII)
                if channel == 'stable' else channel == 'beta' and beta_source_allowed(version, ref))
     if not allowed:
         raise ValueError('Unauthorized release source/channel')
@@ -43,7 +88,7 @@ def source_ref(run, repository, version, channel, dispatch_ref):
 
 def inventory(root, run, repository, version, channel, windows=False, macos=False, linux=False):
     root = Path(root)
-    manifest = load(root / MANIFEST_NAME)
+    manifest = read_workspace_json(root / MANIFEST_NAME)
     validate_manifest(manifest, asset_root=root)
     identity = manifest['release']
     if any(identity[key] != value for key, value in (
@@ -73,7 +118,7 @@ def github(endpoint):
 def verify_tag(repository, tag, commit, lookup=github):
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
         raise ValueError('Invalid repository')
-    if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+-[A-Za-z0-9.-]+', tag):
+    if not re.fullmatch(r'v\d+\.\d+\.\d+-[A-Za-z0-9.-]+', tag, re.ASCII):
         raise ValueError('Invalid beta tag')
     reference = lookup(f'repos/{repository}/git/ref/tags/{quote(tag, safe="")}')
     if reference.get('ref') != 'refs/tags/' + tag:
@@ -85,12 +130,10 @@ def verify_tag(repository, tag, commit, lookup=github):
         if not isinstance(sha, str) or not re.fullmatch(r'[0-9a-f]{40}', sha) or sha in seen:
             raise ValueError('Invalid/cyclic tag object')
         seen.add(sha)
-        if obj.get('type') == 'commit':
-            if sha != commit:
-                raise ValueError('Existing beta tag points to another commit')
+        if obj.get('type') == 'commit' and sha == commit:
             return
         if obj.get('type') != 'tag':
-            raise ValueError('Beta tag must resolve to a commit')
+            raise ValueError('Beta tag must resolve to the exact source commit')
         annotated = lookup(f'repos/{repository}/git/tags/{sha}')
         if annotated.get('sha') != sha:
             raise ValueError('Tag object identity differs')
@@ -137,33 +180,32 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subs = parser.add_subparsers(dest='command', required=True)
     source = subs.add_parser('source')
-    for name in ('run', 'repository', 'version', 'channel', 'dispatch-ref'):
+    for name in ('repository', 'version', 'channel', 'dispatch-ref'):
         source.add_argument('--' + name, required=True)
     inv = subs.add_parser('inventory')
-    for name in ('root', 'run', 'repository', 'version', 'channel'):
+    for name in ('repository', 'version', 'channel'):
         inv.add_argument('--' + name, required=True)
     for platform in ('windows', 'macos', 'linux'):
         inv.add_argument('--' + platform + '-patches', action='store_true')
     draft = subs.add_parser('target')
-    draft.add_argument('--release', required=True)
-    draft.add_argument('--manifest', required=True)
+    draft.add_argument('--phase', choices=('before', 'after'), required=True)
     assets = subs.add_parser('assets')
-    assets.add_argument('--root', required=True)
-    assets.add_argument('--pages', required=True)
+    assets.add_argument('--phase', choices=('before', 'after'), required=True)
     assets.add_argument('--complete', action='store_true')
     args = parser.parse_args()
     try:
         if args.command == 'source':
-            print(source_ref(load(args.run), args.repository, args.version, args.channel, args.dispatch_ref))
+            print(source_ref(load('source'), args.repository, args.version, args.channel, args.dispatch_ref))
         elif args.command == 'inventory':
-            inventory(args.root, load(args.run), args.repository, args.version, args.channel,
+            inventory(Path('release-assets'), load('source'), args.repository, args.version, args.channel,
                       args.windows_patches, args.macos_patches, args.linux_patches)
         elif args.command == 'target':
-            manifest = load(args.manifest)
+            manifest = load('manifest')
             validate_manifest(manifest)
-            target(load(args.release), manifest)
+            target(load('before-target') if args.phase == 'before' else load('after-target'), manifest)
         else:
-            for path in remote_assets(args.root, load(args.pages), complete=args.complete):
+            pages = load('before-assets') if args.phase == 'before' else load('after-assets')
+            for path in remote_assets(Path('release-assets'), pages, complete=args.complete):
                 print(path)
     except (ValueError, KeyError, TypeError, AttributeError, OSError, subprocess.SubprocessError) as error:
         parser.exit(1, f'Draft validation refused: {error}\n')

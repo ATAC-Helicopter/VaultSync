@@ -1161,7 +1161,7 @@ jobs:
           set -euo pipefail
           [[ "$ASSET_RUN" =~ ^[0-9]+$ ]] || { echo 'Asset run must be a numeric run ID'; exit 1; }
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ASSET_RUN" > source-run.json
-          source_ref="$(python3 scripts/release_draft.py source --run source-run.json \
+          source_ref="$(python3 scripts/release_draft.py source \
             --repository "$GITHUB_REPOSITORY" --version "$TARGET_VERSION" \
             --channel "$RELEASE_CHANNEL" --dispatch-ref "$GITHUB_REF")"
           echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
@@ -1223,7 +1223,7 @@ jobs:
           LINUX_PATCHES: ${{ inputs.include_linux_patches }}
         run: |
           set -euo pipefail
-          patch_args=(--root release-assets --run source-run.json --repository "$GITHUB_REPOSITORY" --version "$TARGET_VERSION" --channel "$RELEASE_CHANNEL")
+          patch_args=(--repository "$GITHUB_REPOSITORY" --version "$TARGET_VERSION" --channel "$RELEASE_CHANNEL")
           [[ "$WINDOWS_PATCHES" != "true" ]] || patch_args+=(--windows-patches)
           [[ "$MACOS_PATCHES" != "true" ]] || patch_args+=(--macos-patches)
           [[ "$LINUX_PATCHES" != "true" ]] || patch_args+=(--linux-patches)
@@ -1236,17 +1236,17 @@ jobs:
           # Existing drafts only. Beta tags must already resolve to the exact
           # qualified source; Dev is solely the old updater's discovery marker.
           gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" > draft-release.json
-          python3 scripts/release_draft.py target --release draft-release.json --manifest release-assets/vaultsync-release-manifest.json
+          python3 scripts/release_draft.py target --phase before
           release_id="$(jq -r '.id' draft-release.json)"
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > draft-assets.json
-          python3 scripts/release_draft.py assets --root release-assets --pages draft-assets.json > missing-assets.txt
+          python3 scripts/release_draft.py assets --phase before > missing-assets.txt
           assets=()
           while IFS= read -r asset; do assets+=("$asset"); done < missing-assets.txt
           if [[ ${#assets[@]} -gt 0 ]]; then
             gh release upload "$tag" "${assets[@]}"
           fi
           gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" > final-draft-release.json
-          python3 scripts/release_draft.py target --release final-draft-release.json --manifest release-assets/vaultsync-release-manifest.json
+          python3 scripts/release_draft.py target --phase after
           [[ "$(jq -r '.id' final-draft-release.json)" == "$release_id" ]] || { echo 'Draft identity changed during upload.' >&2; exit 1; }
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > uploaded-assets.json
-          python3 scripts/release_draft.py assets --root release-assets --pages uploaded-assets.json --complete
+          python3 scripts/release_draft.py assets --phase after --complete

@@ -714,3 +714,14 @@ recovery/profile qualification and protected reviews remain open. The workflow
 never creates/moves a tag, creates/edits/publishes a release or merges #736.
 See [signing/staging contract](RELEASE_SIGNING.md#existing-beta-draft-assembly--2026-10-21)
 and [current evidence](release-evidence/1.9-beta-draft-2026-10-21.md).
+
+
+## Draft input security follow-up — 2026-10-21
+
+BUG-19034/#810 addresses hosted S8707 on d798e58: CLI-selected JSON paths are
+removed in favor of fixed workspace files and before/after phase choices.
+Bounded UTF-8 reads reject escape/traversal, links, replaced descriptors and
+invalid JSON. Existing draft identity, source/ref/commit signatures, complete
+matrix and no-overwrite checks remain mandatory. No rule or threshold is lowered.
+See [current boundary evidence](release-evidence/1.9-draft-input-boundary-2026-10-21.md).
+This is a tool correction, not beta/recovery qualification; #736 stays draft.

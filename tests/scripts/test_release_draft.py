@@ -7,6 +7,7 @@ import sys
 import tempfile
 import textwrap
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -56,6 +57,67 @@ def release(manifest):
 
 
 class DraftTests(unittest.TestCase):
+    def test_command_line_rejects_file_and_directory_overrides(self):
+        commands = [
+            ['source', '--repository', REPO, '--version', VERSION, '--channel', 'beta',
+             '--dispatch-ref', PREPARATION_REF, '--run', '../outside.json'],
+            ['inventory', '--repository', REPO, '--version', VERSION, '--channel', 'beta', '--root', '..'],
+            ['target', '--phase', 'before', '--release', '/outside.json'],
+            ['target', '--phase', 'before', '--manifest', '../outside.json'],
+            ['assets', '--phase', 'before', '--pages', '../outside.json'],
+            ['assets', '--phase', '../outside.json'],
+        ]
+        for args in commands:
+            with self.subTest(args=args):
+                result = subprocess.run([sys.executable, str(ROOT / 'scripts/release_draft.py'), *args],
+                                        capture_output=True, text=True, cwd=ROOT)
+                self.assertEqual(2, result.returncode)
+                self.assertEqual('', result.stdout)
+
+    def test_unknown_input_roles_and_parent_or_absolute_escape_refuse(self):
+        for role in ('../source-run.json', '/source-run.json', 'not-a-role'):
+            with self.subTest(role=role), self.assertRaises(ValueError):
+                draft.load(role)
+        with tempfile.TemporaryDirectory() as outside:
+            file = Path(outside) / 'outside.json'; file.write_text('{"outside": true}')
+            with self.assertRaises(ValueError): draft.read_workspace_json(file)
+        with self.assertRaises(ValueError): draft.read_workspace_json(Path('../outside.json'))
+
+    def test_json_symlink_and_linked_ancestor_refuse(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            root = Path(tmp); source = root / 'source.json'; source.write_text('{}')
+            (root / 'linked.json').symlink_to(source)
+            (root / 'linked-directory').symlink_to(root, target_is_directory=True)
+            for path in (root / 'linked.json', root / 'linked-directory/source.json'):
+                with self.subTest(path=path), self.assertRaises(ValueError):
+                    draft.read_workspace_json(path)
+
+    def test_json_hardlinks_oversize_and_non_utf8_refuse(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            root = Path(tmp); source = root / 'source.json'; source.write_text('{}')
+            os.link(source, root / 'hardlink.json')
+            with self.assertRaises(ValueError): draft.read_workspace_json(source)
+            huge = root / 'huge.json'; huge.write_bytes(b' ' * (draft.MAXIMUM_JSON_BYTES + 1))
+            with self.assertRaises(ValueError): draft.read_workspace_json(huge)
+            utf16 = root / 'utf16.json'; utf16.write_bytes('{}'.encode('utf-16'))
+            with self.assertRaises(ValueError): draft.read_workspace_json(utf16)
+
+    def test_json_replacement_before_open_refuses_without_parsing_replacement(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            root = Path(tmp); source = root / 'source.json'; source.write_text('{}')
+            replacement = root / 'replacement.json'; replacement.write_text('{"different":true}')
+            original_open = os.open
+            def replace(path, flags):
+                source.unlink(); replacement.rename(source)
+                return original_open(path, flags)
+            with patch.object(draft.os, 'open', side_effect=replace), self.assertRaises(ValueError):
+                draft.read_workspace_json(source)
+
+    def test_regular_json_inside_workspace_is_decoded_with_duplicate_checks(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            path = Path(tmp) / 'source.json'; path.write_text('{"value":"à"}', encoding='utf-8')
+            self.assertEqual({'value': 'à'}, draft.read_workspace_json(path))
+
     def test_source_accepts_only_qualified_same_repository_and_branch(self):
         self.assertEqual(PREPARATION_REF, draft.source_ref(run(), REPO, VERSION, 'beta', PREPARATION_REF))
         for key, value in [('status', 'in_progress'), ('conclusion', 'failure'), ('event', 'pull_request'),
@@ -76,7 +138,7 @@ class DraftTests(unittest.TestCase):
             draft.source_ref(source, REPO, '1.9.0', 'stable', PREPARATION_REF)
 
     def test_beta_inventory_requires_all_eight_direct_packages_without_store(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             root = Path(tmp); manifest = fixture(root)
             self.assertEqual(manifest, draft.inventory(root, run(), REPO, VERSION, 'beta'))
             (root / PACKAGES[0].format(VERSION)).unlink()
@@ -84,23 +146,23 @@ class DraftTests(unittest.TestCase):
                 draft.inventory(root, run(), REPO, VERSION, 'beta')
 
     def test_beta_explicit_patch_matrix_and_stable_full_store_matrix(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             root = Path(tmp); fixture(root, patches=True)
             draft.inventory(root, run(), REPO, VERSION, 'beta', True, True, True)
             with self.assertRaises(ValueError):
                 draft.inventory(root, run(), REPO, VERSION, 'beta')
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             root = Path(tmp); fixture(root, store=True)
             with self.assertRaises(ValueError):
                 draft.inventory(root, run(), REPO, VERSION, 'beta')
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             root = Path(tmp); manifest = fixture(root, stable=True, patches=True, store=True)
             self.assertEqual(19, len(manifest['assets']))
             draft.inventory(root, run(), REPO, '1.9.0', 'stable')
 
     def test_inventory_refuses_wrong_source_channel_extra_links_and_changed_bytes(self):
         for fault in ('commit', 'channel', 'extra', 'link', 'changed'):
-            with self.subTest(fault=fault), tempfile.TemporaryDirectory() as tmp:
+            with self.subTest(fault=fault), tempfile.TemporaryDirectory(dir=ROOT) as tmp:
                 root = Path(tmp); fixture(root); source = run(); channel = 'beta'
                 if fault == 'commit': source['head_sha'] = 'b' * 40
                 if fault == 'channel': channel = 'stable'
@@ -139,7 +201,7 @@ class DraftTests(unittest.TestCase):
                 draft.verify_tag(REPO, tag, SHA, lookup)
 
     def test_beta_target_requires_existing_private_prerelease_and_dev_marker(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             manifest = fixture(Path(tmp)); valid = release(manifest)
             lookup = lambda _: {'ref': 'refs/tags/v' + VERSION, 'object': {'type': 'commit', 'sha': SHA}}
             draft.target(valid, manifest, lookup)
@@ -153,14 +215,14 @@ class DraftTests(unittest.TestCase):
                     'object': {'type': 'commit', 'sha': 'b' * 40}})
 
     def test_stable_target_preserves_exact_sha_and_never_queries_beta_tags(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             manifest = fixture(Path(tmp), stable=True, patches=True, store=True)
             draft.target(release(manifest), manifest, lambda _: self.fail('Unexpected beta tag lookup'))
             wrong = release(manifest); wrong['target_commitish'] = 'Stable'
             with self.assertRaises(ValueError): draft.target(wrong, manifest)
 
     def test_complete_paginated_remote_inventory_and_safe_missing_upload_list(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             root = Path(tmp); fixture(root)
             paths = sorted(root.iterdir())
             assets = [{'name': p.name, 'state': 'uploaded', 'size': p.stat().st_size,
@@ -178,9 +240,9 @@ class DraftTests(unittest.TestCase):
                     draft.remote_assets(root, changed if fault == 'unpaginated' else [changed], complete=True)
 
     def test_duplicate_json_members_refuse(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             path = Path(tmp) / 'duplicate.json'; path.write_text('{"draft":true,"draft":false}')
-            with self.assertRaises(ValueError): draft.load(path)
+            with self.assertRaises(ValueError): draft.read_workspace_json(path)
 
     def test_actual_workflow_draft_dispatch_guard(self):
         workflow = (ROOT / '.github/workflows/release-assets.yml').read_text()
@@ -221,7 +283,7 @@ elif args[0]=='api':
 else: sys.exit(98)
 '''
         for fault in ('none', 'complete', 'patches', 'tag', 'existing-bytes', 'published'):
-            with self.subTest(fault=fault), tempfile.TemporaryDirectory() as tmp:
+            with self.subTest(fault=fault), tempfile.TemporaryDirectory(dir=ROOT) as tmp:
                 root = Path(tmp); assets = root / 'release-assets'; assets.mkdir()
                 manifest = fixture(assets, patches=fault == 'patches')
                 (root / 'source-run.json').write_text(json.dumps(run()))

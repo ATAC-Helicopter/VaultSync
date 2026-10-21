@@ -11,7 +11,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
                     ".github/workflows/release-assets.yml").read_text()
         self.assertIn('"$branch" != "Stable"', workflow)
         self.assertIn('"$release_candidate" == "true"', workflow)
-        self.assertIn('scripts/release_draft.py source --run source-run.json', workflow)
+        self.assertIn('scripts/release_draft.py source', workflow)
         self.assertIn('[[ "$(git rev-parse HEAD)" == "$source_sha" ]]', workflow)
         self.assertIn('--source-ref "$SOURCE_REF"', workflow)
         self.assertIn('git merge-base --is-ancestor "$source_sha" origin/Stable', workflow)
