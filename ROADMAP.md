@@ -1420,6 +1420,14 @@ repository must not transfer before a compatible release is adopted.
     [worker evidence](docs/release-evidence/1.9-disk-worker-2026-10-17.md),
     [parent client](docs/release-evidence/1.9-disk-worker-client-2026-10-20.md) and
     [native reads](docs/release-evidence/1.9-linux-block-read-2026-10-20.md).
+  - Kernel peer increment (2026-10-21): an internal Linux x64 Unix-stream
+    binding checks expected connect-time PID/UID/GID and holds SO_PEERPIDFD,
+    never reopening a numeric PID. Unsupported options, disconnect, mismatch,
+    exit and failed rechecks refuse/release the lease; the caller owns the
+    socket. Native child/fork tests prove dead peers invalidate even while an
+    inherited socket remains open. This is not build trust, per-message origin,
+    privilege or operation consent; integration and sandboxing remain open.
+    See [peer evidence](docs/release-evidence/1.9-worker-peer-2026-10-21.md).
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
     persisted import marker distinguishes origin from restore state; cards,

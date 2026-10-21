@@ -725,3 +725,25 @@ invalid JSON. Existing draft identity, source/ref/commit signatures, complete
 matrix and no-overwrite checks remain mandatory. No rule or threshold is lowered.
 See [current boundary evidence](release-evidence/1.9-draft-input-boundary-2026-10-21.md).
 This is a tool correction, not beta/recovery qualification; #736 stays draft.
+
+
+## Kernel worker peer binding — 2026-10-21
+
+VS-1904/#492 adds an internal Linux x64 Unix-stream peer binding prerequisite.
+Expected connect-time PID/UID/GID must match kernel credentials; a socket-bound
+pidfd pins the exact process lifetime without a numeric-PID fallback. Mismatch,
+unsupported kernel options, disconnect/exit and failed checks refuse; owned
+close-on-exec process descriptors are released without closing caller sockets.
+It consumes no application bytes and grants no privilege or operation authority.
+
+This is not integrated into the existing inventory pipes, trusted build selection,
+per-message/operation authorization or a privileged restore broker. Those remain
+open with unprivileged image isolation, offline authority, media/UI, device writes
+and complete recovery/upgrade/package qualification. All profiles stay candidates.
+See [worker contract](DISK_WORKER_1.9.md#kernel-peer-binding-prerequisite--2026-10-21)
+and [source-bound evidence](release-evidence/1.9-worker-peer-2026-10-21.md).
+
+The preceding exact head `37f6999f683a21327c5d7b701a466df65cb4b865` passes hosted
+Sonar and the remaining checks, including the fixed draft-input S8707 boundary.
+The failed d798e58 analysis remains historical. This new source needs its own
+hosted checks; no quality gate is weakened and #736 stays draft/unmerged.

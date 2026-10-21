@@ -136,3 +136,51 @@ adapter is not wired into that worker, desktop or recovery media. It executes
 with its caller's existing privileges, offers no elevated endpoint and exposes
 no writable stream or arbitrary native command. Authenticated source operations
 and capture consistency remain required before product integration.
+
+
+## Kernel peer binding prerequisite — 2026-10-21
+
+`LinuxWorkerPeerBinding` is an internal Linux x64 component for an existing
+connected Unix stream. A future trusted launcher must supply the exact expected
+process ID and connect-time UID/GID; never derive that expectation from image or
+wire claims. It checks kernel `SO_PEERCRED` and obtains `SO_PEERPIDFD` from that
+same socket. It does not reopen a numeric PID, so process-ID reuse cannot redirect
+that process lease. Credential/connection/liveness checks surround acquisition.
+
+The held pidfd must be close-on-exec. Nonblocking polling detects task exit or
+reaping without reading process data, sending signals or acquiring another
+process's files. Rechecks inspect connection closure and connect-time credentials;
+any failure invalidates the lease permanently. Disposal is idempotent and closes
+only the pidfd. The caller still owns the socket and must close/cancel its
+operation on refusal. No application bytes are consumed by these checks.
+
+Missing kernel support refuses with no numeric-PID or uncredentialled fallback.
+The first implementation is restricted to Linux x64 UAPI; no new platform/profile
+support is claimed. Kernel references:
+[Unix credentials](https://man7.org/linux/man-pages/man7/unix.7.html),
+[Linux 6.12 socket options](https://github.com/torvalds/linux/blob/v6.12/include/uapi/asm-generic/socket.h),
+[pidfd lifetime polling](https://man7.org/linux/man-pages/man2/pidfd_open.2.html).
+The implementation uses the socket-bound pidfd option rather than pidfd_open.
+
+### Security limits and integration
+
+This binds a connection to a kernel process, not to a trusted executable build,
+authenticated human consent, current global device use, privileged role or write
+operation. SO_PEERCRED describes credentials when connect/listen/socketpair ran;
+it does not prove current credentials after a transition. Inherited sockets and
+forked senders are not per-message authenticated by this option. The native test
+proves invalidation when the original peer dies while a fork retains the socket;
+it does not claim to prevent every inherited-socket sender while that peer lives.
+Socket closure with queued bytes is observed after those bytes drain; the future
+protocol must separately bound requests, EOF, disconnect and deadlines.
+
+The existing inventory worker/client still use their development pipe transport.
+No listener, elevation helper, executable selection, device operation or desktop
+path is added here. Trusted build/installation selection, authenticated channel
+integration and per-operation consent, unprivileged hostile-image parsing,
+controlled offline authority, sandboxing, recovery UI/media and writable restore
+remain required. Internal test providers cannot be selected by a wire message.
+No raw IDs, paths or free-form peer diagnostics enter product reporting.
+
+Current retained source/runtime/native measurements and explicit limits:
+[peer evidence](release-evidence/1.9-worker-peer-2026-10-21.md).
