@@ -71,6 +71,7 @@ jobs:
           TARGET_VERSION: ${{ inputs.target_version }}
           RELEASE_CANDIDATE: ${{ inputs.release_candidate }}
           ASSEMBLE_DRAFT: ${{ inputs.prepare_draft_from_run }}
+          INCLUDE_STORE_UPLOAD: ${{ inputs.include_store_upload }}
         run: |
           set -euo pipefail
 
@@ -81,8 +82,14 @@ jobs:
           branch="$GITHUB_REF_NAME"
 
           if [[ -n "$ASSEMBLE_DRAFT" ]]; then
-            if [[ "$channel" != "stable" || "$release_candidate" == "true" || "$branch" != "Stable" ]]; then
-              echo 'Final draft assets must be generated from Stable, not a release-branch candidate.' >&2
+            if [[ "$release_candidate" == "true" ]]; then
+              echo 'Release candidates cannot assemble final drafts.' >&2
+              exit 1
+            fi
+            if [[ "$channel" == "beta" && "$INCLUDE_STORE_UPLOAD" == "false" ]]; then
+              python3 scripts/release_source.py --version "$target" --source-ref "$GITHUB_REF"
+            elif [[ "$channel" != "stable" || "$branch" != "Stable" ]]; then
+              echo 'Draft source/channel is unauthorized; beta drafts exclude Store uploads.' >&2
               exit 1
             fi
           fi
@@ -1137,22 +1144,33 @@ jobs:
     permissions:
       contents: write
       actions: read
+      attestations: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Validate qualified source run
+        id: qualified_source
         env:
           GH_TOKEN: ${{ github.token }}
           ASSET_RUN: ${{ inputs.prepare_draft_from_run }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
         run: |
           set -euo pipefail
           [[ "$ASSET_RUN" =~ ^[0-9]+$ ]] || { echo 'Asset run must be a numeric run ID'; exit 1; }
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ASSET_RUN" > source-run.json
-          jq -e '.conclusion == "success" and .head_branch == "Stable" and .path == ".github/workflows/release-assets.yml"' source-run.json
+          source_ref="$(python3 scripts/release_draft.py source --run source-run.json \
+            --repository "$GITHUB_REPOSITORY" --version "$TARGET_VERSION" \
+            --channel "$RELEASE_CHANNEL" --dispatch-ref "$GITHUB_REF")"
+          echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
           source_sha="$(jq -r '.head_sha' source-run.json)"
-          git merge-base --is-ancestor "$source_sha" origin/Stable
+          if [[ "$RELEASE_CHANNEL" == "beta" ]]; then
+            [[ "$(git rev-parse HEAD)" == "$source_sha" ]] || { echo 'Beta preparation advanced; a new qualified build is required.' >&2; exit 1; }
+          else
+            git merge-base --is-ancestor "$source_sha" origin/Stable
+          fi
           git diff --exit-code "$source_sha" HEAD -- src Localization installer packaging Directory.Build.props Directory.Packages.props global.json scripts/build_patch.py scripts/build_linux_release.sh scripts/build_macos_dmg.sh scripts/macos_bundle_version.py scripts/thin_macos_native_libraries.sh
       - name: Download qualified direct packages and patches
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -1163,6 +1181,7 @@ jobs:
           merge-multiple: true
           path: release-assets
       - name: Download qualified Store upload
+        if: ${{ inputs.release_channel == 'stable' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           github-token: ${{ github.token }}
@@ -1186,77 +1205,48 @@ jobs:
       - name: Verify qualified source signatures before draft upload
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_REF: ${{ steps.qualified_source.outputs.source_ref }}
         run: |
           set -euo pipefail
           python3 scripts/release_signing.py verify \
             --asset-root release-assets --repository "$GITHUB_REPOSITORY" \
-            --commit "$(jq -r '.head_sha' source-run.json)" --source-ref refs/heads/Stable \
+            --commit "$(jq -r '.head_sha' source-run.json)" --source-ref "$SOURCE_REF" \
             --bundle supply-chain/attestations/release-provenance.json \
             --trusted-root supply-chain/trusted-root.jsonl
       - name: Verify assets and upload only to the existing draft
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_VERSION: ${{ inputs.target_version }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
+          WINDOWS_PATCHES: ${{ inputs.include_windows_patches }}
+          MACOS_PATCHES: ${{ inputs.include_macos_patches }}
+          LINUX_PATCHES: ${{ inputs.include_linux_patches }}
         run: |
           set -euo pipefail
-          python3 scripts/release_manifest.py validate --manifest release-assets/vaultsync-release-manifest.json --asset-root release-assets
-          store_upload="$(find release-assets/dist/store -maxdepth 1 -type f \( -name '*.msixupload' -o -name '*.appxupload' \))"
-          python3 scripts/verify_store_upload.py "$store_upload" --version "$TARGET_VERSION" --source-manifest packaging/VaultSync.Store/Package.appxmanifest
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          root = Path('release-assets')
-          manifest = json.loads((root / 'vaultsync-release-manifest.json').read_text())
-          source = json.loads(Path('source-run.json').read_text())
-          assert manifest['release']['version'] == os.environ['TARGET_VERSION']
-          assert manifest['release']['commit'] == source['head_sha']
-          expected = {asset['name'] for asset in manifest['assets']} | {'vaultsync-release-manifest.json'}
-          files = [path.name for path in root.rglob('*') if path.is_file()]
-          assert len(files) == len(expected) and set(files) == expected, 'Unexpected or duplicated draft asset'
-          assert len(manifest['assets']) == 19, 'Full platform/patch/Store matrix is required'
-          PY
+          patch_args=(--root release-assets --run source-run.json --repository "$GITHUB_REPOSITORY" --version "$TARGET_VERSION" --channel "$RELEASE_CHANNEL")
+          [[ "$WINDOWS_PATCHES" != "true" ]] || patch_args+=(--windows-patches)
+          [[ "$MACOS_PATCHES" != "true" ]] || patch_args+=(--macos-patches)
+          [[ "$LINUX_PATCHES" != "true" ]] || patch_args+=(--linux-patches)
+          python3 scripts/release_draft.py inventory "${patch_args[@]}"
+          if [[ "$RELEASE_CHANNEL" == "stable" ]]; then
+            store_upload="$(find release-assets/dist/store -maxdepth 1 -type f \( -name '*.msixupload' -o -name '*.appxupload' \))"
+            python3 scripts/verify_store_upload.py "$store_upload" --version "$TARGET_VERSION" --source-manifest packaging/VaultSync.Store/Package.appxmanifest
+          fi
           tag="v$TARGET_VERSION"
-          gh release view "$tag" --json isDraft,databaseId > draft-release.json
-          jq -e '.isDraft == true' draft-release.json
-          release_id="$(jq -r '.databaseId' draft-release.json)"
-          gh api "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > draft-assets.json
-          python3 - <<'PY'
-          import hashlib, json
-          from pathlib import Path
-          root = Path('release-assets')
-          expected = {path.name: path for path in root.rglob('*') if path.is_file()}
-          existing = json.loads(Path('draft-assets.json').read_text())
-          names = set()
-          for asset in existing:
-              name = asset['name']
-              assert name in expected and name not in names, 'Unexpected existing draft asset'
-              path = expected[name]
-              digest = hashlib.file_digest(path.open('rb'), 'sha256').hexdigest()
-              assert asset['size'] == path.stat().st_size and asset.get('digest') == 'sha256:' + digest, 'Draft asset differs; refusing overwrite'
-              names.add(name)
-          Path('missing-assets.txt').write_text(''.join(str(path) + '\n' for name, path in sorted(expected.items()) if name not in names))
-          PY
-          source_sha="$(jq -r '.release.commit' release-assets/vaultsync-release-manifest.json)"
-          # A maintainer stages the draft target separately. GITHUB_TOKEN
-          # cannot retarget releases at commits that modify workflows.
-          gh release view "$tag" --json isDraft,targetCommitish \
-            --jq '.' > draft-target.json
-          jq -e --arg sha "$source_sha" '.isDraft == true and .targetCommitish == $sha' draft-target.json
-          mapfile -t assets < missing-assets.txt
+          # Existing drafts only. Beta tags must already resolve to the exact
+          # qualified source; Dev is solely the old updater's discovery marker.
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" > draft-release.json
+          python3 scripts/release_draft.py target --release draft-release.json --manifest release-assets/vaultsync-release-manifest.json
+          release_id="$(jq -r '.id' draft-release.json)"
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > draft-assets.json
+          python3 scripts/release_draft.py assets --root release-assets --pages draft-assets.json > missing-assets.txt
+          assets=()
+          while IFS= read -r asset; do assets+=("$asset"); done < missing-assets.txt
           if [[ ${#assets[@]} -gt 0 ]]; then
             gh release upload "$tag" "${assets[@]}"
           fi
-          gh release view "$tag" --json isDraft,assets | jq -e '.isDraft == true and (.assets | length) == 20'
-          gh api "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > uploaded-assets.json
-          python3 - <<'PY'
-          import hashlib, json
-          from pathlib import Path
-          expected = {path.name: path for path in Path('release-assets').rglob('*') if path.is_file()}
-          uploaded = json.loads(Path('uploaded-assets.json').read_text())
-          assert len(uploaded) == len(expected) and {asset['name'] for asset in uploaded} == set(expected)
-          for asset in uploaded:
-              path = expected[asset['name']]
-              with path.open('rb') as stream:
-                  digest = hashlib.file_digest(stream, 'sha256').hexdigest()
-              assert asset['size'] == path.stat().st_size and asset.get('digest') == 'sha256:' + digest, 'Uploaded asset differs'
-          PY
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" > final-draft-release.json
+          python3 scripts/release_draft.py target --release final-draft-release.json --manifest release-assets/vaultsync-release-manifest.json
+          [[ "$(jq -r '.id' final-draft-release.json)" == "$release_id" ]] || { echo 'Draft identity changed during upload.' >&2; exit 1; }
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > uploaded-assets.json
+          python3 scripts/release_draft.py assets --root release-assets --pages uploaded-assets.json --complete

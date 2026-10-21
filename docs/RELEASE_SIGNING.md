@@ -119,5 +119,51 @@ channel field. GitHub documents that an existing tag is not moved by
 [`target_commitish`](https://docs.github.com/en/rest/releases/releases#create-a-release).
 The returned API field, resolved tag, canonical manifest, source-run SHA and
 actual-ref attestations must all be checked. No source or protected branch moves.
-Draft assembly currently remains Stable-only; beta staging and installed 1.8.9
-upgrade testing remain open. This increment creates no tag or draft.
+Draft assembly now includes the guarded beta path below; live staging and
+installed 1.8.9 upgrade testing remain unqualified. No tag or draft was created
+by implementation or synthetic tests.
+
+
+### Existing beta draft assembly — 2026-10-21
+
+After every beta gate passes and the canonical identity is cut, freeze the
+qualified preparation commit. Create the beta tag at that exact SHA and stage an
+unpublished GitHub prerelease with the same tag and `target_commitish=Dev`.
+The assembly workflow **does not create tags, create/edit releases or publish**.
+Those maintainer-controlled actions remain separate from the asset upload.
+Never move a beta tag to reuse its version; a changed build needs a new beta.
+
+Dispatch `release-assets.yml` on the same frozen source ref/version with
+`prepare_draft_from_run` pointing to the successful qualified asset run. The
+source run must belong to this repository, use this workflow and workflow_dispatch,
+be completed/successful, and match the dispatch branch. Beta assembly requires
+its checkout SHA to equal the source run SHA; a later dispatch head refuses.
+The canonical manifest must match the exact repository, commit, version and
+channel. Actual-ref online/offline signature checks remain mandatory before
+any upload; `Dev` never substitutes for the signing source ref.
+
+`scripts/release_draft.py` enforces the full eight direct package roles, excludes
+Store uploads and requires exactly the optional patch pairs selected by dispatch
+inputs. With no patches, nine files include the canonical manifest; with every
+patch pair, nineteen. It rejects missing/extra/duplicate/linked/changed files.
+The existing stable path still requires nineteen declared assets plus manifest,
+including all patch pairs and its separately validated Store upload.
+
+For beta, both before and after uploading, the authenticated API draft must have
+`draft=true`, `prerelease=true`, the exact tag and the legacy `Dev` marker. The
+remote tag must already exist and resolve to the qualified commit, with bounded
+annotated-tag traversal and no branch fallback. Stable retains its exact source
+SHA target and non-prerelease checks. A changed release ID refuses after upload.
+
+The complete paginated remote asset inventory must contain only uploaded files
+whose names, sizes and SHA-256 digests match local qualified bytes. Only missing
+files are uploaded; differing files are never overwritten. Afterward the complete
+inventory must match exactly, including the manifest. An already complete draft
+is an idempotent check. Failure leaves the draft unpublished for investigation;
+this job does not roll back uploads or claim a completed release.
+
+Unit and actual-workflow-shell tests use synthetic bytes and simulated GitHub
+responses, including no-patch/all-patch, partial/complete draft, tag/byte mismatch
+and already-published refusal. They do not qualify native packages, new signatures,
+live GitHub tag/field behavior, installed old-client discovery/upgrade or final
+publication. Retained results: [draft evidence](release-evidence/1.9-beta-draft-2026-10-21.md).

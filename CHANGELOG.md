@@ -42,6 +42,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1902] Assemble beta drafts from qualified preparation commits without Microsoft Store assets.
 - [VS-1905] Use explicit native identity checks before describing restore targets.
 - [VS-1980] Track measured recovery prerequisites separately from remaining beta release blockers.
 - [VS-1902] Permit verified beta builds from the unmerged 1.9.0 preparation branch.

@@ -18,7 +18,9 @@ ship and be adopted first. See [organization transfer](ORGANIZATION_TRANSFER.md)
 The 1.9.0 beta packaging source may be the unmerged preparation head. Its actual
 SHA/ref must remain bound to provenance, and its immutable tag must select that
 SHA. Keeping `target_commitish=Dev` for old-client discovery does not merge #736
-or change Dev. This staging path and exact installed 1.8.9 upgrade are not yet
+or change Dev. Draft assembly now checks this binding and the exact complete
+non-Store beta inventory before/after upload. It creates no tag or release and
+never publishes. Live staging and exact installed 1.8.9 upgrades are not yet
 qualified; see [release signing](RELEASE_SIGNING.md#unmerged-190-beta-source--vs-1902).
 
 ## Required Release Assets

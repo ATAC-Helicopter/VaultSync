@@ -6,12 +6,14 @@ from pathlib import Path
 
 
 class ReleaseWorkflowTests(unittest.TestCase):
-    def test_final_draft_assets_require_stable_build_provenance(self):
+    def test_final_drafts_require_authorized_source_and_preserve_stable_provenance(self):
         workflow = (Path(__file__).resolve().parents[2] /
                     ".github/workflows/release-assets.yml").read_text()
         self.assertIn('"$branch" != "Stable"', workflow)
         self.assertIn('"$release_candidate" == "true"', workflow)
-        self.assertIn('.head_branch == "Stable"', workflow)
+        self.assertIn('scripts/release_draft.py source --run source-run.json', workflow)
+        self.assertIn('[[ "$(git rev-parse HEAD)" == "$source_sha" ]]', workflow)
+        self.assertIn('--source-ref "$SOURCE_REF"', workflow)
         self.assertIn('git merge-base --is-ancestor "$source_sha" origin/Stable', workflow)
 
     def test_store_is_part_of_manifest_and_supply_chain_inputs(self):

@@ -1156,6 +1156,13 @@ Migration principles:
     authorization without moving Dev or merging #736. Qualified disk evidence,
     actual source SHA/ref and canonical identity checks remain mandatory.
     Beta draft staging, immutable tag routing and exact installed upgrades remain open.
+  - 2026-10-21: draft assembly now accepts an exact successful preparation-head
+    beta run, rechecks actual-ref signatures and an existing tag at that source,
+    and uploads only missing matching assets to an existing Dev-marked private
+    prerelease. All direct packages are required; Store is excluded and patch
+    pairs follow explicit inputs. Stable retains its full 19-asset matrix.
+    Live beta/tag/API behavior and installed 1.8.9 upgrades remain unqualified.
+    See [draft assembly evidence](docs/release-evidence/1.9-beta-draft-2026-10-21.md).
 - [x] `VS-1903` `P2` Add background integrity audits with alerts.
   - Scope: retain the delivered background repository-integrity audit and its
     user-visible warning path as historical foundation work.

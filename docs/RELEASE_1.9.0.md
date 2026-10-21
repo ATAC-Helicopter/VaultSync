@@ -695,3 +695,22 @@ Hosted SonarCloud and CodeQL completed successfully on the previous exact head
 `b30e355ce4a999ef23f5df21b15dfb902e047d5a`; the earlier failed 99773d2 result
 remains historical. This increment requires its own hosted checks after push.
 All four disk profiles remain candidates; PR #736 stays draft and unmerged.
+
+
+## Guarded beta draft assembly — 2026-10-21
+
+VS-1902/#113 extends the existing unpublished draft assembler to the exact
+qualified beta preparation commit. Actual source-ref provenance is reverified
+online/offline, the pre-existing tag must resolve to that commit, and the existing
+private prerelease must retain `target_commitish=Dev` for old-client discovery.
+Eight direct package roles are mandatory; Store is excluded and requested patch
+pairs must be exact. Complete paginated remote names/sizes/SHA-256 are checked;
+only missing assets upload and changed files refuse. The tag/draft identity is
+rechecked afterward. Stable keeps its full nineteen-asset-plus-manifest matrix.
+
+This implements guarded assembly, not live release qualification: canonical beta
+cut, a real successful package/signature run, exact 1.8.9 discovery/upgrade,
+recovery/profile qualification and protected reviews remain open. The workflow
+never creates/moves a tag, creates/edits/publishes a release or merges #736.
+See [signing/staging contract](RELEASE_SIGNING.md#existing-beta-draft-assembly--2026-10-21)
+and [current evidence](release-evidence/1.9-beta-draft-2026-10-21.md).
