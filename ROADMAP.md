@@ -1723,6 +1723,13 @@ repository must not transfer before a compatible release is adopted.
     and SafeHandle parameters protected automatically across native calls.
     Retain exact peer-exit checks, including inherited sockets; release both
     owned descriptors. See [interop evidence](docs/release-evidence/1.9-peer-safe-interop-2026-10-21.md).
+  - Restore cleanup follow-up (2026-10-21): hosted fcb47e8 reports S2583 on
+    cleanup-state assignment inside finally. Existing success/cleanup-failure
+    tests exercise both outcomes; replace the implicit flag with a separately
+    returned release outcome and preserve disposal after unexpected exceptions.
+    No rule/threshold change or suppression; current source requires its own
+    Release, native write/read-back and hosted checks. See
+    [cleanup evidence](docs/release-evidence/1.9-restore-cleanup-2026-10-21.md).
 
 - [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
   - Scope: SonarCloud rejects PR metadata after successful build and coverage

@@ -818,3 +818,24 @@ media/UI, power-cut and full filesystem/boot/interactive qualification, installe
 upgrade and package/signature/protected review gates remain open. Four support
 profiles stay candidates; #495/native Project stay In progress, #736 draft.
 This is an internal byte-write prerequisite, not a feature-complete beta.
+
+
+## Restore cleanup flow follow-up — 2026-10-21
+
+BUG-19034/#810 addresses hosted S2583 on fcb47e8's cleanup flag assigned inside
+finally. Existing tests execute both successful and failed cleanup; no native
+corruption was measured. An explicit release-result helper now preserves those
+outcomes and target release after unexpected provider exceptions, without
+suppressing the rule or weakening a gate. Feature owner remains VS-1907/#495.
+
+Current required Release: 1,835 Core / 261 Python, zero warnings/errors/skips;
+1,943 keys / 19 locales. The fresh isolated UEFI run repeats all 32 native
+write/read-back cases on two new disposable target files, with host-independent
+source SHA-256 equality, normal QEMU/guest exit zero and no timeout. Its 53.48
+seconds is total boot/probes, not throughput. No host raw device/network/share.
+The fcb47e8 scan and earlier native results remain historical. See
+[current source-bound evidence](release-evidence/1.9-restore-cleanup-2026-10-21.md).
+Trusted writer/authority/journal integration, image isolation, independent
+media/UI, full recovery/OS boot, installed upgrade/package/signature/review gates
+remain open. Four support profiles remain candidates; #736 stays draft/unmerged.
+New exact-head hosted verification is required; no release publication occurs.

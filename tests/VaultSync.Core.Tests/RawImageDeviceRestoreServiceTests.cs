@@ -60,6 +60,7 @@ public sealed class RawImageDeviceRestoreServiceTests
         public ValueTask WriteAsync(ReadOnlyMemory<byte> bytes, ulong offset, CancellationToken token)
         {
             Step("write"); token.ThrowIfCancellationRequested();
+            if (Fault == "unexpected-write") throw new InvalidOperationException("fixture-provider-fault");
             Writes++;
             if (Fault == "partial-write")
             {
@@ -293,5 +294,18 @@ public sealed class RawImageDeviceRestoreServiceTests
         Assert.Equal(131072UL, result.AcknowledgedBytes); Assert.Equal(131072UL, result.UncertainOffset);
         Assert.Equal(131072UL, result.UncertainLength);
         Assert.Single(journal.Records, r => r.Kind == RawImageRestoreRecordKind.RangeFlushed);
+    }
+
+    [Fact]
+    public async Task UnexpectedProviderExceptionStillReleasesTargetWithoutACompletionRecord()
+    {
+        await using var stage = await Stage(512);
+        var trace = new List<string>(); var target = new Target(Device(512, stage.Image.VerifiedBytes), trace) { Fault = "unexpected-write" };
+        var journal = new Journal(trace);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await RawImageDeviceRestoreService.RunAsync(stage, Request(stage, target.Observation), target, journal));
+        Assert.True(target.Disposed);
+        Assert.DoesNotContain(journal.Records, r => r.Kind == RawImageRestoreRecordKind.ReadBackVerified);
+        Assert.Single(journal.Records, r => r.Kind == RawImageRestoreRecordKind.WriteIntent);
     }
 }

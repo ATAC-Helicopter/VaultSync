@@ -42,18 +42,23 @@ internal static class RawImageDeviceRestoreService
         ITarget target, IJournal journal, CancellationToken token = default)
     {
         RawImageDeviceRestoreResult result;
-        bool cleanupFailed = false;
         try { result = await ExecuteAsync(stage, request, target, journal, token).ConfigureAwait(false); }
-        finally
+        catch
         {
-            try { await target.DisposeAsync().ConfigureAwait(false); }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException or ObjectDisposedException)
-            { cleanupFailed = true; }
+            await TryReleaseAsync(target).ConfigureAwait(false);
+            throw;
         }
-        if (!cleanupFailed) return result;
+        if (await TryReleaseAsync(target).ConfigureAwait(false)) return result;
         bool recorded = await RecordFailureAsync(journal, request, RawImageDeviceRestoreState.Failed,
             result.UncertainOffset, result.UncertainLength).ConfigureAwait(false);
         return result with { State = RawImageDeviceRestoreState.Failed, TerminalRecordWritten = recorded };
+    }
+
+    private static async ValueTask<bool> TryReleaseAsync(ITarget target)
+    {
+        try { await target.DisposeAsync().ConfigureAwait(false); return true; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ObjectDisposedException)
+        { return false; }
     }
 
     private static async ValueTask<RawImageDeviceRestoreResult> ExecuteAsync(

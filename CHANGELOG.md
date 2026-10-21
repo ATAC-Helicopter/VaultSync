@@ -85,6 +85,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19034] Make restore cleanup outcomes explicit and preserve failure reporting.
 - [BUG-19034] Protect worker handles automatically during native process lifetime checks.
 - [BUG-19034] Restrict beta draft inputs to fixed workspace files and reject links.
 - [BUG-19035] Preserve beta and candidate identities in packaged release builds.

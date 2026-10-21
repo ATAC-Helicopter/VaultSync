@@ -96,3 +96,15 @@ Full privileged broker/operation consent, private production journal acquisition
 independent recovery medium, UI, power-cut/crash qualification, full filesystem
 recovery/boot/interactive verification and installed upgrade/package/signature
 checks remain open. All four disk profiles remain candidates.
+
+
+## Explicit release outcome — BUG-19034, 2026-10-21
+
+Hosted fcb47e8 reports S2583 on the cleanup flag assigned inside finally.
+Existing successful/failed-disposal tests exercise both paths, with no measured
+native data failure. The release helper now returns an explicit outcome instead
+of relying on flag mutation through exception control flow. Expected cleanup
+errors still produce Failed and attempt a failure record; unexpected execution
+exceptions still release the target before propagating and never append a
+read-back completion. No journal order, native authority, wire format or quality
+threshold changes. See [current checks](release-evidence/1.9-restore-cleanup-2026-10-21.md).
