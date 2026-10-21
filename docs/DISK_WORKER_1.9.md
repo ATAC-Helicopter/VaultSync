@@ -203,3 +203,59 @@ and [close-on-exec creation](https://man7.org/linux/man-pages/man2/epoll_create.
 are retained references. No security exception, rule/threshold change or new
 operation authority is introduced. Current source/runtime/FD-leak/native results:
 [interop evidence](release-evidence/1.9-peer-safe-interop-2026-10-21.md).
+
+
+## Inventory peer integration — 2026-10-21
+
+VS-1904/#492 connects the internal kernel binding to the actual same-privilege
+Linux x64 inventory launcher and child. This supersedes the earlier prerequisite's
+statement that the inventory pipes are unchanged in isolation; the binary frame
+schema remains version 1. Windows, macOS and other Linux architectures retain the
+existing unprivileged pipe-only development transport. No platform is promoted
+into a qualified disk profile by this change.
+
+Before starting the fixed adjacent apphost, the Linux x64 parent creates an
+exclusive temporary directory, verifies mode 0700 and no directory link, and
+listens on a private Unix stream socket named `peer`. The generated endpoint is
+the sole additional startup argument (`--inventory-peer <endpoint>`); no request
+can choose a program, inventory provider, command or device. The path is bounded
+by the Unix socket limit. The listener/socket are owned and removed on completion,
+refusal or cancellation; cleanup never recursively removes unexpected entries.
+A cleanup permission/I/O failure can leave the private directory for local
+administrative cleanup; its path is never included in product diagnostics.
+
+The parent requires connect-time PID equal to the process it actually started,
+with its own effective UID/GID. The child requires the kernel-reported parent PID
+(getppid), rechecks that relationship during binding, and requires its own
+effective UID/GID. Both acquire the existing socket-bound process lifetime lease.
+This is intentionally same-privilege only: a credential change, wrong peer,
+unsupported socket-bound pidfd, inaccessible endpoint or failed binding refuses.
+Linux x64 never retries a failed rendezvous using unauthenticated pipes. A
+wrong connection consumes the one-shot attempt and fails closed.
+
+The three bounded one-byte phases are startup ready (`31` hex), response ready
+(`32`) and accepted (`33`). After mutual binding, the child announces startup;
+only then does the parent send its existing correlated 32-byte request and stdin
+EOF. The child emits/flushed the existing bounded response and announces response
+ready, retaining its process and socket while awaiting acceptance. The parent
+validates the exact response header/body/schema and rechecks the peer before
+acknowledging. Only this terminal send has no post-send liveness check: it permits
+the child to exit, so such a check would race a legitimate exit. The parent then
+requires stdout EOF with no extra byte, empty stderr and exit zero before returning
+any inventory. Early buffered EOF, malformed data, wrong phase or nonzero exit
+never returns an inventory. Cancellation/deadline covers connection, phases,
+pipes and process exit; existing bounded process-tree cleanup still applies.
+
+The request's operation UUID remains on the existing frame, not the auxiliary
+socket. No identity or path is emitted as telemetry. Legacy direct no-argument
+worker invocation remains a development pipe endpoint; the Linux x64 parent does
+not fall back to it. There is still no desktop launcher or packaged recovery
+medium. Both paths remain read-only namespace observations, never global Offline.
+
+This is kernel process identity/lifetime integration, not a trusted installation
+or publisher check, authenticated per-message origin after fork/credential
+transition, a sandbox, elevation, authorization for a device, human confirmation
+or offline/source-consistency proof. Same-UID or administrator compromise is not
+contained. Hostile image isolation, privileged broker/operation protocol, native
+restore/journal/read-back, media/UI and full recovery/upgrade qualification remain
+open. See [source-bound checks](release-evidence/1.9-worker-channel-2026-10-21.md).

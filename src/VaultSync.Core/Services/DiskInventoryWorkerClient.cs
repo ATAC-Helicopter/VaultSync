@@ -49,21 +49,43 @@ public static class DiskInventoryWorkerClient
             }
         };
         bool started = false;
+        LinuxInventoryWorkerPeerChannel.Listener? listener = null;
+        LinuxInventoryWorkerPeerChannel? peer = null;
         try
         {
+            if (LinuxInventoryWorkerPeerChannel.Supported)
+            {
+                listener = new();
+                process.StartInfo.ArgumentList.Add(LinuxInventoryWorkerPeerChannel.Argument);
+                process.StartInfo.ArgumentList.Add(listener.Endpoint);
+            }
             started = process.Start();
             if (!started)
                 return new(DiskInventoryWorkerOutcome.Failed, null);
+            if (listener is not null)
+            {
+                peer = await AuthenticatePeerAsync(listener, process, deadline.Token).ConfigureAwait(false);
+            }
             Guid operation = Guid.NewGuid();
             // Read output concurrently: a broken peer must not deadlock on a full pipe.
-            Task<LinuxBlockInventory> response = ReadResponseAsync(process.StandardOutput.BaseStream, operation, deadline.Token);
+            Task<LinuxBlockInventory> response = ReadResponseAsync(process.StandardOutput.BaseStream, operation,
+                deadline.Token, requireEndOfStream: peer is null);
             Task quiet = RequireEmptyDiagnosticsAsync(process.StandardError.BaseStream, deadline.Token);
             async Task SendRequestAsync()
             {
                 await WriteRequestAsync(process.StandardInput.BaseStream, operation, deadline.Token).ConfigureAwait(false);
                 process.StandardInput.Close(); // EOF is mandatory, even for a valid 32-byte frame.
             }
-            var pending = new List<Task> { response, quiet, SendRequestAsync(), process.WaitForExitAsync(deadline.Token) };
+            async Task AcceptResponseAsync()
+            {
+                await response.ConfigureAwait(false);
+                if (peer is not null)
+                {
+                    await peer.AcceptResponseAsync(deadline.Token).ConfigureAwait(false);
+                    await RequireResponseEndAsync(process.StandardOutput.BaseStream, deadline.Token).ConfigureAwait(false);
+                }
+            }
+            var pending = new List<Task> { AcceptResponseAsync(), quiet, SendRequestAsync(), process.WaitForExitAsync(deadline.Token) };
             // Observe every eventual fault, including pipe disposal after a timeout. React
             // to the first failing task instead of waiting for a blocked peer to exit.
             _ = Task.WhenAll(pending).ContinueWith(static completed => { _ = completed.Exception; },
@@ -87,6 +109,8 @@ public static class DiskInventoryWorkerClient
         finally
         {
             deadline.Cancel();
+            peer?.Dispose();
+            listener?.Dispose();
             if (started && !process.HasExited)
             {
                 try { process.Kill(entireProcessTree: true); }
@@ -98,6 +122,35 @@ public static class DiskInventoryWorkerClient
                 catch (TimeoutException) { }
             }
         }
+    }
+
+    private static async Task<LinuxInventoryWorkerPeerChannel> AuthenticatePeerAsync(
+        LinuxInventoryWorkerPeerChannel.Listener listener, Process process, CancellationToken token)
+    {
+        using var startupDeadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        async Task<LinuxInventoryWorkerPeerChannel> StartAsync()
+        {
+            LinuxInventoryWorkerPeerChannel channel = await listener.AcceptAsync(process.Id, startupDeadline.Token)
+                .ConfigureAwait(false);
+            try
+            {
+                await channel.ConfirmStartupAsync(startupDeadline.Token).ConfigureAwait(false);
+                return channel;
+            }
+            catch { channel.Dispose(); throw; }
+        }
+        Task<LinuxInventoryWorkerPeerChannel> startup = StartAsync();
+        Task exited = process.WaitForExitAsync(startupDeadline.Token);
+        if (await Task.WhenAny(startup, exited).ConfigureAwait(false) == startup)
+            return await startup.ConfigureAwait(false);
+        startupDeadline.Cancel();
+        // Drain acquisition before returning: a concurrent successful accept must
+        // not strand a socket/pidfd after the worker's early exit.
+        try { using var abandoned = await startup.ConfigureAwait(false); }
+        catch (Exception error) when (error is OperationCanceledException or IOException or
+            InvalidDataException or System.Net.Sockets.SocketException) { }
+        token.ThrowIfCancellationRequested();
+        throw new InvalidDataException("inventory.peer-early-exit");
     }
 
     internal static async Task WriteRequestAsync(Stream output, Guid operation, CancellationToken token)
@@ -113,7 +166,8 @@ public static class DiskInventoryWorkerClient
         await output.FlushAsync(token).ConfigureAwait(false);
     }
 
-    internal static async Task<LinuxBlockInventory> ReadResponseAsync(Stream input, Guid operation, CancellationToken token)
+    internal static async Task<LinuxBlockInventory> ReadResponseAsync(Stream input, Guid operation, CancellationToken token,
+        bool requireEndOfStream = true)
     {
         byte[] header = new byte[DiskInventoryWorkerService.ResponseHeaderBytes];
         await input.ReadExactlyAsync(header, token).ConfigureAwait(false);
@@ -127,12 +181,18 @@ public static class DiskInventoryWorkerClient
             throw new InvalidDataException("inventory.response-limit");
         byte[] body = new byte[(int)length];
         await input.ReadExactlyAsync(body, token).ConfigureAwait(false);
-        if (await input.ReadAsync(new byte[1], token).ConfigureAwait(false) != 0)
-            throw new InvalidDataException("inventory.response-trailing-data");
+        if (requireEndOfStream)
+            await RequireResponseEndAsync(input, token).ConfigureAwait(false);
         LinuxBlockInventory inventory = JsonSerializer.Deserialize<LinuxBlockInventory>(body, JsonOptions)
             ?? throw new InvalidDataException("inventory.response-null");
         Validate(inventory);
         return inventory;
+    }
+
+    private static async Task RequireResponseEndAsync(Stream input, CancellationToken token)
+    {
+        if (await input.ReadAsync(new byte[1], token).ConfigureAwait(false) != 0)
+            throw new InvalidDataException("inventory.response-trailing-data");
     }
 
     private static async Task RequireEmptyDiagnosticsAsync(Stream input, CancellationToken token)

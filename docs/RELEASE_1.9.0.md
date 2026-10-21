@@ -758,3 +758,30 @@ and inherited-socket checks retain their fail-closed behavior. No rule, threshol
 or exclusion is changed. See [current interop evidence](release-evidence/1.9-peer-safe-interop-2026-10-21.md).
 This remains an internal peer prerequisite, with no privileged protocol or raw
 write integration; four disk profiles stay candidates and #736 stays draft.
+
+
+## Actual inventory peer integration — 2026-10-21
+
+VS-1904/#492 now uses kernel peer binding in the actual Linux x64 inventory
+parent and child. Private startup precedes any request; the child stays alive
+until the bounded correlated response is validated and acknowledged. Matching
+child/kernel-parent PID/UID/GID, socket-bound lifetimes, EOF, empty stderr and
+exit zero are mandatory. Unsupported binding refuses without pipe-only fallback.
+Windows/macOS/other architectures retain their existing development transport.
+
+Current required Release: 1,797 Core / 261 Python, zero warnings/errors/skips;
+1,943 keys / 19 locales. Actual isolated UEFI VM: 92 cases, including 24 new
+integration checks, eight real worker runs, nobody-UID completion, malformed/
+interrupted peers, post-ACK trailing/nonzero refusal and cleanup/no descriptor
+leaks. Normal guest/QEMU exit zero, no timeout; 77.56 host-monotonic seconds is total boot/probes.
+No host raw-device writes/network/shared folder. See the
+[contract](DISK_WORKER_1.9.md#inventory-peer-integration--2026-10-21) and
+[source-bound evidence](release-evidence/1.9-worker-channel-2026-10-21.md).
+
+This advances inventory integration only: trusted installation/publisher checks,
+per-message origin, image sandbox, privilege/offline/device-operation authority,
+native writable recovery/journal/read-back, media/UI and full recovery/installed
+upgrade/package/signature/review gates remain open. Four disk profiles stay
+candidates. #492/native Project stay In progress; #736 stays draft/unmerged.
+Exact delivered-head hosted checks remain required. No beta cut/tag/draft,
+release asset run or publication occurred.

@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1904] Bind Linux inventory worker startup and response validation to kernel peers.
 - [VS-1904] Prototype Linux worker peer binding with kernel credentials and process lifetimes.
 - [VS-1905] Bind single-use overwrite reviews to verified images and fresh target observations.
 - [VS-1905] Prototype Linux restore previews with fresh handles and repository exclusion.

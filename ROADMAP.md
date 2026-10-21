@@ -1428,6 +1428,14 @@ repository must not transfer before a compatible release is adopted.
     inherited socket remains open. This is not build trust, per-message origin,
     privilege or operation consent; integration and sandboxing remain open.
     See [peer evidence](docs/release-evidence/1.9-worker-peer-2026-10-21.md).
+  - Inventory integration (2026-10-21): Linux x64 launchers now require a private
+    same-privilege peer rendezvous, matching the actual child and kernel parent
+    PID/UID/GID before any request. A completion acknowledgement keeps the child
+    alive through bounded response validation; EOF, empty stderr and exit zero
+    remain mandatory. Unsupported binding refuses without a pipe-only fallback.
+    This is read-only inventory, not publisher trust, sandboxing, elevation,
+    per-message authentication or device-operation authority. See the
+    [integration contract](docs/DISK_WORKER_1.9.md#inventory-peer-integration--2026-10-21).
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
     persisted import marker distinguishes origin from restore state; cards,
