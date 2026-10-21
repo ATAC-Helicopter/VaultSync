@@ -108,52 +108,78 @@ internal sealed class LinuxWorkerPeerBinding : IDisposable
             if (socket.GetRawSocketOption(1, 77, buffer) != buffer.Length) return null; // SO_PEERPIDFD, no PID fallback.
             int descriptor = BinaryPrimitives.ReadInt32LittleEndian(buffer);
             if (descriptor < 0) return null;
-            var handle = new PeerProcessHandle(descriptor);
-            int flags = DescriptorFlags(handle, 1); // F_GETFD / FD_CLOEXEC
-            if (flags >= 0 && (flags & 1) != 0)
-                return new ProcessLifetime(handle);
-            handle.Dispose();
-            return null;
+            var handle = new NativeHandle(descriptor);
+            NativeHandle? monitor = null;
+            bool transferred = false;
+            try
+            {
+                if (!CloseOnExec(handle)) return null;
+                int polling = CreateEpoll(0x80000); // EPOLL_CLOEXEC
+                if (polling < 0) return null;
+                monitor = new NativeHandle(polling);
+                var registration = new EpollEvent { Events = 1, Data = 1 }; // EPOLLIN, opaque local cookie.
+                if (!CloseOnExec(monitor) || Register(monitor, 1, handle, ref registration) != 0) return null;
+                var lifetime = new ProcessLifetime(handle, monitor);
+                transferred = true;
+                return lifetime;
+            }
+            finally
+            {
+                if (!transferred) { monitor?.Dispose(); handle.Dispose(); }
+            }
         }
     }
 
-    private sealed class ProcessLifetime(PeerProcessHandle handle) : IProcessLifetime
+    private static bool CloseOnExec(NativeHandle handle)
+    {
+        int flags = DescriptorFlags(handle, 1); // F_GETFD / FD_CLOEXEC
+        return flags >= 0 && (flags & 1) != 0;
+    }
+
+    private sealed class ProcessLifetime(NativeHandle handle, NativeHandle monitor) : IProcessLifetime
     {
         public bool IsAlive
         {
             get
             {
-                bool held = false;
-                try
-                {
-                    handle.DangerousAddRef(ref held);
-                    var poll = new PollDescriptor { Descriptor = handle.DangerousGetHandle().ToInt32(), Events = 1 };
-                    return Poll(ref poll, 1, 0) == 0 && poll.ReturnedEvents == 0;
-                }
-                catch (ObjectDisposedException) { return false; }
-                finally { if (held) handle.DangerousRelease(); }
+                // SafeHandle arguments receive automatic native-call lifetime
+                // protection. No raw descriptor extraction or manual ref counting.
+                int ready = Wait(monitor, out _, 1, 0);
+                GC.KeepAlive(handle); // Keep the registered pidfd alive through the wait.
+                return ready == 0;
             }
         }
-        public void Dispose() => handle.Dispose();
+        public void Dispose() { monitor.Dispose(); handle.Dispose(); }
     }
 
     // FD zero is valid on Linux. Do not use a zero-is-invalid handle wrapper.
-    private sealed class PeerProcessHandle : SafeHandle
+    private sealed class NativeHandle : SafeHandle
     {
-        internal PeerProcessHandle(int descriptor) : base((IntPtr)(-1), ownsHandle: true) => SetHandle((IntPtr)descriptor);
+        internal NativeHandle(int descriptor) : base((IntPtr)(-1), ownsHandle: true) => SetHandle((IntPtr)descriptor);
         public override bool IsInvalid => handle.ToInt64() < 0;
         protected override bool ReleaseHandle() => NativeClose(handle.ToInt32()) == 0;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct PollDescriptor { public int Descriptor; public short Events; public short ReturnedEvents; }
+    // Linux x64 epoll_event is packed, 12 bytes (u32 events + u64 data).
+    [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 12)]
+    private struct EpollEvent
+    {
+        [FieldOffset(0)] public uint Events;
+        [FieldOffset(4)] public ulong Data;
+    }
 
     [DllImport("libc", EntryPoint = "fcntl", CallingConvention = CallingConvention.Cdecl)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
-    private static extern int DescriptorFlags(PeerProcessHandle descriptor, int command);
-    [DllImport("libc", EntryPoint = "poll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int DescriptorFlags(NativeHandle descriptor, int command);
+    [DllImport("libc", EntryPoint = "epoll_create1", CallingConvention = CallingConvention.Cdecl)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
-    private static extern int Poll(ref PollDescriptor descriptor, nuint count, int timeout);
+    private static extern int CreateEpoll(int flags);
+    [DllImport("libc", EntryPoint = "epoll_ctl", CallingConvention = CallingConvention.Cdecl)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static extern int Register(NativeHandle monitor, int operation, NativeHandle process, ref EpollEvent registration);
+    [DllImport("libc", EntryPoint = "epoll_wait", CallingConvention = CallingConvention.Cdecl)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static extern int Wait(NativeHandle monitor, out EpollEvent ready, int maximumEvents, int timeout);
     [DllImport("libc", EntryPoint = "close", CallingConvention = CallingConvention.Cdecl)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     private static extern int NativeClose(int descriptor);

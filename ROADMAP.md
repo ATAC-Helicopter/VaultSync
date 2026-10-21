@@ -1699,6 +1699,11 @@ repository must not transfer before a compatible release is adopted.
     symbolic/hard links and changed descriptors. Preserve exact asset/signature
     checks; new regressions and exact-head reanalysis are required. See
     [boundary evidence](docs/release-evidence/1.9-draft-input-boundary-2026-10-21.md).
+  - Peer interop follow-up (2026-10-21): hosted 6a69f75 reports S3869 on
+    manual handle extraction. Replace it with a close-on-exec epoll monitor
+    and SafeHandle parameters protected automatically across native calls.
+    Retain exact peer-exit checks, including inherited sockets; release both
+    owned descriptors. See [interop evidence](docs/release-evidence/1.9-peer-safe-interop-2026-10-21.md).
 
 - [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
   - Scope: SonarCloud rejects PR metadata after successful build and coverage

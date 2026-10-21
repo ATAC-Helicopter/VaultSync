@@ -747,3 +747,14 @@ The preceding exact head `37f6999f683a21327c5d7b701a466df65cb4b865` passes hoste
 Sonar and the remaining checks, including the fixed draft-input S8707 boundary.
 The failed d798e58 analysis remains historical. This new source needs its own
 hosted checks; no quality gate is weakened and #736 stays draft/unmerged.
+
+
+## Peer native lifetime protection — 2026-10-21
+
+BUG-19034/#810 addresses hosted S3869 on 6a69f75 by replacing manual handle
+extraction with SafeHandle-based epoll interop. The pidfd and monitor remain
+close-on-exec and owned; acquisition/refusal/disposal release both. Peer-death
+and inherited-socket checks retain their fail-closed behavior. No rule, threshold
+or exclusion is changed. See [current interop evidence](release-evidence/1.9-peer-safe-interop-2026-10-21.md).
+This remains an internal peer prerequisite, with no privileged protocol or raw
+write integration; four disk profiles stay candidates and #736 stays draft.

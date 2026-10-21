@@ -147,11 +147,11 @@ wire claims. It checks kernel `SO_PEERCRED` and obtains `SO_PEERPIDFD` from that
 same socket. It does not reopen a numeric PID, so process-ID reuse cannot redirect
 that process lease. Credential/connection/liveness checks surround acquisition.
 
-The held pidfd must be close-on-exec. Nonblocking polling detects task exit or
+The held pidfd and its epoll monitor must be close-on-exec. Nonblocking polling detects task exit or
 reaping without reading process data, sending signals or acquiring another
 process's files. Rechecks inspect connection closure and connect-time credentials;
 any failure invalidates the lease permanently. Disposal is idempotent and closes
-only the pidfd. The caller still owns the socket and must close/cancel its
+only the owned pidfd and monitor. The caller still owns the socket and must close/cancel its
 operation on refusal. No application bytes are consumed by these checks.
 
 Missing kernel support refuses with no numeric-PID or uncredentialled fallback.
@@ -184,3 +184,22 @@ No raw IDs, paths or free-form peer diagnostics enter product reporting.
 
 Current retained source/runtime/native measurements and explicit limits:
 [peer evidence](release-evidence/1.9-worker-peer-2026-10-21.md).
+
+
+### Safe native interop follow-up — BUG-19034, 2026-10-21
+
+Hosted analysis of 6a69f75 reports S3869 on manual SafeHandle extraction, even
+though the earlier poll call paired reference acquisition/release. The current
+implementation removes that pattern: epoll_ctl receives both owned SafeHandles,
+and epoll_wait receives the owned monitor SafeHandle. Native-call marshalling
+protects their lifetime automatically; the registered pidfd stays rooted through
+the wait. No raw descriptor is extracted for a polling structure.
+
+Both descriptors require close-on-exec and are released on refused acquisition,
+failed recheck or disposal. The x64 epoll_event ABI is explicitly packed to
+12 bytes, with a fixed one-event/zero-timeout wait. Relevant
+[kernel layout](https://github.com/torvalds/linux/blob/v6.12/include/uapi/linux/eventpoll.h)
+and [close-on-exec creation](https://man7.org/linux/man-pages/man2/epoll_create.2.html)
+are retained references. No security exception, rule/threshold change or new
+operation authority is introduced. Current source/runtime/FD-leak/native results:
+[interop evidence](release-evidence/1.9-peer-safe-interop-2026-10-21.md).
