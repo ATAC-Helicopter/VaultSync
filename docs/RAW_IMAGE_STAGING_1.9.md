@@ -80,3 +80,14 @@ regular input descriptors and their staging parent. Unknown source ancestry
 does not invalidate byte inspection, but it blocks a
 [native target description](LINUX_RESTORE_TARGET_PREVIEW_1.9.md). Those numbers
 are not trusted image claims, persistent physical identity or permission to write.
+
+
+## Internal write-engine consumer — 2026-10-21
+
+VS-1907 now consumes exclusively caller-owned sealed sessions in an internal
+[write/read-back engine](RAW_DEVICE_RESTORE_1.9.md). It revalidates the entire image
+before writing an already-held target and verifies the complete target afterward.
+A sealed session, image root or review UUID still grants no writable capability.
+The engine supplies no path opener, privilege, offline proof, product journal
+acquisition or UI/media integration. Native writes are currently measured only
+against explicitly selected new disposable-VM disk files; support stays unqualified.

@@ -1565,6 +1565,17 @@ repository must not transfer before a compatible release is adopted.
     substitute bytes after staging. Device authority, worker/media, lifecycle
     cleanup and the actual five-stage recovery loop remain open.
     See [staging contract](docs/RAW_IMAGE_STAGING_1.9.md); issue #495, PR #736.
+  - Write-engine increment (2026-10-21): an internal engine revalidates sealed
+    bytes, binds image/operation/review/target geometry, records intent before
+    bounded writes and acknowledges only after target flush and durable journal
+    return. Full target content/GPT read-back precedes a byte-verification result;
+    failures retain acknowledged and uncertain ranges without rollback/resume.
+    A Linux x64 adapter adopts an already-held writable block descriptor, refusing
+    ordinary files, changed identity, append/direct modes and missing close-on-exec.
+    It opens no target path and supplies no device/offline authority. Public
+    restore, trusted broker/journal acquisition, independent media and complete
+    filesystem/boot qualification remain open. See the
+    [write-engine contract](docs/RAW_DEVICE_RESTORE_1.9.md).
 - [ ] `VS-1908` `P1` Record clone, validation, boot, and restore evidence with
   source-machine and tool-version identity.
 - [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on

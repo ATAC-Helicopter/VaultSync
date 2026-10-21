@@ -1,0 +1,98 @@
+# Internal raw-device write engine — VS-1907
+
+Owner #495; sole preparation PR #736. This is the first bounded write/read-back
+engine behind internal interfaces. It has no public restore API, target-path
+opener, elevated endpoint, desktop route or recovery launcher. The approved
+joint direction permits implementation and disposable-VM tests; it does not
+supply host-device authorization or qualify any support profile.
+
+## Admission and trust
+
+The trusted caller must exclusively own the sealed staging session, an exact
+already-authorized/exclusively held target and a private durable journal outside
+that target. A request binds operation/review UUIDs, image/capture/generation/root
+and a whole-disk observation. UUIDs and observations are correlation data, not
+human consent, executable provenance, an offline proof or device authority.
+Neither an image nor an unprivileged request can select a writable path here.
+
+Admission requires nonempty operation/review identity, exact staged image facts,
+matching target observation, whole disk with unique observed identity/nonzero
+disk sequence, no observed mount/swap/holder, writable state and equal capacity,
+logical and physical geometry. Unknown use stays Unknown. The sealed metadata
+and payload are independently reverified in full before the first journal/write.
+Corrupt/disposed or still-writable stages refuse. Ordinary file test providers
+exercise ordering only; they are never native physical identity substitutes.
+
+The Linux x64 adapter adopts an already-held descriptor; it does not open it or
+prove its exclusive claim. Ownership transfers only on successful adoption.
+The caller retains a refused descriptor. It independently checks native block
+kind/device number/capacity/geometry/disk sequence/read-only state with the existing
+held-handle inspector. Access must be O_RDWR, with FD_CLOEXEC and without O_APPEND
+(offset semantics) or O_DIRECT (unsupported managed-buffer alignment). Ordinary
+files, closed/invalid handles, unsupported geometry and observed busy targets
+refuse. Native writes are capped at 128 KiB, sector aligned and within capacity.
+Held identity is checked around writes/flushes and on read-back through the
+existing read-only stream facade. No discard, resize, repartition ioctl, source
+path reopen or generic privileged file-open endpoint is introduced.
+
+The adapter does not establish current global use, repository/journal ancestry,
+trusted build/role, exact human consent or controlled offline state. These are
+required future broker obligations before any production device operation.
+The only native writer caller currently lives in the private disposable-VM lab.
+All public preview/review APIs remain read-only and grant no writable capability.
+
+## Journal and I/O order
+
+`IJournal.AppendDurableAsync` must return only after its exact typed record is
+committed to trusted local storage. This increment defines callback ordering,
+not a stable serialized journal format, production journal opener or resume API.
+The VM provider uses private regular JSONL files and Flush(true) after each record;
+fault fixtures supply deterministic failures. Future product acquisition must
+bind journal location/ancestry, permissions, build/operation and retention policy.
+The journal is local technical evidence; never upload it or raw payloads/logs.
+
+1. Reverify staged bytes and held target, then durably append Started.
+2. Read at most 128 KiB from the sealed payload. Recheck the target and durably
+   append WriteIntent with exact offset/length and intended SHA-256.
+3. Mark that interval uncertain before calling the writer. Cancellation or a
+   native exception can occur after some bytes changed; never infer zero writes.
+4. Write the interval, recheck identity, flush target storage, recheck again,
+   and durably append RangeFlushed with the same range/hash. Only then advance
+   acknowledged bytes and clear that interval's uncertainty.
+5. After all ranges, independently run the full raw verifier against the held
+   target: length, payload digest, completion/root and actual primary/backup GPT.
+   Recheck identity and durably append ReadBackVerified before reporting the
+   narrowly named WrittenAndReadBack byte observation.
+6. Release the target on success, refusal, cancellation and failure. A cleanup
+   failure changes the outcome to Failed and attempts a final failure record;
+   a preceding read-back record remains a byte observation, not completed recovery.
+
+A RangeFlushed record acknowledges successful target flush plus journal return,
+not independent per-range read-back, physical power-loss durability or an OS boot.
+The final verification is separate. SHA-256 proves byte binding, not authorship.
+Full target capacity must match the staged image; there is no larger-disk GPT
+relocation, sparse omission, sector translation or automatic resume/rollback.
+
+## Interruption and limits
+
+Failures report the contiguous acknowledged prefix and at most one uncertain
+interval. Write/flush/acknowledgement failure cannot advance that prefix.
+An unconfirmed journal append is not treated as persisted. Cancellation/failure
+attempts a terminal record without the cancelled caller token; failure to retain
+it is reported explicitly. Cancellation after durable ReadBackVerified does not
+undo that observation. Cancellation before any write leaves bytes untouched;
+its intent range may still conservatively be marked uncertain.
+
+The engine assumes trusted OS/administrator/same-UID storage and exclusive caller
+ownership of stage/target/journal. It does not sandbox hostile images or prevent
+same-UID mutation; staged verification must eventually run outside the elevated
+writer. Synchronous flush and uninterruptible kernel I/O cannot be preempted by a
+managed token; the future integrated bounded worker must enforce operation lifetime
+and disconnect behavior. The current inventory rendezvous is not that protocol.
+
+All outcomes and exceptions are internal technical states, not UI strings or
+telemetry fields. Future UI must localize every surfaced outcome in all locales.
+Full privileged broker/operation consent, private production journal acquisition,
+independent recovery medium, UI, power-cut/crash qualification, full filesystem
+recovery/boot/interactive verification and installed upgrade/package/signature
+checks remain open. All four disk profiles remain candidates.

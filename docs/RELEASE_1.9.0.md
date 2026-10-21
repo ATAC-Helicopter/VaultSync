@@ -785,3 +785,36 @@ upgrade/package/signature/review gates remain open. Four disk profiles stay
 candidates. #492/native Project stay In progress; #736 stays draft/unmerged.
 Exact delivered-head hosted checks remain required. No beta cut/tag/draft,
 release asset run or publication occurred.
+
+
+## Internal device writes and full byte read-back — 2026-10-21
+
+VS-1907/#495 adds an internal engine consuming an exclusively owned sealed stage,
+already-held target and durable-journal provider. Image/operation/review/target
+bindings are rechecked before writes. Each bounded range has a prior durable
+intent, target flush and subsequent durable acknowledgement; failure retains
+acknowledged/uncertain ranges without rollback/resume claims. The complete target
+payload and GPT must pass the independent raw verifier before WrittenAndReadBack.
+The Linux adapter opens no path; it adopts only a matching held O_RDWR block
+handle without append/direct mode and with close-on-exec. No public device writer,
+elevated endpoint, desktop route or production journal acquisition is added.
+
+Required Release: 1,834 Core / 261 Python, zero warnings/errors/skips;
+1,943 keys / 19 locales. The actual pinned isolated UEFI VM passes 32 new native
+checks, including capture/stage, exact new disposable targets, review correlation,
+read-only/append refusal, cancellation after durable intent with unchanged bytes,
+real writes/flushes, journal order and full read-back for 512/4096 sectors.
+After normal poweroff the host independently confirms both new raw target files
+match their source SHA-256. QEMU/guest exit zero, no timeout; 49.00 seconds is whole
+boot/probes, not throughput. Tiny GPT fixtures do not contain a bootable OS.
+
+The earlier 92 inventory/peer/capture cases remain historical at 72f9e6d; they are
+not relabeled as rerun by this new 32-case probe. No host raw devices/network/share
+were attached. See the [write-engine contract](RAW_DEVICE_RESTORE_1.9.md) and
+[source-bound evidence](release-evidence/1.9-device-restore-2026-10-21.md).
+Trusted broker/role/build and exact per-operation device authority, controlled
+offline/repository/journal ancestry, unprivileged image isolation, real recovery
+media/UI, power-cut and full filesystem/boot/interactive qualification, installed
+upgrade and package/signature/protected review gates remain open. Four support
+profiles stay candidates; #495/native Project stay In progress, #736 draft.
+This is an internal byte-write prerequisite, not a feature-complete beta.
