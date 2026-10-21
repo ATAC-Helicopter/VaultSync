@@ -1512,7 +1512,17 @@ repository must not transfer before a compatible release is adopted.
     See [native preview contract](docs/LINUX_RESTORE_TARGET_PREVIEW_1.9.md); #493.
     Hosted S2674 findings on 99773d2 identify two implicit empty-read probes;
     an explicit serialized binding operation now replaces them without reading
-    bytes or changing expiry/authorization. Exact-head reanalysis remains required.
+    bytes or changing expiry/authorization. Hosted reanalysis passes on b30e355;
+    subsequent increments require their own exact-head checks.
+
+
+  - Review exchange increment (2026-10-21): immutable, single-use descriptions
+    bind operation/review UUIDs, verified image root/generation and the exact
+    native target/range. New reviews supersede old ones; replies recheck fresh
+    topology, ancestry and held identity, with monotonic expiry and no writes.
+    This is not proof of human consent or authenticated execution authority;
+    translated overwrite UI and the privileged writer remain open. See
+    [review evidence](docs/release-evidence/1.9-overwrite-review-2026-10-21.md).
 
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
   systems with offline device discovery and recovery workflows.

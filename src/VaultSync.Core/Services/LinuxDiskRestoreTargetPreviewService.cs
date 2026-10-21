@@ -19,28 +19,82 @@ public sealed class LinuxDiskRestoreTargetPreview : IAsyncDisposable
 {
     private readonly LinuxBlockReadSession target;
     private readonly LinuxRawImageStagingSession stage;
+    private readonly LinuxBlockInventory initialInventory;
+    private readonly Func<CancellationToken, ValueTask<LinuxBlockInventory>> observe;
+    private readonly TimeProvider clock;
+    private readonly long started;
+    private readonly SemaphoreSlim reviewGate = new(1, 1);
+    private LinuxDiskRestoreOverwriteReview? activeReview;
     public LinuxBlockObservation ObservedTarget { get; }
     public DiskImageManifestVerificationAssessment Image => stage.Image;
     public DateTimeOffset ObservedAtUtc { get; } = DateTimeOffset.UtcNow;
     internal LinuxDiskRestoreTargetPreview(LinuxBlockReadSession target, LinuxRawImageStagingSession stage,
-        LinuxBlockObservation observation)
-    { this.target = target; this.stage = stage; ObservedTarget = observation; }
+        LinuxBlockObservation observation, LinuxBlockInventory initialInventory,
+        Func<CancellationToken, ValueTask<LinuxBlockInventory>> observe, TimeProvider clock)
+    {
+        this.target = target; this.stage = stage; ObservedTarget = observation;
+        this.initialInventory = initialInventory; this.observe = observe; this.clock = clock;
+        ObservedAtUtc = clock.GetUtcNow(); started = clock.GetTimestamp();
+    }
 
     public async ValueTask<bool> RecheckAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (!stage.IsAlive || !target.CanRead || ObservedAtUtc > now || now - ObservedAtUtc > TimeSpan.FromSeconds(30))
-        { await target.DisposeAsync().ConfigureAwait(false); return false; }
+        if (!Alive()) { await DisposeAsync().ConfigureAwait(false); return false; }
         try
         {
+            var fresh = await observe(cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!LinuxDiskRestoreTargetPreviewService.MatchesReview(stage, initialInventory, fresh, ObservedTarget))
+            { await DisposeAsync().ConfigureAwait(false); return false; }
             await target.ValidateBindingAsync(cancellationToken).ConfigureAwait(false);
+            if (!Alive()) { await DisposeAsync().ConfigureAwait(false); return false; }
             return true;
         }
-        catch (IOException) { await target.DisposeAsync().ConfigureAwait(false); return false; }
+        catch (IOException) { await DisposeAsync().ConfigureAwait(false); return false; }
+        catch (UnauthorizedAccessException) { await DisposeAsync().ConfigureAwait(false); return false; }
         catch (ObjectDisposedException) { return false; }
     }
-    public ValueTask DisposeAsync() => target.DisposeAsync();
+
+    private bool Alive() => stage.IsAlive && target.CanRead && clock.GetUtcNow() >= ObservedAtUtc &&
+        clock.GetUtcNow() - ObservedAtUtc <= TimeSpan.FromSeconds(30) &&
+        clock.GetElapsedTime(started) <= TimeSpan.FromSeconds(30);
+
+    /// <summary>Creates a single-use review description, not device write authorization.</summary>
+    public async ValueTask<LinuxDiskRestoreOverwriteReview?> CreateOverwriteReviewAsync(Guid operationId,
+        CancellationToken cancellationToken = default)
+    {
+        await reviewGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            Interlocked.Exchange(ref activeReview, null);
+            if (operationId == Guid.Empty || !await RecheckAsync(cancellationToken).ConfigureAwait(false)) return null;
+            var review = new LinuxDiskRestoreOverwriteReview(this, operationId);
+            Interlocked.Exchange(ref activeReview, review);
+            return review;
+        }
+        finally { reviewGate.Release(); }
+    }
+
+    internal async ValueTask<bool> AcknowledgeAsync(LinuxDiskRestoreOverwriteReview review, Guid operationId,
+        Guid reviewId, CancellationToken cancellationToken)
+    {
+        await reviewGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            // Consume before any asynchronous checks: failures and retries need a new review.
+            if (!ReferenceEquals(Interlocked.CompareExchange(ref activeReview, null, review), review)) return false;
+            if (review.OperationId != operationId || review.ReviewId != reviewId) return false;
+            return await RecheckAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally { reviewGate.Release(); }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Interlocked.Exchange(ref activeReview, null);
+        return target.DisposeAsync();
+    }
 }
 
 /// <summary>Fresh native target description and repository exclusion, with no writable device opens.</summary>
@@ -54,7 +108,7 @@ public static class LinuxDiskRestoreTargetPreviewService
     internal static async ValueTask<LinuxDiskRestoreTargetPreviewAssessment> CreateAsync(LinuxRawImageStagingSession stage,
         LinuxBlockInventory expected, string kernelName, Func<CancellationToken, ValueTask<LinuxBlockInventory>> observe,
         Func<LinuxBlockInventory, string, CancellationToken, Task<LinuxBlockReadResult>> open,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, TimeProvider? clock = null)
     {
         ArgumentNullException.ThrowIfNull(stage); ArgumentNullException.ThrowIfNull(expected);
         ArgumentNullException.ThrowIfNull(observe); ArgumentNullException.ThrowIfNull(open);
@@ -89,7 +143,7 @@ public static class LinuxDiskRestoreTargetPreviewService
             if (!held.Identity.Matches(selected)) return Refuse(LinuxDiskRestoreTargetPreviewReason.SelectionChanged);
             await held.ValidateBindingAsync(cancellationToken).ConfigureAwait(false);
             if (!stage.IsAlive) return Refuse(LinuxDiskRestoreTargetPreviewReason.InvalidImage);
-            var preview = new LinuxDiskRestoreTargetPreview(held, stage, selected);
+            var preview = new LinuxDiskRestoreTargetPreview(held, stage, selected, fresh, observe, clock ?? TimeProvider.System);
             held = null;
             return new(LinuxDiskRestoreTargetPreviewReason.ObservationOnly, preview);
         }
@@ -106,6 +160,11 @@ public static class LinuxDiskRestoreTargetPreviewService
         inventory.ObservationId != Guid.Empty && inventory.BootId != Guid.Empty && inventory.MountNamespace is { Length: >= 7 and <= 32 } &&
         inventory.Devices is { Count: <= LinuxBlockInventoryService.MaximumDevices } && inventory.Devices.All(device => device is not null) &&
         inventory.ObservedAtUtc <= DateTimeOffset.UtcNow && DateTimeOffset.UtcNow - inventory.ObservedAtUtc <= TimeSpan.FromSeconds(30);
+
+    internal static bool MatchesReview(LinuxRawImageStagingSession stage, LinuxBlockInventory initial,
+        LinuxBlockInventory fresh, LinuxBlockObservation target) => InventoryValid(fresh) &&
+        initial.BootId == fresh.BootId && initial.MountNamespace == fresh.MountNamespace &&
+        target == Single(fresh, target.KernelName) && CheckRepository(stage, fresh, target) is null;
 
     private static LinuxBlockObservation? Single(LinuxBlockInventory inventory, string name)
     {

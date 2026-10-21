@@ -223,4 +223,192 @@ public sealed class LinuxDiskRestoreTargetPreviewServiceTests
         }
         finally { File.Delete(path); }
     }
+    private sealed class Clock : TimeProvider
+    {
+        internal DateTimeOffset Now = DateTimeOffset.UtcNow;
+        internal long Ticks;
+        public override DateTimeOffset GetUtcNow() => Now;
+        public override long GetTimestamp() => Ticks;
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+    }
+
+    private sealed class ReviewFixture : IAsyncDisposable
+    {
+        private readonly string path = Path.GetTempFileName();
+        internal LinuxRawImageStagingSession Stage = null!;
+        internal LinuxBlockInventory Fresh = Inventory();
+        internal LinuxDiskRestoreTargetPreview Preview = null!;
+        internal SafeFileHandle Handle = null!;
+        internal Clock Clock = new();
+        internal Access Access = new();
+        internal int Observations;
+        internal bool ObservationFails;
+        internal Action? OnObservation;
+        internal static async Task<ReviewFixture> Create()
+        {
+            var fixture = new ReviewFixture();
+            fixture.Stage = await LinuxDiskRestoreTargetPreviewServiceTests.Stage();
+            fixture.Handle = File.OpenHandle(fixture.path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var source = new LinuxBlockReadSession(fixture.Handle, Identity, fixture.Access);
+            var result = await LinuxDiskRestoreTargetPreviewService.CreateAsync(fixture.Stage, fixture.Fresh, "sdb",
+                _ =>
+                {
+                    fixture.Observations++;
+                    fixture.OnObservation?.Invoke();
+                    if (fixture.ObservationFails) throw new IOException();
+                    return ValueTask.FromResult(fixture.Fresh);
+                }, (_, _, _) => Task.FromResult(new LinuxBlockReadResult(LinuxBlockReadState.OpenedReadOnly, source)),
+                clock: fixture.Clock);
+            fixture.Preview = Assert.IsType<LinuxDiskRestoreTargetPreview>(result.Preview);
+            return fixture;
+        }
+        public async ValueTask DisposeAsync()
+        { await Preview.DisposeAsync(); await Stage.DisposeAsync(); File.Delete(path); }
+    }
+
+    [Fact]
+    public async Task ReviewBindsExactImageTargetAndOperationAndCanBeAcknowledgedOnce()
+    {
+        await using var fixture = await ReviewFixture.Create();
+        Guid operation = Guid.NewGuid();
+        var review = Assert.IsType<LinuxDiskRestoreOverwriteReview>(await fixture.Preview.CreateOverwriteReviewAsync(operation));
+        Assert.Equal(operation, review.OperationId);
+        Assert.NotEqual(Guid.Empty, review.ReviewId);
+        Assert.Same(fixture.Stage.Image, review.Image);
+        Assert.Equal(Target, review.Target);
+        Assert.Equal(0ul, review.OverwriteOffset);
+        Assert.Equal(65536ul, review.OverwriteLength);
+        Assert.True(await review.AcknowledgeAsync(operation, review.ReviewId));
+        Assert.False(await review.AcknowledgeAsync(operation, review.ReviewId));
+        Assert.Equal(3, fixture.Observations); // Create preview, create review, acknowledge.
+        Assert.False(fixture.Handle.IsClosed);
+        Assert.Equal(LinuxBlockUse.Unknown, review.Target.Use);
+    }
+
+    [Fact]
+    public async Task NewReviewReplacesOldReviewWithoutLettingOldResponseConsumeNewOne()
+    {
+        await using var fixture = await ReviewFixture.Create();
+        Guid operation = Guid.NewGuid();
+        var old = (await fixture.Preview.CreateOverwriteReviewAsync(operation))!;
+        var current = (await fixture.Preview.CreateOverwriteReviewAsync(operation))!;
+        Assert.NotEqual(old.ReviewId, current.ReviewId);
+        Assert.False(await old.AcknowledgeAsync(operation, old.ReviewId));
+        Assert.True(await current.AcknowledgeAsync(operation, current.ReviewId));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task MismatchedResponseConsumesReviewAndCannotBeRetried(bool wrongOperation)
+    {
+        await using var fixture = await ReviewFixture.Create();
+        Guid operation = Guid.NewGuid();
+        var review = (await fixture.Preview.CreateOverwriteReviewAsync(operation))!;
+        Assert.False(await review.AcknowledgeAsync(wrongOperation ? Guid.NewGuid() : operation,
+            wrongOperation ? review.ReviewId : Guid.NewGuid()));
+        Assert.False(await review.AcknowledgeAsync(operation, review.ReviewId));
+        Assert.Equal(2, fixture.Observations);
+    }
+
+    [Theory]
+    [InlineData("boot")]
+    [InlineData("namespace")]
+    [InlineData("mounted")]
+    [InlineData("swap")]
+    [InlineData("holders")]
+    [InlineData("identity")]
+    [InlineData("ancestry")]
+    [InlineData("missing-repository")]
+    [InlineData("incomplete")]
+    [InlineData("stale")]
+    [InlineData("io")]
+    [InlineData("stage")]
+    [InlineData("descriptor")]
+    public async Task ReviewRefusesChangedOrUnavailableConditionsAndClosesClaim(string fault)
+    {
+        await using var fixture = await ReviewFixture.Create();
+        Guid operation = Guid.NewGuid();
+        var review = (await fixture.Preview.CreateOverwriteReviewAsync(operation))!;
+        var devices = fixture.Fresh.Devices.ToArray();
+        switch (fault)
+        {
+            case "boot": fixture.Fresh = fixture.Fresh with { BootId = Guid.NewGuid() }; break;
+            case "namespace": fixture.Fresh = fixture.Fresh with { MountNamespace = "mnt:[125]" }; break;
+            case "mounted": devices[2] = devices[2] with { MountObserved = true }; break;
+            case "swap": fixture.Fresh = fixture.Fresh with { HasUnresolvedSwaps = true }; break;
+            case "holders": devices[2] = devices[2] with { HasHolders = true }; break;
+            case "identity": devices[2] = devices[2] with { DiskSequence = 112 }; break;
+            case "ancestry": devices[1] = devices[1] with { ParentKernelName = "sdb" }; break;
+            case "missing-repository": devices[1] = devices[1] with { DeviceNumber = "8:2" }; break;
+            case "incomplete": fixture.Fresh = fixture.Fresh with { State = LinuxBlockInventoryState.Incomplete }; break;
+            case "stale": fixture.Fresh = fixture.Fresh with { ObservedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1) }; break;
+            case "io": fixture.ObservationFails = true; break;
+            case "stage": await fixture.Stage.DisposeAsync(); break;
+            case "descriptor": fixture.Access.Current = Identity with { DiskSequence = 112 }; break;
+        }
+        fixture.Fresh = fixture.Fresh with { Devices = devices };
+        Assert.False(await review.AcknowledgeAsync(operation, review.ReviewId));
+        Assert.True(fixture.Handle.IsClosed);
+        Assert.False(await review.AcknowledgeAsync(operation, review.ReviewId));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReviewExpiresWithoutDependingOnWallClockAdvance(bool rollBackWallClock)
+    {
+        await using var fixture = await ReviewFixture.Create();
+        Guid operation = Guid.NewGuid();
+        var review = (await fixture.Preview.CreateOverwriteReviewAsync(operation))!;
+        fixture.Clock.Ticks += TimeSpan.FromSeconds(31).Ticks;
+        if (rollBackWallClock) fixture.Clock.Now = fixture.Clock.Now.AddSeconds(-1);
+        Assert.False(await review.AcknowledgeAsync(operation, review.ReviewId));
+        Assert.True(fixture.Handle.IsClosed);
+    }
+
+    [Fact]
+    public async Task StageClosingDuringObservationCannotBecomeAcknowledged()
+    {
+        await using var fixture = await ReviewFixture.Create();
+        Guid operation = Guid.NewGuid();
+        var review = (await fixture.Preview.CreateOverwriteReviewAsync(operation))!;
+        fixture.OnObservation = () => fixture.Stage.DisposeAsync().GetAwaiter().GetResult();
+        Assert.False(await review.AcknowledgeAsync(operation, review.ReviewId));
+        Assert.True(fixture.Handle.IsClosed);
+    }
+
+    [Fact]
+    public async Task ConcurrentRepliesOnlyAcknowledgeOneExchange()
+    {
+        await using var fixture = await ReviewFixture.Create();
+        Guid operation = Guid.NewGuid();
+        var review = (await fixture.Preview.CreateOverwriteReviewAsync(operation))!;
+        var results = await Task.WhenAll(Enumerable.Range(0, 8)
+            .Select(_ => review.AcknowledgeAsync(operation, review.ReviewId).AsTask()));
+        Assert.Single(results, value => value);
+    }
+
+    [Fact]
+    public async Task MissingOperationInvalidatesPreviousReview()
+    {
+        await using var fixture = await ReviewFixture.Create();
+        Guid operation = Guid.NewGuid();
+        var review = (await fixture.Preview.CreateOverwriteReviewAsync(operation))!;
+        Assert.Null(await fixture.Preview.CreateOverwriteReviewAsync(Guid.Empty));
+        Assert.False(await review.AcknowledgeAsync(operation, review.ReviewId));
+    }
+
+    [Fact]
+    public async Task CancellationDuringAcknowledgementConsumesReview()
+    {
+        await using var fixture = await ReviewFixture.Create();
+        Guid operation = Guid.NewGuid();
+        var review = (await fixture.Preview.CreateOverwriteReviewAsync(operation))!;
+        using var cancellation = new CancellationTokenSource();
+        fixture.OnObservation = cancellation.Cancel;
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => review.AcknowledgeAsync(operation, review.ReviewId, cancellation.Token).AsTask());
+        Assert.False(await review.AcknowledgeAsync(operation, review.ReviewId));
+    }
+
 }

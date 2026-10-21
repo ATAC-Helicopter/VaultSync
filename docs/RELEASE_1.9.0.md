@@ -676,3 +676,22 @@ historical; a new exact-head analysis is required after delivery.
 [Current explicit-check evidence](release-evidence/1.9-explicit-binding-check-2026-10-20.md):
 1,740 Core / 242 Python and 43 native read-only cases pass. Hosted reanalysis
 remains separate; the five-stage recovery and beta gates remain open.
+
+
+## Native overwrite review exchange — 2026-10-21
+
+VS-1905/#493 adds operation-bound, single-use overwrite review descriptions over
+verified staged images and read-only native target claims. Each acknowledgement
+requires a fresh independent inventory, repository exclusion and held descriptor
+check. Image root/generation, target and full overwrite range remain fixed;
+review replacement, wrong operation/review, replay and expiry refuse. UTC and
+monotonic deadlines prevent clock rollback from extending the claim. No user
+interaction, Offline authority, privilege or device-write capability is inferred.
+The translated dialog, authenticated broker and writable restore remain open.
+See [contract](LINUX_RESTORE_TARGET_PREVIEW_1.9.md) and
+[source-bound evidence](release-evidence/1.9-overwrite-review-2026-10-21.md).
+
+Hosted SonarCloud and CodeQL completed successfully on the previous exact head
+`b30e355ce4a999ef23f5df21b15dfb902e047d5a`; the earlier failed 99773d2 result
+remains historical. This increment requires its own hosted checks after push.
+All four disk profiles remain candidates; PR #736 stays draft and unmerged.
