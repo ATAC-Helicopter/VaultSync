@@ -1,0 +1,82 @@
+{
+  "owner": "BUG-19037/#813",
+  "date": "2026-10-22",
+  "sourceBase": "f703aa23333d337847986bf6206f33d4cb1901f7",
+  "sourceSha256": {
+    "scripts/work_tracking.py": "ae65c0b4f266a24f8366ae77ee7dfa9abf89396321a40e6c942cbb0b5d2bb74b",
+    "scripts/work_tracking_audit.py": "a634a3e3769351663bb191c7ed6a8b9316fb62b511e7dfe1193632f54e686338",
+    "tests/scripts/test_work_tracking.py": "f2325cb160f02ba558b3ef528e14d3a842d66796bcf9c4c11740223507875f0f",
+    "tests/scripts/test_work_tracking_audit.py": "d140095fc9f55b4726fcb790d5c325901e2b15260e4a29d9cfb389643e57c6b1",
+    "tests/scripts/test_work_tracking_boundaries.py": "ede3f3077dec42d6e767bdd3d16815cf86ca8d777b6df79e7071a2fc7c94f699",
+    "tests/scripts/test_work_tracking_remote.py": "48306496771e7b562bbaf42dc5f440227ed2a912305004c332dfbef7855f4c1d"
+  },
+  "completeRemote": {
+    "records": 740,
+    "issues": 570,
+    "pullRequests": 170,
+    "uniqueNumbers": 740,
+    "snapshotSha256": "bd821e4e409d17dc83e96face0f2157763155d32d64d4270f342d56576236f24",
+    "beforeNewTicket": {
+      "records": 739,
+      "issues": 569,
+      "pullRequests": 170,
+      "snapshotSha256": "17b7db32704ea46825f2016ca2f8683f849744ec12b060a80010d2383c0b73e3"
+    }
+  },
+  "validation": {
+    "core": 2061,
+    "python": 285,
+    "newRemoteRegressionMethods": 15,
+    "focusedTrackerTests": 47,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "trxSha256": "989de922fa3cf625d03be85e65274735251c8486810c540409f739953feb441f",
+    "activeReleaseOwners": 47,
+    "familyOwners": 108,
+    "discrepancies": 0,
+    "familyAuditSha256": "994c4c1d85802000a12cd143e8e81585f1c289683984739773c25ccf1f6cb1e8",
+    "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/reader-staging-20261022/tracker-final-release.log"
+  },
+  "historicalIncompleteRest": {
+    "issues-enumeration.json": {
+      "sha256": "0c687d2f23ad6b36312313f8c6f739a61774df02a86ae4ff436cc9c479501d69"
+    },
+    "issues-ascending.json": {
+      "sha256": "ba093adc45337fc52a51b7f78bee7e1d44a09d2075d14df18854af5cbdf479d7"
+    },
+    "issues-manual.json": {
+      "sha256": "d05a6e6b68cfdc30cf64ea3475611e2909ec733fb343bceef010faed8206e681"
+    },
+    "issues-versioned.json": {
+      "sha256": "bb2634eaa86fc1f444082215c896e6ef0d51613b99491ad22c6a47fa0658276d"
+    },
+    "issues-retry.json": {
+      "sha256": "39bcbe8d2ac02b5a65155487e73fdb8be7a176b72872cf47590fa76785b492c5"
+    },
+    "tracking-before-push.log": {
+      "sha256": "c06d9e12a44c17fe8c8a4655bcf414bf3f3ab6163d3eeaf5280d5f85bcd7fab9"
+    },
+    "tracking-recheck.log": {
+      "sha256": "bfc25941502a0d92f2de0f4f21be2e61f4e0661e91c67344999f676ea607f066"
+    },
+    "tracking-complete-recheck.log": {
+      "sha256": "99b41c65ee3b183cb8e6d23d9bb2e023ae651a5d4bb8d0b63460a26e3a072350"
+    },
+    "tracking-complete.log": {
+      "sha256": "99b41c65ee3b183cb8e6d23d9bb2e023ae651a5d4bb8d0b63460a26e3a072350"
+    }
+  },
+  "historicalNormalizationRefusal": {
+    "logSha256": "a4caa38de7925d32f55e04c01b43479f3681cc852004f610b89af871aefb193d",
+    "meaning": "first GraphQL mapping omitted closedAt; full-family audit refused VS-1943 closure-date check; query/mapping and date regression fixed before push"
+  },
+  "native": "No Core source changes after the 36-case source-hash-bound staging run; no new native recovery measurement",
+  "limits": [
+    "checks work metadata, not release acceptance",
+    "no release gate/owner/priority/status/date bypass",
+    "all four disk profiles candidate; PR #736 draft/unmerged; no beta tag/assets/publication"
+  ]
+}

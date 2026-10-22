@@ -2815,6 +2815,7 @@ namespace VaultSync.UI.ViewModels
                     RuntimeLog.WriteVerbose($"[Restore] Starting restore for '{preparation.ProjectName}'.");
                     RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
                     await RunRestoreAsync(null);
+                    ProductDiagnostics.Record(DiagnosticOperation.Restore, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Commit);
                     RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
                     restoreSucceeded = true;
                 }
@@ -2851,7 +2852,8 @@ namespace VaultSync.UI.ViewModels
                             RuntimeLog.WriteVerbose($"[Restore] Starting restore for '{preparation.ProjectName}'.");
                             RuntimeLog.WriteVerbose($"[Restore] Source='{backupFullPath}', Target='{projectRoot}'.");
                             await RunRestoreAsync(restorePassword);
-                            RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
+                            ProductDiagnostics.Record(DiagnosticOperation.Restore, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Commit);
+                    RuntimeLog.WriteVerbose($"[Restore] Completed restore for '{preparation.ProjectName}'.");
                             restoreSucceeded = true;
                             break;
                         }
@@ -2869,6 +2871,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch (Exception ex)
             {
+                ProductDiagnostics.Record(DiagnosticOperation.Restore, DiagnosticOutcome.Failed, ex);
                 Console.WriteLine($"[Restore] Restore failed for '{preparation.ProjectName}': {ex.Message}");
 
                 string failureMessage = IsEncryptedRestorePasswordError(ex)

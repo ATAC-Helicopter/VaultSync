@@ -200,6 +200,7 @@ public sealed class BackupService(
     {
         ".txt", ".md", ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
         ".csv", ".tsv", ".log", ".sql",
+        ".unity", ".prefab", ".meta",
         ".cs", ".fs", ".vb", ".js", ".ts", ".jsx", ".tsx", ".py", ".java", ".kt", ".swift",
         ".cpp", ".cc", ".cxx", ".c", ".h", ".hpp", ".hh", ".rs", ".go", ".php", ".rb", ".sh",
         ".html", ".css", ".scss", ".less"
@@ -880,11 +881,14 @@ public sealed class BackupService(
             CancellationToken = ct
         });
 
+    public Task<BackupRunResult> RunBackupAsync(BackupRunRequest request) =>
+        ProductDiagnostics.TraceBetaAsync(DiagnosticOperation.Backup, () => RunBackupCoreAsync(request));
+
     [SuppressMessage(
         "Major Code Smell",
         "S3776:Cognitive Complexity of methods should not be too high",
         Justification = "This transaction coordinator intentionally keeps backup creation, cleanup, and metadata publication in one auditable failure boundary; its sub-operations are delegated to focused helpers.")]
-    public async Task<BackupRunResult> RunBackupAsync(BackupRunRequest request)
+    private async Task<BackupRunResult> RunBackupCoreAsync(BackupRunRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         Project project = request.Project;
@@ -2354,7 +2358,7 @@ public sealed class BackupService(
         }
     }
 
-    private static CompressionLevel ResolveArchiveCompressionLevel(string filePath)
+    internal static CompressionLevel ResolveArchiveCompressionLevel(string filePath)
     {
         string ext = Path.GetExtension(filePath);
         if (string.IsNullOrWhiteSpace(ext))

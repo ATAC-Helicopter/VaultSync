@@ -644,6 +644,7 @@ public sealed class MetadataSyncService
                 ExternalId = metaProject.ExternalId,
                 Name = metaProject.Name,
                 RootPath = projectRoot,
+                IsImported = true,
                 Preset = metaProject.Preset,
                 CreatedUtc = metaProject.CreatedUtc,
                 NeedsRestore = false,
@@ -1665,6 +1666,7 @@ public sealed class MetadataSyncService
             ExternalId = externalId,
             Name = projectGroup.Key,
             RootPath = projectRoot,
+            IsImported = true,
             Preset = "generic",
             CreatedUtc = projectGroup.Min(folder => folder.CreatedUtc),
             NeedsRestore = false

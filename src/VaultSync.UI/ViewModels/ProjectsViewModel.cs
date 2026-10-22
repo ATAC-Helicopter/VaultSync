@@ -178,6 +178,7 @@ public partial class ProjectsViewModel : ViewModelBase
                 IsRemoveProjectPreviewOpen = false;
 
                 _openFolderCommand.RaiseCanExecuteChanged();
+                (SnapshotCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 _removeProjectCommand.RaiseCanExecuteChanged();
                 _confirmRemoveProjectCommand.RaiseCanExecuteChanged();
                 _moveSelectedProjectToFolderCommand.RaiseCanExecuteChanged();
@@ -588,7 +589,8 @@ public partial class ProjectsViewModel : ViewModelBase
         _repositoryFactory = repositoryFactory ?? new SqliteRepositoryFactory(_configStore);
         RefreshCommand = new RelayCommand(_ => Refresh());
         _selectProjectCommand = new RelayCommand(project => SelectedProject = project as ProjectItemViewModel);
-        _openFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null);
+        _openFolderCommand = new RelayCommand(_ => OpenFolder(), _ => SelectedProject is not null &&
+            (!SelectedProject.IsImported || SelectedProject.IsLocalSourceAvailable));
         _removeProjectCommand = new RelayCommand(_ => BeginRemoveProjectPreview(), _ => SelectedProject is not null);
         var cancelRemoveProjectCommand = new RelayCommand(_ => IsRemoveProjectPreviewOpen = false);
         _confirmRemoveProjectCommand = new RelayCommand(_ => RemoveProject(), _ => SelectedProject is not null);
@@ -676,7 +678,8 @@ public partial class ProjectsViewModel : ViewModelBase
         ApplyProjectTagColorCommand = _applyProjectTagColorCommand;
         ResetProjectTagColorCommand = _resetProjectTagColorCommand;
         ApplyProjectTagColorSwatchCommand = _applyProjectTagColorSwatchCommand;
-        SnapshotCommand = new RelayCommand(_ => TakeSnapshot());
+        SnapshotCommand = new RelayCommand(_ => TakeSnapshot(), _ => SelectedProject is not null &&
+            (!SelectedProject.IsImported || SelectedProject.IsLocalSourceAvailable));
         ManageProjectEncryptionCommand = new RelayCommand(p => RequestProjectEncryptionPasswordEdit(p as ProjectItemViewModel ?? SelectedProject));
         ToggleSortCommand = new RelayCommand(_ => ToggleSortMode());
 
@@ -904,6 +907,7 @@ public partial class ProjectsViewModel : ViewModelBase
         try
         {
             var repo = CreateRepository(config);
+            repo.ReconcileHistoricalImportedProjectOrigins();
             var registeredProjects = repo.GetAllProjects().ToList();
             var projectsByName = registeredProjects
                 .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
@@ -947,9 +951,7 @@ public partial class ProjectsViewModel : ViewModelBase
 
     private static void AddRegisteredProjectSource(List<DiscoveredProject> projectSources, HashSet<string> seenPaths, Project project)
     {
-        var rootPath = project.RootPath?.Trim();
-        if (string.IsNullOrWhiteSpace(rootPath))
-            return;
+        var rootPath = project.RootPath?.Trim() ?? string.Empty;
 
         var normalizedRoot = NormalizeProjectPath(rootPath);
         if (!string.IsNullOrWhiteSpace(normalizedRoot) && seenPaths.Contains(normalizedRoot))
@@ -1006,7 +1008,12 @@ public partial class ProjectsViewModel : ViewModelBase
 
         try
         {
-            context.ProjectsByName.TryGetValue(source.Name, out existingProject);
+            string normalizedSource = NormalizeProjectPath(source.Path);
+            if (!string.IsNullOrWhiteSpace(normalizedSource))
+                existingProject = context.RegisteredProjects.FirstOrDefault(project =>
+                    string.Equals(NormalizeProjectPath(project.RootPath), normalizedSource, StringComparison.OrdinalIgnoreCase));
+            if (existingProject is null)
+                context.ProjectsByName.TryGetValue(source.Name, out existingProject);
             return existingProject is null
                 ? stats
                 : stats.WithRepositoryData(existingProject.Id, context.LatestSnapshotsByProject, context.LatestBackupsByProject);
@@ -1021,9 +1028,11 @@ public partial class ProjectsViewModel : ViewModelBase
     {
         return new ProjectItemViewModel
         {
-            Name = source.Name,
+            Name = existingProject?.Name ?? source.Name,
             Path = source.Path,
             ProjectId = existingProject?.Id ?? 0,
+            IsImported = existingProject?.IsImported ?? false,
+            IsLocalSourceAvailable = Directory.Exists(source.Path),
             ExternalId = existingProject?.ExternalId ?? string.Empty,
             LastSnapshot = stats.LastSnapshotTime ?? default,
             SizeBytes = stats.LastSnapshotBytes ?? 0,
@@ -1968,6 +1977,8 @@ public partial class ProjectsViewModel : ViewModelBase
         var selectedProject = SelectedProject;
         if (selectedProject is null)
             return;
+        if (selectedProject.IsImported && !selectedProject.IsLocalSourceAvailable)
+            return;
 
         try
         {
@@ -2347,6 +2358,12 @@ public partial class ProjectsViewModel : ViewModelBase
     {
         if (sender is not ProjectItemViewModel vm)
             return;
+        if (ReferenceEquals(vm, SelectedProject) &&
+            e.PropertyName is nameof(ProjectItemViewModel.IsImported) or nameof(ProjectItemViewModel.IsLocalSourceAvailable))
+        {
+            _openFolderCommand.RaiseCanExecuteChanged();
+            (SnapshotCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        }
 
         if (string.Equals(e.PropertyName, nameof(ProjectItemViewModel.SelectedGroupOption), StringComparison.Ordinal) &&
             ReferenceEquals(vm, SelectedProject))
@@ -2582,6 +2599,7 @@ public partial class ProjectsViewModel : ViewModelBase
             UpdateProjectDestinationDisplay(project, config);
             UpdateProjectEncryptionDisplay(project, config);
             UpdateProjectPresetDisplay(project);
+            project.RefreshImportLabels();
 
         }
         RefreshHealthTags();
@@ -2720,7 +2738,8 @@ public partial class ProjectsViewModel : ViewModelBase
     private static void AddIndexedPresetInfos(string indexPath, List<PresetInfo> presets, HashSet<string> ids)
     {
         var json = File.ReadAllText(indexPath);
-        var index = JsonSerializer.Deserialize<PresetIndex>(json);
+        var index = JsonSerializer.Deserialize<PresetIndex>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         foreach (var preset in index?.Presets ?? [])
         {
             AddPresetInfo(preset, presets, ids);
@@ -3329,6 +3348,26 @@ public enum ProjectHealthStatus
 /// </summary>
 public class ProjectItemViewModel : ViewModelBase
 {
+    private bool _isImported;
+    public bool IsImported
+    {
+        get => _isImported;
+        set { if (SetField(ref _isImported, value)) RefreshImportLabels(); }
+    }
+    private bool _isLocalSourceAvailable;
+    public bool IsLocalSourceAvailable
+    {
+        get => _isLocalSourceAvailable;
+        set { if (SetField(ref _isLocalSourceAvailable, value)) RefreshImportLabels(); }
+    }
+    public string ImportLabel => L("Projects.Imported.Label", "Imported");
+    public string ImportDescription => IsLocalSourceAvailable
+        ? L("Projects.Imported.Available", "Imported project. Its source folder is available on this machine.")
+        : L("Projects.Imported.Unavailable", "Imported backup history. Restore or link a local source folder before creating snapshots.");
+    public string SourcePathDisplay => string.IsNullOrWhiteSpace(Path)
+        ? L("Projects.Imported.NoPath", "No local folder linked") : Path;
+    public void RefreshImportLabels() => OnPropertiesChanged(nameof(ImportLabel), nameof(ImportDescription), nameof(SourcePathDisplay));
+
     private static string L(string key, string fallback)
     {
         string? value = LocalizationProvider.Service?.GetString(key);
@@ -3354,7 +3393,7 @@ public class ProjectItemViewModel : ViewModelBase
     public string Path
     {
         get => _path;
-        set => SetField(ref _path, value);
+        set { if (SetField(ref _path, value)) OnPropertyChanged(nameof(SourcePathDisplay)); }
     }
 
     private string _externalId = string.Empty;
@@ -3483,6 +3522,7 @@ public class ProjectItemViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(LastSnapshotSummary));
                 OnPropertyChanged(nameof(LastSnapshotShort));
+                OnPropertyChanged(nameof(HasSnapshot));
                 OnPropertyChanged(nameof(LatestSnapshotSizeDisplay));
                 OnPropertyChanged(nameof(DaysSinceLastSnapshotDisplay));
             }
@@ -3820,6 +3860,8 @@ public class ProjectItemViewModel : ViewModelBase
     public string LastSnapshotShort => LastSnapshot == default
         ? GetMissingSnapshotLabel("Projects.LastSnapshot.NoneShort")
         : LastSnapshot.ToString("ddd - HH:mm", CultureInfo.CurrentCulture);
+
+    public bool HasSnapshot => LastSnapshot != default;
 
     private string GetMissingSnapshotLabel(string registeredKey)
     {

@@ -893,9 +893,11 @@ compatibility, and smoke tests on all supported operating systems.
 
 ## 1.8.9 — Bug fixes and everyday polish
 
-**Status:** Implementation integrated into Stable; unreleased draft preparation and deferred qualification remain
+**Status:** Released on 2026-09-16 as `v1.8.9`; tracking closed on maintainer instruction 2026-09-18
 **Tagline:** *Keep your place. Work with clarity.*
-**Current stable:** 1.8.8, released 2026-09-02
+**Released:** 2026-09-16
+**Tag:** `v1.8.9`
+**Stable integration:** `ec3ba18` / PR #667
 **Planning started:** 2026-09-05
 **Stable target:** 2026-09-09
 **Maximum date:** 2026-09-16
@@ -942,9 +944,9 @@ Checked items represent implementation integrated into Dev or Stable, not public
   [Issue #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632).
   Advance UI, CLI, installer, Store manifest, canonical and public metadata to 1.8.9. Record the published 1.8.8 stable date, target the exact 1.8.8 predecessor, retire the obsolete 1.8.8 working contract, preserve historical evidence, and align roadmap, changelog, What's New, milestone, Project fields, and release documentation. Use release/1.8.9 into Dev, then Stable via merge commits. Validate metadata consumers and release scripts; do not publish or claim qualification during kickoff.
 
-- [ ] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
+- [x] `VS-1894` `P0` Qualify 1.8.9 desktop continuity and release artifacts.
   [Issue #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633).
-  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Candidate run 35071592180 passes the real released 1.8.8 helper upgrade on Windows x64, Linux x64/ARM64, and macOS Apple Silicon/Intel; Windows installer and both Debian upgrades pass. All platform, patch, and Store packages pass canonical verification and supply-chain proof. The full .NET suite has 919 tests and the script suite has 97 tests. Public draft discovery, interactive UAC/polkit, Wayland/Xorg, packaged Store runtime, and remaining rendered desktop checks are not proven by these tests. Record draft-upload integrity and remaining evidence before promotion; keep this P0 gate open.
+  Release gate: verify scroll, expansion, pagination, focus, and selection through deletion, cancellation, background refresh, and empty groups across Windows, macOS, and Linux. Review dark/light/custom themes, compact density, long translations, and 100/150/200 percent scaling; refresh isolated-profile screenshots. Candidate run 35071592180 passes the real released 1.8.8 helper upgrade on Windows x64, Linux x64/ARM64, and macOS Apple Silicon/Intel; Windows installer and both Debian upgrades pass. All platform, patch, and Store packages pass canonical verification and supply-chain proof. The full .NET suite has 919 tests and the script suite has 97 tests. Public draft discovery, interactive UAC/polkit, Wayland/Xorg, packaged Store runtime, and remaining rendered desktop checks are not proven by these tests. Record draft-upload integrity and remaining evidence before promotion; this historical P0 gate was closed on maintainer instruction 2026-09-18, with unproven checks waived for closeout rather than marked passed.
 
 - [x] `VS-1895` `P1` Service coordinated runtime, rendering, and validation dependencies.
   [Issue #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636).
@@ -1027,6 +1029,12 @@ Checked items represent implementation integrated into Dev or Stable, not public
   _(Issue #659; implemented on the release branch, Stable integration complete.)_
   Linux tar.gz fallback opens installation files rather than running an installer, but the generic handoff closed VaultSync immediately. Keep the app running for manual Linux archives and macOS disk images, explain the remaining installation/restart steps in all 19 localization files, and retain shutdown for executable installers. Regression tests and all five native candidate updater jobs pass; Stable integration is complete; the interactive permission walkthrough remains in VS-1894.
 
+Maintainer closeout on 2026-09-18: VS-1894 / #633 and milestone 1.8.9 are
+complete on explicit instruction after publication. Previously unproven manual
+checks are waived for this release closeout, not represented as passed; their
+historical limitations remain in the release contract. Applicable 1.9 gates
+still require fresh evidence.
+
 ---
 
 # VaultSync 1.9 — Recovery Horizon
@@ -1040,11 +1048,26 @@ Checked items represent implementation integrated into Dev or Stable, not public
 requires cloning, validation, image-to-disk recovery, and bootable recovery
 media to be ready and tested together.
 
+Recovery Horizon also carries a later **Binary Source Control** track for
+binary-heavy project workflows. It is intentionally sequenced after the core
+recovery path so it cannot block disk/boot recovery. Its maintained architecture,
+storage, locking, recovery, collaboration, and qualification contract is in
+[`docs/BINARY_SOURCE_CONTROL_STRATEGY.md`](docs/BINARY_SOURCE_CONTROL_STRATEGY.md).
+
 The maintained strategy, sequencing rationale, architecture gates, Project
 entry contract, and `1.10` versus `2.0` decision rule are in
 [`docs/RECOVERY_HORIZON_STRATEGY.md`](docs/RECOVERY_HORIZON_STRATEGY.md).
 
+Planning opened on 2026-09-18. The `1.9.0` target remains 2027-03-26; the
+family horizon remains 2027-09-24. Later patch milestones define sequence,
+not individual committed dates; their Project target dates use the family
+horizon until a reviewed patch schedule exists. The conditional VS-1943
+follow-up and candidate VS-1971 remain outside the execution kickoff.
+
 ## 1.9 architecture approval gate
+
+The imported full roadmap and the immutable work-ID crosswalk are recorded in
+[the family alignment contract](docs/RELEASE_FAMILY_1.9.md).
 
 Feature implementation does not begin merely because `1.9` is the next release
 family. Before destructive disk work or public support claims begin, the
@@ -1058,10 +1081,43 @@ following contracts must be reviewed together:
   recovery media, immutable storage, and provider-account loss;
 - portable recovery dependencies and the minimum independent restore path;
 - shared identities, dependencies, evidence, and failure domains required by
-  later resilience evaluation.
+  later resilience evaluation;
+- BSC has its own later architecture gate; it cannot block the preceding
+  disk, explorer, portable, offsite, and assurance releases.
 
 Unsupported combinations must remain explicit. A prototype or dependency
 spike is evidence for a decision, not a stable product commitment.
+
+## 1.9 CLI rework program
+
+The CLI becomes a first-class power-user interface through the sequenced 1.9 releases. This is a
+full command and behavior rework: add missing operations, change inconsistent
+semantics where needed, and make terminal use worthwhile for bulk work,
+inspection, scripting, unattended verification, and emergency recovery.
+
+- Approve an inventory of commands, user tasks, behavioral defects, and
+  compatibility changes before rewriting the command tree.
+- Use consistent resource/action commands, stable IDs, explicit selectors,
+  predictable configuration precedence, and shared desktop/core services.
+- Separate recorded backup creation from live directory mirroring; describe
+  the exact data and verification scope used by every restore or check.
+- Provide stable structured output, exit codes, stdout/stderr separation,
+  non-interactive operation, cancellation, and actionable errors.
+- Make destructive operations previewable; generic confirmation must never
+  bypass destination identity, containment, overwrite, or integrity checks.
+- Add useful bulk/filter workflows, shell completion, contextual examples,
+  and packaged CLI discovery on supported systems.
+- Preserve supported old commands through explicit aliases or documented
+  deprecation and migration; do not silently change existing scripts.
+- Introduce image, portable, and offsite commands only alongside the
+  corresponding qualified services and supported recovery contracts.
+
+Delivery realigned on 2026-10-03: discovery and legacy-command documentation
+in `1.9.1`; independent recovery in `1.9.2`; offsite commands with qualified
+services in `1.9.3`; the implemented resource-command, structured-output,
+backup/restore and automation rework in `1.9.5`. It is preserved separately
+and is not part of the `1.9.0` disk/boot release gate. Existing safety fixes
+may be backported independently without introducing the future command tree.
 
 ## 1.9 UI migration program
 
@@ -1089,6 +1145,24 @@ Migration principles:
 
 - [ ] `VS-1902` `P1` Add trusted application signing where operationally and
   financially feasible. _(Tracked by #113.)_
+  - 2026-10-13: mandatory keyless provenance covers canonical manifests and all
+    updater assets with workflow/ref/commit-bound online and offline checks.
+    Proof is retained and reverified before draft upload. Native publisher
+    certificates remain unavailable; unsigned metadata stays truthful.
+    Historical 1.8.9 signing was independently verified, including tamper
+    rejection. New-run and platform upgrade qualification remain open.
+    See [signing policy](docs/RELEASE_SIGNING.md); Refs #113 in #736.
+  - 2026-10-20: beta packaging and signing share an explicit 1.9.0 preparation-ref
+    authorization without moving Dev or merging #736. Qualified disk evidence,
+    actual source SHA/ref and canonical identity checks remain mandatory.
+    Beta draft staging, immutable tag routing and exact installed upgrades remain open.
+  - 2026-10-21: draft assembly now accepts an exact successful preparation-head
+    beta run, rechecks actual-ref signatures and an existing tag at that source,
+    and uploads only missing matching assets to an existing Dev-marked private
+    prerelease. All direct packages are required; Store is excluded and patch
+    pairs follow explicit inputs. Stable retains its full 19-asset matrix.
+    Live beta/tag/API behavior and installed 1.8.9 upgrades remain unqualified.
+    See [draft assembly evidence](docs/release-evidence/1.9-beta-draft-2026-10-21.md).
 - [x] `VS-1903` `P2` Add background integrity audits with alerts.
   - Scope: retain the delivered background repository-integrity audit and its
     user-visible warning path as historical foundation work.
@@ -1096,7 +1170,1041 @@ Migration principles:
     evidence, or recovery-assurance expansion receives a new release-specific
     identifier rather than reopening or reusing `VS-1903`.
 
-## 1.9 platform modernization gate
+## 1.9 Binary Source Control architecture gate
+
+Binary Source Control is a separate version-control repository model, not a
+rename of backup snapshots and not a Git replacement. Implementation may use
+prototypes and benchmarks before this gate closes, but stable-format work does
+not begin until the following contracts are approved together:
+
+- [ ] `VS-1981` `P0` Define the Binary Source Control architecture,
+  repository format, immutable object/change graph, product boundary, backend
+  primitives, threat model, migration rules, and Stable-versus-Preview gate.
+  _(Issue #703.)_
+- [ ] `VS-1982` `P0` Define BSC authorship, workspace identity, ownership,
+  long-lived path locks, short writer leases, guarded ref updates, stale-lock
+  takeover, conflict review, and audit evidence.
+  _(Issue #704.)_
+
+The gate must explicitly preserve the distinction from `VS-1801` full
+`.git` repository backup. BSC must coexist with Git without silently mutating
+Git metadata or claiming Git LFS protocol compatibility.
+
+The full maintained strategy is
+[`docs/BINARY_SOURCE_CONTROL_STRATEGY.md`](docs/BINARY_SOURCE_CONTROL_STRATEGY.md).
+
+## 1.9.0 — Disk and Bootable Recovery Foundation
+
+**Status:** Active implementation; worker, independent recovery and qualification gates remain open
+**Planning started:** 2026-09-18
+**Current stable:** `1.8.9`, published 2026-09-16
+**Stable target:** 2027-03-26
+**Working branch:** `work/1.9-roadmap-realignment` (sole release PR #736)
+**Protected release identity:** `release/1.9.0`
+**Integration target:** `Dev`
+**Primary upgrade predecessor:** `1.8.9`; qualification pending
+**Release contract:** [1.9.0 kickoff and gates](docs/RELEASE_1.9.0.md)
+**Tagline:** *Recover when the installed system cannot.*
+
+The 2026-10-13 beta direction requires the complete 1.9.0 feature scope,
+including an independently qualified disk recovery loop on an explicitly
+supported disposable virtual profile and refusal tests for destructive errors.
+The beta is for wider testing; physical hardware breadth remains a stable gate.
+Later 1.9.x features remain in their owning releases.
+
+Updater owner-transfer compatibility from [PR #721](https://github.com/ATAC-Helicopter/VaultSync/pull/721)
+is staged for this release through [PR #722](https://github.com/ATAC-Helicopter/VaultSync/pull/722).
+It needs exact 1.8.9 upgrade and platform qualification before shipping; the
+repository must not transfer before a compatible release is adopted.
+
+- [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
+  workflow boundaries, navigation invariants, and legacy-shell migration map.
+  - Progress: the [route architecture review draft](docs/ROUTE_ARCHITECTURE_1.9.md)
+    inventories the current shell and proposes typed routes, state ownership,
+    compatibility mapping, and parity gates. The October 9 in-memory coordinator
+    prototype adds bounded back/forward history and resolve-before-commit navigation,
+    including cancellation and overlapping-request regression coverage.
+    The subsequent page-shell integration adds localized Back/Forward controls
+    and Alt+Left/Right, ordered/coalesced last-page writes, synchronous startup
+    restoration and retention of unfinished History drafts on same-snapshot refresh.
+    Native Linux UI evidence and limitations are recorded in the
+    [navigation ledger](docs/release-evidence/1.9-navigation-2026-10-09.md).
+    The [October 9 public diary](https://fglabs.dev/devlog/vaultsync-190-keeping-your-place) documents this increment with actual screenshots; Reddit text awaits maintainer submission.
+    API, deep-link inventory, and
+    cross-platform usability evidence remain open. _(Issue #501.)_
+- [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility
+  contract.
+  - Progress: the [format review draft](docs/DISK_IMAGE_FORMAT_1.9.md) defines
+    coverage, integrity, completion/checkpoints, read-only compatibility and
+    permanent fixture requirements. A bounded logical-map prototype now checks
+    exact coverage, raw part bounds, zero reconstruction and incomplete states;
+    a complete structure remains unverified. A bounded read-only draft envelope
+    recognizer, permanent header/refusal fixtures and streaming raw-part digest
+    checks now exist. A bounded draft manifest/completion reader now binds image
+    identity, generation, extent map and raw payload digests. Draft schema 2 now
+    binds regular-file source/tool claims and GPT layout observations, with
+    copied-layout checks before completion and after reconstruction. Native source
+    observations and complete-image qualification remain open; joint direction was approved on October 20. See the
+    [payload verification evidence](docs/release-evidence/1.9-payload-verification-2026-10-13.md).
+    See also [manifest binding evidence](docs/release-evidence/1.9-manifest-binding-2026-10-13.md).
+  - Raw reader increment (2026-10-20): frozen first-profile bytes distinguish
+    fixture and offline-block source claims; strict capacity/total metadata/GPT
+    limits and actual payload layout comparison now complement content hashes.
+    Permanent independent valid/refusal cases cover both sector geometries.
+    The pure bounded encoder reproduces those bytes exactly, rejecting invalid
+    identity, origin, geometry, partition and digest claims before serialization.
+    Encoding supplies no durable completion or native acquisition.
+    This opens no devices and proves no durable capture, source trust or restore.
+    See [wire contract](docs/DISK_IMAGE_RAW_WIRE_1.9.md) and
+    [current evidence](docs/release-evidence/1.9-raw-image-reader-2026-10-20.md).
+  - GPT increment (2026-10-15): bounded read-only inspection validates protective
+    MBR, primary/backup header and array CRCs, GUIDs and partition ranges. Both
+    geometry fixtures survive capture/reconstruction with identical layout roots;
+    colliding array CRCs still require exact copy equality. This adds no device
+    adapter or stable serialization. See [GPT evidence](docs/release-evidence/1.9-gpt-inspection-2026-10-15.md).
+  - Origin increment (2026-10-15): explicit GPT-file captures retain source and
+    observation IDs, UTC time, physical geometry, full partition observations and
+    tool version/source commit. Layout changes prevent completion; reconstructed
+    bytes must match the recorded layout. Generic verification reports claims,
+    not authenticated origin. Legacy schema 1 remains readable. See
+    [origin evidence](docs/release-evidence/1.9-image-origin-2026-10-15.md).
+  - Scope: cover source identity, partition layout, block/sparse maps,
+    integrity records, compression and encryption descriptors, incomplete and
+    resumable states, build identity, and reader/writer compatibility.
+  - Acceptance: incomplete images cannot appear valid; verification detects
+    missing or corrupt regions; readers reject unsupported versions without
+    mutation. _(Issue #574.)_
+- [ ] `BUG-19026` `P0` Reject unaligned raw payload offsets.
+  - Progress: stored extent offsets now require logical-sector alignment even
+    when their byte ranges fit within a payload. Regression cases cover 512/4096
+    sectors and refuse before payload reads. Issue #780; preparation PR #736.
+  - Acceptance: current-head checks pass and only aligned raw maps can be verified;
+    destructive restore and disk qualification remain gated.
+- [ ] `BUG-19027` `P1` Read the exclusion preset catalog consistently.
+  - Progress: UI, CLI and backup readers now accept the shipped lowercase JSON
+    fields and legacy PascalCase catalogs. An end-to-end regression resolves
+    `cpp` to `c_cpp.vaultsyncignore`, displays its ID and excludes generated files.
+    Issue #781; preparation PR #736.
+  - Acceptance: catalog selection and applied rules agree on the actual head;
+    recovery/upgrade and release gates remain separate.
+- [ ] `BUG-19028` `P1` Exclude saved Unity profiler captures from source backups.
+  - Progress: read-only inspection of three maintainer-selected Unity archives
+    found two `.pdata` files contributing approximately 98 percent of logical
+    backup bytes. The Unity preset now excludes that diagnostic capture format;
+    source, normal assets, project settings and package manifests/locks remain
+    covered by regression fixtures. Issue #782; preparation PR #736.
+  - Acceptance: current-head checks and native exclusion comparison pass; existing
+    archives remain preserved. See [preset audit evidence](docs/release-evidence/1.9-exclusion-presets-2026-10-13.md).
+- [ ] `BUG-19030` `P1` Localize omitted desktop messages and enforce UI coverage.
+  - 2026-10-13: missing keys, initial Guide/Recovery text, coverage units,
+    Recovery summaries and updater outcomes use all 19 locale catalogs.
+    Cached Guide/Recovery text reapplies on language changes without resetting
+    filters/search or rewriting recorded evidence. Structural/source checks run
+    in local validation, required CI and before packaging. Issue #785; Refs #785
+    in #736. See [localization contract](docs/LOCALIZATION.md).
+- [ ] `BUG-19029` `P1` Unmount the actual SMB share root for nested destinations.
+  - Progress: the preset audit reproduced auto-unmount targeting a share's `Dev`
+    child instead of the mount point. Cleanup now resolves the current SMB mount
+    root with path-boundary checks and chooses the most specific matching mount.
+    Issue #783; preparation PR #736.
+  - Acceptance: nested/root/neighbor/parent-traversal regressions pass and temporary
+    audit mounts close without modifying stored backups.
+- [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
+  matrix before implementation claims begin.
+  - Joint review package (2026-10-20): concrete offline platform/raw format,
+    bounds, completion, privilege, target identity and desktop recommendations
+    are ready in [the combined review](docs/ARCHITECTURE_REVIEW_1.9.0.md).
+    The maintainer explicitly approved that package after review; the matrix
+    retains the named, dated and hash-bound decision. All profiles stay candidates.
+  - Progress: [ADR 001](docs/adr/001-imaging-engine-1.9.md) compares engines and
+    proposes an isolated full raw/offline profile. Four candidate GPT/UEFI
+    ext4/NTFS sector profiles have an executable evidence gate; none is qualified.
+    The October 5 gate fix rejects runs preceding valid retained engine approval.
+    Joint direction approval is now recorded; concrete privilege/format security
+    implementation and actual recovery runs remain open.
+    October 9 CI follow-up enforces a runtime-independent 64-container JSON
+    depth bound, including escaped-string and boundary regressions; see the
+    [CI repair evidence](docs/release-evidence/1.9-json-depth-2026-10-09.md).
+  - Lab preflight (2026-10-15): a pinned Debian guest boots x86 UEFI/ext4/512
+    under isolated QEMU with no network/host devices, emits observation markers
+    and powers off. Core also inspects the real 3 GiB GPT after conversion.
+    Cloud network-wait/SSH failures are retained; this is not recovery media,
+    engine approval or disk qualification. See [lab evidence](docs/release-evidence/1.9-vm-lab-preflight-2026-10-15.md).
+  - Scope: decide build versus integration, privilege and isolation boundaries,
+    supported operating systems, filesystems, partition tables, encryption,
+    live capture, Secure Boot, recovery-media signing, drivers, and hardware.
+  - Acceptance: every supported combination has a qualification method and
+    every unsupported combination has explicit product and documentation
+    behavior. _(Issue #575.)_
+- [ ] `VS-1919` `P0` Define recovery identities, dependencies, failure domains,
+  and evidence provenance shared by Recovery Horizon and candidate Resilience.
+  - Progress: the [identity/evidence review draft](docs/RECOVERY_IDENTITIES_1.9.md)
+    defines generation binding, dependency alternatives, failure correlation,
+    evidence provenance/freshness and privacy. The October 9 single-observation
+    prototype tests binding, chronology, basis and outcome separately, and fixes
+    future timestamps in existing confidence evaluation. The October 12 read-only
+    dependency prototype checks required groups, explicit alternatives, missing
+    parents, cycles and graph limits with synthetic observations. A subsequent
+    generation-bound failure-domain simulation distinguishes modeled coverage
+    loss, retained alternatives and unknown correlation while preserving measured
+    baseline observations. Stable schemas, conflict selection, domain membership
+    provenance and joint architecture approval
+    remain open; see [dependency evidence](docs/release-evidence/1.9-dependencies-2026-10-12.md).
+    A subsequent contract batch combines up to 32 modeled failures and refuses
+    ambiguous current observations without guessing precedence. See
+    [batch validation](docs/release-evidence/1.9-contract-batch-2026-10-12.md).
+  - Scope: model devices, sites, repositories, destinations, credentials,
+    encryption-key references, recovery media, tools, recovery points,
+    verification, drills, and dependency correlation without exporting secrets.
+  - Acceptance: later readiness and scenario evaluation can distinguish
+    recorded facts, measured evidence, simulation, inference, user confirmation,
+    stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
+- [ ] `BUG-19033` `P1` Preserve canonical priority when adopting existing issues.
+  - Scope: default adoption uses the roadmap or existing priority and removes
+    conflicting priority labels atomically without changing unrelated labels.
+    Unknown conflicts or denied metadata writes cannot report adoption success.
+  - Progress (2026-10-15): #792 supplies the sole defect owner; regressions
+    cover P0/P1 preservation, explicit overrides and failed writes. Shared
+    contributor tooling applies to all preparation heads; release gates stay open.
+- [ ] `BUG-19032` `P1` Keep destination totals independent of partial backup lists.
+  - Scope: count complete recorded history off the UI thread, retaining light
+    page caches and describing known logical size honestly in all locales.
+  - Progress: a narrow accounting projection feeds sidebar totals and quota
+    suggestions separately from five-item page caches. Partial/empty page loads
+    cannot replace those totals. Cached labels reapply on language changes.
+    Issue #790; preparation PR #736. See [current evidence](docs/release-evidence/1.9-destination-sidebar-2026-10-14.md).
+  - Acceptance: current-head Release and localization checks pass; native sidebar
+    review and cross-device checks distinguish database coverage from actual
+    allocated destination storage. Release acceptance remains open.
+- [ ] `BUG-19031` `P2` Bound synthetic capture and reconstruction before payload storage.
+  - Follow-up (2026-10-15): reconstruction enforces its capacity limit during
+    metadata parsing, before payload reads or staging writes. Both oversized raw
+    regressions failed before correction; exact-limit cases retain truncation
+    refusal. Empty temporary workspaces can remain for diagnostics. See
+    [reconstruction admission evidence](docs/release-evidence/1.9-reconstruction-limit-2026-10-15.md).
+  - Progress: requests above 1 GiB are refused before source reads or workspace
+    creation, matching the reconstruction fixture limit. Boundary regressions
+    cover 512/4096-byte sectors without allocating large files. Issue #789;
+    preparation PR #736. See [capture limit evidence](docs/release-evidence/1.9-capture-limit-2026-10-14.md).
+  - Scope: apply the reconstruction fixture's resource bound to synthetic capture;
+    keep disk support and device authorization outside this correction.
+  - Acceptance: current-head Release checks pass, oversized requests allocate no
+    workspace and supported boundaries retain truncation refusal. This fixture
+    correction does not qualify disk capture or recovery.
+- [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
+  explicit operation states and checkpoint contracts.
+  - Progress: a file-only capture prototype streams synthetic input into an
+    exclusive temporary workspace, flushes the payload before manifest/completion
+    publication and preserves incomplete/interrupted/failed captures. Independent
+    encoded fixtures and read-back verification pass; device adapters, source
+    consistency, privileged worker isolation, checkpoints/resume and crash/filesystem durability
+    remain open. See [file capture evidence](docs/release-evidence/1.9-file-capture-2026-10-13.md).
+    A separate read-only inventory executable now accepts one bounded, correlated
+    request over inherited pipes, with refusal before observation and a host
+    deadline. A fixed-path parent client now enforces correlated bounded replies,
+    strict JSON, process exit, timeout/cancellation and cleanup. It is not an
+    authenticated/elevated worker or desktop integration.
+    A same-privilege Linux x64 adapter now opens read descriptors with exclusive
+    claims and binds native type, device number, disk sequence and geometry.
+    Every read rechecks the held descriptor; real virtual-device tests cover
+    mounted/busy/changed refusals and hot removal. This is not an offline or
+    complete-capture guarantee.
+    A same-privilege raw capture pipeline now requires a kernel-read-only source,
+    reserves private ext4 output, copies and verifies all bytes/GPT, flushes files
+    and directories, then publishes with rename-no-replace. Interruptions stay
+    partial; unconfirmed parent-sync outcomes cannot report completed images.
+    Authenticated worker/UI/media, source consistency, recovery and power-failure
+    qualification remain open. See [capture contract](docs/LINUX_RAW_CAPTURE_1.9.md).
+    Issue #492; preparation PR #736. See
+    [worker contract](docs/DISK_WORKER_1.9.md) and
+    [worker evidence](docs/release-evidence/1.9-disk-worker-2026-10-17.md),
+    [parent client](docs/release-evidence/1.9-disk-worker-client-2026-10-20.md) and
+    [native reads](docs/release-evidence/1.9-linux-block-read-2026-10-20.md).
+  - Kernel peer increment (2026-10-21): an internal Linux x64 Unix-stream
+    binding checks expected connect-time PID/UID/GID and holds SO_PEERPIDFD,
+    never reopening a numeric PID. Unsupported options, disconnect, mismatch,
+    exit and failed rechecks refuse/release the lease; the caller owns the
+    socket. Native child/fork tests prove dead peers invalidate even while an
+    inherited socket remains open. This is not build trust, per-message origin,
+    privilege or operation consent; integration and sandboxing remain open.
+    See [peer evidence](docs/release-evidence/1.9-worker-peer-2026-10-21.md).
+  - Inventory integration (2026-10-21): Linux x64 launchers now require a private
+    same-privilege peer rendezvous, matching the actual child and kernel parent
+    PID/UID/GID before any request. A completion acknowledgement keeps the child
+    alive through bounded response validation; EOF, empty stderr and exit zero
+    remain mandatory. Unsupported binding refuses without a pipe-only fallback.
+    This is read-only inventory, not publisher trust, sandboxing, elevation,
+    per-message authentication or device-operation authority. See the
+    [integration contract](docs/DISK_WORKER_1.9.md#inventory-peer-integration--2026-10-21).
+  - Exclusive restore acquisition (2026-10-22): an internal Linux x64 opener
+    binds sealed image facts, fresh exact target/boot/namespace observations and
+    original/staging/journal ancestry before and after openat2 O_RDWR/O_EXCL.
+    File/link substitutes, competing claims, changed identity/topology, disposed
+    stages and mismatched/started journals refuse without writes. Final native
+    run: 59 cases across 512/4096-byte fixtures; required Release: 1,955 Core /
+    261 Python. This grants no consent/offline authority and has no worker/UI
+    route. Hosted feedback also simplifies ownership flow and native marshalling
+    without changing admission, syscall flags or write ordering. See
+    [contract](docs/LINUX_RAW_RESTORE_OPEN_1.9.md) and
+    [current evidence](docs/release-evidence/1.9-restore-open-2026-10-22.md).
+  - Isolated reader increment (2026-10-22): a separate Linux x64 worker now reads
+    only bounded ranges of two caller-held streams, with fixed binary facts and
+    an independent whole-payload SHA-256. Trusted bootstrap precedes privilege
+    reduction and a syscall allowlist synchronized across all threads. The parent
+    requires complete stable kernel credential/filter observations, terminal ACK,
+    EOF, empty diagnostics and exit zero. No file/device path or writable operation
+    crosses the inspection protocol. The subsequent VS-1907 increment now requires
+    reader-first staging and byte-only writer checks; trusted build/role, offline
+    consent and media/UI remain open.
+    See [reader contract](docs/IMAGE_INSPECTION_WORKER_1.9.md) and
+    [source-bound evidence](docs/release-evidence/1.9-image-inspection-2026-10-22.md).
+- [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
+  - Progress: imported projects remain visible without source paths. A local
+    persisted import marker distinguishes origin from restore state; cards,
+    compact rows and details display a translated label and source availability.
+    Discovery merges restored paths without replacing the registered project name.
+    Imported-only historical entries with missing sources can recover the marker.
+    Issue #784; preparation PR #736.
+  - Acceptance: additive schema/import/restore/discovery regressions and focused
+    UI checks pass; origin labels do not authorize backup or disk restore.
+- [ ] `VS-1998` `P1` Add private technical diagnostics with beta-only default delivery.
+  - Scope: allowlisted operation/error/build data, bounded local records, beta-only
+    default policy with isolated preferences and queues, explicit non-beta opt-in,
+    cancellable upload queue, private FG Labs reception,
+    grouped operator alerts and daily summaries. Never upload existing logs,
+    user content, paths, identities, credentials or free-form exception messages.
+  - Acceptance: prove consent/revocation, hostile input, retry/deduplication,
+    retention and authenticated review across the application and receiver;
+    translate every application control and document provider configuration.
+    Issue #805; sole preparation PR #736; receiver fglabs-site#49.
+    October 19 local validation passed, including actual desktop failure/hang
+    receipt; deployed synthetic hang delivery also reached the operator inbox.
+    Exact source evidence and remaining release gates are recorded in
+    docs/release-evidence/1.9-product-diagnostics-2026-10-19.md.
+    October 20 expands beta operation starts/durations/cancellations/failures,
+    startup/shutdown and sparse UI responsiveness/recovery. Error-priority
+    retention stays bounded; policy 2 is beta-only on both client and receiver.
+    Native Italian disclosure/default sending/disable are observed in isolation.
+    See [current policy evidence](docs/release-evidence/1.9-beta-diagnostics-2026-10-20.md).
+- [ ] `VS-1996` `P2` Improve compatible ZIP compression and develop an isolated native codec design.
+  - Progress (2026-10-13): generated Unity text/meta measurements support targeted
+    `Optimal` compression. A bounded LZ77 Python prototype has raw fallback and
+    checksums; hostile framing and roundtrip tests run in repository validation.
+    The experiment is excluded from product builds and currently compresses
+    less densely than DEFLATE. Issue #786; preparation PR #736.
+  - Acceptance: legacy ZIP readability, production backup readback and failure
+    checks; traceable measurements and staged migration design. Production codec
+    replacement requires independent readers, fuzzing, cross-platform and restore
+    qualification; no new backup format is introduced for beta by this experiment.
+    See [compression evolution](docs/COMPRESSION_EVOLUTION.md).
+  - Second iteration (2026-10-14): original canonical Huffman coding shrinks
+    generated YAML/code frames by 28.4%/33.3% against v0, with bounded codebooks,
+    token sizes and exact bit/padding validation. Raw/LZ fallback counts full
+    entropy framing. DEFLATE remains denser and faster; native independent readers
+    and deeper match search remain open. No production codec/default is changed.
+  - Third iteration (2026-10-15): bounded numeric context lanes preserve byte
+    spelling and select complete broad/wide-only transform candidates. Generated
+    numeric JSON shrinks 91.5% versus prior Huffman; ordinary YAML/code improve
+    15.2%/7.5%, with Zstandard still denser/faster there. The transformed-zlib
+    control exposes backend limits; no verified novelty or production rollout
+    is claimed. See [current research evidence](docs/release-evidence/1.9-compression-structure-2026-10-15.md).
+  - Fourth iteration (2026-10-15): a bounded content sampler selects one numeric
+    or hexadecimal transform family. GUID-like lexemes preserve exact casing;
+    full framed cost retains raw/LZ/Huffman fallback. No production registration
+    or new beta prerequisite. See [hybrid evidence](docs/release-evidence/1.9-compression-hybrid-2026-10-15.md).
+- [ ] `VS-1997` `P0` Require serviced runtimes and verify every included release framework.
+  - All-branch follow-up (2026-10-15): 28 remote branches are classified; nine
+    maintained preparations pass fresh full NuGet/runtime graph audits and 17
+    other maintained sources have validated scoped backports. Five existing PR
+    heads are updated; twelve protected targets await security PR integration.
+    Stable #793 and Dev #794 retain review/merge-only protections; the 18 default
+    alerts stay open until Stable is patched and reanalyzed. See
+    [branch evidence](docs/release-evidence/1.9-runtime-branches-2026-10-15.md).
+  - Scope (2026-10-14): October runtime advisories require .NET 10.0.13.
+    Raise the SDK, runtime and coordinated Microsoft package baseline; reject
+    vulnerable ASP.NET/Windows Desktop versions even when NETCore is updated.
+    Reuse sole preparation PRs when applying the shared packaging standard.
+    Issue #787; active preparation PR #736.
+  - Acceptance: required Release checks, fresh dependency audit and real
+    self-contained runtime/asset verification; malformed, duplicate, unknown and
+    unserviced framework fixtures fail closed. Installed updates and platform
+    qualification remain separate. See [runtime security](docs/RUNTIME_SECURITY.md).
+  - Delivery (2026-10-14): all nine sole draft preparation PRs contain this
+    standard, each with zero-warning Release checks and own metadata preserved.
+    Active 1.9.0 five-RID outputs embed NETCore 10.0.13; default-branch alerts
+    await reviewed integration. See [per-head evidence](docs/release-evidence/1.9-runtime-servicing-2026-10-14.md).
+- [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
+  capacity checks, interruption semantics, and block validation.
+  - Progress (2026-10-15): pure whole-disk previews bind operation, image root,
+    generation and exact observed destination. Unknown/ambiguous identity,
+    in-use/read-only targets, repository co-location, incompatible geometry and
+    smaller/larger destinations refuse. Rechecking rejects changed selections.
+    This is no device authorization or UI/worker integration; adapter freshness,
+    native ancestry checks, interruption semantics and measured recovery remain open.
+    See [preview evidence](docs/release-evidence/1.9-disk-preview-2026-10-15.md).
+  - Linux observation increment (2026-10-17): bounded sysfs/proc reads collect
+    device numbers, geometry, disk sequence and persistent identity candidates.
+    Mount/swap use propagates across partitions and stacked-device relationships;
+    shared identity aliases are ambiguous. Changed/incomplete scans return no
+    devices. Namespace absence never becomes Offline or write permission.
+    See [Linux observation evidence](docs/release-evidence/1.9-linux-block-inventory-2026-10-17.md).
+  - Native target observation now binds a sealed stage to statx repository/
+    staging devices, fresh kernel topology and read-only exclusive target
+    descriptors. Unknown/stacked ancestry, repository conflicts, changed
+    selection and unequal geometry refuse; observations expire after 30 seconds.
+    Unknown use is not Offline or overwrite authority. Worker, exact consent,
+    translated UI and device-write qualification remain open.
+    See [native preview contract](docs/LINUX_RESTORE_TARGET_PREVIEW_1.9.md); #493.
+    Hosted S2674 findings on 99773d2 identify two implicit empty-read probes;
+    an explicit serialized binding operation now replaces them without reading
+    bytes or changing expiry/authorization. Hosted reanalysis passes on b30e355;
+    subsequent increments require their own exact-head checks.
+
+
+  - Review exchange increment (2026-10-21): immutable, single-use descriptions
+    bind operation/review UUIDs, verified image root/generation and the exact
+    native target/range. New reviews supersede old ones; replies recheck fresh
+    topology, ancestry and held identity, with monotonic expiry and no writes.
+    This is not proof of human consent or authenticated execution authority;
+    translated overwrite UI and the privileged writer remain open. See
+    [review evidence](docs/release-evidence/1.9-overwrite-review-2026-10-21.md).
+
+- [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
+  systems with offline device discovery and recovery workflows.
+- [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
+  bootable environment.
+  - Reader-first integration (2026-10-22): staging requires isolated preflight and
+    sealed-copy parsing with identical bounded facts/hash. Parent-side bounded
+    hashing binds exact private metadata/payload bytes; the write engine checks
+    these before Started and verifies full target hash equality without parsing
+    hostile metadata/GPT. Preview/opener consume bounded geometry rather than
+    declared origin graphs. No fallback exists for a missing/failed reader. Native
+    authority, installed worker trust, media/UI and full recovery remain open.
+    See [integration evidence](docs/release-evidence/1.9-reader-staging-2026-10-22.md).
+  - Progress: a temporary-file reconstruction prototype stages payloads during
+    verification, reconstructs raw/zero extent maps and hashes target read-back.
+    Synthetic Capture → Validate → Reconstruct → Validate passes without the
+    original source; corruption, changed input and cancellation cases are covered.
+    No physical destination is opened. Offline media, device authorization,
+    isolated worker and measured disk restore remain open. See
+    [file reconstruction evidence](docs/release-evidence/1.9-file-reconstruction-2026-10-13.md).
+    Raw-profile staging now owns a bounded metadata snapshot, verifies before
+    allocation and after copying, persists private read-only permissions and
+    reopens matching inodes without writable descriptors before returning an
+    independently verified sealed session. Changed original inputs cannot
+    substitute bytes after staging. Device authority, worker/media, lifecycle
+    cleanup and the actual five-stage recovery loop remain open.
+    See [staging contract](docs/RAW_IMAGE_STAGING_1.9.md); issue #495, PR #736.
+  - Write-engine increment (2026-10-21): an internal engine revalidates sealed
+    bytes, binds image/operation/review/target geometry, records intent before
+    bounded writes and acknowledges only after target flush and durable journal
+    return. Full target content/GPT read-back precedes a byte-verification result;
+    failures retain acknowledged and uncertain ranges without rollback/resume.
+    A Linux x64 adapter adopts an already-held writable block descriptor, refusing
+    ordinary files, changed identity, append/direct modes and missing close-on-exec.
+    It opens no target path and supplies no device/offline authority. Public
+    restore, trusted broker/journal acquisition, independent media and complete
+    filesystem/boot qualification remain open. See the
+    [write-engine contract](docs/RAW_DEVICE_RESTORE_1.9.md).
+  - Private journal increment (2026-10-22): the product now creates a separately
+    named private ext4 journal outside the restore target, with independent
+    before/after topology checks and preallocation before publication. Fixed-size
+    versioned records bind operation/image/review/geometry and form a SHA-256
+    chain; state and range order are validated before each durable append.
+    Failed/unconfirmed appends latch closed. Inspection distinguishes incomplete,
+    interrupted, failed and byte-read-back histories without authorizing resume.
+    Device/worker authority, image isolation, media/UI and full qualification
+    remain open. See [journal contract](docs/RAW_RESTORE_JOURNAL_1.9.md).
+- [ ] `VS-1908` `P1` Record clone, validation, boot, and restore evidence with
+  source-machine and tool-version identity.
+- [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on
+  representative hardware and virtual machines.
+
+- [ ] `BUG-19012` `P1` Diagnose and resolve Linux startup blocked before the desktop window.
+  - Progress: the installed 1.8.9 process was blocked in native font-manager
+    initialization. Relaunch now passes initialization; visible-window and login
+    qualification, triggering input and durable remediation remain open.
+    See [the evidence ledger](docs/release-evidence/linux-startup-2026-10-04.md).
+    _(Issue #751; preparation PR #736.)_
+
+- [ ] `BUG-19001` `P0` Require explicit confirmation for quiet and unattended CLI project removal.
+  - Scope: reject removal without --yes when --quiet is set or standard input
+    is redirected, before touching configuration or the database; preserve
+    interactive confirmation and source/backup-file safety on both command routes.
+  - Acceptance: rejected removal preserves registration and snapshot history;
+    explicit --yes still works; scripts receive a nonzero result and actionable
+    stderr guidance. Two isolated cases reproduced the old deletion behavior.
+  - Tracking: [issue #699](https://github.com/ATAC-Helicopter/VaultSync/issues/699);
+    the implementation and passing regression evidence await release integration.
+- [ ] `BUG-19009` `P1` Run required release checks for embedded documentation changes.
+  - Scope: CI/CodeQL/Sonar PR and integration triggers must include docs-only
+    changes; bundled CLI guides change executable content and require validation.
+  - Acceptance: protected release PRs emit every required check context while
+    preserving existing OS jobs and source-analysis gates. Related #736 and #747.
+
+- [ ] `BUG-19010` `P1` Keep managed and native rendering package versions aligned.
+  - Scope: qualify all eleven SkiaSharp/HarfBuzzSharp packages together; retain
+    ABI/security pins and remove only dependencies without active consumers.
+  - Tracking: [issue #749](https://github.com/ATAC-Helicopter/VaultSync/issues/749).
+- [ ] `BUG-19011` `P1` Preserve CLI behavior across the Spectre command API upgrade.
+  - Scope: port async overrides atomically with 0.57.2; qualify flat, discovery
+    and future resource variants without moving features between releases.
+  - Tracking: [issue #750](https://github.com/ATAC-Helicopter/VaultSync/issues/750).
+
+- [ ] `BUG-19013` `P1` Decode repository tracking command output as UTF-8.
+  - Scope: The complete GitHub ID audit must decode Unicode output on Windows without locale-dependent reader failures; decoding errors must never allocate IDs.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #766; related development/maintenance issue #673.
+
+- [ ] `BUG-19014` `P1` Preserve unfinished History drafts during snapshot refresh.
+  - Scope: Same-snapshot refresh and transient selection callbacks must retain unfinished label, note and tag edits.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #768; related development/maintenance issue #501.
+
+- [ ] `BUG-19015` `P1` Keep last-page saves ordered during rapid navigation.
+  - Scope: An older asynchronous page save must never overwrite the newest visited startup location.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #769; related development/maintenance issue #501.
+
+- [ ] `BUG-19016` `P1` Keep project names readable in narrow desktop cards.
+  - Scope: Narrow project cards must retain visible project names beside snapshot statistics.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #767; related development/maintenance issue #501.
+
+- [ ] `BUG-19017` `P1` Restore the saved page before accepting initial navigation.
+  - Scope: A delayed startup callback must never override the first deliberate user navigation.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #770; related development/maintenance issue #501.
+
+- [ ] `BUG-19018` `P1` Enforce consistent qualification JSON nesting limits.
+  - Scope: Qualification parsing must enforce the same 64-container limit across supported Python runtimes.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #771; related development/maintenance issue #575.
+
+- [ ] `BUG-19019` `P1` Reject future-dated checks in recovery confidence.
+  - Scope: Future verification and drill observations must not make recovery confidence FullyVerified.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #772; related development/maintenance issue #576.
+
+- [ ] `BUG-19020` `P0` Reject ambiguous and growing qualification evidence input.
+  - Scope: Duplicate keys, non-finite or invalid UTF-8 JSON and evidence files growing beyond the byte budget must reject.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #773; related development/maintenance issue #575.
+
+- [ ] `BUG-19021` `P0` Reject recovery evidence predating valid engine approval.
+  - Scope: Approval recorded after a recovery run must never retrospectively qualify that run.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #774; related development/maintenance issue #575.
+
+- [ ] `BUG-19022` `P1` Handle root-owned AppImage extraction during packaging.
+  - Scope: AppImage packaging must handle the retained root-owned extraction case without weakening archive or workspace containment.
+  - Acceptance: retained regressions pass; owning release integration remains required.
+  - Tracking: issue #775; related development/maintenance issue #673.
+
+- [ ] `VS-1994` `P1` Refresh desktop dependencies and simplify storage charts.
+  - Scope: service Avalonia, Dapper and the xUnit runner; replace the two
+    LiveCharts summaries with native Avalonia drawing and retain ABI/security
+    overrides, localized legends, sort order and empty/error behavior.
+  - Progress: three LiveCharts packages removed; local builds, proportion tests
+    and Windows/macOS native offscreen rendering pass. Installed desktop
+    acceptance remains open. See the [dependency audit](docs/release-evidence/1.9-desktop-dependencies-2026-10-12.md)
+    and [macOS render evidence](docs/release-evidence/1.9-desktop-macos-2026-10-13.md).
+  - Tracking: issue #776; preparation PR #736; Project In progress.
+
+- [ ] `BUG-19023` `P2` Remove stale beta claims from Linux package metadata.
+  - Scope: make the `.deb` and AppImage AppStream release descriptions accurate
+    for the selected target version without implying unqualified beta features.
+  - Acceptance: both package templates use release-neutral text, the packaging
+    script passes syntax validation, and owning release integration remains open.
+  - Tracking: issue #777; preparation PR #736.
+
+- [ ] `BUG-19024` `P1` Keep macOS beta bundle versions valid and monotonic.
+  - Progress: the builder now maps `X.Y.Z-beta.N` to numeric short version
+    `X.Y.Z` and build `X.Y.(1000*Z+N)`; stable uses `X.Y.(1000*Z+999)`.
+    The exact target is retained in bundle metadata and the DMG filename.
+    Native synthetic beta/stable DMGs pass plist, signing and checksum checks.
+  - Acceptance: beta and stable bundle fields are valid, beta builds have
+    traceable increasing build numbers, package identity remains coherent, and
+    actual beta package inspection and predecessor upgrade still pass.
+  - Tracking: issue #778; preparation PR #736; see the
+    [native fixture record](docs/release-evidence/1.9-macos-beta-bundle-2026-10-13.md).
+
+- [ ] `BUG-19035` `P1` Preserve beta and candidate identities in packaged builds.
+  - Scope: replace hardcoded stable compiler metadata with validated beta,
+    candidate or stable identity for all six release packaging commands.
+    Runtime update source, signing/qualification gates and asset names stay intact.
+  - Acceptance: executed workflow-policy regressions and actual compiled beta
+    metadata match; owning release/package qualification remains open.
+    Issue #811; sole draft preparation PR #736; Start 2026-10-20,
+    Target 2027-03-26; Project #7 In progress, Release, P1, 1.9.x.
+- [ ] `BUG-19034` `P1` Resolve measured Sonar safety findings and coverage omissions.
+  - Scope: review the first restored PR analysis, harden release-tool arguments
+    and report output, make navigation cancellation ownership explicit, and
+    measure existing compression tests alongside scripts without weakening gates.
+    Preserve deterministic benchmark fixtures; review non-security PRNG use honestly.
+  - Acceptance: focused safety regressions, required Release validation and an
+    actual current-head PR quality gate pass with unchanged thresholds.
+  - Tracking: issue #810; sole preparation PR #736. Initial restored analysis
+    ec202c1 found four reliability/nine security findings and 62.2% new coverage.
+    Hosted 1a777b0 measured 83.6% coverage and zero reliability findings; the
+    signing-option follow-up on 6ee344e now passes the actual hosted gate after
+    documented false-positive review; release-gated integration remains open.
+
+
+  - Draft follow-up (2026-10-21): hosted d798e58 reports S8707 on CLI-selected
+    JSON input paths. Remove file/directory overrides, select fixed workspace
+    inputs by phase, bound UTF-8 JSON to 2 MiB and reject outside/traversal,
+    symbolic/hard links and changed descriptors. Preserve exact asset/signature
+    checks; new regressions and exact-head reanalysis are required. See
+    [boundary evidence](docs/release-evidence/1.9-draft-input-boundary-2026-10-21.md).
+  - Peer interop follow-up (2026-10-21): hosted 6a69f75 reports S3869 on
+    manual handle extraction. Replace it with a close-on-exec epoll monitor
+    and SafeHandle parameters protected automatically across native calls.
+    Retain exact peer-exit checks, including inherited sockets; release both
+    owned descriptors. See [interop evidence](docs/release-evidence/1.9-peer-safe-interop-2026-10-21.md).
+  - Restore cleanup follow-up (2026-10-21): hosted fcb47e8 reports S2583 on
+    cleanup-state assignment inside finally. Existing success/cleanup-failure
+    tests exercise both outcomes; replace the implicit flag with a separately
+    returned release outcome and preserve disposal after unexpected exceptions.
+    No rule/threshold change or suppression; current source requires its own
+    Release, native write/read-back and hosted checks. See
+    [cleanup evidence](docs/release-evidence/1.9-restore-cleanup-2026-10-21.md).
+
+- [ ] `BUG-19037` `P1` Reject incomplete remote tracking snapshots.
+  - Scope: use counted GraphQL issue/PR cursor connections for work tracking;
+    preserve unique identities, full labels/assignees and body-based ID reservation.
+    REST enumerations missing existing records must never pass an audit or allocate.
+  - Acceptance: actual complete remote counts and current/family audits pass;
+    truncated/changing/duplicate/cyclic/error snapshots fail before mutation.
+  - Tracking: issue #813; preparation PR #736; source-bound evidence in
+    [remote audit checks](docs/release-evidence/1.9-tracking-cursors-2026-10-22.md).
+
+- [ ] `BUG-19036` `P0` Reject stale buffered reads from sealed recovery files.
+  - Scope: read-only sealed metadata/payload descriptors must observe current
+    inode bytes across inspection/hash/copy seeks, without retained managed
+    read buffers hiding controlled owner mutation.
+  - Acceptance: ordinary-file native regression and isolated staged restore
+    refuse changed metadata/payload before Started or any write; retain final
+    hash verification, privacy and all release qualification gates.
+  - Tracking: issue #812; preparation PR #736; source-bound results in
+    [integration evidence](docs/release-evidence/1.9-reader-staging-2026-10-22.md).
+
+- [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
+  - Coverage collection follow-up (2026-10-22): the `ubuntu-latest` rollout
+    selected Ubuntu 26.04 and the profiler emitted an empty report despite
+    passing tests. Pin the previously measured Ubuntu 24.04 runner and reject
+    missing/empty/test-only coverage before import; keep quality thresholds
+    unchanged. The inspector's hosted maintainability findings are also refined.
+    Local/native and exact-head hosted results are recorded separately in
+    [follow-up evidence](docs/release-evidence/1.9-sonar-coverage-2026-10-22.md).
+  - Scope: SonarCloud rejects PR metadata after successful build and coverage
+    on #736 and the other 1.9 preparation PRs; `Dev` branch analyses pass.
+  - Acceptance: verify the project repository binding and GitHub app access,
+    then obtain a successful SonarQube PR check on the actual #736 head.
+  - Tracking: issue #779; preparation PR #736; see the
+    [diagnosis](docs/release-evidence/1.9-sonarqube-pr-2026-10-13.md).
+    October 19 authenticated inspection found the organization unbound while
+    the project claimed BOUND. Approved GitHub access is limited to VaultSync;
+    organization and project bindings are now verified. Current-head analysis
+    passed on 6ee344e, verified October 20; release-gated integration remains open.
+    See the October 19 follow-up evidence and its verified outcome.
+
+- [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
+  - Tracking reconciliation (2026-10-15): the initial family audit covered 102
+    canonical IDs; BUG-19033 raises the current checked total to 103. All 41 active-release owners already existed; 34 required
+    issue/Project metadata repairs, including 57 native fields. `./dev audit`
+    now checks exact milestones, unique labels, owners, status and traceable
+    dates before pushes; unavailable/partial data cannot pass. VS-1943's missing
+    conditional record is #791, closed as not planned because VS-1811 shipped.
+    Release-gated issues stay open. See [audit evidence](docs/release-evidence/1.9-tracking-audit-2026-10-15.md).
+  - Editorial placement (2026-10-14): development diaries, Reddit drafts and
+    publication packages are retained in the private editorial workspace and
+    removed from the current public tree. Technical release evidence remains
+    tracked separately. The [new article](https://fglabs.dev/devlog/vaultsync-190-following-the-files)
+    is published from the private site source. Automatic product notifications
+    are website-owned work under fglabs-site #25/#43; the new article has a
+    provider-confirmed delivery. VaultSync beta gates remain open.
+  - Progress: the [beta readiness snapshot](docs/release-evidence/1.9-beta-readiness-2026-10-13.md)
+    records current build/CI evidence, open architecture and measured recovery
+    gates, and the versioned beta workflow. Complete 1.9.0 feature scope is now
+    required for beta; the asset workflow now refuses a 1.9.0 beta with no
+    qualified disk profile. Suffix and date remain unset. Stable target: 2027-03-26.
+  - Current [October 20 readiness](docs/release-evidence/1.9-beta-readiness-2026-10-20.md)
+    records native capture, sealed staging and target observation at 99773d2
+    (1,737 Core / 242 Python; 43 native cases), without claiming the absent
+    worker/write/media/UI/complete-loop/upgrade/package gates. Four candidates
+    remain unqualified; no beta version or publication is selected.
+  - Scope: synchronize version consumers, canonical/public metadata, historical
+    1.8.9 publication, release contract, milestone, labels, project fields, and
+    the release/1.9.0 draft PR into Dev; retain existing dates and immutable IDs.
+  - Acceptance: metadata validation and roadmap/project audits pass; the current
+    stable remains 1.8.9; disk support and predecessor upgrades remain unqualified
+    until their owning gates have evidence.
+
+Today’s audit, dependency reduction, immutable ID crosswalk and one-PR-per-release
+tracking are recorded in [the daily ledger](docs/release-evidence/1.9-work-2026-10-03.md).
+The assembled 1.9.0 release PR is #736; protected preparation refs retain their
+history and are not rewritten merely to consolidate review.
+
+### 1.9.0 stable release gate
+
+- upgrades from exact `1.8.9` preserve existing repositories and user settings;
+- source and destination cannot be confused silently;
+- destructive actions require an exact wipe/overwrite preview;
+- interrupted clones are rejected or safely resumable;
+- clone verification detects incomplete or corrupt images;
+- recovery media boots independently of the installed OS;
+- supported images can be restored from that environment;
+- restored media passes the documented validation procedure;
+- limitations for filesystems, encryption, Secure Boot, and live-system
+  capture are explicit;
+- no claim of universal bare-metal recovery is made.
+
+## 1.9.1 — Clone Explorer
+
+- [ ] `VS-1911` `P1` Browse supported image partitions and files read-only.
+- [ ] `VS-1912` `P1` Search and selectively extract files from images.
+- [ ] `VS-1913` `P1` Inspect image creation, verification, and compatibility.
+- [ ] `VS-1914` `P2` Compare supported clone images where safe and practical.
+- [ ] `VS-1915` `P0` Introduce the adaptive 1.9 shell and typed route/state
+  infrastructure without removing the existing workflow views.
+- [ ] `VS-1916` `P1` Migrate Dashboard and Recovery entry points into
+  goal-oriented home and recovery workspaces.
+- [ ] `VS-1977` `P1` Add CLI discovery, contextual help, and shell completion.
+  - Scope: task-oriented help and examples, Bash/Zsh/PowerShell completion,
+    stable-ID discovery, clear command suggestions, and packaged executable/PATH
+    guidance for Windows, macOS, and Linux.
+  - Acceptance: a user can discover and complete a backup, inspection, or safe
+    restore task from terminal help; generated completions track the command tree
+    and installation instructions work on supported packages.
+  - Progress: the no-argument introductory UI now has a compact text logo, purpose,
+    website/repository/release/documentation links, six starter commands, and help
+    pointers. Root help remains separate. The `docs` discovery command and generated
+    Bash/Zsh/PowerShell command/option completion and `--task`/`--output` value
+    suggestions are implemented on the shared 1.9 branch. The handbook documents
+    packaged tool/PATH setup, and `docs --task` exposes focused workflow examples.
+    Stable-ID discovery, richer contextual
+    suggestions, and supported-platform completion qualification remain.
+- [ ] `VS-1978` `P1` Publish a practical CLI handbook and script migration guide.
+  - Scope: quick start, command reference, bulk workflows, JSON/exit-code
+    contracts, cron/systemd/Task Scheduler examples, credentials, troubleshooting,
+    cancellation, legacy migration, and recovery runbooks.
+  - Acceptance: executable examples run against disposable data on supported
+    systems; each command documents mutation, verification scope, and failure
+    behavior; a script author can migrate without guessing.
+  - Progress: `docs/CLI.md` covers concepts, configuration precedence, workflows,
+    structured results, automation safety, and limits. A complete reference is
+    generated from help for every registered grouped and compatibility command.
+    The handbook, task guides, and reference are embedded, packaged, and printed
+    by `docs --full`; online access uses `docs --open`/`--url`. Disposable inspection,
+    scheduler recipes, and migration instructions are drafted; supported-platform
+    qualification and independent recovery runbooks remain.
+
+- [ ] `BUG-19008` `P1` Isolate captured CLI console writers during Windows qualification.
+  - Scope: initialize/save the original Spectre console before redirecting stdout
+    and restore both consoles before disposing captured writers.
+  - Acceptance: bundled documentation/completion assertions and later restore/
+    self-test output pass on Windows; no disposed output writer leaks across tests.
+  - Evidence: PR #737 Windows job 111221779954 reproduced the failure; the fix
+    is prepared on fix/1.9.1-console-isolation and awaits native revalidation.
+
+## 1.9.2 — Portable Recovery
+
+Portable recovery moves ahead of offsite expansion because provider support is
+not a recovery path until a fresh installation can discover, inspect, unlock,
+restore, and verify supported portable data. Existing identifiers remain
+unchanged because work IDs are immutable and do not encode the patch number.
+
+- [ ] `VS-1931` `P0` Ship a standalone desktop restore utility.
+- [ ] `VS-1932` `P1` Generate an emergency recovery kit.
+- [ ] `VS-1933` `P0` Publish the supported backup and encryption format
+  specification.
+- [ ] `VS-1934` `P0` Define compatibility, migration, deprecation, and
+  emergency read-only policies.
+- [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
+  focused activity, inspection, and management workspaces.
+- [ ] `VS-1976` `P0` Add independent headless recovery through the reworked CLI.
+  - Scope: discover, inspect, unlock, plan, restore, and verify supported portable
+    repositories without the original database; add image commands only through
+    the approved engine/environment and preserve explicit privilege boundaries.
+  - Acceptance: a clean isolated machine recovers supported recorded content
+    without the original installation; credentials remain private, unsupported
+    formats stay unmodified, and destructive plans require exact target identity.
+
+## 1.9.3 — Offsite Protection
+
+- [ ] `VS-1921` `P0` Add resumable S3-compatible object-storage destinations.
+- [ ] `VS-1922` `P1` Add Backblaze B2 and SFTP destination profiles.
+- [ ] `VS-1923` `P0` Validate remote manifests and clean incomplete uploads.
+- [ ] `VS-1924` `P1` Explain immutability, object lock, retention, and cost.
+- [ ] `VS-1925` `P1` Prove clean-machine recovery from supported offsite data.
+- [ ] `VS-1926` `P1` Migrate Projects, Backups, and Schedule into one
+  progressive-disclosure Protection workspace.
+- [ ] `VS-1927` `P1` Add multi-destination health scoring and safe,
+  explainable automatic failover.
+
+## 1.9.4 — Unified Recovery Experience
+
+- [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
+  recovery navigation and retire the legacy shell after parity.
+- [ ] `VS-1942` `P1` Add a shared Recovery Inspector across recovery types.
+- [x] `VS-1943` `P2` Revisit project groups and high-density organization if
+  `VS-1811` moved out of 1.8.
+  - Conditional disposition (2026-10-15): not activated. VS-1811/#363 shipped
+    in 1.8, so #791 records the linked proof and closes as not planned. This
+    resolves the condition without claiming new 1.9.4 functionality or changing
+    its manifest ownership; no beta feature is removed.
+- [ ] `VS-1944` `P0` Qualify the complete 1.9 interface across supported
+  widths, scaling, keyboard, screen-reader, theme, and interrupted-work states.
+
+## 1.9.5 — Continuous Recovery Assurance
+
+- [ ] `VS-1951` `P1` Schedule full verification and recovery drills.
+- [ ] `VS-1952` `P1` Add user-controlled stale, missed, offline, credential,
+  and offsite alerts.
+- [ ] `VS-1953` `P1` Add CLI and structured headless recovery reporting.
+- [ ] `VS-1954` `P2` Add multi-machine summaries without introducing hidden
+  telemetry or mandatory hosted services.
+- [ ] `VS-1955` `P2` Add explicit local automation hooks for approved backup,
+  verification, and restore events.
+- [ ] `VS-1956` `P2` Bring the CLI to documented parity with stable,
+  automation-safe desktop workflows.
+- [ ] `VS-1979` `P0` Qualify the CLI rework and script compatibility across supported platforms.
+  - Scope: qualify the accumulated command/output contracts, aliases and migration,
+    non-TTY/scheduler use, shell quoting, bulk partial failures, cancellation,
+    encrypted/unavailable destinations, clean-machine restore, and packaged CLI.
+  - Acceptance: representative power-user scripts and independent recovery
+    runbooks pass on Windows, macOS, and Linux; no misleading success or secret
+    output remains; results provide evidence for VS-1956 parity closure.
+
+### Preserved CLI implementation cohort
+
+The following work is retained under its original ID, with release ownership
+moved from 1.9.0 to 1.9.5. Local evidence predating realignment is historical
+implementation evidence, not stable release qualification.
+
+- [ ] `VS-1972` `P0` Audit the CLI and approve command, behavior, and compatibility contracts.
+  - Scope: inventory existing commands and core-service gaps; define resource/action
+    naming, selectors, stable IDs, config precedence, errors, mirror-versus-backup
+    semantics, restore/verification scope, aliases, and deprecation policy.
+  - Acceptance: each current command has a keep, change, replace, or retire decision;
+    incompatible changes have migration examples and a defined compatibility window.
+  - Progress: command inventory and initial compatibility/behavior decisions are
+    in [the CLI rework audit](docs/CLI_REWORK.md); review/integration remains pending.
+- [ ] `VS-1973` `P1` Rebuild CLI commands around consistent tasks and shared services.
+  - Scope: implement the approved tree for projects, destinations, backups,
+    snapshots, history, verification, restore, configuration, and diagnostics;
+    add filtering, bulk selection, plan/dry-run, and explicit per-item results.
+  - Acceptance: useful terminal workflows use the same safety and storage contracts
+    as the desktop; live mirroring cannot masquerade as a recorded recovery point;
+    supported legacy invocations retain their documented behavior or migration path.
+  - Progress: grouped projects, snapshots, and recovery routes plus explicit mirror
+    naming reuse existing handlers; projects discover now exposes source-folder
+    discovery. Read-only projects show accepts literal names or explicit IDs;
+    listing supports name/preset filters and limits; snapshot show/history and
+    bounded same-project diffs now have versioned read-only results; watch accepts
+    explicit --db. Project-scoped backup list/show/verify now cover records and
+    full, unencrypted folder payloads. Full folder backup creation with explicit
+    destination and dry-run now uses the shared service. Read-only verify-all
+    checks bounded records across projects with per-backup outcomes. Backup
+    creation/restore bulk mutations and format parity remain.
+- [ ] `VS-1974` `P0` Establish reliable CLI output and unattended-operation behavior.
+  - Scope: versioned JSON and streaming result contracts, stable exit codes,
+    stdout/stderr separation, TTY-aware progress/color, no-prompt mode, safe secret
+    input and redaction, Ctrl-C cancellation, and explicit partial-failure results.
+  - Acceptance: redirected and scheduled commands terminate without interactive
+    prompts; machine output parses without log/progress contamination; failures,
+    cancellation, unsupported scope, and partial results have documented outcomes.
+  - Progress: raw argv logging is removed; BUG-19001 owns the confirmed quiet
+    removal defect. Project list/show implement explicit v1 JSON envelopes,
+    read-only project, snapshot-history, and bounded diff inspection, plus parse/
+    selection/operational errors; remaining workflows and uniform unattended contracts
+    remain pending. BUG-19002 owns
+    watcher shutdown/draining; quiet startup and cancellation exit 130 are implemented.
+    Snapshot and mirror service diagnostics now use the private CLI log rather
+    than contaminating quiet or preview output. Mirror, verify, and restore now
+    read existing databases without initializing them and report missing stores
+    on stderr. Backup list/show/verify also use read-only v1 results; failed
+    folder verification carries bounded details without leaking storage paths.
+    Backup and snapshot creation now return v1 results; shared-service
+    diagnostics stay in the private CLI log. Live mirror/sync and verify also
+    return opt-in v1 results while preserving legacy output. Doctor now returns
+    versioned check results without initializing an absent database.
+    Watch dry runs now terminate with a read-only plan and opt-in `watch.plan`
+    JSON, without snapshot, transfer, or configuration writes. Live event
+    framing, uniform cancellation, and the remaining unattended contracts remain.
+- [ ] `VS-1975` `P1` Make CLI backup, inspection, verification, and restore useful for power users.
+  - Scope: repeatable multi-project tasks, filters and selectors, recorded backup
+    and snapshot inspection, selective safe restore, integrity evidence, destination
+    diagnostics, and previewable retention using qualified shared services.
+  - Acceptance: isolated end-to-end examples protect and recover recorded bytes;
+    protected points survive bulk operations; per-item evidence and failures are
+    inspectable; unavailable or unsupported combinations fail explicitly.
+  - Progress: snapshot show exposes identity, size/change summaries, History
+    markers, and recorded-backup reference counts without claiming payload
+    availability or integrity. The Windows mirror runner no longer creates a
+    destination before a dry run. Backup records can now be inspected and full,
+    unencrypted folder payloads hash-checked. Explicit-destination full folder
+    backups now run through the shared service with a dry-run preflight.
+    Selective folder/file restore and exact backup-ID selection now preserve
+    unrelated target files. Read-only verify-all reports failed and omitted
+    records explicitly. Snapshot pruning now has a read-only v1 preview and
+    bounded mutation batches with remaining-work counts. Archive/encrypted
+    creation and cross-project bulk mutations remain.
+- [ ] `BUG-19002` `P1` Stop CLI watchers cleanly on cancellation and drain active work.
+  - Scope: honor command cancellation during startup and idle waiting; detach
+    Ctrl-C handlers; disable filesystem events and cancel/drain all debounce work
+    before returning. Synchronize debounce cancellation with token-source disposal.
+  - Acceptance: idle and pending-change sessions terminate with exit 130;
+    superseded active work is drained; no snapshots occur after shutdown;
+    concurrent trigger/cancel/completion does not access disposed token sources.
+  - Tracking: [issue #700](https://github.com/ATAC-Helicopter/VaultSync/issues/700);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19003` `P1` Restrict CLI snapshot diffs to the selected project's history.
+  - Scope: validate both explicit snapshot IDs against the selected project before
+    reading file paths on grouped and legacy routes; return a stable structured
+    error and retain nonzero legacy failure behavior.
+  - Acceptance: foreign-project snapshot IDs cannot contribute paths or counts;
+    valid same-project comparisons and legacy JSON remain compatible.
+  - Tracking: [issue #716](https://github.com/ATAC-Helicopter/VaultSync/issues/716);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19004` `P1` Recheck staged CLI restore bytes before target replacement.
+  - Scope: validate size and available SHA-256 hash after copying backup data to
+    the temporary restore file, before atomically replacing the target.
+  - Acceptance: changed or incomplete bytes cannot replace an existing target;
+    temporary files are cleaned up on failure.
+  - Tracking: [issue #717](https://github.com/ATAC-Helicopter/VaultSync/issues/717);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19005` `P1` Keep live CLI prune JSON parseable after deletion.
+  - Scope: preserve one JSON document on legacy live and empty-history paths;
+    keep quiet success silent and add bounded versioned prune results.
+  - Acceptance: scripts can parse dry-run and live outcomes, including actual
+    deletion and remaining counts, without human output mixed into stdout.
+  - Tracking: [issue #718](https://github.com/ATAC-Helicopter/VaultSync/issues/718);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19006` `P1` Stop CLI watchers when a snapshot, mirror, verification, or filesystem cycle fails.
+  - Scope: propagate startup and background cycle failures to the watcher session;
+    report brief errors on stderr, keep details in the private log, disable events,
+    and drain queued or active debounce work before returning a nonzero result.
+  - Acceptance: a failed startup mirror returns exit 2 without quiet stdout;
+    later cycle and filesystem watcher failures stop the session instead of
+    silently continuing; cancellation retains exit 130.
+  - Tracking: [issue #719](https://github.com/ATAC-Helicopter/VaultSync/issues/719);
+    implementation and regression evidence await release integration.
+- [ ] `BUG-19007` `P1` Keep watcher dry runs finite and read-only.
+  - Scope: stop dry-run snapshot writes and persistent listening; return a finite
+    plan without destination transfers, verification, database migration, or
+    configuration-default writes. Related: VS-1974 / #671.
+  - Acceptance: preview exits with unchanged database/configuration and no later
+    watcher work; missing stores stay absent; v1 JSON describes intent and evidence
+    limits without paths. Live JSON remains explicitly unsupported.
+  - Progress: [#734](https://github.com/ATAC-Helicopter/VaultSync/issues/734),
+    commit `5c01fa25` on `work/1.9-watch-preview`; fourteen preview cases and the
+    accumulated 1,053 .NET tests pass locally. In progress until release integration.
+  - Start: 2026-10-03; target: 2027-03-26; owner: Flavio Giacchetti / Team Work.
+
+## 1.9.6 — Binary Source Control Foundation
+
+Binary Source Control enters the 1.9 family only after `VS-1981` and
+`VS-1982` approve the repository and collaboration contracts. This release
+targets a complete local/NAS mainline workflow before branching or offsite scale.
+
+- [ ] `VS-1983` `P0` Build the immutable binary object store with
+  content-defined chunking, repository-local deduplication, independently
+  verifiable packs, rebuildable indexes, and bounded-memory streaming.
+  _(Issue #705.)_
+- [ ] `VS-1984` `P0` Build canonical file/tree objects, immutable changesets,
+  tags, and compare-and-swap refs with atomic publication ordering.
+  _(Issue #706.)_
+- [ ] `VS-1985` `P0` Build workspace status, staging, check-in, sync, and
+  safe checkout with dirty-workspace protection and cross-platform path checks.
+  _(Issue #707.)_
+- [ ] `VS-1986` `P0` Add binary lock rules, exclusive checkout, lock
+  heartbeat, commit-time ownership checks, and explicit stale-lock takeover.
+  _(Issue #708.)_
+- [ ] `VS-1987` `P1` Add changeset/path history, read-only browse, exact
+  restore, compare, tagging, and recovery evidence.
+  _(Issue #709.)_
+- [ ] `VS-1989` `P0` Add authenticated repository encryption, secure local
+  credential use, and a portable recovery-key path.
+  _(Issue #711.)_
+- [ ] `VS-1990` `P0` Add repository verification, index rebuild, reachability
+  analysis, quarantine, safe GC/repack, and emergency read-only recovery.
+  _(Issue #712.)_
+- [ ] `VS-1992` `P1` Integrate the BSC desktop and CLI foundation with clear
+  Git coexistence guidance and no automatic mutation of `.git`.
+  _(Issue #714.)_
+
+### 1.9.6 stable release gate
+
+- a repository can be created, reopened, and recovered without the original
+  local application database;
+- a second machine can attach a workspace, sync, lock, modify, check in, and
+  restore earlier content through one guarded default ref;
+- interrupted object/pack/index/tree/changeset writes cannot publish an
+  incomplete changeset;
+- guarded ref updates reject a stale base rather than overwriting newer work;
+- dirty workspace paths are never silently overwritten by sync/checkout;
+- exclusive locks cannot be silently stolen and stale takeover retains evidence;
+- index/cache loss is rebuildable from authoritative repository data;
+- full verification detects injected corruption;
+- encrypted repositories are recoverable on a clean machine with documented
+  authorized recovery material;
+- GC/repack fault tests preserve every reachable changeset;
+- Windows, macOS, Linux, and representative NAS/SMB workflows pass the stated
+  qualification envelope.
+
+If these gates are not met, BSC remains clearly labelled Preview and cannot
+block the earlier Recovery Horizon releases.
+
+## 1.9.7 — Binary Collaboration and Scale
+
+- [ ] `VS-1988` `P1` Add branches and deterministic three-way path planning,
+  auto-resolving only provably non-overlapping or byte-identical changes and
+  requiring explicit resolution for overlapping binary edits.
+  _(Issue #710.)_
+- [ ] `VS-1991` `P1` Add sparse workspaces, verified local cache, resumable
+  object transfer, and safe mirror/offsite replication where backend
+  conditional-write semantics are sufficient.
+  _(Issue #713.)_
+- [ ] `VS-1993` `P0` Qualify BSC performance, cross-platform clean-machine
+  recovery, multi-client NAS concurrency, large logical histories, corruption,
+  interruption, maintenance, and fault injection.
+  _(Issue #715.)_
+
+### 1.9.7 stable release gate
+
+- branch/ref operations never silently discard overlapping binary work;
+- sparse and full workspaces reconstruct identical bytes for included paths;
+- cache corruption causes re-fetch/reverification rather than trusted output;
+- resumable transfer never publishes incomplete history;
+- a mirror is reported protected only after all objects reachable from the
+  selected changeset are durable and verifiable;
+- large-history performance and memory budgets are enforced;
+- repeated commit/verify/GC/repack cycles remain recoverable under forced
+  termination and network loss.
+
+## 1.9.8 — Stability and LTS Baseline
+
+- [ ] `VS-1961` `P0` Stabilize disk-image, offsite, portable-recovery, and
+  Binary Source Control formats.
+- [ ] `VS-1962` `P0` Complete long-duration, large-dataset, migration,
+  filesystem, source-control, and fault-injection qualification.
+- [ ] `VS-1963` `P1` Publish the supported compatibility window and LTS policy.
+
+---
+
+# Post-1.9 major-version decision
+
+`2.0` is a candidate product family, not a promised release. Use `1.10` for
+compatible extensions such as additional providers, filesystems, image formats,
+automation, performance, or incremental interface improvements.
+
+Use `2.0` only when VaultSync changes the authoritative unit users manage from
+backup/recovery operations to resilience outcomes and that change creates an
+intentional compatibility or migration boundary.
+
+### Independent platform maintenance gates (LTS ownership)
 
 These migrations are isolated from the `1.8.8` patch so their runtime,
 packaging, activation, test-discovery, and CI effects can be qualified without
@@ -1121,146 +2229,6 @@ destabilizing the maintenance release.
     semantics have regression coverage and contributor documentation.
     _(Issue #587.)_
 
-## 1.9.0 — Disk and Bootable Recovery Foundation
-
-**Status:** Planned; implementation begins only after the shipped `1.8.8` qualification is recorded and the
-1.9 architecture approval gate is complete.
-**Tagline:** *Recover when the installed system cannot.*
-
-- [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
-  workflow boundaries, navigation invariants, and legacy-shell migration map.
-  _(Issue #501.)_
-- [ ] `VS-1917` `P0` Define the versioned disk-image format and compatibility
-  contract.
-  - Scope: cover source identity, partition layout, block/sparse maps,
-    integrity records, compression and encryption descriptors, incomplete and
-    resumable states, build identity, and reader/writer compatibility.
-  - Acceptance: incomplete images cannot appear valid; verification detects
-    missing or corrupt regions; readers reject unsupported versions without
-    mutation. _(Issue #574.)_
-- [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
-  matrix before implementation claims begin.
-  - Scope: decide build versus integration, privilege and isolation boundaries,
-    supported operating systems, filesystems, partition tables, encryption,
-    live capture, Secure Boot, recovery-media signing, drivers, and hardware.
-  - Acceptance: every supported combination has a qualification method and
-    every unsupported combination has explicit product and documentation
-    behavior. _(Issue #575.)_
-- [ ] `VS-1919` `P0` Define recovery identities, dependencies, failure domains,
-  and evidence provenance shared by Recovery Horizon and candidate Resilience.
-  - Scope: model devices, sites, repositories, destinations, credentials,
-    encryption-key references, recovery media, tools, recovery points,
-    verification, drills, and dependency correlation without exporting secrets.
-  - Acceptance: later readiness and scenario evaluation can distinguish
-    recorded facts, measured evidence, simulation, inference, user confirmation,
-    stale evidence, missing evidence, and unsupported checks. _(Issue #576.)_
-- [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
-  explicit operation states and checkpoint contracts.
-- [ ] `VS-1905` `P0` Add safe source/destination identity, overwrite previews,
-  capacity checks, interruption semantics, and block validation.
-- [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
-  systems with offline device discovery and recovery workflows.
-- [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
-  bootable environment.
-- [ ] `VS-1908` `P1` Record clone, validation, boot, and restore evidence with
-  source-machine and tool-version identity.
-- [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on
-  representative hardware and virtual machines.
-
-### 1.9.0 stable release gate
-
-- source and destination cannot be confused silently;
-- destructive actions require an exact wipe/overwrite preview;
-- interrupted clones are rejected or safely resumable;
-- clone verification detects incomplete or corrupt images;
-- recovery media boots independently of the installed OS;
-- supported images can be restored from that environment;
-- restored media passes the documented validation procedure;
-- limitations for filesystems, encryption, Secure Boot, and live-system
-  capture are explicit;
-- no claim of universal bare-metal recovery is made.
-
-## 1.9.1 — Clone Explorer
-
-- [ ] `VS-1911` `P1` Browse supported image partitions and files read-only.
-- [ ] `VS-1912` `P1` Search and selectively extract files from images.
-- [ ] `VS-1913` `P1` Inspect image creation, verification, and compatibility.
-- [ ] `VS-1914` `P2` Compare supported clone images where safe and practical.
-- [ ] `VS-1915` `P0` Introduce the adaptive 1.9 shell and typed route/state
-  infrastructure without removing the existing workflow views.
-- [ ] `VS-1916` `P1` Migrate Dashboard and Recovery entry points into
-  goal-oriented home and recovery workspaces.
-
-## 1.9.2 — Portable Recovery
-
-Portable recovery moves ahead of offsite expansion because provider support is
-not a recovery path until a fresh installation can discover, inspect, unlock,
-restore, and verify supported portable data. Existing identifiers remain
-unchanged because work IDs are immutable and do not encode the patch number.
-
-- [ ] `VS-1931` `P0` Ship a standalone desktop restore utility.
-- [ ] `VS-1932` `P1` Generate an emergency recovery kit.
-- [ ] `VS-1933` `P0` Publish the supported backup and encryption format
-  specification.
-- [ ] `VS-1934` `P0` Define compatibility, migration, deprecation, and
-  emergency read-only policies.
-- [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
-  focused activity, inspection, and management workspaces.
-
-## 1.9.3 — Offsite Protection
-
-- [ ] `VS-1921` `P0` Add resumable S3-compatible object-storage destinations.
-- [ ] `VS-1922` `P1` Add Backblaze B2 and SFTP destination profiles.
-- [ ] `VS-1923` `P0` Validate remote manifests and clean incomplete uploads.
-- [ ] `VS-1924` `P1` Explain immutability, object lock, retention, and cost.
-- [ ] `VS-1925` `P1` Prove clean-machine recovery from supported offsite data.
-- [ ] `VS-1926` `P1` Migrate Projects, Backups, and Schedule into one
-  progressive-disclosure Protection workspace.
-- [ ] `VS-1927` `P1` Add multi-destination health scoring and safe,
-  explainable automatic failover.
-
-## 1.9.4 — Unified Recovery Experience
-
-- [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
-  recovery navigation and retire the legacy shell after parity.
-- [ ] `VS-1942` `P1` Add a shared Recovery Inspector across recovery types.
-- [ ] `VS-1943` `P2` Revisit project groups and high-density organization if
-  `VS-1811` moved out of 1.8.
-- [ ] `VS-1944` `P0` Qualify the complete 1.9 interface across supported
-  widths, scaling, keyboard, screen-reader, theme, and interrupted-work states.
-
-## 1.9.5 — Continuous Recovery Assurance
-
-- [ ] `VS-1951` `P1` Schedule full verification and recovery drills.
-- [ ] `VS-1952` `P1` Add user-controlled stale, missed, offline, credential,
-  and offsite alerts.
-- [ ] `VS-1953` `P1` Add CLI and structured headless recovery reporting.
-- [ ] `VS-1954` `P2` Add multi-machine summaries without introducing hidden
-  telemetry or mandatory hosted services.
-- [ ] `VS-1955` `P2` Add explicit local automation hooks for approved backup,
-  verification, and restore events.
-- [ ] `VS-1956` `P2` Bring the CLI to documented parity with stable,
-  automation-safe desktop workflows.
-
-## 1.9.6 — Stability and LTS Baseline
-
-- [ ] `VS-1961` `P0` Stabilize disk-image, offsite, and portable-recovery
-  formats.
-- [ ] `VS-1962` `P0` Complete long-duration, large-dataset, migration,
-  filesystem, and fault-injection qualification.
-- [ ] `VS-1963` `P1` Publish the supported compatibility window and LTS policy.
-
----
-
-# Post-1.9 major-version decision
-
-`2.0` is a candidate product family, not a promised release. Use `1.10` for
-compatible extensions such as additional providers, filesystems, image formats,
-automation, performance, or incremental interface improvements.
-
-Use `2.0` only when VaultSync changes the authoritative unit users manage from
-backup/recovery operations to resilience outcomes and that change creates an
-intentional compatibility or migration boundary.
 
 ## Candidate VaultSync 2 — Resilience
 
@@ -1331,3 +2299,28 @@ These items are not assigned to a release until their contracts are approved:
 - Stable history is never rewritten to make a release branch appear cleaner.
 - Scope changes must update this file, the owning issue, milestone, project
   fields, and draft PR description together.
+
+Repository tracking rollout (2026-10-07): VS-1980/#673 adopts the helper from #759/#758 on active preparation heads. Release ownership, approval gates and sole PRs remain authoritative; see [workflow](docs/WORK_TRACKING.md).
+
+VS-1910/#501 progress (2026-10-07): the pure typed-route/legacy adapter prototype covers all eight existing page keys and explicit refusal/fallback behavior. Live navigation and persistence remain unchanged; coordinator, identity, architecture and platform parity review are open.
+
+VS-1918/#575 progress (2026-10-09): qualification rejects duplicate/conflicting JSON keys, non-finite/non-UTF-8 input and evidence growth beyond bounded reads. Positive and refusal regression fixtures are synthetic; engine approval and actual five-stage recovery remain open.
+
+VS-1919/#576 progress (2026-10-09): a read-only in-memory observation classifier binds subject, generation and scope, retaining execution result separately from freshness and measurement basis. Existing recovery confidence now treats future verification/drill timestamps as stale. Stable schemas, dependency evaluation, producer trust and measured recovery qualification remain open; see the [development evidence](docs/release-evidence/1.9-prototypes-2026-10-09.md).
+
+VS-1980/#673 validation portability (2026-10-12): preserve LF bytes for the hash-bound imported planning source and make mocked Unix process cleanup available in Windows updater fixtures. Artifact path/hash refusals remain tested; the separate symlink-escape case reports a skip only when Windows denies symlink creation. These are contributor checks, not installed-upgrade or disk-recovery qualification.
+
+VS-1980/#673 changelog standard (2026-10-12): AGENTS.md and CONTRIBUTING.md require one short outcome per entry, aiming for 8–14 words with the existing 22-word ceiling. Consecutive entries have no blank or whitespace-only separators; release/category spacing remains. Validation rejects separated entries in current and historical sections. The shared standard applies to all nine owning preparation PRs without importing sibling features.
+
+BUG-19012/#751 progress (2026-10-09): read-only REA inspection binds the installed stable SkiaSharp artifact and its font-manager P/Invoke declaration; retained evidence does not establish native resolution, the hang cause or 1.9.0 runtime qualification.
+
+Signing standard delivery (2026-10-13): the shared rule is committed and pushed
+to all nine sole preparation PRs, with each real release's metadata preserved
+and its required CLI Release checks passed. See [per-head signing evidence](docs/release-evidence/1.9-signing-2026-10-13.md).
+Current tests, historical signatures and pending publication gates remain separate.
+
+Localization delivery (2026-10-13): all nine sole preparation PRs have the shared
+rule and validated existing-desktop repairs, retaining release ownership and
+metadata. Locale-only changes invalidate reused packages. See
+[per-head localization evidence](docs/release-evidence/1.9-localization-2026-10-13.md); native translation/rendering and
+release qualification remain separate.

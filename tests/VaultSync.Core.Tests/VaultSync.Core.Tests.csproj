@@ -20,7 +20,24 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\VaultSync.CLI\VaultSync.CLI.csproj" />
     <ProjectReference Include="..\..\src\VaultSync.Core\VaultSync.Core.csproj" />
+    <ProjectReference Include="..\..\src\VaultSync.DiskWorker\VaultSync.DiskWorker.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\src\VaultSync.UI\VaultSync.UI.csproj" />
+  </ItemGroup>
+
+  <Target Name="CopyInventoryWorkerForProcessTests" AfterTargets="Build">
+    <ItemGroup>
+      <InventoryWorkerTestFiles Include="$(MSBuildThisFileDirectory)..\..\src\VaultSync.DiskWorker\bin\$(Configuration)\net10.0\VaultSync.DiskWorker*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(InventoryWorkerTestFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <ItemGroup>
+    <None Update="Fixtures\disk-restore-journal-v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\disk-image-raw-profile-v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\disk-image-origin-v2.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\disk-gpt-v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\disk-image-envelope-v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\disk-image-manifest-v1.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -164,6 +164,7 @@ namespace VaultSync.UI.ViewModels
         private DateTime _lastDashboardRefreshUtc;
         private List<Project>? _backupsCacheProjects;
         private List<Backup>? _backupsCacheBackups;
+        private IReadOnlyList<DestinationQuotaPlan>? _backupsCacheDestinationQuotaPlans;
         private HashSet<int>? _backupsCacheDisabledAuto;
         private DateTime _backupsCacheUpdatedUtc;
         private bool _backupsCachePartial;

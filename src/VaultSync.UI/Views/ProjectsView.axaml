@@ -291,7 +291,7 @@
             ColumnDefinitions="*,Auto"
             RowSpacing="{DynamicResource ListRowSpacing}">
         <Grid Grid.Row="0"
-              ColumnDefinitions="Auto,*,Auto,Auto"
+              ColumnDefinitions="Auto,*"
               ColumnSpacing="8"
               MinHeight="40"
               VerticalAlignment="Center">
@@ -315,7 +315,12 @@
                        FontWeight="SemiBold"
                        Foreground="{Binding AvatarColor, Converter={StaticResource ContrastForegroundConverter}}" />
           </Grid>
-          <TextBlock Grid.Column="1"
+          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+          <Border Classes="stat-pill sm info" HorizontalAlignment="Left"
+                  IsVisible="{Binding IsImported}" ToolTip.Tip="{Binding ImportDescription}">
+            <TextBlock Text="{Binding ImportLabel}" FontSize="10" />
+          </Border>
+          <TextBlock
                      Text="{Binding Name}"
                      FontSize="{DynamicResource SectionHeaderFontSize}"
                      FontWeight="Bold"
@@ -323,21 +328,26 @@
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      TextWrapping="NoWrap"
                      TextTrimming="CharacterEllipsis" />
-          <TextBlock Grid.Column="2"
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBlock
                      Text="{Binding LastSnapshotShort}"
                      FontSize="{DynamicResource PageSubtitleFontSize}"
-                     Foreground="{DynamicResource TextSecondaryBrush}" />
-          <TextBlock Grid.Column="3"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="1"
+                     IsVisible="{Binding HasSnapshot}"
                      Text="{Binding LatestSnapshotSizeDisplay}"
                      FontSize="{DynamicResource PageSubtitleFontSize}"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
+          </Grid>
+          </StackPanel>
         </Grid>
 
         <TextBlock Grid.Row="1"
                    Grid.ColumnSpan="2"
                    Margin="0,6,0,0"
-                   Text="{Binding Path}"
+                   Text="{Binding SourcePathDisplay}"
                    Foreground="{DynamicResource TextMutedBrush}"
                    FontSize="{DynamicResource PageSubtitleFontSize}"
                    TextWrapping="NoWrap"
@@ -442,12 +452,16 @@
                      Foreground="{Binding AvatarColor, Converter={StaticResource ContrastForegroundConverter}}" />
         </Grid>
         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+          <Border Classes="stat-pill sm info" HorizontalAlignment="Left"
+                  IsVisible="{Binding IsImported}" ToolTip.Tip="{Binding ImportDescription}">
+            <TextBlock Text="{Binding ImportLabel}" FontSize="9" />
+          </Border>
           <TextBlock Text="{Binding Name}"
                      FontSize="12"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      TextTrimming="CharacterEllipsis" />
-          <TextBlock Text="{Binding Path}"
+          <TextBlock Text="{Binding SourcePathDisplay}"
                      FontSize="10"
                      Foreground="{DynamicResource TextMutedBrush}"
                      TextTrimming="CharacterEllipsis" />
@@ -914,6 +928,13 @@
             </Grid>
 
             <StackPanel Grid.Column="1" Spacing="6">
+              <Border Classes="stat-pill sm info" HorizontalAlignment="Left"
+                      IsVisible="{Binding IsImported}" ToolTip.Tip="{Binding ImportDescription}">
+                <TextBlock Text="{Binding ImportLabel}" FontSize="11" />
+              </Border>
+              <TextBlock Text="{Binding ImportDescription}" IsVisible="{Binding IsImported}"
+                         FontSize="11" TextWrapping="Wrap" MaxWidth="460"
+                         Foreground="{DynamicResource TextMutedBrush}" />
               <TextBlock
                 Text="{Binding Name}"
                 FontSize="{DynamicResource PageTitleFontSize}"
@@ -929,7 +950,7 @@
                     TextTrimming="CharacterEllipsis">
                     <Run Text="{infra:LocalizedString Key=Projects.Label.Location}" FontWeight="SemiBold" />
                     <Run Text=" " />
-                    <Run Text="{Binding Path}" />
+                    <Run Text="{Binding SourcePathDisplay}" />
                   </TextBlock>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <Border Classes="stat-pill sm info"

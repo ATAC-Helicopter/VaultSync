@@ -3,16 +3,10 @@ name: SonarQube
 on:
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   push:
     # Release branches are analyzed by their required PR. Running again for the
     # same branch push duplicates the complete build and coverage pipeline.
     branches: [ "Dev", "Stable" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -26,7 +20,9 @@ concurrency:
 jobs:
   analysis:
     name: SonarQube Cloud analysis
-    runs-on: ubuntu-latest
+    # dotnet-coverage 18.9.0 produced an empty report on the 26.04 rollout.
+    # Keep the measured runner until the profiler qualifies on a newer image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
@@ -88,7 +84,7 @@ jobs:
         run: |
           dotnet tool install --global dotnet-sonarscanner --version 11.2.1
           dotnet tool install --global dotnet-coverage --version 18.9.0
-          python -m pip install coverage==7.10.4
+          python -m pip install --only-binary :all: coverage==7.10.4
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Restore
@@ -126,10 +122,14 @@ jobs:
           -f xml
           -o coverage.xml
 
+      - name: Verify coverage collection
+        if: steps.config.outputs.configured == 'true'
+        run: python3 scripts/validate_sonar_coverage.py coverage.xml
+
       - name: Test Python with coverage
         if: steps.config.outputs.configured == 'true'
         run: |
-          python -m coverage run --source=scripts -m unittest discover -s tests/scripts -p 'test_*.py'
+          python -m coverage run --source=scripts,experiments -m unittest discover -s tests/scripts -p 'test_*.py'
           python -m coverage xml -o python-coverage.xml
 
       - name: End SonarQube analysis

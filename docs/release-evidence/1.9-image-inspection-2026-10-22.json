@@ -1,0 +1,188 @@
+{
+  "owner": "VS-1904/#492",
+  "date": "2026-10-22",
+  "sourceBase": "419c6ab0e12f1d6e9b966370f2f49b350e3540ed",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/DiskImageInspectionProtocol.cs": "8b6a1c9e9afa9c5759de9792981eb0f490e4cc37d6766f4be5fe126bf38b19d8",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerClient.cs": "bb771264b340abed9652ea1be84cf13ee8818aaab7c6cc11aef5b0c0119db4ed",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerService.cs": "8e58b4f4572daefc059f55d98da1cd53ff6b5b06eff0919151e6f14ca9790faa",
+    "src/VaultSync.Core/Services/LinuxImageInspectionFilter.cs": "2116f74a06a804e03ae4cd11ac2a943158da3426b69b6a19478ef4f48f422571",
+    "src/VaultSync.Core/Services/LinuxImageInspectionSandbox.cs": "fe15c9af24b2779d4204715701e806194550b0cdc262353a8abcfa40f0114ac6",
+    "src/VaultSync.Core/Services/DiskInventoryWorkerClient.cs": "09c461bd0840e348fdd8dcff671cd228b35872aad2a66d47206ca00d30c4c22c",
+    "src/VaultSync.Core/Services/LinuxInventoryWorkerPeerChannel.cs": "2f143d7937c01c9dd814edf8b6a4a643c19a78b2d0a5e42dc2590a9e2e7ffa10",
+    "src/VaultSync.DiskWorker/Program.cs": "9316b9622fc19901045ce02c380dab8f7da52ab42f3eb2acdd7d15ccd63a7b38",
+    "src/VaultSync.Core/VaultSync.Core.csproj": "bf46ca42b27b7a8250bf9bb18eb8eff0bf844ce0ffe6b8f18e36d1037e3ac336",
+    "src/VaultSync.Core/Resources/Inspection/warmup.metadata": "cb131e311daa9bf5d2a94c9a61d021cd82c8daf80a0b1caeb6824cb140f6f304",
+    "src/VaultSync.Core/Resources/Inspection/warmup.raw": "f86d4a863bf4dced92eaa4290324e71f96a215e9f38c7acd8054a7c1a6c0a663",
+    "tests/VaultSync.Core.Tests/DiskImageInspectionTests.cs": "7cb1b40ea6aa863a362bef2786c58361e7a2a466456e78131fdfc655b5102f8a"
+  },
+  "validation": {
+    "core": 2036,
+    "newInspectionCases": 81,
+    "python": 261,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/image-inspection-20261022/release.log",
+    "trxSha256": "20be5be9436be7006df2d527c3a48c0f6d8bc3aa544a7fbf6dfebc4e4840ecc3",
+    "trackingAudit": {
+      "release": "1.9.0",
+      "workItems": 45,
+      "discrepancies": 0
+    }
+  },
+  "native": {
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 53.83,
+    "guestExitZero": true,
+    "cases": [
+      "fixture-independent-golden-binding-512",
+      "actual-inspector-completed-512",
+      "actual-inspector-exact-facts-512",
+      "actual-inspector-corruption-refused-512",
+      "actual-inspector-truncation-not-success-512",
+      "actual-inspector-trailing-refused-512",
+      "actual-inspector-caller-streams-preserved-512",
+      "fixture-independent-golden-binding-4096",
+      "actual-inspector-completed-4096",
+      "actual-inspector-exact-facts-4096",
+      "actual-inspector-corruption-refused-4096",
+      "actual-inspector-truncation-not-success-4096",
+      "actual-inspector-trailing-refused-4096",
+      "actual-inspector-caller-streams-preserved-4096",
+      "actual-inspector-empty-incomplete",
+      "actual-inspector-caller-cancellation",
+      "actual-inspector-running-cancellation-closes-worker",
+      "actual-inspector-cancel-retains-caller-streams",
+      "actual-inspector-parent-deadline-no-observation",
+      "actual-sandbox-uid-gid-drop",
+      "actual-sandbox-world-readable-open-denied",
+      "actual-sandbox-tmp-create-denied",
+      "actual-sandbox-udp-socket-denied",
+      "actual-sandbox-exec-denied",
+      "actual-sandbox-preexisting-thread-filtered",
+      "actual-sandbox-new-thread-inherits-filter",
+      "actual-sandbox-independent-all-thread-status",
+      "actual-sandbox-probe-clean-exit",
+      "actual-sandbox-no-created-file",
+      "actual-inspector-nonroot-parent-and-worker"
+    ],
+    "serialSha256": "8460e9d9e0308430df84d139c0112afb37e772ffb6beb75eca90c8f11473f432",
+    "seedSha256": "2fdc75f8b87e9cf734f88216edcdc065d294b409f09885f1633fcbdc95faeda6",
+    "qemuArgumentsSha256": "d6019a77b9ceff7d46cc62e3bdfc10b75b83bce3805e899ab9b34671b88b2e6c",
+    "harnessSourceSha256": "ed5a77e1d95aa188725bef94ca51735edd5580a38a24b1dee7c7e4e1b9e8f5ba",
+    "coreAssemblySha256": "91e4001332d608d742349e6ae00d01ffb8a1a92b5ac26789171bd9a2be9eae95",
+    "workerAssemblySha256": "d675ceb9c6d658bccd859401fa30bae11501f4b20cdc0c119863220b85dd9609",
+    "harnessAssemblySha256": "424d362bf370d13207f876f4673d82985bbd34eff1b583a68c9ceae20accda05",
+    "runtime": "10.0.13",
+    "network": "none",
+    "sharedFolders": false,
+    "hostRawDevicesPassed": false,
+    "guestRawDeviceOperations": false,
+    "onlyDiskPassed": "disposable pinned Debian OS overlay; fixture bytes in seed ISO",
+    "previousGuestState": "reused disposable pinned Debian guest",
+    "fixtures": "65,536/524,288-byte synthetic GPT image streams, no filesystem or bootable OS",
+    "privateHarnessWarnings": "platform analyzer warnings for Linux-only VM fixture; product Release has zero warnings",
+    "probes": [
+      "real shipped-source worker executable",
+      "root launcher drops worker to UID/GID 65534",
+      "nobody launcher and worker",
+      "world-readable file open denied",
+      "world-writable-directory create denied, no entry afterward",
+      "UDP socket and exec denied",
+      "existing and new threads constrained",
+      "parent independently validates all thread IDs/capabilities/NoNewPrivs/Seccomp",
+      "cancellation during blocked byte reply and caller stream retention",
+      "parent deadline yields no observation"
+    ]
+  },
+  "historicalAttempts": [
+    {
+      "privatePrefix": "first-",
+      "meaning": "early native bootstrap refused unknown CLR descriptor",
+      "serialSha256": "dbea2a544e9791ccfa8bebff1dd98f5a1bec0f8124dc43efcd3f7f6f026ea7ef"
+    },
+    {
+      "privatePrefix": "first-diagnostic-",
+      "meaning": "private diagnostic, inherited-descriptor refusal",
+      "serialSha256": "668feff3723902a8d313ccbe857b6ecdc15057035641c08dc91a3139973db16e"
+    },
+    {
+      "privatePrefix": "fd-diagnostic-",
+      "meaning": "identified anonymous CLR JIT memfd and loaded module descriptors",
+      "serialSha256": "c5aba9993773cfca8e1f95c7d7b1cad9fc9e5cc1f46b861d1d70e0f2c71ecd8b"
+    },
+    {
+      "privatePrefix": "jit-diagnostic-",
+      "meaning": "parser dependencies not initialized before policy; failed observation",
+      "serialSha256": "91b34a66ac6221cd6a17912a24f26d600c159501815287c5bfb750835c93a637"
+    },
+    {
+      "privatePrefix": "warmup-diagnostic-",
+      "meaning": "fixed synthetic warmup; early refusal classification failed",
+      "serialSha256": "d41ee7dd1b7032e278ae7473dd9824f18b8708b5ce0305c82f414e116c0121aa"
+    },
+    {
+      "privatePrefix": "thread-diagnostic-",
+      "meaning": "identified retiring task during parent kernel-status observation",
+      "serialSha256": "9ccd6b15d61551112727ff464ee23dd25042c6bed575e83739920d2629d84d82"
+    },
+    {
+      "privatePrefix": "policy-first-",
+      "meaning": "typed refusal/error-output failure, not a successful source",
+      "serialSha256": "a490c94e2b7656fdbb944f84282050697f3a024f983d7aea43d16308d46db9a4"
+    },
+    {
+      "privatePrefix": "parent-observer-",
+      "meaning": "unexpected worker diagnostics",
+      "serialSha256": "0e64bd08a0d7722c0c8ca2822d353ef8dc26e0fb1725450063191d424c5c9a2d"
+    },
+    {
+      "privatePrefix": "stderr-first-",
+      "meaning": "private diagnostic extension",
+      "serialSha256": "ffc1d3f1d320439aa8d8a69db8808bca16aa64602a19d4071445a6fc345170d9"
+    },
+    {
+      "privatePrefix": "memory-diagnostic-",
+      "meaning": "captured Out of memory worker exit 134, failed run",
+      "serialSha256": "7b9d2fae6c17139378801af253939c789679b68c3b9fc111309af9317a6b891d"
+    },
+    {
+      "privatePrefix": "memory-budget-",
+      "meaning": "memory reservation accounting alone did not fix runtime abort",
+      "serialSha256": "2ab53ec6c68da850674da072425db0cd1954dc69a3bfa0d9081b646c319b2a95"
+    },
+    {
+      "privatePrefix": "trace-first-",
+      "meaning": "traced diagnostic source, not qualification",
+      "serialSha256": "03407c43d5d6610210d99754ab420a7d40011ec9c8d26a8e86144121dbd98d25"
+    },
+    {
+      "privatePrefix": "trace-relevant-",
+      "meaning": "read-only retrieval of relevant failed syscalls; not product validation",
+      "serialSha256": "442a0d0e334474abbab5f22b3e5259f09e0b9d30dbb44bdcb933a4d2040cc817"
+    },
+    {
+      "privatePrefix": "first-success-",
+      "meaning": "27 cases before final cleanup extraction, timeout and running-cancellation probes",
+      "serialSha256": "5988b0c98f70259f16ec9b3366a759fcd2b5bc66642acb181dde105199f81c56"
+    }
+  ],
+  "debugTool": {
+    "url": "https://deb.debian.org/debian/pool/main/s/strace/strace-udeb_6.13+ds-1_amd64.udeb",
+    "sha256": "8de54e0c06c5a3a156fbddea1772cef3af2b3175bb6b65175db1994d7c05d047",
+    "use": "private disposable-guest debugging only, absent from final seed and product",
+    "finding": "sched_setaffinity(0,...) denied at new CLR thread startup; exact self-only rule now allowed; file-open denial remains"
+  },
+  "limits": [
+    "internal reader component, no device authority or writable protocol",
+    "current staging and engine still require mandatory reader-first integration",
+    "fixed path is not publisher or installed-build trust",
+    "no cgroup resident-memory or kernel-compromise qualification",
+    "no filesystem/OS-boot/physical-power-loss/full-recovery qualification",
+    "all four profiles candidate; PR draft; no beta cut/tag/assets/publication or merge"
+  ]
+}
