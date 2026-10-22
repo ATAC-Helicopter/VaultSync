@@ -44,7 +44,8 @@ Namespace-only use remains Unknown.
 3. Open only `/dev/<validated-kernel-name>` using Linux x64 `openat2`,
    `O_RDWR|O_EXCL|O_NOCTTY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC` and
    `RESOLVE_NO_SYMLINKS`. Every component, including magic links, is covered.
-   Unsupported kernels refuse; no weaker open fallback or retry exists.
+   The syscall receives explicit terminated UTF-8 bytes; its descriptor conversion
+   is checked. Unsupported kernels refuse; no weaker open fallback or retry exists.
 4. Inspect held block kind, device number, disk sequence, capacity, both sector
    geometries and read-only state. Ordinary files refuse.
 5. Independently reobserve all bindings/ancestry/journal and reinspect the held

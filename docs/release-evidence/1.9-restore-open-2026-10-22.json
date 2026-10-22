@@ -1,9 +1,9 @@
 {
   "owner": "VS-1904/#492",
   "date": "2026-10-22",
-  "sourceBase": "6b5c23f84f8471ffaf0a7b65d1ae306911270f78",
+  "sourceBase": "2ae7c24a4496bebb342472a715c5b469f627132f",
   "sourceSha256": {
-    "src/VaultSync.Core/Services/LinuxRawRestoreTargetOpenService.cs": "df9976542296c966540543be46cb39ef48df22a21d92299fa64aa94df5836738",
+    "src/VaultSync.Core/Services/LinuxRawRestoreTargetOpenService.cs": "2cdc2b3e2f273d2492cd60e69e6f1fb54ca0512cf8b8b4fbcd174636ceba5908",
     "src/VaultSync.Core/Services/RawImageRestoreJournal.cs": "8a086ceb7ad6606074e008d75085ef3e9305b351c7e4f1b1c7d9a4196547f802",
     "src/VaultSync.Core/Services/LinuxRawRestoreTarget.cs": "e140ef0f6e50965cc14e22b29ce17913effe9f37a60a3c83fab31aad35b54bb9",
     "src/VaultSync.Core/Services/RawImageDeviceRestoreService.cs": "2851a38875c7055c7606335e793b48d5d94dad8f3310b2a7b7d33ff7577196c6",
@@ -20,14 +20,14 @@
     "localizationKeys": 1943,
     "locales": 19,
     "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/restore-open-20261022/release.log",
-    "trxSha256": "ad39c2c2758033dbe1bbcb1dc99f9031302676b2e747f8064e9454f9e5b13f35",
+    "trxSha256": "6bd03bc11fa325060ccabaf11e5d0478f2359e14ca298df7f84aebcabae369e1",
     "trackingOwners": 45,
     "trackingDiscrepancies": 0
   },
   "native": {
     "exitCode": 0,
     "timedOut": false,
-    "elapsedSeconds": 55.99,
+    "elapsedSeconds": 50.4,
     "guestExitZero": true,
     "cases": [
       "journal-parent-refusal-before-any-entry",
@@ -45,6 +45,7 @@
       "opener-native-exclusive-512",
       "opener-competing-exclusive-refused-512",
       "restore-cancel-intent-recorded-512",
+      "opener-owned-native-fd-released-512",
       "restore-cancel-no-write-and-closed-512",
       "journal-native-interrupted-reopen-512",
       "restore-new-operation-new-review-512",
@@ -73,6 +74,7 @@
       "opener-native-exclusive-4096",
       "opener-competing-exclusive-refused-4096",
       "restore-cancel-intent-recorded-4096",
+      "opener-owned-native-fd-released-4096",
       "restore-cancel-no-write-and-closed-4096",
       "journal-native-interrupted-reopen-4096",
       "restore-new-operation-new-review-4096",
@@ -94,12 +96,12 @@
     "original4096Sha256": "4aa6c0b0755f4d3e3fd5eb23d2fdf9e3d22e05f64821a5148eef3686d9d1a17c",
     "target4096Sha256": "4aa6c0b0755f4d3e3fd5eb23d2fdf9e3d22e05f64821a5148eef3686d9d1a17c",
     "hostIndependentMatch4096": true,
-    "serialSha256": "373a8a6fa910df11f5a4aab64f159978e4308ae766f9f105adb47bec77531dde",
+    "serialSha256": "107fbf49b56bf328bf2d8633013479604c6cda7c0e39d4b6d548d58daa4aca91",
     "qemuArgumentsSha256": "eb748874d0e3601928a9a704f2c226670210a3c3114693f9fa81d361c030d259",
-    "seedSha256": "6580455f8ae7117f664954f0337ef170c4c1dbe2dc47d51abb53a9dd1f7c5a3a",
-    "harnessSourceSha256": "2fba74cf60e47d1ea887241499079422cbeea1b1907b1a592f94422b1095af1b",
-    "harnessAssemblySha256": "d8f27b48d9a4e5c2c7aa131a9594b3657a04b8d0b8a0305ff474aa8f1a871dea",
-    "coreAssemblySha256": "bda20fbf863ae1cd60e75fc3d8031b175e3222bbfaaf44cd76d5f8d70d230f4d",
+    "seedSha256": "0349671df2090899a0bfe4ef7b270ec2fb54ed7a1f108f8aba0940bc2485749e",
+    "harnessSourceSha256": "dff52ba51eaee531cd0b9ecacbdfc06b5487849ab6cfead07704ea6e9dfa22bf",
+    "harnessAssemblySha256": "af27b38aac9618dafdc3661680ee01e310587502f226b7422e11afbce51d1d07",
+    "coreAssemblySha256": "1f6a5eb05833433bbf29671b88250c63b62a890c961dc68b7373555d7cd3f1d5",
     "runtime": "10.0.13",
     "hostRawDevicesPassed": false,
     "network": "none",
@@ -111,8 +113,9 @@
     ],
     "filesystemsOrBootableOs": false,
     "previousGuestState": "reused disposable pinned Debian guest",
-    "scope": "57 cases including new native opener, competing claims and file/symlink substitutions; GPT byte fixtures only",
-    "privateHarnessWarnings": "two CA1416 UnixFileMode platform warnings; product Release gate has zero warnings"
+    "scope": "59 cases including native opener, exclusive/file/link refusals and independent owned-fd release checks",
+    "privateHarnessWarnings": "two CA1416 UnixFileMode platform warnings; product Release gate has zero warnings",
+    "labHashObserver": "native O_RDONLY/nonexclusive held descriptor; bypasses framework advisory-sharing lock without write access"
   },
   "limits": [
     "internal acquisition prerequisite only; no writable worker endpoint or authorization capability",
@@ -120,5 +123,30 @@
     "not controlled-offline or image sandbox proof",
     "no full filesystem/OS boot recovery, power-cut, upgrade or package qualification",
     "all four profiles candidate; draft PR remains open; no beta cut/tag/assets/publication"
+  ],
+  "historicalAttempts": [
+    {
+      "sourceCommit": "2ae7c24a4496bebb342472a715c5b469f627132f",
+      "nativeCases": 57,
+      "elapsedSeconds": 55.99,
+      "hostedChecks": 21,
+      "hostedAllSuccess": true,
+      "sonarGate": "OK",
+      "sonarBugs": 0,
+      "sonarVulnerabilities": 0,
+      "sonarCodeSmells": 240,
+      "newCoverage": 84.4,
+      "analysisDate": "2026-10-22T08:28:37+0000",
+      "privatePrefix": "first-",
+      "meaning": "before maintainability/interop refinement, not final source"
+    },
+    {
+      "privatePrefix": "failed-read-probe-",
+      "nativeCasesBeforeFailure": 15,
+      "guestExitZero": false,
+      "serialSha256": "57ab35c6fcb28b6d6221e91b8366f4f78e8f56844a45fb89178d77dd86ca83a2",
+      "harnessSourceSha256": "2fba74cf60e47d1ea887241499079422cbeea1b1907b1a592f94422b1095af1b",
+      "meaning": "private FileStream hash sharing refusal after cancellation, before restore writes; not successful product evidence"
+    }
   ]
 }

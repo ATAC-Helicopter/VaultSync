@@ -888,7 +888,7 @@ capability is added; exact consent, trusted role/build and offline authority sta
 required. See [contract](LINUX_RAW_RESTORE_OPEN_1.9.md).
 
 Current required Release: 1,955 Core / 261 Python, zero warnings/errors/skips;
-1,943 keys / 19 locales. The isolated pinned UEFI VM passes 57 actual native cases,
+1,943 keys / 19 locales. The isolated pinned UEFI VM passes 59 actual native cases,
 including both 512/4096-sector writes/read-back and new opener refusals. Independent
 host hashes match both restored targets to original fixtures after normal poweroff.
 This is tiny GPT byte-image evidence, not filesystem/OS-boot recovery qualification.
@@ -897,3 +897,10 @@ The earlier journal and worker results remain historical at their exact sources.
 Trusted writable worker/protocol, image sandbox, independent media/UI, full recovery,
 installed upgrade, signed package and protected-review gates remain open; all four
 profiles stay candidates. #736 remains draft/unmerged, without beta cut or release.
+
+The same-day hosted follow-up separates acquisition ownership from typed admission,
+uses explicit terminated UTF-8 bytes at the syscall boundary, checks the descriptor
+conversion and keeps native declarations in their owning adapter. It addresses
+new maintainability findings without changing admission, native flags, journal
+order or supported profiles; final source is rebuilt and rerun in the VM.
+The first 2ae7c24 hosted results remain historical, not final-source evidence.

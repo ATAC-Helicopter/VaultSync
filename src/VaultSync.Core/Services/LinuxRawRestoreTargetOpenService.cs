@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Win32.SafeHandles;
 using VaultSync.Core.Models;
 
@@ -39,8 +40,6 @@ internal static class LinuxRawRestoreTargetOpenService
         Func<CancellationToken, ValueTask<LinuxBlockInventory>> observe, IDeviceAccess access,
         CancellationToken token = default)
     {
-        SafeFileHandle? handle = null;
-        RawImageDeviceRestoreService.ITarget? target = null;
         try
         {
             token.ThrowIfCancellationRequested();
@@ -53,6 +52,24 @@ internal static class LinuxRawRestoreTargetOpenService
             if (!Matches(stage, request, expected, before) ||
                 !await journal.MatchesUnstartedAsync(request, before, token).ConfigureAwait(false))
                 return new(LinuxRawRestoreOpenState.Changed);
+            return await AcquireAsync(stage, request, journal, expected, observe, access, token).ConfigureAwait(false);
+        }
+        catch (InvalidDataException) { return new(LinuxRawRestoreOpenState.Refused); }
+        catch (UnauthorizedAccessException) { return new(LinuxRawRestoreOpenState.AccessDenied); }
+        catch (Exception error) when (error is IOException or ObjectDisposedException)
+        { return new(LinuxRawRestoreOpenState.Failed); }
+        catch (Exception error) when (error is EntryPointNotFoundException or DllNotFoundException)
+        { return new(LinuxRawRestoreOpenState.Unsupported); }
+    }
+
+    private static async ValueTask<LinuxRawRestoreOpenResult> AcquireAsync(LinuxRawImageStagingSession stage,
+        RawImageDeviceRestoreRequest request, RawImageRestoreJournal journal, LinuxBlockInventory expected,
+        Func<CancellationToken, ValueTask<LinuxBlockInventory>> observe, IDeviceAccess access, CancellationToken token)
+    {
+        SafeFileHandle? handle = null;
+        RawImageDeviceRestoreService.ITarget? target = null;
+        try
+        {
             token.ThrowIfCancellationRequested();
             handle = access.Open(request.Target.KernelName, out var failure);
             if (handle is null) return new(failure);
@@ -75,12 +92,6 @@ internal static class LinuxRawRestoreTargetOpenService
             target = null;
             return result;
         }
-        catch (InvalidDataException) { return new(LinuxRawRestoreOpenState.Refused); }
-        catch (UnauthorizedAccessException) { return new(LinuxRawRestoreOpenState.AccessDenied); }
-        catch (Exception error) when (error is IOException or ObjectDisposedException)
-        { return new(LinuxRawRestoreOpenState.Failed); }
-        catch (Exception error) when (error is EntryPointNotFoundException or DllNotFoundException)
-        { return new(LinuxRawRestoreOpenState.Unsupported); }
         finally
         {
             handle?.Dispose();
@@ -101,13 +112,11 @@ internal static class LinuxRawRestoreTargetOpenService
             !RawImageRestoreJournal.Current(initial, device) || !RawImageRestoreJournal.Current(fresh, device) ||
             initial.BootId != fresh.BootId || initial.MountNamespace != fresh.MountNamespace)
             return false;
-        foreach (string number in stage.RepositoryDeviceNumbers)
-            if (!RawImageRestoreJournal.OutsideTarget(initial, device, number) ||
-                !RawImageRestoreJournal.OutsideTarget(fresh, device, number) ||
-                RawImageRestoreJournal.RepositoryDisk(initial, device, number) !=
-                RawImageRestoreJournal.RepositoryDisk(fresh, device, number))
-                return false;
-        return true;
+        return stage.RepositoryDeviceNumbers.All(number =>
+            RawImageRestoreJournal.OutsideTarget(initial, device, number) &&
+            RawImageRestoreJournal.OutsideTarget(fresh, device, number) &&
+            RawImageRestoreJournal.RepositoryDisk(initial, device, number) ==
+            RawImageRestoreJournal.RepositoryDisk(fresh, device, number));
     }
 
     private sealed class Native : IDeviceAccess
@@ -117,9 +126,9 @@ internal static class LinuxRawRestoreTargetOpenService
             // Linux x64 openat2: O_RDWR|O_EXCL|O_NOCTTY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC.
             // NO_SYMLINKS includes magic links and every ancestor. Never fall back.
             var how = new OpenHow { Flags = 2 | 0x80 | 0x100 | 0x800 | 0x20000 | 0x80000, Mode = 0, Resolve = 4 };
-            long descriptor = OpenAt2(437, -100, "/dev/" + kernelName, ref how, 24);
+            long descriptor = OpenAt2(437, -100, Encoding.UTF8.GetBytes("/dev/" + kernelName + "\0"), ref how, 24);
             if (descriptor >= 0)
-            { failure = LinuxRawRestoreOpenState.OpenedExclusive; return new SafeFileHandle((IntPtr)descriptor, true); }
+            { failure = LinuxRawRestoreOpenState.OpenedExclusive; return new SafeFileHandle((IntPtr)checked((int)descriptor), true); }
             failure = Marshal.GetLastPInvokeError() switch
             {
                 1 or 13 => LinuxRawRestoreOpenState.AccessDenied,
@@ -135,13 +144,13 @@ internal static class LinuxRawRestoreTargetOpenService
             new LinuxBlockReadNative().Inspect(handle, out identity);
         public RawImageDeviceRestoreService.ITarget? Adopt(SafeFileHandle handle, LinuxBlockObservation target) =>
             LinuxRawRestoreTarget.Adopt(handle, target);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct OpenHow { public ulong Flags, Mode, Resolve; }
+
+        [DllImport("libc", EntryPoint = "syscall", ExactSpelling = true, SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+        private static extern long OpenAt2(long number, int directory, [In] byte[] path,
+            ref OpenHow how, nuint size);
     }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct OpenHow { public ulong Flags, Mode, Resolve; }
-
-    [DllImport("libc", EntryPoint = "syscall", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
-    private static extern long OpenAt2(long number, int directory, [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
-        ref OpenHow how, nuint size);
 }

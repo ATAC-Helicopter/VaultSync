@@ -1441,9 +1441,11 @@ repository must not transfer before a compatible release is adopted.
     original/staging/journal ancestry before and after openat2 O_RDWR/O_EXCL.
     File/link substitutes, competing claims, changed identity/topology, disposed
     stages and mismatched/started journals refuse without writes. Final native
-    run: 57 cases across 512/4096-byte fixtures; required Release: 1,955 Core /
+    run: 59 cases across 512/4096-byte fixtures; required Release: 1,955 Core /
     261 Python. This grants no consent/offline authority and has no worker/UI
-    route. See [contract](docs/LINUX_RAW_RESTORE_OPEN_1.9.md) and
+    route. Hosted feedback also simplifies ownership flow and native marshalling
+    without changing admission, syscall flags or write ordering. See
+    [contract](docs/LINUX_RAW_RESTORE_OPEN_1.9.md) and
     [current evidence](docs/release-evidence/1.9-restore-open-2026-10-22.md).
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
