@@ -1761,6 +1761,16 @@ repository must not transfer before a compatible release is adopted.
     Release, native write/read-back and hosted checks. See
     [cleanup evidence](docs/release-evidence/1.9-restore-cleanup-2026-10-21.md).
 
+- [ ] `BUG-19036` `P0` Reject stale buffered reads from sealed recovery files.
+  - Scope: read-only sealed metadata/payload descriptors must observe current
+    inode bytes across inspection/hash/copy seeks, without retained managed
+    read buffers hiding controlled owner mutation.
+  - Acceptance: ordinary-file native regression and isolated staged restore
+    refuse changed metadata/payload before Started or any write; retain final
+    hash verification, privacy and all release qualification gates.
+  - Tracking: issue #812; preparation PR #736; source-bound results in
+    [integration evidence](docs/release-evidence/1.9-reader-staging-2026-10-22.md).
+
 - [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
   - Coverage collection follow-up (2026-10-22): the `ubuntu-latest` rollout
     selected Ubuntu 26.04 and the profiler emitted an empty report despite

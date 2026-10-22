@@ -92,6 +92,18 @@ public sealed class LinuxRawImageStorageTests(ITestOutputHelper output)
                 Assert.Equal(7, staging.Payload.ReadByte());
                 staging.FlushDirectories(); staging.Publish();
                 Assert.Throws<IOException>(staging.Seal);
+                // Controlled owner mutation of an ordinary temporary file. A
+                // retained managed read buffer must not hide it after seeking.
+                string sealedPath = Path.Combine(root, stageId.ToString("N"), "payload.raw");
+                File.SetUnixFileMode(sealedPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+                using (var mutation = File.OpenHandle(sealedPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+                {
+                    RandomAccess.Write(mutation, new byte[] { 42 }, 0);
+                    RandomAccess.FlushToDisk(mutation);
+                }
+                File.SetUnixFileMode(sealedPath, UnixFileMode.UserRead);
+                staging.Payload.Position = 0;
+                Assert.Equal(42, staging.Payload.ReadByte());
             }
             string staged = Path.Combine(root, stageId.ToString("N"));
             Assert.Equal(UnixFileMode.UserRead, File.GetUnixFileMode(Path.Combine(staged, "payload.raw")));

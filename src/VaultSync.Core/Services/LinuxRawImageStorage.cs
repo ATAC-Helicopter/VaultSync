@@ -137,7 +137,10 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorag
                 old.Inode != fresh.Inode || old.Size != fresh.Size ||
                 old.DeviceMajor != fresh.DeviceMajor || old.DeviceMinor != fresh.DeviceMinor)
                 throw IoFailure();
-            return new FileStream(handle, FileAccess.Read, 128 * 1024, isAsync: false);
+            // Repeated image binding must observe the held inode's current bytes,
+            // not a managed read buffer retained across seek/hash/copy passes.
+            // Transfer callers already supply bounded buffers of their own.
+            return new FileStream(handle, FileAccess.Read, 1, isAsync: false);
         }
         catch { handle.Dispose(); throw; }
     }
