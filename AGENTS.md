@@ -130,6 +130,9 @@ For any non-trivial tracked change, work tracking is a push prerequisite:
    Run `./dev audit --release <owning-version>` and resolve every discrepancy
    before pushing. A missing permission, partial API result or failed audit is
    not a pass; retain the output and report the exact unresolved condition.
+   Remote issue audits require complete counted cursor snapshots; ID allocation
+   also covers PR titles/bodies. Missing rows, changed totals, duplicate identities,
+   cyclic cursors, partial metadata or API errors fail closed before mutation.
 4. A dedicated branch remains optional unless another repository/release rule requires one.
 5. Tiny typo/format-only maintenance may use the repository's explicit tracking-skip mechanism; larger work must not silently bypass tracking.
 

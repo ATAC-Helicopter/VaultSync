@@ -149,6 +149,106 @@ def extract_ids(text: str, prefix: str) -> set[int]:
     return {int(match.group(1)) for match in pattern.finditer(text or "")}
 
 
+def _remote_metadata(connection, field):
+    nodes = connection['nodes']
+    if connection['pageInfo']['hasNextPage'] is not False or not isinstance(nodes, list):
+        raise ValueError('Incomplete remote metadata')
+    key = 'name' if field == 'labels' else 'login'
+    if any(not isinstance(item, dict) or not isinstance(item.get(key), str) or not item[key] for item in nodes):
+        raise ValueError('Invalid remote metadata')
+    return nodes
+
+
+def _remote_record(node, include_body, pull_request, numbers):
+    number = node['number']
+    if type(number) is not int or number <= 0 or number in numbers or not isinstance(node['title'], str):
+        raise ValueError('Missing or duplicate remote identity')
+    numbers.add(number)
+    state, closed = node['state'].lower(), node['closedAt']
+    if state not in (('open', 'closed', 'merged') if pull_request else ('open', 'closed')):
+        raise ValueError('Invalid remote state')
+    if state != 'open' and (not isinstance(closed, str) or len(closed) < 10):
+        raise ValueError('Missing remote closure date')
+    record = dict(number=number, title=node['title'], state=state, closed_at=closed,
+                  state_reason=(node.get('stateReason') or '').lower(), milestone=node['milestone'])
+    if include_body:
+        if not isinstance(node['body'], str):
+            raise ValueError('Missing remote body')
+        record['body'] = node['body']
+    for field in ('labels', 'assignees'):
+        record[field] = _remote_metadata(node[field], field)
+    if pull_request:
+        record['pull_request'] = {}
+    return record
+
+
+def _remote_page(text, collection, expected):
+    data = json.loads(text)
+    if data.get('errors'):
+        raise ValueError('GraphQL returned errors')
+    page = data['data']['repository'][collection]
+    total, nodes = page['totalCount'], page['nodes']
+    if type(total) is not int or total < 0 or total > 10000:
+        raise ValueError('Invalid remote count')
+    if expected is not None and expected != total:
+        raise ValueError('Remote count changed during pagination')
+    if not isinstance(nodes, list) or len(nodes) > 50:
+        raise ValueError('Invalid remote page')
+    return total, nodes, page['pageInfo']
+
+
+def _remote_next(info, count, total, nodes, cursors):
+    more = info['hasNextPage']
+    if type(more) is not bool or count > total:
+        raise ValueError('Invalid remote pagination')
+    if not more:
+        if count != total:
+            raise ValueError('Incomplete remote count')
+        return None
+    cursor = info['endCursor']
+    if not nodes or count >= total or not isinstance(cursor, str) or not cursor or cursor in cursors:
+        raise ValueError('Invalid or repeated remote cursor')
+    cursors.add(cursor)
+    return cursor
+
+
+def fetch_remote_work_items(root: Path, repository: str, *, include_prs: bool = False,
+                            include_body: bool = False) -> list[dict[str, Any]]:
+    """Read complete cursor connections; reject partial snapshots before use."""
+    owner, name = repository.split('/')
+    records = []
+    numbers = set()
+    for collection in (['issues', 'pullRequests'] if include_prs else ['issues']):
+        reason = 'stateReason' if collection == 'issues' else ''
+        body = 'body' if include_body else ''
+        query = """query($owner:String!,$name:String!,$cursor:String) {
+          repository(owner:$owner,name:$name) { COLLECTION(first:50,after:$cursor,
+            orderBy:{field:CREATED_AT,direction:ASC}) {
+            totalCount pageInfo { hasNextPage endCursor } nodes {
+              number title state closedAt REASON BODY milestone { title }
+              labels(first:100) { pageInfo { hasNextPage } nodes { name } }
+              assignees(first:100) { pageInfo { hasNextPage } nodes { login } }
+            } } } }""".replace('COLLECTION', collection).replace('REASON', reason).replace('BODY', body)
+        cursor = None
+        cursors = set()
+        expected = None
+        count = 0
+        while True:
+            request = dict(query=query, variables=dict(owner=owner, name=name, cursor=cursor))
+            response = run(['gh', 'api', 'graphql', '--input', '-'], cwd=root,
+                           input_text=json.dumps(request))
+            try:
+                expected, nodes, info = _remote_page(response.stdout, collection, expected)
+                records.extend(_remote_record(node, include_body, collection == 'pullRequests', numbers) for node in nodes)
+                count += len(nodes)
+                cursor = _remote_next(info, count, expected, nodes, cursors)
+                if cursor is None:
+                    break
+            except (ValueError, TypeError, KeyError, AttributeError) as error:
+                raise TrackingError('Remote work audit incomplete; no passing result or ID allocation: ' + str(error)) from error
+    return records
+
+
 def collect_used_ids(root: Path, config: dict[str, Any], prefix: str) -> set[int]:
     used: set[int] = set()
     # Keep locally allocated IDs reserved while GitHub issue listings catch up.
@@ -162,25 +262,9 @@ def collect_used_ids(root: Path, config: dict[str, Any], prefix: str) -> set[int
             used.update(extract_ids(path.read_text(encoding="utf-8-sig"), prefix))
 
     repository = github_repo(root)
-    result = run(
-        ["gh", "api", "--paginate", "--slurp", f"repos/{repository}/issues?state=all&per_page=100"],
-        cwd=root,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise TrackingError("Cannot audit remote work IDs; no ID was allocated. Check GitHub access and retry.")
-    try:
-        pages = json.loads(result.stdout)
-        if not isinstance(pages, list) or any(not isinstance(page, list) for page in pages):
-            raise ValueError("Expected paginated issue lists")
-        for page in pages:
-            for issue in page:
-                if not isinstance(issue, dict):
-                    raise ValueError("Invalid issue record")
-                used.update(extract_ids(issue.get("title") or "", prefix))
-                used.update(extract_ids(issue.get("body") or "", prefix))
-    except (ValueError, TypeError) as error:
-        raise TrackingError("Cannot parse the remote ID audit; no ID was allocated.") from error
+    for issue in fetch_remote_work_items(root, repository, include_prs=True, include_body=True):
+        used.update(extract_ids(issue['title'], prefix))
+        used.update(extract_ids(issue['body'], prefix))
     return used
 
 

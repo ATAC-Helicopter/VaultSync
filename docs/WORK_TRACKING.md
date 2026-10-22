@@ -174,3 +174,22 @@ Use the existing owning issue and sole release PR, with `Refs` for release-gated
 ID allocation fails closed if the complete remote issue audit is unavailable; it
 never silently allocates using only a local roadmap. Permission or network failures
 must be resolved before creating a new numbered work item.
+
+
+## Complete remote snapshots
+
+BUG-19037/#813 uses GraphQL cursor connections for remote issue enumeration;
+identifier reservation also reads all PR titles and bodies. Every connection must
+reach its reported total with unique global issue/PR numbers, stable counts and
+nonrepeated cursors. Labels and assignees must be complete, correctly shaped
+connections. API errors, missing rows, changed counts or partial metadata fail
+before an audit can pass or an ID can be allocated; retry only a fresh read.
+No weaker REST fallback or local-only allocation exists. Native Project metadata
+remains independently queried/checked. This is a shared validation standard for
+all release preparations; it changes no release acceptance or closure criteria.
+
+On October 22, REST listings returned varying incomplete subsets despite direct
+access to missing owners. Counted GraphQL enumeration independently returned all
+569 issues and 170 PRs before the new tracker ticket was created. This identifies
+an observed enumeration failure, not a proven service/CLI root cause. See
+[source-bound evidence](release-evidence/1.9-tracking-cursors-2026-10-22.md).

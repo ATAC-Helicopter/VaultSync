@@ -24,7 +24,7 @@ class WorkTrackingTests(unittest.TestCase):
             if args[:3] == ["git", "config", "--get-all"]:
                 return work_tracking.CommandResult("BUG-19016", "", 0)
             return work_tracking.CommandResult('[[]]', "", 0)
-        with tempfile.TemporaryDirectory() as directory, patch.object(work_tracking, "github_repo", return_value="owner/repo"), patch.object(work_tracking, "run", side_effect=fake_run):
+        with tempfile.TemporaryDirectory() as directory, patch.object(work_tracking, "github_repo", return_value="owner/repo"), patch.object(work_tracking, "run", side_effect=fake_run), patch.object(work_tracking, "fetch_remote_work_items", return_value=[]):
             used = work_tracking.collect_used_ids(pathlib.Path(directory), {"planning_files": []}, "BUG")
             self.assertEqual("BUG-19017", work_tracking.allocate_id(used, prefix="BUG", major=1, minor=9, family_digits=3))
 
@@ -49,15 +49,14 @@ class WorkTrackingTests(unittest.TestCase):
             self.assertEqual(work_tracking.infer_release_family(root, "work/preparation", None), (1, 8))
 
     def test_remote_id_audit_paginates_and_fails_closed(self):
-        with tempfile.TemporaryDirectory() as directory, patch.object(work_tracking, "github_repo", return_value="owner/repo"), patch.object(work_tracking, "run") as execute:
+        with tempfile.TemporaryDirectory() as directory, patch.object(work_tracking, "github_repo", return_value="owner/repo"), patch.object(work_tracking, "run", return_value=work_tracking.CommandResult('', '', 1)), patch.object(work_tracking, "fetch_remote_work_items") as fetch:
             root = pathlib.Path(directory)
-            execute.return_value = work_tracking.CommandResult(stdout='[[{"title":"VS-1990"}],[{"body":"VS-1993"}]]', stderr='', returncode=0)
+            fetch.return_value = [{"title":"VS-1990", "body":"VS-1993"}]
             self.assertEqual(work_tracking.collect_used_ids(root, {"planning_files":[]}, "VS"), {1990, 1993})
-            self.assertIn("--paginate", execute.call_args.args[0])
-            for response in [work_tracking.CommandResult(stdout='', stderr='unavailable', returncode=1), work_tracking.CommandResult(stdout='{"message":"bad"}', stderr='', returncode=0)]:
-                execute.return_value = response
-                with self.assertRaises(work_tracking.TrackingError):
-                    work_tracking.collect_used_ids(root, {"planning_files":[]}, "VS")
+            fetch.assert_called_once_with(root, 'owner/repo', include_prs=True, include_body=True)
+            fetch.side_effect = work_tracking.TrackingError('incomplete remote audit')
+            with self.assertRaises(work_tracking.TrackingError):
+                work_tracking.collect_used_ids(root, {"planning_files":[]}, "VS")
 
     def test_slugify(self):
         self.assertEqual(work_tracking.slugify("Fix: Résumé / restore path!"), "fix-resume-restore-path")

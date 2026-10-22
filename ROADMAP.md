@@ -1770,6 +1770,15 @@ repository must not transfer before a compatible release is adopted.
     Release, native write/read-back and hosted checks. See
     [cleanup evidence](docs/release-evidence/1.9-restore-cleanup-2026-10-21.md).
 
+- [ ] `BUG-19037` `P1` Reject incomplete remote tracking snapshots.
+  - Scope: use counted GraphQL issue/PR cursor connections for work tracking;
+    preserve unique identities, full labels/assignees and body-based ID reservation.
+    REST enumerations missing existing records must never pass an audit or allocate.
+  - Acceptance: actual complete remote counts and current/family audits pass;
+    truncated/changing/duplicate/cyclic/error snapshots fail before mutation.
+  - Tracking: issue #813; preparation PR #736; source-bound evidence in
+    [remote audit checks](docs/release-evidence/1.9-tracking-cursors-2026-10-22.md).
+
 - [ ] `BUG-19036` `P0` Reject stale buffered reads from sealed recovery files.
   - Scope: read-only sealed metadata/payload descriptors must observe current
     inode bytes across inspection/hash/copy seeks, without retained managed

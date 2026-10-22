@@ -89,6 +89,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19037] Require complete remote tracking snapshots before audits and identifier allocation.
 - [BUG-19036] Recheck sealed recovery files without retaining stale buffered bytes.
 - [BUG-19025] Reject missing Sonar coverage before importing reports from the pinned runner.
 - [BUG-19034] Make restore cleanup outcomes explicit and preserve failure reporting.

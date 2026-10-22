@@ -985,3 +985,28 @@ exact-device/offline/consent authority, operation lifetime, recovery media/UI,
 full filesystem/OS-boot/crash/power-cut loops, installed upgrades or signed assets.
 All four profiles remain candidates and #736 stays draft/unmerged. No beta
 cut/tag, release asset publication or protected review bypass is introduced.
+
+
+## Complete remote tracking snapshots — 2026-10-22
+
+BUG-19037/#813 was discovered at the mandatory push audit for the reader-staging
+increment: REST enumerations returned varying incomplete subsets and omitted
+known owners still available by direct lookup. Independent counted GraphQL reads
+returned all 569 issues and 170 PRs before this tracker ticket was created.
+The exact remote service/CLI cause is not established; no discrepancy was ignored.
+
+Audit enumeration now follows issue cursors to stable totalCount with unique
+identities and complete labels/assignees. ID reservation also reads all PR titles
+and bodies. Missing rows, changed counts, duplicates, bad/cyclic cursors, partial
+metadata and API errors fail closed before mutation. Fifteen new regression
+methods retain this shared standard; native Project fields are checked separately.
+Current required Release passes **2,061 Core / 285 Python**, zero warnings/errors/
+skips, localization **1,943 keys / 19 locales**. Core sources are unchanged from
+the preceding source-hash-bound **36-case** native staging run; this tooling change
+is not another native recovery measurement. See
+[current tracking evidence](release-evidence/1.9-tracking-cursors-2026-10-22.md).
+
+Protected reviews, native authorization/media/UI/recovery loops, installed upgrade
+and signed packages remain release gates. #736 stays draft/unmerged; no beta
+cut/tag/assets/publication. Missing or partial remote data never justifies a gate
+bypass or locally inferred ID allocation.

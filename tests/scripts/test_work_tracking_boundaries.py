@@ -42,7 +42,9 @@ class TrackingBoundaryTests(unittest.TestCase):
         if args[:3] == ['gh', 'repo', 'view']:
             return result('owner/repo', '', 0)
         if args[:2] == ['gh', 'api']:
-            return result('', 'API forbidden', 1) if self.remote_failure else result('[[]]', '', 0)
+            collection = 'pullRequests' if 'pullRequests(' in kwargs.get('input_text', '') else 'issues'
+            payload = {'data': {'repository': {collection: {'totalCount':0, 'nodes':[], 'pageInfo':{'hasNextPage':False, 'endCursor':None}}}}}
+            return result('', 'API forbidden', 1) if self.remote_failure else result(json.dumps(payload), '', 0)
         if args[:3] == ['gh', 'label', 'list']:
             labels = ['kind:bug', 'bug', 'priority:p1', 'priority:P1', 'release:1.9.x']
             return result(json.dumps([{'name':name} for name in labels]), '', 0)

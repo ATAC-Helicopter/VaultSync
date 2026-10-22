@@ -6,7 +6,7 @@ import re
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from work_tracking import TrackingError, github_repo, load_config, repo_root, run
+from work_tracking import TrackingError, fetch_remote_work_items, github_repo, load_config, repo_root, run
 
 
 def audit_records(release, roadmap, issues, project_records, project_number, today, project_owner):
@@ -84,11 +84,7 @@ def audit_records(release, roadmap, issues, project_records, project_number, tod
 
 
 def fetch_records(root, repository, work_ids):
-    pages = json.loads(run(['gh', 'api', '--paginate', '--slurp',
-        f'repos/{repository}/issues?state=all&per_page=100'], cwd=root).stdout)
-    if not isinstance(pages, list) or not pages or any(not isinstance(page, list) for page in pages):
-        raise TrackingError('Incomplete remote issue audit')
-    issues = [issue for page in pages for issue in page if 'pull_request' not in issue]
+    issues = fetch_remote_work_items(root, repository)
     selected = [issue for issue in issues if any(re.match(r'^' + re.escape(wid) + r'\b', issue['title']) for wid in work_ids)]
     owner, name = repository.split('/')
     records = {}

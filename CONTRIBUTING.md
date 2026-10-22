@@ -35,7 +35,9 @@ For non-trivial work, use the repository helper to create or adopt the GitHub is
 - Create a dedicated branch: `./dev issue feature "Concise scope" --branch new`
 - Adopt an existing report: `./dev adopt <issue-number> --type bug --branch current`
 - Inspect the active association: `./dev status`
-- Before every tracked push: `./dev audit --release <owning-version>`
+- Before every tracked push: `./dev audit --release <owning-version>`.
+  Remote cursors/counts and metadata must be complete; errors, changed totals,
+  duplicate rows or partial connections fail closed, including before ID allocation.
 - Create a linked PR from a tracked branch: `./dev pr --draft`
 
 The helper preserves the existing `VS-xxxx` and `BUG-xxxxx` release-family numbering, reuses existing public Issue Forms rather than replacing them, and stores branch association only in local git config.

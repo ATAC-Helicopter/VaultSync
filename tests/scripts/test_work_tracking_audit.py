@@ -92,23 +92,22 @@ class ReleaseTrackingAuditTests(unittest.TestCase):
         self.assertTrue(self.findings())
 
     def test_fetch_paginates_issues_excludes_prs_and_is_read_only(self):
-        pages = [[self.issue, dict(self.issue, number=999, pull_request={})]]
         payload = dict(data=dict(repository=dict(i493=self.records()[493])))
-        with patch.object(audit, 'run', side_effect=[CommandResult(json.dumps(pages), '', 0),
-                CommandResult(json.dumps(payload), '', 0)]) as execute:
+        with patch.object(audit, 'fetch_remote_work_items', return_value=[self.issue]) as fetch, patch.object(audit, 'run', return_value=CommandResult(json.dumps(payload), '', 0)) as execute:
             issues, records = audit.fetch_records(pathlib.Path('.'), 'owner/repo', ['VS-1905'])
         self.assertEqual([self.issue], issues)
         self.assertEqual(self.records(), records)
-        self.assertIn('--paginate', execute.call_args_list[0].args[0])
+        fetch.assert_called_once_with(pathlib.Path('.'), 'owner/repo')
         for call in execute.call_args_list:
             self.assertNotIn('mutation', ' '.join(call.args[0]))
 
     def test_graphql_errors_and_empty_issue_pagination_fail_closed(self):
-        for pages, payload in (([], {}), ([[self.issue]], {'errors': [{'message': 'denied'}]})):
-            with patch.object(audit, 'run', side_effect=[CommandResult(json.dumps(pages), '', 0),
-                    CommandResult(json.dumps(payload), '', 0)]):
-                with self.assertRaises(TrackingError):
-                    audit.fetch_records(pathlib.Path('.'), 'owner/repo', ['VS-1905'])
+        with patch.object(audit, 'fetch_remote_work_items', side_effect=TrackingError('partial data')):
+            with self.assertRaises(TrackingError):
+                audit.fetch_records(pathlib.Path('.'), 'owner/repo', ['VS-1905'])
+        with patch.object(audit, 'fetch_remote_work_items', return_value=[self.issue]), patch.object(audit, 'run', return_value=CommandResult(json.dumps({'errors':[{'message':'denied'}]}), '', 0)):
+            with self.assertRaises(TrackingError):
+                audit.fetch_records(pathlib.Path('.'), 'owner/repo', ['VS-1905'])
 
     def test_audit_scope_is_explicit(self):
         args = build_parser().parse_args(['audit', '--release', '1.9.0'])
