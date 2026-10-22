@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1904] Prototype exclusive restore target acquisition with image and journal binding.
 - [VS-1907] Persist restore journals with ordered records and explicit interrupted outcomes.
 - [VS-1907] Prototype bounded disk writes with journal ordering and complete target read-back.
 - [VS-1904] Bind Linux inventory worker startup and response validation to kernel peers.

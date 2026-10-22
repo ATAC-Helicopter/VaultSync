@@ -8,12 +8,14 @@ internal sealed class RawImageRestoreJournal : RawImageDeviceRestoreService.IJou
     internal interface IStorage : LinuxRawImageCaptureService.IStorage { string? FilesystemDeviceNumber { get; } }
     private readonly IStorage storage;
     private readonly RawImageRestoreJournalCodec.Cursor cursor;
+    private readonly RawImageDeviceRestoreRequest request;
+    private readonly LinuxBlockInventory initialInventory;
     private readonly SemaphoreSlim gate = new(1, 1);
     private bool poisoned, disposed;
 
     private RawImageRestoreJournal(IStorage storage,
-        RawImageDeviceRestoreRequest request, byte[] header)
-    { this.storage = storage; cursor = new(request, header); }
+        RawImageDeviceRestoreRequest request, byte[] header, LinuxBlockInventory inventory)
+    { this.storage = storage; this.request = request; initialInventory = inventory; cursor = new(request, header); }
 
     internal static ValueTask<RawImageRestoreJournal> CreateAsync(string parent, RawImageDeviceRestoreRequest request,
         LinuxBlockInventory expected, CancellationToken token = default) => CreateAsync(request, expected,
@@ -51,7 +53,7 @@ internal sealed class RawImageRestoreJournal : RawImageDeviceRestoreService.IJou
             storage.FlushMetadata(); storage.FlushPayload(); storage.FlushDirectories();
             token.ThrowIfCancellationRequested();
             storage.Publish();
-            var journal = new RawImageRestoreJournal(storage, request, header);
+            var journal = new RawImageRestoreJournal(storage, request, header, fresh);
             transferred = true;
             return journal;
         }
@@ -79,7 +81,7 @@ internal sealed class RawImageRestoreJournal : RawImageDeviceRestoreService.IJou
         return disk is not null && disk.KernelName != target.KernelName && disk.DeviceNumber != target.DeviceNumber;
     }
 
-    private static LinuxBlockObservation? RepositoryDisk(LinuxBlockInventory inventory, LinuxBlockObservation target, string? number)
+    internal static LinuxBlockObservation? RepositoryDisk(LinuxBlockInventory inventory, LinuxBlockObservation target, string? number)
     {
         if (number is null || !Current(inventory, target)) return null;
         var repository = inventory.Devices.SingleOrDefault(d => d.DeviceNumber == number);
@@ -88,6 +90,25 @@ internal sealed class RawImageRestoreJournal : RawImageDeviceRestoreService.IJou
             ? inventory.Devices.SingleOrDefault(d => d.KernelName == repository.ParentKernelName) : repository;
         return disk is { Kind: LinuxBlockKind.WholeDisk, ParentKernelName: null,
             Identity: LinuxBlockIdentity.UniqueInSnapshot, DiskSequence: > 0 } ? disk : null;
+    }
+
+    // Preflight for the internal opener only, never consent or a reusable write capability.
+    // Caller must exclusively own this journal throughout acquisition and execution.
+    internal async ValueTask<bool> MatchesUnstartedAsync(RawImageDeviceRestoreRequest expected,
+        LinuxBlockInventory inventory, CancellationToken token)
+    {
+        await gate.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return !disposed && !poisoned && request == expected && cursor.Sequence == 0 && storage.Published &&
+                storage.Payload.CanWrite && storage.Metadata.CanWrite && storage.Payload.Length == 0 &&
+                storage.Payload.Position == 0 && initialInventory.BootId == inventory.BootId &&
+                initialInventory.MountNamespace == inventory.MountNamespace &&
+                OutsideTarget(inventory, request.Target, storage.FilesystemDeviceNumber) &&
+                RepositoryDisk(initialInventory, request.Target, storage.FilesystemDeviceNumber) ==
+                RepositoryDisk(inventory, request.Target, storage.FilesystemDeviceNumber);
+        }
+        finally { gate.Release(); }
     }
 
     public async ValueTask AppendDurableAsync(RawImageRestoreRecord record, CancellationToken token)

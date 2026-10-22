@@ -1436,6 +1436,15 @@ repository must not transfer before a compatible release is adopted.
     This is read-only inventory, not publisher trust, sandboxing, elevation,
     per-message authentication or device-operation authority. See the
     [integration contract](docs/DISK_WORKER_1.9.md#inventory-peer-integration--2026-10-21).
+  - Exclusive restore acquisition (2026-10-22): an internal Linux x64 opener
+    binds sealed image facts, fresh exact target/boot/namespace observations and
+    original/staging/journal ancestry before and after openat2 O_RDWR/O_EXCL.
+    File/link substitutes, competing claims, changed identity/topology, disposed
+    stages and mismatched/started journals refuse without writes. Final native
+    run: 57 cases across 512/4096-byte fixtures; required Release: 1,955 Core /
+    261 Python. This grants no consent/offline authority and has no worker/UI
+    route. See [contract](docs/LINUX_RAW_RESTORE_OPEN_1.9.md) and
+    [current evidence](docs/release-evidence/1.9-restore-open-2026-10-22.md).
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
     persisted import marker distinguishes origin from restore state; cards,

@@ -874,3 +874,26 @@ and protected review gates remain open. Four support profiles stay candidates;
 #495/native Project stay In progress and #736 stays draft/unmerged. This is not
 a feature-complete beta or a release asset/publication run. New exact-head hosted
 verification remains required.
+
+## Exclusive native restore acquisition — 2026-10-22
+
+VS-1904/#492 adds the internal Linux x64 acquisition prerequisite for the existing
+VS-1907 writer. Strict request/image/geometry binding, live unstarted bound journal,
+unique original/staging/journal ancestry, fresh boot/namespace/target observations
+and held native identity precede ownership transfer. openat2 rejects links in
+all components, requests O_RDWR/O_EXCL and refuses unsupported kernels without
+fallback. Competing claims, file/link substitution, cancellation and changed
+identity/topology close without writing. No worker/UI endpoint or authorization
+capability is added; exact consent, trusted role/build and offline authority stay
+required. See [contract](LINUX_RAW_RESTORE_OPEN_1.9.md).
+
+Current required Release: 1,955 Core / 261 Python, zero warnings/errors/skips;
+1,943 keys / 19 locales. The isolated pinned UEFI VM passes 57 actual native cases,
+including both 512/4096-sector writes/read-back and new opener refusals. Independent
+host hashes match both restored targets to original fixtures after normal poweroff.
+This is tiny GPT byte-image evidence, not filesystem/OS-boot recovery qualification.
+See [source-bound evidence](release-evidence/1.9-restore-open-2026-10-22.md).
+The earlier journal and worker results remain historical at their exact sources.
+Trusted writable worker/protocol, image sandbox, independent media/UI, full recovery,
+installed upgrade, signed package and protected-review gates remain open; all four
+profiles stay candidates. #736 remains draft/unmerged, without beta cut or release.

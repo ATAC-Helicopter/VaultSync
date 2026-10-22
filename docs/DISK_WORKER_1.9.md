@@ -259,3 +259,15 @@ or offline/source-consistency proof. Same-UID or administrator compromise is not
 contained. Hostile image isolation, privileged broker/operation protocol, native
 restore/journal/read-back, media/UI and full recovery/upgrade qualification remain
 open. See [source-bound checks](release-evidence/1.9-worker-channel-2026-10-21.md).
+
+## Native restore acquisition prerequisite — 2026-10-22
+
+VS-1904/#492 now supplies an internal exclusive writable target opener outside
+this executable's inventory protocol. Only the disposable-VM fixture calls it;
+the worker still cannot receive a writable operation. Sealed image facts, the
+unstarted operation-bound journal and original/staging/journal ancestry are checked
+around fresh inventory and held native identity. openat2 excludes all symlinks,
+requests O_RDWR/O_EXCL and has no weaker fallback. It grants no operation/consent/
+offline authority; trusted build/role, hostile-image sandbox and actual writable
+worker integration remain open. See [native contract](LINUX_RAW_RESTORE_OPEN_1.9.md)
+and [current evidence](release-evidence/1.9-restore-open-2026-10-22.md).

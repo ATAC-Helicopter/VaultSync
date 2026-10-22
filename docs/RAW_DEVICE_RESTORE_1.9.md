@@ -1,8 +1,10 @@
 # Internal raw-device write engine — VS-1907
 
 Owner #495; sole preparation PR #736. This is the first bounded write/read-back
-engine behind internal interfaces. It has no public restore API, target-path
-opener, elevated endpoint, desktop route or recovery launcher. The approved
+engine behind internal interfaces. It has no public restore API,
+elevated endpoint, desktop route or recovery launcher. A separate internal
+[native acquisition prerequisite](LINUX_RAW_RESTORE_OPEN_1.9.md) now supplies
+an exclusive target in the disposable-VM lab; it grants no device authority. The approved
 joint direction permits implementation and disposable-VM tests; it does not
 supply host-device authorization or qualify any support profile.
 
@@ -23,7 +25,7 @@ and payload are independently reverified in full before the first journal/write.
 Corrupt/disposed or still-writable stages refuse. Ordinary file test providers
 exercise ordering only; they are never native physical identity substitutes.
 
-The Linux x64 adapter adopts an already-held descriptor; it does not open it or
+The Linux x64 adapter adopts an already-held descriptor; it does not itself open it or
 prove its exclusive claim. Ownership transfers only on successful adoption.
 The caller retains a refused descriptor. It independently checks native block
 kind/device number/capacity/geometry/disk sequence/read-only state with the existing

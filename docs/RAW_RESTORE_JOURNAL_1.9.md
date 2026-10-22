@@ -109,3 +109,15 @@ Trusted writable worker/protocol/build/role integration, controlled offline stat
 image sandbox, qualified recovery media/UI, physical power-cut/crash recovery,
 full filesystem/OS-boot/interactive validation and installed upgrade/package/
 signature/protected reviews remain open. All support profiles stay candidates.
+
+## Acquisition admission — 2026-10-22
+
+The internal [native target opener](LINUX_RAW_RESTORE_OPEN_1.9.md) can now check
+that a journal remains live/published/unpoisoned, belongs to the exact request and
+has zero appended records. Checks hold the append/disposal gate and re-resolve
+the held filesystem against the current inventory, preserving the whole-disk
+identity observed at journal publication and excluding the target. This performs
+no append or device open itself. A started/disposed/mismatched journal refuses
+acquisition; it never authorizes automatic resume or destructive operation.
+The future broker must exclusively own journal/stage/operation lifetime; these
+checks are neither a human confirmation nor a replay-resistant capability.
