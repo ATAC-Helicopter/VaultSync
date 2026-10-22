@@ -43,13 +43,20 @@ All public preview/review APIs remain read-only and grant no writable capability
 
 ## Journal and I/O order
 
+The [private journal implementation](RAW_RESTORE_JOURNAL_1.9.md), added on
+2026-10-22, now supplies the native persistent provider described below. Earlier
+statements that only the lab supplied durable storage are historical. The
+privileged broker/writable operation protocol and UI/media integration remain
+unimplemented; the journal never supplies device authority or automatic resume.
+
 `IJournal.AppendDurableAsync` must return only after its exact typed record is
-committed to trusted local storage. This increment defines callback ordering,
-not a stable serialized journal format, production journal opener or resume API.
-The VM provider uses private regular JSONL files and Flush(true) after each record;
-fault fixtures supply deterministic failures. Future product acquisition must
-bind journal location/ancestry, permissions, build/operation and retention policy.
-The journal is local technical evidence; never upload it or raw payloads/logs.
+committed to trusted local storage. The internal version-1 provider now uses
+private binary records, preallocation, held-parent ancestry checks, file/directory
+flushes and rename-no-replace publication. The earlier JSONL provider remains
+historical lab evidence. There is no stable public journal compatibility or
+resume API. Trusted broker/build/role integration and retention controls remain
+required. The journal is local technical evidence; never upload it or raw
+payloads/logs.
 
 1. Reverify staged bytes and held target, then durably append Started.
 2. Read at most 128 KiB from the sealed payload. Recheck the target and durably
@@ -92,7 +99,7 @@ and disconnect behavior. The current inventory rendezvous is not that protocol.
 
 All outcomes and exceptions are internal technical states, not UI strings or
 telemetry fields. Future UI must localize every surfaced outcome in all locales.
-Full privileged broker/operation consent, private production journal acquisition,
+Full privileged broker/operation consent, journal lifecycle/retention controls,
 independent recovery medium, UI, power-cut/crash qualification, full filesystem
 recovery/boot/interactive verification and installed upgrade/package/signature
 checks remain open. All four disk profiles remain candidates.

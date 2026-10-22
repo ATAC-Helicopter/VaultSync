@@ -1576,6 +1576,15 @@ repository must not transfer before a compatible release is adopted.
     restore, trusted broker/journal acquisition, independent media and complete
     filesystem/boot qualification remain open. See the
     [write-engine contract](docs/RAW_DEVICE_RESTORE_1.9.md).
+  - Private journal increment (2026-10-22): the product now creates a separately
+    named private ext4 journal outside the restore target, with independent
+    before/after topology checks and preallocation before publication. Fixed-size
+    versioned records bind operation/image/review/geometry and form a SHA-256
+    chain; state and range order are validated before each durable append.
+    Failed/unconfirmed appends latch closed. Inspection distinguishes incomplete,
+    interrupted, failed and byte-read-back histories without authorizing resume.
+    Device/worker authority, image isolation, media/UI and full qualification
+    remain open. See [journal contract](docs/RAW_RESTORE_JOURNAL_1.9.md).
 - [ ] `VS-1908` `P1` Record clone, validation, boot, and restore evidence with
   source-machine and tool-version identity.
 - [ ] `VS-1909` `P0` Qualify the complete clone-to-bootable-recovery path on

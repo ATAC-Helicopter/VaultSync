@@ -117,7 +117,7 @@ internal static class RawImageDeviceRestoreService
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         { state = RawImageDeviceRestoreState.Interrupted; }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ObjectDisposedException)
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ObjectDisposedException)
         { state = RawImageDeviceRestoreState.Failed; }
 
         bool recorded = started && await RecordFailureAsync(journal, request, state,
@@ -136,7 +136,7 @@ internal static class RawImageDeviceRestoreService
                 request, offset, length), CancellationToken.None).ConfigureAwait(false);
             return true;
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ObjectDisposedException)
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ObjectDisposedException)
         { return false; }
     }
 

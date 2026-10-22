@@ -8,7 +8,7 @@ namespace VaultSync.Core.Services;
 /// retained; no automatic cleanup, replacement, resume or arbitrary file names.
 /// Same-user/admin/kernel compromise is outside this storage boundary.
 /// </summary>
-internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorage
+internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorage, RawImageRestoreJournal.IStorage
 {
     private const int DirectoryFlags = 0x10000 | 0x20000 | 0x80000;
     private const int FileFlags = 2 | 0x40 | 0x80 | 0x20000 | 0x80000;
@@ -48,6 +48,13 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorag
               status.DeviceMinor.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
 
     internal static LinuxRawImageStorage Create(string outputParent, Guid imageId, ulong capacity)
+        => CreateCore(outputParent, imageId, capacity, false, null);
+
+    internal static LinuxRawImageStorage CreateRestoreJournal(string outputParent, Guid operationId, ulong capacity,
+        Func<string?, bool> allowFilesystem) => CreateCore(outputParent, operationId, capacity, true, allowFilesystem);
+
+    private static LinuxRawImageStorage CreateCore(string outputParent, Guid imageId, ulong capacity,
+        bool journal, Func<string?, bool>? allowFilesystem)
     {
         if (!OperatingSystem.IsLinux() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
             throw new IOException("raw-storage.unsupported-platform");
@@ -69,13 +76,17 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorag
                 fs.BlockSize <= 0 || fs.AvailableBlocks > ulong.MaxValue / (ulong)fs.BlockSize ||
                 fs.AvailableBlocks * (ulong)fs.BlockSize < capacity + DiskImageRawProfileVerificationService.MaximumMetadataBytes)
                 throw new IOException("raw-storage.private-ext4-space-required");
-            string partial = ".vaultsync-incomplete-" + Guid.NewGuid().ToString("N");
+            // Journal ancestry must be admitted through the HELD parent before
+            // creating even a directory; refusal cannot modify the target filesystem.
+            if (allowFilesystem is not null && !allowFilesystem(DeviceNumber(parent, 0x4000)))
+                throw new IOException("raw-storage.journal-filesystem-refused");
+            string partial = (journal ? ".vaultsync-journal-incomplete-" : ".vaultsync-incomplete-") + Guid.NewGuid().ToString("N");
             if (Mkdirat(parent, partial, 0x1c0) != 0) throw IoFailure(); // 0700
             directory = Hold(Openat(parent, partial, DirectoryFlags, 0));
             if (!PrivateDirectory(directory)) throw IoFailure();
             Sync(parent);
-            payload = NewFile(directory, "payload.raw");
-            metadata = NewFile(directory, "image.metadata");
+            payload = NewFile(directory, journal ? "records.bin" : "payload.raw");
+            metadata = NewFile(directory, journal ? "journal.header" : "image.metadata");
             // Reserve actual ext4 blocks before reading the source; KEEP_SIZE
             // leaves logical EOF at zero until copied. ENOSPC is not a partial success.
             if (Fallocate(payload.SafeFileHandle, 1, 0, checked((long)capacity)) != 0) throw IoFailure();

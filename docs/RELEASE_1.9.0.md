@@ -839,3 +839,38 @@ Trusted writer/authority/journal integration, image isolation, independent
 media/UI, full recovery/OS boot, installed upgrade/package/signature/review gates
 remain open. Four support profiles remain candidates; #736 stays draft/unmerged.
 New exact-head hosted verification is required; no release publication occurs.
+
+
+## Private persistent restore journal — 2026-10-22
+
+VS-1907/#495 replaces the lab-only JSONL provider with an internal version-1
+binary journal. It independently checks target/boot/namespace and the held
+parent's unique filesystem ancestry before any entry is created; journal storage
+on the target, unknown or changed ancestry refuses. Preallocated private ext4
+files are flushed/published without replacement. Bounded hash-linked records
+validate exact operation/image/review/range ordering. An unconfirmed append
+latches closed; inspection never promotes a truncated history into verification
+or grants resume/device authority. The engine handles journal binding/terminal
+refusals as controlled failure, including cleanup after an existing terminal.
+
+Current required Release: 1,910 Core / 261 Python, zero warnings/errors/skips;
+1,943 keys / 19 locales. Seventy-three journal cases and two engine integration
+regressions are new. A permanent Python-generated independent byte fixture checks
+header/framing/hash order. Final isolated UEFI VM: 43 native cases, including the
+actual product journal for both geometries, interruption/read-back reopen,
+private modes, parent refusal before any entry, duplicate/stale refusal, corruption
+and truncation. Full target hashes independently match both original sources on
+the host after normal poweroff. QEMU/guest exit zero, no timeout; 52.05 seconds is
+boot/probes, not throughput. No host raw devices/network/shared folder.
+
+A prior hash-probe advisory sharing failure and an overly narrow negative-test
+exception expectation remain separate failed lab attempts; no product admission
+is weakened. See [journal contract](RAW_RESTORE_JOURNAL_1.9.md) and
+[source-bound evidence](release-evidence/1.9-restore-journal-2026-10-22.md).
+Trusted writable broker/role/build/consent, image sandbox, controlled offline
+state, journal lifecycle/retention, independent media/UI, physical power-cut and
+full filesystem/OS-boot/interactive recovery, installed upgrade/package/signature
+and protected review gates remain open. Four support profiles stay candidates;
+#495/native Project stay In progress and #736 stays draft/unmerged. This is not
+a feature-complete beta or a release asset/publication run. New exact-head hosted
+verification remains required.

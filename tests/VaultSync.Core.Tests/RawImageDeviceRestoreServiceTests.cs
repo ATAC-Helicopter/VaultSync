@@ -39,6 +39,7 @@ public sealed class RawImageDeviceRestoreServiceTests
         internal string? Fault;
         internal int Writes;
         internal bool Disposed;
+        internal bool DisposeFault;
         internal Action<string>? Hook;
         private MemoryStream? reader;
         private bool corrupted;
@@ -71,16 +72,19 @@ public sealed class RawImageDeviceRestoreServiceTests
             return ValueTask.CompletedTask;
         }
         public void Flush() => Step("flush");
-        public ValueTask DisposeAsync() { Disposed = true; reader?.Dispose(); trace.Add("dispose"); if (Fault == "dispose") throw new IOException("private-path-secret"); return ValueTask.CompletedTask; }
+        public ValueTask DisposeAsync() { Disposed = true; reader?.Dispose(); trace.Add("dispose"); if (Fault == "dispose" || DisposeFault) throw new IOException("private-path-secret"); return ValueTask.CompletedTask; }
     }
     private sealed class Journal(List<string> trace) : RawImageDeviceRestoreService.IJournal
     {
         internal readonly List<RawImageRestoreRecord> Records = new();
         internal RawImageRestoreRecordKind? Fault;
         internal Action<RawImageRestoreRecord>? Hook;
+        internal bool Invalid, StrictTerminal;
         public ValueTask AppendDurableAsync(RawImageRestoreRecord record, CancellationToken token)
         {
             token.ThrowIfCancellationRequested(); trace.Add(record.Kind.ToString());
+            if (Invalid || StrictTerminal && Records.Any(r => r.Kind is RawImageRestoreRecordKind.Interrupted or RawImageRestoreRecordKind.Failed))
+                throw new InvalidDataException("journal-binding-or-terminal");
             if (Fault == record.Kind) throw new IOException("private-journal-secret");
             Records.Add(record); Hook?.Invoke(record); return ValueTask.CompletedTask;
         }
@@ -307,5 +311,29 @@ public sealed class RawImageDeviceRestoreServiceTests
         Assert.True(target.Disposed);
         Assert.DoesNotContain(journal.Records, r => r.Kind == RawImageRestoreRecordKind.ReadBackVerified);
         Assert.Single(journal.Records, r => r.Kind == RawImageRestoreRecordKind.WriteIntent);
+    }
+
+    [Fact]
+    public async Task JournalBindingRefusalDoesNotEscapeAsAnUnhandledFailure()
+    {
+        await using var stage = await Stage(512);
+        var trace = new List<string>(); var target = new Target(Device(512, stage.Image.VerifiedBytes), trace);
+        var journal = new Journal(trace) { Invalid = true };
+        var result = await RawImageDeviceRestoreService.RunAsync(stage, Request(stage, target.Observation), target, journal);
+        Assert.Equal(RawImageDeviceRestoreState.Failed, result.State); Assert.Equal(0, target.Writes);
+        Assert.True(target.Disposed); Assert.False(result.TerminalRecordWritten);
+    }
+
+    [Fact]
+    public async Task CleanupAfterTerminalFailureCannotForceAnInvalidSecondTerminalRecord()
+    {
+        await using var stage = await Stage(512);
+        var trace = new List<string>(); var target = new Target(Device(512, stage.Image.VerifiedBytes), trace)
+            { Fault = "partial-write", DisposeFault = true };
+        var journal = new Journal(trace) { StrictTerminal = true };
+        var result = await RawImageDeviceRestoreService.RunAsync(stage, Request(stage, target.Observation), target, journal);
+        Assert.Equal(RawImageDeviceRestoreState.Failed, result.State); Assert.False(result.TerminalRecordWritten);
+        Assert.Equal(65536UL, result.UncertainLength); Assert.True(target.Disposed);
+        Assert.Single(journal.Records, r => r.Kind == RawImageRestoreRecordKind.Failed);
     }
 }
