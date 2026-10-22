@@ -1762,6 +1762,13 @@ repository must not transfer before a compatible release is adopted.
     [cleanup evidence](docs/release-evidence/1.9-restore-cleanup-2026-10-21.md).
 
 - [ ] `BUG-19025` `P1` Restore SonarCloud pull request analysis.
+  - Coverage collection follow-up (2026-10-22): the `ubuntu-latest` rollout
+    selected Ubuntu 26.04 and the profiler emitted an empty report despite
+    passing tests. Pin the previously measured Ubuntu 24.04 runner and reject
+    missing/empty/test-only coverage before import; keep quality thresholds
+    unchanged. The inspector's hosted maintainability findings are also refined.
+    Local/native and exact-head hosted results are recorded separately in
+    [follow-up evidence](docs/release-evidence/1.9-sonar-coverage-2026-10-22.md).
   - Scope: SonarCloud rejects PR metadata after successful build and coverage
     on #736 and the other 1.9 preparation PRs; `Dev` branch analyses pass.
   - Acceptance: verify the project repository binding and GitHub app access,

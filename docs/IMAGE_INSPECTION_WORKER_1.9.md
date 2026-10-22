@@ -131,6 +131,10 @@ cleanup; synchronous blocked kernel I/O still requires operational qualification
 ## Evidence and remaining gates
 
 See [source-bound measurements](release-evidence/1.9-image-inspection-2026-10-22.md).
+The subsequent [coverage/maintainability follow-up](release-evidence/1.9-sonar-coverage-2026-10-22.md)
+retains those results at their original source. It bundles parent read context,
+separates host dispatch, clarifies override parameter/field names and uses
+asynchronous deadline cancellation without changing wire bytes or syscall policy.
 ABI/runtime references: [seccomp and TSYNC](https://man7.org/linux/man-pages/man2/seccomp.2.html),
 [NPTL credential wrappers](https://man7.org/linux/man-pages/man2/setresuid.2.html),
 [CLR anonymous JIT mappings](https://github.com/dotnet/runtime/blob/v10.0.13/src/coreclr/minipal/Unix/doublemapping.cpp),

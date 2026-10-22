@@ -20,7 +20,9 @@ concurrency:
 jobs:
   analysis:
     name: SonarQube Cloud analysis
-    runs-on: ubuntu-latest
+    # dotnet-coverage 18.9.0 produced an empty report on the 26.04 rollout.
+    # Keep the measured runner until the profiler qualifies on a newer image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
@@ -119,6 +121,10 @@ jobs:
           "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build"
           -f xml
           -o coverage.xml
+
+      - name: Verify coverage collection
+        if: steps.config.outputs.configured == 'true'
+        run: python3 scripts/validate_sonar_coverage.py coverage.xml
 
       - name: Test Python with coverage
         if: steps.config.outputs.configured == 'true'

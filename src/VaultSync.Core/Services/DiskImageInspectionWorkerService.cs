@@ -67,15 +67,17 @@ internal static class DiskImageInspectionWorkerService
                 throw new InvalidDataException("inspection.read-reply");
             input.ReadExactly(buffer[..count]); position+=count; deadline.ThrowIfCancellationRequested(); return count;
         }
-        public override ValueTask<int> ReadAsync(Memory<byte> buffer,CancellationToken token=default)
-        { token.ThrowIfCancellationRequested(); return ValueTask.FromResult(Read(buffer.Span)); }
-        public override Task<int> ReadAsync(byte[] buffer,int offset,int count,CancellationToken token)
-        { token.ThrowIfCancellationRequested(); return Task.FromResult(Read(buffer,offset,count)); }
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer,CancellationToken cancellationToken=default)
+        { cancellationToken.ThrowIfCancellationRequested(); return ValueTask.FromResult(Read(buffer.Span)); }
+        public override Task<int> ReadAsync(byte[] buffer,int offset,int count,CancellationToken cancellationToken)
+        { cancellationToken.ThrowIfCancellationRequested(); return Task.FromResult(Read(buffer,offset,count)); }
         public override long Seek(long offset,SeekOrigin origin)
         {
             ObjectDisposedException.ThrowIf(disposed,this);
             long basis=origin switch {SeekOrigin.Begin=>0,SeekOrigin.Current=>position,SeekOrigin.End=>length,_=>throw new ArgumentOutOfRangeException(nameof(origin))};
-            long next=checked(basis+offset); if(next<0 || next>length) throw new IOException("inspection.seek-range"); return position=next;
+            long next=checked(basis+offset);
+            if(next<0 || next>length) throw new IOException("inspection.seek-range");
+            return position=next;
         }
         protected override void Dispose(bool disposing) { disposed=true; base.Dispose(disposing); }
         public override void Flush() { }

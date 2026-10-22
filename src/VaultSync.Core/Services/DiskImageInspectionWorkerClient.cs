@@ -14,6 +14,7 @@ internal sealed record DiskImageInspectionWorkerResult(DiskImageInspectionWorker
 /// </summary>
 internal static class DiskImageInspectionWorkerClient
 {
+    internal sealed record Sources(Stream Metadata,Stream Payload,Guid Operation,long MetadataLength,long PayloadLength);
     internal static Task<DiskImageInspectionWorkerResult> InspectAsync(Stream metadata,Stream payload,CancellationToken token=default) =>
         InspectAsync(metadata,payload,Path.Combine(AppContext.BaseDirectory,"VaultSync.DiskWorker"),TimeSpan.FromSeconds(130),token);
 
@@ -54,9 +55,9 @@ internal static class DiskImageInspectionWorkerClient
             started=process.Start(); if(!started) return new(DiskImageInspectionWorkerOutcome.Failed);
             using var peer=await DiskInventoryWorkerClient.AuthenticatePeerAsync(listener,process,deadline.Token).ConfigureAwait(false);
             Task quiet=DiskInventoryWorkerClient.RequireEmptyDiagnosticsAsync(process.StandardError.BaseStream,deadline.Token);
-            Task<DiskImageInspectionObservation> response=ExchangeAsync(process,peer,metadata,payload,request,operation,
-                metadataLength,payloadLength,user==0?LinuxImageInspectionSandbox.Nobody:user,
-                user==0?LinuxImageInspectionSandbox.Nobody:group,deadline.Token);
+            Task<DiskImageInspectionObservation> response=ExchangeAsync(process,peer,
+                new(metadata,payload,operation,metadataLength,payloadLength),request,
+                (user==0?LinuxImageInspectionSandbox.Nobody:user,user==0?LinuxImageInspectionSandbox.Nobody:group),deadline.Token);
             var pending=new List<Task> {response,quiet,process.WaitForExitAsync(deadline.Token)};
             _=Task.WhenAll(pending).ContinueWith(static t=>{_=t.Exception;},CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted|TaskContinuationOptions.ExecuteSynchronously,TaskScheduler.Default);
@@ -74,7 +75,7 @@ internal static class DiskImageInspectionWorkerClient
         { return new(DiskImageInspectionWorkerOutcome.Failed); }
         finally
         {
-            deadline.Cancel();
+            await deadline.CancelAsync().ConfigureAwait(false);
             await StopAsync(process,started).ConfigureAwait(false);
         }
     }
@@ -82,19 +83,20 @@ internal static class DiskImageInspectionWorkerClient
     private static async Task StopAsync(Process process,bool started)
     {
         if(!started || process.HasExited) return;
-        try { process.Kill(true); } catch(InvalidOperationException) { } catch(System.ComponentModel.Win32Exception) { }
+        try { process.Kill(true); } catch(InvalidOperationException) { /* Child already exited. */ }
+        catch(System.ComponentModel.Win32Exception) { /* Still perform the bounded exit wait. */ }
         try { await process.WaitForExitAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); }
-        catch(TimeoutException) { }
+        catch(TimeoutException) { /* Cleanup never waits past the additional two-second bound. */ }
     }
 
     private static async Task<DiskImageInspectionObservation> ExchangeAsync(Process process,LinuxInventoryWorkerPeerChannel peer,
-        Stream metadata,Stream payload,byte[] request,Guid operation,long metadataLength,long payloadLength,uint user,uint group,CancellationToken token)
+        Sources sources,byte[] request,(uint User,uint Group) identity,CancellationToken token)
     {
         await process.StandardInput.BaseStream.WriteAsync(request,token).ConfigureAwait(false);
         await process.StandardInput.BaseStream.FlushAsync(token).ConfigureAwait(false);
         var observation=await ServeAsync(process.StandardOutput.BaseStream,process.StandardInput.BaseStream,
-            metadata,payload,operation,metadataLength,payloadLength,peer.ValidatePeer,token).ConfigureAwait(false);
-        peer.ValidatePeer(); LinuxImageInspectionSandbox.ValidateProcess(process.Id,user,group,true); peer.ValidatePeer();
+            sources,peer.ValidatePeer,token).ConfigureAwait(false);
+        peer.ValidatePeer(); LinuxImageInspectionSandbox.ValidateProcess(process.Id,identity.User,identity.Group,true); peer.ValidatePeer();
         await peer.AcceptResponseAsync(token).ConfigureAwait(false);
         await DiskInventoryWorkerClient.RequireResponseEndAsync(process.StandardOutput.BaseStream,token).ConfigureAwait(false);
         return observation;
@@ -102,9 +104,10 @@ internal static class DiskImageInspectionWorkerClient
 
     // Parent brokers only a bounded byte oracle for these two held streams. Never
     // service an image-selected path, native operation, descriptor or new stream.
-    internal static async Task<DiskImageInspectionObservation> ServeAsync(Stream input,Stream output,Stream metadata,Stream payload,
-        Guid operation,long metadataLength,long payloadLength,Action validatePeer,CancellationToken token)
+    internal static async Task<DiskImageInspectionObservation> ServeAsync(Stream input,Stream output,Sources sources,
+        Action validatePeer,CancellationToken token)
     {
+        var (metadata,payload,operation,metadataLength,payloadLength)=sources;
         ulong remaining=checked(3*(ulong)payloadLength+4*(ulong)metadataLength+1024*1024);
         ulong calls=checked(((ulong)payloadLength+(ulong)metadataLength)/4096*4+16384);
         byte[] prefix=new byte[8],frame=new byte[DiskImageInspectionProtocol.ReadBytes],buffer=new byte[DiskImageInspectionProtocol.ChunkBytes];

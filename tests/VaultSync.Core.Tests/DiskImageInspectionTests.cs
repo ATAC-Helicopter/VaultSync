@@ -126,8 +126,8 @@ public sealed class DiskImageInspectionTests
 
     private static Task<DiskImageInspectionObservation> Serve(byte[] messages,MemoryStream output,
         Stream? metadata=null,Stream? payload=null,Guid? operation=null,CancellationToken token=default) =>
-        DiskImageInspectionWorkerClient.ServeAsync(new MemoryStream(messages),output,metadata??new MemoryStream(new byte[16],false),
-            payload??new MemoryStream(new byte[65536],false),operation??Operation,16,65536,()=>{},token);
+        DiskImageInspectionWorkerClient.ServeAsync(new MemoryStream(messages),output,
+            new(metadata??new MemoryStream(new byte[16],false),payload??new MemoryStream(new byte[65536],false),operation??Operation,16,65536),()=>{},token);
 
     [Fact]
     public async Task OracleServesOnlyExactHeldStreamsWithoutClosingThem()

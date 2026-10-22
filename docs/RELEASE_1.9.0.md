@@ -932,3 +932,22 @@ build/role/protocol review, device/offline consent, independent media/UI, comple
 recovery and installed-upgrade/package/signature/protected-review gates remain open.
 No support profile is qualified. #492/Project remain In progress; #736 stays draft,
 without beta cut, tag, release assets/publication or merge.
+
+
+## Sonar coverage collection follow-up — 2026-10-22
+
+BUG-19025/#779 follows the actual b0a5e68 hosted result: Windows/Linux/macOS
+build/test, release profiles, scripts, tracking and CodeQL pass. Sonar's workflow
+finishes but its quality gate fails at 33.0% coverage: the Ubuntu 26.04 rollout
+failed to initialize the collector and imported no C# coverage. The preceding
+Ubuntu 24.04 analysis measured coverage successfully. Pin that runner and require
+covered Core source ranges before import; no rule, threshold or exclusion changes.
+
+VS-1904's inspector follow-up separates host dispatch and parent request context,
+clarifies names/statement boundaries and asynchronously cancels pending I/O during
+cleanup. Exact wire bytes, sandbox policy and required native scenarios remain.
+See [source-bound follow-up evidence](release-evidence/1.9-sonar-coverage-2026-10-22.md)
+for current Release, native results and the independent hosted gate. The earlier
+inspection evidence remains historical at its exact source. Reader-first staging/
+restore integration, four-profile recovery qualification and the remaining beta
+gates stay open; #736 remains draft, with no release publication or merge.

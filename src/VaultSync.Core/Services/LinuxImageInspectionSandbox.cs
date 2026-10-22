@@ -74,8 +74,8 @@ internal static class LinuxImageInspectionSandbox
                 throw new InvalidDataException("inspection.thread-limit");
             try
             {
-                foreach(string task in tasks)
-                    if(!StatusMatches(read(task),user,group,filtered)) throw new InvalidDataException("inspection.privilege-state");
+                if(tasks.Any(task=>!StatusMatches(read(task),user,group,filtered)))
+                    throw new InvalidDataException("inspection.privilege-state");
             }
             catch(Exception error) when(error is FileNotFoundException or DirectoryNotFoundException) { continue; }
             if(tasks.SequenceEqual(list().Order(StringComparer.Ordinal),StringComparer.Ordinal)) return;
@@ -123,7 +123,7 @@ internal static class LinuxImageInspectionSandbox
 
     private static bool AnonymousJitMemory(int fd) => (Fcntl(fd,1)&1)!=0 &&
         Statx(fd,"",0x1100,0x7ff,out var status)==0 && (status.Mask&15)==15 &&
-        (status.Mode&0xf000)==0x8000 && status.Links==0 && status.User==User &&
+        (status.Mode&0xf000)==0x8000 && status.Links==0 && status.OwnerUid==User &&
         Statfs(fd,out var filesystem)==0 && filesystem.Type==0x01021994;
 
     private static void Limit(int resource,ulong maximum)
@@ -138,7 +138,7 @@ internal static class LinuxImageInspectionSandbox
     {
         [FieldOffset(0)] public uint Mask;
         [FieldOffset(16)] public uint Links;
-        [FieldOffset(20)] public uint User;
+        [FieldOffset(20)] public uint OwnerUid;
         [FieldOffset(28)] public ushort Mode;
     }
     [StructLayout(LayoutKind.Explicit,Size=120)] private struct FilesystemStatus { [FieldOffset(0)] public long Type; }
