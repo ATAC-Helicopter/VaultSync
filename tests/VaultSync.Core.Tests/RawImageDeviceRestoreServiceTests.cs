@@ -17,6 +17,7 @@ public sealed class RawImageDeviceRestoreServiceTests
     {
         private MemoryStream payload = new(), metadata = new();
         internal byte[]? SealedBytes;
+        internal byte[]? SealedMetadataBytes;
         public Stream Payload => payload;
         public Stream Metadata => metadata;
         public bool Published { get; private set; }
@@ -28,6 +29,7 @@ public sealed class RawImageDeviceRestoreServiceTests
         {
             byte[] raw = payload.ToArray(), meta = metadata.ToArray();
             SealedBytes = raw;
+            SealedMetadataBytes = meta;
             payload.Dispose(); metadata.Dispose();
             payload = new(raw, false); metadata = new(meta, false);
         }
@@ -96,7 +98,7 @@ public sealed class RawImageDeviceRestoreServiceTests
     {
         using var metadata = new MemoryStream(Convert.FromHexString(DiskImageRawProfileVerificationServiceTests.Valid(sector).MetadataHex));
         using var payload = new MemoryStream(DiskImageRawProfileVerificationServiceTests.Raw(sector));
-        return (await LinuxRawImageStagingService.StageAsync(metadata, payload, _ => storage ?? new Storage())).Session!;
+        return (await LinuxRawImageStagingService.StageAsync(metadata, payload, _ => storage ?? new Storage(), DiskImageInspectionFixture.InspectAsync)).Session!;
     }
     private static RawImageDeviceRestoreRequest Request(LinuxRawImageStagingSession stage, LinuxBlockObservation device) =>
         new(Guid.NewGuid(), Guid.NewGuid(), stage.Image.ImageId, stage.Image.CaptureId,
@@ -279,6 +281,18 @@ public sealed class RawImageDeviceRestoreServiceTests
         var storage = new Storage(); await using var stage = await Stage(512, storage);
         if (disposed) await stage.DisposeAsync();
         else storage.SealedBytes![storage.SealedBytes.Length / 2] ^= 1;
+        var trace = new List<string>(); var target = new Target(Device(512, stage.Image.VerifiedBytes), trace);
+        var journal = new Journal(trace);
+        var result = await RawImageDeviceRestoreService.RunAsync(stage, Request(stage, target.Observation), target, journal);
+        Assert.Equal(RawImageDeviceRestoreState.Refused, result.State);
+        Assert.Equal(0, target.Writes); Assert.Empty(journal.Records); Assert.True(target.Disposed);
+    }
+
+    [Fact]
+    public async Task ChangedSealedMetadataRefusesBeforeJournalOrDeviceWrites()
+    {
+        var storage = new Storage(); await using var stage = await Stage(512, storage);
+        storage.SealedMetadataBytes![^1] ^= 1;
         var trace = new List<string>(); var target = new Target(Device(512, stage.Image.VerifiedBytes), trace);
         var journal = new Journal(trace);
         var result = await RawImageDeviceRestoreService.RunAsync(stage, Request(stage, target.Observation), target, journal);

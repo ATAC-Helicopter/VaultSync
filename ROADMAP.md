@@ -1453,8 +1453,9 @@ repository must not transfer before a compatible release is adopted.
     reduction and a syscall allowlist synchronized across all threads. The parent
     requires complete stable kernel credential/filter observations, terminal ACK,
     EOF, empty diagnostics and exit zero. No file/device path or writable operation
-    crosses the inspection protocol. Production reader-first staging/writer
-    integration, trusted build/role, offline consent and media/UI remain open.
+    crosses the inspection protocol. The subsequent VS-1907 increment now requires
+    reader-first staging and byte-only writer checks; trusted build/role, offline
+    consent and media/UI remain open.
     See [reader contract](docs/IMAGE_INSPECTION_WORKER_1.9.md) and
     [source-bound evidence](docs/release-evidence/1.9-image-inspection-2026-10-22.md).
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
@@ -1572,6 +1573,14 @@ repository must not transfer before a compatible release is adopted.
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Reader-first integration (2026-10-22): staging requires isolated preflight and
+    sealed-copy parsing with identical bounded facts/hash. Parent-side bounded
+    hashing binds exact private metadata/payload bytes; the write engine checks
+    these before Started and verifies full target hash equality without parsing
+    hostile metadata/GPT. Preview/opener consume bounded geometry rather than
+    declared origin graphs. No fallback exists for a missing/failed reader. Native
+    authority, installed worker trust, media/UI and full recovery remain open.
+    See [integration evidence](docs/release-evidence/1.9-reader-staging-2026-10-22.md).
   - Progress: a temporary-file reconstruction prototype stages payloads during
     verification, reconstructs raw/zero extent maps and hashes target read-back.
     Synthetic Capture → Validate → Reconstruct → Validate passes without the

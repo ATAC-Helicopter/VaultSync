@@ -94,3 +94,13 @@ Authenticated broker/privilege, recovery media, exact overwrite UI in every
 maintained locale, safe device writes, interrupted-write records, read-back/boot
 qualification and installed upgrade/signing gates remain open. All support
 profiles remain candidates; no beta is qualified by a successful preview.
+
+
+## Reader-bound stage summary — 2026-10-22
+
+Native previews compare the isolated reader's bounded logical/physical geometry
+stored in the session. Its public assessment carries IDs/root/capacity without
+declared origin, tool strings or parser-owned coverage/layout graphs. Original
+metadata remains unchanged in the sealed private stream. Review freshness,
+repository exclusion and the lack of writable authority are unchanged. See
+[mandatory staging inspection](RAW_IMAGE_STAGING_1.9.md).

@@ -15,8 +15,11 @@ On other operating systems inventory reports UnsupportedPlatform; inspection ref
 
 The executable is not connected to desktop/CLI launchers, updater assets or release
 packaging. A local developer can build and test it; it must not be shipped as an
-elevated helper. It has the launching user's privileges, with no elevation and no
-OS sandbox. Separate process execution alone does not establish containment.
+elevated helper. Inventory retains the launching user's privileges without an OS
+sandbox. Image inspection separately drops privileges and applies its documented
+irreversible policy. Raw staging now requires that reader; it has no in-process
+parser fallback. Neither fixed process selection nor separate execution establishes
+installed executable/build trust or writable authority.
 
 ## One-shot protocol version 1
 

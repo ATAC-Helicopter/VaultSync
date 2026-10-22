@@ -56,7 +56,10 @@ public sealed class LinuxDiskRestoreTargetPreviewServiceTests
         using var payload = new MemoryStream(DiskImageRawProfileVerificationServiceTests.Raw(512));
         var verified = await DiskImageRawProfileVerificationService.VerifyAsync(meta, payload);
         Assert.Equal(DiskImageRawProfileVerificationState.ContentAndLayoutVerified, verified.State);
-        return new(new Storage(), verified.Image!, metadataDevice, payloadDevice);
+        var inspected = await DiskImageInspectionFixture.InspectAsync(meta, payload, CancellationToken.None);
+        meta.Position = 0;
+        return new(new Storage(), inspected.Observation!,
+            Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(meta)), (ulong)meta.Length, metadataDevice, payloadDevice);
     }
 
     [Fact]

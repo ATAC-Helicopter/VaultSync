@@ -116,7 +116,7 @@ public static class LinuxDiskRestoreTargetPreviewService
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!stage.IsAlive || stage.Image.State != DiskImageManifestVerificationState.ContentVerified || stage.Image.DeclaredOrigin is null)
+            if (!stage.IsAlive || stage.Image.State != DiskImageManifestVerificationState.ContentVerified)
                 return Refuse(LinuxDiskRestoreTargetPreviewReason.InvalidImage);
             if (!stage.RepositoryAncestryKnown)
                 return Refuse(LinuxDiskRestoreTargetPreviewReason.UnknownRepositoryDevice);
@@ -132,9 +132,8 @@ public static class LinuxDiskRestoreTargetPreviewService
             if (selected.Kind != LinuxBlockKind.WholeDisk || selected.ParentKernelName is not null)
                 return Refuse(LinuxDiskRestoreTargetPreviewReason.UnsupportedTarget);
             if (selected.IsReadOnly) return Refuse(LinuxDiskRestoreTargetPreviewReason.TargetReadOnly);
-            var origin = stage.Image.DeclaredOrigin;
-            if (selected.Capacity != stage.Image.VerifiedBytes || selected.LogicalSectorBytes != origin.Layout.LogicalSectorBytes ||
-                selected.PhysicalSectorBytes != origin.PhysicalSectorBytes)
+            if (selected.Capacity != stage.Image.VerifiedBytes || selected.LogicalSectorBytes != stage.LogicalSectorBytes ||
+                selected.PhysicalSectorBytes != stage.PhysicalSectorBytes)
                 return Refuse(LinuxDiskRestoreTargetPreviewReason.UnsupportedGeometry);
             var opened = await open(fresh, kernelName, cancellationToken).ConfigureAwait(false);
             held = opened.Source;

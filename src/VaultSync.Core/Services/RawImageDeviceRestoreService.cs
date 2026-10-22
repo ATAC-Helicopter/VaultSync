@@ -73,10 +73,7 @@ internal static class RawImageDeviceRestoreService
             token.ThrowIfCancellationRequested();
             if (!Matches(stage, request, target))
                 return new(RawImageDeviceRestoreState.Refused, 0, 0, 0, false);
-            stage.Metadata.Position = 0; stage.Payload.Position = 0;
-            var verified = await DiskImageRawProfileVerificationService.VerifyAsync(stage.Metadata, stage.Payload, token)
-                .ConfigureAwait(false);
-            if (!SameImage(verified, request))
+            if (!await stage.VerifyBytesAsync(token).ConfigureAwait(false))
                 return new(RawImageDeviceRestoreState.Refused, 0, 0, 0, false);
             await target.RecheckAsync(token).ConfigureAwait(false);
             await journal.AppendDurableAsync(new(RawImageRestoreRecordKind.Started, request, 0, 0), token)
@@ -105,10 +102,9 @@ internal static class RawImageDeviceRestoreService
                 acknowledged += (ulong)count;
                 uncertainOffset = 0; uncertainLength = 0;
             }
-            stage.Metadata.Position = 0; target.ReadBack.Position = 0;
-            var readBack = await DiskImageRawProfileVerificationService.VerifyAsync(stage.Metadata, target.ReadBack, token)
+            string? readBack = await DiskImageByteIntegrity.HashExactAsync(target.ReadBack, stage.Image.VerifiedBytes, token)
                 .ConfigureAwait(false);
-            if (!SameImage(readBack, request)) throw new IOException("raw-restore.read-back-refused");
+            if (readBack != stage.Inspection.PayloadSha256) throw new IOException("raw-restore.read-back-refused");
             await target.RecheckAsync(token).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             await journal.AppendDurableAsync(new(RawImageRestoreRecordKind.ReadBackVerified, request,
@@ -140,11 +136,6 @@ internal static class RawImageDeviceRestoreService
         { return false; }
     }
 
-    private static bool SameImage(DiskImageRawProfileVerificationAssessment assessment, RawImageDeviceRestoreRequest request) =>
-        assessment.State == DiskImageRawProfileVerificationState.ContentAndLayoutVerified &&
-        assessment.Image is { } image && image.ImageId == request.ImageId && image.CaptureId == request.CaptureId &&
-        image.Generation == request.Generation && image.ManifestRoot == request.ManifestRoot;
-
     private static bool Matches(LinuxRawImageStagingSession stage, RawImageDeviceRestoreRequest request, ITarget target)
     {
         var device = request.Target;
@@ -158,7 +149,6 @@ internal static class RawImageDeviceRestoreService
             device.Identity == LinuxBlockIdentity.UniqueInSnapshot && device.DiskSequence is > 0 &&
             !device.IsReadOnly && !device.MountObserved && !device.SwapObserved && !device.HasHolders &&
             device.Use == LinuxBlockUse.Unknown && device.Capacity == image.VerifiedBytes &&
-            image.DeclaredOrigin is { } origin && device.LogicalSectorBytes == origin.Layout.LogicalSectorBytes &&
-            device.PhysicalSectorBytes == origin.PhysicalSectorBytes;
+            device.LogicalSectorBytes == stage.LogicalSectorBytes && device.PhysicalSectorBytes == stage.PhysicalSectorBytes;
     }
 }

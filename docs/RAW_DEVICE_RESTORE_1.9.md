@@ -60,7 +60,7 @@ resume API. Trusted broker/build/role integration and retention controls remain
 required. The journal is local technical evidence; never upload it or raw
 payloads/logs.
 
-1. Reverify staged bytes and held target, then durably append Started.
+1. Rehash bound staged metadata/payload and recheck held target, then durably append Started.
 2. Read at most 128 KiB from the sealed payload. Recheck the target and durably
    append WriteIntent with exact offset/length and intended SHA-256.
 3. Mark that interval uncertain before calling the writer. Cancellation or a
@@ -93,11 +93,17 @@ undo that observation. Cancellation before any write leaves bytes untouched;
 its intent range may still conservatively be marked uncertain.
 
 The engine assumes trusted OS/administrator/same-UID storage and exclusive caller
-ownership of stage/target/journal. Its current in-process verification does not
-sandbox hostile images or prevent same-UID mutation. A separate
-[isolated reader](IMAGE_INSPECTION_WORKER_1.9.md) now produces bounded facts and a
-whole-payload hash; mandatory staged-byte binding and writer integration must
-still move parsing out of elevated execution. Synchronous flush and
+ownership of stage/target/journal. The mandatory staging path now runs the
+[isolated reader](IMAGE_INSPECTION_WORKER_1.9.md) before allocation and on the sealed
+copy. The session binds only bounded facts, geometry and exact metadata/payload
+hashes, not declared origin/tool/coverage graphs. Before Started, the writer hashes
+both sealed streams and requires exact lengths/EOF. After writing, exact full target
+SHA-256 must match the reader-verified payload. This carries byte/GPT identity
+without parsing hostile records in the writer; it is not filesystem/OS-boot or
+power-loss evidence. Same-UID/admin mutation and trusted executable/build/role
+qualification remain separate assumptions/gates. See
+[integration measurements](release-evidence/1.9-reader-staging-2026-10-22.md).
+Synchronous flush and
 uninterruptible kernel I/O cannot be preempted by a
 managed token; the future integrated bounded worker must enforce operation lifetime
 and disconnect behavior. The current inventory rendezvous is not that protocol.

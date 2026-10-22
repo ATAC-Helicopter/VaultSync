@@ -107,8 +107,8 @@ internal static class LinuxRawRestoreTargetOpenService
         if (!stage.IsAlive || stage.Payload.CanWrite || stage.Metadata.CanWrite || !stage.RepositoryAncestryKnown ||
             image.State != DiskImageManifestVerificationState.ContentVerified || image.ImageId != request.ImageId ||
             image.CaptureId != request.CaptureId || image.Generation != request.Generation || image.ManifestRoot != request.ManifestRoot ||
-            image.VerifiedBytes != device.Capacity || image.DeclaredOrigin is not { } origin ||
-            origin.Layout.LogicalSectorBytes != device.LogicalSectorBytes || origin.PhysicalSectorBytes != device.PhysicalSectorBytes ||
+            image.VerifiedBytes != device.Capacity || stage.LogicalSectorBytes != device.LogicalSectorBytes ||
+            stage.PhysicalSectorBytes != device.PhysicalSectorBytes ||
             !RawImageRestoreJournal.Current(initial, device) || !RawImageRestoreJournal.Current(fresh, device) ||
             initial.BootId != fresh.BootId || initial.MountNamespace != fresh.MountNamespace)
             return false;

@@ -6,12 +6,16 @@ separate from inventory. It requests bytes from two caller-held read-only stream
 it receives no filename, device selector, executable, credential or native handle.
 The inspector opens no disk, writes no image and grants no restore authority.
 
-This is a real constrained reader component, not the completed broker/staging/
-restore integration. Current staging and the write engine still parse images in
-their callers. Before production use they must adopt a reader-first flow, exact
-sealed-byte binding and a writer that consumes reviewed facts without reparsing
-hostile structures with privileges. Desktop/media launchers and release packages
-do not yet include this operation. All disk support profiles remain candidates.
+The Linux raw staging path now requires this reader before allocation and after
+sealing its private copy. The restore engine consumes the bound summary and exact
+metadata/payload hashes without reparsing hostile structures in its caller. No
+in-process fallback exists when the reader is unavailable. See
+[staging integration](RAW_IMAGE_STAGING_1.9.md) and its
+[source-bound measurements](release-evidence/1.9-reader-staging-2026-10-22.md).
+This is not the completed trusted broker: installed executable/build/role review,
+writable operation authority and desktop/media packaging remain open. Other
+capture/inspection entry points require their own boundary review. All support
+profiles remain candidates.
 
 ## Launch, ownership and bootstrap
 
@@ -144,8 +148,8 @@ No UI/telemetry field is added. All observations remain internal technical data;
 future UI must localize outcomes in every maintained locale. Never upload raw
 protocol bytes, images, journals, exception text, dumps or laboratory traces.
 
-Trusted installation/role/protocol review, mandatory reader-first staging/writer
-integration, controlled offline authority and overwrite consent, independent
+Trusted installation/role/protocol review, bounded writable operation integration,
+controlled offline authority and overwrite consent, independent
 media/UI, full filesystem/OS-boot/crash/power-cut recovery, installed upgrade,
 signed packages and protected reviews remain open. Kernel compromise, arbitrary
 administrator interference and cgroup containment are not qualified by this work.

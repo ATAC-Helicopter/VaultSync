@@ -951,3 +951,37 @@ for current Release, native results and the independent hosted gate. The earlier
 inspection evidence remains historical at its exact source. Reader-first staging/
 restore integration, four-profile recovery qualification and the remaining beta
 gates stay open; #736 remains draft, with no release publication or merge.
+
+
+## Mandatory reader-first staging and byte-only restore checks — 2026-10-22
+
+VS-1907/#495 now requires the isolated reader for raw staging preflight and the
+sealed private copy. Every bounded fact and whole-payload hash must match; missing,
+failed or timed-out inspection never falls back to the caller's parser. The
+session binds exact metadata/payload hashes and lengths, carries bounded geometry
+and no declared-origin/tool/coverage graph. Parent-side fixed bounded hashing
+checks the sealed bytes before publication and before Started. The write engine
+verifies full target hash equality without parsing hostile metadata/GPT.
+
+BUG-19036/#812 was discovered by the native controlled-owner-mutation probe:
+128 KiB read buffers could retain old sealed bytes across seeks, permitting a
+write before final read-back detected the changed payload. Read-only native
+reopens now disable managed buffering; transfer callers retain bounded buffers.
+The fix preserves same-inode/seal checks, journal/native write ordering, exact
+hashes, target exclusivity and the administrator/same-UID trust limit.
+
+Current required Release passes **2,061 Core / 270 Python**, zero warnings/errors/
+skips; localization **1,943 keys / 19 locales**. The final pinned native VM passes
+**36 integration cases**, guest/QEMU exit zero, normal shutdown, no timeout.
+Targets/journals in this run are byte-array/in-memory fixtures, not raw devices or
+durable-journal qualification. Audits pass **46 current-release / 107 family owners**
+with zero discrepancies.
+
+See [current source-bound measurements](release-evidence/1.9-reader-staging-2026-10-22.md)
+for Release and native results, failed probes and exact-head hosted verification.
+Earlier inspector/write/journal numbers remain historical at their original
+sources. This integration does not qualify a trusted installed writable broker,
+exact-device/offline/consent authority, operation lifetime, recovery media/UI,
+full filesystem/OS-boot/crash/power-cut loops, installed upgrades or signed assets.
+All four profiles remain candidates and #736 stays draft/unmerged. No beta
+cut/tag, release asset publication or protected review bypass is introduced.

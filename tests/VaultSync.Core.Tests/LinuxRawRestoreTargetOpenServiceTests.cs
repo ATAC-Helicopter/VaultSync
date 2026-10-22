@@ -91,9 +91,9 @@ public sealed class LinuxRawRestoreTargetOpenServiceTests
         using var metadata = new MemoryStream(Convert.FromHexString(DiskImageRawProfileVerificationServiceTests.Valid(sector).MetadataHex));
         using var payload = new MemoryStream(DiskImageRawProfileVerificationServiceTests.Raw(sector));
         var storage = new Storage();
-        var image = (await LinuxRawImageStagingService.StageAsync(metadata, payload, _ => storage)).Session!;
+        var image = (await LinuxRawImageStagingService.StageAsync(metadata, payload, _ => storage, DiskImageInspectionFixture.InspectAsync)).Session!;
         // Test-only known filesystem provenance; ordinary files never establish native ancestry.
-        var stage = new LinuxRawImageStagingSession(storage, image.Image, "254:1", "254:1");
+        var stage = new LinuxRawImageStagingSession(storage, image.Inspection, image.MetadataSha256, image.MetadataLength, "254:1", "254:1");
         var device = new LinuxBlockObservation("vdb", "254:16", null, LinuxBlockKind.WholeDisk, image.Image.VerifiedBytes,
             sector, sector, 2, false, "serial:RESTORE-FIXTURE", LinuxBlockIdentity.UniqueInSnapshot, false, false, false, LinuxBlockUse.Unknown);
         var request = new RawImageDeviceRestoreRequest(Guid.NewGuid(), Guid.NewGuid(), image.Image.ImageId,

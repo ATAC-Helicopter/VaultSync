@@ -82,3 +82,13 @@ Trusted writable worker/protocol/consent/offline authority, hostile-image sandbo
 independent recovery media/UI, crash/power-cut/full filesystem boot recovery,
 installed predecessor upgrade, signed packages and protected reviews remain open.
 All four disk profiles stay candidates; beta is not feature complete.
+
+
+## Reader-bound geometry — 2026-10-22
+
+The stage now carries canonical bounded geometry from mandatory isolated parsing;
+opening compares those fields instead of declared origin/layout graphs. The engine
+subsequently rehashes exact sealed bytes before Started and verifies complete target
+hash equality. No image parser runs in staging/opener/write-engine callers. This
+does not change native open flags, ancestry, consent or authority obligations. See
+[staging integration](RAW_IMAGE_STAGING_1.9.md).
