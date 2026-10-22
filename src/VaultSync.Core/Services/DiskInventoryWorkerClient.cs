@@ -124,7 +124,7 @@ public static class DiskInventoryWorkerClient
         }
     }
 
-    private static async Task<LinuxInventoryWorkerPeerChannel> AuthenticatePeerAsync(
+    internal static async Task<LinuxInventoryWorkerPeerChannel> AuthenticatePeerAsync(
         LinuxInventoryWorkerPeerChannel.Listener listener, Process process, CancellationToken token)
     {
         using var startupDeadline = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -189,13 +189,13 @@ public static class DiskInventoryWorkerClient
         return inventory;
     }
 
-    private static async Task RequireResponseEndAsync(Stream input, CancellationToken token)
+    internal static async Task RequireResponseEndAsync(Stream input, CancellationToken token)
     {
         if (await input.ReadAsync(new byte[1], token).ConfigureAwait(false) != 0)
             throw new InvalidDataException("inventory.response-trailing-data");
     }
 
-    private static async Task RequireEmptyDiagnosticsAsync(Stream input, CancellationToken token)
+    internal static async Task RequireEmptyDiagnosticsAsync(Stream input, CancellationToken token)
     {
         // The worker contract has numeric exits only. Never retain or log arbitrary peer text.
         if (await input.ReadAsync(new byte[1], token).ConfigureAwait(false) != 0)

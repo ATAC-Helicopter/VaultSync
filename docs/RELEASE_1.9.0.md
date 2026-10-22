@@ -904,3 +904,31 @@ conversion and keeps native declarations in their owning adapter. It addresses
 new maintainability findings without changing admission, native flags, journal
 order or supported profiles; final source is rebuilt and rerun in the VM.
 The first 2ae7c24 hosted results remain historical, not final-source evidence.
+
+## Isolated image reader — 2026-10-22
+
+VS-1904/#492 adds an actual separate Linux x64 image reader. After trusted module
+warmup, it drops root privileges, validates zero capabilities and synchronizes a
+compiled syscall allowlist across all threads. The parent supplies only bounded
+byte ranges of two held read-only streams: no paths, device handles or writable
+operation. Fixed binary results bind image facts and an independent whole-payload
+SHA-256; parent kernel-state checks, terminal ACK, EOF, empty stderr and exit zero
+remain mandatory. See [reader contract](IMAGE_INSPECTION_WORKER_1.9.md).
+
+Current source required Release: 2,036 Core / 261 Python, zero warnings/errors/skips;
+1,943 keys / 19 locales. Final isolated VM run passes 30 native cases, including
+actual 512/4096 image verification/corruption/truncation, root-to-nobody and already-
+nonroot launch, forbidden file/network/exec operations on old/new threads, independent
+kernel status, blocked-read cancellation and deadline cleanup. Earlier bootstrap,
+thread-retirement and runtime-abort attempts are retained separately. Native trace
+identified CLR self-affinity initialization; the filter permits only PID-zero
+self-affinity while keeping filesystem/network/foreign-process prohibitions.
+See [source-bound evidence](release-evidence/1.9-image-inspection-2026-10-22.md).
+
+This is the constrained reader component, not mandatory staging/writer integration.
+Current staging and restore still parse in their caller; the production broker
+must move that parsing to the reader and bind its exact sealed bytes/hash. Trusted
+build/role/protocol review, device/offline consent, independent media/UI, complete
+recovery and installed-upgrade/package/signature/protected-review gates remain open.
+No support profile is qualified. #492/Project remain In progress; #736 stays draft,
+without beta cut, tag, release assets/publication or merge.

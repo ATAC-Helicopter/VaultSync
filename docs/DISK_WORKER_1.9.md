@@ -5,11 +5,13 @@ Preparation: #736, 1.9.0. Status: **development transport**, not an approved
 privileged protocol or a supported recovery workflow. Review with
 [ADR 001](adr/001-imaging-engine-1.9.md), the image and identity contracts.
 
-`VaultSync.DiskWorker` is a separate executable in the solution. Its sole operation
-calls the fixed `LinuxBlockInventoryService` sysfs/proc observer. It accepts no
-arguments, filenames, image metadata, executable names, shell commands, device
-selectors or credentials. It opens no raw device and performs no capture/restore.
-On other operating systems the body reports UnsupportedPlatform.
+`VaultSync.DiskWorker` is a separate executable in the solution. Inventory mode
+calls only the fixed `LinuxBlockInventoryService` sysfs/proc observer; its bounded
+request accepts no filename, image, executable, shell command, device selector or
+credential. A separate Linux x64 [isolated image reader](IMAGE_INSPECTION_WORKER_1.9.md)
+now accepts bounded reads from two parent-held streams, with its own frames and
+irreversible process policy. Neither mode opens raw devices or captures/restores.
+On other operating systems inventory reports UnsupportedPlatform; inspection refuses.
 
 The executable is not connected to desktop/CLI launchers, updater assets or release
 packaging. A local developer can build and test it; it must not be shipped as an

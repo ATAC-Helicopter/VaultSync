@@ -1447,6 +1447,16 @@ repository must not transfer before a compatible release is adopted.
     without changing admission, syscall flags or write ordering. See
     [contract](docs/LINUX_RAW_RESTORE_OPEN_1.9.md) and
     [current evidence](docs/release-evidence/1.9-restore-open-2026-10-22.md).
+  - Isolated reader increment (2026-10-22): a separate Linux x64 worker now reads
+    only bounded ranges of two caller-held streams, with fixed binary facts and
+    an independent whole-payload SHA-256. Trusted bootstrap precedes privilege
+    reduction and a syscall allowlist synchronized across all threads. The parent
+    requires complete stable kernel credential/filter observations, terminal ACK,
+    EOF, empty diagnostics and exit zero. No file/device path or writable operation
+    crosses the inspection protocol. Production reader-first staging/writer
+    integration, trusted build/role, offline consent and media/UI remain open.
+    See [reader contract](docs/IMAGE_INSPECTION_WORKER_1.9.md) and
+    [source-bound evidence](docs/release-evidence/1.9-image-inspection-2026-10-22.md).
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
     persisted import marker distinguishes origin from restore state; cards,

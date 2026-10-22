@@ -25,6 +25,7 @@ Use this page as the primary index for all project documentation.
 - 1.9.0 read-only worker transport and integration limits: [development contract](DISK_WORKER_1.9.md)
 - 1.9.0 internal restore journal and interruption evidence: [journal contract](RAW_RESTORE_JOURNAL_1.9.md)
 - 1.9.0 internal exclusive restore target acquisition: [native contract](LINUX_RAW_RESTORE_OPEN_1.9.md)
+- 1.9.0 isolated image reader and syscall policy: [worker contract](IMAGE_INSPECTION_WORKER_1.9.md)
 - 1.9.0 architecture/workflow progress: [October 4 evidence](release-evidence/1.9-work-2026-10-04.md)
 - 1.9 accumulated local validation: [October 3 audit](release-evidence/1.9-audit-2026-10-03.md)
 - GitHub/wiki/Project and historical closeout: [October 3 tracking](release-evidence/1.9-tracking-2026-10-03.md)

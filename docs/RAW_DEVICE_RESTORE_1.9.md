@@ -93,9 +93,12 @@ undo that observation. Cancellation before any write leaves bytes untouched;
 its intent range may still conservatively be marked uncertain.
 
 The engine assumes trusted OS/administrator/same-UID storage and exclusive caller
-ownership of stage/target/journal. It does not sandbox hostile images or prevent
-same-UID mutation; staged verification must eventually run outside the elevated
-writer. Synchronous flush and uninterruptible kernel I/O cannot be preempted by a
+ownership of stage/target/journal. Its current in-process verification does not
+sandbox hostile images or prevent same-UID mutation. A separate
+[isolated reader](IMAGE_INSPECTION_WORKER_1.9.md) now produces bounded facts and a
+whole-payload hash; mandatory staged-byte binding and writer integration must
+still move parsing out of elevated execution. Synchronous flush and
+uninterruptible kernel I/O cannot be preempted by a
 managed token; the future integrated bounded worker must enforce operation lifetime
 and disconnect behavior. The current inventory rendezvous is not that protocol.
 

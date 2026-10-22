@@ -64,6 +64,11 @@ internal sealed class LinuxInventoryWorkerPeerChannel : IDisposable
 
     internal Task ConfirmStartupAsync(CancellationToken token) => ReceiveAsync(Ready, token);
 
+    // Inspection uses the same pinned same-privilege startup; privilege dropping
+    // happens only after that rendezvous. These are connect-time credentials.
+    internal int SocketDescriptor => checked((int)connection.Handle);
+    internal void ValidatePeer() => RequirePeer();
+
     internal async Task AcceptResponseAsync(CancellationToken token)
     {
         // The worker keeps itself and its socket alive until the bounded reply
