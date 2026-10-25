@@ -81,8 +81,26 @@ def read_identity(executable, directory, timeout=10):
         process.stderr.close()
 
 
+def allowed_build_roots():
+    roots = [Path(__file__).resolve().parents[1], Path(tempfile.gettempdir()).resolve(strict=True)]
+    if os.environ.get("RUNNER_TEMP"):
+        roots.append(Path(os.environ["RUNNER_TEMP"]).resolve(strict=True))
+    # Never let a malformed runner environment turn filesystem root into a boundary.
+    return tuple(root for root in roots if root.is_dir() and root != root.parent)
+
+
+def build_directory(path):
+    candidate = Path(path)
+    if ".." in candidate.parts or candidate.is_symlink():
+        raise ValueError("build directory alias refused")
+    candidate = candidate.resolve(strict=True)
+    if not candidate.is_dir() or not any(candidate.is_relative_to(root) for root in allowed_build_roots()):
+        raise ValueError("build directory must stay inside repository or build temporary roots")
+    return candidate
+
+
 def stage(worker_dir, app_dir, commit):
-    worker_dir, app_dir = Path(worker_dir), Path(app_dir)
+    worker_dir, app_dir = build_directory(worker_dir), build_directory(app_dir)
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("full source commit required")
     if not worker_dir.is_dir() or worker_dir.is_symlink() or not app_dir.is_dir() or app_dir.is_symlink():

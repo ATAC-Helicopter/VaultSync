@@ -37,6 +37,41 @@ class StageDiskWorkerTests(unittest.TestCase):
         with patch.object(worker, "read_identity", return_value=IDENTITY if identity is None else identity):
             return worker.stage(self.source, self.app, COMMIT)
 
+    def test_build_roots_refuse_external_paths_and_aliases_before_execution_or_writes(self):
+        with patch.object(worker, "allowed_build_roots", return_value=(self.source,)), \
+                patch.object(worker, "read_identity") as execute:
+            with self.assertRaises(ValueError):
+                worker.stage(self.source, self.app, COMMIT)
+            execute.assert_not_called()
+            self.assertFalse((self.app / "DiskWorker").exists())
+            self.assertEqual((self.app / "preserved.txt").read_text(), "untouched build fixture")
+        with patch.object(worker, "allowed_build_roots", return_value=(self.app,)), \
+                patch.object(worker, "read_identity") as execute:
+            with self.assertRaises(ValueError):
+                worker.stage(self.source, self.app, COMMIT)
+            execute.assert_not_called()
+        sibling = self.source.with_name(self.source.name + "-outside")
+        sibling.mkdir()
+        with patch.object(worker, "allowed_build_roots", return_value=(self.source,)):
+            with self.assertRaises(ValueError):
+                worker.build_directory(sibling)
+        with self.assertRaises(ValueError):
+            worker.build_directory(self.app / ".." / "app")
+        if os.name == "posix":
+            alias = self.root / "alias"
+            alias.symlink_to(self.source, target_is_directory=True)
+            with self.assertRaises(ValueError):
+                worker.build_directory(alias)
+            # A nested link also cannot escape a narrower trusted root.
+            within = self.app / "escape"
+            within.symlink_to(self.source, target_is_directory=True)
+            (self.source / "nested").mkdir()
+            with patch.object(worker, "allowed_build_roots", return_value=(self.app,)):
+                with self.assertRaises(ValueError):
+                    worker.build_directory(within / "nested")
+        with patch.dict(os.environ, {"RUNNER_TEMP": os.path.abspath(os.sep)}):
+            self.assertNotIn(Path(os.path.abspath(os.sep)), worker.allowed_build_roots())
+
     def test_stages_exact_complete_closure_and_manifest_without_changing_source(self):
         before = {path.name: path.read_bytes() for path in self.source.iterdir()}
         self.assertEqual(self.run_stage(), len(before))

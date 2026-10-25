@@ -1478,6 +1478,14 @@ repository must not transfer before a compatible release is adopted.
     and [current evidence](docs/release-evidence/1.9-worker-installation-2026-10-25.md).
     Offline/device consent, writable lifetime, media/UI, recovery and package
     qualification remain open; no profile is promoted.
+- [ ] `BUG-19038` `P0` Confine Linux worker staging to trusted build directories.
+  - Owner #815; preparation PR #736. Canonicalized input and output directories
+    must remain within the repository, system temporary root or runner temporary
+    root. Refuse traversal aliases, symlinks escaping those roots and filesystem
+    root as an allowed boundary before worker execution or output mutation.
+  - Acceptance: path refusal regressions, required Release and exact-head Sonar
+    security gate; preserve existing outputs and final release/package gates.
+    In progress, started 2026-10-25; no release qualification or Completed date.
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
     persisted import marker distinguishes origin from restore state; cards,

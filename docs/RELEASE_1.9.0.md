@@ -1062,3 +1062,17 @@ property publish exposed RID-neutral versus RID-specific bytes. A fresh actual
 pair now matches; Linux CI stages the helper before AppImage packaging to enforce
 this integration before the qualification-gated release job. This build check
 is separate from the retained 84-case native measurement and installed qualification.
+
+
+## Worker staging path confinement — 2026-10-25
+
+BUG-19038/#815 addresses Sonar's path-traversal finding in the newly added build
+script. Both source and destination must resolve inside repository/system/runner
+build temporary roots. Unsafe aliases and escapes refuse before helper execution
+or filesystem mutation; filesystem root cannot become an allowed boundary.
+This is build tooling confinement, not native device authority or package/recovery
+qualification. Required checks and the exact-head security gate remain separate;
+#815 stays In progress and #736 draft. See the
+[worker contract](DISK_WORKER_1.9.md#build-path-confinement--bug-19038--815).
+
+[Current path-confinement results](release-evidence/1.9-worker-staging-roots-2026-10-25.md) retain the failed preceding security gate separately from fresh local/VM checks.

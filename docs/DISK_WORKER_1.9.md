@@ -344,3 +344,17 @@ patches; asset names and updater schema remain unchanged. Package signature and
 offline source/device consent, recovery media or qualified profile is added.
 
 [Current measurements and limits](release-evidence/1.9-worker-installation-2026-10-25.md).
+
+
+### Build path confinement — BUG-19038 / #815
+
+Staging canonicalizes both existing build directories and requires containment in
+the script's repository root, system temporary root or `RUNNER_TEMP`. Filesystem
+root is never an allowed boundary. Traversal aliases, final directory symlinks,
+non-directories and resolved escapes refuse before executing the helper or
+creating output. The build environment and repository/script location are trusted;
+this is not a privileged path-opening API. Reviewed private labs copy the script
+under their own build root rather than widening production's allowed paths.
+The production client retains its independent held-descriptor checks.
+
+[Source-bound path-confinement evidence](release-evidence/1.9-worker-staging-roots-2026-10-25.md).
