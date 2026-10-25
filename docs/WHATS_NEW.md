@@ -71,6 +71,13 @@ application and does not change ZIP backups. See
 
 ### Disk recovery development
 
+Native capture development now sends GPT checks to the isolated reader before
+allocation and after copying. Images are sealed read-only and independently
+checked before publication, with no parser fallback when the reader is missing.
+Disposable-VM tests cover read-only synthetic devices at 512/4096-byte geometry;
+they do not qualify filesystem recovery or an available beta. See
+[the capture boundary and measurements](release-evidence/1.9-capture-inspection-2026-10-23.md).
+
 The image development path can now inspect GPT layout metadata without writes,
 including the backup table and partition boundaries. Synthetic file-based
 capture/reconstruction preserves both the raw bytes and inspected layout.

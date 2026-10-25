@@ -1458,6 +1458,16 @@ repository must not transfer before a compatible release is adopted.
     consent and media/UI remain open.
     See [reader contract](docs/IMAGE_INSPECTION_WORKER_1.9.md) and
     [source-bound evidence](docs/release-evidence/1.9-image-inspection-2026-10-22.md).
+  - Capture inspection integration (2026-10-23): source GPT is parsed in the
+    restricted reader before output allocation and after copying. Capture files
+    are sealed/reopened read-only before mandatory isolated image verification;
+    exact byte hashes bind metadata/payload without parent-side image/GPT parsing.
+    The bounded flat GPT protocol carries no paths, names or device authority.
+    Missing/failing readers never trigger a parser fallback. Native/Release checks
+    and remaining acceptance are recorded in
+    [source-bound evidence](docs/release-evidence/1.9-capture-inspection-2026-10-23.md).
+    Installed build/role/authority, media/UI, complete recovery and release gates
+    remain open; no candidate profile is promoted.
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
     persisted import marker distinguishes origin from restore state; cards,

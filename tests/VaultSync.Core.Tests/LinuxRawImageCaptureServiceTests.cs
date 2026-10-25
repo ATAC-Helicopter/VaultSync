@@ -16,14 +16,36 @@ public sealed class LinuxRawImageCaptureServiceTests
     private static LinuxRawImageCaptureRequest Request() => new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
         Guid.NewGuid(), 1, "1.9.0", new string('a', 40));
 
-    private sealed class Storage : LinuxRawImageCaptureService.IStorage
+    // Explicit ordinary-stream providers only. Production capture has no parser fallback.
+    private static ValueTask<LinuxRawImageCaptureAssessment> Capture(LinuxRawImageCaptureRequest request,
+        Stream source, uint physicalSectorBytes, Guid observationId, Func<LinuxRawImageCaptureService.ICaptureStorage> storage,
+        CancellationToken cancellationToken = default, uint logicalSectorBytes = 512) =>
+        LinuxRawImageCaptureService.CaptureAsync(request, source, physicalSectorBytes, observationId, storage,
+            LayoutFixture, ImageFixture, cancellationToken, logicalSectorBytes);
+
+    internal static async Task<DiskGptInspectionWorkerResult> LayoutFixture(Stream source, uint sector, CancellationToken token) =>
+        new(DiskImageInspectionWorkerOutcome.Completed,
+            await DiskImageGptInspectionService.InspectWithinEntryLimitAsync(source, (ulong)source.Length, sector,
+                DiskImageRawProfileVerificationService.MaximumGptEntries, token));
+
+    internal static async Task<DiskImageInspectionWorkerResult> ImageFixture(Stream metadata, Stream payload, CancellationToken token)
+    {
+        var result = await DiskImageRawProfileVerificationService.VerifyAsync(metadata, payload, token);
+        payload.Position = 0;
+        string hash = Convert.ToHexStringLower(await SHA256.HashDataAsync(payload, token));
+        return new(DiskImageInspectionWorkerOutcome.Completed, DiskImageInspectionProtocol.Observe(result, hash));
+    }
+
+    private sealed class Storage : LinuxRawImageCaptureService.ICaptureStorage
     {
         internal readonly MemoryStream Raw = new(), Meta = new();
         internal readonly List<string> Steps = new();
         internal string? Failure;
         internal Action<string>? Hook;
-        public Stream Payload => Raw;
-        public Stream Metadata => Meta;
+        private bool sealedFiles;
+        public Stream Payload => sealedFiles ? new LinuxRawImageStagingService.BorrowedReadStream(Raw) : Raw;
+        public Stream Metadata => sealedFiles ? new LinuxRawImageStagingService.BorrowedReadStream(Meta) : Meta;
+        public void Seal() { Step("seal"); sealedFiles = true; }
         public bool Published { get; private set; }
         private void Step(string step)
         {
@@ -79,13 +101,13 @@ public sealed class LinuxRawImageCaptureServiceTests
         using var source = new Source(raw);
         var storage = new Storage();
         var request = Request();
-        var result = await LinuxRawImageCaptureService.CaptureAsync(request, source, sector, Guid.NewGuid(),
+        var result = await Capture(request, source, sector, Guid.NewGuid(),
             () => storage, logicalSectorBytes: sector);
         Assert.Equal(LinuxRawImageCaptureState.PublishedVerified, result.State);
         Assert.Equal((ulong)raw.Length, result.CopiedBytes);
         Assert.Equal(request.ImageId.ToString("N"), result.ImageDirectoryName);
         Assert.Equal(raw, storage.Raw.ToArray());
-        Assert.Equal(new[] { "payload-flush", "metadata-flush", "directory-flush", "rename", "parent-flush", "dispose" }, storage.Steps);
+        Assert.Equal(new[] { "payload-flush", "metadata-flush", "seal", "directory-flush", "rename", "parent-flush", "dispose" }, storage.Steps);
         Assert.True(source.CanRead); // Caller still owns source.
         using var meta = new MemoryStream(storage.Meta.ToArray());
         using var payload = new MemoryStream(storage.Raw.ToArray());
@@ -119,7 +141,7 @@ public sealed class LinuxRawImageCaptureServiceTests
             _ => request with { ToolSourceCommit = "bad" }
         };
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
-        var result = await LinuxRawImageCaptureService.CaptureAsync(request, source, 512, Guid.NewGuid(),
+        var result = await Capture(request, source, 512, Guid.NewGuid(),
             () => throw new InvalidOperationException("must not create"));
         Assert.Equal(LinuxRawImageCaptureState.Invalid, result.State);
         Assert.False(source.CopyStarted);
@@ -128,6 +150,7 @@ public sealed class LinuxRawImageCaptureServiceTests
     [Theory]
     [InlineData("payload-flush")]
     [InlineData("metadata-flush")]
+    [InlineData("seal")]
     [InlineData("directory-flush")]
     [InlineData("rename")]
     [InlineData("parent-flush")]
@@ -136,7 +159,7 @@ public sealed class LinuxRawImageCaptureServiceTests
     {
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
         var storage = new Storage { Failure = failure };
-        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(), () => storage);
+        var result = await Capture(Request(), source, 512, Guid.NewGuid(), () => storage);
         Assert.Equal(failure is "parent-flush" or "dispose" ? LinuxRawImageCaptureState.PublicationUnconfirmed :
             LinuxRawImageCaptureState.Failed, result.State);
         Assert.Null(result.ManifestRoot);
@@ -154,7 +177,7 @@ public sealed class LinuxRawImageCaptureServiceTests
     {
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512)) { Fault = fault };
         var storage = new Storage();
-        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(), () => storage);
+        var result = await Capture(Request(), source, 512, Guid.NewGuid(), () => storage);
         Assert.Equal(expected, result.State);
         Assert.False(storage.Published);
         Assert.Equal(0, storage.Meta.Length);
@@ -165,6 +188,7 @@ public sealed class LinuxRawImageCaptureServiceTests
     [InlineData("copy")]
     [InlineData("payload-flush")]
     [InlineData("metadata-flush")]
+    [InlineData("seal")]
     [InlineData("directory-flush")]
     public async Task CancellationBeforeCommitLeavesOnlyPartialStorage(string stage)
     {
@@ -173,7 +197,7 @@ public sealed class LinuxRawImageCaptureServiceTests
         var storage = new Storage();
         if (stage == "copy") source.AtCopy = cancellation.Cancel;
         else storage.Hook = step => { if (step == stage) cancellation.Cancel(); };
-        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(), () => storage, cancellation.Token);
+        var result = await Capture(Request(), source, 512, Guid.NewGuid(), () => storage, cancellation.Token);
         Assert.Equal(LinuxRawImageCaptureState.Interrupted, result.State);
         Assert.False(storage.Published);
         Assert.DoesNotContain("rename", storage.Steps);
@@ -185,7 +209,7 @@ public sealed class LinuxRawImageCaptureServiceTests
         using var cancellation = new CancellationTokenSource();
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
         var storage = new Storage { Hook = step => { if (step == "parent-flush") cancellation.Cancel(); } };
-        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(), () => storage, cancellation.Token);
+        var result = await Capture(Request(), source, 512, Guid.NewGuid(), () => storage, cancellation.Token);
         Assert.Equal(LinuxRawImageCaptureState.PublishedVerified, result.State);
         Assert.True(storage.Published);
     }
@@ -203,7 +227,7 @@ public sealed class LinuxRawImageCaptureServiceTests
                 storage.Raw.WriteByte(0xfe);
             }
         };
-        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(), () => storage);
+        var result = await Capture(Request(), source, 512, Guid.NewGuid(), () => storage);
         Assert.Equal(LinuxRawImageCaptureState.Refused, result.State);
         Assert.Equal("raw-capture.readback-refused", result.Reason);
         Assert.False(storage.Published);
@@ -215,7 +239,7 @@ public sealed class LinuxRawImageCaptureServiceTests
     {
         byte[] raw = DiskImageRawProfileVerificationServiceTests.Raw(512); raw[512] ^= 1;
         using var source = new Source(raw);
-        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
+        var result = await Capture(Request(), source, 512, Guid.NewGuid(),
             () => throw new InvalidOperationException("must not create"));
         Assert.Equal(LinuxRawImageCaptureState.Refused, result.State);
     }
@@ -225,7 +249,7 @@ public sealed class LinuxRawImageCaptureServiceTests
     {
         using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
-        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
+        var result = await Capture(Request(), source, 512, Guid.NewGuid(),
             () => throw new InvalidOperationException("must not create"), cancellation.Token);
         Assert.Equal(LinuxRawImageCaptureState.Interrupted, result.State);
     }
@@ -237,7 +261,7 @@ public sealed class LinuxRawImageCaptureServiceTests
     public async Task UnsupportedGeometryNeverCreatesStorage(uint physical, uint logical)
     {
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
-        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, physical, Guid.NewGuid(),
+        var result = await Capture(Request(), source, physical, Guid.NewGuid(),
             () => throw new InvalidOperationException("must not create"), logicalSectorBytes: logical);
         Assert.Equal(LinuxRawImageCaptureState.Invalid, result.State);
         Assert.False(source.CopyStarted);
@@ -249,12 +273,85 @@ public sealed class LinuxRawImageCaptureServiceTests
     public async Task StorageAdmissionFailureDoesNotReadSourcePayload(bool denied)
     {
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
-        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
+        var result = await Capture(Request(), source, 512, Guid.NewGuid(),
             () => denied ? throw new UnauthorizedAccessException("private-parent") : throw new IOException("private-parent"));
         Assert.Equal(LinuxRawImageCaptureState.Failed, result.State);
         Assert.False(source.CopyStarted);
         Assert.Equal(0UL, result.CopiedBytes);
         Assert.DoesNotContain("private", result.Reason);
+    }
+
+    [Theory]
+    [InlineData((int)DiskImageInspectionWorkerOutcome.Unavailable)]
+    [InlineData((int)DiskImageInspectionWorkerOutcome.Failed)]
+    [InlineData((int)DiskImageInspectionWorkerOutcome.TimedOut)]
+    [InlineData((int)DiskImageInspectionWorkerOutcome.Completed)]
+    public async Task MissingOrFailedLayoutReaderNeverAllocatesOrFallsBack(int value)
+    {
+        using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
+        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
+            () => throw new InvalidOperationException("must not allocate"),
+            (view, _, _) => { Assert.False(view.CanWrite); return Task.FromResult(new DiskGptInspectionWorkerResult((DiskImageInspectionWorkerOutcome)value)); },
+            (_, _, _) => throw new InvalidOperationException("must not inspect image"));
+        Assert.Equal(LinuxRawImageCaptureState.Refused, result.State);
+        Assert.False(source.CopyStarted); Assert.True(source.CanRead);
+    }
+
+    [Theory]
+    [InlineData("unavailable")]
+    [InlineData("missing")]
+    [InlineData("root")]
+    [InlineData("image")]
+    [InlineData("payload")]
+    [InlineData("metadata-bytes")]
+    public async Task FailedOrLyingFinalReaderCannotPublish(string fault)
+    {
+        using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
+        var storage = new Storage();
+        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
+            () => storage, LayoutFixture, async (metadata, payload, token) =>
+            {
+                Assert.False(metadata.CanWrite); Assert.False(payload.CanWrite);
+                Assert.Contains("seal", storage.Steps);
+                if (fault == "unavailable") return new(DiskImageInspectionWorkerOutcome.Unavailable);
+                if (fault == "missing") return new(DiskImageInspectionWorkerOutcome.Completed);
+                var valid = await ImageFixture(metadata, payload, token);
+                if (fault == "metadata-bytes")
+                {
+                    storage.Meta.Position = 0; storage.Meta.WriteByte(0xff);
+                    return valid;
+                }
+                return valid with { Observation = fault switch
+                {
+                    "root" => valid.Observation! with { ManifestRoot = new string('1', 64) },
+                    "image" => valid.Observation! with { ImageId = Guid.NewGuid() },
+                    _ => valid.Observation! with { PayloadSha256 = new string('1', 64) }
+                } };
+            });
+        Assert.Equal(LinuxRawImageCaptureState.Refused, result.State);
+        Assert.False(storage.Published); Assert.DoesNotContain("directory-flush", storage.Steps);
+        Assert.Equal("dispose", storage.Steps[^1]);
+    }
+
+    [Theory]
+    [InlineData(1)] [InlineData(2)] [InlineData(3)]
+    public async Task CancellationInEveryIsolatedInspectionStopsPublication(int cancelAt)
+    {
+        using var cancel = new CancellationTokenSource();
+        using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
+        var storage = new Storage(); int call = 0;
+        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
+            () => storage, async (view, sector, token) =>
+            {
+                if (++call == cancelAt) cancel.Cancel();
+                return await LayoutFixture(view, sector, token);
+            }, async (metadata, payload, token) =>
+            {
+                if (++call == cancelAt) cancel.Cancel();
+                return await ImageFixture(metadata, payload, token);
+            }, cancel.Token);
+        Assert.Equal(LinuxRawImageCaptureState.Interrupted, result.State);
+        Assert.False(storage.Published); Assert.DoesNotContain("rename", storage.Steps);
     }
 
     [Fact]

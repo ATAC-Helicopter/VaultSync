@@ -1010,3 +1010,27 @@ Protected reviews, native authorization/media/UI/recovery loops, installed upgra
 and signed packages remain release gates. #736 stays draft/unmerged; no beta
 cut/tag/assets/publication. Missing or partial remote data never justifies a gate
 bypass or locally inferred ID allocation.
+
+
+## Capture inspection integration — 2026-10-23
+
+VS-1904/#492 now routes initial/post-copy GPT inspection through the restricted
+reader, using a separate bounded flat protocol. The parent encodes observed
+layout fields but never parses GPT/image structures. Initial failure precedes
+output allocation; after copying, native files are sealed at 0400 and reopened
+read-only with writable transaction handles closed. Mandatory isolated image
+inspection and independent exact metadata/payload hashing precede publication.
+No in-process fallback exists for missing/failed/timed-out readers.
+
+The original image protocol, peer/kernel-policy checks and write authorization
+gates are preserved. October 23 required Release passes **2,109 Core / 285 Python**,
+zero warnings/errors/skips, and the final source-bound VM passes **74 cases**,
+including actual capture from two read-only synthetic GPT guest block devices.
+These are not filesystem/OS-boot profile qualification; the October 25 delivery
+reconciliation preserves the original measurement date. See [capture contract](LINUX_RAW_CAPTURE_1.9.md) and
+[current source-bound results](release-evidence/1.9-capture-inspection-2026-10-23.md).
+Installed trusted worker/build/role, controlled offline operation/device consent,
+bounded writable lifetime, media/UI, complete filesystem/OS-boot/crash/power-cut
+recovery, installed upgrade, signed packages and protected reviews remain open.
+All four profiles remain candidates; #492 stays In progress and #736 draft.
+No beta tag/assets/publication or merge is introduced by these checks.

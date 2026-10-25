@@ -11,22 +11,40 @@ internal static class DiskImageInspectionWorkerService
     {
         byte[] request=new byte[DiskImageInspectionProtocol.RequestBytes];
         await input.ReadExactlyAsync(request,token).ConfigureAwait(false);
-        var facts=DiskImageInspectionProtocol.DecodeRequest(request);
+        bool gpt=request.AsSpan(0,8).SequenceEqual("VSGPREQ1"u8);
+        if(gpt) _=DiskGptInspectionProtocol.DecodeRequest(request);
+        else _=DiskImageInspectionProtocol.DecodeRequest(request);
         // Warm trusted runtime/crypto and pipe paths BEFORE the irreversible policy;
         // no image bytes are requested or parsed before entering it.
         _=SHA256.HashData(new byte[1]);
         await Task.Run(static () => _=SHA256.HashData(new byte[1]),token).ConfigureAwait(false);
         await WarmupAsync(token).ConfigureAwait(false);
         LinuxImageInspectionSandbox.Enter(peer.SocketDescriptor);
+        byte[] response=gpt ? await InspectGptAsync(input,output,request,token).ConfigureAwait(false)
+            : await InspectImageAsync(input,output,request,token).ConfigureAwait(false);
+        await output.WriteAsync(response,token).ConfigureAwait(false); await output.FlushAsync(token).ConfigureAwait(false);
+        return true;
+    }
+
+    private static async Task<byte[]> InspectGptAsync(Stream input,Stream output,byte[] request,CancellationToken token)
+    {
+        var facts=DiskGptInspectionProtocol.DecodeRequest(request);
+        using var source=new RemoteStream(input,output,facts.Operation,1,facts.Capacity,token);
+        var result=await DiskImageGptInspectionService.InspectWithinEntryLimitAsync(source,(ulong)facts.Capacity,
+            facts.Sector,DiskImageRawProfileVerificationService.MaximumGptEntries,token).ConfigureAwait(false);
+        return DiskGptInspectionProtocol.Result(facts.Operation,result);
+    }
+
+    private static async Task<byte[]> InspectImageAsync(Stream input,Stream output,byte[] request,CancellationToken token)
+    {
+        var facts=DiskImageInspectionProtocol.DecodeRequest(request);
         using var metadata=new RemoteStream(input,output,facts.Operation,0,facts.Metadata,token);
         using var payload=new RemoteStream(input,output,facts.Operation,1,facts.Payload,token);
         var result=await DiskImageRawProfileVerificationService.VerifyAsync(metadata,payload,token).ConfigureAwait(false);
         string? hash=null;
         if(result.State==DiskImageRawProfileVerificationState.ContentAndLayoutVerified)
         { payload.Position=0; hash=Convert.ToHexStringLower(await SHA256.HashDataAsync(payload,token).ConfigureAwait(false)); }
-        byte[] response=DiskImageInspectionProtocol.Result(facts.Operation,DiskImageInspectionProtocol.Observe(result,hash));
-        await output.WriteAsync(response,token).ConfigureAwait(false); await output.FlushAsync(token).ConfigureAwait(false);
-        return true;
+        return DiskImageInspectionProtocol.Result(facts.Operation,DiskImageInspectionProtocol.Observe(result,hash));
     }
 
     // Immutable module-owned synthetic bytes, never request/image-derived. Exercise

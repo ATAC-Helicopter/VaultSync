@@ -14,7 +14,7 @@ the exclusive open with native inventory, and bind type, capacity, device number
 disk sequence and geometry through the descriptor. Capture additionally requires
 kernel read-only state. Unsupported, mounted, ambiguous or changed views refuse.
 
-The full GPT is inspected before storage creation, using the raw profile's
+The full GPT is inspected by the fixed isolated reader before storage creation, using the raw profile's
 128-entry policy and 8 TiB refusal ceiling. Physical/logical geometry must match
 the source and be 512/4096 with physical >= logical. Current image IDs and origin
 records remain claims, not authenticated producer identity or universal offline
@@ -52,12 +52,16 @@ worker/restore requirements, not conferred by these filesystem permissions.
 
 1. Copy exactly source capacity in chunks of at most 128 KiB, hashing the bytes.
    The source session rechecks its native identity before/after every read.
-2. Check EOF through that session and re-inspect source GPT. A changed layout,
+2. Check EOF through that session and re-inspect source GPT in the isolated reader. A changed layout,
    missing/trailing data, I/O error or cancellation never publishes an image.
 3. Flush payload to disk. Encode the frozen metadata format with the copied
    digest and source GPT observations; write and flush metadata.
-4. Rewind both held output streams and run the independent full raw reader:
-   completion/root, length, all payload bytes and actual GPT must verify.
+4. Flush and seal both files at 0400, reopen the same inodes read-only without
+   managed read caching, and close all transaction-owned writable handles. Require
+   the isolated full image reader, matching image/capture/generation/root, capacity,
+   physical/logical geometry and copied payload digest. Independently hash exact
+   held metadata/payload bytes before publication; the parent never parses GPT or
+   image structures. Missing, failed or timed-out readers refuse without fallback.
 5. Flush the image directory and parent. Check cancellation before the commit.
 6. Atomically rename the partial child to the fixed image UUID using
    renameat2(RENAME_NOREPLACE), then fsync the parent. An existing image, empty
@@ -94,3 +98,23 @@ References: Linux [openat2](https://man7.org/linux/man-pages/man2/openat2.2.html
 [rename](https://man7.org/linux/man-pages/man2/rename.2.html),
 [fallocate](https://man7.org/linux/man-pages/man2/fallocate.2.html),
 and [statx](https://man7.org/linux/man-pages/man2/statx.2.html).
+
+## Isolated capture inspection — 2026-10-23
+
+The parent now consumes only the bounded flat GPT layout record described in
+[the inspection contract](IMAGE_INSPECTION_WORKER_1.9.md#capture-gpt-operation--2026-10-23).
+Initial source inspection precedes output allocation. The byte oracle may move
+the held source position; copying explicitly restarts at zero. After the exact
+copy/EOF, a second isolated GPT observation must retain its metadata digest.
+The final sealed-copy inspection uses the original full-image grammar, followed
+by independent fixed-byte hashing in the parent. No in-process GPT/image-parser
+fallback remains in this native capture path. Ordinary stream fault tests inject
+explicit fixture readers only, never a production-selectable parser/provider.
+
+File sealing removes transaction-owned writable descriptors, not an administrator's
+ability to interfere. Mutable fixture input views are not represented as immutable
+native devices. Trusted same-UID/admin/kernel ownership, installed worker/build/role,
+controlled offline source authority, media/UI, full filesystem/OS-boot/interruption
+recovery and release qualification remain required. Historical earlier raw capture
+measurements remain bound to their original source. Current source evidence is
+[retained separately](release-evidence/1.9-capture-inspection-2026-10-23.md).

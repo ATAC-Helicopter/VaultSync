@@ -276,3 +276,15 @@ requests O_RDWR/O_EXCL and has no weaker fallback. It grants no operation/consen
 offline authority; trusted build/role, hostile-image sandbox and actual writable
 worker integration remain open. See [native contract](LINUX_RAW_RESTORE_OPEN_1.9.md)
 and [current evidence](release-evidence/1.9-restore-open-2026-10-22.md).
+
+## Isolated capture consumers — 2026-10-23
+
+The existing inspection host now also accepts the separate bounded GPT grammar
+in [the reader contract](IMAGE_INSPECTION_WORKER_1.9.md#capture-gpt-operation--2026-10-23).
+It requests bytes only from one caller-held read-only source, after the same
+irreversible policy, and returns at most 128 flat partition observations with no
+names, paths, raw descriptors or device authority. Inventory/image wire versions,
+fixed launcher selection, peer/kernel checks, terminal framing and deadlines
+remain unchanged. The capture path uses it before allocation and after copying,
+and requires the image reader on sealed output before private publication.
+This completes neither installed build trust nor a writable operation protocol.

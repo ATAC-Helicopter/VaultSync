@@ -35,6 +35,7 @@
     <None Update="Fixtures\disk-restore-journal-v1.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\disk-image-raw-profile-v1.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\disk-image-origin-v2.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\disk-gpt-inspection-v1.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\disk-gpt-v1.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\disk-image-envelope-v1.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\disk-image-manifest-v1.json" CopyToOutputDirectory="PreserveNewest" />

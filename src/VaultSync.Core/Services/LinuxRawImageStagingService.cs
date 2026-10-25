@@ -60,9 +60,8 @@ public sealed class LinuxRawImageStagingSession : IAsyncDisposable
 /// </summary>
 public static class LinuxRawImageStagingService
 {
-    internal interface IStorage : LinuxRawImageCaptureService.IStorage
+    internal interface IStorage : LinuxRawImageCaptureService.ICaptureStorage
     {
-        void Seal();
         string? FilesystemDeviceNumber => null;
     }
 
@@ -158,7 +157,7 @@ public static class LinuxRawImageStagingService
 
     // Non-owning view: mutable caller input is never represented as sealed.
     // Only the independently re-inspected private copy can become a session.
-    private sealed class BorrowedReadStream(Stream source) : Stream
+    internal sealed class BorrowedReadStream(Stream source) : Stream
     {
         public override bool CanRead => source.CanRead;
         public override bool CanSeek => source.CanSeek;

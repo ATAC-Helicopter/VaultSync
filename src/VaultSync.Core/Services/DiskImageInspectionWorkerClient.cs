@@ -31,6 +31,18 @@ internal static class DiskImageInspectionWorkerClient
         Guid operation=Guid.NewGuid(); byte[] request;
         try { request=DiskImageInspectionProtocol.Request(operation,metadataLength,payloadLength); }
         catch(InvalidDataException) { return new(DiskImageInspectionWorkerOutcome.Failed); }
+        var result=await RunAsync(new(metadata,payload,operation,metadataLength,payloadLength),request,worker,timeout,
+            "VSIMRSL1"u8.ToArray(),ReadImageResultAsync,token).ConfigureAwait(false);
+        return new(result.Outcome,result.Observation);
+    }
+
+    internal sealed record ExchangeResult<T>(DiskImageInspectionWorkerOutcome Outcome,T? Observation=null) where T:class;
+    internal static async Task<ExchangeResult<T>> RunAsync<T>(Sources sources,byte[] request,string worker,TimeSpan timeout,
+        byte[] resultMagic,Func<Stream,byte[],Sources,CancellationToken,Task<T>> readResult,CancellationToken token) where T:class
+    {
+        token.ThrowIfCancellationRequested();
+        if(!LinuxInventoryWorkerPeerChannel.Supported || !Path.IsPathFullyQualified(worker) || !File.Exists(worker) ||
+            new FileInfo(worker).LinkTarget is not null) return new(DiskImageInspectionWorkerOutcome.Unavailable);
         uint user=LinuxImageInspectionSandbox.User,group=LinuxImageInspectionSandbox.Group;
         using var deadline=CancellationTokenSource.CreateLinkedTokenSource(token); deadline.CancelAfter(timeout);
         using var listener=new LinuxInventoryWorkerPeerChannel.Listener();
@@ -55,8 +67,8 @@ internal static class DiskImageInspectionWorkerClient
             started=process.Start(); if(!started) return new(DiskImageInspectionWorkerOutcome.Failed);
             using var peer=await DiskInventoryWorkerClient.AuthenticatePeerAsync(listener,process,deadline.Token).ConfigureAwait(false);
             Task quiet=DiskInventoryWorkerClient.RequireEmptyDiagnosticsAsync(process.StandardError.BaseStream,deadline.Token);
-            Task<DiskImageInspectionObservation> response=ExchangeAsync(process,peer,
-                new(metadata,payload,operation,metadataLength,payloadLength),request,
+            Task<T> response=ExchangeAsync(process,peer,
+                sources,request,resultMagic,readResult,
                 (user==0?LinuxImageInspectionSandbox.Nobody:user,user==0?LinuxImageInspectionSandbox.Nobody:group),deadline.Token);
             var pending=new List<Task> {response,quiet,process.WaitForExitAsync(deadline.Token)};
             _=Task.WhenAll(pending).ContinueWith(static t=>{_=t.Exception;},CancellationToken.None,
@@ -89,13 +101,14 @@ internal static class DiskImageInspectionWorkerClient
         catch(TimeoutException) { /* Cleanup never waits past the additional two-second bound. */ }
     }
 
-    private static async Task<DiskImageInspectionObservation> ExchangeAsync(Process process,LinuxInventoryWorkerPeerChannel peer,
-        Sources sources,byte[] request,(uint User,uint Group) identity,CancellationToken token)
+    private static async Task<T> ExchangeAsync<T>(Process process,LinuxInventoryWorkerPeerChannel peer,
+        Sources sources,byte[] request,byte[] resultMagic,Func<Stream,byte[],Sources,CancellationToken,Task<T>> readResult,
+        (uint User,uint Group) identity,CancellationToken token)
     {
         await process.StandardInput.BaseStream.WriteAsync(request,token).ConfigureAwait(false);
         await process.StandardInput.BaseStream.FlushAsync(token).ConfigureAwait(false);
         var observation=await ServeAsync(process.StandardOutput.BaseStream,process.StandardInput.BaseStream,
-            sources,peer.ValidatePeer,token).ConfigureAwait(false);
+            sources,peer.ValidatePeer,resultMagic,readResult,token).ConfigureAwait(false);
         peer.ValidatePeer(); LinuxImageInspectionSandbox.ValidateProcess(process.Id,identity.User,identity.Group,true); peer.ValidatePeer();
         await peer.AcceptResponseAsync(token).ConfigureAwait(false);
         await DiskInventoryWorkerClient.RequireResponseEndAsync(process.StandardOutput.BaseStream,token).ConfigureAwait(false);
@@ -104,8 +117,19 @@ internal static class DiskImageInspectionWorkerClient
 
     // Parent brokers only a bounded byte oracle for these two held streams. Never
     // service an image-selected path, native operation, descriptor or new stream.
-    internal static async Task<DiskImageInspectionObservation> ServeAsync(Stream input,Stream output,Sources sources,
+    internal static Task<DiskImageInspectionObservation> ServeAsync(Stream input,Stream output,Sources sources,
         Action validatePeer,CancellationToken token)
+        => ServeAsync(input,output,sources,validatePeer,"VSIMRSL1"u8.ToArray(),ReadImageResultAsync,token);
+
+    private static async Task<DiskImageInspectionObservation> ReadImageResultAsync(Stream input,byte[] prefix,Sources sources,CancellationToken token)
+    {
+        byte[] result=new byte[DiskImageInspectionProtocol.ResultBytes]; prefix.CopyTo(result,0);
+        await input.ReadExactlyAsync(result.AsMemory(8),token).ConfigureAwait(false);
+        return DiskImageInspectionProtocol.DecodeResult(result,sources.Operation,sources.PayloadLength);
+    }
+
+    internal static async Task<T> ServeAsync<T>(Stream input,Stream output,Sources sources,Action validatePeer,
+        byte[] resultMagic,Func<Stream,byte[],Sources,CancellationToken,Task<T>> readResult,CancellationToken token)
     {
         var (metadata,payload,operation,metadataLength,payloadLength)=sources;
         ulong remaining=checked(3*(ulong)payloadLength+4*(ulong)metadataLength+1024*1024);
@@ -115,11 +139,10 @@ internal static class DiskImageInspectionWorkerClient
         while(true)
         {
             validatePeer(); await input.ReadExactlyAsync(prefix,token).ConfigureAwait(false);
-            if(prefix.AsSpan().SequenceEqual("VSIMRSL1"u8))
+            if(prefix.AsSpan().SequenceEqual(resultMagic))
             {
-                byte[] result=new byte[DiskImageInspectionProtocol.ResultBytes]; prefix.CopyTo(result,0);
-                await input.ReadExactlyAsync(result.AsMemory(8),token).ConfigureAwait(false); validatePeer();
-                return DiskImageInspectionProtocol.DecodeResult(result,operation,payloadLength);
+                T result=await readResult(input,prefix,sources,token).ConfigureAwait(false);
+                validatePeer(); return result;
             }
             if(!prefix.AsSpan().SequenceEqual("VSIMREAD"u8) || calls--==0) throw new InvalidDataException("inspection.message-budget");
             prefix.CopyTo(frame,0); await input.ReadExactlyAsync(frame.AsMemory(8),token).ConfigureAwait(false);

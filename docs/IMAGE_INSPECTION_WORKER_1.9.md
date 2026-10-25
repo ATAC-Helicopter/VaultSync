@@ -154,3 +154,45 @@ media/UI, full filesystem/OS-boot/crash/power-cut recovery, installed upgrade,
 signed packages and protected reviews remain open. Kernel compromise, arbitrary
 administrator interference and cgroup containment are not qualified by this work.
 No beta cut, tag, asset run, publication or merge is authorized by these checks.
+
+## Capture GPT operation — 2026-10-23
+
+VS-1904/#492 adds a second, separate read-only grammar on the same fixed inspector
+host. `VSGPREQ1` cannot be decoded as an image request, and its parent accepts only
+`VSGPRSL1`, never an image result. The source is one exclusively caller-held
+read-only stream. Source index 1 supplies bounded bytes; source index 0 has length
+zero and any nonempty metadata request refuses. No path, raw descriptor, source
+name, tool/origin text or writable command crosses this grammar.
+
+| Request, 48 bytes | Offset / layout |
+| --- | --- |
+| Magic/version/kind | 0: `VSGPREQ1`; 8: u32=1; 12: u32=2 |
+| Operation | 16: nonzero RFC/network UUID |
+| Geometry | 32: logical sector u32 (512/4096); 36: reserved u32=0; 40: capacity u64 |
+
+| Result | Offset / layout |
+| --- | --- |
+| Fixed header, 128 bytes | 0: `VSGPRSL1`; 8: exact operation UUID; 24: state u32; 28: reason u32; 32: policy marker u32=1; 36–47: zero |
+| Positive facts | 48: capacity u64; 56: logical sector u32; 60: partition count u32; 64: disk UUID; 80/88: first/last usable LBA u64; 96: GPT-metadata SHA-256 (32 bytes) |
+| Partition, 64 bytes each | 0: entry number u32; 4/20: type/partition UUID; 36/44/52: offset/length/attributes u64; 60: reserved u32=0 |
+
+All integers remain little-endian and UUIDs network-order. Refusals have no facts,
+zero partitions and exactly 128 bytes. Enum values use the existing fixed GPT
+assessment states/reasons; only LayoutInspected/LayoutOnly carries facts. The
+parent admits at most 128 partitions (8,320 total result bytes) before allocation,
+requires exact requested capacity/sector, canonical reserved bytes, unique ordered
+entry/partition identities, aligned bounded nonoverlapping ranges and valid GPT
+attributes. A digest is an observation, not provenance or device authorization.
+The independent synthetic wire fixture is `disk-gpt-inspection-v1.json`.
+
+The existing held-source byte/read-count ceilings, runtime warmup, irreversible
+privilege drop/seccomp policy, independent live kernel-state validation, terminal
+peer ACK, stdout EOF, empty stderr, exit zero and deadlines remain mandatory.
+Shared transport does not relax the original image grammar or its fixed result.
+The GPT reader parses in its restricted child; the parent decodes only the bounded
+flat layout record for capture metadata encoding. Capture still needs a trusted
+installed build, source/offline authority and full recovery qualification.
+
+[Capture integration](LINUX_RAW_CAPTURE_1.9.md) now requires isolated source GPT
+checks before allocation and after copying, then sealed-copy image inspection
+before publication. No missing/failed/timed-out reader has an in-process fallback.

@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "measuredOn": "2026-10-23",
+  "recordedOn": "2026-10-25",
+  "owner": {
+    "id": "VS-1904",
+    "issue": 492,
+    "preparationPr": 736
+  },
+  "sourceBase": "008365cde9877ea2918c2892e9e0c4b05b73d445",
+  "sourceDirtyDuringMeasurement": true,
+  "sourcesSha256AndPortablePdbChecksums": {
+    "src/VaultSync.Core/Services/DiskGptInspectionProtocol.cs": "ea06e5ab86096ecc911181673def16e9494b60580469b7854ac2379a0be5ed88",
+    "src/VaultSync.Core/Services/DiskGptInspectionWorkerClient.cs": "a243c9a5d47d113d5c19e08204f6f9a1fb7498a73af0e6de56a93222e22efe65",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerClient.cs": "7c89d9edd75d29767f4c82f1216c6317e33e2aa84c865213955d253ef1aa532d",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerService.cs": "264003388d8885957c63225bd4f1f6df9c3d6907ca32bd1c667ee1a9415e0461",
+    "src/VaultSync.Core/Services/LinuxRawImageCaptureService.cs": "5663af3ebc5137440a96592ad81b74157e448524d4d6ff9335b4c2458315cde7",
+    "src/VaultSync.Core/Services/LinuxRawImageStagingService.cs": "e857961e238a9d3266e00e4cf90f0207757c8d7ace79f823c988ba925a78de44"
+  },
+  "localRelease": {
+    "coreTests": 2109,
+    "pythonTests": 285,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localizationKeys": 1943,
+    "locales": 19
+  },
+  "native": {
+    "exitCode": 0,
+    "guestExitZero": true,
+    "timedOut": false,
+    "cases": 74,
+    "elapsedSecondsIncludingBootAndProbes": 91.14,
+    "performanceQualification": false,
+    "guest": "UEFI Debian x86_64 QEMU; pinned existing lab OS backing with disposable overlay",
+    "network": false,
+    "sharedFolders": false,
+    "hostRawDevices": false,
+    "sourceDevices": "two synthetic ordinary raw files exposed as read-only guest block devices",
+    "restoreTargets": "ordinary byte-array fixtures; journal in memory, not native write/durable-journal qualification",
+    "captures": [
+      {
+        "logicalSectorBytes": 512,
+        "payloadBytes": 65536,
+        "metadataSha256": "80e8404e329f5c2d1518e5e7b67b6fa36ed8b26a5118d734bc54f20b9e93d2f3",
+        "payloadSha256": "f86d4a863bf4dced92eaa4290324e71f96a215e9f38c7acd8054a7c1a6c0a663",
+        "manifestRootSha256": "5ec9089e8fd2af1e73b7268c8a476b1b6edd0639c9f734f6aeadcac3e74783ee",
+        "hostSourceFileUnchanged": true,
+        "independentCompletionAndPayloadBinding": true
+      },
+      {
+        "logicalSectorBytes": 4096,
+        "payloadBytes": 524288,
+        "metadataSha256": "f96c73d0f583df5fca4987ecf59c8d0637cd3b79b99ff26ba2f490eb02ca4d1f",
+        "payloadSha256": "4aa6c0b0755f4d3e3fd5eb23d2fdf9e3d22e05f64821a5148eef3686d9d1a17c",
+        "manifestRootSha256": "e5c88074dbd4b2bbc524ca5e231c98e6b1a35c054510745cc2bfc2e7143166f7",
+        "hostSourceFileUnchanged": true,
+        "independentCompletionAndPayloadBinding": true
+      }
+    ]
+  },
+  "retainedPrivateArtifactsSha256": {
+    "native-result.json": "8ffd26b4ecd505cc2fc2174e20924bfe0b44fc40ffab36d8974f70f693e6f894",
+    "serial.log": "54f494fac8b3278d421757db6efe3450cf5bfbf9bb2f438e59507eaeadaea984",
+    "qemu-args.json": "c8febde3f8180382ae5e3f0702849df5b385689841e183352c31429ba315a2c0",
+    "seed.iso": "198fc828045292b723bda8e648637e419bc7287bdb8c6179c41d9e1c2f9a42cd",
+    "probe/Program.cs": "557de1c14d294aec1612d7b40575375840cab669c860e4424f37e0f721a33cbc",
+    "probe/CaptureProbe.csproj": "055a3bf48883dedaaab72457e6903b248edb3d954615c2739e22dd9d65ae7391",
+    "published/VaultSync.Core.dll": "332226dca53c535148837eb5ef314cb77116b97388171a8c7b5ecd12aa1c141f",
+    "published/VaultSync.Core.pdb": "300f462eea78044194ba4c6475917a5cff14726ef5f4e70fc7808bde254ba841",
+    "published/VaultSync.Core.Tests": "635d4305de499fea9f7e78cbd0fc124bddba70d7d59222ecb3b7010e20548157",
+    "published/VaultSync.Core.Tests.dll": "466b74a0493b866bebe38042bbe3b867f62c77e381070d811263aa29218a67fb",
+    "published/VaultSync.Core.Tests.runtimeconfig.json": "1bc10a3f7b2e0352dd3df130e2a31514290dd566d64c1c9298b01fb85ff1867b",
+    "published/VaultSync.DiskWorker": "4e722b8f4b35df80551126b70588493ad3ef8964bc13beba862a5897378b5a95",
+    "published/VaultSync.DiskWorker.dll": "870b2461d946b6d432376615efd7f0eb257113663d6951d5a4613ce39cb12e83",
+    "published/VaultSync.DiskWorker.runtimeconfig.json": "1bc10a3f7b2e0352dd3df130e2a31514290dd566d64c1c9298b01fb85ff1867b",
+    "release.log": "80b6b0fba751fe0e49e4199f9e3debab7e6a41cd1300ce8c1e657e37489ba118",
+    "pdb-source-check.json": "dcf7170448b94f93d123ad4500bdbde9a857b55d87d9c7913d0108388e517dc6",
+    "independent-capture-wire.json": "688e8402f9f076884aeec29fb6c3a395a601726f6ac60fe73ed62d47bf8ebcec",
+    "first-launch-native-result.json": "7cc2e6b642982e48ea816a42adf1419f6158e0bfe087d8edc2822ce9615f3310",
+    "first-launch-serial.log": "89c0993148de0425b571d6213b8971cd6e0f5ac8bb9db159e57a30ddea7eb19c",
+    "selector-attempt-native-result.json": "b39890a1f477336eea576f522f09299fe368590a5cb25a3efc950a45d454db1c",
+    "selector-attempt-serial.log": "8b3a91bdec45be8b5e67031838dc85e2aa2ecc1a4c67abf400d224b48311136c",
+    "delivery-contracts-20261025.log": "70908ef61bd178507e462f9d1af599d1a0c5053c8cf96af2bff7085f3aaf35f8",
+    "delivery-release-audit.log": "b441e9738ad3d12b40d7f1b60e54069a6c19d9a965d2b6a68e6705efe99c8776",
+    "delivery-family-audit.log": "01899503c661712d8376ef4889a48b412a0cbe677a524173107ea591efd6940c"
+  },
+  "failedAttempts": {
+    "firstLaunch": "Private tar copy lost the worker executable bit; zero cases; archived and corrected without product changes.",
+    "selectorAttempt": "Private harness matched whole disk and partitions by inherited serial; four cases then refused. Corrected to whole-disk selection without changing product admission."
+  },
+  "remaining": [
+    "trusted installed worker/build/role and concrete protocol review",
+    "controlled offline source and exact-device/consent authority",
+    "bounded writable operation lifetime",
+    "independent recovery media and UI",
+    "full filesystem/OS-boot/crash/power-cut recovery loops",
+    "installed 1.8.9 upgrade",
+    "signed packages and protected reviews"
+  ],
+  "qualifiedProfiles": 0,
+  "deliveryTracking": {
+    "checkedOn": "2026-10-25",
+    "owningReleaseItems": 47,
+    "familyItems": 108,
+    "discrepancies": 0,
+    "owningIssueState": "In progress",
+    "completedOn": null
+  }
+}
