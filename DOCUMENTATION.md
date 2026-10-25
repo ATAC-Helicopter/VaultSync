@@ -38,6 +38,10 @@ Core pillars:
 - `docs/ROUTE_ARCHITECTURE_1.9.md`: UI route/state migration contract for review.
 - `docs/RECOVERY_HORIZON_STRATEGY.md`: maintainer planning for the 1.9
   architecture gates, delivery order, issue preparation, and the gated `2.0` candidate.
+- `docs/platform/README.md`: **research-only** candidate modular platform architecture,
+  post-1.9 extension security and marketplace model, proposed 1.9.1–1.9.8 internal
+  foundation landing zones, qualification plan, and open decisions. The 1.9.0
+  roadmap and beta contract are unchanged; this is not approved delivery scope.
 - `docs/REPOSITORY_FORMATS.md`: repository layouts, compatibility boundaries,
   and emergency read-only recovery guidance.
 - `docs/CROSS_MACHINE_SAFETY.md`: cross-machine threat model, identity,
