@@ -11,7 +11,7 @@ public enum DiskInventoryWorkerOutcome { Completed, Unavailable, Failed, TimedOu
 /// <summary>Transport completion is not device identity, offline proof or write authorization.</summary>
 public sealed record DiskInventoryWorkerResult(DiskInventoryWorkerOutcome Outcome, LinuxBlockInventory? Inventory);
 
-/// <summary>Unprivileged, one-shot consumer of the fixed adjacent inventory worker.</summary>
+/// <summary>Unprivileged, one-shot consumer of the fixed packaged inventory worker.</summary>
 public static class DiskInventoryWorkerClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -25,12 +25,17 @@ public static class DiskInventoryWorkerClient
     public static Task<DiskInventoryWorkerResult> ObserveAsync(CancellationToken cancellationToken = default)
     {
         string name = OperatingSystem.IsWindows() ? "VaultSync.DiskWorker.exe" : "VaultSync.DiskWorker";
-        return ObserveAsync(Path.Combine(AppContext.BaseDirectory, name), TimeSpan.FromSeconds(35), cancellationToken);
+        return ObserveCoreAsync(LinuxInventoryWorkerPeerChannel.Supported ? LinuxWorkerInstallation.FixedWorker :
+            Path.Combine(AppContext.BaseDirectory, name), TimeSpan.FromSeconds(35),
+            LinuxInventoryWorkerPeerChannel.Supported, cancellationToken);
     }
 
     // Only local integration tests may choose a worker. No protocol or UI input selects a program.
-    internal static async Task<DiskInventoryWorkerResult> ObserveAsync(string workerPath, TimeSpan timeout,
-        CancellationToken cancellationToken = default)
+    internal static Task<DiskInventoryWorkerResult> ObserveAsync(string workerPath, TimeSpan timeout,
+        CancellationToken cancellationToken = default) => ObserveCoreAsync(workerPath, timeout, false, cancellationToken);
+
+    private static async Task<DiskInventoryWorkerResult> ObserveCoreAsync(string workerPath, TimeSpan timeout,
+        bool requireInstallation, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!Path.IsPathFullyQualified(workerPath) || !File.Exists(workerPath) ||
@@ -51,8 +56,19 @@ public static class DiskInventoryWorkerClient
         bool started = false;
         LinuxInventoryWorkerPeerChannel.Listener? listener = null;
         LinuxInventoryWorkerPeerChannel? peer = null;
+        LinuxWorkerInstallation? installation = null;
         try
         {
+            if (requireInstallation)
+            {
+                installation = await LinuxWorkerInstallation.OpenAsync(workerPath, deadline.Token).ConfigureAwait(false);
+                if (installation is null) return new(DiskInventoryWorkerOutcome.Unavailable, null);
+                process.StartInfo.Environment.Clear();
+                process.StartInfo.Environment["LANG"] = "C";
+                process.StartInfo.Environment["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "1";
+                process.StartInfo.Environment["DOTNET_EnableDiagnostics"] = "0";
+                process.StartInfo.Environment["DOTNET_GCHeapHardLimit"] = "0x10000000";
+            }
             if (LinuxInventoryWorkerPeerChannel.Supported)
             {
                 listener = new();
@@ -65,6 +81,8 @@ public static class DiskInventoryWorkerClient
             if (listener is not null)
             {
                 peer = await AuthenticatePeerAsync(listener, process, deadline.Token).ConfigureAwait(false);
+                if (installation is not null && !installation.BindProcess(process.Id, peer.ValidatePeer))
+                    return new(DiskInventoryWorkerOutcome.Failed, null);
             }
             Guid operation = Guid.NewGuid();
             // Read output concurrently: a broken peer must not deadlock on a full pipe.
@@ -79,6 +97,8 @@ public static class DiskInventoryWorkerClient
             async Task AcceptResponseAsync()
             {
                 await response.ConfigureAwait(false);
+                if (installation is not null && !installation.Recheck())
+                    throw new InvalidDataException("inventory.installation-changed");
                 if (peer is not null)
                 {
                     await peer.AcceptResponseAsync(deadline.Token).ConfigureAwait(false);
@@ -111,6 +131,7 @@ public static class DiskInventoryWorkerClient
             deadline.Cancel();
             peer?.Dispose();
             listener?.Dispose();
+            installation?.Dispose();
             if (started && !process.HasExited)
             {
                 try { process.Kill(entireProcessTree: true); }

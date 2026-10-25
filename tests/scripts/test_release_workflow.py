@@ -43,7 +43,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
         workflow = (Path(__file__).resolve().parents[2] /
                     ".github/workflows/release-assets.yml").read_text()
         values = re.findall(r"[/\-]p:VaultSyncReleaseChannel=([^\n`]+)", workflow)
-        self.assertEqual(6, len(values))
+        self.assertEqual(7, len(values))
         self.assertTrue(all(v.strip() == "${{ needs.validate.outputs.build_channel }}" for v in values))
         self.assertIn("build_channel: ${{ steps.validate_inputs.outputs.build_channel }}", workflow)
 

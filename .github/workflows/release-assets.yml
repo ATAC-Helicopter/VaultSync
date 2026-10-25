@@ -719,6 +719,25 @@ jobs:
           -p:VaultSyncSignatureStatus=unsigned
           -p:SourceRevisionId=${{ github.sha }}
 
+      - name: Publish read-only disk worker (linux-x64)
+        run: >
+          dotnet publish src/VaultSync.DiskWorker/VaultSync.DiskWorker.csproj
+          -c Release -r linux-x64 --self-contained true
+          -o artifacts/disk-worker/linux-x64
+          -p:VaultSyncReleaseChannel=${{ needs.validate.outputs.build_channel }}
+          -p:VaultSyncPackageKind=linux-multi-format
+          -p:VaultSyncUpdateSource=github
+          -p:VaultSyncOfficialBuild=true
+          -p:VaultSyncSignatureStatus=unsigned
+          -p:SourceRevisionId=${{ github.sha }}
+
+      - name: Bind read-only disk worker to the application build
+        run: >
+          python3 scripts/stage_disk_worker.py
+          --worker-dir artifacts/disk-worker/linux-x64
+          --app-dir src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+          --source-commit ${{ github.sha }}
+
       - name: Publish (linux-arm64)
         run: >
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj
@@ -738,6 +757,7 @@ jobs:
           python3 scripts/runtime_pack_audit.py
           --runtimeconfig src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish/VaultSync.UI.runtimeconfig.json
           --runtimeconfig src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish/VaultSync.UI.runtimeconfig.json
+          --runtimeconfig src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish/DiskWorker/VaultSync.DiskWorker.runtimeconfig.json
 
       - name: Build Linux archives
         env:

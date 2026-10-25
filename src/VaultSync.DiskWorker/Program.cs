@@ -1,8 +1,16 @@
 using System.Text.Json;
 using VaultSync.Core.Services;
 
-// Development-only transport host; deliberately absent from desktop launchers and
-// release packaging. No shell, elevation, caller-selected paths or device opens.
+// Fixed public build facts only: no device, image, path, credential or operation.
+if (args.Length == 1 && args[0] == DiskWorkerBuildIdentity.Argument)
+{
+    if (!LinuxInventoryWorkerPeerChannel.Supported || DiskWorkerBuildIdentity.SourceCommit is null) return 64;
+    await Console.OpenStandardOutput().WriteAsync(DiskWorkerBuildIdentity.Encode());
+    return 0;
+}
+
+// Read-only transport host, staged only in the Linux x64 package. No writable
+// operation, elevation, shell, caller-selected paths or device opens.
 bool peerMode = args.Length == 2 && args[0] == LinuxInventoryWorkerPeerChannel.Argument &&
     LinuxInventoryWorkerPeerChannel.Supported;
 bool inspectMode = args.Length == 2 && args[0] == DiskImageInspectionWorkerService.Argument &&

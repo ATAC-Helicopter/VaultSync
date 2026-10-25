@@ -8,7 +8,7 @@ internal sealed record DiskGptInspectionWorkerResult(DiskImageInspectionWorkerOu
 internal static class DiskGptInspectionWorkerClient
 {
     internal static Task<DiskGptInspectionWorkerResult> InspectAsync(Stream source, uint sector, CancellationToken token = default) =>
-        InspectAsync(source, sector, Path.Combine(AppContext.BaseDirectory, "VaultSync.DiskWorker"), TimeSpan.FromSeconds(130), token);
+        InspectAsync(source, sector, LinuxWorkerInstallation.FixedWorker, TimeSpan.FromSeconds(130), token);
 
     // Only local process tests can override the fixed adjacent worker/deadline.
     internal static async Task<DiskGptInspectionWorkerResult> InspectAsync(Stream source, uint sector,

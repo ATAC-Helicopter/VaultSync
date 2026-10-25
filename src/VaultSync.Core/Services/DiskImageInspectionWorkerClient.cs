@@ -16,7 +16,7 @@ internal static class DiskImageInspectionWorkerClient
 {
     internal sealed record Sources(Stream Metadata,Stream Payload,Guid Operation,long MetadataLength,long PayloadLength);
     internal static Task<DiskImageInspectionWorkerResult> InspectAsync(Stream metadata,Stream payload,CancellationToken token=default) =>
-        InspectAsync(metadata,payload,Path.Combine(AppContext.BaseDirectory,"VaultSync.DiskWorker"),TimeSpan.FromSeconds(130),token);
+        InspectAsync(metadata,payload,LinuxWorkerInstallation.FixedWorker,TimeSpan.FromSeconds(130),token);
 
     // Only local process fixtures may override the fixed adjacent installation.
     internal static async Task<DiskImageInspectionWorkerResult> InspectAsync(Stream metadata,Stream payload,
@@ -64,11 +64,14 @@ internal static class DiskImageInspectionWorkerClient
         bool started=false;
         try
         {
+            using var installation=await LinuxWorkerInstallation.OpenAsync(worker,deadline.Token).ConfigureAwait(false);
+            if(installation is null) return new(DiskImageInspectionWorkerOutcome.Unavailable);
             started=process.Start(); if(!started) return new(DiskImageInspectionWorkerOutcome.Failed);
             using var peer=await DiskInventoryWorkerClient.AuthenticatePeerAsync(listener,process,deadline.Token).ConfigureAwait(false);
+            if(!installation.BindProcess(process.Id,peer.ValidatePeer)) return new(DiskImageInspectionWorkerOutcome.Failed);
             Task quiet=DiskInventoryWorkerClient.RequireEmptyDiagnosticsAsync(process.StandardError.BaseStream,deadline.Token);
             Task<T> response=ExchangeAsync(process,peer,
-                sources,request,resultMagic,readResult,
+                sources,request,resultMagic,readResult,installation.Recheck,
                 (user==0?LinuxImageInspectionSandbox.Nobody:user,user==0?LinuxImageInspectionSandbox.Nobody:group),deadline.Token);
             var pending=new List<Task> {response,quiet,process.WaitForExitAsync(deadline.Token)};
             _=Task.WhenAll(pending).ContinueWith(static t=>{_=t.Exception;},CancellationToken.None,
@@ -103,12 +106,13 @@ internal static class DiskImageInspectionWorkerClient
 
     private static async Task<T> ExchangeAsync<T>(Process process,LinuxInventoryWorkerPeerChannel peer,
         Sources sources,byte[] request,byte[] resultMagic,Func<Stream,byte[],Sources,CancellationToken,Task<T>> readResult,
-        (uint User,uint Group) identity,CancellationToken token)
+        Func<bool> installationValid,(uint User,uint Group) identity,CancellationToken token)
     {
         await process.StandardInput.BaseStream.WriteAsync(request,token).ConfigureAwait(false);
         await process.StandardInput.BaseStream.FlushAsync(token).ConfigureAwait(false);
         var observation=await ServeAsync(process.StandardOutput.BaseStream,process.StandardInput.BaseStream,
             sources,peer.ValidatePeer,resultMagic,readResult,token).ConfigureAwait(false);
+        if(!installationValid()) throw new InvalidDataException("inspection.installation-changed");
         peer.ValidatePeer(); LinuxImageInspectionSandbox.ValidateProcess(process.Id,identity.User,identity.Group,true); peer.ValidatePeer();
         await peer.AcceptResponseAsync(token).ConfigureAwait(false);
         await DiskInventoryWorkerClient.RequireResponseEndAsync(process.StandardOutput.BaseStream,token).ConfigureAwait(false);

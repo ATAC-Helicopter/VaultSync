@@ -1468,6 +1468,15 @@ repository must not transfer before a compatible release is adopted.
     [source-bound evidence](docs/release-evidence/1.9-capture-inspection-2026-10-23.md).
     Installed build/role/authority, media/UI, complete recovery and release gates
     remain open; no candidate profile is promoted.
+  - Local worker installation (2026-10-25): Linux x64 packaging now stages a
+    bounded self-contained read-only closure. Public clients check file hashes,
+    ownership, permissions, exact Core/source/role and the authenticated child's
+    executable before sending requests; changed installations refuse. This grants
+    neither publisher trust nor writable authority. See the
+    [installation contract](docs/DISK_WORKER_1.9.md#local-installation-integrity-and-packaging--2026-10-25)
+    and [current evidence](docs/release-evidence/1.9-worker-installation-2026-10-25.md).
+    Offline/device consent, writable lifetime, media/UI, recovery and package
+    qualification remain open; no profile is promoted.
 - [ ] `VS-1995` `P1` Show imported file-backup projects in Projects with origin labels.
   - Progress: imported projects remain visible without source paths. A local
     persisted import marker distinguishes origin from restore state; cards,

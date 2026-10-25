@@ -13,13 +13,14 @@ now accepts bounded reads from two parent-held streams, with its own frames and
 irreversible process policy. Neither mode opens raw devices or captures/restores.
 On other operating systems inventory reports UnsupportedPlatform; inspection refuses.
 
-The executable is not connected to desktop/CLI launchers, updater assets or release
-packaging. A local developer can build and test it; it must not be shipped as an
-elevated helper. Inventory retains the launching user's privileges without an OS
-sandbox. Image inspection separately drops privileges and applies its documented
+The Linux x64 build now stages the self-contained reader under `DiskWorker/` in
+the application publish directory. It remains disconnected from user-facing disk
+launchers and must never be installed as an elevated helper. Inventory retains
+the launching user's privileges without an OS sandbox. Image inspection separately drops privileges and applies its documented
 irreversible policy. Raw staging now requires that reader; it has no in-process
 parser fallback. Neither fixed process selection nor separate execution establishes
-installed executable/build trust or writable authority.
+publisher trust or writable authority. Local installation checks below bind the
+packaged closure to the executing application; they grant no operation authority.
 
 ## One-shot protocol version 1
 
@@ -288,3 +289,54 @@ fixed launcher selection, peer/kernel checks, terminal framing and deadlines
 remain unchanged. The capture path uses it before allocation and after copying,
 and requires the image reader on sealed output before private publication.
 This completes neither installed build trust nor a writable operation protocol.
+
+
+## Local installation integrity and packaging — 2026-10-25
+
+The public Linux x64 inventory/image/GPT clients select only
+`<application>/DiskWorker/VaultSync.DiskWorker`. No UI or protocol field can choose
+another executable. The internal inventory transport-test overload is explicitly
+unqualified and is never a production fallback. Other platforms retain the
+unsupported inventory response; no Linux ARM64 disk helper is declared.
+
+The release workflow builds the self-contained helper with the application's
+channel, distribution and source properties. `scripts/stage_disk_worker.py`
+checks the real fixed `--installation-identity` output, self-contained runtime
+configuration, RID and identical application/helper Core bytes. It copies a flat,
+bounded closure into a new directory and emits `worker.installation.json`;
+existing destinations are refused, never replaced. The public build facts carry
+no paths, devices, credentials or operation permission. Standard error, output,
+time and file sizes are bounded. This script executes a reviewed just-built
+helper as a build step; it is not a sandbox for arbitrary supplied executables.
+
+The manifest schema is strict version 1, role `read-only-inspection-v1`, RID
+`linux-x64`, exact 40-character source commit from the loaded Core assembly,
+and sorted unique leaf records (`name`, `size`, SHA-256, executable flag).
+Limits are 128 KiB manifest, 512 files, 64 MiB/file and 512 MiB total. Required
+closure entries include the worker apphost/assembly/configuration/dependencies,
+Core and the self-contained .NET runtime. Unknown/duplicate properties, extra or
+missing files, path aliases and wrong build/role are refused before launching.
+
+Linux opens each ancestor and file without following links and retains handles.
+Every ancestor must be root-owned or owned by the current effective UID, without
+group/other write permission; launching as root therefore requires root ownership
+throughout. Files must be regular, single-link, have the declared execute mode,
+and lack set-ID bits and file capabilities. Unsupported capability/statx checks
+refuse. SHA-256 binds every file and the parent Core assembly. Statx identity,
+length, mode, ownership and change timestamps are rechecked before the request
+and before response acknowledgement. Kernel peer validation brackets binding
+`/proc/<pid>/exe` to the held apphost identity before privilege dropping.
+The environment excludes inherited runtime/loader hooks. Timeouts include these
+checks, with existing bounded child cleanup preserved.
+
+This assumes the launching UID and root are trusted; it does not protect against
+an adversarial administrator or same-UID process, prove in-memory code identity,
+or attest OS libraries. The local manifest is not a publisher signature or
+operation permission. Writable ancestry, including ordinary `/tmp` extraction,
+is refused; portable mounts and actual installed packages still need qualification.
+The nested helper is part of existing final packages, file inventories and updater
+patches; asset names and updater schema remain unchanged. Package signature and
+1.8.9 installed-update checks remain mandatory. No elevation, writable operation,
+offline source/device consent, recovery media or qualified profile is added.
+
+[Current measurements and limits](release-evidence/1.9-worker-installation-2026-10-25.md).

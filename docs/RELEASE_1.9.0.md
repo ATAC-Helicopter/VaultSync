@@ -1034,3 +1034,25 @@ bounded writable lifetime, media/UI, complete filesystem/OS-boot/crash/power-cut
 recovery, installed upgrade, signed packages and protected reviews remain open.
 All four profiles remain candidates; #492 stays In progress and #736 draft.
 No beta tag/assets/publication or merge is introduced by these checks.
+
+
+## Packaged read-only worker integrity — 2026-10-25
+
+VS-1904/#492 adds a separately staged self-contained Linux x64 reader closure,
+strict bounded installation manifest and held-file checks in public inventory,
+image and GPT clients. Exact source/role, identical parent/helper Core bytes,
+SHA-256, ownership, modes and authenticated child executable are checked before
+requests; changed files refuse response acceptance. Cleared runtime environments,
+existing kernel peers, protocol bounds and cancellation remain in force.
+No unqualified adjacent development worker becomes a production fallback.
+
+The helper receives the same validated release channel and source properties as
+the application. Existing package/patch names and updater schema remain intact;
+final provenance, installed upgrade and portable deployment remain unqualified.
+This is local integrity under a trusted launching UID/root, not publisher trust,
+elevation or writable authority. Offline source/exact-device consent, bounded
+writable operations, independent media/UI and full filesystem/OS-boot/crash/power
+recovery still block a complete-feature beta. All four profiles remain candidates;
+#492 remains In progress and #736 draft. See the
+[worker contract](DISK_WORKER_1.9.md#local-installation-integrity-and-packaging--2026-10-25)
+and [current results](release-evidence/1.9-worker-installation-2026-10-25.md).

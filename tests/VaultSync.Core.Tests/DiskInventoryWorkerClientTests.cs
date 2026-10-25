@@ -188,11 +188,25 @@ public sealed class DiskInventoryWorkerClientTests
     [Fact]
     public async Task ActualAdjacentWorkerCompletesWithoutShellArgumentsOrPrivilege()
     {
-        DiskInventoryWorkerResult result = await DiskInventoryWorkerClient.ObserveAsync();
+        string name = OperatingSystem.IsWindows() ? "VaultSync.DiskWorker.exe" : "VaultSync.DiskWorker";
+        DiskInventoryWorkerResult result = await DiskInventoryWorkerClient.ObserveAsync(
+            Path.Combine(AppContext.BaseDirectory, name), TimeSpan.FromSeconds(35));
         Assert.Equal(DiskInventoryWorkerOutcome.Completed, result.Outcome);
         Assert.NotNull(result.Inventory);
         if (!OperatingSystem.IsLinux())
             Assert.Equal(LinuxBlockInventoryState.UnsupportedPlatform, result.Inventory.State);
+    }
+
+    [Fact]
+    public async Task PublicLinuxClientRefusesUnstagedAdjacentDevelopmentWorker()
+    {
+        if (!LinuxInventoryWorkerPeerChannel.Supported) return;
+        // The test output contains only the adjacent transport fixture, not the
+        // packaged nested closure. It must never be a production fallback.
+        Assert.False(Directory.Exists(Path.GetDirectoryName(LinuxWorkerInstallation.FixedWorker)));
+        var result = await DiskInventoryWorkerClient.ObserveAsync();
+        Assert.Equal(DiskInventoryWorkerOutcome.Unavailable, result.Outcome);
+        Assert.Null(result.Inventory);
     }
 
     [Fact]
