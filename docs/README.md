@@ -14,6 +14,7 @@ Use this page as the primary index for all project documentation.
 - Roadmap: [ROADMAP](../ROADMAP.md)
 - Recovery Horizon sequencing and post-1.9 decision gates:
   [Recovery Horizon strategy](RECOVERY_HORIZON_STRATEGY.md)
+- **Research only, no 1.9.0 scope change:** [Post-1.9 modular platform RFC and 1.9.1–1.9.8 foundation map](platform/README.md)
 - Changelog: [CHANGELOG](../CHANGELOG.md)
 - Current release highlights: [What's New](WHATS_NEW.md)
 - 1.9 CLI structured project inspection: [output contract](CLI_OUTPUT.md)
