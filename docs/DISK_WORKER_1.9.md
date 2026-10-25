@@ -299,6 +299,10 @@ another executable. The internal inventory transport-test overload is explicitly
 unqualified and is never a production fallback. Other platforms retain the
 unsupported inventory response; no Linux ARM64 disk helper is declared.
 
+Linux CI also stages the actual helper before AppImage packaging. Its Core
+reference explicitly uses the desktop target negotiation, preventing RID-neutral
+and RID-specific Core binaries from being mixed.
+
 The release workflow builds the self-contained helper with the application's
 channel, distribution and source properties. `scripts/stage_disk_worker.py`
 checks the real fixed `--installation-identity` output, self-contained runtime

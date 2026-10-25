@@ -1469,7 +1469,8 @@ repository must not transfer before a compatible release is adopted.
     Installed build/role/authority, media/UI, complete recovery and release gates
     remain open; no candidate profile is promoted.
   - Local worker installation (2026-10-25): Linux x64 packaging now stages a
-    bounded self-contained read-only closure. Public clients check file hashes,
+    bounded self-contained read-only closure. Explicit Core target negotiation and
+    real Linux CI staging enforce matching UI/helper builds. Public clients check file hashes,
     ownership, permissions, exact Core/source/role and the authenticated child's
     executable before sending requests; changed installations refuse. This grants
     neither publisher trust nor writable authority. See the

@@ -12,6 +12,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 ### Added
 
 - [VS-1904] Bind packaged Linux readers to verified files and matching application builds.
+- [VS-1904] Validate matching desktop and worker builds before Linux package assembly.
 - [VS-1904] Inspect capture layouts separately and verify sealed images before publication.
 - [VS-1907] Require isolated staging inspection and byte-bound verification throughout disk restoration.
 - [VS-1904] Prototype isolated image inspection with bounded reads and Linux syscall restrictions.

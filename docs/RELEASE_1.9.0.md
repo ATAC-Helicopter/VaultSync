@@ -1056,3 +1056,9 @@ recovery still block a complete-feature beta. All four profiles remain candidate
 #492 remains In progress and #736 draft. See the
 [worker contract](DISK_WORKER_1.9.md#local-installation-integrity-and-packaging--2026-10-25)
 and [current results](release-evidence/1.9-worker-installation-2026-10-25.md).
+
+The follow-up aligns worker/desktop Core target negotiation after a real workflow-
+property publish exposed RID-neutral versus RID-specific bytes. A fresh actual
+pair now matches; Linux CI stages the helper before AppImage packaging to enforce
+this integration before the qualification-gated release job. This build check
+is separate from the retained 84-case native measurement and installed qualification.

@@ -144,7 +144,10 @@
     "release-audit.log": "b441e9738ad3d12b40d7f1b60e54069a6c19d9a965d2b6a68e6705efe99c8776",
     "family-audit.log": "01899503c661712d8376ef4889a48b412a0cbe677a524173107ea591efd6940c",
     "first-launch-native-result.json": "b1aba033bf8a1e9d10f1c38d036818d93192f4d25c8344812319851e0e83145a",
-    "first-launch-serial.log": "c1383d82dcabe68896871b8ae58bd51737e36a8e9564d09ceb15c3345969c906"
+    "first-launch-serial.log": "c1383d82dcabe68896871b8ae58bd51737e36a8e9564d09ceb15c3345969c906",
+    "aligned-release.log": "8604ba0433fbbd9ea8c6bd9bdd2604afcd10c4c7291539e6834b72ae58952842",
+    "aligned-contracts.log": "0c2859d915831c93ef49054a8c9734f039932dd404801a526592f828e5a3480e",
+    "workflow-pair/core-pair-check.json": "dbe9bfffdf5d380f656983f67fe7c4e3514207013eb620ce92b72f0cac0f971b"
   },
   "failedAttempts": {
     "firstLaunch": "Archive retained macOS file ownership; root installer validation refused with zero passing cases. Private archive fixed to root ownership without weakening product checks."
@@ -166,5 +169,30 @@
     "full filesystem/OS-boot/crash/power-cut recovery loops",
     "installed 1.8.9 upgrade",
     "signed packages and protected reviews"
-  ]
+  ],
+  "buildGraphFollowUp": {
+    "sourceBase": "920329953b689d39cc9796578ee87a6c5932ef47",
+    "sourceDirtyDuringMeasurement": true,
+    "coreImplementationChanged": false,
+    "actualUiWorkerBetaProperties": {
+      "sourceCommit": "920329953b689d39cc9796578ee87a6c5932ef47",
+      "sourceDirtyDuringMeasurement": true,
+      "channel": "beta",
+      "coreSha256": "b663b5926fddfa848794ed3e9e10a9f748aec8b169ff64d8d5bc91e1f0929f88",
+      "sameCoreBytes": true,
+      "publishedOrInstalled": false
+    },
+    "projectFileSha256": "56f5d62102ebe5082f5784764acb0777152c974e5a3b38019f4f39eaeaf3b61b",
+    "localRelease": {
+      "coreTests": 2133,
+      "pythonTests": 292,
+      "warnings": 0,
+      "errors": 0,
+      "skips": 0,
+      "localizationKeys": 1943,
+      "locales": 19
+    },
+    "linuxCiStagesActualWorkerBeforeAppImage": true,
+    "publishedOrInstalled": false
+  }
 }

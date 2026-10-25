@@ -66,6 +66,12 @@ jobs:
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj --framework net10.0 --configuration Release --runtime linux-x64 --self-contained true --output "${{ runner.temp }}/runtime-audit"
           python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/runtime-audit/VaultSync.UI.runtimeconfig.json"
 
+      - name: Stage and audit read-only Linux worker
+        run: |
+          dotnet publish src/VaultSync.DiskWorker/VaultSync.DiskWorker.csproj --configuration Release --runtime linux-x64 --self-contained true --output "${{ runner.temp }}/disk-worker"
+          python3 scripts/stage_disk_worker.py --worker-dir "${{ runner.temp }}/disk-worker" --app-dir "${{ runner.temp }}/runtime-audit" --source-commit "${{ github.sha }}"
+          python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/runtime-audit/DiskWorker/VaultSync.DiskWorker.runtimeconfig.json"
+
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
 
