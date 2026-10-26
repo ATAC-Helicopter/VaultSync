@@ -121,7 +121,7 @@ internal sealed class LinuxRawRestoreOperation : IAsyncDisposable
         if (Interlocked.CompareExchange(ref consumed, 1, 0) != 0)
             return new(RawImageDeviceRestoreState.Refused, LinuxRawRestoreOperationReason.AlreadyConsumed,
                 null, false, Volatile.Read(ref closed) != 0 && cleanupConfirmed);
-        await gate.WaitAsync().ConfigureAwait(false);
+        await gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         if (Volatile.Read(ref closed) != 0)
         {
             gate.Release();
@@ -249,7 +249,7 @@ internal sealed class LinuxRawRestoreOperation : IAsyncDisposable
     {
         try { await lifetime.CancelAsync().ConfigureAwait(false); }
         catch (ObjectDisposedException) when (Volatile.Read(ref closed) != 0) { /* Execution already released ownership. */ }
-        await gate.WaitAsync().ConfigureAwait(false);
+        await gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
             if (Volatile.Read(ref closed) != 0) return;

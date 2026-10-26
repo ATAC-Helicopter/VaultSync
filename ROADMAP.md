@@ -1623,6 +1623,8 @@ repository must not transfer before a compatible release is adopted.
     pass on a 3 GiB UEFI/ext4 source, with 512/4096 partial-write fault checks.
     See [source-bound results](docs/release-evidence/1.9-owned-restore-2026-10-26.md).
     Product worker authorization, UI/media, support and release gates stay open.
+    Hosted S8949 follow-up explicitly preserves uncancellable ownership/cleanup
+    waits; fresh Release checks pass while original native evidence stays bound.
 
   - Reader-first integration (2026-10-22): staging requires isolated preflight and
     sealed-copy parsing with identical bounded facts/hash. Parent-side bounded

@@ -1100,3 +1100,8 @@ Production worker/device/human authorization, reachable translated UI, product
 media, full matrix/power-loss qualification, installed upgrade, packages/signatures
 and protected reviews remain open. All four profiles stay candidates and #736
 stays draft. This measurement does not authorize a beta cut or publication.
+
+The S8949 hosted follow-up explicitly uses uncancellable ownership/cleanup waits
+so cancellation cannot strand resources. Fresh required Release remains 2,170
+Core / 293 Python, zero warnings/errors/skips; original native source/PDB results
+remain historical rather than relabeled as a new run. No rule or gate is waived.

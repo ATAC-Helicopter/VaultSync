@@ -53,6 +53,8 @@ filesystem consistency, physical power-loss durability or successful OS boot.
 `JournalAcquired` means the owner received a live published journal, not that a
 failed acquisition left no partial/unconfirmed filesystem artifact.
 
+Both ownership/cleanup gate waits explicitly use `CancellationToken.None` so
+caller cancellation cannot strand transferred resources before cleanup.
 Disposal cancels the active lifetime, waits for its serialized owner and releases
 an abandoned review. Caller cancellation and the monotonic execution timer share
 the same cleanup path. The hard execution ceiling is 24 hours; local fault tests

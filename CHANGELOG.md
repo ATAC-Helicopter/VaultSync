@@ -11,7 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
-- [VS-1907] Coordinate reviewed disk restoration with owned staging, journals and cleanup.
+- [VS-1907] Coordinate reviewed disk restoration and interrupted cleanup under one resource owner.
 - [VS-1904] Bind packaged Linux readers to verified files and matching application builds.
 - [VS-1904] Validate matching desktop and worker builds before Linux package assembly.
 - [VS-1904] Inspect capture layouts separately and verify sealed images before publication.

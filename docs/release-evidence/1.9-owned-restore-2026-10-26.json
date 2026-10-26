@@ -284,5 +284,21 @@
     "full support matrix and physical power-cut/durability qualification",
     "installed 1.8.9 update and package/provenance qualification",
     "protected reviews and release gates"
-  ]
+  ],
+  "deliveryRefinement": {
+    "recordedOn": "2026-10-26",
+    "base": "117bb12",
+    "change": "Explicit CancellationToken.None on both ownership/cleanup waits; identical uncancellable behavior to parameterless WaitAsync. No token/rule suppression.",
+    "nativeSourceSha256": "197a20bad77b85a1bc4ddc2a3fbf0ca8a84ab2677278812a5b97074b5710a96e",
+    "currentSourceSha256": "74f97beefc1d7d72da9af853519ed817a486640f7cefb384452883c96b92d8fa",
+    "nativeMeasurementsRerun": false,
+    "currentManagedChecks": {
+      "coreTests": 2170,
+      "pythonTests": 293,
+      "warnings": 0,
+      "errors": 0,
+      "skips": 0,
+      "logSha256": "a4427fff4c41a45908b125ddbbf54b110fd01695cdb290d99a5f0ebe025eb525"
+    }
+  }
 }
