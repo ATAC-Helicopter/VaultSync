@@ -1,43 +1,26 @@
-# VaultSync Codex: quality-first quota efficiency
+# VaultSync Codex routing
 
-This file governs repository work in Codex. Implement complete requests without unnecessary delegation. The goal is **the lowest total usage that produces correct, tested code**, not the cheapest model on every isolated step.
+Goal: minimize **total Codex Plus usage per correct, tested change**. Do not under-select for data safety. More agents are not automatically better.
 
-## Non-negotiable ceiling and project rules
+**Ceiling:** never choose more than `gpt-6.1-sol` / `medium` (**GPT-6.1 Sol / medium**). No Sol high/xhigh/max or Astra. This is an instruction, **not** hard enforcement against client/user overrides. Root defaults to `gpt-6.1-terra` / `medium`; it cannot swap its own model mid-turn, but subagents can use distinct configurations.
 
-- Never select a model stronger or more expensive than **GPT-6.1 Sol / medium** for this project. Specifically do not invoke Sol high/xhigh/max or Astra.
-- This is a cooperative project policy, **not** an enforced account/provider cap. Explicit client or user overrides can bypass it.
-- Root defaults to GPT-6.1 Terra / medium; choose a stronger specialized subagent **before** risky work. Root itself cannot change model midway through an active turn.
-- Respect repository boundaries: `src/VaultSync.Core`, `src/VaultSync.CLI`, `src/VaultSync.UI` (Avalonia AXAML), `tests/VaultSync.Core.Tests`. Preserve data integrity, backward compatibility, security and recoverability.
-- Never run destructive tests on real disks, live backups or user data without explicit authorization. No unsafe "quick fixes" to verification, recovery or security.
+## Pick the route from risk, uncertainty and coupling
 
-## Route by actual risk and complexity, not by keywords alone
+- **Root alone, zero subagents:** small docs/fixes, routine UI, obvious isolated changes, routine test commands. Default for short work.
+- **`vaultscan` (Luna Low):** independent, sizeable read-only investigation; not a single search.
+- **`vaultui` (Terra Medium):** routine substantial Avalonia AXAML, styles, presentation and bindings in multi-part requests.
+- **`vaultworker` (Terra High):** tricky UI async logic, substantial noncritical Core/CLI or multi-file integration/debugging.
+- **`vaultcritical` (Sol Medium):** any credible risk to backup/restore, disk writes/imaging, data deletion/retention, encryption/keys, repository formats/migrations, cross-machine identity, recoverability or security; also ambiguous high-coupling architecture. Escalate **before editing**, even for tiny changes.
+- **`vaultverify` (Terra Medium):** genuinely separate noncritical tests/reviews, never redundant routine checks. Critical invariants stay with `vaultcritical`.
 
-Make a brief internal risk assessment from expected touched paths, invariants, dependencies, ambiguity and available tests. You do not need to publish a verbose planning preamble.
+If a cheap tier is uncertain, finds surprising coupling, cannot prove assumptions or repeatedly fails, escalate only that slice. Do not retry identical prompts. If Sol Medium is insufficient, report unverified risks rather than quietly downgrading or violating the cap.
 
-| Route | When |
-| --- | --- |
-| **Root Terra Medium only (zero subagents)** | Readme/docs, tiny well-specified edits, ordinary presentation tweaks, obvious localized fixes, quick diagnosis. This is the default for small tasks. |
-| **vaultscan: Luna Low** | Independent *read-only* narrow discovery when offloading a nontrivial investigation saves root context; not for one grep or known file. |
-| **vaultui: Terra Medium** | Substantial but straightforward AXAML, styling, binding or presentational ViewModel changes in a mixed request. |
-| **vaultworker: Terra High** | Noncritical multi-file changes, tricky async UI state, nontrivial service integration, debugging requiring careful reasoning or regressions. |
-| **vaultcritical: Sol Medium** | Any change with credible risk to backups/restores, actual disk writes/imaging, retention/deletion, encryption/keys, repository formats/migrations, cross-machine safety, recovery confidence or security guarantees. Also use for ambiguous high-coupling architecture and correctness-sensitive cross-layer decisions. Choose proactively, not only after failure. |
-| **vaultverify: Terra Medium** | A genuinely independent focused test/integration check that saves time or context. Do not delegate routine test commands; safety-critical verification belongs to vaultcritical. |
+## Multiple subtasks within one user request
 
-If a simple-looking fix changes a critical invariant, **risk wins** and vaultcritical owns that slice. If a UI task has tricky multi-module state handling, upgrade from vaultui to vaultworker. If the low-tier agent is uncertain or cannot test its assumptions, escalate the specific slice; do not repeat the same failed prompt or accept unverifiable code.
+Define interface, progress, cancellation, error and state contracts **before** independent edits. For worker + UI, route backend to `vaultworker` or `vaultcritical` depending on risk and presentation to `vaultui` (or `vaultworker` if complex). Run routine integration/tests in root. Spawn **at most two** specialists concurrently and only if independent work saves time/context; otherwise delegate sequentially or use root. Keep write sets disjoint, handoffs precise, and avoid duplicate scans/reviews. Finish the **entire prompt**, not just one subsystem.
 
-## Multi-part requests in one turn
+## Engineering safety
 
-- Decompose a mixed request into backend, UI, tests **only when the boundaries matter**. Agree on DTOs/events/progress/error/cancellation contract first.
-- For `worker + UI`: assign backend to vaultworker **or** vaultcritical depending on risk, UI to vaultui if independent, then let root integrate and run checks. For complex UI use vaultworker; serialize overlapping file writes.
-- Spawn at most **two** specialists concurrently, and only if independence or separated context meaningfully improves quality or total work. Sequential delegation is valid within the same prompt.
-- The main agent should handle simple changes and routine verification itself. No automatic "scan + implement + verify" fan-out for small tasks; no extra reviewer unless the outcome is genuinely uncertain or high-risk.
-- Use disjoint edit ownership, compact handoffs with exact paths/contract, and reuse evidence. Never duplicate repository scans or large-context reviews without a new reason.
-- Do not let low-cost agents touch a safety-critical slice on the assumption that a later review will catch mistakes.
+Preserve existing C#/.NET and Avalonia conventions, compatibility and safe backup semantics. Paths: `src/VaultSync.Core`, `src/VaultSync.CLI`, `src/VaultSync.UI`, `tests/VaultSync.Core.Tests`. Never run destructive tests on user backups, drives or production data without explicit authorization. Make the smallest correct diff and add meaningful regressions. Run focused checks first (e.g. `dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj`), broaden for cross-module risk, and verify UI build when relevant. Never claim unrun tests passed. Conclude with actual changes, executed checks and remaining uncertainty; name agent tiers only if used.
 
-## Verification and delivery
-
-- Prefer existing patterns; make the smallest correct diff; avoid speculative refactoring and unrelated formatting.
-- Run the narrowest useful build/test first; expand when integration risk or failures justify it. For Core use `dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj` as appropriate; validate Avalonia compilation if UI changed.
-- Do not claim tests passed unless they ran. Do not run unsafe real-device tests.
-- Finish the whole user request, including integration, then report result, checks and meaningful uncertainty concisely. State subagent tiers only when one was actually used.
-- If the requested result cannot be delivered safely under Sol Medium, report the limitation and required verification instead of silently under-selecting or violating the ceiling.
+Detailed scenarios and measurement procedure: `docs/CODEX_ROUTING.md`.
