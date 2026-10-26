@@ -1,10 +1,12 @@
-# VaultSync-only defaults. Requires a trusted repository and Codex CLI >= 0.159.0.
-# The coordinator stays on Terra High; selected subagents may use cheaper models.
+#:schema https://developers.openai.com/codex/config-schema.json
+# Cost-aware coordinator. Specialist subagents select higher effort when warranted.
+# This project config is loaded only when the repo is trusted.
 model = "gpt-6.1-terra"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
 
 [agents]
 enabled = true
-max_concurrent_threads_per_session = 3
+# Only two spawned agents at once. A third is rarely worth the extra context.
+max_concurrent_threads_per_session = 2
 default_subagent_model = "gpt-6.1-terra"
 default_subagent_reasoning_effort = "medium"
