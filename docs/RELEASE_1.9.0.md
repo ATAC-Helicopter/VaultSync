@@ -28,6 +28,10 @@ separate synthetic profiles, with actual screenshots retained privately. The
 container isolation and network denial; this is not a release signing or restore
 qualification. Earlier blank captures/launch failures are not proof that the UI
 control connection caused this crash.
+The S8705 follow-up fixes the signing executable and all command arguments,
+using the validated Info.plist identity instead of passing caller input to the
+command. A minimal native signing/verification probe passes and is cleaned up;
+this is not a new full-product GUI or package qualification.
 
 VS-1907/#495 adds bounded operation framing and authenticated read-only image
 descriptor handoff. An independent unprivileged producer/root consumer passes

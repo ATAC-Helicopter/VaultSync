@@ -63,3 +63,19 @@ symlink/recursive-output refusal and signing-failure cleanup. Native launch and
 rendered review supplement these tests; signature verification alone did not
 prove the earlier package could launch. See the
 [technical receipt](release-evidence/1.9-macos-qa-launch-2026-10-26.json).
+
+## Fixed signing command arguments — 2026-10-26
+
+The S8705 hosted follow-up no longer passes the caller's bundle identifier or
+paths as command operands. The builder invokes `/usr/bin/codesign` with literal
+arguments from the exclusively reserved bundle directory. Codesign derives the
+previously validated identity from `Contents/Info.plist`; the entitlement path
+is a fixed relative resource. No shell or PATH-selected signing executable is
+used. The same fixed target is verified without changing its signed resources.
+
+Focused guards check exact argument vectors and working directory, rejecting
+option-like, newline and shell-like identifiers before signing. A minimal real
+native bundle passed ad-hoc signing, strict verification and identity inspection;
+its temporary directory was removed immediately. This checks the command change,
+not a new VaultSync GUI launch, publisher signature or release asset. Earlier GUI
+launch evidence remains historical; the old local QA/VM lab has been removed.

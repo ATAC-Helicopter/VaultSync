@@ -45,7 +45,9 @@ class MacosQaPackageTests(unittest.TestCase):
         self.assertEqual(len(entitlements), 3)
 
     def test_production_identifiers_and_existing_artifacts_are_preserved(self):
-        for name in ["com.vaultsync.app", "VaultSync.UI", "dev.vaultsync.qa...", "dev.vaultsync.qa./outside"]:
+        for name in ["com.vaultsync.app", "VaultSync.UI", "dev.vaultsync.qa...", "dev.vaultsync.qa./outside",
+                     "--requirements=malicious", "dev.vaultsync.qa.x;echo injected",
+                     "dev.vaultsync.qa.x\n--options=runtime"]:
             with self.subTest(name=name), self.assertRaises(ValueError):
                 self.validate(identifier=name)
         self.output.mkdir()
@@ -92,5 +94,13 @@ class MacosQaPackageTests(unittest.TestCase):
         self.assertEqual(info["CFBundleVersion"], "1.9.1")
         self.assertIn("/Containers/dev.vaultsync.qa.recovery/Data/", info["LSEnvironment"]["VAULTSYNC_CONFIG_DIR"])
         self.assertEqual(signing.call_count, 2)
+        self.assertEqual(signing.call_args_list[0].args[0], [
+            "/usr/bin/codesign", "--force", "--deep", "--sign", "-",
+            "--entitlements", "Contents/Resources/qa-signing.plist", "."])
+        self.assertEqual(signing.call_args_list[1].args[0], [
+            "/usr/bin/codesign", "--verify", "--deep", "--strict", "."])
+        for call in signing.call_args_list:
+            self.assertEqual(call.kwargs["cwd"], self.output.resolve())
+            self.assertNotIn("shell", call.kwargs)
         self.assertFalse(result["releaseAsset"])
         self.assertTrue(result["sandbox"])

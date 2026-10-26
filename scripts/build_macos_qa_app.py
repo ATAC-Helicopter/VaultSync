@@ -95,12 +95,17 @@ def build(publish_dir, output, identifier, version):
         resources.mkdir()
         entitlements = resources / "qa-signing.plist"
         entitlements.write_bytes(plistlib.dumps(sandbox_entitlements()))
-        subprocess.run(["codesign", "--force", "--deep", "--sign", "-", "--identifier", identifier,
-                        "--entitlements", str(entitlements), str(target)], check=True, timeout=120,
+        # No caller-controlled command arguments: codesign derives the validated
+        # identity from Info.plist. The exact reserved bundle is the working
+        # directory; both the entitlement path and bundle operand are literals.
+        subprocess.run(["/usr/bin/codesign", "--force", "--deep", "--sign", "-",
+                        "--entitlements", "Contents/Resources/qa-signing.plist", "."],
+                       cwd=target, check=True, timeout=120,
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Keep the signed resource tree unchanged after sealing it.
-        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(target)], check=True,
-                       timeout=120, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(["/usr/bin/codesign", "--verify", "--deep", "--strict", "."],
+                       cwd=target, check=True, timeout=120,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return {"app": str(target), "identifier": identifier, "privateProfile": str(profile),
                 "purpose": "private-macos-ui-validation", "signing": "ad-hoc; publisher signing unqualified",
                 "sandbox": True, "networkEntitlement": False, "releaseAsset": False}

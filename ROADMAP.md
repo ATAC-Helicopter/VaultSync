@@ -1479,6 +1479,11 @@ repository must not transfer before a compatible release is adopted.
     Offline/device consent, writable lifetime, media/UI, recovery and package
     qualification remain open; no profile is promoted.
 - [ ] `BUG-19040` `P1` Allow native GUI registration in isolated macOS QA packages.
+  - Signing follow-up (2026-10-26): fixed absolute-tool/literal-argument calls
+    derive the validated QA identity from Info.plist. Native minimal-bundle
+    signing and strict verification pass; its scratch bundle is removed.
+    This is not a new GUI or release qualification. Hosted S8705 reanalysis
+    remains required on the next pushed head.
   - Owner #819; preparation PR #736. Both automatic and manual QA launches abort
     because the sandbox denies the precise Launch Services lookup required by
     Avalonia. Preserve private containers and network denial; add only the named
