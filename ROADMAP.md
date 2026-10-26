@@ -1478,6 +1478,17 @@ repository must not transfer before a compatible release is adopted.
     and [current evidence](docs/release-evidence/1.9-worker-installation-2026-10-25.md).
     Offline/device consent, writable lifetime, media/UI, recovery and package
     qualification remain open; no profile is promoted.
+- [ ] `BUG-19039` `P0` Avoid small remote reads during full-image digest verification.
+  - Owner #816; preparation PR #736. A 3 GiB offline OS capture copied all bytes
+    but refused final verification. The second digest used 4 KiB authenticated
+    exchanges; an independent 2 MiB probe measured 512 calls versus 16 bounded
+    128 KiB calls with identical SHA-256. Reuse exact-length bounded hashing in
+    the worker and trusted warmup; preserve protocol budgets and deadlines.
+  - Acceptance: request-count/corruption/cancellation regressions, actual full OS
+    capture/restore/boot evidence and required Release/exact-head checks.
+    Current backend loop passes; [measurements and limits](docs/release-evidence/1.9-owned-restore-2026-10-26.md)
+    keep product qualification separate.
+    In progress, started 2026-10-25; no support profile is qualified by this fix.
 - [ ] `BUG-19038` `P0` Confine Linux worker staging to trusted build directories.
   - Owner #815; preparation PR #736. Canonicalized input and output directories
     must remain within the repository, system temporary root or runner temporary
@@ -1601,6 +1612,18 @@ repository must not transfer before a compatible release is adopted.
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Owned operation integration (2026-10-25): one internal worker-side owner now
+    consumes a single review, releases its read-only exclusive claim, verifies
+    staged bytes, reobserves selection, acquires the durable journal/native target,
+    runs real write/read-back and closes every resource. Duplicate calls do not
+    cancel the active owner; disposal and deadlines preserve interrupted/uncertain
+    evidence. Trusted offline execution and actual human/worker authorization
+    remain caller preconditions; no new public writable endpoint is added.
+    Native full-OS capture/independent recovery restart/restore/restored boot now
+    pass on a 3 GiB UEFI/ext4 source, with 512/4096 partial-write fault checks.
+    See [source-bound results](docs/release-evidence/1.9-owned-restore-2026-10-26.md).
+    Product worker authorization, UI/media, support and release gates stay open.
+
   - Reader-first integration (2026-10-22): staging requires isolated preflight and
     sealed-copy parsing with identical bounded facts/hash. Parent-side bounded
     hashing binds exact private metadata/payload bytes; the write engine checks

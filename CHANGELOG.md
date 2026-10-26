@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1907] Coordinate reviewed disk restoration with owned staging, journals and cleanup.
 - [VS-1904] Bind packaged Linux readers to verified files and matching application builds.
 - [VS-1904] Validate matching desktop and worker builds before Linux package assembly.
 - [VS-1904] Inspect capture layouts separately and verify sealed images before publication.
@@ -92,6 +93,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19039] Verify disk-image digests with bounded reads instead of tiny exchanges.
 - [BUG-19038] Confine Linux worker staging to repository and build temporary directories.
 - [BUG-19037] Require complete remote tracking snapshots before audits and identifier allocation.
 - [BUG-19036] Recheck sealed recovery files without retaining stale buffered bytes.

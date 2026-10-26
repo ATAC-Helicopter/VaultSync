@@ -126,3 +126,13 @@ errors still produce Failed and attempt a failure record; unexpected execution
 exceptions still release the target before propagating and never append a
 read-back completion. No journal order, native authority, wire format or quality
 threshold changes. See [current checks](release-evidence/1.9-restore-cleanup-2026-10-21.md).
+
+## Owned operation integration — 2026-10-25
+
+VS-1907/#495 now supplies an internal [single-owner operation](LINUX_RAW_RESTORE_OPERATION_1.9.md)
+joining sealed staging ownership, expiring native review, fresh inventory,
+persistent journal, exclusive acquisition, this writer and cleanup. Replays
+cannot cancel an active owner; timeout/disposal preserve uncertain write results.
+The engine's byte observation remains separate from overall cleanup success.
+The trusted caller still establishes worker/offline/device/human authority;
+there is no new public writable or elevated endpoint.

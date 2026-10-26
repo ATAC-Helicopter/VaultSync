@@ -196,3 +196,14 @@ installed build, source/offline authority and full recovery qualification.
 [Capture integration](LINUX_RAW_CAPTURE_1.9.md) now requires isolated source GPT
 checks before allocation and after copying, then sealed-copy image inspection
 before publication. No missing/failed/timed-out reader has an in-process fallback.
+
+## Bounded digest reads — BUG-19039 / #816
+
+A full 3 GiB OS capture exposed excessive authenticated pipe traffic during the
+reader's independent payload digest. The generic stream hashing API requested
+4 KiB blocks; a separate 2 MiB oracle probe measured 512 requests, versus 16 with
+the existing exact-length 128 KiB reader, with identical SHA-256. The worker now
+uses that reader for its digest and trusted warmup. Wire framing, byte/call
+budgets, kernel policy, deadlines, cancellation and no-fallback behavior remain
+unchanged. Every pass rereads bytes; no payload cache is introduced. This is a
+request-count observation, not a qualified throughput/capacity claim.

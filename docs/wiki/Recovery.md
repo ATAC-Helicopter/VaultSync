@@ -67,3 +67,12 @@ Technical details:
 - [Disaster recovery](../DISASTER_RECOVERY.md)
 - [Recoverability engine](../RECOVERABILITY_ENGINE.md)
 - [Privacy](../PRIVACY.md)
+
+
+## Disk-image development in 1.9.0
+
+Full-disk recovery remains under development. The internal Linux engine has
+completed a measured 3 GiB UEFI/ext4 capture, independent recovery restart,
+restoration and restored-system boot in disposable VMs. This is backend evidence;
+the product recovery medium, desktop workflow and support qualification remain
+open. See the [current results and limits](../release-evidence/1.9-owned-restore-2026-10-26.md).

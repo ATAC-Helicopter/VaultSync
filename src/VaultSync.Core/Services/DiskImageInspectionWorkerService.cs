@@ -43,7 +43,7 @@ internal static class DiskImageInspectionWorkerService
         var result=await DiskImageRawProfileVerificationService.VerifyAsync(metadata,payload,token).ConfigureAwait(false);
         string? hash=null;
         if(result.State==DiskImageRawProfileVerificationState.ContentAndLayoutVerified)
-        { payload.Position=0; hash=Convert.ToHexStringLower(await SHA256.HashDataAsync(payload,token).ConfigureAwait(false)); }
+        { hash=await PayloadDigestAsync(payload,token).ConfigureAwait(false); }
         return DiskImageInspectionProtocol.Result(facts.Operation,DiskImageInspectionProtocol.Observe(result,hash));
     }
 
@@ -60,8 +60,15 @@ internal static class DiskImageInspectionWorkerService
         var result=await DiskImageRawProfileVerificationService.VerifyAsync(metadata,payload,token).ConfigureAwait(false);
         if(result.State!=DiskImageRawProfileVerificationState.ContentAndLayoutVerified || result.Image?.VerifiedBytes!=65536)
             throw new InvalidDataException("inspection.failed-self-test");
-        payload.Position=0; _=await SHA256.HashDataAsync(payload,token).ConfigureAwait(false);
+        if(await PayloadDigestAsync(payload,token).ConfigureAwait(false) is null)
+            throw new InvalidDataException("inspection.failed-digest-self-test");
     }
+
+    // HashDataAsync's 4 KiB stream buffer amplifies every digest into tiny
+    // authenticated pipe round trips. Use the existing exact-length 128 KiB
+    // reader, including in warmup, without relaxing any deadline or byte budget.
+    internal static ValueTask<string?> PayloadDigestAsync(Stream payload,CancellationToken token) =>
+        DiskImageByteIntegrity.HashExactAsync(payload,checked((ulong)payload.Length),token);
 
     internal sealed class RemoteStream(Stream input,Stream output,Guid operation,uint source,long length,CancellationToken deadline) : Stream
     {

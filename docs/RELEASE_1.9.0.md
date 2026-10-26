@@ -1076,3 +1076,27 @@ qualification. Required checks and the exact-head security gate remain separate;
 [worker contract](DISK_WORKER_1.9.md#build-path-confinement--bug-19038--815).
 
 [Current path-confinement results](release-evidence/1.9-worker-staging-roots-2026-10-25.md) retain the failed preceding security gate separately from fresh local/VM checks.
+
+
+## Owned restoration and full OS backend loop — 2026-10-26
+
+VS-1907/#495 connects native review, sealed staging ownership, fresh inventory,
+durable journal, exclusive target acquisition, actual writes/read-back and cleanup
+in one consumed operation. Duplicates cannot cancel an active owner; interruption
+and close failures preserve uncertainty and cannot report overall success.
+BUG-19039/#816 replaces the reader's tiny digest exchanges with exact-length
+128 KiB reads, including warmup, while retaining existing protocol and deadlines.
+
+Current source-bound checks pass **2,170 Core / 293 Python**, zero warnings/errors/
+skips, **1,943 keys / 19 locales**. A 3 GiB UEFI GPT/ext4 source is captured,
+retained through an independent recovery restart, restored with the source absent,
+verified byte for byte and booted with matching fixture hashes. Four native
+partial-write/cancellation targets cover 512/4096 sectors with durable honest
+outcomes. There are **64 named native assertions** plus separate boot/hash checks.
+[Current evidence and failed attempts](release-evidence/1.9-owned-restore-2026-10-26.md).
+
+The recovery guest uses injected lab executables, not generated product media.
+Production worker/device/human authorization, reachable translated UI, product
+media, full matrix/power-loss qualification, installed upgrade, packages/signatures
+and protected reviews remain open. All four profiles stay candidates and #736
+stays draft. This measurement does not authorize a beta cut or publication.
