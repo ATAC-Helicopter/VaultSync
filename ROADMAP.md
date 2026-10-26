@@ -1478,6 +1478,18 @@ repository must not transfer before a compatible release is adopted.
     and [current evidence](docs/release-evidence/1.9-worker-installation-2026-10-25.md).
     Offline/device consent, writable lifetime, media/UI, recovery and package
     qualification remain open; no profile is promoted.
+- [ ] `BUG-19040` `P1` Allow native GUI registration in isolated macOS QA packages.
+  - Owner #819; preparation PR #736. Both automatic and manual QA launches abort
+    because the sandbox denies the precise Launch Services lookup required by
+    Avalonia. Preserve private containers and network denial; add only the named
+    service permission and a create-only, self-contained QA package builder.
+  - Acceptance: reproduce the sandbox denial, verify native launch/onboarding
+    and Recovery rendering from the generated package, protect isolation and
+    existing artifacts, pass Release/contracts and exact-head hosted checks.
+    The [QA contract](docs/MACOS_QA_VALIDATION.md) records the actual root cause
+    and corrects the earlier connection-failure attribution. This does not
+    qualify disk support, updater behavior or publisher signing. In progress,
+    started 2026-10-26; no release or profile is promoted.
 - [ ] `BUG-19039` `P0` Avoid small remote reads during full-image digest verification.
   - Owner #816; preparation PR #736. A 3 GiB offline OS capture copied all bytes
     but refused final verification. The second digest used 4 KiB authenticated

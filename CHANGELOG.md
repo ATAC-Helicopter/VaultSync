@@ -95,6 +95,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19040] Open sandboxed macOS validation builds with the required GUI registration permission.
 - [BUG-19039] Verify disk-image digests with bounded reads instead of tiny exchanges.
 - [BUG-19038] Confine Linux worker staging to repository and build temporary directories.
 - [BUG-19037] Require complete remote tracking snapshots before audits and identifier allocation.

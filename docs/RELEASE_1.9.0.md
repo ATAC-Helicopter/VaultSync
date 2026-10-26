@@ -7,6 +7,14 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+BUG-19040/#819 corrects the private macOS QA package's missing Launch Services
+permission. Native startup, onboarding and Recovery rendering now pass in
+separate synthetic profiles, with actual screenshots retained privately. The
+[QA contract](MACOS_QA_VALIDATION.md) and create-only builder preserve sandbox,
+container isolation and network denial; this is not a release signing or restore
+qualification. Earlier blank captures/launch failures are not proof that the UI
+control connection caused this crash.
+
 VS-1907/#495 adds bounded operation framing and authenticated read-only image
 descriptor handoff. An independent unprivileged producer/root consumer passes
 153 checks in the latest disposable offline VM run. This is transport evidence, not a writable

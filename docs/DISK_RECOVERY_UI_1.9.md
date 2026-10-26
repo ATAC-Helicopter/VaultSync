@@ -5,8 +5,11 @@ panel. This is the first connected UI increment, not a complete restore wizard.
 Local Release checks passed with zero warnings/errors, 2,183 Core tests,
 293 Python tests and 1,959 keys in 19 locales. See the
 [source-bound receipt](release-evidence/1.9-recovery-image-ui-2026-10-26.json).
-Native interactive capture is still unverified: the available computer-use
-session returned blank screenshots and timed out launching the isolated QA app.
+The earlier QA launches failed before rendering. BUG-19040 subsequently traced
+the native crash to a missing sandbox Launch Services permission; corrected
+packages now open and render this page, with actual screenshots retained
+privately. See [the native QA verification](MACOS_QA_VALIDATION.md). This does
+not provide a screenshot or qualification of the complete restoration flow.
 
 1. Choose the directory containing `image.metadata` and `payload.raw`.
 2. On Linux x64, select **Verify image**. The desktop opens both files read-only
