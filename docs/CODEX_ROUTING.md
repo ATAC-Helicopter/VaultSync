@@ -6,7 +6,7 @@ This is a repository-scoped configuration for Codex. It introduces **subtask-lev
 
 - Main coordinator: `gpt-6.1-terra` / `high`.
 - Default untyped subagent: `gpt-6.1-terra` / `medium`.
-- Custom roles: `vaultscan` = Terra Low; `vaultui` = Terra Medium; `vaultworker` = Terra High; `vaultverify` = Terra Medium; `vaultcritical` = Sol Medium.
+- Custom roles: `vaultscan` = Luna Low; `vaultui` = Terra Medium; `vaultworker` = Terra High; `vaultverify` = Terra Medium; `vaultcritical` = Sol Medium.
 - Up to three open subagent threads in each session. More subagents often consume **more** quota; only delegate when the task benefits.
 - Highest permitted choice by project policy: **Sol Medium**. This is a **soft policy**, not a technical restriction on manual model selection, CLI flags, or a client that ignores project instructions. If hard enforcement is needed, use an external gateway/provider allowlist.
 
