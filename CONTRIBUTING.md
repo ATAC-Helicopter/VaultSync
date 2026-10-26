@@ -78,6 +78,16 @@ configurations have no additional before-launch build, preventing duplicate work
 These checks do not qualify UI behavior, disk recovery, upgrade or release approval.
 See AGENTS.md for scoped semantic search, refactoring, debugging and diagnostics.
 
+### Local validation lifecycle
+
+Use [validation workspaces](docs/VALIDATION_WORKSPACES.md) for local packages,
+VMs and recovery probes: inventory ownership and peak disk use, retain bounded
+source-bound evidence, stop owned processes and remove regenerable artifacts at
+the end of each completed increment. Reuse the existing workflow and release
+gates. For macOS native UI checks, follow [isolated QA](docs/MACOS_QA_VALIDATION.md).
+Deleted environments require reconstruction before fresh native evidence; a
+historical receipt does not establish current artifact availability.
+
 ## 4) Implementation Rules
 - Keep changes focused.
 - Avoid unrelated refactors in the same PR.

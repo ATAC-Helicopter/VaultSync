@@ -91,6 +91,59 @@ the release contract together so the next session starts in the correct place.
 - Ask the maintainer about unresolved repository conventions or architectural
   choices after checking the canonical contracts; continue independent work.
 
+## Local validation workspaces and cleanup
+
+Follow [the workspace lifecycle](docs/VALIDATION_WORKSPACES.md) for every local
+build, VM, package, screenshot and recovery experiment. This supplements the
+existing review, signing, localization and release gates; it never replaces them.
+
+- Use one private validation root outside the repository and sync services, with
+  one bounded run directory. Record owned paths, processes, purpose, source SHA,
+  expected peak size and retention before creating substantial artifacts. Keep
+  screenshots/editorial material in the private editorial workspace.
+- Inspect current free space and existing usable inputs before provisioning.
+  Budget downloads, expanded images, copy-on-write growth and publish outputs;
+  sparse virtual capacity is not the host-space budget. Do not accumulate parallel
+  copies or redownload ISOs the maintainer removed without a concrete next test.
+- Stop only the run's own VM, TPM, helper and QA processes when finished; verify
+  termination before deleting their files. Never terminate the installed app or
+  another run by a broad process-name match. Disposable guest disks are regular
+  owned files, never host raw devices or existing backup destinations.
+- End each completed increment by removing its regenerable ISOs, VM overlays,
+  seeds, duplicate publishes/apps, obsolete synthetic images and scratch files.
+  Preserve required source-bound receipts, signing proofs and unresolved failure
+  evidence first. Retain only explicitly listed, bounded evidence or an active
+  next-test dependency; give each exception a purpose and review/expiry date.
+- Delete only proven run-owned paths after checking aliases and boundaries.
+  Never sweep personal folders, projects, backups, mounted shares, global caches,
+  QA containers with unknown contents or untracked repository work. Do not use
+  blanket `git clean`, recursive temp globs or backup copies as a cleanup policy.
+- Recheck free space, remaining processes and the ownership inventory at the end;
+  report actual measured recovery and anything deliberately retained. If the
+  maintainer deletes an environment, update its availability record and rebuild
+  only what the next test needs. Historical receipts do not prove that deleted
+  binaries, logs or VM images remain locally available.
+
+## Native UI and hosted verification
+
+- For isolated macOS UI checks use `scripts/build_macos_qa_app.py` and
+  [the QA contract](docs/MACOS_QA_VALIDATION.md), a serviced self-contained
+  development publish and a private QA container. Preserve sandbox/network
+  restrictions, the narrow Launch Services entitlement and installed-app data.
+  Keep synthetic diagnostic reports local. QA ad-hoc signing is not publisher,
+  updater, Store, beta-channel or recovery qualification.
+- Diagnose startup failures using the native crash stack and relevant sandbox
+  denial before blaming session access. A valid signature/build does not prove
+  launch: verify an actual visible window, required interactions, clean exit and
+  relaunch. Capture real UI only; label unsupported platforms and untested flows.
+- Bind hosted results to the exact PR head SHA. A successful Sonar analysis job
+  is not its quality gate: inspect the separate SonarCloud result, conditions and
+  matching analyzed commit. Preserve failed runs as historical; rerun appropriate
+  checks after repairs without suppressing findings to make a release pass.
+- Keep issue/PR bodies and native Project fields current without adding comments
+  when the maintainer requests silence. Missing IDE access, deleted environments
+  and unavailable native tests must be recorded, never counted as passing tests.
+
 ## Work tracking
 
 For non-trivial code, behavior, packaging, security, release, or user-facing documentation work, keep the change tied to a GitHub issue.

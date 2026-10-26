@@ -1898,6 +1898,11 @@ repository must not transfer before a compatible release is adopted.
     See the October 19 follow-up evidence and its verified outcome.
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
+  - Workspace lifecycle (2026-10-26): AGENTS/CONTRIBUTING retain existing gates
+    and add owned-run inventories, peak-space budgets, cleanup on completion,
+    native UI/crash checks and exact-head Sonar verification. The maintainer
+    removed the local VM/ISO lab; historical receipts remain, but those inputs
+    are unavailable for fresh native tests. See [workspace contract](docs/VALIDATION_WORKSPACES.md).
   - Tracking reconciliation (2026-10-15): the initial family audit covered 102
     canonical IDs; BUG-19033 raises the current checked total to 103. All 41 active-release owners already existed; 34 required
     issue/Project metadata repairs, including 57 native fields. `./dev audit`

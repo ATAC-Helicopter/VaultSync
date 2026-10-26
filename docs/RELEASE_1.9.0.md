@@ -7,6 +7,14 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1980/#673 records the [local validation lifecycle](VALIDATION_WORKSPACES.md):
+owned-run inventories, bounded storage and cleanup of completed experiments,
+without replacing existing repository or release workflows. On October 26 the
+maintainer removed the private VM/ISO lab. Source-bound historical receipts remain
+tracked; underlying local guests, binaries and raw logs are no longer available.
+Fresh native qualification requires reconstructing only the required environment;
+no historical result is relabeled as a new run or release qualification.
+
 BUG-19040/#819 corrects the private macOS QA package's missing Launch Services
 permission. Native startup, onboarding and Recovery rendering now pass in
 separate synthetic profiles, with actual screenshots retained privately. The
