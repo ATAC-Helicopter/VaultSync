@@ -20,6 +20,10 @@ descriptor handoff. An independent unprivileged producer/root consumer passes
 153 checks in the latest disposable offline VM run. This is transport evidence, not a writable
 host, actual human/device authorization, media or a qualified restore profile.
 See the [operation transport contract](RECOVERY_OPERATION_PROTOCOL_1.9.md).
+The S3869 follow-up uses private native descriptor copies instead of borrowing
+SafeHandle numbers; a fresh 153-check native run retains source/PDB binding and
+separately records original-handle closure and copy cleanup. Hosted verification
+remains a distinct gate.
 
 VS-1907/#495 now connects Recovery image selection and cancellable read-only
 inspection to the isolated Linux x64 reader, with all 19 locales and explicit

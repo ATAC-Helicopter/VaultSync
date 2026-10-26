@@ -1637,6 +1637,9 @@ repository must not transfer before a compatible release is adopted.
     disposal during send backpressure and wrong-phase rights cleanup. Fresh
     local Release passes 2,230 Core cases; the Linux-only fixture's exclusive
     source-open error is corrected for the next hosted verification.
+    The subsequent S3869 refinement uses native close-on-exec descriptor copies
+    instead of borrowed SafeHandle numbers or manual dangerous references. Original
+    streams can close while the sender waits; both owned copies are reclaimed.
   - Recovery UI increment (2026-10-26): select an image folder, run isolated
     Linux x64 content/layout inspection and cancel verification from Recovery.
     All 19 locales translate status and limitations without resetting selection.

@@ -30,35 +30,21 @@ internal static class LinuxRecoveryImageTransfer
         deadline.CancelAfter(TimeSpan.FromSeconds(10));
         CheckPeer(socket, peer, deadline.Token);
         if (metadata.CanWrite || payload.CanWrite) throw Refused();
-        // Keep the exact SafeHandle objects across awaits. Re-reading a disposed
-        // FileStream.SafeFileHandle during cleanup can itself throw and strand
-        // the dangerous references that protect an in-flight send.
-        var metadataHandle = metadata.SafeFileHandle;
-        var payloadHandle = payload.SafeFileHandle;
-        var first = CheckFile(metadataHandle, DiskImageRawProfileVerificationService.MaximumMetadataBytes);
-        var second = CheckFile(payloadHandle, DiskImageRawProfileVerificationService.MaximumCapacity);
-        if (SameFile(first, second)) throw Refused();
-        bool firstHeld = false, secondHeld = false;
-        try
+        // fcntl receives SafeHandle arguments with runtime-managed call lifetime.
+        // The resulting private descriptor copies survive original stream disposal
+        // without extracting raw numbers from, or manually pinning, a SafeHandle.
+        using var metadataCopy = CopySource(metadata.SafeFileHandle, DiskImageRawProfileVerificationService.MaximumMetadataBytes);
+        using var payloadCopy = CopySource(payload.SafeFileHandle, DiskImageRawProfileVerificationService.MaximumCapacity);
+        if (SameFile(metadataCopy.Status, payloadCopy.Status)) throw Refused();
+        using var message = new NativeMessage();
+        message.SetDescriptors(metadataCopy.Number, payloadCopy.Number);
+        while (true)
         {
-            metadataHandle.DangerousAddRef(ref firstHeld);
-            payloadHandle.DangerousAddRef(ref secondHeld);
-            using var message = new NativeMessage();
-            message.SetDescriptors(metadataHandle.DangerousGetHandle().ToInt32(),
-                payloadHandle.DangerousGetHandle().ToInt32());
-            while (true)
-            {
-                CheckPeer(socket, peer, deadline.Token);
-                nint sent = Send(socket.SafeHandle, ref message.Header, DontWait | NoSignal);
-                if (sent == 1) { CheckPeer(socket, peer, deadline.Token); return; }
-                if (sent != -1 || !Retryable()) throw Refused();
-                await Task.Delay(10, deadline.Token).ConfigureAwait(false);
-            }
-        }
-        finally
-        {
-            try { if (secondHeld) payloadHandle.DangerousRelease(); }
-            finally { if (firstHeld) metadataHandle.DangerousRelease(); }
+            CheckPeer(socket, peer, deadline.Token);
+            nint sent = Send(socket.SafeHandle, ref message.Header, DontWait | NoSignal);
+            if (sent == 1) { CheckPeer(socket, peer, deadline.Token); return; }
+            if (sent != -1 || !Retryable()) throw Refused();
+            await Task.Delay(10, deadline.Token).ConfigureAwait(false);
         }
     }
 
@@ -175,6 +161,27 @@ internal static class LinuxRecoveryImageTransfer
     private static bool Retryable() => Marshal.GetLastPInvokeError() is 4 or 11;
     private static IOException Refused() => new("recovery-transfer.refused");
 
+    private static DescriptorCopy CopySource(SafeFileHandle source, ulong maximum)
+    {
+        int descriptor = Duplicate(source, 1030, 0); // F_DUPFD_CLOEXEC: atomic private copy, not a borrowed handle number.
+        return descriptor >= 0 ? new DescriptorCopy(descriptor, maximum) : throw Refused();
+    }
+
+    private sealed class DescriptorCopy : IDisposable
+    {
+        private readonly SafeFileHandle handle;
+        internal int Number { get; }
+        internal FileStatus Status { get; }
+        internal DescriptorCopy(int number, ulong maximum)
+        {
+            Number = number;
+            handle = new((IntPtr)number, ownsHandle: true);
+            try { Status = CheckFile(handle, maximum); }
+            catch { handle.Dispose(); throw; }
+        }
+        public void Dispose() => handle.Dispose();
+    }
+
     private sealed class NativeMessage : IDisposable
     {
         internal MessageHeader Header;
@@ -233,6 +240,8 @@ internal static class LinuxRecoveryImageTransfer
     private static extern nint Receive(SafeSocketHandle socket, ref MessageHeader message, int flags);
     [DllImport("libc", EntryPoint = "fcntl", SetLastError = true)]
     private static extern int FileFlags(SafeFileHandle file, int operation);
+    [DllImport("libc", EntryPoint = "fcntl", SetLastError = true)]
+    private static extern int Duplicate(SafeFileHandle file, int operation, int minimum);
     [DllImport("libc", EntryPoint = "statx", SetLastError = true)]
     private static extern int Statx(SafeFileHandle file, string path, int flags, uint mask, out FileStatus status);
 }

@@ -85,8 +85,10 @@ filesystem observations compatible with the existing staging ancestry checks.
 These limits are refusal bounds, not qualified image sizes.
 
 Descriptor passing shares the underlying open-file description with the sender.
-The sender pins the exact SafeHandle objects through backpressure and releases
-both in nested cleanup even if the original FileStreams close meanwhile.
+The sender obtains private read-only descriptor copies using `F_DUPFD_CLOEXEC`.
+The syscall receives SafeHandle arguments with runtime-managed lifetime; no
+`DangerousGetHandle` or manual dangerous reference is used. Two owned copy leases
+survive backpressure/original-stream disposal and close on every send outcome.
 The caller must hand off exclusive use; it is not a snapshot or immutable input.
 The existing isolated reader, root-owned sealed staging copy and exact byte
 rechecks remain necessary before device preparation/execution. Receiving files
@@ -116,6 +118,17 @@ flags, and refusal/cleanup when rights are attached to the wrong protocol phase.
 The earlier 137-case evidence remains historical. The hosted 783be53 test failure
 was an exclusive-open error in the test fixture, corrected before rechecking the
 new preparation head. See the [follow-up receipt](release-evidence/1.9-recovery-transport-lifetime-2026-10-26.json).
+
+Hosted S3869 review subsequently rejected both raw SafeHandle number extractions.
+The next implementation replaces manual dangerous references with two owned
+`F_DUPFD_CLOEXEC` copies. A complete new independent native run passes all 153
+checks, explicitly proving that original handles close while the copies retain
+valid data and are reclaimed after sending. The source checksums again match the
+measured Portable PDB; the previous runs remain historical. See the
+[copy-based receipt](release-evidence/1.9-recovery-transport-copies-2026-10-26.json).
+Native access mode is checked on the actual copies, including when a writable
+descriptor is wrapped in a managed read-only stream. This is not suppression of
+the analyzer finding or a new operation-authority claim.
 
 Remaining: trusted supervisor/installation and clean unprivileged UI launch,
 typed response codecs and dispatcher, actual consent/destination flow, owned

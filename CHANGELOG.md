@@ -11,7 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
-- [VS-1907] Prototype authenticated recovery messages with bounded transfers of read-only image handles.
+- [VS-1907] Prototype authenticated recovery messages with independently owned read-only image handles.
 - [VS-1907] Select recovery images and inspect their contents through the isolated Linux reader.
 - [VS-1907] Coordinate reviewed disk restoration and interrupted cleanup under one resource owner.
 - [VS-1904] Bind packaged Linux readers to verified files and matching application builds.

@@ -121,7 +121,7 @@ public sealed class LinuxRecoveryImageTransferTests
         var sending = LinuxRecoveryImageTransfer.SendAsync(pair.Client, pair.ClientPeer, metadata, payload);
         Assert.False(sending.IsCompleted);
         metadata.Dispose(); payload.Dispose();
-        Assert.False(metadataHandle.IsClosed); Assert.False(payloadHandle.IsClosed);
+        Assert.True(metadataHandle.IsClosed); Assert.True(payloadHandle.IsClosed);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (pending > 0)
         {
@@ -144,7 +144,12 @@ public sealed class LinuxRecoveryImageTransferTests
         string path = Path.Combine(pair.Directory, "source"); await File.WriteAllBytesAsync(path, [1, 2]);
         using (var writable = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
         using (var sharedRead = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
             await Assert.ThrowsAsync<IOException>(() => LinuxRecoveryImageTransfer.SendAsync(pair.Client, pair.ClientPeer, writable, sharedRead));
+            using var readLabelled = new FileStream(writable.SafeFileHandle, FileAccess.Read, 1, isAsync: false);
+            Assert.False(readLabelled.CanWrite);
+            await Assert.ThrowsAsync<IOException>(() => LinuxRecoveryImageTransfer.SendAsync(pair.Client, pair.ClientPeer, readLabelled, sharedRead));
+        }
         using var read = File.OpenRead(path); using var alias = File.OpenRead(path);
         await Assert.ThrowsAsync<IOException>(() => LinuxRecoveryImageTransfer.SendAsync(pair.Client, pair.ClientPeer, read, alias));
         Assert.Equal(0, pair.Server.Available);
