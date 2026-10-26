@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "Tinjau laporan yang dikumpulkan",
   "Diagnostics.Delete": "Hapus laporan lokal dan tertunda",
   "Diagnostics.SaveFailed": "Pilihan tidak dapat disimpan. Pengiriman dinonaktifkan. Periksa izin penyimpanan lokal.",
-  "Diagnostics.PrivacyLink": "Baca pemberitahuan privasi"
+  "Diagnostics.PrivacyLink": "Baca pemberitahuan privasi",
+  "DiskRecovery.Title": "Pemulihan disk",
+  "DiskRecovery.Intro": "Pilih citra disk VaultSync dan verifikasi isinya sebelum pemulihan.",
+  "DiskRecovery.Steps": "1. Pilih citra → 2. Verifikasi isi → 3. Tinjau tujuan → 4. Pulihkan dan verifikasi",
+  "DiskRecovery.Choose": "Pilih folder citra",
+  "DiskRecovery.Verify": "Verifikasi citra",
+  "DiskRecovery.Cancel": "Batalkan verifikasi",
+  "DiskRecovery.Empty": "Belum ada citra yang dipilih.",
+  "DiskRecovery.Unsupported": "Verifikasi citra disk memerlukan lingkungan pemulihan Linux x64.",
+  "DiskRecovery.Ready": "Citra dipilih. Mulai verifikasi isinya.",
+  "DiskRecovery.Checking": "Memverifikasi isi dan tata letak partisi…",
+  "DiskRecovery.Verified": "{0:N0} byte terverifikasi · sektor logis {1:N0} byte.",
+  "DiskRecovery.Rejected": "Citra tidak lengkap, rusak, atau di luar profil yang didukung.",
+  "DiskRecovery.Unavailable": "Pembaca terisolasi tidak tersedia atau pemasangannya tidak dapat dipercaya.",
+  "DiskRecovery.Failed": "Verifikasi tidak dapat diselesaikan. Periksa berkas citra lalu coba lagi.",
+  "DiskRecovery.Cancelled": "Verifikasi dibatalkan.",
+  "DiskRecovery.Boundary": "Layar ini saat ini hanya memverifikasi citra. Otorisasi tujuan dan penulisan disk belum terhubung. Verifikasi tidak menjamin dapat melakukan boot atau mengizinkan penghapusan disk."
 }

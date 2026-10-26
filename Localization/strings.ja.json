@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "収集したレポートを確認する",
   "Diagnostics.Delete": "ローカルと送信待ちのレポートを削除する",
   "Diagnostics.SaveFailed": "選択を保存できませんでした。送信は無効です。ローカルストレージの権限を確認してください。",
-  "Diagnostics.PrivacyLink": "プライバシーに関する説明を読む"
+  "Diagnostics.PrivacyLink": "プライバシーに関する説明を読む",
+  "DiskRecovery.Title": "ディスクの復旧",
+  "DiskRecovery.Intro": "VaultSync のディスクイメージを選択し、復旧前に内容を検証します。",
+  "DiskRecovery.Steps": "1. イメージを選択 → 2. 内容を検証 → 3. 復元先を確認 → 4. 復元して検証",
+  "DiskRecovery.Choose": "イメージのフォルダーを選択",
+  "DiskRecovery.Verify": "イメージを検証",
+  "DiskRecovery.Cancel": "検証をキャンセル",
+  "DiskRecovery.Empty": "イメージが選択されていません。",
+  "DiskRecovery.Unsupported": "ディスクイメージの検証には Linux x64 の復旧環境が必要です。",
+  "DiskRecovery.Ready": "イメージを選択しました。内容の検証を開始してください。",
+  "DiskRecovery.Checking": "内容とパーティション構成を検証中…",
+  "DiskRecovery.Verified": "{0:N0} バイトを検証済み · 論理セクターは {1:N0} バイト。",
+  "DiskRecovery.Rejected": "イメージが不完全、破損、または対応プロファイルの対象外です。",
+  "DiskRecovery.Unavailable": "隔離されたリーダーが使用できないか、そのインストールを信頼できません。",
+  "DiskRecovery.Failed": "検証を完了できませんでした。イメージのファイルを確認して再試行してください。",
+  "DiskRecovery.Cancelled": "検証をキャンセルしました。",
+  "DiskRecovery.Boundary": "この画面では現在イメージの検証のみが可能です。復元先の承認とディスクへの書き込みはまだ接続されていません。検証は起動可能性を保証せず、ディスクの消去を許可するものでもありません。"
 }

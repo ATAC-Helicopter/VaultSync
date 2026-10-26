@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "Review collected reports",
   "Diagnostics.Delete": "Delete local and pending reports",
   "Diagnostics.SaveFailed": "Could not save your choice. Sending is disabled. Check local storage permissions.",
-  "Diagnostics.PrivacyLink": "Read privacy notice"
+  "Diagnostics.PrivacyLink": "Read privacy notice",
+  "DiskRecovery.Title": "Disk recovery",
+  "DiskRecovery.Intro": "Select a VaultSync disk image and verify its contents before recovery.",
+  "DiskRecovery.Steps": "1. Choose image → 2. Verify contents → 3. Review destination → 4. Restore and verify",
+  "DiskRecovery.Choose": "Choose image folder",
+  "DiskRecovery.Verify": "Verify image",
+  "DiskRecovery.Cancel": "Cancel verification",
+  "DiskRecovery.Empty": "No image selected.",
+  "DiskRecovery.Unsupported": "Disk image verification requires the Linux x64 recovery environment.",
+  "DiskRecovery.Ready": "Image selected. Start verification to check its contents.",
+  "DiskRecovery.Checking": "Verifying image contents and partition layout…",
+  "DiskRecovery.Verified": "Verified {0:N0} bytes · {1:N0}-byte logical sectors.",
+  "DiskRecovery.Rejected": "The image is incomplete, corrupt or outside the supported profile.",
+  "DiskRecovery.Unavailable": "The isolated image reader is unavailable or its installation could not be trusted.",
+  "DiskRecovery.Failed": "Verification could not finish. Check the image files and try again.",
+  "DiskRecovery.Cancelled": "Verification cancelled.",
+  "DiskRecovery.Boundary": "This screen currently verifies images only. Destination authorization and disk writing are not connected yet. Verification does not qualify bootability or authorize erasing a disk."
 }

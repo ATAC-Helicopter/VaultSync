@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "Gesammelte Berichte prüfen",
   "Diagnostics.Delete": "Lokale und ausstehende Berichte löschen",
   "Diagnostics.SaveFailed": "Auswahl konnte nicht gespeichert werden. Versand ist deaktiviert. Prüfen Sie die lokalen Speicherberechtigungen.",
-  "Diagnostics.PrivacyLink": "Datenschutzhinweise lesen"
+  "Diagnostics.PrivacyLink": "Datenschutzhinweise lesen",
+  "DiskRecovery.Title": "Datenträgerwiederherstellung",
+  "DiskRecovery.Intro": "Wählen Sie ein VaultSync-Datenträgerabbild und prüfen Sie seinen Inhalt vor der Wiederherstellung.",
+  "DiskRecovery.Steps": "1. Abbild wählen → 2. Inhalt prüfen → 3. Ziel prüfen → 4. Wiederherstellen und prüfen",
+  "DiskRecovery.Choose": "Abbildordner wählen",
+  "DiskRecovery.Verify": "Abbild prüfen",
+  "DiskRecovery.Cancel": "Prüfung abbrechen",
+  "DiskRecovery.Empty": "Kein Abbild ausgewählt.",
+  "DiskRecovery.Unsupported": "Die Abbildprüfung erfordert die Linux-x64-Wiederherstellungsumgebung.",
+  "DiskRecovery.Ready": "Abbild ausgewählt. Starten Sie die Inhaltsprüfung.",
+  "DiskRecovery.Checking": "Inhalt und Partitionslayout werden geprüft…",
+  "DiskRecovery.Verified": "{0:N0} Bytes geprüft · logische Sektoren mit {1:N0} Bytes.",
+  "DiskRecovery.Rejected": "Das Abbild ist unvollständig, beschädigt oder entspricht keinem unterstützten Profil.",
+  "DiskRecovery.Unavailable": "Der isolierte Leser ist nicht verfügbar oder seine Installation ist nicht vertrauenswürdig.",
+  "DiskRecovery.Failed": "Die Prüfung konnte nicht abgeschlossen werden. Prüfen Sie die Abbilddateien und versuchen Sie es erneut.",
+  "DiskRecovery.Cancelled": "Prüfung abgebrochen.",
+  "DiskRecovery.Boundary": "Diese Ansicht prüft nur Abbilder. Zielfreigabe und Datenträgerschreiben sind noch nicht angebunden. Die Prüfung bestätigt weder die Startfähigkeit noch erlaubt sie das Löschen eines Datenträgers."
 }

@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "Rever relatórios recolhidos",
   "Diagnostics.Delete": "Eliminar relatórios locais e pendentes",
   "Diagnostics.SaveFailed": "Não foi possível guardar a escolha. O envio está desativado. Verifique as permissões de armazenamento local.",
-  "Diagnostics.PrivacyLink": "Ler o aviso de privacidade"
+  "Diagnostics.PrivacyLink": "Ler o aviso de privacidade",
+  "DiskRecovery.Title": "Recuperação de disco",
+  "DiskRecovery.Intro": "Selecione uma imagem de disco do VaultSync e verifique o conteúdo antes da recuperação.",
+  "DiskRecovery.Steps": "1. Escolher imagem → 2. Verificar conteúdo → 3. Rever destino → 4. Restaurar e verificar",
+  "DiskRecovery.Choose": "Escolher pasta da imagem",
+  "DiskRecovery.Verify": "Verificar imagem",
+  "DiskRecovery.Cancel": "Cancelar verificação",
+  "DiskRecovery.Empty": "Nenhuma imagem selecionada.",
+  "DiskRecovery.Unsupported": "A verificação de imagens requer o ambiente de recuperação Linux x64.",
+  "DiskRecovery.Ready": "Imagem selecionada. Inicie a verificação do conteúdo.",
+  "DiskRecovery.Checking": "A verificar o conteúdo e a disposição das partições…",
+  "DiskRecovery.Verified": "{0:N0} bytes verificados · setores lógicos de {1:N0} bytes.",
+  "DiskRecovery.Rejected": "A imagem está incompleta, danificada ou fora do perfil suportado.",
+  "DiskRecovery.Unavailable": "O leitor isolado está indisponível ou a instalação não é fiável.",
+  "DiskRecovery.Failed": "Não foi possível concluir a verificação. Verifique os ficheiros da imagem e tente novamente.",
+  "DiskRecovery.Cancelled": "Verificação cancelada.",
+  "DiskRecovery.Boundary": "Este ecrã apenas verifica imagens. A autorização do destino e a escrita no disco ainda não estão ligadas. A verificação não certifica o arranque nem autoriza apagar um disco."
 }

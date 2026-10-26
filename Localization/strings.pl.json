@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "Przejrzyj zebrane raporty",
   "Diagnostics.Delete": "Usuń raporty lokalne i oczekujące",
   "Diagnostics.SaveFailed": "Nie udało się zapisać wyboru. Wysyłanie jest wyłączone. Sprawdź uprawnienia do lokalnej pamięci.",
-  "Diagnostics.PrivacyLink": "Przeczytaj informacje o prywatności"
+  "Diagnostics.PrivacyLink": "Przeczytaj informacje o prywatności",
+  "DiskRecovery.Title": "Odzyskiwanie dysku",
+  "DiskRecovery.Intro": "Wybierz obraz dysku VaultSync i sprawdź jego zawartość przed odzyskaniem.",
+  "DiskRecovery.Steps": "1. Wybierz obraz → 2. Sprawdź zawartość → 3. Sprawdź cel → 4. Przywróć i sprawdź",
+  "DiskRecovery.Choose": "Wybierz folder obrazu",
+  "DiskRecovery.Verify": "Sprawdź obraz",
+  "DiskRecovery.Cancel": "Anuluj sprawdzanie",
+  "DiskRecovery.Empty": "Nie wybrano obrazu.",
+  "DiskRecovery.Unsupported": "Sprawdzanie obrazów wymaga środowiska odzyskiwania Linux x64.",
+  "DiskRecovery.Ready": "Wybrano obraz. Rozpocznij sprawdzanie zawartości.",
+  "DiskRecovery.Checking": "Sprawdzanie zawartości i układu partycji…",
+  "DiskRecovery.Verified": "Sprawdzono {0:N0} bajtów · sektory logiczne po {1:N0} bajtów.",
+  "DiskRecovery.Rejected": "Obraz jest niekompletny, uszkodzony lub niezgodny z obsługiwanym profilem.",
+  "DiskRecovery.Unavailable": "Izolowany czytnik jest niedostępny lub jego instalacja nie jest zaufana.",
+  "DiskRecovery.Failed": "Nie udało się ukończyć sprawdzania. Sprawdź pliki obrazu i spróbuj ponownie.",
+  "DiskRecovery.Cancelled": "Anulowano sprawdzanie.",
+  "DiskRecovery.Boundary": "Ten ekran służy wyłącznie do sprawdzania obrazów. Autoryzacja celu i zapis na dysku nie są jeszcze połączone. Sprawdzenie nie potwierdza możliwości rozruchu ani nie zezwala na wymazanie dysku."
 }

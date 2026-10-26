@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "Verzamelde rapporten bekijken",
   "Diagnostics.Delete": "Lokale en wachtende rapporten verwijderen",
   "Diagnostics.SaveFailed": "Uw keuze kon niet worden opgeslagen. Verzending is uitgeschakeld. Controleer de rechten voor lokale opslag.",
-  "Diagnostics.PrivacyLink": "Privacyverklaring lezen"
+  "Diagnostics.PrivacyLink": "Privacyverklaring lezen",
+  "DiskRecovery.Title": "Schijfherstel",
+  "DiskRecovery.Intro": "Selecteer een VaultSync-schijfimage en controleer de inhoud vóór herstel.",
+  "DiskRecovery.Steps": "1. Image kiezen → 2. Inhoud controleren → 3. Doel controleren → 4. Herstellen en controleren",
+  "DiskRecovery.Choose": "Imagemap kiezen",
+  "DiskRecovery.Verify": "Image controleren",
+  "DiskRecovery.Cancel": "Controle annuleren",
+  "DiskRecovery.Empty": "Geen image geselecteerd.",
+  "DiskRecovery.Unsupported": "Schijfimages controleren vereist de Linux x64-herstelomgeving.",
+  "DiskRecovery.Ready": "Image geselecteerd. Start de inhoudscontrole.",
+  "DiskRecovery.Checking": "Inhoud en partitie-indeling worden gecontroleerd…",
+  "DiskRecovery.Verified": "{0:N0} bytes gecontroleerd · logische sectoren van {1:N0} bytes.",
+  "DiskRecovery.Rejected": "De image is onvolledig, beschadigd of valt buiten het ondersteunde profiel.",
+  "DiskRecovery.Unavailable": "De geïsoleerde lezer is niet beschikbaar of de installatie is niet betrouwbaar.",
+  "DiskRecovery.Failed": "De controle kon niet worden voltooid. Controleer de imagebestanden en probeer opnieuw.",
+  "DiskRecovery.Cancelled": "Controle geannuleerd.",
+  "DiskRecovery.Boundary": "Dit scherm controleert alleen images. Doelautorisatie en schrijven naar schijven zijn nog niet aangesloten. De controle bevestigt geen opstartbaarheid en geeft geen toestemming om een schijf te wissen."
 }

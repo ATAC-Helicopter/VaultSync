@@ -96,6 +96,7 @@ public sealed class RecoveryViewModel : ViewModelBase
 
     public void ReapplyLocalization()
     {
+        DiskRecovery.ReapplyLocalization();
         RecoveryProjectFilter selected = SelectedProjectFilter?.Filter ?? RecoveryProjectFilter.All;
         ProjectFilters.Clear();
         ProjectFilters.Add(new(RecoveryProjectFilter.All, L("Recovery.Filter.All", "All projects")));
@@ -115,6 +116,7 @@ public sealed class RecoveryViewModel : ViewModelBase
     }
 
     public ObservableCollection<RecoveryProjectViewModel> Projects { get; } = [];
+    public DiskRecoveryViewModel DiskRecovery { get; } = new();
     public ObservableCollection<RecoveryFilterOption> ProjectFilters { get; }
 
     public ICommand RefreshCommand { get; }

@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "查看已收集的报告",
   "Diagnostics.Delete": "删除本地及待发送报告",
   "Diagnostics.SaveFailed": "无法保存选择。发送已关闭。请检查本地存储权限。",
-  "Diagnostics.PrivacyLink": "阅读隐私说明"
+  "Diagnostics.PrivacyLink": "阅读隐私说明",
+  "DiskRecovery.Title": "磁盘恢复",
+  "DiskRecovery.Intro": "选择 VaultSync 磁盘映像，并在恢复前验证其内容。",
+  "DiskRecovery.Steps": "1. 选择映像 → 2. 验证内容 → 3. 检查目标 → 4. 恢复并验证",
+  "DiskRecovery.Choose": "选择映像文件夹",
+  "DiskRecovery.Verify": "验证映像",
+  "DiskRecovery.Cancel": "取消验证",
+  "DiskRecovery.Empty": "未选择映像。",
+  "DiskRecovery.Unsupported": "验证磁盘映像需要 Linux x64 恢复环境。",
+  "DiskRecovery.Ready": "已选择映像。请开始验证其内容。",
+  "DiskRecovery.Checking": "正在验证内容和分区布局…",
+  "DiskRecovery.Verified": "已验证 {0:N0} 字节 · 逻辑扇区大小为 {1:N0} 字节。",
+  "DiskRecovery.Rejected": "映像不完整、已损坏或不符合支持的配置。",
+  "DiskRecovery.Unavailable": "隔离读取器不可用或其安装不可信。",
+  "DiskRecovery.Failed": "无法完成验证。请检查映像文件后重试。",
+  "DiskRecovery.Cancelled": "已取消验证。",
+  "DiskRecovery.Boundary": "此页面目前仅验证映像。目标授权和磁盘写入尚未接入。验证不代表可启动，也不授权擦除磁盘。"
 }

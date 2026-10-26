@@ -76,3 +76,10 @@ completed a measured 3 GiB UEFI/ext4 capture, independent recovery restart,
 restoration and restored-system boot in disposable VMs. This is backend evidence;
 the product recovery medium, desktop workflow and support qualification remain
 open. See the [current results and limits](../release-evidence/1.9-owned-restore-2026-10-26.md).
+
+The development Recovery page now lets you choose the folder containing
+`image.metadata` and `payload.raw`. On Linux x64, **Verify image** checks content
+and partition layout in the isolated reader; **Cancel verification** stops it.
+macOS and Windows explain the Linux recovery-environment requirement. This panel
+does not restore or erase disks yet. A verified image is not proof that a system
+will boot. See [the current workflow and remaining steps](../DISK_RECOVERY_UI_1.9.md).

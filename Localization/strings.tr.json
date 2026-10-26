@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "Toplanan raporları incele",
   "Diagnostics.Delete": "Yerel ve bekleyen raporları sil",
   "Diagnostics.SaveFailed": "Seçiminiz kaydedilemedi. Gönderim kapalı. Yerel depolama izinlerini kontrol edin.",
-  "Diagnostics.PrivacyLink": "Gizlilik bildirimini oku"
+  "Diagnostics.PrivacyLink": "Gizlilik bildirimini oku",
+  "DiskRecovery.Title": "Disk kurtarma",
+  "DiskRecovery.Intro": "Bir VaultSync disk görüntüsü seçin ve kurtarmadan önce içeriğini doğrulayın.",
+  "DiskRecovery.Steps": "1. Görüntü seç → 2. İçeriği doğrula → 3. Hedefi incele → 4. Geri yükle ve doğrula",
+  "DiskRecovery.Choose": "Görüntü klasörü seç",
+  "DiskRecovery.Verify": "Görüntüyü doğrula",
+  "DiskRecovery.Cancel": "Doğrulamayı iptal et",
+  "DiskRecovery.Empty": "Görüntü seçilmedi.",
+  "DiskRecovery.Unsupported": "Disk görüntüsü doğrulaması Linux x64 kurtarma ortamı gerektirir.",
+  "DiskRecovery.Ready": "Görüntü seçildi. İçerik doğrulamasını başlatın.",
+  "DiskRecovery.Checking": "İçerik ve bölüm düzeni doğrulanıyor…",
+  "DiskRecovery.Verified": "{0:N0} bayt doğrulandı · mantıksal sektör boyutu {1:N0} bayt.",
+  "DiskRecovery.Rejected": "Görüntü eksik, bozuk veya desteklenen profilin dışında.",
+  "DiskRecovery.Unavailable": "Yalıtılmış okuyucu kullanılamıyor veya kurulumuna güvenilemiyor.",
+  "DiskRecovery.Failed": "Doğrulama tamamlanamadı. Görüntü dosyalarını kontrol edip yeniden deneyin.",
+  "DiskRecovery.Cancelled": "Doğrulama iptal edildi.",
+  "DiskRecovery.Boundary": "Bu ekran şu anda yalnızca görüntüleri doğrular. Hedef yetkilendirmesi ve diske yazma henüz bağlanmadı. Doğrulama, önyüklenebilirliği onaylamaz veya diskin silinmesine izin vermez."
 }

@@ -6,6 +6,14 @@ separate from inventory. It requests bytes from two caller-held read-only stream
 it receives no filename, device selector, executable, credential or native handle.
 The inspector opens no disk, writes no image and grants no restore authority.
 
+VS-1907/#495 now exposes the existing fixed reader through
+`DiskImageInspectionService` for the Recovery panel. The public facade accepts
+caller-owned streams, never a helper path, and returns only a typed state and
+verified byte/sector counts. Non-Linux-x64 hosts refuse before reading bytes;
+there is no parent-process parsing fallback or writable capability. See the
+[UI contract](DISK_RECOVERY_UI_1.9.md). Existing installation, sandbox, protocol,
+timeout, terminal acknowledgment and provenance requirements remain unchanged.
+
 The Linux raw staging path now requires this reader before allocation and after
 sealing its private copy. The restore engine consumes the bound summary and exact
 metadata/payload hashes without reparsing hostile structures in its caller. No

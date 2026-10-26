@@ -7,6 +7,12 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1907/#495 now connects Recovery image selection and cancellable read-only
+inspection to the isolated Linux x64 reader, with all 19 locales and explicit
+macOS/Windows limitations. Destination authorization, writing and media are not
+connected to this panel yet. See [the UI contract](DISK_RECOVERY_UI_1.9.md);
+this increment does not satisfy the complete beta or support-profile gates.
+
 VS-1980/#673 keeps development diaries, Reddit drafts and publication packages
 in a private editorial workspace outside GitHub. Existing public commit history
 is preserved; manuscript files are removed from the current preparation tree.

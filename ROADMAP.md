@@ -1612,6 +1612,13 @@ repository must not transfer before a compatible release is adopted.
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Recovery UI increment (2026-10-26): select an image folder, run isolated
+    Linux x64 content/layout inspection and cancel verification from Recovery.
+    All 19 locales translate status and limitations without resetting selection.
+    macOS/Windows show the Linux recovery requirement and never parse hostile
+    images in-process. This is inspection only; writable authorization/media
+    integration and actual screenshot/platform qualification remain open.
+    See [the UI contract](docs/DISK_RECOVERY_UI_1.9.md).
   - Owned operation integration (2026-10-25): one internal worker-side owner now
     consumes a single review, releases its read-only exclusive claim, verifies
     staged bytes, reobserves selection, acquires the durable journal/native target,

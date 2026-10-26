@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "Xem báo cáo đã thu thập",
   "Diagnostics.Delete": "Xóa báo cáo cục bộ và đang chờ",
   "Diagnostics.SaveFailed": "Không thể lưu lựa chọn. Đã tắt gửi. Hãy kiểm tra quyền lưu trữ cục bộ.",
-  "Diagnostics.PrivacyLink": "Đọc thông báo quyền riêng tư"
+  "Diagnostics.PrivacyLink": "Đọc thông báo quyền riêng tư",
+  "DiskRecovery.Title": "Khôi phục ổ đĩa",
+  "DiskRecovery.Intro": "Chọn ảnh ổ đĩa VaultSync và xác minh nội dung trước khi khôi phục.",
+  "DiskRecovery.Steps": "1. Chọn ảnh → 2. Xác minh nội dung → 3. Kiểm tra đích → 4. Khôi phục và xác minh",
+  "DiskRecovery.Choose": "Chọn thư mục ảnh",
+  "DiskRecovery.Verify": "Xác minh ảnh",
+  "DiskRecovery.Cancel": "Hủy xác minh",
+  "DiskRecovery.Empty": "Chưa chọn ảnh.",
+  "DiskRecovery.Unsupported": "Xác minh ảnh ổ đĩa yêu cầu môi trường khôi phục Linux x64.",
+  "DiskRecovery.Ready": "Đã chọn ảnh. Bắt đầu xác minh nội dung.",
+  "DiskRecovery.Checking": "Đang xác minh nội dung và bố cục phân vùng…",
+  "DiskRecovery.Verified": "Đã xác minh {0:N0} byte · kích thước sector logic {1:N0} byte.",
+  "DiskRecovery.Rejected": "Ảnh không đầy đủ, bị hỏng hoặc nằm ngoài cấu hình được hỗ trợ.",
+  "DiskRecovery.Unavailable": "Trình đọc cách ly không khả dụng hoặc không thể tin cậy bản cài đặt.",
+  "DiskRecovery.Failed": "Không thể hoàn tất xác minh. Kiểm tra các tệp ảnh rồi thử lại.",
+  "DiskRecovery.Cancelled": "Đã hủy xác minh.",
+  "DiskRecovery.Boundary": "Màn hình này hiện chỉ xác minh ảnh. Chưa kết nối việc cấp quyền cho đích và ghi ổ đĩa. Xác minh không chứng nhận khả năng khởi động hay cho phép xóa ổ đĩa."
 }

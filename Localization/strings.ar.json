@@ -1941,5 +1941,21 @@
   "Diagnostics.Review": "مراجعة التقارير المجمّعة",
   "Diagnostics.Delete": "حذف التقارير المحلية والمعلّقة",
   "Diagnostics.SaveFailed": "تعذّر حفظ اختيارك. الإرسال معطل. تحقق من أذونات التخزين المحلي.",
-  "Diagnostics.PrivacyLink": "قراءة إشعار الخصوصية"
+  "Diagnostics.PrivacyLink": "قراءة إشعار الخصوصية",
+  "DiskRecovery.Title": "استعادة القرص",
+  "DiskRecovery.Intro": "اختر صورة قرص VaultSync وتحقق من محتواها قبل الاستعادة.",
+  "DiskRecovery.Steps": "1. اختيار الصورة ← 2. التحقق من المحتوى ← 3. مراجعة الوجهة ← 4. الاستعادة والتحقق",
+  "DiskRecovery.Choose": "اختيار مجلد الصورة",
+  "DiskRecovery.Verify": "التحقق من الصورة",
+  "DiskRecovery.Cancel": "إلغاء التحقق",
+  "DiskRecovery.Empty": "لم يتم اختيار صورة.",
+  "DiskRecovery.Unsupported": "يتطلب التحقق من صور الأقراص بيئة الاستعادة Linux x64.",
+  "DiskRecovery.Ready": "تم اختيار الصورة. ابدأ التحقق من محتواها.",
+  "DiskRecovery.Checking": "جارٍ التحقق من المحتوى وتخطيط الأقسام…",
+  "DiskRecovery.Verified": "تم التحقق من {0:N0} بايت · حجم القطاع المنطقي {1:N0} بايت.",
+  "DiskRecovery.Rejected": "الصورة غير مكتملة أو تالفة أو خارج النطاق المدعوم.",
+  "DiskRecovery.Unavailable": "قارئ الصور المعزول غير متاح أو تعذر الوثوق بتثبيته.",
+  "DiskRecovery.Failed": "تعذر إكمال التحقق. افحص ملفات الصورة وحاول مجددًا.",
+  "DiskRecovery.Cancelled": "تم إلغاء التحقق.",
+  "DiskRecovery.Boundary": "تتحقق هذه الشاشة من الصور فقط حاليًا. لم يتم ربط تفويض الوجهة والكتابة على القرص بعد. لا يثبت التحقق إمكانية الإقلاع ولا يسمح بمسح القرص."
 }
