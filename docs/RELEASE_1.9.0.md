@@ -9,7 +9,7 @@ No disk support or predecessor upgrade is qualified yet.
 
 VS-1907/#495 adds bounded operation framing and authenticated read-only image
 descriptor handoff. An independent unprivileged producer/root consumer passes
-137 checks in a disposable offline VM. This is transport evidence, not a writable
+153 checks in the latest disposable offline VM run. This is transport evidence, not a writable
 host, actual human/device authorization, media or a qualified restore profile.
 See the [operation transport contract](RECOVERY_OPERATION_PROTOCOL_1.9.md).
 

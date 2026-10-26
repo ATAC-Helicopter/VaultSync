@@ -85,6 +85,8 @@ filesystem observations compatible with the existing staging ancestry checks.
 These limits are refusal bounds, not qualified image sizes.
 
 Descriptor passing shares the underlying open-file description with the sender.
+The sender pins the exact SafeHandle objects through backpressure and releases
+both in nested cleanup even if the original FileStreams close meanwhile.
 The caller must hand off exclusive use; it is not a snapshot or immutable input.
 The existing isolated reader, root-owned sealed staging copy and exact byte
 rechecks remain necessary before device preparation/execution. Receiving files
@@ -105,6 +107,15 @@ surplus/truncated rights cleanup, peer death/wrong UID, fragmented frames, repla
 wrong operation/direction, oversized length and cancellation. This source-bound
 run is separate from previous raw-device restoration/OS-boot evidence. See
 [the receipt](release-evidence/1.9-recovery-transport-2026-10-26.json).
+
+The subsequent lifetime refinement passes fresh Release checks with 2,230 Core
+tests and 47 focused cases. A complete new native run passes 153 checks, including
+a .NET sender blocked on a full socket whose original streams are then disposed,
+independent Python verification of the received descriptors/content/close-on-exec
+flags, and refusal/cleanup when rights are attached to the wrong protocol phase.
+The earlier 137-case evidence remains historical. The hosted 783be53 test failure
+was an exclusive-open error in the test fixture, corrected before rechecking the
+new preparation head. See the [follow-up receipt](release-evidence/1.9-recovery-transport-lifetime-2026-10-26.json).
 
 Remaining: trusted supervisor/installation and clean unprivileged UI launch,
 typed response codecs and dispatcher, actual consent/destination flow, owned

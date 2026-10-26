@@ -1621,6 +1621,10 @@ repository must not transfer before a compatible release is adopted.
     The read-only helper gains no writable endpoint; trusted launch/dispatcher,
     UI/media and release/support qualification remain open. See the
     [protocol and measured scope](docs/RECOVERY_OPERATION_PROTOCOL_1.9.md).
+    The subsequent full native run passes 153 checks, including source-stream
+    disposal during send backpressure and wrong-phase rights cleanup. Fresh
+    local Release passes 2,230 Core cases; the Linux-only fixture's exclusive
+    source-open error is corrected for the next hosted verification.
   - Recovery UI increment (2026-10-26): select an image folder, run isolated
     Linux x64 content/layout inspection and cancel verification from Recovery.
     All 19 locales translate status and limitations without resetting selection.

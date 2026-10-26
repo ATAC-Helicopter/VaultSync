@@ -103,15 +103,49 @@ public sealed class LinuxRecoveryImageTransferTests
     }
 
     [Fact]
+    public async Task NativeBackpressureKeepsHandlesAliveAfterSenderStreamsClose()
+    {
+        if (!NativeSupported) return;
+        using var pair = await Pair.CreateAsync();
+        if (pair.ServerPeer is null || pair.ClientPeer is null) return;
+        string first = Path.Combine(pair.Directory, "metadata"), second = Path.Combine(pair.Directory, "payload");
+        await File.WriteAllBytesAsync(first, [1, 2]); await File.WriteAllBytesAsync(second, [3, 4]);
+        using var metadata = File.OpenRead(first); using var payload = File.OpenRead(second);
+        var metadataHandle = metadata.SafeFileHandle; var payloadHandle = payload.SafeFileHandle;
+        pair.Client.Blocking = false;
+        byte[] filler = new byte[16384]; int pending = 0;
+        try { while (pending < 16 * 1024 * 1024) pending += pair.Client.Send(filler); }
+        catch (SocketException error) when (error.SocketErrorCode == SocketError.WouldBlock) { }
+        finally { pair.Client.Blocking = true; }
+        Assert.InRange(pending, 1, 16 * 1024 * 1024 - 1);
+        var sending = LinuxRecoveryImageTransfer.SendAsync(pair.Client, pair.ClientPeer, metadata, payload);
+        Assert.False(sending.IsCompleted);
+        metadata.Dispose(); payload.Dispose();
+        Assert.False(metadataHandle.IsClosed); Assert.False(payloadHandle.IsClosed);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (pending > 0)
+        {
+            int read = await pair.Server.ReceiveAsync(filler.AsMemory(0, Math.Min(filler.Length, pending)), SocketFlags.None, timeout.Token);
+            Assert.True(read > 0); pending -= read;
+        }
+        var receiving = LinuxRecoveryImageTransfer.ReceiveAsync(pair.Server, pair.ServerPeer, timeout.Token);
+        await sending; using var sources = await receiving;
+        Assert.True(metadataHandle.IsClosed); Assert.True(payloadHandle.IsClosed);
+        byte[] bytes = new byte[2]; await sources.Payload.ReadExactlyAsync(bytes, timeout.Token);
+        Assert.Equal(new byte[] {3, 4}, bytes);
+    }
+
+    [Fact]
     public async Task NativeWritableSourcesAndAliasesRefuseBeforeSending()
     {
         if (!NativeSupported) return;
         using var pair = await Pair.CreateAsync();
         if (pair.ClientPeer is null) return;
         string path = Path.Combine(pair.Directory, "source"); await File.WriteAllBytesAsync(path, [1, 2]);
-        using var writable = File.Open(path, FileMode.Open, FileAccess.ReadWrite);
+        using (var writable = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+        using (var sharedRead = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            await Assert.ThrowsAsync<IOException>(() => LinuxRecoveryImageTransfer.SendAsync(pair.Client, pair.ClientPeer, writable, sharedRead));
         using var read = File.OpenRead(path); using var alias = File.OpenRead(path);
-        await Assert.ThrowsAsync<IOException>(() => LinuxRecoveryImageTransfer.SendAsync(pair.Client, pair.ClientPeer, writable, read));
         await Assert.ThrowsAsync<IOException>(() => LinuxRecoveryImageTransfer.SendAsync(pair.Client, pair.ClientPeer, read, alias));
         Assert.Equal(0, pair.Server.Available);
     }

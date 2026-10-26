@@ -30,17 +30,22 @@ internal static class LinuxRecoveryImageTransfer
         deadline.CancelAfter(TimeSpan.FromSeconds(10));
         CheckPeer(socket, peer, deadline.Token);
         if (metadata.CanWrite || payload.CanWrite) throw Refused();
-        var first = CheckFile(metadata.SafeFileHandle, DiskImageRawProfileVerificationService.MaximumMetadataBytes);
-        var second = CheckFile(payload.SafeFileHandle, DiskImageRawProfileVerificationService.MaximumCapacity);
+        // Keep the exact SafeHandle objects across awaits. Re-reading a disposed
+        // FileStream.SafeFileHandle during cleanup can itself throw and strand
+        // the dangerous references that protect an in-flight send.
+        var metadataHandle = metadata.SafeFileHandle;
+        var payloadHandle = payload.SafeFileHandle;
+        var first = CheckFile(metadataHandle, DiskImageRawProfileVerificationService.MaximumMetadataBytes);
+        var second = CheckFile(payloadHandle, DiskImageRawProfileVerificationService.MaximumCapacity);
         if (SameFile(first, second)) throw Refused();
         bool firstHeld = false, secondHeld = false;
         try
         {
-            metadata.SafeFileHandle.DangerousAddRef(ref firstHeld);
-            payload.SafeFileHandle.DangerousAddRef(ref secondHeld);
+            metadataHandle.DangerousAddRef(ref firstHeld);
+            payloadHandle.DangerousAddRef(ref secondHeld);
             using var message = new NativeMessage();
-            message.SetDescriptors(metadata.SafeFileHandle.DangerousGetHandle().ToInt32(),
-                payload.SafeFileHandle.DangerousGetHandle().ToInt32());
+            message.SetDescriptors(metadataHandle.DangerousGetHandle().ToInt32(),
+                payloadHandle.DangerousGetHandle().ToInt32());
             while (true)
             {
                 CheckPeer(socket, peer, deadline.Token);
@@ -52,8 +57,8 @@ internal static class LinuxRecoveryImageTransfer
         }
         finally
         {
-            if (secondHeld) payload.SafeFileHandle.DangerousRelease();
-            if (firstHeld) metadata.SafeFileHandle.DangerousRelease();
+            try { if (secondHeld) payloadHandle.DangerousRelease(); }
+            finally { if (firstHeld) metadataHandle.DangerousRelease(); }
         }
     }
 
