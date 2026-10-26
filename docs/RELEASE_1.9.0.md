@@ -7,6 +7,12 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+The #820 routing update at 3bea6e5 lowers new-session coordinator effort to
+Terra Medium and child concurrency to two, preserving the same critical-task
+ceiling and all repository gates. Its pinned static workflow validates routing
+configuration. Private session token counters do not establish Plus savings
+without matched accepted work and actual quota-debit information.
+
 VS-1980/#673 integrates #820's [task routing](CODEX_ROUTING.md) into the existing
 preparation with merge history, preserving all prior AGENTS.md rules. Every role
 inherits release/tracking, localization, safety and cleanup gates. Read-only

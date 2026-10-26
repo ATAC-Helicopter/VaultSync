@@ -1903,6 +1903,11 @@ repository must not transfer before a compatible release is adopted.
     See the October 19 follow-up evidence and its verified outcome.
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
+  - Routing update (2026-10-26): integrate #820 revision 3bea6e5, replacing
+    three-child/Terra High defaults with two children/Terra Medium while retaining
+    every release gate. The static workflow uses existing pinned actions. Local
+    token metadata is measurable, but unmatched tasks and missing Plus debit
+    cannot establish savings. Private counters stay outside GitHub.
   - Task routing (2026-10-26): integrate #820 into #736 with source history and
     the full existing AGENTS.md preserved. Every role inherits repository gates,
     assigned interfaces/write sets and cleanup. A read-only Luna Low rehearsal

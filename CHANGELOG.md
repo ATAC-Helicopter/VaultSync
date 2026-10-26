@@ -55,7 +55,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
-- [VS-1980] Route repository tasks by risk while preserving existing release safeguards.
+- [VS-1980] Route repository tasks with bounded concurrency and preserved release safeguards.
 - [VS-1980] Bound local validation storage and clean completed test environments.
 - [VS-1902] Assemble beta drafts from qualified preparation commits without Microsoft Store assets.
 - [VS-1905] Use explicit native identity checks before describing restore targets.
