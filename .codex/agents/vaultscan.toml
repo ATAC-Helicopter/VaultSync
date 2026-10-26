@@ -9,3 +9,12 @@ Return paths, evidence, uncertainties, and any integrity-related risks in a shor
 Never edit, run destructive commands, spawn other agents or expand the task.
 If dependencies or correctness cannot be established confidently, report that, do not guess.
 """
+
+# This role searches the checked-out repository; omit unrelated plugin and skills context.
+[features]
+apps = false
+plugins = false
+memories = false
+
+[skills]
+include_instructions = false
