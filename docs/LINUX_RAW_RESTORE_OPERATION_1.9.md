@@ -16,6 +16,11 @@ they cannot supply those prerequisites. The architecture approval permits the
 retained disposable-VM tests, not maintainer host-device writes or publication.
 The [native opener](LINUX_RAW_RESTORE_OPEN_1.9.md) keeps all independent checks.
 
+The new [operation transport](RECOVERY_OPERATION_PROTOCOL_1.9.md) supplies bounded
+framing and read-only source-descriptor handoff for future integration. It does
+not provide the supervisor/build/role/offline/human/device prerequisites above,
+nor does a Confirm/review UUID call this owner or grant writable access.
+
 Preparation takes exclusive ownership of the sealed staging session on entry,
 including refusal/cancellation. It creates the native read-only preview and one
 review with a new operation ID. Invalid bounds, unavailable/changed selection or

@@ -77,6 +77,9 @@ internal sealed class LinuxWorkerPeerBinding : IDisposable
         }
     }
 
+    // A valid binding for a different connection must never authenticate this one.
+    internal bool OwnsConnection(Socket connection) => access is SocketAccess native && native.Owns(connection);
+
     private static bool Unavailable(Exception error) => error is SocketException or IOException or
         UnauthorizedAccessException or ObjectDisposedException or PlatformNotSupportedException;
 
@@ -92,6 +95,7 @@ internal sealed class LinuxWorkerPeerBinding : IDisposable
 
     private sealed class SocketAccess(Socket socket) : IAccess
     {
+        internal bool Owns(Socket connection) => ReferenceEquals(socket, connection);
         public bool ConnectionOpen => socket.Connected && !(socket.Poll(0, SelectMode.SelectRead) && socket.Available == 0);
         public bool TryCredentials(out LinuxWorkerPeerCredentials credentials)
         {

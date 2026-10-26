@@ -35,6 +35,11 @@ The visible four-step outline describes the intended workflow; the panel states
 that only verification is connected in this development build. Keep #495 open
 and #736 draft. OS build checks do not qualify boot or restoration support.
 
+The [operation transport](RECOVERY_OPERATION_PROTOCOL_1.9.md) now provides
+peer-bound framing and source-descriptor handoff for that integration. It is
+not yet attached to this panel. A review acknowledgment is not human or device
+authority and cannot, by itself, start restoration.
+
 Real application screenshots must come from an isolated synthetic-data profile
 and describe the observed build and outcome. A blank capture, rendering-only
 test, replay or earlier native backend result cannot stand in for a successful

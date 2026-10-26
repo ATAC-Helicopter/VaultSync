@@ -7,6 +7,12 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1907/#495 adds bounded operation framing and authenticated read-only image
+descriptor handoff. An independent unprivileged producer/root consumer passes
+137 checks in a disposable offline VM. This is transport evidence, not a writable
+host, actual human/device authorization, media or a qualified restore profile.
+See the [operation transport contract](RECOVERY_OPERATION_PROTOCOL_1.9.md).
+
 VS-1907/#495 now connects Recovery image selection and cancellable read-only
 inspection to the isolated Linux x64 reader, with all 19 locales and explicit
 macOS/Windows limitations. Destination authorization, writing and media are not

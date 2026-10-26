@@ -1612,6 +1612,15 @@ repository must not transfer before a compatible release is adopted.
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Operation transport (2026-10-26): kernel-peer-bound single-operation framing
+    checks direction, operation, sequence and lengths before body allocation.
+    Image handoff uses exactly two read-only regular-file descriptors, with no
+    privileged opening of UI paths. Native independent cross-UID fault tests
+    exercise ownership, replay, cancellation and truncated/surplus descriptors.
+    This supplies transport, not supervisor/build/role/device/human authority.
+    The read-only helper gains no writable endpoint; trusted launch/dispatcher,
+    UI/media and release/support qualification remain open. See the
+    [protocol and measured scope](docs/RECOVERY_OPERATION_PROTOCOL_1.9.md).
   - Recovery UI increment (2026-10-26): select an image folder, run isolated
     Linux x64 content/layout inspection and cancel verification from Recovery.
     All 19 locales translate status and limitations without resetting selection.
