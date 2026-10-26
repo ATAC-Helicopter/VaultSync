@@ -5,8 +5,8 @@ This repository uses an economical multi-agent policy. Keep developer control of
 ## Model and reasoning ceiling
 
 - **Absolute routing policy for this project:** highest permitted configuration is `gpt-6.1-sol` at `medium`. Never request, spawn or recommend Sol at high/xhigh/max, or another more expensive model as a workaround.
-- Prefer `gpt-6.1-terra` at the lowest reasoning effort adequate for each bounded task. The coordinator defaults to Terra High, while subagents are configured independently.
-- Available specialist roles in `.codex/agents/`: `vaultscan` (Terra Low, read only), `vaultui` (Terra Medium), `vaultworker` (Terra High), `vaultverify` (Terra Medium), `vaultcritical` (Sol Medium).
+- Prefer `gpt-6-luna` for safe lightweight inspection and `gpt-6.1-terra` for implementation, at the lowest reasoning effort adequate for each bounded task. The coordinator defaults to Terra High, while subagents are configured independently.
+- Available specialist roles in `.codex/agents/`: `vaultscan` (Luna Low, read only), `vaultui` (Terra Medium), `vaultworker` (Terra High), `vaultverify` (Terra Medium), `vaultcritical` (Sol Medium).
 - **Important:** these are agent instructions and defaults, not a provider-side quota or an enforceable model ceiling against user/client overrides. Do not claim otherwise.
 - Avoid agent spawning for trivial, dependent or tiny work. Maximum three simultaneously open subagents. Reuse completed agent results; do not duplicate searches or run redundant reviews.
 
@@ -15,7 +15,7 @@ This repository uses an economical multi-agent policy. Keep developer control of
 1. Briefly identify components, touched file scopes, data-integrity risks and acceptance criteria. Skip elaborate planning on trivial tasks.
 2. For a mixed feature (e.g. backend worker + UI + tests), identify the public interface / payload / events / state contract **before** parallel work. Assign each edit owner a disjoint write set.
 3. Select agents per subtask rather than applying the highest tier to the entire prompt:
-   - Investigation or docs lookup: `vaultscan`.
+   - Simple inventory, read-only investigation or docs lookup: `vaultscan`.
    - Avalonia AXAML, Views, Styles, presentation-only ViewModels: `vaultui`.
    - Ordinary Core/CLI implementation, safe services and contained bug fixes: `vaultworker`.
    - Risky Core services, backup, restore, recovery, disk imaging, encryption, retention, migrations, destructive or compatibility-sensitive changes: `vaultcritical`.
