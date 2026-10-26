@@ -1898,6 +1898,11 @@ repository must not transfer before a compatible release is adopted.
     See the October 19 follow-up evidence and its verified outcome.
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
+  - Task routing (2026-10-26): integrate #820 into #736 with source history and
+    the full existing AGENTS.md preserved. Every role inherits repository gates,
+    assigned interfaces/write sets and cleanup. A read-only Luna Low rehearsal
+    passed; active coordinator hot-switch and provider spending enforcement are
+    not claimed. See [routing contract](docs/CODEX_ROUTING.md).
   - Workspace lifecycle (2026-10-26): AGENTS/CONTRIBUTING retain existing gates
     and add owned-run inventories, peak-space budgets, cleanup on completion,
     native UI/crash checks and exact-head Sonar verification. The maintainer

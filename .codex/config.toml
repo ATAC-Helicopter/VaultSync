@@ -1,0 +1,10 @@
+# VaultSync-only defaults. Requires a trusted repository and Codex CLI >= 0.159.0.
+# The coordinator stays on Terra High; selected subagents may use cheaper models.
+model = "gpt-6.1-terra"
+model_reasoning_effort = "high"
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 3
+default_subagent_model = "gpt-6.1-terra"
+default_subagent_reasoning_effort = "medium"

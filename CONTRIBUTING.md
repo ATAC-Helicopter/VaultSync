@@ -88,6 +88,14 @@ gates. For macOS native UI checks, follow [isolated QA](docs/MACOS_QA_VALIDATION
 Deleted environments require reconstruction before fresh native evidence; a
 historical receipt does not establish current artifact availability.
 
+### Agent entry point
+
+Every contributor agent reads root [AGENTS.md](AGENTS.md) and applicable directory
+instructions, then uses [task routing](docs/CODEX_ROUTING.md) within its assigned
+scope. Routing supplements all existing contributor and release gates. Shared
+interfaces and disjoint edit ownership precede parallel work; the coordinator
+integrates and keeps tracking current. Unsupported client routing is disclosed.
+
 ## 4) Implementation Rules
 - Keep changes focused.
 - Avoid unrelated refactors in the same PR.

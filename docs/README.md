@@ -47,6 +47,7 @@ Use this page as the primary index for all project documentation.
 
 ## Contribution and Governance
 - Contributing: [CONTRIBUTING](../CONTRIBUTING.md)
+- Repository task routing and role limits: [routing contract](CODEX_ROUTING.md)
 - Local validation storage and cleanup: [workspace lifecycle](VALIDATION_WORKSPACES.md)
 - Security policy: [SECURITY](../SECURITY.md)
 - Privacy overview: [Privacy](PRIVACY.md)

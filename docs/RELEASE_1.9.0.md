@@ -7,6 +7,12 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1980/#673 integrates #820's [task routing](CODEX_ROUTING.md) into the existing
+preparation with merge history, preserving all prior AGENTS.md rules. Every role
+inherits release/tracking, localization, safety and cleanup gates. Read-only
+routing was exercised; no active coordinator hot-switch or provider-enforced
+spending cap is claimed. Protected Dev integration/reviews remain separate.
+
 VS-1980/#673 records the [local validation lifecycle](VALIDATION_WORKSPACES.md):
 owned-run inventories, bounded storage and cleanup of completed experiments,
 without replacing existing repository or release workflows. On October 26 the
