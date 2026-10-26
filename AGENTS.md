@@ -1,33 +1,43 @@
-# VaultSync: Codex routing and engineering guidance
+# VaultSync Codex: quality-first quota efficiency
 
-This repository uses an economical multi-agent policy. Keep developer control of data-safety decisions.
+This file governs repository work in Codex. Implement complete requests without unnecessary delegation. The goal is **the lowest total usage that produces correct, tested code**, not the cheapest model on every isolated step.
 
-## Model and reasoning ceiling
+## Non-negotiable ceiling and project rules
 
-- **Absolute routing policy for this project:** highest permitted configuration is `gpt-6.1-sol` at `medium`. Never request, spawn or recommend Sol at high/xhigh/max, or another more expensive model as a workaround.
-- Prefer `gpt-6-luna` for safe lightweight inspection and `gpt-6.1-terra` for implementation, at the lowest reasoning effort adequate for each bounded task. The coordinator defaults to Terra High, while subagents are configured independently.
-- Available specialist roles in `.codex/agents/`: `vaultscan` (Luna Low, read only), `vaultui` (Terra Medium), `vaultworker` (Terra High), `vaultverify` (Terra Medium), `vaultcritical` (Sol Medium).
-- **Important:** these are agent instructions and defaults, not a provider-side quota or an enforceable model ceiling against user/client overrides. Do not claim otherwise.
-- Avoid agent spawning for trivial, dependent or tiny work. Maximum three simultaneously open subagents. Reuse completed agent results; do not duplicate searches or run redundant reviews.
+- Never select a model stronger or more expensive than **GPT-6.1 Sol / medium** for this project. Specifically do not invoke Sol high/xhigh/max or Astra.
+- This is a cooperative project policy, **not** an enforced account/provider cap. Explicit client or user overrides can bypass it.
+- Root defaults to GPT-6.1 Terra / medium; choose a stronger specialized subagent **before** risky work. Root itself cannot change model midway through an active turn.
+- Respect repository boundaries: `src/VaultSync.Core`, `src/VaultSync.CLI`, `src/VaultSync.UI` (Avalonia AXAML), `tests/VaultSync.Core.Tests`. Preserve data integrity, backward compatibility, security and recoverability.
+- Never run destructive tests on real disks, live backups or user data without explicit authorization. No unsafe "quick fixes" to verification, recovery or security.
 
-## Route every multi-part request by subtask, including within a single prompt
+## Route by actual risk and complexity, not by keywords alone
 
-1. Briefly identify components, touched file scopes, data-integrity risks and acceptance criteria. Skip elaborate planning on trivial tasks.
-2. For a mixed feature (e.g. backend worker + UI + tests), identify the public interface / payload / events / state contract **before** parallel work. Assign each edit owner a disjoint write set.
-3. Select agents per subtask rather than applying the highest tier to the entire prompt:
-   - Simple inventory, read-only investigation or docs lookup: `vaultscan`.
-   - Avalonia AXAML, Views, Styles, presentation-only ViewModels: `vaultui`.
-   - Ordinary Core/CLI implementation, safe services and contained bug fixes: `vaultworker`.
-   - Risky Core services, backup, restore, recovery, disk imaging, encryption, retention, migrations, destructive or compatibility-sensitive changes: `vaultcritical`.
-   - Targeted tests, independent validation and integration checks: `vaultverify`.
-4. Work in parallel only when tasks are genuinely independent and write scopes do not overlap. Otherwise run them sequentially under the same user request. The coordinator integrates the full feature and runs appropriate tests. Do not stop after finishing only backend or only UI.
-5. If a Terra worker discovers that its scope is actually critical, stop that portion and delegate to `vaultcritical`; keep independent UI, docs or tests on Terra. Never increase Sol above Medium.
-6. Report which parts used which role (model/effort), final tests and any unverified or unsafe areas. Never claim an autonomous model switch occurred in the active coordinator turn; subagents have independent configurations.
+Make a brief internal risk assessment from expected touched paths, invariants, dependencies, ambiguity and available tests. You do not need to publish a verbose planning preamble.
 
-## Safety and quality rules
+| Route | When |
+| --- | --- |
+| **Root Terra Medium only (zero subagents)** | Readme/docs, tiny well-specified edits, ordinary presentation tweaks, obvious localized fixes, quick diagnosis. This is the default for small tasks. |
+| **vaultscan: Luna Low** | Independent *read-only* narrow discovery when offloading a nontrivial investigation saves root context; not for one grep or known file. |
+| **vaultui: Terra Medium** | Substantial but straightforward AXAML, styling, binding or presentational ViewModel changes in a mixed request. |
+| **vaultworker: Terra High** | Noncritical multi-file changes, tricky async UI state, nontrivial service integration, debugging requiring careful reasoning or regressions. |
+| **vaultcritical: Sol Medium** | Any change with credible risk to backups/restores, actual disk writes/imaging, retention/deletion, encryption/keys, repository formats/migrations, cross-machine safety, recovery confidence or security guarantees. Also use for ambiguous high-coupling architecture and correctness-sensitive cross-layer decisions. Choose proactively, not only after failure. |
+| **vaultverify: Terra Medium** | A genuinely independent focused test/integration check that saves time or context. Do not delegate routine test commands; safety-critical verification belongs to vaultcritical. |
 
-- VaultSync protects user data. Preserve backup/restore correctness, recoverability guarantees, encryption guarantees, version compatibility and fail-safe behavior.
-- Never run destructive tests on real disks/devices, blindly delete backups or weaken verification. Require explicit user authorization for actions that could modify production/user data.
-- Match existing C#/.NET patterns. Relevant locations: `src/VaultSync.Core`, `src/VaultSync.CLI`, `src/VaultSync.UI` (Avalonia AXAML), `tests/VaultSync.Core.Tests`.
-- For meaningful changes add or update regression tests. Prefer a focused `dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj` when available; validate build/UI separately where feasible. If tools/OS block a check, state the limitation rather than claiming success.
-- Respect user requirements and existing architectural boundaries. Avoid incidental refactors, broad formatting or unrelated file edits.
+If a simple-looking fix changes a critical invariant, **risk wins** and vaultcritical owns that slice. If a UI task has tricky multi-module state handling, upgrade from vaultui to vaultworker. If the low-tier agent is uncertain or cannot test its assumptions, escalate the specific slice; do not repeat the same failed prompt or accept unverifiable code.
+
+## Multi-part requests in one turn
+
+- Decompose a mixed request into backend, UI, tests **only when the boundaries matter**. Agree on DTOs/events/progress/error/cancellation contract first.
+- For `worker + UI`: assign backend to vaultworker **or** vaultcritical depending on risk, UI to vaultui if independent, then let root integrate and run checks. For complex UI use vaultworker; serialize overlapping file writes.
+- Spawn at most **two** specialists concurrently, and only if independence or separated context meaningfully improves quality or total work. Sequential delegation is valid within the same prompt.
+- The main agent should handle simple changes and routine verification itself. No automatic "scan + implement + verify" fan-out for small tasks; no extra reviewer unless the outcome is genuinely uncertain or high-risk.
+- Use disjoint edit ownership, compact handoffs with exact paths/contract, and reuse evidence. Never duplicate repository scans or large-context reviews without a new reason.
+- Do not let low-cost agents touch a safety-critical slice on the assumption that a later review will catch mistakes.
+
+## Verification and delivery
+
+- Prefer existing patterns; make the smallest correct diff; avoid speculative refactoring and unrelated formatting.
+- Run the narrowest useful build/test first; expand when integration risk or failures justify it. For Core use `dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj` as appropriate; validate Avalonia compilation if UI changed.
+- Do not claim tests passed unless they ran. Do not run unsafe real-device tests.
+- Finish the whole user request, including integration, then report result, checks and meaningful uncertainty concisely. State subagent tiers only when one was actually used.
+- If the requested result cannot be delivered safely under Sol Medium, report the limitation and required verification instead of silently under-selecting or violating the ceiling.
