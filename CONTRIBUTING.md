@@ -1,4 +1,4 @@
-﻿# Contributing
+# Contributing
 
 Thanks for contributing to VaultSync.
 
@@ -185,3 +185,12 @@ Commit/push defaults:
 Reference:
 - `DOCUMENTATION.md`
 - `docs/README.md`
+
+## Runtime security servicing
+
+Use SDK 10.0.402 or later serviced SDK for .NET 10; packaged Microsoft runtimes
+must be stable 10.0.x at or above 10.0.13. Audit every included framework with
+`scripts/runtime_pack_audit.py`, including optional ASP.NET/Windows Desktop.
+Managed package audits and actual self-contained output checks are separate.
+Preserve protected-branch review and publication/signing gates. See
+[the runtime policy](docs/RUNTIME_SECURITY.md). Refs #787 / VS-1997.
