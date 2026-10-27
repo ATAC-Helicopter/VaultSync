@@ -24,3 +24,12 @@ Define interface, progress, cancellation, error and state contracts **before** i
 Preserve existing C#/.NET and Avalonia conventions, compatibility and safe backup semantics. Paths: `src/VaultSync.Core`, `src/VaultSync.CLI`, `src/VaultSync.UI`, `tests/VaultSync.Core.Tests`. Never run destructive tests on user backups, drives or production data without explicit authorization. Make the smallest correct diff and add meaningful regressions. Run focused checks first (e.g. `dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj`), broaden for cross-module risk, and verify UI build when relevant. Never claim unrun tests passed. Conclude with actual changes, executed checks and remaining uncertainty; name agent tiers only if used.
 
 Detailed scenarios and measurement procedure: `docs/CODEX_ROUTING.md`.
+
+## Risk-based, targeted verification (mandatory)
+- Do **not** automatically run the full test suite, a solution-wide build, repository-wide lint/typecheck, or repeated test cycles for every edit. Minimize unnecessary tool calls, time, and token use.
+- Before testing, assess the changed files, affected behavior, and realistic regression risk. For docs, text/copy, comments, formatting, and other clearly non-behavioral changes, **skip automated tests** unless a specific gate applies; inspect the diff instead.
+- For behavior-changing code, use **only the smallest relevant existing test(s)**, focused test filter, package, assembly, or project. Run at a meaningful checkpoint, not after each trivial edit. Avoid redundant dependency installs/restores.
+- If no relevant automated test exists, use a focused static/manual check when feasible; say what remains unverified. Do not run unrelated tests merely to claim coverage.
+- Expand to integration tests, broader builds, or the full suite **only when justified** by shared/core changes, significant refactors, security/privacy changes, migrations, release gates, failure of focused checks, or explicit user instruction. Explain the reason and avoid unnecessary repeats.
+- Respect genuinely mandatory CI/release/security gates. Interpret generic existing instructions such as "run tests before commit" as **scoped, risk-based validation**, not permission to test the entire repository on every small change.
+- In the final report, state what was tested, what was deliberately skipped, and any remaining risk. Never claim skipped tests passed.
