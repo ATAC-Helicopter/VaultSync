@@ -1442,3 +1442,5 @@ These items are not assigned to a release until their contracts are approved:
 - Stable history is never rewritten to make a release branch appear cleaner.
 - Scope changes must update this file, the owning issue, milestone, project
   fields, and draft PR description together.
+
+Runtime security backport (2026-10-15): VS-1997/#787 services the SDK/runtime/package baseline to 10.0.402/10.0.13 on `docs/outreach-media-kit-20261014`. All 18 open default-branch advisories name 10.0.13 as the first patched version. This security-only change does not import 1.9 features, approve a release, rewrite published assets or close alerts before default-branch integration. See docs/RUNTIME_SECURITY.md.
