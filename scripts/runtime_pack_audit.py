@@ -20,6 +20,8 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 def version_tuple(value: str) -> tuple[int, ...]:
+    if not isinstance(value, str) or re.fullmatch(r"\d+\.\d+\.\d+", value) is None:
+        raise ValueError(f"Invalid stable runtime version: {value!r}")
     return tuple(int(part) for part in value.split("."))
 
 
@@ -48,15 +50,35 @@ def resolve_runtimeconfig(path_text: str, repo_root: Path) -> Path:
 def audit_runtimeconfig(path: Path, minimum: str) -> list[str]:
     data = json.loads(path.read_text(encoding="utf-8-sig"))
     frameworks = data.get("runtimeOptions", {}).get("includedFrameworks", [])
-    netcore = next(
-        (item for item in frameworks if item.get("name") == "Microsoft.NETCore.App"),
-        None,
-    )
-    if netcore is None:
+    if not isinstance(frameworks, list) or not frameworks:
         return [f"{path}: self-contained Microsoft.NETCore.App metadata is missing"]
-    version = netcore.get("version", "")
-    if version_tuple(version) < version_tuple(minimum):
-        return [f"{path}: embeds Microsoft.NETCore.App {version}; require >= {minimum}"]
+    errors: list[str] = []
+    names: set[str] = set()
+    for framework in frameworks:
+        errors.extend(audit_framework(path, framework, minimum, names))
+    if "Microsoft.NETCore.App" not in names:
+        errors.append(f"{path}: self-contained Microsoft.NETCore.App metadata is missing")
+    return errors
+
+
+def audit_framework(path: Path, framework: object, minimum: str, names: set[str]) -> list[str]:
+    if not isinstance(framework, dict):
+        return [f"{path}: invalid included framework metadata"]
+    name = framework.get("name")
+    if not isinstance(name, str) or name not in {
+        "Microsoft.NETCore.App", "Microsoft.AspNetCore.App", "Microsoft.WindowsDesktop.App"
+    }:
+        return [f"{path}: unknown included framework {name!r}; no servicing policy"]
+    if name in names:
+        return [f"{path}: duplicate included framework {name}"]
+    names.add(name)
+    version = framework.get("version", "")
+    try:
+        actual, required = version_tuple(version), version_tuple(minimum)
+    except ValueError as error:
+        return [f"{path}: {name}: {error}"]
+    if actual[:2] != required[:2] or actual < required:
+        return [f"{path}: embeds {name} {version}; require >= {minimum} on the same runtime line"]
     return []
 
 
