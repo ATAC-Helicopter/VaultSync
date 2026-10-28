@@ -1628,6 +1628,14 @@ repository must not transfer before a compatible release is adopted.
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
+  - Typed response integration (2026-10-26): complete bounded inventory/review,
+    durable-write progress and truthful terminal/refusal codecs before dispatcher
+    and UI consumption. Review data stays correlated to the exact observation,
+    operation and selection; it never becomes offline/device/human authority.
+    Full-ack failures and cleanup uncertainty remain failures. Completed on
+    October 28: 52 focused cases and 2,282 Core cases pass; the interrupted Core
+    gate reused the unchanged successful build. Response schemas are internal;
+    dispatcher/UI/media and release qualification remain open under #495 / #736.
   bootable environment.
   - Operation transport (2026-10-26): kernel-peer-bound single-operation framing
     checks direction, operation, sequence and lengths before body allocation.

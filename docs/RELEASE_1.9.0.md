@@ -39,6 +39,15 @@ using the validated Info.plist identity instead of passing caller input to the
 command. A minimal native signing/verification probe passes and is cleaned up;
 this is not a new full-product GUI or package qualification.
 
+VS-1907/#495 adds strict typed worker responses for inventory, review,
+durable-write progress and terminal/refusal results. The codec contract preserves
+full-write read-back/cleanup failures instead of converting acknowledged bytes
+into a success claim. Response DTOs are display/correlation data, never device
+or human authority. Dispatcher, trusted supervisor, complete UI/media and profile
+qualification remain separate acceptance gates. The 52 focused response tests
+and resumed 2,282-Core gate pass; the unchanged successful Release build is reused.
+See [response evidence](release-evidence/1.9-recovery-responses-2026-10-28.json).
+
 VS-1907/#495 adds bounded operation framing and authenticated read-only image
 descriptor handoff. An independent unprivileged producer/root consumer passes
 153 checks in the latest disposable offline VM run. This is transport evidence, not a writable

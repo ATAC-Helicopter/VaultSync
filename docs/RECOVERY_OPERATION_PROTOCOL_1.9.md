@@ -60,11 +60,65 @@ header is checked before allocating or reading any body.
 The Prepare selector permits only ASCII letters, digits, underscore and hyphen,
 with a maximum 63-byte name and mandatory zero padding. It cannot contain a path,
 NUL followed by hidden text, whitespace or a normalized non-ASCII alias. Actual
-native observation/freshness/identity checks remain mandatory. Variable response
-bodies are only bounded envelopes here, not trusted domain objects. Their typed
-codecs and state/consent validation must be completed and reviewed before a
-production dispatcher consumes them. This development grammar is not a public
+native observation/freshness/identity checks remain mandatory. Response
+bodies remain untrusted until their strict typed codec and context checks pass.
+Runtime state/consent validation must be completed before a production dispatcher
+consumes them. This development grammar is not a public
 recovery API or compatibility promise.
+
+## Typed worker response bodies
+
+The internal `LinuxRecoveryResponses` codecs are the next dispatcher boundary.
+They validate payloads separately from framing and return display/correlation
+DTOs. They do not recreate an authoritative `LinuxBlockInventory`, open devices,
+prove offline state, authenticate builds or grant human/device write authority.
+All integers are little-endian and UUIDs use network byte order. Decoders reject
+truncation, trailing data, unknown enums/flags and nonzero reserved bytes before
+returning a value. There is no arbitrary diagnostic text, path, boot namespace or
+hardware-identity string. These local response bodies are not diagnostic uploads.
+
+| Kind | Typed body | Context required by the consumer |
+| --- | --- | --- |
+| Inventory | 32-byte header plus at most 256 fixed 168-byte device entries | Native state/reason and topology consistency; a redacted observation only |
+| Review | 304 bytes: operation/review/image/capture IDs, generation, manifest root, observed time, full overwrite length, one device entry and inventory observation ID | Exact expected operation, inventory observation and selected kernel name |
+| Progress | 24 bytes: review ID and durably acknowledged byte count | Exact review, full overwrite bound and optional previous durable count |
+| Outcome | 64 bytes: review ID, outer state/reason, independent optional writer state, journal/cleanup/terminal flags and acknowledged/uncertain ranges | Exact review, geometry and optional last progress |
+| Refused | Four-byte explicit pre-execution refusal code | Dispatcher phase; never a substitute for a post-write outcome |
+
+The inventory header contains observation ID, UTC timestamp, state/reason,
+unresolved-swap flag and entry count. Entries contain bounded zero-padded kernel
+and parent selectors, native major/minor numbers, capacity, optional disk
+sequence, logical/physical sector sizes, kind/identity/use classifications and
+read-only/mount/swap/holder flags. Bounds mirror native inventory geometry rather
+than promising support: zero-capacity observations and non-profile sectors can
+be shown, while duplicate selectors/device numbers or inconsistent parent/use
+claims refuse. Unsupported/incomplete/changed observations keep their explicit
+failure state instead of being converted to an observed snapshot. Unsafe native
+selector spelling refuses instead of being normalized into another device name.
+
+A review is stricter: a verified full image and exact whole-disk selection with
+supported geometry, matching nonzero identifiers/generation/disk sequence, an
+immutable manifest-root binding and no direct in-use/read-only indication.
+The review body explicitly carries the inventory observation ID at offset 288;
+the decoder binds both that wire value and the supplied inventory to the exact
+expected observation. An identical device list from a different observation
+cannot accept an earlier review. Observation correlation is not a freshness or
+global-offline proof. The trusted
+owner must retain its original native context and recheck it before execution.
+
+Progress means durable `RangeFlushed` bytes only. It does not mean read-back has
+passed. Counts must be monotonic at chunk boundaries, with the exact final size
+allowed. Outcomes preserve both the outer lifecycle result and the optional
+writer result: full acknowledged bytes with failed read-back remain failed;
+failed cleanup can override an internally completed write. Uncertain write
+ranges and missing terminal journal/cleanup evidence cannot become success.
+A successful result requires full write/read-back evidence, durable journal and
+confirmed cleanup. An acknowledgment/review ID alone cannot supply any of these.
+
+The dispatcher must still enforce state ordering, trusted operation ownership,
+real progress callbacks, selection freshness and actual human confirmation. These
+codecs cannot enforce those runtime facts by themselves. The existing frame
+length limits remain an outer refusal bound; the typed body length is stricter.
 
 ## Read-only image descriptor handoff
 
@@ -94,7 +148,7 @@ The existing isolated reader, root-owned sealed staging copy and exact byte
 rechecks remain necessary before device preparation/execution. Receiving files
 does not authorize restoration or prove trusted origin, offline state or boot.
 
-## Current verification and remaining integration
+## Historical framing verification — 2026-10-26
 
 Portable/local Release checks pass: 2,229 Core tests, 293 Python tests and zero
 warnings/errors. The 46 focused recovery transport cases include pure malformed
@@ -130,8 +184,18 @@ Native access mode is checked on the actual copies, including when a writable
 descriptor is wrapped in a managed read-only stream. This is not suppression of
 the analyzer finding or a new operation-authority claim.
 
+## Typed response verification — 2026-10-28
+
+The 52 focused response cases pass, including independent wire vectors and
+observation-bound review replay refusal. The unchanged Release build passed with
+zero warnings/errors; the interrupted mandatory Core gate was completed on
+October 28 with `--no-build --no-restore`: 2,282 passed, zero failed/skipped.
+Retained October 26 contract results include 299 Python tests and 1,959 keys in
+19 locales. No docs-only rebuild or unrelated test cycle was added. See the
+[source-bound receipt](release-evidence/1.9-recovery-responses-2026-10-28.json).
+
 Remaining: trusted supervisor/installation and clean unprivileged UI launch,
-typed response codecs and dispatcher, actual consent/destination flow, owned
+stateful dispatcher and actual consent/destination flow, owned
 engine execution/progress, generated boot media, full platform/profile and
 failure loops, package provenance and protected review/release gates. Keep #495
 open, Project In progress and #736 draft. No host-device write or release
