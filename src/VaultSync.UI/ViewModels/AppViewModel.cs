@@ -141,6 +141,7 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<int, EncryptedOpenUnlockSession> _encryptedOpenSessions = new();
         private int _destinationOverviewRefreshInFlight;
         private readonly ConcurrentDictionary<string, DateTime> _metadataImportAttempts = new();
+        private readonly ConcurrentDictionary<string, byte> _metadataImportsInFlight = new();
         private readonly ConcurrentDictionary<int, byte> _manualBackupInFlight = new();
         private readonly ConcurrentDictionary<int, byte> _backupCancelRequested = new();
         private readonly ConcurrentDictionary<string, CancellationTokenSource> _restoreCancellations = new(StringComparer.Ordinal);

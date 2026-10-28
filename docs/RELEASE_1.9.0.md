@@ -7,6 +7,16 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+BUG-19042/#824 restores periodic automatic destination metadata import through
+an existing timer, independent of optional daily maintenance. The pass is passive,
+opted-in and read-only at the source, without new mounts/path creation or backup
+retention. Focused testing exposed source SQLite auxiliary-file creation; changed
+read-only sources therefore use a private copy and fail closed if unavailable.
+Passive network resolution also suppresses SMB keepalive writers. This repairs existing project-metadata behavior; it does not introduce
+whole-app configuration or custom-preset synchronization. Fifteen focused cases
+pass with warnings-as-errors; unrelated suites/solution build were skipped. Native
+macOS mounted-share checks remain distinct. See [import evidence](release-evidence/1.9-periodic-metadata-import-2026-10-28.json).
+
 BUG-19041/#823 replaces the preset editor's Windows-font glyph with an existing
 Avalonia vector primitive. Labels/bindings and localization remain unchanged.
 The presentation-only diff is inspected without unrelated tests/builds; native

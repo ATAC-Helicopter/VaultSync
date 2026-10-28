@@ -270,10 +270,14 @@ public sealed class MetadataSyncService
 
             string? walTempRoot = null;
             bool copiedWalStore = false;
-            if (ShouldUseTempCopy(store.DatabasePath))
+            bool requireReadCopy = !opts.ExportMissingTombstonesOnImport && !opts.ApplyDestructiveTombstones;
+            if (requireReadCopy || ShouldUseTempCopy(store.DatabasePath))
             {
                 using var copyTiming = RuntimeTiming.Measure("Metadata import temp copy");
+                ObserveCheckpoint("metadata-import-read-copy");
                 copiedWalStore = TryCopyStoreForRead(store.DatabasePath, out walTempRoot);
+                if (requireReadCopy && !copiedWalStore)
+                    return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Could not copy metadata store for read-only import.");
             }
 
             if (copiedWalStore && !string.IsNullOrWhiteSpace(walTempRoot))

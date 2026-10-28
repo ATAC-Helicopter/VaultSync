@@ -2,6 +2,32 @@
 
 VaultSync can export a portable metadata store to backup destinations and later import that metadata on another machine.
 
+## Automatic imports while VaultSync is open
+
+With metadata sync and auto-import enabled globally and for the destination,
+VaultSync checks active destinations about every five minutes. The first timer
+check is about one minute after startup. This check runs independently of the
+optional daily maintenance window; existing per-destination throttles and failure
+backoff still apply. You can turn auto-import off globally or per destination and
+use manual refresh instead.
+
+Automatic discovery uses destinations that are already accessible. It does not
+create missing folders, run writability probes, ask for credentials or mount a
+new share. Connect an unavailable share normally; a later pass can then import
+its metadata. The pass skips unchanged sources and prevents overlapping imports.
+When a changed source needs reading, automatic import opens a private metadata
+copy so SQLite cannot create auxiliary files on the destination. If the private
+copy cannot be prepared, import stops and retries later. Passive resolution also
+avoids starting an SMB keepalive writer.
+Automatic destination import does not invoke backup retention or delete payloads.
+Manual actions and separately enabled maintenance keep their own policies.
+
+Project identities and portable project settings use the existing safe merge
+rules below. Local source folders, credentials and machine-specific destination
+configuration remain local. Full app configuration and custom preset catalogs
+are not synchronized by this feature. Conflicts remain reviewable rather than
+silently forcing every machine's local settings to match.
+
 ## Where it lives
 - Destination metadata is stored under `.vaultsync/meta/` at the destination root.
 - The SQLite store file is `vaultsync.meta.db`.

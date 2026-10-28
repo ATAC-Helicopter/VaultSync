@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-28",
+  "owner": "BUG-19042",
+  "issue": 824,
+  "releasePr": 736,
+  "sourceBase": "f5f1c15cdbf5dfbebab5c0600cae27dbac505c51",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/MetadataSyncService.cs": "d89dab0ad1be623a657b25c9a7cd5fd2ff1f2526317415dd869759c456b1864f",
+    "src/VaultSync.Core/Services/NetworkMountService.cs": "9972f0f4c0536dbfd72f9ca679857195de7b4df474a5dc5c59301030197106eb",
+    "src/VaultSync.UI/ViewModels/AppViewModel.cs": "c40188e00b0e395fcbd1b09afddf3af94b44363cf7f59ba7a1bf73f83660d014",
+    "src/VaultSync.UI/ViewModels/AppViewModel.RuntimeOps.cs": "99cf55c95185566e21b14bcba733897a39fb25d7949814e633eba09fffed492d",
+    "src/VaultSync.UI/ViewModels/AppViewModel.MaintenanceOps.cs": "83d39fd68cdd44fa7e04369f9f9942a91b38522dfafdab5c47a7029e535e3e2d",
+    "tests/VaultSync.Core.Tests/AutomaticMetadataImportTests.cs": "dee67739a7032756f60b71229bf7456da200b58b619f908764ad440ee34d279c"
+  },
+  "verification": {
+    "focusedPassed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "warningsAsErrors": true,
+    "fixtureCounts": {
+      "automatic-pass": 10,
+      "unchanged-source-cache": 4,
+      "passive-resolution": 1
+    },
+    "filter": "AutomaticMetadataImportTests OR MetadataSyncTests.ImportFromStore_UnchangedReadOnlySource; plus exact PrepareDestination_PassiveProbeDoesNotReadCredentialOrMount case with --no-build",
+    "initialFailure": "Initial focused preservation check exposed SQLite source WAL/SHM creation; strict assertion retained, read-copy behavior repaired; source/test fixture was still being finalized",
+    "fullSuite": "deliberately skipped: unrelated to this bounded defect",
+    "solutionWideBuild": "deliberately skipped: incremental referenced test-project build only",
+    "newVisibleStrings": 0,
+    "localizationAudit": "not repeated: unchanged translated UI strings; technical failure remains internal result/log data",
+    "selectionCorrection": "Initial class-qualified passive filter matched no case; discovered count was checked and the exact existing method was run separately without rebuilding"
+  },
+  "behavior": [
+    "Existing timer checks active opted-in accessible destinations independently of maintenance window",
+    "The periodic pass uses passive resolution: no new mount/local target, credential access or keepalive registration",
+    "Original configured destination is not modified by passive local resolution",
+    "Read-only import uses private copy and refuses direct fallback; source file set and bytes stay unchanged",
+    "Per-source single-flight, throttle, retry and unchanged-source skip retained",
+    "Automatic destination import cannot prune backup payloads; manual/root-other maintenance policies retained"
+  ],
+  "limits": [
+    "Managed synthetic cases ran on macOS; no actual remote SMB share/credentials or native keepalive run",
+    "No whole-app settings/custom-preset synchronization or new schema",
+    "Native cross-platform runtime, all beta recovery/media profiles and protected release gates remain separate"
+  ],
+  "retention": {
+    "privateReceiptsReviewDate": "2026-11-04"
+  }
+}

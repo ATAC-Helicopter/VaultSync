@@ -1478,6 +1478,17 @@ repository must not transfer before a compatible release is adopted.
     and [current evidence](docs/release-evidence/1.9-worker-installation-2026-10-25.md).
     Offline/device consent, writable lifetime, media/UI, recovery and package
     qualification remain open; no profile is promoted.
+- [ ] `BUG-19042` `P2` Keep automatic destination metadata imports periodic after startup.
+  - Owner #824; preparation PR #736. The existing five-minute timer checks
+    opted-in active accessible destinations independently of optional daily
+    maintenance. Preserve read-only import, unchanged-source cache, throttle,
+    retry and single-flight behavior; no path creation, new mounts or backup
+    retention/deletion in this automatic pass. Private read copies prevent source
+    SQLite sidecar writes; passive mount resolution suppresses keepalive writers.
+    Fifteen focused cases pass, including unchanged-source and passive-probe
+    regressions; unrelated suites/builds were skipped. No whole-app/preset
+    configuration sync is added.
+    In progress, started 2026-10-28; native macOS validation remains separate.
 - [ ] `BUG-19041` `P2` Restore preset editor icons across operating systems.
   - Owner #823; preparation PR #736. Replace the Windows-font edit glyph with
     an Avalonia vector, preserving translated text, command and visibility.

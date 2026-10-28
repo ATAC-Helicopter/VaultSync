@@ -95,7 +95,10 @@ separate. Hover over a truncated size label to read its full text.
 
 - Metadata is stored under `.vaultsync/meta/` on destinations.
 - VaultSync can import and merge metadata from reachable destinations.
-- Optional auto-import is available in Settings.
+- Optional auto-import checks enabled active destinations about every five minutes
+  while the app is open, independently of daily maintenance. Connect an unavailable
+  share normally; the passive check does not create folders or mount new shares.
+  Keep manual control through the global and per-destination auto-import settings.
 - Conflicting imported project settings can be reviewed and resolved from Settings > Advanced > Doctor.
 - Imported projects also appear in Projects with an **Imported** label in cards,
   compact rows and details. Projects without a source path remain visible.

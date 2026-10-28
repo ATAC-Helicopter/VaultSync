@@ -19,9 +19,6 @@ namespace VaultSync.UI.ViewModels
             _maintenanceTimer?.Dispose();
             _maintenanceTimer = null;
 
-            if (!_config.Advanced.Maintenance.Enabled)
-                return;
-
             _maintenanceTimer = new Timer(
                 _ => AppViewModel.RunDetached(SafeRunScheduledMaintenanceAsync, nameof(SafeRunScheduledMaintenanceAsync)),
                 null,
@@ -33,12 +30,54 @@ namespace VaultSync.UI.ViewModels
         {
             try
             {
+                await RunPeriodicDestinationMetadataImportAsync().ConfigureAwait(false);
                 await RunScheduledMaintenanceAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 DiagnosticsLogger.Record(
                     $"Scheduled maintenance failed: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        private async Task RunPeriodicDestinationMetadataImportAsync()
+        {
+            AppConfig cfg = _configStore.GetSnapshot();
+            foreach (BackupDestination dest in GetActiveDestinations(cfg))
+            {
+                if (!IsMetadataImportEnabled(cfg, dest) || string.IsNullOrWhiteSpace(dest.Path))
+                    continue;
+
+                // Local resolution normally creates its directory, even in passive mode.
+                // Treat local paths as pre-mounted without changing the saved destination.
+                string path = dest.Path.Trim();
+                bool networkPath = path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("//", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("smb://", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase);
+                var passiveDestination = new BackupDestination
+                {
+                    Path = dest.Path,
+                    Alias = dest.Alias,
+                    Active = dest.Active,
+                    CredentialName = dest.CredentialName,
+                    PreMounted = dest.PreMounted || !networkPath,
+                    AutoMount = dest.AutoMount,
+                    AutoUnmount = dest.AutoUnmount
+                };
+
+                try
+                {
+                    DestinationResolution resolution = await Task.Run(() =>
+                        _networkMountService.PrepareDestination(passiveDestination, null, allowAutoMount: false))
+                        .ConfigureAwait(false);
+                    if (resolution.IsSuccess && !string.IsNullOrWhiteSpace(resolution.EffectivePath))
+                        await TryImportMetadataForDestination(cfg, dest, resolution.EffectivePath).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    DiagnosticsLogger.Record($"Periodic metadata import failed: {ex.GetType().Name} - {ex.Message}");
+                }
             }
         }
 
@@ -152,7 +191,7 @@ namespace VaultSync.UI.ViewModels
                     if (!resolution.IsSuccess || string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         continue;
 
-                    TryImportMetadataForDestination(cfg, dest, resolution.EffectivePath);
+                    await TryImportMetadataForDestination(cfg, dest, resolution.EffectivePath).ConfigureAwait(false);
                     queuedCount++;
                 }
 
