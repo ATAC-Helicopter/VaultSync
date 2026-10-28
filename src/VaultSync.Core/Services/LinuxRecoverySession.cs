@@ -129,8 +129,9 @@ internal sealed class LinuxRecoverySession
                 phase = LinuxRecoverySessionPhase.Ready;
                 break;
             case LinuxRecoveryMessage.Staging:
-                Require(LinuxRecoverySessionPhase.ImagesOffered);
-                phase = LinuxRecoverySessionPhase.Staging;
+                if (phase == LinuxRecoverySessionPhase.ImagesOffered) phase = LinuxRecoverySessionPhase.Staging;
+                else if (phase is not (LinuxRecoverySessionPhase.Staging or LinuxRecoverySessionPhase.InventoryRequested or
+                    LinuxRecoverySessionPhase.PrepareRequested)) throw Invalid();
                 break;
             case LinuxRecoveryMessage.Inventory:
                 Require(LinuxRecoverySessionPhase.InventoryRequested);
@@ -145,8 +146,8 @@ internal sealed class LinuxRecoverySession
             case LinuxRecoveryMessage.Executing:
                 // Cancellation can race execution after an acknowledgment. It must not
                 // erase an already-started writer or permit a pre-write refusal instead.
-                Require(LinuxRecoverySessionPhase.Confirmed);
-                phase = LinuxRecoverySessionPhase.Executing;
+                if (phase == LinuxRecoverySessionPhase.Confirmed) phase = LinuxRecoverySessionPhase.Executing;
+                else Require(LinuxRecoverySessionPhase.Executing);
                 break;
             case LinuxRecoveryMessage.Progress:
                 Require(LinuxRecoverySessionPhase.Executing);

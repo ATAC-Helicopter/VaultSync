@@ -47,3 +47,10 @@ Real application screenshots must come from an isolated synthetic-data profile
 and describe the observed build and outcome. A blank capture, rendering-only
 test, replay or earlier native backend result cannot stand in for a successful
 interactive restore. Editorial screenshots and manuscripts stay outside GitHub.
+
+The internal worker coordinator now joins channel events to actual staging,
+review and owned execution. It requires both wire acknowledgment and a separate
+trusted in-process supervisor action; it is still not attached to this panel.
+Its synthetic tests do not qualify human confirmation, installed privileged
+launch, retained-storage lifecycle or bootable recovery media. See the
+[orchestration contract](RECOVERY_OPERATION_PROTOCOL_1.9.md#owned-worker-orchestration--2026-10-28).

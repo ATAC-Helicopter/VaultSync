@@ -86,7 +86,7 @@ public sealed class LinuxRecoverySessionTests
     [InlineData(Phase.InventoryRequested, Message.InventoryRequest, true)]
     [InlineData(Phase.InventoryReceived, Message.Staging, false)]
     [InlineData(Phase.Reviewed, Message.InventoryRequest, true)]
-    [InlineData(Phase.Executing, Message.Executing, false)]
+    [InlineData(Phase.Executing, Message.Staging, false)]
     public void OutOfOrderOrReplayedEventsPoisonSession(object phaseValue, object kindValue, bool controller)
     {
         var phase = (Phase)phaseValue;
@@ -240,6 +240,21 @@ public sealed class LinuxRecoverySessionTests
         Assert.Equal(before with { Phase = Phase.Faulted }, session.Fail());
         Assert.Null(session.State.Outcome);
         Assert.Equal(session.State, session.Fail());
+    }
+
+    [Theory]
+    [InlineData(Phase.Staging)] [InlineData(Phase.InventoryRequested)] [InlineData(Phase.PrepareRequested)]
+    [InlineData(Phase.Executing)]
+    public void RepeatedLiveStatusPreservesPendingPhaseAndDurableCount(object phaseValue)
+    {
+        var phase = (Phase)phaseValue;
+        var session = At(phase);
+        if (phase == Phase.Executing)
+            Worker(session, Message.Progress, Responses.EncodeProgress(new(ReviewId, 131072), Review));
+        var before = session.State;
+        var status = phase == Phase.Executing ? Message.Executing : Message.Staging;
+        Assert.Equal(before, Worker(session, status));
+        Assert.Equal(before, Worker(session, status));
     }
 
     [Fact]

@@ -1654,6 +1654,16 @@ repository must not transfer before a compatible release is adopted.
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Owned worker orchestration (2026-10-28): native staging, inventory, review
+    and execution run under one transcript/resource owner. Wire confirmation and
+    separate trusted-supervisor action are both required before execution.
+    Heartbeat/cancel processing survives synchronous native entry; durable
+    progress is coalesced after journal flush and never implies read-back success.
+    Total-run/review bounds do not renew with heartbeat traffic. Channel/cleanup
+    failures cannot manufacture a clean result. The 124 focused cases pass;
+    installed supervisor, retained-storage lifecycle, complete UI/media and native
+    profile/package qualification remain open. See the
+    [source-bound receipt](docs/release-evidence/1.9-recovery-worker-owner-2026-10-28.json).
   - Stateful session integration (2026-10-28): consume channel frames in one
     correlated, single-use conversation, rejecting reordered setup, stale review
     acknowledgments and post-execution refusal. Preserve cancellation races and

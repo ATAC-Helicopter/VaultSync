@@ -104,6 +104,65 @@ public sealed class RawImageDeviceRestoreServiceTests
         new(Guid.NewGuid(), Guid.NewGuid(), stage.Image.ImageId, stage.Image.CaptureId,
             stage.Image.Generation, stage.Image.ManifestRoot!, device);
 
+    [Fact]
+    public async Task ProgressOccursOnlyAfterDurableRangeAndStopsBeforeTerminalReadBack()
+    {
+        await using var stage = await Stage(512);
+        var trace = new List<string>(); var target = new Target(Device(512, stage.Image.VerifiedBytes), trace);
+        var journal = new Journal(trace);
+        ulong previous = 0;
+        var result = await RawImageDeviceRestoreService.RunAsync(stage, Request(stage, target.Observation), target, journal,
+            progress: (count, _) =>
+            {
+                Assert.Equal(RawImageRestoreRecordKind.RangeFlushed, journal.Records.Last().Kind);
+                Assert.Equal(count, (ulong)journal.Records.Where(r => r.Kind == RawImageRestoreRecordKind.RangeFlushed).Sum(r => (long)r.Length));
+                Assert.True(count > previous); previous = count;
+                Assert.Equal("RangeFlushed", trace.Last()); trace.Add("progress");
+                return ValueTask.CompletedTask;
+            });
+        Assert.Equal(RawImageDeviceRestoreState.WrittenAndReadBack, result.State);
+        Assert.Equal(result.AcknowledgedBytes, previous);
+        Assert.True(trace.LastIndexOf("progress") < trace.IndexOf("ReadBackVerified"));
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task CallbackFailureOrCancellationPreservesAlreadyAcknowledgedRange(bool cancel)
+    {
+        await using var stage = await Stage(512);
+        var trace = new List<string>(); var target = new Target(Device(512, stage.Image.VerifiedBytes), trace);
+        var journal = new Journal(trace); using var cancellation = new CancellationTokenSource();
+        ulong observed = 0;
+        var result = await RawImageDeviceRestoreService.RunAsync(stage, Request(stage, target.Observation), target, journal,
+            cancellation.Token, (count, token) =>
+            {
+                observed = count;
+                if (cancel) { cancellation.Cancel(); token.ThrowIfCancellationRequested(); }
+                throw new IOException("fixture-progress-failed");
+            });
+        Assert.Equal(cancel ? RawImageDeviceRestoreState.Interrupted : RawImageDeviceRestoreState.Failed, result.State);
+        Assert.True(observed > 0);
+        Assert.Equal(observed, result.AcknowledgedBytes);
+        Assert.Equal(0UL, result.UncertainOffset);
+        Assert.Equal(0UL, result.UncertainLength);
+        Assert.True(result.TerminalRecordWritten);
+        Assert.True(target.Disposed);
+    }
+
+    [Fact]
+    public async Task FailedDurableRangeNeverEmitsProgress()
+    {
+        await using var stage = await Stage(512);
+        var trace = new List<string>(); var target = new Target(Device(512, stage.Image.VerifiedBytes), trace);
+        var journal = new Journal(trace) { Fault = RawImageRestoreRecordKind.RangeFlushed };
+        int calls = 0;
+        var result = await RawImageDeviceRestoreService.RunAsync(stage, Request(stage, target.Observation), target, journal,
+            progress: (_, _) => { calls++; return ValueTask.CompletedTask; });
+        Assert.Equal(0, calls);
+        Assert.Equal(0UL, result.AcknowledgedBytes);
+        Assert.True(result.UncertainLength > 0);
+    }
+
     [Theory]
     [InlineData(512u)]
     [InlineData(4096u)]

@@ -39,10 +39,11 @@ internal static class RawImageDeviceRestoreService
 
     internal static async ValueTask<RawImageDeviceRestoreResult> RunAsync(
         LinuxRawImageStagingSession stage, RawImageDeviceRestoreRequest request,
-        ITarget target, IJournal journal, CancellationToken token = default)
+        ITarget target, IJournal journal, CancellationToken token = default,
+        Func<ulong, CancellationToken, ValueTask>? progress = null)
     {
         RawImageDeviceRestoreResult result;
-        try { result = await ExecuteAsync(stage, request, target, journal, token).ConfigureAwait(false); }
+        try { result = await ExecuteAsync(stage, request, target, journal, token, progress).ConfigureAwait(false); }
         catch
         {
             await TryReleaseAsync(target).ConfigureAwait(false);
@@ -63,7 +64,8 @@ internal static class RawImageDeviceRestoreService
 
     private static async ValueTask<RawImageDeviceRestoreResult> ExecuteAsync(
         LinuxRawImageStagingSession stage, RawImageDeviceRestoreRequest request,
-        ITarget target, IJournal journal, CancellationToken token)
+        ITarget target, IJournal journal, CancellationToken token,
+        Func<ulong, CancellationToken, ValueTask>? progress)
     {
         ulong acknowledged = 0, uncertainOffset = 0, uncertainLength = 0;
         bool started = false;
@@ -101,6 +103,9 @@ internal static class RawImageDeviceRestoreService
                     acknowledged, (ulong)count, hash), token).ConfigureAwait(false);
                 acknowledged += (ulong)count;
                 uncertainOffset = 0; uncertainLength = 0;
+                // Notify only after both durability and local acknowledgment advance.
+                // A callback failure/cancellation cannot erase that durable range.
+                if (progress is not null) await progress(acknowledged, token).ConfigureAwait(false);
             }
             string? readBack = await DiskImageByteIntegrity.HashExactAsync(target.ReadBack, stage.Image.VerifiedBytes, token)
                 .ConfigureAwait(false);

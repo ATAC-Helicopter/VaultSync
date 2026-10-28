@@ -126,7 +126,7 @@ internal sealed class LinuxRawRestoreOperation : IAsyncDisposable
     }
 
     internal async ValueTask<LinuxRawRestoreExecution> ExecuteReviewedAsync(Guid operationId, Guid reviewId,
-        CancellationToken token = default)
+        CancellationToken token = default, Func<ulong, CancellationToken, ValueTask>? progress = null)
     {
         // A duplicate attempt neither cancels nor disposes an executing operation.
         if (Interlocked.CompareExchange(ref consumed, 1, 0) != 0)
@@ -183,7 +183,7 @@ internal sealed class LinuxRawRestoreOperation : IAsyncDisposable
                                 // Keep an idempotent cleanup lease: the engine normally
                                 // closes it, while an unconfirmed close gets one final attempt.
                                 target = new OwnedTarget(target);
-                                var written = await RawImageDeviceRestoreService.RunAsync(stage, request, target, journal, linked.Token)
+                                var written = await RawImageDeviceRestoreService.RunAsync(stage, request, target, journal, linked.Token, progress)
                                     .ConfigureAwait(false);
                                 result = new(written.State, written.State switch
                                 {

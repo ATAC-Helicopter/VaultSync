@@ -159,6 +159,58 @@ confirmation UI or installed supervisor. Actual owner execution, callbacks,
 channel pumping and independent media remain integration work. Existing
 trusted-offline, build/role and exact-device authority requirements remain.
 
+## Owned worker orchestration — 2026-10-28
+
+The internal worker operation joins the authenticated channel, session, descriptor
+sources, sealed staging, full native inventory and owned restore lifecycle. Its
+production adapters use the existing native services; fixture transports and
+platforms are internal test seams. This is not an installed/elevated entry point.
+Only a trusted caller may supply the fixed staging and journal parents; the
+controller cannot choose privileged paths or providers.
+
+One transcript owner serializes outgoing events before processing dependent
+incoming frames. Native staging/observation/preparation/execution run off that
+actor, including synchronous work before their first await; their work token is
+passed inside an unconditionally scheduled task so cancellation cannot skip
+transferred-resource adoption. A pending receive remains active while staging, observing,
+preparing or executing, so controller heartbeats, cancellation and peer loss can
+be handled. The native review is retained separately from display response DTOs.
+Wire Confirm records correlation only; actual execution additionally requires a
+matching, one-shot in-process supervisor action after its real human/device
+checks. Neither a review ID nor a boolean supplied over the connection is a
+write capability.
+
+Durable progress originates only after the engine completes RangeFlushed and
+updates its acknowledged count. The worker coalesces to a bounded latest value,
+never retaining one queued event per chunk, drains at most four times per second
+and sends pending progress before terminal Outcome. Cancellation or callback failure after a durable flush retains
+the acknowledged range instead of reverting it to zero or uncertainty.
+
+For long preparation the worker may repeat Staging while actual staging or
+prepare work remains active, preserving InventoryRequested/PrepareRequested.
+It may repeat Executing only while its execution task remains active. These
+empty status messages do not increment durable bytes, prove I/O advancement,
+reset review freshness or imply successful cleanup. They prevent the channel's
+two-minute receive inactivity limit from rejecting valid large-image preparation
+or read-back. The runner's cadence is 20 seconds; send, controller inactivity and
+owned execution deadlines remain. The total run also has a 24-hour cancellation
+deadline, including setup. Review waiting retains only the remaining native
+30-second validity, measured monotonically after publication; heartbeats never
+renew it. Expiry before execution releases resources before a refusal. Internal
+fixtures can shorten these limits, never lengthen production bounds. This does
+not supply a native I/O watchdog or guarantee immediate native cancellation.
+A status after terminal completion or in an unrelated phase remains invalid.
+
+Channel failure cancels work and awaits owned cleanup without manufacturing a
+terminal result. Before execution, explicit cancellation releases staging/review
+resources before a refusal. After execution starts, only the actual owner result
+after cleanup can supply Outcome. Full write acknowledgment is never a substitute
+for read-back or confirmed cleanup. The trusted installed/offline supervisor,
+complete UI/media and native profile/package qualification still remain separate.
+Here cleanup closes owned tasks and handles; existing storage disposal retains
+sealed staging and journals. No automatic deletion of that evidence is implied.
+A bounded, owned retained-storage lifecycle remains a supervisor integration gate.
+
 ## Read-only image descriptor handoff
 
 `LinuxRecoveryImageTransfer` uses Linux x64 `SCM_RIGHTS` on the very same

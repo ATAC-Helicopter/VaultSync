@@ -7,6 +7,19 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1907/#495 now joins the authenticated operation channel to native staging,
+observation, reviewed preparation and owned execution through an internal worker
+coordinator. Wire confirmation alone cannot write: a separate trusted supervisor
+must authorize the exact native review. Heartbeat/cancellation handling remains
+live across native work; progress follows real durable journal commits and
+terminal results follow owned cleanup. The 124 focused tests pass after correcting
+four test compilation errors; unrelated suites were skipped. Total/review bounds
+and confirmed cleanup are explicit. Existing sealed staging/journals remain
+retained by storage disposal; this is handle cleanup, not an automatic file purge.
+Installed supervisor, retained-storage policy, full UI/media and native
+profile/package qualification remain open. See
+[worker owner evidence](release-evidence/1.9-recovery-worker-owner-2026-10-28.json).
+
 VS-1907/#495 adds a single-use stateful recovery conversation and explicit
 operation-ID binding into the owned restoration lifecycle. Reordered setup,
 wrong confirmations and post-execution refusal cannot advance the session;

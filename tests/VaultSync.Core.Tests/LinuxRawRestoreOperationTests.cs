@@ -243,6 +243,130 @@ public sealed class LinuxRawRestoreOperationTests
     }
 
     [Fact]
+    public async Task OwnedExecutionForwardsOnlyDurablyCommittedProgress()
+    {
+        using var f = await Fixture.Create(); await using var operation = await f.Ready();
+        ulong last = 0; int calls = 0;
+        var result = await operation.ExecuteReviewedAsync(operation.Review.OperationId, operation.Review.ReviewId,
+            progress: (count, _) => { Assert.True(count > last); last = count; calls++; return ValueTask.CompletedTask; });
+        Assert.True(calls > 0);
+        Assert.Equal(result.WriteResult!.AcknowledgedBytes, last);
+        Assert.True(result.CleanupConfirmed);
+    }
+
+    [Theory]
+    [InlineData(false, false)] [InlineData(true, false)] [InlineData(false, true)]
+    public async Task WorkerJoinsRealOwnerOnlyAfterBothSupervisorActionAndWireConfirmation(bool supervisorFirst, bool losePeer)
+    {
+        using var f = await Fixture.Create();
+        // Native partition observations never advertise whole-disk identity.
+        f.Snapshot = f.Snapshot with { Devices = f.Snapshot.Devices.Select(d => d.Kind == LinuxBlockKind.Partition
+            ? d with { Identity = LinuxBlockIdentity.Unknown } : d).ToArray() };
+        f.Destination.WriteGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var transport = new LinuxRecoveryWorkerOperationTests.Transport();
+        using var sources = new LinuxRecoveryWorkerOperationTests.Sources();
+        Guid id = Guid.NewGuid();
+        var platform = new LinuxRecoveryWorkerOperationTests.Platform
+        {
+            Stage = (_, _, _) => ValueTask.FromResult(new LinuxRawImageStagingAssessment(LinuxRawImageStagingState.StagedVerified, "fixture-staged", f.Stage)),
+            Observe = f.ObserveAsync,
+            Prepare = (operation, stage, inventory, selection, token) => LinuxRawRestoreOperation.PrepareAsync(operation,
+                stage, inventory, selection, Path.GetTempPath(), f, LinuxRawRestoreOperation.MaximumExecutionTime, token)
+        };
+        await using var worker = new LinuxRecoveryWorkerOperation(id, transport, platform);
+        var run = worker.RunAsync();
+        using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+        transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+        using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+        transport.Controller(LinuxRecoveryMessage.InventoryRequest);
+        using (await transport.Next(LinuxRecoveryMessage.Inventory)) { }
+        transport.Controller(LinuxRecoveryMessage.Prepare, LinuxRecoveryProtocol.Selection(f.Snapshot.ObservationId, "vdb"));
+        using (await transport.Next(LinuxRecoveryMessage.Review)) { }
+        var review = await worker.ReviewReady.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(id, review.OperationId);
+        Task<LinuxRawRestoreExecution>? execution = null;
+        if (supervisorFirst) execution = worker.ExecuteReviewedAsync(id, review.ReviewId);
+        else transport.Controller(LinuxRecoveryMessage.Confirm, LinuxRecoveryProtocol.ReviewAcknowledgment(review.ReviewId));
+        await transport.Barrier();
+        Assert.Equal(0, f.Opens); Assert.Equal(0, f.Destination.Writes);
+        Assert.DoesNotContain(LinuxRecoveryMessage.Executing, transport.Sent);
+        if (supervisorFirst) transport.Controller(LinuxRecoveryMessage.Confirm, LinuxRecoveryProtocol.ReviewAcknowledgment(review.ReviewId));
+        else execution = worker.ExecuteReviewedAsync(id, review.ReviewId);
+        using (await transport.Next(LinuxRecoveryMessage.Executing)) { }
+        await f.Destination.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Throws<InvalidOperationException>(() => { _ = worker.ExecuteReviewedAsync(id, review.ReviewId); });
+        Assert.False(execution!.IsCompleted);
+        if (losePeer)
+        {
+            transport.ThrowDispose = true;
+            transport.LosePeer(new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.ConnectionReset));
+            Assert.Equal(LinuxRecoverySessionPhase.Faulted, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+            Assert.Equal(1, f.Destination.Disposals);
+            Assert.Equal(1, f.StageStorage.Disposals);
+            Assert.Equal(1, f.JournalStorage.Disposals);
+            Assert.True(execution.IsCompleted);
+            Assert.DoesNotContain(LinuxRecoveryMessage.Outcome, transport.Sent);
+            Assert.DoesNotContain(LinuxRecoveryMessage.Refused, transport.Sent);
+            transport.CleanupFrames();
+            return;
+        }
+        f.Destination.WriteGate.SetResult();
+        bool outcome = false;
+        while (!outcome)
+        {
+            using var frame = await transport.NextAny();
+            Assert.True(frame.Kind is LinuxRecoveryMessage.Progress or LinuxRecoveryMessage.Outcome);
+            outcome = frame.Kind == LinuxRecoveryMessage.Outcome;
+        }
+        var terminal = await run.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(LinuxRecoverySessionPhase.Completed, terminal.Phase);
+        Assert.True((await execution).CleanupConfirmed);
+        Assert.Equal(f.Device.Capacity, terminal.AcknowledgedBytes);
+        Assert.Equal(RawImageDeviceRestoreState.WrittenAndReadBack, terminal.Outcome!.Execution.State);
+        Assert.Equal(id, f.Request!.OperationId);
+        Assert.Equal(1, f.Destination.Disposals);
+        Assert.Equal(1, f.StageStorage.Disposals);
+        Assert.Equal(1, f.JournalStorage.Disposals);
+        transport.CleanupFrames();
+    }
+
+    [Fact]
+    public async Task WorkerReviewExpiryReleasesNativeOwnerWithoutRenewingForHeartbeats()
+    {
+        using var f = await Fixture.Create();
+        f.Snapshot = f.Snapshot with { Devices = f.Snapshot.Devices.Select(d => d.Kind == LinuxBlockKind.Partition
+            ? d with { Identity = LinuxBlockIdentity.Unknown } : d).ToArray() };
+        var transport = new LinuxRecoveryWorkerOperationTests.Transport();
+        using var sources = new LinuxRecoveryWorkerOperationTests.Sources();
+        Guid id = Guid.NewGuid();
+        var platform = new LinuxRecoveryWorkerOperationTests.Platform
+        {
+            Stage = (_, _, _) => ValueTask.FromResult(new LinuxRawImageStagingAssessment(LinuxRawImageStagingState.StagedVerified, "fixture-staged", f.Stage)),
+            Observe = f.ObserveAsync,
+            Prepare = (operation, stage, inventory, selection, token) => LinuxRawRestoreOperation.PrepareAsync(operation,
+                stage, inventory, selection, Path.GetTempPath(), f, LinuxRawRestoreOperation.MaximumExecutionTime, token)
+        };
+        await using var worker = new LinuxRecoveryWorkerOperation(id, transport, platform, reviewLimit: TimeSpan.FromMilliseconds(50));
+        var run = worker.RunAsync();
+        using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+        transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+        using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+        transport.Controller(LinuxRecoveryMessage.InventoryRequest);
+        using (await transport.Next(LinuxRecoveryMessage.Inventory)) { }
+        transport.Controller(LinuxRecoveryMessage.Prepare, LinuxRecoveryProtocol.Selection(f.Snapshot.ObservationId, "vdb"));
+        using (await transport.Next(LinuxRecoveryMessage.Review)) { }
+        var review = await worker.ReviewReady.WaitAsync(TimeSpan.FromSeconds(10));
+        transport.Controller(LinuxRecoveryMessage.Heartbeat);
+        using (await transport.Next(LinuxRecoveryMessage.Refused)) { }
+        Assert.Equal(LinuxRecoverySessionPhase.Refused, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+        Assert.Throws<InvalidOperationException>(() => { _ = worker.ExecuteReviewedAsync(id, review.ReviewId); });
+        Assert.Equal(0, f.Opens); Assert.Equal(0, f.Destination.Writes);
+        Assert.Equal(1, f.StageStorage.Disposals);
+        Assert.False(f.Stage.IsAlive);
+        transport.CleanupFrames();
+    }
+
+    [Fact]
     public async Task DefaultNativePreparationNeverPromotesSyntheticObservationsIntoDeviceAuthority()
     {
         using var f = await Fixture.Create();
