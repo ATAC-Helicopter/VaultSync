@@ -77,7 +77,18 @@ internal sealed class LinuxRawRestoreOperation : IAsyncDisposable
         LinuxBlockInventory expected, string kernelName, string journalParent, CancellationToken token = default) =>
         PrepareAsync(stage, expected, kernelName, journalParent, new NativePlatform(), MaximumExecutionTime, token);
 
-    internal static async ValueTask<LinuxRawRestorePreparation> PrepareAsync(LinuxRawImageStagingSession stage,
+    // Correlates a trusted caller's single-operation channel/session. A supplied ID
+    // is never authority; native freshness/offline/human prerequisites still apply.
+    internal static ValueTask<LinuxRawRestorePreparation> PrepareAsync(Guid operationId, LinuxRawImageStagingSession stage,
+        LinuxBlockInventory expected, string kernelName, string journalParent, CancellationToken token = default) =>
+        PrepareAsync(operationId, stage, expected, kernelName, journalParent, new NativePlatform(), MaximumExecutionTime, token);
+
+    internal static ValueTask<LinuxRawRestorePreparation> PrepareAsync(LinuxRawImageStagingSession stage,
+        LinuxBlockInventory expected, string kernelName, string journalParent, IPlatform platform,
+        TimeSpan executionTime, CancellationToken token = default) =>
+        PrepareAsync(Guid.NewGuid(), stage, expected, kernelName, journalParent, platform, executionTime, token);
+
+    internal static async ValueTask<LinuxRawRestorePreparation> PrepareAsync(Guid operationId, LinuxRawImageStagingSession stage,
         LinuxBlockInventory expected, string kernelName, string journalParent, IPlatform platform,
         TimeSpan executionTime, CancellationToken token = default)
     {
@@ -87,14 +98,14 @@ internal sealed class LinuxRawRestoreOperation : IAsyncDisposable
         try
         {
             token.ThrowIfCancellationRequested();
-            if (executionTime <= TimeSpan.Zero || executionTime > MaximumExecutionTime ||
+            if (operationId == Guid.Empty || executionTime <= TimeSpan.Zero || executionTime > MaximumExecutionTime ||
                 !Path.IsPathFullyQualified(journalParent) || platform is null || expected is null)
                 return new(LinuxRawRestoreOperationReason.ReviewRefused);
             var assessment = await platform.PreviewAsync(stage, expected, kernelName, token).ConfigureAwait(false);
             preview = assessment.Preview;
             if (assessment.Reason != LinuxDiskRestoreTargetPreviewReason.ObservationOnly || preview is null)
                 return new(LinuxRawRestoreOperationReason.ReviewRefused);
-            var review = await preview.CreateOverwriteReviewAsync(Guid.NewGuid(), token).ConfigureAwait(false);
+            var review = await preview.CreateOverwriteReviewAsync(operationId, token).ConfigureAwait(false);
             if (review is null) return new(LinuxRawRestoreOperationReason.ReviewRefused);
             var operation = new LinuxRawRestoreOperation(stage, preview, review, expected, journalParent, platform, executionTime);
             transferred = true;

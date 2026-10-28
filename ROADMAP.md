@@ -1653,6 +1653,15 @@ repository must not transfer before a compatible release is adopted.
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
+  bootable environment.
+  - Stateful session integration (2026-10-28): consume channel frames in one
+    correlated, single-use conversation, rejecting reordered setup, stale review
+    acknowledgments and post-execution refusal. Preserve cancellation races and
+    durable progress without manufacturing completion after channel failure.
+    Bind owned restore preparation to the supplied channel operation identifier.
+    Trusted launch, live execution/channel orchestration, UI/media and measured
+    profile/package qualification remain open; see the
+    [operation contract](docs/RECOVERY_OPERATION_PROTOCOL_1.9.md).
   - Typed response integration (2026-10-26): complete bounded inventory/review,
     durable-write progress and truthful terminal/refusal codecs before dispatcher
     and UI consumption. Review data stays correlated to the exact observation,
@@ -1661,7 +1670,6 @@ repository must not transfer before a compatible release is adopted.
     October 28: 52 focused cases and 2,282 Core cases pass; the interrupted Core
     gate reused the unchanged successful build. Response schemas are internal;
     dispatcher/UI/media and release qualification remain open under #495 / #736.
-  bootable environment.
   - Operation transport (2026-10-26): kernel-peer-bound single-operation framing
     checks direction, operation, sequence and lengths before body allocation.
     Image handoff uses exactly two read-only regular-file descriptors, with no

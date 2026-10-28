@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1907] Correlate recovery sessions and reject reordered confirmations or misleading completion.
 - [VS-1907] Prototype bounded recovery responses with explicit device and completion checks.
 - [VS-1907] Prototype authenticated recovery messages with independently owned read-only image handles.
 - [VS-1907] Select recovery images and inspect their contents through the isolated Linux reader.

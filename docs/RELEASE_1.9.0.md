@@ -7,6 +7,16 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1907/#495 adds a single-use stateful recovery conversation and explicit
+operation-ID binding into the owned restoration lifecycle. Reordered setup,
+wrong confirmations and post-execution refusal cannot advance the session;
+cancellation races and terminal evidence remain explicit. Sixty-one focused
+session/owner cases pass with warnings-as-errors, including the actual synthetic
+owner-to-session/journal round trip. No full suite or solution-wide build was
+repeated. The trusted supervisor, channel runner, actual human/device authority,
+complete UI/media and profile/package qualification remain open. See
+[session evidence](release-evidence/1.9-recovery-session-2026-10-28.json).
+
 The BUG-19042 read-copy follow-up closes the entire manual preview/import source
 boundary as well: transactional sidecars and source observations must remain
 consistent, incomplete copies refuse, and SHM is rebuilt privately. Thirty

@@ -171,6 +171,78 @@ public sealed class LinuxRawRestoreOperationTests
         operation.ExecuteReviewedAsync(operation.Review.OperationId, operation.Review.ReviewId, token);
 
     [Fact]
+    public async Task SuppliedOperationBindsActualReviewSessionExecutionAndJournal()
+    {
+        using var f = await Fixture.Create();
+        Guid id = Guid.Parse("00112233-4455-6677-8899-aabbccddeeff");
+        var prepared = await LinuxRawRestoreOperation.PrepareAsync(id, f.Stage, f.Snapshot, "vdb", Path.GetTempPath(),
+            f, LinuxRawRestoreOperation.MaximumExecutionTime);
+        Assert.Equal(LinuxRawRestoreOperationReason.ReviewReady, prepared.Reason);
+        await using var operation = prepared.Operation!;
+        Assert.Equal(id, operation.Review.OperationId);
+        // The wire fixture displays only its synthetic destination. Native prepare
+        // and execution retain the full native fixture inventory/ancestry context.
+        var inventory = LinuxRecoveryResponses.ProjectInventory(f.Snapshot with { Devices = new[] { f.Device } });
+        var review = LinuxRecoveryResponses.ProjectReview(operation.Review, inventory);
+        var session = new LinuxRecoverySession(id);
+        void Apply(LinuxRecoveryRole role, LinuxRecoveryMessage kind, byte[]? body = null)
+        {
+            using var frame = new LinuxRecoveryOperationChannel.Frame(kind, body ?? Array.Empty<byte>(), null);
+            session.Apply(role, frame);
+        }
+        Apply(LinuxRecoveryRole.Worker, LinuxRecoveryMessage.Ready);
+        Apply(LinuxRecoveryRole.Controller, LinuxRecoveryMessage.OfferImages);
+        Apply(LinuxRecoveryRole.Worker, LinuxRecoveryMessage.Staging);
+        Apply(LinuxRecoveryRole.Controller, LinuxRecoveryMessage.InventoryRequest);
+        Apply(LinuxRecoveryRole.Worker, LinuxRecoveryMessage.Inventory, LinuxRecoveryResponses.EncodeInventory(inventory));
+        Apply(LinuxRecoveryRole.Controller, LinuxRecoveryMessage.Prepare, LinuxRecoveryProtocol.Selection(inventory.ObservationId, "vdb"));
+        Apply(LinuxRecoveryRole.Worker, LinuxRecoveryMessage.Review, LinuxRecoveryResponses.EncodeReview(review));
+        Apply(LinuxRecoveryRole.Controller, LinuxRecoveryMessage.Confirm, LinuxRecoveryProtocol.ReviewAcknowledgment(review.ReviewId));
+        Apply(LinuxRecoveryRole.Worker, LinuxRecoveryMessage.Executing);
+        var execution = await operation.ExecuteReviewedAsync(id, review.ReviewId);
+        Apply(LinuxRecoveryRole.Worker, LinuxRecoveryMessage.Outcome,
+            LinuxRecoveryResponses.EncodeOutcome(new(review.ReviewId, execution), review));
+        Assert.Equal(LinuxRecoverySessionPhase.Completed, session.State.Phase);
+        Assert.Equal(RawImageDeviceRestoreState.WrittenAndReadBack, session.State.Outcome!.Execution.State);
+        Assert.Equal(id, f.Request!.OperationId);
+        Assert.Equal(RawImageRestoreJournalState.ReadBackVerified, (await f.InspectJournal()).State);
+        Assert.True(session.State.Outcome.Execution.CleanupConfirmed);
+    }
+
+    [Fact]
+    public async Task EmptySuppliedOperationRefusesBeforePreviewAndDisposesTransferredStage()
+    {
+        using var f = await Fixture.Create();
+        var prepared = await LinuxRawRestoreOperation.PrepareAsync(Guid.Empty, f.Stage, f.Snapshot, "vdb", Path.GetTempPath(),
+            f, LinuxRawRestoreOperation.MaximumExecutionTime);
+        Assert.Equal(LinuxRawRestoreOperationReason.ReviewRefused, prepared.Reason);
+        Assert.Null(prepared.Operation);
+        Assert.Equal(0, f.Previews);
+        Assert.Equal(0, f.Journals);
+        Assert.Equal(0, f.Opens);
+        Assert.Equal(1, f.StageStorage.Disposals);
+        Assert.False(f.Stage.IsAlive);
+    }
+
+    [Fact]
+    public async Task WrongSuppliedExecutionOperationCannotAcquireJournalOrWrite()
+    {
+        using var f = await Fixture.Create();
+        Guid id = Guid.NewGuid();
+        var prepared = await LinuxRawRestoreOperation.PrepareAsync(id, f.Stage, f.Snapshot, "vdb", Path.GetTempPath(),
+            f, LinuxRawRestoreOperation.MaximumExecutionTime);
+        await using var operation = prepared.Operation!;
+        var execution = await operation.ExecuteReviewedAsync(Guid.NewGuid(), operation.Review.ReviewId);
+        Assert.Equal(LinuxRawRestoreOperationReason.ReviewRefused, execution.Reason);
+        Assert.Equal(0, f.Journals);
+        Assert.Equal(0, f.Opens);
+        Assert.Equal(0, f.Destination.Writes);
+        Assert.True(execution.CleanupConfirmed);
+        Assert.Equal(1, f.StageStorage.Disposals);
+        Assert.False(f.Stage.IsAlive);
+    }
+
+    [Fact]
     public async Task DefaultNativePreparationNeverPromotesSyntheticObservationsIntoDeviceAuthority()
     {
         using var f = await Fixture.Create();

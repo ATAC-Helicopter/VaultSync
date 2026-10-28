@@ -120,6 +120,45 @@ real progress callbacks, selection freshness and actual human confirmation. Thes
 codecs cannot enforce those runtime facts by themselves. The existing frame
 length limits remain an outer refusal bound; the typed body length is stricter.
 
+## Stateful conversation boundary — 2026-10-28
+
+`LinuxRecoverySession` consumes actual channel frames as one serialized
+conversation. Pair it with exactly one channel using the same operation ID;
+frames do not carry the authenticated header, so the session cannot independently
+prove that pairing. The channel still owns peer/header/sequence checks and
+read-only descriptor handoff. The caller owns frame/source disposal, processing
+order, cancellation and cleanup. It must record each successful outgoing event
+before consuming a dependent reply and fault the session after a send failure.
+A per-method lock does not supply that orchestration or a socket receive loop.
+
+The single-use order is Ready → OfferImages → Staging → InventoryRequest →
+Inventory → Prepare → Review → Confirm → Executing → Progress/Outcome. Inventory,
+selected observation/kernel name, operation and review are correlated by the
+existing strict codecs. A new inventory or selection requires a new session.
+Malformed, wrong-direction, replayed or out-of-order nonterminal events fault
+permanently, retaining the last review and durable byte count. Terminal evidence
+is immutable: late traffic refuses without replacing an accepted result.
+
+Cancel latches intent and blocks further controller setup or confirmation;
+heartbeats and already outstanding worker replies can still arrive. Cancellation
+after confirmation may race Executing, so the session retains the actual writer
+outcome rather than pretending execution never began. Once Executing is observed,
+Refused cannot replace Outcome. Progress counts alone never imply completion.
+Channel loss faults without inventing read-back, journal or cleanup evidence.
+
+The owned restore preparation overload now accepts the same nonzero operation
+ID instead of generating an unrelated one. Empty IDs refuse before preview and
+close transferred staging resources. Existing internal callers retain their
+generated-ID behavior. Tests project the actual prepared review into the session,
+execute on synthetic storage, and correlate the final outcome and journal.
+The 61 focused session/owner cases pass; see the
+[source-bound receipt](release-evidence/1.9-recovery-session-2026-10-28.json).
+
+This is a reusable internal state boundary, not a privileged runner, human
+confirmation UI or installed supervisor. Actual owner execution, callbacks,
+channel pumping and independent media remain integration work. Existing
+trusted-offline, build/role and exact-device authority requirements remain.
+
 ## Read-only image descriptor handoff
 
 `LinuxRecoveryImageTransfer` uses Linux x64 `SCM_RIGHTS` on the very same
@@ -195,8 +234,8 @@ Retained October 26 contract results include 299 Python tests and 1,959 keys in
 [source-bound receipt](release-evidence/1.9-recovery-responses-2026-10-28.json).
 
 Remaining: trusted supervisor/installation and clean unprivileged UI launch,
-stateful dispatcher and actual consent/destination flow, owned
-engine execution/progress, generated boot media, full platform/profile and
+runtime dispatcher/channel orchestration and actual consent/destination flow,
+owned engine execution/progress callbacks, generated boot media, full platform/profile and
 failure loops, package provenance and protected review/release gates. Keep #495
 open, Project In progress and #736 draft. No host-device write or release
 publication follows from these transport tests.
