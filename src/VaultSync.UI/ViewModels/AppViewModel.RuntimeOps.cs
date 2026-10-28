@@ -1111,7 +1111,7 @@ namespace VaultSync.UI.ViewModels
                             actionLabel: actionLabel,
                             actionCommand: actionCommand);
                     }
-                }).ConfigureAwait(false);
+                }, CancellationToken.None).ConfigureAwait(false);
             }
             finally
             {

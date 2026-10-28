@@ -270,12 +270,16 @@ public sealed class MetadataSyncService
 
             string? walTempRoot = null;
             bool copiedWalStore = false;
-            bool requireReadCopy = !opts.ExportMissingTombstonesOnImport && !opts.ApplyDestructiveTombstones;
+            bool requireReadCopy = !opts.ExportMissingTombstonesOnImport;
             if (requireReadCopy || ShouldUseTempCopy(store.DatabasePath))
             {
                 using var copyTiming = RuntimeTiming.Measure("Metadata import temp copy");
                 ObserveCheckpoint("metadata-import-read-copy");
-                copiedWalStore = TryCopyStoreForRead(store.DatabasePath, out walTempRoot);
+                copiedWalStore = TryCopyStoreForRead(
+                    store.DatabasePath,
+                    out walTempRoot,
+                    strictReadOnly: requireReadCopy,
+                    operationCheckpoint: ObserveCheckpoint);
                 if (requireReadCopy && !copiedWalStore)
                     return MetadataSyncResult.Failure(MetadataSyncStatus.InvalidStore, "Could not copy metadata store for read-only import.");
             }
@@ -362,38 +366,24 @@ public sealed class MetadataSyncService
                 return MetadataSyncPreview.Failure(MetadataSyncStatus.NoStore, rootPath, store.DatabasePath, "Metadata store not found.");
             }
 
-            if (ShouldUseTempCopy(store.DatabasePath) && TryCopyStoreForRead(store.DatabasePath, out string? walTempRoot))
+            if (!TryCopyStoreForRead(
+                    store.DatabasePath,
+                    out string tempRoot,
+                    strictReadOnly: true,
+                    operationCheckpoint: ObserveCheckpoint))
             {
-                Console.WriteLine($"[MetadataSync] Preview using temp copy (SQLite sidecar detected): '{walTempRoot}'.");
-                try
-                {
-                    return PreviewImportFromStoreInternal(rootPath, new MetadataStore(walTempRoot, allowReadRecovery: true), opts);
-                }
-                finally
-                {
-                    TryDeleteTempStore(walTempRoot);
-                }
+                return MetadataSyncPreview.Failure(
+                    MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath,
+                    "Could not copy metadata store for read-only import.");
             }
 
             try
             {
-                return PreviewImportFromStoreInternal(rootPath, store, opts);
+                return PreviewImportFromStoreInternal(rootPath, new MetadataStore(tempRoot, allowReadRecovery: true), opts);
             }
-            catch (SqliteException ex) when (IsCannotOpenOrLocked(ex))
+            finally
             {
-                Console.WriteLine($"[MetadataSync] Preview failed opening store at '{store.DatabasePath}': {ex.Message}");
-                if (!TryCopyStoreForRead(store.DatabasePath, out string? tempRoot))
-                    return MetadataSyncPreview.Failure(MetadataSyncStatus.InvalidStore, rootPath, store.DatabasePath, ex.Message);
-
-                Console.WriteLine($"[MetadataSync] Preview retrying from temp copy: '{tempRoot}'.");
-                try
-                {
-                    return PreviewImportFromStoreInternal(rootPath, new MetadataStore(tempRoot, allowReadRecovery: true), opts);
-                }
-                finally
-                {
-                    TryDeleteTempStore(tempRoot);
-                }
+                TryDeleteTempStore(tempRoot);
             }
         }
         finally
@@ -2010,20 +2000,62 @@ public sealed class MetadataSyncService
         return ex.SqliteErrorCode == 14 || ex.SqliteErrorCode == 5;
     }
 
-    private static bool TryCopyStoreForRead(string databasePath, out string tempRoot)
+    private sealed record ReadCopyFileStamp(long Length, DateTime LastWriteTimeUtc, string Header);
+
+    private static bool TryCopyStoreForRead(
+        string databasePath,
+        out string tempRoot,
+        bool strictReadOnly = false,
+        Action<string>? operationCheckpoint = null)
     {
         tempRoot = string.Empty;
         string? workingRoot = null;
         try
         {
-            workingRoot = Path.Combine(Path.GetTempPath(), "vaultsync-meta-import", Guid.NewGuid().ToString("N"));
+            string copyParent = Path.Combine(Path.GetTempPath(), "vaultsync-meta-import");
+            string candidateRoot = Path.Combine(copyParent, Guid.NewGuid().ToString("N"));
+            if (strictReadOnly)
+            {
+                if (OperatingSystem.IsWindows())
+                    Directory.CreateDirectory(copyParent);
+                else
+                    Directory.CreateDirectory(copyParent, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+                if (new DirectoryInfo(copyParent).LinkTarget is not null ||
+                    (!OperatingSystem.IsWindows() &&
+                     (File.GetUnixFileMode(copyParent) & (UnixFileMode.GroupWrite | UnixFileMode.OtherWrite)) != 0))
+                {
+                    throw new IOException("Metadata read-copy parent is not a protected directory.");
+                }
+                if (Directory.Exists(candidateRoot) || File.Exists(candidateRoot))
+                    throw new IOException("Metadata read-copy workspace already exists.");
+
+                if (OperatingSystem.IsWindows())
+                    Directory.CreateDirectory(candidateRoot);
+                else
+                    Directory.CreateDirectory(candidateRoot, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+                workingRoot = candidateRoot;
+                PrivateDataPermissions.EnsureDirectory(workingRoot);
+            }
+            else
+            {
+                workingRoot = candidateRoot;
+            }
             string tempDir = Path.Combine(workingRoot, VaultSyncDirectoryName, "meta");
             Directory.CreateDirectory(tempDir);
             string destPath = Path.Combine(tempDir, Path.GetFileName(databasePath));
-            File.Copy(databasePath, destPath, overwrite: true);
-            TryCopySidecar(databasePath, destPath, "-wal");
-            TryCopySidecar(databasePath, destPath, "-shm");
-            TryCopySidecar(databasePath, destPath, "-journal");
+            if (strictReadOnly)
+            {
+                CopyStableReadStore(databasePath, destPath, operationCheckpoint);
+            }
+            else
+            {
+                File.Copy(databasePath, destPath, overwrite: true);
+                TryCopySidecar(databasePath, destPath, "-wal");
+                TryCopySidecar(databasePath, destPath, "-shm");
+                TryCopySidecar(databasePath, destPath, "-journal");
+            }
             tempRoot = workingRoot;
             return true;
         }
@@ -2033,6 +2065,87 @@ public sealed class MetadataSyncService
                 TryDeleteTempStore(workingRoot);
             tempRoot = string.Empty;
             return false;
+        }
+    }
+
+    private static void CopyStableReadStore(
+        string databasePath,
+        string destinationPath,
+        Action<string>? operationCheckpoint)
+    {
+        // SHM is a rebuildable WAL index, not transactional state. Let SQLite
+        // generate a fresh index on the private copy instead of copying live locks.
+        string[] suffixes = [string.Empty, "-wal", "-journal"];
+        var observed = suffixes.ToDictionary(suffix => suffix, suffix => ReadCopyStamp(databasePath + suffix));
+        if (observed[string.Empty] is null)
+            throw new IOException("Metadata database disappeared before copying.");
+
+        operationCheckpoint?.Invoke("metadata-import-read-copy-observed");
+        foreach (string suffix in suffixes)
+        {
+            if (observed[suffix] is not { } stamp)
+                continue;
+
+            CopyObservedBytes(databasePath + suffix, destinationPath + suffix, stamp.Length);
+            ReadCopyFileStamp? copied = ReadCopyStamp(destinationPath + suffix);
+            if (copied is null || copied.Length != stamp.Length || copied.Header != stamp.Header)
+                throw new IOException("Metadata copy did not match its observed source header.");
+        }
+
+        operationCheckpoint?.Invoke("metadata-import-read-copy-copied");
+        foreach (string suffix in suffixes)
+        {
+            if (ReadCopyStamp(databasePath + suffix) != observed[suffix])
+                throw new IOException("Metadata database or transactional sidecars changed during copying.");
+        }
+    }
+
+    private static ReadCopyFileStamp? ReadCopyStamp(string path)
+    {
+        try
+        {
+            using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            long length = source.Length;
+            DateTime lastWrite = File.GetLastWriteTimeUtc(path);
+            Span<byte> header = stackalloc byte[100];
+            int headerLength = (int)Math.Min(length, header.Length);
+            source.ReadExactly(header[..headerLength]);
+            return new ReadCopyFileStamp(length, lastWrite, Convert.ToHexString(header[..headerLength]));
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    private static void CopyObservedBytes(string sourcePath, string destinationPath, long observedLength)
+    {
+        using var source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        if (source.Length != observedLength)
+            throw new IOException("Metadata source length changed before copying.");
+
+        using var destination = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(81920);
+        try
+        {
+            long remaining = observedLength;
+            while (remaining > 0)
+            {
+                int read = source.Read(buffer, 0, (int)Math.Min(remaining, 81920));
+                if (read == 0)
+                    throw new EndOfStreamException("Metadata source shrank while copying.");
+
+                destination.Write(buffer, 0, read);
+                remaining -= read;
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
         }
     }
 

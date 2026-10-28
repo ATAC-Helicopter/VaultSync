@@ -69,7 +69,7 @@ namespace VaultSync.UI.ViewModels
                 try
                 {
                     DestinationResolution resolution = await Task.Run(() =>
-                        _networkMountService.PrepareDestination(passiveDestination, null, allowAutoMount: false))
+                        _networkMountService.PrepareDestination(passiveDestination, null, allowAutoMount: false), CancellationToken.None)
                         .ConfigureAwait(false);
                     if (resolution.IsSuccess && !string.IsNullOrWhiteSpace(resolution.EffectivePath))
                         await TryImportMetadataForDestination(cfg, dest, resolution.EffectivePath).ConfigureAwait(false);

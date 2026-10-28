@@ -7,6 +7,14 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+The BUG-19042 read-copy follow-up closes the entire manual preview/import source
+boundary as well: transactional sidecars and source observations must remain
+consistent, incomplete copies refuse, and SHM is rebuilt privately. Thirty
+focused cases pass, including six deterministic copy-transition failures and
+manual reviewed-deletion preservation. The prior hosted count failure remains
+unattributed until exact-head CI provides evidence. See
+[strict-copy evidence](release-evidence/1.9-metadata-read-copy-2026-10-28.json).
+
 BUG-19042/#824 restores periodic automatic destination metadata import through
 an existing timer, independent of optional daily maintenance. The pass is passive,
 opted-in and read-only at the source, without new mounts/path creation or backup

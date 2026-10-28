@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -170,9 +171,227 @@ public sealed class AutomaticMetadataImportTests
     }
 
     [Fact]
-    public async Task AutomaticImport_PreservesSourceFilesAndLocalFields_WithoutRetention_WhileExplicitRetentionStillWorks()
+    public void PreviewThenManualImport_WithoutSourceWrites_PreservesSourceFilesWhileApplyingReviewedLocalTombstone()
     {
         using var fixture = new Fixture();
+        MetadataStore store = fixture.CreateStore();
+        int projectId = TestRepository.AddProject(fixture.Repository, "reviewed-local", fixture.Root);
+        var created = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        int snapshotId = fixture.Repository.CreateSnapshotFromMetadata("reviewed-snapshot", projectId, created, 1, 8);
+        string localBackupRoot = Path.Combine(fixture.Root, "local-backups");
+        string relative = "reviewed-local/2026-01-01_00-00-00";
+        string backupDirectory = Directory.CreateDirectory(Path.Combine(localBackupRoot, relative)).FullName;
+        string localPayload = Path.Combine(backupDirectory, "payload.txt");
+        File.WriteAllText(localPayload, "keep local payload");
+        fixture.Repository.CreateBackupFromMetadata(
+            "reviewed-backup", projectId, snapshotId, created, "manual", 8, relative,
+            localBackupRoot, "Local", isProtected: false, isImported: false);
+        store.AddTombstone(new MetaTombstone
+        {
+            EntityType = "backup", EntityId = "reviewed-backup", DeletedUtc = created.AddDays(1), OriginMachineId = "remote"
+        });
+        string[] sourceFiles = Directory.GetFiles(fixture.Source, "*", SearchOption.AllDirectories).OrderBy(path => path).ToArray();
+        var sourceBytes = sourceFiles.ToDictionary(path => path, File.ReadAllBytes);
+        MetadataSyncService service = fixture.Field<MetadataSyncService>("_metadataSyncService");
+
+        byte[] configBefore = File.ReadAllBytes(Path.Combine(fixture.ConfigDirectory, "appsettings.json"));
+
+        MetadataSyncPreview preview = service.PreviewImportFromStore(fixture.Source,
+            MetadataSyncOptions.Default.WithoutSourceWrites());
+
+        Assert.Equal(MetadataSyncStatus.Success, preview.Status);
+        Assert.Equal(1, preview.DeletedBackups);
+        Assert.NotNull(fixture.Repository.GetBackupByExternalId("reviewed-backup"));
+        Assert.Equal(configBefore, File.ReadAllBytes(Path.Combine(fixture.ConfigDirectory, "appsettings.json")));
+        Assert.Equal(sourceFiles, Directory.GetFiles(fixture.Source, "*", SearchOption.AllDirectories).OrderBy(path => path));
+        Assert.All(sourceBytes, pair => Assert.Equal(pair.Value, File.ReadAllBytes(pair.Key)));
+
+        MetadataSyncResult result = service.ImportFromStore(fixture.Source,
+            MetadataSyncOptions.Default.WithoutSourceWrites());
+
+        Assert.Equal(MetadataSyncStatus.Success, result.Status);
+        Assert.Equal(1, result.AppliedTombstones);
+        Assert.Null(fixture.Repository.GetBackupByExternalId("reviewed-backup"));
+        Assert.NotNull(fixture.Repository.GetProjectById(projectId));
+        Assert.True(File.Exists(localPayload));
+        Assert.Equal(sourceFiles, Directory.GetFiles(fixture.Source, "*", SearchOption.AllDirectories).OrderBy(path => path));
+        Assert.All(sourceBytes, pair => Assert.Equal(pair.Value, File.ReadAllBytes(pair.Key)));
+    }
+
+    [Fact]
+    public void Preview_StrictCopyFailure_DoesNotMutateLocalRepositoryOrConfiguration_AndCanRestart()
+    {
+        string database = string.Empty;
+        bool removeRequiredWal = true;
+        using var fixture = new Fixture(checkpoint =>
+        {
+            if (removeRequiredWal && checkpoint == "metadata-import-read-copy-observed")
+                File.Delete(database + "-wal");
+        });
+        MetadataStore store = fixture.CreateStore();
+        fixture.AddProject(store, "preview-remote");
+        database = store.DatabasePath;
+        byte[] originalDatabase = File.ReadAllBytes(database);
+        File.WriteAllBytes(database + "-wal", new byte[128]);
+        int localId = TestRepository.AddProject(fixture.Repository, "preview-local", fixture.Root);
+        byte[] configBefore = File.ReadAllBytes(Path.Combine(fixture.ConfigDirectory, "appsettings.json"));
+        MetadataSyncService service = fixture.Field<MetadataSyncService>("_metadataSyncService");
+
+        MetadataSyncPreview refused = service.PreviewImportFromStore(fixture.Source);
+
+        Assert.Equal(MetadataSyncStatus.InvalidStore, refused.Status);
+        Assert.Equal("Could not copy metadata store for read-only import.", refused.Message);
+        Assert.Equal(localId, Assert.Single(fixture.Repository.GetAllProjects()).Id);
+        Assert.Equal(configBefore, File.ReadAllBytes(Path.Combine(fixture.ConfigDirectory, "appsettings.json")));
+        Assert.Empty(AppConfigStore.Load().Advanced.MetadataImportCache.Sources);
+        Assert.Equal(originalDatabase, File.ReadAllBytes(database));
+        Assert.Equal(new[] { database }, Directory.GetFiles(fixture.Source, "*", SearchOption.AllDirectories));
+
+        removeRequiredWal = false;
+        MetadataSyncPreview restarted = service.PreviewImportFromStore(fixture.Source);
+        Assert.Equal(MetadataSyncStatus.Success, restarted.Status);
+        Assert.Equal(1, restarted.NewProjects);
+        Assert.Equal(localId, Assert.Single(fixture.Repository.GetAllProjects()).Id);
+        Assert.Equal(configBefore, File.ReadAllBytes(Path.Combine(fixture.ConfigDirectory, "appsettings.json")));
+        Assert.Equal(originalDatabase, File.ReadAllBytes(database));
+        Assert.Equal(new[] { database }, Directory.GetFiles(fixture.Source, "*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public void ReadOnlyCopy_WorkspaceIsPrivate_AndOmitsSharedMemoryIndex()
+    {
+        using var fixture = new Fixture();
+        MetadataStore store = fixture.CreateStore();
+        fixture.AddProject(store, "private-copy");
+        string sharedMemory = store.DatabasePath + "-shm";
+        File.WriteAllBytes(sharedMemory, new byte[128]);
+        byte[] databaseBefore = File.ReadAllBytes(store.DatabasePath);
+        byte[] sharedMemoryBefore = File.ReadAllBytes(sharedMemory);
+        object?[] arguments = [store.DatabasePath, string.Empty, true, null];
+
+        bool success = (bool)typeof(MetadataSyncService)
+            .GetMethod("TryCopyStoreForRead", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, arguments)!;
+
+        Assert.True(success);
+        using var workspace = new TempDirectory((string)arguments[1]!);
+        if (!OperatingSystem.IsWindows())
+            Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+                File.GetUnixFileMode(workspace.Path));
+        string copiedDatabase = Path.Combine(workspace.Path, ".vaultsync", "meta", Path.GetFileName(store.DatabasePath));
+        Assert.Equal(databaseBefore, File.ReadAllBytes(copiedDatabase));
+        Assert.False(File.Exists(copiedDatabase + "-shm"));
+        Assert.Equal(databaseBefore, File.ReadAllBytes(store.DatabasePath));
+        Assert.Equal(sharedMemoryBefore, File.ReadAllBytes(sharedMemory));
+    }
+
+    [Theory]
+    [InlineData("missing-wal")]
+    [InlineData("blocked-journal")]
+    [InlineData("appearing-wal")]
+    [InlineData("changed-wal-header")]
+    [InlineData("growing-database")]
+    [InlineData("growing-wal")]
+    public void ReadOnlyImport_StrictCopyFault_RefusesPartialSnapshotWithoutLocalMutation_AndCanRestart(string fault)
+    {
+        string database = string.Empty;
+        bool injectFault = true;
+        bool faultInjected = false;
+        var expectedSource = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        using var fixture = new Fixture(checkpoint =>
+        {
+            string boundary = fault is "changed-wal-header" or "growing-wal"
+                ? "metadata-import-read-copy-copied"
+                : "metadata-import-read-copy-observed";
+            if (!injectFault || checkpoint != boundary)
+                return;
+
+            faultInjected = true;
+            string sidecar = database + (fault == "blocked-journal" ? "-journal" : "-wal");
+            switch (fault)
+            {
+                case "missing-wal":
+                    File.Delete(sidecar);
+                    expectedSource.Remove(sidecar);
+                    break;
+                case "blocked-journal":
+                    File.Delete(sidecar);
+                    Directory.CreateDirectory(sidecar);
+                    expectedSource.Remove(sidecar);
+                    break;
+                case "appearing-wal":
+                    File.WriteAllBytes(sidecar, new byte[128]);
+                    expectedSource[sidecar] = File.ReadAllBytes(sidecar);
+                    break;
+                case "changed-wal-header":
+                    DateTime originalWrite = File.GetLastWriteTimeUtc(sidecar);
+                    byte[] changedHeader = File.ReadAllBytes(sidecar);
+                    changedHeader[0] ^= 1;
+                    File.WriteAllBytes(sidecar, changedHeader);
+                    // Keep length/time unchanged: the bounded header check must refuse.
+                    File.SetLastWriteTimeUtc(sidecar, originalWrite);
+                    expectedSource[sidecar] = changedHeader;
+                    break;
+                case "growing-database":
+                case "growing-wal":
+                    string growingPath = fault == "growing-database" ? database : sidecar;
+                    using (var growing = new FileStream(growingPath, FileMode.Append, FileAccess.Write))
+                        growing.Write(new byte[128]);
+                    expectedSource[growingPath] = File.ReadAllBytes(growingPath);
+                    break;
+            }
+        });
+        MetadataStore store = fixture.CreateStore();
+        fixture.AddProject(store, "strict-copy-remote");
+        database = store.DatabasePath;
+        byte[] originalDatabase = File.ReadAllBytes(database);
+        if (fault is "missing-wal" or "changed-wal-header" or "growing-wal")
+            File.WriteAllBytes(database + "-wal", new byte[128]);
+        if (fault == "blocked-journal")
+            File.WriteAllBytes(database + "-journal", new byte[128]);
+        foreach (string path in Directory.GetFiles(fixture.Source, "*", SearchOption.AllDirectories))
+            expectedSource[path] = File.ReadAllBytes(path);
+        int localId = TestRepository.AddProject(fixture.Repository, "local-only", fixture.Root);
+        byte[] configBefore = File.ReadAllBytes(Path.Combine(fixture.ConfigDirectory, "appsettings.json"));
+        MetadataSyncService service = fixture.Field<MetadataSyncService>("_metadataSyncService");
+
+        MetadataSyncResult result = service.ImportFromStore(fixture.Source,
+            MetadataSyncOptions.Default.AsReadOnlySource().WithUnchangedSourceSkip());
+
+        Assert.True(faultInjected);
+        Assert.Equal(MetadataSyncStatus.InvalidStore, result.Status);
+        Assert.Equal("Could not copy metadata store for read-only import.", result.Message);
+        Project local = Assert.Single(fixture.Repository.GetAllProjects());
+        Assert.Equal(localId, local.Id);
+        Assert.Equal("local-only", local.Name);
+        Assert.Equal(configBefore, File.ReadAllBytes(Path.Combine(fixture.ConfigDirectory, "appsettings.json")));
+        Assert.Empty(AppConfigStore.Load().Advanced.MetadataImportCache.Sources);
+        Assert.Equal(expectedSource.Keys.OrderBy(path => path),
+            Directory.GetFiles(fixture.Source, "*", SearchOption.AllDirectories).OrderBy(path => path));
+        Assert.All(expectedSource, pair => Assert.Equal(pair.Value, File.ReadAllBytes(pair.Key)));
+
+        injectFault = false;
+        foreach (string suffix in new[] { "-wal", "-journal" })
+        {
+            string path = database + suffix;
+            if (Directory.Exists(path))
+                Directory.Delete(path);
+            else if (File.Exists(path))
+                File.Delete(path);
+        }
+        File.WriteAllBytes(database, originalDatabase);
+        MetadataSyncResult restarted = service.ImportFromStore(fixture.Source,
+            MetadataSyncOptions.Default.AsReadOnlySource().WithUnchangedSourceSkip());
+        Assert.Equal(MetadataSyncStatus.Success, restarted.Status);
+        Assert.Equal(2, fixture.Repository.GetAllProjects().Count());
+        Assert.NotNull(fixture.Repository.GetProjectById(localId));
+        Assert.Single(AppConfigStore.Load().Advanced.MetadataImportCache.Sources);
+    }
+
+    [Fact]
+    public async Task AutomaticImport_PreservesSourceFilesAndLocalFields_WithoutRetention_WhileExplicitRetentionStillWorks()
+    {
+        var checkpoints = new ConcurrentQueue<string>();
+        using var fixture = new Fixture(checkpoints.Enqueue);
         MetadataStore store = fixture.CreateStore();
         fixture.AddProject(store, "history");
         string localSource = Directory.CreateDirectory(Path.Combine(fixture.Root, "local-project")).FullName;
@@ -218,7 +437,17 @@ public sealed class AutomaticMetadataImportTests
         Project local = fixture.Repository.GetProjectById(id)!;
         Assert.Equal(localSource, local.RootPath);
         Assert.Equal("local-key-only", local.EncryptionKeyRef);
-        Assert.Equal(2, fixture.Repository.GetBackupsForProject(id).Count());
+        string[] backupIds = fixture.Repository.GetBackupsForProject(id)
+            .Select(backup => backup.ExternalId).OrderBy(externalId => externalId, StringComparer.Ordinal).ToArray();
+        AppConfig observedConfig = AppConfigStore.GetSnapshot();
+        string importDiagnostics = $"Surviving backup IDs: [{string.Join(", ", backupIds)}]; " +
+            $"checkpoints: [{string.Join(", ", checkpoints)}]; " +
+            $"attempted paths: [{string.Join(", ", fixture.Attempts.Keys)}]; " +
+            $"retry paths: [{string.Join(", ", fixture.RetryAfter.Keys)}]; " +
+            $"fixture config active: {observedConfig.DbPath == fixture.Config.DbPath}; " +
+            $"global sync/import: {observedConfig.Backups.EnableMetadataSync}/{observedConfig.Backups.AutoImportMetadata}.";
+        Assert.True(fixture.RetryAfter.IsEmpty, importDiagnostics);
+        Assert.True(new[] { "backup-0", "backup-1" }.SequenceEqual(backupIds), importDiagnostics);
         Assert.All(sourceBytes, pair => Assert.Equal(pair.Value, File.ReadAllBytes(pair.Key)));
         Assert.Equal(sourceFiles, Directory.GetFiles(fixture.Source, "*", SearchOption.AllDirectories).OrderBy(p => p).ToArray());
         Assert.All(sourceFiles.Where(p => p.EndsWith("payload.txt", StringComparison.Ordinal)), p => Assert.True(File.Exists(p)));
@@ -237,6 +466,7 @@ public sealed class AutomaticMetadataImportTests
         private readonly TestAppConfigScope _configScope = new();
         private readonly AppViewModel _viewModel = (AppViewModel)RuntimeHelpers.GetUninitializedObject(typeof(AppViewModel));
         public string Root => _root.Path;
+        public string ConfigDirectory => _configScope.ConfigDirectory;
         public string Source => Path.Combine(Root, "destination");
         public AppConfig Config { get; }
         public BackupDestination Destination { get; }

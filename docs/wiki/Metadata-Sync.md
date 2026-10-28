@@ -15,9 +15,13 @@ Automatic discovery uses destinations that are already accessible. It does not
 create missing folders, run writability probes, ask for credentials or mount a
 new share. Connect an unavailable share normally; a later pass can then import
 its metadata. The pass skips unchanged sources and prevents overlapping imports.
-When a changed source needs reading, automatic import opens a private metadata
-copy so SQLite cannot create auxiliary files on the destination. If the private
-copy cannot be prepared, import stops and retries later. Passive resolution also
+Metadata previews and imports that prohibit source writes open a private
+metadata copy, so SQLite cannot create auxiliary files on the destination. This
+includes the manual preview/review/import flow. Required WAL/journal files must
+copy successfully; source file sets, sizes and headers are checked around the
+copy. A change or copy failure stops the operation instead of using a partial
+copy or falling back to the source. Manual review still controls local deletion
+changes independently of source-write permission. Passive resolution also
 avoids starting an SMB keepalive writer.
 Automatic destination import does not invoke backup retention or delete payloads.
 Manual actions and separately enabled maintenance keep their own policies.

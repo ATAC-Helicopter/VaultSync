@@ -99,6 +99,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 ### Fixed
 
 - [BUG-19042] Check enabled destinations for metadata updates periodically after startup.
+- [BUG-19042] Keep metadata previews and read-only imports on private copies.
 - [BUG-19041] Draw the preset edit icon consistently without platform-specific fonts.
 - [BUG-19040] Open sandboxed macOS validation builds with the required GUI registration permission.
 - [BUG-19040] Sign isolated macOS validation packages using fixed command arguments.

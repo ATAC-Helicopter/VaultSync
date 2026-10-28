@@ -1479,6 +1479,14 @@ repository must not transfer before a compatible release is adopted.
     Offline/device consent, writable lifetime, media/UI, recovery and package
     qualification remain open; no profile is promoted.
 - [ ] `BUG-19042` `P2` Keep automatic destination metadata imports periodic after startup.
+  - Read-copy follow-up (2026-10-28): preview and no-source-write imports
+    require stable DB/WAL/journal copies, omit SHM and refuse partial copying or
+    source changes. Owned Unix workspaces are private; observed-length streaming
+    is bounded. Thirty directly relevant cases pass; unrelated suites skipped.
+    An earlier hosted count failure is not attributed to this confirmed copy
+    weakness; added diagnostics preserve all safety assertions. S8949 tasks
+    explicitly retain CancellationToken.None rather than an unrelated updater
+    cancellation token. No suppression or beta qualification is claimed.
   - Owner #824; preparation PR #736. The existing five-minute timer checks
     opted-in active accessible destinations independently of optional daily
     maintenance. Preserve read-only import, unchanged-source cache, throttle,
