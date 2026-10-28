@@ -1478,6 +1478,12 @@ repository must not transfer before a compatible release is adopted.
     and [current evidence](docs/release-evidence/1.9-worker-installation-2026-10-25.md).
     Offline/device consent, writable lifetime, media/UI, recovery and package
     qualification remain open; no profile is promoted.
+- [ ] `BUG-19041` `P2` Restore preset editor icons across operating systems.
+  - Owner #823; preparation PR #736. Replace the Windows-font edit glyph with
+    an Avalonia vector, preserving translated text, command and visibility.
+    Diff/resource inspection only: no new behavior, strings or dependencies;
+    unrelated suites/builds deliberately skipped. Native rendering remains
+    distinct from static evidence. In progress, started 2026-10-28.
 - [ ] `BUG-19040` `P1` Allow native GUI registration in isolated macOS QA packages.
   - Signing follow-up (2026-10-26): fixed absolute-tool/literal-argument calls
     derive the validated QA identity from Info.plist. Native minimal-bundle

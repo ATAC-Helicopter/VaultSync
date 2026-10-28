@@ -7,6 +7,11 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+BUG-19041/#823 replaces the preset editor's Windows-font glyph with an existing
+Avalonia vector primitive. Labels/bindings and localization remain unchanged.
+The presentation-only diff is inspected without unrelated tests/builds; native
+cross-platform rendering is not claimed from source inspection.
+
 The #820 routing update at 3bea6e5 lowers new-session coordinator effort to
 Terra Medium and child concurrency to two, preserving the same critical-task
 ceiling and all repository gates. Its pinned static workflow validates routing

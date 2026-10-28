@@ -1358,10 +1358,13 @@
                         Command="{Binding DataContext.TogglePresetEditorCommand, ElementName=Root}"
                         IsVisible="{Binding DataContext.HasPresetEditorTarget, ElementName=Root}">
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Text="&#xE70F;"
-                               FontFamily="Segoe MDL2 Assets"
-                               FontSize="12"
-                               VerticalAlignment="Center" />
+                    <shapes:Path Width="14"
+                                 Height="14"
+                                 Stretch="Uniform"
+                                 Stroke="{DynamicResource TextPrimaryBrush}"
+                                 StrokeThickness="1.5"
+                                 VerticalAlignment="Center"
+                                 Data="M2,10 L10,2 L14,6 L6,14 H2 Z M9,3 L13,7" />
                     <TextBlock Text="{Binding DataContext.PresetEditorToggleLabel, ElementName=Root}"
                                FontWeight="SemiBold" />
                   </StackPanel>
