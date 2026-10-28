@@ -53,6 +53,8 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
     private ulong latestProgress;
     private bool progressPending;
     private Task<LinuxRecoverySession.Snapshot>? run;
+    private Task? disposal;
+    private Task? transportClosure;
     private int executionClaimed;
     private bool disposed;
 
@@ -82,12 +84,24 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
 
     internal Task<LinuxRecoverySession.Snapshot> RunAsync(CancellationToken token = default)
     {
+        TaskCompletionSource<LinuxRecoverySession.Snapshot> completion;
         lock (startup)
         {
             ObjectDisposedException.ThrowIf(disposed, this);
             if (run is not null) throw new InvalidOperationException("recovery-worker.already-started");
-            return run = RunCoreAsync(token);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            run = completion.Task;
         }
+        // Publish before invoking code that can complete synchronously or reenter.
+        // Dispose must always see the run it has to await before closing lifetime.
+        _ = CompleteRunAsync(token, completion);
+        return completion.Task;
+    }
+
+    private async Task CompleteRunAsync(CancellationToken token, TaskCompletionSource<LinuxRecoverySession.Snapshot> completion)
+    {
+        try { completion.TrySetResult(await RunCoreAsync(token).ConfigureAwait(false)); }
+        catch (Exception error) { completion.TrySetException(error); }
     }
 
     /// <summary>
@@ -276,7 +290,7 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
             {
                 try { await stop.CancelAsync().ConfigureAwait(false); }
                 catch (Exception error) { session.Fail(); if (!ExpectedFailure(error)) unexpected = error; }
-                try { transport.Dispose(); }
+                try { await CloseTransportAsync().ConfigureAwait(false); }
                 catch (Exception error) { session.Fail(); if (!ExpectedFailure(error)) unexpected ??= error; }
                 if (receiving is not null)
                 {
@@ -292,7 +306,7 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
             finally
             {
                 try { await CleanupAsync().ConfigureAwait(false); }
-                finally { reviewReady.TrySetCanceled(); executionCompleted.TrySetCanceled(); }
+                finally { reviewReady.TrySetCanceled(CancellationToken.None); executionCompleted.TrySetCanceled(CancellationToken.None); }
             }
             if (unexpected is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(unexpected).Throw();
         }
@@ -366,24 +380,69 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
     private static bool ExpectedFailure(Exception error) => error is IOException or InvalidDataException or UnauthorizedAccessException or
         OperationCanceledException or ObjectDisposedException or System.Net.Sockets.SocketException;
 
-    public async ValueTask DisposeAsync()
+    private Task CloseTransportAsync()
     {
-        Task<LinuxRecoverySession.Snapshot>? running;
+        TaskCompletionSource completion;
         lock (startup)
         {
-            if (disposed) { running = run; }
-            else { disposed = true; running = run; }
+            if (transportClosure is not null) return transportClosure;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            transportClosure = completion.Task;
         }
-        try { await lifetime.CancelAsync().ConfigureAwait(false); }
-        finally
+        // Publish first, then call outside the lock: close callbacks may request
+        // asynchronous disposal again. Every caller observes the same first close
+        // result, including a failure an idempotent second Dispose would hide.
+        try { transport.Dispose(); completion.TrySetResult(); }
+        catch (Exception error) { completion.TrySetException(error); }
+        return completion.Task;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Task<LinuxRecoverySession.Snapshot>? running;
+        TaskCompletionSource completion;
+        lock (startup)
         {
-            try { transport.Dispose(); }
+            if (disposal is not null) return new(disposal);
+            disposed = true;
+            running = run;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            disposal = completion.Task;
+        }
+        _ = CompleteDisposalAsync(running, completion);
+        return new(completion.Task);
+    }
+
+    private async Task CompleteDisposalAsync(Task<LinuxRecoverySession.Snapshot>? running, TaskCompletionSource completion)
+    {
+        Exception? failure = null;
+        try
+        {
+            try { await lifetime.CancelAsync().ConfigureAwait(false); }
             finally
             {
-                if (running is not null) await running.ConfigureAwait(false);
-                else { session.Fail(); reviewReady.TrySetCanceled(); executionCompleted.TrySetCanceled(); }
+                try { await CloseTransportAsync().ConfigureAwait(false); }
+                finally
+                {
+                    if (running is not null) await running.ConfigureAwait(false);
+                    else
+                    {
+                        session.Fail();
+                        reviewReady.TrySetCanceled(CancellationToken.None);
+                        executionCompleted.TrySetCanceled(CancellationToken.None);
+                    }
+                }
             }
         }
-        // Retain the tiny CTS for concurrent DisposeAsync callers, like owner gates.
+        catch (Exception error) { failure = error; }
+        finally
+        {
+            // Every linked run/work token and owned native task is now gone. Only
+            // this memoized disposal body can touch lifetime after startup closes.
+            try { lifetime.Dispose(); }
+            catch (Exception error) { failure ??= error; }
+        }
+        if (failure is null) completion.TrySetResult();
+        else completion.TrySetException(failure);
     }
 }

@@ -7,6 +7,14 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+The VS-1907 worker-disposal follow-up addresses the exact-head Sonar findings
+without exclusions: lifetime CTS disposal follows shared run/resource cleanup,
+and completion cancellation explicitly uses no caller token. A focused regression
+exposed a close-error race, now corrected with one cached transport-close result.
+The final 49 affected lifecycle cases pass with warnings-as-errors; previous
+124-case and hosted results remain historical. Fresh hosted verification remains
+separate. See [disposal evidence](release-evidence/1.9-recovery-worker-disposal-2026-10-28.json).
+
 VS-1907/#495 now joins the authenticated operation channel to native staging,
 observation, reviewed preparation and owned execution through an internal worker
 coordinator. Wire confirmation alone cannot write: a separate trusted supervisor

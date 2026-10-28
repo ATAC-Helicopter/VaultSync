@@ -1664,6 +1664,11 @@ repository must not transfer before a compatible release is adopted.
     installed supervisor, retained-storage lifecycle, complete UI/media and native
     profile/package qualification remain open. See the
     [source-bound receipt](docs/release-evidence/1.9-recovery-worker-owner-2026-10-28.json).
+    Disposal follow-up: shared run/close/dispose completions preserve the first
+    transport failure and release CTS only after native cleanup. The corrected
+    49-case lifecycle checkpoint passes after exposing a close-error race; exact
+    updated-head Sonar/CI remain separate. See the
+    [disposal receipt](docs/release-evidence/1.9-recovery-worker-disposal-2026-10-28.json).
   - Stateful session integration (2026-10-28): consume channel frames in one
     correlated, single-use conversation, rejecting reordered setup, stale review
     acknowledgments and post-execution refusal. Preserve cancellation races and

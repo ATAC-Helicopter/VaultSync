@@ -273,7 +273,7 @@ public sealed class LinuxRawRestoreOperationTests
             Prepare = (operation, stage, inventory, selection, token) => LinuxRawRestoreOperation.PrepareAsync(operation,
                 stage, inventory, selection, Path.GetTempPath(), f, LinuxRawRestoreOperation.MaximumExecutionTime, token)
         };
-        await using var worker = new LinuxRecoveryWorkerOperation(id, transport, platform);
+        var worker = new LinuxRecoveryWorkerOperation(id, transport, platform);
         var run = worker.RunAsync();
         using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
         transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
@@ -307,6 +307,8 @@ public sealed class LinuxRawRestoreOperationTests
             Assert.True(execution.IsCompleted);
             Assert.DoesNotContain(LinuxRecoveryMessage.Outcome, transport.Sent);
             Assert.DoesNotContain(LinuxRecoveryMessage.Refused, transport.Sent);
+            await Assert.ThrowsAsync<IOException>(() => worker.DisposeAsync().AsTask());
+            Assert.Equal(1, transport.Disposals);
             transport.CleanupFrames();
             return;
         }
@@ -327,6 +329,8 @@ public sealed class LinuxRawRestoreOperationTests
         Assert.Equal(1, f.Destination.Disposals);
         Assert.Equal(1, f.StageStorage.Disposals);
         Assert.Equal(1, f.JournalStorage.Disposals);
+        await worker.DisposeAsync();
+        Assert.Equal(1, transport.Disposals);
         transport.CleanupFrames();
     }
 

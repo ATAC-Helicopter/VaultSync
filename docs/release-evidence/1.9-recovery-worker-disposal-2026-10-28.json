@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-28",
+  "workId": "VS-1907",
+  "issue": 495,
+  "releasePr": 736,
+  "baseCommit": "8d19af30afedcf58cd85f95b7e72780ca526b85d",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoveryWorkerOperation.cs": "d0d7c2c3bcd1c8519d9f5edea6b3e03acc6c4762013d4c4134d75c23698ec6aa",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryWorkerOperationTests.cs": "6ad60bdbacd4d4dc4d94e397cf21b81457bda6b03a1d078f80c7a7b3189cdb9a",
+    "tests/VaultSync.Core.Tests/LinuxRawRestoreOperationTests.cs": "80dc6b3429e207b765fcf14b1fd85a38260d2b4c73db9b01c2f7ef1706ed1d9e"
+  },
+  "historicalGate": {
+    "commit": "8d19af30afedcf58cd85f95b7e72780ca526b85d",
+    "otherHostedChecks": 21,
+    "otherChecksResult": "SUCCESS",
+    "sonarGate": "ERROR",
+    "sonarBugs": 5,
+    "sonarVulnerabilities": 0,
+    "rules": [
+      "csharpsquid:S2930",
+      "csharpsquid:S8949"
+    ]
+  },
+  "change": "Memoized run, transport close and disposal; close errors preserved consistently; CTS disposed only after run/native cleanup. Completion cancellation explicitly opts out of caller cancellation.",
+  "check": {
+    "command": "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj -c Release --no-restore -m:1 -warnaserror --filter \"FullyQualifiedName~LinuxRecoveryWorkerOperationTests|FullyQualifiedName~LinuxRawRestoreOperationTests\"",
+    "passed": 49,
+    "failed": 0,
+    "skipped": 0,
+    "exitCode": 0
+  },
+  "historicalFocusedFailure": "Previous48-case checkpoint:47passed,1failed. Concurrent close could be won by run cleanup, masking close failure from external disposal. Shared cached closure corrects the race; failure log/TRX retained separately.",
+  "regressions": [
+    "Repeated disposal before run uses one completion and closes once",
+    "Concurrent disposal awaits late staging cleanup and one cancellation callback",
+    "Transport-close failure preserved across run-initiated/reentrant/external disposal",
+    "Peer-loss target/stage/journal cleanup remains asserted",
+    "Run/resource cleanup completes before lifetime CTS disposal"
+  ],
+  "limits": [
+    "No new native platform/device/UI/media qualification",
+    "Previous124-case source-bound result remains historical; only affected two classes rerun after disposal change",
+    "No unrelated full suite/solution-wide build or localization rerun",
+    "Fresh exact-head hosted analysis required; no rule suppression/threshold change",
+    "Installed supervisor, actual authorization UI, retained-storage lifecycle, boot media/profile/package qualification remain open"
+  ]
+}

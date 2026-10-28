@@ -21,6 +21,8 @@ public sealed class LinuxRecoveryWorkerOperationTests
         internal readonly ConcurrentQueue<LinuxRecoveryMessage> Sent = new();
         internal bool ThrowDispose;
         internal int Receives;
+        internal int Disposals;
+        internal Action? OnDispose;
         private int closed;
         public async Task<LinuxRecoveryOperationChannel.Frame> ReceiveAsync(CancellationToken token)
         {
@@ -56,9 +58,11 @@ public sealed class LinuxRecoveryWorkerOperationTests
         }
         public void Dispose()
         {
+            Interlocked.Increment(ref Disposals);
             if (Interlocked.Exchange(ref closed, 1) != 0) return;
             incoming.Writer.TryComplete(); outgoing.Writer.TryComplete();
             while (incoming.Reader.TryRead(out var frame)) frame.Dispose();
+            OnDispose?.Invoke();
             if (ThrowDispose) throw new IOException("fixture-transport-dispose");
         }
         internal void CleanupFrames() { while (outgoing.Reader.TryRead(out var frame)) frame.Dispose(); }
@@ -117,6 +121,119 @@ public sealed class LinuxRecoveryWorkerOperationTests
     }
 
     [Fact]
+    public async Task DisposalBeforeRunIsSharedAndRejectsLaterStartup()
+    {
+        var transport = new Transport();
+        var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, new Platform());
+        Task first = worker.DisposeAsync().AsTask(), second = worker.DisposeAsync().AsTask();
+        Assert.Same(first, second);
+        await first;
+        Assert.Same(first, worker.DisposeAsync().AsTask());
+        Assert.Equal(1, transport.Disposals);
+        Assert.Equal(LinuxRecoverySessionPhase.Faulted, worker.State.Phase);
+        Assert.True(worker.ReviewReady.IsCanceled);
+        Assert.Throws<ObjectDisposedException>(() => { _ = worker.RunAsync(); });
+        transport.CleanupFrames();
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task ConcurrentDisposalAwaitsLateStageCleanupAndSharesTransportFailure(bool throwDispose)
+    {
+        var storage = new Storage(); var staged = await Stage(storage);
+        var transport = new Transport { ThrowDispose = throwDispose }; using var sources = new Sources();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var canceled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int cancellations = 0;
+        var platform = new Platform
+        {
+            Stage = async (_, _, token) =>
+            {
+                using var registration = token.Register(() => { Interlocked.Increment(ref cancellations); canceled.TrySetResult(); });
+                entered.TrySetResult();
+                await release.Task;
+                return staged;
+            }
+        };
+        var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
+        var run = worker.RunAsync();
+        using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+        transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+        using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Task first = worker.DisposeAsync().AsTask(), second = worker.DisposeAsync().AsTask();
+        try
+        {
+            await canceled.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Same(first, second);
+            Assert.False(first.IsCompleted);
+            Assert.False(run.IsCompleted);
+            Assert.True(staged.Session!.IsAlive);
+        }
+        finally { release.TrySetResult(); }
+        if (throwDispose)
+        {
+            await Assert.ThrowsAsync<IOException>(() => first.WaitAsync(TimeSpan.FromSeconds(10)));
+            await Assert.ThrowsAsync<IOException>(() => second);
+        }
+        else await first.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(LinuxRecoverySessionPhase.Faulted, (await run).Phase);
+        Assert.Same(first, worker.DisposeAsync().AsTask());
+        Assert.Equal(1, cancellations);
+        Assert.Equal(1, storage.Disposals);
+        Assert.False(staged.Session!.IsAlive);
+        Assert.False(sources.Lease.Metadata.CanRead);
+        Assert.True(worker.ReviewReady.IsCanceled);
+        Assert.Equal(1, transport.Disposals);
+        transport.CleanupFrames();
+    }
+
+    [Fact]
+    public async Task FaultedRunHasOneRepeatableDisposalFailureAfterClosingSources()
+    {
+        var transport = new Transport(); using var sources = new Sources();
+        var platform = new Platform
+        {
+            Stage = (_, _, _) => throw new InvalidOperationException("fixture-programming-fault")
+        };
+        var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
+        var run = worker.RunAsync();
+        using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+        transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+        using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+        await Assert.ThrowsAsync<InvalidOperationException>(() => run.WaitAsync(TimeSpan.FromSeconds(10)));
+        Task first = worker.DisposeAsync().AsTask(), second = worker.DisposeAsync().AsTask();
+        Assert.Same(first, second);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => first);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => second);
+        Assert.False(sources.Lease.Metadata.CanRead);
+        Assert.True(worker.ReviewReady.IsCanceled);
+        Assert.Equal(1, transport.Disposals);
+        Assert.Equal(LinuxRecoverySessionPhase.Faulted, worker.State.Phase);
+        transport.CleanupFrames();
+    }
+
+    [Fact]
+    public async Task RunInitiatedCloseRetainsFailureAcrossReentrantDisposalWithoutClosingTwice()
+    {
+        var transport = new Transport { ThrowDispose = true };
+        var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, new Platform());
+        Task? reentered = null;
+        transport.OnDispose = () => { reentered = worker.DisposeAsync().AsTask(); };
+        var run = worker.RunAsync();
+        using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+        transport.LosePeer(new SocketException((int)SocketError.ConnectionReset));
+        Assert.Equal(LinuxRecoverySessionPhase.Faulted, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+        Assert.NotNull(reentered);
+        await Assert.ThrowsAsync<IOException>(() => reentered!.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.Same(reentered, worker.DisposeAsync().AsTask());
+        Assert.Equal(1, transport.Disposals);
+        Assert.True(worker.ReviewReady.IsCanceled);
+        transport.CleanupFrames();
+    }
+
+    [Fact]
     public async Task CancelAndHeartbeatsRemainReachableDuringActualStagingTask()
     {
         var transport = new Transport(); using var sources = new Sources();
@@ -157,7 +274,7 @@ public sealed class LinuxRecoveryWorkerOperationTests
         var storage = new Storage(); var staged = await Stage(storage);
         var transport = new Transport { ThrowDispose = throwDispose }; using var sources = new Sources();
         var platform = new Platform { Stage = (_, _, _) => ValueTask.FromResult(staged) };
-        await using var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
+        var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
         var run = worker.RunAsync();
         using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
         transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
@@ -170,6 +287,9 @@ public sealed class LinuxRecoveryWorkerOperationTests
         Assert.True(worker.ReviewReady.IsCompleted);
         Assert.DoesNotContain(LinuxRecoveryMessage.Outcome, transport.Sent);
         Assert.DoesNotContain(LinuxRecoveryMessage.Refused, transport.Sent);
+        if (throwDispose) await Assert.ThrowsAsync<IOException>(() => worker.DisposeAsync().AsTask());
+        else await worker.DisposeAsync();
+        Assert.Equal(1, transport.Disposals);
         transport.CleanupFrames();
     }
 

@@ -211,6 +211,16 @@ Here cleanup closes owned tasks and handles; existing storage disposal retains
 sealed staging and journals. No automatic deletion of that evidence is implied.
 A bounded, owned retained-storage lifecycle remains a supervisor integration gate.
 
+The disposal follow-up shares one published run task, one transport-close result
+and one disposal task. Concurrent/reentrant callers await the same result,
+including the first close failure, before lifetime token storage is disposed.
+Cleanup completion cancellation explicitly ignores caller cancellation.
+The initial 48-case repair exposed a close-error race; the complete corrected
+49-case checkpoint passes. The original 124-case result remains bound to its
+source, and the earlier exact-head Sonar failure is retained separately. See the
+[disposal receipt](release-evidence/1.9-recovery-worker-disposal-2026-10-28.json).
+No analyzer rule or threshold was suppressed to obtain a pass.
+
 ## Read-only image descriptor handoff
 
 `LinuxRecoveryImageTransfer` uses Linux x64 `SCM_RIGHTS` on the very same
