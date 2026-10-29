@@ -7,6 +7,13 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+The e85d371 hosted checkpoint leaves Sonar red at77.8% coverage with two
+unreachable cleanup findings; its macOS release-profile cancellation is not a
+pass. The follow-up removes only those no-op calls and adds relevant regression
+cases plus real isolated CI storage checks. No production admission or quality
+threshold is relaxed. Exact-head hosted results remain required; see the
+[storage-check receipt](release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
+
 VS-1906/#494 and VS-1907/#495 add a separate headless recovery entry joining
 immutable-media admission, a fixed privilege-dropping launcher, the nonroot
 controller and the existing restore supervisor. Operation storage has explicit

@@ -65,8 +65,8 @@ internal static class LinuxRecoveryControllerClient
             metadata = File.OpenRead(Path.Combine(intent.ImageFolder, "image.metadata"));
             payload = File.OpenRead(Path.Combine(intent.ImageFolder, "payload.raw"));
         }
-        catch (UnauthorizedAccessException) { metadata?.Dispose(); payload?.Dispose(); return Result.AccessDenied; }
-        catch { metadata?.Dispose(); payload?.Dispose(); throw; }
+        catch (UnauthorizedAccessException) { metadata?.Dispose(); return Result.AccessDenied; }
+        catch { metadata?.Dispose(); throw; }
         using (metadata)
         using (payload)
         {

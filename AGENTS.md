@@ -64,6 +64,10 @@ The separate `VaultSync.RecoveryHost` and `VaultSync.RecoveryController` project
 are internal recovery-media roles. Follow [the installed-entry contract](docs/RECOVERY_ENTRY_1.9.md);
 never turn them into ordinary desktop elevation endpoints or treat staging/builds
 as installed-boot, graphical-consent or disk-profile qualification.
+The isolated CI storage fixture runs only through
+`scripts/test_recovery_storage_native.sh` and its actual kernel/mount/inode proof.
+Ordinary non-Linux or unprivileged test rows are not native storage evidence;
+never enable them with a request flag alone or treat them as host/media qualification.
 
 ## Working copy and delivery
 

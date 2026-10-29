@@ -94,4 +94,27 @@ public sealed class LinuxRecoveryMediaInstallationTests
         Assert.False(LinuxRecoveryNative.TrustedFile(valid with { Mode = 0xa1a4 }, false));
         Assert.False(LinuxRecoveryNative.TrustedFile(valid, true));
     }
+
+    [Fact]
+    public void ManifestAndFileBoundsRejectUnqualifiedOrDamagedInstallations()
+    {
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(new byte[1024 * 1024 + 1], Commit));
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(Manifest()), Commit.ToUpperInvariant()));
+        foreach (long size in new[] { 0L, -1L, LinuxRecoveryMediaInstallation.MaximumFile + 1 })
+        {
+            var value = Manifest(); Files(value)[0]["size"] = size;
+            Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(value), Commit));
+        }
+        var total = Manifest();
+        foreach (var file in Files(total)) file["size"] = LinuxRecoveryMediaInstallation.MaximumFile;
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(total), Commit));
+        var empty = Manifest(); Files(empty).Clear();
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(empty), Commit));
+        var unknown = Manifest(); Files(unknown)[0]["permission"] = true;
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(unknown), Commit));
+        var invalidFlag = Manifest(); Files(invalidFlag)[0]["executable"] = "true";
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(invalidFlag), Commit));
+        var invalidHash = Manifest(); Files(invalidHash)[0]["sha256"] = Hash.ToUpperInvariant();
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(invalidHash), Commit));
+    }
 }

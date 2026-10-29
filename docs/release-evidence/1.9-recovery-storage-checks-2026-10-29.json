@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "owner": "VS-1907/#495",
+  "sourceBase": "e85d371b4dcf9f8e869f11e73a4ce1784198a1a9",
+  "binding": "Working-tree component hashes before follow-up commit; hosted execution remains separate",
+  "componentSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerClient.cs": "5a9b4dc47f1d731ee54d50fd2d023c1a5eb6434659a386380e667049eb29722a",
+    "scripts/test_recovery_storage_native.sh": "d2df137634a25a7421bfc473182c612578a0706f318961c7a97a8f03a79c484d",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryNativeTests.cs": "c5d3b436f6d4b2249b4a18f7f030709b5e40a20a14a51218ae56a209e69360c2",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryStorageNativeTests.cs": "47d89b11fe3a6a965314f9d0d1980f9f900bdc569e8c74b237341d04e3219123"
+  },
+  "historicalHostedGate": {
+    "sourceCommit": "e85d371b4dcf9f8e869f11e73a4ce1784198a1a9",
+    "analysisId": "eab1a8c0-784f-4de9-a4b2-47a57fd57259",
+    "taskId": "AaGISlWvYtqrnQwZIWZ7",
+    "reliability": "C: two S2583 unreachable payload-null cleanup checks",
+    "newCoverage": 77.83307810107198,
+    "threshold": 80,
+    "newLinesToCover": 7836,
+    "newUncoveredLines": 1737,
+    "githubChecks": {
+      "success": 20,
+      "failure": 1,
+      "cancelled": 1
+    },
+    "cancelled": "macOS release profile; never counted as passed"
+  },
+  "local": {
+    "focusedCheckpoint": {
+      "rowsPassed": 35,
+      "testFailures": 0,
+      "processExit": 1,
+      "reason": "xUnit2009 assertion-style warning treated as error; raw log/TRX retained"
+    },
+    "correctedExactClass": {
+      "filter": "LinuxRecoveryStorageNativeTests",
+      "rowsPassed": 1,
+      "failures": 0,
+      "processExit": 0,
+      "configuration": "Release warnings as errors"
+    },
+    "nativeBodies": "Linux helper/storage branches do not execute on macOS; these rows do not qualify native behavior",
+    "shellSyntaxExit": 0,
+    "unsupportedPlatform": {
+      "platform": "macOS",
+      "exit": 1,
+      "resultsCreated": false
+    }
+  },
+  "containmentReview": {
+    "tier": "vaultcritical / Sol Medium",
+    "kind": "Read-only inspection, not runtime execution or protected review",
+    "finding": "Abort trap lacked results-directory identity validation before recursive ownership restoration",
+    "repair": "Canonical path/device-inode gate plus the reviewer-proposed verified-working-directory ownership restoration",
+    "otherRoutineChange": "Equivalent Assert.StartsWith with Ordinal preserves guard behavior and clears xUnit2009"
+  },
+  "plannedHostedFixture": {
+    "platform": "Ubuntu24.04 x64, passwordless sudo, real ext4 backing",
+    "scope": "Actual storage factory/retention/cleanup on owned synthetic files in new mount/PID namespaces; no host/device recovery execution",
+    "expectedScenarios": 7,
+    "requires": [
+      "Kernel outer/fresh namespace proof",
+      "Private tmpfs /srv and matching owned ext4 source/store inode",
+      "Executed cases and source identity evidence",
+      "Passed TRX and positive StorageLease.Create/Complete Microsoft coverage ranges"
+    ],
+    "outcome": "pending exact-head CI",
+    "reports": "Ordinary and isolated actual managed reports merged; existing80% gate unchanged"
+  },
+  "qualifiedProfiles": 0
+}

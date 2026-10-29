@@ -59,6 +59,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1907] Validate recovery storage retention and cleanup through isolated Linux filesystem checks.
 - [VS-1980] Route repository tasks with bounded concurrency and preserved release safeguards.
 - [VS-1980] Bound local validation storage and clean completed test environments.
 - [VS-1902] Assemble beta drafts from qualified preparation commits without Microsoft Store assets.

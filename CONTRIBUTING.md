@@ -93,6 +93,11 @@ internal Linux recovery-media roles, not desktop elevation commands. Build and
 stage them together with the unchanged isolated reader; follow the
 [installed-entry contract](docs/RECOVERY_ENTRY_1.9.md). Generic compilation or a
 staged directory does not qualify boot media or authorize host-device tests.
+The Linux CI storage fixture uses `bash scripts/test_recovery_storage_native.sh
+<fresh-results-dir>` on its qualified Ubuntu runner. It confines actual storage
+tests in new mount/PID namespaces and requires executed-case, kernel, TRX and
+coverage proof. A normal test row on another platform does not execute or qualify
+that fixture; it never substitutes for recovery-host or media/profile tests.
 
 ### Agent entry point
 

@@ -1665,6 +1665,11 @@ repository must not transfer before a compatible release is adopted.
     defect and collector correction remain historical; GUI/media, other locale
     rendering and full profiles remain unqualified. See the
     [native receipt](docs/release-evidence/1.9-installed-recovery-entry-2026-10-29.json).
+    Hosted follow-up: remove unreachable source-cleanup checks and exercise real
+    storage retention/cleanup through a confined CI filesystem fixture. Local
+    non-Linux checks do not qualify those native branches; fresh hosted results
+    and the unchanged quality gate remain required. See the
+    [follow-up receipt](docs/release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
   - Independent console supervisor (2026-10-29): the original native review now

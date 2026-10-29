@@ -132,4 +132,58 @@ public sealed class LinuxRecoveryControllerClientTests
             new { imageFolder = folder, kernelName = "sda", authorized = true })));
         Assert.Throws<InvalidDataException>(() => LinuxRecoveryControllerClient.DecodeIntent(new byte[16385]));
     }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task FullAcknowledgmentCannotTurnReadbackOrCleanupFailureIntoRestored(bool cleanupFailure)
+    {
+        using var sources = new Sources();
+        var peer = new Peer((connection, kind, _) =>
+        {
+            switch (kind)
+            {
+                case LinuxRecoveryMessage.OfferImages: connection.Push(LinuxRecoveryMessage.Staging); break;
+                case LinuxRecoveryMessage.InventoryRequest: connection.Push(LinuxRecoveryMessage.Inventory, Responses.EncodeInventory(Inventory)); break;
+                case LinuxRecoveryMessage.Prepare: connection.Push(LinuxRecoveryMessage.Review, Responses.EncodeReview(Review)); break;
+                case LinuxRecoveryMessage.Confirm:
+                    connection.Push(LinuxRecoveryMessage.Executing);
+                    connection.Push(LinuxRecoveryMessage.Progress, Responses.EncodeProgress(new(ReviewId, 131584), Review));
+                    connection.Push(LinuxRecoveryMessage.Outcome, Responses.EncodeOutcome(new(ReviewId, new(
+                        RawImageDeviceRestoreState.Failed, cleanupFailure ? LinuxRawRestoreOperationReason.CleanupUnconfirmed : LinuxRawRestoreOperationReason.Failed,
+                        new(cleanupFailure ? RawImageDeviceRestoreState.WrittenAndReadBack : RawImageDeviceRestoreState.Failed, 131584, 0, 0, true),
+                        true, !cleanupFailure)), Review, 131584));
+                    break;
+            }
+        });
+        peer.Push(LinuxRecoveryMessage.Ready);
+        Assert.Equal(LinuxRecoveryControllerClient.Result.Failed, await LinuxRecoveryControllerClient.RunAsync(peer, Operation,
+            sources.Metadata, sources.Payload, "sda", CancellationToken.None));
+        Assert.True(peer.Disposed);
+    }
+
+    [Fact]
+    public async Task RefusalAndObserverFailureCloseConversationWithoutAcknowledgingAReview()
+    {
+        using var sources = new Sources();
+        var refusal = new Peer((connection, kind, _) =>
+        {
+            if (kind == LinuxRecoveryMessage.OfferImages) connection.Push(LinuxRecoveryMessage.Staging);
+            if (kind == LinuxRecoveryMessage.InventoryRequest) connection.Push(LinuxRecoveryMessage.Refused,
+                Responses.EncodeRefused(LinuxRawRestoreOperationReason.ReviewRefused));
+        });
+        refusal.Push(LinuxRecoveryMessage.Ready);
+        Assert.Equal(LinuxRecoveryControllerClient.Result.Refused, await LinuxRecoveryControllerClient.RunAsync(refusal, Operation,
+            sources.Metadata, sources.Payload, "sda", CancellationToken.None));
+        Assert.DoesNotContain(LinuxRecoveryMessage.Confirm, refusal.Sent); Assert.True(refusal.Disposed);
+        var observed = new Peer((connection, kind, _) =>
+        {
+            if (kind == LinuxRecoveryMessage.OfferImages) connection.Push(LinuxRecoveryMessage.Staging);
+            if (kind == LinuxRecoveryMessage.InventoryRequest) connection.Push(LinuxRecoveryMessage.Inventory, Responses.EncodeInventory(Inventory));
+        });
+        observed.Push(LinuxRecoveryMessage.Ready);
+        await Assert.ThrowsAsync<IOException>(() => LinuxRecoveryControllerClient.RunAsync(observed, Operation,
+            sources.Metadata, sources.Payload, "sda", CancellationToken.None,
+            state => { if (state.Inventory is not null) throw new IOException("fixture-observer-failed"); }));
+        Assert.DoesNotContain(LinuxRecoveryMessage.Prepare, observed.Sent); Assert.True(observed.Disposed);
+    }
 }

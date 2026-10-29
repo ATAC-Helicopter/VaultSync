@@ -120,11 +120,36 @@ jobs:
           dotnet-coverage collect
           "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build"
           -f xml
+          -o "${{ runner.temp }}/coverage-main.xml"
+
+      - name: Test owned recovery storage in isolated namespace
+        if: steps.config.outputs.configured == 'true'
+        run: bash scripts/test_recovery_storage_native.sh "${{ runner.temp }}/recovery-storage"
+
+      - name: Merge managed coverage
+        if: steps.config.outputs.configured == 'true'
+        run: >
+          dotnet-coverage merge
+          "${{ runner.temp }}/coverage-main.xml"
+          "${{ runner.temp }}/recovery-storage/coverage-native.xml"
+          -f xml
           -o coverage.xml
 
       - name: Verify coverage collection
         if: steps.config.outputs.configured == 'true'
         run: python3 scripts/validate_sonar_coverage.py coverage.xml
+
+      - name: Retain isolated storage evidence
+        if: always() && steps.config.outputs.configured == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: recovery-storage-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/recovery-storage/coverage-native.xml
+            ${{ runner.temp }}/recovery-storage/native-storage-evidence.json
+            ${{ runner.temp }}/recovery-storage/**/*.trx
 
       - name: Test Python with coverage
         if: steps.config.outputs.configured == 'true'

@@ -143,3 +143,41 @@ The native app connector could not select the standalone executable, so this is
 actual framebuffer/rendering evidence, not native-window accessibility coverage.
 Headless captures remain a laboratory limitation; other fonts/locales, the
 Avalonia wizard and final media/profile rendering remain open.
+
+## Isolated CI storage scope
+
+The hosted follow-up repairs two unreachable nullable cleanup calls in the
+nonroot source opener. The already-opened metadata stream still closes if
+opening the payload fails. The successful source/peer/operation path and all
+production admission checks remain unchanged.
+
+Real storage-lifecycle coverage uses a separate Linux CI fixture. Its launcher
+creates fresh owned scratch data, then confines the required test class in new
+mount/PID namespaces. A private tmpfs hides `/srv`; an owned ext4 directory is
+bound at the fixed store path. The original proc view is retained read-only to
+check actual outer namespace identity after the inner proc remount. Kernel UID,
+mount, filesystem and inode proofs are required before test storage creation;
+a request flag alone cannot enable privileged filesystem operations.
+
+The fixture runs only existing compiled storage tests, with a clean privileged
+environment and bounded process lifetime. It requires executed-case evidence,
+TRX and covered `StorageLease.Create`/`Complete` ranges in the Microsoft report.
+The final report merges ordinary and isolated managed coverage; existing Sonar
+thresholds and production-source inclusion remain unchanged. See
+[Microsoft's coverage collection and merge interface](https://learn.microsoft.com/en-us/dotnet/core/additional-tools/dotnet-coverage).
+
+This checks real artifact ownership, receipts, retention and cleanup on synthetic
+files. It does not execute the recovery host, open a block device, qualify media
+or replace the installed native probes above. The actual hosted outcome must be
+recorded separately; adding a fixture is not a passing native test result.
+
+The local follow-up checkpoint executes 35 test rows but initially exits1 because
+an xUnit assertion-style warning is treated as an error. After the equivalent
+Ordinal `Assert.StartsWith` correction, only the affected exact class is rerun:
+one row passes with exit0. Linux-specific helper/storage bodies are not executed
+on macOS. Shell syntax passes and the wrapper refuses macOS before creating a
+results directory. The independent containment review found an abort-trap
+ownership check omission, now guarded by exact directory identity and the
+reviewer's verified-working-directory hardening. Hosted native execution and the
+80% gate are pending; see the
+[follow-up receipt](release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
