@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "owners": [
+    "VS-1906/#494",
+    "VS-1907/#495"
+  ],
+  "sourceBase": "664e4fdfe0f8213dd12a79f696d0c854bf8ba2d0",
+  "binding": "Working-tree component hashes before implementation commit; not final asset qualification",
+  "componentSha256": {
+    "packaging/recovery/vaultsync-recovery.service": "67d2adb0b591ffd50021a88e94c5613992f94c2ecf17951cae4f8ba4fa0737b6",
+    "scripts/stage_recovery_host.py": "f1f7ade214c3286e9fd19e462d7549d410b74c92b1835184887d83f33c4c8a5f",
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerClient.cs": "38d2c38fa6d5c419d4cba65021499bbeb129f8782b684ecfd7781c64621a0ad4",
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerLaunch.cs": "c51d10a2c5fc68ce1fc0523902aba0d86c5fb34844c2b202de46ac281d571014",
+    "src/VaultSync.Core/Services/LinuxRecoveryHost.cs": "8e35bf7e75a7e92e0e0b5abe3e91e6d6b6f12f788ec0a2b2bc4b89c8c0dc4559",
+    "src/VaultSync.Core/Services/LinuxRecoveryMediaInstallation.cs": "45ff8f9a81a5b010820cb1617e1e3971212a7cfa146809954058ab9720d4fc05",
+    "src/VaultSync.Core/Services/LinuxRecoveryStorageLease.cs": "791fbff83740fff0e2da27af6b00ffde14d43e9ed9a7e36fa39b070882b46ffc",
+    "src/VaultSync.RecoveryController/Program.cs": "345528ae4dbf18d965b412cede80c8ee8322918c1c22e4635560376374070d83",
+    "src/VaultSync.RecoveryHost/Native/controller-launch.c": "b7865f975046724e8eb09165814d3758f8b92501ea1e2e5d03c8182ab3c06186",
+    "src/VaultSync.RecoveryHost/Program.cs": "2ae9a4e5cf2c9523e75abead32c06fed6af0eb68a049ca56c85a59c7ab682bd4"
+  },
+  "checks": {
+    "hostReleaseBuild": {
+      "exitCode": 0,
+      "warnings": 0,
+      "errors": 0
+    },
+    "controllerReleaseBuild": {
+      "exitCode": 0,
+      "warnings": 0,
+      "errors": 0
+    },
+    "focusedTests": {
+      "filter": "LinuxRecoveryHostTests|LinuxRecoveryMediaInstallationTests|LinuxRecoveryControllerLaunchTests|LinuxRecoveryControllerClientTests|LinuxRecoveryStorageLeaseTests",
+      "passed": 34,
+      "failed": 0,
+      "skipped": 0,
+      "configuration": "Release, warnings as errors"
+    },
+    "producerTests": {
+      "module": "test_stage_recovery_host.py",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "deliberatelySkipped": [
+    "Unrelated full local suite; new focused tests compile their existing project dependencies",
+    "Repeated localization audit: no new or changed visible application strings",
+    "Installed native launch, media and profile qualification are separate and not yet passing here"
+  ],
+  "remaining": [
+    "Actual read-only-root admission and controller peer/cgroup lifecycle",
+    "Native owned staging cleanup and retained failure behavior",
+    "Graphical flow and readable access to previously root-private captures",
+    "Bootable product media, complete OS/profile/fault loops",
+    "Publisher/package/updater/provenance qualification and protected reviews"
+  ],
+  "qualifiedProfiles": 0
+}

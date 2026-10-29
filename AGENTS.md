@@ -60,6 +60,10 @@ tests. Concrete format/protocol security checks, exact device authorization,
 protected reviews and recovery/package qualification remain required. Host-device
 writes and release publication are outside that approval; all profiles remain
 unqualified until their own measured loop passes.
+The separate `VaultSync.RecoveryHost` and `VaultSync.RecoveryController` projects
+are internal recovery-media roles. Follow [the installed-entry contract](docs/RECOVERY_ENTRY_1.9.md);
+never turn them into ordinary desktop elevation endpoints or treat staging/builds
+as installed-boot, graphical-consent or disk-profile qualification.
 
 ## Working copy and delivery
 

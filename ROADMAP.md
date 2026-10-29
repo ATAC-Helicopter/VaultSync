@@ -1652,6 +1652,12 @@ repository must not transfer before a compatible release is adopted.
 
 - [ ] `VS-1906` `P0` Produce bootable recovery media for supported UEFI
   systems with offline device discovery and recovery workflows.
+  - Connected entry implementation (2026-10-29): separate media-only host and
+    nonroot controller join the existing restore owner, with immutable-installation
+    admission and owned operation storage. This is headless source implementation,
+    not bootable media or a qualified profile. Actual boot, graphical recovery,
+    capture-source access and final package qualification remain open. See the
+    [entry contract](docs/RECOVERY_ENTRY_1.9.md).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
   - Independent console supervisor (2026-10-29): the original native review now

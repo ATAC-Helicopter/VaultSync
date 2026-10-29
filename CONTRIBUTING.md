@@ -88,6 +88,12 @@ gates. For macOS native UI checks, follow [isolated QA](docs/MACOS_QA_VALIDATION
 Deleted environments require reconstruction before fresh native evidence; a
 historical receipt does not establish current artifact availability.
 
+The `VaultSync.RecoveryHost` and `VaultSync.RecoveryController` projects are
+internal Linux recovery-media roles, not desktop elevation commands. Build and
+stage them together with the unchanged isolated reader; follow the
+[installed-entry contract](docs/RECOVERY_ENTRY_1.9.md). Generic compilation or a
+staged directory does not qualify boot media or authorize host-device tests.
+
 ### Agent entry point
 
 Every contributor agent reads root [AGENTS.md](AGENTS.md) and applicable directory

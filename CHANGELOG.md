@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1907] Prototype isolated recovery startup with verified media and owned staging cleanup.
 - [VS-1907] Prototype independent local confirmation before recovery disk overwrites.
 - [VS-1907] Prototype coordinated recovery messages, consent barriers, durable progress and consistent cleanup.
 - [VS-1907] Prototype bounded recovery responses with explicit device and completion checks.

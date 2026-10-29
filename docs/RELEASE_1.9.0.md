@@ -7,6 +7,14 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1906/#494 and VS-1907/#495 add a separate headless recovery entry joining
+immutable-media admission, a fixed privilege-dropping launcher, the nonroot
+controller and the existing restore supervisor. Operation storage has explicit
+ownership and success/failure retention boundaries. This increment does not
+qualify installed boot, graphical consent, capture-source access or a support
+profile. Current implementation and verification limits are recorded in the
+[entry contract](RECOVERY_ENTRY_1.9.md); earlier results below remain historical.
+
 VS-1907/#495 adds an independent local-console supervisor over the actual
 worker/restore owner. A root-owned physical VT and exact fresh typed review are
 required separately from the controller acknowledgment. Queued/stale/wrong input,
