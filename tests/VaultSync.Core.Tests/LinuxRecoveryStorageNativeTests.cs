@@ -184,11 +184,22 @@ public sealed class LinuxRecoveryStorageNativeTests
     private static void HardlinkPreservesOriginal(Proof proof)
     {
         Guid id = Guid.NewGuid(); using var lease = LinuxRecoveryStorageLease.Create(id); string stage = Stage(lease);
-        string original = proof.Scratch + "/hardlink-original";
+        // link(2) rejects distinct mount IDs, even aliases of the same ext4 inode
+        // tree. Keep both fixture names on the proved /srv bind mount, while the
+        // original remains outside the operation whose staging may be removed.
+        string original = LinuxRecoveryStorageLease.Store + "/hardlink-original-" + Guid.NewGuid().ToString("N");
         File.WriteAllBytes(original, Enumerable.Repeat((byte)0x5a, 65536).ToArray()); File.SetUnixFileMode(original, UnixFileMode.UserRead);
-        File.Delete(stage + "/payload.raw"); Assert.Equal(0, LinkFile(original, stage + "/payload.raw"));
+        var originalIdentity = LinuxRecoveryNative.StatPath(original);
+        Assert.Equal((proof.Store.DeviceMajor, proof.Store.DeviceMinor), (originalIdentity.DeviceMajor, originalIdentity.DeviceMinor));
+        Assert.Equal(0U, originalIdentity.Owner); Assert.Equal((ushort)0x8100, originalIdentity.Mode);
+        File.Delete(stage + "/payload.raw");
+        if (LinkFile(original, stage + "/payload.raw") != 0)
+            throw new IOException("fixture.hardlink-failed errno=" + Marshal.GetLastPInvokeError().ToString(CultureInfo.InvariantCulture));
+        Assert.Equal(2U, LinuxRecoveryNative.StatPath(original).Links);
+        Assert.Equal(2U, LinuxRecoveryNative.StatPath(stage + "/payload.raw").Links);
         Assert.Throws<IOException>(() => lease.Complete(State(id, true)));
         Assert.True(File.Exists(stage + "/image.metadata")); Assert.True(File.Exists(stage + "/payload.raw"));
+        Assert.Equal(File.ReadAllBytes(original), File.ReadAllBytes(stage + "/payload.raw"));
         Assert.All(File.ReadAllBytes(original), value => Assert.Equal((byte)0x5a, value));
     }
 
@@ -253,6 +264,6 @@ public sealed class LinuxRecoveryStorageNativeTests
     [StructLayout(LayoutKind.Explicit, Size = 120)] private struct Filesystem { [FieldOffset(0)] public long Type; }
     [DllImport("libc", EntryPoint = "fstatfs")][DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     private static extern int StatFs(SafeFileHandle handle, out Filesystem value);
-    [DllImport("libc", EntryPoint = "link")][DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [DllImport("libc", EntryPoint = "link", SetLastError = true)][DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     private static extern int LinkFile(string source, string destination);
 }

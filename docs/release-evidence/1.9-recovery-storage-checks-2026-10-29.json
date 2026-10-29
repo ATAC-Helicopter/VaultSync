@@ -68,5 +68,17 @@
     "outcome": "pending exact-head CI",
     "reports": "Ordinary and isolated actual managed reports merged; existing80% gate unchanged"
   },
-  "qualifiedProfiles": 0
+  "qualifiedProfiles": 0,
+  "firstHostedFixtureAttempt": {
+    "sourceCommit": "d2cb47517f64ab7de0944c9bf2630de3cbfc90fc",
+    "runId": 40936329604,
+    "jobId": 123667726781,
+    "outcome": "Failed actual isolated storage test at hardlink-fixture creation; later scenarios not claimed",
+    "observed": "link returned-1; errno was not captured in this attempt",
+    "fixtureIssue": "Original used scratch path while destination used bind-mounted store; Linux mount boundaries can reject this even with shared ext4 backing",
+    "repair": "Both synthetic names now reside on the proved store mount, with original outside operation. Require actual nlink2 and preservation; future link errors include errno. Production guards unchanged.",
+    "repairedTestSha256": "7583308690d3bf0bcd918b1b396fe12408c5468654b5e7429b89206a7b3ada6e",
+    "localVerification": "Focused diff inspection only; unsupported macOS would not execute this Linux-only case. No redundant local suite rerun.",
+    "hostedRerun": "pending exact-head CI"
+  }
 }

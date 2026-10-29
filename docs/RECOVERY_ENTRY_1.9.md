@@ -181,3 +181,12 @@ ownership check omission, now guarded by exact directory identity and the
 reviewer's verified-working-directory hardening. Hosted native execution and the
 80% gate are pending; see the
 [follow-up receipt](release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
+
+The first required CI fixture attempt on `d2cb475` reaches real namespace/storage
+execution but fails when creating a hardlink across the scratch path and its
+bind-mounted store alias. Its errno was not captured, so the earlier value is
+not reconstructed. The corrected fixture places both synthetic names on the
+same proved mount, with the original outside the operation. It requires real
+nlink2 plus preservation of both names/bytes; future link failures include errno.
+No production guard changes. Later scenarios in that failed attempt are not
+counted as executed; the repaired exact-head CI result remains pending.
