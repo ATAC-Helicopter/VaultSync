@@ -14,6 +14,11 @@ ownership and success/failure retention boundaries. This increment does not
 qualify installed boot, graphical consent, capture-source access or a support
 profile. Current implementation and verification limits are recorded in the
 [entry contract](RECOVERY_ENTRY_1.9.md); earlier results below remain historical.
+The repaired installed component passes a synthetic 64 KiB consent loop and a
+no-input cancellation check on readonly-root Linux. The first teardown failure
+and collector expectation correction remain recorded. The active Cocoa frame shows the complete English review; graphical flow,
+other locales and complete profiles are still open. See the
+[native entry receipt](release-evidence/1.9-installed-recovery-entry-2026-10-29.json).
 
 VS-1907/#495 adds an independent local-console supervisor over the actual
 worker/restore owner. A root-owned physical VT and exact fresh typed review are

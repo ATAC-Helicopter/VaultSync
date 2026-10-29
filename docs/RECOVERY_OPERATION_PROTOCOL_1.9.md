@@ -5,6 +5,13 @@ Development transport for the approved offline recovery direction, on the sole
 endpoint or completed restoration UI. The existing read-only DiskWorker role
 does not gain a writable command. No support profile is promoted.
 
+The separate media-only host/controller now consume this transport under the
+[installed-entry contract](RECOVERY_ENTRY_1.9.md). Its source-bound native probes
+measure headless admission/restore/storage/teardown and an active English console
+frame. Earlier checkpoint descriptions below remain historical. Graphical consent,
+source access for root-private captures and final media/profile gates remain open;
+transport acknowledgments still do not authorize disk writes.
+
 ## Authority and connection ownership
 
 The trusted media bootstrap must establish installed build/role trust, a

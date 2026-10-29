@@ -80,3 +80,20 @@ only the environment needed for a concrete next test, validate its inputs and
 record a fresh result separately. Existing private editorial screenshots remain
 outside GitHub. The missing environment does not change the four unqualified
 recovery profiles or make the beta ready.
+
+## Installed-entry availability — 2026-10-29
+
+The disposable environment for the installed recovery-entry component was removed
+after the source-bound consent and active-display/no-input probes. Its readonly
+root guest, base image, seed, virtual disks, temporary SSH keys, duplicate publishes
+and owned Release build outputs are no longer available. No owned VM process
+remains. Regenerate only for a concrete next test; no recovery ISO was retained.
+
+Cleanup removed 42 owned paths containing 4,929,327,104 allocated file bytes.
+Observed free space increased by 2,764,886,016 bytes to 46,577,909,760 bytes;
+APFS sharing/deferred accounting and concurrent activity explain why file blocks
+are not a physical recovery total. Approximately 1 MiB of bounded source-bound
+logs, manifests, TRX, failed-run evidence and regeneration scripts remains for
+review by 2026-11-05. The selected original VM frame, PNG derivative and IT/EN
+caption stay in the private editorial workspace, with the same review date.
+See the [installed component receipt](release-evidence/1.9-installed-recovery-entry-2026-10-29.json).

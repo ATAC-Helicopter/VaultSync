@@ -71,10 +71,12 @@ files and backup permissions are never changed.
 
 ## Remaining qualification
 
-Real readonly-root boot, source/role admission, exact-child/cgroup cleanup,
-retained-storage behavior and negative cases require their own native evidence.
-Catalog admission for English/Italian is not font qualification; only English
-console rendering has prior component evidence. Graphical consent remains open.
+The source-bound component receipts below measure readonly-root boot, source/role
+admission, exact-child/cgroup cleanup and retained storage on tiny synthetic
+disks. Full OS/profile/fault and final media/package loops remain unqualified.
+Catalog admission for English/Italian is not general font qualification; the
+active Cocoa frame demonstrates only the English console. Graphical consent
+and other locale/platform rendering remain open.
 
 Root-private images created by earlier capture paths may not be readable by the
 dedicated controller user. Report access denial honestly. A reviewed source-handle
@@ -110,3 +112,34 @@ Their POSIX pathname branches are explicitly limited to Linux/macOS; Windows API
 availability does not qualify these filesystem semantics. No unrelated suite was
 repeated. A new exact-source installed consent probe is required before declaring
 this teardown repaired natively.
+
+## Installed component evidence — 2026-10-29
+
+The repaired source `856ba6069e0d8b8de2fa15a430b89efd1618edd3` passes the
+installed consent probe: real readonly-root admission, fixed nonroot controller,
+physical VT review, synthetic keyboard confirmation, 64 KiB write/read-back,
+retained completion evidence, current staging removal and service/QEMU exit 0.
+The independent target hash changes from zero-filled bytes to the expected image;
+the socket and controller subgroup are absent afterward. A separate no-input
+probe retains its failed staging with zero writes and no execution/journal,
+unchanged target and clean controller/socket shutdown. Its expected cancellation
+exit is 124; the collector's initial 74 expectation remains a recorded assertion
+failure, corrected by an exact-review/source offline audit without rerunning the
+VM. Both role runtime audits pass the 10.0.13 minimum.
+
+These use synthetic input and a tiny golden GPT image, not an installed OS or
+observed human consent. New headless framebuffer captures remain incomplete even
+with delayed capture; active-display rendering and graphical recovery stay open.
+The earlier complete real frame is retained privately with its actual source and
+scope. It is not final-source visual qualification. See the
+[native receipt](release-evidence/1.9-installed-recovery-entry-2026-10-29.json).
+
+The targeted active-display follow-up uses the same installed source and owned
+VM, with Cocoa graphics instead of the headless backend. Its full English review
+frame is readable and captured for private editorial use. The no-input timeout
+returns the expected 124 directly, leaves the target unchanged and cleans the
+socket/controller; the fresh failed stage remains retained. QEMU exits normally.
+The native app connector could not select the standalone executable, so this is
+actual framebuffer/rendering evidence, not native-window accessibility coverage.
+Headless captures remain a laboratory limitation; other fonts/locales, the
+Avalonia wizard and final media/profile rendering remain open.

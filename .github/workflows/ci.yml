@@ -79,6 +79,8 @@ jobs:
         run: |
           dotnet publish src/VaultSync.RecoveryHost/VaultSync.RecoveryHost.csproj --configuration Release --runtime linux-x64 --self-contained true --output "${{ runner.temp }}/recovery-host"
           dotnet publish src/VaultSync.RecoveryController/VaultSync.RecoveryController.csproj --configuration Release --runtime linux-x64 --self-contained true --output "${{ runner.temp }}/recovery-controller"
+          python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/recovery-host/VaultSync.RecoveryHost.runtimeconfig.json"
+          python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/recovery-controller/VaultSync.RecoveryController.runtimeconfig.json"
           mkdir "${{ runner.temp }}/recovery-inputs"
           cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=3 '-DSOURCE_COMMIT="${{ github.sha }}"' src/VaultSync.RecoveryHost/Native/controller-launch.c -Wl,-z,relro,-z,now -o "${{ runner.temp }}/recovery-inputs/recovery-controller-launch"
           cp -L /usr/lib/systemd/systemd "${{ runner.temp }}/recovery-inputs/systemd"

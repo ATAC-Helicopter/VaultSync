@@ -73,6 +73,6 @@
       "configuration": "Release, warnings as errors"
     },
     "platformScope": "Three real pathname branches execute on Linux/macOS only; the explicit Windows guard was added after this checkpoint and does not change macOS execution",
-    "nativeRerun": "pending"
+    "nativeRerun": "Consent passes on856ba6069e0d8b8de2fa15a430b89efd1618edd3; separate no-consent outcome audited against124 timeout contract. See1.9-installed-recovery-entry-2026-10-29.json; prior failed raw runs retained."
   }
 }

@@ -1654,10 +1654,17 @@ repository must not transfer before a compatible release is adopted.
   systems with offline device discovery and recovery workflows.
   - Connected entry implementation (2026-10-29): separate media-only host and
     nonroot controller join the existing restore owner, with immutable-installation
-    admission and owned operation storage. This is headless source implementation,
-    not bootable media or a qualified profile. Actual boot, graphical recovery,
+    admission and owned operation storage. Native component measurements follow;
+    this is not product boot media or a qualified profile. Graphical recovery,
     capture-source access and final package qualification remain open. See the
     [entry contract](docs/RECOVERY_ENTRY_1.9.md).
+    Follow-up: the installed readonly-root consent loop now restores and verifies
+    a synthetic 64 KiB image, removes owned successful staging and exits cleanly.
+    The separate no-input case retains staging and leaves the target unchanged.
+    The active Cocoa frame renders the complete English review. The teardown
+    defect and collector correction remain historical; GUI/media, other locale
+    rendering and full profiles remain unqualified. See the
+    [native receipt](docs/release-evidence/1.9-installed-recovery-entry-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
   - Independent console supervisor (2026-10-29): the original native review now
@@ -1666,8 +1673,10 @@ repository must not transfer before a compatible release is adopted.
     checks, queued-input flushing, bounded exact typing and cancellation preserve
     the existing native 30-second review. Nine labels are translated in all 19
     locales. Native checks use a disposable offline VM and synthetic keyboard
-    input; installed UI/host launch, graphical consent, retained storage, product
-    media and full-profile/package qualification remain open under #495/#736.
+    input. That checkpoint left installed launch/storage open; their headless
+    component evidence now appears under VS-1906 above. Installed UI, graphical
+    consent, product media and full-profile/package qualification remain open
+    under #495/#736.
     Eight native console/runner cases pass across two source-bound QA probes;
     final normal shutdown and independent target hashes are retained in the
     [console receipt](docs/release-evidence/1.9-recovery-console-2026-10-29.json).
