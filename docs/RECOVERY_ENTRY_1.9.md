@@ -162,7 +162,7 @@ a request flag alone cannot enable privileged filesystem operations.
 The fixture runs only existing compiled storage tests, with a clean privileged
 environment and bounded process lifetime. It requires executed-case evidence,
 TRX and covered `StorageLease.Create`/`Complete` ranges in the Microsoft report.
-The final report merges ordinary and isolated managed coverage; existing Sonar
+Sonar imports both independently validated original managed reports; existing
 thresholds and production-source inclusion remain unchanged. See
 [Microsoft's coverage collection and merge interface](https://learn.microsoft.com/en-us/dotnet/core/additional-tools/dotnet-coverage).
 
@@ -190,3 +190,16 @@ same proved mount, with the original outside the operation. It requires real
 nlink2 plus preservation of both names/bytes; future link failures include errno.
 No production guard changes. Later scenarios in that failed attempt are not
 counted as executed; the repaired exact-head CI result remains pending.
+
+The repaired seven-scenario fixture passes on `e09204c`, with distinct real
+mount/PID namespaces, private tmpfs `/srv`, ext4 backing and matching source/store
+inode proof. The compiled checkout is `4a930b96a5962281120ac627875958ab3ad7566a`,
+distinct from the analyzed PR head. Its actual namespace/TRX/Microsoft report
+artifact is retained. The job then fails the existing health check on the
+intermediate merged report, so no successful quality gate is claimed. A local
+single-input merge reproduction preserves valid native ranges; the old job did
+not archive its main/merged outputs, so their contents are not reconstructed.
+The workflow now validates and imports both original reports through Sonar's
+[documented multiple-report parameter](https://docs.sonarsource.com/sonarqube-server/analyzing-source-code/test-coverage/test-coverage-parameters).
+It archives both inputs for diagnosis. Missing/empty input still fails before
+analysis; no range data, coverage exclusions or thresholds are changed.

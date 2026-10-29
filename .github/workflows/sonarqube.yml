@@ -103,7 +103,7 @@ jobs:
             /o:"${SONAR_ORGANIZATION}" \
             /d:sonar.host.url="${host_url}" \
             /d:sonar.token="${SONAR_TOKEN}" \
-            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml \
+            /d:sonar.cs.vscoveragexml.reportsPaths="${RUNNER_TEMP}/coverage-main.xml,${RUNNER_TEMP}/recovery-storage/coverage-native.xml" \
             /d:sonar.python.coverage.reportPaths=python-coverage.xml \
             /d:sonar.exclusions="coverage.xml,python-coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
             /d:sonar.coverage.exclusions="benchmarks/**,docs/video/**,src/VaultSync.UI/**,src/VaultSync.Core/Services/BackupService.cs,src/VaultSync.Core/Services/NetworkMountService.cs,src/VaultSync.Core/Services/SnapshotService.cs" \
@@ -126,18 +126,11 @@ jobs:
         if: steps.config.outputs.configured == 'true'
         run: bash scripts/test_recovery_storage_native.sh "${{ runner.temp }}/recovery-storage"
 
-      - name: Merge managed coverage
-        if: steps.config.outputs.configured == 'true'
-        run: >
-          dotnet-coverage merge
-          "${{ runner.temp }}/coverage-main.xml"
-          "${{ runner.temp }}/recovery-storage/coverage-native.xml"
-          -f xml
-          -o coverage.xml
-
       - name: Verify coverage collection
         if: steps.config.outputs.configured == 'true'
-        run: python3 scripts/validate_sonar_coverage.py coverage.xml
+        run: |
+          python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/coverage-main.xml"
+          python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/recovery-storage/coverage-native.xml"
 
       - name: Retain isolated storage evidence
         if: always() && steps.config.outputs.configured == 'true'
@@ -147,6 +140,7 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           path: |
+            ${{ runner.temp }}/coverage-main.xml
             ${{ runner.temp }}/recovery-storage/coverage-native.xml
             ${{ runner.temp }}/recovery-storage/native-storage-evidence.json
             ${{ runner.temp }}/recovery-storage/**/*.trx

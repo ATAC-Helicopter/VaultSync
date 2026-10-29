@@ -66,7 +66,7 @@
       "Passed TRX and positive StorageLease.Create/Complete Microsoft coverage ranges"
     ],
     "outcome": "pending exact-head CI",
-    "reports": "Ordinary and isolated actual managed reports merged; existing80% gate unchanged"
+    "reports": "Both real original Microsoft reports independently validated and imported through documented comma-delimited Sonar parameter; no transformed/fabricated ranges"
   },
   "qualifiedProfiles": 0,
   "firstHostedFixtureAttempt": {
@@ -80,5 +80,18 @@
     "repairedTestSha256": "7583308690d3bf0bcd918b1b396fe12408c5468654b5e7429b89206a7b3ada6e",
     "localVerification": "Focused diff inspection only; unsupported macOS would not execute this Linux-only case. No redundant local suite rerun.",
     "hostedRerun": "pending exact-head CI"
+  },
+  "hostedFixtureSuccess": {
+    "prHead": "e09204c317ce92ad80e4b29931173ec8d3c4b161",
+    "checkoutAndCompiledSource": "4a930b96a5962281120ac627875958ab3ad7566a",
+    "runId": 40937911698,
+    "jobId": 123673263236,
+    "artifactId": 12926426114,
+    "scenariosExecuted": 7,
+    "fixturePassed": true,
+    "proof": "Actual outer/fresh mount+PID namespaces, private tmpfs /srv, ext4 store, source/store device and inode match",
+    "followingFailure": "Merged-report health check found no covered Core ranges. No quality-gate success claimed. Old main/merged files not archived, no reconstructed contents.",
+    "workflowRepair": "Import independently validated originals through supported multiple-report property; archive both originals",
+    "localReproduction": "Pinned18.9 tool single-input merge of actual native report retains covered Core ranges and passes existing validator; not proof of old combined report contents"
   }
 }
