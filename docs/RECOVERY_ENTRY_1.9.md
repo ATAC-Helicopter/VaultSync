@@ -92,3 +92,21 @@ C# classes pass 34 tests and the producer passes six tests. Unrelated local suit
 and repeated localization checks were skipped because no visible strings changed.
 These checks do not exercise native admission or deletion. See the
 [source-bound receipt](release-evidence/1.9-recovery-entry-2026-10-29.json).
+
+## Teardown follow-up — 2026-10-29
+
+The first installed-entry consent probe reached verified restoration and persisted
+its final staging-cleanup receipt, but the service then exited 74. This run remains
+failed evidence. The serviced runtime automatically removes directly bound Unix
+socket paths on disposal; the subsequent identity check therefore saw its own
+missing socket. A delegating endpoint now preserves the exact Unix address while
+leaving pathname deletion exclusively to held-parent, identity-checked cleanup.
+It also prevents automatic deletion of an unexpected replacement. Cgroup lifetime
+checks and timeouts are unchanged. See the
+[serviced runtime implementation](https://github.com/dotnet/runtime/blob/v10.0.13/src/libraries/System.Net.Sockets/src/System/Net/Sockets/Socket.cs#L3185).
+
+Eight affected tests pass on macOS, including three real socket regressions.
+Their POSIX pathname branches are explicitly limited to Linux/macOS; Windows API
+availability does not qualify these filesystem semantics. No unrelated suite was
+repeated. A new exact-source installed consent probe is required before declaring
+this teardown repaired natively.

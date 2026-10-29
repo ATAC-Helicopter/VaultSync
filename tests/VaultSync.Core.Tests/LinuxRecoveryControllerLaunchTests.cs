@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.IO;
+using System.Net.Sockets;
 using VaultSync.Core.Services;
 using Xunit;
 
@@ -8,6 +9,63 @@ namespace VaultSync.Core.Tests;
 
 public sealed class LinuxRecoveryControllerLaunchTests
 {
+    [Fact]
+    public void ListenerClosePreservesOwnedPathForExplicitIdentityCheckedCleanup()
+    {
+        if (!(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) || !Socket.OSSupportsUnixDomainSockets) return;
+        var directory = Directory.CreateTempSubdirectory("vsr-");
+        string path = Path.Combine(directory.FullName, "peer");
+        try
+        {
+            using (var listener = LinuxRecoveryControllerLaunch.BindOwnedListener(path))
+            {
+                listener.Listen(1);
+                using var client = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                client.Connect(new UnixDomainSocketEndPoint(path));
+                using var accepted = listener.Accept();
+                Assert.True(accepted.Connected);
+            }
+            Assert.True(File.Exists(path));
+            File.Delete(path);
+            Assert.False(File.Exists(path));
+        }
+        finally { File.Delete(path); directory.Delete(); }
+    }
+
+    [Fact]
+    public void ListenerDisposeCannotDeleteAnUnexpectedReplacement()
+    {
+        if (!(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) || !Socket.OSSupportsUnixDomainSockets) return;
+        var directory = Directory.CreateTempSubdirectory("vsr-");
+        string path = Path.Combine(directory.FullName, "peer");
+        try
+        {
+            using (var listener = LinuxRecoveryControllerLaunch.BindOwnedListener(path))
+            {
+                listener.Listen(1);
+                File.Delete(path);
+                File.WriteAllText(path, "unrelated-replacement");
+            }
+            Assert.Equal("unrelated-replacement", File.ReadAllText(path));
+        }
+        finally { File.Delete(path); directory.Delete(); }
+    }
+
+    [Fact]
+    public void FailedBindCannotDeleteAnExistingEntry()
+    {
+        if (!(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) || !Socket.OSSupportsUnixDomainSockets) return;
+        var directory = Directory.CreateTempSubdirectory("vsr-");
+        string path = Path.Combine(directory.FullName, "peer");
+        try
+        {
+            File.WriteAllText(path, "preserved-before-bind");
+            Assert.Throws<SocketException>(() => { using var listener = LinuxRecoveryControllerLaunch.BindOwnedListener(path); });
+            Assert.Equal("preserved-before-bind", File.ReadAllText(path));
+        }
+        finally { File.Delete(path); directory.Delete(); }
+    }
+
     [Fact]
     public void HelloHasIndependentFixedMagicAndNetworkUuidLayout()
     {

@@ -56,5 +56,23 @@
     "Bootable product media, complete OS/profile/fault loops",
     "Publisher/package/updater/provenance qualification and protected reviews"
   ],
-  "qualifiedProfiles": 0
+  "qualifiedProfiles": 0,
+  "teardownFollowup": {
+    "sourceBase": "b62de876960f88bbfeeb3f456100793b9c1525ea",
+    "failure": "First native consent restored exact expected target and removed owned staging, but service exited74 during socket teardown; native run remains failed",
+    "componentSha256": {
+      "src/VaultSync.Core/Services/LinuxRecoveryControllerLaunch.cs": "8c58254224fe52054c6e187305ea8460569056f7cce9d32093479f85f91d71b9",
+      "tests/VaultSync.Core.Tests/LinuxRecoveryControllerLaunchTests.cs": "14db5a319e30e5fafe095b4f84ffb11c3f6cd645577a4a8a54af8137a85789c4"
+    },
+    "check": {
+      "filter": "LinuxRecoveryControllerLaunchTests",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "platform": "macOS",
+      "configuration": "Release, warnings as errors"
+    },
+    "platformScope": "Three real pathname branches execute on Linux/macOS only; the explicit Windows guard was added after this checkpoint and does not change macOS execution",
+    "nativeRerun": "pending"
+  }
 }

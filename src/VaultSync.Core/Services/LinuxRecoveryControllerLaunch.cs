@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
@@ -47,8 +48,7 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
             group = LinuxRecoveryNative.OpenDirectory(LinuxRecoveryMediaInstallation.ControllerGroup, false);
             if (!LinuxRecoveryNative.Cgroup(group) || LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
                 throw LinuxRecoveryMediaInstallation.Invalid();
-            listener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-            listener.Bind(new UnixDomainSocketEndPoint(LinuxRecoveryMediaInstallation.SocketPath));
+            listener = BindOwnedListener(LinuxRecoveryMediaInstallation.SocketPath);
             File.SetUnixFileMode(LinuxRecoveryMediaInstallation.SocketPath,
                 UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.GroupWrite);
             if (Chown(LinuxRecoveryMediaInstallation.SocketPath, 0, LinuxRecoveryMediaInstallation.ControllerId) != 0) throw LinuxRecoveryMediaInstallation.Invalid();
@@ -113,6 +113,30 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
         if (operation == Guid.Empty) throw LinuxRecoveryMediaInstallation.Invalid();
         byte[] bytes = new byte[24]; "VSRHEL01"u8.CopyTo(bytes);
         operation.TryWriteBytes(bytes.AsSpan(8), true, out _); return bytes;
+    }
+
+    internal static Socket BindOwnedListener(string path)
+    {
+        var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        try
+        {
+            socket.Bind(new OwnedPathEndPoint(new UnixDomainSocketEndPoint(path)));
+            return socket;
+        }
+        catch { socket.Dispose(); throw; }
+    }
+
+    // Socket.Dispose automatically unlinks a directly bound UnixDomainSocketEndPoint.
+    // This owner must instead verify the exact filesystem identity and unlink via
+    // its held directory after closing the listener. Preserve ordinary Unix wire
+    // serialization while keeping filesystem cleanup out of Socket.Dispose,
+    // including when an unexpected entry has replaced the owned socket name.
+    private sealed class OwnedPathEndPoint(UnixDomainSocketEndPoint address) : EndPoint
+    {
+        public override AddressFamily AddressFamily => address.AddressFamily;
+        public override SocketAddress Serialize() => address.Serialize();
+        public override EndPoint Create(SocketAddress socketAddress) =>
+            new OwnedPathEndPoint((UnixDomainSocketEndPoint)address.Create(socketAddress));
     }
     internal static Guid DecodeHello(ReadOnlySpan<byte> bytes)
     {
