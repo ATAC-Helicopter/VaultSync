@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "Yalıtılmış okuyucu kullanılamıyor veya kurulumuna güvenilemiyor.",
   "DiskRecovery.Failed": "Doğrulama tamamlanamadı. Görüntü dosyalarını kontrol edip yeniden deneyin.",
   "DiskRecovery.Cancelled": "Doğrulama iptal edildi.",
-  "DiskRecovery.Boundary": "Bu ekran şu anda yalnızca görüntüleri doğrular. Hedef yetkilendirmesi ve diske yazma henüz bağlanmadı. Doğrulama, önyüklenebilirliği onaylamaz veya diskin silinmesine izin vermez."
+  "DiskRecovery.Boundary": "Bu ekran şu anda yalnızca görüntüleri doğrular. Hedef yetkilendirmesi ve diske yazma henüz bağlanmadı. Doğrulama, önyüklenebilirliği onaylamaz veya diskin silinmesine izin vermez.",
+  "Recovery.Console.Title": "Diskin tamamen üzerine yazılmasını onayla",
+  "Recovery.Console.Warning": "Bu işlem seçilen diskteki her baytın üzerine kalıcı olarak yazar.",
+  "Recovery.Console.Target": "Hedef: {0} ({1}), disk sıra numarası {2}",
+  "Recovery.Console.Capacity": "Üzerine yazma: {0} bayt; mantıksal sektör {1} bayt; fiziksel sektör {2} bayt",
+  "Recovery.Console.Image": "İmaj: {0}; yakalama: {1}; nesil: {2}",
+  "Recovery.Console.Manifest": "Bildirim SHA-256: {0}",
+  "Recovery.Console.Hardware": "Donanım kimliği: {0}",
+  "Recovery.Console.Challenge": "Onaylamak için tam olarak {0} yazın ve Enter tuşuna basın.",
+  "Recovery.Console.Deadline": "Bu incelemenin süresi dolmadan onayı tamamlayın."
 }

@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "The isolated image reader is unavailable or its installation could not be trusted.",
   "DiskRecovery.Failed": "Verification could not finish. Check the image files and try again.",
   "DiskRecovery.Cancelled": "Verification cancelled.",
-  "DiskRecovery.Boundary": "This screen currently verifies images only. Destination authorization and disk writing are not connected yet. Verification does not qualify bootability or authorize erasing a disk."
+  "DiskRecovery.Boundary": "This screen currently verifies images only. Destination authorization and disk writing are not connected yet. Verification does not qualify bootability or authorize erasing a disk.",
+  "Recovery.Console.Title": "Confirm full disk overwrite",
+  "Recovery.Console.Warning": "This permanently overwrites every byte on the selected disk.",
+  "Recovery.Console.Target": "Target: {0} ({1}), disk sequence {2}",
+  "Recovery.Console.Capacity": "Overwrite: {0} bytes; logical sector {1} bytes; physical sector {2} bytes",
+  "Recovery.Console.Image": "Image: {0}; capture: {1}; generation: {2}",
+  "Recovery.Console.Manifest": "Manifest SHA-256: {0}",
+  "Recovery.Console.Hardware": "Hardware identity: {0}",
+  "Recovery.Console.Challenge": "Type exactly {0} and press Enter to confirm.",
+  "Recovery.Console.Deadline": "Complete confirmation before this review expires."
 }

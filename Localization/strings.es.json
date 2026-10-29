@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "El lector aislado no está disponible o su instalación no es fiable.",
   "DiskRecovery.Failed": "No se pudo completar la verificación. Revisa los archivos de la imagen y vuelve a intentarlo.",
   "DiskRecovery.Cancelled": "Verificación cancelada.",
-  "DiskRecovery.Boundary": "Esta pantalla solo verifica imágenes. La autorización del destino y la escritura en disco aún no están conectadas. La verificación no certifica el arranque ni autoriza borrar un disco."
+  "DiskRecovery.Boundary": "Esta pantalla solo verifica imágenes. La autorización del destino y la escritura en disco aún no están conectadas. La verificación no certifica el arranque ni autoriza borrar un disco.",
+  "Recovery.Console.Title": "Confirmar la sobrescritura completa del disco",
+  "Recovery.Console.Warning": "Esto sobrescribe permanentemente cada byte del disco seleccionado.",
+  "Recovery.Console.Target": "Destino: {0} ({1}), secuencia de disco {2}",
+  "Recovery.Console.Capacity": "Sobrescritura: {0} bytes; sector lógico {1} bytes; sector físico {2} bytes",
+  "Recovery.Console.Image": "Imagen: {0}; captura: {1}; generación: {2}",
+  "Recovery.Console.Manifest": "SHA-256 del manifiesto: {0}",
+  "Recovery.Console.Hardware": "Identidad del hardware: {0}",
+  "Recovery.Console.Challenge": "Escriba exactamente {0} y pulse Intro para confirmar.",
+  "Recovery.Console.Deadline": "Complete la confirmación antes de que caduque esta revisión."
 }

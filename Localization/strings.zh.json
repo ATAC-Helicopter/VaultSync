@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "隔离读取器不可用或其安装不可信。",
   "DiskRecovery.Failed": "无法完成验证。请检查映像文件后重试。",
   "DiskRecovery.Cancelled": "已取消验证。",
-  "DiskRecovery.Boundary": "此页面目前仅验证映像。目标授权和磁盘写入尚未接入。验证不代表可启动，也不授权擦除磁盘。"
+  "DiskRecovery.Boundary": "此页面目前仅验证映像。目标授权和磁盘写入尚未接入。验证不代表可启动，也不授权擦除磁盘。",
+  "Recovery.Console.Title": "确认覆盖整个磁盘",
+  "Recovery.Console.Warning": "这将永久覆盖所选磁盘上的每一个字节。",
+  "Recovery.Console.Target": "目标：{0}（{1}），磁盘序列号 {2}",
+  "Recovery.Console.Capacity": "覆盖：{0} 字节；逻辑扇区 {1} 字节；物理扇区 {2} 字节",
+  "Recovery.Console.Image": "映像：{0}；捕获：{1}；代次：{2}",
+  "Recovery.Console.Manifest": "清单 SHA-256：{0}",
+  "Recovery.Console.Hardware": "硬件标识：{0}",
+  "Recovery.Console.Challenge": "准确输入 {0} 并按 Enter 确认。",
+  "Recovery.Console.Deadline": "请在本次审核过期前完成确认。"
 }

@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "Trình đọc cách ly không khả dụng hoặc không thể tin cậy bản cài đặt.",
   "DiskRecovery.Failed": "Không thể hoàn tất xác minh. Kiểm tra các tệp ảnh rồi thử lại.",
   "DiskRecovery.Cancelled": "Đã hủy xác minh.",
-  "DiskRecovery.Boundary": "Màn hình này hiện chỉ xác minh ảnh. Chưa kết nối việc cấp quyền cho đích và ghi ổ đĩa. Xác minh không chứng nhận khả năng khởi động hay cho phép xóa ổ đĩa."
+  "DiskRecovery.Boundary": "Màn hình này hiện chỉ xác minh ảnh. Chưa kết nối việc cấp quyền cho đích và ghi ổ đĩa. Xác minh không chứng nhận khả năng khởi động hay cho phép xóa ổ đĩa.",
+  "Recovery.Console.Title": "Xác nhận ghi đè toàn bộ ổ đĩa",
+  "Recovery.Console.Warning": "Thao tác này sẽ ghi đè vĩnh viễn mọi byte trên ổ đĩa đã chọn.",
+  "Recovery.Console.Target": "Đích: {0} ({1}), số thứ tự ổ đĩa {2}",
+  "Recovery.Console.Capacity": "Ghi đè: {0} byte; sector logic {1} byte; sector vật lý {2} byte",
+  "Recovery.Console.Image": "Ảnh: {0}; bản chụp: {1}; thế hệ: {2}",
+  "Recovery.Console.Manifest": "SHA-256 của bản kê: {0}",
+  "Recovery.Console.Hardware": "Định danh phần cứng: {0}",
+  "Recovery.Console.Challenge": "Nhập chính xác {0} và nhấn Enter để xác nhận.",
+  "Recovery.Console.Deadline": "Hoàn tất xác nhận trước khi lượt xem xét này hết hạn."
 }

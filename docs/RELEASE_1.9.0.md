@@ -7,6 +7,21 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+VS-1907/#495 adds an independent local-console supervisor over the actual
+worker/restore owner. A root-owned physical VT and exact fresh typed review are
+required separately from the controller acknowledgment. Queued/stale/wrong input,
+unsafe terminal context and cancellation cannot supply approval. All 19 catalogs
+translate the nine new labels; locale/font rendering remains a media gate.
+Focused results retain90 passing cases plus the corrected exact case separately;
+no unrelated local suite was repeated. Disposable offline native proof uses a
+synthetic image/keyboard, not a qualified OS/profile or observed human consent.
+Installed launch, full graphical flow/media, retained-storage policy and release
+qualification remain open. Eight native cases pass across two QA probes, with
+independent target hashes,9 PDB-bound source documents and final normal shutdown.
+The first collector failure remains historical; only its remaining cases were
+rerun. See [source-bound evidence](release-evidence/1.9-recovery-console-2026-10-29.json)
+and the [operation contract](RECOVERY_OPERATION_PROTOCOL_1.9.md#independent-local-console-action--2026-10-29).
+
 The VS-1907 worker-disposal follow-up addresses the exact-head Sonar findings
 without exclusions: lifetime CTS disposal follows shared run/resource cleanup,
 and completion cancellation explicitly uses no caller token. A focused regression

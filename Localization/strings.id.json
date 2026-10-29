@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "Pembaca terisolasi tidak tersedia atau pemasangannya tidak dapat dipercaya.",
   "DiskRecovery.Failed": "Verifikasi tidak dapat diselesaikan. Periksa berkas citra lalu coba lagi.",
   "DiskRecovery.Cancelled": "Verifikasi dibatalkan.",
-  "DiskRecovery.Boundary": "Layar ini saat ini hanya memverifikasi citra. Otorisasi tujuan dan penulisan disk belum terhubung. Verifikasi tidak menjamin dapat melakukan boot atau mengizinkan penghapusan disk."
+  "DiskRecovery.Boundary": "Layar ini saat ini hanya memverifikasi citra. Otorisasi tujuan dan penulisan disk belum terhubung. Verifikasi tidak menjamin dapat melakukan boot atau mengizinkan penghapusan disk.",
+  "Recovery.Console.Title": "Konfirmasi penimpaan seluruh disk",
+  "Recovery.Console.Warning": "Ini akan menimpa setiap byte pada disk yang dipilih secara permanen.",
+  "Recovery.Console.Target": "Tujuan: {0} ({1}), urutan disk {2}",
+  "Recovery.Console.Capacity": "Penimpaan: {0} byte; sektor logis {1} byte; sektor fisik {2} byte",
+  "Recovery.Console.Image": "Citra: {0}; pengambilan: {1}; generasi: {2}",
+  "Recovery.Console.Manifest": "SHA-256 manifes: {0}",
+  "Recovery.Console.Hardware": "Identitas perangkat keras: {0}",
+  "Recovery.Console.Challenge": "Ketik tepat {0} dan tekan Enter untuk mengonfirmasi.",
+  "Recovery.Console.Deadline": "Selesaikan konfirmasi sebelum peninjauan ini kedaluwarsa."
 }

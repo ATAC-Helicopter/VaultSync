@@ -54,3 +54,10 @@ trusted in-process supervisor action; it is still not attached to this panel.
 Its synthetic tests do not qualify human confirmation, installed privileged
 launch, retained-storage lifecycle or bootable recovery media. See the
 [orchestration contract](RECOVERY_OPERATION_PROTOCOL_1.9.md#owned-worker-orchestration--2026-10-28).
+
+The independent local-console supervisor is now implemented behind the worker.
+Its physical-terminal confirmation is separate from controller acknowledgment;
+this does not add an overwrite action to the existing read-only panel. Native
+console mechanics use synthetic keyboard input and do not qualify graphical
+consent or every locale/font. The installed unprivileged UI/privileged host
+launcher, full wizard and generated media remain separate acceptance work.

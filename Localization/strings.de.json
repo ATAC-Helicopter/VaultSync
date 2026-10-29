@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "Der isolierte Leser ist nicht verfügbar oder seine Installation ist nicht vertrauenswürdig.",
   "DiskRecovery.Failed": "Die Prüfung konnte nicht abgeschlossen werden. Prüfen Sie die Abbilddateien und versuchen Sie es erneut.",
   "DiskRecovery.Cancelled": "Prüfung abgebrochen.",
-  "DiskRecovery.Boundary": "Diese Ansicht prüft nur Abbilder. Zielfreigabe und Datenträgerschreiben sind noch nicht angebunden. Die Prüfung bestätigt weder die Startfähigkeit noch erlaubt sie das Löschen eines Datenträgers."
+  "DiskRecovery.Boundary": "Diese Ansicht prüft nur Abbilder. Zielfreigabe und Datenträgerschreiben sind noch nicht angebunden. Die Prüfung bestätigt weder die Startfähigkeit noch erlaubt sie das Löschen eines Datenträgers.",
+  "Recovery.Console.Title": "Vollständiges Überschreiben des Datenträgers bestätigen",
+  "Recovery.Console.Warning": "Dadurch wird jedes Byte auf dem ausgewählten Datenträger dauerhaft überschrieben.",
+  "Recovery.Console.Target": "Ziel: {0} ({1}), Datenträgersequenz {2}",
+  "Recovery.Console.Capacity": "Überschreiben: {0} Byte; logischer Sektor {1} Byte; physischer Sektor {2} Byte",
+  "Recovery.Console.Image": "Abbild: {0}; Erfassung: {1}; Generation: {2}",
+  "Recovery.Console.Manifest": "Manifest-SHA-256: {0}",
+  "Recovery.Console.Hardware": "Hardwareidentität: {0}",
+  "Recovery.Console.Challenge": "Geben Sie genau {0} ein und drücken Sie zur Bestätigung die Eingabetaste.",
+  "Recovery.Console.Deadline": "Schließen Sie die Bestätigung ab, bevor diese Überprüfung abläuft."
 }

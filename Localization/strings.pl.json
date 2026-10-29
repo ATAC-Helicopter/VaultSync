@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "Izolowany czytnik jest niedostępny lub jego instalacja nie jest zaufana.",
   "DiskRecovery.Failed": "Nie udało się ukończyć sprawdzania. Sprawdź pliki obrazu i spróbuj ponownie.",
   "DiskRecovery.Cancelled": "Anulowano sprawdzanie.",
-  "DiskRecovery.Boundary": "Ten ekran służy wyłącznie do sprawdzania obrazów. Autoryzacja celu i zapis na dysku nie są jeszcze połączone. Sprawdzenie nie potwierdza możliwości rozruchu ani nie zezwala na wymazanie dysku."
+  "DiskRecovery.Boundary": "Ten ekran służy wyłącznie do sprawdzania obrazów. Autoryzacja celu i zapis na dysku nie są jeszcze połączone. Sprawdzenie nie potwierdza możliwości rozruchu ani nie zezwala na wymazanie dysku.",
+  "Recovery.Console.Title": "Potwierdź całkowite nadpisanie dysku",
+  "Recovery.Console.Warning": "Spowoduje to trwałe nadpisanie każdego bajtu na wybranym dysku.",
+  "Recovery.Console.Target": "Cel: {0} ({1}), numer sekwencyjny dysku {2}",
+  "Recovery.Console.Capacity": "Nadpisanie: {0} bajtów; sektor logiczny {1} bajtów; sektor fizyczny {2} bajtów",
+  "Recovery.Console.Image": "Obraz: {0}; przechwycenie: {1}; generacja: {2}",
+  "Recovery.Console.Manifest": "SHA-256 manifestu: {0}",
+  "Recovery.Console.Hardware": "Tożsamość sprzętu: {0}",
+  "Recovery.Console.Challenge": "Wpisz dokładnie {0} i naciśnij Enter, aby potwierdzić.",
+  "Recovery.Console.Deadline": "Potwierdź przed wygaśnięciem tego przeglądu."
 }

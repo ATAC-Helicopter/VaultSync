@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "De geïsoleerde lezer is niet beschikbaar of de installatie is niet betrouwbaar.",
   "DiskRecovery.Failed": "De controle kon niet worden voltooid. Controleer de imagebestanden en probeer opnieuw.",
   "DiskRecovery.Cancelled": "Controle geannuleerd.",
-  "DiskRecovery.Boundary": "Dit scherm controleert alleen images. Doelautorisatie en schrijven naar schijven zijn nog niet aangesloten. De controle bevestigt geen opstartbaarheid en geeft geen toestemming om een schijf te wissen."
+  "DiskRecovery.Boundary": "Dit scherm controleert alleen images. Doelautorisatie en schrijven naar schijven zijn nog niet aangesloten. De controle bevestigt geen opstartbaarheid en geeft geen toestemming om een schijf te wissen.",
+  "Recovery.Console.Title": "Volledig overschrijven van schijf bevestigen",
+  "Recovery.Console.Warning": "Hiermee wordt elke byte op de geselecteerde schijf permanent overschreven.",
+  "Recovery.Console.Target": "Doel: {0} ({1}), schijfvolgnummer {2}",
+  "Recovery.Console.Capacity": "Overschrijven: {0} bytes; logische sector {1} bytes; fysieke sector {2} bytes",
+  "Recovery.Console.Image": "Image: {0}; opname: {1}; generatie: {2}",
+  "Recovery.Console.Manifest": "SHA-256 van manifest: {0}",
+  "Recovery.Console.Hardware": "Hardware-identiteit: {0}",
+  "Recovery.Console.Challenge": "Typ exact {0} en druk op Enter om te bevestigen.",
+  "Recovery.Console.Deadline": "Voltooi de bevestiging voordat deze beoordeling verloopt."
 }

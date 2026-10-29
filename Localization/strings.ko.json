@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "격리된 읽기 도구를 사용할 수 없거나 설치를 신뢰할 수 없습니다.",
   "DiskRecovery.Failed": "검증을 완료하지 못했습니다. 이미지 파일을 확인하고 다시 시도하세요.",
   "DiskRecovery.Cancelled": "검증을 취소했습니다.",
-  "DiskRecovery.Boundary": "이 화면은 현재 이미지만 검증합니다. 대상 승인과 디스크 쓰기는 아직 연결되지 않았습니다. 검증은 부팅 가능성을 보장하거나 디스크 삭제를 승인하지 않습니다."
+  "DiskRecovery.Boundary": "이 화면은 현재 이미지만 검증합니다. 대상 승인과 디스크 쓰기는 아직 연결되지 않았습니다. 검증은 부팅 가능성을 보장하거나 디스크 삭제를 승인하지 않습니다.",
+  "Recovery.Console.Title": "디스크 전체 덮어쓰기 확인",
+  "Recovery.Console.Warning": "선택한 디스크의 모든 바이트를 영구적으로 덮어씁니다.",
+  "Recovery.Console.Target": "대상: {0} ({1}), 디스크 시퀀스 {2}",
+  "Recovery.Console.Capacity": "덮어쓰기: {0}바이트; 논리 섹터 {1}바이트; 물리 섹터 {2}바이트",
+  "Recovery.Console.Image": "이미지: {0}; 캡처: {1}; 세대: {2}",
+  "Recovery.Console.Manifest": "매니페스트 SHA-256: {0}",
+  "Recovery.Console.Hardware": "하드웨어 식별 정보: {0}",
+  "Recovery.Console.Challenge": "정확히 {0}을(를) 입력하고 Enter를 눌러 확인하세요.",
+  "Recovery.Console.Deadline": "이 검토가 만료되기 전에 확인을 완료하세요."
 }

@@ -7,7 +7,7 @@ does not gain a writable command. No support profile is promoted.
 
 ## Authority and connection ownership
 
-The future trusted supervisor must establish installed build/role trust, a
+The trusted media bootstrap must establish installed build/role trust, a
 controlled offline boot, exact operation/device authority and actual human
 confirmation before invoking the restore owner. Neither a Unix connection, an
 operation/review UUID, the framing role nor a valid image supplies that authority.
@@ -221,6 +221,52 @@ source, and the earlier exact-head Sonar failure is retained separately. See the
 [disposal receipt](release-evidence/1.9-recovery-worker-disposal-2026-10-28.json).
 No analyzer rule or threshold was suppressed to obtain a pass.
 
+## Independent local-console action — 2026-10-29
+
+`LinuxRecoverySupervisor` now joins the actual worker lifetime to a concrete
+independent console interaction. It races the original native review against
+worker failure/expiry, requests confirmation on that review, then invokes the
+in-process execution action only after confirmation completes. The controller's
+separate matching acknowledgment remains mandatory. Failure/shutdown cancels and
+drains console input before worker cleanup; duplicate supervisor starts cannot
+cancel the existing owner. This is an internal qualification component, not an
+installed supervisor/elevation executable or a complete graphical consent flow.
+
+`LinuxRecoveryLocalConsole` opens only `/dev/tty1` with no-follow, no-controlling-
+terminal, close-on-exec and nonblocking flags. It verifies matching held/path
+inode and filesystem-device identity, character device 4:1, root ownership,
+exact mode 0600 and a single link. Both real/effective UID/GID must be root; the
+positive controlling-session and foreground-group IDs must match the process,
+VT1 must be active/canonical and legacy TIOCSTI injection must be disabled.
+The tty device's group may be `tty`: zero group permissions remain required.
+Pipes, PTYs, supplied descriptors/paths and standard-descriptor reuse refuse.
+The trusted bootstrap must keep the nonroot UI in a different session/VT with
+no inherited console handles; that installed launch still requires qualification.
+
+Queued input is flushed before displaying the actual target, geometry, disk
+sequence, hardware identity and verified image/capture/manifest facts. The
+operator must type the exact invariant selector plus fresh review UUID, within
+128 ASCII characters and the remaining native 30-second review lifetime.
+Nonblocking reads poll with cancellation; wrong, multiline, extra, control, EOF
+or expired input refuses. Terminal context is rechecked after input and before
+approval. Neither UUID knowledge nor a wire message supplies this interaction.
+Technical control/bidi/backslash fields are escaped rather than executed.
+
+All nine prompt labels require trusted catalog entries with exact placeholder
+signatures; there is no embedded English fallback. Numbers use the selected
+read-only culture, while recorded technical tokens remain invariant. All 19
+catalogs contain translations (1,968 keys total). Catalog/culture/font trust is
+a bootstrap prerequisite: coverage does not qualify CJK/RTL rendering on a
+physical VT. Native evidence uses English and synthetic QMP keyboard input,
+not observed human consent or graphical UI qualification.
+
+The focused checkpoint passed90 cases and exposed one fixture assertion issue;
+the corrected exact case then passed separately with a zero-exit warning gate.
+Earlier compilation/counter/ordinal-assertion failures remain historical. No
+unrelated suite or full solution build was repeated locally. See the source-bound
+[console receipt](release-evidence/1.9-recovery-console-2026-10-29.json) for the native checks and their limits. Product media, trusted
+installed UI/host binding, retained storage, full UI and release gates stay open.
+
 ## Read-only image descriptor handoff
 
 `LinuxRecoveryImageTransfer` uses Linux x64 `SCM_RIGHTS` on the very same
@@ -301,3 +347,12 @@ owned engine execution/progress callbacks, generated boot media, full platform/p
 failure loops, package provenance and protected review/release gates. Keep #495
 open, Project In progress and #736 draft. No host-device write or release
 publication follows from these transport tests.
+
+Native console qualification covers eight cases across two private probe versions:
+PTY/session refusal, wrong typing, flushed prequeued input, successful write and
+read-back, wire-only, console-only, cancellation and peer loss. Six passed before
+the QA collector canceled its own artifact drain; only the remaining two were
+rerun after repairing that collector. Product source/PDB checksums remained the
+same. Both successful targets match the independent whole-byte fixture hash.
+Final shutdown/QEMU exit0 is recorded separately. This is not one complete
+eight-case probe run, observed human consent, a full OS loop or release support.

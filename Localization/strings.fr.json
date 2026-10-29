@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "Le lecteur isolé est indisponible ou son installation n’est pas fiable.",
   "DiskRecovery.Failed": "La vérification n’a pas pu aboutir. Vérifiez les fichiers de l’image et réessayez.",
   "DiskRecovery.Cancelled": "Vérification annulée.",
-  "DiskRecovery.Boundary": "Cet écran vérifie uniquement les images. L’autorisation de destination et l’écriture sur disque ne sont pas encore reliées. La vérification ne certifie pas le démarrage et n’autorise pas l’effacement d’un disque."
+  "DiskRecovery.Boundary": "Cet écran vérifie uniquement les images. L’autorisation de destination et l’écriture sur disque ne sont pas encore reliées. La vérification ne certifie pas le démarrage et n’autorise pas l’effacement d’un disque.",
+  "Recovery.Console.Title": "Confirmer l’écrasement complet du disque",
+  "Recovery.Console.Warning": "Cette opération écrase définitivement chaque octet du disque sélectionné.",
+  "Recovery.Console.Target": "Cible : {0} ({1}), séquence du disque {2}",
+  "Recovery.Console.Capacity": "Écrasement : {0} octets ; secteur logique {1} octets ; secteur physique {2} octets",
+  "Recovery.Console.Image": "Image : {0} ; capture : {1} ; génération : {2}",
+  "Recovery.Console.Manifest": "SHA-256 du manifeste : {0}",
+  "Recovery.Console.Hardware": "Identité matérielle : {0}",
+  "Recovery.Console.Challenge": "Saisissez exactement {0}, puis appuyez sur Entrée pour confirmer.",
+  "Recovery.Console.Deadline": "Confirmez avant l’expiration de cette vérification."
 }

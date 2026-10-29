@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Globalization;
+using System.Text;
 using Microsoft.Win32.SafeHandles;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
@@ -169,6 +171,30 @@ public sealed class LinuxRawRestoreOperationTests
 
     private static ValueTask<LinuxRawRestoreExecution> Execute(LinuxRawRestoreOperation operation, CancellationToken token = default) =>
         operation.ExecuteReviewedAsync(operation.Review.OperationId, operation.Review.ReviewId, token);
+
+    internal static async Task<(LinuxDiskRestoreOverwriteReview Review, IAsyncDisposable Cleanup)> ConsoleReview(string? hardware = null)
+    {
+        var fixture = await Fixture.Create();
+        try
+        {
+            if (hardware is not null)
+            {
+                fixture.Device = fixture.Device with { HardwareIdentityCandidate = hardware };
+                fixture.Snapshot = fixture.Snapshot with { Devices = fixture.Snapshot.Devices.Select(d =>
+                    d.KernelName == fixture.Device.KernelName ? fixture.Device : d).ToArray() };
+                fixture.Destination = new(fixture.Device);
+            }
+            var operation = await fixture.Ready();
+            return (operation.Review, new ConsoleReviewCleanup(operation, fixture));
+        }
+        catch { fixture.Dispose(); throw; }
+    }
+
+    private sealed class ConsoleReviewCleanup(LinuxRawRestoreOperation operation, Fixture fixture) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        { try { await operation.DisposeAsync(); } finally { fixture.Dispose(); } }
+    }
 
     [Fact]
     public async Task SuppliedOperationBindsActualReviewSessionExecutionAndJournal()
@@ -367,6 +393,99 @@ public sealed class LinuxRawRestoreOperationTests
         Assert.Equal(0, f.Opens); Assert.Equal(0, f.Destination.Writes);
         Assert.Equal(1, f.StageStorage.Disposals);
         Assert.False(f.Stage.IsAlive);
+        transport.CleanupFrames();
+    }
+
+    [Theory]
+    [InlineData("console-first")] [InlineData("wire-first")] [InlineData("reject")] [InlineData("peer-loss")]
+    public async Task ActualConsoleSupervisorJoinsNativeReviewAndOwnedEngineOnlyAfterBothIndependentInteractions(string mode)
+    {
+        using var f = await Fixture.Create();
+        f.Snapshot = f.Snapshot with { Devices = f.Snapshot.Devices.Select(d => d.Kind == LinuxBlockKind.Partition
+            ? d with { Identity = LinuxBlockIdentity.Unknown } : d).ToArray() };
+        f.Destination.WriteGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var transport = new LinuxRecoveryWorkerOperationTests.Transport();
+        using var sources = new LinuxRecoveryWorkerOperationTests.Sources();
+        Guid id = Guid.NewGuid();
+        var platform = new LinuxRecoveryWorkerOperationTests.Platform
+        {
+            Stage = (_, _, _) => ValueTask.FromResult(new LinuxRawImageStagingAssessment(LinuxRawImageStagingState.StagedVerified, "fixture-staged", f.Stage)),
+            Observe = f.ObserveAsync,
+            Prepare = (operation, stage, inventory, selection, token) => LinuxRawRestoreOperation.PrepareAsync(operation,
+                stage, inventory, selection, Path.GetTempPath(), f, LinuxRawRestoreOperation.MaximumExecutionTime, token)
+        };
+        var worker = new LinuxRecoveryWorkerOperation(id, transport, platform);
+        var access = new LinuxRecoveryLocalConsoleTests.Access { WaitForInput = true };
+        var console = new LinuxRecoveryLocalConsole(LinuxRecoveryLocalConsoleTests.Text, CultureInfo.InvariantCulture, () => access);
+        var confirmation = new LinuxRecoverySupervisorTests.Confirmation
+        {
+            Request = (review, token) =>
+            {
+                if (mode == "console-first") access.AfterPrompt = Encoding.ASCII.GetBytes(LinuxRecoveryLocalConsole.Challenge(review) + "\n");
+                return console.ConfirmAsync(review, token);
+            }
+        };
+        var supervisor = new LinuxRecoverySupervisor(worker, confirmation);
+        var run = supervisor.RunAsync();
+        using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+        transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+        using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+        transport.Controller(LinuxRecoveryMessage.InventoryRequest);
+        using (await transport.Next(LinuxRecoveryMessage.Inventory)) { }
+        transport.Controller(LinuxRecoveryMessage.Prepare, LinuxRecoveryProtocol.Selection(f.Snapshot.ObservationId, "vdb"));
+        using (await transport.Next(LinuxRecoveryMessage.Review)) { }
+        var review = await worker.ReviewReady.WaitAsync(TimeSpan.FromSeconds(10));
+        await access.Prompted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        if (mode != "console-first")
+            transport.Controller(LinuxRecoveryMessage.Confirm, LinuxRecoveryProtocol.ReviewAcknowledgment(review.ReviewId));
+        await transport.Barrier();
+        Assert.Equal(0, f.Opens); Assert.Equal(0, f.Destination.Writes);
+        Assert.DoesNotContain(LinuxRecoveryMessage.Executing, transport.Sent);
+        if (mode == "peer-loss")
+        {
+            transport.LosePeer(new IOException("fixture-peer-loss-during-console"));
+            Assert.Equal(LinuxRecoverySessionPhase.Faulted, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+        }
+        else if (mode == "reject")
+        {
+            foreach (byte value in Encoding.ASCII.GetBytes("wrong target\n")) access.Input.Enqueue(value);
+            await Assert.ThrowsAsync<InvalidDataException>(() => run.WaitAsync(TimeSpan.FromSeconds(10)));
+        }
+        else
+        {
+            if (mode == "console-first")
+                transport.Controller(LinuxRecoveryMessage.Confirm, LinuxRecoveryProtocol.ReviewAcknowledgment(review.ReviewId));
+            else foreach (byte value in Encoding.ASCII.GetBytes(LinuxRecoveryLocalConsole.Challenge(review) + "\n")) access.Input.Enqueue(value);
+            using (await transport.Next(LinuxRecoveryMessage.Executing)) { }
+            await f.Destination.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Throws<InvalidOperationException>(() => { _ = supervisor.RunAsync(); });
+            f.Destination.WriteGate.SetResult();
+            bool outcome = false;
+            while (!outcome)
+            {
+                using var frame = await transport.NextAny();
+                Assert.True(frame.Kind is LinuxRecoveryMessage.Progress or LinuxRecoveryMessage.Outcome);
+                outcome = frame.Kind == LinuxRecoveryMessage.Outcome;
+            }
+            var terminal = await run.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal(LinuxRecoverySessionPhase.Completed, terminal.Phase);
+            Assert.Equal(RawImageDeviceRestoreState.WrittenAndReadBack, terminal.Outcome!.Execution.State);
+            Assert.True(terminal.Outcome.Execution.CleanupConfirmed);
+            Assert.Equal(id, f.Request!.OperationId);
+            Assert.Equal(1, f.Destination.Disposals);
+            Assert.Equal(1, f.JournalStorage.Disposals);
+        }
+        if (mode is "reject" or "peer-loss")
+        {
+            Assert.Equal(0, f.Opens); Assert.Equal(0, f.Destination.Writes);
+            Assert.DoesNotContain(LinuxRecoveryMessage.Executing, transport.Sent);
+            Assert.DoesNotContain(LinuxRecoveryMessage.Outcome, transport.Sent);
+        }
+        Assert.True(access.Disposed);
+        Assert.Equal(1, confirmation.Calls);
+        Assert.Equal(1, f.StageStorage.Disposals);
+        Assert.False(f.Stage.IsAlive);
+        Assert.Equal(1, transport.Disposals);
         transport.CleanupFrames();
     }
 

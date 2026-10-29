@@ -1957,5 +1957,14 @@
   "DiskRecovery.Unavailable": "隔離されたリーダーが使用できないか、そのインストールを信頼できません。",
   "DiskRecovery.Failed": "検証を完了できませんでした。イメージのファイルを確認して再試行してください。",
   "DiskRecovery.Cancelled": "検証をキャンセルしました。",
-  "DiskRecovery.Boundary": "この画面では現在イメージの検証のみが可能です。復元先の承認とディスクへの書き込みはまだ接続されていません。検証は起動可能性を保証せず、ディスクの消去を許可するものでもありません。"
+  "DiskRecovery.Boundary": "この画面では現在イメージの検証のみが可能です。復元先の承認とディスクへの書き込みはまだ接続されていません。検証は起動可能性を保証せず、ディスクの消去を許可するものでもありません。",
+  "Recovery.Console.Title": "ディスク全体の上書きを確認",
+  "Recovery.Console.Warning": "選択したディスクのすべてのバイトが完全に上書きされます。",
+  "Recovery.Console.Target": "対象: {0} ({1})、ディスクシーケンス {2}",
+  "Recovery.Console.Capacity": "上書き: {0} バイト、論理セクター {1} バイト、物理セクター {2} バイト",
+  "Recovery.Console.Image": "イメージ: {0}、キャプチャ: {1}、世代: {2}",
+  "Recovery.Console.Manifest": "マニフェストの SHA-256: {0}",
+  "Recovery.Console.Hardware": "ハードウェア識別情報: {0}",
+  "Recovery.Console.Challenge": "確認するには {0} を正確に入力し、Enter キーを押してください。",
+  "Recovery.Console.Deadline": "この確認の有効期限が切れる前に確定してください。"
 }

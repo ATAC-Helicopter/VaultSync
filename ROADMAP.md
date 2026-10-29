@@ -1654,6 +1654,17 @@ repository must not transfer before a compatible release is adopted.
   systems with offline device discovery and recovery workflows.
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Independent console supervisor (2026-10-29): the original native review now
+    drives an actual root-owned VT interaction before the worker execution action;
+    UI acknowledgment alone remains insufficient. Fixed device/session/foreground
+    checks, queued-input flushing, bounded exact typing and cancellation preserve
+    the existing native 30-second review. Nine labels are translated in all 19
+    locales. Native checks use a disposable offline VM and synthetic keyboard
+    input; installed UI/host launch, graphical consent, retained storage, product
+    media and full-profile/package qualification remain open under #495/#736.
+    Eight native console/runner cases pass across two source-bound QA probes;
+    final normal shutdown and independent target hashes are retained in the
+    [console receipt](docs/release-evidence/1.9-recovery-console-2026-10-29.json).
   - Owned worker orchestration (2026-10-28): native staging, inventory, review
     and execution run under one transcript/resource owner. Wire confirmation and
     separate trusted-supervisor action are both required before execution.
