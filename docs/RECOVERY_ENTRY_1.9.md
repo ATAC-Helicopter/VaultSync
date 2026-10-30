@@ -226,6 +226,40 @@ boundary; the observer callback is not that interaction contract. Existing
 source-access, full-media/profile and package qualification gates remain open.
 
 The 2026-10-30 focused Release checkpoint passes 43 cases with warnings as errors.
-Linux-only fixture assertions remain pending hosted execution; unrelated suites
-and repeated localization checks were skipped. See the
+Linux-only assertions subsequently pass in the `3ce3e8d` isolated CI fixture;
+unrelated local suites and repeated localization checks were skipped. See the
 [admission/liveness receipt](release-evidence/1.9-recovery-admission-liveness-2026-10-30.json).
+
+## Serialized controller interaction
+
+The controller client requires an explicit interaction provider. It requests
+read-only image streams, a target from the worker's validated inventory, and an
+acknowledgment of the exact operation/review. Only one choice may be pending.
+The receive/heartbeat loop continues while a choice is open; presentation cannot
+hold up a worker refusal, timeout or terminal result. Operation, observation and
+review identifiers are checked again before any corresponding send. Neither a
+selected target nor a review acknowledgment grants physical overwrite authority.
+
+The provider retains ownership of all returned image streams, including late or
+rejected choices. It keeps accepted streams alive until the conversation has
+finished draining, then releases its own resources. Only read-only handles cross
+the existing channel; the host never opens a provider-selected path. Pending tasks receive
+cancellation and are drained at teardown; a late answer cannot send a new action.
+Providers must finish promptly on cancellation and marshal presentation to their
+own UI thread. Raw transport/native errors are not localized presentation text.
+
+A separate interaction cancellation signal requests one graceful protocol Cancel
+while continuing to receive the worker's actual refusal/outcome. A null choice
+has the same meaning. The lifetime token remains the immediate abort boundary.
+Cancellation is checked before consuming a choice or sending a confirmation;
+completed writes/read-back and uncertain cleanup retain their actual outcomes.
+The explicit headless adapter preserves the installed laboratory path; there is
+no implicit automatic acknowledgment for a future graphical provider. This is
+the client interaction boundary, not an installed Avalonia wizard or media/UI
+qualification. The original independent physical-console supervisor is unchanged.
+
+All 18 focused client cases pass in warning-as-error Release configuration on
+macOS. Eleven new cases cover deferred choices, exact correlation, graceful
+cancellation and late results/failures. These are transcript fixtures, not native
+media/UI evidence; no unrelated suite or VM was run. See the
+[interaction receipt](release-evidence/1.9-recovery-controller-interaction-2026-10-30.json).

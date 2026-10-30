@@ -59,6 +59,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1907] Separate recovery choices from worker progress and independent overwrite authorization.
 - [VS-1907] Validate recovery admission, cancellation and stalled-stage liveness alongside isolated storage cleanup.
 - [VS-1980] Route repository tasks with bounded concurrency and preserved release safeguards.
 - [VS-1980] Bound local validation storage and clean completed test environments.

@@ -7,14 +7,22 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
-The `264a896` hosted checkpoint imports both independently validated coverage
-reports and passes the seven isolated filesystem scenarios. Its separate Sonar
-quality gate still fails: new coverage is 79.4% against 80%; all other conditions
-pass. Earlier failed/cancelled checks remain historical. The next test-only
-increment checks fixed-role identity, actual kernel admission observations,
-worker cancellation/preparation refusal and stalled-stage liveness. No production
-admission, report ranges, exclusions or quality thresholds are relaxed. See the
-[storage-check receipt](release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
+The `3ce3e8d` hosted checkpoint passes all seven isolated filesystem scenarios
+and 21 other checks. Its separate Sonar quality gate still fails only new coverage
+(79.9%, minimum 80%); the scanner SCM revision and GitHub check bind that result
+to the exact PR head. The anonymous task lookup returns 404, so no analysis ID is
+inferred. Earlier failed/cancelled checks remain historical. No production admission,
+report ranges, exclusions or quality thresholds are relaxed. See the
+[admission/liveness receipt](release-evidence/1.9-recovery-admission-liveness-2026-10-30.json).
+
+VS-1907/#495 separates controller choices from worker observations through an
+explicit interaction provider. Image/target selection and exact review acknowledgment
+must coexist with heartbeat, worker responses and graceful cancellation; independent
+physical overwrite approval stays separate. The headless adapter remains explicit.
+This prepares the graphical client boundary; it does not deliver or qualify an
+installed graphical wizard. All 18 focused client tests pass in warning-as-error
+Release configuration; fresh hosted results remain separate. See the
+[interaction receipt](release-evidence/1.9-recovery-controller-interaction-2026-10-30.json).
 
 VS-1906/#494 and VS-1907/#495 add a separate headless recovery entry joining
 immutable-media admission, a fixed privilege-dropping launcher, the nonroot

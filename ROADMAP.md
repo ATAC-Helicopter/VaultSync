@@ -1672,6 +1672,11 @@ repository must not transfer before a compatible release is adopted.
     [follow-up receipt](docs/release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Serialized controller interaction (2026-10-30): explicit image, target and
+    exact-review choices share a receive/heartbeat loop with graceful cancellation.
+    A headless adapter is explicit; physical overwrite authorization stays separate.
+    This client boundary prepares the graphical provider without claiming an
+    installed wizard or qualified media. See the [entry contract](docs/RECOVERY_ENTRY_1.9.md).
   - Admission/liveness regressions (2026-10-30): fixed-role identity, actual
     kernel observations inside the existing isolated storage fixture, inventory
     cancellation, preparation refusal and a real 20-second stalled-stage check.

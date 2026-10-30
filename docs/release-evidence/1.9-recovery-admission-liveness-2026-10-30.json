@@ -37,7 +37,21 @@
     "minimum": 80,
     "remainingConditions": "All pass; ratings A, duplication0.0%, hotspots reviewed100%"
   },
-  "freshHosted": "pending new commit",
+  "freshHosted": {
+    "sourceCommit": "3ce3e8d77cecd561ebb7aaafcbaf759dd87ed23d",
+    "runId": 41026081334,
+    "scannerScmRevisionMatches": true,
+    "taskIdFromScanner": "AaGL7FQoHItCPQqI9Ybd",
+    "analysisId": null,
+    "taskLookup": "Anonymous ce/task returns404 Project does not exist; analysisId not inferred",
+    "exactHeadGitHubSonarCheckRun": 123966208212,
+    "nativeScenariosPassed": 7,
+    "qualityGate": "ERROR: coverage79.9 against80; other conditionsOK",
+    "githubChecks": {
+      "success": 21,
+      "failure": 1
+    }
+  },
   "qualifiedProfiles": 0,
   "remaining": [
     "Serialized graphical intent/review/cancellation flow",
