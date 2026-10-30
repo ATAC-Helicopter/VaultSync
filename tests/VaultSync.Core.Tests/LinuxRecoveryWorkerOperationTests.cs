@@ -44,8 +44,8 @@ public sealed class LinuxRecoveryWorkerOperationTests
             var frame = await NextAny();
             Assert.Equal(expected, frame.Kind); return frame;
         }
-        internal Task<LinuxRecoveryOperationChannel.Frame> NextAny() =>
-            outgoing.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+        internal Task<LinuxRecoveryOperationChannel.Frame> NextAny(TimeSpan? timeout = null) =>
+            outgoing.Reader.ReadAsync().AsTask().WaitAsync(timeout ?? TimeSpan.FromSeconds(10));
         internal async Task Barrier()
         {
             for (int i = 0; i < 2; i++)
@@ -118,6 +118,113 @@ public sealed class LinuxRecoveryWorkerOperationTests
         using var metadata = new MemoryStream(Convert.FromHexString(DiskImageRawProfileVerificationServiceTests.Valid(512).MetadataHex));
         using var payload = new MemoryStream(DiskImageRawProfileVerificationServiceTests.Raw(512));
         return await LinuxRawImageStagingService.StageAsync(metadata, payload, _ => storage, DiskImageInspectionFixture.InspectAsync);
+    }
+
+    [Theory]
+    [InlineData(0, false)] [InlineData(-1, false)] [InlineData(86400001, false)]
+    [InlineData(0, true)] [InlineData(-1, true)] [InlineData(30001, true)]
+    public void InvalidLifetimeBoundsCannotCreateAnOwner(double milliseconds, bool review)
+    {
+        using var transport = new Transport();
+        Assert.Throws<ArgumentOutOfRangeException>(() => new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, new Platform(),
+            runLimit: review ? TimeSpan.FromHours(24) : TimeSpan.FromMilliseconds(milliseconds),
+            reviewLimit: review ? TimeSpan.FromMilliseconds(milliseconds) : TimeSpan.FromSeconds(30)));
+    }
+
+    [Fact]
+    public async Task ControllerCancellationDuringInventoryObservationDrainsStagingBeforeRefusal()
+    {
+        var storage = new Storage(); var staged = await Stage(storage);
+        var transport = new Transport(); using var sources = new Sources();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var platform = new Platform
+        {
+            Stage = (_, _, _) => ValueTask.FromResult(staged),
+            Observe = async token =>
+            {
+                entered.TrySetResult(); await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                throw new InvalidOperationException("fixture-unreachable");
+            }
+        };
+        await using var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
+        var run = worker.RunAsync();
+        using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+        transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+        using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+        transport.Controller(LinuxRecoveryMessage.InventoryRequest);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        transport.Controller(LinuxRecoveryMessage.Cancel);
+        using (await transport.Next(LinuxRecoveryMessage.Refused)) { }
+        Assert.Equal(1, storage.Disposals); Assert.False(staged.Session!.IsAlive);
+        Assert.Equal(LinuxRecoverySessionPhase.Refused, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+        Assert.DoesNotContain(LinuxRecoveryMessage.Inventory, transport.Sent);
+        Assert.DoesNotContain(LinuxRecoveryMessage.Executing, transport.Sent);
+        transport.CleanupFrames();
+    }
+
+    [Fact]
+    public async Task PreparationRefusalDisposesTransferredStageWithoutReviewOrExecution()
+    {
+        var storage = new Storage(); var staged = await Stage(storage);
+        var target = new LinuxBlockObservation("sda", "8:0", null, LinuxBlockKind.WholeDisk, 65536, 512, 512, 1,
+            false, "serial:fixture", LinuxBlockIdentity.UniqueInSnapshot, false, false, false, LinuxBlockUse.Unknown);
+        var snapshot = new LinuxBlockInventory(LinuxBlockInventoryState.Observed, LinuxBlockInventoryReason.NamespaceObservationOnly,
+            Guid.NewGuid(), DateTimeOffset.UtcNow, Guid.NewGuid(), "mnt:[1]", false, new[] { target });
+        var transport = new Transport(); using var sources = new Sources();
+        var platform = new Platform
+        {
+            Stage = (_, _, _) => ValueTask.FromResult(staged), Observe = _ => ValueTask.FromResult(snapshot),
+            Prepare = async (_, owned, _, _, _) =>
+            { await owned.DisposeAsync(); return new LinuxRawRestorePreparation(LinuxRawRestoreOperationReason.ReviewRefused); }
+        };
+        await using var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
+        var run = worker.RunAsync();
+        using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+        transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+        using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+        transport.Controller(LinuxRecoveryMessage.InventoryRequest);
+        using (await transport.Next(LinuxRecoveryMessage.Inventory)) { }
+        transport.Controller(LinuxRecoveryMessage.Prepare, LinuxRecoveryProtocol.Selection(snapshot.ObservationId, "sda"));
+        using (await transport.Next(LinuxRecoveryMessage.Refused)) { }
+        Assert.Equal(LinuxRecoverySessionPhase.Refused, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+        Assert.Equal(1, storage.Disposals); Assert.False(staged.Session!.IsAlive);
+        Assert.True(worker.ReviewReady.IsCanceled);
+        Assert.DoesNotContain(LinuxRecoveryMessage.Review, transport.Sent);
+        Assert.DoesNotContain(LinuxRecoveryMessage.Executing, transport.Sent);
+        transport.CleanupFrames();
+    }
+
+    [Fact]
+    public async Task StalledStageReportsRealLivenessAtTwentySecondsWithoutInventingProgressAndStillCancels()
+    {
+        var transport = new Transport(); using var sources = new Sources();
+        var platform = new Platform
+        {
+            Stage = async (_, _, token) =>
+            {
+                try { await Task.Delay(Timeout.InfiniteTimeSpan, token); } catch (OperationCanceledException) { }
+                return new(LinuxRawImageStagingState.Interrupted, "fixture-staging-cancelled");
+            }
+        };
+        await using var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
+        long started = System.Diagnostics.Stopwatch.GetTimestamp();
+        var run = worker.RunAsync();
+        using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+        transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+        using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+        transport.Controller(LinuxRecoveryMessage.Heartbeat);
+        using (var live = await transport.NextAny(TimeSpan.FromSeconds(25))) Assert.Equal(LinuxRecoveryMessage.Staging, live.Kind);
+        Assert.True(System.Diagnostics.Stopwatch.GetElapsedTime(started) >= TimeSpan.FromSeconds(20));
+        Assert.Equal(LinuxRecoverySessionPhase.Staging, worker.State.Phase);
+        Assert.Equal(0UL, worker.State.AcknowledgedBytes);
+        Assert.DoesNotContain(LinuxRecoveryMessage.Progress, transport.Sent);
+        Assert.DoesNotContain(LinuxRecoveryMessage.Executing, transport.Sent);
+        Assert.False(run.IsCompleted);
+        transport.Controller(LinuxRecoveryMessage.Cancel);
+        using (await transport.Next(LinuxRecoveryMessage.Refused)) { }
+        Assert.Equal(LinuxRecoverySessionPhase.Refused, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+        Assert.False(sources.Lease.Metadata.CanRead); Assert.True(worker.ReviewReady.IsCanceled);
+        transport.CleanupFrames();
     }
 
     [Fact]

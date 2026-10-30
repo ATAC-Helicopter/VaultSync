@@ -50,6 +50,21 @@ public sealed class LinuxRecoveryMediaInstallationTests
     }
 
     [Theory]
+    [InlineData(LinuxRecoveryMediaInstallation.Role.Host, "/usr/lib/vaultsync-recovery/host/VaultSync.RecoveryHost", "offline-recovery-supervisor-v1")]
+    [InlineData(LinuxRecoveryMediaInstallation.Role.Controller, "/usr/lib/vaultsync-recovery/controller/VaultSync.RecoveryController", "recovery-controller-v1")]
+    public void InstallationIdentityMatchesCompiledSourceAndFixedRoleWithoutClaimingBootAuthority(object roleValue, string program, string role)
+    {
+        var value = (LinuxRecoveryMediaInstallation.Role)roleValue;
+        Assert.Equal(program, LinuxRecoveryMediaInstallation.ProgramPath(value));
+        using var document = JsonDocument.Parse(LinuxRecoveryMediaInstallation.BuildIdentity(value));
+        Assert.Equal(1, document.RootElement.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(role, document.RootElement.GetProperty("role").GetString());
+        Assert.Equal("linux-x64", document.RootElement.GetProperty("runtimeIdentifier").GetString());
+        Assert.Equal(DiskWorkerBuildIdentity.SourceCommit, document.RootElement.GetProperty("sourceCommit").GetString());
+        Assert.False(document.RootElement.TryGetProperty("authority", out _));
+    }
+
+    [Theory]
     [InlineData("role", "read-only-inspection-v1")]
     [InlineData("runtimeIdentifier", "linux-arm64")]
     [InlineData("sourceCommit", "cccccccccccccccccccccccccccccccccccccccc")]

@@ -7,11 +7,13 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
-The e85d371 hosted checkpoint leaves Sonar red at77.8% coverage with two
-unreachable cleanup findings; its macOS release-profile cancellation is not a
-pass. The follow-up removes only those no-op calls and adds relevant regression
-cases plus real isolated CI storage checks. No production admission or quality
-threshold is relaxed. Exact-head hosted results remain required; see the
+The `264a896` hosted checkpoint imports both independently validated coverage
+reports and passes the seven isolated filesystem scenarios. Its separate Sonar
+quality gate still fails: new coverage is 79.4% against 80%; all other conditions
+pass. Earlier failed/cancelled checks remain historical. The next test-only
+increment checks fixed-role identity, actual kernel admission observations,
+worker cancellation/preparation refusal and stalled-stage liveness. No production
+admission, report ranges, exclusions or quality thresholds are relaxed. See the
 [storage-check receipt](release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 
 VS-1906/#494 and VS-1907/#495 add a separate headless recovery entry joining
@@ -1251,3 +1253,8 @@ The S8949 hosted follow-up explicitly uses uncancellable ownership/cleanup waits
 so cancellation cannot strand resources. Fresh required Release remains 2,170
 Core / 293 Python, zero warnings/errors/skips; original native source/PDB results
 remain historical rather than relabeled as a new run. No rule or gate is waived.
+
+The 2026-10-30 focused Release checkpoint passes 43 cases with warnings as errors.
+Linux-only fixture assertions remain pending hosted execution; unrelated suites
+and repeated localization checks were skipped. See the
+[admission/liveness receipt](release-evidence/1.9-recovery-admission-liveness-2026-10-30.json).

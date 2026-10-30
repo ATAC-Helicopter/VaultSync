@@ -1672,6 +1672,13 @@ repository must not transfer before a compatible release is adopted.
     [follow-up receipt](docs/release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Admission/liveness regressions (2026-10-30): fixed-role identity, actual
+    kernel observations inside the existing isolated storage fixture, inventory
+    cancellation, preparation refusal and a real 20-second stalled-stage check.
+    No production guards or quality thresholds change. On `264a896`, seven
+    filesystem scenarios pass; Sonar remains 79.4% against 80%. Fresh results for
+    the test-only increment remain separate; see the
+    [entry contract](docs/RECOVERY_ENTRY_1.9.md).
   - Independent console supervisor (2026-10-29): the original native review now
     drives an actual root-owned VT interaction before the worker execution action;
     UI acknowledgment alone remains insufficient. Fixed device/session/foreground

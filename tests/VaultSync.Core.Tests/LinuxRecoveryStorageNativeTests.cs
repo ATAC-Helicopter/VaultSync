@@ -91,6 +91,24 @@ public sealed class LinuxRecoveryStorageNativeTests
         string checkout = Environment.GetEnvironmentVariable("VS_STORAGE_NATIVE_SOURCE") ?? throw new InvalidDataException("fixture.checkout-unidentified");
         Assert.Equal(40, sourceCommit.Length); Assert.Equal(40, checkout.Length);
         Assert.Equal(checkout, sourceCommit); // Reject stale binaries; neither value claims the scanner PR-head revision.
+        // Read actual kernel facts used by admission, without changing interfaces,
+        // mounting media, forging a lease or invoking the privileged Host entry.
+        string[] interfaces = Directory.GetDirectories("/sys/class/net");
+        bool allAdministrativelyDown = interfaces.Where(path => Path.GetFileName(path) != "lo").All(path =>
+            (uint.Parse(File.ReadAllText(path + "/flags").Trim()[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture) & 1) == 0);
+        Assert.Equal(allAdministrativelyDown, LinuxRecoveryNative.NetworkDown());
+        Assert.False(LinuxRecoveryNative.ReadOnlyFilesystem("/")); // This fixture is an ordinary writable CI root, not qualified media.
+        Assert.Throws<InvalidDataException>(() => { using var rejected = LinuxRecoveryNative.OpenDirectory(scratch, false); });
+        Assert.False(Directory.Exists(LinuxRecoveryMediaInstallation.Root));
+        bool hadRuntime = Directory.Exists("/run/vaultsync-recovery");
+        Assert.Empty(Directory.EnumerateFileSystemEntries(LinuxRecoveryStorageLease.Store));
+        Assert.Throws<InvalidDataException>(() =>
+        {
+            using var rejected = LinuxRecoveryMediaInstallation.OpenAsync(
+                LinuxRecoveryMediaInstallation.Role.Host, System.Threading.CancellationToken.None).GetAwaiter().GetResult();
+        });
+        Assert.Equal(hadRuntime, Directory.Exists("/run/vaultsync-recovery"));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(LinuxRecoveryStorageLease.Store));
         return new(sourceCommit, checkout, scratch, results, outerMount, privateMount, outerPid, privatePid, sourceIdentity, storeIdentity, resultsIdentity);
     }
 

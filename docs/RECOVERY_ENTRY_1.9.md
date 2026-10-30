@@ -203,3 +203,29 @@ The workflow now validates and imports both original reports through Sonar's
 [documented multiple-report parameter](https://docs.sonarsource.com/sonarqube-server/analyzing-source-code/test-coverage/test-coverage-parameters).
 It archives both inputs for diagnosis. Missing/empty input still fails before
 analysis; no range data, coverage exclusions or thresholds are changed.
+
+## Admission and liveness regression follow-up — 2026-10-30
+
+The `264a896` scanner revision imports both independently validated original
+reports. All seven isolated filesystem scenarios pass; the compiled checkout is
+`025b7759af5947352c0ad083ec99d10e6f7a9b64`, distinct from the analyzed PR head.
+Analysis `ed5f4cdc-f2a7-472e-977c-01ed0fd14b04` leaves only the coverage condition
+red (79.4%, minimum 80%); reliability/security/maintainability are A, duplication
+is 0.0% and reviewed hotspots 100%. Scanner success alone is not gate success.
+
+The next test-only increment checks compiled fixed-role identity, real interface
+flags and readonly-root observations, protected-ancestry rejection and ordinary
+installation refusal without runtime/store mutation. These native assertions run
+only after the existing namespace/mount/inode proof; macOS does not execute them.
+Worker regressions check lifetime limits, resource disposal before cancellation
+refusal, preparation refusal without review/execution, and an actual 20-second
+stalled-stage status with zero durable progress and functioning cancellation.
+No production or launcher code changes; no authority is supplied by test flags.
+The graphical controller still needs a serialized intent/review/cancellation
+boundary; the observer callback is not that interaction contract. Existing
+source-access, full-media/profile and package qualification gates remain open.
+
+The 2026-10-30 focused Release checkpoint passes 43 cases with warnings as errors.
+Linux-only fixture assertions remain pending hosted execution; unrelated suites
+and repeated localization checks were skipped. See the
+[admission/liveness receipt](release-evidence/1.9-recovery-admission-liveness-2026-10-30.json).
