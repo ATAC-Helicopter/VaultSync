@@ -30,7 +30,25 @@ The workflow is intentionally guarded. If the secret or required variables are m
 The workflow lives in `.github/workflows/sonarqube.yml` and runs on:
 
 - Pull requests into `Dev`, `Stable`, and versioned `release/*` branches.
-- Pushes to `Dev`, `Stable`, and versioned `release/*` branches.
+- Pushes to `Dev` and `Stable` (release branches use their PR analysis).
 - Manual `workflow_dispatch` runs.
 
 Keep the workflow exclusions and repository branch-protection requirement aligned with the active SonarQube quality gate. Missing secrets remain an intentional skip for forks and unconfigured copies of the repository.
+
+## Coverage collection health
+
+BUG-19025/#779 pins the analysis runner to Ubuntu 24.04. On October 22 the
+`ubuntu-latest` rollout selected Ubuntu 26.04: all 2,036 tests passed but
+dotnet-coverage 18.9.0 reported that its profiler was not initialized and emitted
+an empty report. That run's 33.0% Sonar coverage was not a measured C# result.
+The earlier same-day Ubuntu 24.04 run imported measured coverage successfully.
+
+`scripts/validate_sonar_coverage.py coverage.xml` must succeed immediately after
+collection. It requires Microsoft XML with a covered or partially covered range
+in the actual VaultSync.Core module, mapped to a Core source file with valid line
+numbers. Missing, malformed, empty, uncovered or test-only reports fail before
+import. This is a collector health check; Sonar's coverage threshold, quality
+rules and source exclusions remain unchanged. A newer runner/profiler must pass
+this health check and exact-head analysis before replacing the pinned image.
+
+See [the measured failure and follow-up](release-evidence/1.9-sonar-coverage-2026-10-22.md).

@@ -119,7 +119,7 @@ namespace VaultSync.UI.ViewModels
                         previous.Reachable &&
                         (now - previous.LastChecked) < DestinationProbeMinInterval)
                     {
-                        TryImportMetadataForDestination(cfg, dest, GetMetadataImportPath(previous));
+                        await TryImportMetadataForDestination(cfg, dest, GetMetadataImportPath(previous)).ConfigureAwait(false);
                         continue;
                     }
 
@@ -136,7 +136,7 @@ namespace VaultSync.UI.ViewModels
 
                     if (result.Reachable && (previous is null || !previous.Reachable))
                     {
-                        TryImportMetadataForDestination(cfg, dest, result.EffectivePath);
+                        await TryImportMetadataForDestination(cfg, dest, result.EffectivePath).ConfigureAwait(false);
                     }
 
                     if (!result.Reachable && !result.IsDeferred && (previous is null || previous.Reachable))
@@ -1042,7 +1042,7 @@ namespace VaultSync.UI.ViewModels
             return true;
         }
 
-        private void TryImportMetadataForDestination(AppConfig cfg, BackupDestination dest, string effectivePath)
+        private async Task TryImportMetadataForDestination(AppConfig cfg, BackupDestination dest, string effectivePath)
         {
             using var dispatchTiming = RuntimeTiming.Measure("Metadata destination import dispatch");
             if (!IsMetadataImportEnabled(cfg, dest))
@@ -1051,63 +1051,72 @@ namespace VaultSync.UI.ViewModels
             if (string.IsNullOrWhiteSpace(effectivePath))
                 return;
 
-            string key = effectivePath.Trim();
-            if (_metadataImportRetryAfter.TryGetValue(key, out DateTime retryAfter) &&
-                DateTime.UtcNow < retryAfter)
-            {
+            string key = Path.TrimEndingDirectorySeparator(Path.GetFullPath(effectivePath.Trim()));
+            if (!_metadataImportsInFlight.TryAdd(key, 0))
                 return;
-            }
-            if (_metadataImportAttempts.TryGetValue(key, out DateTime last) &&
-                DateTime.UtcNow - last < TimeSpan.FromMinutes(5))
-            {
-                return;
-            }
 
-            _metadataImportAttempts[key] = DateTime.UtcNow;
-            MetadataSyncOptions options = new MetadataSyncOptions(
-                AllowCreateProjects: true,
-                MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
-                .AsReadOnlySource()
-                .WithUnchangedSourceSkip();
-            string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
-            _ = Task.Run(() =>
+            try
             {
-                using var importTiming = RuntimeTiming.Measure("Metadata destination import run");
-                try
+                if (_metadataImportRetryAfter.TryGetValue(key, out DateTime retryAfter) &&
+                    DateTime.UtcNow < retryAfter)
                 {
-                    Console.WriteLine($"[MetadataSync] Auto import started for '{name}'.");
-                    MetadataSyncResult result = _metadataSyncService.ImportFromStore(effectivePath, options);
-                    Console.WriteLine($"[MetadataSync] Auto import ({name}) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
-                    if (result.Status == MetadataSyncStatus.Success &&
-                        (result.ImportedProjects > 0 || result.ImportedSnapshots > 0 || result.ImportedBackups > 0 || result.AppliedTombstones > 0))
+                    return;
+                }
+                if (_metadataImportAttempts.TryGetValue(key, out DateTime last) &&
+                    DateTime.UtcNow - last < TimeSpan.FromMinutes(5))
+                {
+                    return;
+                }
+
+                _metadataImportAttempts[key] = DateTime.UtcNow;
+                MetadataSyncOptions options = new MetadataSyncOptions(
+                    AllowCreateProjects: true,
+                    MarkNeedsRestoreOnImport: cfg.Backups.PromptRestoreAfterImport)
+                    .AsReadOnlySource()
+                    .WithUnchangedSourceSkip();
+                string name = string.IsNullOrWhiteSpace(dest.Alias) ? dest.Path : dest.Alias!;
+                await Task.Run(() =>
+                {
+                    using var importTiming = RuntimeTiming.Measure("Metadata destination import run");
+                    try
                     {
-                        GlobalNotificationCenter.Instance.Show(
-                            Lf("MetadataSync.Notification.Imported", "Imported updates from '{0}'.", name),
-                            NotificationSeverity.Info,
-                            L("MetadataSync.Notification.Title", "Metadata import"));
+                        Console.WriteLine($"[MetadataSync] Auto import started for '{name}'.");
+                        MetadataSyncResult result = _metadataSyncService.ImportFromStore(effectivePath, options);
+                        Console.WriteLine($"[MetadataSync] Auto import ({name}) result: {result.Status} (projects={result.ImportedProjects}, snapshots={result.ImportedSnapshots}, backups={result.ImportedBackups}, tombstones={result.AppliedTombstones}).");
+                        if (result.Status == MetadataSyncStatus.Success &&
+                            (result.ImportedProjects > 0 || result.ImportedSnapshots > 0 || result.ImportedBackups > 0 || result.AppliedTombstones > 0))
+                        {
+                            GlobalNotificationCenter.Instance.Show(
+                                Lf("MetadataSync.Notification.Imported", "Imported updates from '{0}'.", name),
+                                NotificationSeverity.Info,
+                                L("MetadataSync.Notification.Title", "Metadata import"));
+                        }
+                        if (result.Status != MetadataSyncStatus.Success)
+                        {
+                            _metadataImportRetryAfter[key] = DateTime.UtcNow.AddMinutes(15);
+                        }
+                        MaybeRefreshAfterImport(result);
                     }
-                    if (result.Status != MetadataSyncStatus.Success)
+                    catch (Exception ex)
                     {
+                        Console.WriteLine($"[MetadataSync] Auto import failed for '{name}': {ex.Message}");
                         _metadataImportRetryAfter[key] = DateTime.UtcNow.AddMinutes(15);
+                        string actionLabel = L("Logs.CopySnippet", "Copy log snippet");
+                        System.Windows.Input.ICommand actionCommand = CreateCopyLogSnippetCommand(
+                            Lf("Logs.Snippet.MetadataImportFailure", "Metadata import failed for '{0}'.", name));
+                        GlobalNotificationCenter.Instance.Show(
+                            Lf("MetadataSync.Notification.ImportFailed", "Metadata import failed for '{0}'. Check logs for details.", name),
+                            NotificationSeverity.Error,
+                            L("MetadataSync.Notification.Title", "Metadata import"),
+                            actionLabel: actionLabel,
+                            actionCommand: actionCommand);
                     }
-                    ApplyRetentionAfterMetadataImport(effectivePath, result);
-                    MaybeRefreshAfterImport(result);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[MetadataSync] Auto import failed for '{name}': {ex.Message}");
-                    _metadataImportRetryAfter[key] = DateTime.UtcNow.AddMinutes(15);
-                    string actionLabel = L("Logs.CopySnippet", "Copy log snippet");
-                    System.Windows.Input.ICommand actionCommand = CreateCopyLogSnippetCommand(
-                        Lf("Logs.Snippet.MetadataImportFailure", "Metadata import failed for '{0}'.", name));
-                    GlobalNotificationCenter.Instance.Show(
-                        Lf("MetadataSync.Notification.ImportFailed", "Metadata import failed for '{0}'. Check logs for details.", name),
-                        NotificationSeverity.Error,
-                        L("MetadataSync.Notification.Title", "Metadata import"),
-                        actionLabel: actionLabel,
-                        actionCommand: actionCommand);
-                }
-            });
+                }, CancellationToken.None).ConfigureAwait(false);
+            }
+            finally
+            {
+                _metadataImportsInFlight.TryRemove(key, out _);
+            }
         }
 
         private void TryImportMetadataFromRoot(string rootPath)

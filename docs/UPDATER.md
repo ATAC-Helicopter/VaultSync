@@ -2,9 +2,26 @@
 
 VaultSync uses GitHub Releases for update discovery and supports patch assets to avoid full-installer downloads on every update.
 
+The 1.9 staging change accepts exact release assets under the current
+repository owner and the planned FG Labs owner. This is preparation for a
+possible transfer, not permission to transfer today: a compatible release must
+ship and be adopted first. See [organization transfer](ORGANIZATION_TRANSFER.md).
+
 ## Channels
 - Stable: latest non-prerelease release.
-- Beta/Dev: prerelease-capable flow for `Dev` branch builds that use a prerelease suffix (when enabled in app settings).
+- Beta/Dev: when enabled in settings, discovers published releases whose
+  `target_commitish` is `Dev`, compares their version tags with the installed
+  version and the stable candidate, and requires a valid canonical manifest.
+  This field selects a channel; the updater downloads release assets, not branch
+  contents. A new source commit with the same version is not a new update.
+
+The 1.9.0 beta packaging source may be the unmerged preparation head. Its actual
+SHA/ref must remain bound to provenance, and its immutable tag must select that
+SHA. Keeping `target_commitish=Dev` for old-client discovery does not merge #736
+or change Dev. Draft assembly now checks this binding and the exact complete
+non-Store beta inventory before/after upload. It creates no tag or release and
+never publishes. Live staging and exact installed 1.8.9 upgrades are not yet
+qualified; see [release signing](RELEASE_SIGNING.md#unmerged-190-beta-source--vs-1902).
 
 ## Required Release Assets
 - Canonical release manifest:
@@ -128,3 +145,20 @@ payload-level contract describing the files inside one platform patch.
 - `docs/RELEASING.md`
 - `docs/wiki/Updates.md`
 - `CHANGELOG.md`
+
+## 1.9.0 planning baseline
+
+The active target is `1.9.0`, with exact `1.8.9` as the primary upgrade
+predecessor. This is a planning identity, not evidence of a qualified patch
+or migration. Native upgrades, format compatibility, and installer fallback
+must pass the 1.9.0 gates before release; extra patch bases remain disabled.
+
+## Release provenance verification
+
+Candidate, beta and stable release preparation verifies GitHub/Sigstore provenance
+signatures for the canonical manifest and every declared asset, including patch
+JSON and ZIP. Proof is retained outside the release asset inventory. Updater
+schema, asset names and byte-integrity checks remain compatible; desktop clients
+do not verify Sigstore at runtime. Native publisher signing and notarization
+remain separate from provenance, and unsigned distribution metadata stays
+truthful. See [release signing policy](RELEASE_SIGNING.md).

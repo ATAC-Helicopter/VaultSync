@@ -1,0 +1,33 @@
+[Unit]
+Description=VaultSync offline recovery
+After=local-fs.target dev-tty1.device
+RequiresMountsFor=/srv/vaultsync-recovery
+ConditionPathIsReadWrite=!/
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/lib/vaultsync-recovery/host/VaultSync.RecoveryHost
+WorkingDirectory=/usr/lib/vaultsync-recovery/host
+StandardInput=tty-force
+StandardOutput=null
+StandardError=null
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+PrivateNetwork=no
+PrivateMounts=no
+Delegate=yes
+KillMode=control-group
+TimeoutStopSec=30
+SendSIGKILL=yes
+Restart=no
+LimitNOFILE=8192
+UMask=0077
+Environment=LANG=C
+Environment=DOTNET_EnableDiagnostics=0
+Environment=DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=0
+
+[Install]
+WantedBy=multi-user.target

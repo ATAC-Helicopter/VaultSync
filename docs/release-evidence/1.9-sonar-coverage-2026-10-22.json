@@ -1,0 +1,121 @@
+{
+  "owners": [
+    "BUG-19025/#779",
+    "VS-1904/#492"
+  ],
+  "date": "2026-10-22",
+  "sourceBase": "b0a5e68ee8036cf499cc919bb10e7298f96b3565",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/DiskImageInspectionProtocol.cs": "8b6a1c9e9afa9c5759de9792981eb0f490e4cc37d6766f4be5fe126bf38b19d8",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerClient.cs": "794d8d5dce2a5a8a9a2c6d788afc36fdc61f20b543945332afdcafb10a331dc0",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerService.cs": "f1c6c44796a8d8f3ad6a52aeaaf14a530f4cc12aed680f3f6ba3d498e40825d9",
+    "src/VaultSync.Core/Services/LinuxImageInspectionFilter.cs": "2116f74a06a804e03ae4cd11ac2a943158da3426b69b6a19478ef4f48f422571",
+    "src/VaultSync.Core/Services/LinuxImageInspectionSandbox.cs": "788de98144e3a5aac8a780685e0a1a5426da545398009581c75e4e4e7764787c",
+    "src/VaultSync.Core/Services/DiskInventoryWorkerClient.cs": "09c461bd0840e348fdd8dcff671cd228b35872aad2a66d47206ca00d30c4c22c",
+    "src/VaultSync.Core/Services/LinuxInventoryWorkerPeerChannel.cs": "2f143d7937c01c9dd814edf8b6a4a643c19a78b2d0a5e42dc2590a9e2e7ffa10",
+    "src/VaultSync.DiskWorker/Program.cs": "45e41931abe851db7e46b0cc36fba522242fc20cad0a2a9f03f28c403881de5e",
+    "src/VaultSync.Core/VaultSync.Core.csproj": "bf46ca42b27b7a8250bf9bb18eb8eff0bf844ce0ffe6b8f18e36d1037e3ac336",
+    "src/VaultSync.Core/Resources/Inspection/warmup.metadata": "cb131e311daa9bf5d2a94c9a61d021cd82c8daf80a0b1caeb6824cb140f6f304",
+    "src/VaultSync.Core/Resources/Inspection/warmup.raw": "f86d4a863bf4dced92eaa4290324e71f96a215e9f38c7acd8054a7c1a6c0a663",
+    "tests/VaultSync.Core.Tests/DiskImageInspectionTests.cs": "30cf2445c68b140c3df89b3c69a11984315ca2823852ea4e9189ce0e135a6726",
+    ".github/workflows/sonarqube.yml": "8ae9cf3110cbb7ba33f0b561e36f487e993486c28f649503d9af1f39f53a7e09",
+    "scripts/validate_sonar_coverage.py": "920deb4ada333d87a31eebd76cbb4e479aef9f9d203de7ba3357326429502853",
+    "tests/scripts/test_sonar_coverage.py": "77f5737960d39c15d7d18ec4476c11161e2cf4f112d734c5b77568a59394a57a"
+  },
+  "validation": {
+    "core": 2036,
+    "python": 270,
+    "newCollectorRegressionCases": 9,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/image-inspection-20261022/followup-release.log",
+    "trxSha256": "0b77ed8305df81cc68cf163bc3bdf07b41f666baa8cf9bff6dccd82aa563ab8d",
+    "trackingAudit": {
+      "release": "1.9.0",
+      "workItems": 45,
+      "discrepancies": 0
+    }
+  },
+  "native": {
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 54.37,
+    "guestExitZero": true,
+    "cases": [
+      "fixture-independent-golden-binding-512",
+      "actual-inspector-completed-512",
+      "actual-inspector-exact-facts-512",
+      "actual-inspector-corruption-refused-512",
+      "actual-inspector-truncation-not-success-512",
+      "actual-inspector-trailing-refused-512",
+      "actual-inspector-caller-streams-preserved-512",
+      "fixture-independent-golden-binding-4096",
+      "actual-inspector-completed-4096",
+      "actual-inspector-exact-facts-4096",
+      "actual-inspector-corruption-refused-4096",
+      "actual-inspector-truncation-not-success-4096",
+      "actual-inspector-trailing-refused-4096",
+      "actual-inspector-caller-streams-preserved-4096",
+      "actual-inspector-empty-incomplete",
+      "actual-inspector-caller-cancellation",
+      "actual-inspector-running-cancellation-closes-worker",
+      "actual-inspector-cancel-retains-caller-streams",
+      "actual-inspector-parent-deadline-no-observation",
+      "actual-sandbox-uid-gid-drop",
+      "actual-sandbox-world-readable-open-denied",
+      "actual-sandbox-tmp-create-denied",
+      "actual-sandbox-udp-socket-denied",
+      "actual-sandbox-exec-denied",
+      "actual-sandbox-preexisting-thread-filtered",
+      "actual-sandbox-new-thread-inherits-filter",
+      "actual-sandbox-independent-all-thread-status",
+      "actual-sandbox-probe-clean-exit",
+      "actual-sandbox-no-created-file",
+      "actual-inspector-nonroot-parent-and-worker"
+    ],
+    "serialSha256": "af28b33ec945ca7a65e09a410f7b19cb0741e723e14e9b7b20f6bc9c5115e6de",
+    "seedSha256": "410ed03a3e35a203f4a03825909bde973e9119d310d635acec2e76af01ca9518",
+    "harnessSourceSha256": "ed5a77e1d95aa188725bef94ca51735edd5580a38a24b1dee7c7e4e1b9e8f5ba",
+    "coreAssemblySha256": "a9619e62d20c35dd3e71c53bc245fb4bd7ab6d517b447fd88452b2b4f6cb6259",
+    "workerAssemblySha256": "f397123b71f628ee1abd45018c02969c25f513e7e4bca5a9e7585be00a351918",
+    "harnessAssemblySha256": "55b85a0c9839765479e4ded9c628c29bdd0323e9f2c81c00e08cc60e4d921b6b",
+    "network": "none",
+    "hostRawDevicesPassed": false,
+    "guestRawDeviceOperations": false
+  },
+  "historicalFailure": {
+    "head": "b0a5e68ee8036cf499cc919bb10e7298f96b3565",
+    "run": "https://github.com/ATAC-Helicopter/VaultSync/actions/runs/39780258435",
+    "runner": "Ubuntu 26.04.1 / image 20261018.168.1",
+    "collector": "dotnet-coverage 18.9.0",
+    "profiler": "not initialized; no C# coverage data",
+    "sonarGate": "ERROR",
+    "newCoverage": 33.0,
+    "bugs": 0,
+    "vulnerabilities": 0,
+    "logSha256": "cdc3f674d4187da92253ef965ca67ff41bf99e58dc633d17a4c6a7ac3668d296"
+  },
+  "previousMeasuredRun": {
+    "head": "419c6ab0e12f1d6e9b966370f2f49b350e3540ed",
+    "run": "https://github.com/ATAC-Helicopter/VaultSync/actions/runs/39749183841",
+    "runner": "Ubuntu 24.04 / image 20261018.339",
+    "newCoverage": 84.4,
+    "logSha256": "a164feeeba7cd64335ee64b7887acb37db5780d25d8f8cc942b28f0cf25596d6"
+  },
+  "harnessSetupRefusal": {
+    "prefix": "stale-cloud-init-",
+    "cases": 0,
+    "guestExitZero": false,
+    "meaning": "reused instance ID skipped harness; manually stopped idle disposable guest; not a product result",
+    "serialSha256": "8ddb510e3497eb0f37f7698efb2ea8f3792d5b20cde67faab9537c497c6721d4"
+  },
+  "hostedCurrentHead": "required after push; do not substitute earlier analysis",
+  "limits": [
+    "reader-first integration remains open",
+    "all four profiles candidate",
+    "PR #736 draft/unmerged; no release publication"
+  ]
+}

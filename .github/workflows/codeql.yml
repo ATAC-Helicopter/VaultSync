@@ -16,14 +16,8 @@ on:
   push:
     # Release branches are analyzed by their required PR.
     branches: [ "Dev", "Stable" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   schedule:
     - cron: '31 14 * * 4'
 

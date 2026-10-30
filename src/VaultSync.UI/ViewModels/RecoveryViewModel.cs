@@ -36,8 +36,9 @@ public sealed class RecoveryViewModel : ViewModelBase
     private readonly AsyncRelayCommand _exportReportCommand;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private DateTime _lastRefreshUtc = DateTime.MinValue;
-    private string _headline = "Loading recovery readiness...";
-    private string _detail = "Checking projects, backup recency, verification policy, and destination availability.";
+    private RecoveryData? _lastAppliedData;
+    private string _headline = L("Recovery.Loading", "Loading recovery readiness...");
+    private string _detail = L("Recovery.Checking", "Checking projects, backup recency, verification policy, and destination availability.");
     private int _readyCount;
     private int _attentionCount;
     private int _riskCount;
@@ -93,11 +94,38 @@ public sealed class RecoveryViewModel : ViewModelBase
         _selectedProjectFilter = ProjectFilters[0];
     }
 
+    public void ReapplyLocalization()
+    {
+        DiskRecovery.ReapplyLocalization();
+        RecoveryProjectFilter selected = SelectedProjectFilter?.Filter ?? RecoveryProjectFilter.All;
+        ProjectFilters.Clear();
+        ProjectFilters.Add(new(RecoveryProjectFilter.All, L("Recovery.Filter.All", "All projects")));
+        ProjectFilters.Add(new(RecoveryProjectFilter.NeedsAttention, L("Recovery.Filter.NeedsAttention", "Needs attention")));
+        ProjectFilters.Add(new(RecoveryProjectFilter.Ready, L("Recovery.Filter.Ready", "Ready")));
+        SelectedProjectFilter = ProjectFilters.First(option => option.Filter == selected);
+        if (_lastAppliedData is { } data)
+        {
+            ApplyData(data);
+        }
+        else
+        {
+            Headline = L("Recovery.Loading", "Loading recovery readiness...");
+            Detail = L("Recovery.Checking", "Checking projects, backup recency, verification policy, and destination availability.");
+        }
+        OnPropertyChanged(string.Empty);
+    }
+
     public ObservableCollection<RecoveryProjectViewModel> Projects { get; } = [];
+    public DiskRecoveryViewModel DiskRecovery { get; } = new();
     public ObservableCollection<RecoveryFilterOption> ProjectFilters { get; }
 
     public ICommand RefreshCommand { get; }
     public ICommand ExportReportCommand { get; }
+
+    public string Coverage24WindowLabel => LF("Recovery.Coverage.Hours", "{0} h", 24);
+    public string Coverage7WindowLabel => LF("Recovery.Coverage.Days", "{0} d", 7);
+    public string Coverage30WindowLabel => LF("Recovery.Coverage.Days", "{0} d", 30);
+    public string Coverage90WindowLabel => LF("Recovery.Coverage.Days", "{0} d", 90);
 
     public string Headline
     {
@@ -548,40 +576,34 @@ public sealed class RecoveryViewModel : ViewModelBase
         int within30Days = latestBackups.Count(backup => now - backup.CreatedUtc <= TimeSpan.FromDays(30));
         int within90Days = latestBackups.Count(backup => now - backup.CreatedUtc <= TimeSpan.FromDays(90));
 
-        string coverageSummary = projects.Count == 0
-            ? L("Recovery.NoProjects", "No tracked projects yet.")
-            : LF(
-                "Recovery.Coverage.Summary",
-                "{0}/{1} project(s) have a backup from the last 24 hours; {2}/{1} are covered within 7 days.",
-                within24Hours,
-                projects.Count,
-                within7Days);
-
-        ProjectRestoreReadiness? firstIssue = summary.Projects
-            .Where(project => project.State != RestoreReadinessState.Ready)
-            .OrderBy(project => project.Score)
-            .FirstOrDefault();
-
-        string topRecommendation = firstIssue is null
-            ? L("Recovery.Recommendation.AllReady", "All tracked projects with backups are currently restore-ready.")
-            : LF("Recovery.Recommendation.ProjectReason", "{0}: {1}", firstIssue.ProjectName, firstIssue.Reason);
-
         return new RecoveryData(
             summary,
             within24Hours,
             within7Days,
             within30Days,
             within90Days,
-            coverageSummary,
-            topRecommendation,
             disasterRecovery,
             confidenceByProject,
             groupNameByProject,
             repositoryIdentityByProject);
     }
 
+    private static string BuildLocalizedHeadline(RestoreReadinessSummary summary)
+    {
+        if (summary.ProjectCount > 0 && summary.ReadyCount == summary.ProjectCount)
+            return L("RestoreReadiness.Headline.AllReady", "Restore ready across all tracked projects");
+        if (summary.UnavailableCount > 0)
+            return LF("RestoreReadiness.Headline.Unavailable", "{0} project(s) are not currently restore-ready", summary.UnavailableCount);
+        if (summary.RiskCount > 0)
+            return LF("RestoreReadiness.Headline.Risk", "{0} project(s) need restore-readiness attention", summary.RiskCount);
+        if (summary.AttentionCount > 0)
+            return LF("RestoreReadiness.Headline.Attention", "{0} project(s) should be reviewed", summary.AttentionCount);
+        return L("RestoreReadiness.Headline.Empty", "No tracked projects yet");
+    }
+
     private void ApplyData(RecoveryData data)
     {
+        _lastAppliedData = data;
         RestoreReadinessSummary summary = data.Summary;
         ReadyCount = summary.ReadyCount;
         AttentionCount = summary.AttentionCount;
@@ -598,14 +620,23 @@ public sealed class RecoveryViewModel : ViewModelBase
             >= 35 => L("Recovery.Band.AtRisk", "At risk"),
             _ => L("Recovery.Band.Unavailable", "Unavailable")
         };
-        Headline = summary.Headline;
-        Detail = summary.Detail;
+        Headline = BuildLocalizedHeadline(summary);
+        Detail = LF("RestoreReadiness.Detail", "Ready {0} - Attention {1} - Risk {2} - Unavailable {3}",
+            summary.ReadyCount, summary.AttentionCount, summary.RiskCount, summary.UnavailableCount);
         Coverage24Hours = data.Coverage24Hours;
         Coverage7Days = data.Coverage7Days;
         Coverage30Days = data.Coverage30Days;
         Coverage90Days = data.Coverage90Days;
-        CoverageSummary = data.CoverageSummary;
-        TopRecommendation = data.TopRecommendation;
+        CoverageSummary = summary.ProjectCount == 0
+            ? L("Recovery.NoProjects", "No tracked projects yet.")
+            : LF("Recovery.Coverage.Summary", "{0}/{1} project(s) have a backup from the last 24 hours; {2}/{1} are covered within 7 days.",
+                data.Coverage24Hours, summary.ProjectCount, data.Coverage7Days);
+        ProjectRestoreReadiness? firstIssue = summary.Projects
+            .Where(project => project.State != RestoreReadinessState.Ready)
+            .OrderBy(project => project.Score).FirstOrDefault();
+        TopRecommendation = firstIssue is null
+            ? L("Recovery.Recommendation.AllReady", "All tracked projects with backups are currently restore-ready.")
+            : LF("Recovery.Recommendation.ProjectReason", "{0}: {1}", firstIssue.ProjectName, firstIssue.Reason);
         ThreeTwoOneReadyCount = data.DisasterRecovery.ThreeTwoOneReadyCount;
         DrilledProjectCount = data.DisasterRecovery.DrilledProjectCount;
         PassedDrillCount = data.DisasterRecovery.PassedDrillCount;
@@ -697,8 +728,6 @@ public sealed class RecoveryViewModel : ViewModelBase
         int Coverage7Days,
         int Coverage30Days,
         int Coverage90Days,
-        string CoverageSummary,
-        string TopRecommendation,
         DisasterRecoverySummary DisasterRecovery,
         IReadOnlyDictionary<int, ProjectRecoveryConfidence> ConfidenceByProject,
         IReadOnlyDictionary<int, string> GroupNameByProject,

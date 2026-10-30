@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "owners": [
+    "VS-1906/#494",
+    "VS-1907/#495"
+  ],
+  "sourceCommit": "856ba6069e0d8b8de2fa15a430b89efd1618edd3",
+  "scope": "Installed headless entry component on disposable synthetic disks, not product media or OS/profile qualification",
+  "environment": {
+    "guest": "Debian13 x86-64",
+    "kernel": "6.12.113+deb13-amd64",
+    "systemd": "257.13-1~deb13u1",
+    "runtime": "10.0.13",
+    "hypervisor": "QEMU11.1.1 x86-64 TCG, UEFI",
+    "network": "No NIC during both final probes",
+    "root": "Actually read-only ext4; shared PID1 namespaces, fixed systemd service",
+    "store": "Separate private ext4 on owned regular-file virtual disk"
+  },
+  "installation": {
+    "sha256": "17a2274c7aa8f24e269113e5cd9cd60b34c1dfbbe69d02c28fa1e3bc9f588841",
+    "files": 625,
+    "sharedCoreSha256": "230196164a6050f224fc959156f54ad9183504c9c82767ebf842145c0405cf17",
+    "runtimeAudit": "Both new role runtimeconfigs pass minimum10.0.13; owned private build root declared through existing RUNNER_TEMP contract"
+  },
+  "consent": {
+    "pass": true,
+    "operatorInput": "Synthetic QMP keyboard, not observed human consent",
+    "targetBytes": 65536,
+    "targetBeforeSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "targetAfterSha256": "f86d4a863bf4dced92eaa4290324e71f96a215e9f38c7acd8054a7c1a6c0a663",
+    "expectedSha256": "f86d4a863bf4dced92eaa4290324e71f96a215e9f38c7acd8054a7c1a6c0a663",
+    "serviceExit": 0,
+    "qemuExit": 0,
+    "worker": "Completed; all65536 bytes acknowledged, terminal journal persisted, read-back and cleanup confirmed",
+    "staging": "Current successful staging removed after retained receipts; prior failed staging preserved",
+    "socketAbsent": true,
+    "controllerCgroupAbsent": true
+  },
+  "noConsent": {
+    "sourceCommit": "856ba6069e0d8b8de2fa15a430b89efd1618edd3",
+    "pass": true,
+    "expectedExit": 124,
+    "actualExit": 124,
+    "targetUnchanged": true,
+    "executionStarted": false,
+    "acknowledgedBytes": 0,
+    "stagingRetained": true,
+    "socketAbsent": true,
+    "controllerCgroupAbsent": true,
+    "normalQemuExit": true,
+    "rawCollectorPass": false,
+    "correction": "Original collector incorrectly expected generic I/O exit74; actual timeout/cancel contract is124. Raw failed result retained, exact review/source/target/storage evidence audited offline; no product-code change or repeated VM run.",
+    "rawResultSha256": "201fc06582f20d2d0992abff2653ab4dafa3c362cba725e988d539c4383e0346"
+  },
+  "historicalFailures": [
+    {
+      "sourceCommit": "b62de876960f88bbfeeb3f456100793b9c1525ea",
+      "serviceExit": 74,
+      "targetMatched": true,
+      "stagingRemoved": true,
+      "disposition": "Failed native run retained; .NET socket auto-unlink preempted identity cleanup, repaired with explicit pathname ownership before final probes"
+    },
+    {
+      "scope": "First QA observer",
+      "disposition": "Serial terminal hangup interrupted stdout; fixed only private observer, no product guard changes"
+    },
+    {
+      "scope": "Final no-consent collector assertion",
+      "disposition": "Expected generic exit74 incorrectly; timeout contract returns124. Raw failure retained and exact review/source/target/storage audited offline; no repeated VM run."
+    }
+  ],
+  "visualLimits": "Active Cocoa framebuffer displays the full English review on the repaired source. Headless captures remain incomplete and are retained as laboratory evidence. Other fonts/locales, Avalonia recovery UI and final package/profile rendering remain unqualified.",
+  "remaining": [
+    "Graphical recovery flow and complete platform/locale rendering qualification",
+    "Readable access to previously root-private captures",
+    "Product boot media and complete OS/profile/fault loops",
+    "Source-bound final assets, publisher/updater/provenance qualification and protected reviews"
+  ],
+  "qualifiedProfiles": 0,
+  "activeDisplayNoConsent": {
+    "sourceCommit": "856ba6069e0d8b8de2fa15a430b89efd1618edd3",
+    "pass": true,
+    "backend": "Cocoa active display, actual QMP framebuffer captured",
+    "renderedReview": "Complete nine-label English review visually inspected; not the Avalonia wizard or observed human consent",
+    "input": "None; timeout/cancel expected",
+    "serviceExit": 124,
+    "qemuExit": 0,
+    "targetUnchanged": true,
+    "targetSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "socketAbsent": true,
+    "controllerCgroupAbsent": true,
+    "captureSha256": "333561c32adb307808b79c7425b90f8a499b2f48bb8ad4103f03a5e406c3434d",
+    "captureStorage": "Private editorial workspace, no GitHub screenshot/manuscript upload",
+    "nativeAppToolLimit": "Standalone QEMU executable was not selectable by native app connector; rendered framebuffer, not a native-window accessibility result"
+  },
+  "cleanup": {
+    "removedOwnedPaths": 42,
+    "removedAllocatedFileBytes": 4929327104,
+    "freeBeforeBytes": 43813023744,
+    "freeAfterBytes": 46577909760,
+    "observedFreeDeltaBytes": 2764886016,
+    "remainingOwnedVmProcesses": 0,
+    "validationEvidenceBytes": 1064960,
+    "caveat": "Allocated file blocks and observed free-space delta differ with APFS sharing/deferred accounting and concurrent activity",
+    "reviewBy": "2026-11-05",
+    "availability": "VMs/disks/seed/keys/publishes/owned Release outputs removed; bounded evidence and private original screenshot+PNG/caption retained"
+  }
+}

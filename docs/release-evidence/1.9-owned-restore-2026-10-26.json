@@ -1,0 +1,304 @@
+{
+  "schemaVersion": 1,
+  "measurementDates": [
+    "2026-10-25",
+    "2026-10-26"
+  ],
+  "recordedOn": "2026-10-26",
+  "owners": [
+    {
+      "id": "VS-1907",
+      "issue": 495
+    },
+    {
+      "id": "BUG-19039",
+      "issue": 816
+    }
+  ],
+  "preparationPr": 736,
+  "sourceBase": "3e7719e6283e8301bcbd3fd9b74c4788babab409",
+  "sourceDirtyDuringMeasurement": true,
+  "sourcesSha256AndPortablePdbChecksums": {
+    "src/VaultSync.Core/Services/DiskImageByteIntegrity.cs": "75bf7bfdf1862f37b227e9862bb8e80da5e8a788896eaee5b3de0e2596cc1736",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerClient.cs": "659185f2e727a0624bc044d03800ba3b0575cfa2f55ef5039827b2fa2365f474",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerService.cs": "5c3a6d9db7207c36d822ee999421bbf0bb1235645004e6850aeaf76ddfd0e8f5",
+    "src/VaultSync.Core/Services/LinuxDiskRestoreTargetPreviewService.cs": "6df287a951b0419965d7576c5f4dd0355fd419101578d42aa8bb18629667b2b8",
+    "src/VaultSync.Core/Services/LinuxRawImageCaptureService.cs": "5663af3ebc5137440a96592ad81b74157e448524d4d6ff9335b4c2458315cde7",
+    "src/VaultSync.Core/Services/LinuxRawImageStagingService.cs": "e857961e238a9d3266e00e4cf90f0207757c8d7ace79f823c988ba925a78de44",
+    "src/VaultSync.Core/Services/LinuxRawRestoreOperation.cs": "197a20bad77b85a1bc4ddc2a3fbf0ca8a84ab2677278812a5b97074b5710a96e",
+    "src/VaultSync.Core/Services/LinuxRawRestoreTarget.cs": "e140ef0f6e50965cc14e22b29ce17913effe9f37a60a3c83fab31aad35b54bb9",
+    "src/VaultSync.Core/Services/LinuxRawRestoreTargetOpenService.cs": "db52b3b0f7129d968d900ff8b626a7ce8a21b02a16e27197d2056b5b87222629",
+    "src/VaultSync.Core/Services/LinuxWorkerInstallation.cs": "673b19a32b28755e65aeec6d6ed5958934cdd5f11558d35db56a26b71a39daed",
+    "src/VaultSync.Core/Services/RawImageDeviceRestoreService.cs": "759188341608b7e9f9c15ce1b5403d8bce601a23471723ad704a4f17a31de684",
+    "src/VaultSync.Core/Services/RawImageRestoreJournal.cs": "8a086ceb7ad6606074e008d75085ef3e9305b351c7e4f1b1c7d9a4196547f802"
+  },
+  "localRelease": {
+    "coreTests": 2170,
+    "pythonTests": 293,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "newLifecycleCases": 27,
+    "newDigestCases": 10
+  },
+  "native": {
+    "sourceOS": "Debian 12 amd64, UEFI GPT ext4, 512-byte logical/physical sectors",
+    "recoveryEnvironment": "pinned Debian x86_64 OS image with injected source-bound lab executables; not generated product recovery media",
+    "network": false,
+    "sharedFolders": false,
+    "hostRawDevices": false,
+    "capacityBytes": 3221225472,
+    "namedCases": 64,
+    "phases": {
+      "capture": {
+        "qemuExit": 0,
+        "guestSuccess": true,
+        "timedOut": false,
+        "elapsedSeconds": 260.38,
+        "cases": [
+          "root-owned-reader-installation",
+          "selected-offline-lab-VS_OS_SOURCE",
+          "source-os-kernel-readonly",
+          "full-os-capture-published-verified",
+          "full-os-capture-sealed"
+        ]
+      },
+      "restore": {
+        "daemonLaunchExit": 0,
+        "guestSuccess": true,
+        "qmpShutdownConfirmed": true,
+        "qmpQuitAccepted": true,
+        "daemonStopped": true,
+        "timedOut": false,
+        "cases": [
+          "root-owned-reader-installation",
+          "original-source-os-not-attached",
+          "retained-image-id",
+          "full-os-stage-isolated-and-sealed",
+          "selected-offline-lab-VS_OS_TARGET",
+          "full-os-equal-capacity-disposable-target",
+          "full-os-owned-operation-ready",
+          "full-os-exact-review-range",
+          "full-os-native-write-readback-and-cleanup",
+          "full-os-durable-complete-byte-observation",
+          "full-os-stage-released",
+          "full-os-operation-replay-refused",
+          "full-os-native-journal-independent-readback"
+        ]
+      },
+      "recovered": {
+        "daemonLaunchExit": 0,
+        "guestSuccess": true,
+        "qmpShutdownConfirmed": true,
+        "qmpQuitAccepted": true,
+        "daemonStopped": true,
+        "timedOut": false,
+        "cases": []
+      },
+      "fault": {
+        "daemonLaunchExit": 0,
+        "guestSuccess": true,
+        "qmpShutdownConfirmed": true,
+        "qmpQuitAccepted": true,
+        "daemonStopped": true,
+        "timedOut": false,
+        "cases": [
+          "fault-offline-selected-VS_FAULT_SOURCE512",
+          "fault-source-readonly-512",
+          "fault-source-captured-512",
+          "fault-native-stage-512-False",
+          "fault-offline-selected-VS_FAULT_IO512",
+          "fault-operation-ready-512-False",
+          "fault-honest-terminal-512-False",
+          "fault-persisted-uncertain-range-512-False",
+          "fault-all-native-owners-closed-512-False",
+          "fault-independent-durable-journal-512-False",
+          "fault-offline-selected-VS_FAULT_IO512",
+          "fault-native-claim-released-512-False",
+          "fault-no-automatic-retry-512-False",
+          "fault-native-stage-512-True",
+          "fault-offline-selected-VS_FAULT_CANCEL512",
+          "fault-operation-ready-512-True",
+          "fault-honest-terminal-512-True",
+          "fault-persisted-uncertain-range-512-True",
+          "fault-all-native-owners-closed-512-True",
+          "fault-independent-durable-journal-512-True",
+          "fault-offline-selected-VS_FAULT_CANCEL512",
+          "fault-native-claim-released-512-True",
+          "fault-no-automatic-retry-512-True",
+          "fault-offline-selected-VS_FAULT_SOURCE4096",
+          "fault-source-readonly-4096",
+          "fault-source-captured-4096",
+          "fault-native-stage-4096-False",
+          "fault-offline-selected-VS_FAULT_IO4096",
+          "fault-operation-ready-4096-False",
+          "fault-honest-terminal-4096-False",
+          "fault-persisted-uncertain-range-4096-False",
+          "fault-all-native-owners-closed-4096-False",
+          "fault-independent-durable-journal-4096-False",
+          "fault-offline-selected-VS_FAULT_IO4096",
+          "fault-native-claim-released-4096-False",
+          "fault-no-automatic-retry-4096-False",
+          "fault-native-stage-4096-True",
+          "fault-offline-selected-VS_FAULT_CANCEL4096",
+          "fault-operation-ready-4096-True",
+          "fault-honest-terminal-4096-True",
+          "fault-persisted-uncertain-range-4096-True",
+          "fault-all-native-owners-closed-4096-True",
+          "fault-independent-durable-journal-4096-True",
+          "fault-offline-selected-VS_FAULT_CANCEL4096",
+          "fault-native-claim-released-4096-True",
+          "fault-no-automatic-retry-4096-True"
+        ]
+      }
+    },
+    "independentChecks": {
+      "fixtureHashesMatchOriginal": true,
+      "fixtureCount": 3,
+      "uefiExt4Boot": true,
+      "sourceImageAndRepositoryAbsentFromBoot": true,
+      "prebootFullDiskEquality": {
+        "bytes": 3221225472,
+        "sourceSha256": "ef8afe1f61da7421141e65f0e3a2502154bc87dd8273f518b8242eb675c8f393",
+        "targetSha256BeforeBoot": "ef8afe1f61da7421141e65f0e3a2502154bc87dd8273f518b8242eb675c8f393",
+        "sourceUnchanged": true,
+        "fullByteEquality": true
+      },
+      "nativeFaultTargets": [
+        {
+          "sectorBytes": 512,
+          "mode": "io",
+          "targetBytes": 65536,
+          "exactlyFirstSectorChanged": true,
+          "targetSha256": "ebd2db990a432b4136cc8f3b80eac301cb4139a7be7603195ac70c5e7ca4fbf3"
+        },
+        {
+          "sectorBytes": 512,
+          "mode": "cancel",
+          "targetBytes": 65536,
+          "exactlyFirstSectorChanged": true,
+          "targetSha256": "ebd2db990a432b4136cc8f3b80eac301cb4139a7be7603195ac70c5e7ca4fbf3"
+        },
+        {
+          "sectorBytes": 4096,
+          "mode": "io",
+          "targetBytes": 524288,
+          "exactlyFirstSectorChanged": true,
+          "targetSha256": "01f96dd932ce0f67e265597d7180afd7bfa3d0fa015cd0f07f45aac1cf1ceb59"
+        },
+        {
+          "sectorBytes": 4096,
+          "mode": "cancel",
+          "targetBytes": 524288,
+          "exactlyFirstSectorChanged": true,
+          "targetSha256": "01f96dd932ce0f67e265597d7180afd7bfa3d0fa015cd0f07f45aac1cf1ceb59"
+        }
+      ],
+      "cases": {
+        "capture": 5,
+        "restore": 13,
+        "recovered": 0,
+        "fault": 46
+      }
+    },
+    "performanceQualification": false,
+    "authority": "only exact serial-named disposable QEMU targets, under retained maintainer VM-test approval; no production worker/UI authorization claim",
+    "faultInjection": "native first-sector writes followed by injected I/O exception or cancellation; no physical power cut"
+  },
+  "digestDiagnostic": {
+    "bytes": 2097152,
+    "oldRequestBytes": 4096,
+    "oldCalls": 512,
+    "newRequestBytes": 131072,
+    "newCalls": 16,
+    "sameSha256": true,
+    "protocolBudgetsAndDeadlinesChanged": false
+  },
+  "sourceDownload": {
+    "sourceUrl": "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2",
+    "sha512": "9f181877006e8d9ca4f4554eba8729a829936f0f7d1db5e77f69b1ef0f6bc372b4d46f3dae39b10d84f9131496c2cc1d449264f26577fe934a79de5a5512a3dd",
+    "downloadVerifiedBeforeUse": true,
+    "pgpSignatureVerified": false
+  },
+  "retainedPrivateArtifactsSha256": {
+    "capture-result.json": "e6d72bc2b6885e77bd0ff371a098535bdd38efa2d04dba62999e5b8a1089a16f",
+    "restore-result.json": "f14298e9d81eb53bc856598eda66812b144e46203c3c2adaed5e488b3438a93c",
+    "recovered-result.json": "bd6db5931987c466ee7732552e2a813a8fb1c77657fc48d87602745bc31e91bd",
+    "fault-result.json": "c9aefd32043d402597d582fc0af07e93a4b221a27fc94e18e8dd2a4c777f1f6d",
+    "capture-serial.log": "c10a44e3ea705fcf7eb062beb352646bcdc8afb74eaaba227686b01acc08b0d5",
+    "restore-serial.log": "f8eeb7178970b08821bb47b6c9db6a66f7dc789b06f7aad67990968603073f80",
+    "recovered-serial.log": "c7f2fd1545219f7112eed01f45ec896f36456809d7d3e6bb9bae01c9db47ed0e",
+    "fault-serial.log": "2b1ad7a7a0e3dee7941da0197a3a47196bad73aa80a50e8d428e415a0a1c8481",
+    "capture-qemu-args.json": "9b6d719efede9daadcaf67f445a3023b45bf1da9f42ea58fbed43d7706299cff",
+    "restore-qemu-args.json": "cda2cccfadb99985cdaea7d522a4bad53833a99ba27907d6da27842d003bf2e6",
+    "recovered-qemu-args.json": "d9d7c87b3736f250969a4b5d61cc46d6133cf3da7a33246e5c0ceeeffab399fb",
+    "fault-qemu-args.json": "970250374a4cfe7292321ee7650d4529f1eb7f5ac3625de2160836a392037d8c",
+    "independent-final-check.json": "d7c1a0a80046ff5b71e3ca31ff074915896a83ea3bceb7a8dcf8e82bdce34775",
+    "independent-preboot-equality.json": "29ce51212220413ad7e42ad68a20b1852564810942d93a0c8dc973da08abdfcb",
+    "pdb-source-check.json": "6c3f320db315b3b389e2fc85c1a511aff16baa1153e78c2248c58e6fccc54ea1",
+    "probe/Program.cs": "b913217239f200d9899d6cfbfbfe6e34a7848a5fec129ffa42f26ca68c576aa1",
+    "probe/OperationProbe.csproj": "9c84caa58b3bb543e203bb7c28f6d052f9b6a083b3b6924c1f9be606bef827bb",
+    "fault-probe/Program.cs": "8621d3b0f22530ca1d2eb834a9f7200fae00f3a20da51bfbabf4ee46561049c4",
+    "published/VaultSync.Core.dll": "98c1cf8c5c2fbeea7bc8eae7d150ee07f17c16f8579028e041f34a2d0a3abec6",
+    "published/VaultSync.Core.pdb": "431c6383a132a4e214f253aca777c59fc4994ca0f447b762a670bbe0e9205474",
+    "worker-published/VaultSync.DiskWorker.dll": "4efcfbe9c4b21be8ec109c465c8729de11977be478a1308c4212b7eeb225e258",
+    "worker-published/VaultSync.DiskWorker.pdb": "06c86414df48f9a55c3ac7b9d2d87aeed12fa23da55f2088115d779b3590934a",
+    "recovery-capture-seed.iso": "5114c80d5b06013a44babb1de4e2c308e3a3e74ef79a85a7fb43661b91c5c9b4",
+    "recovery-restore-seed.iso": "2a5d0df9165e7f2c010cae70368aeeb8958412a305f8082984cbd10663d0ea46",
+    "recovered-seed.iso": "c41532166e20eb6c7f3cd9e7bee4260cf2ef3b44a1e27136bf8d658d2239a891",
+    "fault-seed.iso": "ae5c8397a750a8248fcd373762defb0ef500494fc9e15d1b22c1cf2c0b5cfcd7",
+    "source-raw-before.json": "95924b4a1a59805fdd4dd36e19fc40a719df0a2005dda29e69951326e9cafba9",
+    "download/receipt.json": "9779fa467cec97238ac01d70783b51f398084997588160c452d532676a283c45",
+    "first-attempt-capture-result.json": "dba28b136f4a5fcc00c6a17086cc38840edf05a831e5b6cb39d4716b4bfd8b73",
+    "first-attempt-capture-serial.log": "f843008980dd4b27e41b8e408b50ada9e6655bbf0d09cc621e9ab00f217c64c5",
+    "first-attempt-repository-archive.json": "f5301cb730b66faee30a3bebcf7cb761475eb8a1bd00f69277bbba7cf16dcc53",
+    "interrupted-restore-receipt.json": "c96423a8e13cca5864e3351656ffe702d9d4ed48de5c68e899bfb4dd37102652",
+    "interrupted-repository-archive.json": "82e7ea1a06e60a31dc168d44dab809b4ef5b4327c4c2bee5c78bb8358b2df928",
+    "wrong-journal-path-receipt.json": "7ac4885ada478d0c5fe1ae3a7f5398e632aab4444293e54318fc9568094623b7",
+    "wrong-journal-path-restore-serial.log": "050e9ee398034a62d6a8c2ce5d7e684d4b4edb9e34ba1fb17ea6be0e56edf143",
+    "rpc-diagnostic-result.log": "a7b5d207d66d184b64abb7e62ef65121c0e9e31255a1c5d6338ebab29e9b54f7",
+    "release.log": "4ca0bd79a2725fd2c70c1a6660c3dfc01fa1735866e9f2e630266000ff515257",
+    "digest-tests.log": "bffbbcd7ca3c1db9c9ca0d3435b0045a323ebee86c65e70c20b9e62ef0b83b63",
+    "delivery-audit.log": "4213afbcf431a29609c3398f10fec1429c54f8244964a3f29c32e3d16cfa6cd6",
+    "family-audit.log": "6ae7e34d7b6000bcd6f0f8a1b1ce52abc34a313436ac7f735580440fc7c26cd1"
+  },
+  "failedAttempts": {
+    "sourceIdeSeed": "cloud kernel lacked IDE metadata drive discovery; replaced with virtio seed; not a product failure",
+    "firstCapture": "copied 3 GiB then refused isolated final verification; no completed image published",
+    "interruptedRestore": "tool session ended during staging; target independently still blank; state archived and own lab staging reset",
+    "wrongJournalPath": "native restore/read-back/cleanup passed and host disk bytes matched source; private postcheck added incorrect .journal suffix. Fixed fixture and reran entire restore onto a new blank target; original failed harness not counted as success"
+  },
+  "tracking": {
+    "activeReleaseItems": 49,
+    "familyItems": 110,
+    "discrepancies": 0,
+    "status": "In progress",
+    "completedOn": null
+  },
+  "qualifiedProfiles": 0,
+  "remaining": [
+    "production authenticated privileged worker/device/human authorization",
+    "reachable translated recovery UI and generated recovery media",
+    "full support matrix and physical power-cut/durability qualification",
+    "installed 1.8.9 update and package/provenance qualification",
+    "protected reviews and release gates"
+  ],
+  "deliveryRefinement": {
+    "recordedOn": "2026-10-26",
+    "base": "117bb12",
+    "change": "Explicit CancellationToken.None on both ownership/cleanup waits; identical uncancellable behavior to parameterless WaitAsync. No token/rule suppression.",
+    "nativeSourceSha256": "197a20bad77b85a1bc4ddc2a3fbf0ca8a84ab2677278812a5b97074b5710a96e",
+    "currentSourceSha256": "74f97beefc1d7d72da9af853519ed817a486640f7cefb384452883c96b92d8fa",
+    "nativeMeasurementsRerun": false,
+    "currentManagedChecks": {
+      "coreTests": 2170,
+      "pythonTests": 293,
+      "warnings": 0,
+      "errors": 0,
+      "skips": 0,
+      "logSha256": "a4427fff4c41a45908b125ddbbf54b110fd01695cdb290d99a5f0ebe025eb525"
+    }
+  }
+}

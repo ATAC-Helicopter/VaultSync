@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "recordedUtc": "2026-10-14T07:33:14Z",
+  "python": "3.9.6",
+  "platform": "macOS-27.2-arm64-arm-64bit",
+  "codecSha256": "3415630296f8ba00cad6c5cf982bcc2544a0108846eb09282f370797692a7ab5",
+  "entropySha256": "6edacbe10f683d816f98caaed60b2fa20835c168432191bf382d1bc148c39bfa",
+  "benchmarkSha256": "dfa06c644df1dae16087d0b6aabb8a6e1c2f84ba0b7f0dd860b284b9f92a696e",
+  "worktreeBaseCommit": "8ff4333655825342c1e43c8d9bc93ee311267d53",
+  "worktreeDirty": true,
+  "iterations": 5,
+  "measurements": [
+    {
+      "fixture": "unity-yaml",
+      "codec": "prototype-v0",
+      "logicalBytes": 486480,
+      "storedBytes": 75999,
+      "blocks": 4,
+      "sha256": "7ae2431904e044a25431108ff2dd7aefd060eeedf8e5ae609d9cd041c50f139b",
+      "encodeMedianMs": 58.21,
+      "decodeMedianMs": 33.774125,
+      "roundtrip": true
+    },
+    {
+      "fixture": "unity-yaml",
+      "codec": "prototype-huffman",
+      "logicalBytes": 486480,
+      "storedBytes": 54394,
+      "blocks": 4,
+      "sha256": "7ae2431904e044a25431108ff2dd7aefd060eeedf8e5ae609d9cd041c50f139b",
+      "encodeMedianMs": 81.094041,
+      "decodeMedianMs": 150.712667,
+      "roundtrip": true
+    },
+    {
+      "fixture": "unity-yaml",
+      "codec": "zlib-1",
+      "logicalBytes": 486480,
+      "storedBytes": 50442,
+      "blocks": 4,
+      "sha256": "7ae2431904e044a25431108ff2dd7aefd060eeedf8e5ae609d9cd041c50f139b",
+      "encodeMedianMs": 0.865042,
+      "decodeMedianMs": 0.194041,
+      "roundtrip": true
+    },
+    {
+      "fixture": "unity-yaml",
+      "codec": "zlib-6",
+      "logicalBytes": 486480,
+      "storedBytes": 38181,
+      "blocks": 4,
+      "sha256": "7ae2431904e044a25431108ff2dd7aefd060eeedf8e5ae609d9cd041c50f139b",
+      "encodeMedianMs": 2.060792,
+      "decodeMedianMs": 0.151625,
+      "roundtrip": true
+    },
+    {
+      "fixture": "unity-yaml",
+      "codec": "zlib-9",
+      "logicalBytes": 486480,
+      "storedBytes": 37136,
+      "blocks": 4,
+      "sha256": "7ae2431904e044a25431108ff2dd7aefd060eeedf8e5ae609d9cd041c50f139b",
+      "encodeMedianMs": 3.573041,
+      "decodeMedianMs": 0.148666,
+      "roundtrip": true
+    },
+    {
+      "fixture": "source-code",
+      "codec": "prototype-v0",
+      "logicalBytes": 426490,
+      "storedBytes": 54726,
+      "blocks": 4,
+      "sha256": "84348ae9485e5c36688a85a92144a591b2e18c8894f420a79e4cc45e89ae8977",
+      "encodeMedianMs": 48.111959,
+      "decodeMedianMs": 27.976417,
+      "roundtrip": true
+    },
+    {
+      "fixture": "source-code",
+      "codec": "prototype-huffman",
+      "logicalBytes": 426490,
+      "storedBytes": 36502,
+      "blocks": 4,
+      "sha256": "84348ae9485e5c36688a85a92144a591b2e18c8894f420a79e4cc45e89ae8977",
+      "encodeMedianMs": 63.624291,
+      "decodeMedianMs": 105.39825,
+      "roundtrip": true
+    },
+    {
+      "fixture": "source-code",
+      "codec": "zlib-1",
+      "logicalBytes": 426490,
+      "storedBytes": 40627,
+      "blocks": 4,
+      "sha256": "84348ae9485e5c36688a85a92144a591b2e18c8894f420a79e4cc45e89ae8977",
+      "encodeMedianMs": 0.693666,
+      "decodeMedianMs": 0.157042,
+      "roundtrip": true
+    },
+    {
+      "fixture": "source-code",
+      "codec": "zlib-6",
+      "logicalBytes": 426490,
+      "storedBytes": 25943,
+      "blocks": 4,
+      "sha256": "84348ae9485e5c36688a85a92144a591b2e18c8894f420a79e4cc45e89ae8977",
+      "encodeMedianMs": 1.670042,
+      "decodeMedianMs": 0.1175,
+      "roundtrip": true
+    },
+    {
+      "fixture": "source-code",
+      "codec": "zlib-9",
+      "logicalBytes": 426490,
+      "storedBytes": 25649,
+      "blocks": 4,
+      "sha256": "84348ae9485e5c36688a85a92144a591b2e18c8894f420a79e4cc45e89ae8977",
+      "encodeMedianMs": 3.750417,
+      "decodeMedianMs": 0.116333,
+      "roundtrip": true
+    },
+    {
+      "fixture": "random-proxy",
+      "codec": "prototype-v0",
+      "logicalBytes": 524288,
+      "storedBytes": 524612,
+      "blocks": 4,
+      "sha256": "00d496e9a09a459ad082817d456d3810e61bb450f8a66450c2de6485d31d7b8a",
+      "encodeMedianMs": 356.303208,
+      "decodeMedianMs": 0.445333,
+      "roundtrip": true
+    },
+    {
+      "fixture": "random-proxy",
+      "codec": "prototype-huffman",
+      "logicalBytes": 524288,
+      "storedBytes": 524612,
+      "blocks": 4,
+      "sha256": "00d496e9a09a459ad082817d456d3810e61bb450f8a66450c2de6485d31d7b8a",
+      "encodeMedianMs": 500.9795,
+      "decodeMedianMs": 0.441625,
+      "roundtrip": true
+    },
+    {
+      "fixture": "random-proxy",
+      "codec": "zlib-1",
+      "logicalBytes": 524288,
+      "storedBytes": 524472,
+      "blocks": 4,
+      "sha256": "00d496e9a09a459ad082817d456d3810e61bb450f8a66450c2de6485d31d7b8a",
+      "encodeMedianMs": 7.73925,
+      "decodeMedianMs": 0.072167,
+      "roundtrip": true
+    },
+    {
+      "fixture": "random-proxy",
+      "codec": "zlib-6",
+      "logicalBytes": 524288,
+      "storedBytes": 524472,
+      "blocks": 4,
+      "sha256": "00d496e9a09a459ad082817d456d3810e61bb450f8a66450c2de6485d31d7b8a",
+      "encodeMedianMs": 7.872083,
+      "decodeMedianMs": 0.072625,
+      "roundtrip": true
+    },
+    {
+      "fixture": "random-proxy",
+      "codec": "zlib-9",
+      "logicalBytes": 524288,
+      "storedBytes": 524472,
+      "blocks": 4,
+      "sha256": "00d496e9a09a459ad082817d456d3810e61bb450f8a66450c2de6485d31d7b8a",
+      "encodeMedianMs": 7.848042,
+      "decodeMedianMs": 0.073291,
+      "roundtrip": true
+    },
+    {
+      "fixture": "already-deflated",
+      "codec": "prototype-v0",
+      "logicalBytes": 36398,
+      "storedBytes": 31995,
+      "blocks": 1,
+      "sha256": "1053348f85215e7ecce7dfb627426017e0cce47bba6308ce29244fe40263c817",
+      "encodeMedianMs": 13.568167,
+      "decodeMedianMs": 4.683,
+      "roundtrip": true
+    },
+    {
+      "fixture": "already-deflated",
+      "codec": "prototype-huffman",
+      "logicalBytes": 36398,
+      "storedBytes": 22850,
+      "blocks": 1,
+      "sha256": "1053348f85215e7ecce7dfb627426017e0cce47bba6308ce29244fe40263c817",
+      "encodeMedianMs": 22.440292,
+      "decodeMedianMs": 54.701917,
+      "roundtrip": true
+    },
+    {
+      "fixture": "already-deflated",
+      "codec": "zlib-1",
+      "logicalBytes": 36398,
+      "storedBytes": 18126,
+      "blocks": 1,
+      "sha256": "1053348f85215e7ecce7dfb627426017e0cce47bba6308ce29244fe40263c817",
+      "encodeMedianMs": 0.297209,
+      "decodeMedianMs": 0.062375,
+      "roundtrip": true
+    },
+    {
+      "fixture": "already-deflated",
+      "codec": "zlib-6",
+      "logicalBytes": 36398,
+      "storedBytes": 17462,
+      "blocks": 1,
+      "sha256": "1053348f85215e7ecce7dfb627426017e0cce47bba6308ce29244fe40263c817",
+      "encodeMedianMs": 0.90525,
+      "decodeMedianMs": 0.063,
+      "roundtrip": true
+    },
+    {
+      "fixture": "already-deflated",
+      "codec": "zlib-9",
+      "logicalBytes": 36398,
+      "storedBytes": 17462,
+      "blocks": 1,
+      "sha256": "1053348f85215e7ecce7dfb627426017e0cce47bba6308ce29244fe40263c817",
+      "encodeMedianMs": 0.904958,
+      "decodeMedianMs": 0.062459,
+      "roundtrip": true
+    }
+  ],
+  "limitations": [
+    "Generated fixtures; no real project or network measurements.",
+    "Python prototype versus native zlib is not a fair runtime comparison.",
+    "Prototype includes 81 bytes per block; zlib includes its stream wrapper.",
+    "No archive/file metadata or production concurrency is measured."
+  ]
+}

@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using VaultSync.Core.Config;
+using VaultSync.Core.Models;
 using VaultSync.UI.Notifications;
 using VaultSync.UI.ViewModels;
 using VaultSync.UI.ViewModels.Notifications;
@@ -143,6 +144,14 @@ public partial class App : Application
 
     private void InitializeDesktopApplication(IClassicDesktopStyleApplicationLifetime desktop)
     {
+        ProductDiagnostics.Initialize(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VaultSync", "product-diagnostics"), typeof(App).Assembly);
+        ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.Application, VaultSync.Core.Models.DiagnosticOutcome.Started);
+        desktop.Exit += (_, _) =>
+        {
+            if (ProductDiagnostics.IsBeta)
+                ProductDiagnostics.Record(DiagnosticOperation.Application, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Cleanup);
+            ProductDiagnostics.Shutdown();
+        };
         CrashHandler.RegisterAvalonia();
         WireGlobalExceptionHandlers();
         WireLifecycleBreadcrumbs(desktop);
@@ -205,6 +214,9 @@ public partial class App : Application
         {
             if (!TryShowOnboarding(desktop))
                 TryShowWhatsNew(desktop);
+            if (ProductDiagnostics.IsBeta)
+                ProductDiagnostics.Record(DiagnosticOperation.Application, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Initialize);
+            ProductDiagnosticWindows.ShowConsent(desktop.MainWindow);
         });
         _ = Task.Run(CleanupStaleEncryptedOpenTempFolders, CancellationToken.None);
         _ = HandleInitialActivationArgsAsync(desktop);
@@ -301,12 +313,21 @@ public partial class App : Application
         {
             Interval = TimeSpan.FromMilliseconds(250)
         };
+        long lastBetaPulse = System.Diagnostics.Stopwatch.GetTimestamp();
         _uiHeartbeatTimer.Tick += (_, _) =>
         {
-            Interlocked.Exchange(ref _uiHeartbeatTicks, DateTime.UtcNow.Ticks);
+            long previous = Interlocked.Exchange(ref _uiHeartbeatTicks, DateTime.UtcNow.Ticks);
+            TimeSpan latency = DateTime.UtcNow - new DateTime(previous, DateTimeKind.Utc);
             if (Interlocked.Exchange(ref _uiHangReported, 0) == 1)
             {
                 DiagnosticsLogger.Record("UI heartbeat resumed after stall.");
+                if (ProductDiagnostics.IsBeta)
+                    ProductDiagnostics.Record(DiagnosticOperation.UserInterface, DiagnosticOutcome.Completed, duration: latency);
+            }
+            if (ProductDiagnostics.IsBeta && System.Diagnostics.Stopwatch.GetElapsedTime(lastBetaPulse) >= TimeSpan.FromMinutes(15))
+            {
+                lastBetaPulse = System.Diagnostics.Stopwatch.GetTimestamp();
+                ProductDiagnostics.Record(DiagnosticOperation.UserInterface, DiagnosticOutcome.Completed, duration: latency);
             }
         };
         _uiHeartbeatTimer.Start();
@@ -321,6 +342,8 @@ public partial class App : Application
             if (Interlocked.Exchange(ref _uiHangReported, 1) == 1)
                 return;
 
+            ProductDiagnostics.Record(DiagnosticOperation.UserInterface, DiagnosticOutcome.Hang,
+                duration: TimeSpan.FromMilliseconds(ageMs));
             var proc = System.Diagnostics.Process.GetCurrentProcess();
             DiagnosticsLogger.Record(
                 $"UI hang suspected ({ageMs:0}ms). Threads={proc.Threads.Count}, " +
@@ -1335,6 +1358,7 @@ public partial class App : Application
                         return;
 
                     DiagnosticsLogger.RecordException("Global unobserved task exception", e.Exception, includeStack: true);
+                    ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.BackgroundTask, VaultSync.Core.Models.DiagnosticOutcome.Failed, e.Exception);
                     Telemetry.Log("app_crash", b => b
                         .WithException(e.Exception)
                         .WithCode(TelemetrySourceCode, "unobserved_task"));

@@ -1151,6 +1151,7 @@ namespace VaultSync.UI.ViewModels
         {
             OnPropertyChanged(nameof(StatusDisplay));
             OnPropertyChanged(nameof(LastCheckedDisplay));
+            OnPropertyChanged(nameof(StoredBytesLabelText));
         }
 
         public bool IsChecking => _status == BackupsViewModel.DestinationStatus.Pending;
@@ -1248,6 +1249,16 @@ namespace VaultSync.UI.ViewModels
         }
 
         public bool HasStoredBytesText => !string.IsNullOrWhiteSpace(StoredBytesText);
+
+        private string _storedBytesValueText = string.Empty;
+        public string StoredBytesValueText
+        {
+            get => _storedBytesValueText;
+            set => SetField(ref _storedBytesValueText, value);
+        }
+
+        public string StoredBytesLabelText => LocalizationProvider.Service?.GetString(
+            "Backups.Destinations.StoredBytesLabel") ?? "Known backups (logical)";
 
         private string _cleanupSuggestionText = string.Empty;
         public string CleanupSuggestionText

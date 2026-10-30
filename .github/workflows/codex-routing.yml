@@ -1,0 +1,32 @@
+name: Repository routing policy guard
+
+on:
+  pull_request:
+    paths:
+      - '.codex/**'
+      - 'AGENTS.md'
+      - 'docs/CODEX_ROUTING.md'
+      - 'scripts/verify_codex_routing.py'
+      - '.github/workflows/codex-routing.yml'
+  push:
+    branches: [Dev]
+    paths:
+      - '.codex/**'
+      - 'AGENTS.md'
+      - 'docs/CODEX_ROUTING.md'
+      - 'scripts/verify_codex_routing.py'
+      - '.github/workflows/codex-routing.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-routing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.13'
+      - run: python scripts/verify_codex_routing.py

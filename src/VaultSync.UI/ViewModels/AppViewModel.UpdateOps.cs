@@ -135,6 +135,8 @@ namespace VaultSync.UI.ViewModels
         private void RefreshCurrentViewLocalization()
         {
             _projectsViewModel?.RefreshLocalization();
+            _recoveryViewModel?.ReapplyLocalization();
+            _guideViewModel?.ReapplyLocalization();
             if (_dashboardViewModel != null)
             {
                 _dashboardViewModel.ReapplyLocalization();
@@ -387,6 +389,8 @@ namespace VaultSync.UI.ViewModels
                     CancellationToken.None);
                 if (archivePath is null)
                 {
+                    ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.Update, VaultSync.Core.Models.DiagnosticOutcome.Failed,
+                        phase: VaultSync.Core.Models.DiagnosticPhase.Download, failure: VaultSync.Core.Models.DiagnosticFailure.Other);
                     PatchStatusMessage = L("Patch.Status.DownloadFailed", "Failed to download or verify the patch.");
                     _patchFailed = true;
                     OnPropertyChanged(nameof(ShowInstallerFallback));
@@ -419,6 +423,7 @@ namespace VaultSync.UI.ViewModels
             }
             catch (Exception ex)
             {
+                ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.Update, VaultSync.Core.Models.DiagnosticOutcome.Failed, ex, VaultSync.Core.Models.DiagnosticPhase.Download);
                 PatchStatusMessage = L("Patch.Status.DownloadFailed", "Failed to download or verify the patch.");
                 Debug.WriteLine($"[Patch] Install failed: {ex}");
                 _patchFailed = true;
@@ -975,12 +980,12 @@ namespace VaultSync.UI.ViewModels
                 {
                     string completionMessage;
                     if (launchResult.RelaunchAfterShutdown)
-                        completionMessage = "Update ready. VaultSync will restart with the new version.";
+                        completionMessage = L("Update.Installer.ReadyToRestart", "Update ready. VaultSync will restart with the new version.");
                     else if (launchResult.Completed)
-                        completionMessage = "Update installed. VaultSync will close so the new version can start cleanly.";
+                        completionMessage = L("Update.Installer.Installed", "Update installed. VaultSync will close so the new version can start cleanly.");
                     else
-                        completionMessage = "Installer launched. VaultSync will close so setup can continue.";
-                    PatchStatusMessage = L("Update.Installer.Launched", completionMessage);
+                        completionMessage = L("Update.Installer.Launched", "Installer launched. VaultSync will close so setup can continue.");
+                    PatchStatusMessage = completionMessage;
                 }
                 if (launchResult.ShouldShutdown)
                 {

@@ -47,12 +47,24 @@ function Get-FileVersionValue {
 }
 
 function Get-ChangelogHeader {
-    $line = Get-Content CHANGELOG.md | Select-Object -First 3 | Where-Object { $_ -match '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})' } | Select-Object -First 1
+    $content = Get-Content CHANGELOG.md -Raw
+    $line = Get-Content CHANGELOG.md | Where-Object { $_ -match '^## \[(.+?)\]' } | Select-Object -First 1
     if (-not $line) {
         throw "Could not find release changelog header in CHANGELOG.md."
     }
 
-    $match = [regex]::Match($line, '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})')
+    if ($line -eq '## [Unreleased]') {
+        $body = ($content -split '(?m)^## \[', 3)[1]
+        $target = [regex]::Match($body, '(?m)^\*\*Target version:\*\* `([^`]+)`')
+        if (-not $target.Success) {
+            throw 'Unreleased changelog must declare its target version.'
+        }
+        return [pscustomobject]@{ version = $target.Groups[1].Value; status = 'Unreleased' }
+    }
+    $match = [regex]::Match($line, '^## \[(.+?)\] - (\d{4}-\d{2}-\d{2})(?: \[YANKED\])?$')
+    if (-not $match.Success) {
+        throw 'Published changelog headers must use YYYY-MM-DD.'
+    }
     return [pscustomobject]@{
         version = $match.Groups[1].Value.Trim()
         status  = $match.Groups[2].Value.Trim()
@@ -75,12 +87,15 @@ function Get-ChangelogEntries {
     $entries = New-Object System.Collections.Generic.List[object]
     $inTargetSection = $false
     $lineNumber = 0
+    $activeVersion = (Get-ChangelogHeader).version
 
     foreach ($line in Get-Content CHANGELOG.md) {
         $lineNumber++
 
         if ($line -match '^## \[(.+?)\]') {
-            $inTargetSection = ($matches[1] -eq $Version)
+            $sectionVersion = $matches[1]
+            $inTargetSection = ($sectionVersion -eq $Version) -or (
+                $sectionVersion -eq 'Unreleased' -and $activeVersion -eq $Version)
             continue
         }
 
@@ -259,6 +274,12 @@ Add-CheckResult -Results $results -Code "docs-unsigned-integrity-policy" `
     -PassMessage "Unsigned distribution and mandatory integrity controls are documented." `
     -FailMessage "Unsigned distribution policy or mandatory SHA-256 integrity guidance is missing." `
     -Data @{ paths = @("docs/RELEASING.md", "SECURITY.md") }
+
+Add-CheckResult -Results $results -Code "release-provenance-policy" `
+    -Condition ((Test-Path "scripts/release_signing.py") -and (Test-Path "docs/RELEASE_SIGNING.md") -and $releasingDoc -match 'RELEASE_SIGNING.md') `
+    -PassMessage "Mandatory release provenance policy and verifier are present; actual run proof remains required." `
+    -FailMessage "Mandatory release provenance policy or verifier is missing." `
+    -Data @{ paths = @("scripts/release_signing.py", "docs/RELEASE_SIGNING.md") }
 
 if ($SkipGitHubChecks) {
     $results.Add((New-Result -Code "github-checks-skipped" -Status "warn" -Message "GitHub release and project checks were skipped for PR-local validation." -Data @{

@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="VaultSync.RecoveryController.RecoveryWindow" x:CompileBindings="False" Width="880" Height="720" MinWidth="600" MinHeight="480" Title="VaultSync">
+  <Grid RowDefinitions="Auto,*" Margin="28" RowSpacing="20">
+    <DockPanel Grid.Row="0" LastChildFill="False">
+      <TextBlock Name="Brand" Text="VaultSync" FontSize="24" FontWeight="SemiBold" DockPanel.Dock="Left" />
+      <ComboBox Name="Language" DockPanel.Dock="Right" MinWidth="160" DisplayMemberBinding="{Binding DisplayName}"  />
+    </DockPanel>
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="16">
+        <TextBlock Name="Heading" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Name="Description" TextWrapping="Wrap" />
+        <TextBox Name="Folder" IsVisible="False" />
+        <ListBox Name="Targets" IsVisible="False" MinHeight="120"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate></ListBox.ItemTemplate></ListBox>
+        <TextBlock Name="Details" TextWrapping="Wrap" FlowDirection="LeftToRight" FontFamily="monospace" />
+        <ProgressBar Name="Progress" IsVisible="False" Minimum="0" Maximum="100" Height="12" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Name="Primary" Click="PrimaryClick" />
+          <Button Name="Cancel" Click="CancelClick" />
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Window>

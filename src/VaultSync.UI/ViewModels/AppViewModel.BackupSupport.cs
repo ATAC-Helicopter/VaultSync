@@ -47,6 +47,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     var snapshotService = new SnapshotService(_repo, new HashService());
                     int hashed = await snapshotService.HashMissingFilesAsync(project, snapshotId, CancellationToken.None);
+                    ProductDiagnostics.Record(DiagnosticOperation.Snapshot, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Verify, quantity: hashed);
                     Telemetry.Log("backup_post_hash_complete", b => b
                         .WithHashedString("project", project.Name)
                         .WithCount("hashedFiles", hashed));
@@ -57,6 +58,7 @@ namespace VaultSync.UI.ViewModels
                     Telemetry.Log("backup_post_hash_failed", b => b
                         .WithHashedString("project", project.Name)
                         .WithException(ex));
+                    ProductDiagnostics.Record(DiagnosticOperation.Snapshot, DiagnosticOutcome.Failed, ex, DiagnosticPhase.Verify);
                     Console.WriteLine($"[Backup] Post-hash failed: project='{project.Name}', error={ex.Message}");
                 }
                 finally
@@ -68,6 +70,8 @@ namespace VaultSync.UI.ViewModels
 
         private void RecordBackupThroughput(int backupId, TimeSpan elapsed, bool useArchiveMode)
         {
+            ProductDiagnostics.Record(DiagnosticOperation.Backup, DiagnosticOutcome.Completed,
+                phase: DiagnosticPhase.Commit, mode: useArchiveMode ? DiagnosticMode.Zip : DiagnosticMode.Folder, duration: elapsed);
             try
             {
                 if (backupId <= 0)
@@ -150,6 +154,7 @@ namespace VaultSync.UI.ViewModels
                 }
                 catch (Exception vex)
                 {
+                    ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Failed, vex, DiagnosticPhase.Verify);
                     Telemetry.Log(telemetryEvent, b => b
                         .WithHashedString("project", project.Name)
                         .WithHashedString("projectRoot", project.RootPath)

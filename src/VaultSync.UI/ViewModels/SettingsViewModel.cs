@@ -821,6 +821,7 @@ namespace VaultSync.UI
             _enableVerboseLogging      = cfg.Advanced.VerboseLogging;
             _saveVerboseLogs           = cfg.Advanced.SaveVerboseLogs;
             _crashReportAssistanceEnabled = cfg.Advanced.CrashReportAssistanceEnabled;
+            ProductDiagnostics.ConsentChanged += () => Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(AutomaticDiagnosticsEnabled)));
             _checkForUpdatesOnStartup  = cfg.Advanced.CheckUpdates;
             _updateCheckIntervalMinutes = ClampInt(cfg.Advanced.UpdateCheckIntervalMinutes, 15, 10080, 120);
             _betaChannelEnabled         = cfg.Advanced.BetaChannelEnabled;
@@ -2258,6 +2259,25 @@ namespace VaultSync.UI
             get => _saveVerboseLogs;
             set => SetField(ref _saveVerboseLogs, value);
         }
+
+        public bool IsBetaDiagnostics => ProductDiagnostics.IsBeta;
+
+        public bool AutomaticDiagnosticsEnabled
+        {
+            get => ProductDiagnostics.Enabled;
+            set
+            {
+                if (value == ProductDiagnostics.Enabled) return;
+                if (!ProductDiagnostics.SetConsent(value))
+                    SaveStatus = L("Diagnostics.SaveFailed", "Could not save your choice. Sending is disabled. Check local storage permissions.");
+                OnPropertyChanged();
+            }
+        }
+
+        public ICommand DiagnosticPrivacyCommand { get; } = new RelayCommand(_ => ProductDiagnosticWindows.OpenPrivacy());
+
+        public ICommand ReviewDiagnosticReportsCommand { get; } = new RelayCommand(_ =>
+            ProductDiagnosticWindows.ShowReview((Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow));
 
         public bool CrashReportAssistanceEnabled
         {

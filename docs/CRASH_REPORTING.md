@@ -1,6 +1,10 @@
 # Crash reporting and user control
 
-VaultSync crash reporting is a local report-preparation feature. It is not an automatic crash uploader and does not use an analytics SDK, crash-reporting vendor, web API, SMTP credential, background transfer, or hosted report database.
+This contract describes the local text crash-report assistance workflow. It does
+not upload its reports automatically. Separately, the optional
+[technical diagnostic collector](PRODUCT_DIAGNOSTICS.md) can send fixed crash
+codes after explicit device-local consent; it never sends this text file,
+exception messages, raw logs or memory dumps.
 
 ## In one sentence
 
@@ -38,7 +42,8 @@ The **Settings > Advanced > Crash report assistance** toggle controls the entire
 - Enabled: VaultSync may create a local report after a crash and offer the review workflow.
 - Disabled: VaultSync does not create a crash report and does not offer email preparation.
 - Changing the setting does not transmit anything.
-- There is no automatic-send option and no remembered consent to send future reports.
+- This text-report workflow has no automatic-send option. Automatic structured
+  diagnostics has separate consent and controls, described in its contract.
 - A report can be inspected, copied, or deleted before the email application is opened.
 - The report ID, OS family, crash category, and crash reason are generated fields and cannot be changed in VaultSync. Optional user context belongs in the visible email draft.
 - VaultSync attempts to attach the visible text file to the draft. The user must review the attachment and press **Send** in their own email application.
