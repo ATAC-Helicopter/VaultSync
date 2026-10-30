@@ -57,6 +57,8 @@ class StageRecoveryHostTests(unittest.TestCase):
         self.assertEqual(value["role"], "offline-recovery-media-v1")
         self.assertEqual(value["sourceCommit"], COMMIT)
         self.assertEqual(value["systemdSha256"], media.worker.digest(self.systemd))
+        self.assertEqual(value["controllerMode"], "headless")
+        self.assertIsNone(value["xorgSha256"])
         self.assertEqual(count, len(value["files"]))
         self.assertEqual([file["path"] for file in value["files"]], sorted(file["path"] for file in value["files"]))
         for record in value["files"]:
@@ -66,6 +68,36 @@ class StageRecoveryHostTests(unittest.TestCase):
         self.assertEqual((self.host / "VaultSync.Core.dll").read_bytes(), b"shared-Core")
         with self.assertRaises(ValueError):
             self.run_stage()
+
+    def test_graphical_dependencies_are_source_bound_and_catalog_nesting_is_exact(self):
+        catalogs = self.controller / "Localization"
+        catalogs.mkdir()
+        for source in (media.REPOSITORY / "Localization").glob("strings.*.json"):
+            (catalogs / source.name).write_bytes(source.read_bytes())
+        display = self.root / "recovery-display-launch"
+        display.write_bytes(b"fixture-display-bootstrap"); display.chmod(0o755)
+        xorg = self.root / "Xorg"
+        xorg.write_bytes(b"fixture-target-Xorg"); xorg.chmod(0o755)
+        def identity(program, directory):
+            if program == display:
+                return {"schemaVersion": 1, "role": "recovery-display-launch-v1", "runtimeIdentifier": "linux-x64", "sourceCommit": COMMIT}
+            return self.identity(program, directory)
+        with patch.object(media.worker, "read_identity", side_effect=identity):
+            media.stage(self.host, self.controller, self.reader, self.launcher, self.systemd, self.output, COMMIT, "en", "graphical", display, xorg)
+        value = media.worker.strict_json((self.output / media.MANIFEST).read_bytes())
+        self.assertEqual(value["controllerMode"], "graphical")
+        self.assertEqual(value["xorgSha256"], media.worker.digest(xorg))
+        self.assertEqual((self.output / "boot/vaultsync-recovery.service").read_bytes(),
+                         (media.REPOSITORY / "packaging/recovery/vaultsync-recovery-graphical.service").read_bytes())
+        self.assertEqual(len(list((self.output / "controller/Localization").iterdir())), 19)
+
+    def test_missing_graphical_dependencies_and_arbitrary_nested_directories_refuse_before_creation(self):
+        with self.assertRaises(ValueError):
+            media.stage(self.host, self.controller, self.reader, self.launcher, self.systemd, self.output, COMMIT, "en", "graphical")
+        (self.controller / "unexpected").mkdir()
+        with self.assertRaises(ValueError):
+            self.run_stage()
+        self.assertFalse(self.output.exists())
 
     def test_existing_output_and_outside_build_root_refuse_before_execution(self):
         self.output.mkdir()

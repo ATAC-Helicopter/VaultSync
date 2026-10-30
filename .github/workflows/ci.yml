@@ -53,7 +53,9 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Validate UI localization
-        run: python3 scripts/localization_audit.py --check
+        run: |
+          python3 scripts/localization_audit.py --check
+          python3 scripts/localization_audit.py --check --source-dir src/VaultSync.RecoveryController
 
       - name: Restore
         run: dotnet restore VaultSync.sln
@@ -83,6 +85,7 @@ jobs:
           python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/recovery-controller/VaultSync.RecoveryController.runtimeconfig.json"
           mkdir "${{ runner.temp }}/recovery-inputs"
           cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=3 '-DSOURCE_COMMIT="${{ github.sha }}"' src/VaultSync.RecoveryHost/Native/controller-launch.c -Wl,-z,relro,-z,now -o "${{ runner.temp }}/recovery-inputs/recovery-controller-launch"
+          cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=3 '-DSOURCE_COMMIT="${{ github.sha }}"' src/VaultSync.RecoveryHost/Native/display-launch.c -Wl,-z,relro,-z,now -o "${{ runner.temp }}/recovery-inputs/recovery-display-launch"
           cp -L /usr/lib/systemd/systemd "${{ runner.temp }}/recovery-inputs/systemd"
           python3 scripts/stage_recovery_host.py --host-dir "${{ runner.temp }}/recovery-host" --controller-dir "${{ runner.temp }}/recovery-controller" --reader-dir "${{ runner.temp }}/runtime-audit/DiskWorker" --launcher "${{ runner.temp }}/recovery-inputs/recovery-controller-launch" --systemd "${{ runner.temp }}/recovery-inputs/systemd" --output "${{ runner.temp }}/recovery-installation" --source-commit "${{ github.sha }}" --console-culture en
 

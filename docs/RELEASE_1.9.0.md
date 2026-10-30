@@ -7,13 +7,18 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
-The `3ce3e8d` hosted checkpoint passes all seven isolated filesystem scenarios
-and 21 other checks. Its separate Sonar quality gate still fails only new coverage
-(79.9%, minimum 80%); the scanner SCM revision and GitHub check bind that result
-to the exact PR head. The anonymous task lookup returns 404, so no analysis ID is
-inferred. Earlier failed/cancelled checks remain historical. No production admission,
-report ranges, exclusions or quality thresholds are relaxed. See the
-[admission/liveness receipt](release-evidence/1.9-recovery-admission-liveness-2026-10-30.json).
+The `b8e3010` hosted checkpoint passes all 22 GitHub checks and its separate
+Sonar quality gate: coverage80.0%, ratings A, duplication0.0%, reviewed hotspots100%.
+This result is historical for the graphical-controller increment now under
+integration. It is not media, profile, updater or beta qualification. Earlier
+failures are retained; no threshold, exclusion or report range was relaxed.
+
+VS-1907/#495 now integrates the separate localized graphical controller, fixed
+X11 display/bootstrap admission and VT handoff. The successful component checkpoint
+is 112 focused cases, eight producer cases, controller Release build and two native
+launcher compilations. Installed graphical interaction, final-screen retention,
+authentication and cleanup still require measured offline VM results. This is not
+a beta or media/profile qualification; see the [graphical receipt](release-evidence/1.9-graphical-controller-2026-10-30.json).
 
 VS-1907/#495 separates controller choices from worker observations through an
 explicit interaction provider. Image/target selection and exact review acknowledgment

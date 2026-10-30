@@ -163,6 +163,28 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
             });
     }
 
+    internal Task WaitForPresentationExitAsync(CancellationToken token)
+    {
+        lock (gate)
+        {
+            if (disposal is not null) throw new ObjectDisposedException(nameof(LinuxRecoveryControllerLaunch));
+            return WaitForOwnedExitAsync(earlyExit ?? throw new InvalidOperationException("recovery-controller.not-connected"),
+                TimeSpan.FromMinutes(10), token);
+        }
+    }
+
+    // Presentation retention only, after the worker and receipt are terminal.
+    // This never grants execution, inspects an exit code, or cancels the owned
+    // process-exit task. Existing cgroup disposal follows every return path.
+    internal static async Task WaitForOwnedExitAsync(Task exit, TimeSpan limit, CancellationToken token)
+    {
+        ArgumentNullException.ThrowIfNull(exit);
+        if (limit <= TimeSpan.Zero || limit > TimeSpan.FromMinutes(10)) throw new ArgumentOutOfRangeException(nameof(limit));
+        try { await exit.WaitAsync(limit, token).ConfigureAwait(false); }
+        catch (TimeoutException) when (!exit.IsFaulted) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested && !exit.IsFaulted && !exit.IsCanceled) { }
+    }
+
     public ValueTask DisposeAsync()
     {
         TaskCompletionSource completion;

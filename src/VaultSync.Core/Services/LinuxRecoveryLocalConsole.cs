@@ -15,6 +15,7 @@ internal sealed class LinuxRecoveryLocalConsole : LinuxRecoverySupervisor.IConfi
 {
     internal interface IAccess : IDisposable
     {
+        void WaitForActive(CancellationToken token);
         void ValidateContext();
         void FlushInput();
         void Write(byte[] bytes, CancellationToken token);
@@ -73,6 +74,7 @@ internal sealed class LinuxRecoveryLocalConsole : LinuxRecoverySupervisor.IConfi
             var cancellation = input.Token;
             cancellation.ThrowIfCancellationRequested();
             using var access = open();
+            access.WaitForActive(cancellation);
             access.ValidateContext();
             access.FlushInput();
             access.ValidateContext();
@@ -183,12 +185,30 @@ internal sealed class LinuxRecoveryLocalConsole : LinuxRecoverySupervisor.IConfi
 
         public void ValidateContext()
         {
+            LinuxRecoveryLocalConsole.ValidateContext(ReadContext());
+        }
+
+        public void WaitForActive(CancellationToken token)
+        {
+            // Changing VT is never approval. The same remaining review deadline
+            // bounds this wait; the full original context is checked afterwards.
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+                if (GetVt(handle, 0x5603, out var vt) != 0) throw Invalid();
+                if (vt.Active == 1) return;
+                token.WaitHandle.WaitOne(50);
+            }
+        }
+
+        private Context ReadContext()
+        {
             if (StatHandle(handle, "", 0x1100, 0x7ff, out var held) != 0 ||
                 StatPath(-100, Pathname, 0x100, 0x7ff, out var path) != 0 ||
                 GetVt(handle, 0x5603, out var vt) != 0 || GetAttributes(handle, out var attributes) != 0) throw Invalid();
-            LinuxRecoveryLocalConsole.ValidateContext(new(GetUid(), GetEuid(), GetGid(), GetEgid(),
+            return new(GetUid(), GetEuid(), GetGid(), GetEgid(),
                 Identity(held), Identity(path), IsTerminal(handle) == 1, SessionOfTerminal(handle), GetSession(0),
-                ForegroundGroup(handle), GetProcessGroup(), vt.Active, (attributes.LocalFlags & 2) != 0, InjectionDisabled()));
+                ForegroundGroup(handle), GetProcessGroup(), vt.Active, (attributes.LocalFlags & 2) != 0, InjectionDisabled());
         }
 
         private static DeviceIdentity Identity(FileStatus value) => new(value.Mask, value.Mode, value.Owner, value.Links,

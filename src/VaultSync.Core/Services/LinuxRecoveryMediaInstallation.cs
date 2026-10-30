@@ -17,11 +17,18 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
     internal const string ServiceGroup = "/system.slice/vaultsync-recovery.service";
     internal const string ControllerGroup = "/sys/fs/cgroup" + ServiceGroup + "/controller";
     internal const string SocketPath = "/run/vaultsync-recovery/controller.sock";
+    internal const string DisplayUnit = "/usr/lib/systemd/system/vaultsync-recovery-display.service";
+    internal const string Xorg = "/usr/lib/xorg/Xorg";
+    internal const string DisplayRoot = "/run/vaultsync-recovery-display";
+    internal const string DisplayAuthority = DisplayRoot + "/Xauthority";
+    internal const string DisplayTemporary = DisplayRoot + "/controller";
+    internal const string DisplaySocket = "/tmp/.X11-unix/X0";
     internal const uint ControllerId = 60999;
     internal const int MaximumFiles = 2048, MaximumManifest = 1024 * 1024;
     internal const long MaximumFile = 64L * 1024 * 1024, MaximumTotal = 1024L * 1024 * 1024;
     internal sealed record Entry(string Path, long Size, string Sha256, bool Executable);
-    internal sealed record Manifest(string Commit, string Culture, string SystemdHash, IReadOnlyList<Entry> Files);
+    internal sealed record Manifest(string Commit, string Culture, string SystemdHash, IReadOnlyList<Entry> Files,
+        string ControllerMode = "headless", string? XorgHash = null);
     internal readonly record struct BootFacts(bool RootIdentity, int Parent, bool ReadOnlyRoot, bool SameMount,
         bool SameNetwork, bool InitialUser, bool SystemdMatches, bool NetworkDown, string Group);
     internal static void ValidateHostBoot(BootFacts value)
@@ -33,8 +40,10 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
     private readonly List<SafeFileHandle> directories = new();
     private readonly Dictionary<string, LinuxRecoveryNative.Identity> identities = new(StringComparer.Ordinal);
     private readonly HashSet<string> heldDirectories = new(StringComparer.Ordinal);
+    private Role? admittedRole;
     private bool disposed;
     internal Manifest Description { get; private set; } = null!;
+    private LinuxRecoveryMediaInstallation() { }
 
     internal static string RoleName(Role role) => role == Role.Host ? "offline-recovery-supervisor-v1" : "recovery-controller-v1";
     internal static string ProgramPath(Role role) => Root + (role == Role.Host
@@ -50,8 +59,13 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
         if (bytes.Length is 0 or > MaximumManifest || !Hex(commit, 40)) throw Invalid();
         using var document = JsonDocument.Parse(bytes, new JsonDocumentOptions { AllowDuplicateProperties = false, MaxDepth = 5 });
         var root = document.RootElement;
-        Keys(root, "schemaVersion", "role", "runtimeIdentifier", "sourceCommit", "consoleCulture", "systemdSha256", "files");
-        if (!root.GetProperty("schemaVersion").TryGetInt32(out int schema) || schema != 1 || Text(root, "role") != "offline-recovery-media-v1" ||
+        if (!root.GetProperty("schemaVersion").TryGetInt32(out int schema) || schema is not (1 or 2)) throw Invalid();
+        if (schema == 1) Keys(root, "schemaVersion", "role", "runtimeIdentifier", "sourceCommit", "consoleCulture", "systemdSha256", "files");
+        else Keys(root, "schemaVersion", "role", "runtimeIdentifier", "sourceCommit", "consoleCulture", "systemdSha256", "files", "controllerMode", "xorgSha256");
+        string mode = schema == 1 ? "headless" : Text(root, "controllerMode");
+        string? xorgHash = schema == 1 || root.GetProperty("xorgSha256").ValueKind == JsonValueKind.Null ? null : Text(root, "xorgSha256");
+        if (mode is not ("headless" or "graphical") || (mode == "graphical" ? xorgHash is null || !Hex(xorgHash, 64) : xorgHash is not null)) throw Invalid();
+        if (Text(root, "role") != "offline-recovery-media-v1" ||
             Text(root, "runtimeIdentifier") != "linux-x64" || Text(root, "sourceCommit") != commit ||
             Text(root, "consoleCulture") is not ("en" or "it") || !Hex(Text(root, "systemdSha256"), 64)) throw Invalid();
         var list = root.GetProperty("files");
@@ -83,7 +97,13 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
             entries.Single(e => e.Path == "host/VaultSync.Core.dll").Sha256 != entries.Single(e => e.Path == "controller/VaultSync.Core.dll").Sha256 ||
             entries.Single(e => e.Path == "host/VaultSync.Core.dll").Sha256 != entries.Single(e => e.Path == "host/DiskWorker/VaultSync.Core.dll").Sha256)
             throw Invalid();
-        return new(commit, Text(root, "consoleCulture"), Text(root, "systemdSha256"), entries.AsReadOnly());
+        if (mode == "graphical")
+        {
+            foreach (string required in new[] { "launch/recovery-display-launch", "boot/vaultsync-recovery-display.service" })
+                if (!entries.Any(e => e.Path == required)) throw Invalid();
+            if (!entries.Single(e => e.Path == "launch/recovery-display-launch").Executable) throw Invalid();
+        }
+        return new(commit, Text(root, "consoleCulture"), Text(root, "systemdSha256"), entries.AsReadOnly(), mode, xorgHash);
     }
 
     internal static async Task<LinuxRecoveryMediaInstallation> OpenAsync(Role role, CancellationToken token)
@@ -110,11 +130,20 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
             var unit = lease.Hold(Unit, MaximumFile, false);
             if (Convert.ToHexStringLower(await SHA256.HashDataAsync(unit, token).ConfigureAwait(false)) !=
                 lease.Description.Files.Single(e => e.Path == "boot/vaultsync-recovery.service").Sha256) throw Invalid();
+            if (lease.Description.ControllerMode == "graphical")
+            {
+                var xorg = lease.Hold(Xorg, MaximumFile, true);
+                if (Convert.ToHexStringLower(await SHA256.HashDataAsync(xorg, token).ConfigureAwait(false)) != lease.Description.XorgHash) throw Invalid();
+                var displayUnit = lease.Hold(DisplayUnit, MaximumFile, false);
+                if (Convert.ToHexStringLower(await SHA256.HashDataAsync(displayUnit, token).ConfigureAwait(false)) !=
+                    lease.Description.Files.Single(e => e.Path == "boot/vaultsync-recovery-display.service").Sha256) throw Invalid();
+            }
             string expectedCore = Root + (role == Role.Host ? "/host/" : "/controller/") + "VaultSync.Core.dll";
             if (typeof(LinuxRecoveryMediaInstallation).Assembly.Location != expectedCore) throw Invalid();
             lease.RequireExecutable(Environment.ProcessId, role);
             lease.RecheckBoot(role);
             lease.Recheck();
+            lease.admittedRole = role;
             return lease;
         }
         catch { lease.Dispose(); throw; }
@@ -176,6 +205,17 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
         }
     }
 
+    // Borrowing this lease never skips admission: only OpenAsync can construct
+    // and mark it admitted. The caller keeps it alive through conversation drain.
+    internal void RecheckController()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (admittedRole != Role.Controller) throw Invalid();
+        RecheckBoot(Role.Controller);
+        RequireExecutable(Environment.ProcessId, Role.Controller);
+        Recheck();
+    }
+
     internal void RecheckBoot(Role role)
     {
         if (!LinuxRecoveryNative.ReadOnlyFilesystem("/")) throw Invalid();
@@ -195,6 +235,36 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
             // nonwritable fixed socket, not an inaccessible /proc assumption.
             if (LinuxRecoveryNative.ParentProcess() <= 1) throw Invalid();
         }
+    }
+
+    internal readonly record struct DisplayFacts(LinuxRecoveryNative.Identity Runtime, LinuxRecoveryNative.Identity Authority,
+        LinuxRecoveryNative.Identity Temporary, LinuxRecoveryNative.Identity SocketDirectory, LinuxRecoveryNative.Identity Socket);
+    internal static void ValidateDisplay(DisplayFacts facts)
+    {
+        if (facts.Runtime.Mode != 0x41c8 || facts.Runtime.Owner != 0 || facts.Runtime.Group != ControllerId ||
+            facts.Authority.Mode != 0x81a0 || facts.Authority.Owner != 0 || facts.Authority.Group != ControllerId ||
+            facts.Authority.Links != 1 || facts.Authority.Size != 45 ||
+            facts.Temporary.Mode != 0x41c0 || facts.Temporary.Owner != ControllerId || facts.Temporary.Group != ControllerId ||
+            facts.SocketDirectory.Mode != 0x43ff || facts.SocketDirectory.Owner != 0 ||
+            (facts.Socket.Mode & 0xf000) != 0xc000 || facts.Socket.Owner != 0 || facts.Socket.Links != 1) throw Invalid();
+    }
+
+    internal async Task RequireDisplayAsync(CancellationToken token)
+    {
+        if (Description.ControllerMode != "graphical" || Environment.GetEnvironmentVariable("DISPLAY") != ":0" ||
+            Environment.GetEnvironmentVariable("XAUTHORITY") != DisplayAuthority ||
+            Environment.GetEnvironmentVariable("TMPDIR") != DisplayTemporary) throw Invalid();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        deadline.CancelAfter(TimeSpan.FromSeconds(30));
+        while (!File.Exists(DisplaySocket)) await Task.Delay(100, deadline.Token).ConfigureAwait(false);
+        // Openat2 refuses aliases in every path component. Keep the cookie out of
+        // controller-writable storage; Xlib reads this root-owned fixed file.
+        using var authority = LinuxRecoveryNative.OpenFile(DisplayAuthority, false);
+        using var runtime = LinuxRecoveryNative.Open(DisplayRoot, 0x200000 | 0x10000 | 0x20000 | 0x80000); // O_PATH: group traversal only.
+        using var temporary = LinuxRecoveryNative.Open(DisplayTemporary, 0x10000 | 0x20000 | 0x80000);
+        using var sockets = LinuxRecoveryNative.Open("/tmp/.X11-unix", 0x10000 | 0x20000 | 0x80000);
+        ValidateDisplay(new(LinuxRecoveryNative.Stat(runtime), LinuxRecoveryNative.Stat(authority.SafeFileHandle),
+            LinuxRecoveryNative.Stat(temporary), LinuxRecoveryNative.Stat(sockets), LinuxRecoveryNative.StatPath(DisplaySocket)));
     }
 
     internal (Func<string, string?> Text, CultureInfo Culture) ConsoleText()

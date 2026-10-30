@@ -231,7 +231,9 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Validate UI localization before packaging
-        run: python3 scripts/localization_audit.py --check
+        run: |
+          python3 scripts/localization_audit.py --check
+          python3 scripts/localization_audit.py --check --source-dir src/VaultSync.RecoveryController
 
       - name: Restore
         run: dotnet restore VaultSync.sln

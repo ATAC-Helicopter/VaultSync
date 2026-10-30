@@ -39,6 +39,56 @@ public sealed class LinuxRecoveryMediaInstallationTests
     private static byte[] Encode(Dictionary<string, object> value) => JsonSerializer.SerializeToUtf8Bytes(value);
     private static List<Dictionary<string, object>> Files(Dictionary<string, object> value) => (List<Dictionary<string, object>>)value["files"];
 
+    private static Dictionary<string, object> GraphicalManifest()
+    {
+        var value = Manifest(); value["schemaVersion"] = 2; value["controllerMode"] = "graphical"; value["xorgSha256"] = Hash;
+        Files(value).Add(new() { ["path"] = "launch/recovery-display-launch", ["size"] = 1, ["sha256"] = Hash, ["executable"] = true });
+        Files(value).Add(new() { ["path"] = "boot/vaultsync-recovery-display.service", ["size"] = 1, ["sha256"] = Hash, ["executable"] = false });
+        value["files"] = Files(value).OrderBy(file => (string)file["path"], StringComparer.Ordinal).ToList(); return value;
+    }
+
+    [Fact]
+    public void GraphicalModeIsImmutableAndRequiresDisplayClosureAndExecutableIdentity()
+    {
+        var decoded = LinuxRecoveryMediaInstallation.Decode(Encode(GraphicalManifest()), Commit);
+        Assert.Equal("graphical", decoded.ControllerMode); Assert.Equal(Hash, decoded.XorgHash);
+        Assert.Equal("headless", LinuxRecoveryMediaInstallation.Decode(Encode(Manifest()), Commit).ControllerMode);
+        foreach (string missing in new[] { "launch/recovery-display-launch", "boot/vaultsync-recovery-display.service" })
+        {
+            var value = GraphicalManifest(); Files(value).RemoveAll(file => (string)file["path"] == missing);
+            Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(value), Commit));
+        }
+        var wrong = GraphicalManifest(); wrong["xorgSha256"] = "invalid";
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(wrong), Commit));
+        wrong = GraphicalManifest(); wrong["controllerMode"] = "headless";
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(wrong), Commit));
+    }
+
+    [Theory]
+    [InlineData("valid")] [InlineData("runtime-owner")] [InlineData("runtime-write")]
+    [InlineData("cookie-owner")] [InlineData("cookie-write")] [InlineData("cookie-hardlink")]
+    [InlineData("tmp-owner")] [InlineData("socket-owner")] [InlineData("socket-link")]
+    public void DisplayAdmissionRequiresRootOwnedCookieAndSeparatePrivateControllerTemporaryStorage(string change)
+    {
+        static LinuxRecoveryNative.Identity State(ushort mode, uint owner, uint group, ulong size = 0) => new(mode, owner, group, 1, 1, size, 0, 5, 0, 0, 0, 0);
+        var facts = new LinuxRecoveryMediaInstallation.DisplayFacts(State(0x41c8, 0, 60999), State(0x81a0, 0, 60999, 45),
+            State(0x41c0, 60999, 60999), State(0x43ff, 0, 0), State(0xc1ff, 0, 0));
+        facts = change switch
+        {
+            "runtime-owner" => facts with { Runtime = facts.Runtime with { Owner = 60999 } },
+            "runtime-write" => facts with { Runtime = facts.Runtime with { Mode = 0x41d8 } },
+            "cookie-owner" => facts with { Authority = facts.Authority with { Owner = 60999 } },
+            "cookie-write" => facts with { Authority = facts.Authority with { Mode = 0x81b0 } },
+            "cookie-hardlink" => facts with { Authority = facts.Authority with { Links = 2 } },
+            "tmp-owner" => facts with { Temporary = facts.Temporary with { Owner = 0 } },
+            "socket-owner" => facts with { Socket = facts.Socket with { Owner = 60999 } },
+            "socket-link" => facts with { Socket = facts.Socket with { Mode = 0xa1ff } },
+            _ => facts
+        };
+        if (change == "valid") LinuxRecoveryMediaInstallation.ValidateDisplay(facts);
+        else Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.ValidateDisplay(facts));
+    }
+
     [Fact]
     public void CompleteExactRoleClosureDecodesWithSeparatePublisherGate()
     {

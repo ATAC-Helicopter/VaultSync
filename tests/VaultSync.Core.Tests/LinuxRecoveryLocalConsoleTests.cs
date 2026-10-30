@@ -43,6 +43,8 @@ public sealed class LinuxRecoveryLocalConsoleTests
         internal int Validations, Reads;
         internal Action<Access, int>? OnValidation;
         internal readonly TaskCompletionSource Prompted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal Action<CancellationToken>? Activation;
+        public void WaitForActive(CancellationToken token) { token.ThrowIfCancellationRequested(); Activation?.Invoke(token); }
         public void ValidateContext()
         { Validations++; OnValidation?.Invoke(this, Validations); ConsolePolicy.ValidateContext(Current); }
         public void FlushInput() { Flushed = true; Input.Clear(); }
@@ -63,6 +65,30 @@ public sealed class LinuxRecoveryLocalConsoleTests
         }
         public bool HasPendingInput() => !Input.IsEmpty;
         public void Dispose() => Disposed = true;
+    }
+
+    [Fact]
+    public async Task ActivationHandoffPrecedesUnchangedValidationFlushAndChallenge()
+    {
+        var fixture = await LinuxRawRestoreOperationTests.ConsoleReview(); await using var cleanup = fixture.Cleanup;
+        var access = new Access { Current = Context with { ActiveVt = 2 }, AfterPrompt = Encoding.ASCII.GetBytes(ConsolePolicy.Challenge(fixture.Review) + "\n") };
+        access.Activation = _ => { Assert.False(access.Flushed); Assert.Equal(0, access.Validations); access.Current = Context; };
+        await new ConsolePolicy(Text, CultureInfo.InvariantCulture, () => access).ConfirmAsync(fixture.Review, CancellationToken.None);
+        Assert.True(access.Disposed); Assert.Equal(4, access.Validations);
+    }
+
+    [Fact]
+    public async Task CancelledActivationCannotFlushPromptOrApproveAndReleasesAccess()
+    {
+        var fixture = await LinuxRawRestoreOperationTests.ConsoleReview(); await using var cleanup = fixture.Cleanup;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellation = new CancellationTokenSource();
+        var access = new Access { Current = Context with { ActiveVt = 2 } };
+        access.Activation = token => { entered.TrySetResult(); token.WaitHandle.WaitOne(); token.ThrowIfCancellationRequested(); };
+        var run = new ConsolePolicy(Text, CultureInfo.InvariantCulture, () => access).ConfirmAsync(fixture.Review, cancellation.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)); await cancellation.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.True(access.Disposed); Assert.False(access.Flushed); Assert.Equal("", access.Written);
     }
 
     [Fact]

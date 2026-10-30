@@ -37,9 +37,10 @@ int main(int argc, char **argv)
     if (null < 0) return 77;
     for (int fd = 0; fd < 3; ++fd) if (dup2(null, fd) < 0) return 77;
     if (null > 2 && close(null) != 0) return 77;
-    char *const environment[] = { "LANG=C", "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1", "DOTNET_EnableDiagnostics=0",
+    char *const environment[] = { "LANG=C", "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=0", "DOTNET_EnableDiagnostics=0",
         "DOTNET_GCHeapHardLimit=0x10000000", "HOME=/usr/lib/vaultsync-recovery/controller",
-        "TMPDIR=/usr/lib/vaultsync-recovery/controller", NULL };
+        "DISPLAY=:0", "XAUTHORITY=/run/vaultsync-recovery-display/Xauthority",
+        "TMPDIR=/run/vaultsync-recovery-display/controller", "XDG_CACHE_HOME=/run/vaultsync-recovery-display/controller", NULL };
     char *const arguments[] = { "/usr/lib/vaultsync-recovery/controller/VaultSync.RecoveryController", NULL };
     execve(arguments[0], arguments, environment);
     return errno == EACCES ? 77 : 74;

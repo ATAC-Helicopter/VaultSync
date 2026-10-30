@@ -4,13 +4,29 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <UsedAvaloniaProducts></UsedAvaloniaProducts>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.HarfBuzz" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+    <PackageReference Include="HarfBuzzSharp" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
     <ProjectReference Include="..\VaultSync.Core\VaultSync.Core.csproj">
       <SetTargetFramework>TargetFramework=net10.0</SetTargetFramework>
       <AdditionalProperties>TargetFramework=net10.0</AdditionalProperties>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../VaultSync.UI/Services/LocalizationService.cs" Link="Services/LocalizationService.cs" />
+    <Content Include="../../Localization/strings.*.json" Link="Localization/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <AvaloniaResource Include="../VaultSync.UI/Assets/Fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
+    <AvaloniaResource Include="../VaultSync.UI/Styles/Colors.axaml" Link="Styles/Colors.axaml" />
   </ItemGroup>
 </Project>

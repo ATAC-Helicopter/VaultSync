@@ -2,6 +2,8 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using VaultSync.Core.Services;
 using Xunit;
 
@@ -9,6 +11,46 @@ namespace VaultSync.Core.Tests;
 
 public sealed class LinuxRecoveryControllerLaunchTests
 {
+    [Fact]
+    public async Task ResultScreenRetentionAwaitsOwnedExitWithoutRequiringAnExitCode()
+    {
+        var exit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var wait = LinuxRecoveryControllerLaunch.WaitForOwnedExitAsync(exit.Task, TimeSpan.FromSeconds(5), CancellationToken.None);
+        Assert.False(wait.IsCompleted); Assert.False(exit.Task.IsCompleted);
+        exit.SetResult();
+        await wait.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(exit.Task.IsCompletedSuccessfully);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task PresentationDeadlineAndShutdownEndWaitWithoutCancellingOwnedExit(bool shutdown)
+    {
+        var exit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellation = new CancellationTokenSource();
+        var wait = LinuxRecoveryControllerLaunch.WaitForOwnedExitAsync(exit.Task,
+            shutdown ? TimeSpan.FromMinutes(10) : TimeSpan.FromMilliseconds(10), cancellation.Token);
+        if (shutdown) await cancellation.CancelAsync();
+        await wait.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(exit.Task.IsCompleted);
+        exit.SetResult(); // Owner remains responsible for the original exit task.
+    }
+
+    [Theory]
+    [InlineData("io")] [InlineData("timeout")] [InlineData("cancel")]
+    public async Task UnexpectedOwnedExitTaskFailureCannotBecomeCleanPresentationCompletion(string kind)
+    {
+        Exception failure = kind switch
+        {
+            "timeout" => new TimeoutException("fixture-owned-exit-failed"),
+            "cancel" => new OperationCanceledException("fixture-owned-exit-failed"),
+            _ => new IOException("fixture-owned-exit-failed")
+        };
+        using var cancellation = new CancellationTokenSource(); await cancellation.CancelAsync();
+        Assert.Same(failure, await Record.ExceptionAsync(() => LinuxRecoveryControllerLaunch.WaitForOwnedExitAsync(
+            Task.FromException(failure), TimeSpan.FromSeconds(5), cancellation.Token)));
+    }
+
     [Fact]
     public void ListenerClosePreservesOwnedPathForExplicitIdentityCheckedCleanup()
     {

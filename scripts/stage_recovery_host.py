@@ -110,7 +110,25 @@ def reader_manifest(directory, commit):
         raise ValueError("reader closure changed")
 
 
-def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commit, culture):
+def controller_files(directory):
+    records = []
+    for entry in sorted(directory.iterdir()):
+        if entry.name == "Localization" and entry.is_dir() and not entry.is_symlink():
+            expected = {file.name for file in (REPOSITORY / "Localization").glob("strings.*.json")}
+            if {file.name for file in entry.iterdir()} != expected or len(expected) != 19:
+                raise ValueError("controller catalogs incomplete")
+            records.extend(("Localization/" + file.name, checked_file(file)) for file in sorted(entry.iterdir()))
+        else:
+            if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", entry.name):
+                raise ValueError("unsafe controller closure name")
+            records.append((entry.name, checked_file(entry)))
+    if len(records) > 600:
+        raise ValueError("controller closure bound")
+    return records
+
+
+def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commit, culture,
+          controller_mode="headless", display_launcher=None, xorg=None):
     if not re.fullmatch(r"[0-9a-f]{40}", commit) or culture not in ("en", "it"):
         raise ValueError("source or console culture")
     host, controller, reader = map(checked_directory, (host_dir, controller_dir, reader_dir))
@@ -123,11 +141,27 @@ def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commi
         raise ValueError("output exists")
     sources = []
     for prefix, directory in (("host", host), ("controller", controller), ("host/DiskWorker", reader)):
-        sources.extend((prefix + "/" + file.name, file) for file in flat(directory))
+        files = controller_files(directory) if prefix == "controller" else [(file.name, file) for file in flat(directory)]
+        sources.extend((prefix + "/" + name, file) for name, file in files)
     if launcher.name != "recovery-controller-launch" or not launcher.stat().st_mode & 0o111:
         raise ValueError("fixed launcher required")
     sources.append(("launch/recovery-controller-launch", launcher))
-    unit = checked_file(REPOSITORY / "packaging/recovery/vaultsync-recovery.service")
+    if controller_mode not in ("headless", "graphical"):
+        raise ValueError("controller mode")
+    graphical = controller_mode == "graphical"
+    if graphical:
+        if display_launcher is None or xorg is None:
+            raise ValueError("graphical dependencies missing")
+        display_launcher, xorg = checked_file(display_launcher), checked_file(xorg)
+        if display_launcher.name != "recovery-display-launch" or not display_launcher.stat().st_mode & 0o111 or not xorg.stat().st_mode & 0o111:
+            raise ValueError("graphical executables invalid")
+        if not (controller / "Localization").is_dir():
+            raise ValueError("graphical catalogs missing")
+        sources.append(("launch/recovery-display-launch", display_launcher))
+        sources.append(("boot/vaultsync-recovery-display.service", checked_file(REPOSITORY / "packaging/recovery/vaultsync-recovery-display.service")))
+    elif display_launcher is not None or xorg is not None:
+        raise ValueError("headless display dependencies")
+    unit = checked_file(REPOSITORY / ("packaging/recovery/vaultsync-recovery-graphical.service" if graphical else "packaging/recovery/vaultsync-recovery.service"))
     sources.append(("boot/vaultsync-recovery.service", unit))
     catalogs = checked_directory(REPOSITORY / "Localization")
     catalog_files = sorted(catalogs.glob("strings.*.json"))
@@ -153,8 +187,11 @@ def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commi
     identity(host / "VaultSync.RecoveryHost", "offline-recovery-supervisor-v1", commit)
     identity(controller / "VaultSync.RecoveryController", "recovery-controller-v1", commit)
     identity(launcher, "recovery-controller-launch-v1", commit)
-    value = {"schemaVersion": 1, "role": "offline-recovery-media-v1", "runtimeIdentifier": "linux-x64",
-             "sourceCommit": commit, "consoleCulture": culture, "systemdSha256": worker.digest(systemd), "files": records}
+    if graphical:
+        identity(display_launcher, "recovery-display-launch-v1", commit)
+    value = {"schemaVersion": 2, "role": "offline-recovery-media-v1", "runtimeIdentifier": "linux-x64",
+             "sourceCommit": commit, "consoleCulture": culture, "systemdSha256": worker.digest(systemd), "files": records,
+             "controllerMode": controller_mode, "xorgSha256": worker.digest(xorg) if graphical else None}
     encoded = (json.dumps(value, indent=2, ensure_ascii=True) + "\n").encode()
     if len(encoded) > 1024 * 1024:
         raise ValueError("media manifest bound")
@@ -191,9 +228,13 @@ def main():
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--console-culture", choices=("en", "it"), required=True)
+    parser.add_argument("--controller-mode", choices=("headless", "graphical"), default="headless")
+    parser.add_argument("--display-launcher", type=Path)
+    parser.add_argument("--xorg", type=Path)
     args = parser.parse_args()
     try:
-        count = stage(args.host_dir, args.controller_dir, args.reader_dir, args.launcher, args.systemd, args.output, args.source_commit, args.console_culture)
+        count = stage(args.host_dir, args.controller_dir, args.reader_dir, args.launcher, args.systemd, args.output,
+                      args.source_commit, args.console_culture, args.controller_mode, args.display_launcher, args.xorg)
     except (ValueError, OSError, KeyError, TypeError, subprocess.SubprocessError):
         parser.exit(1, "recovery-stage.refused\n")
     print("recovery-stage.completed", count)

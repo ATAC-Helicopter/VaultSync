@@ -263,3 +263,51 @@ macOS. Eleven new cases cover deferred choices, exact correlation, graceful
 cancellation and late results/failures. These are transcript fixtures, not native
 media/UI evidence; no unrelated suite or VM was run. See the
 [interaction receipt](release-evidence/1.9-recovery-controller-interaction-2026-10-30.json).
+
+## Graphical installed controller — 2026-10-30
+
+The media controller now includes an isolated Avalonia wizard. The ordinary
+desktop application remains read-only; this is not an elevation route. Image
+sources are opened by admitted UID 60999 and held until client/choice drain.
+The wizard uses all 19 shared catalogs, selected-culture numbers, RTL direction,
+accessible labels and state-preserving language changes. Targets come only from
+the validated inventory. Review acknowledgment has no physical write authority.
+
+The stager emits schema 2 with an explicit headless/graphical mode and optional
+Xorg executable hash; schema 1 remains headless-compatible. Graphical mode requires
+the source-bound display launcher, boot unit and exact 19 controller catalogs.
+No other nested input directory is accepted. Install the selected host template
+as `vaultsync-recovery.service`, retaining its fixed cgroup identity. The separate
+display unit owns VT2 and the fixed distro `/usr/lib/xorg/Xorg` executable. It uses
+filesystem Unix X11 only, with TCP and abstract-local listening disabled. Distro
+X11 modules/libraries, ICU and complete fallback fonts remain media dependencies.
+Their actual packaging/rendering and final provenance are separate qualification.
+
+A fresh root-owned `/run/vaultsync-recovery-display` contains a per-boot cryptographic
+Xauthority record readable only by controller group 60999, plus a separate private
+controller-writable temporary directory. The launcher supplies fixed display,
+authentication and temporary paths after dropping privileges. Display admission
+checks held immutable files, root-owned endpoint and cookie/runtime permissions;
+it never inherits a desktop display or enables a caller-selected endpoint. The
+native bootstrap forwards termination to its unreaped child without a lost-stop
+race, waits for exit, and removes only matching owned entries. Existing or uncertain
+runtime is retained and cannot be adopted on restart. No global X socket/lock is
+deleted by cleanup. The unit has no automatic restart.
+
+The physical-console reader waits for actual VT1 activation within the original
+30-second review deadline, then performs unchanged context validation, input flush
+and exact typed challenge. The wizard explains Ctrl+Alt+F1 and return via
+Ctrl+Alt+F2. Switching terminals or acknowledging a GUI review does not authorize
+an overwrite. After the actual worker outcome and storage receipt, the host keeps
+the owned controller alive for the result screen until close or a 10-minute bound,
+while continuing boot monitoring. Lifetime shutdown ends this presentation wait;
+controller exit status cannot rewrite the worker outcome or authorize another write.
+
+Controller Release build passes with warnings as errors after repairing one
+Avalonia constructor-access error. The 112 focused client/admission/console/launch
+cases and 8 producer tests pass. Both native launchers compile with strict hardened
+flags on disposable Debian 13 x64. Ordinary local tests are not native GUI/media
+proof. The first installed graphical/no-NIC rendering, authentication, physical
+confirmation, final-window and cleanup probes remain pending. No support profile,
+old root-private source access, product boot media or beta is qualified by this
+component checkpoint. See the [graphical receipt](release-evidence/1.9-graphical-controller-2026-10-30.json).

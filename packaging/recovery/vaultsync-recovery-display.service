@@ -1,0 +1,25 @@
+[Unit]
+Description=VaultSync isolated recovery display
+After=local-fs.target dev-tty2.device
+ConditionPathIsReadWrite=!/
+StopWhenUnneeded=yes
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/lib/vaultsync-recovery/launch/recovery-display-launch
+WorkingDirectory=/usr/lib/vaultsync-recovery/launch
+StandardInput=tty-force
+StandardOutput=null
+StandardError=null
+TTYPath=/dev/tty2
+TTYReset=yes
+TTYVHangup=yes
+PrivateNetwork=no
+PrivateMounts=no
+KillMode=control-group
+TimeoutStopSec=30
+SendSIGKILL=yes
+Restart=no
+UMask=0077

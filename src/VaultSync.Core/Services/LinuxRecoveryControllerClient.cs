@@ -69,6 +69,14 @@ internal static class LinuxRecoveryControllerClient
     internal static async Task<Result> RunInstalledAsync(CancellationToken token)
     {
         using var installation = await LinuxRecoveryMediaInstallation.OpenAsync(LinuxRecoveryMediaInstallation.Role.Controller, token).ConfigureAwait(false);
+        return await RunInstalledAsync(installation, token).ConfigureAwait(false);
+    }
+
+    // Borrows an already fully admitted installation; never adopts/disposes it.
+    internal static async Task<Result> RunInstalledAsync(LinuxRecoveryMediaInstallation installation, CancellationToken token)
+    {
+        installation.RecheckController();
+        if (installation.Description.ControllerMode != "headless") throw LinuxRecoveryMediaInstallation.Invalid();
         // Untrusted intent is read only in this nonroot role. No privileged opener,
         // permissions repair, original chmod or source-access fallback exists.
         byte[] request;
@@ -97,29 +105,52 @@ internal static class LinuxRecoveryControllerClient
         catch { metadata?.Dispose(); throw; }
         using (metadata)
         using (payload)
+            return await RunConnectedAsync(installation, new HeadlessInteraction(metadata, payload, intent.KernelName), token, null).ConfigureAwait(false);
+    }
+
+    internal static async Task<Result> RunInstalledAsync(IInteraction interaction, CancellationToken token,
+        Action<LinuxRecoverySession.Snapshot>? observe = null)
+    {
+        using var installation = await LinuxRecoveryMediaInstallation.OpenAsync(LinuxRecoveryMediaInstallation.Role.Controller, token).ConfigureAwait(false);
+        return await RunInstalledAsync(installation, interaction, token, observe).ConfigureAwait(false);
+    }
+
+    internal static async Task<Result> RunInstalledAsync(LinuxRecoveryMediaInstallation installation, IInteraction interaction,
+        CancellationToken token, Action<LinuxRecoverySession.Snapshot>? observe = null)
+    {
+        installation.RecheckController();
+        await installation.RequireDisplayAsync(token).ConfigureAwait(false);
+        return await RunConnectedAsync(installation, interaction, token, observe).ConfigureAwait(false);
+    }
+
+    private static async Task<Result> RunConnectedAsync(LinuxRecoveryMediaInstallation installation, IInteraction interaction,
+        CancellationToken token, Action<LinuxRecoverySession.Snapshot>? observe)
+    {
+        var directory = LinuxRecoveryNative.StatPath("/run/vaultsync-recovery");
+        var endpoint = LinuxRecoveryNative.StatPath(LinuxRecoveryMediaInstallation.SocketPath);
+        if (directory.Mode != 0x41c8 || directory.Owner != 0 || directory.Group != LinuxRecoveryMediaInstallation.ControllerId ||
+            endpoint.Mode != 0xc1b0 || endpoint.Owner != 0 || endpoint.Group != LinuxRecoveryMediaInstallation.ControllerId || endpoint.Links != 1)
+            throw LinuxRecoveryMediaInstallation.Invalid();
+        var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        LinuxWorkerPeerBinding? peer = null; bool transferred = false;
+        try
         {
-            var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-            LinuxWorkerPeerBinding? peer = null; bool transferred = false;
-            try
-            {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromSeconds(30));
-                int parent = LinuxRecoveryNative.ParentProcess();
-                if (parent <= 1) throw LinuxRecoveryMediaInstallation.Invalid();
-                await socket.ConnectAsync(new UnixDomainSocketEndPoint(LinuxRecoveryMediaInstallation.SocketPath), timeout.Token).ConfigureAwait(false);
-                peer = LinuxWorkerPeerBinding.TryCreate(socket, new(parent, 0, 0)) ?? throw LinuxRecoveryMediaInstallation.Invalid();
-                if (!peer.Recheck()) throw LinuxRecoveryMediaInstallation.Invalid();
-                installation.Recheck();
-                using var stream = new NetworkStream(socket, false); byte[] hello = new byte[24];
-                await stream.ReadExactlyAsync(hello, timeout.Token).ConfigureAwait(false);
-                Guid operation = LinuxRecoveryControllerLaunch.DecodeHello(hello);
-                if (!peer.Recheck()) throw LinuxRecoveryMediaInstallation.Invalid();
-                var channel = new LinuxRecoveryOperationChannel(socket, peer, operation, LinuxRecoveryRole.Controller);
-                peer = null; transferred = true;
-                return await RunAsync(new Channel(channel), operation,
-                    new HeadlessInteraction(metadata, payload, intent.KernelName), token).ConfigureAwait(false);
-            }
-            finally { if (!transferred) { peer?.Dispose(); socket.Dispose(); } }
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromSeconds(30));
+            int parent = LinuxRecoveryNative.ParentProcess();
+            if (parent <= 1) throw LinuxRecoveryMediaInstallation.Invalid();
+            await socket.ConnectAsync(new UnixDomainSocketEndPoint(LinuxRecoveryMediaInstallation.SocketPath), timeout.Token).ConfigureAwait(false);
+            peer = LinuxWorkerPeerBinding.TryCreate(socket, new(parent, 0, 0)) ?? throw LinuxRecoveryMediaInstallation.Invalid();
+            if (!peer.Recheck()) throw LinuxRecoveryMediaInstallation.Invalid();
+            installation.Recheck();
+            using var stream = new NetworkStream(socket, false); byte[] hello = new byte[24];
+            await stream.ReadExactlyAsync(hello, timeout.Token).ConfigureAwait(false);
+            Guid operation = LinuxRecoveryControllerLaunch.DecodeHello(hello);
+            if (!peer.Recheck()) throw LinuxRecoveryMediaInstallation.Invalid();
+            var channel = new LinuxRecoveryOperationChannel(socket, peer, operation, LinuxRecoveryRole.Controller);
+            peer = null; transferred = true;
+            return await RunAsync(new Channel(channel), operation, interaction, token, observe).ConfigureAwait(false);
         }
+        finally { if (!transferred) { peer?.Dispose(); socket.Dispose(); } }
     }
 
     // Fixture channel only. Production must perform the installed/peer admission above.

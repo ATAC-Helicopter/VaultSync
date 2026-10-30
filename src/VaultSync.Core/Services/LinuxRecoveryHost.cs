@@ -1,6 +1,6 @@
 namespace VaultSync.Core.Services;
 
-/// <summary>Actual installed headless media entry. No ordinary-desktop privilege endpoint.</summary>
+/// <summary>Actual installed media entry. No ordinary-desktop privilege endpoint.</summary>
 internal static class LinuxRecoveryHost
 {
     internal static async Task<int> RunAsync(CancellationToken token)
@@ -17,6 +17,7 @@ internal static class LinuxRecoveryHost
         var supervisor = new LinuxRecoverySupervisor(worker, console);
         Task<LinuxRecoverySession.Snapshot>? running = null;
         Task? monitor = null;
+        Task? presentation = null;
         try
         {
             running = supervisor.RunAsync(linked.Token);
@@ -26,6 +27,12 @@ internal static class LinuxRecoveryHost
             // Device outcome is already truthful. Artifact cleanup is separately
             // recorded before the host can report a fully clean successful exit.
             storage.Complete(state);
+            if (installation.Description.ControllerMode == "graphical")
+            {
+                presentation = controller.WaitForPresentationExitAsync(linked.Token);
+                if (await Task.WhenAny(presentation, monitor).ConfigureAwait(false) == monitor) await monitor.ConfigureAwait(false);
+                await presentation.ConfigureAwait(false);
+            }
             return LinuxRecoveryStorageLease.Successful(state) ? 0 : 74;
         }
         finally
@@ -45,8 +52,12 @@ internal static class LinuxRecoveryHost
                         }
                         finally
                         {
-                            if (monitor is not null)
-                            { try { await monitor.ConfigureAwait(false); } catch (OperationCanceledException) when (linked.IsCancellationRequested) { } }
+                            try { if (presentation is not null) await presentation.ConfigureAwait(false); }
+                            finally
+                            {
+                                if (monitor is not null)
+                                { try { await monitor.ConfigureAwait(false); } catch (OperationCanceledException) when (linked.IsCancellationRequested) { } }
+                            }
                         }
                     }
                 }

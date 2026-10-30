@@ -1672,6 +1672,12 @@ repository must not transfer before a compatible release is adopted.
     [follow-up receipt](docs/release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Graphical controller integration (2026-10-30): separate localized Avalonia
+    wizard, fixed authenticated X11/VT2 bootstrap, bounded VT1 physical-review
+    handoff and truthful retained result screen. Controller Release build,
+    112 focused cases, eight producer cases and both native compilations pass.
+    Actual offline graphical boot/interaction, media/profile and package gates
+    remain open; see the [entry contract](docs/RECOVERY_ENTRY_1.9.md).
   - Serialized controller interaction (2026-10-30): explicit image, target and
     exact-review choices share a receive/heartbeat loop with graceful cancellation.
     A headless adapter is explicit; physical overwrite authorization stays separate.

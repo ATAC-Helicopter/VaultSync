@@ -39,6 +39,7 @@ inspect long strings, accessibility labels and RTL languages on affected screens
 
 ```bash
 python3 scripts/localization_audit.py --check
+python3 scripts/localization_audit.py --check --source-dir src/VaultSync.RecoveryController
 bash scripts/validate_development.sh release
 ```
 
@@ -68,3 +69,10 @@ and Recovery cached presentation reapply on language changes; Recovery formats
 coverage and recommendations at application time. The audit retains historical
 technical payloads and intentional identical terminology, and does not claim
 native-speaker review or complete rendering qualification.
+
+The separate recovery-media controller is an additional localized application
+surface. Its wizard uses the same 19 catalogs without loading the installed
+desktop profile or telemetry. CI and direct-download packaging audit its source
+explicitly as well as the ordinary UI. Dynamic wizard keys are reviewed against
+the screen/result enums; real font, RTL, language-switch and native rendering
+remain required before graphical media qualification.

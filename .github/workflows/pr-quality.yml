@@ -108,7 +108,9 @@ jobs:
         with:
           python-version: "3.x"
       - name: Check locale files and UI source
-        run: python3 scripts/localization_audit.py --check
+        run: |
+          python3 scripts/localization_audit.py --check
+          python3 scripts/localization_audit.py --check --source-dir src/VaultSync.RecoveryController
 
   script-tests:
     name: Script tests
