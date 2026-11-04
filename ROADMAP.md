@@ -1682,6 +1682,11 @@ repository must not transfer before a compatible release is adopted.
     [follow-up receipt](docs/release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Native follow-up (2026-11-04, ce55f1f): authorized X11 succeeds, untrusted
+    display/cookie access refuses. Controller admission still times out before
+    a window, cleanup remains unconfirmed and the synthetic target is unchanged.
+    Four fixed admission markers prepare measured diagnosis; no timeout or guard
+    is relaxed. Separate Sonar gate fails; all support/release gates stay open.
   - Progress (2026-11-04): bounded local startup codes and strict inherited
     FIFO parsing diagnose the failed graphical launch without raw error text.
     The 119 affected startup/presentation/navigation tests pass; native GUI,

@@ -22,10 +22,13 @@ public sealed class LinuxRecoveryStartupDiagnosticsTests
     [Fact]
     public async Task OnlyValidatedControllerEnumsAreForwardedAndOwnedInputIsClosed()
     {
-        var input = new Input(Encoding.ASCII.GetBytes("VSREC1|2|120|0\nVSREC1|2|104|0\nVSREC1|2|111|5\n"));
+        var input = new Input(Encoding.ASCII.GetBytes("VSREC1|2|120|0\nVSREC1|2|112|0\nVSREC1|2|113|0\nVSREC1|2|114|0\nVSREC1|2|115|0\nVSREC1|2|104|0\nVSREC1|2|111|5\n"));
         var records = new List<(Status.Phase, Status.Error)>();
         await Status.ReadControllerAsync(input, (phase, error) => records.Add((phase, error)), CancellationToken.None);
-        Assert.Equal(new[] { (Status.Phase.NativePipe, Status.Error.None), (Status.Phase.PlatformActivation, Status.Error.None),
+        Assert.Equal(new[] { (Status.Phase.NativePipe, Status.Error.None),
+            (Status.Phase.ControllerManifestDecoded, Status.Error.None), (Status.Phase.ControllerClosureEnumerated, Status.Error.None),
+            (Status.Phase.ControllerClosureHashed, Status.Error.None), (Status.Phase.ControllerBootChecked, Status.Error.None),
+            (Status.Phase.PlatformActivation, Status.Error.None),
             (Status.Phase.ControllerFailed, Status.Error.MissingMethod) }, records);
         Assert.True(input.Closed);
     }

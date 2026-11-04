@@ -331,3 +331,19 @@ Installed anonymous-pipe permissions, graphical startup, authenticated X11 acces
 and cleanup still need exact-source VM evidence. The first graphical probe at
 8c8b429 failed with no visible wizard and unchanged synthetic target; it is not
 qualification.
+
+
+The exact `ce55f1f` offline VM probe verifies the installed 675-file closure,
+authorized X11 access (exit 0), untrusted X11 refusal and cookie-read refusal
+(both exit 1). It still shows no wizard. Startup reaches controller entry 101,
+then host connection cancellation and unconfirmed cleanup timeout; the controller
+socket remains. No consent or receipt exists, and the 64-KiB synthetic target
+hash is unchanged. QEMU exits normally. This proves the auth observations only,
+not graphical operation or safe completed cleanup.
+
+The next diagnostic increment separates manifest decode, closure enumeration,
+closure hashing and boot checks with four controller-only enum markers (112–115).
+The observer records fixed codes and journal monotonic timestamps. Existing
+30-second connection and two-second cleanup deadlines stay unchanged pending
+measured cause; no admission guard or failure retention is removed. Cleanup
+waits explicitly use `CancellationToken.None` and retain their own deadlines.

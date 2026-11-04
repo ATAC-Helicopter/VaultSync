@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Win32.SafeHandles;
+using Startup = VaultSync.Core.Services.LinuxRecoveryStartupDiagnostics;
 
 namespace VaultSync.Core.Services;
 
@@ -117,14 +118,17 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
             var manifest = lease.Hold(Root + "/" + ManifestName, MaximumManifest, false);
             byte[] bytes = new byte[checked((int)manifest.Length)]; await manifest.ReadExactlyAsync(bytes, token).ConfigureAwait(false);
             lease.Description = Decode(bytes, commit);
+            ObserveControllerAdmission(role, Startup.Phase.ControllerManifestDecoded);
             var observed = EnumerateClosure();
             if (!observed.SequenceEqual(lease.Description.Files.Select(e => e.Path).Append(ManifestName).Order(StringComparer.Ordinal))) throw Invalid();
+            ObserveControllerAdmission(role, Startup.Phase.ControllerClosureEnumerated);
             foreach (var entry in lease.Description.Files)
             {
                 token.ThrowIfCancellationRequested();
                 var stream = lease.Hold(Root + "/" + entry.Path, MaximumFile, entry.Executable);
                 if (stream.Length != entry.Size || Convert.ToHexStringLower(await SHA256.HashDataAsync(stream, token).ConfigureAwait(false)) != entry.Sha256) throw Invalid();
             }
+            ObserveControllerAdmission(role, Startup.Phase.ControllerClosureHashed);
             var systemd = lease.Hold(Systemd, MaximumFile, true);
             if (Convert.ToHexStringLower(await SHA256.HashDataAsync(systemd, token).ConfigureAwait(false)) != lease.Description.SystemdHash) throw Invalid();
             var unit = lease.Hold(Unit, MaximumFile, false);
@@ -142,11 +146,19 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
             if (typeof(LinuxRecoveryMediaInstallation).Assembly.Location != expectedCore) throw Invalid();
             lease.RequireExecutable(Environment.ProcessId, role);
             lease.RecheckBoot(role);
+            ObserveControllerAdmission(role, Startup.Phase.ControllerBootChecked);
             lease.Recheck();
             lease.admittedRole = role;
             return lease;
         }
         catch { lease.Dispose(); throw; }
+    }
+
+    private static void ObserveControllerAdmission(Role role, Startup.Phase phase)
+    {
+        // Four fixed completion markers only: no file names, counts, timings or
+        // identities. The final recheck still precedes actual role admission.
+        if (role == Role.Controller) Startup.Write(Startup.Role.Controller, phase);
     }
 
     private FileStream Hold(string path, long maximum, bool executable)

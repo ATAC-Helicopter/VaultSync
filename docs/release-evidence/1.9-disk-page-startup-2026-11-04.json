@@ -49,5 +49,51 @@
     "all-platform operational cloning; macOS/APFS remains excluded",
     "disk-profile/media/updater/package/provenance/protected-review gates"
   ],
-  "qualification": "none; PR736 remains draft"
+  "qualification": "none; PR736 remains draft",
+  "componentCheckCommit": "ce55f1f0ea2e54629597c275cde9434b4e948777",
+  "nativeFollowup": {
+    "sourceCommit": "ce55f1f0ea2e54629597c275cde9434b4e948777",
+    "manifestSha256": "93920656d3430f898b459d2684b88e389543b88533d37cd0127b278a23bb051c",
+    "boundFiles": 675,
+    "network": "none",
+    "targetBytes": 65536,
+    "actualVisibleWindow": false,
+    "authorizedDisplayExit": 0,
+    "untrustedDisplayExit": 1,
+    "untrustedCookieReadExit": 1,
+    "controllerLastPhase": 101,
+    "connectFailure": "cancelled",
+    "cleanupFailure": "timeout; not confirmed",
+    "controllerSocketRetained": true,
+    "physicalConsentSent": false,
+    "receipts": 0,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "qualification": "failed startup; auth observations only",
+    "qemuNormalExitObserved": true
+  },
+  "hostedAtComponentCommit": {
+    "checksSucceeded": 21,
+    "separateSonarGate": "failed",
+    "newCoveragePercent": 78.1,
+    "reliabilityRating": "C",
+    "securityRating": "D",
+    "thresholdsOrExclusionsChanged": false
+  },
+  "admissionFollowup": {
+    "focusedRelease": {
+      "passed": 72,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "change": "four controller-only fixed admission phase codes; explicit independent cleanup waits; acceptance/stop helper extraction",
+    "deadlinesChanged": false,
+    "admissionGuardsChanged": false,
+    "nativeStatus": "not executed on follow-up source"
+  },
+  "followupSourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoveryStartupDiagnostics.cs": "8ff0b9586ae89ce0dec5fd3ccfcd7bc15f234f31d83812804407cc9614258b3a",
+    "src/VaultSync.Core/Services/LinuxRecoveryMediaInstallation.cs": "0f223e0e563bde2755443e3b1c48233d82019f37edd63540dcc8f41e68029975",
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerLaunch.cs": "017fbe6049202069006748d0d91772d280a7c6425ac635465fe5735f23e6ac0d"
+  }
 }

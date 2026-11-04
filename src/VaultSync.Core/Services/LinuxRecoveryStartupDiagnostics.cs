@@ -19,6 +19,8 @@ internal static class LinuxRecoveryStartupDiagnostics
         PlatformActivation = 104, WindowOpened = 105, ClientEntry = 106,
         ControllerConnect = 107, ControllerPeer = 108, ControllerHello = 109,
         ControllerResult = 110, ControllerFailed = 111,
+        ControllerManifestDecoded = 112, ControllerClosureEnumerated = 113,
+        ControllerClosureHashed = 114, ControllerBootChecked = 115,
         NativePipe = 120, NativeGroup = 121, NativeSession = 122, NativeIds = 123,
         NativeCapabilities = 124, NativeDescriptors = 125, NativeExec = 126
     }

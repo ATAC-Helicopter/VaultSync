@@ -99,30 +99,7 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
         diagnosticDrain = Startup.ReadControllerAsync(process.StandardError.BaseStream,
             (phase, error) => Startup.Write(Startup.Role.Controller, phase, error), diagnosticStop.Token);
         Startup.Write(Startup.Role.Host, Startup.Phase.ChildStarted);
-        var accepting = listener.AcceptAsync(timeout.Token).AsTask();
-        Startup.Write(Startup.Role.Host, Startup.Phase.Accept);
-        Socket socket;
-        try
-        {
-            if (await Task.WhenAny(accepting, earlyExit, diagnosticDrain).ConfigureAwait(false) == diagnosticDrain)
-            {
-                await diagnosticDrain.ConfigureAwait(false);
-                await Task.WhenAny(accepting, earlyExit).ConfigureAwait(false);
-            }
-            if (earlyExit.IsCompleted && !accepting.IsCompletedSuccessfully)
-            {
-                if (process.ExitCode == 77) throw new UnauthorizedAccessException("recovery-controller.access-denied");
-                throw LinuxRecoveryMediaInstallation.Invalid();
-            }
-            socket = await accepting.ConfigureAwait(false);
-        }
-        catch
-        {
-            await timeout.CancelAsync().ConfigureAwait(false);
-            try { (await accepting.ConfigureAwait(false)).Dispose(); }
-            catch (Exception error) when (error is OperationCanceledException or SocketException or ObjectDisposedException) { }
-            throw;
-        }
+        Socket socket = await AcceptControllerAsync(earlyExit, diagnosticDrain, timeout).ConfigureAwait(false);
         LinuxWorkerPeerBinding? peer = null;
         try
         {
@@ -147,6 +124,34 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
             peer = null; return channel;
         }
         catch { peer?.Dispose(); socket.Dispose(); throw; }
+    }
+
+    private async Task<Socket> AcceptControllerAsync(Task exit, Task drain, CancellationTokenSource timeout)
+    {
+        var accepting = listener.AcceptAsync(timeout.Token).AsTask();
+        Startup.Write(Startup.Role.Host, Startup.Phase.Accept);
+        try
+        {
+            if (await Task.WhenAny(accepting, exit, drain).ConfigureAwait(false) == drain)
+            {
+                await drain.ConfigureAwait(false);
+                await Task.WhenAny(accepting, exit).ConfigureAwait(false);
+            }
+            if (exit.IsCompleted && !accepting.IsCompletedSuccessfully)
+            {
+                if (process.ExitCode == 77) throw new UnauthorizedAccessException("recovery-controller.access-denied");
+                throw LinuxRecoveryMediaInstallation.Invalid();
+            }
+            return await accepting.ConfigureAwait(false);
+        }
+        catch
+        {
+            await timeout.CancelAsync().ConfigureAwait(false);
+            try { (await accepting.ConfigureAwait(false)).Dispose(); }
+            catch (Exception error) when (error is OperationCanceledException or SocketException or ObjectDisposedException)
+            { /* The canceled accept owns no usable socket; preserve the original startup failure. */ }
+            throw;
+        }
     }
 
     internal static byte[] Hello(Guid operation)
@@ -222,8 +227,10 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(exit);
         if (limit <= TimeSpan.Zero || limit > TimeSpan.FromMinutes(10)) throw new ArgumentOutOfRangeException(nameof(limit));
         try { await exit.WaitAsync(limit, token).ConfigureAwait(false); }
-        catch (TimeoutException) when (!exit.IsFaulted) { }
-        catch (OperationCanceledException) when (token.IsCancellationRequested && !exit.IsFaulted && !exit.IsCanceled) { }
+        catch (TimeoutException) when (!exit.IsFaulted)
+        { /* Presentation retention ended; the owner still performs cgroup cleanup. */ }
+        catch (OperationCanceledException) when (token.IsCancellationRequested && !exit.IsFaulted && !exit.IsCanceled)
+        { /* Shutdown ends retention without canceling the owned process-exit task. */ }
     }
 
     public ValueTask DisposeAsync()
@@ -243,25 +250,7 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
         try
         {
             listener.Dispose();
-            if (started)
-            {
-                bool exited = false;
-                try { await earlyExit!.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); exited = true; }
-                catch (TimeoutException) { }
-                if (!exited || LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
-                {
-                    // Kernel-owned subgroup, including descendants. Before joining
-                    // it the fixed launcher is still owned by KillMode=control-group.
-                    using var kill = new FileStream(LinuxRecoveryNative.Open(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.kill", 1 | 0x20000 | 0x80000), FileAccess.Write);
-                    await kill.WriteAsync("1"u8.ToArray(), CancellationToken.None).ConfigureAwait(false);
-                    await earlyExit!.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-                    using var empty = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-                    while (LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
-                        await Task.Delay(25, empty.Token).ConfigureAwait(false);
-                }
-            }
-            if (LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
-                throw new IOException("recovery-controller.cleanup-unconfirmed");
+            await StopOwnedControllerAsync().ConfigureAwait(false);
             Startup.Write(Startup.Role.Host, Startup.Phase.ControllerStopped);
             Startup.Write(Startup.Role.Host, Startup.Phase.SocketRemoval);
             if (LinuxRecoveryNative.StatPath(LinuxRecoveryMediaInstallation.SocketPath) != socketIdentity) throw LinuxRecoveryMediaInstallation.Invalid();
@@ -282,10 +271,37 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
         if (failure is null) completion.TrySetResult(); else completion.TrySetException(failure);
     }
 
+    private async Task StopOwnedControllerAsync()
+    {
+        if (started)
+        {
+            bool exited = false;
+            // Cleanup must outlive UI/lifetime cancellation. Each wait keeps its
+            // existing deadline, while cancellation of tracing cannot skip reaping.
+            try { await earlyExit!.WaitAsync(TimeSpan.FromSeconds(2), CancellationToken.None).ConfigureAwait(false); exited = true; }
+            catch (TimeoutException)
+            { /* The graceful deadline expired; the owned subgroup must now be stopped. */ }
+            if (!exited || LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
+            {
+                // Kernel-owned subgroup, including descendants. Before joining
+                // it the fixed launcher is still owned by KillMode=control-group.
+                using var kill = new FileStream(LinuxRecoveryNative.Open(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.kill", 1 | 0x20000 | 0x80000), FileAccess.Write);
+                await kill.WriteAsync("1"u8.ToArray(), CancellationToken.None).ConfigureAwait(false);
+                await earlyExit!.WaitAsync(TimeSpan.FromSeconds(2), CancellationToken.None).ConfigureAwait(false);
+                using var empty = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                while (LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
+                    await Task.Delay(25, empty.Token).ConfigureAwait(false);
+            }
+        }
+        if (LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
+            throw new IOException("recovery-controller.cleanup-unconfirmed");
+    }
+
     private async Task DrainDiagnosticsAsync()
     {
         Exception? failure = null;
-        try { if (diagnosticDrain is not null) await diagnosticDrain.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); }
+        // Draining is owned cleanup, independent of the token that stops reads.
+        try { if (diagnosticDrain is not null) await diagnosticDrain.WaitAsync(TimeSpan.FromSeconds(2), CancellationToken.None).ConfigureAwait(false); }
         catch (Exception error) { failure = error; }
         finally
         {
@@ -297,7 +313,8 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
                     if (diagnosticDrain is not null)
                     {
                         try { await diagnosticDrain.ConfigureAwait(false); }
-                        catch (OperationCanceledException) when (diagnosticStop.IsCancellationRequested) { }
+                        catch (OperationCanceledException) when (diagnosticStop.IsCancellationRequested)
+                        { /* Our stop request ended the owned read; it is now fully observed. */ }
                     }
                 }
                 finally { diagnosticStop.Dispose(); }

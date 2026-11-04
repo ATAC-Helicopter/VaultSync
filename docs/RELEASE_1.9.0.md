@@ -7,6 +7,15 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+The installed `ce55f1f` offline probe passes X11 authorized/untrusted access and
+cookie isolation checks, but fails before controller admission completes: no
+window, no consent, no receipt, unchanged 64-KiB synthetic target. Cleanup times
+out and retains the socket; this is not safe completed cleanup. The exact-head
+separate Sonar gate also fails (coverage 78.1%, reliability C, security D), while
+21 other checks pass. Four fixed admission markers now prepare the next measured
+diagnosis; deadlines and security guards remain intact. Earlier passing component
+checks do not replace either failed gate.
+
 The November 4 follow-up adds a dedicated localized Disk Cloning desktop page
 with cached image selection, typed route and back/forward support. The entry is
 available across the desktop targets; the current verifier still requires Linux
