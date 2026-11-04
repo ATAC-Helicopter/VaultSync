@@ -618,6 +618,8 @@
   "Nav.History": "इतिहास",
   "Nav.Projects": "प्रोजेक्ट",
   "Nav.Recovery": "रिकवरी",
+  "Nav.DiskCloning": "डिस्क क्लोनिंग",
+  "DiskCloning.Intro": "डिस्क इमेज उपकरण। अभी केवल इमेज सत्यापन उपलब्ध है।",
   "Nav.Settings": "सेटिंग्स",
   "Nav.Schedule": "शेड्यूल",
   "Schedule.Action.OpenBackups": "बैकअप खोलें",

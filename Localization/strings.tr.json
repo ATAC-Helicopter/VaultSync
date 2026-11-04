@@ -618,6 +618,8 @@
   "Nav.History": "Tarihçe",
   "Nav.Projects": "Projeler",
   "Nav.Recovery": "İyileşme",
+  "Nav.DiskCloning": "Disk klonlama",
+  "DiskCloning.Intro": "Disk imajı araçları. Şu anda yalnızca imaj doğrulaması kullanılabilir.",
   "Nav.Settings": "Ortamlar",
   "Nav.Schedule": "Zamanlama",
   "Schedule.Action.OpenBackups": "Yedeklemeleri Aç",

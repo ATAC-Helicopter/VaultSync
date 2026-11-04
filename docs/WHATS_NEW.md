@@ -71,6 +71,12 @@ application and does not change ZIP backups. See
 
 ### Disk recovery development
 
+Disk Cloning now has its own desktop page, separate from project Recovery.
+The same navigation entry is available on Windows, macOS and Linux, with image
+selection retained between visits. The current operation remains read-only
+verification through the Linux x64 reader; all-platform cloning and native
+recovery qualification are still open.
+
 Native capture development now sends GPT checks to the isolated reader before
 allocation and after copying. Images are sealed read-only and independently
 checked before publication, with no parser fallback when the reader is missing.

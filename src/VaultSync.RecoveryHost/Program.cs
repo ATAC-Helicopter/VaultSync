@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using VaultSync.Core.Services;
+using Startup = VaultSync.Core.Services.LinuxRecoveryStartupDiagnostics;
 
 if (args.Length == 1 && args[0] == "--installation-identity")
 {
@@ -12,6 +13,6 @@ using var shutdown = new CancellationTokenSource();
 using var terminate = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context => { context.Cancel = true; shutdown.Cancel(); });
 using var interrupt = PosixSignalRegistration.Create(PosixSignal.SIGINT, context => { context.Cancel = true; shutdown.Cancel(); });
 try { return await LinuxRecoveryHost.RunAsync(shutdown.Token); }
-catch (OperationCanceledException) { return 124; }
-catch (UnauthorizedAccessException) { return 77; }
-catch (Exception) { return 74; } // Numeric role outcome only; never disclose image paths or technical payloads.
+catch (OperationCanceledException error) { Startup.Write(Startup.Role.Host, Startup.Phase.HostFailed, Startup.Classify(error)); return 124; }
+catch (UnauthorizedAccessException error) { Startup.Write(Startup.Role.Host, Startup.Phase.HostFailed, Startup.Classify(error)); return 77; }
+catch (Exception error) { Startup.Write(Startup.Role.Host, Startup.Phase.HostFailed, Startup.Classify(error)); return 74; }

@@ -1,0 +1,53 @@
+{
+  "observedOn": "2026-11-04",
+  "release": "1.9.0",
+  "baseCommit": "8c8b429569e728c68b1b33fd6e959b98e49378cc",
+  "owners": [
+    "VS-1907/#495",
+    "VS-1910/#501",
+    "VS-1904/#492"
+  ],
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoveryStartupDiagnostics.cs": "e075c3b3efdd7a8e7171b4ed7877ec32b1ba7a5c09a72126d64a45a0955a8b93",
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerLaunch.cs": "df644d2f19cd4d72da1c0c066d34e2598232f3e21a76a5602b7ca5d505bdb419",
+    "src/VaultSync.RecoveryHost/Native/controller-launch.c": "fa91821efa048d6ce22b26529a4219c4f990ba4afeb70442aac31d71049ca9f8",
+    "src/VaultSync.UI/Infrastructure/DesktopRoute.cs": "874fd572dfef4a9ef6916b56bbee74d8bfa569e257050b79ce53430b558e460c",
+    "src/VaultSync.UI/Views/DiskCloningView.axaml": "0da4a37f31be86e17b677c6591dab4609e87acd0b52912723406c873354ef2b5"
+  },
+  "checks": {
+    "focusedRelease": {
+      "passed": 119,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "hostReleaseBuild": {
+      "warnings": 0,
+      "errors": 0
+    },
+    "localization": {
+      "keys": 1992,
+      "locales": 19,
+      "sources": [
+        "VaultSync.UI",
+        "VaultSync.RecoveryController"
+      ]
+    },
+    "nativeLauncherCompile": {
+      "platform": "Debian 13 x86_64 disposable guest",
+      "flags": "-std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=3 -Wl,-z,relro,-z,now",
+      "result": "passed; compile only, not installed launch"
+    }
+  },
+  "historicalFailures": [
+    "First integrated test compile referenced the prior RecoveryViewModel property; migrated test to DiskCloningViewModel.",
+    "First native compile recipe omitted required SOURCE_COMMIT; corrected recipe needed.",
+    "8c8b429 native graphical probe failed without a visible window; synthetic target remained unchanged."
+  ],
+  "unverified": [
+    "exact-source native graphical launch and X11 authentication",
+    "all-platform operational cloning; macOS/APFS remains excluded",
+    "disk-profile/media/updater/package/provenance/protected-review gates"
+  ],
+  "qualification": "none; PR736 remains draft"
+}

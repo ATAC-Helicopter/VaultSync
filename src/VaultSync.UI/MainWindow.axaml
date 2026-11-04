@@ -181,6 +181,7 @@
           </StackPanel>
         </Border>
 
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel x:Name="NavButtonsPanel" Spacing="4" Margin="0,0,0,10">
           <Button x:Name="NavDashboardButton" Classes="nav" Classes.active="{CompiledBinding IsDashboardActive}" Command="{CompiledBinding NavigateDashboard}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Dashboard}" AutomationProperties.Name="{infra:LocalizedString Key=Nav.Dashboard}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -267,6 +268,19 @@
             </StackPanel>
           </Button>
 
+          <Button x:Name="NavDiskCloningButton" Classes="nav" Classes.active="{CompiledBinding IsDiskCloningActive}" Command="{CompiledBinding NavigateDiskCloning}" ToolTip.Tip="{infra:LocalizedString Key=Nav.DiskCloning}" AutomationProperties.Name="{infra:LocalizedString Key=Nav.DiskCloning}">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Border x:Name="NavDiskCloningIconBadge" Classes="nav-icon-badge">
+                <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <shapes:Path Data="M4 3.5H16C17.1 3.5 18 4.4 18 5.5V14.5C18 15.6 17.1 16.5 16 16.5H4C2.9 16.5 2 15.6 2 14.5V5.5C2 4.4 2.9 3.5 4 3.5ZM2.5 12H17.5M5 14.2H5.1M8 14.2H8.1"
+                               Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6"
+                               StrokeLineCap="Round" Fill="Transparent" />
+                </Viewbox>
+              </Border>
+              <TextBlock x:Name="NavDiskCloningText" Text="{infra:LocalizedString Key=Nav.DiskCloning}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+
           <Button x:Name="NavGuideButton" Classes="nav" Classes.active="{CompiledBinding IsGuideActive}" Command="{CompiledBinding NavigateGuide}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Guide}" AutomationProperties.Name="{infra:LocalizedString Key=Nav.Guide}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavGuideIconBadge" Classes="nav-icon-badge">
@@ -294,6 +308,7 @@
             </StackPanel>
           </Button>
         </StackPanel>
+        </ScrollViewer>
 
       </DockPanel>
     </Border>
@@ -416,6 +431,9 @@
         </Panel>
         <Panel IsVisible="{Binding IsRecoveryActive}">
           <views:RecoveryView DataContext="{Binding RecoveryViewModel}" />
+        </Panel>
+        <Panel IsVisible="{Binding IsDiskCloningActive}">
+          <views:DiskCloningView DataContext="{Binding DiskCloningViewModel}" />
         </Panel>
         <Panel IsVisible="{Binding IsGuideActive}">
           <views:GuideView DataContext="{Binding GuideViewModel}" />

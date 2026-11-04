@@ -45,7 +45,7 @@
   <ScrollViewer VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
                 Padding="{DynamicResource PagePadding}">
-    <Grid RowDefinitions="Auto,Auto,Auto,*"
+    <Grid RowDefinitions="Auto,Auto,*"
           RowSpacing="16">
       <Grid x:Name="RecoveryHeaderGrid"
             Grid.Row="0"
@@ -177,10 +177,8 @@
         </Border>
       </Grid>
 
-      <views:DiskRecoveryView Grid.Row="2" DataContext="{Binding DiskRecovery}"/>
-
       <Grid x:Name="RecoveryContentGrid"
-            Grid.Row="3"
+            Grid.Row="2"
             ColumnDefinitions="360,*"
             RowDefinitions="Auto"
             ColumnSpacing="16">

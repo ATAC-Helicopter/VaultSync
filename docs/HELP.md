@@ -142,6 +142,19 @@ Metadata sync does not carry:
 
 Full recovery guidance: `docs/wiki/Recovery.md`.
 
+## Disk Cloning (1.9.0 development)
+
+Open **Disk Cloning** from the sidebar for the separate disk-image workflow.
+The page is available in the Windows, macOS and Linux desktop shell. Select an
+image folder containing `image.metadata` and `payload.raw`; the current read-only
+verification requires the Linux x64 isolated reader. Verification does not
+authorize overwriting a disk or establish bootability.
+
+Capture and restore are still under development. No disk profile is qualified,
+and macOS/APFS recovery is outside the current engine profile. An available page
+is not a declaration of operational support. Project readiness remains under
+**Recovery**.
+
 ## Explore and Compare
 
 ![Snapshot comparison with changed files and readable text differences](images/Compare_View.png)

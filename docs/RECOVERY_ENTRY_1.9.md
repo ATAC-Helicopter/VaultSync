@@ -311,3 +311,23 @@ proof. The first installed graphical/no-NIC rendering, authentication, physical
 confirmation, final-window and cleanup probes remain pending. No support profile,
 old root-private source access, product boot media or beta is qualified by this
 component checkpoint. See the [graphical receipt](release-evidence/1.9-graphical-controller-2026-10-30.json).
+
+
+## Bounded local startup diagnostics — 2026-11-04
+
+The installed host and controller emit only fixed numeric
+`VSREC1|role|phase|error` records to the local systemd journal. The launcher
+accepts fd 2 only as a root:root, mode-0600, write-only FIFO; stdin/stdout still
+become `/dev/null` and higher descriptors close before the controller executes.
+Identity probes stay silent on stderr. No root console or storage descriptor is
+passed to the controller.
+
+The host validates canonical ASCII records before forwarding known enums, with
+32-record, 32-byte-line and 4-KiB limits. Unknown, truncated, control-bearing or
+raw exception text refuses; cancellation and failure close the owned input. These
+records carry no paths, exception text, cookies, IDs or user content and are not
+sent over the network. They never authorize disk access or replace receipts.
+Installed anonymous-pipe permissions, graphical startup, authenticated X11 access
+and cleanup still need exact-source VM evidence. The first graphical probe at
+8c8b429 failed with no visible wizard and unchanged synthetic target; it is not
+qualification.

@@ -618,6 +618,8 @@
   "Nav.History": "السجل",
   "Nav.Projects": "المشاريع",
   "Nav.Recovery": "الاستعادة",
+  "Nav.DiskCloning": "استنساخ القرص",
+  "DiskCloning.Intro": "أدوات صور الأقراص. يتوفر حالياً التحقق من الصور فقط.",
   "Nav.Settings": "الإعدادات",
   "Nav.Schedule": "الجدول",
   "Schedule.Action.OpenBackups": "فتح النسخ الاحتياطية",

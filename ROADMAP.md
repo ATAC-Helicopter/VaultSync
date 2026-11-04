@@ -1219,6 +1219,11 @@ repository must not transfer before a compatible release is adopted.
 
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
   workflow boundaries, navigation invariants, and legacy-shell migration map.
+  - Direction (2026-11-04): a dedicated Disk Cloning desktop page separates
+    disk images from project Recovery, retaining cached selection and typed
+    navigation on Windows/macOS/Linux. Page visibility does not qualify the
+    Linux-only verifier or deliver all-platform capture/restore; see the
+    [disk workflow boundary](docs/ROUTE_ARCHITECTURE_1.9.md#dedicated-disk-workflow--2026-11-04).
   - Progress: the [route architecture review draft](docs/ROUTE_ARCHITECTURE_1.9.md)
     inventories the current shell and proposes typed routes, state ownership,
     compatibility mapping, and parity gates. The October 9 in-memory coordinator
@@ -1393,6 +1398,11 @@ repository must not transfer before a compatible release is adopted.
     correction does not qualify disk capture or recovery.
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
   explicit operation states and checkpoint contracts.
+  - Requirement (2026-11-04): the maintainer requests operational cloning on
+    every supported desktop OS. Current Linux/ext4 and Windows/NTFS offline
+    candidates do not cover macOS/APFS. Resolve that platform gap with VS-1918
+    before claiming parity; preserve exclusions and require measured recovery.
+    A cross-platform navigation entry alone does not complete this requirement.
   - Progress: a file-only capture prototype streams synthetic input into an
     exclusive temporary workspace, flushes the payload before manifest/completion
     publication and preserves incomplete/interrupted/failed captures. Independent
@@ -1672,6 +1682,11 @@ repository must not transfer before a compatible release is adopted.
     [follow-up receipt](docs/release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Progress (2026-11-04): bounded local startup codes and strict inherited
+    FIFO parsing diagnose the failed graphical launch without raw error text.
+    The 119 affected startup/presentation/navigation tests pass; native GUI,
+    X11 authentication and cleanup remain unqualified. Earlier 8c8b429 boot
+    failed with no window and unchanged synthetic target.
   - Graphical controller integration (2026-10-30): separate localized Avalonia
     wizard, fixed authenticated X11/VT2 bootstrap, bounded VT1 physical-review
     handoff and truthful retained result screen. Controller Release build,

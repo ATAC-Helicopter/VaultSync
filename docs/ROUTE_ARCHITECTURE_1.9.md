@@ -174,3 +174,29 @@ records actual scope, reviewer and observation time. This selects implementation
 direction while concrete serialization/API/security work and qualification
 remain open. Historical proposed/draft status above describes earlier increments.
 No persisted data or supported-device status changes merely from this approval.
+
+
+## Dedicated disk workflow — 2026-11-04
+
+The maintainer requested a dedicated Disk Cloning page, reachable from the same
+desktop shell on Windows, macOS and Linux. The page owns its cached image
+selection and uses the exact `DiskCloning` saved-location key, a Recover intent
+route and ordinary back/forward history. Existing `Recovery` locations continue
+to open project readiness; they are not silently redirected to disk operations.
+
+Page availability and operational support are separate. This increment moves the
+existing read-only image verification surface; it does not add privileged desktop
+commands. Verification currently requires the admitted Linux x64 reader. Capture,
+destination review and writes remain governed by their existing worker/media
+contracts. Changing pages must preserve selection and must not grant or resume
+overwrite approval. Native UI parity remains unverified until measured.
+
+The requested product goal includes disk cloning for every supported desktop OS.
+The current engine plan covers offline Linux/ext4 and Windows/NTFS candidates;
+macOS/APFS is explicitly excluded and no profile is qualified. Making the page
+visible on macOS does not meet that operational goal. VS-1904/#492 and
+VS-1918/#575 must resolve the missing platform adapters, recovery environment,
+boot/security constraints and measured full recovery loops before claiming
+all-platform disk cloning. Do not remove the exclusion or mark a profile supported
+merely to match the navigation. This request stays within the 1.9.0 ownership
+review; later-family features are not imported.

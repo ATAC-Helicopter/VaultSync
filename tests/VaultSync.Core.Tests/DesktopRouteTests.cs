@@ -14,6 +14,7 @@ public sealed class DesktopRouteTests
     [InlineData("Schedule", DesktopRouteKind.Protect, DesktopRoutePage.Schedule)]
     [InlineData("History", DesktopRouteKind.History, DesktopRoutePage.Overview)]
     [InlineData("Recovery", DesktopRouteKind.Recover, DesktopRoutePage.Overview)]
+    [InlineData("DiskCloning", DesktopRouteKind.Recover, DesktopRoutePage.DiskCloning)]
     [InlineData("Guide", DesktopRouteKind.Manage, DesktopRoutePage.Guide)]
     [InlineData("Settings", DesktopRouteKind.Manage, DesktopRoutePage.Settings)]
     public void EveryExistingPageRoundTripsWithoutLosingItsIdentity(
@@ -48,6 +49,7 @@ public sealed class DesktopRouteTests
     [InlineData(DesktopRouteKind.Manage, DesktopRoutePage.Overview, 1)]
     [InlineData(DesktopRouteKind.History, DesktopRoutePage.Settings, 1)]
     [InlineData(DesktopRouteKind.Recover, DesktopRoutePage.Backups, 1)]
+    [InlineData(DesktopRouteKind.Protect, DesktopRoutePage.DiskCloning, 1)]
     [InlineData((DesktopRouteKind)99, DesktopRoutePage.Overview, 1)]
     [InlineData(DesktopRouteKind.Protect, (DesktopRoutePage)99, 1)]
     public void UnsupportedVersionsAndTargetsNeverResolveToAnotherPage(

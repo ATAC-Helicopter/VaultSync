@@ -618,6 +618,8 @@
   "Nav.History": "历史记录",
   "Nav.Projects": "项目",
   "Nav.Recovery": "恢复",
+  "Nav.DiskCloning": "磁盘克隆",
+  "DiskCloning.Intro": "磁盘映像工具。目前仅支持验证映像。",
   "Nav.Settings": "设置",
   "Nav.Schedule": "计划",
   "Schedule.Action.OpenBackups": "打开备份",

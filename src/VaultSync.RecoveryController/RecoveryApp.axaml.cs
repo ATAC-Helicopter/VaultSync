@@ -8,6 +8,7 @@ namespace VaultSync.RecoveryController;
 
 internal sealed partial class RecoveryApp : Application
 {
+    public RecoveryApp() { }
     internal static Func<IRecoveryPresentation, CancellationToken, Task>? Runner { get; set; }
     internal static CancellationToken LifetimeToken { get; set; }
     public override void Initialize() => AvaloniaXamlLoader.Load(this);

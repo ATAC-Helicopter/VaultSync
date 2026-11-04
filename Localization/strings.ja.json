@@ -618,6 +618,8 @@
   "Nav.History": "歴史",
   "Nav.Projects": "プロジェクト",
   "Nav.Recovery": "回復",
+  "Nav.DiskCloning": "ディスクのクローン",
+  "DiskCloning.Intro": "ディスクイメージツール。現在はイメージの検証のみ利用できます。",
   "Nav.Settings": "舞台設定",
   "Nav.Schedule": "スケジュール",
   "Schedule.Action.OpenBackups": "オープンバックアップ",

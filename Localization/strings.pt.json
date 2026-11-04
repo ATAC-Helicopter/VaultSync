@@ -618,6 +618,8 @@
   "Nav.History": "Histórico",
   "Nav.Projects": "Projetos",
   "Nav.Recovery": "Recuperação",
+  "Nav.DiskCloning": "Clonagem de disco",
+  "DiskCloning.Intro": "Ferramentas de imagens de disco. No momento, só a verificação está disponível.",
   "Nav.Settings": "Configurações",
   "Nav.Schedule": "Agenda",
   "Schedule.Action.OpenBackups": "Abra backups",

@@ -238,16 +238,23 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
     }
 
     internal readonly record struct DisplayFacts(LinuxRecoveryNative.Identity Runtime, LinuxRecoveryNative.Identity Authority,
-        LinuxRecoveryNative.Identity Temporary, LinuxRecoveryNative.Identity SocketDirectory, LinuxRecoveryNative.Identity Socket);
+        LinuxRecoveryNative.Identity Temporary, LinuxRecoveryNative.Identity SocketDirectory, LinuxRecoveryNative.Identity Socket,
+        LinuxRecoveryNative.Identity PublicTemporary, LinuxRecoveryNative.Identity NamedSocketDirectory);
     internal static void ValidateDisplay(DisplayFacts facts)
     {
         if (facts.Runtime.Mode != 0x41c8 || facts.Runtime.Owner != 0 || facts.Runtime.Group != ControllerId ||
             facts.Authority.Mode != 0x81a0 || facts.Authority.Owner != 0 || facts.Authority.Group != ControllerId ||
             facts.Authority.Links != 1 || facts.Authority.Size != 45 ||
             facts.Temporary.Mode != 0x41c0 || facts.Temporary.Owner != ControllerId || facts.Temporary.Group != ControllerId ||
+            facts.PublicTemporary.Mode != 0x43ff || facts.PublicTemporary.Owner != 0 ||
             facts.SocketDirectory.Mode != 0x43ff || facts.SocketDirectory.Owner != 0 ||
+            !SameDisplayDirectory(facts.SocketDirectory, facts.NamedSocketDirectory) ||
             (facts.Socket.Mode & 0xf000) != 0xc000 || facts.Socket.Owner != 0 || facts.Socket.Links != 1) throw Invalid();
     }
+
+    private static bool SameDisplayDirectory(LinuxRecoveryNative.Identity held, LinuxRecoveryNative.Identity named) =>
+        held.Inode == named.Inode && held.DeviceMajor == named.DeviceMajor && held.DeviceMinor == named.DeviceMinor &&
+        held.Mode == named.Mode && held.Owner == named.Owner && held.Group == named.Group;
 
     internal async Task RequireDisplayAsync(CancellationToken token)
     {
@@ -262,9 +269,14 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
         using var authority = LinuxRecoveryNative.OpenFile(DisplayAuthority, false);
         using var runtime = LinuxRecoveryNative.Open(DisplayRoot, 0x200000 | 0x10000 | 0x20000 | 0x80000); // O_PATH: group traversal only.
         using var temporary = LinuxRecoveryNative.Open(DisplayTemporary, 0x10000 | 0x20000 | 0x80000);
+        using var publicTemporary = LinuxRecoveryNative.Open("/tmp", 0x10000 | 0x20000 | 0x80000);
         using var sockets = LinuxRecoveryNative.Open("/tmp/.X11-unix", 0x10000 | 0x20000 | 0x80000);
+        // Public X11 paths are required by the transport. Neither sticky parent
+        // may be user-owned, and the named socket directory must still identify
+        // the opened inode. Entry additions may change size/times, not identity.
         ValidateDisplay(new(LinuxRecoveryNative.Stat(runtime), LinuxRecoveryNative.Stat(authority.SafeFileHandle),
-            LinuxRecoveryNative.Stat(temporary), LinuxRecoveryNative.Stat(sockets), LinuxRecoveryNative.StatPath(DisplaySocket)));
+            LinuxRecoveryNative.Stat(temporary), LinuxRecoveryNative.Stat(sockets), LinuxRecoveryNative.StatPath(DisplaySocket),
+            LinuxRecoveryNative.Stat(publicTemporary), LinuxRecoveryNative.StatPath("/tmp/.X11-unix")));
     }
 
     internal (Func<string, string?> Text, CultureInfo Culture) ConsoleText()

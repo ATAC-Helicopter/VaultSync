@@ -68,11 +68,15 @@ public sealed class LinuxRecoveryMediaInstallationTests
     [InlineData("valid")] [InlineData("runtime-owner")] [InlineData("runtime-write")]
     [InlineData("cookie-owner")] [InlineData("cookie-write")] [InlineData("cookie-hardlink")]
     [InlineData("tmp-owner")] [InlineData("socket-owner")] [InlineData("socket-link")]
+    [InlineData("public-tmp-owner")] [InlineData("public-tmp-no-sticky")] [InlineData("public-tmp-file")]
+    [InlineData("directory-inode")] [InlineData("directory-device")]
+    [InlineData("directory-link")] [InlineData("directory-owner")] [InlineData("directory-mode")]
+    [InlineData("directory-contents")]
     public void DisplayAdmissionRequiresRootOwnedCookieAndSeparatePrivateControllerTemporaryStorage(string change)
     {
         static LinuxRecoveryNative.Identity State(ushort mode, uint owner, uint group, ulong size = 0) => new(mode, owner, group, 1, 1, size, 0, 5, 0, 0, 0, 0);
         var facts = new LinuxRecoveryMediaInstallation.DisplayFacts(State(0x41c8, 0, 60999), State(0x81a0, 0, 60999, 45),
-            State(0x41c0, 60999, 60999), State(0x43ff, 0, 0), State(0xc1ff, 0, 0));
+            State(0x41c0, 60999, 60999), State(0x43ff, 0, 0), State(0xc1ff, 0, 0), State(0x43ff, 0, 0), State(0x43ff, 0, 0));
         facts = change switch
         {
             "runtime-owner" => facts with { Runtime = facts.Runtime with { Owner = 60999 } },
@@ -83,9 +87,18 @@ public sealed class LinuxRecoveryMediaInstallationTests
             "tmp-owner" => facts with { Temporary = facts.Temporary with { Owner = 0 } },
             "socket-owner" => facts with { Socket = facts.Socket with { Owner = 60999 } },
             "socket-link" => facts with { Socket = facts.Socket with { Mode = 0xa1ff } },
+            "public-tmp-owner" => facts with { PublicTemporary = facts.PublicTemporary with { Owner = 60999 } },
+            "public-tmp-no-sticky" => facts with { PublicTemporary = facts.PublicTemporary with { Mode = 0x41ff } },
+            "public-tmp-file" => facts with { PublicTemporary = facts.PublicTemporary with { Mode = 0x83ff } },
+            "directory-inode" => facts with { NamedSocketDirectory = facts.NamedSocketDirectory with { Inode = 2 } },
+            "directory-device" => facts with { NamedSocketDirectory = facts.NamedSocketDirectory with { DeviceMinor = 6 } },
+            "directory-link" => facts with { NamedSocketDirectory = facts.NamedSocketDirectory with { Mode = 0xa1ff } },
+            "directory-owner" => facts with { NamedSocketDirectory = facts.NamedSocketDirectory with { Owner = 60999 } },
+            "directory-mode" => facts with { NamedSocketDirectory = facts.NamedSocketDirectory with { Mode = 0x41ff } },
+            "directory-contents" => facts with { NamedSocketDirectory = facts.NamedSocketDirectory with { Size = 4096, Modified = 1, Changed = 1 } },
             _ => facts
         };
-        if (change == "valid") LinuxRecoveryMediaInstallation.ValidateDisplay(facts);
+        if (change is "valid" or "directory-contents") LinuxRecoveryMediaInstallation.ValidateDisplay(facts);
         else Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.ValidateDisplay(facts));
     }
 

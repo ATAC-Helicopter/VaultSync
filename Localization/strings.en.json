@@ -594,6 +594,8 @@
   "Nav.History": "History",
   "Nav.Projects": "Projects",
   "Nav.Recovery": "Recovery",
+  "Nav.DiskCloning": "Disk cloning",
+  "DiskCloning.Intro": "Disk image tools. Currently, only image verification is available.",
   "Nav.Settings": "Settings",
   "Nav.Schedule": "Schedule",
   "Schedule.Action.OpenBackups": "Open Backups",

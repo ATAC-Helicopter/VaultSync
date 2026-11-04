@@ -618,6 +618,8 @@
   "Nav.History": "История",
   "Nav.Projects": "Проекты",
   "Nav.Recovery": "Восстановление",
+  "Nav.DiskCloning": "Клонирование диска",
+  "DiskCloning.Intro": "Инструменты образов диска. Сейчас доступна только проверка образа.",
   "Nav.Settings": "Настройки",
   "Nav.Schedule": "Расписание",
   "Schedule.Action.OpenBackups": "Открыть резервные копии",

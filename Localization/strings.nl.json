@@ -618,6 +618,8 @@
   "Nav.History": "Geschiedenis",
   "Nav.Projects": "Projecten",
   "Nav.Recovery": "Herstel",
+  "Nav.DiskCloning": "Schijf klonen",
+  "DiskCloning.Intro": "Hulpmiddelen voor schijfkopieën. Momenteel is alleen verificatie beschikbaar.",
   "Nav.Settings": "Instellingen",
   "Nav.Schedule": "Planning",
   "Schedule.Action.OpenBackups": "Open Back-ups",

@@ -28,6 +28,7 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
     private readonly RecoveryWindow window;
     private readonly LocalizationService text = new();
     private readonly CancellationTokenSource cancellation = new();
+    private readonly CancellationToken cancellationToken;
     private readonly ComboBox language;
     private readonly TextBlock heading, description, details;
     private readonly TextBox folder;
@@ -42,11 +43,12 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
     private LinuxRecoveryControllerClient.Result result;
     private bool terminalObserved;
     internal bool IsComplete { get; private set; }
-    public CancellationToken CancellationRequested => cancellation.Token;
+    public CancellationToken CancellationRequested => cancellationToken;
 
     internal RecoveryViewModel(RecoveryWindow window)
     {
         this.window = window;
+        cancellationToken = cancellation.Token;
         language = window.FindControl<ComboBox>("Language")!;
         heading = window.FindControl<TextBlock>("Heading")!;
         description = window.FindControl<TextBlock>("Description")!;
@@ -137,6 +139,8 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
     {
         if (IsComplete) return;
         result = value; IsComplete = true; terminalObserved = true;
+        // Complete is called only after the runner has drained all interactions.
+        cancellation.Dispose();
         choice?.TrySetResult(null); acknowledgment?.TrySetResult(false); choice = null; acknowledgment = null;
         screen = Screen.Finished; Render();
     });

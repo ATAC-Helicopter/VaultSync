@@ -618,6 +618,8 @@
   "Nav.History": "Historique",
   "Nav.Projects": "Projets",
   "Nav.Recovery": "Récupération",
+  "Nav.DiskCloning": "Clonage de disque",
+  "DiskCloning.Intro": "Outils pour les images disque. Seule leur vérification est disponible actuellement.",
   "Nav.Settings": "Paramètres",
   "Nav.Schedule": "Planification",
   "Schedule.Action.OpenBackups": "Sauvegardes ouvertes",

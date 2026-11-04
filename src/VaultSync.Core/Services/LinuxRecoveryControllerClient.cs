@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using System.Text.Json;
+using Startup = VaultSync.Core.Services.LinuxRecoveryStartupDiagnostics;
 
 namespace VaultSync.Core.Services;
 
@@ -126,6 +127,7 @@ internal static class LinuxRecoveryControllerClient
     private static async Task<Result> RunConnectedAsync(LinuxRecoveryMediaInstallation installation, IInteraction interaction,
         CancellationToken token, Action<LinuxRecoverySession.Snapshot>? observe)
     {
+        Startup.Write(Startup.Role.Controller, Startup.Phase.ControllerConnect);
         var directory = LinuxRecoveryNative.StatPath("/run/vaultsync-recovery");
         var endpoint = LinuxRecoveryNative.StatPath(LinuxRecoveryMediaInstallation.SocketPath);
         if (directory.Mode != 0x41c8 || directory.Owner != 0 || directory.Group != LinuxRecoveryMediaInstallation.ControllerId ||
@@ -141,11 +143,13 @@ internal static class LinuxRecoveryControllerClient
             await socket.ConnectAsync(new UnixDomainSocketEndPoint(LinuxRecoveryMediaInstallation.SocketPath), timeout.Token).ConfigureAwait(false);
             peer = LinuxWorkerPeerBinding.TryCreate(socket, new(parent, 0, 0)) ?? throw LinuxRecoveryMediaInstallation.Invalid();
             if (!peer.Recheck()) throw LinuxRecoveryMediaInstallation.Invalid();
+            Startup.Write(Startup.Role.Controller, Startup.Phase.ControllerPeer);
             installation.Recheck();
             using var stream = new NetworkStream(socket, false); byte[] hello = new byte[24];
             await stream.ReadExactlyAsync(hello, timeout.Token).ConfigureAwait(false);
             Guid operation = LinuxRecoveryControllerLaunch.DecodeHello(hello);
             if (!peer.Recheck()) throw LinuxRecoveryMediaInstallation.Invalid();
+            Startup.Write(Startup.Role.Controller, Startup.Phase.ControllerHello);
             var channel = new LinuxRecoveryOperationChannel(socket, peer, operation, LinuxRecoveryRole.Controller);
             peer = null; transferred = true;
             return await RunAsync(new Channel(channel), operation, interaction, token, observe).ConfigureAwait(false);

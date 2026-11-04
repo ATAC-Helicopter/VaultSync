@@ -618,6 +618,8 @@
   "Nav.History": "역사",
   "Nav.Projects": "프로젝트",
   "Nav.Recovery": "회복",
+  "Nav.DiskCloning": "디스크 복제",
+  "DiskCloning.Intro": "디스크 이미지 도구입니다. 현재는 이미지 검증만 사용할 수 있습니다.",
   "Nav.Settings": "설정",
   "Nav.Schedule": "일정",
   "Schedule.Action.OpenBackups": "백업 열기",

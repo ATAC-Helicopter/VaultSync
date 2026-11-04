@@ -7,6 +7,21 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+The November 4 follow-up adds a dedicated localized Disk Cloning desktop page
+with cached image selection, typed route and back/forward support. The entry is
+available across the desktop targets; the current verifier still requires Linux
+x64. The maintainer's all-platform operational cloning requirement remains open,
+including macOS/APFS adapters excluded by the present engine plan.
+
+Recovery startup now uses fixed bounded local codes, strict inherited FIFO
+validation and source-bound display-directory checks. The 119 affected Release
+tests pass with warnings-as-errors, the host Release build has zero warnings or
+errors, and both localization source audits pass (1,992 keys / 19 locales).
+The first integrated test attempt failed compilation against the moved page API;
+the owning localization regression was migrated before the passing run. Native
+graphical launch and the separate hosted gate remain unverified on this follow-up.
+See [the current receipt](release-evidence/1.9-disk-page-startup-2026-11-04.json).
+
 The `b8e3010` hosted checkpoint passes all 22 GitHub checks and its separate
 Sonar quality gate: coverage80.0%, ratings A, duplication0.0%, reviewed hotspots100%.
 This result is historical for the graphical-controller increment now under

@@ -121,6 +121,8 @@ namespace VaultSync.UI.ViewModels
             get;
         }
 
+        public ICommand NavigateDiskCloning { get; }
+
         public ICommand NavigateGuide
         {
             get;
@@ -260,6 +262,13 @@ namespace VaultSync.UI.ViewModels
                     HeaderKicker = AppViewModel.L("Main.HeaderRecovery", "Readiness & coverage");
                     // Page refresh is independent of update-check cancellation.
                     _ = RecoveryViewModel.RefreshAsync(cancellationToken: CancellationToken.None);
+                    break;
+                case "DiskCloning":
+                    BackupsViewModel.IsActiveView = false;
+                    CurrentViewName = "DiskCloning";
+                    CurrentView = DiskCloningViewModel;
+                    HeaderTitle = AppViewModel.L("Nav.DiskCloning", "Disk cloning");
+                    HeaderKicker = AppViewModel.L("DiskCloning.Intro", "Disk image tools. Currently, only image verification is available.");
                     break;
                 case "Guide":
                     BackupsViewModel.IsActiveView = false;

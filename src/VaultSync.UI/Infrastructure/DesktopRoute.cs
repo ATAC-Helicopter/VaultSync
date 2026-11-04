@@ -16,7 +16,8 @@ public enum DesktopRoutePage
     Backups,
     Schedule,
     Guide,
-    Settings
+    Settings,
+    DiskCloning
 }
 
 public readonly record struct DesktopRoute(
@@ -43,6 +44,7 @@ public static class LegacyDesktopRouteAdapter
             "Schedule" => new DesktopRoute(DesktopRouteKind.Protect, DesktopRoutePage.Schedule),
             "History" => new DesktopRoute(DesktopRouteKind.History, DesktopRoutePage.Overview),
             "Recovery" => new DesktopRoute(DesktopRouteKind.Recover, DesktopRoutePage.Overview),
+            "DiskCloning" => new DesktopRoute(DesktopRouteKind.Recover, DesktopRoutePage.DiskCloning),
             "Guide" => new DesktopRoute(DesktopRouteKind.Manage, DesktopRoutePage.Guide),
             "Settings" => new DesktopRoute(DesktopRouteKind.Manage, DesktopRoutePage.Settings),
             _ => null
@@ -64,6 +66,7 @@ public static class LegacyDesktopRouteAdapter
             (DesktopRouteKind.Protect, DesktopRoutePage.Schedule) => "Schedule",
             (DesktopRouteKind.History, DesktopRoutePage.Overview) => "History",
             (DesktopRouteKind.Recover, DesktopRoutePage.Overview) => "Recovery",
+            (DesktopRouteKind.Recover, DesktopRoutePage.DiskCloning) => "DiskCloning",
             (DesktopRouteKind.Manage, DesktopRoutePage.Guide) => "Guide",
             (DesktopRouteKind.Manage, DesktopRoutePage.Settings) => "Settings",
             _ => null

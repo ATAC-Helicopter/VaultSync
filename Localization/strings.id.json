@@ -618,6 +618,8 @@
   "Nav.History": "Sejarah",
   "Nav.Projects": "Proyek",
   "Nav.Recovery": "Pemulihan",
+  "Nav.DiskCloning": "Kloning disk",
+  "DiskCloning.Intro": "Alat citra disk. Saat ini hanya verifikasi citra yang tersedia.",
   "Nav.Settings": "Pengaturan",
   "Nav.Schedule": "Jadwal",
   "Schedule.Action.OpenBackups": "Buka Cadangan",

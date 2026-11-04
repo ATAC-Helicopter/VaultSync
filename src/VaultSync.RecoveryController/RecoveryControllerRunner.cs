@@ -1,4 +1,5 @@
 using VaultSync.Core.Services;
+using Startup = VaultSync.Core.Services.LinuxRecoveryStartupDiagnostics;
 
 namespace VaultSync.RecoveryController;
 
@@ -11,12 +12,13 @@ internal static class RecoveryControllerRunner
         var result = LinuxRecoveryControllerClient.Result.Failed;
         try
         {
+            Startup.Write(Startup.Role.Controller, Startup.Phase.ClientEntry);
             await using var interaction = new Interaction(presentation);
             result = await LinuxRecoveryControllerClient.RunInstalledAsync(installation, interaction, token, presentation.Observe).ConfigureAwait(false);
         }
-        catch (UnauthorizedAccessException) { result = LinuxRecoveryControllerClient.Result.AccessDenied; }
-        catch (OperationCanceledException) when (token.IsCancellationRequested) { result = LinuxRecoveryControllerClient.Result.Cancelled; }
-        catch (Exception) { result = LinuxRecoveryControllerClient.Result.Failed; }
+        catch (UnauthorizedAccessException error) { Startup.Write(Startup.Role.Controller, Startup.Phase.ControllerFailed, Startup.Classify(error)); result = LinuxRecoveryControllerClient.Result.AccessDenied; }
+        catch (OperationCanceledException error) when (token.IsCancellationRequested) { Startup.Write(Startup.Role.Controller, Startup.Phase.ControllerFailed, Startup.Classify(error)); result = LinuxRecoveryControllerClient.Result.Cancelled; }
+        catch (Exception error) { Startup.Write(Startup.Role.Controller, Startup.Phase.ControllerFailed, Startup.Classify(error)); result = LinuxRecoveryControllerClient.Result.Failed; }
         // Dispose/drain precedes terminal presentation, including failure paths.
         presentation.Complete(result);
         return result;

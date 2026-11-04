@@ -15,11 +15,11 @@ public sealed class DiskRecoveryLocalizationTests
         try
         {
             LocalizationProvider.Initialize(localization);
-            var model = new RecoveryViewModel();
+            var model = new DiskCloningViewModel();
             model.DiskRecovery.SelectFolder("synthetic-image-folder");
             var english = model.DiskRecovery.Status;
             Assert.True(localization.SetLanguage("it"));
-            model.ReapplyLocalization();
+            model.DiskRecovery.ReapplyLocalization();
             Assert.Equal("synthetic-image-folder", model.DiskRecovery.Folder);
             Assert.NotEqual(english, model.DiskRecovery.Status);
             Assert.Equal(localization.GetString(model.DiskRecovery.Supported ? "DiskRecovery.Ready" : "DiskRecovery.Unsupported"),

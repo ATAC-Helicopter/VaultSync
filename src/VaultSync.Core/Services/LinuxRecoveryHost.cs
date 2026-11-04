@@ -1,16 +1,21 @@
 namespace VaultSync.Core.Services;
 
+using Startup = LinuxRecoveryStartupDiagnostics;
+
 /// <summary>Actual installed media entry. No ordinary-desktop privilege endpoint.</summary>
 internal static class LinuxRecoveryHost
 {
     internal static async Task<int> RunAsync(CancellationToken token)
     {
+        Startup.Write(Startup.Role.Host, Startup.Phase.HostAdmission);
         using var installation = await LinuxRecoveryMediaInstallation.OpenAsync(LinuxRecoveryMediaInstallation.Role.Host, token).ConfigureAwait(false);
+        Startup.Write(Startup.Role.Host, Startup.Phase.HostAdmitted);
         await using var controller = LinuxRecoveryControllerLaunch.Create(installation);
         Guid operation = Guid.NewGuid();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(token);
         using var channel = await controller.ConnectAsync(operation, linked.Token).ConfigureAwait(false);
         using var storage = LinuxRecoveryStorageLease.Create(operation);
+        Startup.Write(Startup.Role.Host, Startup.Phase.Storage);
         var text = installation.ConsoleText();
         var worker = new LinuxRecoveryWorkerOperation(channel, operation, storage.StagingParent, storage.JournalParent);
         var console = new GuardedConsole(installation, new LinuxRecoveryLocalConsole(text.Text, text.Culture));
@@ -21,12 +26,15 @@ internal static class LinuxRecoveryHost
         try
         {
             running = supervisor.RunAsync(linked.Token);
+            Startup.Write(Startup.Role.Host, Startup.Phase.Owner);
             monitor = MonitorAsync(installation, linked.Token);
             if (await Task.WhenAny(running, monitor).ConfigureAwait(false) == monitor) await monitor.ConfigureAwait(false);
             var state = await running.ConfigureAwait(false);
+            Startup.Write(Startup.Role.Host, Startup.Phase.OwnerTerminal);
             // Device outcome is already truthful. Artifact cleanup is separately
             // recorded before the host can report a fully clean successful exit.
             storage.Complete(state);
+            Startup.Write(Startup.Role.Host, Startup.Phase.Receipt);
             if (installation.Description.ControllerMode == "graphical")
             {
                 presentation = controller.WaitForPresentationExitAsync(linked.Token);

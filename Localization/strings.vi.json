@@ -618,6 +618,8 @@
   "Nav.History": "Lịch sử",
   "Nav.Projects": "Dự án",
   "Nav.Recovery": "Phục hồi",
+  "Nav.DiskCloning": "Sao chép ổ đĩa",
+  "DiskCloning.Intro": "Công cụ ảnh đĩa. Hiện chỉ có thể xác minh ảnh đĩa.",
   "Nav.Settings": "Cài đặt",
   "Nav.Schedule": "Lịch",
   "Schedule.Action.OpenBackups": "Mở bản sao lưu",
