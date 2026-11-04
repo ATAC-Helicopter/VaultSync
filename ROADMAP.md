@@ -1682,6 +1682,11 @@ repository must not transfer before a compatible release is adopted.
     [follow-up receipt](docs/release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Timing diagnosis (2026-11-04, 99dc624): host admission takes 28.97 seconds;
+    the controller's combined 30-second budget expires during closure hashing.
+    A fixed five-minute startup maximum and independent 20-second owned cleanup budget
+    now retain every guard and failure outcome. All 34 affected Release tests pass;
+    new-source native qualification remains pending.
   - Native follow-up (2026-11-04, ce55f1f): authorized X11 succeeds, untrusted
     display/cookie access refuses. Controller admission still times out before
     a window, cleanup remains unconfirmed and the synthetic target is unchanged.

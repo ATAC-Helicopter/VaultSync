@@ -7,6 +7,13 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+The `99dc624` trace reaches controller manifest decode and closure enumeration,
+then expires during hashing. Host admission alone measures 28.97 seconds. The
+follow-up grants a fixed five-minute startup maximum and one independent
+20-second owned-controller cleanup budget, retaining two-second diagnostic drain,
+all admission guards and failure retention. All 34 affected Release cases pass;
+fresh native and hosted verification remain required before calling this repaired.
+
 The installed `ce55f1f` offline probe passes X11 authorized/untrusted access and
 cookie isolation checks, but fails before controller admission completes: no
 window, no consent, no receipt, unchanged 64-KiB synthetic target. Cleanup times

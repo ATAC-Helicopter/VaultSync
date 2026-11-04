@@ -95,5 +95,32 @@
     "src/VaultSync.Core/Services/LinuxRecoveryStartupDiagnostics.cs": "8ff0b9586ae89ce0dec5fd3ccfcd7bc15f234f31d83812804407cc9614258b3a",
     "src/VaultSync.Core/Services/LinuxRecoveryMediaInstallation.cs": "0f223e0e563bde2755443e3b1c48233d82019f37edd63540dcc8f41e68029975",
     "src/VaultSync.Core/Services/LinuxRecoveryControllerLaunch.cs": "017fbe6049202069006748d0d91772d280a7c6425ac635465fe5735f23e6ac0d"
+  },
+  "secondNativeProbe": {
+    "sourceCommit": "99dc62435a4e487f22ebe726dc7afd843461db5e",
+    "manifestSha256": "3fd734acf06f49eab0f31cc53354f2ad6be6883aadce6aa7dda6bed61b60104a",
+    "hostAdmissionSeconds": 28.973116,
+    "controllerManifestDecodedBootSeconds": 63.803096,
+    "controllerClosureEnumeratedBootSeconds": 64.329641,
+    "hostConnectionCancelledBootSeconds": 83.936415,
+    "controllerClosureHashCompleted": false,
+    "actualVisibleWindow": false,
+    "cleanup": "unconfirmed timeout; socket retained",
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "qemuNormalExitObserved": true,
+    "qualification": "none"
+  },
+  "boundedStartupFollowup": {
+    "focusedReleasePassed": 34,
+    "failed": 0,
+    "skipped": 0,
+    "warningsAsErrors": true,
+    "startupMaximumSeconds": 300,
+    "ownedCleanupMaximumSeconds": 20,
+    "diagnosticDrainMaximumSeconds": 2,
+    "diagnosticsCanExtendDeadline": false,
+    "admissionGuardsChanged": false,
+    "nativeStatus": "pending new source",
+    "sourceSha256": "4099b2e98500036f59b51ffeaa0abbd8cd535a8e4ac2acab500eea33b604774c"
   }
 }

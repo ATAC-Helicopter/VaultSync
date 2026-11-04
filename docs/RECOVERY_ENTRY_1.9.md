@@ -347,3 +347,27 @@ The observer records fixed codes and journal monotonic timestamps. Existing
 30-second connection and two-second cleanup deadlines stay unchanged pending
 measured cause; no admission guard or failure retention is removed. Cleanup
 waits explicitly use `CancellationToken.None` and retain their own deadlines.
+
+
+## Measured startup budget correction — 2026-11-04
+
+At `99dc624`, monotonic journal codes measure host admission at 28.97 seconds.
+Controller entry reaches manifest decode and exact closure enumeration, but the
+30-second combined parent-recheck/startup/admission/hello clock expires while
+closure hashing is still pending. No admitted-controller marker or window exists.
+This identifies an insufficient startup budget in this cold emulated environment;
+it does not prove all later stages will succeed.
+
+The current production maximum is five minutes for that entire startup boundary,
+including the unchanged bounded closure (up to 1 GiB). Diagnostic messages cannot
+extend it. Caller cancellation remains linked and is checked before and after
+the synchronous parent recheck, before starting a child. This is a maximum, not
+an expected normal startup time. All hashes, ownership, boot and peer checks stay.
+
+Owned controller cleanup uses one independent 20-second budget for the initial
+two-second grace, subgroup kill, exact process reaping and empty-group proof.
+Diagnostic drainage retains a separate two-second limit. Expiry preserves failure
+and uncertain paths; no catch manufactures a clean outcome. This standalone
+budget is below the unit's 30-second stop limit, but whole-host stop timing and
+native success still require measurement. The preceding deadline statements
+describe the earlier source-bound probes.

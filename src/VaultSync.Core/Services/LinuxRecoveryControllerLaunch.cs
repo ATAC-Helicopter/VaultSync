@@ -86,8 +86,13 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
 
     private async Task<LinuxRecoveryOperationChannel> ConnectCoreAsync(Guid operation, CancellationToken token)
     {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        // This single startup deadline includes the parent's recheck, cold
+        // runtime startup, complete bounded media admission and authenticated
+        // hello. Child diagnostics never extend it; caller cancellation remains linked.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromMinutes(5));
+        timeout.Token.ThrowIfCancellationRequested();
         installation.Recheck();
+        timeout.Token.ThrowIfCancellationRequested();
         process.StartInfo = new(LinuxRecoveryMediaInstallation.Root + "/launch/recovery-controller-launch")
         { UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
             WorkingDirectory = LinuxRecoveryMediaInstallation.Root + "/launch", CreateNoWindow = true };
@@ -273,28 +278,35 @@ internal sealed class LinuxRecoveryControllerLaunch : IAsyncDisposable
 
     private async Task StopOwnedControllerAsync()
     {
-        if (started)
+        // One independent budget covers grace, subgroup kill, process reaping
+        // and empty-group proof. Caller/tracing cancellation cannot skip cleanup.
+        // Diagnostic drainage has its separate two-second bound afterwards.
+        using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        try
         {
-            bool exited = false;
-            // Cleanup must outlive UI/lifetime cancellation. Each wait keeps its
-            // existing deadline, while cancellation of tracing cannot skip reaping.
-            try { await earlyExit!.WaitAsync(TimeSpan.FromSeconds(2), CancellationToken.None).ConfigureAwait(false); exited = true; }
-            catch (TimeoutException)
-            { /* The graceful deadline expired; the owned subgroup must now be stopped. */ }
-            if (!exited || LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
+            if (started)
             {
-                // Kernel-owned subgroup, including descendants. Before joining
-                // it the fixed launcher is still owned by KillMode=control-group.
-                using var kill = new FileStream(LinuxRecoveryNative.Open(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.kill", 1 | 0x20000 | 0x80000), FileAccess.Write);
-                await kill.WriteAsync("1"u8.ToArray(), CancellationToken.None).ConfigureAwait(false);
-                await earlyExit!.WaitAsync(TimeSpan.FromSeconds(2), CancellationToken.None).ConfigureAwait(false);
-                using var empty = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-                while (LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
-                    await Task.Delay(25, empty.Token).ConfigureAwait(false);
+                bool exited = false;
+                try { await earlyExit!.WaitAsync(TimeSpan.FromSeconds(2), cleanup.Token).ConfigureAwait(false); exited = true; }
+                catch (TimeoutException) when (!earlyExit!.IsFaulted)
+                { /* Grace expired; the remaining owned cleanup budget now covers stopping the subgroup. */ }
+                if (!exited || LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
+                {
+                    // Kernel-owned subgroup, including descendants. Before joining
+                    // it the fixed launcher is still owned by KillMode=control-group.
+                    using var kill = new FileStream(LinuxRecoveryNative.Open(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.kill", 1 | 0x20000 | 0x80000), FileAccess.Write);
+                    await kill.WriteAsync("1"u8.ToArray(), cleanup.Token).ConfigureAwait(false);
+                    await earlyExit!.WaitAsync(cleanup.Token).ConfigureAwait(false);
+                    while (LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
+                        await Task.Delay(25, cleanup.Token).ConfigureAwait(false);
+                }
             }
+            if (LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
+                throw new IOException("recovery-controller.cleanup-unconfirmed");
+            cleanup.Token.ThrowIfCancellationRequested();
         }
-        if (LinuxRecoveryNative.ReadBounded(LinuxRecoveryMediaInstallation.ControllerGroup + "/cgroup.procs", 4096).Length != 0)
-            throw new IOException("recovery-controller.cleanup-unconfirmed");
+        catch (OperationCanceledException error) when (cleanup.IsCancellationRequested)
+        { throw new TimeoutException("recovery-controller.cleanup-unconfirmed", error); }
     }
 
     private async Task DrainDiagnosticsAsync()

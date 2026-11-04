@@ -61,7 +61,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
-- [VS-1907] Diagnose recovery admission and cleanup through bounded local technical codes.
+- [VS-1907] Allow bounded recovery verification time and preserve independent cleanup after cancellation.
 - [VS-1907] Separate recovery choices from worker progress and independent overwrite authorization.
 - [VS-1907] Validate recovery admission, cancellation and stalled-stage liveness alongside isolated storage cleanup.
 - [VS-1980] Route repository tasks with bounded concurrency and preserved release safeguards.
