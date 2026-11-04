@@ -42,10 +42,12 @@
   "historicalFailures": [
     "First integrated test compile referenced the prior RecoveryViewModel property; migrated test to DiskCloningViewModel.",
     "First native compile recipe omitted required SOURCE_COMMIT; corrected recipe needed.",
-    "8c8b429 native graphical probe failed without a visible window; synthetic target remained unchanged."
+    "8c8b429 native graphical probe failed without a visible window; synthetic target remained unchanged.",
+    "fa0fea0 first worker staging exceeded identity deadline; unchanged default stager later passed.",
+    "fa0fea0 first recovery staging returned generic refusal; unchanged guarded stage later passed; original refusal cause remains unproven."
   ],
   "unverified": [
-    "exact-source native graphical launch and X11 authentication",
+    "native keyboard/focus/cancel and owned cleanup on BUG-19043 repair source",
     "all-platform operational cloning; macOS/APFS remains excluded",
     "disk-profile/media/updater/package/provenance/protected-review gates"
   ],
@@ -122,5 +124,45 @@
     "admissionGuardsChanged": false,
     "nativeStatus": "pending new source",
     "sourceSha256": "4099b2e98500036f59b51ffeaa0abbd8cd535a8e4ac2acab500eea33b604774c"
+  },
+  "boundedStartupNative": {
+    "sourceCommit": "fa0fea0c1a6f633926cc75607291146d704432b4",
+    "manifestSha256": "b84fe95bbd91cef46b7def742c254764b619e702e0e965141a839668576056a6",
+    "boundFiles": 675,
+    "stagerTimeoutsOrChecksOverridden": false,
+    "controllerAdmittedBootSeconds": 87.732782,
+    "windowOpenedBootSeconds": 197.976088,
+    "supervisorStartedBootSeconds": 206.321243,
+    "idleTerminalBootSeconds": 329.157212,
+    "actualVisibleFolderWindow": true,
+    "actualVisibleTerminalWindow": true,
+    "imageSelected": false,
+    "physicalConsentSent": false,
+    "inputInteractionVerified": false,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "exit": "QEMU exited after orderly ACPI powerdown request; not a measured UI close",
+    "cleanupQualification": "not established; final host cleanup was not collected before shutdown",
+    "qualification": "cold emulated startup/render only; no capture/restore OS profile"
+  },
+  "focusRepairCandidate": {
+    "owner": "BUG-19043/#826",
+    "backend": "default X11 mode; no input-focus proxy",
+    "action": "one request for exact own mapped controller window before protocol startup",
+    "readinessDeadlineSeconds": 5,
+    "nativeIoIndependentlyInterruptible": false,
+    "hostDeadlineAndOwnedStopRequiredForHungXServer": true,
+    "focusGrabsOrVtSwitches": false,
+    "nativeInteractionStatus": "pending repaired-source proof",
+    "headlessPresentationTests": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "sourceSha256": {
+      "src/VaultSync.RecoveryController/LinuxRecoveryX11Focus.cs": "84645dbc6e42abbe96a695e14be2e8a72253ccc7bba9e70464f1925a7996dd43",
+      "src/VaultSync.RecoveryController/RecoveryApp.axaml.cs": "ae2f317707ac3e661f18b3987fea010ab0b4634a7c9839b564cc76868b3e396f",
+      "tests/VaultSync.Core.Tests/RecoveryControllerPresentationTests.cs": "49fa0972cb05dfe31f357072477421b4c58454b71d801bf4cc0b93d23cf2f3ae"
+    }
   }
 }

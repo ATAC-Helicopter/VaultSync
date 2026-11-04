@@ -371,3 +371,47 @@ and uncertain paths; no catch manufactures a clean outcome. This standalone
 budget is below the unit's 30-second stop limit, but whole-host stop timing and
 native success still require measurement. The preceding deadline statements
 describe the earlier source-bound probes.
+
+
+## Actual rendering and bare-X11 focus — 2026-11-04
+
+The source-bound fa0fea0 probe installs 675 files (manifest
+`b84fe95bbd91cef46b7def742c254764b619e702e0e965141a839668576056a6`)
+through unchanged stagers. It completes admission and renders actual folder and
+terminal windows. The unselected image request expires; no physical approval is
+sent and the 64-KiB synthetic target remains byte-identical. Screenshots remain
+private. Orderly ACPI shutdown is observed, but UI-close cleanup is not qualified.
+
+BUG-19043/#826 owns the bare-X11 keyboard-focus defect. Pinned Avalonia12.1.4
+[default activation](https://raw.githubusercontent.com/AvaloniaUI/Avalonia/12.1.4/src/Avalonia.X11/X11WindowModes/DefaultWindowMode.cs)
+raises a window without assigning focus when no compatible window manager exists.
+[Upstream22447](https://github.com/AvaloniaUI/Avalonia/issues/22447) describes this
+case. The opt-in proxy is not adopted as a proven remedy: its pinned
+[proxy callback](https://raw.githubusercontent.com/AvaloniaUI/Avalonia/12.1.4/src/Avalonia.X11/X11WindowModes/InputProxyWindowMode.cs)
+does not forward keyboard events. A controller-local focus candidate must target
+only its own mapped native window, once during startup, with bounded readiness
+and cancellation. It must not grab keys, switch VTs, refocus on deactivation or
+change independent physical approval. Native interaction remains the acceptance
+gate; headless keyboard tests prove presentation behavior only.
+
+
+### BUG-19043 focus candidate
+
+The isolated controller keeps Avalonia's default window mode. Before starting
+the client protocol it opens its own connection to the already admitted fixed
+X server, checks its exact managed native-window handle, root/class and mapped
+state, then makes at most one focus request and confirms the server's focus.
+The helper accepts Linux x64 only; its LP64 layout follows the pinned framework
+ABI. Readiness polling has a five-second deadline linked to lifetime, user
+cancellation and window closure. The owned X connection and closure handler are
+released on every path. No keyboard grab, VT switch or deactivation refocus is
+added; ordinary desktop startup and Core authority remain unchanged.
+
+Xlib calls themselves are synchronous, as in the framework backend. A hung X
+server still requires the host's overall startup deadline and owned-group stop;
+the readiness deadline alone is not a native-I/O interruption guarantee. A
+pre-protocol cancellation shows cancelled presentation, while the existing main
+result remains failed because the runner has not executed (exit 74); no protocol
+result format is changed in this repair. Six headless presentation cases pass,
+including keyboard traversal/text input/acceptance. Actual X11 keyboard, physical
+VT1 handoff/return and final cleanup remain unqualified on this candidate.

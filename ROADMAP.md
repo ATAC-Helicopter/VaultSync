@@ -1217,6 +1217,12 @@ is staged for this release through [PR #722](https://github.com/ATAC-Helicopter/
 It needs exact 1.8.9 upgrade and platform qualification before shipping; the
 repository must not transfer before a compatible release is adopted.
 
+- [ ] `BUG-19043` `P0` Restore keyboard focus in the isolated graphical recovery controller.
+  - The fa0fea0 offline probe renders the actual wizard and terminal screen, but
+    input remains unqualified without a window manager. A narrow controller-local
+    candidate requests focus on its own mapped X11 window once at startup and
+    preserves independent VT1 authorization. Native keyboard/cancel/cleanup evidence remains required.
+    Issue #826; preparation PR #736; not release-qualified.
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
   workflow boundaries, navigation invariants, and legacy-shell migration map.
   - Direction (2026-11-04): a dedicated Disk Cloning desktop page separates
@@ -1682,6 +1688,10 @@ repository must not transfer before a compatible release is adopted.
     [follow-up receipt](docs/release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Rendering proof (2026-11-04, fa0fea0): actual folder and terminal windows
+    render after full admission. Keyboard/input, UI-close cleanup and recovery
+    remain unqualified; BUG-19043/#826 owns the bare-X11 focus repair. Earlier
+    failed staging/native checkpoints remain separate; no profile is qualified.
   - Timing diagnosis (2026-11-04, 99dc624): host admission takes 28.97 seconds;
     the controller's combined 30-second budget expires during closure hashing.
     A fixed five-minute startup maximum and independent 20-second owned cleanup budget

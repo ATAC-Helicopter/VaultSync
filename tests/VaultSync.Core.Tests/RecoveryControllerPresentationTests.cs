@@ -10,6 +10,7 @@ using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Interactivity;
+using Avalonia.Input;
 using Avalonia.Threading;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
@@ -39,6 +40,36 @@ public sealed class RecoveryControllerPresentationTests
         window.ViewModel.Complete(result);
         await Flush();
         window.Close();
+    }
+
+    [Fact]
+    public async Task Keyboard_only_folder_choice_can_traverse_type_and_continue()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(RecoveryApp));
+        await session.Dispatch(async () =>
+        {
+            var window = new RecoveryWindow(); window.Show();
+            var pending = window.ViewModel.ChooseImageFolderAsync(Guid.NewGuid(), CancellationToken.None);
+            await Flush();
+            var language = window.FindControl<ComboBox>("Language")!;
+            var folder = window.FindControl<TextBox>("Folder")!;
+            var primary = window.FindControl<Button>("Primary")!;
+            Assert.True(language.Focus());
+            window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+            window.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+            await Flush();
+            Assert.Same(folder, window.FocusManager!.GetFocusedElement());
+            window.KeyTextInput("/media/keyboard-image");
+            window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+            window.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+            await Flush();
+            Assert.Same(primary, window.FocusManager.GetFocusedElement());
+            window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
+            window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.None);
+            Assert.Equal("/media/keyboard-image", await pending.WaitAsync(TimeSpan.FromSeconds(2)));
+            await Finish(window, LinuxRecoveryControllerClient.Result.Cancelled);
+            return 0;
+        }, CancellationToken.None);
     }
 
     [Fact]

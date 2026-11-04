@@ -23,6 +23,14 @@ internal sealed partial class RecoveryApp : Application
                 try
                 {
                     if (Runner is null) { window.ViewModel.Complete(LinuxRecoveryControllerClient.Result.Failed); return; }
+                    // Focus only this mapped X11 window before starting the protocol.
+                    // Failure/cancellation here has no client-owned operation to drain.
+                    if (!await LinuxRecoveryX11Focus.FocusWhenMappedAsync(window, LifetimeToken))
+                    {
+                        window.ViewModel.Complete(LifetimeToken.IsCancellationRequested || window.ViewModel.CancellationRequested.IsCancellationRequested
+                            ? LinuxRecoveryControllerClient.Result.Cancelled : LinuxRecoveryControllerClient.Result.Failed);
+                        return;
+                    }
                     await Runner(window.ViewModel, LifetimeToken);
                 }
                 catch (Exception) { window.ViewModel.Complete(LinuxRecoveryControllerClient.Result.Failed); }

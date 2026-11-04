@@ -7,6 +7,24 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+BUG-19043/#826 adds one controller-local mapped-window focus request before the
+protocol starts. All six affected warning-as-error Release presentation cases
+pass, including keyboard-only folder selection. The controller localization
+audit passes (1,992 keys / 19 locales); no new strings are introduced. The repair
+uses default X11 mode and leaves physical VT1 authorization independent. Native
+input, handoff and cleanup on the repaired source remain required; this is not
+release qualification.
+
+The exact `fa0fea0` offline probe now completes controller admission and displays
+the actual folder and terminal windows. The cold emulated timings are 87.73s
+admission, 197.98s window-open and 206.32s supervisor start from kernel boot.
+No image or target was selected; the image-choice wait expires at 329.16s and the
+synthetic target hash stays unchanged. Input interaction and UI-close cleanup
+remain unverified. Staging passed unchanged checks after retained earlier
+refusals; no timeout or identity bypass was used. BUG-19043/#826 tracks missing
+keyboard focus in the bare X11 session. This is rendering evidence, not a beta
+or a qualified restore path.
+
 The `99dc624` trace reaches controller manifest decode and closure enumeration,
 then expires during hashing. Host admission alone measures 28.97 seconds. The
 follow-up grants a fixed five-minute startup maximum and one independent
