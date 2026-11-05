@@ -1206,11 +1206,13 @@ The full maintained strategy is
 **Release contract:** [1.9.0 kickoff and gates](docs/RELEASE_1.9.0.md)
 **Tagline:** *Recover when the installed system cannot.*
 
-The 2026-10-13 beta direction requires the complete 1.9.0 feature scope,
-including an independently qualified disk recovery loop on an explicitly
-supported disposable virtual profile and refusal tests for destructive errors.
-The beta is for wider testing; physical hardware breadth remains a stable gate.
-Later 1.9.x features remain in their owning releases.
+The maintainer's 2026-11-05 [staged disk beta program](docs/BETA_PROGRAM_1.9.0.md)
+keeps Windows, macOS and Linux desktop support in every beta. Only cloning and
+recovery scope is staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS.
+Each advertised profile requires an independently qualified complete disk loop
+and destructive-refusal tests. Final 1.9.0 scope and shared release gates remain;
+physical hardware breadth stays a stable gate. Later 1.9.x features retain their
+owning releases.
 
 Updater owner-transfer compatibility from [PR #721](https://github.com/ATAC-Helicopter/VaultSync/pull/721)
 is staged for this release through [PR #722](https://github.com/ATAC-Helicopter/VaultSync/pull/722).
@@ -1333,6 +1335,9 @@ repository must not transfer before a compatible release is adopted.
     audit mounts close without modifying stored backups.
 - [ ] `VS-1918` `P0` Approve the imaging-engine strategy and supported-system
   matrix before implementation claims begin.
+  - 2026-11-05: stage disk qualification by OS while preserving all desktop
+    targets; see the [beta program](docs/BETA_PROGRAM_1.9.0.md). Production
+    capture integration, image access and a real Linux OS loop remain open.
   - Joint review package (2026-10-20): concrete offline platform/raw format,
     bounds, completion, privilege, target identity and desktop recommendations
     are ready in [the combined review](docs/ARCHITECTURE_REVIEW_1.9.0.md).

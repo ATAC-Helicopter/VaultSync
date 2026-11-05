@@ -186,3 +186,12 @@ This is input confinement in a trusted CI workspace, not a sandbox against its
 owner or an administrator concurrently replacing directory trees. Existing tag,
 draft, asset and online/offline signature gates remain unchanged. Full current
 validation and hosted reanalysis status: [input boundary evidence](release-evidence/1.9-draft-input-boundary-2026-10-21.md).
+
+## Staged disk qualification in 1.9.0 betas
+
+The [beta program](BETA_PROGRAM_1.9.0.md) stages cloning/recovery profiles only;
+Windows, macOS and Linux application assets remain supported in every beta.
+All declared final assets still require the same manifest, signatures and
+exact-source verification. A milestone plan does not select a release identity
+or waive platform package/updater checks. Keep the unmerged preparation-ref and
+legacy Dev updater discovery contract above; exclude MSStore assets as requested.

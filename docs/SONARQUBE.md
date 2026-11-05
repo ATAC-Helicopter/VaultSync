@@ -52,3 +52,11 @@ rules and source exclusions remain unchanged. A newer runner/profiler must pass
 this health check and exact-head analysis before replacing the pinned image.
 
 See [the measured failure and follow-up](release-evidence/1.9-sonar-coverage-2026-10-22.md).
+
+## Recovery display findings — 2026-11-05
+
+The [line-specific review](release-evidence/1.9-recovery-display-security-review-2026-11-05.md)
+recommends false-positive dispositions for five guarded read-only X11 rendezvous
+findings and one restrictive-umask finding. No code guard, quality threshold or
+exclusion is weakened. Administrative disposition and a fresh exact-head result
+remain separate; a review document is not a passing quality gate.

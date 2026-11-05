@@ -69,6 +69,16 @@ The isolated CI storage fixture runs only through
 Ordinary non-Linux or unprivileged test rows are not native storage evidence;
 never enable them with a request flag alone or treat them as host/media qualification.
 
+## Staged 1.9.0 disk betas
+
+The maintainer clarified on 2026-11-05 that Windows, macOS and Linux desktop
+application support remains present in every beta. Stage only cloning/system
+imaging/recovery qualification: beta 1 Linux, beta 2 adds Windows, beta 3 adds
+macOS. Follow [the beta program](docs/BETA_PROGRAM_1.9.0.md). This replaces the
+older all-disk-platforms-in-beta-1 requirement; it does not remove final 1.9.0
+scope, qualify a candidate or waive shared signing/updater/security/review gates.
+A lab-only capture harness is not an installed product capture workflow.
+
 ## Working copy and delivery
 
 - The assembled 1.9.0 development branch is `work/1.9-roadmap-realignment`.

@@ -7,6 +7,12 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+The maintainer's [2026-11-05 beta program](BETA_PROGRAM_1.9.0.md) keeps all
+three desktop platforms supported throughout. Only disk cloning and recovery
+are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersedes
+older all-disk-platforms-in-beta-1 statements below, without waiving complete
+installed Linux workflows, qualified profiles or shared release gates.
+
 ## Software-frame retention follow-up — 2026-11-05
 
 BUG-19044/#827 tracks black content during actual bare-X11 wizard transitions.
