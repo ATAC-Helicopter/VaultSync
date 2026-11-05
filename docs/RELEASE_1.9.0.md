@@ -7,6 +7,12 @@ Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 No disk support or predecessor upgrade is qualified yet.
 
+The November 5 BUG-19043 follow-up corrects the native handle descriptor to the
+pinned XID representation. Eighteen focused warning-as-error Release cases pass;
+foreign/reserved/null handles still refuse. The initial 031e3f1 candidate and
+interrupted native probe remain historical failures, not keyboard qualification.
+Fresh installed interaction on the corrected source remains required.
+
 BUG-19043/#826 adds one controller-local mapped-window focus request before the
 protocol starts. All six affected warning-as-error Release presentation cases
 pass, including keyboard-only folder selection. The controller localization

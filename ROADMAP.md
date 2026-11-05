@@ -1218,6 +1218,10 @@ It needs exact 1.8.9 upgrade and platform qualification before shipping; the
 repository must not transfer before a compatible release is adopted.
 
 - [ ] `BUG-19043` `P0` Restore keyboard focus in the isolated graphical recovery controller.
+  - Follow-up (2026-11-05): the pinned framework exposes native windows as XID;
+    the original candidate rejected that descriptor. Eighteen focused cases now
+    cover valid native bounds, foreign/reserved/null handles and keyboard input.
+    The corrected candidate still requires installed X11 interaction proof.
   - The fa0fea0 offline probe renders the actual wizard and terminal screen, but
     input remains unqualified without a window manager. A narrow controller-local
     candidate requests focus on its own mapped X11 window once at startup and

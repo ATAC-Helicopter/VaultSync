@@ -11,11 +11,13 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
 using RecoveryApp = RecoveryController::VaultSync.RecoveryController.RecoveryApp;
 using RecoveryWindow = RecoveryController::VaultSync.RecoveryController.RecoveryWindow;
+using RecoveryX11Focus = RecoveryController::VaultSync.RecoveryController.LinuxRecoveryX11Focus;
 using LanguageOption = RecoveryController::VaultSync.UI.Services.LanguageOption;
 using Xunit;
 
@@ -40,6 +42,33 @@ public sealed class RecoveryControllerPresentationTests
         window.ViewModel.Complete(result);
         await Flush();
         window.Close();
+    }
+
+    [Theory]
+    [InlineData("XID", 2L, true)]
+    [InlineData("XID", 4294967295L, true)]
+    [InlineData("XID", 0L, false)]
+    [InlineData("XID", 1L, false)]
+    [InlineData("XID", -1L, false)]
+    [InlineData("XID", 4294967296L, false)]
+    [InlineData("XID", long.MaxValue, false)]
+    [InlineData("X11Window", 2L, false)]
+    [InlineData("HWND", 2L, false)]
+    [InlineData("Xid", 2L, false)]
+    [InlineData("", 2L, false)]
+    public void Native_focus_accepts_pinned_XID_handles_and_rejects_foreign_or_reserved_values(
+        string descriptor, long value, bool expected)
+    {
+        var handle = new PlatformHandle((nint)value, descriptor);
+        Assert.Equal(expected, RecoveryX11Focus.TryGetWindowId(handle, out nint windowId));
+        Assert.Equal(expected ? (nint)value : 0, windowId);
+    }
+
+    [Fact]
+    public void Missing_native_handle_cannot_become_a_focus_target()
+    {
+        Assert.False(RecoveryX11Focus.TryGetWindowId(null, out nint windowId));
+        Assert.Equal(0, windowId);
     }
 
     [Fact]

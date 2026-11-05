@@ -164,5 +164,23 @@
       "src/VaultSync.RecoveryController/RecoveryApp.axaml.cs": "ae2f317707ac3e661f18b3987fea010ab0b4634a7c9839b564cc76868b3e396f",
       "tests/VaultSync.Core.Tests/RecoveryControllerPresentationTests.cs": "49fa0972cb05dfe31f357072477421b4c58454b71d801bf4cc0b93d23cf2f3ae"
     }
+  },
+  "focusHandleCorrection": {
+    "observedOn": "2026-11-05",
+    "owner": "BUG-19043/#826",
+    "priorCandidate": "031e3f1697cd6c9e66fd33a3e04ed35aa678ecd1",
+    "defect": "Native descriptor incorrectly checked against backend type name; pinned descriptor is XID",
+    "focusedRelease": {
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "earlierNativeProbe": "Stopped via orderly ACPI after source defect identified; last code platform activation; no input attempted",
+    "nativeStatus": "pending corrected-source proof",
+    "sourceSha256": {
+      "src/VaultSync.RecoveryController/LinuxRecoveryX11Focus.cs": "1f49842b488e5ec441265574e3027ca3699c4b47b6623110bcf34cb174b9117f",
+      "tests/VaultSync.Core.Tests/RecoveryControllerPresentationTests.cs": "aca35edaa383fc4dead24d70acac8dc8393875b1aca482838bacd91179cfb324"
+    }
   }
 }

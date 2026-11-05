@@ -415,3 +415,21 @@ result remains failed because the runner has not executed (exit 74); no protocol
 result format is changed in this repair. Six headless presentation cases pass,
 including keyboard traversal/text input/acceptance. Actual X11 keyboard, physical
 VT1 handoff/return and final cleanup remain unqualified on this candidate.
+
+
+### Native handle correction — 2026-11-05
+
+The initial BUG-19043 candidate incorrectly required the backend type name as
+its handle descriptor. Pinned Avalonia 12.1.4
+[X11Window.cs, line 190](https://raw.githubusercontent.com/AvaloniaUI/Avalonia/12.1.4/src/Avalonia.X11/X11Window.cs)
+constructs the public platform handle with `XID`. The corrected helper checks
+that exact descriptor and a non-reserved 32-bit window identifier both initially
+and before its request. It still obtains the handle only from its own Window;
+representation validation supplies no independent authority.
+
+Eighteen focused Release presentation/handle cases pass, including the original
+wrong descriptor, foreign platforms, null/reserved/out-of-range handles and real
+headless keyboard traversal. These replace no native focus proof. The 031e3f1
+probe was stopped with an orderly ACPI request after the source mismatch was
+identified; its last collected code was platform activation, with no input
+interaction attempted. Preserve that unsuccessful candidate separately.

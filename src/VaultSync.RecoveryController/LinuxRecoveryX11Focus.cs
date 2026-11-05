@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Avalonia.Controls;
+using Avalonia.Platform;
 using Avalonia.Threading;
 
 namespace VaultSync.RecoveryController;
@@ -18,9 +19,7 @@ internal static class LinuxRecoveryX11Focus
             RuntimeInformation.ProcessArchitecture != Architecture.X64 || Marshal.SizeOf<WindowAttributes>() != 136 ||
             Environment.GetEnvironmentVariable("DISPLAY") != ":0" ||
             Environment.GetEnvironmentVariable("XAUTHORITY") != Authority) return false;
-        var handle = window.TryGetPlatformHandle();
-        if (handle?.HandleDescriptor != "X11Window" || handle.Handle.ToInt64() is <= 1 or > uint.MaxValue) return false;
-        nint target = handle.Handle;
+        if (!TryGetWindowId(window.TryGetPlatformHandle(), out nint target)) return false;
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(token, window.ViewModel.CancellationRequested);
         stop.CancelAfter(TimeSpan.FromSeconds(5));
         EventHandler closed = (_, _) => stop.Cancel();
@@ -34,8 +33,7 @@ internal static class LinuxRecoveryX11Focus
             while (true)
             {
                 stop.Token.ThrowIfCancellationRequested();
-                var current = window.TryGetPlatformHandle();
-                if (!window.IsVisible || current?.HandleDescriptor != "X11Window" || current.Handle != target) return false;
+                if (!window.IsVisible || !TryGetWindowId(window.TryGetPlatformHandle(), out nint current) || current != target) return false;
                 WindowAttributes attributes = default;
                 if (GetWindowAttributes(display, target, ref attributes) == 0 || attributes.Class != 1 ||
                     attributes.Root != DefaultRootWindow(display)) return false;
@@ -63,6 +61,16 @@ internal static class LinuxRecoveryX11Focus
             window.Closed -= closed;
             if (display != 0) _ = CloseDisplay(display);
         }
+    }
+
+    // Avalonia 12.1.4 exposes the X11 handle descriptor as "XID", not its backend type name.
+    // This checks representation only; the caller obtains the handle from its own Window.
+    internal static bool TryGetWindowId(IPlatformHandle? handle, out nint windowId)
+    {
+        windowId = 0;
+        if (handle?.HandleDescriptor != "XID" || handle.Handle.ToInt64() is <= 1 or > uint.MaxValue) return false;
+        windowId = handle.Handle;
+        return true;
     }
 
     // LP64 layout from Xlib's XWindowAttributes; also used by the pinned
