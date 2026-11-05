@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace VaultSync.Core.Services;
 
-/// <summary>Local fixed startup codes only. Never an authority input or network diagnostic sender.</summary>
+/// <summary>Local fixed recovery phase codes only. Never an authority input or network diagnostic sender.</summary>
 internal static class LinuxRecoveryStartupDiagnostics
 {
     internal enum Role { Host = 1, Controller = 2 }
@@ -15,6 +15,10 @@ internal static class LinuxRecoveryStartupDiagnostics
         CleanupFailed = 18, HostFailed = 19, ChildStatusRejected = 20,
         RuntimeOwned = 21, ControllerGroup = 22, ListenerBind = 23, SocketIdentity = 24,
         ControllerStopped = 25, SocketRemoval = 26, GroupRemoval = 27,
+        WorkerReceivingFailed = 30, WorkerProtocolFailed = 31, WorkerStagingFailed = 32,
+        WorkerInventoryFailed = 33, WorkerPreparingFailed = 34, WorkerExecutingFailed = 35,
+        WorkerPublishingFailed = 36, WorkerWaitingFailed = 37, WorkerCleanupFailed = 38,
+        WorkerStageVerified = 39, WorkerInventorySent = 40, WorkerPrepareReceived = 41,
         ControllerEntry = 101, ControllerAdmitted = 102, DisplayAdmitted = 103,
         PlatformActivation = 104, WindowOpened = 105, ClientEntry = 106,
         ControllerConnect = 107, ControllerPeer = 108, ControllerHello = 109,
@@ -45,12 +49,16 @@ internal static class LinuxRecoveryStartupDiagnostics
 
     internal static void Write(Role role, Phase phase, Error error = Error.None)
     {
-        if (!Valid(role, phase, error)) return;
         try
         {
+            if (!Valid(role, phase, error)) return;
             Console.Error.Write(string.Create(CultureInfo.InvariantCulture, $"VSREC1|{(int)role}|{(int)phase}|{(int)error}\n"));
         }
-        catch (Exception failure) when (failure is IOException or ObjectDisposedException or InvalidOperationException) { }
+        catch (Exception)
+        {
+            // Best-effort local evidence must never override the operation's
+            // original failure, cancellation, cleanup or durable outcome.
+        }
     }
 
     private static bool Valid(Role role, Phase phase, Error error) => Enum.IsDefined(role) && Enum.IsDefined(phase) &&

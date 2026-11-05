@@ -182,5 +182,39 @@
       "src/VaultSync.RecoveryController/LinuxRecoveryX11Focus.cs": "1f49842b488e5ec441265574e3027ca3699c4b47b6623110bcf34cb174b9117f",
       "tests/VaultSync.Core.Tests/RecoveryControllerPresentationTests.cs": "aca35edaa383fc4dead24d70acac8dc8393875b1aca482838bacd91179cfb324"
     }
+  },
+  "nativeHandleFollowup": {
+    "observedOn": "2026-11-05",
+    "sourceCommit": "1f6644b1a5e751bdf03baf779ba6a7e8240d614a",
+    "manifestSha256": "32383fb8331c931305d610a90eea5985cab64fb9d7842c3216dd7b82239e2c2a",
+    "boundFiles": 675,
+    "folderInputAndDestinationPageObserved": true,
+    "redrawDefect": "BUG-19044/#827: black contents during software updates",
+    "finalHostExit": 74,
+    "controllerSocketExists": false,
+    "controllerCgroupExists": false,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "physicalConsentSent": false,
+    "qualification": "input and faulted cleanup only; no successful restore/profile"
+  },
+  "softwareFrameFollowup": {
+    "observedOn": "2026-11-05",
+    "owner": "BUG-19044/#827",
+    "parent": "VS-1907/#495",
+    "focusedRelease": {
+      "passed": 67,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "nativeCandidateStatus": "pending installed redraw/cancel/relaunch proof",
+    "diagnostics": "fixed local numeric allowlist only; no user payloads or network sender",
+    "sourceSha256": {
+      "src/VaultSync.RecoveryController/Program.cs": "767f29696df5cacb899422d2bf29bd291669f484647081ef606afc5f084507f3",
+      "src/VaultSync.Core/Services/LinuxRecoveryStartupDiagnostics.cs": "51fd91cbe911a6275a2af449f9ff847ea5fbf0b106cf88eee61b90d87e55e95a",
+      "src/VaultSync.Core/Services/LinuxRecoveryWorkerOperation.cs": "ed5a0e6c8d59a717d513ab75d7e9547da20f0e1f0d5305e8244c0d2990f78ebb",
+      "tests/VaultSync.Core.Tests/LinuxRecoveryStartupDiagnosticsTests.cs": "d2f3119337e61b427324f9f620f035e72e570d1fcad114f28bd3963ed40e01d5",
+      "tests/VaultSync.Core.Tests/LinuxRecoveryWorkerOperationTests.cs": "bf73f6ef96eebd15a283d93911a7548730010c29d5ecd29b9f539e4732c23b3a"
+    }
   }
 }

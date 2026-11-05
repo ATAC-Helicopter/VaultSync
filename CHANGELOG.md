@@ -106,6 +106,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19044] Keep recovery wizard content visible during software redraws.
 - [BUG-19043] Keep keyboard focus working in the isolated recovery wizard.
 - [BUG-19042] Check enabled destinations for metadata updates periodically after startup.
 - [BUG-19042] Keep metadata previews and read-only imports on private copies.

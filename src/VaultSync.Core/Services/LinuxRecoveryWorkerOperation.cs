@@ -1,4 +1,5 @@
 using VaultSync.Core.Models;
+using Startup = VaultSync.Core.Services.LinuxRecoveryStartupDiagnostics;
 
 namespace VaultSync.Core.Services;
 
@@ -143,9 +144,11 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
         bool executionQueued = false, finished = false;
         long reviewPublished = 0;
         TimeSpan remainingReview = TimeSpan.Zero;
+        Startup.Phase failureStep = Startup.Phase.WorkerWaitingFailed;
         try
         {
-            await SendAsync(LinuxRecoveryMessage.Ready, [], stop.Token).ConfigureAwait(false);
+            await SendObservedAsync(LinuxRecoveryMessage.Ready, [], stop.Token).ConfigureAwait(false);
+            failureStep = Startup.Phase.WorkerReceivingFailed;
             receiving = transport.ReceiveAsync(stop.Token);
             tick = statusTimer.WaitForNextTickAsync(stop.Token).AsTask();
             while (!finished)
@@ -156,6 +159,7 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
                 if (preparing is not null) pending.Add(preparing);
                 if (executing is not null) pending.Add(executing);
                 if (!executionQueued) pending.Add(executionRequested.Task);
+                failureStep = Startup.Phase.WorkerWaitingFailed;
                 await Task.WhenAny(pending).ConfigureAwait(false);
                 stop.Token.ThrowIfCancellationRequested();
 
@@ -163,23 +167,28 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
                 // apply a dependent reply, including replies already read by channel.
                 if (receiving.IsCompleted)
                 {
+                    failureStep = Startup.Phase.WorkerReceivingFailed;
                     var frame = await receiving.ConfigureAwait(false);
                     receiving = null;
                     try
                     {
+                        failureStep = Startup.Phase.WorkerProtocolFailed;
                         if (frame.Kind == LinuxRecoveryMessage.OfferImages && frame.Sources is null)
                             throw new InvalidDataException("recovery-worker.missing-sources");
                         session.Apply(LinuxRecoveryRole.Controller, frame);
                         switch (frame.Kind)
                         {
                             case LinuxRecoveryMessage.OfferImages:
+                                failureStep = Startup.Phase.WorkerStagingFailed;
                                 offered = frame;
                                 staging = Task.Run(async () => await platform.StageAsync(frame.Sources!.Metadata,
                                     frame.Sources.Payload, work.Token).ConfigureAwait(false), CancellationToken.None);
-                                await SendAsync(LinuxRecoveryMessage.Staging, [], stop.Token).ConfigureAwait(false);
+                                await SendObservedAsync(LinuxRecoveryMessage.Staging, [], stop.Token).ConfigureAwait(false);
                                 break;
                             case LinuxRecoveryMessage.Prepare:
+                                failureStep = Startup.Phase.WorkerPreparingFailed;
                                 var selection = LinuxRecoveryProtocol.DecodeSelection(frame.Body.Span);
+                                Startup.Write(Startup.Role.Host, Startup.Phase.WorkerPrepareReceived);
                                 var transferred = stage ?? throw new InvalidDataException("recovery-worker.stage-unavailable");
                                 stage = null; // Prepare adopts on entry, including refusal and cancellation.
                                 preparing = Task.Run(async () => await platform.PrepareAsync(operation, transferred,
@@ -191,11 +200,13 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
                         }
                     }
                     finally { if (!ReferenceEquals(offered, frame)) frame.Dispose(); }
+                    failureStep = Startup.Phase.WorkerReceivingFailed;
                     receiving = transport.ReceiveAsync(stop.Token);
                 }
 
                 if (staging?.IsCompleted == true)
                 {
+                    failureStep = Startup.Phase.WorkerStagingFailed;
                     var completed = staging; staging = null;
                     var result = await completed.ConfigureAwait(false);
                     stage = result.Session;
@@ -204,18 +215,24 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
                         throw new IOException("recovery-worker.staging-unconfirmed");
                     if (result.State != LinuxRawImageStagingState.StagedVerified || stage is null)
                         finished = await RefuseAsync().ConfigureAwait(false);
+                    else Startup.Write(Startup.Role.Host, Startup.Phase.WorkerStageVerified);
                 }
                 if (!finished && observing?.IsCompleted == true)
                 {
+                    failureStep = Startup.Phase.WorkerInventoryFailed;
                     var completed = observing; observing = null;
                     try { inventory = await completed.ConfigureAwait(false); }
                     catch (OperationCanceledException) when (session.State.CancellationRequested) { inventory = null; }
                     if (!session.State.CancellationRequested)
-                        await SendAsync(LinuxRecoveryMessage.Inventory,
+                    {
+                        await SendObservedAsync(LinuxRecoveryMessage.Inventory,
                             LinuxRecoveryResponses.EncodeInventory(LinuxRecoveryResponses.ProjectInventory(inventory!)), stop.Token).ConfigureAwait(false);
+                        Startup.Write(Startup.Role.Host, Startup.Phase.WorkerInventorySent);
+                    }
                 }
                 if (!finished && preparing?.IsCompleted == true)
                 {
+                    failureStep = Startup.Phase.WorkerPreparingFailed;
                     var completed = preparing; preparing = null;
                     var result = await completed.ConfigureAwait(false);
                     owner = result.Operation;
@@ -225,7 +242,8 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
                     {
                         var wireInventory = LinuxRecoveryResponses.ProjectInventory(inventory!);
                         var review = LinuxRecoveryResponses.ProjectReview(owner.Review, wireInventory);
-                        await SendAsync(LinuxRecoveryMessage.Review, LinuxRecoveryResponses.EncodeReview(review), stop.Token).ConfigureAwait(false);
+                        await SendObservedAsync(LinuxRecoveryMessage.Review, LinuxRecoveryResponses.EncodeReview(review), stop.Token).ConfigureAwait(false);
+                        failureStep = Startup.Phase.WorkerPreparingFailed;
                         var age = DateTimeOffset.UtcNow - owner.Review.ObservedAtUtc;
                         if (age < TimeSpan.Zero) throw new InvalidDataException("recovery-worker.future-review");
                         remainingReview = TimeSpan.FromSeconds(30) - age;
@@ -236,11 +254,13 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
                 }
                 if (!finished && executing?.IsCompleted == true)
                 {
+                    failureStep = Startup.Phase.WorkerExecutingFailed;
                     var completed = executing; executing = null;
                     var result = await completed.ConfigureAwait(false);
                     await owner!.DisposeAsync().ConfigureAwait(false); owner = null;
+                    failureStep = Startup.Phase.WorkerPublishingFailed;
                     await FlushProgressAsync(stop.Token).ConfigureAwait(false);
-                    await SendAsync(LinuxRecoveryMessage.Outcome,
+                    await SendObservedAsync(LinuxRecoveryMessage.Outcome,
                         LinuxRecoveryResponses.EncodeOutcome(new(session.State.Review!.ReviewId, result),
                             session.State.Review, session.State.AcknowledgedBytes), stop.Token).ConfigureAwait(false);
                     executionCompleted.TrySetResult(result);
@@ -255,10 +275,13 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
                 { finished = await RefuseAsync().ConfigureAwait(false); continue; }
                 if (!session.State.CancellationRequested && stage is not null &&
                     session.State.Phase == LinuxRecoverySessionPhase.InventoryRequested && observing is null)
+                {
+                    failureStep = Startup.Phase.WorkerInventoryFailed;
                     observing = Task.Run(async () => await platform.ObserveAsync(work.Token).ConfigureAwait(false), CancellationToken.None);
+                }
                 if (executionQueued && !session.State.CancellationRequested && session.State.Phase == LinuxRecoverySessionPhase.Confirmed)
                 {
-                    await SendAsync(LinuxRecoveryMessage.Executing, [], stop.Token).ConfigureAwait(false);
+                    await SendObservedAsync(LinuxRecoveryMessage.Executing, [], stop.Token).ConfigureAwait(false);
                     var executingOwner = owner!;
                     executing = Task.Run(async () => await executingOwner.ExecuteReviewedAsync(operation,
                         executingOwner.Review.ReviewId, work.Token, ReportProgressAsync).ConfigureAwait(false), CancellationToken.None);
@@ -266,14 +289,18 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
                 if (tick.IsCompleted)
                 {
                     _ = await tick.ConfigureAwait(false);
-                    if (executing is not null) await FlushProgressAsync(stop.Token).ConfigureAwait(false);
+                    if (executing is not null)
+                    {
+                        failureStep = Startup.Phase.WorkerPublishingFailed;
+                        await FlushProgressAsync(stop.Token).ConfigureAwait(false);
+                    }
                     if (System.Diagnostics.Stopwatch.GetElapsedTime(lastStatus) >= TimeSpan.FromSeconds(20))
                     {
                         // Live owner status only; no claim of native I/O advancement.
                         if (executing is not null)
-                            await SendAsync(LinuxRecoveryMessage.Executing, [], stop.Token).ConfigureAwait(false);
+                            await SendObservedAsync(LinuxRecoveryMessage.Executing, [], stop.Token).ConfigureAwait(false);
                         else if (staging is not null || preparing is not null)
-                            await SendAsync(LinuxRecoveryMessage.Staging, [], stop.Token).ConfigureAwait(false);
+                            await SendObservedAsync(LinuxRecoveryMessage.Staging, [], stop.Token).ConfigureAwait(false);
                         lastStatus = System.Diagnostics.Stopwatch.GetTimestamp();
                     }
                     tick = statusTimer.WaitForNextTickAsync(stop.Token).AsTask();
@@ -281,8 +308,9 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
             }
         }
         catch (Exception error) when (ExpectedFailure(error))
-        { session.Fail(); }
-        catch { session.Fail(); throw; }
+        { Startup.Write(Startup.Role.Host, failureStep, Startup.Classify(error)); session.Fail(); }
+        catch (Exception error)
+        { Startup.Write(Startup.Role.Host, failureStep, Startup.Classify(error)); session.Fail(); throw; }
         finally
         {
             Exception? unexpected = null;
@@ -314,11 +342,18 @@ internal sealed class LinuxRecoveryWorkerOperation : IAsyncDisposable
 
         async Task<bool> RefuseAsync()
         {
+            failureStep = Startup.Phase.WorkerCleanupFailed;
             await CleanupAsync().ConfigureAwait(false);
             if (session.State.Phase == LinuxRecoverySessionPhase.Faulted) throw new IOException("recovery-worker.cleanup-unconfirmed");
-            await SendAsync(LinuxRecoveryMessage.Refused,
+            await SendObservedAsync(LinuxRecoveryMessage.Refused,
                 LinuxRecoveryResponses.EncodeRefused(LinuxRawRestoreOperationReason.ReviewRefused), stop.Token).ConfigureAwait(false);
             return true;
+        }
+
+        async Task SendObservedAsync(LinuxRecoveryMessage kind, byte[] message, CancellationToken cancellationToken)
+        {
+            failureStep = Startup.Phase.WorkerPublishingFailed;
+            await SendAsync(kind, message, cancellationToken).ConfigureAwait(false);
         }
 
         async Task CleanupAsync()

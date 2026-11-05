@@ -35,7 +35,13 @@ try
         };
         Startup.Write(Startup.Role.Controller, Startup.Phase.PlatformActivation);
         AppBuilder.Configure<RecoveryApp>().UsePlatformDetect()
-            .With(new X11PlatformOptions { RenderingMode = new[] { X11RenderingMode.Software }, WmClass = "vaultsync-recovery" })
+            .With(new X11PlatformOptions
+            {
+                RenderingMode = new[] { X11RenderingMode.Software },
+                // Retain CPU frames for the bare-X11 recovery display; native redraw verification is required.
+                UseRetainedFramebuffer = true,
+                WmClass = "vaultsync-recovery"
+            })
             .With(new FontManagerOptions { DefaultFamilyName = "avares://VaultSync.RecoveryController/Assets/Fonts/#Noto Sans" })
             .StartWithClassicDesktopLifetime(args);
     }

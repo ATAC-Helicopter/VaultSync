@@ -35,6 +35,7 @@ public sealed class LinuxRecoveryStartupDiagnosticsTests
 
     [Theory]
     [InlineData("VSREC1|1|1|0\n")] [InlineData("VSREC1|2|1|0\n")]
+    [InlineData("VSREC1|2|39|0\n")] // Host worker milestones cannot enter the controller drain.
     [InlineData("VSREC1|2|999|0\n")] [InlineData("VSREC1|2|104|999\n")]
     [InlineData("VSREC1|2|104|0|private\n")] [InlineData("VSREC1|2|104|0\r\n")]
     [InlineData("VSREC1|2|104|0")] [InlineData("untrusted raw text\n")]

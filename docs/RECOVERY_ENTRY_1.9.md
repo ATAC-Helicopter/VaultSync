@@ -433,3 +433,23 @@ headless keyboard traversal. These replace no native focus proof. The 031e3f1
 probe was stopped with an orderly ACPI request after the source mismatch was
 identified; its last collected code was platform activation, with no input
 interaction attempted. Preserve that unsuccessful candidate separately.
+
+
+## Software-frame retention follow-up — 2026-11-05
+
+BUG-19044/#827 tracks black content during actual bare-X11 wizard transitions.
+The installed `1f6644b` probe accepts folder input and reaches destination
+selection, but its redraws remain defective. After closing the controller,
+the observer records no controller socket or cgroup; the host exits 74 and
+retains faulted receipts with zero acknowledged bytes. The synthetic target
+remains unchanged. This is input and failed-operation cleanup evidence, not a
+successful restore or a qualified disk profile.
+
+The follow-up enables retained CPU framebuffer storage only in the isolated
+software-rendered recovery controller. Fixed local worker phase codes distinguish
+staging, inventory, preparation and publication failures without recording paths,
+exception messages or image contents. Diagnostic sink failures cannot replace the
+operation's original outcome. Protocol, physical consent and disk authorization
+remain unchanged. All 67 affected warning-as-error Release cases pass with no
+skips. Native redraw, cancellation and relaunch on the candidate remain pending;
+no fresh whole-suite, media/profile or beta qualification is claimed.

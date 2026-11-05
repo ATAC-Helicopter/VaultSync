@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -118,6 +119,133 @@ public sealed class LinuxRecoveryWorkerOperationTests
         using var metadata = new MemoryStream(Convert.FromHexString(DiskImageRawProfileVerificationServiceTests.Valid(512).MetadataHex));
         using var payload = new MemoryStream(DiskImageRawProfileVerificationServiceTests.Raw(512));
         return await LinuxRawImageStagingService.StageAsync(metadata, payload, _ => storage, DiskImageInspectionFixture.InspectAsync);
+    }
+
+    [Fact]
+    public async Task StagingFaultEmitsOneFixedStepWithoutPrivateErrorText()
+    {
+        const string sensitive = "fixture/private/path credential=secret@example.invalid";
+        var previous = Console.Error;
+        using var captured = new StringWriter();
+        Console.SetError(captured);
+        try
+        {
+            var transport = new Transport(); using var sources = new Sources();
+            var platform = new Platform { Stage = (_, _, _) => throw new IOException(sensitive) };
+            await using var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
+            var run = worker.RunAsync();
+            using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+            transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+            using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+            Assert.Equal(LinuxRecoverySessionPhase.Faulted, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+            Assert.Equal(new[] { "VSREC1|1|32|4" }, captured.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries));
+            Assert.DoesNotContain(sensitive, captured.ToString());
+            Assert.DoesNotContain(LinuxRecoveryMessage.Review, transport.Sent);
+            Assert.DoesNotContain(LinuxRecoveryMessage.Executing, transport.Sent);
+            Assert.False(sources.Lease.Metadata.CanRead);
+            Assert.Equal(1, transport.Disposals);
+            transport.CleanupFrames();
+        }
+        finally { Console.SetError(previous); }
+    }
+
+    [Theory]
+    [InlineData(false, "VSREC1|1|30|4")]
+    [InlineData(true, "VSREC1|1|30|3")]
+    public async Task ReceiveFaultIsDistinctFromStagingAndDoesNotExposeItsPayload(bool cancelled, string expected)
+    {
+        const string sensitive = "fixture/private/peer token=hidden";
+        var previous = Console.Error;
+        using var captured = new StringWriter();
+        Console.SetError(captured);
+        try
+        {
+            var transport = new Transport();
+            await using var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, new Platform());
+            var run = worker.RunAsync();
+            using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+            transport.LosePeer(cancelled ? new OperationCanceledException(sensitive) : new IOException(sensitive));
+            Assert.Equal(LinuxRecoverySessionPhase.Faulted, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+            Assert.Equal(new[] { expected }, captured.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries));
+            Assert.DoesNotContain(sensitive, captured.ToString());
+            Assert.DoesNotContain(LinuxRecoveryMessage.Executing, transport.Sent);
+            Assert.Equal(1, transport.Disposals);
+            transport.CleanupFrames();
+        }
+        finally { Console.SetError(previous); }
+    }
+
+    [Fact]
+    public async Task PreparationFaultPreservesVerifiedStageAndInventoryMilestonesAndOwnedCleanup()
+    {
+        const string sensitive = "fixture/private/prepare key=hidden";
+        var storage = new Storage(); var staged = await Stage(storage);
+        var target = new LinuxBlockObservation("sda", "8:0", null, LinuxBlockKind.WholeDisk, 65536, 512, 512, 1,
+            false, "serial:fixture", LinuxBlockIdentity.UniqueInSnapshot, false, false, false, LinuxBlockUse.Unknown);
+        var inventory = new LinuxBlockInventory(LinuxBlockInventoryState.Observed, LinuxBlockInventoryReason.NamespaceObservationOnly,
+            Guid.NewGuid(), DateTimeOffset.UtcNow, Guid.NewGuid(), "mnt:[1]", false, new[] { target });
+        var previous = Console.Error;
+        using var captured = new StringWriter();
+        Console.SetError(captured);
+        try
+        {
+            var transport = new Transport(); using var sources = new Sources();
+            var platform = new Platform
+            {
+                Stage = (_, _, _) => ValueTask.FromResult(staged), Observe = _ => ValueTask.FromResult(inventory),
+                Prepare = async (_, owned, _, _, _) => { await owned.DisposeAsync(); throw new InvalidDataException(sensitive); }
+            };
+            await using var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
+            var run = worker.RunAsync();
+            using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+            transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+            using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+            transport.Controller(LinuxRecoveryMessage.InventoryRequest);
+            using (await transport.Next(LinuxRecoveryMessage.Inventory)) { }
+            transport.Controller(LinuxRecoveryMessage.Prepare, LinuxRecoveryProtocol.Selection(inventory.ObservationId, "sda"));
+            Assert.Equal(LinuxRecoverySessionPhase.Faulted, (await run.WaitAsync(TimeSpan.FromSeconds(10))).Phase);
+            Assert.Equal(new[] { "VSREC1|1|39|0", "VSREC1|1|40|0", "VSREC1|1|41|0", "VSREC1|1|34|1" },
+                captured.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries));
+            Assert.DoesNotContain(sensitive, captured.ToString());
+            Assert.Equal(1, storage.Disposals); Assert.False(staged.Session!.IsAlive);
+            Assert.DoesNotContain(LinuxRecoveryMessage.Review, transport.Sent);
+            Assert.DoesNotContain(LinuxRecoveryMessage.Executing, transport.Sent);
+            Assert.Equal(1, transport.Disposals);
+            transport.CleanupFrames();
+        }
+        finally { Console.SetError(previous); }
+    }
+
+    private sealed class BrokenDiagnosticWriter : TextWriter
+    {
+        public override Encoding Encoding => System.Text.Encoding.UTF8;
+        public override void Write(string? value) => throw new NotSupportedException("fixture-private-diagnostic-sink");
+    }
+
+    [Fact]
+    public async Task BrokenDiagnosticsCannotReplaceTheOriginalUnexpectedFailureOrSkipCleanup()
+    {
+        var failure = new InvalidOperationException("fixture-private-original-error");
+        var previous = Console.Error;
+        using var broken = new BrokenDiagnosticWriter();
+        Console.SetError(broken);
+        try
+        {
+            var transport = new Transport(); using var sources = new Sources();
+            var platform = new Platform { Stage = (_, _, _) => throw failure };
+            var worker = new LinuxRecoveryWorkerOperation(Guid.NewGuid(), transport, platform);
+            var run = worker.RunAsync();
+            using (await transport.Next(LinuxRecoveryMessage.Ready)) { }
+            transport.Controller(LinuxRecoveryMessage.OfferImages, sources: sources.Lease);
+            using (await transport.Next(LinuxRecoveryMessage.Staging)) { }
+            Assert.Same(failure, await Record.ExceptionAsync(() => run.WaitAsync(TimeSpan.FromSeconds(10))));
+            Assert.Same(failure, await Record.ExceptionAsync(() => worker.DisposeAsync().AsTask()));
+            Assert.Equal(LinuxRecoverySessionPhase.Faulted, worker.State.Phase);
+            Assert.False(sources.Lease.Metadata.CanRead);
+            Assert.Equal(1, transport.Disposals);
+            transport.CleanupFrames();
+        }
+        finally { Console.SetError(previous); }
     }
 
     [Theory]
