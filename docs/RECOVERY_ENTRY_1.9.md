@@ -451,5 +451,33 @@ staging, inventory, preparation and publication failures without recording paths
 exception messages or image contents. Diagnostic sink failures cannot replace the
 operation's original outcome. Protocol, physical consent and disk authorization
 remain unchanged. All 67 affected warning-as-error Release cases pass with no
-skips. Native redraw, cancellation and relaunch on the candidate remain pending;
+skips. Native transition, cancellation and relaunch coverage remains incomplete;
 no fresh whole-suite, media/profile or beta qualification is claimed.
+
+The exact `caa8ebf` native probe (675-file manifest
+`53baca612b83a3c43c6be138de86da3f971e8936618456aa372b7e9602dc7553`)
+renders the complete folder and final windows without the preceding black content.
+Selection instead fails: controller InvalidData at 69.39s, worker receive/I/O at
+69.41s. No physical consent is sent. Actual Close input leads to owned-controller,
+socket and group cleanup by 105.17s; observer confirms absent socket/group and an
+unchanged target. The VM subsequently powers down. Selection, destination redraw,
+cancel/relaunch and full recovery remain unqualified; this probe does not close
+BUG-19044 or establish beta readiness.
+
+### Sequenced native interaction — 2026-11-05
+
+On the same installed `caa8ebf` build, a fresh no-network boot with separated
+input and bounded settling confirms the exact synthetic image path, verified
+staging, and a complete destination list. Cancel produces the existing protocol
+Refused outcome; no disk is selected or physical consent sent. The final window
+is readable, Close completes controller/socket/group cleanup by 284.46s, and
+the observer confirms zero acknowledged bytes and an unchanged target. Earlier
+fast-input InvalidData is not reproduced; another manual probe times out before
+submission. Intermediate emulated scanout can appear incomplete while settled
+frames render fully; no additional renderer patch is justified by those captures.
+
+The separate Sonar gate for exact analyzed commit `caa8ebf` fails: security D
+and new coverage 77.7%; reliability passes at A. Scanner completion does not
+satisfy the gate. No threshold, exclusion or security guard changes. Physical
+VT1 handoff, successful full restore, OS/media profiles, updater/packages and
+protected reviews remain open. #736 stays draft; beta is not qualified.

@@ -97,3 +97,19 @@ logs, manifests, TRX, failed-run evidence and regeneration scripts remains for
 review by 2026-11-05. The selected original VM frame, PNG derivative and IT/EN
 caption stay in the private editorial workspace, with the same review date.
 See the [installed component receipt](release-evidence/1.9-installed-recovery-entry-2026-10-29.json).
+
+## Graphical interaction availability — 2026-11-05
+
+The existing single disposable graphical guest remains a bounded next-test input
+for physical-console handoff and complete recovery qualification; review it by
+2026-11-06. The run occupies approximately 3.21 GiB allocated. No owned VM or
+awake helper remains running, no ISO was downloaded, and installed-app data and
+host devices were untouched. Historical probes retain their original outcomes.
+
+This increment removed duplicate publishes, transferred archives and derivative
+PPMs containing 649,191,424 allocated file bytes. The final host free-space
+measurement is 39,488,868,352 bytes; allocated file removal is not a claim of
+physical recovery on APFS. Compact source-bound receipts, failed-run logs, PNGs
+and regeneration scripts remain. Selected real screenshots are held only in the
+private editorial workspace. Remove the retained guest inputs when the immediate
+qualification dependency ends, after preserving required evidence.

@@ -216,5 +216,67 @@
       "tests/VaultSync.Core.Tests/LinuxRecoveryStartupDiagnosticsTests.cs": "d2f3119337e61b427324f9f620f035e72e570d1fcad114f28bd3963ed40e01d5",
       "tests/VaultSync.Core.Tests/LinuxRecoveryWorkerOperationTests.cs": "bf73f6ef96eebd15a283d93911a7548730010c29d5ecd29b9f539e4732c23b3a"
     }
+  },
+  "softwareFrameNative": {
+    "observedOn": "2026-11-05",
+    "sourceCommit": "caa8ebf295be3b4c025101039a701597ee7005a2",
+    "manifestSha256": "53baca612b83a3c43c6be138de86da3f971e8936618456aa372b7e9602dc7553",
+    "boundFiles": 675,
+    "network": "none",
+    "actualFolderAndFinalWindowsVisible": true,
+    "destinationPageOnThisProbe": false,
+    "controllerFailure": {
+      "phase": 111,
+      "error": 1,
+      "bootSeconds": 69.390402
+    },
+    "workerFailure": {
+      "phase": 30,
+      "error": 4,
+      "bootSeconds": 69.414329
+    },
+    "uiCloseObserved": true,
+    "cleanedBootSeconds": 105.166502,
+    "hostExit": 74,
+    "socketExists": false,
+    "controllerCgroupExists": false,
+    "physicalConsentSent": false,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "vmExit": "power-down observed at boot110.426s; process absent",
+    "qualification": "redraw/failed-close component only; selection failure remains unqualified"
+  },
+  "hostedSoftwareFrameCommit": {
+    "sourceCommit": "caa8ebf295be3b4c025101039a701597ee7005a2",
+    "analyzedCommitVerified": true,
+    "analysisId": "970a4fe7-929c-44a9-a764-5c75c4523b2b",
+    "scanner": "SUCCESS",
+    "separateQualityGate": "ERROR",
+    "newReliabilityRating": "A",
+    "newSecurityRating": "D",
+    "newCoveragePercent": 77.7,
+    "requiredCoveragePercent": 80,
+    "thresholdsOrExclusionsChanged": false
+  },
+  "softwareFrameSequencedNative": {
+    "observedOn": "2026-11-05",
+    "sourceCommit": "caa8ebf295be3b4c025101039a701597ee7005a2",
+    "manifestSha256": "53baca612b83a3c43c6be138de86da3f971e8936618456aa372b7e9602dc7553",
+    "network": "none",
+    "exactSyntheticFolderConfirmedBeforeSubmit": true,
+    "actualDestinationListVisible": true,
+    "stageVerifiedBootSeconds": 235.083682,
+    "inventorySentBootSeconds": 235.507615,
+    "userCancel": "acknowledged as existing protocol Refused; no disk selected",
+    "actualFinalWindowVisible": true,
+    "actualCloseObserved": true,
+    "cleanedBootSeconds": 284.457311,
+    "hostExit": 74,
+    "socketExists": false,
+    "controllerCgroupExists": false,
+    "physicalConsentSent": false,
+    "acknowledgedBytes": 0,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "limits": "intermediate QEMU frames/input lag; settled full screens verified, no completed disk restore or physical VT handoff",
+    "earlierFailures": "fast-input InvalidData not reproduced; second manual probe expired before submission"
   }
 }

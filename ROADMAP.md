@@ -1220,8 +1220,10 @@ repository must not transfer before a compatible release is adopted.
 - [ ] `BUG-19044` `P0` Keep recovery wizard content visible during software redraws.
   - Native source 1f6644b accepts image-folder input and reaches destination
     selection, but content can turn black on updates. A retained software-buffer
-    candidate preserves existing CPU pixels; native transition/cancel/restart
-    checks are required before claiming the repair. Issue #827; PR #736.
+    candidate preserves existing CPU pixels. Source caa8ebf renders complete folder
+    and final windows; a fresh sequenced run verifies destination selection,
+    Cancel/refusal and Close cleanup without writes. Full media/profile and
+    physical-handoff qualification remain open. Issue #827; PR #736.
 - [ ] `BUG-19043` `P0` Restore keyboard focus in the isolated graphical recovery controller.
   - Follow-up (2026-11-05): the pinned framework exposes native windows as XID;
     the original candidate rejected that descriptor. Eighteen focused cases now
