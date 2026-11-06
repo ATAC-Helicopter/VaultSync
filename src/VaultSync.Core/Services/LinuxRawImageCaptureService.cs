@@ -14,7 +14,10 @@ public enum LinuxRawImageCaptureState
 
 /// <summary>Capture observation only; no filesystem, boot or recovery qualification.</summary>
 public sealed record LinuxRawImageCaptureAssessment(LinuxRawImageCaptureState State, string Reason,
-    ulong CopiedBytes = 0, string? ImageDirectoryName = null, string? ManifestRoot = null);
+    ulong CopiedBytes = 0, string? ImageDirectoryName = null, string? ManifestRoot = null)
+{
+    internal DiskImageInspectionDiagnostic? InspectionDiagnostic { get; init; }
+}
 
 /// <summary>
 /// Same-privilege Linux x64 capture. Requires a kernel-read-only exclusive source;
@@ -141,17 +144,25 @@ public static class LinuxRawImageCaptureService
             await storage.Metadata.WriteAsync(encoded.Metadata, cancellationToken).ConfigureAwait(false);
             storage.FlushMetadata();
             storage.Seal();
+            DiskImageInspectionDiagnostic? inspection = null;
+            async Task<DiskImageInspectionWorkerResult> InspectSealed(Stream metadata, Stream payload, CancellationToken token)
+            {
+                var result = await inspectImage(metadata, payload, token).ConfigureAwait(false);
+                inspection = result.Diagnostic;
+                return result;
+            }
             if (storage.Payload.CanWrite || storage.Metadata.CanWrite ||
                 !await VerifySealedAsync(storage, request, encoded, capacity, logicalSectorBytes,
-                    physicalSectorBytes, payloadHash, inspectImage, cancellationToken).ConfigureAwait(false))
-                return new(LinuxRawImageCaptureState.Refused, "raw-capture.readback-refused", copied);
+                    physicalSectorBytes, payloadHash, InspectSealed, cancellationToken).ConfigureAwait(false))
+                return new(LinuxRawImageCaptureState.Refused, "raw-capture.readback-refused", copied)
+                    { InspectionDiagnostic = inspection };
             storage.FlushDirectories();
             cancellationToken.ThrowIfCancellationRequested();
             // Commit point. Publish is synchronous rename-no-replace plus parent fsync;
             // cancellation after rename cannot retroactively turn publication into cancellation.
             storage.Publish();
             return new(LinuxRawImageCaptureState.PublishedVerified, "raw-capture.published", copied,
-                request.ImageId.ToString("N"), encoded.ManifestRoot);
+                request.ImageId.ToString("N"), encoded.ManifestRoot) { InspectionDiagnostic = inspection };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested && storage?.Published != true)
         { return new(LinuxRawImageCaptureState.Interrupted, "raw-capture.interrupted", copied); }

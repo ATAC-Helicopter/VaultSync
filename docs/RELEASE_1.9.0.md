@@ -13,6 +13,22 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Capture readback diagnosis — 2026-11-06
+
+VS-1904/#492 adds capture-host-only bounded numeric inspection evidence without
+changing deadlines, wire grammar, refusal or publication behavior.172 focused
+warning-as-error Release cases pass; seven diagnostic cases pass after final
+test cleanup. RecoveryHost Release builds with zero warnings/errors. The existing
+native37d7 capture copied3GiB then refused before publication; its target remained
+unchanged. Both the worker wall clock and sandbox CPU limit are120seconds, so
+timing alone cannot prove which bound caused refusal. Native inspection diagnosis,
+image publication and the complete restored-OS loop remain open. See the
+[capture contract](RECOVERY_CAPTURE_1.9.md).
+
+The separate Sonar result for prior head`ebe901b` reports zero bugs/vulnerabilities
+and A ratings, but fails new coverage77.9% below80%. It is historical for this
+increment; fresh exact-head analysis remains required. No beta/profile is qualified.
+
 ## Image refresh lifecycle — 2026-11-06
 
 BUG-19045/#828 follows up the two hosted reliability findings on16fb3c3.

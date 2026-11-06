@@ -93,6 +93,31 @@ public sealed class LinuxRawImageCaptureServiceTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(1)]
+    public async Task DiagnosticObservationCannotAuthorizePublication(int outcomeCode)
+    {
+        var outcome = (DiskImageInspectionWorkerOutcome)outcomeCode;
+        using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
+        var storage = new Storage();
+        var diagnostic = new DiskImageInspectionDiagnostic(DiskImageInspectionPhase.Exchange, outcome,
+            LinuxRecoveryStartupDiagnostics.Error.Io, 120001, 124, 7, 4096);
+        var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
+            _ => ValueTask.FromResult<LinuxRawImageCaptureService.ICaptureStorage>(storage), LayoutFixture,
+            async (metadata, payload, token) =>
+            {
+                var inspected = await ImageFixture(metadata, payload, token);
+                return inspected with { Outcome = outcome, Diagnostic = diagnostic };
+            });
+        Assert.Same(diagnostic, result.InspectionDiagnostic);
+        Assert.Equal(outcome == DiskImageInspectionWorkerOutcome.Completed, storage.Published);
+        Assert.Equal(outcome == DiskImageInspectionWorkerOutcome.Completed
+            ? LinuxRawImageCaptureState.PublishedVerified : LinuxRawImageCaptureState.Refused, result.State);
+    }
+
+    [Theory]
     [InlineData(512)]
     [InlineData(4096)]
     public async Task FullRawCaptureRoundTripsThroughIndependentProfileReader(uint sector)

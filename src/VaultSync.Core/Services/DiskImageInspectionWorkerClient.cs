@@ -5,7 +5,7 @@ namespace VaultSync.Core.Services;
 
 internal enum DiskImageInspectionWorkerOutcome { Completed,Unavailable,Failed,TimedOut }
 internal sealed record DiskImageInspectionWorkerResult(DiskImageInspectionWorkerOutcome Outcome,
-    DiskImageInspectionObservation? Observation=null);
+    DiskImageInspectionObservation? Observation=null, DiskImageInspectionDiagnostic? Diagnostic=null);
 
 /// <summary>
 /// Internal development inspector. Only bounded reads from two exclusively owned
@@ -33,10 +33,10 @@ internal static class DiskImageInspectionWorkerClient
         catch(InvalidDataException) { return new(DiskImageInspectionWorkerOutcome.Failed); }
         var result=await RunAsync(new(metadata,payload,operation,metadataLength,payloadLength),request,worker,timeout,
             "VSIMRSL1"u8.ToArray(),ReadImageResultAsync,token).ConfigureAwait(false);
-        return new(result.Outcome,result.Observation);
+        return new(result.Outcome,result.Observation,result.Diagnostic);
     }
 
-    internal sealed record ExchangeResult<T>(DiskImageInspectionWorkerOutcome Outcome,T? Observation=null) where T:class;
+    internal sealed record ExchangeResult<T>(DiskImageInspectionWorkerOutcome Outcome,T? Observation=null, DiskImageInspectionDiagnostic? Diagnostic=null) where T:class;
     internal static async Task<ExchangeResult<T>> RunAsync<T>(Sources sources,byte[] request,string worker,TimeSpan timeout,
         byte[] resultMagic,Func<Stream,byte[],Sources,CancellationToken,Task<T>> readResult,CancellationToken token) where T:class
     {
@@ -62,17 +62,28 @@ internal static class DiskImageInspectionWorkerClient
             process.StartInfo.Environment["DOTNET_ROOT"]=root.FullName;
         process.StartInfo.ArgumentList.Add(DiskImageInspectionWorkerService.Argument); process.StartInfo.ArgumentList.Add(listener.Endpoint);
         bool started=false;
+        var diagnostic=new DiskImageInspectionDiagnostics();
+        ExchangeResult<T> Finish(DiskImageInspectionWorkerOutcome outcome,T? observation=null,
+            LinuxRecoveryStartupDiagnostics.Error error=LinuxRecoveryStartupDiagnostics.Error.None)
+        {
+            int? exit=null;
+            try { if(started && process.HasExited) exit=process.ExitCode; }
+            catch(Exception) { /* Exit evidence is best effort, never an outcome input. */ }
+            return new(outcome,observation,diagnostic.Snapshot(outcome,error,exit));
+        }
         try
         {
             using var installation=await LinuxWorkerInstallation.OpenAsync(worker,deadline.Token).ConfigureAwait(false);
-            if(installation is null) return new(DiskImageInspectionWorkerOutcome.Unavailable);
-            started=process.Start(); if(!started) return new(DiskImageInspectionWorkerOutcome.Failed);
+            if(installation is null) return Finish(DiskImageInspectionWorkerOutcome.Unavailable);
+            diagnostic.Phase=DiskImageInspectionPhase.Start;
+            started=process.Start(); if(!started) return Finish(DiskImageInspectionWorkerOutcome.Failed);
+            diagnostic.Phase=DiskImageInspectionPhase.Peer;
             using var peer=await DiskInventoryWorkerClient.AuthenticatePeerAsync(listener,process,deadline.Token).ConfigureAwait(false);
-            if(!installation.BindProcess(process.Id,peer.ValidatePeer)) return new(DiskImageInspectionWorkerOutcome.Failed);
+            if(!installation.BindProcess(process.Id,peer.ValidatePeer)) return Finish(DiskImageInspectionWorkerOutcome.Failed);
             Task quiet=DiskInventoryWorkerClient.RequireEmptyDiagnosticsAsync(process.StandardError.BaseStream,deadline.Token);
             Task<T> response=ExchangeAsync(process,peer,
                 sources,request,resultMagic,readResult,installation.Recheck,
-                (user==0?LinuxImageInspectionSandbox.Nobody:user,user==0?LinuxImageInspectionSandbox.Nobody:group),deadline.Token);
+                (user==0?LinuxImageInspectionSandbox.Nobody:user,user==0?LinuxImageInspectionSandbox.Nobody:group),deadline.Token,diagnostic);
             var pending=new List<Task> {response,quiet,process.WaitForExitAsync(deadline.Token)};
             _=Task.WhenAll(pending).ContinueWith(static t=>{_=t.Exception;},CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted|TaskContinuationOptions.ExecuteSynchronously,TaskScheduler.Default);
@@ -81,13 +92,14 @@ internal static class DiskImageInspectionWorkerClient
                 Task completed=await Task.WhenAny(pending).WaitAsync(deadline.Token).ConfigureAwait(false);
                 await completed.ConfigureAwait(false); pending.Remove(completed);
             }
-            return process.ExitCode==0 ? new(DiskImageInspectionWorkerOutcome.Completed,await response.ConfigureAwait(false))
-                : new(DiskImageInspectionWorkerOutcome.Failed);
+            diagnostic.Phase=DiskImageInspectionPhase.Exit;
+            return process.ExitCode==0 ? Finish(DiskImageInspectionWorkerOutcome.Completed,await response.ConfigureAwait(false))
+                : Finish(DiskImageInspectionWorkerOutcome.Failed);
         }
-        catch(OperationCanceledException) when(!token.IsCancellationRequested) { return new(DiskImageInspectionWorkerOutcome.TimedOut); }
+        catch(OperationCanceledException) when(!token.IsCancellationRequested) { return Finish(DiskImageInspectionWorkerOutcome.TimedOut,error:LinuxRecoveryStartupDiagnostics.Error.Timeout); }
         catch(Exception error) when(error is IOException or InvalidDataException or UnauthorizedAccessException or
             System.ComponentModel.Win32Exception or System.Net.Sockets.SocketException)
-        { return new(DiskImageInspectionWorkerOutcome.Failed); }
+        { return Finish(DiskImageInspectionWorkerOutcome.Failed,error:LinuxRecoveryStartupDiagnostics.Classify(error)); }
         finally
         {
             await deadline.CancelAsync().ConfigureAwait(false);
@@ -106,15 +118,20 @@ internal static class DiskImageInspectionWorkerClient
 
     private static async Task<T> ExchangeAsync<T>(Process process,LinuxInventoryWorkerPeerChannel peer,
         Sources sources,byte[] request,byte[] resultMagic,Func<Stream,byte[],Sources,CancellationToken,Task<T>> readResult,
-        Func<bool> installationValid,(uint User,uint Group) identity,CancellationToken token)
+        Func<bool> installationValid,(uint User,uint Group) identity,CancellationToken token,DiskImageInspectionDiagnostics diagnostic)
     {
+        diagnostic.Phase=DiskImageInspectionPhase.Exchange;
         await process.StandardInput.BaseStream.WriteAsync(request,token).ConfigureAwait(false);
         await process.StandardInput.BaseStream.FlushAsync(token).ConfigureAwait(false);
         var observation=await ServeAsync(process.StandardOutput.BaseStream,process.StandardInput.BaseStream,
-            sources,peer.ValidatePeer,resultMagic,readResult,token).ConfigureAwait(false);
+            sources,peer.ValidatePeer,resultMagic,readResult,token,diagnostic.ReadServed).ConfigureAwait(false);
+        diagnostic.Phase=DiskImageInspectionPhase.Result;
         if(!installationValid()) throw new InvalidDataException("inspection.installation-changed");
+        diagnostic.Phase=DiskImageInspectionPhase.Sandbox;
         peer.ValidatePeer(); LinuxImageInspectionSandbox.ValidateProcess(process.Id,identity.User,identity.Group,true); peer.ValidatePeer();
+        diagnostic.Phase=DiskImageInspectionPhase.Acknowledgment;
         await peer.AcceptResponseAsync(token).ConfigureAwait(false);
+        diagnostic.Phase=DiskImageInspectionPhase.End;
         await DiskInventoryWorkerClient.RequireResponseEndAsync(process.StandardOutput.BaseStream,token).ConfigureAwait(false);
         return observation;
     }
@@ -133,7 +150,7 @@ internal static class DiskImageInspectionWorkerClient
     }
 
     internal static async Task<T> ServeAsync<T>(Stream input,Stream output,Sources sources,Action validatePeer,
-        byte[] resultMagic,Func<Stream,byte[],Sources,CancellationToken,Task<T>> readResult,CancellationToken token)
+        byte[] resultMagic,Func<Stream,byte[],Sources,CancellationToken,Task<T>> readResult,CancellationToken token,Action<int>? readServed=null)
     {
         var (metadata,payload,operation,metadataLength,payloadLength)=sources;
         ulong remaining=checked(3*(ulong)payloadLength+4*(ulong)metadataLength+1024*1024);
@@ -160,6 +177,7 @@ internal static class DiskImageInspectionWorkerClient
             BinaryPrimitives.WriteInt32LittleEndian(header,read.Count);
             await output.WriteAsync(header,token).ConfigureAwait(false);
             await output.WriteAsync(buffer.AsMemory(0,read.Count),token).ConfigureAwait(false); await output.FlushAsync(token).ConfigureAwait(false);
+            readServed?.Invoke(read.Count);
         }
     }
 }

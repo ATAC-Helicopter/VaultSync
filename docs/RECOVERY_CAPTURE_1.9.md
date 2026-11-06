@@ -44,6 +44,22 @@ that is not a claim of healthy admission/cleanup. Result display has its own
 publication result or block the service indefinitely. Pre-publication admission
 failures remain fail-closed. PublicationUnconfirmed is never promoted to success.
 
+## Local inspection failure evidence
+
+The capture host records one best-effort `VSINS1` numeric line after isolated
+inspection. It contains a fixed phase, outcome and error category, bounded elapsed
+milliseconds, a worker exit code observed before parent cleanup (or unknown), and
+bounded broker read-call/byte counts. It contains no paths, image metadata,
+exception text, raw stderr, process identifiers or persistent identifiers. This
+is local technical evidence; it is not connected to product diagnostic sending.
+A diagnostic sink failure cannot replace the capture result.
+
+The worker wire format, empty-stderr requirement, inspection deadlines, image
+verification and publication barriers remain unchanged. The separate controller
+continues to use its existing startup diagnostic grammar. A refused or timed-out
+readback does not publish an image. These observations identify a failing stage;
+they do not establish its cause or qualify a recovery profile.
+
 ## Image access and remaining integration
 
 Published originals remain root-private0400 files inside0700 directories.

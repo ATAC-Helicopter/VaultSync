@@ -1430,6 +1430,11 @@ repository must not transfer before a compatible release is adopted.
     workspace and supported boundaries retain truncation refusal. This fixture
     correction does not qualify disk capture or recovery.
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
+  - Readback diagnosis (2026-11-06): the installed37d7 probe copied3GiB, then
+    refused after sealing without publishing an image or changing the target.
+    Bounded local phase/outcome/elapsed/read counters now separate inspection
+    failures without altering verification, deadlines or publication barriers.
+    Native diagnosis and the restored-OS loop remain open; Refs #492 in #736.
   - Recovery copy follow-up (2026-11-06): fixed-path verified copies preserve
     private originals and separate publication uncertainty.81 focused Release
     cases, ten producer tests and host build pass; actual controller access,

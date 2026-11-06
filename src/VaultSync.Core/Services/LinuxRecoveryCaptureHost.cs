@@ -45,6 +45,7 @@ internal static class LinuxRecoveryCaptureHost
                 await reservation.DisposeAsync().ConfigureAwait(false);
                 throw;
             }
+            DiskImageInspectionDiagnostics.Write(captured.InspectionDiagnostic, Console.Error.Write);
             exported = await FinishExportAsync(captured, reservation, async () =>
             {
                 using var original = reservation.OpenOriginal();
