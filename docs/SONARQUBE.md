@@ -60,3 +60,7 @@ recommends false-positive dispositions for five guarded read-only X11 rendezvous
 findings and one restrictive-umask finding. No code guard, quality threshold or
 exclusion is weakened. Administrative disposition and a fresh exact-head result
 remain separate; a review document is not a passing quality gate.
+
+On November6, the maintainer recorded all six recommended dispositions; a
+complete six-ID API query verifies FALSE-POSITIVE for each. A fresh exact-head
+analysis is still required, including the unchanged coverage condition.

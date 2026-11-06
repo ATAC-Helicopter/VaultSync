@@ -47,6 +47,27 @@ public sealed class LinuxRecoveryMediaInstallationTests
         value["files"] = Files(value).OrderBy(file => (string)file["path"], StringComparer.Ordinal).ToList(); return value;
     }
 
+    [Theory]
+    [InlineData("en")] [InlineData("it")]
+    public void InstalledCatalogProviderAdmitsCaptureKeysAndLocalizesPhysicalPrompt(string culture)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md"))) directory = directory.Parent;
+        Assert.NotNull(directory);
+        using var input = File.OpenRead(Path.Combine(directory!.FullName, "Localization", "strings." + culture + ".json"));
+        var provider = LinuxRecoveryMediaInstallation.ConsoleText(input, culture);
+        foreach (string key in new[] { "Title", "Warning", "NoSources", "Cancelled", "Status.Invalid", "Status.Unsupported",
+            "Status.Refused", "Status.Incomplete", "Status.Interrupted", "Status.Failed", "Status.PublicationUnconfirmed",
+            "Status.PublishedVerified" })
+            Assert.NotEmpty(LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, key));
+        Assert.Contains("vdc", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "Source", "vdc", "100", "512", "512"));
+        Assert.Contains("challenge", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "Challenge", "challenge"));
+        Assert.Contains("image", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "Published", "image", "root"));
+        Assert.Contains("123", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "Result", "state", "123"));
+        Assert.Null(provider.Text("Recovery.Capture.Unknown"));
+        Assert.Null(provider.Text("App.Title"));
+    }
+
     [Fact]
     public void GraphicalModeIsImmutableAndRequiresDisplayClosureAndExecutableIdentity()
     {
@@ -125,6 +146,15 @@ public sealed class LinuxRecoveryMediaInstallationTests
         Assert.Equal("linux-x64", document.RootElement.GetProperty("runtimeIdentifier").GetString());
         Assert.Equal(DiskWorkerBuildIdentity.SourceCommit, document.RootElement.GetProperty("sourceCommit").GetString());
         Assert.False(document.RootElement.TryGetProperty("authority", out _));
+    }
+
+    [Fact]
+    public void ExplicitCaptureModeIsBoundAndCannotCarryGraphicalDependencies()
+    {
+        var value = Manifest(); value["schemaVersion"] = 2; value["controllerMode"] = "capture"; value["xorgSha256"] = null!;
+        Assert.Equal("capture", LinuxRecoveryMediaInstallation.Decode(Encode(value), Commit).ControllerMode);
+        value["xorgSha256"] = Hash;
+        Assert.Throws<InvalidDataException>(() => LinuxRecoveryMediaInstallation.Decode(Encode(value), Commit));
     }
 
     [Theory]

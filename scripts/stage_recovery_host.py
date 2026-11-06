@@ -146,7 +146,7 @@ def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commi
     if launcher.name != "recovery-controller-launch" or not launcher.stat().st_mode & 0o111:
         raise ValueError("fixed launcher required")
     sources.append(("launch/recovery-controller-launch", launcher))
-    if controller_mode not in ("headless", "graphical"):
+    if controller_mode not in ("headless", "graphical", "capture"):
         raise ValueError("controller mode")
     graphical = controller_mode == "graphical"
     if graphical:
@@ -161,7 +161,8 @@ def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commi
         sources.append(("boot/vaultsync-recovery-display.service", checked_file(REPOSITORY / "packaging/recovery/vaultsync-recovery-display.service")))
     elif display_launcher is not None or xorg is not None:
         raise ValueError("headless display dependencies")
-    unit = checked_file(REPOSITORY / ("packaging/recovery/vaultsync-recovery-graphical.service" if graphical else "packaging/recovery/vaultsync-recovery.service"))
+    unit_name = "vaultsync-recovery-graphical.service" if graphical else "vaultsync-recovery-capture.service" if controller_mode == "capture" else "vaultsync-recovery.service"
+    unit = checked_file(REPOSITORY / "packaging/recovery" / unit_name)
     sources.append(("boot/vaultsync-recovery.service", unit))
     catalogs = checked_directory(REPOSITORY / "Localization")
     catalog_files = sorted(catalogs.glob("strings.*.json"))
@@ -173,6 +174,12 @@ def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commi
         for key in ("Title", "Warning", "Target", "Capacity", "Image", "Manifest", "Hardware", "Challenge", "Deadline"):
             if not isinstance(parsed.get("Recovery.Console." + key), str) or not parsed["Recovery.Console." + key]:
                 raise ValueError("console translation missing")
+        if controller_mode == "capture":
+            for key in ("Title", "Warning", "Source", "Challenge", "Result", "Published", "NoSources", "Cancelled",
+                        "Status.Invalid", "Status.Unsupported", "Status.Refused", "Status.Incomplete", "Status.Interrupted",
+                        "Status.Failed", "Status.PublicationUnconfirmed", "Status.PublishedVerified"):
+                if not isinstance(parsed.get("Recovery.Capture." + key), str) or not parsed["Recovery.Capture." + key]:
+                    raise ValueError("capture translation missing")
         sources.append(("catalogs/" + file.name, file))
     runtime(host, "VaultSync.RecoveryHost"); runtime(controller, "VaultSync.RecoveryController")
     reader_manifest(reader, commit)
@@ -228,7 +235,7 @@ def main():
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--console-culture", choices=("en", "it"), required=True)
-    parser.add_argument("--controller-mode", choices=("headless", "graphical"), default="headless")
+    parser.add_argument("--controller-mode", choices=("headless", "graphical", "capture"), default="headless")
     parser.add_argument("--display-launcher", type=Path)
     parser.add_argument("--xorg", type=Path)
     args = parser.parse_args()

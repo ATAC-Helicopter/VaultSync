@@ -44,7 +44,13 @@ public static class LinuxRawImageCaptureService
             if (!source.Identity.IsReadOnly)
                 return Result(LinuxRawImageCaptureState.Refused, "raw-capture.read-only-source-required");
             return await CaptureAsync(request, source, source.Identity.PhysicalSectorBytes, expected.ObservationId,
-                () => LinuxRawImageStorage.Create(outputParent, request.ImageId, (ulong)source.Length),
+                async token =>
+                {
+                    var fresh = await LinuxBlockInventoryService.ObserveAsync(token).ConfigureAwait(false);
+                    token.ThrowIfCancellationRequested();
+                    return LinuxRawImageStorage.CreateCapture(outputParent, request.ImageId, (ulong)source.Length,
+                        number => LinuxCaptureRepositoryAdmission.Allows(expected, fresh, kernelName, number));
+                },
                 DiskGptInspectionWorkerClient.InspectAsync, DiskImageInspectionWorkerClient.InspectAsync,
                 cancellationToken, source.Identity.LogicalSectorBytes).ConfigureAwait(false);
         }
@@ -69,7 +75,7 @@ public static class LinuxRawImageCaptureService
     // streams and storage for deterministic I/O faults; it is not a worker protocol.
     internal static async ValueTask<LinuxRawImageCaptureAssessment> CaptureAsync(
         LinuxRawImageCaptureRequest request, Stream source, uint physicalSectorBytes, Guid observationId,
-        Func<ICaptureStorage> createStorage,
+        Func<CancellationToken, ValueTask<ICaptureStorage>> createStorage,
         Func<Stream, uint, CancellationToken, Task<DiskGptInspectionWorkerResult>> inspectLayout,
         Func<Stream, Stream, CancellationToken, Task<DiskImageInspectionWorkerResult>> inspectImage,
         CancellationToken cancellationToken = default,
@@ -103,7 +109,7 @@ public static class LinuxRawImageCaptureService
                 request.ToolVersion, request.ToolSourceCommit, layout)
                 { SourceKind = DiskImageSourceKind.OfflineBlockDevice };
             cancellationToken.ThrowIfCancellationRequested();
-            storage = createStorage();
+            storage = await createStorage(cancellationToken).ConfigureAwait(false);
             await using var storageLifetime = storage;
             if (!IndependentEmptyStorage(source, storage))
                 return Result(LinuxRawImageCaptureState.Refused, "raw-capture.storage-refused");

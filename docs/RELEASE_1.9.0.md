@@ -13,6 +13,18 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Installed capture component — 2026-11-06
+
+VS-1904/#492 now connects the existing capture engine to a fixed admitted
+recovery-console entry with physical source confirmation and held output-device
+separation before allocation. Actual compiled provenance and localized terminal
+states are retained; durable publication and host/presentation health are
+separate.194 focused Release cases, nine producer cases, the host Release build
+and2,008-key/19-locale audit pass. Independent review repaired the catalog loader
+and terminal-outcome boundary. Native capture, nonroot image access/export and
+full Linux OS/media qualification remain open. See the
+[capture contract](RECOVERY_CAPTURE_1.9.md); no beta/profile is qualified.
+
 ## Software-frame retention follow-up — 2026-11-05
 
 BUG-19044/#827 tracks black content during actual bare-X11 wizard transitions.

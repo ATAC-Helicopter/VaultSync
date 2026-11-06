@@ -1419,6 +1419,11 @@ repository must not transfer before a compatible release is adopted.
     workspace and supported boundaries retain truncation refusal. This fixture
     correction does not qualify disk capture or recovery.
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
+  - 2026-11-06: installed offline console capture selects an exact fresh source
+    and rejects same/unknown output ancestry before allocation.194 focused
+    Release cases, nine staging tests and host build pass; native execution,
+    safe image export/access and complete Linux recovery remain open. See
+    [capture contract](docs/RECOVERY_CAPTURE_1.9.md); Refs #492 in #736.
   explicit operation states and checkpoint contracts.
   - Requirement (2026-11-04): the maintainer requests operational cloning on
     every supported desktop OS. Current Linux/ext4 and Windows/NTFS offline

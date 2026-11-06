@@ -65,7 +65,7 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
         else Keys(root, "schemaVersion", "role", "runtimeIdentifier", "sourceCommit", "consoleCulture", "systemdSha256", "files", "controllerMode", "xorgSha256");
         string mode = schema == 1 ? "headless" : Text(root, "controllerMode");
         string? xorgHash = schema == 1 || root.GetProperty("xorgSha256").ValueKind == JsonValueKind.Null ? null : Text(root, "xorgSha256");
-        if (mode is not ("headless" or "graphical") || (mode == "graphical" ? xorgHash is null || !Hex(xorgHash, 64) : xorgHash is not null)) throw Invalid();
+        if (mode is not ("headless" or "graphical" or "capture") || (mode == "graphical" ? xorgHash is null || !Hex(xorgHash, 64) : xorgHash is not null)) throw Invalid();
         if (Text(root, "role") != "offline-recovery-media-v1" ||
             Text(root, "runtimeIdentifier") != "linux-x64" || Text(root, "sourceCommit") != commit ||
             Text(root, "consoleCulture") is not ("en" or "it") || !Hex(Text(root, "systemdSha256"), 64)) throw Invalid();
@@ -297,13 +297,28 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
         string path = Root + "/catalogs/strings." + Description.Culture + ".json";
         using var input = LinuxRecoveryNative.OpenFile(path, true);
         if (input.Length > MaximumManifest) throw Invalid();
+        return ConsoleText(input, Description.Culture);
+    }
+
+    internal static (Func<string, string?> Text, CultureInfo Culture) ConsoleText(Stream input, string culture)
+    {
         using var json = JsonDocument.Parse(input, new JsonDocumentOptions { AllowDuplicateProperties = false, MaxDepth = 3 });
         var text = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var property in json.RootElement.EnumerateObject())
-            if (property.Name.StartsWith("Recovery.Console.", StringComparison.Ordinal) && property.Value.ValueKind == JsonValueKind.String)
+            if ((property.Name.StartsWith("Recovery.Console.", StringComparison.Ordinal) || CaptureTextKeys.Contains(property.Name)) && property.Value.ValueKind == JsonValueKind.String)
                 text.Add(property.Name, property.Value.GetString()!);
-        return (key => text.GetValueOrDefault(key), CultureInfo.GetCultureInfo(Description.Culture));
+        return (key => text.GetValueOrDefault(key), CultureInfo.GetCultureInfo(culture));
     }
+
+    private static readonly HashSet<string> CaptureTextKeys = new(StringComparer.Ordinal)
+    {
+        "Recovery.Capture.Title", "Recovery.Capture.Warning", "Recovery.Capture.Source",
+        "Recovery.Capture.Challenge", "Recovery.Capture.Result", "Recovery.Capture.Published",
+        "Recovery.Capture.NoSources", "Recovery.Capture.Cancelled", "Recovery.Capture.Status.Invalid",
+        "Recovery.Capture.Status.Unsupported", "Recovery.Capture.Status.Refused", "Recovery.Capture.Status.Incomplete",
+        "Recovery.Capture.Status.Interrupted", "Recovery.Capture.Status.Failed",
+        "Recovery.Capture.Status.PublicationUnconfirmed", "Recovery.Capture.Status.PublishedVerified"
+    };
 
     public void Dispose()
     {

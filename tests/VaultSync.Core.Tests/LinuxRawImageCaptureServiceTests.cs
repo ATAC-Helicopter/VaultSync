@@ -20,7 +20,7 @@ public sealed class LinuxRawImageCaptureServiceTests
     private static ValueTask<LinuxRawImageCaptureAssessment> Capture(LinuxRawImageCaptureRequest request,
         Stream source, uint physicalSectorBytes, Guid observationId, Func<LinuxRawImageCaptureService.ICaptureStorage> storage,
         CancellationToken cancellationToken = default, uint logicalSectorBytes = 512) =>
-        LinuxRawImageCaptureService.CaptureAsync(request, source, physicalSectorBytes, observationId, storage,
+        LinuxRawImageCaptureService.CaptureAsync(request, source, physicalSectorBytes, observationId, _ => ValueTask.FromResult(storage()),
             LayoutFixture, ImageFixture, cancellationToken, logicalSectorBytes);
 
     internal static async Task<DiskGptInspectionWorkerResult> LayoutFixture(Stream source, uint sector, CancellationToken token) =>
@@ -290,7 +290,7 @@ public sealed class LinuxRawImageCaptureServiceTests
     {
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
         var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
-            () => throw new InvalidOperationException("must not allocate"),
+            _ => throw new InvalidOperationException("must not allocate"),
             (view, _, _) => { Assert.False(view.CanWrite); return Task.FromResult(new DiskGptInspectionWorkerResult((DiskImageInspectionWorkerOutcome)value)); },
             (_, _, _) => throw new InvalidOperationException("must not inspect image"));
         Assert.Equal(LinuxRawImageCaptureState.Refused, result.State);
@@ -309,7 +309,7 @@ public sealed class LinuxRawImageCaptureServiceTests
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
         var storage = new Storage();
         var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
-            () => storage, LayoutFixture, async (metadata, payload, token) =>
+            _ => ValueTask.FromResult<LinuxRawImageCaptureService.ICaptureStorage>(storage), LayoutFixture, async (metadata, payload, token) =>
             {
                 Assert.False(metadata.CanWrite); Assert.False(payload.CanWrite);
                 Assert.Contains("seal", storage.Steps);
@@ -341,7 +341,7 @@ public sealed class LinuxRawImageCaptureServiceTests
         using var source = new Source(DiskImageRawProfileVerificationServiceTests.Raw(512));
         var storage = new Storage(); int call = 0;
         var result = await LinuxRawImageCaptureService.CaptureAsync(Request(), source, 512, Guid.NewGuid(),
-            () => storage, async (view, sector, token) =>
+            _ => ValueTask.FromResult<LinuxRawImageCaptureService.ICaptureStorage>(storage), async (view, sector, token) =>
             {
                 if (++call == cancelAt) cancel.Cancel();
                 return await LayoutFixture(view, sector, token);

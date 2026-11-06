@@ -9,6 +9,7 @@ internal static class LinuxRecoveryHost
     {
         Startup.Write(Startup.Role.Host, Startup.Phase.HostAdmission);
         using var installation = await LinuxRecoveryMediaInstallation.OpenAsync(LinuxRecoveryMediaInstallation.Role.Host, token).ConfigureAwait(false);
+        if (installation.Description.ControllerMode == "capture") throw LinuxRecoveryMediaInstallation.Invalid();
         Startup.Write(Startup.Role.Host, Startup.Phase.HostAdmitted);
         await using var controller = LinuxRecoveryControllerLaunch.Create(installation);
         Guid operation = Guid.NewGuid();

@@ -162,6 +162,8 @@ internal sealed class LinuxRecoveryLocalConsole : LinuxRecoverySupervisor.IConfi
 
     private static InvalidDataException Invalid() => new("recovery-console.refused");
 
+    internal static IAccess OpenPhysical() => NativeAccess.Open();
+
     private sealed class NativeAccess : IAccess
     {
         private const string Pathname = "/dev/tty1";

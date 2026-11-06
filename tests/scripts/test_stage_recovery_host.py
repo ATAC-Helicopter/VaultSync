@@ -69,6 +69,19 @@ class StageRecoveryHostTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.run_stage()
 
+    def test_capture_mode_binds_fixed_entry_without_display_or_restore_protocol_changes(self):
+        with patch.object(media.worker, "read_identity", side_effect=self.identity):
+            media.stage(self.host, self.controller, self.reader, self.launcher, self.systemd,
+                        self.output, COMMIT, "en", "capture")
+        value = media.worker.strict_json((self.output / media.MANIFEST).read_bytes())
+        self.assertEqual(value["controllerMode"], "capture")
+        self.assertIsNone(value["xorgSha256"])
+        unit = self.output / "boot/vaultsync-recovery.service"
+        self.assertIn("ExecStart=/usr/lib/vaultsync-recovery/host/VaultSync.RecoveryHost --capture\n", unit.read_text())
+        self.assertEqual(media.worker.digest(unit), next(record["sha256"] for record in value["files"]
+                        if record["path"] == "boot/vaultsync-recovery.service"))
+        self.assertFalse((self.output / "boot/vaultsync-recovery-display.service").exists())
+
     def test_graphical_dependencies_are_source_bound_and_catalog_nesting_is_exact(self):
         catalogs = self.controller / "Localization"
         catalogs.mkdir()

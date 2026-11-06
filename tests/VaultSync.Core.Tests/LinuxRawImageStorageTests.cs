@@ -57,6 +57,15 @@ public sealed class LinuxRawImageStorageTests(ITestOutputHelper output)
             string final = Path.Combine(root, id.ToString("N"));
             Assert.Equal(new byte[] { 1, 2, 3 }, await File.ReadAllBytesAsync(Path.Combine(final, "payload.raw")));
             Assert.Equal(new byte[] { 4, 5, 6 }, await File.ReadAllBytesAsync(Path.Combine(final, "image.metadata")));
+            var existingEntries = Directory.GetFileSystemEntries(root);
+            bool heldFilesystemObserved = false;
+            Assert.Throws<IOException>(() => LinuxRawImageStorage.CreateCapture(root, Guid.NewGuid(), 65536, number =>
+            {
+                heldFilesystemObserved = number is not null;
+                return false;
+            }));
+            Assert.True(heldFilesystemObserved);
+            Assert.Equal(existingEntries, Directory.GetFileSystemEntries(root));
             await using (var collision = LinuxRawImageStorage.Create(root, id, 65536))
             {
                 Assert.Throws<IOException>(collision.Publish);

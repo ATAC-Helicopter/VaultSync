@@ -50,6 +50,11 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorag
     internal static LinuxRawImageStorage Create(string outputParent, Guid imageId, ulong capacity)
         => CreateCore(outputParent, imageId, capacity, false, null);
 
+    internal static LinuxRawImageStorage CreateCapture(string outputParent, Guid imageId, ulong capacity,
+        Func<string?, bool> allowFilesystem)
+        => CreateCore(outputParent, imageId, capacity, false,
+            allowFilesystem ?? throw new ArgumentNullException(nameof(allowFilesystem)));
+
     internal static LinuxRawImageStorage CreateRestoreJournal(string outputParent, Guid operationId, ulong capacity,
         Func<string?, bool> allowFilesystem) => CreateCore(outputParent, operationId, capacity, true, allowFilesystem);
 
