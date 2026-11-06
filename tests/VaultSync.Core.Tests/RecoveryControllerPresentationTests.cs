@@ -83,10 +83,14 @@ public sealed class RecoveryControllerPresentationTests
             var language = window.FindControl<ComboBox>("Language")!;
             var folder = window.FindControl<TextBox>("Folder")!;
             var primary = window.FindControl<Button>("Primary")!;
+            window.FindControl<Expander>("AdvancedFolder")!.IsExpanded = true;
             Assert.True(language.Focus());
-            window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
-            window.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.None);
-            await Flush();
+            for (int index = 0; index < 10 && window.FocusManager!.GetFocusedElement() != folder; index++)
+            {
+                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+                window.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+                await Flush();
+            }
             Assert.Same(folder, window.FocusManager!.GetFocusedElement());
             window.KeyTextInput("/media/keyboard-image");
             window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
@@ -221,4 +225,94 @@ public sealed class RecoveryControllerPresentationTests
             return 0;
         }, CancellationToken.None);
     }
+    [Fact]
+    public async Task Catalog_selection_needs_no_typed_path_and_survives_language_change()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(RecoveryApp));
+        await session.Dispatch(async () =>
+        {
+            var window = new RecoveryWindow(); window.Show();
+            string name = Guid.NewGuid().ToString("N");
+            window.ViewModel.CatalogLoader = _ => Task.FromResult(new LinuxRecoveryImageCatalog.Result(
+                LinuxRecoveryImageCatalog.State.Available, [new(name, 1234432)]));
+            var choice = window.ViewModel.ChooseImageFolderAsync(Guid.NewGuid(), CancellationToken.None);
+            await Flush();
+            var list = window.FindControl<ListBox>("Images")!;
+            list.SelectedIndex = 0;
+            var selected = list.SelectedItem;
+            Assert.NotNull(selected);
+            Assert.Contains(name[..8], Label(selected));
+            Assert.DoesNotContain("/srv/", Label(selected));
+            window.FindControl<TextBox>("Folder")!.Text = "/media/manual-image";
+            Assert.Null(list.SelectedItem);
+            list.SelectedIndex = 0;
+            Assert.Empty(window.FindControl<TextBox>("Folder")!.Text!);
+            var language = window.FindControl<ComboBox>("Language")!;
+            language.SelectedItem = ((IEnumerable<LanguageOption>)language.ItemsSource!).Single(x => x.Code == "de");
+            Assert.Same(selected, list.SelectedItem);
+            Assert.Contains(1234432UL.ToString("N0", CultureInfo.GetCultureInfo("de")), Label(selected));
+            Assert.False(choice.IsCompleted);
+            Assert.Empty(window.FindControl<TextBox>("Folder")!.Text!);
+            Click(window, "Primary");
+            Assert.Equal(LinuxRecoveryCaptureExport.Root + "/" + name, await choice);
+            await Finish(window, LinuxRecoveryControllerClient.Result.Cancelled);
+            return 0;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Late_refresh_preserves_manual_input_and_cannot_replace_cancelled_screen()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(RecoveryApp));
+        await session.Dispatch(async () =>
+        {
+            var window = new RecoveryWindow(); window.Show();
+            var first = new TaskCompletionSource<LinuxRecoveryImageCatalog.Result>();
+            var second = new TaskCompletionSource<LinuxRecoveryImageCatalog.Result>();
+            window.ViewModel.CatalogLoader = _ => first.Task;
+            var choice = window.ViewModel.ChooseImageFolderAsync(Guid.NewGuid(), CancellationToken.None);
+            await Flush();
+            var folder = window.FindControl<TextBox>("Folder")!;
+            folder.Text = "/media/known-image";
+            first.SetResult(new(LinuxRecoveryImageCatalog.State.Available, [new(Guid.NewGuid().ToString("N"), 4096)]));
+            await Flush();
+            Assert.Equal("/media/known-image", folder.Text);
+            Assert.Null(window.FindControl<ListBox>("Images")!.SelectedItem);
+            window.ViewModel.CatalogLoader = _ => second.Task;
+            window.ViewModel.RefreshImages();
+            window.ViewModel.Cancel();
+            Assert.Null(await choice);
+            string? heading = window.FindControl<TextBlock>("Heading")!.Text;
+            second.SetException(new System.IO.IOException("synthetic late refresh failure"));
+            await Flush();
+            Assert.Equal(heading, window.FindControl<TextBlock>("Heading")!.Text);
+            Assert.False(window.FindControl<ListBox>("Images")!.IsVisible);
+            await Finish(window, LinuxRecoveryControllerClient.Result.Cancelled);
+            return 0;
+        }, CancellationToken.None);
+    }
+
+    [Theory]
+    [InlineData((int)LinuxRecoveryImageCatalog.State.Available, "No recovery copies")]
+    [InlineData((int)LinuxRecoveryImageCatalog.State.Unavailable, "unavailable")]
+    [InlineData((int)LinuxRecoveryImageCatalog.State.Failed, "Could not read")]
+    public async Task Catalog_outcomes_retain_advanced_known_folder_fallback(int state, string expected)
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(RecoveryApp));
+        await session.Dispatch(async () =>
+        {
+            var window = new RecoveryWindow(); window.Show();
+            window.ViewModel.CatalogLoader = _ => Task.FromResult(new LinuxRecoveryImageCatalog.Result((LinuxRecoveryImageCatalog.State)state, []));
+            var choice = window.ViewModel.ChooseImageFolderAsync(Guid.NewGuid(), CancellationToken.None);
+            await Flush();
+            Assert.Contains(expected, window.FindControl<TextBlock>("ImageStatus")!.Text);
+            Assert.True(window.FindControl<Expander>("AdvancedFolder")!.IsVisible);
+            window.FindControl<TextBox>("Folder")!.Text = "/media/known-image";
+            Click(window, "Primary");
+            Assert.Equal("/media/known-image", await choice);
+            await Finish(window, LinuxRecoveryControllerClient.Result.Cancelled);
+            return 0;
+        }, CancellationToken.None);
+    }
+
 }

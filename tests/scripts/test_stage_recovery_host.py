@@ -109,6 +109,28 @@ class StageRecoveryHostTests(unittest.TestCase):
             if program == display:
                 return {"schemaVersion": 1, "role": "recovery-display-launch-v1", "runtimeIdentifier": "linux-x64", "sourceCommit": COMMIT}
             return self.identity(program, directory)
+        decode = media.worker.strict_json
+        def missing_chooser_translation(data):
+            value = decode(data)
+            value.pop("Recovery.Wizard.ImagesEmpty", None)
+            return value
+        with patch.object(media.worker, "strict_json", side_effect=missing_chooser_translation), \
+                patch.object(media.worker, "read_identity") as execute:
+            with self.assertRaisesRegex(ValueError, "image chooser translation missing"):
+                media.stage(self.host, self.controller, self.reader, self.launcher, self.systemd, self.output, COMMIT, "en", "graphical", display, xorg)
+            execute.assert_not_called()
+        self.assertFalse(self.output.exists())
+        controller_catalog = catalogs / "strings.en.json"
+        original_catalog = controller_catalog.read_bytes()
+        incomplete = decode(original_catalog)
+        incomplete.pop("Recovery.Wizard.ImagesEmpty")
+        controller_catalog.write_text(json.dumps(incomplete))
+        with patch.object(media.worker, "read_identity") as execute:
+            with self.assertRaisesRegex(ValueError, "image chooser translation missing"):
+                media.stage(self.host, self.controller, self.reader, self.launcher, self.systemd, self.output, COMMIT, "en", "graphical", display, xorg)
+            execute.assert_not_called()
+        self.assertFalse(self.output.exists())
+        controller_catalog.write_bytes(original_catalog)
         with patch.object(media.worker, "read_identity", side_effect=identity):
             media.stage(self.host, self.controller, self.reader, self.launcher, self.systemd, self.output, COMMIT, "en", "graphical", display, xorg)
         value = media.worker.strict_json((self.output / media.MANIFEST).read_bytes())

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -270,7 +271,7 @@ public sealed class LinuxRecoveryStorageNativeTests
         try
         {
             using var exports = LinuxRecoveryNative.OpenDirectory(LinuxRecoveryCaptureExport.Root, false);
-            LinuxRecoveryNative.SetGroup(exports, LinuxRecoveryCaptureExport.ControllerGroup, 0x1c8);
+            LinuxRecoveryNative.SetGroup(exports, LinuxRecoveryCaptureExport.ControllerGroup, 0x1e8);
             Assert.True(LinuxRecoveryNative.Ext4(exports));
             var repository = LinuxRecoveryNative.Stat(exports);
             string device = repository.DeviceMajor.ToString(CultureInfo.InvariantCulture) + ":" + repository.DeviceMinor.ToString(CultureInfo.InvariantCulture);
@@ -314,10 +315,17 @@ public sealed class LinuxRecoveryStorageNativeTests
                 var exportedMetadata = LinuxRecoveryNative.StatPath(shared + "/image.metadata");
                 Assert.True(LinuxRecoveryCaptureExport.SharedFile(exportedPayload));
                 Assert.True(LinuxRecoveryCaptureExport.SharedFile(exportedMetadata));
-                Assert.True(LinuxRecoveryCaptureExport.ExportRoot(LinuxRecoveryNative.StatPath(shared)));
+                Assert.True(LinuxRecoveryCaptureExport.SharedDirectory(LinuxRecoveryNative.StatPath(shared)));
                 Assert.NotEqual(originalPayload.Inode, exportedPayload.Inode); Assert.NotEqual(originalMetadata.Inode, exportedMetadata.Inode);
                 Assert.Equal(fixture.Raw, File.ReadAllBytes(shared + "/payload.raw"));
                 Assert.Equal(fixture.Metadata, File.ReadAllBytes(shared + "/image.metadata"));
+                var catalog = LinuxRecoveryImageCatalog.ReadAsync(CancellationToken.None).GetAwaiter().GetResult();
+                Assert.Equal(LinuxRecoveryImageCatalog.State.Available, catalog.Status);
+                var candidate = Assert.Single(catalog.Images);
+                Assert.Equal(name, candidate.Name); Assert.Equal((ulong)fixture.Raw.Length, candidate.CandidateBytes);
+                // Actual C# catalog executes as fixture root; separate helper below
+                // proves nonroot kernel permissions, not C# execution as UID60999.
+                AssertNonrootExportDiscovery(name);
                 // A second same-ID transaction cannot replace the visible verified copy.
                 var collision = LinuxRecoveryCaptureExport.Reserve(fixture.Request, (ulong)fixture.Raw.Length, inventory, inventory, "fixture-source");
                 try
@@ -343,6 +351,94 @@ public sealed class LinuxRecoveryStorageNativeTests
             Assert.Equal(proof.Store.Inode, LinuxRecoveryNative.StatPath(LinuxRecoveryStorageLease.Store).Inode);
         }
         finally { Assert.Equal(0, Unmount(LinuxRecoveryCaptureExport.Root, 0)); }
+    }
+
+    [SupportedOSPlatform("linux")]
+    private static void AssertNonrootExportDiscovery(string name)
+    {
+        // /srv is a proved, run-owned tmpfs mounted0700 by the wrapper. Permit
+        // traversal only for this component assertion, then restore exact mode.
+        var srv = LinuxRecoveryNative.StatPath("/srv");
+        Assert.Equal((ushort)0x41c0, srv.Mode);
+        Assert.True(File.Exists("/usr/bin/setpriv")); Assert.True(File.Exists("/usr/bin/python3"));
+        const string script = """
+            import itertools, os, stat, sys
+            uid = int(sys.argv[1])
+            name = sys.argv[2]
+            assert os.getuid() == os.geteuid() == uid
+            assert os.getgid() == os.getegid() == uid and os.getgroups() == []
+            root = '/srv/vaultsync-recovery-exports'
+            child = root + '/' + name
+            if uid == 60999:
+                with os.scandir(root) as scan:
+                    names = [entry.name for entry in itertools.islice(scan, 17)]
+                assert len(names) <= 16 and name in names
+                assert stat.S_IMODE(os.stat(root).st_mode) == 0o750
+                assert stat.S_IMODE(os.stat(child).st_mode) == 0o710
+                try:
+                    with os.scandir(child) as scan:
+                        next(scan, None)
+                except PermissionError:
+                    pass
+                else:
+                    raise AssertionError('child enumeration allowed')
+                for leaf in ('image.metadata', 'payload.raw'):
+                    with open(child + '/' + leaf, 'rb') as source:
+                        assert source.read(1)
+                assert not os.access(root, os.W_OK) and not os.access(child, os.W_OK)
+            else:
+                try:
+                    with os.scandir(root) as scan:
+                        next(scan, None)
+                except PermissionError:
+                    pass
+                else:
+                    raise AssertionError('unrelated group enumeration allowed')
+                assert not os.access(child + '/payload.raw', os.R_OK)
+            try:
+                with open('/srv/vaultsync-recovery/captures/' + name + '/payload.raw', 'rb'):
+                    pass
+            except PermissionError:
+                pass
+            else:
+                raise AssertionError('private original readable')
+            print('catalog-access-ok')
+            """;
+        try
+        {
+            File.SetUnixFileMode("/srv", (UnixFileMode)0x1c9); //0711: no directory listing for nonroot.
+            foreach (string uid in new[] { "60999", "60998" })
+            {
+                var start = new ProcessStartInfo("/usr/bin/setpriv")
+                {
+                    UseShellExecute = false, WorkingDirectory = "/",
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                start.Environment.Clear(); start.Environment["PATH"] = "/usr/bin:/bin";
+                foreach (string argument in new[] { "--reuid=" + uid, "--regid=" + uid, "--clear-groups",
+                    "/usr/bin/python3", "-I", "-c", script, uid, name }) start.ArgumentList.Add(argument);
+                using var child = Process.Start(start) ?? throw new InvalidOperationException("fixture.helper-start");
+                try
+                {
+                    Assert.True(child.WaitForExit(10000), "Nonroot export access helper timed out.");
+                    Assert.Equal(0, child.ExitCode);
+                    Assert.Equal("catalog-access-ok", child.StandardOutput.ReadToEnd().Trim());
+                    Assert.Empty(child.StandardError.ReadToEnd());
+                }
+                finally
+                {
+                    if (!child.HasExited) child.Kill(entireProcessTree: true);
+                    Assert.True(child.WaitForExit(5000), "Nonroot export access helper cleanup unconfirmed.");
+                }
+            }
+        }
+        finally
+        {
+            File.SetUnixFileMode("/srv", (UnixFileMode)(srv.Mode & 0xfff));
+            var restored = LinuxRecoveryNative.StatPath("/srv");
+            Assert.Equal((srv.Mode, srv.Owner, srv.Group, srv.Inode, srv.DeviceMajor, srv.DeviceMinor),
+                (restored.Mode, restored.Owner, restored.Group, restored.Inode, restored.DeviceMajor, restored.DeviceMinor));
+        }
     }
 
     private static void WriteProof(Proof proof, IReadOnlyList<string> cases)

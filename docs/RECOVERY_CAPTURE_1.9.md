@@ -49,7 +49,7 @@ failures remain fail-closed. PublicationUnconfirmed is never promoted to success
 Published originals remain root-private0400 files inside0700 directories.
 The installed capture path now reserves a separate local-interface copy before
 capture, under the fixed preprovisioned ext4 export root
-`/srv/vaultsync-recovery-exports` (root:60999 mode0710). Both repository ancestry
+`/srv/vaultsync-recovery-exports` (root:60999 mode0750). Both repository ancestry
 checks precede any directory creation or reservation. The existing capture
 transaction independently reserves its payload too; insufficient space refuses
 before capture starts.
@@ -66,11 +66,26 @@ uncertainty and never rolls back a possibly visible copy.
 Original permissions, inodes and link counts remain unchanged. No hardlinks,
 overwriting or arbitrary privileged GUI paths are introduced. The console
 separates the capture result from the copy result and prints the exact recovery
-folder only for a verified published copy. The GUI's existing absolute-folder
-input can address known fixed filenames through0710 traversal; it cannot browse
-or enumerate these directories. Native UID60999 access and actual GUI use still
-need measurement. Graphical capture selection is not delivered by this console
-component.
+folder only for a verified published copy. The fixed export parent is now
+listable by the dedicated controller group only (0750); copied children remain
+traversal-only0710 and files0440. Trusted media provisioning must create the
+parent with that exact mode; runtime does not chmod or adopt an older0710 parent.
+Private originals remain unchanged.
+
+The graphical restore controller lists at most16 entries from that fixed parent,
+excluding hidden workspaces and noncanonical UUID names. It admits only held,
+root-owned group60999 children and regular single-link copied files with exact
+permissions, matching devices and bounded lengths; symlinks and changed root or
+named identities refuse. A seventeenth entry refuses the list. Candidate labels
+show a shortened image ID and payload length, explicitly not verified contents.
+Selection still uses independent inspection/staging and descriptor handoff.
+Refresh, empty/unavailable/failure outcomes and an advanced known-folder fallback
+are localized; manual paths never become privileged opens. No system-wide image
+search, arbitrary privileged browser or metadata parser is introduced.
+
+Native UID60999 access, group isolation and actual GUI use still need measurement
+on freshly provisioned0750 exports. Graphical capture selection is not delivered
+by this console component.
 
 The export parent is bounded to16 entries, including hidden workspaces. Empty
 successful workspaces currently remain, so this component admits at most eight

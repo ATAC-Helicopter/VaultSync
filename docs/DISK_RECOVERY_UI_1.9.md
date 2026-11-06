@@ -61,3 +61,13 @@ this does not add an overwrite action to the existing read-only panel. Native
 console mechanics use synthetic keyboard input and do not qualify graphical
 consent or every locale/font. The installed unprivileged UI/privileged host
 launcher, full wizard and generated media remain separate acceptance work.
+
+
+The separate installed offline controller now offers a fixed export image list
+under VS-1907/#495, with refresh and advanced known-folder entry. It does not use
+the desktop folder picker or require a portal service. Only generated recovery
+copies in the preprovisioned group-readable export parent are discovered; private
+capture originals remain inaccessible. Labels show short image IDs and candidate
+sizes before the unchanged independent verification. See the
+[entry contract](RECOVERY_ENTRY_1.9.md#fixed-export-image-chooser--2026-11-06).
+Native group access, installed interaction and full recovery remain unqualified.

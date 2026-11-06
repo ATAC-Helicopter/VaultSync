@@ -8,7 +8,12 @@
       <StackPanel Spacing="16">
         <TextBlock Name="Heading" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap" />
         <TextBlock Name="Description" TextWrapping="Wrap" />
-        <TextBox Name="Folder" IsVisible="False" />
+        <TextBlock Name="ImageStatus" IsVisible="False" TextWrapping="Wrap" />
+        <ListBox Name="Images" IsVisible="False" MinHeight="120"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ListBox.ItemTemplate></ListBox>
+        <Button Name="RefreshImages" IsVisible="False" />
+        <Expander Name="AdvancedFolder" IsVisible="False" HorizontalAlignment="Stretch">
+          <TextBox Name="Folder" IsVisible="False" />
+        </Expander>
         <ListBox Name="Targets" IsVisible="False" MinHeight="120"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate></ListBox.ItemTemplate></ListBox>
         <TextBlock Name="Details" TextWrapping="Wrap" FlowDirection="LeftToRight" FontFamily="monospace" />
         <ProgressBar Name="Progress" IsVisible="False" Minimum="0" Maximum="100" Height="12" />

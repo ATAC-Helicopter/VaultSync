@@ -165,8 +165,11 @@ public sealed class LinuxRecoveryCaptureExportTests
     public void PermissionAdmissionNeverAdoptsSharedOriginalOrUserOwnedExportParent(string fault)
     {
         var original = new LinuxRecoveryNative.Identity(0x8100, 0, 0, 1, 1, 1, 8, 1, 0, 0, 0, 0);
-        var export = new LinuxRecoveryNative.Identity(0x41c8, 0, 60999, 1, 2, 0, 8, 1, 0, 0, 0, 0);
+        var export = new LinuxRecoveryNative.Identity(0x41e8, 0, 60999, 1, 2, 0, 8, 1, 0, 0, 0, 0);
         Assert.True(LinuxRecoveryCaptureExport.OriginalFile(original)); Assert.True(LinuxRecoveryCaptureExport.ExportRoot(export));
+        Assert.False(LinuxRecoveryCaptureExport.ExportRoot(export with { Mode = 0x41c8 }));
+        Assert.True(LinuxRecoveryCaptureExport.SharedDirectory(export with { Mode = 0x41c8 }));
+        Assert.False(LinuxRecoveryCaptureExport.SharedDirectory(export));
         if (fault == "original-shared") Assert.False(LinuxRecoveryCaptureExport.OriginalFile(original with { Mode = 0x8120 }));
         if (fault == "original-hardlink") Assert.False(LinuxRecoveryCaptureExport.OriginalFile(original with { Links = 2 }));
         if (fault == "export-writable") Assert.False(LinuxRecoveryCaptureExport.ExportRoot(export with { Mode = 0x41d8 }));

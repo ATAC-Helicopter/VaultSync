@@ -481,3 +481,38 @@ and new coverage 77.7%; reliability passes at A. Scanner completion does not
 satisfy the gate. No threshold, exclusion or security guard changes. Physical
 VT1 handoff, successful full restore, OS/media profiles, updater/packages and
 protected reviews remain open. #736 stays draft; beta is not qualified.
+
+
+## Fixed export image chooser — 2026-11-06
+
+VS-1907/#495 adds a selectable list of local recovery copies from
+`/srv/vaultsync-recovery-exports`, cross-referencing VS-1904/#492. Only that
+preprovisioned root:60999 parent becomes0750. Export children remain0710,
+files0440 and capture originals0700/0400; rendezvous/display runtime permissions
+remain unchanged. The admitted nonroot controller performs bounded discovery,
+never a privileged path opener. Root/held/named identity checks, exact modes,
+canonical UUID names, fixed filenames, regular single-link files and length
+bounds exclude unsafe candidates. Hidden workspaces are omitted; more than16
+entries refuses the list. Candidate size is a discovery hint, not verification.
+
+The list, refresh and empty/unavailable/failure states are translated in all19
+locales. Selection survives language changes; cancelled and superseded refreshes
+cannot replace the current screen. Advanced known-folder entry remains for
+already-known accessible images. The existing source descriptors, isolated
+verification, fresh destination review and independent physical authorization
+remain required. No metadata parsing, new protocol, graphical capture, desktop
+elevation, reboot handoff or postrestore installation is added.
+
+This is component implementation. Actual0750 provisioning, native UID60999
+listing/access/isolation and the complete capture-to-restored-OS loop remain
+unqualified; earlier0710 VM receipts cannot establish these new permissions.
+
+The guarded native storage fixture now provisions only the export parent0750,
+executes the catalog as fixture root and includes a bounded, privilege-dropped
+read-only helper for UID/GID60999 and an unrelated60998 identity. It checks parent
+listing, child listing denial, copied-file readability and private-original
+isolation. Its run-owned `/srv` ancestor temporarily permits traversal0711 and
+returns to its exact original0700 mode; no runtime or host directory is changed.
+These assertions require the existing genuine namespace/ext4 fixture. Ordinary
+macOS/unprivileged test rows do not execute them, and the helper does not prove
+that the C# catalog itself ran as UID60999.

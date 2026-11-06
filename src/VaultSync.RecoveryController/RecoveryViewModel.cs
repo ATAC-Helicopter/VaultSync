@@ -25,6 +25,22 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
         }
     }
+    private sealed class ImageItem(LinuxRecoveryImageCatalog.Image image, Func<string, object[], string> format) : INotifyPropertyChanged
+    {
+        internal LinuxRecoveryImageCatalog.Image Image { get; } = image;
+        public string Label => format("Recovery.Wizard.ImageCandidate", [Image.Name[..8], Image.CandidateBytes]);
+        public event PropertyChangedEventHandler? PropertyChanged;
+        internal void Refresh() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
+    }
+    internal Func<CancellationToken, Task<LinuxRecoveryImageCatalog.Result>> CatalogLoader { get; set; } = LinuxRecoveryImageCatalog.ReadAsync;
+    private CancellationTokenSource? catalogCancellation;
+    private long catalogGeneration;
+    private CancellationToken imageChoiceToken;
+    private string catalogStatus = "ImagesLoading";
+    private readonly ListBox images;
+    private readonly TextBlock imageStatus;
+    private readonly Button refresh;
+    private readonly Expander advanced;
     private readonly RecoveryWindow window;
     private readonly LocalizationService text = new();
     private readonly CancellationTokenSource cancellation = new();
@@ -55,6 +71,18 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
         details = window.FindControl<TextBlock>("Details")!;
         folder = window.FindControl<TextBox>("Folder")!;
         targets = window.FindControl<ListBox>("Targets")!;
+        images = window.FindControl<ListBox>("Images")!;
+        imageStatus = window.FindControl<TextBlock>("ImageStatus")!;
+        refresh = window.FindControl<Button>("RefreshImages")!;
+        advanced = window.FindControl<Expander>("AdvancedFolder")!;
+        refresh.Click += (_, _) => RefreshImages();
+        images.SelectionChanged += (_, _) => { if (images.SelectedItem is not null) folder.Text = ""; };
+        // TextChanged is deferred by Avalonia; clear selection synchronously so
+        // an immediate Continue cannot prefer an older list choice over typed input.
+        folder.PropertyChanged += (_, change) =>
+        {
+            if (change.Property == TextBox.TextProperty && !string.IsNullOrWhiteSpace(folder.Text)) images.SelectedIndex = -1;
+        };
         primary = window.FindControl<Button>("Primary")!;
         cancel = window.FindControl<Button>("Cancel")!;
         progress = window.FindControl<ProgressBar>("Progress")!;
@@ -67,6 +95,8 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
                 window.FlowDirection = selected.Code == "ar" ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
                 if (targets.ItemsSource is IEnumerable<TargetItem> items)
                     foreach (var item in items) item.SetCulture(CultureInfo.GetCultureInfo(selected.Code));
+                if (images.ItemsSource is IEnumerable<ImageItem> imageItems)
+                    foreach (var item in imageItems) item.Refresh();
                 Render();
             }
         };
@@ -89,6 +119,8 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
                 targets.ItemsSource = inventory.State == LinuxBlockInventoryState.Observed && !inventory.HasUnresolvedSwaps
                     ? inventory.Devices.Where(d => d.Kind == LinuxBlockKind.WholeDisk && d.Identity == LinuxBlockIdentity.UniqueInSnapshot && d.DiskSequence is > 0 && !d.IsReadOnly && d.Use == LinuxBlockUse.Unknown && !d.MountObserved && !d.SwapObserved && !d.HasHolders).Select(d => new TargetItem(d, CultureInfo.GetCultureInfo(text.CurrentLanguage))).ToArray()
                     : Array.Empty<TargetItem>();
+            if (next == Screen.Folder) { imageChoiceToken = token; RefreshImages(token); }
+            else StopCatalog();
             Render();
         });
         return completion.Task;
@@ -106,10 +138,57 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
         });
         return completion.Task;
     }
+    private void StopCatalog()
+    {
+        catalogGeneration++;
+        catalogCancellation?.Cancel();
+        catalogCancellation = null;
+    }
+    internal void RefreshImages() => RefreshImages(imageChoiceToken);
+    private async void RefreshImages(CancellationToken token)
+    {
+        if (screen != Screen.Folder || terminalObserved || IsComplete || cancellation.IsCancellationRequested || token.IsCancellationRequested) return;
+        StopCatalog();
+        long generation = catalogGeneration;
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(token, cancellationToken);
+        catalogCancellation = stop;
+        catalogStatus = "ImagesLoading";
+        refresh.IsEnabled = false;
+        Render();
+        try
+        {
+            var result = await CatalogLoader(stop.Token);
+            if (stop.IsCancellationRequested || generation != catalogGeneration || screen != Screen.Folder || IsComplete || terminalObserved) return;
+            var items = result.Images.Select(image => new ImageItem(image, (key, args) => F(key, args))).ToArray();
+            string? selected = string.IsNullOrWhiteSpace(folder.Text) ? (images.SelectedItem as ImageItem)?.Image.Name : null;
+            images.ItemsSource = items;
+            images.SelectedItem = items.FirstOrDefault(item => item.Image.Name == selected);
+            catalogStatus = result.Status switch
+            {
+                LinuxRecoveryImageCatalog.State.Unavailable => "ImagesUnavailable",
+                LinuxRecoveryImageCatalog.State.Failed => "ImagesFailed",
+                _ => items.Length == 0 ? "ImagesEmpty" : "ImagesHelp"
+            };
+        }
+        catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
+        catch (Exception) { if (generation == catalogGeneration) { images.ItemsSource = null; catalogStatus = "ImagesFailed"; } }
+        finally
+        {
+            if (generation == catalogGeneration)
+            {
+                catalogCancellation = null;
+                refresh.IsEnabled = true;
+                Render();
+            }
+        }
+    }
     internal void Accept()
     {
-        if (screen == Screen.Folder && !string.IsNullOrWhiteSpace(folder.Text))
-        { choice?.TrySetResult(folder.Text.Trim()); choice = null; screen = Screen.Starting; }
+        if (screen == Screen.Folder && (images.SelectedItem is ImageItem || !string.IsNullOrWhiteSpace(folder.Text)))
+        {
+            string selected = images.SelectedItem is ImageItem item ? item.Image.Folder : folder.Text!.Trim();
+            StopCatalog(); choice?.TrySetResult(selected); choice = null; screen = Screen.Starting;
+        }
         else if (screen == Screen.Target && targets.SelectedItem is TargetItem target)
         { choice?.TrySetResult(target.Device.KernelName); choice = null; screen = Screen.Starting; }
         else if (screen == Screen.Review && acknowledgment is not null)
@@ -119,7 +198,7 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
     internal void Cancel()
     {
         if (IsComplete) return;
-        cancellation.Cancel(); choice?.TrySetResult(null); acknowledgment?.TrySetResult(false);
+        StopCatalog(); cancellation.Cancel(); choice?.TrySetResult(null); acknowledgment?.TrySetResult(false);
         choice = null; acknowledgment = null; screen = Screen.Cancelling; Render();
     }
     public void Observe(LinuxRecoverySession.Snapshot value) => Dispatcher.UIThread.Post(() =>
@@ -128,17 +207,17 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
         snapshot = value;
         if (value.Phase is LinuxRecoverySessionPhase.Completed or LinuxRecoverySessionPhase.Refused or LinuxRecoverySessionPhase.Faulted)
         {
-            terminalObserved = true; choice?.TrySetResult(null); acknowledgment?.TrySetResult(false);
+            StopCatalog(); terminalObserved = true; choice?.TrySetResult(null); acknowledgment?.TrySetResult(false);
             choice = null; acknowledgment = null; screen = Screen.Cancelling;
         }
-        else if (value.CancellationRequested || cancellation.IsCancellationRequested) { choice?.TrySetResult(null); acknowledgment?.TrySetResult(false); choice = null; acknowledgment = null; screen = Screen.Cancelling; }
+        else if (value.CancellationRequested || cancellation.IsCancellationRequested) { StopCatalog(); choice?.TrySetResult(null); acknowledgment?.TrySetResult(false); choice = null; acknowledgment = null; screen = Screen.Cancelling; }
         else if (value.Phase == LinuxRecoverySessionPhase.Executing) screen = Screen.Progress;
         Render();
     });
     public void Complete(LinuxRecoveryControllerClient.Result value) => Dispatcher.UIThread.Post(() =>
     {
         if (IsComplete) return;
-        result = value; IsComplete = true; terminalObserved = true;
+        StopCatalog(); result = value; IsComplete = true; terminalObserved = true;
         // Complete is called only after the runner has drained all interactions.
         cancellation.Dispose();
         choice?.TrySetResult(null); acknowledgment?.TrySetResult(false); choice = null; acknowledgment = null;
@@ -159,6 +238,10 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
         AutomationProperties.SetName(targets, T("Target"));
         AutomationProperties.SetName(progress, T("Progress"));
         folder.IsVisible = screen == Screen.Folder; targets.IsVisible = screen == Screen.Target;
+        images.IsVisible = imageStatus.IsVisible = refresh.IsVisible = advanced.IsVisible = screen == Screen.Folder;
+        imageStatus.Text = T(catalogStatus);
+        refresh.Content = T("RefreshImages"); advanced.Header = T("AdvancedFolder");
+        AutomationProperties.SetName(images, T("Images"));
         primary.IsVisible = screen is Screen.Folder or Screen.Target or Screen.Review;
         primary.Content = T(screen == Screen.Review ? "Acknowledge" : "Continue");
         cancel.Content = text.GetString(IsComplete ? "Common.Close" : "Common.Cancel");

@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1907] List recovery image candidates without requiring manually typed folder paths.
 - [VS-1904] Prepare verified recovery copies while preserving private captured originals.
 - [VS-1904] Prototype offline disk capture through the admitted recovery console.
 - [VS-1910] Open disk image tools from a dedicated, localized cloning page.
@@ -63,6 +64,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1910] Explain offline recovery steps and conditional post-restore VaultSync availability.
 - [VS-1918] Plan progressive Linux, Windows and macOS disk-recovery beta qualification.
 - [VS-1907] Allow bounded recovery verification time and preserve independent cleanup after cancellation.
 - [VS-1907] Separate recovery choices from worker progress and independent overwrite authorization.

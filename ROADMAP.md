@@ -1238,6 +1238,11 @@ repository must not transfer before a compatible release is adopted.
     Issue #826; preparation PR #736; not release-qualified.
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
   workflow boundaries, navigation invariants, and legacy-shell migration map.
+  - User journey clarification (2026-11-06): distinguish the delivered read-only
+    desktop panel and laboratory recovery entry from product image/media creation,
+    desktop-to-recovery restart and post-restore application/identity reconciliation.
+    See [the user journey](docs/RECOVERY_USER_JOURNEY_1.9.md); none of those open
+    capabilities is qualified by a visible wizard.
   - Direction (2026-11-04): a dedicated Disk Cloning desktop page separates
     disk images from project Recovery, retaining cached selection and typed
     navigation on Windows/macOS/Linux. Page visibility does not qualify the
@@ -1713,6 +1718,12 @@ repository must not transfer before a compatible release is adopted.
     [follow-up receipt](docs/release-evidence/1.9-recovery-storage-checks-2026-10-29.json).
 - [ ] `VS-1907` `P0` Restore supported images to a disk or partition from the
   bootable environment.
+  - Image discovery (2026-11-06): the offline wizard lists bounded recovery-copy
+    candidates and retains manual folders under advanced options. Only the fixed
+    copied-image parent becomes group-listable; originals stay private. Selection
+    still requires isolated verification and independent fresh target consent.
+    Native permissions and complete user/media recovery remain unqualified.
+    See [the UI contract](docs/DISK_RECOVERY_UI_1.9.md).
   - Rendering proof (2026-11-04, fa0fea0): actual folder and terminal windows
     render after full admission. Keyboard/input, UI-close cleanup and recovery
     remain unqualified; BUG-19043/#826 owns the bare-X11 focus repair. Earlier

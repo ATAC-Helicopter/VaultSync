@@ -191,7 +191,7 @@ internal static class LinuxRecoveryCaptureExport
             string path = Root + "/" + temporary + "/" + name;
             var held = LinuxRecoveryNative.Stat(child);
             if (held != storage.HeldDirectoryIdentity || held != LinuxRecoveryNative.StatPath(path) ||
-                !(shared ? ExportRoot(held) : Private(held)) || !SameDevice(exportState, held)) throw Refused();
+                !(shared ? SharedDirectory(held) : Private(held)) || !SameDevice(exportState, held)) throw Refused();
             var metadata = LinuxRecoveryNative.Stat(((FileStream)storage.Metadata).SafeFileHandle);
             var payload = LinuxRecoveryNative.Stat(((FileStream)storage.Payload).SafeFileHandle);
             if (metadata != LinuxRecoveryNative.StatPath(path + "/image.metadata") ||
@@ -255,7 +255,8 @@ internal static class LinuxRecoveryCaptureExport
     }
     internal static bool OriginalFile(LinuxRecoveryNative.Identity value) => value.Mode == 0x8100 && value.Owner == 0 && value.Group == 0 && value.Links == 1;
     internal static bool SharedFile(LinuxRecoveryNative.Identity value) => value.Mode == 0x8120 && value.Owner == 0 && value.Group == ControllerGroup && value.Links == 1;
-    internal static bool ExportRoot(LinuxRecoveryNative.Identity value) => value.Mode == 0x41c8 && value.Owner == 0 && value.Group == ControllerGroup;
+    internal static bool ExportRoot(LinuxRecoveryNative.Identity value) => value.Mode == 0x41e8 && value.Owner == 0 && value.Group == ControllerGroup;
+    internal static bool SharedDirectory(LinuxRecoveryNative.Identity value) => value.Mode == 0x41c8 && value.Owner == 0 && value.Group == ControllerGroup;
     private static bool Private(LinuxRecoveryNative.Identity value) => value.Mode == 0x41c0 && value.Owner == 0 && value.Group == 0;
     private static bool SameDevice(LinuxRecoveryNative.Identity a, LinuxRecoveryNative.Identity b) => a.DeviceMajor == b.DeviceMajor && a.DeviceMinor == b.DeviceMinor;
     private static bool SameDirectory(LinuxRecoveryNative.Identity a, LinuxRecoveryNative.Identity b) => SameDevice(a, b) && a.Inode == b.Inode && a.Mode == b.Mode && a.Owner == b.Owner && a.Group == b.Group;

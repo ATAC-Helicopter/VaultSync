@@ -174,6 +174,13 @@ def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commi
         for key in ("Title", "Warning", "Target", "Capacity", "Image", "Manifest", "Hardware", "Challenge", "Deadline"):
             if not isinstance(parsed.get("Recovery.Console." + key), str) or not parsed["Recovery.Console." + key]:
                 raise ValueError("console translation missing")
+        if graphical:
+            controller_catalog = worker.strict_json(checked_file(controller / "Localization" / file.name).read_bytes())
+            for key in ("Images", "ImageCandidate", "ImagesLoading", "ImagesUnavailable", "ImagesFailed", "ImagesEmpty",
+                        "ImagesHelp", "RefreshImages", "AdvancedFolder"):
+                for current in (parsed, controller_catalog):
+                    if not isinstance(current.get("Recovery.Wizard." + key), str) or not current["Recovery.Wizard." + key]:
+                        raise ValueError("image chooser translation missing")
         if controller_mode == "capture":
             for key in ("Title", "Warning", "Source", "Challenge", "Result", "Published", "NoSources", "Cancelled",
                         "Status.Invalid", "Status.Unsupported", "Status.Refused", "Status.Incomplete", "Status.Interrupted",

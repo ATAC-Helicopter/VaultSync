@@ -13,6 +13,26 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## User journey and image discovery — 2026-11-06
+
+VS-1907/#495 adds bounded discovery of recovery-copy candidates to the installed
+wizard, with refresh, localized availability and an advanced known-folder escape
+hatch. The exact preprovisioned export parent is now root:60999 mode0750;
+children remain0710, copied files0440 and originals0700/0400. No unknown root is
+adopted or chmodded. Candidate size is not verified capacity, and image selection
+still uses the unchanged isolated reader, descriptor transport and physical
+write authorization. Native new-permission/selection measurement remains open. The63-case component
+checkpoint, final23-case presentation run, ten producer cases,2,023-key/19-locale
+audit and Controller Release build pass; the native fixture was compiled but not
+executed on macOS. See [component evidence](release-evidence/1.9-recovery-image-choice-2026-11-06.json).
+
+The [user journey](RECOVERY_USER_JOURNEY_1.9.md) records the actual gap between
+laboratory components and an ordinary-user image/media/restore workflow. Automatic
+desktop-to-recovery boot handoff and universal post-restore VaultSync installation
+are not implemented. Raw restores retain the app only when present in the image;
+cloned identity and protected credentials need explicit reconciliation. This does
+not introduce online system-disk writes or qualify a beta/profile.
+
 ## Recovery copy bridge — 2026-11-06
 
 VS-1904/#492 now copies private captured images into a fixed local-recovery
