@@ -317,7 +317,10 @@ internal sealed class LinuxRecoveryMediaInstallation : IDisposable
         "Recovery.Capture.NoSources", "Recovery.Capture.Cancelled", "Recovery.Capture.Status.Invalid",
         "Recovery.Capture.Status.Unsupported", "Recovery.Capture.Status.Refused", "Recovery.Capture.Status.Incomplete",
         "Recovery.Capture.Status.Interrupted", "Recovery.Capture.Status.Failed",
-        "Recovery.Capture.Status.PublicationUnconfirmed", "Recovery.Capture.Status.PublishedVerified"
+        "Recovery.Capture.Status.PublicationUnconfirmed", "Recovery.Capture.Status.PublishedVerified",
+        "Recovery.Capture.ExportResult", "Recovery.Capture.Export.Published", "Recovery.Capture.Export.Status.Failed",
+        "Recovery.Capture.Export.Status.Interrupted", "Recovery.Capture.Export.Status.PublicationUnconfirmed",
+        "Recovery.Capture.Export.Status.PublishedVerified"
     };
 
     public void Dispose()

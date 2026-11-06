@@ -47,12 +47,38 @@ failures remain fail-closed. PublicationUnconfirmed is never promoted to success
 ## Image access and remaining integration
 
 Published originals remain root-private0400 files inside0700 directories.
-The nonroot graphical restore controller cannot read them just because capture
-succeeded. A reviewed export/descriptor boundary is still required for the
-complete product-created-image recovery flow. Never solve this by chmod on an
-original backup, hardlinking it into a public directory, or opening arbitrary
-paths with privilege on behalf of the GUI. Graphical capture selection is also
-not delivered by this console component.
+The installed capture path now reserves a separate local-interface copy before
+capture, under the fixed preprovisioned ext4 export root
+`/srv/vaultsync-recovery-exports` (root:60999 mode0710). Both repository ancestry
+checks precede any directory creation or reservation. The existing capture
+transaction independently reserves its payload too; insufficient space refuses
+before capture starts.
+
+A fresh hidden0700 workspace uses the existing create-only native transaction.
+The copy is sealed and inspected independently, matching the original image,
+capture, generation, manifest, length and hashes. Held and named directory/file
+identities are rechecked before permission changes and exposure. Only copied
+files become0440/root:60999 and the copied child0710. A no-replace outer rename
+publishes the generated UUID child; both source and destination parents must be
+flushed. Cancellation or uncertainty after that rename remains publication
+uncertainty and never rolls back a possibly visible copy.
+
+Original permissions, inodes and link counts remain unchanged. No hardlinks,
+overwriting or arbitrary privileged GUI paths are introduced. The console
+separates the capture result from the copy result and prints the exact recovery
+folder only for a verified published copy. The GUI's existing absolute-folder
+input can address known fixed filenames through0710 traversal; it cannot browse
+or enumerate these directories. Native UID60999 access and actual GUI use still
+need measurement. Graphical capture selection is not delivered by this console
+component.
+
+The export parent is bounded to16 entries, including hidden workspaces. Empty
+successful workspaces currently remain, so this component admits at most eight
+successful exports before trusted ownership review/maintenance. Failed or
+uncertain partials also consume the bound. No automatic deletion of originals,
+partials or copies is authorized by the bridge. Provisioning must budget the
+private image, recovery copy and restore staging separately, plus journal and
+filesystem overhead.
 
 The capture directory must be provisioned as part of a real media/storage
 installation. A staged service template alone is not bootable recovery media.
@@ -72,3 +98,14 @@ without relaxing production checks, and the failed run remains historical.
 Localization covers2,008 keys in19 catalogs. Existing native ext4 transaction
 rows do not execute kernel storage on macOS; no native test is inferred from
 their ordinary passing test rows. No unrelated full suite was repeated here.
+
+## Export verification checkpoint — 2026-11-06
+
+The81 affected warning-as-error Release cases, ten producer tests and the host
+Release build pass, with no warnings/errors. Independent review verified the
+held-copy permissions, publication and asynchronous cleanup boundaries. The
+first executed export run exposed sealed streams left at EOF before inspection;
+positions were corrected before the passing checkpoint. Earlier failures remain
+historical. Linux native fixture guards return without kernel execution on
+macOS: those ordinary rows establish no ext4/mount/group-access evidence. The
+qualified CI fixture and installed capture-to-wizard OS loop remain required.

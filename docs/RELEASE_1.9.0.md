@@ -13,6 +13,18 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Recovery copy bridge — 2026-11-06
+
+VS-1904/#492 now copies private captured images into a fixed local-recovery
+export area using separate reservation, isolated readback, held identity checks,
+copy-only permissions and no-replace publication. Original images remain private
+and unchanged. Capture and export outcomes are independent, including cleanup
+and post-publication uncertainty.81 focused Release cases, ten producer cases,
+host build and2,014-key/19-locale audit pass. Native ext4 permissions, actual
+controller access and the complete OS loop remain unqualified. The fixed export
+root requires trusted provisioning and has an explicit bounded-entry limit.
+See [the capture/export contract](RECOVERY_CAPTURE_1.9.md).
+
 ## Installed capture component — 2026-11-06
 
 VS-1904/#492 now connects the existing capture engine to a fixed admitted

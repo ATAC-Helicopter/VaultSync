@@ -2,6 +2,13 @@
 
 ## [1.9.0]
 
+The [staged disk beta program](BETA_PROGRAM_1.9.0.md) keeps the desktop app on
+Windows, macOS and Linux throughout. Only disk cloning/recovery is phased:
+Linux first, then Windows, then macOS. The admitted offline capture console and
+verified recovery-copy bridge are implemented components under native validation;
+no profile or beta is qualified by their unit/staging checks. Original captured
+images stay private. See [capture and access limits](RECOVERY_CAPTURE_1.9.md).
+
 Recovery Horizon is in planning and architecture work. 1.9.0 owns disk capture,
 validation, independent boot media, restore and post-restore validation.
 These capabilities have not shipped. The earlier CLI development cohort has

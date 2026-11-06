@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.Json;
+using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
@@ -42,6 +43,7 @@ public sealed class LinuxRecoveryStorageNativeTests
         SymlinkPreservesOriginal(proof); cases.Add(nameof(SymlinkPreservesOriginal));
         UnexpectedEntryPreventsEveryUnlink(proof); cases.Add(nameof(UnexpectedEntryPreventsEveryUnlink));
         ReplacedDirectoryCannotRedirectCleanup(proof); cases.Add(nameof(ReplacedDirectoryCannotRedirectCleanup));
+        CaptureExportPreservesOriginalAndPublishesIndependentCopies(proof); cases.Add(nameof(CaptureExportPreservesOriginalAndPublishesIndependentCopies));
         WriteProof(proof, cases);
     }
 
@@ -254,6 +256,95 @@ public sealed class LinuxRecoveryStorageNativeTests
         Assert.True(File.Exists(stage.Replace(lease.StagingParent, saved, StringComparison.Ordinal) + "/payload.raw"));
     }
 
+    [SupportedOSPlatform("linux")]
+    private static void CaptureExportPreservesOriginalAndPublishesIndependentCopies(Proof proof)
+    {
+        // ProveFixture already established an owned writable ext4 store inside new
+        // kernel mount/PID namespaces. Never invoke this from a flag-only fixture.
+        using var store = LinuxRecoveryNative.OpenDirectory(LinuxRecoveryStorageLease.Store, false);
+        LinuxRecoveryNative.MakeDirectory(store, "captures");
+        LinuxRecoveryNative.MakeDirectory(store, "export-fixture");
+        string backing = LinuxRecoveryStorageLease.Store + "/export-fixture";
+        Directory.CreateDirectory(LinuxRecoveryCaptureExport.Root, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        Assert.Equal(0, BindMount(backing, LinuxRecoveryCaptureExport.Root, null, 4096, null));
+        try
+        {
+            using var exports = LinuxRecoveryNative.OpenDirectory(LinuxRecoveryCaptureExport.Root, false);
+            LinuxRecoveryNative.SetGroup(exports, LinuxRecoveryCaptureExport.ControllerGroup, 0x1c8);
+            Assert.True(LinuxRecoveryNative.Ext4(exports));
+            var repository = LinuxRecoveryNative.Stat(exports);
+            string device = repository.DeviceMajor.ToString(CultureInfo.InvariantCulture) + ":" + repository.DeviceMinor.ToString(CultureInfo.InvariantCulture);
+            var fixture = LinuxRecoveryCaptureExportTests.Fixture().GetAwaiter().GetResult();
+            var inventory = new LinuxBlockInventory(LinuxBlockInventoryState.Observed, LinuxBlockInventoryReason.NamespaceObservationOnly,
+                Guid.NewGuid(), DateTimeOffset.UtcNow, Guid.NewGuid(), "mnt:[123]", false,
+                new[]
+                {
+                    new LinuxBlockObservation("fixture-source", "999:999", null, LinuxBlockKind.WholeDisk, (ulong)fixture.Raw.Length,
+                        512, 512, 4, true, "synthetic", LinuxBlockIdentity.UniqueInSnapshot, false, false, false, LinuxBlockUse.Unknown),
+                    new LinuxBlockObservation("fixture-repository", device, null, LinuxBlockKind.WholeDisk, 1024 * 1024 * 1024,
+                        512, 512, 5, false, "synthetic", LinuxBlockIdentity.UniqueInSnapshot, true, false, false, LinuxBlockUse.Unknown)
+                });
+            // Topology is a pure fixture; this case proves actual file/mount/inode
+            // behavior only, never native block-device observation or authorization.
+            var copy = LinuxRecoveryCaptureExport.Reserve(fixture.Request, (ulong)fixture.Raw.Length, inventory, inventory, "fixture-source");
+            try
+            {
+                var storage = LinuxRawImageStorage.Create(LinuxRecoveryCaptureHost.OutputParent, fixture.Request.ImageId, (ulong)fixture.Raw.Length);
+                try
+                {
+                    storage.Payload.Write(fixture.Raw); storage.Metadata.Write(fixture.Metadata);
+                    storage.FlushPayload(); storage.FlushMetadata(); storage.Seal(); storage.FlushDirectories(); storage.Publish();
+                }
+                finally { storage.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+                string name = fixture.Request.ImageId.ToString("N");
+                string original = LinuxRecoveryCaptureHost.OutputParent + "/" + name;
+                var originalPayload = LinuxRecoveryNative.StatPath(original + "/payload.raw");
+                var originalMetadata = LinuxRecoveryNative.StatPath(original + "/image.metadata");
+                using (var source = copy.OpenOriginal())
+                {
+                    var result = LinuxRecoveryCaptureExport.CopyAsync(fixture.Request, fixture.Capture, source.Metadata, source.Payload,
+                        copy, source.Recheck, LinuxRawImageCaptureServiceTests.ImageFixture, CancellationToken.None).GetAwaiter().GetResult();
+                    Assert.Equal(LinuxRecoveryCaptureExportState.PublishedVerified, result.State);
+                    source.Recheck();
+                }
+                string shared = LinuxRecoveryCaptureExport.Root + "/" + name;
+                Assert.Equal(originalPayload, LinuxRecoveryNative.StatPath(original + "/payload.raw"));
+                Assert.Equal(originalMetadata, LinuxRecoveryNative.StatPath(original + "/image.metadata"));
+                var exportedPayload = LinuxRecoveryNative.StatPath(shared + "/payload.raw");
+                var exportedMetadata = LinuxRecoveryNative.StatPath(shared + "/image.metadata");
+                Assert.True(LinuxRecoveryCaptureExport.SharedFile(exportedPayload));
+                Assert.True(LinuxRecoveryCaptureExport.SharedFile(exportedMetadata));
+                Assert.True(LinuxRecoveryCaptureExport.ExportRoot(LinuxRecoveryNative.StatPath(shared)));
+                Assert.NotEqual(originalPayload.Inode, exportedPayload.Inode); Assert.NotEqual(originalMetadata.Inode, exportedMetadata.Inode);
+                Assert.Equal(fixture.Raw, File.ReadAllBytes(shared + "/payload.raw"));
+                Assert.Equal(fixture.Metadata, File.ReadAllBytes(shared + "/image.metadata"));
+                // A second same-ID transaction cannot replace the visible verified copy.
+                var collision = LinuxRecoveryCaptureExport.Reserve(fixture.Request, (ulong)fixture.Raw.Length, inventory, inventory, "fixture-source");
+                try
+                {
+                    using var source = collision.OpenOriginal();
+                    var refused = LinuxRecoveryCaptureExport.CopyAsync(fixture.Request, fixture.Capture, source.Metadata, source.Payload,
+                        collision, source.Recheck, LinuxRawImageCaptureServiceTests.ImageFixture, CancellationToken.None).GetAwaiter().GetResult();
+                    Assert.Equal(LinuxRecoveryCaptureExportState.Failed, refused.State); Assert.False(collision.Published);
+                    Assert.Equal(exportedPayload, LinuxRecoveryNative.StatPath(shared + "/payload.raw"));
+                    Assert.Equal(exportedMetadata, LinuxRecoveryNative.StatPath(shared + "/image.metadata"));
+                }
+                finally { collision.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+                // Replacing an original with an additional name refuses admission;
+                // do not chmod or unlink the original while exercising refusal.
+                string alias = original + "/payload-alias.raw";
+                Assert.Equal(0, LinkFile(original + "/payload.raw", alias));
+                try { Assert.Throws<IOException>(() => { using var refused = copy.OpenOriginal(); }); }
+                finally { File.Delete(alias); }
+                Assert.Equal(1U, LinuxRecoveryNative.StatPath(original + "/payload.raw").Links);
+                Assert.Equal(originalPayload.Mode, LinuxRecoveryNative.StatPath(original + "/payload.raw").Mode);
+            }
+            finally { copy.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+            Assert.Equal(proof.Store.Inode, LinuxRecoveryNative.StatPath(LinuxRecoveryStorageLease.Store).Inode);
+        }
+        finally { Assert.Equal(0, Unmount(LinuxRecoveryCaptureExport.Root, 0)); }
+    }
+
     private static void WriteProof(Proof proof, IReadOnlyList<string> cases)
     {
         Assert.NotEmpty(cases);
@@ -284,4 +375,8 @@ public sealed class LinuxRecoveryStorageNativeTests
     private static extern int StatFs(SafeFileHandle handle, out Filesystem value);
     [DllImport("libc", EntryPoint = "link", SetLastError = true)][DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     private static extern int LinkFile(string source, string destination);
+    [DllImport("libc", EntryPoint = "mount", SetLastError = true)][DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static extern int BindMount(string source, string destination, string? filesystem, ulong flags, string? data);
+    [DllImport("libc", EntryPoint = "umount2", SetLastError = true)][DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static extern int Unmount(string target, int flags);
 }

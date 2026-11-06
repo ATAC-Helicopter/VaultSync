@@ -11,6 +11,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
+- [VS-1904] Prepare verified recovery copies while preserving private captured originals.
 - [VS-1904] Prototype offline disk capture through the admitted recovery console.
 - [VS-1910] Open disk image tools from a dedicated, localized cloning page.
 - [VS-1907] Prototype a localized recovery wizard with independent physical overwrite confirmation.

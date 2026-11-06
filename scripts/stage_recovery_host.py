@@ -177,7 +177,9 @@ def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commi
         if controller_mode == "capture":
             for key in ("Title", "Warning", "Source", "Challenge", "Result", "Published", "NoSources", "Cancelled",
                         "Status.Invalid", "Status.Unsupported", "Status.Refused", "Status.Incomplete", "Status.Interrupted",
-                        "Status.Failed", "Status.PublicationUnconfirmed", "Status.PublishedVerified"):
+                        "Status.Failed", "Status.PublicationUnconfirmed", "Status.PublishedVerified",
+                        "ExportResult", "Export.Published", "Export.Status.Failed", "Export.Status.Interrupted",
+                        "Export.Status.PublicationUnconfirmed", "Export.Status.PublishedVerified"):
                 if not isinstance(parsed.get("Recovery.Capture." + key), str) or not parsed["Recovery.Capture." + key]:
                     raise ValueError("capture translation missing")
         sources.append(("catalogs/" + file.name, file))

@@ -36,6 +36,7 @@ internal sealed class LinuxRawImageStorage : LinuxRawImageStagingService.IStorag
     public Stream Payload => payload;
     public Stream Metadata => metadata;
     public bool Published { get; private set; }
+    internal LinuxRecoveryNative.Identity HeldDirectoryIdentity => LinuxRecoveryNative.Stat(directory);
 
     internal static string? TryFilesystemDeviceNumber(Stream stream) =>
         OperatingSystem.IsLinux() && RuntimeInformation.ProcessArchitecture == Architecture.X64 &&

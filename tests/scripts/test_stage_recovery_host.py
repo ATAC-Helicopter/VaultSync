@@ -82,6 +82,20 @@ class StageRecoveryHostTests(unittest.TestCase):
                         if record["path"] == "boot/vaultsync-recovery.service"))
         self.assertFalse((self.output / "boot/vaultsync-recovery-display.service").exists())
 
+    def test_missing_capture_export_translation_refuses_before_creation(self):
+        original = media.worker.strict_json
+        def missing_export(data):
+            value = original(data)
+            if "Recovery.Capture.ExportResult" in value:
+                value.pop("Recovery.Capture.ExportResult")
+            return value
+        with patch.object(media.worker, "read_identity", side_effect=self.identity), \
+                patch.object(media.worker, "strict_json", side_effect=missing_export):
+            with self.assertRaisesRegex(ValueError, "capture translation missing"):
+                media.stage(self.host, self.controller, self.reader, self.launcher, self.systemd,
+                            self.output, COMMIT, "en", "capture")
+        self.assertFalse(self.output.exists())
+
     def test_graphical_dependencies_are_source_bound_and_catalog_nesting_is_exact(self):
         catalogs = self.controller / "Localization"
         catalogs.mkdir()

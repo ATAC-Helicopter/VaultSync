@@ -15,6 +15,7 @@ internal static class LinuxRecoveryCaptureHost
         var console = installation.ConsoleText();
         var build = BuildInformationService.Create(typeof(LinuxRecoveryCaptureHost).Assembly);
         string version = RequireBuild(build, installation.Description.Commit);
+        LinuxRecoveryCaptureExportAssessment? exported = null;
         var outcome = await RunSessionAsync(async cancellation =>
         {
             var expected = await LinuxBlockInventoryService.ObserveAsync(cancellation).ConfigureAwait(false);
@@ -30,12 +31,58 @@ internal static class LinuxRecoveryCaptureHost
             installation.RecheckBoot(LinuxRecoveryMediaInstallation.Role.Host); installation.Recheck();
             var request = new LinuxRawImageCaptureRequest(Guid.NewGuid(), operation, Guid.NewGuid(),
                 Guid.NewGuid(), 1, version, installation.Description.Commit);
-            var result = await LinuxRawImageCaptureService.CaptureAsync(request, fresh, selected, OutputParent,
-                cancellation).ConfigureAwait(false);
-            return result;
-        }, (result, cancellation) => WriteResult(console.Text, console.Culture, result, cancellation),
+            // Reserve the second payload before capture so ENOSPC cannot consume all
+            // available space with an original that cannot be shared with the interface.
+            var reservation = LinuxRecoveryCaptureExport.Reserve(request, before[0].Capacity, expected, fresh, selected);
+            LinuxRawImageCaptureAssessment captured;
+            try
+            {
+                captured = await LinuxRawImageCaptureService.CaptureAsync(request, fresh, selected, OutputParent,
+                    cancellation).ConfigureAwait(false);
+            }
+            catch
+            {
+                await reservation.DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
+            exported = await FinishExportAsync(captured, reservation, async () =>
+            {
+                using var original = reservation.OpenOriginal();
+                return await LinuxRecoveryCaptureExport.CopyAsync(request, captured, original.Metadata, original.Payload,
+                    reservation, original.Recheck, DiskImageInspectionWorkerClient.InspectAsync, cancellation).ConfigureAwait(false);
+            }, cancellation).ConfigureAwait(false);
+            return captured;
+        }, (result, cancellation) => WriteResult(console.Text, console.Culture, result, exported, cancellation),
             lifetime => MonitorAsync(installation, lifetime), token).ConfigureAwait(false);
-        return outcome.ExitCode;
+        return ExitCode(outcome, exported);
+    }
+
+    internal static int ExitCode(SessionOutcome outcome, LinuxRecoveryCaptureExportAssessment? exported) =>
+        outcome.ExitCode == 0 && exported?.State != LinuxRecoveryCaptureExportState.PublishedVerified ? 74 : outcome.ExitCode;
+
+    // Every failure after capture publication belongs to export/host health. Neither
+    // reader disposal nor asynchronous copy cleanup may erase the captured result.
+    internal static async Task<LinuxRecoveryCaptureExportAssessment?> FinishExportAsync(
+        LinuxRawImageCaptureAssessment captured, LinuxRecoveryCaptureExport.ICopy reservation,
+        Func<Task<LinuxRecoveryCaptureExportAssessment>> export, CancellationToken token)
+    {
+        LinuxRecoveryCaptureExportAssessment? result = null;
+        try
+        {
+            if (captured.State == LinuxRawImageCaptureState.PublishedVerified)
+                result = await export().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        { result = new(reservation.Published ? LinuxRecoveryCaptureExportState.PublicationUnconfirmed : LinuxRecoveryCaptureExportState.Interrupted); }
+        catch (Exception)
+        { result = new(reservation.Published ? LinuxRecoveryCaptureExportState.PublicationUnconfirmed : LinuxRecoveryCaptureExportState.Failed); }
+        finally
+        {
+            try { await reservation.DisposeAsync().ConfigureAwait(false); }
+            catch (Exception)
+            { result = new(reservation.Published ? LinuxRecoveryCaptureExportState.PublicationUnconfirmed : LinuxRecoveryCaptureExportState.Failed); }
+        }
+        return result;
     }
 
     internal static string RequireBuild(BuildInformation build, string commit)
@@ -86,7 +133,7 @@ internal static class LinuxRecoveryCaptureHost
     { if (mode != "capture") throw LinuxRecoveryMediaInstallation.Invalid(); }
 
     private static void WriteResult(Func<string, string?> text, CultureInfo culture,
-        LinuxRawImageCaptureAssessment result, CancellationToken token)
+        LinuxRawImageCaptureAssessment result, LinuxRecoveryCaptureExportAssessment? exported, CancellationToken token)
     {
         string statusKey = result.State switch
         {
@@ -104,6 +151,22 @@ internal static class LinuxRecoveryCaptureHost
             result.CopiedBytes.ToString("N0", culture)) + "\n";
         if (result.State == LinuxRawImageCaptureState.PublishedVerified)
             message += LinuxRecoveryCaptureConsole.Format(text, culture, "Published", result.ImageDirectoryName!, result.ManifestRoot!) + "\n";
+        if (exported is not null)
+        {
+            string exportKey = exported.State switch
+            {
+                LinuxRecoveryCaptureExportState.Failed => "Export.Status.Failed",
+                LinuxRecoveryCaptureExportState.Interrupted => "Export.Status.Interrupted",
+                LinuxRecoveryCaptureExportState.PublicationUnconfirmed => "Export.Status.PublicationUnconfirmed",
+                LinuxRecoveryCaptureExportState.PublishedVerified => "Export.Status.PublishedVerified",
+                _ => throw LinuxRecoveryMediaInstallation.Invalid()
+            };
+            message += LinuxRecoveryCaptureConsole.Format(text, culture, "ExportResult",
+                LinuxRecoveryCaptureConsole.Format(text, culture, exportKey)) + "\n";
+            if (exported.State == LinuxRecoveryCaptureExportState.PublishedVerified)
+                message += LinuxRecoveryCaptureConsole.Format(text, culture, "Export.Published",
+                    LinuxRecoveryCaptureExport.Root + "/" + result.ImageDirectoryName) + "\n";
+        }
         using var access = LinuxRecoveryLocalConsole.OpenPhysical();
         access.WaitForActive(token); access.ValidateContext(); access.Write(Encoding.UTF8.GetBytes(message), token);
     }

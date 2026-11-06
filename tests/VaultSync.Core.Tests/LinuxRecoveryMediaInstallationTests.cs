@@ -58,12 +58,14 @@ public sealed class LinuxRecoveryMediaInstallationTests
         var provider = LinuxRecoveryMediaInstallation.ConsoleText(input, culture);
         foreach (string key in new[] { "Title", "Warning", "NoSources", "Cancelled", "Status.Invalid", "Status.Unsupported",
             "Status.Refused", "Status.Incomplete", "Status.Interrupted", "Status.Failed", "Status.PublicationUnconfirmed",
-            "Status.PublishedVerified" })
+            "Status.PublishedVerified", "Export.Status.Failed", "Export.Status.Interrupted", "Export.Status.PublicationUnconfirmed", "Export.Status.PublishedVerified" })
             Assert.NotEmpty(LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, key));
         Assert.Contains("vdc", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "Source", "vdc", "100", "512", "512"));
         Assert.Contains("challenge", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "Challenge", "challenge"));
         Assert.Contains("image", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "Published", "image", "root"));
         Assert.Contains("123", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "Result", "state", "123"));
+        Assert.Contains("state", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "ExportResult", "state"));
+        Assert.Contains("folder", LinuxRecoveryCaptureConsole.Format(provider.Text, provider.Culture, "Export.Published", "folder"));
         Assert.Null(provider.Text("Recovery.Capture.Unknown"));
         Assert.Null(provider.Text("App.Title"));
     }
