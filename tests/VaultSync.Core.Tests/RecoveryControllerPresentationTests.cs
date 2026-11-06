@@ -44,6 +44,37 @@ public sealed class RecoveryControllerPresentationTests
         window.Close();
     }
 
+    [Fact]
+    public async Task Refresh_button_uses_image_choice_cancellation()
+    {
+        using var session = HeadlessUnitTestSession.StartNew(typeof(RecoveryApp));
+        await session.Dispatch(async () =>
+        {
+            var window = new RecoveryWindow(); window.Show();
+            using var stop = new CancellationTokenSource();
+            var loads = new List<CancellationToken>();
+            var pending = new TaskCompletionSource<LinuxRecoveryImageCatalog.Result>();
+            window.ViewModel.CatalogLoader = token =>
+            {
+                loads.Add(token);
+                return loads.Count == 1
+                    ? Task.FromResult(new LinuxRecoveryImageCatalog.Result(LinuxRecoveryImageCatalog.State.Available, []))
+                    : pending.Task;
+            };
+            var choice = window.ViewModel.ChooseImageFolderAsync(Guid.NewGuid(), stop.Token);
+            await Flush();
+            Click(window, "RefreshImages");
+            Assert.Equal(2, loads.Count);
+            stop.Cancel();
+            Assert.True(loads[1].IsCancellationRequested);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await choice);
+            pending.SetResult(new(LinuxRecoveryImageCatalog.State.Available, []));
+            await Flush();
+            await Finish(window, LinuxRecoveryControllerClient.Result.Cancelled);
+            return 0;
+        }, CancellationToken.None);
+    }
+
     [Theory]
     [InlineData("XID", 2L, true)]
     [InlineData("XID", 4294967295L, true)]
@@ -279,11 +310,12 @@ public sealed class RecoveryControllerPresentationTests
             Assert.Equal("/media/known-image", folder.Text);
             Assert.Null(window.FindControl<ListBox>("Images")!.SelectedItem);
             window.ViewModel.CatalogLoader = _ => second.Task;
-            window.ViewModel.RefreshImages();
+            var refresh = window.ViewModel.RefreshImagesAsync(CancellationToken.None);
             window.ViewModel.Cancel();
             Assert.Null(await choice);
             string? heading = window.FindControl<TextBlock>("Heading")!.Text;
             second.SetException(new System.IO.IOException("synthetic late refresh failure"));
+            await refresh;
             await Flush();
             Assert.Equal(heading, window.FindControl<TextBlock>("Heading")!.Text);
             Assert.False(window.FindControl<ListBox>("Images")!.IsVisible);

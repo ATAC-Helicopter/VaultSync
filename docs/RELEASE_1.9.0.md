@@ -13,6 +13,16 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Image refresh lifecycle — 2026-11-06
+
+BUG-19045/#828 follows up the two hosted reliability findings on16fb3c3.
+The presentation refresh now returns an observed task and the button supplies
+its current image-choice cancellation token. All24 focused warning-as-error
+Release presentation cases pass, including cancellation and stale failures;
+the test project also builds the referenced controller. No image/worker/consent
+contract or localization string changes. New-head Sonar and native interaction
+remain separate; coverage77.9% on16fb3c3 is historical, not a passing release gate.
+
 ## User journey and image discovery — 2026-11-06
 
 VS-1907/#495 adds bounded discovery of recovery-copy candidates to the installed

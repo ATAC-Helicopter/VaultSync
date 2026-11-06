@@ -1219,6 +1219,12 @@ is staged for this release through [PR #722](https://github.com/ATAC-Helicopter/
 It needs exact 1.8.9 upgrade and platform qualification before shipping; the
 repository must not transfer before a compatible release is adopted.
 
+- [ ] `BUG-19045` `P0` Observe recovery image refresh tasks and explicit cancellation.
+  - Image-list refresh now returns an observed task and the refresh button keeps
+    the active image-choice cancellation token. Twenty-four focused warning-as-error
+    Release presentation cases pass, including cancellation and late refresh failures.
+    No Core/device/protocol change or new UI text; native rendering and hosted
+    Sonar confirmation remain open. Issue #828; PR #736; not release-qualified.
 - [ ] `BUG-19044` `P0` Keep recovery wizard content visible during software redraws.
   - Native source 1f6644b accepts image-folder input and reaches destination
     selection, but content can turn black on updates. A retained software-buffer

@@ -75,7 +75,7 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
         imageStatus = window.FindControl<TextBlock>("ImageStatus")!;
         refresh = window.FindControl<Button>("RefreshImages")!;
         advanced = window.FindControl<Expander>("AdvancedFolder")!;
-        refresh.Click += (_, _) => RefreshImages();
+        refresh.Click += (_, _) => StartCatalogRefresh(imageChoiceToken);
         images.SelectionChanged += (_, _) => { if (images.SelectedItem is not null) folder.Text = ""; };
         // TextChanged is deferred by Avalonia; clear selection synchronously so
         // an immediate Continue cannot prefer an older list choice over typed input.
@@ -119,7 +119,7 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
                 targets.ItemsSource = inventory.State == LinuxBlockInventoryState.Observed && !inventory.HasUnresolvedSwaps
                     ? inventory.Devices.Where(d => d.Kind == LinuxBlockKind.WholeDisk && d.Identity == LinuxBlockIdentity.UniqueInSnapshot && d.DiskSequence is > 0 && !d.IsReadOnly && d.Use == LinuxBlockUse.Unknown && !d.MountObserved && !d.SwapObserved && !d.HasHolders).Select(d => new TargetItem(d, CultureInfo.GetCultureInfo(text.CurrentLanguage))).ToArray()
                     : Array.Empty<TargetItem>();
-            if (next == Screen.Folder) { imageChoiceToken = token; RefreshImages(token); }
+            if (next == Screen.Folder) { imageChoiceToken = token; StartCatalogRefresh(token); }
             else StopCatalog();
             Render();
         });
@@ -144,8 +144,15 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
         catalogCancellation?.Cancel();
         catalogCancellation = null;
     }
-    internal void RefreshImages() => RefreshImages(imageChoiceToken);
-    private async void RefreshImages(CancellationToken token)
+    private void StartCatalogRefresh(CancellationToken token)
+    {
+        var task = RefreshImagesAsync(token);
+        // Preserve UI-thread exception reporting for unexpected presentation failures.
+        _ = task.ContinueWith(failed => Dispatcher.UIThread.Post(() => failed.GetAwaiter().GetResult()),
+            CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+    internal async Task RefreshImagesAsync(CancellationToken token)
     {
         if (screen != Screen.Folder || terminalObserved || IsComplete || cancellation.IsCancellationRequested || token.IsCancellationRequested) return;
         StopCatalog();
