@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -132,6 +133,25 @@ class ProjectDateGuardTests(unittest.TestCase):
         self.assertEqual({"1.8.8": "2026-08-28"}, milestones)
         self.assertEqual({"1.8.7": "2026-08-21"}, releases)
         self.assertEqual(4, run_gh.call_count)
+
+    @mock.patch.object(project_date_guard, "run_gh")
+    def test_live_pagination_accepts_concatenated_json_without_slurp(self, run_gh):
+        page = {"data": {"user": {"projectV2": {"items": {"nodes": [
+            {"id": "PVTI_first", "content": {"title": "First"}, "fieldValues": {"nodes": []}}
+        ]}}}}}
+        second = {"data": {"user": {"projectV2": {"items": {"nodes": [
+            {"id": "PVTI_second", "content": {"title": "Second"}, "fieldValues": {"nodes": []}}
+        ]}}}}}
+        run_gh.side_effect = [
+            '{"id":"PVT_project"}',
+            json.dumps({"fields": [{"name": name, "id": "PVTF_" + name.replace(" ", "_")}
+                                  for name in project_date_guard.REQUIRED_DATE_FIELDS]}),
+            json.dumps(page) + "\n" + json.dumps(second),
+            '{"data":{"repository":{"milestones":{"nodes":[]},"releases":{"nodes":[]}}}}',
+        ]
+        _, _, items, _, _ = project_date_guard.load_live_state("ATAC-Helicopter", 7)
+        self.assertEqual(["PVTI_first", "PVTI_second"], [item["id"] for item in items])
+        self.assertNotIn("--slurp", run_gh.call_args_list[2].args[0])
 
     @mock.patch.object(project_date_guard, "run_gh")
     def test_load_live_state_fails_closed_when_required_project_fields_are_missing(self, run_gh):

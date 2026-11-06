@@ -66,3 +66,6 @@ docs/video/build/
 /log/
 /project/
 /versions
+
+# Editorial drafts belong in the private workspace, outside public Git.
+/docs/dev-diaries/

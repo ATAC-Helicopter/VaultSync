@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,6 +75,86 @@ public sealed class HistoryViewModelTests
         SnapshotHistoryMetadata metadata = repo.GetSnapshotHistoryMetadata(snapshotId)!;
         Assert.True(metadata.IsProtected);
         Assert.True(metadata.IsKnownGood);
+    }
+
+    [Fact]
+    public void RebuiltSelectedSnapshotRetainsUnfinishedMetadataDrafts()
+    {
+        using var temp = new TempDirectory();
+        var viewModel = CreateViewModel(Path.Combine(temp.Path, "vaultsync.db"));
+        viewModel.SelectedTimelineItem = CreateTimelineItem(7);
+        viewModel.SelectedSnapshotLabelDraft = "Unfinished label";
+        viewModel.SelectedSnapshotNoteDraft = "Unfinished note";
+        viewModel.SelectedSnapshotTagsDraft = "draft, review";
+        viewModel.SelectedTimelineItem = CreateTimelineItem(7);
+        Assert.Equal("Unfinished label", viewModel.SelectedSnapshotLabelDraft);
+        Assert.Equal("Unfinished note", viewModel.SelectedSnapshotNoteDraft);
+        Assert.Equal("draft, review", viewModel.SelectedSnapshotTagsDraft);
+    }
+
+    [Fact]
+    public void DifferentSnapshotDoesNotInheritThePreviousDraft()
+    {
+        using var temp = new TempDirectory();
+        var viewModel = CreateViewModel(Path.Combine(temp.Path, "vaultsync.db"));
+        viewModel.SelectedTimelineItem = CreateTimelineItem(7);
+        viewModel.SelectedSnapshotLabelDraft = "Unfinished label";
+        viewModel.SelectedTimelineItem = CreateTimelineItem(8);
+        Assert.Empty(viewModel.SelectedSnapshotLabelDraft);
+        viewModel.SelectedSnapshotLabelDraft = "Another unfinished label";
+        viewModel.SelectedTimelineItem = null;
+        Assert.Empty(viewModel.SelectedSnapshotLabelDraft);
+    }
+
+    [Fact]
+    public void CleanDraftsFollowRefreshedMetadata()
+    {
+        using var temp = new TempDirectory();
+        var viewModel = CreateViewModel(Path.Combine(temp.Path, "vaultsync.db"));
+        viewModel.SelectedTimelineItem = CreateTimelineItem(7);
+        viewModel.SelectedTimelineItem = new HistoryTimelineItemViewModel(new HistoryTimelineItemData
+        {
+            ProjectId = 1, SnapshotId = 7, MetadataLabel = "Updated elsewhere",
+            MetadataNote = "New note", MetadataTags = "new"
+        });
+        Assert.Equal("Updated elsewhere", viewModel.SelectedSnapshotLabelDraft);
+        Assert.Equal("New note", viewModel.SelectedSnapshotNoteDraft);
+        Assert.Equal("new", viewModel.SelectedSnapshotTagsDraft);
+    }
+
+    [Fact]
+    public void AnotherProjectCannotInheritDraftsFromAnIdenticalSnapshotNumber()
+    {
+        using var temp = new TempDirectory();
+        var viewModel = CreateViewModel(Path.Combine(temp.Path, "vaultsync.db"));
+        viewModel.SelectedTimelineItem = CreateTimelineItem(7);
+        viewModel.SelectedSnapshotLabelDraft = "Unfinished label";
+        viewModel.SelectedTimelineItem = new HistoryTimelineItemViewModel(new HistoryTimelineItemData
+        {
+            ProjectId = 2, SnapshotId = 7, MetadataLabel = "Different project"
+        });
+        Assert.Equal("Different project", viewModel.SelectedSnapshotLabelDraft);
+    }
+
+    [Fact]
+    public void TransientListSelectionClearingDuringRefreshDoesNotDiscardDrafts()
+    {
+        using var temp = new TempDirectory();
+        var viewModel = CreateViewModel(Path.Combine(temp.Path, "vaultsync.db"));
+        HistoryTimelineItemViewModel previous = CreateTimelineItem(7);
+        viewModel.TimelineItems.Add(previous);
+        viewModel.SelectedTimelineItem = previous;
+        viewModel.SelectedSnapshotLabelDraft = "Keep this unfinished label";
+        viewModel.TimelineItems.CollectionChanged += (_, _) => viewModel.SelectedTimelineItem = null;
+        HistoryTimelineItemViewModel refreshed = CreateTimelineItem(7);
+
+        viewModel.ReplaceTimelinePageItems(new[] { refreshed });
+
+        Assert.Same(refreshed, viewModel.SelectedTimelineItem);
+        Assert.Equal("Keep this unfinished label", viewModel.SelectedSnapshotLabelDraft);
+        viewModel.ReplaceTimelinePageItems(Array.Empty<HistoryTimelineItemViewModel>());
+        Assert.Null(viewModel.SelectedTimelineItem);
+        Assert.Empty(viewModel.SelectedSnapshotLabelDraft);
     }
 
     private static HistoryViewModel CreateViewModel(string dbPath)

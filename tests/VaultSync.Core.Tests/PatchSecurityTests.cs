@@ -98,7 +98,7 @@ public sealed class PatchSecurityTests
         Assert.ThrowsAny<Exception>(() => SafeZipExtractor.GetSafeEntryRelativePath(path));
     }
 
-    [Fact]
+    [DirectorySymlinkFact]
     public void SafeZipExtractor_RejectsLinkedDestinationComponents()
     {
         string root = Path.Combine(Path.GetTempPath(), $"vaultsync-zip-root-{Guid.NewGuid():N}");

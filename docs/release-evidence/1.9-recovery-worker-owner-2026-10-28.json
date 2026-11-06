@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-28",
+  "workId": "VS-1907",
+  "issue": 495,
+  "releasePr": 736,
+  "baseCommit": "3b2924cc6d378aaec2d1e2a00b7d89e02167e758",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoveryWorkerOperation.cs": "ca5a3ee0d3a888151e95aa960832fca9f91b2f128538e0af65dd1e34e15f1a8a",
+    "src/VaultSync.Core/Services/LinuxRecoverySession.cs": "33dcf621061da087d81175fe2556adc8a6e399c5043ea2d6654c61779109492d",
+    "src/VaultSync.Core/Services/LinuxRawRestoreOperation.cs": "2b63b682e63b7a2b2dd766e1227561bae4c49bdf3ff26dd20bb7c0eeb6f5297a",
+    "src/VaultSync.Core/Services/RawImageDeviceRestoreService.cs": "e74f6aa345dbdb45836976872344f775843c003f8e74c960834268fc2d250b25",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryWorkerOperationTests.cs": "78f3010d07db50bbb938df17781632a3b4cf67d00c6400b8f6d3689713392e9b",
+    "tests/VaultSync.Core.Tests/LinuxRecoverySessionTests.cs": "e9a93e966cd00cd9b1af05ec2c5c57984183380cab39772c781fe87c35ab7e40",
+    "tests/VaultSync.Core.Tests/LinuxRawRestoreOperationTests.cs": "cf3170099781a4b4b9ebcbdaf290e1ccb33b166b70be7b9f4ac0a56f53083bce",
+    "tests/VaultSync.Core.Tests/RawImageDeviceRestoreServiceTests.cs": "f9ff01a768d4fe1ecdfd9fb7b5603c2b06c629c4d7d603f31d4c1aa9df674700"
+  },
+  "check": {
+    "command": "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj -c Release --no-restore -m:1 -warnaserror --filter \"FullyQualifiedName~LinuxRecoveryWorkerOperationTests|FullyQualifiedName~LinuxRecoverySessionTests|FullyQualifiedName~LinuxRawRestoreOperationTests|FullyQualifiedName~RawImageDeviceRestoreServiceTests\"",
+    "passed": 124,
+    "failed": 0,
+    "skipped": 0,
+    "exitCode": 0
+  },
+  "historicalFailure": "Initial compilation stopped at four obsolete xUnit Assert.Throws(Func<Task>) calls. No test ran in that failed checkpoint; calls corrected before the complete focused pass.",
+  "verified": [
+    "Wire confirmation alone and supervisor action alone cannot open/write target",
+    "Actual synthetic owner executes only after both actions, preserves journal identity and cleans owned handles",
+    "Duplicate execution does not cancel active owner",
+    "Peer SocketException plus throwing transport disposal still releases target/stage/journal",
+    "Heartbeat/cancel processing continues during synchronous-before-await staging",
+    "Review expiration and total-run bound do not renew with heartbeats",
+    "Unconfirmed staging or failed cleanup cannot send clean refusal",
+    "Durable progress only after RangeFlushed and acknowledgment update",
+    "Progress callback failure/cancellation retains committed bytes",
+    "Bounded repeated status does not advance durable progress"
+  ],
+  "limits": [
+    "Internal native adapters and synthetic fixtures; no installed privileged host or native IPC/recovery qualification in this run",
+    "Trusted installed/offline supervisor, exact channel pairing and actual human/device authority remain caller prerequisites",
+    "No public writable endpoint, complete UI, bootable media or qualified support profile",
+    "Existing stage/journal storage disposal closes handles and retains files; bounded retained-storage lifecycle remains a supervisor integration gate",
+    "24-hour total and 30-second native-review bounds request cancellation; no immediate native I/O termination guarantee",
+    "No solution-wide build/full suite repeated; affected test project and references compiled with warnings as errors",
+    "No visible UI string/diagnostics change; no localization rerun",
+    "Exact-head hosted checks and protected reviews remain separate"
+  ]
+}

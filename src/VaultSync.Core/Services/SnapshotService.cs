@@ -298,11 +298,15 @@ public class SnapshotService
             },
             ct);
 
-    public async Task<int> CreateSnapshotAsync(
+    public Task<int> CreateSnapshotAsync(Project project, bool fullHash, SnapshotCreationOptions options,
+        CancellationToken ct = default) => ProductDiagnostics.TraceBetaAsync(DiagnosticOperation.Snapshot,
+            () => CreateSnapshotCoreAsync(project, fullHash, options, ct));
+
+    private async Task<int> CreateSnapshotCoreAsync(
         Project project,
         bool fullHash,
         SnapshotCreationOptions options,
-        CancellationToken ct = default)
+        CancellationToken ct)
     {
         if (project is null) throw new ArgumentNullException(nameof(project));
         ArgumentNullException.ThrowIfNull(options);
@@ -647,6 +651,7 @@ public class SnapshotService
             TotalBytes: totalBytes);
         LastOutcome = LastCreatedOutcome;
 
+        ProductDiagnostics.Record(DiagnosticOperation.Snapshot, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Commit, quantity: totalFiles);
         _logger.Info($"[SnapshotService] Finished snapshot for '{project.Name}': " +
                      $"added={changes.Added.Count}, modified={changes.Modified.Count}, deleted={changes.Deleted.Count}, unchanged={changes.Unchanged.Count}, totalFiles={totalFiles}, totalBytes={totalBytes}");
     }

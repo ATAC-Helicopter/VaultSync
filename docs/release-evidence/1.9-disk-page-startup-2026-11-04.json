@@ -1,0 +1,282 @@
+{
+  "observedOn": "2026-11-04",
+  "release": "1.9.0",
+  "baseCommit": "8c8b429569e728c68b1b33fd6e959b98e49378cc",
+  "owners": [
+    "VS-1907/#495",
+    "VS-1910/#501",
+    "VS-1904/#492"
+  ],
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoveryStartupDiagnostics.cs": "e075c3b3efdd7a8e7171b4ed7877ec32b1ba7a5c09a72126d64a45a0955a8b93",
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerLaunch.cs": "df644d2f19cd4d72da1c0c066d34e2598232f3e21a76a5602b7ca5d505bdb419",
+    "src/VaultSync.RecoveryHost/Native/controller-launch.c": "fa91821efa048d6ce22b26529a4219c4f990ba4afeb70442aac31d71049ca9f8",
+    "src/VaultSync.UI/Infrastructure/DesktopRoute.cs": "874fd572dfef4a9ef6916b56bbee74d8bfa569e257050b79ce53430b558e460c",
+    "src/VaultSync.UI/Views/DiskCloningView.axaml": "0da4a37f31be86e17b677c6591dab4609e87acd0b52912723406c873354ef2b5"
+  },
+  "checks": {
+    "focusedRelease": {
+      "passed": 119,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "hostReleaseBuild": {
+      "warnings": 0,
+      "errors": 0
+    },
+    "localization": {
+      "keys": 1992,
+      "locales": 19,
+      "sources": [
+        "VaultSync.UI",
+        "VaultSync.RecoveryController"
+      ]
+    },
+    "nativeLauncherCompile": {
+      "platform": "Debian 13 x86_64 disposable guest",
+      "flags": "-std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=3 -Wl,-z,relro,-z,now",
+      "result": "passed; compile only, not installed launch"
+    }
+  },
+  "historicalFailures": [
+    "First integrated test compile referenced the prior RecoveryViewModel property; migrated test to DiskCloningViewModel.",
+    "First native compile recipe omitted required SOURCE_COMMIT; corrected recipe needed.",
+    "8c8b429 native graphical probe failed without a visible window; synthetic target remained unchanged.",
+    "fa0fea0 first worker staging exceeded identity deadline; unchanged default stager later passed.",
+    "fa0fea0 first recovery staging returned generic refusal; unchanged guarded stage later passed; original refusal cause remains unproven."
+  ],
+  "unverified": [
+    "native keyboard/focus/cancel and owned cleanup on BUG-19043 repair source",
+    "all-platform operational cloning; macOS/APFS remains excluded",
+    "disk-profile/media/updater/package/provenance/protected-review gates"
+  ],
+  "qualification": "none; PR736 remains draft",
+  "componentCheckCommit": "ce55f1f0ea2e54629597c275cde9434b4e948777",
+  "nativeFollowup": {
+    "sourceCommit": "ce55f1f0ea2e54629597c275cde9434b4e948777",
+    "manifestSha256": "93920656d3430f898b459d2684b88e389543b88533d37cd0127b278a23bb051c",
+    "boundFiles": 675,
+    "network": "none",
+    "targetBytes": 65536,
+    "actualVisibleWindow": false,
+    "authorizedDisplayExit": 0,
+    "untrustedDisplayExit": 1,
+    "untrustedCookieReadExit": 1,
+    "controllerLastPhase": 101,
+    "connectFailure": "cancelled",
+    "cleanupFailure": "timeout; not confirmed",
+    "controllerSocketRetained": true,
+    "physicalConsentSent": false,
+    "receipts": 0,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "qualification": "failed startup; auth observations only",
+    "qemuNormalExitObserved": true
+  },
+  "hostedAtComponentCommit": {
+    "checksSucceeded": 21,
+    "separateSonarGate": "failed",
+    "newCoveragePercent": 78.1,
+    "reliabilityRating": "C",
+    "securityRating": "D",
+    "thresholdsOrExclusionsChanged": false
+  },
+  "admissionFollowup": {
+    "focusedRelease": {
+      "passed": 72,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "change": "four controller-only fixed admission phase codes; explicit independent cleanup waits; acceptance/stop helper extraction",
+    "deadlinesChanged": false,
+    "admissionGuardsChanged": false,
+    "nativeStatus": "not executed on follow-up source"
+  },
+  "followupSourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoveryStartupDiagnostics.cs": "8ff0b9586ae89ce0dec5fd3ccfcd7bc15f234f31d83812804407cc9614258b3a",
+    "src/VaultSync.Core/Services/LinuxRecoveryMediaInstallation.cs": "0f223e0e563bde2755443e3b1c48233d82019f37edd63540dcc8f41e68029975",
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerLaunch.cs": "017fbe6049202069006748d0d91772d280a7c6425ac635465fe5735f23e6ac0d"
+  },
+  "secondNativeProbe": {
+    "sourceCommit": "99dc62435a4e487f22ebe726dc7afd843461db5e",
+    "manifestSha256": "3fd734acf06f49eab0f31cc53354f2ad6be6883aadce6aa7dda6bed61b60104a",
+    "hostAdmissionSeconds": 28.973116,
+    "controllerManifestDecodedBootSeconds": 63.803096,
+    "controllerClosureEnumeratedBootSeconds": 64.329641,
+    "hostConnectionCancelledBootSeconds": 83.936415,
+    "controllerClosureHashCompleted": false,
+    "actualVisibleWindow": false,
+    "cleanup": "unconfirmed timeout; socket retained",
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "qemuNormalExitObserved": true,
+    "qualification": "none"
+  },
+  "boundedStartupFollowup": {
+    "focusedReleasePassed": 34,
+    "failed": 0,
+    "skipped": 0,
+    "warningsAsErrors": true,
+    "startupMaximumSeconds": 300,
+    "ownedCleanupMaximumSeconds": 20,
+    "diagnosticDrainMaximumSeconds": 2,
+    "diagnosticsCanExtendDeadline": false,
+    "admissionGuardsChanged": false,
+    "nativeStatus": "pending new source",
+    "sourceSha256": "4099b2e98500036f59b51ffeaa0abbd8cd535a8e4ac2acab500eea33b604774c"
+  },
+  "boundedStartupNative": {
+    "sourceCommit": "fa0fea0c1a6f633926cc75607291146d704432b4",
+    "manifestSha256": "b84fe95bbd91cef46b7def742c254764b619e702e0e965141a839668576056a6",
+    "boundFiles": 675,
+    "stagerTimeoutsOrChecksOverridden": false,
+    "controllerAdmittedBootSeconds": 87.732782,
+    "windowOpenedBootSeconds": 197.976088,
+    "supervisorStartedBootSeconds": 206.321243,
+    "idleTerminalBootSeconds": 329.157212,
+    "actualVisibleFolderWindow": true,
+    "actualVisibleTerminalWindow": true,
+    "imageSelected": false,
+    "physicalConsentSent": false,
+    "inputInteractionVerified": false,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "exit": "QEMU exited after orderly ACPI powerdown request; not a measured UI close",
+    "cleanupQualification": "not established; final host cleanup was not collected before shutdown",
+    "qualification": "cold emulated startup/render only; no capture/restore OS profile"
+  },
+  "focusRepairCandidate": {
+    "owner": "BUG-19043/#826",
+    "backend": "default X11 mode; no input-focus proxy",
+    "action": "one request for exact own mapped controller window before protocol startup",
+    "readinessDeadlineSeconds": 5,
+    "nativeIoIndependentlyInterruptible": false,
+    "hostDeadlineAndOwnedStopRequiredForHungXServer": true,
+    "focusGrabsOrVtSwitches": false,
+    "nativeInteractionStatus": "pending repaired-source proof",
+    "headlessPresentationTests": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "sourceSha256": {
+      "src/VaultSync.RecoveryController/LinuxRecoveryX11Focus.cs": "84645dbc6e42abbe96a695e14be2e8a72253ccc7bba9e70464f1925a7996dd43",
+      "src/VaultSync.RecoveryController/RecoveryApp.axaml.cs": "ae2f317707ac3e661f18b3987fea010ab0b4634a7c9839b564cc76868b3e396f",
+      "tests/VaultSync.Core.Tests/RecoveryControllerPresentationTests.cs": "49fa0972cb05dfe31f357072477421b4c58454b71d801bf4cc0b93d23cf2f3ae"
+    }
+  },
+  "focusHandleCorrection": {
+    "observedOn": "2026-11-05",
+    "owner": "BUG-19043/#826",
+    "priorCandidate": "031e3f1697cd6c9e66fd33a3e04ed35aa678ecd1",
+    "defect": "Native descriptor incorrectly checked against backend type name; pinned descriptor is XID",
+    "focusedRelease": {
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "earlierNativeProbe": "Stopped via orderly ACPI after source defect identified; last code platform activation; no input attempted",
+    "nativeStatus": "pending corrected-source proof",
+    "sourceSha256": {
+      "src/VaultSync.RecoveryController/LinuxRecoveryX11Focus.cs": "1f49842b488e5ec441265574e3027ca3699c4b47b6623110bcf34cb174b9117f",
+      "tests/VaultSync.Core.Tests/RecoveryControllerPresentationTests.cs": "aca35edaa383fc4dead24d70acac8dc8393875b1aca482838bacd91179cfb324"
+    }
+  },
+  "nativeHandleFollowup": {
+    "observedOn": "2026-11-05",
+    "sourceCommit": "1f6644b1a5e751bdf03baf779ba6a7e8240d614a",
+    "manifestSha256": "32383fb8331c931305d610a90eea5985cab64fb9d7842c3216dd7b82239e2c2a",
+    "boundFiles": 675,
+    "folderInputAndDestinationPageObserved": true,
+    "redrawDefect": "BUG-19044/#827: black contents during software updates",
+    "finalHostExit": 74,
+    "controllerSocketExists": false,
+    "controllerCgroupExists": false,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "physicalConsentSent": false,
+    "qualification": "input and faulted cleanup only; no successful restore/profile"
+  },
+  "softwareFrameFollowup": {
+    "observedOn": "2026-11-05",
+    "owner": "BUG-19044/#827",
+    "parent": "VS-1907/#495",
+    "focusedRelease": {
+      "passed": 67,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true
+    },
+    "nativeCandidateStatus": "pending installed redraw/cancel/relaunch proof",
+    "diagnostics": "fixed local numeric allowlist only; no user payloads or network sender",
+    "sourceSha256": {
+      "src/VaultSync.RecoveryController/Program.cs": "767f29696df5cacb899422d2bf29bd291669f484647081ef606afc5f084507f3",
+      "src/VaultSync.Core/Services/LinuxRecoveryStartupDiagnostics.cs": "51fd91cbe911a6275a2af449f9ff847ea5fbf0b106cf88eee61b90d87e55e95a",
+      "src/VaultSync.Core/Services/LinuxRecoveryWorkerOperation.cs": "ed5a0e6c8d59a717d513ab75d7e9547da20f0e1f0d5305e8244c0d2990f78ebb",
+      "tests/VaultSync.Core.Tests/LinuxRecoveryStartupDiagnosticsTests.cs": "d2f3119337e61b427324f9f620f035e72e570d1fcad114f28bd3963ed40e01d5",
+      "tests/VaultSync.Core.Tests/LinuxRecoveryWorkerOperationTests.cs": "bf73f6ef96eebd15a283d93911a7548730010c29d5ecd29b9f539e4732c23b3a"
+    }
+  },
+  "softwareFrameNative": {
+    "observedOn": "2026-11-05",
+    "sourceCommit": "caa8ebf295be3b4c025101039a701597ee7005a2",
+    "manifestSha256": "53baca612b83a3c43c6be138de86da3f971e8936618456aa372b7e9602dc7553",
+    "boundFiles": 675,
+    "network": "none",
+    "actualFolderAndFinalWindowsVisible": true,
+    "destinationPageOnThisProbe": false,
+    "controllerFailure": {
+      "phase": 111,
+      "error": 1,
+      "bootSeconds": 69.390402
+    },
+    "workerFailure": {
+      "phase": 30,
+      "error": 4,
+      "bootSeconds": 69.414329
+    },
+    "uiCloseObserved": true,
+    "cleanedBootSeconds": 105.166502,
+    "hostExit": 74,
+    "socketExists": false,
+    "controllerCgroupExists": false,
+    "physicalConsentSent": false,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "vmExit": "power-down observed at boot110.426s; process absent",
+    "qualification": "redraw/failed-close component only; selection failure remains unqualified"
+  },
+  "hostedSoftwareFrameCommit": {
+    "sourceCommit": "caa8ebf295be3b4c025101039a701597ee7005a2",
+    "analyzedCommitVerified": true,
+    "analysisId": "970a4fe7-929c-44a9-a764-5c75c4523b2b",
+    "scanner": "SUCCESS",
+    "separateQualityGate": "ERROR",
+    "newReliabilityRating": "A",
+    "newSecurityRating": "D",
+    "newCoveragePercent": 77.7,
+    "requiredCoveragePercent": 80,
+    "thresholdsOrExclusionsChanged": false
+  },
+  "softwareFrameSequencedNative": {
+    "observedOn": "2026-11-05",
+    "sourceCommit": "caa8ebf295be3b4c025101039a701597ee7005a2",
+    "manifestSha256": "53baca612b83a3c43c6be138de86da3f971e8936618456aa372b7e9602dc7553",
+    "network": "none",
+    "exactSyntheticFolderConfirmedBeforeSubmit": true,
+    "actualDestinationListVisible": true,
+    "stageVerifiedBootSeconds": 235.083682,
+    "inventorySentBootSeconds": 235.507615,
+    "userCancel": "acknowledged as existing protocol Refused; no disk selected",
+    "actualFinalWindowVisible": true,
+    "actualCloseObserved": true,
+    "cleanedBootSeconds": 284.457311,
+    "hostExit": 74,
+    "socketExists": false,
+    "controllerCgroupExists": false,
+    "physicalConsentSent": false,
+    "acknowledgedBytes": 0,
+    "targetBeforeAndAfterSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "limits": "intermediate QEMU frames/input lag; settled full screens verified, no completed disk restore or physical VT handoff",
+    "earlierFailures": "fast-input InvalidData not reproduced; second manual probe expired before submission"
+  }
+}

@@ -2520,6 +2520,7 @@ namespace VaultSync.UI.ViewModels
             foreach (DestinationStatusItem des in DestinationStatuses)
             {
                 des.RefreshLocalization();
+                ApplyDestinationQuotaPlan(des);
             }
             OnPropertyChanged(string.Empty);
             _lastHealthProbeUtc = DateTime.MinValue;
@@ -4247,8 +4248,12 @@ namespace VaultSync.UI.ViewModels
         /// <summary>
         /// Populates this view model from real projects and backups loaded from the core layer.
         /// Call this after performing any backup/restore/delete operations.
+        /// Destination plans must come from complete accounting; omitted plans preserve
+        /// the independent sidebar state rather than deriving totals from a partial page.
         /// </summary>
-        public void LoadFromBackups(IEnumerable<Project> projects, IEnumerable<Backup> backups, ISet<int>? autoBackupDisabledProjects = null)
+        public void LoadFromBackups(IEnumerable<Project> projects, IEnumerable<Backup> backups,
+            ISet<int>? autoBackupDisabledProjects = null,
+            IReadOnlyList<DestinationQuotaPlan>? destinationQuotaPlans = null)
         {
             if (projects is null) throw new ArgumentNullException(nameof(projects));
             if (backups  is null) throw new ArgumentNullException(nameof(backups));
@@ -4263,7 +4268,8 @@ namespace VaultSync.UI.ViewModels
 
             List<Project> projectList = projects.ToList();
             List<Backup> backupList = DeduplicateBackups(backups);
-            RefreshDestinationQuotaPlans(config, backupList);
+            if (destinationQuotaPlans is not null)
+                UpdateDestinationQuotaPlans(destinationQuotaPlans);
             Dictionary<int, Snapshot> snapshotById = LoadSnapshotLookup(config, backupList);
             int projectSignature = ComputeProjectSignature(projectList);
             int backupSignature = ComputeBackupSignature(backupList);
@@ -4551,11 +4557,11 @@ namespace VaultSync.UI.ViewModels
             }
         }
 
-        private void RefreshDestinationQuotaPlans(AppConfig config, IEnumerable<Backup> backups)
+        internal void UpdateDestinationQuotaPlans(IReadOnlyList<DestinationQuotaPlan> plans)
         {
             _destinationQuotaPlansById.Clear();
 
-            foreach (DestinationQuotaPlan plan in DestinationQuotaPlanner.BuildPlans(config.Backups.Destinations ?? [], backups))
+            foreach (DestinationQuotaPlan plan in plans)
             {
                 _destinationQuotaPlansById[plan.DestinationId] = plan;
             }
@@ -4571,14 +4577,16 @@ namespace VaultSync.UI.ViewModels
             if (!_destinationQuotaPlansById.TryGetValue(item.Id, out DestinationQuotaPlan? plan))
             {
                 item.StoredBytesText = string.Empty;
+                item.StoredBytesValueText = string.Empty;
                 item.CleanupSuggestionText = string.Empty;
                 return;
             }
 
+            item.StoredBytesValueText = BackupSnapshotItem.FormatSize(plan.StoredBytes);
             item.StoredBytesText = string.Format(
                 CultureInfo.CurrentCulture,
-                Lf("Backups.Destinations.StoredBytes", "Stored: {0}"),
-                BackupSnapshotItem.FormatSize(plan.StoredBytes));
+                Lf("Backups.Destinations.StoredBytes", "{0} · Known backups (logical)"),
+                item.StoredBytesValueText);
 
             if (!plan.SoftQuotaBytes.HasValue)
             {

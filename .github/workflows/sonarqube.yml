@@ -3,16 +3,10 @@ name: SonarQube
 on:
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   push:
     # Release branches are analyzed by their required PR. Running again for the
     # same branch push duplicates the complete build and coverage pipeline.
     branches: [ "Dev", "Stable" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -26,7 +20,9 @@ concurrency:
 jobs:
   analysis:
     name: SonarQube Cloud analysis
-    runs-on: ubuntu-latest
+    # dotnet-coverage 18.9.0 produced an empty report on the 26.04 rollout.
+    # Keep the measured runner until the profiler qualifies on a newer image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
@@ -88,7 +84,7 @@ jobs:
         run: |
           dotnet tool install --global dotnet-sonarscanner --version 11.2.1
           dotnet tool install --global dotnet-coverage --version 18.9.0
-          python -m pip install coverage==7.10.4
+          python -m pip install --only-binary :all: coverage==7.10.4
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Restore
@@ -107,7 +103,7 @@ jobs:
             /o:"${SONAR_ORGANIZATION}" \
             /d:sonar.host.url="${host_url}" \
             /d:sonar.token="${SONAR_TOKEN}" \
-            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml \
+            /d:sonar.cs.vscoveragexml.reportsPaths="${RUNNER_TEMP}/coverage-main.xml,${RUNNER_TEMP}/recovery-storage/coverage-native.xml" \
             /d:sonar.python.coverage.reportPaths=python-coverage.xml \
             /d:sonar.exclusions="coverage.xml,python-coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
             /d:sonar.coverage.exclusions="benchmarks/**,docs/video/**,src/VaultSync.UI/**,src/VaultSync.Core/Services/BackupService.cs,src/VaultSync.Core/Services/NetworkMountService.cs,src/VaultSync.Core/Services/SnapshotService.cs" \
@@ -124,12 +120,35 @@ jobs:
           dotnet-coverage collect
           "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build"
           -f xml
-          -o coverage.xml
+          -o "${{ runner.temp }}/coverage-main.xml"
+
+      - name: Test owned recovery storage in isolated namespace
+        if: steps.config.outputs.configured == 'true'
+        run: bash scripts/test_recovery_storage_native.sh "${{ runner.temp }}/recovery-storage"
+
+      - name: Verify coverage collection
+        if: steps.config.outputs.configured == 'true'
+        run: |
+          python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/coverage-main.xml"
+          python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/recovery-storage/coverage-native.xml"
+
+      - name: Retain isolated storage evidence
+        if: always() && steps.config.outputs.configured == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: recovery-storage-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/coverage-main.xml
+            ${{ runner.temp }}/recovery-storage/coverage-native.xml
+            ${{ runner.temp }}/recovery-storage/native-storage-evidence.json
+            ${{ runner.temp }}/recovery-storage/**/*.trx
 
       - name: Test Python with coverage
         if: steps.config.outputs.configured == 'true'
         run: |
-          python -m coverage run --source=scripts -m unittest discover -s tests/scripts -p 'test_*.py'
+          python -m coverage run --source=scripts,experiments -m unittest discover -s tests/scripts -p 'test_*.py'
           python -m coverage xml -o python-coverage.xml
 
       - name: End SonarQube analysis

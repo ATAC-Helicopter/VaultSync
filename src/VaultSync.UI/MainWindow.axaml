@@ -15,7 +15,15 @@
     TransparencyLevelHint="AcrylicBlur, Blur, Transparent, None"
     Title="{infra:LocalizedString Key=Shell.Title}">
 
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Alt+Left" Command="{CompiledBinding NavigateBack}" />
+    <KeyBinding Gesture="Alt+Right" Command="{CompiledBinding NavigateForward}" />
+  </Window.KeyBindings>
+
   <Window.Styles>
+    <Style Selector="Button.navigation-history:disabled">
+      <Setter Property="Opacity" Value="0.35" />
+    </Style>
     <Style Selector="Border.pulse-ring">
       <Setter Property="Opacity" Value="0.6" />
       <Setter Property="Width" Value="8" />
@@ -173,6 +181,7 @@
           </StackPanel>
         </Border>
 
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel x:Name="NavButtonsPanel" Spacing="4" Margin="0,0,0,10">
           <Button x:Name="NavDashboardButton" Classes="nav" Classes.active="{CompiledBinding IsDashboardActive}" Command="{CompiledBinding NavigateDashboard}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Dashboard}" AutomationProperties.Name="{infra:LocalizedString Key=Nav.Dashboard}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -259,6 +268,19 @@
             </StackPanel>
           </Button>
 
+          <Button x:Name="NavDiskCloningButton" Classes="nav" Classes.active="{CompiledBinding IsDiskCloningActive}" Command="{CompiledBinding NavigateDiskCloning}" ToolTip.Tip="{infra:LocalizedString Key=Nav.DiskCloning}" AutomationProperties.Name="{infra:LocalizedString Key=Nav.DiskCloning}">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Border x:Name="NavDiskCloningIconBadge" Classes="nav-icon-badge">
+                <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <shapes:Path Data="M4 3.5H16C17.1 3.5 18 4.4 18 5.5V14.5C18 15.6 17.1 16.5 16 16.5H4C2.9 16.5 2 15.6 2 14.5V5.5C2 4.4 2.9 3.5 4 3.5ZM2.5 12H17.5M5 14.2H5.1M8 14.2H8.1"
+                               Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6"
+                               StrokeLineCap="Round" Fill="Transparent" />
+                </Viewbox>
+              </Border>
+              <TextBlock x:Name="NavDiskCloningText" Text="{infra:LocalizedString Key=Nav.DiskCloning}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+
           <Button x:Name="NavGuideButton" Classes="nav" Classes.active="{CompiledBinding IsGuideActive}" Command="{CompiledBinding NavigateGuide}" ToolTip.Tip="{infra:LocalizedString Key=Nav.Guide}" AutomationProperties.Name="{infra:LocalizedString Key=Nav.Guide}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavGuideIconBadge" Classes="nav-icon-badge">
@@ -286,16 +308,35 @@
             </StackPanel>
           </Button>
         </StackPanel>
+        </ScrollViewer>
 
       </DockPanel>
     </Border>
 
     <Border Grid.Row="0" Grid.Column="1" Classes="header" Padding="18,14">
       <StackPanel Spacing="8">
-        <StackPanel>
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+          <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <Button x:Name="NavigateBackButton" Command="{CompiledBinding NavigateBack}"
+                    IsEnabled="{CompiledBinding CanNavigateBack}" Width="36" Height="36"
+                    Classes="action-ghost navigation-history" ToolTip.Tip="{infra:LocalizedString Key=Nav.Back}"
+                    AutomationProperties.Name="{infra:LocalizedString Key=Nav.Back}">
+              <shapes:Path Data="M14,4 L6,12 L14,20 M6,12 L22,12" Width="18" Height="18" Stretch="Uniform"
+                           Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="2" />
+            </Button>
+            <Button x:Name="NavigateForwardButton" Command="{CompiledBinding NavigateForward}"
+                    IsEnabled="{CompiledBinding CanNavigateForward}" Width="36" Height="36"
+                    Classes="action-ghost navigation-history" ToolTip.Tip="{infra:LocalizedString Key=Nav.Forward}"
+                    AutomationProperties.Name="{infra:LocalizedString Key=Nav.Forward}">
+              <shapes:Path Data="M10,4 L18,12 L10,20 M18,12 L2,12" Width="18" Height="18" Stretch="Uniform"
+                           Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="2" />
+            </Button>
+          </StackPanel>
+          <StackPanel Grid.Column="1">
           <TextBlock Text="{CompiledBinding HeaderTitle}" FontSize="24" FontWeight="SemiBold"/>
           <TextBlock Text="{CompiledBinding HeaderKicker}" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0"/>
-        </StackPanel>
+          </StackPanel>
+        </Grid>
 
         <Border Margin="0,4,0,0"
                 Padding="12"
@@ -390,6 +431,9 @@
         </Panel>
         <Panel IsVisible="{Binding IsRecoveryActive}">
           <views:RecoveryView DataContext="{Binding RecoveryViewModel}" />
+        </Panel>
+        <Panel IsVisible="{Binding IsDiskCloningActive}">
+          <views:DiskCloningView DataContext="{Binding DiskCloningViewModel}" />
         </Panel>
         <Panel IsVisible="{Binding IsGuideActive}">
           <views:GuideView DataContext="{Binding GuideViewModel}" />

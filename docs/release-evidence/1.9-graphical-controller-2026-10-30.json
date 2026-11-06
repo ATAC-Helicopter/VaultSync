@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-30",
+  "owner": "VS-1907/#495; Refs#494/#736",
+  "sourceBase": "b8e3010850fd6dfe98c663dec84b5601deec0806",
+  "binding": "Precommit working-tree component hashes; native installed proof pending",
+  "componentSha256": {
+    "scripts/stage_recovery_host.py": "c198951536eb08e51ea670d67610af47c8b35cfe2c95ec4feb6d1779849aac74",
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerClient.cs": "c36ebe79c0b95adac8848febdc7b8085ed87057196b7e9b50b95ab89ba273a9d",
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerLaunch.cs": "05e82cb3e97ad6bfa75489796eb605fce2404c49fe00d9ca3c458e56c6d468f2",
+    "src/VaultSync.Core/Services/LinuxRecoveryHost.cs": "0c75307e503399f9010658c273e03b8a094ebdd4bbabf57869b8aebd5d368ccf",
+    "src/VaultSync.Core/Services/LinuxRecoveryLocalConsole.cs": "7d0d96918bb41b37377d62ffa62187514dbae97246cf502760685f831bf3abd9",
+    "src/VaultSync.Core/Services/LinuxRecoveryMediaInstallation.cs": "c15b6fcc02ddcb8d236e1609909a374ea12271676d7f0fe4680145e86e19f8a6",
+    "src/VaultSync.RecoveryController/Program.cs": "1832aa7d213416b33612b72fb5df2d0e0fa91a53a86ce06c643f42c3ced64ba4",
+    "src/VaultSync.RecoveryController/VaultSync.RecoveryController.csproj": "8fb1103057a609cfe4c3a4917c63785a3ec87acde0e8c1d3d06812c5bdc25773",
+    "src/VaultSync.RecoveryHost/Native/controller-launch.c": "65926ccbdd710f1db35986c4e753129745d1bc8d018f73a6d19f4ed8b381ab86",
+    "packaging/recovery/vaultsync-recovery-display.service": "ac0776a0332b443334b5c0080998d9601bdd1119acdd739d91e7aef56b2eb5a2",
+    "packaging/recovery/vaultsync-recovery-graphical.service": "bec6f80ed31f97388dd353cd10ace7008bb8c17cab4ba21317c5ccb97a23cf86",
+    "src/VaultSync.RecoveryController/IRecoveryPresentation.cs": "72620677a2371acd1b8702710c443a9754e2f91d3138f28b1a692170ba355e72",
+    "src/VaultSync.RecoveryController/RecoveryApp.axaml": "3a8e58298fbef804bc0c339e074b97b675e74235c41cacbb0d1fa3a936c4e33a",
+    "src/VaultSync.RecoveryController/RecoveryApp.axaml.cs": "50dc4c65229791723fb1703ff00e22fc15f1efb2a8ac328d9bbd7a5380e4e01f",
+    "src/VaultSync.RecoveryController/RecoveryControllerRunner.cs": "9e570a590fd551617f7e62f561f4ac63a7bf37099571aef540c642d1cba9e967",
+    "src/VaultSync.RecoveryController/RecoveryViewModel.cs": "14ee1850f909013277e570e36a0e313275c1f9ea3db359402e28c3220b0328b5",
+    "src/VaultSync.RecoveryController/RecoveryWindow.axaml": "fdb598e7be5184bd1a7d78efa45eafb583bef0329fe2156d96c3343520aedfb4",
+    "src/VaultSync.RecoveryController/RecoveryWindow.axaml.cs": "f61a496382e34f5cc8d2da37c1b989d90ea2c12533685ba86d182eafe04cfaa5",
+    "src/VaultSync.RecoveryHost/Native/display-launch.c": "448a3af042b145c515ce4164005db3d4ec2bdd27de784acb3e74793d26ab6c06"
+  },
+  "local": {
+    "controllerBuild": "Release --no-restore -warnaserror -p:UseSharedCompilation=false: passed0warnings/0errors",
+    "historicalBuildFailure": "Initial Avalonia AVLN3000: window constructor not public; corrected and rebuilt",
+    "focusedTests": {
+      "classes": [
+        "LinuxRecoveryControllerClientTests",
+        "LinuxRecoveryMediaInstallationTests",
+        "LinuxRecoveryLocalConsoleTests",
+        "LinuxRecoveryControllerLaunchTests"
+      ],
+      "passed": 112,
+      "failed": 0,
+      "skipped": 0,
+      "exit": 0
+    },
+    "producerTests": {
+      "passed": 8,
+      "exit": 0
+    },
+    "localization": "1990keys19catalogs; ordinary UI and separate controller source audits pass",
+    "nativeCompilation": "Both hardened -Wall -Wextra -Werror C launchers compile0; no execution/qualification inferred",
+    "deliberatelySkipped": "Unrelated local suites/full solution release gate; installed native graphical flows not yet run"
+  },
+  "reviews": {
+    "backend": "vaultcritical / Sol Medium",
+    "presentation": "vaultworker / Terra High after narrower role explicitly escalated async lifecycle",
+    "limits": "Static component review, not protected human release review or native qualification"
+  },
+  "historicalHosted": {
+    "head": "b8e3010850fd6dfe98c663dec84b5601deec0806",
+    "checksPassed": 22,
+    "sonarQualityGate": "OK",
+    "coverage": 80.0,
+    "ratings": "A",
+    "duplication": 0.0,
+    "hotspotsReviewed": 100.0
+  },
+  "freshHosted": "pending new source head",
+  "nativeGraphical": "pending exact installed source proof; no NIC during recovery; only disposable owned disks",
+  "qualifiedProfiles": 0
+}

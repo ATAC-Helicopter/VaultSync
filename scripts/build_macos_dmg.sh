@@ -10,6 +10,9 @@ if [[ -z "$version" || -z "$arch" || -z "$publish_dir" ]]; then
   exit 1
 fi
 
+bundle_versions="$(python3 scripts/macos_bundle_version.py "$version")"
+read -r short_version build_version <<< "$bundle_versions"
+
 base_dist="dist/macos"
 icns="$base_dist/VaultSync.icns"
 repo_icns="src/VaultSync.UI/Assets/VaultSync.icns"
@@ -46,8 +49,10 @@ cat > "$contents/Info.plist" <<EOF
   <key>CFBundleIdentifier</key>
   <string>com.vaultsync.app</string>
   <key>CFBundleVersion</key>
-  <string>${version}</string>
+  <string>${build_version}</string>
   <key>CFBundleShortVersionString</key>
+  <string>${short_version}</string>
+  <key>VaultSyncReleaseVersion</key>
   <string>${version}</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>

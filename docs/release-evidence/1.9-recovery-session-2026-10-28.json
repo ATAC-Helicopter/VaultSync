@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-28",
+  "workId": "VS-1907",
+  "issue": 495,
+  "releasePr": 736,
+  "baseCommit": "eb1fea77955c8fccebef16e621424c427b0cd370",
+  "scope": "Single-use recovery transcript and supplied operation identity in owned restoration",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoverySession.cs": "2beb495fa9a3534013ca18b2e1ac6aa8c90a46e6f7eb19b6a84bae25bc5c5b0f",
+    "src/VaultSync.Core/Services/LinuxRawRestoreOperation.cs": "704afeaeaef1268fba21f4412d5353a11efc82f6bf85124b31157f4837104ea4",
+    "tests/VaultSync.Core.Tests/LinuxRecoverySessionTests.cs": "a0eb321863a242bafd2dcc043f5caca89377d4038c2dba99cf46adc857c7b2e1",
+    "tests/VaultSync.Core.Tests/LinuxRawRestoreOperationTests.cs": "b625df7b24eab6149b0806f68d250832845b718cb83a9b14a879bba46d2c8b0e"
+  },
+  "check": {
+    "command": "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj -c Release --no-restore -m:1 -warnaserror --filter \"FullyQualifiedName~LinuxRecoverySessionTests|FullyQualifiedName~LinuxRawRestoreOperationTests\"",
+    "passed": 61,
+    "failed": 0,
+    "total": 61,
+    "skipped": 0,
+    "exitCode": 0
+  },
+  "evidence": [
+    "ordered transcript, invalid/replayed/out-of-order refusal",
+    "observation/selection/operation/review correlation",
+    "cancel before confirmation and confirmation/execution race",
+    "post-execution refusal cannot replace outcome",
+    "monotonic durable progress and immutable terminal evidence",
+    "actual synthetic owner/session/review/journal identity round trip",
+    "empty operation closes transferred stage; wrong execution identity cannot open target"
+  ],
+  "limits": [
+    "Portable synthetic fixtures, no native device writes or full recovery qualification",
+    "Caller must pair exact authenticated channel and causally serialize send/receive processing",
+    "No privileged supervisor, channel runner, actual human/device authority or complete UI/media",
+    "Full suite and solution-wide build deliberately skipped; affected test project compiled with warnings as errors",
+    "No user-visible string or diagnostic policy change; localization audit not repeated",
+    "Exact-head hosted checks and protected review remain separate"
+  ]
+}

@@ -31,11 +31,13 @@ Core pillars:
 - `docs/RELEASING.md`: release packaging/publishing flow.
 - `docs/schemas/release-manifest-v1.schema.json`: canonical direct-download
   artifact identity, size, SHA-256, and compatibility schema.
-- `docs/RELEASE_1.8.9.md`: active-release status, feedback intake, sequencing,
-  and gates.
+- `docs/RELEASE_1.8.9.md`: shipped predecessor status and historical qualification.
+- `docs/RELEASE_1.9.0.md`: active development scope, PR stack, delivery and upgrade gates.
+- `docs/CLI.md`, `docs/CLI_OUTPUT.md`: development
+  CLI workflows, compatibility, evidence limits, and versioned machine results.
+- `docs/ROUTE_ARCHITECTURE_1.9.md`: UI route/state migration contract for review.
 - `docs/RECOVERY_HORIZON_STRATEGY.md`: maintainer planning for the 1.9
-  architecture gates, delivery order, issue preparation, and the `1.10` versus
-  `2.0` decision.
+  architecture gates, delivery order, issue preparation, and the gated `2.0` candidate.
 - `docs/REPOSITORY_FORMATS.md`: repository layouts, compatibility boundaries,
   and emergency read-only recovery guidance.
 - `docs/CROSS_MACHINE_SAFETY.md`: cross-machine threat model, identity,
@@ -51,6 +53,8 @@ Core pillars:
 
 ### 2.3 Wiki docs
 - `docs/wiki/Home.md`: wiki entry page.
+- `docs/wiki/Development-Status.md`: stable versus development state, stack and release gates.
+- `docs/wiki/CLI-Development.md`: recorded backup/verification/restore and finite watcher previews.
 - `docs/wiki/*`: task and feature guides (installation, backups, destinations, troubleshooting, etc.).
 - `docs/wiki/Encryption.md`: backup encryption setup, format, credential storage, password changes, opening, and restore.
 - `docs/wiki/Metadata-Sync.md`: portable metadata behavior, current limitations,
@@ -143,9 +147,18 @@ For the `1.8` Chronicle release line, keep these areas aligned:
 
 ## 10. Active 1.8.9 Documentation Contract
 
-VaultSync 1.8.9 is in development. Use `docs/RELEASE_1.8.9.md` as the status
-page and `ROADMAP.md` as the canonical scope. Planned behavior must stay labeled
+VaultSync 1.9.0 is in development; 1.8.9 is the published stable predecessor.
+Use `AGENTS.md`, `CONTRIBUTING.md`, `release/1.9-family.json` and
+`docs/RELEASE_1.9.0.md` for the working branch, sole release PR, ownership and
+delivery gates. `ROADMAP.md` remains the canonical scope. Planned behavior must stay labeled
 as planned until its implementation, tests, and user documentation land.
+
+Changelog policy is defined in CONTRIBUTING.md: Keep a Changelog 1.1.0,
+standard change categories, linked Unreleased, ISO published dates and concise
+entries. `python3 scripts/changelog.py check` enforces the maintained contract.
+Every meaningful change also updates its release PR, owning issue, Project #7
+and affected docs. Routine validated commit/push is authorized on the correct
+preparation head; public names describe product scope without tool attribution.
 
 Every repository-format or metadata-sync change must update, in the same
 logical commit:
@@ -156,3 +169,5 @@ logical commit:
 - this file for the exported field-level contract;
 - executable migration and regression tests;
 - `CHANGELOG.md` only when the behavior exists on the release branch.
+
+- [Complete 1.9 family alignment](docs/RELEASE_FAMILY_1.9.md): branch ownership, immutable ID crosswalk and stable gates.

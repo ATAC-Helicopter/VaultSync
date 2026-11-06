@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-30",
+  "owner": "VS-1907/#495",
+  "sourceBase": "264a896b99de345b5de6b91e0e70d106406db56d",
+  "binding": "Test working-tree hashes before commit; hosted current-head checks remain separate",
+  "testSha256": {
+    "tests/VaultSync.Core.Tests/LinuxRecoveryMediaInstallationTests.cs": "371803e1b8fc838a529e7c57d47844cf1bcd466a19c5ed734d6f92b663ede002",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryStorageNativeTests.cs": "ce0a415af3dc563eab8d5640518f62b6b5029d77f7d14b0e10cd6bb9ee67cd86",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryWorkerOperationTests.cs": "2d748788e3b0450ae600f7d1b74ae874724dbf5ead5ac9452336fe6641fb604a"
+  },
+  "review": {
+    "tier": "vaultcritical / Sol Medium",
+    "scope": "Static contract review of three test files; corrected real elapsed-time assertion and pre-refusal disposal assertion; not protected release review"
+  },
+  "local": {
+    "platform": "macOS ARM64",
+    "configuration": "Release, no restore, warnings as errors, shared compilation disabled",
+    "filter": "LinuxRecoveryMediaInstallationTests|LinuxRecoveryStorageNativeTests|LinuxRecoveryWorkerOperationTests",
+    "passed": 43,
+    "failed": 0,
+    "skipped": 0,
+    "exit": 0,
+    "durationSeconds": 20,
+    "nativeLimit": "The ordinary macOS storage row returns before privileged fixture; no native execution claimed",
+    "deliberatelySkipped": "Unrelated suites, full solution gate, repeated localization audit; no production or visible strings changed"
+  },
+  "historicalHosted": {
+    "prHead": "264a896b99de345b5de6b91e0e70d106406db56d",
+    "compiledCheckout": "025b7759af5947352c0ad083ec99d10e6f7a9b64",
+    "runId": 40939522110,
+    "analysisId": "ed5f4cdc-f2a7-472e-977c-01ed0fd14b04",
+    "taskId": "AaGJI5dCREo-c7dzMjHg",
+    "nativeScenariosPassed": 7,
+    "qualityGate": "ERROR: coverage only",
+    "newCoverage": 79.4,
+    "minimum": 80,
+    "remainingConditions": "All pass; ratings A, duplication0.0%, hotspots reviewed100%"
+  },
+  "freshHosted": {
+    "sourceCommit": "3ce3e8d77cecd561ebb7aaafcbaf759dd87ed23d",
+    "runId": 41026081334,
+    "scannerScmRevisionMatches": true,
+    "taskIdFromScanner": "AaGL7FQoHItCPQqI9Ybd",
+    "analysisId": null,
+    "taskLookup": "Anonymous ce/task returns404 Project does not exist; analysisId not inferred",
+    "exactHeadGitHubSonarCheckRun": 123966208212,
+    "nativeScenariosPassed": 7,
+    "qualityGate": "ERROR: coverage79.9 against80; other conditionsOK",
+    "githubChecks": {
+      "success": 21,
+      "failure": 1
+    }
+  },
+  "qualifiedProfiles": 0,
+  "remaining": [
+    "Serialized graphical intent/review/cancellation flow",
+    "Readable access to older root-private captures",
+    "Product boot media and full OS/profile/fault loops",
+    "Final package/updater/signing/provenance and protected reviews"
+  ]
+}

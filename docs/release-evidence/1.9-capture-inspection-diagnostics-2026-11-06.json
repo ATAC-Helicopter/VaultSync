@@ -1,0 +1,41 @@
+{
+  "owner": "VS-1904",
+  "issue": 492,
+  "release": "1.9.0",
+  "baseCommit": "ebe901b3f0f856c44b2814238407b8c0c7505fae",
+  "date": "2026-11-06",
+  "scope": "Capture-host-only bounded local numeric inspector evidence; no outcome/deadline/wire/publication/telemetry changes",
+  "sourceHashes": {
+    "src/VaultSync.Core/Services/DiskImageInspectionDiagnostics.cs": "6faf12f9773fc707ead390ce1ed1d7e984a5649f2c08d7cd06453f2c075ec909",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerClient.cs": "8a0d40c6e0a8cbc3355e5aac25f3ae03482225830bda08a9a59a2f02369a0cf7",
+    "src/VaultSync.Core/Services/LinuxRawImageCaptureService.cs": "5fea00a96e9a3a655c0d14bd4151f8e3d7b9492f471011c618f35a069c1e6e3e",
+    "src/VaultSync.Core/Services/LinuxRecoveryCaptureHost.cs": "d3b75bb6859984286ff053137c1154f35e0e4948b2cc9550fe9acab789834200",
+    "tests/VaultSync.Core.Tests/DiskImageInspectionDiagnosticsTests.cs": "352d764f628b0eeb0a9183ac75609ba5674974f76da4d29a3432eefa441f8fd3",
+    "tests/VaultSync.Core.Tests/LinuxRawImageCaptureServiceTests.cs": "358f7c6dc5ce1c097aa94b817916b2e1f6d9327ff375c57eee0cbb8034489b9d"
+  },
+  "checks": [
+    {
+      "name": "focused warning-as-error Release",
+      "passed": 172,
+      "skipped": 0
+    },
+    {
+      "name": "final diagnostic-only warning-as-error Release",
+      "passed": 7,
+      "skipped": 0
+    },
+    {
+      "name": "RecoveryHost Release build",
+      "warnings": 0,
+      "errors": 0
+    }
+  ],
+  "nativeExecuted": false,
+  "limitations": [
+    "Wall clock120s and sandboxCPU120s can both apply; observed122s is not a proven cause.",
+    "Worker exit unknown unless observed before parent cleanup.",
+    "Interrupted/pre-inspector failures may have no snapshot.",
+    "No full suite, new native capture/restore, UI, profile or beta qualification claimed.",
+    "Fresh exact-head hosted analysis still required."
+  ]
+}

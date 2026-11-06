@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "owner": "VS-1917",
+  "issue": 574,
+  "releasePr": 736,
+  "sourceBaseCommit": "0bea207ded3521e499f9da9fc4ed2caac00ed3c2",
+  "sourceSha256": {
+    "src/VaultSync.Core/Models/DiskImageCaptureOrigin.cs": "a5af3f1ce1c3f924b6dba9d55af09bad7d7c8d63fd53c324b7311199bf43980a",
+    "src/VaultSync.Core/Models/DiskImageManifestVerification.cs": "622b2668a2b1bc94aa7a3800d7579b522b0d57a52371fdb08a001e3dc637fd82",
+    "src/VaultSync.Core/Services/DiskImageOriginRecordCodec.cs": "a8fd532fa23866f8076e2e4347026dffbcc6351dee9844a9b94597f32f54a2c7",
+    "src/VaultSync.Core/Services/DiskImageFileCaptureService.cs": "675f7ec915559a7b1a00afa2f76e00ad03c8d404d5330416854035b1c033cd36",
+    "src/VaultSync.Core/Services/DiskImageManifestVerificationService.cs": "e24ba89b09677b9241605682163fe2dfe17cce6f9dcb8ed7aa5773cb99620556",
+    "src/VaultSync.Core/Services/DiskImageFileReconstructionService.cs": "8b6a3359936f723ea14997cb9e307a15c79e1e6bae7865f713e567abf821e321",
+    "tests/VaultSync.Core.Tests/DiskImageOriginTests.cs": "c698fb14bf721daac6fedd0cee6d55e159ccf97dcaef22fced94148efc7d42f9",
+    "tests/VaultSync.Core.Tests/Fixtures/disk-image-origin-v2.json": "45df6e335eba8fe5dab747d0e31ba44019d75239d1fe8af03bde014caa0365a5",
+    "scripts/generate_origin_fixtures.py": "3f2698d22510ad5a6adad663de1dbe99b8fb2d6acc718f49c7b2afd24eb0fbff"
+  },
+  "checks": {
+    "focusedCases": 85,
+    "newOriginCases": 32,
+    "coreTests": 1300,
+    "pythonTests": 221,
+    "buildWarnings": 0,
+    "buildErrors": 0,
+    "coreSkipped": 0,
+    "localeKeys": 1932,
+    "locales": 19,
+    "trackingItems": 42,
+    "trackingDiscrepancies": 0
+  },
+  "limitations": [
+    "Provisional manifest schema 2 for regular-file fixtures only.",
+    "Declared source/tool identity is not authenticated.",
+    "Generic ContentVerified binds raw streams and metadata; only reconstruction additionally checks observed GPT layout.",
+    "No device adapters, isolated worker, recovery medium, destructive restore or disk qualification."
+  ]
+}

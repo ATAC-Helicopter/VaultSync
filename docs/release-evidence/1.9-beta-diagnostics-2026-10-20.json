@@ -1,0 +1,112 @@
+{
+  "owner": "VS-1998",
+  "issue": 805,
+  "relatedDefect": {
+    "id": "BUG-19035",
+    "issue": 811,
+    "commit": "0d1163e"
+  },
+  "sourceBase": "0d1163ea21db00609a360c8bd0bb07a32fb86097",
+  "sourceSha256": {
+    "src/VaultSync.Core/Models/ProductDiagnosticReport.cs": "8e1eb1de68b5f533928e4730031dcaff63c5c731055427b94768ecb1cb75dba3",
+    "src/VaultSync.Core/Services/ProductDiagnosticReporter.cs": "ccfdf4108aa25e70fc19447308a52263d6d0c42224597bd081201dcaf9dd646a",
+    "src/VaultSync.Core/Services/ProductDiagnostics.cs": "dc94415fee69c9d96f6da639d8349de39ba7fc9b8eee8a7680cd5c18eb8e567e",
+    "src/VaultSync.Core/Services/BackupService.cs": "7d7b5a5aaaf620d5dde50a841a756da9161f3ff523404e9be336b0c69d8e3a28",
+    "src/VaultSync.Core/Services/SnapshotService.cs": "ec9cd45b4a43b24fa9fbbbc8f7c4ff4eaf0d1fb094377eb13a598d73856f55f3",
+    "src/VaultSync.Core/Services/VerifyService.cs": "23a499bfc97853c63fdf367034c4bd6f3a7dcac139e9abfe70631840515b80bf",
+    "src/VaultSync.UI/App.axaml.cs": "36e5d52a57cf7f355acfd702a173ba516a80c28eb5ec1754075757b97a7566b6",
+    "src/VaultSync.UI/Infrastructure/ProductDiagnosticWindows.cs": "37745ce41587798fae513fa7321cb93ebfa40c5e6525eb4c2b8f80f1a79da307",
+    "src/VaultSync.UI/Services/RestoreExecutionService.cs": "49796d84448aaedff51a065ebb8438b47986e97c0ecc357f701fabade5dd7237",
+    "src/VaultSync.UI/ViewModels/SettingsViewModel.cs": "8000a3fd97652fba68fdf5da7dc7f700c5c16044c0822cdbbfb1a39cc351ab7f",
+    "src/VaultSync.UI/Views/SettingsView.axaml": "899eb0cf0cf116412d40b0516b10d634a909f00db0c613f7209042925224d3b9",
+    "tests/VaultSync.Core.Tests/ProductDiagnosticsBetaTests.cs": "b4d5d240935842a53da2cdab396d1e0aae8574b81078800777e6708d73c1e438",
+    ".github/workflows/release-assets.yml": "43a117540457631a6843a38ef958a6b29dfac7d2b17191723e2cb8fdbb7fc29f",
+    "tests/scripts/test_release_workflow.py": "b77008738187e125e69681ab6cd71ce126b5f6479d92d7240d0b495b7bcc1833",
+    "Localization/strings.nl.json": "5575dbba041295123d72c53ed340b2ae946b69bb5f51a3bc3fefe73a8eb43aa3",
+    "Localization/strings.ja.json": "f134f87424f719ea75cb7fa05586754c8dace712310fbc817b44f914616d0c7e",
+    "Localization/strings.tr.json": "39509deb1341b6bb98bc549a6ba4380f36aad463114ab37bb2e2eff8fd7f1e22",
+    "Localization/strings.zh.json": "7ff776d015b07637088c1d0291cd53dfb168da96c2cf63a3572c8845ff446526",
+    "Localization/strings.bn.json": "1000ec2f682b29d105fc9a169ad78857fa63bcddd2af06d1fec9ceb04cf95804",
+    "Localization/strings.en.json": "0838a34b85b0b985a321bd3f63d3b2eb60c4d22aec184009fdf175a436c7268b",
+    "Localization/strings.pt.json": "e9c9040f29b98ec27ded9eac007e66c0243436ce3f92d1a311d8fc552e061cae",
+    "Localization/strings.it.json": "2a216f2fb847e51a6d3fa26a12e8432f2267d9d12fd4a8e991a5a8b8a844cdbe",
+    "Localization/strings.uk.json": "fdd078cf469bb6d6cba668febf86fa218deb78b39843011678fc2726df52e7d0",
+    "Localization/strings.ru.json": "5ecba6cc3bd17414ec3f2e9c5b8839c55ee0ccb2a333ea2492688df0181a2be0",
+    "Localization/strings.pl.json": "3671bb971864e6c5e529dd1acb4cc7a012e53b5c6a6992cc4810ca62960c32ca",
+    "Localization/strings.de.json": "46e758af5a6fc017baa87b3e5a22798a0675dec3d1e84d3cdb6e545f94a5b07e",
+    "Localization/strings.hi.json": "c9c5da1277a6dc73a4bb94a17fceedf697c7a804808c62f1c62faf79c8ee64a8",
+    "Localization/strings.ko.json": "7775e67532cbf8464bb5bd22f2ff1d311f2758d18445de377b30fe62d7b13f9f",
+    "Localization/strings.fr.json": "05f4648ce7ca117d649bb09fd07e330f7fa04fa23af4af8e8b8c41740fffd493",
+    "Localization/strings.ar.json": "a0106f83e36386b2cac7c99bca52dd8c887e40ff94194c8b4d838d8ffb65c66e",
+    "Localization/strings.es.json": "77d16512ad90225630098f4f104995dd7925041f61dde46d5dd71b5785497310",
+    "Localization/strings.vi.json": "eb18d026d51b8ce1c6ffa97c8f95c9645bad1e83ad77cefa85884349ab2074df",
+    "Localization/strings.id.json": "bdb19ab23d28b95d882f063ce2ddacfc07be05933abc10ec05e2013c7d62fc8f"
+  },
+  "releaseChecks": {
+    "corePassed": 1654,
+    "pythonPassed": 238,
+    "newBetaCases": 24,
+    "localeKeys": 1943,
+    "localeFiles": 19,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "logSha256": "3528e9afd90ba4d872ccaa11dc5a6f006fa24e956c844355e46228debbe6e178",
+    "trxSha256": "1bfe3c3d62481f0dd300905ef886d32f0a4e4aec395d4541a5e24f0e499824bc"
+  },
+  "native": {
+    "compiledBetaGuardPassed": true,
+    "automaticStructuredReceiptBeforePositiveChoice": true,
+    "receivedRecords": 4,
+    "italianDisclosureVisuallyReviewed": true,
+    "nativeToggleOffObserved": true,
+    "betaOptOutPersisted": true,
+    "pendingQueueEmptyAfterOptOut": true,
+    "stableDecisionNotCreated": true,
+    "transport": "private in-process receipt sink; no production send from native lab",
+    "labLimitation": "App lookup launched two private harness instances; the extra instance was stopped before native opt-out. Counts are reports, not unique operations. Both lab processes stopped."
+  },
+  "nativeBinarySha256": {
+    "VaultSync.UI.dll": "9a9290830cbc6289cd4f045c04f29e9fb0bbd7325c131c6b48dec174ae742352",
+    "VaultSync.Core.dll": "b973b33beb5a26668f15e45a567b69dc18b442894407dc52475bcba3ae57e0de"
+  },
+  "nativeQualificationLimit": "Native UI rendering/default/disable precedes final extra non-beta copied-queue rejection guard; final Release separately verifies that guard. No platform/package qualification.",
+  "receiver": {
+    "schemaCases": 59,
+    "redisCases": 12,
+    "httpCases": 16,
+    "lintPassed": true,
+    "buildPassed": true,
+    "localIntegration": {
+      "storagePassed": true,
+      "httpPassed": true,
+      "realPrivateRedis": true,
+      "mailSinkOnly": true,
+      "productionCredentials": false
+    },
+    "production": {
+      "observedAt": "2026-10-20T13:09:34.717873+00:00",
+      "sourceCommit": "658b705bf45a080d305214e7fe99bfc9e9dbed08",
+      "project": "atac-helicopters-projects/fglabs-site",
+      "deployment": "9UfvF7h6pHdbbFr5TcAhsKhjNZZM",
+      "productionBetaPolicy2Status": 202,
+      "exactTwoFieldReceipt": true,
+      "repeatReceiptMatches": true,
+      "stablePolicy2Refused": 400,
+      "unauthorizedReviewStatus": 401,
+      "betaPrivacyNoticeLive": true,
+      "externalEmailScope": "One ordinary synthetic lab startup report stored; no error-alert email requested or claimed. Existing grouped alerts/daily digest retained."
+    }
+  },
+  "tracking": {
+    "releaseItems": 45,
+    "discrepancies": 0
+  },
+  "privateArtifacts": "/Users/flavio/Developer/vaultsync-validation.nosync/beta-diagnostics-20261020",
+  "limits": [
+    "No raw log/dump or personal-data field added",
+    "No new external email/inbox qualification claimed; local delivery sink used",
+    "Hosted checks must match delivered source; older analysis is historical",
+    "No disk support/profile, installed upgrade, beta release or signing qualification"
+  ]
+}

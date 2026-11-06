@@ -1,0 +1,252 @@
+{
+  "owner": "VS-1904",
+  "issue": 492,
+  "sourceBase": "23a19f88f44c42c5cfe0c1952ae180fa0ffa1413",
+  "sourceHashes": {
+    "src/VaultSync.Core/Services/DiskInventoryWorkerClient.cs": "dea6140f266f71a44f89476f041e7a589144413b10b8562092ca8e68c4fbf310",
+    "tests/VaultSync.Core.Tests/DiskInventoryWorkerClientTests.cs": "11c10a6a3d5f4b297a16df1a9dc62a09306e8e415e8b43a660b35bf3d999dfae",
+    "tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj": "6cbab6db205b043254a7b3c08c731fc4a712980d01a589e709405c5558325364",
+    "src/VaultSync.DiskWorker/VaultSync.DiskWorker.csproj": "89b5d416c8478c217e207e40c81907c1c9ce5d9e0a568d4619ebf7bc51b55aca"
+  },
+  "localRelease": {
+    "coreTests": 1526,
+    "pythonTests": 235,
+    "skips": 0,
+    "warnings": 0,
+    "errors": 0,
+    "localizationKeys": 1942,
+    "localeFiles": 19,
+    "newFocusedTests": 84,
+    "log": "/tmp/vaultsync-worker-client-final-release-20261020.log",
+    "trx": "/var/folders/98/rp_mspy95h175s5xn22b7gqc0000gn/T/vaultsync-validation.obaUv3/test-results/core-tests.trx"
+  },
+  "macOSProcessCases": [
+    {
+      "case": "good",
+      "result": "Completed:UnsupportedPlatform",
+      "expected": "Completed:UnsupportedPlatform",
+      "exit": 0,
+      "elapsed": 0.121,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "bad-exit",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "elapsed": 0.11,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "stderr-flood",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "elapsed": 0.104,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "hung",
+      "result": "TimedOut:",
+      "expected": "TimedOut:",
+      "exit": 0,
+      "elapsed": 0.696,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "cancel",
+      "result": "CallerCanceled",
+      "expected": "CallerCanceled",
+      "exit": 0,
+      "elapsed": 0.287,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "bad-magic",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "elapsed": 0.105,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "trailing",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "elapsed": 0.098,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "truncated",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "elapsed": 0.081,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "no-exit",
+      "result": "TimedOut:",
+      "expected": "TimedOut:",
+      "exit": 0,
+      "elapsed": 0.694,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    }
+  ],
+  "linuxMeasurement": {
+    "processExitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 62.81,
+    "guestCompleted": true,
+    "nativeExitZero": true,
+    "sourceSha512": "f46f0671a6e5bdec5291ab8972bae2f10e5408c2f64a74078f11efc2f06a436a9d0313ed50e0472542eeabf780e9f7c792ac0a314c6c20507fcd9fd81b468c3d",
+    "firmwareSha256": "33090cc07675baa5190d9f1e84bf5176b33bcbfa9bacac522961150cdb6dbb2a",
+    "nvramTemplateSha256": "5d2ac383371b408398accee7ec27c8c09ea5b74a0de0ceea6513388b15be5d1e",
+    "coreAssemblySha256": "0c532c852beb080edff270339c65fe86b5ad7516985917959b04db7256d10ccd",
+    "workerSha256": "4e206d01fd8dde3cbd8e206c84a0a55039209103d53b12f14ad591856cec1bf0",
+    "serialSha256": "3920738b298d5beacaecdf808f6881e8b7f9870638e02cb4acc4cb9acdb119ac",
+    "parentHarnessSha256": "5adbf790b23708295461a80093bc081c5ac261868c0375ea39a8870a6e2417a6",
+    "workerRuntimeConfigSha256": "1bc10a3f7b2e0352dd3df130e2a31514290dd566d64c1c9298b01fb85ff1867b",
+    "probeSha256": "a92252173ae39c71138b641f74e7b1a750320fdab84a51074804bbd8abdbdcb5"
+  },
+  "limits": [
+    "no desktop or recovery medium integration",
+    "no authentication, elevation or raw-device access",
+    "not disk support qualification",
+    "CI evidence belongs to a later delivered exact head"
+  ],
+  "linuxProcessCases": [
+    {
+      "case": "actual",
+      "result": "Completed:Observed",
+      "expected": "Completed:Observed",
+      "exit": 0,
+      "seconds": 3.402,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "good",
+      "result": "Completed:UnsupportedPlatform",
+      "expected": "Completed:UnsupportedPlatform",
+      "exit": 0,
+      "seconds": 2.073,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "bad-exit",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "seconds": 1.609,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "stderr-flood",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "seconds": 1.294,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "hung",
+      "result": "TimedOut:",
+      "expected": "TimedOut:",
+      "exit": 0,
+      "seconds": 5.798,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "cancel",
+      "result": "CallerCanceled",
+      "expected": "CallerCanceled",
+      "exit": 0,
+      "seconds": 1.213,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "bad-magic",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "seconds": 1.046,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "trailing",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "seconds": 1.035,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "truncated",
+      "result": "Failed:",
+      "expected": "Failed:",
+      "exit": 0,
+      "seconds": 0.79,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "no-exit",
+      "result": "TimedOut:",
+      "expected": "TimedOut:",
+      "exit": 0,
+      "seconds": 5.746,
+      "childAlive": false,
+      "stderrEmpty": true,
+      "pass": true
+    },
+    {
+      "case": "actual-unprivileged",
+      "result": "Completed:Observed",
+      "exit": 0,
+      "stderrEmpty": true,
+      "pass": true
+    }
+  ],
+  "failedAttempts": [
+    "Initial lab base missing before boot; pinned base downloaded and rehashed.",
+    "Initial private Linux parent and worker startup required absent ICU; retained initial bootstrap stderr confirms this.",
+    "Invariant parent alone completed nine control cases but rejected actual worker startup.",
+    "After explicit worker invariant configuration, unprivileged observation succeeded; a root startup snapshot changed and the overly strict probe assertion failed. Corrected the probe to preserve valid ChangedDuringRead outcomes; final independent run passed all 11 cases."
+  ]
+}

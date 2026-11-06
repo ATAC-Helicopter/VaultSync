@@ -13,7 +13,7 @@ namespace VaultSync.CLI.Commands
 
     public sealed class VersionCommand : AsyncCommand<VersionSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, VersionSettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, VersionSettings s, CancellationToken cancellationToken)
         {
             Write(s.Json);
             return Task.FromResult(0);

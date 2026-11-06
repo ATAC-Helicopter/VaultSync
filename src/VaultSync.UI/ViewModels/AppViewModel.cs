@@ -99,6 +99,7 @@ namespace VaultSync.UI.ViewModels
         private BackupsViewModel? _backupsViewModel;
         private HistoryViewModel? _historyViewModel;
         private RecoveryViewModel? _recoveryViewModel;
+        private DiskCloningViewModel? _diskCloningViewModel;
         private GuideViewModel? _guideViewModel;
         private readonly SettingsViewModel _settingsViewModel;
         private readonly ScheduleViewModel _scheduleViewModel;
@@ -141,6 +142,7 @@ namespace VaultSync.UI.ViewModels
         private readonly ConcurrentDictionary<int, EncryptedOpenUnlockSession> _encryptedOpenSessions = new();
         private int _destinationOverviewRefreshInFlight;
         private readonly ConcurrentDictionary<string, DateTime> _metadataImportAttempts = new();
+        private readonly ConcurrentDictionary<string, byte> _metadataImportsInFlight = new();
         private readonly ConcurrentDictionary<int, byte> _manualBackupInFlight = new();
         private readonly ConcurrentDictionary<int, byte> _backupCancelRequested = new();
         private readonly ConcurrentDictionary<string, CancellationTokenSource> _restoreCancellations = new(StringComparer.Ordinal);
@@ -164,6 +166,7 @@ namespace VaultSync.UI.ViewModels
         private DateTime _lastDashboardRefreshUtc;
         private List<Project>? _backupsCacheProjects;
         private List<Backup>? _backupsCacheBackups;
+        private IReadOnlyList<DestinationQuotaPlan>? _backupsCacheDestinationQuotaPlans;
         private HashSet<int>? _backupsCacheDisabledAuto;
         private DateTime _backupsCacheUpdatedUtc;
         private bool _backupsCachePartial;
@@ -590,6 +593,7 @@ namespace VaultSync.UI.ViewModels
                 OnPropertyChanged(nameof(IsScheduleActive));
                 OnPropertyChanged(nameof(IsHistoryActive));
                 OnPropertyChanged(nameof(IsRecoveryActive));
+                OnPropertyChanged(nameof(IsDiskCloningActive));
                 OnPropertyChanged(nameof(IsGuideActive));
                 OnPropertyChanged(nameof(IsSettingsActive));
             }
@@ -605,6 +609,7 @@ namespace VaultSync.UI.ViewModels
         public bool IsScheduleActive => CurrentViewName == "Schedule";
         public bool IsHistoryActive => CurrentViewName == "History";
         public bool IsRecoveryActive => CurrentViewName == "Recovery";
+        public bool IsDiskCloningActive => CurrentViewName == "DiskCloning";
         public bool IsGuideActive => CurrentViewName == "Guide";
         public bool IsSettingsActive => CurrentViewName == "Settings";
         public ProjectsViewModel ProjectsViewModel => _projectsViewModel;
@@ -628,6 +633,7 @@ namespace VaultSync.UI.ViewModels
             }
         }
         public RecoveryViewModel RecoveryViewModel => _recoveryViewModel ??= new RecoveryViewModel(_configStore, _repositoryFactory);
+        public DiskCloningViewModel DiskCloningViewModel => _diskCloningViewModel ??= new DiskCloningViewModel();
         public GuideViewModel GuideViewModel => _guideViewModel ??= new GuideViewModel(this, _configStore, _repositoryFactory);
         public ICommand OpenReleasePageCommand => _openReleaseCommand;
         public ICommand InstallPatchCommand => _installPatchCommand;
