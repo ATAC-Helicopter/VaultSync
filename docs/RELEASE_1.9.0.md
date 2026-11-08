@@ -25,9 +25,13 @@ No wire/format, user-visible text, timeout or CPU ceiling changes are introduced
 after hashing during GPT validation.108 capture/export/staging cases pass in TRX;
 the initial combined command reported a Core-copy MSB3026 build race. The required
 serialized Release solution build then passes with zero warnings/errors. No tests
-were repeated merely for the build race. A fresh source-bound read-only VM probe
-and exact-head hosted results remain required. Larger-image work-budget and full
-installed capture/export/restore/boot qualification remain open before beta1.
+were repeated merely for the build race. The exact2495c59 read-only native probe
+now verifies all3GiB in73.807seconds,24583reads/3221260436bytes, worker exit0 and
+verified digest present, with the same120/130second bounds. Baseline passes;
+sealed/repository identities and target remain unchanged; guest staging and VM
+are cleaned up. See [native inspection evidence](release-evidence/1.9-single-scan-native-inspection-2026-11-08.json).
+Exact-head hosted gates, larger-image work-budget and full installed
+capture/export/restore/boot qualification remain open before beta1.
 
 ## Admission refusal coverage — 2026-11-08
 
@@ -36,6 +40,11 @@ mutex creation error. The fixture now creates and verifies a root-owned0700
 `XDG_RUNTIME_DIR` on its existing bounded private tmpfs for collector and chroot.
 Kernel/mount/inode guards are unchanged; fresh Linux execution must establish
 whether this repairs runtime startup and coverage collection.
+The subsequent2495c59 run clears that mutex failure but performs no test run:
+project-based test dispatch cannot resolve generated NuGet imports in the isolated
+root. The wrapper now invokes the already-built Release DLL with VSTest directly,
+keeping source/native evidence requirements and all namespace/mount/inode guards.
+Actual Linux execution and profiler integration remain pending.
 
 
 VS-1904/#492 adds a separate isolated Linux fixture for actual installed-closure

@@ -1,0 +1,59 @@
+{
+  "owner": "BUG-19046",
+  "issue": 831,
+  "observedOn": "2026-11-08",
+  "sourceCommit": "2495c59175b289e46beeb976a917bb45163fa310",
+  "scope": "Read-only normal isolated inspector against retained synthetic sealed3GiB capture; not installed capture/restore or media qualification",
+  "environment": {
+    "guest": "Debian13 Linuxx64",
+    "execution": "QEMU TCG disposable guest",
+    "runtime": "10.0.13",
+    "sourceAndTargetAttached": false,
+    "repositoryReadOnly": true,
+    "mount": "ext4 ro,noload"
+  },
+  "binaryHashes": {
+    "Core": "6bb37479aca0746723e89f53ca866646ea258f46584702e6fca44e478364526e",
+    "Worker": "5e7e150a35cf7514bff215581be7129d8c3c618657b4e5594370a74368298e43",
+    "Probe": "685b563e2d27936fb3775caf59dbc2a2fb1c722e5aac5827e335c679efc81374",
+    "package": "50812355d5bef8c551d01bd0de50c66b58ba23edda5e13897919e7b450d97775"
+  },
+  "baseline": {
+    "outcome": "Completed",
+    "state": "ContentAndLayoutVerified",
+    "verifiedBytes": 65536,
+    "workerExit": 0,
+    "readCalls": 8,
+    "readBytes": 100436,
+    "workerElapsedMilliseconds": 3566
+  },
+  "payload": {
+    "outcome": "Completed",
+    "state": "ContentAndLayoutVerified",
+    "verifiedBytes": 3221225472,
+    "wholePayloadDigestPresent": true,
+    "workerExit": 0,
+    "readCalls": 24583,
+    "readBytes": 3221260436,
+    "workerElapsedMilliseconds": 73807
+  },
+  "bounds": {
+    "workerWallSeconds": 120,
+    "workerCpuSeconds": 120,
+    "parentWallSeconds": 130,
+    "changed": false
+  },
+  "cleanup": {
+    "sealedIdentitiesUnchanged": true,
+    "repositoryIdentityUnchanged": true,
+    "targetAllocatedBytes": 0,
+    "guestArtifactsRemoved": true,
+    "processAbsent": true
+  },
+  "limitations": [
+    "The earlier harness-inheritance refusal is confounded and not product timeout evidence.",
+    "Prior d42 reader failed before completion; no percentage speedup claimed.",
+    "No arbitrary-capacity, installed capture/export/restore/boot, package, profile or beta qualification.",
+    "Larger-image shared work policy remains open."
+  ]
+}

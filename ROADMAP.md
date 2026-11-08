@@ -1220,6 +1220,10 @@ It needs exact 1.8.9 upgrade and platform qualification before shipping; the
 repository must not transfer before a compatible release is adopted.
 
 - [ ] `BUG-19046` `P0` Avoid duplicate payload scans during offline image verification.
+  - Fixed reader2495c59 now verifies the same3GiB in73.807s with24583reads,
+    worker exit0, full verified bytes and digest. No timeout increase, source/
+    target attachment or repository mutation; guest staging removed and VM
+    stopped. Full installed capture/export/restore/boot remains unqualified.
   - The read-only d42 probe passes its verified64KiB baseline, then exits124
     after121.58s and5,145,659,540 broker bytes on a sealed3GiB image.
     Remove redundant complete rereads while preserving computed digest,
