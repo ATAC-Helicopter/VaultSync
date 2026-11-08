@@ -116,10 +116,13 @@ mount -t tmpfs -o size=1m,mode=0755,nosuid,nodev,noexec tmpfs "$root/srv"
 # of chroot. Its bound includes runtime-generated files, not source/runtime binds.
 mount -t tmpfs -o size=64m,mode=1777,nosuid,nodev tmpfs /tmp
 mount --bind /tmp "$root/tmp"
-mkdir -m 700 /tmp/cli-home
+mkdir -m 700 /tmp/cli-home /tmp/runtime
+[[ $(stat -c '%u:%a' /tmp/runtime) == 0:700 ]]
 mount -o remount,bind,ro "$root"
 [[ $(stat -c '%d:%i' "$root") == $(stat -c '%d:%i' "$root/fixture-control") ]]
-export DOTNET_CLI_HOME=/tmp/cli-home TMPDIR=/tmp
+# Serviced .NET uses XDG_RUNTIME_DIR for named-mutex IPC. The clean chroot has
+# no user profile fallback; keep IPC in the same owned tmpfs on both sides.
+export DOTNET_CLI_HOME=/tmp/cli-home TMPDIR=/tmp XDG_RUNTIME_DIR=/tmp/runtime
 "$coverage" collect -f xml -o "$results/coverage-admission.xml" \
   /usr/sbin/chroot "$root" "$dotnet" test "$repo/tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj" \
   --configuration Release --no-build --no-restore \

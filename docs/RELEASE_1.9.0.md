@@ -15,6 +15,13 @@ installed Linux workflows, qualified profiles or shared release gates.
 
 ## Admission refusal coverage — 2026-11-08
 
+The first97c2f38 hosted run stopped before native tests at a NuGet-Migrations
+mutex creation error. The fixture now creates and verifies a root-owned0700
+`XDG_RUNTIME_DIR` on its existing bounded private tmpfs for collector and chroot.
+Kernel/mount/inode guards are unchanged; fresh Linux execution must establish
+whether this repairs runtime startup and coverage collection.
+
+
 VS-1904/#492 adds a separate isolated Linux fixture for actual installed-closure
 refusals, cancellation, held-handle release and repaired retry. A private writable
 alias permits only synthetic fault injection into the fixture's own ext4 backing
