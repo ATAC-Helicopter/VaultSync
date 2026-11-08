@@ -10,6 +10,48 @@ namespace VaultSync.Core.Tests;
 
 public sealed class LinuxRecoveryCaptureHostTests
 {
+    [Fact]
+    public async Task MonitorCancellationDrainsPrecommitCaptureBeforeReturningAndNeverDisplaysAResult()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool captureDrained = false, monitorDrained = false, displayed = false;
+        var running = LinuxRecoveryCaptureHost.RunSessionAsync(async token =>
+        {
+            entered.SetResult();
+            try { await Task.Delay(Timeout.Infinite, token); return null; }
+            finally { captureDrained = true; }
+        }, (_, _) => displayed = true, async lifetime =>
+        {
+            await entered.Task;
+            await lifetime.CancelAsync();
+            monitorDrained = true;
+        }, CancellationToken.None);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => running.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.True(captureDrained); Assert.True(monitorDrained); Assert.False(displayed);
+    }
+
+    [Fact]
+    public async Task NoSelectionDrainsItsMonitorAndAFreshSessionDoesNotInheritCancellation()
+    {
+        bool drained = false;
+        var cancelled = await LinuxRecoveryCaptureHost.RunSessionAsync(_ => Task.FromResult<LinuxRawImageCaptureAssessment?>(null),
+            (_, _) => throw new InvalidOperationException("no-selection-has-no-result"), async lifetime =>
+            {
+                try { await Task.Delay(Timeout.Infinite, lifetime.Token); }
+                catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { drained = true; }
+            }, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(drained); Assert.Null(cancelled.Capture); Assert.Equal(76, cancelled.ExitCode);
+
+        var refusal = new LinuxRawImageCaptureAssessment(LinuxRawImageCaptureState.Refused, "fixture");
+        bool displayed = false;
+        var retry = await LinuxRecoveryCaptureHost.RunSessionAsync(token =>
+        {
+            Assert.False(token.IsCancellationRequested);
+            return Task.FromResult<LinuxRawImageCaptureAssessment?>(refusal);
+        }, (result, _) => { Assert.Same(refusal, result); displayed = true; }, _ => Task.CompletedTask, CancellationToken.None);
+        Assert.True(displayed); Assert.Same(refusal, retry.Capture); Assert.Equal(74, retry.ExitCode);
+    }
+
     [Theory]
     [InlineData(LinuxRawImageCaptureState.PublishedVerified, "io")]
     [InlineData(LinuxRawImageCaptureState.PublishedVerified, "cancel")]

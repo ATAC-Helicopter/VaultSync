@@ -1430,6 +1430,11 @@ repository must not transfer before a compatible release is adopted.
     workspace and supported boundaries retain truncation refusal. This fixture
     correction does not qualify disk capture or recovery.
 - [ ] `VS-1904` `P0` Build an isolated disk/partition cloning engine with
+  - Admission refusal coverage (2026-11-08): add an isolated Linux readonly
+    closure fixture and capture monitor/no-selection lifecycle regressions.
+    Twelve focused Release host tests pass; native fixture execution and its
+    coverage import remain pending CI. No admitted lease, media or profile
+    qualification is inferred from negative cases; Refs #492 in #736.
   - Readback diagnosis (2026-11-06): the installed37d7 probe copied3GiB, then
     refused after sealing without publishing an image or changing the target.
     Bounded local phase/outcome/elapsed/read counters now separate inspection

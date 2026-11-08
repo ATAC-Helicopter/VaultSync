@@ -76,6 +76,14 @@ The build uses `-m:1` to avoid simultaneous builds of Core under different UI
 target-framework properties. Run it after any IDE build finishes. Shared run
 configurations have no additional before-launch build, preventing duplicate work.
 These checks do not qualify UI behavior, disk recovery, upgrade or release approval.
+
+The dedicated Ubuntu 24.04/x64 admission-refusal fixture runs through
+`bash scripts/test_recovery_admission_native.sh <fresh-absolute-results-directory>`
+after Release tests are built and `dotnet-coverage` is installed. It requires
+passwordless sudo and proves its own private PID/mount namespace, readonly ext4
+root and inode boundaries. Its source-bound negative-case report is separate
+from successful installed admission, recovery media and OS/profile qualification.
+Ordinary macOS, Windows or unprivileged test rows do not execute this fixture.
 See AGENTS.md for scoped semantic search, refactoring, debugging and diagnostics.
 
 ### Local validation lifecycle

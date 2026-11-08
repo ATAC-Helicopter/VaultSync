@@ -13,6 +13,21 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Admission refusal coverage — 2026-11-08
+
+VS-1904/#492 adds a separate isolated Linux fixture for actual installed-closure
+refusals, cancellation, held-handle release and repaired retry. A private writable
+alias permits only synthetic fault injection into the fixture's own ext4 backing
+directory. The installation paths remain read-only; the real Core location still
+refuses. No admitted lease or boot facts are fabricated. The wrapper requires
+kernel namespace, mount, inode, source and executed-case evidence before success.
+
+Twelve focused warning-as-error Release capture-host cases pass, including monitor
+cancellation/drain and a fresh session after no selection. The native test compiles
+on macOS; its wrapper refuses before creating results. Linux execution, profiler
+integration and fresh hosted coverage remain unverified until CI completes. The
+third report is imported separately without changing thresholds or exclusions.
+
 ## Capture readback diagnosis — 2026-11-06
 
 VS-1904/#492 adds capture-host-only bounded numeric inspection evidence without

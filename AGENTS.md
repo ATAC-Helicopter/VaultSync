@@ -68,6 +68,11 @@ The isolated CI storage fixture runs only through
 `scripts/test_recovery_storage_native.sh` and its actual kernel/mount/inode proof.
 Ordinary non-Linux or unprivileged test rows are not native storage evidence;
 never enable them with a request flag alone or treat them as host/media qualification.
+The separate negative admission fixture runs only through
+`scripts/test_recovery_admission_native.sh`, with its own kernel, mount, inode
+and read-only-root proof. Its synthetic fault-injection alias is fixture-only;
+refusal/cancellation coverage never proves successful installed admission or
+qualifies media, an OS profile or a beta.
 
 ## Staged 1.9.0 disk betas
 

@@ -64,6 +64,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1904] Verify recovery admission refusals and capture cancellation with isolated fixtures.
 - [VS-1904] Record bounded local inspection outcomes for failed offline captures.
 - [VS-1910] Explain offline recovery steps and conditional post-restore VaultSync availability.
 - [VS-1918] Plan progressive Linux, Windows and macOS disk-recovery beta qualification.
