@@ -1,0 +1,70 @@
+{
+  "owner": "BUG-19046",
+  "issue": 831,
+  "release": "1.9.0",
+  "date": "2026-11-08",
+  "testedBase": "97c2f38db3596ee592829401c580170371d2cee1 plus source-bound working diff",
+  "sourceHashes": {
+    "src/VaultSync.Core/Models/DiskImagePayloadVerification.cs": "f25a31a3a6aa4bb569e3ac0188e08f2bfd8d62d61d447de5022740be1c0f4aa6",
+    "src/VaultSync.Core/Models/DiskImageManifestVerification.cs": "10f070417fb31cbb9b8b65e2318d6b10fddecb39db76ee8fffea1718cc89f5ce",
+    "src/VaultSync.Core/Services/DiskImagePayloadVerificationService.cs": "12ba95933d32df5def79766641404b688b3682ef727cc55145e913c452f33944",
+    "src/VaultSync.Core/Services/DiskImageManifestVerificationService.cs": "0edcad4301366496230a8dc54e2301e97216a4d06ed80495c112430c8a1b4f0e",
+    "src/VaultSync.Core/Services/DiskImageInspectionWorkerService.cs": "fcd7b13e709630b6c03d704190b54d2e26d2f3a53f3ed8c7bbd0f178c48e5ee0",
+    "tests/VaultSync.Core.Tests/DiskImagePayloadVerificationServiceTests.cs": "28c1a4f6121a8e8318909d1b42cb49b7e8790419c47345d8795a864d205963ec",
+    "tests/VaultSync.Core.Tests/DiskImageManifestVerificationServiceTests.cs": "d1d11529188ff9a4389118927b4a0115deee79a6bc791a315e7309af2cf953de",
+    "tests/VaultSync.Core.Tests/DiskImageInspectionDigestTests.cs": "c6e0fdced3a2fca69c0f88caa7fd39127eaebc098cb14366bfe0f5038908cf81",
+    "tests/VaultSync.Core.Tests/DiskImageInspectionFixture.cs": "f0ad385ce990c7e8e53276e6180ca76b3fac338a1bbd3dc49de3283ab899034b"
+  },
+  "nativeReproduction": {
+    "readerSource": "d42dfbf3ecd566f2050638416b2e97f45aecde2f",
+    "baselineVerifiedBytes": 65536,
+    "payloadBytes": 3221225472,
+    "elapsedMilliseconds": 121580,
+    "workerExit": 124,
+    "brokerReadCalls": 39265,
+    "brokerReadBytes": 5145659540,
+    "repositoryReadOnly": true,
+    "sourceAndTargetAttached": false,
+    "sealedIdentityUnchanged": true,
+    "guestArtifactsRemoved": true,
+    "processAbsent": true
+  },
+  "checks": [
+    {
+      "name": "initial focused warning-as-error Release",
+      "passed": 185,
+      "skipped": 0
+    },
+    {
+      "name": "final digest-only warning-as-error Release",
+      "passed": 11,
+      "skipped": 0
+    },
+    {
+      "name": "capture/export/staging integration TRX",
+      "passed": 108,
+      "skipped": 0,
+      "combinedCommandExit": 1,
+      "reason": "MSB3026 Core copy retry from parallel project graph; tests all executed/passed"
+    },
+    {
+      "name": "required serialized Release solution build",
+      "exit": 0,
+      "warnings": 0,
+      "errors": 0
+    }
+  ],
+  "unchanged": [
+    "binary wire and persisted image schema",
+    "worker/parent120/130second and CPU/memory/syscall bounds",
+    "independent parent integrity checks",
+    "mandatory refusal/cancellation/publication barriers"
+  ],
+  "freshNativeRepairExecuted": false,
+  "limitations": [
+    "Managed component/build results are not native qualification.",
+    "Fresh exact-source probe and hosted gates remain required.",
+    "Large-capacity shared work-budget policy and installed full OS recovery remain open.",
+    "No full test suite repeated locally; no UI strings changed."
+  ]
+}

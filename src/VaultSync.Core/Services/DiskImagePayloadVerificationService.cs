@@ -55,6 +55,7 @@ public static class DiskImagePayloadVerificationService
 
         byte[] buffer = new byte[BufferLength];
         ulong verifiedBytes = 0;
+        string? singlePayloadSha256 = null;
         foreach (DiskImagePayloadPart part in request.Coverage.Parts)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -82,11 +83,18 @@ public static class DiskImagePayloadVerificationService
 
             if (await source.ReadAsync(buffer.AsMemory(0, 1), cancellationToken).ConfigureAwait(false) != 0)
                 return new(DiskImagePayloadVerificationState.Corrupt, "image.trailing-part-bytes", verifiedBytes);
-            if (!CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), expected))
+            byte[] actual = hash.GetHashAndReset();
+            if (!CryptographicOperations.FixedTimeEquals(actual, expected))
                 return new(DiskImagePayloadVerificationState.Corrupt, "image.part-digest-mismatch", verifiedBytes);
+            if (request.Coverage.Parts.Count == 1)
+                singlePayloadSha256 = Convert.ToHexStringLower(actual);
         }
 
-        return new(DiskImagePayloadVerificationState.PayloadsVerified, "image.payloads-only", verifiedBytes);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(DiskImagePayloadVerificationState.PayloadsVerified, "image.payloads-only", verifiedBytes)
+        {
+            VerifiedSinglePayloadSha256 = singlePayloadSha256
+        };
     }
 
     private static bool IsLowerSha256(string? digest) =>

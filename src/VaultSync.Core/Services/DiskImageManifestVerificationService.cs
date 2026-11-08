@@ -128,7 +128,9 @@ public static class DiskImageManifestVerificationService
         {
             DeclaredOrigin = origin,
             VerifiedCoverage = state == DiskImageManifestVerificationState.ContentVerified
-                ? new(capacity, sector, parts, extents, HasCompletion: true) : null
+                ? new(capacity, sector, parts, extents, HasCompletion: true) : null,
+            VerifiedSinglePayloadSha256 = state == DiskImageManifestVerificationState.ContentVerified
+                ? result.VerifiedSinglePayloadSha256 : null
         };
     }
 

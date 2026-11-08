@@ -40,6 +40,9 @@ public sealed class DiskImageManifestVerificationServiceTests
             Assert.Equal(7UL, result.Generation);
             Assert.Equal(fixture.Root, result.ManifestRoot);
             Assert.Equal(fixture.VerifiedBytes, result.VerifiedBytes);
+            Assert.Equal(fixture.PayloadHex.Length == 0 ? null :
+                Convert.ToHexStringLower(SHA256.HashData(Convert.FromHexString(fixture.PayloadHex))),
+                result.VerifiedSinglePayloadSha256);
             Assert.Equal(Convert.FromHexString(fixture.MetadataHex), bytes);
         }
     }
@@ -86,6 +89,7 @@ public sealed class DiskImageManifestVerificationServiceTests
         Assert.Equal(reason, result.Reason);
         Assert.Equal(0, payload.Position);
         Assert.Equal(0UL, result.VerifiedBytes);
+        Assert.Null(result.VerifiedSinglePayloadSha256);
     }
 
     [Fact]
@@ -95,6 +99,7 @@ public sealed class DiskImageManifestVerificationServiceTests
         using var metadata = new MemoryStream(Convert.FromHexString(fixture.MetadataHex), writable: false);
         var missing = await DiskImageManifestVerificationService.VerifyAsync(metadata, new Dictionary<Guid, Stream>());
         Assert.Equal(DiskImageManifestVerificationState.Incomplete, missing.State);
+        Assert.Null(missing.VerifiedSinglePayloadSha256);
         metadata.Position = 0;
         byte[] bytes = Convert.FromHexString(fixture.PayloadHex);
         bytes[200] ^= 1;
@@ -102,6 +107,7 @@ public sealed class DiskImageManifestVerificationServiceTests
         var corrupt = await DiskImageManifestVerificationService.VerifyAsync(metadata, new Dictionary<Guid, Stream> { [PartId] = payload });
         Assert.Equal(DiskImageManifestVerificationState.Corrupt, corrupt.State);
         Assert.Equal("image.part-digest-mismatch", corrupt.Reason);
+        Assert.Null(corrupt.VerifiedSinglePayloadSha256);
     }
 
     [Theory]

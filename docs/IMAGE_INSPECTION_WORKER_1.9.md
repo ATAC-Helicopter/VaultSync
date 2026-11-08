@@ -131,7 +131,12 @@ interfaces. Per operation, total read bytes are bounded by
 `3*payload + 4*metadata + 1 MiB`; requests are bounded by
 `4*floor((payload+metadata)/4096) + 16384`. Metadata is at most 16 MiB and payload
 at most 8 TiB, refusal ceilings rather than qualified capacities. The verified
-reader independently hashes the entire payload after content/layout verification.
+reader reuses the actual whole-payload digest computed by payload verification,
+only after exact EOF, digest equality, complete manifest and GPT validation.
+This internal sole-part value is never copied from an unverified manifest and
+is not cached on a stream. Failed, multi-part or cancelled verification cannot
+supply a verified observation through this path. Wire fields are unchanged;
+parent capture/export/staging integrity rechecks remain independent.
 
 The child remains alive through the parent's result/policy checks and terminal
 peer acknowledgement. Exact stdout EOF, empty stderr and process exit zero are
@@ -215,3 +220,22 @@ uses that reader for its digest and trusted warmup. Wire framing, byte/call
 budgets, kernel policy, deadlines, cancellation and no-fallback behavior remain
 unchanged. Every pass rereads bytes; no payload cache is introduced. This is a
 request-count observation, not a qualified throughput/capacity claim.
+
+
+## Single verified payload scan — BUG-19046 / #831
+
+The source-bound d42 read-only probe passes its64KiB known-good baseline, then
+exits124 after121.58seconds while serving5,145,659,540 bytes for a3GiB sealed
+image. The second complete scan is redundant work. The worker now carries the
+actual digest from complete payload verification through internal assessment
+properties and uses it only after full manifest and GPT success. Trusted warmup
+and test fixtures exercise the same helper. Later mutation is checked afresh;
+there is no cross-operation cache or weakened parent-side readback.
+
+The earlier BUG-19039 section describes the historical128KiB digest-reader
+improvement. This follow-up removes that independent second worker scan; it does
+not remove complete payload hashing or the independent parent integrity checks.
+All120/130second, CPU, memory, syscall and broker bounds remain unchanged for the
+measured repair. They do not qualify large capacities: a shared length-aware work
+policy and larger profiles still require separate review and measured throughput.
+A component pass alone is not native/profile or beta qualification.

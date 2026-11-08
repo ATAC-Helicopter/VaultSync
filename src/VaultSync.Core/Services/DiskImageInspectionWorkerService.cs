@@ -40,11 +40,20 @@ internal static class DiskImageInspectionWorkerService
         var facts=DiskImageInspectionProtocol.DecodeRequest(request);
         using var metadata=new RemoteStream(input,output,facts.Operation,0,facts.Metadata,token);
         using var payload=new RemoteStream(input,output,facts.Operation,1,facts.Payload,token);
+        return DiskImageInspectionProtocol.Result(facts.Operation,await VerifyImageAsync(metadata,payload,token).ConfigureAwait(false));
+    }
+
+    internal static async Task<DiskImageInspectionObservation> VerifyImageAsync(Stream metadata,Stream payload,CancellationToken token)
+    {
+        // Reuse the actual content-verification digest instead of scanning again.
+        // The raw profile must also pass manifest and GPT checks before export.
         var result=await DiskImageRawProfileVerificationService.VerifyAsync(metadata,payload,token).ConfigureAwait(false);
-        string? hash=null;
-        if(result.State==DiskImageRawProfileVerificationState.ContentAndLayoutVerified)
-        { hash=await PayloadDigestAsync(payload,token).ConfigureAwait(false); }
-        return DiskImageInspectionProtocol.Result(facts.Operation,DiskImageInspectionProtocol.Observe(result,hash));
+        token.ThrowIfCancellationRequested();
+        string? hash=result.State==DiskImageRawProfileVerificationState.ContentAndLayoutVerified
+            ? result.Image?.VerifiedSinglePayloadSha256 : null;
+        if(result.State==DiskImageRawProfileVerificationState.ContentAndLayoutVerified && !RawImageRestoreJournalCodec.Hash(hash))
+            throw new InvalidDataException("inspection.missing-verified-digest");
+        return DiskImageInspectionProtocol.Observe(result,hash);
     }
 
     // Immutable module-owned synthetic bytes, never request/image-derived. Exercise
@@ -57,18 +66,11 @@ internal static class DiskImageInspectionWorkerService
         using var source=assembly.GetManifestResourceStream("VaultSync.Core.Resources.Inspection.warmup.raw")
             ?? throw new InvalidDataException("inspection.missing-self-test");
         using var payload=new MemoryStream(); await source.CopyToAsync(payload,token).ConfigureAwait(false); payload.Position=0;
-        var result=await DiskImageRawProfileVerificationService.VerifyAsync(metadata,payload,token).ConfigureAwait(false);
-        if(result.State!=DiskImageRawProfileVerificationState.ContentAndLayoutVerified || result.Image?.VerifiedBytes!=65536)
+        var result=await VerifyImageAsync(metadata,payload,token).ConfigureAwait(false);
+        if(result.State!=DiskImageRawProfileVerificationState.ContentAndLayoutVerified || result.VerifiedBytes!=65536 ||
+            !RawImageRestoreJournalCodec.Hash(result.PayloadSha256))
             throw new InvalidDataException("inspection.failed-self-test");
-        if(await PayloadDigestAsync(payload,token).ConfigureAwait(false) is null)
-            throw new InvalidDataException("inspection.failed-digest-self-test");
     }
-
-    // HashDataAsync's 4 KiB stream buffer amplifies every digest into tiny
-    // authenticated pipe round trips. Use the existing exact-length 128 KiB
-    // reader, including in warmup, without relaxing any deadline or byte budget.
-    internal static ValueTask<string?> PayloadDigestAsync(Stream payload,CancellationToken token) =>
-        DiskImageByteIntegrity.HashExactAsync(payload,checked((ulong)payload.Length),token);
 
     internal sealed class RemoteStream(Stream input,Stream output,Guid operation,uint source,long length,CancellationToken deadline) : Stream
     {

@@ -113,6 +113,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19046] Avoid repeated full payload reads during disk image verification.
 - [BUG-19045] Observe image-list refresh failures and preserve cancellation when refreshing.
 - [BUG-19044] Keep recovery wizard content visible during software redraws.
 - [BUG-19043] Keep keyboard focus working in the isolated recovery wizard.

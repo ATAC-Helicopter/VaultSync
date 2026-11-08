@@ -1219,6 +1219,12 @@ is staged for this release through [PR #722](https://github.com/ATAC-Helicopter/
 It needs exact 1.8.9 upgrade and platform qualification before shipping; the
 repository must not transfer before a compatible release is adopted.
 
+- [ ] `BUG-19046` `P0` Avoid duplicate payload scans during offline image verification.
+  - The read-only d42 probe passes its verified64KiB baseline, then exits124
+    after121.58s and5,145,659,540 broker bytes on a sealed3GiB image.
+    Remove redundant complete rereads while preserving computed digest,
+    manifest/GPT integrity and cancellation. Native retest and larger-image
+    work-budget qualification remain open; issue #831, PR #736.
 - [ ] `BUG-19045` `P0` Observe recovery image refresh tasks and explicit cancellation.
   - Image-list refresh now returns an observed task and the refresh button keeps
     the active image-choice cancellation token. Twenty-four focused warning-as-error

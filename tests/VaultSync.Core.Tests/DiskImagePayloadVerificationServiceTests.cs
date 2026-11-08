@@ -46,6 +46,7 @@ public sealed class DiskImagePayloadVerificationServiceTests
         Assert.Equal(DiskImagePayloadVerificationState.PayloadsVerified, result.State);
         Assert.Equal("image.payloads-only", result.Reason);
         Assert.Equal(512UL, result.VerifiedBytes);
+        Assert.Equal(ExpectedSha256, result.VerifiedSinglePayloadSha256);
     }
 
     [Theory]
@@ -68,6 +69,45 @@ public sealed class DiskImagePayloadVerificationServiceTests
 
         Assert.Equal(expectedState, result.State);
         Assert.Equal(expectedReason, result.Reason);
+        Assert.Null(result.VerifiedSinglePayloadSha256);
+    }
+
+    [Fact]
+    public async Task MultipleVerifiedPartsDoNotClaimASinglePayloadDigest()
+    {
+        Guid other = Guid.NewGuid();
+        using var first = new MemoryStream(TestBytes(), writable: false);
+        using var second = new MemoryStream(TestBytes(), writable: false);
+        var request = new DiskImagePayloadVerificationRequest(
+            new(1024, 512, [new(PartId, 512), new(other, 512)],
+                [new(0, 512, DiskImageExtentKind.Stored, PartId), new(512, 512, DiskImageExtentKind.Stored, other)], true),
+            [new(PartId, ExpectedSha256), new(other, ExpectedSha256)]);
+        var result = await DiskImagePayloadVerificationService.VerifyAsync(request,
+            new Dictionary<Guid, Stream> { [PartId] = first, [other] = second });
+        Assert.Equal(DiskImagePayloadVerificationState.PayloadsVerified, result.State);
+        Assert.Equal(1024UL, result.VerifiedBytes);
+        Assert.Null(result.VerifiedSinglePayloadSha256);
+    }
+
+    [Fact]
+    public async Task CancellationAtFinalEofDoesNotPublishTheComputedDigest()
+    {
+        using var cancellation = new CancellationTokenSource();
+        using var source = new CancelAtEofStream(TestBytes(), cancellation);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await DiskImagePayloadVerificationService.VerifyAsync(Request(),
+                new Dictionary<Guid, Stream> { [PartId] = source }, cancellation.Token));
+        Assert.Equal(512, source.Position);
+    }
+
+    private sealed class CancelAtEofStream(byte[] bytes, CancellationTokenSource cancellation) : MemoryStream(bytes, writable: false)
+    {
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default)
+        {
+            int count = await base.ReadAsync(buffer, token);
+            if (count == 0) cancellation.Cancel();
+            return count;
+        }
     }
 
     [Fact]

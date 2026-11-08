@@ -13,6 +13,22 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Single-scan inspection repair — 2026-11-08
+
+BUG-19046/#831 removes the second complete payload scan from isolated image
+inspection. Only the actual digest of a fully verified sole payload is carried
+internally; manifest/GPT refusal and cancellation cannot yield a verified hash.
+Capture, export and staging keep their independent held-byte integrity checks.
+No wire/format, user-visible text, timeout or CPU ceiling changes are introduced.
+
+185 focused Release cases pass; eleven final digest cases include cancellation
+after hashing during GPT validation.108 capture/export/staging cases pass in TRX;
+the initial combined command reported a Core-copy MSB3026 build race. The required
+serialized Release solution build then passes with zero warnings/errors. No tests
+were repeated merely for the build race. A fresh source-bound read-only VM probe
+and exact-head hosted results remain required. Larger-image work-budget and full
+installed capture/export/restore/boot qualification remain open before beta1.
+
 ## Admission refusal coverage — 2026-11-08
 
 The first97c2f38 hosted run stopped before native tests at a NuGet-Migrations

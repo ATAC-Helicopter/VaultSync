@@ -11,4 +11,5 @@ public sealed record DiskImageManifestVerificationAssessment(
     public DiskImageCaptureOrigin? DeclaredOrigin { get; init; }
     // Owned parser data for the file-fixture reconstruction path, never public device authorization.
     internal DiskImageCoveragePlan? VerifiedCoverage { get; init; }
+    internal string? VerifiedSinglePayloadSha256 { get; init; }
 }

@@ -16,4 +16,8 @@ public sealed record DiskImagePayloadVerificationRequest(
 
 /// <summary>Only the supplied payload bytes were checked; image completion and origin remain unverified.</summary>
 public sealed record DiskImagePayloadVerificationAssessment(
-    DiskImagePayloadVerificationState State, string Reason, ulong VerifiedBytes);
+    DiskImagePayloadVerificationState State, string Reason, ulong VerifiedBytes)
+{
+    // Actual digest of the sole complete part, exposed only after all checks pass.
+    internal string? VerifiedSinglePayloadSha256 { get; init; }
+}
