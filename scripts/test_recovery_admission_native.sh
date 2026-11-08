@@ -124,10 +124,9 @@ mount -o remount,bind,ro "$root"
 # no user profile fallback; keep IPC in the same owned tmpfs on both sides.
 export DOTNET_CLI_HOME=/tmp/cli-home TMPDIR=/tmp XDG_RUNTIME_DIR=/tmp/runtime
 "$coverage" collect -f xml -o "$results/coverage-admission.xml" \
-  /usr/sbin/chroot "$root" "$dotnet" test "$repo/tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj" \
-  --configuration Release --no-build --no-restore \
-  --filter FullyQualifiedName~LinuxRecoveryAdmissionNativeTests \
-  --logger 'trx;LogFileName=native-admission.trx' --results-directory /results
+  /usr/sbin/chroot "$root" "$dotnet" vstest "$repo/tests/VaultSync.Core.Tests/bin/Release/net10.0/VaultSync.Core.Tests.dll" \
+  --TestCaseFilter:FullyQualifiedName~LinuxRecoveryAdmissionNativeTests \
+  '--logger:trx;LogFileName=native-admission.trx' --ResultsDirectory:/results
 ROOT_CHILD
 )
 sudo -n /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 TZ=UTC \
