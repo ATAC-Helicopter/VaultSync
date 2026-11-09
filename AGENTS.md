@@ -1,10 +1,19 @@
-# Agent instructions
+# VaultSync: Codex working guide
 
-## Risk-based, targeted verification (mandatory)
-- Do **not** automatically run the full test suite, a solution-wide build, repository-wide lint/typecheck, or repeated test cycles for every edit. Minimize unnecessary tool calls, time, and token use.
-- Before testing, assess the changed files, affected behavior, and realistic regression risk. For docs, text/copy, comments, formatting, and other clearly non-behavioral changes, **skip automated tests** unless a specific gate applies; inspect the diff instead.
-- For behavior-changing code, use **only the smallest relevant existing test(s)**, focused test filter, package, assembly, or project. Run at a meaningful checkpoint, not after each trivial edit. Avoid redundant dependency installs/restores.
-- If no relevant automated test exists, use a focused static/manual check when feasible; say what remains unverified. Do not run unrelated tests merely to claim coverage.
-- Expand to integration tests, broader builds, or the full suite **only when justified** by shared/core changes, significant refactors, security/privacy changes, migrations, release gates, failure of focused checks, or explicit user instruction. Explain the reason and avoid unnecessary repeats.
-- Respect genuinely mandatory CI/release/security gates. Interpret generic existing instructions such as "run tests before commit" as **scoped, risk-based validation**, not permission to test the entire repository on every small change.
-- In the final report, state what was tested, what was deliberately skipped, and any remaining risk. Never claim skipped tests passed.
+Keep work scoped to the request and current branch. Preserve existing C#/.NET/Avalonia conventions, compatibility, and safe backup behavior. Inspect the working diff before edits; do not overwrite unrelated work.
+
+## Find only relevant context
+- Use scoped `rg` / `rg --files` and bounded reads. Avoid whole-repo scans, repeated logs, and mandatory document preloads.
+- Consult `CONTRIBUTING.md` for IDs, issue tracking, changelog, and delivery; `ROADMAP.md`, `release/1.9-family.json`, and `docs/RELEASE_FAMILY_1.9.md` for release ownership, only when relevant. Read the affected domain contract before changing its behavior.
+- Prefer existing patterns and tests. Make the smallest coherent change; avoid unrelated refactors.
+
+## Safety and compatibility
+- Never write to or destructively test real sources, backups, destinations, host disks, or user data without explicit authorization. Use disposable fixtures for recovery checks. A synthetic test or successful build is not proof of installed recovery or release qualification.
+- Preserve backup/restore semantics, data formats, cancellation, failure handling, and security boundaries. Localize changed user-facing strings in all maintained locales; follow `docs/LOCALIZATION.md`.
+- Respect protected branches, review/CI gates, release signing (`docs/RELEASE_SIGNING.md`), and required evidence. Do not merge, publish, or claim support without qualification.
+- Reuse the owning issue and canonical `VS-`/`BUG-` ID for meaningful work. Update relevant release/changelog/tracking records; use the existing `./dev` workflow where available.
+
+## Verification and handoff
+- Review the diff. For docs/format-only changes, skip code tests unless a specific gate requires them.
+- For behavior changes, run the smallest relevant tests and affected build/check at a meaningful checkpoint. Broaden for shared/core changes, migrations, security, release gates, or failures; avoid default full-suite runs and redundant retries.
+- Keep tool output bounded. Report changes, exact checks run or skipped, and remaining risks. Never claim an unrun check passed.
