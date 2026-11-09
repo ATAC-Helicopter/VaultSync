@@ -1,198 +1,22 @@
-# Release preparation: VaultSync 1.9.5
+# VaultSync: Codex working guide
 
-This copy prepares 1.9.5; it does not change the global active product release 1.9.0.
-Read ROADMAP.md, release/1.9-family.json, CONTRIBUTING.md and docs/RELEASE_1.9.5.md.
-Owning draft release PR: #747 into Dev; current public head: `docs/1.9.5-package-guide`.
-Use this preparation copy only for this release or shared standards; do not switch
-it to the 1.9.0 head or import its unreleased features. The main 1.9.0 workspace
-remains work/1.9-roadmap-realignment / #736. Protected release refs require
-reviewed PRs; this preparation head preserves their existing commits.
-The complete current-head map is in docs/RELEASE_FAMILY_1.9.md.
+Keep work scoped to the request and current branch. Preserve existing C#/.NET/Avalonia conventions, compatibility, and safe backup behavior. Inspect the working diff before edits; do not overwrite unrelated work.
 
-## Working copy and delivery
+## Find only relevant context
+- Use scoped `rg` / `rg --files` and bounded reads. Avoid whole-repo scans, repeated logs, and mandatory document preloads.
+- Consult `CONTRIBUTING.md` for IDs, issue tracking, changelog, and delivery; `ROADMAP.md`, `release/1.9-family.json`, and `docs/RELEASE_FAMILY_1.9.md` for release ownership, only when relevant. Read the affected domain contract before changing its behavior.
+- Prefer existing patterns and tests. Make the smallest coherent change; avoid unrelated refactors.
 
-- Before editing, inspect Git status and the PR head. Preserve local/untracked
-  work and existing commits. Follow merge-only protection and required reviews.
-- Use the family manifest to check ownership. Discovery/help/completion belong
-  to 1.9.1; resource CLI automation belongs to 1.9.5. Work for later releases
-  goes to their own preparation branches/PRs, not into the 1.9.0 binary.
-- Reuse the owning issue and update the 1.9.0 changelog, relevant contracts,
-  documentation and native GitHub Project tracking with each meaningful change.
-- Changelog entries use one short sentence describing one user-facing result.
-  Aim for 8–14 words; 22 words is the hard ceiling, excluding the `[ID]` prefix.
-  Never pad an entry to reach a word count. Move explanations into linked docs.
-  Keep consecutive entries adjacent, with no blank or whitespace-only lines
-  between them. Retain blank lines around release and category headings.
-  Active `Fixed` entries must use the defect's sole `BUG-xxxxx` owning ID.
-  Keep development/maintenance under `VS-xxxx` in the appropriate category;
-  never use dual BUG/VS titles. Preserve published historical identifiers.
-  See CONTRIBUTING.md for counting and detail-placement rules.
-  Follow Keep a Changelog 1.1.0: `Added`, `Changed`, `Deprecated`, `Removed`,
-  `Fixed`, `Security`, ISO release dates, and a linked `Unreleased` section.
-- Commit and push completed, validated work to the owning release PR's
-  preparation head without asking again. This is standing maintainer
-  authorization. Preserve protected-branch reviews, merge-only history and
-  release gates; it does not authorize bypass, automatic merge or publication.
-- Never name a public branch, issue, PR, commit, project item or other artifact
-  after an assistant, model, agent or AI system. Use product/release/work scope.
-  Do not add automated-tool attribution to public titles or commit messages.
-- With every meaningful change, update the owning issue and release PR,
-  native Project #7 status and traceable dates, CHANGELOG.md, ROADMAP.md and
-  relevant contracts/user docs. Use `Refs` while release-gated work stays open.
-  Keep historical evidence separate from current-head test results.
-- Cross-release documentation/validation standards apply to every open release
-  PR, using its real head and active metadata. Never copy one release's
-  unreleased features into another; `release/1.9-family.json` owns the IDs.
-- Keep #747 draft until its actual release gates pass. Do not merge or promote
-  a release merely because compilation or mandatory CI checks pass.
+## Safety and compatibility
+- Never write to or destructively test real sources, backups, destinations, host disks, or user data without explicit authorization. Use disposable fixtures for recovery checks. A synthetic test or successful build is not proof of installed recovery or release qualification.
+- Preserve backup/restore semantics, data formats, cancellation, failure handling, and security boundaries. Localize changed user-facing strings in all maintained locales; follow `docs/LOCALIZATION.md`.
+- Respect protected branches, review/CI gates, release signing (`docs/RELEASE_SIGNING.md`), and required evidence. Do not merge, publish, or claim support without qualification.
+- Reuse the owning issue and canonical `VS-`/`BUG-` ID for meaningful work. Update relevant release/changelog/tracking records; use the existing `./dev` workflow where available.
 
-When the maintainer changes the active release, update this working context and
-the release contract together so the next session starts in the correct place.
+## Verification and handoff
+- Review the diff. For docs/format-only changes, skip code tests unless a specific gate requires them.
+- For behavior changes, run the smallest relevant tests and affected build/check at a meaningful checkpoint. Broaden for shared/core changes, migrations, security, release gates, or failures; avoid default full-suite runs and redundant retries.
+- Keep tool output bounded. Report changes, exact checks run or skipped, and remaining risks. Never claim an unrun check passed.
 
-## Rider and contributor workflow
-
-- Confirm Rider's solution projects and Git root once per session. Reuse the
-  connected IDE; do not add a second MCP server for the same Rider instance.
-- For text/file discovery, start with scoped `rg`/`rg --files`. For C# symbols,
-  references and dependencies, use Rider's semantic tools with bounded results.
-  Read only the relevant line ranges; expand when a result is incomplete.
-- Use Rider's build start/state tools for incremental development, and its
-  executable test locations when available. The required Release command in
-  CONTRIBUTING.md remains the review gate; a Debug IDE build cannot replace it.
-  Shared `VaultSync Contracts` and `VaultSync Release Checks` configurations
-  provide concise repository validation; full logs and TRX paths are printed.
-- Use file/batch diagnostics after code edits. An empty Problems View is not
-  fresh analysis; check timeout, partial-result and unsupported-file markers.
-- Use the refactoring skill and Rider for semantic refactors; use the debugging
-  skill and debugger for runtime questions that source/tests cannot resolve.
-  Profile only when performance evidence is needed. Database and game-engine
-  tools are used only for tasks involving those systems.
-- Batch independent reads and keep tool output small: consume structured
-  summaries, retain full logs as local artifacts, and inspect failures narrowly.
-  Do not enumerate every tool schema or repeatedly read the full roadmap.
-- If an IDE tool fails or cannot discover a test, record the limitation and
-  use the repository's CLI checks. Do not interpret missing IDE results as pass.
-- Ask the maintainer about unresolved repository conventions or architectural
-  choices after checking the canonical contracts; continue independent work.
-
-## Work tracking
-
-For non-trivial code, behavior, packaging, security, release, or user-facing documentation work, keep the change tied to a GitHub issue.
-
-Before starting new work, prefer:
-
-```bash
-./dev issue <bug|feature|change|security|maintenance> "Concise scope" --branch current
-```
-
-Use `--branch new` when the work should have a dedicated branch. The default is deliberately `current`; branch creation is a choice, not a ritual.
-
-When a public/existing issue already describes the work, adopt it instead of creating a duplicate:
-
-```bash
-./dev adopt <issue-number> --type bug --branch current
-```
-
-The helper allocates the canonical VaultSync ID from the active release family, adds available repository labels, attempts to add the issue to Project #7, and associates the active branch with the issue in local git config.
-
-Release-family inference order is:
-
-1. explicit `--release X.Y`;
-2. an active `release/X.Y[.Z]` branch;
-3. `activeRelease.version` in `release/release-metadata.json`;
-4. the linked `Unreleased` target version or legacy unreleased entry in `CHANGELOG.md`.
-
-Use `./dev status` before committing if the branch-to-issue association is unclear.
-
-### Before every push
-
-For any non-trivial tracked change, work tracking is a push prerequisite:
-
-1. Run `./dev status` and confirm the active branch is associated with the intended issue and canonical ID.
-2. If tracking is missing, use `./dev issue ... --branch current` or `./dev adopt ... --branch current` before pushing. Do not reconstruct the ticket from commits afterward.
-3. Confirm the issue scope/status still matches the implemented work and update required roadmap/changelog/release metadata.
-   Run `./dev audit --release <owning-version>` and resolve every discrepancy
-   before pushing. A missing permission, partial API result or failed audit is
-   not a pass; retain the output and report the exact unresolved condition.
-4. A dedicated branch remains optional unless another repository/release rule requires one.
-5. Tiny typo/format-only maintenance may use the repository's explicit tracking-skip mechanism; larger work must not silently bypass tracking.
-
-### Issue and Project lifecycle
-
-- Before implementation, reuse or create the owning issue and ensure it has
-  its exact release milestone/label, one roadmap priority, assignee and native
-  Project #7 item with Status, Priority, Area, Release and traceable dates.
-- Starting work updates both the issue status label and Project status. Each
-  meaningful increment records delivered scope, remaining acceptance, current
-  evidence and its commit/PR; preserve historical results as historical.
-- Keep release-gated work open and In progress after implementation. Close and
-  move to Done only when its owning closure criteria pass. Conditional work
-  proven unnecessary may close as not planned with linked evidence; do not
-  describe that disposition as delivered functionality. Record Completed on
-  from the actual closure date, never from a successful build or planned date.
-- Before declaring a release tracking audit complete, run `./dev audit
-  --all-releases` against the complete family manifest. Repair missing owners
-  without allocating duplicate IDs or importing later-release features.
-
-
-## Commit and PR references
-
-Include the canonical ID in meaningful commit subjects when practical, for example:
-
-```text
-fix(BUG-18177): reject incomplete recovery evidence
-feat(VS-1898): add recovery report export
-```
-
-PRs must contain both a canonical ID and an issue link (`Closes #N`, `Fixes #N`, `Resolves #N`, or `Refs #N`). Use `./dev pr` to create the standard PR automatically from the branch association.
-
-Only use `Tracking: skip - <reason>` for genuinely untracked maintenance. `Tracking: bootstrap` exists only for the tracker bootstrap itself.
-
-## Release notes
-
-PR labels feed GitHub's native generated release-note categories through `.github/release.yml`. Preview notes with:
-
-```bash
-./dev notes --tag vX.Y.Z --previous-tag vA.B.C --target <branch>
-```
-
-The generated notes are a release drafting aid; the curated `CHANGELOG.md` remains authoritative until the release workflow explicitly changes that policy.
-
-Release ownership and preparation instructions take precedence over this helper.
-Use the existing owning issue and sole release PR, with `Refs` for release-gated work.
-ID allocation fails closed if the complete remote issue audit is unavailable; it
-never silently allocates using only a local roadmap. Permission or network failures
-must be resolved before creating a new numbered work item.
-
-## Release provenance signing
-
-Candidate, beta and stable direct-download builds must attest the canonical
-manifest and every declared final asset, including updater patch JSON and ZIP.
-Verify all signatures online and offline against the exact source repository,
-workflow, commit and authorized ref before success or draft upload. Retain and
-archive the proof artifact; missing proof requires a new qualified build.
-Follow [release signing policy](docs/RELEASE_SIGNING.md). Preserve updater schema
-and asset names; keep native unsigned metadata truthful until platform publisher
-signing is separately qualified. This shared rule applies to every release.
-
-## Mandatory UI localization
-
-Localize every new or changed user-visible application string in the same change,
-including C# dialogs, notifications, errors, loading states, accessibility, tray
-and updater outcomes. Add real translations in every maintained locale; English
-fallbacks do not satisfy coverage. Preserve placeholder signatures and format
-with the selected culture. Reapply cached text on language changes without losing
-user state; review indirect Core messages and dynamic keys explicitly. Preserve
-user data and recorded technical payloads. Run
-`python3 scripts/localization_audit.py --check` and the required Release gate.
-See [the localization contract](docs/LOCALIZATION.md); this is a shared rule for
-every release and PR. Static checks supplement translation and rendered UI review.
-
-## Risk-based, targeted verification (mandatory)
-- Do **not** automatically run the full test suite, a solution-wide build, repository-wide lint/typecheck, or repeated test cycles for every edit. Minimize unnecessary tool calls, time, and token use.
-- Before testing, assess the changed files, affected behavior, and realistic regression risk. For docs, text/copy, comments, formatting, and other clearly non-behavioral changes, **skip automated tests** unless a specific gate applies; inspect the diff instead.
-- For behavior-changing code, use **only the smallest relevant existing test(s)**, focused test filter, package, assembly, or project. Run at a meaningful checkpoint, not after each trivial edit. Avoid redundant dependency installs/restores.
-- If no relevant automated test exists, use a focused static/manual check when feasible; say what remains unverified. Do not run unrelated tests merely to claim coverage.
-- Expand to integration tests, broader builds, or the full suite **only when justified** by shared/core changes, significant refactors, security/privacy changes, migrations, release gates, failure of focused checks, or explicit user instruction. Explain the reason and avoid unnecessary repeats.
-- Respect genuinely mandatory CI/release/security gates. Interpret generic existing instructions such as "run tests before commit" as **scoped, risk-based validation**, not permission to test the entire repository on every small change.
-- In the final report, state what was tested, what was deliberately skipped, and any remaining risk. Never claim skipped tests passed.
+## Release preparation: 1.9.5
+This branch is the 1.9.5 preparation head (`docs/1.9.5-package-guide`, draft PR #747 into `Dev`), not the active 1.9.0 implementation or the protected release ref. For release-specific work consult `docs/RELEASE_1.9.5.md` and `docs/RELEASE_FAMILY_1.9.md`. Follow the family manifest: do not import another release's scope or rewrite existing work. Keep the draft PR open until real qualification and review gates pass. Preserve signing, localization, evidence, issue tracking and current-head provenance.
