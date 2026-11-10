@@ -28,6 +28,11 @@ Use this page as the primary index for all project documentation.
 - Walkthrough recording and no-key narration:
   [Video production guide](video/recording-guide.md)
 
+## Community and Support
+- Discord channels, safety, and support routing: [Community and support](COMMUNITY.md)
+- Published-release webhook operations: [Discord release notifications](discord-release-notifications.md)
+- Bug reporting: [Reporting bugs](wiki/Reporting-Bugs.md)
+
 ## Contribution and Governance
 - Contributing: [CONTRIBUTING](../CONTRIBUTING.md)
 - Security policy: [SECURITY](../SECURITY.md)

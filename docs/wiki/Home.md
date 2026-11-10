@@ -32,6 +32,7 @@ Use this wiki for user-facing workflows and troubleshooting.
 - Protected points and byte-proof retention floors preserve important recovery baselines.
 
 ## Support
+- [Discord community and support](../COMMUNITY.md)
 - [Troubleshooting](Troubleshooting.md)
 - [FAQ](FAQ.md)
 - [Reporting bugs](Reporting-Bugs.md)

@@ -20,6 +20,7 @@ Rules:
 - Reuse the same ID in PR description, validation notes, and changelog entry when applicable.
 
 ## 2) Before You Start
+- Discuss ideas or contribution plans in the [Discord `#development` channel](https://discord.gg/sgP8UzeAQt) if useful. [Community guide](docs/COMMUNITY.md). GitHub remains authoritative for tracked issues, reviews, and decisions.
 - Check `ROADMAP.md` and open issues.
 - Confirm acceptance criteria before coding.
 - For risky or cross-cutting changes, align scope first.
@@ -133,8 +134,8 @@ Pull requests and pushes to `Dev`/`Stable` also run CI and release-quality workf
 - Ensure roadmap states are accurate for completed/remaining work.
 
 ## 9) Reporting Bugs
-Use `docs/wiki/Reporting-Bugs.md`.
-Security issues: follow `SECURITY.md`.
+Use `docs/wiki/Reporting-Bugs.md`. Discord `#help-and-support` and `#bug-reports` are available for preliminary discussion; reproducible issues belong on GitHub Issues.
+Security issues: follow `SECURITY.md` privately, not a public channel.
 
 ## 10) Standard Project Operations
 These are the default procedures for everyone contributing to VaultSync.

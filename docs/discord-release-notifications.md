@@ -1,5 +1,7 @@
 # Discord release notifications
 
+See [Community and support](COMMUNITY.md) for the public Discord invite, channel overview, and support routing. The workflow becomes operational only when it is merged into the default `Stable` branch **and** the `DISCORD_RELEASE_WEBHOOK` Actions secret is configured; a copy on `Dev` or this documentation alone does not activate it.
+
 This integration sends a single formatted Discord message to the VaultSync
 `#announcements` channel when a GitHub Release is **published**.
 
