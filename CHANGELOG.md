@@ -64,6 +64,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Bind hosted analysis and native evidence to identical source commits.
 - [VS-1904] Verify recovery admission refusals and capture cancellation with isolated fixtures.
 - [VS-1904] Record bounded local inspection outcomes for failed offline captures.
 - [VS-1910] Explain offline recovery steps and conditional post-restore VaultSync availability.

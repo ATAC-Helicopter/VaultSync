@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
+      EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
       SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
       SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
@@ -58,7 +59,16 @@ jobs:
         timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+
+      - name: Verify checked-out source identity
+        if: steps.config.outputs.configured == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SOURCE_SHA" ]]
 
       - name: Setup .NET
         if: steps.config.outputs.configured == 'true'
@@ -102,6 +112,7 @@ jobs:
             /k:"${SONAR_PROJECT_KEY}" \
             /o:"${SONAR_ORGANIZATION}" \
             /d:sonar.host.url="${host_url}" \
+            /d:sonar.scm.revision="${EXPECTED_SOURCE_SHA}" \
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.cs.vscoveragexml.reportsPaths="${RUNNER_TEMP}/coverage-main.xml,${RUNNER_TEMP}/recovery-storage/coverage-native.xml,${RUNNER_TEMP}/recovery-admission/coverage-admission.xml" \
             /d:sonar.python.coverage.reportPaths=python-coverage.xml \
@@ -133,6 +144,7 @@ jobs:
       - name: Verify coverage collection
         if: steps.config.outputs.configured == 'true'
         run: |
+          python3 scripts/validate_native_evidence_source.py "$EXPECTED_SOURCE_SHA" "${{ runner.temp }}/recovery-storage/native-storage-evidence.json" "${{ runner.temp }}/recovery-admission/native-admission-evidence.json"
           python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/coverage-main.xml"
           python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/recovery-storage/coverage-native.xml"
           python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/recovery-admission/coverage-admission.xml"

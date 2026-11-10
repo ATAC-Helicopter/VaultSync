@@ -13,6 +13,16 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Hosted source binding — 2026-11-10
+
+VS-1980/#673 aligns checkout, compiled native receipts and Sonar revision with
+the requested PR/event SHA. Nine focused source-identity validator tests pass;
+no application code, UI strings or quality thresholds change. The previous
+successful native execution compiled synthetic merge f644e404 while Sonar
+reported7ac4ee5; its78.4% gate result is historical cross-SHA evidence. Fresh
+source-aligned CI remains required. The private2495c59 image-inspection proof
+uses its actual exact reader source and is unaffected.
+
 ## Single-scan inspection repair — 2026-11-08
 
 BUG-19046/#831 removes the second complete payload scan from isolated image

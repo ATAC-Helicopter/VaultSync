@@ -2105,6 +2105,10 @@ repository must not transfer before a compatible release is adopted.
     See the October 19 follow-up evidence and its verified outcome.
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
+  - Source binding (2026-11-10): explicitly check out the PR head, verify Git
+    identity before builds, pin scanner revision and reject native receipts
+    whose source, compiled revision or checkout differ. Nine focused Python
+    tests pass; fresh hosted execution remains required. Refs #673 in #736.
   - Routing update (2026-10-26): integrate #820 revision 3bea6e5, replacing
     three-child/Terra High defaults with two children/Terra Medium while retaining
     every release gate. The static workflow uses existing pinned actions. Local

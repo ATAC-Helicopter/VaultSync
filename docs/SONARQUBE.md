@@ -64,3 +64,21 @@ remain separate; a review document is not a passing quality gate.
 On November6, the maintainer recorded all six recommended dispositions; a
 complete six-ID API query verifies FALSE-POSITIVE for each. A fresh exact-head
 analysis is still required, including the unchanged coverage condition.
+
+
+## Source identity
+
+The analysis workflow checks out the pull request head SHA explicitly, or the
+actual event SHA for push/manual runs. It verifies Git HEAD before setup/build
+and supplies the same revision to the scanner. Before coverage import,
+`scripts/validate_native_evidence_source.py` requires both native receipts to
+bind `sourceCommit`, `compiledSourceCommit` and `checkoutRevision` to that SHA.
+The helper accepts only bounded, unambiguous JSON and does not replace each
+wrapper's kernel, mount, inode, executed-case and coverage checks.
+
+The November8 run42528843601 completed both native fixtures, but its compiled
+checkout was merge commit`f644e4046d15e526be38d3f2f27dbd08121bc6b1` while the scanner
+reported PR head`7ac4ee5a477561ffe27f9144e778a1c30bc867be`. Its78.4% coverage and A
+ratings are historical cross-SHA observations, not qualified exact-head results.
+A source-aligned run is required after this repair. Thresholds, exclusions,
+permissions and fork/secret handling are unchanged.
