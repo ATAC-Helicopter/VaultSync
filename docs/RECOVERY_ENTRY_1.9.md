@@ -516,3 +516,30 @@ returns to its exact original0700 mode; no runtime or host directory is changed.
 These assertions require the existing genuine namespace/ext4 fixture. Ordinary
 macOS/unprivileged test rows do not execute them, and the helper does not prove
 that the C# catalog itself ran as UID60999.
+
+## Installed Linux OS loop — 2026-11-10
+
+Frozen executable source `7ac4ee5a477561ffe27f9144e778a1c30bc867be`, serviced
+runtime10.0.13, completes the installed disposable3GiB Linux loop. Physical-console
+capture publishes and verifies a recovery copy (421.009s). With source detached
+and no network, the graphical catalog selects that copy without a typed path;
+only the disposable destination is listed. Graphical review plus a fresh VT1
+challenge precede all target writes. Restore writes and reads back3,221,225,472
+bytes; the durable terminal record and final receipt confirm staging cleanup.
+The service exits0 after622.670s and the guest shuts down normally.
+
+A complete pre-boot comparison reports identical source and restored disk bytes.
+With fresh firmware variables and only the restored target attached, UEFI boots
+Debian13 to a real Xorg/xterm window. Keyboard checks observe systemd running,
+ext4/partition identities, original profile and both markers; a new marker is
+independently observed in serial before normal shutdown. All owned VMs exit.
+See the [source-bound receipt](release-evidence/1.9-installed-linux-os-loop-2026-11-10.json).
+
+This advances VS-1904/#492 and VS-1907/#495; it does not qualify final media or a
+support profile. BUG-19044/#827 still reproduces partial black redraws; VT exposes
+were needed to inspect full screens. Two earlier image-choice attempts failed
+before writes and remain separate. Larger-image budgets, interruption/refusal
+qualification, installed VaultSync continuity, predecessor upgrades, packages,
+updater/provenance and protected reviews remain open. All profiles stay candidates;
+#736 stays draft and beta1 is not published. No unrelated test suite is repeated
+for this evidence-only checkpoint.

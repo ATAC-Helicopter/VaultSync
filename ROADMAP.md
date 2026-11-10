@@ -1219,6 +1219,13 @@ is staged for this release through [PR #722](https://github.com/ATAC-Helicopter/
 It needs exact 1.8.9 upgrade and platform qualification before shipping; the
 repository must not transfer before a compatible release is adopted.
 
+Installed-loop checkpoint (2026-11-10): source7ac4 completes product capture,
+export, graphical restore, full byte comparison and source-absent restored UEFI/
+light-X11 boot on the disposable3GiB Linux fixture. Durable final cleanup passes.
+[Evidence](docs/release-evidence/1.9-installed-linux-os-loop-2026-11-10.json).
+Black partial redraws, capacity/media/fault and shared beta gates remain open;
+no support profile is promoted.
+
 - [ ] `BUG-19046` `P0` Avoid duplicate payload scans during offline image verification.
   - Fixed reader2495c59 now verifies the same3GiB in73.807s with24583reads,
     worker exit0, full verified bytes and digest. No timeout increase, source/
