@@ -28,6 +28,8 @@ Core pillars:
 
 ### 2.2 Operational docs
 - `docs/HELP.md`: in-app help target and concise user guidance.
+- `docs/COMMUNITY.md`: official Discord, support routing, channels, and privacy safeguards.
+- `docs/discord-release-notifications.md`: optional release webhook setup and delivery conditions.
 - `docs/RELEASING.md`: release packaging/publishing flow.
 - `docs/schemas/release-manifest-v1.schema.json`: canonical direct-download
   artifact identity, size, SHA-256, and compatibility schema.

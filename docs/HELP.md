@@ -156,6 +156,12 @@ See full troubleshooting page: `docs/wiki/Troubleshooting.md`.
 
 See `docs/PRIVACY.md` and `docs/CRASH_REPORTING.md`.
 
+## Community Support
+- Join the [official VaultSync Discord](https://discord.gg/sgP8UzeAQt) for troubleshooting, bug discussion, development, and beta conversations.
+- Read [Community and support](COMMUNITY.md) for the correct channels and safe information sharing.
+- Use [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues) to track reproducible bugs.
+- Report security vulnerabilities privately under [SECURITY.md](../SECURITY.md), never in public chat.
+
 ## More Docs
 - Docs index: `docs/README.md`
 - Documentation hub: `DOCUMENTATION.md`
