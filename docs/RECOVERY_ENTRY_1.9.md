@@ -543,3 +543,14 @@ qualification, installed VaultSync continuity, predecessor upgrades, packages,
 updater/provenance and protected reviews remain open. All profiles stay candidates;
 #736 stays draft and beta1 is not published. No unrelated test suite is repeated
 for this evidence-only checkpoint.
+
+## Dirty-clip rendering candidate — 2026-11-10
+
+BUG-19044/#827 still reproduces with retained CPU frames during the successful
+installed OS loop. The isolated controller now selects Avalonia12.1.4's explicit
+Skia root-clip layer workaround (`CompositionOptions.UseSaveLayerRootClip`).
+It changes presentation only; recovery protocol, consent, authority and Core
+remain unchanged. The affected Controller Release build passes with zero
+warnings/errors. Native catalog/refresh/transition/close checks are required
+before claiming this repairs the black redraws; headless tests cannot prove
+X11 scanout. No new visible string or unrelated suite is involved.

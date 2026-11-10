@@ -1243,6 +1243,8 @@ no support profile is promoted.
     No Core/device/protocol change or new UI text; native rendering and hosted
     Sonar confirmation remain open. Issue #828; PR #736; not release-qualified.
 - [ ] `BUG-19044` `P0` Keep recovery wizard content visible during software redraws.
+  - November10: retained frames still fail in the full OS loop. A scoped Skia
+    root-clip layer candidate builds cleanly; native redraw proof remains pending.
   - Native source 1f6644b accepts image-folder input and reaches destination
     selection, but content can turn black on updates. A retained software-buffer
     candidate preserves existing CPU pixels. Source caa8ebf renders complete folder

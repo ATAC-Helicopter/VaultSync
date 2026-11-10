@@ -2,6 +2,7 @@ using VaultSync.Core.Services;
 using VaultSync.RecoveryController;
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Rendering.Composition;
 using System.Runtime.InteropServices;
 using Startup = VaultSync.Core.Services.LinuxRecoveryStartupDiagnostics;
 
@@ -42,6 +43,8 @@ try
                 UseRetainedFramebuffer = true,
                 WmClass = "vaultsync-recovery"
             })
+            // Isolate dirty-region drawing from the retained CPU frame (Skia clip workaround).
+            .With(new CompositionOptions { UseSaveLayerRootClip = true })
             .With(new FontManagerOptions { DefaultFamilyName = "avares://VaultSync.RecoveryController/Assets/Fonts/#Noto Sans" })
             .StartWithClassicDesktopLifetime(args);
     }
