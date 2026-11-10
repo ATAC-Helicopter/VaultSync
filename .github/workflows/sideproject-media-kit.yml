@@ -1,0 +1,62 @@
+name: Build SideProject screenshot ZIP
+
+on:
+  push:
+    branches:
+      - assets/sideproject-screenshots-20261110
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out screenshot source
+        uses: actions/checkout@v4
+      - name: Assemble media kit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p media/sideproject-tmp
+          cp docs/images/Dashboard.png media/sideproject-tmp/01_Dashboard.png
+          cp docs/images/Backup_Page.png media/sideproject-tmp/02_Backups.png
+          cp docs/images/History_Timeline.png media/sideproject-tmp/03_History.png
+          cp docs/images/Recovery_Readiness.png media/sideproject-tmp/04_Recovery_Readiness.png
+          cp docs/images/Recovery_Drill.png media/sideproject-tmp/05_Recovery_Drill.png
+          cp docs/images/Compare_View.png media/sideproject-tmp/06_Snapshot_Compare_Alternative.png
+          cat > media/sideproject-tmp/README.txt <<'EOF'
+          VaultSync - r/SideProject screenshot kit
+          Source: ATAC-Helicopter/VaultSync, Stable branch (real app screenshots).
+
+          UPLOAD IN THIS ORDER:
+          01_Dashboard.png - Dashboard overview and cover.
+          02_Backups.png - Project/folder backup workflows.
+          03_History.png - Timeline and restore points.
+          04_Recovery_Readiness.png - Readiness and protection gaps.
+          05_Recovery_Drill.png - Verified recovery-drill evidence.
+
+          ALTERNATIVE:
+          06_Snapshot_Compare_Alternative.png - Snapshot comparison.
+
+          These screenshots show the stable 1.8.9 app.
+          VaultSync 1.9 disk imaging and bootable recovery are not yet released.
+          Project: https://github.com/ATAC-Helicopter/VaultSync
+          Website: https://fglabs.dev/vaultsync
+          EOF
+          (
+            cd media/sideproject-tmp
+            zip -0 ../VaultSync_SideProject_Images.zip ./*.png README.txt
+          )
+          unzip -t media/VaultSync_SideProject_Images.zip
+          rm -rf media/sideproject-tmp
+      - name: Commit ZIP to media branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add media/VaultSync_SideProject_Images.zip
+          git commit -m "assets: package SideProject screenshots [skip ci]"
+          git push origin "HEAD:assets/sideproject-screenshots-20261110"
