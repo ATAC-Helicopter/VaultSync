@@ -163,6 +163,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Security
 
+- [VS-1980] Restrict native evidence reads to fixed, verified runner files.
 - [VS-1997] Prepare scoped runtime security backports across maintained source branches.
 - [VS-1997] Require serviced .NET runtimes and validate every framework included in release packages.
 

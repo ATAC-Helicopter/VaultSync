@@ -144,7 +144,7 @@ jobs:
       - name: Verify coverage collection
         if: steps.config.outputs.configured == 'true'
         run: |
-          python3 scripts/validate_native_evidence_source.py "$EXPECTED_SOURCE_SHA" "${{ runner.temp }}/recovery-storage/native-storage-evidence.json" "${{ runner.temp }}/recovery-admission/native-admission-evidence.json"
+          python3 scripts/validate_native_evidence_source.py "$EXPECTED_SOURCE_SHA"
           python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/coverage-main.xml"
           python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/recovery-storage/coverage-native.xml"
           python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/recovery-admission/coverage-admission.xml"

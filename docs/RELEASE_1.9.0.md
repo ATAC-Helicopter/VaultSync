@@ -15,6 +15,14 @@ installed Linux workflows, qualified profiles or shared release gates.
 
 ## Hosted source binding — 2026-11-10
 
+The first aligned run completes analysis but reports78.9% new coverage and
+pythonsecurity:S8707 on CLI-selected receipt paths. The validator now accepts
+only the source SHA and reads fixed, identity-checked files under RUNNER_TEMP.
+Fifteen focused Python cases pass, including path escapes, symlinks, hardlinks,
+FIFO refusal and replacement during open. Fresh hosted checks remain required;
+no rule, threshold or admission proof is weakened.
+
+
 VS-1980/#673 aligns checkout, compiled native receipts and Sonar revision with
 the requested PR/event SHA. Nine focused source-identity validator tests pass;
 no application code, UI strings or quality thresholds change. The previous

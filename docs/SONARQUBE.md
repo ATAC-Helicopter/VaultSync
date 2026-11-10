@@ -82,3 +82,11 @@ reported PR head`7ac4ee5a477561ffe27f9144e778a1c30bc867be`. Its78.4% coverage an
 ratings are historical cross-SHA observations, not qualified exact-head results.
 A source-aligned run is required after this repair. Thresholds, exclusions,
 permissions and fork/secret handling are unchanged.
+
+
+The source validator accepts only `EXPECTED_SHA` as an argument. It reads the
+fixed storage/admission receipt names under `RUNNER_TEMP`, refuses canonical-path
+escapes and symlinks, and checks single regular-file identity across open before
+bounded parsing. Caller-selected file paths are not supported. This narrows the
+CLI read surface identified by pythonsecurity:S8707 in the first aligned run;
+the rule remains enabled and a fresh hosted result must confirm disposition.

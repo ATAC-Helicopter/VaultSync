@@ -2105,6 +2105,10 @@ repository must not transfer before a compatible release is adopted.
     See the October 19 follow-up evidence and its verified outcome.
 
 - [ ] `VS-1980` `P1` Prepare 1.9.0 release identity, kickoff, and repository tracking.
+  - Receipt input hardening (2026-11-10): remove caller-selected file paths;
+    inspect only the two fixed runner receipts, rejecting escapes, symlinks,
+    hardlinks, nonregular/replaced files and ambiguous JSON. Fifteen focused
+    Python tests pass; fresh hosted security/coverage results remain required.
   - Source binding (2026-11-10): explicitly check out the PR head, verify Git
     identity before builds, pin scanner revision and reject native receipts
     whose source, compiled revision or checkout differ. Nine focused Python
