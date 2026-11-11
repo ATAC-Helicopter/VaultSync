@@ -65,6 +65,37 @@ commits, Project and milestones. Never interpret the alias as that live ticket.
 | `VS-1981` | `VS-1992` | [#714](https://github.com/ATAC-Helicopter/VaultSync/issues/714) |
 | `VS-1982` | `VS-1993` | [#715](https://github.com/ATAC-Helicopter/VaultSync/issues/715) |
 
+## Evidence scope clarification — 2026-11-11
+
+[Recovery evidence, semantic limits and qualification](RECOVERY_EVIDENCE_SCOPE_1.9.md)
+adds interpretation guidance without changing the 12 immutable invariants,
+work-item crosswalk, planned release dates or release gates. A recorded backup,
+verified payload, independently read-back restored target, target-only cold
+boot, application/service probe and failure-domain assessment are distinct
+facts. Each carries its actual environment/profile, build, covered scope,
+timestamp, outcome and limitations. Unsupported, stale, inconclusive and
+not-run are never silently counted as success.
+
+Release ownership of this clarification:
+
+| Release | Evidence-related owner and limit |
+| --- | --- |
+| 1.9.0 | VS-1918/1919/1908/1909: measured supported boot/restore profiles; no universal app semantics or expansion of beta.1 |
+| 1.9.1 | VS-1911–1914: image inspection and extraction do not establish boot or app health |
+| 1.9.2 | VS-1931–1934/1976: independent portable bytes and explicit reader/key dependencies |
+| 1.9.3 | VS-1923–1925/1927: remote payload presence, retrieval and verified clean-machine restore distinguished |
+| 1.9.4 | VS-1942/1944: accessible scoped, stale/unsupported and not-run evidence presentation |
+| 1.9.5 | VS-1951–1954/1956/1979: bounded opt-in drills, freshness, optional isolated VM/app checks and reports |
+| 1.9.6 | VS-1983/1987/1990: binary object integrity vs materialized exact changeset vs app/build behavior |
+| 1.9.7 | VS-1988/1991/1993: explicit byte, merge, transfer and backend qualification |
+| 1.9.8 | VS-1961–1963: evidence-version migration, compatibility, long-duration and LTS regression |
+
+A general-purpose checker cannot promise semantic correctness for arbitrary
+software/data. Reproducible builds/provenance are related but independent of
+restore and application verification. VM cold-boot qualification is not the
+same as a product feature that automatically boots every backup. No new
+serialized schema, package, beta tag or broad supported profile is declared.
+
 ## Twelve cross-release invariants
 
 1. Stable support follows explicit evidence; unsupported scope is visible.
