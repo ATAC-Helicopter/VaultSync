@@ -12,3 +12,16 @@ See [family contract and stable gates](RELEASE_FAMILY_1.9.md) and
 [canonical scope/status](../ROADMAP.md). Before promotion, integrate the qualified
 predecessor, verify actual functionality and all version/packaging consumers,
 record a reviewed target date, and complete native release evidence.
+
+## Recovery evidence and limitations — 2026-11-11
+
+For canonical BSC IDs VS-1983/1987/1990, distinguish verified repository
+objects/graphs from independently materialized changeset bytes and from
+application-specific or compiler/build behavior. Exact BSC byte reconstruction
+does not mean a game project builds, produces identical binaries or runs on
+a different toolchain/architecture (including hardware-specific compiler
+flags). No arbitrary project build or post-checkout script is an automatic
+recovery probe. Maintain explicit history, key, format, index/pack and GC
+fault evidence and Preview status until the existing BSC stable gate passes.
+This does not block earlier disk releases. See
+[evidence and semantic scope](RECOVERY_EVIDENCE_SCOPE_1.9.md).

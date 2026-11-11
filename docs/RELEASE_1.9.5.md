@@ -12,3 +12,18 @@ See [family contract and stable gates](RELEASE_FAMILY_1.9.md) and
 [canonical scope/status](../ROADMAP.md). Before promotion, integrate the qualified
 predecessor, verify actual functionality and all version/packaging consumers,
 record a reviewed target date, and complete native release evidence.
+
+## Recovery evidence and limitations — 2026-11-11
+
+VS-1951–1954/1956/1979 add **opt-in**, scheduled, bounded verification/drill
+policies and structured evidence reporting. A scheduled integrity check does
+not count as a boot drill; an isolated VM cold boot counts only for qualified
+compatible profiles. Do not boot arbitrary user backups, run recovered
+programs or execute unreviewed application check scripts automatically.
+Explicit consent, disposable targets, trusted runner isolation, bounded CPU/
+I/O/storage/time, network-off defaults and clear failure/skip reports are
+prerequisites for optional VM/application probes. Human/hardware drills retain
+independent operator and environment provenance. Reports show last-run,
+stale/unsupported/not-run and missed states without hidden telemetry.
+Do not introduce any of this as a new 1.9.0-beta.1 feature. See
+[evidence and semantic scope](RECOVERY_EVIDENCE_SCOPE_1.9.md).

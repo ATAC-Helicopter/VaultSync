@@ -85,6 +85,23 @@ disk bytes does not guarantee that secrets unlock on different hardware/accounts
 or that remote credentials remain valid. Preserve recoverable data and request
 reauthorization where required instead of promising portable secrets.
 
+## What "verified" means after restoring — 2026-11-11
+
+Follow [the independent evidence claims](RECOVERY_EVIDENCE_SCOPE_1.9.md).
+Discovery, digest verification, destination read-back and restored-system
+cold boot are distinct visible outcomes; **boot does not certify application
+or database correctness**. Show the actual environment, bytes/properties
+tested, time and unsupported/untested conditions. A successfully restored
+system may still need version-specific service, account, encryption, hardware
+driver or application checks. Describe optional such tests only when actually
+implemented and run; never infer them from an intact image or a passing boot.
+
+A GUI desktop flow must not automatically boot arbitrary recovered images or
+execute scripts simply to claim higher confidence. The 1.9.0 qualification VM
+is a lab tool; optional bounded, consented recurring VM drills belong to 1.9.5,
+and richer presentation of the scopes belongs to 1.9.4. The installed 3 GiB
+Debian loop is a specific observed fixture, not universal supported recovery.
+
 ## Beta acceptance
 
 Every beta retains Windows, macOS and Linux desktop support. Only disk support is

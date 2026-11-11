@@ -12,3 +12,15 @@ See [family contract and stable gates](RELEASE_FAMILY_1.9.md) and
 [canonical scope/status](../ROADMAP.md). Before promotion, integrate the qualified
 predecessor, verify actual functionality and all version/packaging consumers,
 record a reviewed target date, and complete native release evidence.
+
+## Recovery evidence and limitations — 2026-11-11
+
+For VS-1923–1925/1927, distinguish (a) uploaded object/manifest existence,
+(b) actual remote download and integrity, (c) clean-machine restore of named
+bytes, and (d) dependency/failure-domain independence. None implies the next.
+Two buckets in one provider account may share the same account/key failure;
+remote availability and future provider access are time-bounded observations.
+Keep incomplete transfers, revoked credentials, incompatible versions, cost/
+retention limits and untested application state visible. Do not report
+"recoverable" merely because a remote upload completed. See
+[evidence and semantic scope](RECOVERY_EVIDENCE_SCOPE_1.9.md).

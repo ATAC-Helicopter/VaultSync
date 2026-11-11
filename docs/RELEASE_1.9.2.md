@@ -12,3 +12,14 @@ See [family contract and stable gates](RELEASE_FAMILY_1.9.md) and
 [canonical scope/status](../ROADMAP.md). Before promotion, integrate the qualified
 predecessor, verify actual functionality and all version/packaging consumers,
 record a reviewed target date, and complete native release evidence.
+
+## Recovery evidence and limitations — 2026-11-11
+
+For VS-1931–1934/1976, separately demonstrate clean-machine discovery,
+compatible independent reader/unlock, exact restored bytes and any further
+declared checks. Do not silently depend on the source SQLite database or
+installation. Missing credentials/keys, format incompatibility and device/
+software-version mismatches remain explicit. Restoring bytes does not prove
+Keychain/DPAPI/TPM unlock, licenses, drivers or application correctness.
+A missing application test is "not tested", not "passed". See
+[evidence and semantic scope](RECOVERY_EVIDENCE_SCOPE_1.9.md).

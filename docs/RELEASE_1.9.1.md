@@ -15,3 +15,15 @@ record a reviewed target date, and complete native release evidence.
 
 BUG-19008 tracks the Windows console-capture isolation defect found during
 qualification; the focused fix remains subject to native CI and review.
+
+## Recovery evidence and limitations — 2026-11-11
+
+Clone Explorer is **read-only inspection**, not a recovery qualification
+service. VS-1911–1914 should distinguish a discovered image, parsed filesystem,
+byte-verified file and completed selective extraction. Every claim names
+content/profile/reader version, bytes actually checked, and unsupported or
+truncated cases. Searching or extracting a file does not establish a valid
+database/application state, independently bootable restored OS, or successful
+whole-system restore. Unknown formats fail closed; do not execute files merely
+to inspect them. See [evidence and semantic scope](RECOVERY_EVIDENCE_SCOPE_1.9.md).
+No additional beta.1 gate or new shipped capability is implied.
