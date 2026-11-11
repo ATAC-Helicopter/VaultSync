@@ -33,6 +33,25 @@ measured runs; unit tests or Windows PE inventory are not substitutes. No host
 raw-device writes, unknown guest licenses or external storage use are authorized
 by this lifecycle contract.
 
+## Recovery guest and application-check safety — 2026-11-11
+
+For the 1.9 recovery qualification program, disposable VM restores/cold boots
+must bind the exact source/target identities, tool/build, image digest and
+observed environment to the retained receipt. Before claiming independent
+boot, detach the original source and backup repository and reset firmware
+variables where applicable; do not equate a previously booted source with a
+recovered-target boot. Keep at least one separate negative/refusal test for
+unsafe target selection or incomplete/corrupt input. A VM pass is not a
+physical-hardware pass.
+
+Treat recovered guest contents as untrusted: no production secrets, arbitrary
+host mounts, network connectivity or automatic execution of user-supplied
+scripts. Use bounded guest CPU/RAM/disk/time budgets, isolated disposable
+targets, explicit cleanup and exact ownership records. Optional application
+probes need separate consent and threat-model review before becoming a
+user-facing feature. See [the scoped evidence contract](RECOVERY_EVIDENCE_SCOPE_1.9.md).
+The workspace rules here do not alter the 1.9.0 beta release gates.
+
 ## Completion and interruption
 
 1. Stop the exact owned VM, TPM, helper, server and QA app processes normally;

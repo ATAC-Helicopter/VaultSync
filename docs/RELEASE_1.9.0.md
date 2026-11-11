@@ -13,6 +13,35 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Recovery confidence and application-semantic boundary — 2026-11-11
+
+The [maintained evidence-scope contract](RECOVERY_EVIDENCE_SCOPE_1.9.md)
+clarifies existing VS-1918/1919/1908/1909 acceptance; it does not redefine the
+1.9.0 beta or stable release gate. The 2026-11-10 installed 3 GiB Debian
+GPT/UEFI/ext4 VM loop proves one actual capture, independently verified copy,
+destination read-back/whole-image comparison and source-absent restored OS boot
+on the exact observed build/fixture. **It is not a certified Linux profile,
+packaged recovery media or a public beta**. Partial-black redraw, final
+media/capacity/interruption/refusal, application/configuration continuity,
+actual physical profiles, Sonar, predecessor upgrade, signing and protected
+review remain separate acceptance items.
+
+Preserve distinct recorded facts for (1) image/payload integrity, (2) actual
+restoration/read-back, (3) target-only cold boot, and (4) any explicitly
+checked application/service behavior. A hash is not a boot, and a boot is not
+proof of every database or application. Retain the original source/repository
+disconnection and fresh firmware in the boot evidence; never infer unmeasured
+physical hardware support from a VM. Tests that intentionally refuse malformed
+data or unsafe devices are safety evidence, not a failed good backup. A single
+green "fully recoverable" outcome must not be used to hide absent app checks.
+
+Automated end-user VM booting and generic application probes are **not**
+added to beta.1. Application probes, if developed, need bounded trusted
+execution, consent, default network isolation and per-app qualifications;
+recurring automation belongs to 1.9.5. The 80% new-code quality gate and every
+existing beta/release requirement remain unchanged. No format or API schema is
+changed by this documentation clarification.
+
 ## Installed Linux OS loop — 2026-11-10
 
 Frozen executable source `7ac4ee5a477561ffe27f9144e778a1c30bc867be`, serviced

@@ -1064,6 +1064,31 @@ not individual committed dates; their Project target dates use the family
 horizon until a reviewed patch schedule exists. The conditional VS-1943
 follow-up and candidate VS-1971 remain outside the execution kickoff.
 
+## Shared evidence semantics across the 1.9 family — 2026-11-11
+
+The [recovery evidence and semantic limits contract](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md)
+clarifies existing VS-1918/1919/1908/1909 qualification, not new immutable
+work IDs, public features, cut dates or exceptions to current release gates.
+**Recorded**, **payload verified**, **restore/read-back verified**,
+**restored OS boot observed**, **application/service checked** and
+**failure-independence assessed** are separate claims with bound profile,
+method, build, covered bytes, timestamp, outcome and limitations. A claim
+cannot be promoted using evidence from another claim.
+
+An image can be byte-identical and still contain application-inconsistent data;
+a booted OS can still have unusable services. Arbitrary application semantics
+cannot be universally established by generic backup software. Unsupported,
+not-run, failed, stale and inconclusive checks stay explicit and do not become
+green universal success. Historical 1.8 file-level proofs retain their scope.
+
+Use qualified disposable VM/physical recovery tests for 1.9.0 profiles;
+**do not** reinterpret the installed 3 GiB Debian loop as a general supported
+Linux profile or public beta. User-configurable recurring drills, opt-in VM
+boot tests and narrowly consented application probes are 1.9.5 design work,
+not a new blocker for beta.1. Automatic execution of arbitrary recovered
+images/scripts is never the default. See the linked contract for threat model,
+failure cases, compatibility assumptions and release-by-release ownership.
+
 ## 1.9 architecture approval gate
 
 The imported full roadmap and the immutable work-ID crosswalk are recorded in
@@ -1194,6 +1219,16 @@ The full maintained strategy is
 [`docs/BINARY_SOURCE_CONTROL_STRATEGY.md`](docs/BINARY_SOURCE_CONTROL_STRATEGY.md).
 
 ## 1.9.0 — Disk and Bootable Recovery Foundation
+
+**Evidence clarification (no expansion of beta.1 scope):** VS-1908/1909 and
+VS-1918/1919 must record separate capture-integrity, independent target
+read-back and restored-OS boot results for each explicitly advertised profile.
+The actual 2026-11-10 Debian VM pass is limited to its recorded fixture;
+application/configuration continuity, physical hardware qualification,
+media/capacity/interruption work and shared release gates remain open.
+Boot does not promise arbitrary database or application consistency.
+[Scope and test contract](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
 
 **Status:** Active implementation; worker, independent recovery and qualification gates remain open
 **Planning started:** 2026-09-18
@@ -2189,6 +2224,14 @@ history and are not rewritten merely to consolidate review.
 
 ## 1.9.1 — Clone Explorer
 
+**Evidence clarification:** VS-1911–1914 read-only browsing, extraction and
+image comparison demonstrate only their declared bytes/format scope. A file
+being extractable or a partition being parsable does not certify application
+consistency or an independently bootable system. Unknown format/metadata and
+truncated reads remain explicit. See
+[recovery evidence scope](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
+
 - [ ] `VS-1911` `P1` Browse supported image partitions and files read-only.
 - [ ] `VS-1912` `P1` Search and selectively extract files from images.
 - [ ] `VS-1913` `P1` Inspect image creation, verification, and compatibility.
@@ -2237,6 +2280,14 @@ history and are not rewritten merely to consolidate review.
 
 ## 1.9.2 — Portable Recovery
 
+**Evidence clarification:** VS-1931–1934 and VS-1976 must prove supported
+clean-machine discovery/restore and the actual bytes checked, separately
+recording missing keys/readers, incompatible versions and service/app state
+not evaluated. Portability of bytes does not imply portability of secrets,
+drivers or application licensing. See
+[recovery evidence scope](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
+
 Portable recovery moves ahead of offsite expansion because provider support is
 not a recovery path until a fresh installation can discover, inspect, unlock,
 restore, and verify supported portable data. Existing identifiers remain
@@ -2260,6 +2311,14 @@ unchanged because work IDs are immutable and do not encode the patch number.
 
 ## 1.9.3 — Offsite Protection
 
+**Evidence clarification:** VS-1923–1925 and VS-1927 distinguish remote
+object/manifest presence, retrievable verified bytes, actual independent
+clean-machine restore, and provider/account/key failure correlation. Successful
+upload or health scoring alone must not claim recoverability or site
+independence. See
+[recovery evidence scope](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
+
 - [ ] `VS-1921` `P0` Add resumable S3-compatible object-storage destinations.
 - [ ] `VS-1922` `P1` Add Backblaze B2 and SFTP destination profiles.
 - [ ] `VS-1923` `P0` Validate remote manifests and clean incomplete uploads.
@@ -2271,6 +2330,14 @@ unchanged because work IDs are immutable and do not encode the patch number.
   explainable automatic failover.
 
 ## 1.9.4 — Unified Recovery Experience
+
+**Evidence clarification:** VS-1942/1944 present distinct, accessible
+results for payload check, tested restore/read-back, measured boot, optional
+application checks and failure-domain assumptions. Each shows freshness,
+profile, unsupported/not-run states and scope; a single green "fully
+recoverable" badge is not a substitute. See
+[recovery evidence scope](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
 
 - [ ] `VS-1941` `P0` Complete unified project, file, image, storage, and
   recovery navigation and retire the legacy shell after parity.
@@ -2285,6 +2352,15 @@ unchanged because work IDs are immutable and do not encode the patch number.
   widths, scaling, keyboard, screen-reader, theme, and interrupted-work states.
 
 ## 1.9.5 — Continuous Recovery Assurance
+
+**Evidence clarification:** VS-1951–1954, VS-1956 and VS-1979 own
+opt-in scheduled verification and drills, explicit staleness, bounded
+structured reporting and policy-visible limitations. Automatic VM boots
+are optional only for qualified/trusted profiles; never execute arbitrary
+backup contents or application scripts by default. Application probes
+need separate consent, isolation and supported-check contracts. See
+[recovery evidence scope](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
 
 - [ ] `VS-1951` `P1` Schedule full verification and recovery drills.
 - [ ] `VS-1952` `P1` Add user-controlled stale, missed, offline, credential,
@@ -2432,6 +2508,14 @@ implementation evidence, not stable release qualification.
 
 ## 1.9.6 — Binary Source Control Foundation
 
+**Evidence clarification:** VS-1983/1987/1990 distinguish stored object
+integrity, clean-machine changeset materialization and optional build/app
+validation. Matching hashes cannot establish that compiled binaries or
+project-specific tools behave identically on all systems. BSC work remains
+subject to its own architecture gate and must not delay earlier disk recovery.
+See [recovery evidence scope](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
+
 Binary Source Control enters the 1.9 family only after `VS-1981` and
 `VS-1982` approve the repository and collaboration contracts. This release
 targets a complete local/NAS mainline workflow before branching or offsite scale.
@@ -2486,6 +2570,13 @@ block the earlier Recovery Horizon releases.
 
 ## 1.9.7 — Binary Collaboration and Scale
 
+**Evidence clarification:** VS-1988/1991/1993 record exact reconstructed
+bytes and qualified multi-client/backend outcomes. A replicated or
+auto-merged changeset is not proof of semantic correctness; binary conflicts,
+missing objects, weak CAS and divergent tool versions remain explicit. See
+[recovery evidence scope](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
+
 - [ ] `VS-1988` `P1` Add branches and deterministic three-way path planning,
   auto-resolving only provably non-overlapping or byte-identical changes and
   requiring explicit resolution for overlapping binary edits.
@@ -2512,6 +2603,14 @@ block the earlier Recovery Horizon releases.
   termination and network loss.
 
 ## 1.9.8 — Stability and LTS Baseline
+
+**Evidence clarification:** VS-1961–1963 validate versioned evidence
+interpretation, portability/compatibility windows, migration/regression and
+long-duration stale/unsupported handling across disk, portable, offsite and
+BSC data. LTS support does not promise every historical application or build
+runs correctly after restoration. See
+[recovery evidence scope](docs/RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
 
 - [ ] `VS-1961` `P0` Stabilize disk-image, offsite, portable-recovery, and
   Binary Source Control formats.

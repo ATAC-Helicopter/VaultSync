@@ -1635,3 +1635,48 @@ to:
 
 The release family is complete only when recovery remains explainable,
 verifiable, portable, and maintainable across the formats that 1.9 introduces.
+
+---
+
+# 32. Maintained evidence-scope reconciliation — 2026-11-11
+
+**This is a non-normative addendum to the historical consolidated planning
+reference.** Current work IDs and release ownership come from [ROADMAP.md](../../ROADMAP.md)
+and [the immutable ID crosswalk](../RELEASE_FAMILY_1.9.md);
+the historical source above is preserved, including legacy BSC aliases.
+Do not use an alias from older prose to create a new issue or move work.
+
+Following technical review, 1.9 describes *what was actually verified*,
+not unconditional semantic correctness. A payload hash, actual disk read-back,
+restored-system cold boot, selected application/service test, and failure
+independence assessment are **independent** evidence with bound profile/build,
+coverage, date and outcome. Unknown, unsupported, stale, not-run and
+inconclusive states remain visible. The canonical specification, threat model,
+optional VM/manual/app-check modes and limitations are in
+[recovery evidence scope](../RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
+The existing release plan is clarified without moving features:
+
+- **1.9.0:** capture, disk read-back and target-only boot per advertised
+  profile, with negative/refusal tests. The measured 3 GiB Debian VM loop is
+  evidence for one fixture, not beta admission or cross-hardware support;
+  application continuity remains a separate open workstream.
+- **1.9.1:** read-only image browse/extract does not prove boot or app validity.
+- **1.9.2:** independent recovery clarifies reader/key/version dependencies
+  and names any untested application state.
+- **1.9.3:** successful upload, verified remote bytes and real offsite restore
+  are separate; account/key/location independence requires evidence.
+- **1.9.4:** the Recovery Inspector shows independent scopes and freshness,
+  not a universal green success indicator.
+- **1.9.5:** scheduling of bounded user-approved checks/drills and optional
+  isolated VM/application probes (never automatic arbitrary-code execution).
+- **1.9.6:** BSC pack/object verification vs reconstructed changeset bytes vs
+  behavior of the consuming application are independent.
+- **1.9.7:** binary merges, sparse caches and replication need their own
+  byte/transport/consistency observations, with unknown semantics explicit.
+- **1.9.8:** freeze and migrate evidence semantics alongside supported
+  formats, compatibility windows and LTS regression.
+
+This addendum does **not** update the persisted evidence schema, advertise a
+new product feature, declare a beta/release ready, shift any ID, or invent a
+cross-platform application consistency guarantee.

@@ -7,8 +7,11 @@ the BSC aliases in the supplied document have an explicit crosswalk.
 ## Current release and preserved work
 
 1.9.0 owns disk capture/validation, bootable media, disk restore and complete
-post-restore evidence. Architecture approval and the disk/boot implementation
-are still pending. The draft typed route contract is the current UI design work.
+post-restore evidence. The joint architecture direction was approved on 2026-10-20, while
+all platform/profile and beta release gates remain open. The installed disposable
+3 GiB Debian test completed capture, separate recovery copy, graphical restore,
+full read-back and restored-target-only boot on 2026-11-10; it does not certify
+a shipped user workflow or general Linux support.
 
 The implemented resource CLI has moved to **release/1.9.5**. Help, legacy
 handbook and completion belong to **release/1.9.1**, adapted to the command tree
@@ -23,19 +26,31 @@ and [Project #7](https://github.com/users/ATAC-Helicopter/projects/7).
 Protected release integration remains PR-based; branch creation does not mean
 that integration, native qualification or publication has completed.
 
+## Recovery confidence scope — 2026-11-11
+
+Measured image bytes, independently observed target restore/read-back, actual
+cold boot, optional application checks and failure-domain assessments are
+different proofs. Application correctness cannot be inferred from matching
+hashes or even a booted OS. The
+[1.9 evidence/semantic scope contract](../RECOVERY_EVIDENCE_SCOPE_1.9.md)
+documents explicit unsupported/stale/not-run outcomes and the future opt-in
+test options without adding a beta requirement or claiming a release.
+
 ## Remaining gates
 
-Approve VS-1910/1917/1918/1919 before destructive disk implementation. Qualify
-Capture → Validate → Boot → Restore → Validate on the declared matrix.
+The joint VS-1910/1917/1918/1919 architecture direction was approved on
+2026-10-20; implementation, security and profile qualification are still open.
+Qualify Capture → Validate → Boot → Restore → Validate on the declared matrix
+before advertising a supported recovery configuration.
 Portable, offsite, unified recovery, assurance and BSC follow in their own
 releases. BSC gates cannot block earlier releases. No new individual patch dates
 were invented; the existing family horizon remains planning context.
 
 ## Consolidated release PRs and qualification
 
-There is one open draft PR per release: 1.9.0 #736, 1.9.1 #746,
-1.9.2 #738, 1.9.3 #739, 1.9.4 #740, 1.9.5 #747, 1.9.6 #742,
-1.9.7 #743 and 1.9.8 #744. Duplicate preparation/fix PRs are closed as
+The current consolidated draft PRs are: 1.9.0 #736, 1.9.1 #746,
+1.9.2 #752, 1.9.3 #753, 1.9.4 #754, 1.9.5 #747, 1.9.6 #755,
+1.9.7 #756 and 1.9.8 #757. Duplicate preparation/fix PRs are closed as
 superseded; source branches and commits are preserved. All release PRs remain
 draft and none is enabled for automatic merge.
 
@@ -46,7 +61,7 @@ and propagated to the implemented 1.9.1/1.9.5 CLI variants. Unused Inter font
 packaging is removed; remaining library consumers and replacement candidates
 are documented in the dependency inventory.
 
-Full local suites after propagation: 1.9.0 937 .NET/107 Python; 1.9.1 942/116;
+Historical local suite measurements from October 2026 (not current release qualification): 1.9.0 937 .NET/107 Python; 1.9.1 942/116;
 1.9.5 1056/116, warning-free full solution builds. BUG-19008 fixes captured console
 disposal; BUG-19009 schedules mandatory workflows for embedded docs changes.
 Current-head remote CI must be rechecked after release regrouping. Sonar previously

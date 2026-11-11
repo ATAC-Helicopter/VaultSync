@@ -24,19 +24,33 @@ canonical VS-1981–1993, issues #703–715; existing CLI IDs are not reused.
 contains complete stable gates and branch workflow. [Development status](Development-Status.md)
 separates implemented slices from pending engines and release evidence.
 
+## Scoped recovery evidence in each release — 2026-11-11
+
+The [technical evidence contract](../RECOVERY_EVIDENCE_SCOPE_1.9.md)
+clarifies the plan without adding releases or moving work IDs:
+1.9.0 independently records verified capture, target read-back and actual
+restored OS boot on qualified profiles; 1.9.1 inspects supported images
+read-only; 1.9.2 proves clean-machine independent file/data recovery;
+1.9.3 separates remote availability, retrieval and true restore;
+1.9.4 explains independent evidence scopes to users; 1.9.5 owns opt-in
+recurring checks and possible isolated VM/application probes; 1.9.6–1.9.7
+apply byte-versus-semantics limits to BSC; 1.9.8 validates evidence and
+format compatibility for LTS. A passing checksum never certifies boot or
+arbitrary application behavior. No 1.9.0 public beta is available yet.
+
 ## One draft PR per release
 
 | Release | Sole PR | Work present |
 |---|---|---|
 | 1.9.0 | [#736](https://github.com/ATAC-Helicopter/VaultSync/pull/736) | Foundation contracts, safety/maintenance, dependency cleanup and tracking |
 | 1.9.1 | [#746](https://github.com/ATAC-Helicopter/VaultSync/pull/746) | Explorer contract; legacy CLI discovery, bundled guides/completion and console fix |
-| 1.9.2 | [#738](https://github.com/ATAC-Helicopter/VaultSync/pull/738) | Portable metadata/contract scaffold |
-| 1.9.3 | [#739](https://github.com/ATAC-Helicopter/VaultSync/pull/739) | Offsite metadata/contract scaffold |
-| 1.9.4 | [#740](https://github.com/ATAC-Helicopter/VaultSync/pull/740) | Unified recovery metadata/contract scaffold |
+| 1.9.2 | [#752](https://github.com/ATAC-Helicopter/VaultSync/pull/752) | Portable metadata/contract scaffold |
+| 1.9.3 | [#753](https://github.com/ATAC-Helicopter/VaultSync/pull/753) | Offsite metadata/contract scaffold |
+| 1.9.4 | [#754](https://github.com/ATAC-Helicopter/VaultSync/pull/754) | Unified recovery metadata/contract scaffold |
 | 1.9.5 | [#747](https://github.com/ATAC-Helicopter/VaultSync/pull/747) | Assurance contract and preserved resource CLI/fixes |
-| 1.9.6 | [#742](https://github.com/ATAC-Helicopter/VaultSync/pull/742) | BSC foundation scaffold |
-| 1.9.7 | [#743](https://github.com/ATAC-Helicopter/VaultSync/pull/743) | Collaboration/scale scaffold |
-| 1.9.8 | [#744](https://github.com/ATAC-Helicopter/VaultSync/pull/744) | Stability/LTS scaffold |
+| 1.9.6 | [#755](https://github.com/ATAC-Helicopter/VaultSync/pull/755) | BSC foundation scaffold |
+| 1.9.7 | [#756](https://github.com/ATAC-Helicopter/VaultSync/pull/756) | Collaboration/scale scaffold |
+| 1.9.8 | [#757](https://github.com/ATAC-Helicopter/VaultSync/pull/757) | Stability/LTS scaffold |
 
 All remain draft. Preparation heads preserve protected release history; no
 release has been promoted. Original duplicate PRs are superseded and retained.

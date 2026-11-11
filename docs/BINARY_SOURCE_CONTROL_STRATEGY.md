@@ -546,6 +546,29 @@ A clean machine with the repository and authorized key material must be able to
 discover repository identity, inspect refs/history, verify data, and restore a
 changeset without the original app database.
 
+### Byte reconstruction vs project/application behavior — 2026-11-11
+
+The [shared 1.9 evidence contract](RECOVERY_EVIDENCE_SCOPE_1.9.md)
+is applied to BSC without expanding release scope. Repository format/pack
+checks, reachable-object verification, independent clean-machine materialization
+and runtime-specific application/build checks are **different claims**.
+Full content verification establishes stored bytes for the recorded object set;
+a recovery drill establishes materialized bytes at its isolated target.
+Neither proves that a restored game, CAD scene, media project, database or
+executable behaves correctly in a particular version of consuming software.
+
+A matching compiler/source revision does not prove bit-for-bit executable
+reproducibility across architectures/flags (for example `-march=native`).
+Source provenance and reproducible-build checks are independent supply-chain
+controls. Do not run arbitrary project scripts, builds or restored binaries
+automatically during BSC verification. Future named application checks need
+explicit opt-in, trusted runners, resource limits and no-network defaults.
+Record absent/unsupported/stale checks without converting them to a pass.
+
+The 1.9.6 object/materialization gate, 1.9.7 concurrency/replication gate
+and 1.9.8 format/LTS gate retain separate owners; these notes do not
+change immutable BSC IDs or block 1.9.0 disk recovery.
+
 ## Garbage collection, quarantine, and repack
 
 Committed history is retained by default. Backup-retention rules do not silently

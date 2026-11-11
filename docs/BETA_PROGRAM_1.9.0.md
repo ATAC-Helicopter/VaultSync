@@ -57,6 +57,32 @@ schedule nor urgency waives these shared gates. The existing release workflow
 and signing/updater names and schema remain authoritative. Do not merge #736
 merely to make an updater discover a beta: follow RELEASE_SIGNING.md.
 
+## Recovery evidence and semantic limits — 2026-11-11
+
+Use the [scope/qualification contract](RECOVERY_EVIDENCE_SCOPE_1.9.md)
+when reviewing every proposed supported disk profile. Keep payload integrity,
+independent destination write/read-back and **target-only restored OS boot**
+as separately evidenced steps, including the actual offline boot environment,
+build, source/repository disconnection, scope, timestamp and refusal outcomes.
+A hash does not prove bootability. A successful boot does not prove arbitrary
+database/application correctness or real-hardware continuity.
+
+The 2026-11-10 disposable 3 GiB Debian GPT/UEFI/ext4 loop is genuine
+installed-system evidence for that fixture only. It is **not** an admitted
+beta.1 profile or a substitute for native UI/media, capacity/interruption,
+application/configuration continuity, physical-hardware or shared
+quality/package/upgrade/provenance/review gates. Preserve the existing 80%
+coverage requirement. The staged Windows/macOS recovery implementations still
+need separate evidence; every beta retains desktop support on all three OSes.
+
+The first beta is **not** required to run an arbitrary restored image
+automatically in a user-facing VM. Laboratory VM boot tests are permitted
+within the existing qualification gate; optional recurring VM drills and
+explicitly consented, app-specific probes belong to later 1.9.5 assurance
+design. Never treat non-execution of arbitrary application tests as a
+failure of bytes, and never report those tests as passed. Describe such
+claims as "not tested/unsupported" with separate scope and explanation.
+
 ## Current execution order
 
 1. Connect production offline capture to the admitted recovery entry. Preserve

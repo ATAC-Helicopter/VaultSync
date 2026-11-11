@@ -115,6 +115,34 @@ and application scope. A process existing without a desktop window is not a
 successful desktop-startup check. Record the actual visible/interactive result
 or state that it was not measured.
 
+## Application semantics and cross-layer claim separation — 2026-11-11
+
+The [evidence-scope contract](RECOVERY_EVIDENCE_SCOPE_1.9.md) further
+constrains interpretation without changing the approved 2026-10-20 direction
+or establishing a persisted wire schema. Distinguish bound payload verification,
+independent destination write/read-back, target-only cold boot, explicit
+versioned application/service probes, and failure-domain assessment.
+These observations are orthogonal; a successful hash or boot cannot
+automatically produce a successful app check. A byte-identical database can
+still be transactionally or version-inconsistent, and a process running does
+not prove the requested application action worked.
+
+Keep execution result, applicability, freshness, provenance, actual method and
+covered scope separate. Explicitly record not-run, inconclusive, unsupported
+and stale, as well as failed/interrupted. A per-claim report references its
+subject/generation, tool/build and environment/profile and never upgrades
+unmeasured claims. This is a design target for future typed records; it must
+be reviewed with existing serialization/privacy rules before any schema or
+compatibility migration.
+
+Independent restored OS boot qualification uses a disposable target, source
+and repository detached, fresh firmware where relevant, and named boot/
+interaction evidence. VM evidence does not qualify physical hardware.
+Untrusted restored images and scripts must not be executed automatically;
+optional application probes require per-check contracts, explicit opt-in,
+isolation and no-network default. Reproducible builds and artifact signing
+support provenance, not general semantic correctness.
+
 ## Privacy and portability
 
 Recovery bundles export only the metadata needed to locate and validate their

@@ -134,6 +134,34 @@ Stable.
 The maintained technical contract is
 [`BINARY_SOURCE_CONTROL_STRATEGY.md`](BINARY_SOURCE_CONTROL_STRATEGY.md).
 
+## Evidence semantics and bounded assurance — 2026-11-11
+
+Community review challenged the idea that an intact backup or independently
+booted system establishes the semantic validity of every recovered
+application. The limitation is accepted explicitly: software/data may require
+specific runtime versions, consistency protocols, devices, keys, external
+services or user-defined checks. The general problem cannot be solved by a
+universal checker or a reproducible build. VaultSync must instead publish
+**named observations with bounded claims**, not an undifferentiated
+"everything recoverable" verdict.
+
+[The cross-release evidence contract](RECOVERY_EVIDENCE_SCOPE_1.9.md)
+specifies measured payload integrity, independently observed restore/read-back,
+target-only cold boot, explicitly named application probes and failure-domain
+assessments as independent records. Time, environment, tool identity and
+applicability remain visible. Never conflate "not tested" and "failed";
+neither is "passed".
+
+Apply this by release: 1.9.0 retains its existing Linux-first beta gate and
+independently qualified VM/physical profiles; 1.9.1 inspects bytes without
+executing recovered software; 1.9.2 proves independent portable recovery;
+1.9.3 qualifies remote retrieval and clean-machine restore; 1.9.4 exposes the
+evidence scopes in the UI; 1.9.5 owns opt-in bounded recurring tests and
+optional isolated app probes; 1.9.6–1.9.7 apply the distinction to BSC object
+integrity, materialization and collaboration; 1.9.8 validates versioned
+evidence/LTS compatibility. None of these principles expands a shipped
+profile or relaxes existing security/coverage/release qualification.
+
 ## Architecture questions that must be answered
 
 ### Imaging and recovery environment
