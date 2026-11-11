@@ -122,3 +122,16 @@ in 484be54. The engine matrix now retains the named, dated and hash-bound review
 record. This approves implementation direction; exact serialization/security
 implementation and all qualification remain subject to the retained gates above.
 No profile was promoted and no prior laboratory result became recovery evidence.
+
+## Evidence interpretation clarification — 2026-11-11
+
+The maintainer-approved 2026-10-20 architecture direction is unchanged.
+Technical community review emphasizes that restored bytes, restored-system boot
+and arbitrary application consistency cannot be collapsed into a single
+proof. The adopted documentation-only interpretation is in
+[recovery evidence and semantic scope](RECOVERY_EVIDENCE_SCOPE_1.9.md).
+VS-1918/1919 and VS-1908/1909 keep the already-approved profile/identity/
+qualification ownership. This clarification does not re-open the gate, certify
+a profile, change wire serialization or add an executable requirement to
+beta.1 beyond its existing measured end-to-end workflow.
+

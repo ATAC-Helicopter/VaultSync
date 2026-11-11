@@ -71,3 +71,20 @@ capture originals remain inaccessible. Labels show short image IDs and candidate
 sizes before the unchanged independent verification. See the
 [entry contract](RECOVERY_ENTRY_1.9.md#fixed-export-image-chooser--2026-11-06).
 Native group access, installed interaction and full recovery remain unqualified.
+
+## Evidence label boundary — 2026-11-11
+
+The desktop's read-only "Verify image" status is specifically a content/layout
+verification result. It is not a restore/read-back, independent OS boot or
+application test. The separately installed Linux recovery controller now has a
+measured 3 GiB Debian capture-to-boot fixture, but it is not a shipped rescue
+medium, universally supported Linux profile, or proof that this desktop panel
+performs destructive recovery. The black partial redraw defect and shared beta
+gates remain open.
+
+Use [recovery evidence and semantic scope](RECOVERY_EVIDENCE_SCOPE_1.9.md)
+when extending selection, result labels, refusal states and qualification.
+Future multi-claim UI belongs to 1.9.4 and optional recurring checks to 1.9.5.
+Do not execute arbitrary restored guests or scripts automatically; no
+application-consistency status may be inferred from a verified image.
+

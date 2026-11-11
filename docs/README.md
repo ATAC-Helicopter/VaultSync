@@ -14,6 +14,10 @@ Use this page as the primary index for all project documentation.
 - Roadmap: [ROADMAP](../ROADMAP.md)
 - Recovery Horizon sequencing and post-1.9 decision gates:
   [Recovery Horizon strategy](RECOVERY_HORIZON_STRATEGY.md)
+- Recovery evidence, semantic limitations, supported-profile qualification,
+  and optional VM/manual/app-check modes:
+  [Recovery evidence scope (1.9)](RECOVERY_EVIDENCE_SCOPE_1.9.md)
+
 - Changelog: [CHANGELOG](../CHANGELOG.md)
 - Current release highlights: [What's New](WHATS_NEW.md)
 - 1.9 CLI structured project inspection: [output contract](CLI_OUTPUT.md)

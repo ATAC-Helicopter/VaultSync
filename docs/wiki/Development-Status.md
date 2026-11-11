@@ -7,8 +7,11 @@ the BSC aliases in the supplied document have an explicit crosswalk.
 ## Current release and preserved work
 
 1.9.0 owns disk capture/validation, bootable media, disk restore and complete
-post-restore evidence. Architecture approval and the disk/boot implementation
-are still pending. The draft typed route contract is the current UI design work.
+post-restore evidence. The joint architecture direction was approved on 2026-10-20, while all
+platform/profile and beta release gates remain open. The installed disposable
+3 GiB Debian test completed capture, separate recovery copy, graphical restore,
+full read-back and restored-target-only boot on 2026-11-10; it does not certify
+a shipped user workflow or general Linux support.
 
 The implemented resource CLI has moved to **release/1.9.5**. Help, legacy
 handbook and completion belong to **release/1.9.1**, adapted to the command tree
@@ -22,6 +25,16 @@ See [complete release plan](Release-Plan.md),
 and [Project #7](https://github.com/users/ATAC-Helicopter/projects/7).
 Protected release integration remains PR-based; branch creation does not mean
 that integration, native qualification or publication has completed.
+
+## Recovery confidence scope — 2026-11-11
+
+Measured image bytes, independently observed target restore/read-back, actual
+cold boot, optional application checks and failure-domain assessments are
+different proofs. Application correctness cannot be inferred from matching
+hashes or even a booted OS. The
+[1.9 evidence/semantic scope contract](../RECOVERY_EVIDENCE_SCOPE_1.9.md)
+documents explicit unsupported/stale/not-run outcomes and the future opt-in
+test options without adding a beta requirement or claiming a release.
 
 ## Remaining gates
 
