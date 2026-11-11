@@ -24,7 +24,9 @@
   ·
   <a href="DOCUMENTATION.md">Documentation</a>
   ·
-  <a href="https://www.reddit.com/r/VaultSync/">Community</a>
+  <a href="https://discord.gg/sgP8UzeAQt">Discord Community</a>
+  ·
+  <a href="https://www.reddit.com/r/VaultSync/">Reddit</a>
 </p>
 
 <p align="center">
@@ -39,6 +41,9 @@
   </a>
   <img alt="Supported platforms: Windows, macOS and Linux" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-2ea44f?style=flat-square" />
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512bd4?style=flat-square&logo=dotnet" />
+  <a href="https://discord.gg/sgP8UzeAQt">
+    <img alt="Join VaultSync on Discord" src="https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?style=flat-square&amp;logo=discord&amp;logoColor=white" />
+  </a>
   <a href="https://www.reddit.com/r/VaultSync/">
     <img alt="VaultSync subreddit" src="https://img.shields.io/reddit/subreddit-subscribers/VaultSync?style=flat-square&logo=reddit&label=r%2FVaultSync&color=FF4500" />
   </a>
@@ -421,6 +426,7 @@ See [Updater documentation](docs/UPDATER.md) for release manifests, packaging, p
 
 ## Community and support
 
+- Join the [VaultSync Discord community](https://discord.gg/sgP8UzeAQt) for real-time discussion, installation and backup-workflow help, suggestions, and beta-testing conversations. You can participate whether you use VaultSync, are considering it, or simply want to give technical feedback.
 - Join [r/VaultSync](https://www.reddit.com/r/VaultSync/) for updates, feedback, questions, and roadmap discussions.
 - Use [GitHub Discussions](https://github.com/ATAC-Helicopter/VaultSync/discussions) for longer technical or product conversations.
 - Report reproducible problems through [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues).
