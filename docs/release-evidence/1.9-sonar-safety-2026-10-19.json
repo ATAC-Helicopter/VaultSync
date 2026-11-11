@@ -1,0 +1,61 @@
+{
+  "recordedOn": "2026-10-19",
+  "owner": "BUG-19034",
+  "issue": 810,
+  "preparationPr": 736,
+  "parentCommit": "ec202c1c28b9f87509a9cb024b981d1de8684fbd",
+  "sourceSha256": {
+    ".github/workflows/sonarqube.yml": "7f92dbd41da81b9714f7bc92a318f734ca3a0348971160471bd1279169693e84",
+    "scripts/release_signing.py": "5ed82d4f878ba9c8c291ed940c9d4aa06e379aecae769c36c7f80b340e06c550",
+    "scripts/safe_artifact_output.py": "1c7673f5093ce8f14d18c749872511afd3f97937a5ba3d638f884648bdce26c3",
+    "scripts/work_tracking.py": "3e7360ba1b51e254186b50ae72a8c5a27dea62041762beff35b27a36798b6851",
+    "src/VaultSync.UI/ViewModels/AppViewModel.NavigationOps.cs": "1f604bc5fe0892daf4168a9cb2e42e6be09689b621f29d647ed2bb1900c4648e",
+    "benchmarks/VaultSync.Benchmarks/CompressionProfile.cs": "10a2a2fc2e3052fce075561daecc2c885a7edce60e5d5d9e7e320f2deecd50d1",
+    "experiments/compression/benchmark.py": "6a47be57e91a2addd607c328b423d8125c2436dc9b8c25c08aa3486db263b206",
+    "tests/VaultSync.Core.Tests/ProductDiagnosticsFacadeTests.cs": "1d505576f25e6d06144f4a33f5200ede58d96d6c5790b22f6224b764cd0a7866"
+  },
+  "initialAnalysis": {
+    "commit": "ec202c1c28b9f87509a9cb024b981d1de8684fbd",
+    "runId": 39222402115,
+    "qualityGate": "ERROR",
+    "bugs": 4,
+    "vulnerabilities": 9,
+    "newCoveragePercent": 62.2
+  },
+  "releaseValidation": {
+    "corePassed": 1442,
+    "pythonPassed": 235,
+    "warnings": 0,
+    "errors": 0,
+    "localizationKeys": 1942,
+    "localeFiles": 19
+  },
+  "nativeBenchmark": {
+    "rows": 16,
+    "roundtrip": true,
+    "productionCodecChanged": false
+  },
+  "observedExperimentalCoverage": {
+    "experiments/compression/benchmark.py": 57.291666666666664,
+    "experiments/compression/codec.py": 99.24242424242425,
+    "experiments/compression/entropy.py": 95.95959595959596,
+    "experiments/compression/hexlanes.py": 98.66666666666667,
+    "experiments/compression/selection.py": 100.0,
+    "experiments/compression/structure.py": 99.21259842519684
+  },
+  "exceptions": [
+    {
+      "rule": "csharpsquid:S2245",
+      "file": "benchmarks/VaultSync.Benchmarks/CompressionProfile.cs",
+      "reason": "Fixed public synthetic corpus only, never keys, credentials or production identifiers."
+    },
+    {
+      "rule": "python:S2245",
+      "file": "experiments/compression/benchmark.py",
+      "calls": 2,
+      "reason": "Seeded public binary/GUID-shaped fixture bytes; not secrets or actual identifiers."
+    }
+  ],
+  "hostedActualHeadGate": "pending",
+  "gateThresholdsChanged": false
+}

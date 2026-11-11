@@ -1,0 +1,94 @@
+{
+  "owner": "VS-1904",
+  "issue": 492,
+  "sourceBase": "d8c1fc65157314bbf09083c8e0e700d9a9dacd95",
+  "sourceHashes": {
+    "src/VaultSync.Core/Services/LinuxBlockReadService.cs": "b6e76f7edece8aad8e3f27698dd00745e309c463605691b25321edb06e82cdea",
+    "src/VaultSync.Core/Services/LinuxBlockReadNative.cs": "64e08a95e7fcf6d41dcd038b192fa659f5b97bc21785a556f0d57e3ccd7e1db7",
+    "src/VaultSync.Core/Services/LinuxBlockReadSession.cs": "bc077e346be04066641056b1e101efe7f62d450736959e71449903f01d86561a",
+    "src/VaultSync.Core/Services/DiskInventoryWorkerClient.cs": "90cc2e8f68f01fadaefddb718c182f491715a7767b7d51978754a1eabf54b16a",
+    "tests/VaultSync.Core.Tests/LinuxBlockReadServiceTests.cs": "7e66f3ccc06ccb5ed4a178bcaa4a331a86a299c06b319c6f30429434875268f7"
+  },
+  "approval": {
+    "by": "ATAC-Helicopter",
+    "observedAt": "2026-10-20T08:27:28Z",
+    "artifact": {
+      "path": "docs/release-evidence/1.9-joint-architecture-approval-2026-10-20.md",
+      "sha256": "d35256e282cf0131e9c88c51b5fee874e62ee4c96c3f0256eb4f8ad3b96dfd03"
+    }
+  },
+  "releaseChecks": {
+    "core": 1567,
+    "python": 236,
+    "newNativeCases": 41,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localeKeys": 1942,
+    "localeFiles": 19,
+    "log": "/tmp/vaultsync-native-read-release-20261020.log",
+    "trx": "/var/folders/98/rp_mspy95h175s5xn22b7gqc0000gn/T/vaultsync-validation.o7LMYI/test-results/core-tests.trx"
+  },
+  "native": {
+    "processExitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 45.16,
+    "guestCompleted": true,
+    "nativeExitZero": true,
+    "sourceSha512": "f46f0671a6e5bdec5291ab8972bae2f10e5408c2f64a74078f11efc2f06a436a9d0313ed50e0472542eeabf780e9f7c792ac0a314c6c20507fcd9fd81b468c3d",
+    "firmwareSha256": "33090cc07675baa5190d9f1e84bf5176b33bcbfa9bacac522961150cdb6dbb2a",
+    "nvramTemplateSha256": "5d2ac383371b408398accee7ec27c8c09ea5b74a0de0ceea6513388b15be5d1e",
+    "coreAssemblySha256": "05311635678e2bbe5d2116d08e6345e140d3e2d51dfb175bc5fc0cd7ede70783",
+    "readerHarnessSha256": "1607bc7aa9edb0053d4747c2c9c2fdf50d4281970caa386be8671910615cfe16",
+    "hotRemoveCommandSent": true,
+    "serialSha256": "0577a374c37a560a873f206f74a82204a22236c36c74b86032bd90be23e75651",
+    "harnessRuntimeConfigSha256": "1bc10a3f7b2e0352dd3df130e2a31514290dd566d64c1c9298b01fb85ff1867b",
+    "harnessSourceSha256": "e9a56179e39c1ae0f093281e125aca2f1364614d236e3abd03e369b9140d63b4",
+    "hostProbeSha256": "27e6fd895bbfa193314ab5a705a51a55b5b1f2452698dea5f9ff9d2ce5fa8680"
+  },
+  "cases": [
+    {
+      "name": "mounted-refusal",
+      "state": "InUse"
+    },
+    {
+      "name": "changed-selection",
+      "state": "Changed"
+    },
+    {
+      "name": "concurrent-exclusive-claim",
+      "state": "InUse"
+    },
+    {
+      "name": "512-full-read",
+      "bytes": 134217728,
+      "sha256": "254bcc3fc4f27172636df4bf32de9f107f620d559b20d760197e452b97453917",
+      "writeRefused": true
+    },
+    {
+      "name": "claim-release",
+      "state": "OpenedReadOnly"
+    },
+    {
+      "name": "4096-read-only-read",
+      "bytes": 4096
+    },
+    {
+      "name": "held-hot-remove",
+      "refused": true,
+      "closed": true
+    }
+  ],
+  "macOSPlatformGuard": "UnsupportedPlatform",
+  "failedAttempts": [
+    "First focused run passed 122 combined cases but warned about an unassigned fixture race hook; the final race cases use the hook and fresh Release has zero warnings.",
+    "First VM reached the hot-remove marker after read/refusal checks; QMP removal failed because the root PCIe bus did not support hotplug. That run was terminated, not counted as normal completion. The retained final run attaches the generated read-only target through a hotplug-capable root port and selects synthetic fixture roles independently of enumeration order."
+  ],
+  "limits": [
+    "No host raw devices, network or shared folders",
+    "Same caller privilege; no elevated endpoint or worker protocol integration",
+    "No global source consistency or offline proof",
+    "No capture, restore, recovery-medium or installed-updater qualification",
+    "No support row promoted; older exact-head CI is historical"
+  ]
+}

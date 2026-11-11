@@ -1,6 +1,10 @@
 # VaultSync 1.8.9 — Bug fixes and everyday polish
 
-Status: unreleased; implementation integrated into Stable through #634 and #660.
+Status: released on 2026-09-16 as `v1.8.9` from Stable integration
+`ec3ba18` / #667. Tracking completed on explicit maintainer instruction 2026-09-18.
+VS-1894 / #633 and milestone 1.8.9 are closed; previously unproven manual
+checks are waived for closeout, not established as passed.
+The following qualification narrative retains the pre-publication evidence.
 Native upgrades qualified in the initial Stable build, but its source
 `adafac380df41a29552929fbd451ddd36c9d9139` and
 [run 35075261085](https://github.com/ATAC-Helicopter/VaultSync/actions/runs/35075261085)
@@ -11,8 +15,9 @@ Stable assets nor pre-Stable draft attachments may be promoted as final.
 
 The owner [explicitly approved a documented maintainer exception](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168)
 for missing review approval and interactive Windows/Linux/Store-runtime results.
-This permitted Stable promotion; those checks remain incomplete in #633, not
-passed. Publication and Partner Center submission were not authorized.
+This permitted Stable promotion; those historical checks remain unproven in the closed #633 record, not
+passed. The release was subsequently published on 2026-09-16; Partner Center submission
+is not established by GitHub publication.
 
 ## Release identity
 
@@ -220,7 +225,7 @@ native executable upgrades and draft upload integrity passed.
 | [`BUG-18176` / #664](https://github.com/ATAC-Helicopter/VaultSync/issues/664) | Preserve user files during CLI diagnostics and drain tool output safely | Implemented through #665; final asset evidence tracked in VS-1894 |
 | [`VS-1892` / #631](https://github.com/ATAC-Helicopter/VaultSync/issues/631) | Polish shared pill alignment and theme readability | Integrated into Stable |
 | [`VS-1893` / #632](https://github.com/ATAC-Helicopter/VaultSync/issues/632) | Prepare 1.8.9 release identity and repository tracking | Integrated into Stable |
-| [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Deferred checks open |
+| [`VS-1894` / #633](https://github.com/ATAC-Helicopter/VaultSync/issues/633) | Qualify 1.8.9 desktop continuity and release artifacts | Complete by maintainer closeout exception; historical checks unproven |
 | [`VS-1895` / #636](https://github.com/ATAC-Helicopter/VaultSync/issues/636) | Service coordinated runtime, rendering, and validation dependencies | Integrated into Stable |
 | [`VS-1896` / #637](https://github.com/ATAC-Helicopter/VaultSync/issues/637) | Clear remaining desktop Sonar maintainability findings | Integrated into Stable |
 | [`BUG-18159` / #638](https://github.com/ATAC-Helicopter/VaultSync/issues/638) | Prevent page-width bindings from restoring horizontal overflow | Integrated into Stable |
@@ -242,7 +247,7 @@ native executable upgrades and draft upload integrity passed.
 
 Canonical scope: [ROADMAP.md](../ROADMAP.md#189--bug-fixes-and-everyday-polish).
 Implementation integrated through #634 and #660 is tracked separately from
-public release. `VS-1894` remains open for explicitly deferred interactive and
+public release. `VS-1894` was closed on maintainer instruction for explicitly deferred interactive and
 Store-runtime evidence under the owner-approved promotion exception.
 
 - [Milestone 1.8.9](https://github.com/ATAC-Helicopter/VaultSync/milestone/16)

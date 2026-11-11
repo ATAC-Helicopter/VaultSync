@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-30",
+  "owner": "VS-1907/#495",
+  "sourceBase": "3ce3e8d77cecd561ebb7aaafcbaf759dd87ed23d",
+  "binding": "Precommit component hashes; fresh hosted results remain separate",
+  "componentSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoveryControllerClient.cs": "10fd50c8b4671ede42857256f1fbba979ec158cd95c58e64bd8cf101ead71a26",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryControllerClientTests.cs": "ae01b3c3a4dbf276297e31ea23e29d8beb3a65f1ca98ce191b96d0a9bf226c34"
+  },
+  "delivered": [
+    "Required typed interaction with explicit headless adapter",
+    "One pending choice alongside receive/heartbeat processing",
+    "Exact operation/observation/review validation before send",
+    "Separate graceful cancellation and immediate lifetime abort",
+    "Pending choices cancelled/drained; late faults remain failures; source streams provider-owned"
+  ],
+  "local": {
+    "configuration": "Release --no-restore -warnaserror -p:UseSharedCompilation=false",
+    "filter": "FullyQualifiedName~LinuxRecoveryControllerClientTests",
+    "platform": "macOS ARM64",
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0,
+    "durationMilliseconds": 60,
+    "exit": 0,
+    "scope": "Synthetic transcript/interaction fixtures, not installed native media or physical overwrite qualification"
+  },
+  "review": {
+    "tier": "vaultcritical / Sol Medium",
+    "scope": "Critical implementation and static contract review; not protected human release review"
+  },
+  "deliberatelySkipped": [
+    "Unrelated local suites and full solution gate",
+    "Repeated localization audit: no user-visible application strings changed",
+    "VM provisioning or full media/profile qualification"
+  ],
+  "constraints": [
+    "Provider owns all image streams including rejected/late results",
+    "Accepted streams remain open until RunAsync drains and returns",
+    "Provider methods must return promptly and honor cancellation; teardown waits for outstanding choice ownership",
+    "UI dispatch/localization belongs to future graphical provider",
+    "Independent physical-console supervisor remains mandatory and unchanged"
+  ],
+  "hosted": "pending new exact-head checks",
+  "qualifiedProfiles": 0
+}

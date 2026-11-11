@@ -211,7 +211,8 @@ class UpdaterQualificationTests(unittest.TestCase):
                     stack.enter_context(mock.patch.object(qualify_updater.subprocess, "Popen", side_effect=[parent, running]))
                     stack.enter_context(mock.patch.object(qualify_updater.subprocess, "run", return_value=mock.Mock(returncode=0)))
                     stack.enter_context(mock.patch.object(qualify_updater.time, "sleep"))
-                    stack.enter_context(mock.patch.object(qualify_updater.os, "killpg"))
+                    # Windows has no killpg; this fixture also simulates Unix hosts.
+                    stack.enter_context(mock.patch.object(qualify_updater.os, "killpg", create=True))
                     stack.enter_context(mock.patch("builtins.print"))
                     options = argparse.Namespace(assets=assets, previous="1.8.8", target="1.8.9",
                                                  evidence=root / "evidence")

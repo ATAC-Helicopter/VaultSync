@@ -54,6 +54,9 @@
     <Style Selector="UserControl.tray TextBlock.quota-detail">
       <Setter Property="IsVisible" Value="False" />
     </Style>
+    <Style Selector="UserControl.tray Grid.quota-detail">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
   </UserControl.Styles>
 
   <Border x:Name="Card"
@@ -91,12 +94,15 @@
                    FontSize="11"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    TextTrimming="CharacterEllipsis" />
-        <TextBlock Classes="path quota-detail"
-                   Text="{Binding StoredBytesText}"
-                   FontSize="10"
-                   Foreground="{DynamicResource TextSecondaryBrush}"
-                   TextTrimming="CharacterEllipsis"
-                   IsVisible="{Binding HasStoredBytesText}" />
+        <Grid Classes="quota-detail" ColumnDefinitions="Auto,*" ColumnSpacing="4"
+              ToolTip.Tip="{Binding StoredBytesText}"
+              IsVisible="{Binding HasStoredBytesText}">
+          <TextBlock Classes="path" Text="{Binding StoredBytesValueText}" FontSize="10"
+                     Foreground="{DynamicResource TextSecondaryBrush}" />
+          <TextBlock Grid.Column="1" Classes="path" Text="{Binding StoredBytesLabelText}" FontSize="10"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     TextTrimming="CharacterEllipsis" />
+        </Grid>
         <TextBlock Classes="path quota-detail"
                    Text="{Binding CleanupSuggestionText}"
                    FontSize="10"

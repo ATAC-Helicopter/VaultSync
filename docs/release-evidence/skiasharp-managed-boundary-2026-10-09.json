@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-10-09",
+  "kind": "static-artifact-inspection",
+  "tool": {
+    "name": "REA",
+    "version": "6.1.0",
+    "provider": {
+      "id": "rea-dotnet-static",
+      "name": "REA managed static analysis provider",
+      "version": "1"
+    }
+  },
+  "artifact": {
+    "name": "SkiaSharp.dll",
+    "sha256": "6b972ac34e4196050c43cb96582833fd1dabcba7df3981a8a46af18afe42ee3b",
+    "byteLength": 560440,
+    "assemblyVersion": "4.152.0.0",
+    "managedArchitecture": "anycpu",
+    "mvid": "fa7597c4-0a34-4a1f-af69-5caa02c2b049"
+  },
+  "boundary": {
+    "member_token": "0x06000a51",
+    "member_name": "sk_fontmgr_create_default",
+    "import_name": "sk_fontmgr_create_default",
+    "import_scope_name": "libSkiaSharp",
+    "verification": "managed-declaration-only"
+  },
+  "limitations": [
+    "P/Invoke rows prove managed import declarations only; this inspection does not verify that a native library, export, thunk, or provider-qualified function exists.",
+    "Managed metadata tokens are build-local coordinates and are only meaningful with the reported artifact SHA-256 and MVID.",
+    "ReadyToRun, NativeAOT, C++/CLI, and IL2CPP native semantics require separately selected native-provider evidence; this tool does not translate managed tokens into native addresses.",
+    "This installed stable assembly is not the 1.9.0 candidate build, and static declaration inspection does not reproduce or resolve BUG-19012."
+  ],
+  "sourceEvidenceId": "ev_da4fad446c84e6f6b4ed70620fd6b4333b6e6988147d505b3a96b1fe04254585"
+}

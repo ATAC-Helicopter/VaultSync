@@ -1,0 +1,88 @@
+{
+  "owner": "VS-1907",
+  "issue": 495,
+  "relatedOwners": [
+    "VS-1904",
+    "BUG-19046",
+    "BUG-19044"
+  ],
+  "observedOn": "2026-11-10",
+  "sourceCommit": "7ac4ee5a477561ffe27f9144e778a1c30bc867be",
+  "scope": "Installed disposable Linux capture/export, graphical restore and restored target-only cold boot; not release/media/profile qualification",
+  "qualification": false,
+  "environment": {
+    "guest": "Debian13 Linux x64, systemd, GPT/UEFI ext4, unencrypted 512-byte logical sectors",
+    "virtualization": "QEMU TCG disposable guest",
+    "sourceBytes": 3221225472,
+    "runtime": "10.0.13",
+    "captureSourceReadOnly": true,
+    "restoreSourceAbsent": true,
+    "restoredBootSourceAndRepositoryAbsent": true,
+    "networkDuringCaptureRestoreAndBoot": false
+  },
+  "installation": {
+    "manifestSha256": "9cf72ef62a12a36ee863e03c1b5a525019c3adf02ac34eef2c997b496881b20d",
+    "fileCount": 675,
+    "coreSha256": "012787581ed5da09b2d7aabb2260f0d99182298539c5094b2147a47324b1c3a8",
+    "archiveSha256": "3556e0344068bb33384a9ee7b82d178572d0c7c10376b58281b9c117debba7b1",
+    "completeClosureVerified": true
+  },
+  "capture": {
+    "serviceExit": 0,
+    "elapsedSeconds": 421.009,
+    "publishedAndExportVerified": true,
+    "inspectorReadCalls": 24583,
+    "inspectorReadBytes": 3221260436,
+    "inspectorElapsedMilliseconds": 77076,
+    "targetAllocatedBytesAfterCapture": 0
+  },
+  "restore": {
+    "catalogCandidateChosenWithoutTypedPath": true,
+    "onlyDisposableDestinationListed": true,
+    "graphicalReviewAcknowledged": true,
+    "freshIndependentPhysicalConsoleConfirmation": true,
+    "manifestRootSha256": "fc4172aa26f098ab2462812df521db18d1c559a5ce9434158836439573b6d3af",
+    "acknowledgedBytes": 3221225472,
+    "writtenAndReadBack": true,
+    "terminalJournalRecordWritten": true,
+    "cleanupConfirmed": true,
+    "finalReceiptPersisted": true,
+    "stagingRetained": false,
+    "stagingCleanupPending": false,
+    "serviceExit": 0,
+    "elapsedSeconds": 622.67
+  },
+  "restoredBoot": {
+    "preBootQemuImageCompareExit": 0,
+    "preBootImagesIdentical": true,
+    "preBootRawSha256": "6222418338e1a65a8d623c4164f00bbc3b00e4b4958a0b0887d8e2dfa653a608",
+    "freshFirmwareVariables": true,
+    "onlyRestoredTargetAttached": true,
+    "systemdRunningObserved": true,
+    "uefi64BitObserved": true,
+    "originalExt4AndPartitionIdentitiesObserved": true,
+    "originalProfileAndBothMarkersPresent": true,
+    "realXorgXtermWindowObserved": true,
+    "keyboardInteractionObserved": true,
+    "newMarkerObservedInSerial": true,
+    "normalPoweroffObserved": true,
+    "processAbsent": true
+  },
+  "privateEvidenceSha256": {
+    "offline-capture-20261110/receipt.json": "17230b0a5256161f32aedd14570edfc538677163369dcb5112c103b1b74ef9f5",
+    "offline-restore3-20261110/receipt.json": "238081061749220925cad50174fc0b7e2e3228a0ed0bfaf0435d48e8037cce7d",
+    "offline-restore3-20261110/guest-receipts.json": "cbdf8bbf988a00862454c2ac8335d12e486089ee564b33c8eac5a0943a8ce76f",
+    "offline-restore3-20261110/restore-19.png": "e3a84e81a7290ca58678686f7db049df65b7eda32c5f4838e4be73cd123dbe25",
+    "restored-boot-20261110/restore-4.png": "51ebf3b71df747531cf411296733525c935e5691390c7967b930641265a3ec7b",
+    "restored-boot-20261110/serial.log": "426054f6b674245ba0636689a78da4b24cb17362936aeaa959a43b783e9e3535",
+    "restored-boot-20261110/receipt.json": "2d432c43bee30acb29c5cc51285abc0aea6ab7dc1b44125359cc7afcc0722eeb"
+  },
+  "limits": [
+    "Two earlier image-choice attempts ended before writes; their failed receipts are retained separately.",
+    "Recovery content still turns black on partial redraw; VT expose was used to inspect full screens (BUG-19044).",
+    "Only this 3GiB light-X11 disposable profile was measured; larger-capacity work budgets remain unqualified.",
+    "This is installed guest execution, not qualification of final bootable media, physical hardware, installed VaultSync continuity or all Linux desktops.",
+    "Destructive-refusal/interruption matrix, predecessor upgrade, package/updater/signing, exact-head coverage and protected reviews remain release gates.",
+    "All support profiles remain candidates; beta1 is not ready for publication."
+  ]
+}

@@ -556,6 +556,22 @@ public sealed class BackupSafetyServiceTests : IDisposable
         }
     }
 
+    [Fact]
+    public void UnityPresetDropsProfilerCapturesAndKeepsSourceAssetsAndPackageLocks()
+    {
+        string root = Path.Combine(_tempDir.Path, "UnityProfiling");
+        string[] retained = ["Assets/Scripts/Game.cs", "Assets/Scenes/Main.unity", "Assets/Models/player.prefab",
+            "ProjectSettings/ProjectVersion.txt", "Packages/manifest.json", "Packages/packages-lock.json",
+            "ProfileAnalyzer/Analyzer.cs", "ProfileAnalyzer/README.md"];
+        string[] excluded = ["ProfileAnalyzer/tmp0.pdata", "ProfileAnalyzer/runs/tmp1.pdata", "capture.pdata", "Library/cache.bin"];
+        foreach (string path in retained.Concat(excluded))
+            WriteProjectFile(root, path, "synthetic");
+        string[] actual = new ScannerService(FilterService.FromPresetAndLocal(root, "unity", ResolveRepoPresetsDir()))
+            .Scan(root).Select(entry => entry.RelPath).ToArray();
+        foreach (string path in retained) Assert.Contains(path, actual);
+        foreach (string path in excluded) Assert.DoesNotContain(path, actual);
+    }
+
     private static void WriteProjectFile(string projectRoot, string relativePath, string contents)
     {
         string fullPath = Path.Combine(projectRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));

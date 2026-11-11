@@ -1,0 +1,1017 @@
+{
+  "recordedUtc": "2026-10-15T09:56:28.307436+00:00",
+  "owner": "VS-1997 / #787",
+  "defaultBranch": "Stable",
+  "defaultAlertsOpen": 18,
+  "initialBranchCount": 28,
+  "maintainedSourceHeads": 26,
+  "alreadyServicedPreparationHeads": [
+    {
+      "version": "1.9.8",
+      "pr": 757,
+      "head": "work/1.9.8-changelog-protocol",
+      "commit": "36808554c853a28c356e8dab9b785d624604ead5",
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "logRoot": "/tmp/vaultsync-security-audit-1.9.8-20261015-logs",
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+      }
+    },
+    {
+      "version": "1.9.7",
+      "pr": 756,
+      "head": "work/1.9.7-changelog-protocol",
+      "commit": "6560ff77e8b39222abb7782d9972902f72d2634d",
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "logRoot": "/tmp/vaultsync-security-audit-1.9.7-20261015-logs",
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+      }
+    },
+    {
+      "version": "1.9.6",
+      "pr": 755,
+      "head": "work/1.9.6-changelog-protocol",
+      "commit": "f0125e94b88e2447a22cf742c2dc3fdd50bc2d2b",
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "logRoot": "/tmp/vaultsync-security-audit-1.9.6-20261015-logs",
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+      }
+    },
+    {
+      "version": "1.9.4",
+      "pr": 754,
+      "head": "work/1.9.4-changelog-protocol",
+      "commit": "a4be30f3170ce39e0c896c1c5601de819d53baa1",
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "logRoot": "/tmp/vaultsync-security-audit-1.9.4-20261015-logs",
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+      }
+    },
+    {
+      "version": "1.9.3",
+      "pr": 753,
+      "head": "work/1.9.3-changelog-protocol",
+      "commit": "c4dd177dedc2cf117eb5b072123a27c4edae9284",
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "logRoot": "/tmp/vaultsync-security-audit-1.9.3-20261015-logs",
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+      }
+    },
+    {
+      "version": "1.9.2",
+      "pr": 752,
+      "head": "work/1.9.2-changelog-protocol",
+      "commit": "2dfc66734a71826f0523a703d5cbe1dbb8f4442a",
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "logRoot": "/tmp/vaultsync-security-audit-1.9.2-20261015-logs",
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+      }
+    },
+    {
+      "version": "1.9.5",
+      "pr": 747,
+      "head": "docs/1.9.5-package-guide",
+      "commit": "d71f9888815e802f2a3ccce1b9111f1c1e988a3e",
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "logRoot": "/tmp/vaultsync-security-audit-1.9.5-20261015-logs",
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "69fc5a486ac5d0268ec7fd9718b629e508de52b92903e8cdd701eb714be6ccc5",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+      }
+    },
+    {
+      "version": "1.9.1",
+      "pr": 746,
+      "head": "fix/1.9.1-console-isolation",
+      "commit": "09c52f2ffe05f1e1b10181fd7deaab8835886057",
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "logRoot": "/tmp/vaultsync-security-audit-1.9.1-20261015-logs",
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "69fc5a486ac5d0268ec7fd9718b629e508de52b92903e8cdd701eb714be6ccc5",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+      }
+    },
+    {
+      "version": "1.9.0",
+      "pr": 736,
+      "head": "work/1.9-roadmap-realignment",
+      "commit": "a7407dd12da85de373158795ef52773fbbb44758",
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "logRoot": "/tmp/vaultsync-security-audit-1.9.0-20261015-logs",
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "49d2f2912a5c33a1d9f54cf50797e68c92c10728adadc7c0adefcc804b3b07a3",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+      }
+    }
+  ],
+  "backports": [
+    {
+      "target": "Stable",
+      "public": "security/runtime-stable-20261015",
+      "base": "a97ee998dbb2c4f0f5f431251eec991ed3b8a7ff",
+      "protected": true,
+      "active": "1.8.9",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 924,
+      "scriptTests": 103,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-stable-20261015-logs",
+      "commit": "eb300ad8d7acf39b712c40115e260ffdd9423451",
+      "pr": 793,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "a97ee998dbb2c4f0f5f431251eec991ed3b8a7ff",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "Dev",
+      "public": "security/runtime-dev-20261015",
+      "base": "2edfd4c31cd64d300e771baa2867317ddb74ccf9",
+      "protected": true,
+      "active": "1.8.9",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 924,
+      "scriptTests": 103,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-dev-20261015-logs",
+      "commit": "d6bc78d7806d8e73271156371a36d4126aca132d",
+      "pr": 794,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "fdf2d8aa2a75b711c042e228b1e753ed5db4878f14ff79d7f97dfe70f35ec6f4",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "2edfd4c31cd64d300e771baa2867317ddb74ccf9",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "chore/stable-work-tracking",
+      "public": "chore/stable-work-tracking",
+      "base": "f2b3a3c9b838d1c96f4fea60cc5b04d0e3135578",
+      "protected": false,
+      "active": "1.8.9",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 924,
+      "scriptTests": 114,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-chore-stable-work-tracking-20261015-logs",
+      "commit": "06382c70a61e3b2027d0d40896de5db90ca9ca02",
+      "pr": 760,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "06382c70a61e3b2027d0d40896de5db90ca9ca02",
+      "targetSourcePatched": true
+    },
+    {
+      "target": "chore/tracking-automation",
+      "public": "chore/tracking-automation",
+      "base": "6fdacdab44e7ec3db5a69cd1356685e7d6246a94",
+      "protected": false,
+      "active": "1.8.9",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 924,
+      "scriptTests": 114,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-chore-tracking-automation-20261015-logs",
+      "commit": "22500ca213dc6d092d53a347f1dd1ab90cfc4fa5",
+      "pr": 759,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "751e861e47a02a927788b1b3854546a99b970c26e6ef555fd3efa6de74027336",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "22500ca213dc6d092d53a347f1dd1ab90cfc4fa5",
+      "targetSourcePatched": true
+    },
+    {
+      "target": "dependabot/nuget/Dev/rendering-stack-44c0c08043",
+      "public": "dependabot/nuget/Dev/rendering-stack-44c0c08043",
+      "base": "e91532ef70f3750a4efff27750e81b292da2c9a0",
+      "protected": false,
+      "active": "1.8.9",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 924,
+      "scriptTests": 103,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-dependabot-nuget-dev-rendering-stack-44c0c08043-20261015-logs",
+      "commit": "117e43b2a6edf275fdd838694ebc1b34abe82c18",
+      "pr": 763,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "5a1a1c79c975657df98c01f67577f6d66b0427b40832499c56bb50ae2f57456f",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "117e43b2a6edf275fdd838694ebc1b34abe82c18",
+      "targetSourcePatched": true
+    },
+    {
+      "target": "dependabot/nuget/Dev/xunit.runner.visualstudio-4.0.1",
+      "public": "dependabot/nuget/Dev/xunit.runner.visualstudio-4.0.1",
+      "base": "28282cfbbd720d3b42dcb78aa3d9aa4093fe1f88",
+      "protected": false,
+      "active": "1.8.9",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 924,
+      "scriptTests": 103,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-dependabot-nuget-dev-xunit.runner.visualstudio-4.0.1-20261015-logs",
+      "commit": "8962183c09807a4e0b36bf469d2d614ab3b532f0",
+      "pr": 765,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "51b86f310abbe3e8527c983cb935d41179043712669176a2c0771a7df0f941d0",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "8962183c09807a4e0b36bf469d2d614ab3b532f0",
+      "targetSourcePatched": true
+    },
+    {
+      "target": "docs/outreach-media-kit-20261014",
+      "public": "docs/outreach-media-kit-20261014",
+      "base": "de826ffff5d25fc8fa082d6ede7ad38e40b4617c",
+      "protected": false,
+      "active": "1.8.9",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 924,
+      "scriptTests": 103,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-docs-outreach-media-kit-20261014-20261015-logs",
+      "commit": "e2ef4820d054f8dfa88a31ae612900d57a33745e",
+      "pr": 788,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "e2ef4820d054f8dfa88a31ae612900d57a33745e",
+      "targetSourcePatched": true
+    },
+    {
+      "target": "release/1.8.9",
+      "public": "security/runtime-release-1.8.9-20261015",
+      "base": "0280b41d6c6cccd8e2cca64ed6c3c89003713cbd",
+      "protected": true,
+      "active": "1.8.9",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 919,
+      "scriptTests": 100,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.8.9-20261015-logs",
+      "commit": "08870eae215e7f1b1ba8fc969fd86f78881a07ae",
+      "pr": 795,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "0280b41d6c6cccd8e2cca64ed6c3c89003713cbd",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "release/1.9.0",
+      "public": "security/runtime-release-1.9.0-20261015",
+      "base": "2417d12cf4d0d39af10925efbb646191cfaa8c34",
+      "protected": true,
+      "active": "1.9.0",
+      "watcherFixtureSynchronization": "BUG-19006 / #719; existing upstream c6c0b0b, test only",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 1026,
+      "scriptTests": 114,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.9.0-20261015-logs",
+      "fixtureCommit": "efc960452e960ff92a48bd5d58b51b129dddb817",
+      "commit": "e7b2a766b40842a1cd09b497cb0c9a93161e935f",
+      "pr": 796,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "2417d12cf4d0d39af10925efbb646191cfaa8c34",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "release/1.9.1",
+      "public": "security/runtime-release-1.9.1-20261015",
+      "base": "2e082706802a57e5c5f6c4861790052f06da907d",
+      "protected": true,
+      "active": "1.9.1",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 942,
+      "scriptTests": 119,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.9.1-20261015-logs",
+      "commit": "09d94a7490d75123a951a75d32aecd61cd37dd66",
+      "pr": 797,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "2e082706802a57e5c5f6c4861790052f06da907d",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "release/1.9.2",
+      "public": "security/runtime-release-1.9.2-20261015",
+      "base": "17856ef7bfef7bad660735770547b038baa80a09",
+      "protected": true,
+      "active": "1.9.2",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 937,
+      "scriptTests": 108,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.9.2-20261015-logs",
+      "commit": "d40b5058d94fb9a154e17bf30fbe4d18b061c9e4",
+      "pr": 798,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "17856ef7bfef7bad660735770547b038baa80a09",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "release/1.9.3",
+      "public": "security/runtime-release-1.9.3-20261015",
+      "base": "0a8fc812e8b0e5959c9a817f67d40a279e43c4c1",
+      "protected": true,
+      "active": "1.9.3",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 937,
+      "scriptTests": 108,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.9.3-20261015-logs",
+      "commit": "fbbf3f7245bad0260f144368440f5a3e4fe16cce",
+      "pr": 799,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "0a8fc812e8b0e5959c9a817f67d40a279e43c4c1",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "release/1.9.4",
+      "public": "security/runtime-release-1.9.4-20261015",
+      "base": "863076b62a546a2a45be77161b1aa0622ee2aacf",
+      "protected": true,
+      "active": "1.9.4",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 937,
+      "scriptTests": 108,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.9.4-20261015-logs",
+      "commit": "6d46c0293c9a89ec7b1c8d9190ae671a1065eb29",
+      "pr": 800,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "863076b62a546a2a45be77161b1aa0622ee2aacf",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "release/1.9.5",
+      "public": "security/runtime-release-1.9.5-20261015",
+      "base": "33b61593f35b08a4112fbb128e6ad5bee9cee586",
+      "protected": true,
+      "active": "1.9.5",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 1056,
+      "scriptTests": 119,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.9.5-20261015-logs",
+      "commit": "5481cfa079c3dc3b829e0ae4b479ff4c5ef397ac",
+      "pr": 801,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "33b61593f35b08a4112fbb128e6ad5bee9cee586",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "release/1.9.6",
+      "public": "security/runtime-release-1.9.6-20261015",
+      "base": "9c74c01a9acc7e2f6bfc65ca7a4bde9dcdca17f3",
+      "protected": true,
+      "active": "1.9.6",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 937,
+      "scriptTests": 108,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.9.6-20261015-logs",
+      "commit": "c5f45abdf867bd91a1de2947e7808cef3dfcbbc5",
+      "pr": 802,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "9c74c01a9acc7e2f6bfc65ca7a4bde9dcdca17f3",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "release/1.9.7",
+      "public": "security/runtime-release-1.9.7-20261015",
+      "base": "f9f16fcad9c914a13e02301c9a69f91364aa10db",
+      "protected": true,
+      "active": "1.9.7",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 937,
+      "scriptTests": 108,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.9.7-20261015-logs",
+      "commit": "86ec8a1e6c3bddc3601839ed507e5cc6d367847c",
+      "pr": 803,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "f9f16fcad9c914a13e02301c9a69f91364aa10db",
+      "targetSourcePatched": false
+    },
+    {
+      "target": "release/1.9.8",
+      "public": "security/runtime-release-1.9.8-20261015",
+      "base": "6d4e13a0a8216f38e3a88c5b76bd0562d16ba7f8",
+      "protected": true,
+      "active": "1.9.8",
+      "localization": "Legacy report only; --check unavailable; no UI changes",
+      "coreTests": 937,
+      "scriptTests": 108,
+      "managedAuditProjects": 5,
+      "vulnerablePackages": 0,
+      "runtimePacks": {
+        "Microsoft.AspNetCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.NETCore.App.Runtime.win-x64": "[10.0.13, 10.0.13]",
+        "Microsoft.WindowsDesktop.App.Runtime.win-x64": "[10.0.13, 10.0.13]"
+      },
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13"
+      ],
+      "logRoot": "/tmp/vaultsync-security-release-1.9.8-20261015-logs",
+      "commit": "3a3d65bd8da0e4c0395765a55723aefc7ca21edf",
+      "pr": 804,
+      "sourceHashes": {
+        "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+        "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+        "Directory.Packages.props": "3e3da7983dc622cb303497f1e45667856449ec1b525a01f036d993a085fb296d",
+        "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6",
+        "tests/scripts/test_runtime_pack_audit.py": "da124b0d5c1956ac51291877828268fc7a55b4bfc93236716e2e59c534f1c3fa"
+      },
+      "targetHead": "6d4e13a0a8216f38e3a88c5b76bd0562d16ba7f8",
+      "targetSourcePatched": false
+    }
+  ],
+  "alerts": [
+    {
+      "number": 74,
+      "ghsa": "GHSA-4w5f-7jp2-w48g",
+      "severity": "high",
+      "package": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 73,
+      "ghsa": "GHSA-f749-vhgx-39h6",
+      "severity": "high",
+      "package": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 72,
+      "ghsa": "GHSA-f8qh-mqg4-9939",
+      "severity": "high",
+      "package": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 71,
+      "ghsa": "GHSA-fq6x-pvr9-888r",
+      "severity": "medium",
+      "package": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 70,
+      "ghsa": "GHSA-5qr9-xxm9-6cmq",
+      "severity": "medium",
+      "package": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 69,
+      "ghsa": "GHSA-g44w-h65v-4cw9",
+      "severity": "high",
+      "package": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 68,
+      "ghsa": "GHSA-wxxw-5cvc-53j7",
+      "severity": "medium",
+      "package": "Microsoft.NETCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 67,
+      "ghsa": "GHSA-rv87-ccxw-8ggf",
+      "severity": "critical",
+      "package": "Microsoft.AspNetCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 66,
+      "ghsa": "GHSA-fpq8-4vhr-rcxx",
+      "severity": "critical",
+      "package": "Microsoft.AspNetCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 65,
+      "ghsa": "GHSA-f4g7-52wc-p8x7",
+      "severity": "high",
+      "package": "Microsoft.AspNetCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 64,
+      "ghsa": "GHSA-4mpw-cpwj-hxxj",
+      "severity": "high",
+      "package": "Microsoft.NETCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 63,
+      "ghsa": "GHSA-3rxq-g8rj-r2cf",
+      "severity": "high",
+      "package": "Microsoft.NETCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 62,
+      "ghsa": "GHSA-87vj-4hqv-22p9",
+      "severity": "high",
+      "package": "Microsoft.NETCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 61,
+      "ghsa": "GHSA-mc4q-93x5-f6hj",
+      "severity": "high",
+      "package": "Microsoft.NETCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 60,
+      "ghsa": "GHSA-494h-xx7x-5frh",
+      "severity": "high",
+      "package": "Microsoft.AspNetCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 59,
+      "ghsa": "GHSA-57xr-hfxx-jw5x",
+      "severity": "medium",
+      "package": "Microsoft.AspNetCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 58,
+      "ghsa": "GHSA-w5qq-qrpp-rf4c",
+      "severity": "high",
+      "package": "Microsoft.AspNetCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    },
+    {
+      "number": 57,
+      "ghsa": "GHSA-x3vp-85cm-q97r",
+      "severity": "high",
+      "package": "Microsoft.AspNetCore.App.Runtime.win-x64",
+      "manifest": "src/VaultSync.UI/VaultSync.UI.csproj",
+      "firstPatched": "10.0.13",
+      "state": "open"
+    }
+  ],
+  "excluded": [
+    {
+      "branch": "archive/1.9-before-roadmap-20261003",
+      "reason": "Immutable historical snapshot; not a maintained release/build source"
+    },
+    {
+      "branch": "download-stats",
+      "reason": "Non-code branch; no .NET project/runtime"
+    }
+  ],
+  "protectedTargetsPatched": false,
+  "reviewRequired": true,
+  "releasePublished": false
+}

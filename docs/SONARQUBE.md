@@ -30,7 +30,63 @@ The workflow is intentionally guarded. If the secret or required variables are m
 The workflow lives in `.github/workflows/sonarqube.yml` and runs on:
 
 - Pull requests into `Dev`, `Stable`, and versioned `release/*` branches.
-- Pushes to `Dev`, `Stable`, and versioned `release/*` branches.
+- Pushes to `Dev` and `Stable` (release branches use their PR analysis).
 - Manual `workflow_dispatch` runs.
 
 Keep the workflow exclusions and repository branch-protection requirement aligned with the active SonarQube quality gate. Missing secrets remain an intentional skip for forks and unconfigured copies of the repository.
+
+## Coverage collection health
+
+BUG-19025/#779 pins the analysis runner to Ubuntu 24.04. On October 22 the
+`ubuntu-latest` rollout selected Ubuntu 26.04: all 2,036 tests passed but
+dotnet-coverage 18.9.0 reported that its profiler was not initialized and emitted
+an empty report. That run's 33.0% Sonar coverage was not a measured C# result.
+The earlier same-day Ubuntu 24.04 run imported measured coverage successfully.
+
+`scripts/validate_sonar_coverage.py coverage.xml` must succeed immediately after
+collection. It requires Microsoft XML with a covered or partially covered range
+in the actual VaultSync.Core module, mapped to a Core source file with valid line
+numbers. Missing, malformed, empty, uncovered or test-only reports fail before
+import. This is a collector health check; Sonar's coverage threshold, quality
+rules and source exclusions remain unchanged. A newer runner/profiler must pass
+this health check and exact-head analysis before replacing the pinned image.
+
+See [the measured failure and follow-up](release-evidence/1.9-sonar-coverage-2026-10-22.md).
+
+## Recovery display findings — 2026-11-05
+
+The [line-specific review](release-evidence/1.9-recovery-display-security-review-2026-11-05.md)
+recommends false-positive dispositions for five guarded read-only X11 rendezvous
+findings and one restrictive-umask finding. No code guard, quality threshold or
+exclusion is weakened. Administrative disposition and a fresh exact-head result
+remain separate; a review document is not a passing quality gate.
+
+On November6, the maintainer recorded all six recommended dispositions; a
+complete six-ID API query verifies FALSE-POSITIVE for each. A fresh exact-head
+analysis is still required, including the unchanged coverage condition.
+
+
+## Source identity
+
+The analysis workflow checks out the pull request head SHA explicitly, or the
+actual event SHA for push/manual runs. It verifies Git HEAD before setup/build
+and supplies the same revision to the scanner. Before coverage import,
+`scripts/validate_native_evidence_source.py` requires both native receipts to
+bind `sourceCommit`, `compiledSourceCommit` and `checkoutRevision` to that SHA.
+The helper accepts only bounded, unambiguous JSON and does not replace each
+wrapper's kernel, mount, inode, executed-case and coverage checks.
+
+The November8 run42528843601 completed both native fixtures, but its compiled
+checkout was merge commit`f644e4046d15e526be38d3f2f27dbd08121bc6b1` while the scanner
+reported PR head`7ac4ee5a477561ffe27f9144e778a1c30bc867be`. Its78.4% coverage and A
+ratings are historical cross-SHA observations, not qualified exact-head results.
+A source-aligned run is required after this repair. Thresholds, exclusions,
+permissions and fork/secret handling are unchanged.
+
+
+The source validator accepts only `EXPECTED_SHA` as an argument. It reads the
+fixed storage/admission receipt names under `RUNNER_TEMP`, refuses canonical-path
+escapes and symlinks, and checks single regular-file identity across open before
+bounded parsing. Caller-selected file paths are not supported. This narrows the
+CLI read surface identified by pythonsecurity:S8707 in the first aligned run;
+the rule remains enabled and a fresh hosted result must confirm disposition.

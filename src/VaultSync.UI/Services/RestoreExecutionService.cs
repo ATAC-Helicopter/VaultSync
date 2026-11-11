@@ -40,7 +40,12 @@ internal static class RestoreExecutionService
         public CancellationToken CancellationToken { get; init; }
     }
 
-    public static async Task RestoreAsync(
+    public static Task RestoreAsync(string sourceDirectory, string targetDirectory, string? encryptionPassword,
+        IReadOnlyList<string>? selectedTopLevelTargets, Action<RestoreProgressUpdate>? progress, CancellationToken cancellationToken) =>
+        ProductDiagnostics.TraceBetaAsync(VaultSync.Core.Models.DiagnosticOperation.Restore,
+            () => RestoreCoreAsync(sourceDirectory, targetDirectory, encryptionPassword, selectedTopLevelTargets, progress, cancellationToken));
+
+    private static async Task RestoreCoreAsync(
         string sourceDirectory,
         string targetDirectory,
         string? encryptionPassword,

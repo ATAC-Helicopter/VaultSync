@@ -1,0 +1,90 @@
+{
+  "owner": "VS-1907/#495",
+  "date": "2026-10-20",
+  "sourceBase": "70e3e3c309511836ca8d63ac4846e1449aabfbc1",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRawImageStagingService.cs": "8ae83b37fcd4f3cb348a30a539bffcff122cdeaa1ab3b820a51158714dc0b1fb",
+    "src/VaultSync.Core/Services/LinuxRawImageStorage.cs": "c4a4ff832a696c13297edf23131dba3f0307cca47c1a50896076c59df96f4940",
+    "tests/VaultSync.Core.Tests/LinuxRawImageStagingServiceTests.cs": "d62f15b6f5e3773b9235d82411f4edb068bc60ca46e0d1bb7b6a63da20ac0a01",
+    "tests/VaultSync.Core.Tests/LinuxRawImageStorageTests.cs": "94f4d28f0a49cd4c48d1c8524169eb9c53aff1d20b03bd08dbdd5b7519602d30"
+  },
+  "validation": {
+    "core": 1710,
+    "python": 242,
+    "warnings": 0,
+    "errors": 0,
+    "skipped": 0,
+    "newStagingCases": 17,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/raw-staging-20261020/release.log",
+    "trx": "/Users/flavio/Developer/vaultsync-validation.nosync/raw-staging-20261020/core-tests.trx",
+    "trackingLog": "/Users/flavio/Developer/vaultsync-validation.nosync/raw-staging-20261020/tracking.log"
+  },
+  "native": {
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 40.18,
+    "completed": true,
+    "guestExitZero": true,
+    "serialSha256": "d8d4b2df4c24c6c4ae91f476db2784ec841926223c528d51f0484dc587081db4",
+    "cases": [
+      "observed-readonly-512",
+      "native-capture-512",
+      "independent-payload-sha-512",
+      "reopened-profile-512",
+      "private-directory-512",
+      "private-payload-512",
+      "native-staging-512",
+      "sealed-streams-512",
+      "kernel-readonly-descriptors-512",
+      "stage-isolated-from-original-512",
+      "sealed-file-permissions-512",
+      "existing-image-no-replace-512",
+      "observed-readonly-4096",
+      "native-capture-4096",
+      "independent-payload-sha-4096",
+      "reopened-profile-4096",
+      "private-directory-4096",
+      "private-payload-4096",
+      "native-staging-4096",
+      "sealed-streams-4096",
+      "kernel-readonly-descriptors-4096",
+      "stage-isolated-from-original-4096",
+      "sealed-file-permissions-4096",
+      "existing-image-no-replace-4096",
+      "empty-directory-no-replace",
+      "writable-source-refused",
+      "symlink-parent-refused",
+      "symlink-ancestor-refused",
+      "nonprivate-parent-refused",
+      "space-preflight-refused",
+      "seal-replaced-inode-refused"
+    ],
+    "controller": "virtio-blk-pci",
+    "sourceCapacityBytes": [
+      65536,
+      524288
+    ],
+    "logicalSectorBytes": [
+      512,
+      4096
+    ],
+    "coreAssemblySha256": "70c0ede1a9a2010617897cbf1c703187264561e56f830409c653932f2c964aec",
+    "harnessAssemblySha256": "e5ec1a47e023957761ae74bf0bf8091c82cca3bf730e14f01c0d6bef38d11a1d",
+    "harnessSourceSha256": "53261545f8d2414513731625d59d6c8203c6a329b4b641576463410bf2447fd4",
+    "runtimeConfigSha256": "1bc10a3f7b2e0352dd3df130e2a31514290dd566d64c1c9298b01fb85ff1867b",
+    "seedIsoSha256": "a5baccedd32d1dc192e144e5d7199af7c7c546cf6296e96eb371e960b9940d27",
+    "qemuArgumentsSha256": "aebf9a89800d806209cd898f2c284c5309b5b5d668c490ab0b061755627c6f93",
+    "network": "none",
+    "hostDevicesPassed": false
+  },
+  "artifacts": "/Users/flavio/Developer/vaultsync-validation.nosync/raw-staging-20261020",
+  "limitations": [
+    "Same privilege; no authenticated/elevated worker or target permission.",
+    "No independent recovery boot, image-to-device restore or power-cut qualification.",
+    "Synthetic GPT payloads contain no qualified bootable filesystem.",
+    "Staging copies are retained privately; UI lifecycle and cleanup remain open.",
+    "All four support profiles remain candidates."
+  ]
+}

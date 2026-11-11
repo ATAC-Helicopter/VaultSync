@@ -10,6 +10,34 @@ namespace VaultSync.Core.Tests;
 public sealed class PresetStoreTests
 {
     [Fact]
+    public void LowercaseCatalogIdsResolveTheSameRulesInCliUiAndBackup()
+    {
+        using var root = new TempDirectory();
+        string catalog = Directory.CreateDirectory(Path.Combine(root.Path, "presets")).FullName;
+        string project = Directory.CreateDirectory(Path.Combine(root.Path, "project")).FullName;
+        Directory.CreateDirectory(Path.Combine(project, "bin"));
+        File.WriteAllText(Path.Combine(project, "bin", "generated.o"), "generated");
+        File.WriteAllText(Path.Combine(project, "main.cpp"), "source");
+        File.WriteAllText(Path.Combine(catalog, "presets.index.json"),
+            """{"version":2,"presets":[{"id":"cpp","name":"C++","file":"c_cpp.vaultsyncignore","description":"Build output"}]}""");
+        File.WriteAllText(Path.Combine(catalog, "c_cpp.vaultsyncignore"), "bin/");
+        string previous = Environment.GetEnvironmentVariable("VAULTSYNC_PRESETS_DIR");
+        try
+        {
+            Environment.SetEnvironmentVariable("VAULTSYNC_PRESETS_DIR", catalog);
+            Assert.Contains("cpp", PresetStore.ListNames());
+            Assert.Equal("bin/", PresetStore.Load("cpp"));
+            var viewModel = new VaultSync.UI.ViewModels.ProjectsViewModel();
+            Assert.Contains("cpp", viewModel.AvailablePresets);
+            var filter = VaultSync.Core.Services.FilterService.FromPresetAndLocal(project, "cpp", catalog);
+            string[] entries = new VaultSync.Core.Services.ScannerService(filter).Scan(project).Select(entry => entry.RelPath).ToArray();
+            Assert.Contains("main.cpp", entries);
+            Assert.DoesNotContain("bin/generated.o", entries);
+        }
+        finally { Environment.SetEnvironmentVariable("VAULTSYNC_PRESETS_DIR", previous); }
+    }
+
+    [Fact]
     public void ListNamesUsesIndexedIdsAndFileNameFallbacks()
     {
         using var root = new TempDirectory();

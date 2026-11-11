@@ -1,0 +1,194 @@
+{
+  "owners": [
+    "VS-1907/#495",
+    "BUG-19036/#812"
+  ],
+  "date": "2026-10-22",
+  "sourceBase": "a35c7c884bed4332d010910c749e3f2daeffa9bb",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/DiskImageByteIntegrity.cs": "75bf7bfdf1862f37b227e9862bb8e80da5e8a788896eaee5b3de0e2596cc1736",
+    "src/VaultSync.Core/Services/LinuxRawImageStagingService.cs": "2c523950df0dc73e96893c31b37ccb635f3e6662426cbb96c4fd43265d4171aa",
+    "src/VaultSync.Core/Services/LinuxRawImageStorage.cs": "6dc7e14fec6bfc6fe1b4d604d18e2797a2f719a9cd8887af86ddf1d6ed87d047",
+    "src/VaultSync.Core/Services/RawImageDeviceRestoreService.cs": "759188341608b7e9f9c15ce1b5403d8bce601a23471723ad704a4f17a31de684",
+    "src/VaultSync.Core/Services/LinuxRawRestoreTargetOpenService.cs": "db52b3b0f7129d968d900ff8b626a7ce8a21b02a16e27197d2056b5b87222629",
+    "src/VaultSync.Core/Services/LinuxDiskRestoreTargetPreviewService.cs": "6df287a951b0419965d7576c5f4dd0355fd419101578d42aa8bb18629667b2b8",
+    "tests/VaultSync.Core.Tests/DiskImageByteIntegrityTests.cs": "65e75c2ed6b29b87e066c8113438d54132c7c97539df5b2bb2cf21f5be4f0b44",
+    "tests/VaultSync.Core.Tests/DiskImageInspectionFixture.cs": "4cf7d56de5bcdff1f7901016c2d4ecd87cbe11b0189cc081678881bc3903f166",
+    "tests/VaultSync.Core.Tests/LinuxRawImageStagingServiceTests.cs": "5fe10f2353bc020bdeb259ce01f78d6103fdaea7c5c2da5521352f6f6b58de76",
+    "tests/VaultSync.Core.Tests/LinuxRawImageStorageTests.cs": "d51787cacaeea4ea3dc09a8dc2eed63a71dad5d8b3fe73be61bba8c875dfbcb7",
+    "tests/VaultSync.Core.Tests/RawImageDeviceRestoreServiceTests.cs": "0856531f2ae4b5cff05e188f29ef61d36880b89aceecfa46c407a47c30882eee",
+    "tests/VaultSync.Core.Tests/LinuxRawRestoreTargetOpenServiceTests.cs": "55ef147d8a7e4793dc5ac1fe8c79972719bc6557b9118c3135538b9849e74320",
+    "tests/VaultSync.Core.Tests/LinuxDiskRestoreTargetPreviewServiceTests.cs": "54c32346cfd81268e93480d3fa1b188cf77bedebaac57ef91e333d948f8348c6"
+  },
+  "compiledCoreDocumentChecksumsMatch": {
+    "src/VaultSync.Core/Services/DiskImageByteIntegrity.cs": true,
+    "src/VaultSync.Core/Services/LinuxRawImageStagingService.cs": true,
+    "src/VaultSync.Core/Services/LinuxRawImageStorage.cs": true,
+    "src/VaultSync.Core/Services/RawImageDeviceRestoreService.cs": true,
+    "src/VaultSync.Core/Services/LinuxRawRestoreTargetOpenService.cs": true,
+    "src/VaultSync.Core/Services/LinuxDiskRestoreTargetPreviewService.cs": true
+  },
+  "validation": {
+    "core": 2061,
+    "newRegressionCases": 25,
+    "python": 270,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "trxSha256": "ca685bc3aa46ad4427b72ca7856e187b4835b233d3c802e3364feb329006b0ff",
+    "trackingAudit": {
+      "release": "1.9.0",
+      "workItems": 46,
+      "discrepancies": 0
+    },
+    "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/reader-staging-20261022/release.log",
+    "familyTrackingAudit": {
+      "workItems": 107,
+      "discrepancies": 0
+    }
+  },
+  "native": {
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 40.82,
+    "guestExitZero": true,
+    "cases": [
+      "actual-public-stage-isolated-success-512",
+      "independent-wire-binding-512",
+      "independent-full-byte-binding-512",
+      "stage-fixed-geometry-512",
+      "stage-no-parser-graph-or-origin-512",
+      "sealed-held-bytes-outlive-inputs-512",
+      "actual-sealed-file-mode-512",
+      "actual-stage-publication-512",
+      "actual-engine-fixed-byte-consumer-512",
+      "independent-target-byte-equality-512",
+      "engine-journal-order-fixture-512",
+      "changed-sealed-metadata-no-write-512",
+      "changed-sealed-payload-no-write-512",
+      "restored-private-fixture-bytes-recheck-512",
+      "actual-reader-refuses-before-allocation-512",
+      "missing-fixed-worker-no-fallback-512",
+      "public-stage-cancellation-512",
+      "original-input-unchanged-512",
+      "actual-public-stage-isolated-success-4096",
+      "independent-wire-binding-4096",
+      "independent-full-byte-binding-4096",
+      "stage-fixed-geometry-4096",
+      "stage-no-parser-graph-or-origin-4096",
+      "sealed-held-bytes-outlive-inputs-4096",
+      "actual-sealed-file-mode-4096",
+      "actual-stage-publication-4096",
+      "actual-engine-fixed-byte-consumer-4096",
+      "independent-target-byte-equality-4096",
+      "engine-journal-order-fixture-4096",
+      "changed-sealed-metadata-no-write-4096",
+      "changed-sealed-payload-no-write-4096",
+      "restored-private-fixture-bytes-recheck-4096",
+      "actual-reader-refuses-before-allocation-4096",
+      "missing-fixed-worker-no-fallback-4096",
+      "public-stage-cancellation-4096",
+      "original-input-unchanged-4096"
+    ],
+    "serialSha256": "9b65af37f8a01c37dac7c3314f5adedd8a84fb6cdcc527140d1291287bef9f3b",
+    "seedSha256": "48f3a7f48ff1893ee5aa9b61ecc89d890ca447a3a7d1b1cfbe461bb565566f48",
+    "qemuArgumentsSha256": "fedace4687710dfc12634031b6d0ee2243a3dc2b4d92c89a221a624b2c51d696",
+    "harnessSourceSha256": "2ffa8ba8fcdecd17666122fcfc87dd99346c12ea00f29ed408211aa92499a9ae",
+    "coreAssemblySha256": "164e3902b55287d172325d78a841cc46c8eb10a343d002fdcc1cdd0315571e74",
+    "corePdbSha256": "94c5eca39e98a4415d6e1296da3f8c69731b9eafb9a4090e5e276a9f98646a3f",
+    "workerAssemblySha256": "8984c44573cf3fa34b3bce1ecf0c41d55a13eea282f40429a3143d187b5ac3f2",
+    "harnessAssemblySha256": "03d4ed3eb5ec01f1262716a83e3271207404d41180ac542cb7d15d89f3461a21",
+    "runtime": "10.0.13",
+    "network": "none",
+    "sharedFolders": false,
+    "hostRawDevicesPassed": false,
+    "guestRawDeviceOperations": false,
+    "stageStorage": "actual private ext4 / 0400 matching read-only inodes",
+    "restoreTarget": "ordinary byte-array test provider, not a block device",
+    "journal": "in-memory ordering fixture, not durable journal qualification",
+    "expectedFacts": "independent fixed-wire Python extraction from retained synthetic fixture; exact payload/metadata SHA-256"
+  },
+  "historicalAttempts": [
+    {
+      "prefix": "first-harness-",
+      "result": {
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 37.38,
+        "guestExitZero": false,
+        "cases": [
+          "actual-public-stage-isolated-success-512",
+          "independent-wire-binding-512",
+          "independent-full-byte-binding-512",
+          "stage-fixed-geometry-512",
+          "stage-no-parser-graph-or-origin-512",
+          "sealed-held-bytes-outlive-inputs-512"
+        ]
+      },
+      "meaning": "six cases then test harness incorrectly used FileStream.Name on a held native descriptor",
+      "serialSha256": "ed1d86bf37bc9b28eb231fb3e387706c1cf134edcd1e3ec61847e84aa30005e4",
+      "seedSha256": "98bbab452c5d58f44098f0e53dcdaac24259bcd75dd5fa280251b0ee0d477cae"
+    },
+    {
+      "prefix": "mutation-probe-",
+      "result": {
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 38.52,
+        "guestExitZero": false,
+        "cases": [
+          "actual-public-stage-isolated-success-512",
+          "independent-wire-binding-512",
+          "independent-full-byte-binding-512",
+          "stage-fixed-geometry-512",
+          "stage-no-parser-graph-or-origin-512",
+          "sealed-held-bytes-outlive-inputs-512",
+          "actual-sealed-file-mode-512",
+          "actual-stage-publication-512",
+          "actual-engine-fixed-byte-consumer-512",
+          "independent-target-byte-equality-512",
+          "engine-journal-order-fixture-512",
+          "changed-sealed-metadata-no-write-512"
+        ]
+      },
+      "meaning": "12 cases then changed sealed payload allowed one write before final hash failed",
+      "serialSha256": "1e296c8b8f5a1b653fe23b03f441a401765d58a1d722febd35ec26b13d0b6f4f",
+      "seedSha256": "04c4d4f6f9cd63a4ee104f322bfecb203b9986de76e1daf9b8f187b80cdc79d7"
+    },
+    {
+      "prefix": "diagnostic-",
+      "result": {
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedSeconds": 39.08,
+        "guestExitZero": false,
+        "cases": [
+          "actual-public-stage-isolated-success-512",
+          "independent-wire-binding-512",
+          "independent-full-byte-binding-512",
+          "stage-fixed-geometry-512",
+          "stage-no-parser-graph-or-origin-512",
+          "sealed-held-bytes-outlive-inputs-512",
+          "actual-sealed-file-mode-512",
+          "actual-stage-publication-512",
+          "actual-engine-fixed-byte-consumer-512",
+          "independent-target-byte-equality-512",
+          "engine-journal-order-fixture-512",
+          "changed-sealed-metadata-no-write-512"
+        ]
+      },
+      "meaning": "12 cases; confirms payload outcome Failed / one write / closed target / four journal fixture records; pre-fix managed buffer diagnosis",
+      "serialSha256": "9be3991338eb60a0159097d1fca9cd3948cab6c7c8da11dfdcb28351ada3f949",
+      "seedSha256": "cf71f350e38bd3423cc42d0d8010f6b97b716058af65f045adce9d37dac5f720"
+    }
+  ],
+  "limits": [
+    "installed worker/build/role and writable operation authorization remain unqualified",
+    "administrator and same-UID compromise not contained",
+    "no raw-device write or durable journal qualification in this run",
+    "no filesystem/OS-boot/physical-power-loss/full-recovery qualification",
+    "all four profiles candidate; PR draft/unmerged; no beta tag/assets/publication"
+  ]
+}

@@ -20,7 +20,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, DoctorSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, DoctorSettings s, CancellationToken cancellationToken)
         {
             var reporter = new DoctorReporter(s.Quiet);
             bool ok = await CheckSyncToolAsync(reporter, cancellationToken);

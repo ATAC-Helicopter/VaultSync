@@ -96,6 +96,22 @@ jobs:
             .github/ISSUE_TEMPLATE/*.yml \
             .github/dependabot.yml
 
+  localization:
+    name: UI localization coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.x"
+      - name: Check locale files and UI source
+        run: |
+          python3 scripts/localization_audit.py --check
+          python3 scripts/localization_audit.py --check --source-dir src/VaultSync.RecoveryController
+
   script-tests:
     name: Script tests
     needs: changes
@@ -132,6 +148,12 @@ jobs:
 
       - name: Validate canonical public release metadata
         run: python3 scripts/public_release_metadata.py check
+
+      - name: Validate changelog protocol
+        run: python3 scripts/changelog.py check
+
+      - name: Validate disk qualification plan
+        run: python3 scripts/disk_support.py check
 
   store-metadata:
     name: Microsoft Store metadata preflight

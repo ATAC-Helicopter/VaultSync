@@ -1,0 +1,48 @@
+{
+  "owner": "VS-1902/#113",
+  "date": "2026-10-21",
+  "sourceBase": "8c7bbe8a660561e4d58e7cd303a7afb7406ddc25",
+  "sourceSha256": {
+    ".github/workflows/release-assets.yml": "d90fdbe1f0c13a44f4cad655b53c907bf6c7cd38208ee866e55c34d3df804cf3",
+    "scripts/release_draft.py": "6beb7c210484f90c94bcbaddde9ae68a12051965eb3b06e95ba0be4f6e2ac73e",
+    "tests/scripts/test_release_draft.py": "136ff81f7de95a4aef6b9b3d5f817bb95b9f42fdd5a523f7f40d3a7483c49f4c",
+    "tests/scripts/test_release_workflow.py": "cc893e7296971ac70c2fb77a7bf58fa9b45b06914cfca39928a4435464cec804"
+  },
+  "validation": {
+    "core": 1763,
+    "python": 255,
+    "warnings": 0,
+    "errors": 0,
+    "skipped": 0,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "newDraftCases": 13,
+    "yamlParse": "Ruby Psych",
+    "draftShellSyntax": "bash -n for every run block",
+    "actualWorkflowShell": "executed with synthetic assets and simulated GitHub API/upload; no real release mutation",
+    "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/draft-assembly-20261021/release.log",
+    "trx": "/Users/flavio/Developer/vaultsync-validation.nosync/draft-assembly-20261021/core-tests.trx",
+    "trxSha256": "c52bf0e98d6b8cd169e3f78e2b1269c3806b64676ac8e611b3a385ca0bd5045c",
+    "trackingLog": "/Users/flavio/Developer/vaultsync-validation.nosync/draft-assembly-20261021/tracking.log",
+    "trackingOwners": 45,
+    "trackingDiscrepancies": 0
+  },
+  "betaMatrix": {
+    "directPackages": 8,
+    "store": false,
+    "noPatchTotalWithManifest": 9,
+    "allPatchTotalWithManifest": 19
+  },
+  "stableMatrix": {
+    "declaredAssets": 19,
+    "totalWithManifest": 20,
+    "store": true
+  },
+  "liveReleaseChanges": false,
+  "limitations": [
+    "No canonical beta cut, existing beta tag/draft or successful new asset-signature run exists.",
+    "No live GitHub draft/upload or old installed-client discovery/upgrade qualification was attempted.",
+    "Source signatures are still required online/offline before real draft uploads.",
+    "Native recovery/media/UI and four unqualified disk profiles remain blockers."
+  ]
+}

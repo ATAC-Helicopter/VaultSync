@@ -67,3 +67,33 @@ Technical details:
 - [Disaster recovery](../DISASTER_RECOVERY.md)
 - [Recoverability engine](../RECOVERABILITY_ENGINE.md)
 - [Privacy](../PRIVACY.md)
+
+
+## Disk-image development in 1.9.0
+
+Full-disk recovery remains under development. Installed recovery components
+completed a measured 3 GiB Debian GPT/UEFI/ext4 capture, verified recovery
+copy, graphical restore, full read-back and source-absent restored-system boot
+in a disposable VM. This is **one fixture's measured evidence**, not a public
+beta, universally supported Linux profile or packaged recovery media.
+Rendering repair, media/capacity/fault qualification, application continuity,
+physical hardware and shared release gates remain open. See the
+[2026-11-10 installed loop receipt](../release-evidence/1.9-installed-linux-os-loop-2026-11-10.json).
+
+The development Recovery page now lets you choose the folder containing
+`image.metadata` and `payload.raw`. On Linux x64, **Verify image** checks content
+and partition layout in the isolated reader; **Cancel verification** stops it.
+macOS and Windows explain the Linux recovery-environment requirement. This panel
+does not restore or erase disks yet. A verified image is not proof that a system
+will boot. See [the current workflow and remaining steps](../DISK_RECOVERY_UI_1.9.md).
+
+### What verification cannot guarantee
+
+A `Passed` drill in stable 1.8.9 checks stored file bytes and the safe
+restore plan within documented limits; it does **not** reinstall, boot or
+exercise an operating system. Even an independently booted 1.9 development
+image does not automatically prove database/application consistency, external
+account access, compatible drivers or future machine portability. Those checks
+need separately named procedures and measured results. See
+[recovery evidence levels and limitations](../RECOVERY_EVIDENCE_SCOPE_1.9.md).
+

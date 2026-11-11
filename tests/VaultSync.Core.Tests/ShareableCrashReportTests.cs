@@ -9,6 +9,14 @@ namespace VaultSync.Core.Tests;
 public sealed class ShareableCrashReportTests
 {
     [Fact]
+    public void ManualReportDoesNotClaimThatSeparateAutomaticDiagnosticsWereNotSent()
+    {
+        var report = ShareableCrashReport.Create(new IOException("not included"), "AppDomain", true, "1.9.0");
+        Assert.DoesNotContain("Nothing was sent automatically", report.Content);
+        Assert.DoesNotContain("Nothing was sent automatically", ShareableCrashReport.BuildEmailBody());
+        Assert.Contains("Generated and redacted locally.", report.Content);
+    }
+    [Fact]
     public void Create_UsesStrictAllowlistAndDropsSensitiveExceptionContext()
     {
         const string sensitiveMessage =

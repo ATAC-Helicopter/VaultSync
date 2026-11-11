@@ -32,7 +32,32 @@ The `Performance Benchmarks` workflow runs the same enforced profile on
 GitHub-hosted Windows, Linux, and macOS runners when the harness or Core paths
 change. Each job uploads its machine-profiled JSON report for release evidence.
 
-## Budgets
+## Compression research profile (VS-1996)
+
+Run from the repository root:
+
+```bash
+dotnet run --project benchmarks/VaultSync.Benchmarks --configuration Release -- \
+  --compression-profile --output /tmp/compression-zip.json
+python3 experiments/compression/benchmark.py --output /tmp/compression-prototype.json
+```
+
+This opt-in developer profile leaves the existing enforced release profile
+unchanged. It compares current ZIP policy and explicit levels using generated
+Unity scenes/prefabs, small metadata files and binary/compressed proxies. Every
+measurement includes exact ZIP readback; metadata and timestamps are controlled.
+Five measured iterations follow one warmup. P95 is the maximum of five samples,
+not a statistically established tail. Managed allocations omit native memory.
+Reports record worktree base commit, dirty state and source hashes; do not label
+them as clean-head evidence. The Python prototype is separate research and its
+runtime cannot be compared fairly with native ZIP/zlib.
+
+There is no compression performance gate yet. See
+[design](COMPRESSION_EVOLUTION.md) and
+[initial evidence](release-evidence/1.9-compression-2026-10-13.md) for limitations
+and proposed promotion criteria.
+
+## Release profile budgets
 
 | Scenario | Default fixture | p95 duration | p95 allocation |
 |---|---:|---:|---:|
