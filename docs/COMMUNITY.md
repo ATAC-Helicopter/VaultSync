@@ -1,40 +1,80 @@
 # VaultSync Community and Support
 
-Join the [official VaultSync Discord community](https://discord.gg/sgP8UzeAQt) for informal help, discussions, bug triage, development, and optional community activities. Discord participation is never required to use VaultSync, file bugs, or contribute.
+VaultSync is open-source backup software for Windows, macOS and Linux.
+[Discord](https://discord.gg/sgP8UzeAQt) is the place for quick conversations, optional beta testing and direct help. **Joining Discord is never necessary** to use VaultSync, read the documentation, file a GitHub issue or contribute code.
 
-## Choose the right place
+## New here? Three useful first steps
 
-| Purpose | Channel |
+1. **Try the app:** download the [latest published stable build](https://github.com/ATAC-Helicopter/VaultSync/releases/latest) and follow the [Quick Start](wiki/Quick-Start.md).
+2. **Learn how to check a backup:** complete the [Recovery Lab v1](wiki/Recovery-Lab.md) using **disposable synthetic files** and a separate restore destination. A passing read-only drill is not a completed real restore.
+3. **Need help or want to contribute?** Use the routing table below. You can offer a tested procedure, improve docs, translate or submit a reproducible bug without being a developer.
+
+## Where should I post?
+
+| Purpose | Best destination |
 | --- | --- |
-| General questions and troubleshooting | Discord `#help-and-support` Forum |
-| Discuss suspected bugs, with sanitized screenshots/logs | Discord `#bug-reports` Forum |
-| Track reproducible bugs and engineering changes | [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues) |
-| Feature ideas and general feedback | Discord `#ideas-and-feedback` or [GitHub Discussions](https://github.com/ATAC-Helicopter/VaultSync/discussions) |
-| Implementation and contributions | Discord `#development`, GitHub PRs, and [CONTRIBUTING.md](../CONTRIBUTING.md) |
-| Pre-release development conversation | Discord `#beta-discussion` |
-| Published releases and official announcements | [GitHub Releases](https://github.com/ATAC-Helicopter/VaultSync/releases), Discord `#announcements`, and [r/VaultSync](https://www.reddit.com/r/VaultSync/) |
-| Security vulnerabilities | Follow [SECURITY.md](../SECURITY.md) **privately**, not in a public channel |
+| General troubleshooting or questions other users could benefit from | Discord **`#help-and-support`** Forum |
+| Public suspected bugs and reproducible examples | Discord **`#bug-reports`** Forum |
+| Private support, an individual case, or a conversation requiring limited access | Discord **`#open-a-ticket`** (private VaultSync ticket) |
+| Confirmed defects that need engineering tracking | [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues/new/choose) |
+| Feature ideas and design proposals | Discord **`#ideas-and-feedback`** or [GitHub Discussions](https://github.com/ATAC-Helicopter/VaultSync/discussions) |
+| Published-build beta reports and safe repeatable checks | Discord **`#beta-discussion`** and the [beta feedback issue form](https://github.com/ATAC-Helicopter/VaultSync/issues/new/choose) |
+| Implementation, documentation and translation contributions | Discord **`#development`**, GitHub pull requests, [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| Release announcements and shipping status | [GitHub Releases](https://github.com/ATAC-Helicopter/VaultSync/releases), Discord **`#announcements`**, and [r/VaultSync](https://www.reddit.com/r/VaultSync/) |
+| Security vulnerabilities | [Private security reporting](../SECURITY.md), **never** a public Forum, ticket or issue |
 
-GitHub remains the source of truth for issues, code review, the roadmap, and published releases. A Discord discussion is not a confirmed bug, a support commitment, or a claim that experimental behavior is supported.
+**Public Forum versus private ticket:** use public Forums when the answer could help others. Use tickets for privacy or an individual support exchange. Tickets are accessible to the requester and designated staff; they are **not a secret vault**. Never upload passwords, recovery keys, account tokens, private backups, disk images or confidential files. Staff may later write a *sanitized* public help article, but private ticket content must not be copied publicly without authorization.
 
-## Discord channels and opt-in roles
+Ticket channels are automatically removed after the configured closed-ticket retention window (**7 days by default unless reopened**). Transcript copies may remain in the private staff log and are subject to separate retention. The ticket service does **not** automatically publish conversations to GitHub, Reddit or the FG Labs analytics site.
 
-- `#welcome`, `#resources`, `#announcements`: getting started, useful links, and official updates.
-- `#general`, `#ideas-and-feedback`, `#development`: discussion and collaboration.
-- `#help-and-support`, `#bug-reports`: separate support and bug-report Forum threads.
-- `#beta-discussion`: upcoming beta discussion; download availability is determined solely by published release assets.
-- `#trivia`, `#bot-games`, `Game Night`: optional community activities.
+GitHub remains authoritative for code changes, reproduced bugs, roadmap commitments and published releases. A Discord discussion is not a confirmed bug, a support SLA or proof of a tested feature.
 
-Members can select `Release Updates`, `Event Updates`, and `Community Games` through **Channels & Roles**. These are opt-in notification/activity roles, not proof of contributor, maintainer, moderator, or beta-tester status.
+## Suggested Discord onboarding (server administrator)
 
-## Privacy and security
+Keep the initial channel list small, especially while the server is young. **Do not delete existing Forum history or community channels.**
 
-Provide your VaultSync version, OS, reproduction steps, and expected/actual behavior when asking for help. Review and redact all logs, screenshots, and support bundles before posting. Do not share credentials, tokens, password material, encryption or recovery keys, private backup content, or personal information.
+**Show by default:**
+- `#welcome` and `#resources`: orientation, installation and links.
+- `#announcements`: important release/security announcements, not every commit.
+- `#general`: a place to ask where to go.
+- `#help-and-support`: searchable, public support.
+- `#open-a-ticket`: private requests.
 
-The [Code of Conduct](../CODE_OF_CONDUCT.md) applies to the Discord community. Moderation and informal support do not have guaranteed response times.
+**Offer through Channels & Roles or Onboarding as optional:**
+- `#bug-reports`, `#ideas-and-feedback`, `#development`, `#beta-discussion`, `#dev-updates`.
+- Events, voice, off-topic and community activity channels if the member wants them.
 
-## GitHub-to-Discord releases
+A practical onboarding question: **"What brought you to VaultSync?"** with answers like *I want to use it*, *I want to help test*, *I want to contribute*, and *I'm looking for support*. Map these to **channel visibility**, not trust or staff permissions. Keep the existing `Release Updates`, `Event Updates` and `Community Games` roles **opt-in**. Do not create a false `Contributor` or `Beta Tester` role simply because somebody joins a channel.
 
-The optional [release-notification workflow](discord-release-notifications.md) is designed to announce **newly published** GitHub releases in Discord `#announcements`. It does not send messages for commits, pull requests, or draft releases and does not backfill historical versions. It requires both deployment to the default `Stable` branch and a configured `DISCORD_RELEASE_WEBHOOK` Actions secret. Until both are in place, GitHub Releases is the authoritative source.
+Avoid routine `@everyone` mentions. Announce only important releases, security alerts or material service changes; ordinary dev updates belong in `#dev-updates`.
 
-VaultSync 1.9 system recovery is still under development; the current stable application does not provide full-disk bootable recovery.
+## Getting useful support faster
+
+For a public question, beta report or private ticket include the following **without sensitive details**:
+
+- VaultSync version/build and installation channel.
+- Operating system and, for a network issue, destination type (local disk, external drive, pre-mounted SMB/NFS, etc.).
+- Exact steps to reproduce; what you expected and what actually happened.
+- The status shown in the app (completed, failed, attention), plus safe screenshots or redacted logs.
+- Whether you tested with disposable files and whether the outcome was a **read-only drill**, **restore preview**, or **completed real restore**.
+
+For reproducible reports, prefer the [appropriate GitHub issue form](https://github.com/ATAC-Helicopter/VaultSync/issues/new/choose), even if the conversation started on Discord. Do not publish private ticket transcripts or private logs to prove a point.
+
+## Beta testing and Recovery Lab
+
+- The **desktop app** remains available for Windows, macOS and Linux independently of when system-disk recovery qualifies on each platform.
+- The **1.9 system recovery** roadmap is staged by **qualified platforms and disk profiles**; development discussions are not evidence that a public beta or system recovery is available.
+- Test only published, explicitly labeled assets or accurately identify a source/dev build. Never use live disks or production backups for destructive recovery experiments.
+- Start with [Recovery Lab v1](wiki/Recovery-Lab.md): three synthetic text files, a local backup, a read-only drill, then a real restore **only if the UI supports an independent empty target**. Report the precise result, including tests that could not safely be completed.
+
+When a recurring issue has a confirmed, non-sensitive solution, maintainers should add it to [Troubleshooting](wiki/Troubleshooting.md), [FAQ](wiki/FAQ.md) or a relevant wiki guide. This ensures answers remain discoverable outside Discord.
+
+## Community expectations
+
+- See the [Code of Conduct](../CODE_OF_CONDUCT.md) and [Privacy](PRIVACY.md).
+- Never assume that a channel response is guaranteed. Volunteer/maintainer support has no service-level commitment.
+- Server membership, role selections and ticket usage must not be treated as a substitute for product adoption or safe-recovery evidence.
+
+## GitHub-to-Discord release notifications
+
+The optional [release notification workflow](discord-release-notifications.md) announces **newly published** GitHub releases to Discord `#announcements`. It does not announce commits, pull requests or drafts and does not backfill history. It requires integration on the release-publishing branch and a configured `DISCORD_RELEASE_WEBHOOK` Actions secret. Until verified, GitHub Releases remains the authoritative source.
