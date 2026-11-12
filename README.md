@@ -281,6 +281,8 @@ sudo xattr -dr com.apple.quarantine "/Applications/VaultSync.app"
 
 The desktop application provides guided setup and does not require CLI commands.
 
+For a **safe first verification exercise**, use the [Recovery Lab v1](docs/wiki/Recovery-Lab.md): back up synthetic data, run a read-only drill, and restore into a separate empty folder if supported by your build. For public support Forums, private tickets or beta participation, see [Community and Support](docs/COMMUNITY.md); joining Discord is optional.
+
 ---
 
 ## Network storage
