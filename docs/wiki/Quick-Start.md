@@ -48,6 +48,12 @@ every page, see [Guided tour](Guided-Tour.md).
 
 ![Recovery drill evidence for a tested restore point](../images/Recovery_Drill.png)
 
+## Verify with a safe practice run
+
+If this is your first backup, use the [Recovery Lab v1](Recovery-Lab.md) with disposable text files. It separates a read-only drill from a real restore to an independent target; do **not** restore into a real project to practice.
+
+For questions, bug reports and private help, see [Community and Support](../COMMUNITY.md). Discord is optional.
+
 ## Tips
 
 - Use a local SSD for fastest backups.

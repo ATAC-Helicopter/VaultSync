@@ -5,6 +5,7 @@
 - Getting Started
   - [Installation](Installation.md)
   - [Quick start](Quick-Start.md)
+  - [Recovery Lab (safe test)](Recovery-Lab.md)
   - [Guided app tour](Guided-Tour.md)
   - [Configuration](Configuration.md)
   - [Settings reference](Settings-Reference.md)
