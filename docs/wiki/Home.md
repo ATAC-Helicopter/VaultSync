@@ -6,6 +6,7 @@ Use this wiki for user-facing workflows and troubleshooting.
 
 ## Getting Started
 - [Quick start](Quick-Start.md)
+- [Recovery Lab: test a disposable backup and restore](Recovery-Lab.md)
 - [Guided app tour](Guided-Tour.md)
 - [Installation](Installation.md)
 - [Configuration](Configuration.md)

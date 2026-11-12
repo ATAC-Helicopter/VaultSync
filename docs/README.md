@@ -6,6 +6,9 @@ Use this page as the primary index for all project documentation.
 - Product overview: [README](../README.md)
 - Documentation hub: [DOCUMENTATION](../DOCUMENTATION.md)
 - Wiki home: [VaultSync Wiki](wiki/Home.md)
+- Community help and Discord onboarding: [Community and Support](COMMUNITY.md)
+- Maintainer community schedule and privacy-safe metrics: [Community operations](COMMUNITY_OPERATIONS.md)
+- Reproducible first backup verification: [Recovery Lab v1](wiki/Recovery-Lab.md)
 - Help page (in-app target): [Help](HELP.md)
 
 ![VaultSync dashboard](images/Dashboard.png)

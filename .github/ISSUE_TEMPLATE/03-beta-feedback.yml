@@ -1,21 +1,39 @@
-name: Beta feedback
-description: Share feedback from a beta build before the stable release.
+name: Beta / pre-release feedback
+description: Share feedback from a published beta or a clearly identified source/dev build.
 title: "[Beta]: "
 labels:
   - beta
-  - release:1.8.x
 assignees:
   - ATAC-Helicopter
 body:
   - type: markdown
     attributes:
       value: |
-        Use this for beta validation notes, regressions, rough edges, and upgrade feedback. Use the crash template for hard crashes.
+        **Verify your build first.** A roadmap milestone or development post is not
+        a downloadable beta. Only report a published beta you actually ran, or
+        select "Source/dev build" below and provide the exact commit.
+        The desktop application stays supported on Windows, macOS and Linux;
+        **system-disk recovery is separately qualified by platform/profile**.
+        Never test destructive recovery on a production disk.
+        Please remove secrets, credentials, full private paths and sensitive data
+        from any screenshots, logs or support bundles before submitting.
   - type: input
     id: version
     attributes:
-      label: Beta version
-      placeholder: "For example, 1.8.7-Beta.1"
+      label: Exact build identity
+      description: Version, beta suffix if applicable, and commit/build identifier when possible.
+      placeholder: "For example, the version from Settings or vaultsync --version --json"
+    validations:
+      required: true
+  - type: dropdown
+    id: release_family
+    attributes:
+      label: Build family
+      options:
+        - Published stable 1.8.x
+        - Published 1.9.x beta (only if a downloadable asset exists)
+        - Source/dev build (not an official beta)
+        - Other / unsure
     validations:
       required: true
   - type: dropdown
@@ -43,29 +61,66 @@ body:
         - Other
     validations:
       required: true
+  - type: dropdown
+    id: capability
+    attributes:
+      label: Area tested
+      description: Select what you actually exercised, not planned capabilities.
+      options:
+        - Desktop installation, onboarding, updates or UI
+        - Project snapshots, file backup or destinations
+        - NAS / network connectivity
+        - Recovery drill, verification or restore preview
+        - Real file restore into a safe test target
+        - Linux disk/system recovery (qualified test profile only)
+        - Windows disk/system recovery (qualified test profile only)
+        - macOS disk/system recovery (qualified test profile only)
+        - CLI / scripting / JSON
+        - Other
+    validations:
+      required: true
   - type: checkboxes
     id: checked
     attributes:
-      label: What did you test?
+      label: Checks performed
       options:
         - label: Fresh install
-        - label: Update from 1.8.0 stable
-        - label: Update from 1.8.2 beta
+        - label: Update from a prior published build
         - label: Existing projects loaded correctly
         - label: Backup completed
-        - label: Restore completed
+        - label: Recovery drill completed (read-only)
+        - label: Restore preview reviewed (read-only)
+        - label: Real restore completed to a separate disposable target
+        - label: Recovery Lab v1 synthetic-data protocol followed
         - label: Metadata import/reconciliation completed
-        - label: Tray/startup behavior
-        - label: Uninstall/reinstall
-  - type: textarea
-    id: feedback
+        - label: Tray/startup behavior tested
+        - label: Uninstall/reinstall tested
+  - type: dropdown
+    id: outcome
     attributes:
-      label: Feedback
-      description: What felt good, broken, confusing, slower, or improved?
+      label: Outcome
+      options:
+        - Passed
+        - Passed with warnings / limitations
+        - Failed / regression
+        - Not completed / blocked
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction and observed behavior
+      description: What did you do, what did you expect, and what actually happened? Include platform/profile constraints when testing a qualified recovery path.
+      placeholder: "Steps, expected result, actual result, safe test data used"
     validations:
       required: true
   - type: textarea
     id: diagnostics
     attributes:
-      label: Diagnostics or screenshots
-      description: Attach logs/screenshots when the feedback is about errors, speed, UI, or update behavior.
+      label: Sanitized evidence (optional)
+      description: Attach redacted logs, version output or screenshots. Never include credentials, tokens, encryption/recovery keys, private paths, personal files or disk images.
+  - type: markdown
+    attributes:
+      value: |
+        Optional first test: [Recovery Lab v1](https://github.com/ATAC-Helicopter/VaultSync/blob/Dev/docs/wiki/Recovery-Lab.md).
+        Security vulnerabilities belong in the [private reporting workflow](https://github.com/ATAC-Helicopter/VaultSync/security/policy).
