@@ -891,6 +891,23 @@ compatibility, and smoke tests on all supported operating systems.
 
 ---
 
+## 1.8.10 — Security and dependency maintenance
+
+**Status:** Planned maintenance-only release; no public artifact qualified.
+**Stable target:** 2026-11-14
+**Current stable:** 1.8.9 (2026-09-16)
+**Working branch:** `release/1.8.10` (prepared from `Stable`)
+**Previous version:** 1.8.9
+**Scope:** Serviced .NET 10 runtime/SDK, reviewed dependency and workflow updates, and independently validated safety maintenance. No 1.9 system recovery features or format changes.
+
+The planning date does not override release qualification, real-platform testing,
+updater predecessor verification, publication provenance or the confidential
+reporting and coordinated-disclosure process in `SECURITY.md`.
+All required acceptance evidence remains open until independently verified.
+See [candidate contract](docs/RELEASE_1.8.10.md).
+
+---
+
 ## 1.8.9 — Bug fixes and everyday polish
 
 **Status:** Implementation integrated into Stable; unreleased draft preparation and deferred qualification remain

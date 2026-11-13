@@ -1,9 +1,9 @@
 ﻿# Changelog
 ## [1.8.10] - Unreleased
 ### Security
-- Security hardening and serviced runtime updates are under verification.
+- [VS-1997] Service the .NET 10 runtime and Microsoft managed packages; independent security qualification remains pending.
 ### Changed
-- Update supported rendering and test dependencies after compatibility verification.
+- [VS-1997] Refresh test tooling and pinned CI actions, and align the managed and native rendering packages; cross-platform compatibility qualification remains pending.
 
 ## [1.8.9] - 2026-09-16
 ### Maintenance
