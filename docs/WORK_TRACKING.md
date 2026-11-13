@@ -193,3 +193,100 @@ access to missing owners. Counted GraphQL enumeration independently returned all
 569 issues and 170 PRs before the new tracker ticket was created. This identifies
 an observed enumeration failure, not a proven service/CLI root cause. See
 [source-bound evidence](release-evidence/1.9-tracking-cursors-2026-10-22.md).
+
+## Automatic GitHub Issue classification and ID assignment
+
+The repository's `.github/workflows/issue-auto-triage.yml` reacts to new/edited/labeled,
+reopened and closed Issues; a daily scheduled reconciliation can recover missed
+ID events from a burst, processing up to five accepted unnumbered Issues per run.
+Maintainers can also use `workflow_dispatch` with an
+existing issue number (for example #843). GitHub only executes `issues` workflows
+when their YAML is present on the **default branch** (`Stable`). A workflow
+merged only into a release-preparation branch is not active yet.
+
+- Issue Forms already label bug reports (`bug`) and feature requests
+  (`enhancement`). The workflow adds `kind:bug` or `kind:feature` when available;
+  explicit `kind:change`, `kind:maintenance` and `kind:security` also map to `VS`.
+  It never guesses work type from untrusted issue prose. Mixed types fail closed.
+- Unclassified feedback and support do **not** receive invented engineering IDs.
+- Accepted issues with an exact release target but no priority default to the
+  repository's preliminary `priority:p2` label where available; maintainers must
+  still validate it against the roadmap.
+- Open issues without a status receive `status:todo`; closed issues receive
+  `status:done` and reopened issues return to Todo unless independently retriaged.
+  Existing In progress labels remain unchanged.
+- The work ID is allocated only when the issue has **exactly one target-release
+  label**, with an exact version, e.g. `release:1.9.0`; `release:1.8.x` from older
+  public report forms is not a target release. The maintainer must first decide
+  where a reported issue belongs and remove stale/conflicting release labels.
+  Canonical IDs already leading issue titles are preserved, not renumbered.
+- The allocator reuses the complete, fail-closed local/remote audit in
+  `scripts/work_tracking.py` (Issues, PRs, roadmap and changelog), then prefixes
+  the issue title with the next `BUG-19xxx` or `VS-19xx` owning ID as applicable.
+  Changes use the same IDs in their PR and changelog, not a second identifier.
+- GitHub Actions uses a single `concurrency` group for this workflow's ID
+  allocations. Independent local `./dev` operations do **not** participate in
+  that lock; use the audit and review ID ownership before integration.
+- Automation never edits `ROADMAP.md`, `CHANGELOG.md`, the release manifest, or
+  protected release refs; the implementing contributor still maintains the
+  release-specific records under review.
+
+### Project #7: built-in automatic enrollment
+
+In the existing `ATAC-Helicopter` Project #7, use
+**Project → … → Workflows → Auto-add to project → Edit**; choose the
+`ATAC-Helicopter/VaultSync` repository and set the filter to `is:issue`.
+**Save and turn on workflow.** This is the supported GitHub-native solution for
+future Issue additions and does not require a personal token. Where offered,
+enable the built-in Item added → Todo, Item closed → Done, Item reopened → Todo
+workflows. Preserve release-gated issues as open/In progress until their actual
+closure criteria are satisfied.
+
+**Auto-add is not retroactive.** Add #843 and any existing untracked Issues
+separately, or reconcile them through `./dev adopt` where permissions allow.
+The CLI's Project insertion is best-effort and warns if Project write access is
+missing; never treat that warning as a successful insertion.
+
+The repository Issue workflow handles labels, preliminary priority, maintainer
+assignment for otherwise-unassigned issues, and the release milestone when an
+exact release target is set. It never overwrites a conflicting milestone or
+changes an external contributor's existing assignment. Issues without a clear
+type remain in triage rather than receiving a fabricated Bug/VS ID.
+
+The optional `.github/workflows/project-date-sync.yml` and
+`scripts/project_date_sync.py` synchronize two date fields of **personal**
+Project #7 once all of these activation conditions are met:
+
+1. A dedicated `VAULTSYNC_PROJECT_TOKEN` repository secret authorizes **read
+   and write** to the owner's GitHub Projects v2. A normal `GITHUB_TOKEN`
+   cannot write personal Project fields.
+2. The workflow exists on the repository's default branch. Before that, its
+   event and scheduled triggers are not active.
+3. `Start date` and `Completed on` fields exist as Date fields in Project #7.
+
+The sync reads a **complete** paginated Project snapshot. For new issues created
+on/after 2026-11-13, it sets the initially missing Start date when it first
+observes `In progress`. Moving a status manually on the personal Project board
+is detected by the **daily** synchronization, not instantly; the recorded day
+is the first observation, not an invented historical start. Older issues need
+review of their real start dates.
+
+For `Done` issues, it sets Completed on to the issue's actual GitHub close
+date; when Project says Done but the issue is still open, it **refuses** to
+invent a completion. On reopening, it clears stale Completed on values for
+non-Done items. No change ever touches Target date, closure state, roadmap
+priority, branch protections, Project status, or release-gated acceptance.
+Existing release-gated issues must remain Open/In progress until shipped.
+
+This date sync is opt-in and unverified against the live Project until the
+secret and workflow are activated. Continue using `./dev audit --release 1.9.0`
+for alignment, since neither automated issue triage nor date sync currently
+fills Priority/Area/Release and Target date Project fields. Project enrollment
+still requires the built-in Auto-add setting or authorized `./dev adopt`.
+
+
+For a 1.9.0 external contribution, first set the exact release target,
+classification and priority on its Issue, then let the workflow assign its ID.
+Contributors branch from `work/1.9-roadmap-realignment` and use
+`./dev pr --base work/1.9-roadmap-realignment --draft --keep-open` to submit
+a separate reviewed PR for inclusion in the consolidated release PR #736.

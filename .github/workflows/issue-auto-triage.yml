@@ -1,0 +1,71 @@
+name: Issue classification and canonical IDs
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled, reopened, closed]
+  schedule:
+    - cron: "23 3 * * *" # UTC daily repair of replaced/unprocessed issue events
+  pull_request:
+    branches: ["work/1.9-roadmap-realignment", "Dev", "Stable"]
+    paths:
+      - ".github/workflows/issue-auto-triage.yml"
+      - "scripts/issue_auto_triage.py"
+      - "scripts/tests/test_issue_auto_triage.py"
+      - "scripts/project_date_sync.py"
+      - "scripts/tests/test_project_date_sync.py"
+      - ".github/workflows/project-date-sync.yml"
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Existing issue to reconcile (for example 843)
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+# ID assignment must be serialized across all issue events in this workflow.
+# It cannot serialize independent local ./dev allocations; review the audit.
+concurrency:
+  group: vaultsync-canonical-issue-ids
+  cancel-in-progress: false
+
+jobs:
+  policy-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.x"
+      - name: Test issue classification and release-ID policy
+        run: |
+          python3 -m unittest discover -s scripts/tests -p "test_issue_auto_triage.py" -v
+          python3 -m unittest discover -s scripts/tests -p "test_project_date_sync.py" -v
+
+  triage:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository scripts from trusted default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.x"
+
+      - name: Classify and allocate if target release is explicit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number || '0' }}
+        run: python3 scripts/issue_auto_triage.py
