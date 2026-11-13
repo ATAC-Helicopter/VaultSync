@@ -12,6 +12,7 @@ Use this page as the primary index for all project documentation.
 
 ## Planning and Release
 - Roadmap: [ROADMAP](../ROADMAP.md)
+- **Research only:** [Post-1.9 modular platform architecture and internal foundation map](platform/README.md)
 - Recovery Horizon sequencing and post-1.9 decision gates:
   [Recovery Horizon strategy](RECOVERY_HORIZON_STRATEGY.md)
 - Changelog: [CHANGELOG](../CHANGELOG.md)
