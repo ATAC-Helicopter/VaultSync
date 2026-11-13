@@ -43,12 +43,15 @@ def classify_kind(labels: set[str]) -> str | None:
 def release_family(labels: set[str]) -> tuple[int, int] | None:
     """An exact, sole target-release label is required for an owning work ID."""
     tagged = sorted(label for label in labels if label.startswith("release:"))
-    if len(tagged) != 1:
+    exact = [EXACT_RELEASE.fullmatch(label) for label in tagged]
+    matches = [m for m in exact if m]
+    if len(matches) != 1:
         return None
-    match = EXACT_RELEASE.fullmatch(tagged[0])
-    if not match:
+    release = (int(matches[0].group(1)), int(matches[0].group(2)))
+    family = f"release:{release[0]}.{release[1]}.x"
+    if any(label != family and not EXACT_RELEASE.fullmatch(label) for label in tagged):
         return None
-    return (int(match.group(1)), int(match.group(2)))
+    return release
 
 
 def owning_id(title: str) -> str | None:
@@ -71,27 +74,45 @@ def clean_title(title: str) -> str:
     return FORM_PREFIX.sub("", title).strip()
 
 
+def classify_form_title(title: str) -> str | None:
+    """Explicit form prefixes are reliable fallbacks when labels were removed."""
+    match = FORM_PREFIX.match(title)
+    if not match:
+        return None
+    prefix = match.group(0).lower()
+    if prefix.startswith("[feature]"):
+        return "feature"
+    return "bug"
+
+
+def required_assignee(assignees: list[dict[str, str]], fallback: str) -> str | None:
+    """Preserve existing ownership; assign a maintainer only for unowned work."""
+    return fallback if not assignees else None
+
+
 def run_triage(issue_number: int) -> None:
     root = repo_root()
     repository = github_repo(root)
     config = load_config(root)
     response = run(
         ["gh", "issue", "view", str(issue_number), "-R", repository,
-         "--json", "number,title,labels,state"], cwd=root,
+         "--json", "number,title,labels,state,assignees,milestone"], cwd=root,
     )
     issue = json.loads(response.stdout)
     title = issue["title"]
     labels = {entry["name"].lower() for entry in issue["labels"]}
     state = issue["state"]
     kind = classify_kind(labels)
-    if kind is None:
-        print("Unclassified issue: no ID or speculative work type assigned.")
-        return
+    title_kind = classify_form_title(title)
+    if kind and title_kind and kind != title_kind:
+        raise TrackingError("Issue Form title and labels disagree on work type.")
+    kind = kind or title_kind
 
     status = target_status(labels, state)
     available = {label.lower(): label for label in labels_available(root)}
     edits = ["gh", "issue", "edit", str(issue_number), "-R", repository]
-    to_add = [label for label in TYPES[kind] if label not in labels and label in available]
+    to_add = ([label for label in TYPES[kind] if label not in labels and label in available]
+              if kind else [])
     if status not in labels and status in available:
         to_add.append(status)
     to_remove = sorted((labels & STATUS_LABELS) - {status})
@@ -104,6 +125,25 @@ def run_triage(issue_number: int) -> None:
         edits += ["--add-label", available[label]]
     for label in to_remove:
         edits += ["--remove-label", available.get(label, label)]
+    if required_assignee(issue.get("assignees", []), config.get("project_owner", "ATAC-Helicopter")):
+        edits += ["--add-assignee", config.get("project_owner", "ATAC-Helicopter")]
+
+    # Set the correct release milestone without silently overwriting a conflicting one.
+    release = release_family(labels)
+    if release:
+        matches = [label for label in labels if EXACT_RELEASE.fullmatch(label)]
+        target = matches[0].split(":", 1)[1]
+        milestone = issue.get("milestone")
+        if milestone and milestone.get("title") != target:
+            raise TrackingError(f"Existing milestone conflicts with {target}.")
+        if not milestone:
+            edits += ["--milestone", target]
+
+    if kind is None:
+        print("Awaiting explicit Bug/Feature type; status and assignee only.")
+        if len(edits) > 6:
+            run(edits, cwd=root)
+        return
 
     current_id = owning_id(title)
     if current_id:
@@ -111,7 +151,6 @@ def run_triage(issue_number: int) -> None:
         if not current_id.startswith(prefix):
             raise TrackingError("Canonical title ID conflicts with issue type.")
     elif state.upper() != "CLOSED":
-        release = release_family(labels)
         if release is not None:
             type_config = config["types"][kind]
             used = collect_used_ids(root, config, type_config["id_prefix"])
