@@ -56,6 +56,8 @@ Use this page as the primary index for all project documentation.
 - Bug reporting: [Reporting Bugs](wiki/Reporting-Bugs.md)
 
 ## Contribution and Governance
+- Consolidated contributor review, merge, Project, security, and efficient CI:
+  [Engineering workflow](ENGINEERING_WORKFLOW.md)
 - Contributing: [CONTRIBUTING](../CONTRIBUTING.md)
 - Repository task routing and role limits: [routing contract](CODEX_ROUTING.md)
 - Local validation storage and cleanup: [workspace lifecycle](VALIDATION_WORKSPACES.md)
