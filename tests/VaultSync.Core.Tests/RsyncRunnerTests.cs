@@ -56,6 +56,43 @@ public sealed class RsyncRunnerTests
     }
 
     [Fact]
+    public async Task SyncAsync_WhenToolCannotStart_DoesNotLeaveExcludeFile()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var temp = new TempDirectory();
+        string source = Path.Combine(temp.Path, "source");
+        string destination = Path.Combine(temp.Path, "destination");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(destination);
+
+        string marker = $"vaultsync-rsync-cleanup-{Guid.NewGuid():N}.tmp";
+        File.WriteAllText(Path.Combine(source, ".vaultsyncignore"), marker + "\n");
+
+        var project = new Project
+        {
+            Id = 44,
+            Name = "Rsync failed-start cleanup test",
+            RootPath = source,
+            Preset = string.Empty
+        };
+
+        // The test-owned path is isolated: no shared-temp directory enumeration,
+        // unrelated file reads, or permission-sensitive cleanup is required.
+        string excludePath = Path.Combine(temp.Path, "vaultsync_exclude_owned.txt");
+        var runner = new RsyncRunner(
+            useWholeFile: true,
+            rsyncPath: Path.Combine(temp.Path, "missing-rsync"),
+            excludeFilePathFactory: () => excludePath);
+
+        Assert.False(File.Exists(excludePath));
+        await Assert.ThrowsAsync<System.ComponentModel.Win32Exception>(() =>
+            runner.SyncAsync(project, destination, dryRun: true, ct: CancellationToken.None));
+        Assert.False(File.Exists(excludePath));
+    }
+
+    [Fact]
     public async Task SyncAsync_UsesQualifiedToolAndReportsStreamedProgress()
     {
         if (OperatingSystem.IsWindows())
