@@ -24,7 +24,7 @@
     },
     "tagline": "Security and dependency maintenance.",
     "releaseBranch": "release/1.8.10",
-    "integrationBranch": "release/1.8.10",
+    "integrationBranch": "Dev",
     "stableBranch": "Stable"
   },
   "currentStable": {
