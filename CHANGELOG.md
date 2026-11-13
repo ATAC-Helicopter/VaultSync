@@ -1,5 +1,11 @@
 ﻿# Changelog
-## [1.8.9] - Unreleased
+## [1.8.10] - Unreleased
+### Security
+- [VS-1997] Update the supported .NET security runtime and Microsoft framework packages.
+### Changed
+- [VS-1997] Refresh pinned build, CI, and test dependencies for release maintenance.
+
+## [1.8.9] - 16.09.2026
 ### Maintenance
 - [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
 - [VS-1896] Clear static-analysis findings and restore the Sonar coverage gate.
