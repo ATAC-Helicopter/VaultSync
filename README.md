@@ -1,15 +1,15 @@
 # Download stats for ATAC-Helicopter/VaultSync
 
-Captured at: `2026-11-12T10:58:53Z`
+Captured at: `2026-11-13T10:53:30Z`
 
 - Releases: **53**
 - Assets: **499**
-- Total asset downloads: **3872**
-- Change since previous snapshot: **+19**
+- Total asset downloads: **3880**
+- Change since previous snapshot: **+8**
 
 ## Highlights
 
-- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **658** downloads (+14)
+- Latest stable: **VaultSync 1.8.9 — Keep your place. Work with clarity.** with **666** downloads (+8)
 - Latest prerelease: **VaultSync 1.8.5 Beta 1** with **21** downloads (0)
 
 ## Top assets
@@ -18,14 +18,14 @@ Captured at: `2026-11-12T10:58:53Z`
 |---|---|---:|---:|
 | vaultsync-patch-windows.json | `v1.8.2` | 186 | 0 |
 | vaultsync-patch-windows.json | `v1.8.1` | 179 | 0 |
-| VaultSync-Setup-1.8.9.exe | `v1.8.9` | 152 | +4 |
+| VaultSync-Setup-1.8.9.exe | `v1.8.9` | 153 | +1 |
 | vaultsync-patch-linux-x64.json | `v1.8.6` | 135 | 0 |
 | vaultsync-patch-windows.json | `v1.8.6` | 133 | 0 |
 | vaultsync-patch-windows.json | `v1.8.3` | 121 | 0 |
+| VaultSync-1.8.9-macos-intel.dmg | `v1.8.9` | 100 | +1 |
 | vaultsync-patch-windows.json | `v1.8.9` | 100 | 0 |
-| VaultSync-1.8.9-macos-intel.dmg | `v1.8.9` | 99 | +2 |
 | vaultsync-patch-windows.json | `v1.8.7` | 91 | 0 |
-| VaultSync-1.8.9-macos-apple-silicon.dmg | `v1.8.9` | 86 | +3 |
+| VaultSync-1.8.9-macos-apple-silicon.dmg | `v1.8.9` | 87 | +1 |
 
 ## By release
 
@@ -33,21 +33,21 @@ Captured at: `2026-11-12T10:58:53Z`
 
 - Tag: `v1.8.9`
 - Published: `2026-09-16T10:06:22Z`
-- Total downloads: **658**
-- Delta: **+14**
+- Total downloads: **666**
+- Delta: **+8**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| VaultSync-Setup-1.8.9.exe | 152 | +4 | 64315420 |
+| VaultSync-Setup-1.8.9.exe | 153 | +1 | 64315420 |
+| VaultSync-1.8.9-macos-intel.dmg | 100 | +1 | 58169854 |
 | vaultsync-patch-windows.json | 100 | 0 | 57975 |
-| VaultSync-1.8.9-macos-intel.dmg | 99 | +2 | 58169854 |
-| VaultSync-1.8.9-macos-apple-silicon.dmg | 86 | +3 | 55235061 |
-| VaultSync-1.8.9-linux-x64.AppImage | 33 | 0 | 52630720 |
-| VaultSync-1.8.9-linux-arm64.deb | 23 | +1 | 39075410 |
-| VaultSync-1.8.9-linux-x64.tar.gz | 23 | +1 | 52350407 |
+| VaultSync-1.8.9-macos-apple-silicon.dmg | 87 | +1 | 55235061 |
+| VaultSync-1.8.9-linux-x64.AppImage | 36 | +3 | 52630720 |
+| VaultSync-1.8.9-linux-x64.tar.gz | 24 | +1 | 52350407 |
+| VaultSync-1.8.9-linux-arm64.deb | 23 | 0 | 39075410 |
+| VaultSync-1.8.9-linux-x64.deb | 22 | +1 | 41556214 |
 | vaultsync-release-manifest.json | 22 | 0 | 7399 |
-| VaultSync-1.8.9-linux-x64.deb | 21 | +1 | 41556214 |
-| VaultSync-1.8.9-linux-arm64.tar.gz | 20 | +2 | 50026263 |
+| VaultSync-1.8.9-linux-arm64.tar.gz | 20 | 0 | 50026263 |
 | vaultsync-patch-macos-intel.zip | 20 | 0 | 51703031 |
 | vaultsync-patch-macos-apple-silicon.zip | 15 | 0 | 48686145 |
 | vaultsync-patch-linux-x64.zip | 14 | 0 | 52566967 |
@@ -391,11 +391,11 @@ Captured at: `2026-11-12T10:58:53Z`
 - Tag: `v1.7.4`
 - Published: `2026-05-20T14:58:51Z`
 - Total downloads: **66**
-- Delta: **+2**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| VaultSync-1.7.4-macos-apple-silicon.dmg | 11 | +2 | 57799870 |
+| VaultSync-1.7.4-macos-apple-silicon.dmg | 11 | 0 | 57799870 |
 | VaultSync-1.7.4-macos-intel.dmg | 9 | 0 | 59678836 |
 | vaultsync-patch-macos-intel.zip | 8 | 0 | 53237512 |
 | vaultsync-patch-macos-apple-silicon.zip | 6 | 0 | 50962418 |
@@ -767,11 +767,11 @@ Captured at: `2026-11-12T10:58:53Z`
 - Tag: `v1.3.2`
 - Published: `2026-01-18T19:59:14Z`
 - Total downloads: **42**
-- Delta: **+2**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
-| VaultSync-1.3.2-macos-apple-silicon.dmg | 8 | +2 | 54621876 |
+| VaultSync-1.3.2-macos-apple-silicon.dmg | 8 | 0 | 54621876 |
 | vaultsync-patch-windows.zip | 6 | 0 | 93000171 |
 | VaultSync-Setup-1.3.2.exe | 6 | 0 | 66778414 |
 | VaultSync-1.3.2-macos-intel.dmg | 5 | 0 | 55914890 |
@@ -937,12 +937,12 @@ Captured at: `2026-11-12T10:58:53Z`
 - Tag: `v0.9.7.2`
 - Published: `2025-12-04T13:15:10Z`
 - Total downloads: **14**
-- Delta: **+1**
+- Delta: **0**
 
 | Asset | Downloads | Delta | Size (bytes) |
 |---|---:|---:|---:|
 | vaultsync-patch-windows.json | 5 | 0 | 26278 |
-| VaultSync-Setup-0.9.7.2.exe | 5 | +1 | 16405349 |
+| VaultSync-Setup-0.9.7.2.exe | 5 | 0 | 16405349 |
 | vaultsync-patch-windows.zip | 4 | 0 | 21326330 |
 
 ### V0.9.7.1 BETA
