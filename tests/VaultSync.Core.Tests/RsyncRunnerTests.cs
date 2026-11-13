@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Models;
@@ -53,6 +54,58 @@ public sealed class RsyncRunnerTests
                 destination,
                 dryRun: true,
                 ct: cancellation.Token));
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenToolCannotStart_DoesNotLeaveExcludeFile()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        using var temp = new TempDirectory();
+        string source = Path.Combine(temp.Path, "source");
+        string destination = Path.Combine(temp.Path, "destination");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(destination);
+
+        string marker = $"vaultsync-rsync-cleanup-{Guid.NewGuid():N}.tmp";
+        File.WriteAllText(Path.Combine(source, ".vaultsyncignore"), marker + "\n");
+
+        var project = new Project
+        {
+            Id = 44,
+            Name = "Rsync failed-start cleanup test",
+            RootPath = source,
+            Preset = string.Empty
+        };
+
+        string[] OwnedExcludeFiles() =>
+            Directory.EnumerateFiles(Path.GetTempPath(), "vaultsync_exclude_*.txt")
+                .Where(path =>
+                {
+                    try
+                    {
+                        return File.ReadAllText(path).Contains(marker, StringComparison.Ordinal);
+                    }
+                    catch (IOException)
+                    {
+                        return false;
+                    }
+                })
+                .ToArray();
+
+        try
+        {
+            await Assert.ThrowsAsync<System.ComponentModel.Win32Exception>(() =>
+                new RsyncRunner(rsyncPath: Path.Combine(temp.Path, "missing-rsync")).SyncAsync(
+                    project, destination, dryRun: true, ct: CancellationToken.None));
+            Assert.Empty(OwnedExcludeFiles());
+        }
+        finally
+        {
+            foreach (string path in OwnedExcludeFiles())
+                File.Delete(path);
+        }
     }
 
     [Fact]
