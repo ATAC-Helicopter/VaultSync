@@ -5,6 +5,7 @@ Use this page as the primary index for all project documentation.
 ## Start Here
 - Product overview: [README](../README.md)
 - Documentation hub: [DOCUMENTATION](../DOCUMENTATION.md)
+- [Media and community kit](MEDIA_KIT.md)
 - Wiki home: [VaultSync Wiki](wiki/Home.md)
 - Help page (in-app target): [Help](HELP.md)
 
