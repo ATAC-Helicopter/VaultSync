@@ -185,3 +185,8 @@ Commit/push defaults:
 Reference:
 - `DOCUMENTATION.md`
 - `docs/README.md`
+
+
+## Runtime security servicing
+
+Use the serviced .NET 10 SDK 10.0.404 or a later version on the same supported line. Every distributed self-contained Microsoft runtime must be at least 10.0.15, including optional framework packs. Audit with `scripts/runtime_pack_audit.py` and preserve package advisories, exact artifact evidence, protected branch review and publication gates. See `docs/RUNTIME_SECURITY.md`. Refs #787 / VS-1997.
