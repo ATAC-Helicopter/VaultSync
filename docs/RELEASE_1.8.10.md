@@ -14,6 +14,7 @@ This is a **pre-release preparation**, not a published update or announcement th
 ## Pending release gates
 
 - [ ] Review all changed dependency lock/asset graphs on Windows, Linux and macOS; verify package availability.
+- [ ] Qualify SkiaSharp 4.156.0 / HarfBuzzSharp 14.4.0.100 as a complete cross-platform managed/native group, including rendering, font shaping, graphics fallback, RAW/DNG codec expectations and binary ABI tests; revert the rendering group if any platform fails.
 - [ ] Run targeted backup safety, verification, restore, updater and metadata regression tests with disposable fixtures.
 - [ ] Validate final self-contained packages embed only serviced Microsoft runtimes, including optional framework references, at >=10.0.15.
 - [ ] Verify updater's allowed 1.8.9 predecessor and full-installer fallback; do not infer patch compatibility from version strings alone.
