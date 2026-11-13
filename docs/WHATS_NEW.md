@@ -1,5 +1,9 @@
 # What's New
 
+## [1.8.10]
+
+VaultSync 1.8.10 is a planned security and dependency maintenance patch on the 1.8.9 stable baseline. It does not include 1.9 recovery features. Public release notes and platform support claims remain pending validation.
+
 ## [1.8.9]
 
 VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
