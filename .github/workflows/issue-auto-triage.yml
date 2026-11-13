@@ -1,0 +1,43 @@
+name: Issue classification and canonical IDs
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Existing issue to reconcile (for example 843)
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+# ID assignment must be serialized across all issue events in this workflow.
+# It cannot serialize independent local ./dev allocations; review the audit.
+concurrency:
+  group: vaultsync-canonical-issue-ids
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository scripts from trusted default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.x"
+
+      - name: Classify and allocate if target release is explicit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+        run: python3 scripts/issue_auto_triage.py
