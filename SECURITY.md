@@ -17,6 +17,27 @@ Please include:
 - impact summary
 - any suggested mitigation
 
+## Coordinated private remediation
+
+Maintainers triage sensitive findings using a **draft private GitHub Security
+Advisory**. Reproduction material, exploit-sensitive tests and patch history
+stay in the advisory or its **temporary private fork**, never in a public PR,
+Issue, Actions log, changelog, or open community channel. A restricted Discord
+channel may be used for coordination, not as the canonical evidence store.
+
+Reporters can be invited as advisory collaborators to review independently,
+without receiving general repository write/admin privileges. Confirm affected
+shipped versions and trust boundaries before assigning exploitability or
+severity; distinguish filesystem-local prerequisites from remotely reachable
+attacks. Validate rejection cases and positive backup behavior on disposable
+data, assess symlinks and race conditions, and qualify relevant OS platforms.
+Unverified conditions must remain explicit. After private review, coordinate
+integration, qualified release availability, public disclosure and attribution;
+only then propagate applicable fixes to other supported branches. A private
+test pass does not mean the fix has shipped.
+
+See [engineering workflow](docs/ENGINEERING_WORKFLOW.md).
+
 ## Response Policy
 - We acknowledge valid reports as soon as possible.
 - We triage severity and provide an estimated remediation window.
