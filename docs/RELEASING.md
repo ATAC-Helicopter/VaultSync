@@ -2,6 +2,22 @@
 
 This document defines the current release packaging flow.
 
+## Promotion and private remediation
+
+Use merge commits preserving original work on every non-Stable integration
+branch. Stable's **first-parent history** contains only qualified release or
+hotfix promotion merge commits; the complete Git graph retains incoming
+individual commits. Do not squash, rebase, fast-forward or push standalone
+changes directly to Stable. Release promotion requires its independent checks.
+
+Privately reported vulnerabilities belong in a draft private GitHub Security
+Advisory, with confidential patches and reproduction held in its temporary
+private fork until coordinated disclosure. Target the shipped stable lineage
+rather than adding unreleased 1.9 features to a maintenance release. A small
+regression pass alone cannot qualify a public update: native Windows, macOS,
+Linux artifacts, updater/rollback and provenance/review gates remain required.
+See [engineering workflow](ENGINEERING_WORKFLOW.md) and [security](../SECURITY.md).
+
 ## Release cadence
 
 - Minor releases target seven days and have a fourteen-day maximum from the
@@ -17,7 +33,7 @@ This document defines the current release packaging flow.
   family releases remain unscheduled until their predecessor is qualified.
 
 ## Prerequisites
-- Serviced .NET 10 SDK from `global.json` (currently 10.0.402), with embedded
+- Serviced .NET 10 SDK from `global.json` (currently 10.0.404 on the 1.9 preparation branch), with embedded
   runtime verification against the [runtime security contract](RUNTIME_SECURITY.md)
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
