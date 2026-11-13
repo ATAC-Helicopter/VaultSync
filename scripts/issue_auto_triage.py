@@ -99,7 +99,7 @@ def run_triage(issue_number: int) -> None:
     if len(priorities) > 1:
         raise TrackingError("Conflicting priority labels; maintainer reconciliation required.")
     if not priorities and release_family(labels) is not None and "priority:p2" in available:
-        to_add.append("priority:p2")
+        to_add.append(available["priority:p2"])
     for label in to_add:
         edits += ["--add-label", available[label]]
     for label in to_remove:
@@ -142,7 +142,12 @@ def reconcile_pending(limit: int = 5) -> None:
         if item["state"] != "open" or owning_id(item["title"]):
             continue
         labels = {entry["name"].lower() for entry in item["labels"]}
-        if classify_kind(labels) and release_family(labels) is not None:
+        try:
+            kind = classify_kind(labels)
+        except TrackingError:
+            print(f"Skipping ambiguous issue #{item['number']} during reconciliation.")
+            continue
+        if kind and release_family(labels) is not None:
             candidates.append(item["number"])
     for number in sorted(candidates)[:limit]:
         run_triage(number)
