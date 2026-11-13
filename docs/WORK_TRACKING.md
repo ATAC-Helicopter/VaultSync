@@ -193,43 +193,49 @@ access to missing owners. Counted GraphQL enumeration independently returned all
 569 issues and 170 PRs before the new tracker ticket was created. This identifies
 an observed enumeration failure, not a proven service/CLI root cause. See
 [source-bound evidence](release-evidence/1.9-tracking-cursors-2026-10-22.md).
+
 ## Automatic GitHub Issue classification and ID assignment
 
-The repository's \`.github/workflows/issue-auto-triage.yml\` reacts to new/edited/labeled,
-reopened and closed Issues; maintainers can also use its \`workflow_dispatch\` with an
-existing issue number (for example #843). GitHub only executes \`issues\` workflows
-when their YAML is present on the **default branch** (\`Stable\`). A workflow
+The repository's `.github/workflows/issue-auto-triage.yml` reacts to new/edited/labeled,
+reopened and closed Issues; a daily scheduled reconciliation can recover missed
+ID events from a burst, processing up to five accepted unnumbered Issues per run.
+Maintainers can also use `workflow_dispatch` with an
+existing issue number (for example #843). GitHub only executes `issues` workflows
+when their YAML is present on the **default branch** (`Stable`). A workflow
 merged only into a release-preparation branch is not active yet.
 
-- Issue Forms already label bug reports (\`bug\`) and feature requests
-  (\`enhancement\`). The workflow adds \`kind:bug\` or \`kind:feature\` when available;
-  explicit \`kind:change\`, \`kind:maintenance\` and \`kind:security\` also map to \`VS\`.
+- Issue Forms already label bug reports (`bug`) and feature requests
+  (`enhancement`). The workflow adds `kind:bug` or `kind:feature` when available;
+  explicit `kind:change`, `kind:maintenance` and `kind:security` also map to `VS`.
   It never guesses work type from untrusted issue prose. Mixed types fail closed.
 - Unclassified feedback and support do **not** receive invented engineering IDs.
-- Open issues without a status receive \`status:todo\`; closed issues receive
-  \`status:done\` and reopened issues return to Todo unless independently retriaged.
+- Accepted issues with an exact release target but no priority default to the
+repository's preliminary `priority:p2` label where available; maintainers must
+still validate it against the roadmap.
+- Open issues without a status receive `status:todo`; closed issues receive
+  `status:done` and reopened issues return to Todo unless independently retriaged.
   Existing In progress labels remain unchanged.
 - The work ID is allocated only when the issue has **exactly one target-release
-  label**, with an exact version, e.g. \`release:1.9.0\`; \`release:1.8.x\` from older
+  label**, with an exact version, e.g. `release:1.9.0`; `release:1.8.x` from older
   public report forms is not a target release. The maintainer must first decide
   where a reported issue belongs and remove stale/conflicting release labels.
   Canonical IDs already leading issue titles are preserved, not renumbered.
 - The allocator reuses the complete, fail-closed local/remote audit in
-  \`scripts/work_tracking.py\` (Issues, PRs, roadmap and changelog), then prefixes
-  the issue title with the next \`BUG-19xxx\` or \`VS-19xx\` owning ID as applicable.
+  `scripts/work_tracking.py` (Issues, PRs, roadmap and changelog), then prefixes
+  the issue title with the next `BUG-19xxx` or `VS-19xx` owning ID as applicable.
   Changes use the same IDs in their PR and changelog, not a second identifier.
-- GitHub Actions uses a single \`concurrency\` group for this workflow's ID
-  allocations. Independent local \`./dev\` operations do **not** participate in
+- GitHub Actions uses a single `concurrency` group for this workflow's ID
+  allocations. Independent local `./dev` operations do **not** participate in
   that lock; use the audit and review ID ownership before integration.
-- Automation never edits \`ROADMAP.md\`, \`CHANGELOG.md\`, the release manifest, or
+- Automation never edits `ROADMAP.md`, `CHANGELOG.md`, the release manifest, or
   protected release refs; the implementing contributor still maintains the
   release-specific records under review.
 
 ### Project #7: built-in automatic enrollment
 
-In the existing \`ATAC-Helicopter\` Project #7, use
+In the existing `ATAC-Helicopter` Project #7, use
 **Project → … → Workflows → Auto-add to project → Edit**; choose the
-\`ATAC-Helicopter/VaultSync\` repository and set the filter to \`is:issue\`.
+`ATAC-Helicopter/VaultSync` repository and set the filter to `is:issue`.
 **Save and turn on workflow.** This is the supported GitHub-native solution for
 future Issue additions and does not require a personal token. Where offered,
 enable the built-in Item added → Todo, Item closed → Done, Item reopened → Todo
@@ -237,19 +243,19 @@ workflows. Preserve release-gated issues as open/In progress until their actual
 closure criteria are satisfied.
 
 **Auto-add is not retroactive.** Add #843 and any existing untracked Issues
-separately, or reconcile them through \`./dev adopt\` where permissions allow.
+separately, or reconcile them through `./dev adopt` where permissions allow.
 The CLI's Project insertion is best-effort and warns if Project write access is
 missing; never treat that warning as a successful insertion.
 
 Project custom fields (Priority, Release, Area, Start date, Target date,
 Completed on) are **not** automatically populated by this issue-label workflow.
-GitHub's repository-scoped \`GITHUB_TOKEN\` cannot write Project v2 fields:
+GitHub's repository-scoped `GITHUB_TOKEN` cannot write Project v2 fields:
 a separately authorized Project credential and dedicated field-sync implementation
 would be required. Until then, keep fields manually consistent and run the
 read-only release audit; do not report the board as fully synchronized.
 
 For a 1.9.0 external contribution, first set the exact release target,
 classification and priority on its Issue, then let the workflow assign its ID.
-Contributors branch from \`work/1.9-roadmap-realignment\` and use
-\`./dev pr --base work/1.9-roadmap-realignment --draft --keep-open\` to submit
+Contributors branch from `work/1.9-roadmap-realignment` and use
+`./dev pr --base work/1.9-roadmap-realignment --draft --keep-open` to submit
 a separate reviewed PR for inclusion in the consolidated release PR #736.
