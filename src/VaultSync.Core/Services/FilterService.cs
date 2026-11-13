@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -9,11 +8,6 @@ public class FilterService
     private static readonly TimeSpan s_regexTimeout = TimeSpan.FromMilliseconds(250);
     private readonly List<string> _patterns;
     private readonly List<Regex> _compiledPatterns;
-    private static readonly ConcurrentDictionary<string, CachedLines> s_linesCache = new();
-    private static readonly ConcurrentDictionary<string, CachedPresetIndex> s_presetIndexCache = new();
-
-    private sealed record CachedLines(DateTime LastWriteUtc, IReadOnlyList<string> Lines);
-    private sealed record CachedPresetIndex(DateTime LastWriteUtc, Dictionary<string, string> ById);
 
     /// <summary>
     /// True when this filter has at least one ignore rule.
@@ -58,7 +52,7 @@ public class FilterService
 
             if (!string.IsNullOrWhiteSpace(presetFile) && File.Exists(presetFile))
             {
-                IReadOnlyList<string> presetLines = ReadLinesCached(presetFile);
+                IReadOnlyList<string> presetLines = ReadLinesFresh(presetFile);
                 logger.Info($"[FilterService] Loaded {presetLines.Count} rules from preset file.");
                 patterns.AddRange(presetLines);
             }
@@ -72,7 +66,7 @@ public class FilterService
         string localIgnore = Path.Combine(projectRoot, ".vaultsyncignore");
         if (File.Exists(localIgnore))
         {
-            IReadOnlyList<string> localLines = ReadLinesCached(localIgnore);
+            IReadOnlyList<string> localLines = ReadLinesFresh(localIgnore);
             logger.Info($"[FilterService] Loaded {localLines.Count} rules from local .vaultsyncignore.");
             patterns.AddRange(localLines);
         }
@@ -105,9 +99,9 @@ public class FilterService
             if (!File.Exists(indexPath))
                 return null;
 
-            CachedPresetIndex cached = GetPresetIndex(indexPath);
+            Dictionary<string, string> byId = ReadPresetIndex(indexPath);
 
-            if (!cached.ById.TryGetValue(presetName, out string? fileName) || string.IsNullOrWhiteSpace(fileName))
+            if (!byId.TryGetValue(presetName, out string? fileName) || string.IsNullOrWhiteSpace(fileName))
                 return null;
 
             string mappedPath = Path.Combine(presetsDir, fileName);
@@ -117,17 +111,6 @@ public class FilterService
         {
             return null;
         }
-    }
-
-    private static CachedPresetIndex GetPresetIndex(string indexPath)
-    {
-        DateTime lastWrite = File.GetLastWriteTimeUtc(indexPath);
-        if (s_presetIndexCache.TryGetValue(indexPath, out CachedPresetIndex? cached) && cached.LastWriteUtc == lastWrite)
-            return cached;
-
-        cached = new CachedPresetIndex(lastWrite, ReadPresetIndex(indexPath));
-        s_presetIndexCache[indexPath] = cached;
-        return cached;
     }
 
     private static Dictionary<string, string> ReadPresetIndex(string indexPath)
@@ -195,16 +178,11 @@ public class FilterService
             .Select(l => l.Trim())
             .Where(l => l.Length > 0 && !l.StartsWith('#'));
 
-    private static IReadOnlyList<string> ReadLinesCached(string file)
-    {
-        DateTime lastWrite = File.GetLastWriteTimeUtc(file);
-        if (s_linesCache.TryGetValue(file, out CachedLines? cached) && cached.LastWriteUtc == lastWrite)
-            return cached.Lines;
-
-        var lines = ReadLines(file).ToList();
-        s_linesCache[file] = new CachedLines(lastWrite, lines);
-        return lines;
-    }
+    // The exclusion policy may change even when tools preserve file timestamps.
+    // Reading a short ignore file on each new filter construction avoids stale
+    // backup inclusion/exclusion decisions based on timestamp-only cache keys.
+    private static IReadOnlyList<string> ReadLinesFresh(string file) =>
+        ReadLines(file).ToArray();
 
     private static string Normalize(string s)
     {
