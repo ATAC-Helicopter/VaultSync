@@ -13,8 +13,8 @@ import re
 import sys
 
 from work_tracking import (
-    TrackingError, allocate_id, collect_used_ids, github_repo, labels_available,
-    load_config, repo_root, run,
+    TrackingError, allocate_id, collect_used_ids, fetch_remote_work_items,
+    github_repo, labels_available, load_config, repo_root, run,
 )
 
 OWNING_ID = re.compile(r"^\s*(BUG-\d{5,}|VS-\d{4,})(?=\s|:|$)", re.I)
@@ -95,6 +95,11 @@ def run_triage(issue_number: int) -> None:
     if status not in labels and status in available:
         to_add.append(status)
     to_remove = sorted((labels & STATUS_LABELS) - {status})
+    priorities = sorted(label for label in labels if label.startswith("priority:"))
+    if len(priorities) > 1:
+        raise TrackingError("Conflicting priority labels; maintainer reconciliation required.")
+    if not priorities and release_family(labels) is not None and "priority:p2" in available:
+        to_add.append("priority:p2")
     for label in to_add:
         edits += ["--add-label", available[label]]
     for label in to_remove:
@@ -127,11 +132,31 @@ def run_triage(issue_number: int) -> None:
         print(f"Issue #{issue_number} already consistent.")
 
 
+def reconcile_pending(limit: int = 5) -> None:
+    """Catch pending issue events GitHub Actions concurrency may have replaced."""
+    root = repo_root()
+    repository = github_repo(root)
+    all_items = fetch_remote_work_items(root, repository)
+    candidates = []
+    for item in all_items:
+        if item["state"] != "open" or owning_id(item["title"]):
+            continue
+        labels = {entry["name"].lower() for entry in item["labels"]}
+        if classify_kind(labels) and release_family(labels) is not None:
+            candidates.append(item["number"])
+    for number in sorted(candidates)[:limit]:
+        run_triage(number)
+    print(f"Reconciled up to {limit} accepted unnumbered issues ({len(candidates)} pending).")
+
+
 def main() -> int:
     raw = os.environ.get("ISSUE_NUMBER", "")
-    if not raw.isdecimal() or int(raw) < 1:
-        raise TrackingError("ISSUE_NUMBER must be a positive issue number.")
-    run_triage(int(raw))
+    if not raw.isdecimal():
+        raise TrackingError("ISSUE_NUMBER must be a nonnegative issue number.")
+    if int(raw) == 0:
+        reconcile_pending()
+    else:
+        run_triage(int(raw))
     return 0
 
 
