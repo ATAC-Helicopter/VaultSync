@@ -184,6 +184,10 @@ Examples:
 - Describe what changed and why.
 - List compatibility/migration impact if any.
 - Include validation evidence (build, tests, manual checks).
+- Label every PR with exactly one `priority:*`, one exact `release:X.Y.Z`, one
+  `status:*`, at least one `area:*`, and one `kind:*` (except consolidated release
+  umbrellas using `area:release`). Fix conflicting labels before requesting
+  a merge; the Work Tracking workflow enforces this classification.
 
 ## 6.0) Repository Workflow Standard (PR-first)
 - Standard workflow is **PR-first** (feature/fix branches into `Dev` via PR).

@@ -647,6 +647,64 @@ def cmd_pr(args: argparse.Namespace) -> int:
     return 0
 
 
+def validate_pr_label_payload(payload: dict[str, Any]) -> list[str]:
+    """Fail PR tracking when classification labels are absent or contradictory."""
+    pr = payload.get("pull_request") or {}
+    raw_labels = pr.get("labels")
+    if not isinstance(raw_labels, list) or any(
+        not isinstance(item, dict) or not isinstance(item.get("name"), str) or not item["name"]
+        for item in raw_labels
+    ):
+        return ["PR label metadata is missing or invalid."]
+
+    labels = [item["name"] for item in raw_labels]
+    errors: list[str] = []
+    if len(labels) != len(set(labels)):
+        errors.append("PR contains duplicate labels.")
+
+    kinds = [label for label in labels if label.startswith("kind:")]
+    allowed_kinds = {"kind:bug", "kind:feature", "kind:change", "kind:maintenance", "kind:security"}
+    title = pr.get("title") or ""
+    version = re.match(r"^\s*(\d+\.\d+\.\d+)\s*:", title)
+    release_preparation = bool(version and "area:release" in labels)
+    if (len(kinds) != 1 and not (release_preparation and len(kinds) == 0)) or any(
+        label not in allowed_kinds for label in kinds
+    ):
+        errors.append(
+            "PR requires exactly one valid kind:* label "
+            "(release umbrella PRs may use area:release without kind:*)."
+        )
+    if re.search(r"\bBUG-\d{5,}\b", title, flags=re.I) and kinds != ["kind:bug"]:
+        errors.append("BUG-xxxxx PR must have kind:bug.")
+
+    priorities = [label for label in labels if label.startswith("priority:")]
+    if len(priorities) != 1 or priorities[0] not in {
+        "priority:p0", "priority:p1", "priority:p2", "priority:p3"
+    }:
+        errors.append("PR requires exactly one priority:p0..p3 label.")
+
+    releases = [
+        label for label in labels
+        if re.fullmatch(r"release:\d+\.\d+\.\d+", label)
+    ]
+    if len(releases) != 1:
+        errors.append(
+            "PR requires exactly one concrete release:X.Y.Z label; "
+            "a release:X.Y.x family label alone is insufficient."
+        )
+    elif release_preparation and releases[0] != "release:" + version.group(1):
+        errors.append("Release preparation PR title and exact release label disagree.")
+
+    statuses = [label for label in labels if label.startswith("status:")]
+    if len(statuses) != 1 or statuses[0] not in {
+        "status:todo", "status:in-progress", "status:done"
+    }:
+        errors.append("PR requires exactly one recognized status:* label.")
+    if not any(label.startswith("area:") and len(label) > 5 for label in labels):
+        errors.append("PR requires at least one area:* label.")
+    return errors
+
+
 def validate_pr_payload(payload: dict[str, Any]) -> list[str]:
     pr = payload.get("pull_request") or {}
     title = pr.get("title") or ""
@@ -690,7 +748,7 @@ def cmd_check_event(args: argparse.Namespace) -> int:
     event = args.event_name or os.getenv("GITHUB_EVENT_NAME") or ""
 
     if event == "pull_request":
-        errors = validate_pr_payload(payload)
+        errors = validate_pr_payload(payload) + validate_pr_label_payload(payload)
         if errors:
             for error in errors:
                 print(f"::error::{error}")

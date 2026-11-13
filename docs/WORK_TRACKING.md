@@ -142,6 +142,18 @@ The helper creates a PR to `Dev` by default, includes the canonical ID, and link
 1. a canonical work ID;
 2. a closing/reference keyword to a GitHub issue.
 
+PRs also require complete labels: exactly one `priority:p0..p3`, exactly one
+concrete `release:X.Y.Z` (an additional family `release:X.Y.x` may coexist),
+exactly one `status:*`, at least one `area:*`, and exactly one `kind:*`.
+Consolidated release-preparation PRs with a version-prefixed title and
+`area:release` may omit `kind:*` because they aggregate several work types.
+Bug-ID PR titles must have `kind:bug`. Missing or conflicting labels fail the
+Work Tracking job; `labeled`/`unlabeled` events rerun it when metadata changes.
+The validation reads only GitHub's signed pull_request event and checks out the
+trusted base SHA, not contributor-controlled code. For protected branches,
+maintainers must configure **Tracking policy** as a required status check in
+GitHub rulesets: a workflow failure alone cannot prevent an authorized merge.
+
 Direct pushes to every branch are audited but not failed: commits without an ID are surfaced as warnings. This keeps the safety net useful without making emergency or metadata maintenance impossible.
 
 ## Generated release notes
