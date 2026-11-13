@@ -247,12 +247,43 @@ separately, or reconcile them through `./dev adopt` where permissions allow.
 The CLI's Project insertion is best-effort and warns if Project write access is
 missing; never treat that warning as a successful insertion.
 
-Project custom fields (Priority, Release, Area, Start date, Target date,
-Completed on) are **not** automatically populated by this issue-label workflow.
-GitHub's repository-scoped `GITHUB_TOKEN` cannot write Project v2 fields:
-a separately authorized Project credential and dedicated field-sync implementation
-would be required. Until then, keep fields manually consistent and run the
-read-only release audit; do not report the board as fully synchronized.
+The repository Issue workflow handles labels, preliminary priority, maintainer
+assignment for otherwise-unassigned issues, and the release milestone when an
+exact release target is set. It never overwrites a conflicting milestone or
+changes an external contributor's existing assignment. Issues without a clear
+type remain in triage rather than receiving a fabricated Bug/VS ID.
+
+The optional `.github/workflows/project-date-sync.yml` and
+`scripts/project_date_sync.py` synchronize two date fields of **personal**
+Project #7 once all of these activation conditions are met:
+
+1. A dedicated `VAULTSYNC_PROJECT_TOKEN` repository secret authorizes **read
+   and write** to the owner's GitHub Projects v2. A normal `GITHUB_TOKEN`
+   cannot write personal Project fields.
+2. The workflow exists on the repository's default branch. Before that, its
+   event and scheduled triggers are not active.
+3. `Start date` and `Completed on` fields exist as Date fields in Project #7.
+
+The sync reads a **complete** paginated Project snapshot. For new issues created
+on/after 2026-11-13, it sets the initially missing Start date when it first
+observes `In progress`. Moving a status manually on the personal Project board
+is detected by the **daily** synchronization, not instantly; the recorded day
+is the first observation, not an invented historical start. Older issues need
+review of their real start dates.
+
+For `Done` issues, it sets Completed on to the issue's actual GitHub close
+date; when Project says Done but the issue is still open, it **refuses** to
+invent a completion. On reopening, it clears stale Completed on values for
+non-Done items. No change ever touches Target date, closure state, roadmap
+priority, branch protections, Project status, or release-gated acceptance.
+Existing release-gated issues must remain Open/In progress until shipped.
+
+This date sync is opt-in and unverified against the live Project until the
+secret and workflow are activated. Continue using `./dev audit --release 1.9.0`
+for alignment, since neither automated issue triage nor date sync currently
+fills Priority/Area/Release and Target date Project fields. Project enrollment
+still requires the built-in Auto-add setting or authorized `./dev adopt`.
+
 
 For a 1.9.0 external contribution, first set the exact release target,
 classification and priority on its Issue, then let the workflow assign its ID.
