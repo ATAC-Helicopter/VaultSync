@@ -24,7 +24,7 @@
   ·
   <a href="DOCUMENTATION.md">Documentation</a>
   ·
-  <a href="https://www.reddit.com/r/VaultSync/">Community</a>
+  <a href="https://discord.gg/sgP8UzeAQt">Discord</a>
 </p>
 
 <p align="center">
@@ -424,6 +424,8 @@ See [Updater documentation](docs/UPDATER.md) for release manifests, packaging, p
 
 ## Community and support
 
+- Join the [official VaultSync Discord](https://discord.gg/sgP8UzeAQt) for help, bug discussion, development, beta conversation, and optional games.
+- Read the [community and support guide](docs/COMMUNITY.md) for channel guidance and issue-reporting routes.
 - Join [r/VaultSync](https://www.reddit.com/r/VaultSync/) for updates, feedback, questions, and roadmap discussions.
 - Use [GitHub Discussions](https://github.com/ATAC-Helicopter/VaultSync/discussions) for longer technical or product conversations.
 - Report reproducible problems through [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues).

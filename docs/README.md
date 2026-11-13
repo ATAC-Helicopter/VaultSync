@@ -50,6 +50,11 @@ Use this page as the primary index for all project documentation.
 - Walkthrough recording and no-key narration:
   [Video production guide](video/recording-guide.md)
 
+## Community and Support
+- Discord channels, safety and support routing: [Community and Support](COMMUNITY.md)
+- Published-release webhook operations: [Discord release notifications](discord-release-notifications.md)
+- Bug reporting: [Reporting Bugs](wiki/Reporting-Bugs.md)
+
 ## Contribution and Governance
 - Contributing: [CONTRIBUTING](../CONTRIBUTING.md)
 - Repository task routing and role limits: [routing contract](CODEX_ROUTING.md)

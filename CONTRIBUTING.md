@@ -20,6 +20,7 @@ Rules:
 - Reuse the same ID in PR description, validation notes, and changelog entry when applicable.
 
 ## 2) Before You Start
+- Discuss contributor questions in the [VaultSync Discord](https://discord.gg/sgP8UzeAQt) (`#development`) when useful; [community guide](docs/COMMUNITY.md). GitHub remains authoritative for tracked decisions and code review.
 - Active development is **1.9.0** on `work/1.9-roadmap-realignment`, assembled
   in sole release PR #736. Read [the working context](AGENTS.md) and
   [the release contract](docs/RELEASE_1.9.0.md); keep later-release work in its
@@ -292,8 +293,8 @@ Pull requests and pushes to `Dev`/`Stable` also run CI and release-quality workf
 - Ensure roadmap states are accurate for completed/remaining work.
 
 ## 9) Reporting Bugs
-Use `docs/wiki/Reporting-Bugs.md`.
-Security issues: follow `SECURITY.md`.
+Use `docs/wiki/Reporting-Bugs.md`. Discord `#help-and-support` and `#bug-reports` are available for preliminary discussion; reproducible issues belong on GitHub Issues.
+Security issues: follow `SECURITY.md` privately, not a public channel.
 
 ## 10) Standard Project Operations
 These are the default procedures for everyone contributing to VaultSync.

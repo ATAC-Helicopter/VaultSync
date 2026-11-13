@@ -41,6 +41,7 @@ and the [development CLI guide](CLI-Development.md) before using preview command
 - Protected points and byte-proof retention floors preserve important recovery baselines.
 
 ## Support
+- [Discord community and support](../COMMUNITY.md)
 - [Troubleshooting](Troubleshooting.md)
 - [FAQ](FAQ.md)
 - [Reporting bugs](Reporting-Bugs.md)
