@@ -129,6 +129,12 @@ releases; label them as planning, never a publication commitment.
 
 ## Pull requests
 
+The operational [engineering workflow](ENGINEERING_WORKFLOW.md) covers exact-SHA
+independent test receipts, reporter collaboration and first-parent-only Stable
+promotion merges. All non-Stable integration merges preserve source commits;
+Git's complete DAG remains available after Stable release merges.
+
+
 Once the branch is tracked:
 
 ```bash
