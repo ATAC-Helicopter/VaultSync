@@ -13,15 +13,16 @@ This document defines the current release packaging flow.
 - Major releases begin after their planned minor train is complete and use one
   or more explicit betas when the combined feature set is stable enough for
   broader qualification.
-- `1.8.9` targets Stable on 2026-09-09 and has a maximum date of 2026-09-16.
+- The published stable is `1.8.9` (2026-09-16). Planned maintenance patch `1.8.10` targets 2026-11-14 subject to all platform and release gates; see `docs/RELEASE_1.8.10.md`.
 
 ## Prerequisites
 - .NET 10 SDK
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The current stable release is `1.8.8`.
-- The active development target is `1.8.9` on `release/1.8.9`, integrating
-  through `Dev` and promoted to `Stable` only after its release gates pass.
+- The current public stable release is `1.8.9`.
+- The maintenance candidate is prepared from published `Stable` on `release/1.8.10`.
+  It must meet protected review and exact-source gates before promotion; no
+  unreleased 1.9 features or private vulnerability details are imported.
 - The owner-approved 1.8.9 maintainer exception is recorded on
   [PR #634](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168).
   It allowed missing review approval and documented interactive/Store-runtime
