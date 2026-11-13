@@ -1,22 +1,22 @@
 # Runtime servicing and release verification
 
 Owner: VS-1997 / [#787](https://github.com/ATAC-Helicopter/VaultSync/issues/787).
-The October 13, 2026 security release requires .NET 10.0.13 or a later serviced
-patch on the same runtime line. SDK 10.0.402 includes the corrected runtime
+The November 10, 2026 security release requires .NET 10.0.15 or a later serviced
+patch on the same runtime line. SDK 10.0.404 includes the corrected runtime
 ([Microsoft release metadata](https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json)).
 This contract applies to all open preparation PRs using the shared .NET 10
 packaging foundation; it does not change release ownership or feature scope.
 
 ## Inputs
 
-- `global.json` requires SDK 10.0.402, preserving the existing roll-forward policy.
-- `Directory.Build.props` declares `VaultSyncMinimumRuntimeVersion` 10.0.13,
+- `global.json` requires SDK 10.0.404, preserving the existing roll-forward policy.
+- `Directory.Build.props` declares `VaultSyncMinimumRuntimeVersion` 10.0.15,
   and retains `TargetLatestRuntimePatch`. The serviced SDK supplies per-framework
   runtime versions; explicit overrides are still checked in output. A global
   `RuntimeFrameworkVersion` must not force .NET patch numbers onto Windows SDK
   reference packages, which have a different version scheme.
 - Central Microsoft.Data.Sqlite, ProtectedData and Drawing.Common packages are
-  coordinated on 10.0.13. Managed package audits and embedded runtime audits
+  coordinated on 10.0.15. Managed package audits and embedded runtime audits
   answer different questions; both are necessary.
 - Use actual release RID/self-contained outputs. A generic local build or a
   current system runtime does not establish what an installer bundles.
