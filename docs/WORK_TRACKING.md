@@ -210,8 +210,8 @@ merged only into a release-preparation branch is not active yet.
   It never guesses work type from untrusted issue prose. Mixed types fail closed.
 - Unclassified feedback and support do **not** receive invented engineering IDs.
 - Accepted issues with an exact release target but no priority default to the
-repository's preliminary `priority:p2` label where available; maintainers must
-still validate it against the roadmap.
+  repository's preliminary `priority:p2` label where available; maintainers must
+  still validate it against the roadmap.
 - Open issues without a status receive `status:todo`; closed issues receive
   `status:done` and reopened issues return to Todo unless independently retriaged.
   Existing In progress labels remain unchanged.
