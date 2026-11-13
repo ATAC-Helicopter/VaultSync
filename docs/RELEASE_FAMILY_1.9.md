@@ -7,6 +7,14 @@ The source digest and release ownership are in [1.9-family.json](../release/1.9-
 
 ## Release ownership and branch workflow
 
+Integration PRs on non-Stable branches preserve all source commits using
+**Create a merge commit**. Stable receives qualified promotion/hotfix
+merge commits only on its **first-parent history**; the full graph still
+retains merged commits and is not squashed. Never push feature commits
+directly to Stable. The [engineering workflow](ENGINEERING_WORKFLOW.md)
+summarizes Project #7 alignment, labels and targeted independent validation.
+
+
 | Release | Scope | Branch | Stable target |
 |---|---|---|---|
 | 1.9.0 | Disk and Bootable Recovery Foundation | `release/1.9.0` | 2027-03-26 |
