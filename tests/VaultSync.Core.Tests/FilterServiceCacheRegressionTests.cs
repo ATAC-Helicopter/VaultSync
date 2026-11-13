@@ -30,6 +30,24 @@ public sealed class FilterServiceCacheRegressionTests
     }
 
     [Fact]
+    public void RewrittenPresetFileWithUnchangedTimestampMustBeReloaded()
+    {
+        using var root = new TempDirectory();
+        string presets = Directory.CreateDirectory(Path.Combine(root.Path, "presets")).FullName;
+        string presetFile = Path.Combine(presets, "example.vaultsyncignore");
+        File.WriteAllText(presetFile, "first.txt\n");
+        DateTime timestamp = File.GetLastWriteTimeUtc(presetFile);
+        var original = FilterService.FromPresetAndLocal(root.Path, "example", presets);
+        Assert.True(original.ShouldExclude(root.Path, Path.Combine(root.Path, "first.txt")));
+        File.WriteAllText(presetFile, "later.txt\n");
+        File.SetLastWriteTimeUtc(presetFile, timestamp);
+        Assert.Equal(timestamp, File.GetLastWriteTimeUtc(presetFile));
+        var updated = FilterService.FromPresetAndLocal(root.Path, "example", presets);
+        Assert.True(updated.ShouldExclude(root.Path, Path.Combine(root.Path, "later.txt")));
+        Assert.False(updated.ShouldExclude(root.Path, Path.Combine(root.Path, "first.txt")));
+    }
+
+    [Fact]
     public void RewrittenProjectIgnoreWithUnchangedTimestampMustBeReloaded()
     {
         using var root = new TempDirectory();
