@@ -63,4 +63,52 @@ public sealed class FilterServiceCacheRegressionTests
         Assert.True(refreshed.ShouldExclude(root.Path, Path.Combine(root.Path, "later.txt")));
         Assert.False(refreshed.ShouldExclude(root.Path, Path.Combine(root.Path, "first.txt")));
     }
+
+    [Fact]
+    public void MalformedPresetIndexFailsClosedInsteadOfDroppingRequestedExclusions()
+    {
+        using var root = new TempDirectory();
+        string presets = Directory.CreateDirectory(Path.Combine(root.Path, "presets")).FullName;
+        File.WriteAllText(Path.Combine(presets, "presets.index.json"), "{ not valid JSON");
+
+        InvalidDataException error = Assert.Throws<InvalidDataException>(() =>
+            FilterService.FromPresetAndLocal(root.Path, "mapped-preset", presets));
+        Assert.IsType<System.Text.Json.JsonException>(error.InnerException);
+    }
+
+    [Fact]
+    public void MissingRequestedPresetFailsClosedEvenWhenLocalIgnoreExists()
+    {
+        using var root = new TempDirectory();
+        string presets = Directory.CreateDirectory(Path.Combine(root.Path, "presets")).FullName;
+        File.WriteAllText(Path.Combine(root.Path, ".vaultsyncignore"), "local-rule.tmp");
+
+        Assert.Throws<FileNotFoundException>(() =>
+            FilterService.FromPresetAndLocal(root.Path, "missing-preset", presets));
+    }
+
+    [Fact]
+    public void MissingIndexedRuleFileFailsClosed()
+    {
+        using var root = new TempDirectory();
+        string presets = Directory.CreateDirectory(Path.Combine(root.Path, "presets")).FullName;
+        File.WriteAllText(Path.Combine(presets, "presets.index.json"),
+            """{"Presets":[{"Id":"example","File":"missing.vaultsyncignore"}]}""");
+
+        Assert.Throws<FileNotFoundException>(() =>
+            FilterService.FromPresetAndLocal(root.Path, "example", presets));
+    }
+
+    [Fact]
+    public void ValidDirectPresetDoesNotDependOnUnrelatedMalformedIndex()
+    {
+        using var root = new TempDirectory();
+        string presets = Directory.CreateDirectory(Path.Combine(root.Path, "presets")).FullName;
+        File.WriteAllText(Path.Combine(presets, "direct.vaultsyncignore"), "excluded.tmp\n");
+        File.WriteAllText(Path.Combine(presets, "presets.index.json"), "invalid JSON");
+
+        FilterService filter = FilterService.FromPresetAndLocal(root.Path, "direct", presets);
+        Assert.True(filter.ShouldExclude(root.Path, Path.Combine(root.Path, "excluded.tmp")));
+    }
+
 }

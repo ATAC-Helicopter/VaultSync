@@ -36,7 +36,7 @@ internal sealed class SelfTestRunner(
             repository = new SqliteRepository(databasePath);
             repository.EnsureSchema();
             int projectId = repository.AddProject(
-                new Project { Name = projectName, RootPath = sourcePath, Preset = "custom" });
+                new Project { Name = projectName, RootPath = sourcePath, Preset = string.Empty });
             projectRegistered = true;
             Project project = repository.GetProjectByName(projectName)!;
 

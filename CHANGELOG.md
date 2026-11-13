@@ -114,7 +114,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
-- [BUG-19048] Reload ignore rules and preset mappings when file timestamps remain unchanged.
+- [BUG-19048] Reload ignore rules and preset mappings when file timestamps remain unchanged; fail closed when a requested preset cannot be loaded. (@ameenalqershi)
 - [BUG-19046] Avoid repeated full payload reads during disk image verification.
 - [BUG-19045] Observe image-list refresh failures and preserve cancellation when refreshing.
 - [BUG-19044] Keep recovery wizard content visible during partial software redraws.

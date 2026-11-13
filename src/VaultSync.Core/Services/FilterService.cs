@@ -48,18 +48,15 @@ public class FilterService
         if (!string.IsNullOrWhiteSpace(presetName))
         {
             string? presetFile = ResolvePresetFile(presetsDir, presetName);
-            logger.Info($"[FilterService] Looking for preset file '{presetFile ?? "(not found)"}'");
+            if (string.IsNullOrWhiteSpace(presetFile))
+                throw new FileNotFoundException(
+                    $"Requested exclusion preset '{presetName}' could not be resolved; refusing to continue without its rules.");
 
-            if (!string.IsNullOrWhiteSpace(presetFile) && File.Exists(presetFile))
-            {
-                IReadOnlyList<string> presetLines = ReadLinesFresh(presetFile);
-                logger.Info($"[FilterService] Loaded {presetLines.Count} rules from preset file.");
-                patterns.AddRange(presetLines);
-            }
-            else
-            {
-                logger.Info("[FilterService] Preset file NOT FOUND.");
-            }
+            // If the file disappears or becomes unreadable after resolution,
+            // propagate the I/O error instead of silently omitting exclusions.
+            IReadOnlyList<string> presetLines = ReadLinesFresh(presetFile);
+            logger.Info($"[FilterService] Loaded {presetLines.Count} rules from preset file.");
+            patterns.AddRange(presetLines);
         }
 
         // Merge local project overrides
@@ -93,12 +90,12 @@ public class FilterService
 
     private static string? ResolvePresetFileFromIndex(string presetsDir, string presetName)
     {
+        string indexPath = Path.Combine(presetsDir, "presets.index.json");
+        if (!File.Exists(indexPath))
+            return null;
+
         try
         {
-            string indexPath = Path.Combine(presetsDir, "presets.index.json");
-            if (!File.Exists(indexPath))
-                return null;
-
             Dictionary<string, string> byId = ReadPresetIndex(indexPath);
 
             if (!byId.TryGetValue(presetName, out string? fileName) || string.IsNullOrWhiteSpace(fileName))
@@ -107,9 +104,11 @@ public class FilterService
             string mappedPath = Path.Combine(presetsDir, fileName);
             return File.Exists(mappedPath) ? mappedPath : null;
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            return null;
+            throw new InvalidDataException(
+                "Requested exclusion preset index could not be read or parsed; refusing to omit the intended exclusion policy.",
+                ex);
         }
     }
 
