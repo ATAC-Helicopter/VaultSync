@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Models;
@@ -79,33 +78,18 @@ public sealed class RsyncRunnerTests
             Preset = string.Empty
         };
 
-        string[] OwnedExcludeFiles() =>
-            Directory.EnumerateFiles(Path.GetTempPath(), "vaultsync_exclude_*.txt")
-                .Where(path =>
-                {
-                    try
-                    {
-                        return File.ReadAllText(path).Contains(marker, StringComparison.Ordinal);
-                    }
-                    catch (IOException)
-                    {
-                        return false;
-                    }
-                })
-                .ToArray();
+        // The test-owned path is isolated: no shared-temp directory enumeration,
+        // unrelated file reads, or permission-sensitive cleanup is required.
+        string excludePath = Path.Combine(temp.Path, "vaultsync_exclude_owned.txt");
+        var runner = new RsyncRunner(
+            useWholeFile: true,
+            rsyncPath: Path.Combine(temp.Path, "missing-rsync"),
+            excludeFilePathFactory: () => excludePath);
 
-        try
-        {
-            await Assert.ThrowsAsync<System.ComponentModel.Win32Exception>(() =>
-                new RsyncRunner(rsyncPath: Path.Combine(temp.Path, "missing-rsync")).SyncAsync(
-                    project, destination, dryRun: true, ct: CancellationToken.None));
-            Assert.Empty(OwnedExcludeFiles());
-        }
-        finally
-        {
-            foreach (string path in OwnedExcludeFiles())
-                File.Delete(path);
-        }
+        Assert.False(File.Exists(excludePath));
+        await Assert.ThrowsAsync<System.ComponentModel.Win32Exception>(() =>
+            runner.SyncAsync(project, destination, dryRun: true, ct: CancellationToken.None));
+        Assert.False(File.Exists(excludePath));
     }
 
     [Fact]

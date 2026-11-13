@@ -17,11 +17,21 @@ namespace VaultSync.Core.Services
         private static readonly ConcurrentDictionary<string, RsyncCapabilities> s_capabilityCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly bool _useWholeFile;
         private readonly string _rsyncPath;
+        private readonly Func<string> _excludeFilePathFactory;
 
         public RsyncRunner(bool useWholeFile = true, string? rsyncPath = null)
+            : this(useWholeFile, rsyncPath, () =>
+                Path.Combine(Path.GetTempPath(), $"vaultsync_exclude_{Guid.NewGuid():N}.txt"))
+        {
+        }
+
+        // Allows a regression test to observe only its own temporary file, rather
+        // than enumerating or reading other applications' files in shared temp.
+        internal RsyncRunner(bool useWholeFile, string? rsyncPath, Func<string> excludeFilePathFactory)
         {
             _useWholeFile = useWholeFile;
             _rsyncPath = string.IsNullOrWhiteSpace(rsyncPath) ? "rsync" : rsyncPath;
+            _excludeFilePathFactory = excludeFilePathFactory ?? throw new ArgumentNullException(nameof(excludeFilePathFactory));
         }
 
         public string Name => "rsync";
@@ -49,7 +59,7 @@ namespace VaultSync.Core.Services
 
             if (filter.HasRules)
             {
-                tempExcludeFile.Path = Path.Combine(Path.GetTempPath(), $"vaultsync_exclude_{Guid.NewGuid():N}.txt");
+                tempExcludeFile.Path = _excludeFilePathFactory();
                 IReadOnlyList<string> patterns = filter.RawPatterns ?? Array.Empty<string>();
                 await File.WriteAllLinesAsync(
                     tempExcludeFile.Path,
