@@ -2,6 +2,8 @@
 
 VaultSync follows the Contributor Covenant Code of Conduct.
 
+This policy applies to repository spaces, project Discussions and the [official Discord](https://discord.gg/sgP8UzeAQt).
+
 This code applies to repository spaces, project discussions, and the [official Discord](https://discord.gg/sgP8UzeAQt).
 
 ## Our pledge

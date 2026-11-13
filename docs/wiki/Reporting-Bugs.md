@@ -11,6 +11,8 @@ Thanks for helping improve VaultSync. Good bug reports make fixes faster.
 Track reproducible bugs on GitHub Issues:
 - https://github.com/ATAC-Helicopter/VaultSync/issues
 
+For preliminary troubleshooting, visit the [VaultSync Discord](https://discord.gg/sgP8UzeAQt). Discord conversations do not replace GitHub Issues; see [Community and support](../COMMUNITY.md).
+
 For preliminary troubleshooting and bug discussion, visit the [official Discord](https://discord.gg/sgP8UzeAQt) `#help-and-support` or `#bug-reports` Forum. Discord posts do not replace GitHub Issues; see [Community and support](../COMMUNITY.md).
 
 ## What to include

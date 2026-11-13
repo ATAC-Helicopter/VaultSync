@@ -20,6 +20,7 @@ Rules:
 - Reuse the same ID in PR description, validation notes, and changelog entry when applicable.
 
 ## 2) Before You Start
+- For informal coordination, join the [Discord development community](https://discord.gg/sgP8UzeAQt); GitHub Issues/PRs remain authoritative for tracked work. [Community guide](docs/COMMUNITY.md).
 - Discuss contributor questions in the [VaultSync Discord](https://discord.gg/sgP8UzeAQt) (`#development`) when useful; [community guide](docs/COMMUNITY.md). GitHub remains authoritative for tracked decisions and code review.
 - Active development is **1.9.0** on `work/1.9-roadmap-realignment`, assembled
   in sole release PR #736. Read [the working context](AGENTS.md) and

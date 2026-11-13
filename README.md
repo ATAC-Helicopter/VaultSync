@@ -424,6 +424,9 @@ See [Updater documentation](docs/UPDATER.md) for release manifests, packaging, p
 
 ## Community and support
 
+- Join the [official VaultSync Discord](https://discord.gg/sgP8UzeAQt) for help, development and beta discussions.
+- Read the [community and support guide](docs/COMMUNITY.md) for channels and reporting routes.
+
 - Join the [official VaultSync Discord](https://discord.gg/sgP8UzeAQt) for help, bug discussion, development, beta conversation, and optional games.
 - Read the [community and support guide](docs/COMMUNITY.md) for channel guidance and issue-reporting routes.
 - Join [r/VaultSync](https://www.reddit.com/r/VaultSync/) for updates, feedback, questions, and roadmap discussions.
