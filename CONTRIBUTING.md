@@ -189,19 +189,25 @@ Examples:
   umbrellas using `area:release`). Fix conflicting labels before requesting
   a merge; the Work Tracking workflow enforces this classification.
 
+See [engineering workflow](docs/ENGINEERING_WORKFLOW.md) for scope,
+independent test receipts and secure maintenance processes.
+
 ## 6.0) Repository Workflow Standard (PR-first)
 - Standard workflow is **PR-first** (feature/fix branches into `Dev` via PR).
-- Merge feature, fix, and release PRs into `Dev` with a **merge commit**. Do not
-  squash or rebase them at merge time: `Dev` must retain the source commits and
-  their original identities.
-- Promote `Dev` into `Stable` with a **merge commit**. `Stable` is a shipped-
-  release spine: do not squash, rebase, or fast-forward a promotion into it.
+- For **every branch other than `Stable`**, use **Create a merge commit**, retaining
+  all source commits and their authors; do not squash or rebase contributions.
+- For **`Stable`**, create **one real promotion/hotfix merge commit on its
+  first-parent history**. Git's complete graph still contains incoming commits;
+  a true merge is not a squash. Never push separate feature/fix commits directly
+  to Stable, squash/rebase promotions, or fast-forward protected history.
 - Release branches use `release/<version>` and receive the same deletion,
   force-push, review, and status-check protection as `Dev`.
-- Direct pushes are reserved for:
-  - emergency maintainer hotfixes
+- Direct pushes to **non-Stable** branches are reserved for:
+  - emergency maintainer preparation work
   - metadata-only maintenance (for example: label/board sync scripts)
   - explicit owner decision
+- Stable receives only reviewed release/hotfix merge commits, including
+  emergency promotions; it never receives standalone direct commits.
 - A Stable hotfix still goes through a hotfix branch and merge commit so the
   Stable first-parent history remains release/hotfix merges only.
 - Even for direct pushes, keep issue/roadmap/changelog links exactly as with PRs.
