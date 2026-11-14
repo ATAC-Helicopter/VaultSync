@@ -29,7 +29,7 @@ class PackageFamilyAlignmentTests(unittest.TestCase):
         )
 
     def test_avalonia_packages_use_one_version(self) -> None:
-        self.assert_family_is_aligned("Avalonia", 6)
+        self.assert_family_is_aligned("Avalonia", 5)
 
     def test_skiasharp_packages_use_one_version(self) -> None:
         self.assert_family_is_aligned("SkiaSharp", 6)

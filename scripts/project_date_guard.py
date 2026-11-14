@@ -119,6 +119,23 @@ def normalize_items(pages: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return normalized
 
 
+def parse_paginated_json(output: str) -> list[dict[str, Any]]:
+    """Read gh --paginate's JSON stream without requiring newer --slurp support."""
+    decoder = json.JSONDecoder()
+    pages: list[dict[str, Any]] = []
+    remaining = output.lstrip()
+    while remaining:
+        value, offset = decoder.raw_decode(remaining)
+        candidates = value if isinstance(value, list) else [value]
+        if not all(isinstance(page, dict) for page in candidates):
+            raise ValueError("GitHub pagination must return JSON objects")
+        pages.extend(candidates)
+        remaining = remaining[offset:].lstrip()
+    if not pages:
+        raise ValueError("GitHub pagination returned no pages")
+    return pages
+
+
 def normalize_repository_dates(
     response: dict[str, Any],
 ) -> tuple[dict[str, str], dict[str, str]]:
@@ -278,10 +295,10 @@ def load_live_state(
     if missing_fields:
         raise ValueError(f"Project is missing required date fields: {sorted(missing_fields)}")
 
-    pages = json.loads(
+    pages = parse_paginated_json(
         run_gh(
             [
-                "api", "graphql", "--paginate", "--slurp",
+                "api", "graphql", "--paginate",
                 "-f", f"query={ITEMS_QUERY}",
                 "-f", f"owner={validated_owner}",
                 "-F", f"projectNumber={validated_number}",
