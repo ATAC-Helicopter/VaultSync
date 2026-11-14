@@ -6,7 +6,7 @@
   <ItemGroup>
     <!-- Core storage and platform APIs -->
     <PackageVersion Include="Dapper" Version="2.1.86" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="11.0.0" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
 
