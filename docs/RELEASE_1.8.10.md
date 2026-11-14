@@ -40,9 +40,23 @@ independent **exact-SHA** Linux/Windows/macOS build/test validation and the
 native macOS nested-SMB manual test. The independent Fedora test of PR #849 reported 3/3 passing cases but an
 MSBuild output-file collision and nonzero build exit. Do not treat this as
 complete until a separate serialized exact-head build/test succeeds or the
-release CI independently verifies the same backported change. The Draft
-filter-refresh PR
-#850 (`BUG-19048`) is not imported. Private advisory work stays isolated.
+release CI independently verifies the same backported change. The broader fail-closed and CLI self-test changes from Draft PR #850 remain deferred; only its narrow stale-policy-cache correction is present. Private advisory work stays isolated.
+
+## Scoped BUG-19048 compatibility backport
+
+Ameen's timestamp-preserving exclusion-policy cache defect is present in the
+published `v1.8.9` source. For 1.8.10, only fresh reads during filter
+construction are backported, with synthetic regressions for the local
+`.vaultsyncignore`, preset rule file, and preset index plus a legacy
+`custom`-preset compatibility control.
+
+The full contributor [PR #850](https://github.com/ATAC-Helicopter/VaultSync/pull/850)
+is **not** integrated. Its new missing-preset failure behavior requires
+additional compatibility review: the existing 1.8.x CLI defaults to the
+`custom` preset. Changing it abruptly could stop existing backups.
+Verify the narrow backport at the latest SHA, including performance when
+source policy files reside on slow or network-backed storage. Original
+reporter credit: `@ameenalqershi`; Refs #844.
 
 ## Optional community entry
 
