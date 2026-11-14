@@ -87,7 +87,6 @@ jobs:
         if: steps.config.outputs.configured == 'true'
         run: |
           dotnet tool install --global dotnet-sonarscanner --version 11.2.1
-          dotnet tool install --global dotnet-coverage --version 18.9.0
           python -m pip install coverage==7.10.4
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
@@ -107,9 +106,9 @@ jobs:
             /o:"${SONAR_ORGANIZATION}" \
             /d:sonar.host.url="${host_url}" \
             /d:sonar.token="${SONAR_TOKEN}" \
-            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml \
+            /d:sonar.cs.opencover.reportsPaths="TestResults/sonar/**/coverage.opencover.xml" \
             /d:sonar.python.coverage.reportPaths=python-coverage.xml \
-            /d:sonar.exclusions="coverage.xml,python-coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
+            /d:sonar.exclusions="TestResults/**,python-coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
             /d:sonar.coverage.exclusions="benchmarks/**,docs/video/**,src/VaultSync.UI/**,src/VaultSync.Core/Services/BackupService.cs,src/VaultSync.Core/Services/NetworkMountService.cs,src/VaultSync.Core/Services/SnapshotService.cs" \
             /d:sonar.test.inclusions="tests/**/*" \
             /d:sonar.python.version="3"
@@ -120,11 +119,52 @@ jobs:
 
       - name: Test with coverage
         if: steps.config.outputs.configured == 'true'
-        run: >
-          dotnet-coverage collect
-          "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build"
-          -f xml
-          -o coverage.xml
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Coverlet's VSTest collector instruments the test-host assemblies.
+          # Previously dotnet-coverage returned success but reported:
+          # "No code coverage data available. Profiler was not initialized."
+          mkdir -p TestResults/sonar
+          dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj \
+            --configuration Release --no-build \
+            --results-directory "$GITHUB_WORKSPACE/TestResults/sonar" \
+            --collect:"XPlat Code Coverage;Format=opencover"
+
+      - name: Require a real Core coverage report
+        if: steps.config.outputs.configured == 'true'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob
+          import sys
+          import xml.etree.ElementTree as ET
+
+          paths = glob.glob("TestResults/sonar/**/coverage.opencover.xml", recursive=True)
+          if len(paths) != 1:
+              sys.exit(f"Expected exactly one OpenCover report, got {len(paths)}: {paths}")
+          report = ET.parse(paths[0]).getroot()
+          summary = report.find("Summary")
+          if summary is None:
+              sys.exit("OpenCover coverage summary missing")
+          total = int(summary.attrib.get("numSequencePoints", "0"))
+          visited = int(summary.attrib.get("visitedSequencePoints", "0"))
+          core_modules = [
+              module for module in report.findall(".//Module")
+              if "VaultSync.Core" in (module.findtext("ModulePath") or "")
+              and "Tests" not in (module.findtext("ModulePath") or "")
+          ]
+          if total <= 0 or visited <= 0 or not core_modules:
+              sys.exit("Coverage is empty or VaultSync.Core was not instrumented")
+          core_visited = sum(
+              int((module.find("Summary").attrib.get("visitedSequencePoints", "0")))
+              for module in core_modules if module.find("Summary") is not None
+          )
+          if core_visited <= 0:
+              sys.exit("VaultSync.Core has no visited sequence points")
+          print(f"Valid OpenCover report: {visited}/{total} visited points; "
+                f"VaultSync.Core visited: {core_visited}")
+          PY
 
       - name: Test Python with coverage
         if: steps.config.outputs.configured == 'true'
