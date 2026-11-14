@@ -1,0 +1,90 @@
+{
+  "artifactRoot": "/var/folders/98/rp_mspy95h175s5xn22b7gqc0000gn/T/vaultsync-runtime-artifacts.m0827lrv",
+  "measurements": [
+    {
+      "rid": "win-x64",
+      "framework": "net10.0-windows10.0.19041.0",
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.13",
+        "runtimepack.Microsoft.Windows.SDK.NET.Ref/10.0.19041.57"
+      ],
+      "runtimeAudit": "Runtime security audit passed (minimum 10.0.13)."
+    },
+    {
+      "rid": "osx-arm64",
+      "framework": "net10.0",
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.osx-arm64/10.0.13"
+      ],
+      "runtimeAudit": "Runtime security audit passed (minimum 10.0.13)."
+    },
+    {
+      "rid": "osx-x64",
+      "framework": "net10.0",
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.osx-x64/10.0.13"
+      ],
+      "runtimeAudit": "Runtime security audit passed (minimum 10.0.13)."
+    },
+    {
+      "rid": "linux-x64",
+      "framework": "net10.0",
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.linux-x64/10.0.13"
+      ],
+      "runtimeAudit": "Runtime security audit passed (minimum 10.0.13)."
+    },
+    {
+      "rid": "linux-arm64",
+      "framework": "net10.0",
+      "includedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        }
+      ],
+      "runtimeLibraries": [
+        "runtimepack.Microsoft.NETCore.App.Runtime.linux-arm64/10.0.13"
+      ],
+      "runtimeAudit": "Runtime security audit passed (minimum 10.0.13)."
+    }
+  ],
+  "worktreeBaseCommit": "fcddea0f0329c6105f7b2c78b4fbc5c346948fc1",
+  "worktreeDirty": true,
+  "sdk": "10.0.402",
+  "sources": {
+    "global.json": "0018bf36cb15b92e9301d0b86a9a70455bd50b92881c602562873b71543e8036",
+    "Directory.Build.props": "bb3968d079510039442163ed5bd44cb68414bcb95c822e18cbbb54bf78167e4b",
+    "Directory.Packages.props": "49d2f2912a5c33a1d9f54cf50797e68c92c10728adadc7c0adefcc804b3b07a3",
+    "scripts/runtime_pack_audit.py": "c62a740b06a6942aeddc5a176b195a8c0d5bbbdecb491bc5b7f1c149386714a6"
+  },
+  "limitations": [
+    "Private cross-publishes on macOS, not native platform execution or installed upgrades.",
+    "Runtime metadata and deps inspect embedded pack versions; package graph is separate from manifest hashes/provenance.",
+    "Default-branch alerts remain until reviewed integration; no dismissal."
+  ]
+}
