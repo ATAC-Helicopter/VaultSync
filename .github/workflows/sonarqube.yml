@@ -160,6 +160,20 @@ jobs:
               int((module.find("Summary").attrib.get("visitedSequencePoints", "0")))
               for module in core_modules if module.find("Summary") is not None
           )
+          print(f"OpenCover root summary: visited={visited} total={total}")
+          for module in report.findall(".//Module"):
+              module_path = module.findtext("ModulePath") or "(missing ModulePath)"
+              module_summary = module.find("Summary")
+              summary_values = (
+                  module_summary.attrib if module_summary is not None else {}
+              )
+              visited_points = sum(
+                  int(point.attrib.get("vc", "0")) > 0
+                  for point in module.findall(".//SequencePoint")
+              )
+              print(f"OpenCover module {module_path.rsplit('/', 1)[-1]}: "
+                    f"summary={summary_values.get('visitedSequencePoints', 'missing')} "
+                    f"sequence-points-hit={visited_points}")
           if core_visited <= 0:
               sys.exit("VaultSync.Core has no visited sequence points")
           print(f"Valid OpenCover report: {visited}/{total} visited points; "
