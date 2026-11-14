@@ -155,10 +155,14 @@ Consolidated release-preparation PRs with a version-prefixed title and
 `area:release` may omit `kind:*` because they aggregate several work types.
 Bug-ID PR titles must have `kind:bug`. Missing or conflicting labels fail the
 Work Tracking job; `labeled`/`unlabeled` events rerun it when metadata changes.
-The validation reads only GitHub's signed pull_request event and checks out the
-trusted base SHA, not contributor-controlled code. For protected branches,
-maintainers must configure **Tracking policy** as a required status check in
-GitHub rulesets: a workflow failure alone cannot prevent an authorized merge.
+Validation reads the GitHub pull_request event. For external contributors
+the workflow checks out the **trusted base SHA**, not the contributor's code.
+For owner-authored same-repository release PRs it checks out the reviewed
+PR **head SHA**, because the current Dev base does not yet include the
+work-tracking test suite; this exception does not authorize an untrusted
+fork's code in the policy check. For protected branches, maintainers must
+configure **Tracking policy** as a required status check in GitHub rulesets:
+workflow failure alone cannot prevent an authorized merge.
 
 Direct pushes to every branch are audited but not failed: commits without an ID are surfaced as warnings. This keeps the safety net useful without making emergency or metadata maintenance impossible.
 
