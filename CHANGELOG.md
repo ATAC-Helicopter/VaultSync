@@ -2,6 +2,8 @@
 ## [1.8.10] - Unreleased
 ### Security
 - [VS-1997] Service the .NET 10 runtime and Microsoft managed packages; independent security qualification remains pending.
+### Added
+- [VS-1997] Offer an optional Discord community link in What's New and Settings > Advanced, without notifications or telemetry.
 ### Fixed
 - [BUG-19047] Clean up temporary rsync exclusion files if tool startup fails. (@ameenalqershi)
 - [BUG-19001] Require explicit confirmation for noninteractive CLI project removal; retain source and stored backups.

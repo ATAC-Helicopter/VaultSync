@@ -4,6 +4,8 @@
 
 VaultSync 1.8.10 is a planned security and dependency maintenance patch on the 1.8.9 stable baseline. It does not include 1.9 recovery features. Public release notes and platform support claims remain pending validation.
 
+An optional link to the [VaultSync Discord community](https://discord.gg/sgP8UzeAQt) is now available in What's New and Settings > Advanced for help, bug-report discussions and general community chat. GitHub remains the canonical tracker for confirmed issues; no notifications or tracking are added.
+
 ## [1.8.9]
 
 VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.

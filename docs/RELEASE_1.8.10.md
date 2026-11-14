@@ -44,6 +44,15 @@ release CI independently verifies the same backported change. The Draft
 filter-refresh PR
 #850 (`BUG-19048`) is not imported. Private advisory work stays isolated.
 
+## Optional community entry
+
+The What's New footer and Settings > Advanced have a small link to the
+existing official Discord invitation (`https://discord.gg/sgP8UzeAQt`).
+Participation is optional; no telemetry, login requirement or notification is
+added. GitHub Issues and the private security advisory remain authoritative
+for tracked bugs and vulnerabilities. Check cross-platform browser opening,
+including failure if no browser is available.
+
 ## Pending release gates
 
 - [ ] Review all changed dependency lock/asset graphs on Windows, Linux and macOS; verify package availability.
