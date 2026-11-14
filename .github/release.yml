@@ -1,0 +1,28 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: Fixed
+      labels:
+        - bug
+        - kind:bug
+    - title: Added
+      labels:
+        - enhancement
+        - kind:feature
+    - title: Security
+      labels:
+        - security
+        - kind:security
+    - title: Changed
+      labels:
+        - kind:change
+    - title: Maintenance
+      labels:
+        - maintenance
+        - kind:maintenance
+        - dependencies
+    - title: Other Changes
+      labels:
+        - "*"
