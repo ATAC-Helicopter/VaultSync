@@ -5,6 +5,7 @@
 ### Added
 - [VS-1997] Offer an optional Discord community link in What's New and Settings > Advanced, without notifications or telemetry.
 ### Fixed
+- [BUG-19048] Refresh exclusion-file and preset-index mappings after timestamp-preserving changes without altering legacy missing-preset behavior. (@ameenalqershi)
 - [BUG-19047] Clean up temporary rsync exclusion files if tool startup fails. (@ameenalqershi)
 - [BUG-19001] Require explicit confirmation for noninteractive CLI project removal; retain source and stored backups.
 - [BUG-19027] Read JSON preset mappings independently of property-name capitalization.
