@@ -1,6 +1,7 @@
 using VaultSync.Core.Models;
 using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
+using VaultSync.CLI.Utils;
 
 namespace VaultSync.CLI.Services;
 
@@ -40,7 +41,7 @@ internal sealed class SelfTestRunner(
             projectRegistered = true;
             Project project = repository.GetProjectByName(projectName)!;
 
-            var snapshotService = new SnapshotService(repository, new HashService());
+            var snapshotService = new SnapshotService(repository, new HashService(), CliVaultLogger.Instance);
             int snapshotId = await snapshotService.CreateSnapshotAsync(
                 project,
                 fullHash: true,
@@ -145,7 +146,7 @@ internal sealed class SelfTestRunner(
 
     private sealed class SyncServiceRunner : ISyncRunner
     {
-        private readonly SyncService _service = new();
+        private readonly SyncService _service = new(CliVaultLogger.Instance);
 
         public string Name => _service.RunnerName;
 

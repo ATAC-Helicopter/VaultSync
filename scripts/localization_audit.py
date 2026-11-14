@@ -6,8 +6,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from collections import Counter
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 
 PLACEHOLDER_PATTERN = re.compile(r"\{\d+(?::[^}]*)?\}")
@@ -23,9 +25,9 @@ INTENTIONAL_VALUES = {
 
 def read_locale(path: Path) -> tuple[dict[str, str], list[str]]:
     with path.open(encoding="utf-8-sig") as stream:
-        pairs = json.load(stream, object_pairs_hook=list)
+        pairs = json.load(stream, object_pairs_hook=tuple)
 
-    if not isinstance(pairs, list):
+    if not isinstance(pairs, tuple):
         raise ValueError(f"{path} must contain a JSON object.")
 
     keys = [key for key, _ in pairs]
@@ -53,7 +55,70 @@ def is_intentional_exact_match(value: str) -> bool:
     )
 
 
-def audit(localization_dir: Path) -> dict[str, object]:
+UI_PROPERTIES = {"Text", "Content", "Title", "Header", "Watermark", "PlaceholderText",
+                 "ToolTip.Tip", "AutomationProperties.Name", "AutomationProperties.HelpText"}
+# Format tokens, brand names and file-format badges are deliberately invariant.
+UI_INVARIANTS = {"HH:mm", "HH:mm:ss", "VaultSync", "TXT"}
+REFERENCE_PATTERN = re.compile(r'\b(?:L|LF|Lf|LStatic|GetString)\(\s*"([A-Za-z][\w.-]*)"')
+MARKUP_REFERENCE_PATTERN = re.compile(r'LocalizedString\s+Key=([\w.-]+)')
+VISIBLE_ASSIGNMENT_PATTERN = re.compile(
+    r'\b(?:Text|Content|Title|Header|Watermark|PlaceholderText|StatusText|BusyMessage|'
+    r'_headline|_detail|_progressSummary)\s*=\s*\$?"((?:[^"\\]|\\.)*)"')
+
+
+def source_audit(source_dir: Path, english: dict[str, str]) -> dict[str, object]:
+    if not source_dir.is_dir():
+        raise ValueError(f"Missing UI source directory: {source_dir}")
+    missing = []
+    hardcoded = []
+    supported = set()
+    for path in sorted(source_dir.rglob("*")):
+        if path.suffix not in {".cs", ".axaml"} or {"obj", "bin"}.intersection(path.parts):
+            continue
+        text = path.read_text(encoding="utf-8-sig")
+        matches = REFERENCE_PATTERN.finditer(text) if path.suffix == ".cs" else MARKUP_REFERENCE_PATTERN.finditer(text)
+        for match in matches:
+            if match[1] not in english:
+                missing.append({"file": str(path), "line": text.count("\n", 0, match.start()) + 1, "key": match[1]})
+        if path.name == "LocalizationService.cs":
+            supported.update(re.findall(r'Code\s*=\s*"([\w-]+)"', text))
+        if path.suffix == ".axaml":
+            root = ET.fromstring(text)
+            for element in root.iter():
+                if element.tag.rsplit("}", 1)[-1] == "Setter" and element.attrib.get("Property") in UI_PROPERTIES:
+                    value = element.attrib.get("Value", "")
+                    if not value.startswith("{") and value not in UI_INVARIANTS and any(c.isalpha() for c in value):
+                        hardcoded.append({"file": str(path), "property": element.attrib["Property"], "value": value})
+                for prop, value in element.attrib.items():
+                    if prop in UI_PROPERTIES and not value.startswith("{") and value not in UI_INVARIANTS and any(c.isalpha() for c in value):
+                        hardcoded.append({"file": str(path), "property": prop, "value": value})
+        else:
+            for match in VISIBLE_ASSIGNMENT_PATTERN.finditer(text):
+                value = match[1]
+                visible = re.sub(r"\{[^}]*\}", "", value)
+                if value not in UI_INVARIANTS and any(c.isalpha() for c in visible):
+                    hardcoded.append({"file": str(path), "line": text.count("\n", 0, match.start()) + 1, "value": value})
+    return {"missing_references": missing, "hardcoded_ui_text": hardcoded,
+            "supported_locales": sorted(supported)}
+
+
+def validation_errors(report: dict[str, object]) -> list[str]:
+    errors = []
+    for field in ("baseline_duplicate_keys", "baseline_blank_or_non_string_values"):
+        if report.get(field):
+            errors.append(f"English baseline: {field}: {report[field]}")
+    for locale, result in report["locales"].items():
+        for field in ("missing_keys", "extra_keys", "duplicate_keys", "blank_or_non_string_values", "placeholder_mismatches"):
+            if result[field]:
+                errors.append(f"{locale}: {field}: {len(result[field])}")
+    source = report.get("source", {})
+    for field in ("missing_references", "hardcoded_ui_text", "missing_locale_files"):
+        if source.get(field):
+            errors.append(f"UI: {field}: {source[field]}")
+    return errors
+
+
+def audit(localization_dir: Path, source_dir: Path | None = None) -> dict[str, object]:
     english_path = localization_dir / "strings.en.json"
     english, english_duplicate_keys = read_locale(english_path)
     locales: dict[str, object] = {}
@@ -119,12 +184,18 @@ def audit(localization_dir: Path) -> dict[str, object]:
             "placeholder_mismatches": placeholder_mismatches,
         }
 
-    return {
+    report = {
         "baseline": str(english_path),
         "baseline_key_count": len(english),
         "baseline_duplicate_keys": english_duplicate_keys,
+        "baseline_blank_or_non_string_values": sorted(key for key, value in english.items() if not isinstance(value, str) or not value.strip()),
         "locales": locales,
     }
+    if source_dir is not None:
+        source = source_audit(source_dir, english)
+        source["missing_locale_files"] = sorted(set(source["supported_locales"]) - ({"en"} | set(locales)))
+        report["source"] = source
+    return report
 
 
 def print_markdown(report: dict[str, object]) -> None:
@@ -199,13 +270,22 @@ def main() -> int:
         default=Path("Localization"),
     )
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--check", action="store_true", help="Fail on structural errors, missing source keys and fixed UI text")
+    parser.add_argument("--source-dir", type=Path, default=Path("src/VaultSync.UI"))
     args = parser.parse_args()
 
-    report = audit(args.localization_dir)
+    report = audit(args.localization_dir, args.source_dir)
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))
+    elif args.check:
+        print(f"Localization: {report['baseline_key_count']} keys, {len(report['locales']) + 1} locale files checked")
     else:
         print_markdown(report)
+    errors = validation_errors(report)
+    if args.check:
+        for error in errors:
+            print(error, file=sys.stderr)
+        return int(bool(errors))
     return 0
 
 

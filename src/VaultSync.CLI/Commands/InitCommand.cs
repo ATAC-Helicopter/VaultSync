@@ -17,7 +17,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class InitCommand : AsyncCommand<InitSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, InitSettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, InitSettings s, CancellationToken cancellationToken)
         {
             string targetDb = string.IsNullOrWhiteSpace(s.Db)
                 ? ConfigHelper.GetDefaultDbPath()

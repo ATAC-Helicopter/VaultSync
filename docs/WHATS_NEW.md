@@ -1,8 +1,23 @@
 # What's New
 
+## [1.9.5]
+
+Planning scaffold for 1.9.5; current published stable remains 1.8.9.
+This branch is unscheduled and requires qualified predecessor integration.
+See [the family plan](RELEASE_FAMILY_1.9.md).
+
+## [1.9.0]
+
+Recovery Horizon is in planning and architecture work. 1.9.0 owns disk capture,
+validation, independent boot media, restore and post-restore validation.
+These capabilities have not shipped. The earlier CLI development cohort has
+been moved to 1.9.5, with discovery/legacy documentation in 1.9.1.
+Current stable remains **1.8.9**, published 2026-09-16.
+See [the release contract](RELEASE_1.9.0.md) and [family plan](RELEASE_FAMILY_1.9.md).
+
 ## [1.8.9]
 
-VaultSync `1.8.9` is the upcoming bug-fix and everyday-polish update.
+VaultSync `1.8.9` shipped on September 16, 2026 with bug fixes and everyday polish.
 
 Manual Linux update archives now keep VaultSync open and explain installation
 and restart steps.
@@ -520,3 +535,5 @@ Current `1.7` release-train highlights, including repair tooling, safer updates,
 
 ### Updates
 - Release notes are available in the app. [Release notes](https://github.com/ATAC-Helicopter/VaultSync/releases)
+
+Complete development changes and release PR grouping: [daily ledger](release-evidence/1.9-work-2026-10-03.md).

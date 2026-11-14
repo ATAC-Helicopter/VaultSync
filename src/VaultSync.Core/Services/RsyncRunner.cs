@@ -17,11 +17,13 @@ namespace VaultSync.Core.Services
         private static readonly ConcurrentDictionary<string, RsyncCapabilities> s_capabilityCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly bool _useWholeFile;
         private readonly string _rsyncPath;
+        private readonly IVaultLogger _logger;
 
-        public RsyncRunner(bool useWholeFile = true, string? rsyncPath = null)
+        public RsyncRunner(bool useWholeFile = true, string? rsyncPath = null, IVaultLogger? logger = null)
         {
             _useWholeFile = useWholeFile;
             _rsyncPath = string.IsNullOrWhiteSpace(rsyncPath) ? "rsync" : rsyncPath;
+            _logger = logger ?? RuntimeVaultLogger.Instance;
         }
 
         public string Name => "rsync";
@@ -44,7 +46,7 @@ namespace VaultSync.Core.Services
         {
             BackupSafetyService.EnsureSafeBackupRoot(project, destination);
 
-            var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
+            var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset, logger: _logger);
             string? tempExcludeFile = null;
 
             if (filter.HasRules)
@@ -192,7 +194,7 @@ namespace VaultSync.Core.Services
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine("[RsyncRunner] Cancellation requested; stopping rsync process.");
+                _logger.Info("[RsyncRunner] Cancellation requested; stopping rsync process.");
                 TryCancelRead(proc, cancelErrorStream: true);
                 TryCancelRead(proc, cancelErrorStream: false);
                 TryKill(proc);
@@ -206,7 +208,7 @@ namespace VaultSync.Core.Services
             return proc.ExitCode;
         }
 
-        private static void TryCancelRead(Process process, bool cancelErrorStream)
+        private void TryCancelRead(Process process, bool cancelErrorStream)
         {
             try
             {
@@ -218,11 +220,11 @@ namespace VaultSync.Core.Services
             catch (InvalidOperationException ex)
             {
                 // Cancellation cleanup is best effort because the process or async reader may already have exited.
-                RuntimeLog.WriteVerbose($"[RsyncRunner] Could not stop redirected process output: {ex.Message}");
+                _logger.Verbose($"[RsyncRunner] Could not stop redirected process output: {ex.Message}");
             }
         }
 
-        private static void TryKill(Process process)
+        private void TryKill(Process process)
         {
             try
             {
@@ -233,11 +235,11 @@ namespace VaultSync.Core.Services
                                            System.ComponentModel.Win32Exception)
             {
                 // The process may have exited between cancellation observation and this cleanup attempt.
-                RuntimeLog.WriteVerbose($"[RsyncRunner] Could not stop an already-exiting rsync process: {ex.Message}");
+                _logger.Verbose($"[RsyncRunner] Could not stop an already-exiting rsync process: {ex.Message}");
             }
         }
 
-        private static void TryDeleteExcludeFile(string? path)
+        private void TryDeleteExcludeFile(string? path)
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 return;
@@ -249,7 +251,7 @@ namespace VaultSync.Core.Services
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // The file is temporary and startup hygiene can remove it if another process still holds it.
-                RuntimeLog.WriteVerbose($"[RsyncRunner] Could not remove temporary exclusion file '{path}': {ex.Message}");
+                _logger.Verbose($"[RsyncRunner] Could not remove temporary exclusion file '{path}': {ex.Message}");
             }
         }
 

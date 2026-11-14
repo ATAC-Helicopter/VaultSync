@@ -35,7 +35,8 @@ public class SnapshotService
         FilterService Filter,
         IEnumerable<FileEntry> PreviousEntries,
         ScanCacheState? Cache,
-        bool ForceFullScan);
+        bool ForceFullScan,
+        IVaultLogger Logger);
 
     private sealed class HashProgressReporter(
         int totalToHash,
@@ -146,7 +147,7 @@ public class SnapshotService
                 return;
             if (IsLinkedPath(childDirectory))
             {
-                RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked directory '{childDirectory}'.");
+                request.Logger.Verbose($"[SnapshotService] Skipping linked directory '{childDirectory}'.");
                 return;
             }
 
@@ -163,7 +164,7 @@ public class SnapshotService
                     continue;
                 if (IsLinkedPath(file))
                 {
-                    RuntimeLog.WriteVerbose($"[SnapshotService] Skipping linked file '{file}'.");
+                    request.Logger.Verbose($"[SnapshotService] Skipping linked file '{file}'.");
                     continue;
                 }
 
@@ -181,11 +182,11 @@ public class SnapshotService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                RuntimeLog.WriteVerbose($"[SnapshotService] Skipping inaccessible file '{file}': {ex.Message}");
+                request.Logger.Verbose($"[SnapshotService] Skipping inaccessible file '{file}': {ex.Message}");
             }
         }
 
-        private static bool TryReadDirectoryMtime(string fullDirectory, out long mtimeTicks)
+        private bool TryReadDirectoryMtime(string fullDirectory, out long mtimeTicks)
         {
             try
             {
@@ -195,14 +196,14 @@ public class SnapshotService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                RuntimeLog.WriteVerbose(
+                request.Logger.Verbose(
                     $"[SnapshotService] Skipping inaccessible directory '{fullDirectory}': {ex.Message}");
                 mtimeTicks = 0;
                 return false;
             }
         }
 
-        private static string[] EnumerateDirectoriesSafely(string fullDirectory)
+        private string[] EnumerateDirectoriesSafely(string fullDirectory)
         {
             try
             {
@@ -210,13 +211,13 @@ public class SnapshotService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                RuntimeLog.WriteVerbose(
+                request.Logger.Verbose(
                     $"[SnapshotService] Cannot enumerate directories in '{fullDirectory}': {ex.Message}");
                 return [];
             }
         }
 
-        private static string[] EnumerateFilesSafely(string fullDirectory)
+        private string[] EnumerateFilesSafely(string fullDirectory)
         {
             try
             {
@@ -224,13 +225,13 @@ public class SnapshotService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                RuntimeLog.WriteVerbose(
+                request.Logger.Verbose(
                     $"[SnapshotService] Cannot enumerate files in '{fullDirectory}': {ex.Message}");
                 return [];
             }
         }
 
-        private static bool IsLinkedPath(string path)
+        private bool IsLinkedPath(string path)
         {
             try
             {
@@ -238,7 +239,7 @@ public class SnapshotService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FileNotFoundException)
             {
-                RuntimeLog.WriteVerbose(
+                request.Logger.Verbose(
                     $"[SnapshotService] Skipping path with unverifiable link status '{path}': {ex.Message}");
                 return true;
             }
@@ -344,7 +345,8 @@ public class SnapshotService
                 filter,
                 baseline.PreviousFiles.Values,
                 cache,
-                forceFullScan);
+                forceFullScan,
+                _logger);
             List<FileEntry> currentEntries = BuildCurrentEntries(
                 scanRequest,
                 dirMtimeCache,
