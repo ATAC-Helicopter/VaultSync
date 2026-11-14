@@ -156,9 +156,12 @@ jobs:
           ]
           if total <= 0 or visited <= 0 or not core_modules:
               sys.exit("Coverage is empty or VaultSync.Core was not instrumented")
+          # OpenCover reports collected by Coverlet have per-SequencePoint
+          # vc counters, not necessarily a per-Module Summary child.
           core_visited = sum(
-              int((module.find("Summary").attrib.get("visitedSequencePoints", "0")))
-              for module in core_modules if module.find("Summary") is not None
+              int(point.attrib.get("vc", "0")) > 0
+              for module in core_modules
+              for point in module.findall(".//SequencePoint")
           )
           print(f"OpenCover root summary: visited={visited} total={total}")
           for module in report.findall(".//Module"):
